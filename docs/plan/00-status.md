@@ -1,17 +1,30 @@
 # Vergeo5 — Project Status
 
-**Updated:** 2026-07-06 · **Mode:** GATED · **Current phase:** Phase 1 ✅ COMPLETE — gate open (approve to start Phase 2)
+**Updated:** 2026-07-06 · **Mode:** GATED · **Current phase:** Phase 2 ✅ COMPLETE — gate open (approve to start Phase 3 prompts)
 
 ## Phase gate log
 
 | Phase | Status | Output | Approval |
 |-------|--------|--------|----------|
-| 0 — Discovery | ✅ CLOSED 2026-07-06 | `00-discovery.md` + `00-decisions.md` (LOCKED) + `research/*` | Founder answered all 28 Qs; delegated items resolved per recommendations |
-| 0b — Addendum | ✅ 2026-07-06 | Lenco API distilled (`docs/ops/lenco/`), 6/12 design HTMLs committed, live-prototype screenshot findings, `docs/designs/SELECTION.md` | Founder supplied materials ("continue") |
-| 1 — Mountains | ✅ COMPLETE 2026-07-06 — 🟡 AWAITING APPROVAL | `docs/plan/01-mountains.md` (16 mountains, ~141 pebbles est.), `CLAUDE.md` | — |
-| 2 — Pebbles & Waves | ▶ next (`Phase 2` after approval) | `docs/plan/02-pebbles/*`, `docs/plan/03-waves.md` | — |
-| 3 — Cursor prompts | not started | `prompts/*` | — |
+| 0 — Discovery | ✅ CLOSED 2026-07-06 | `00-discovery.md` + `00-decisions.md` (LOCKED) + `research/*` | Founder answered all 28 Qs |
+| 0b — Addendum | ✅ 2026-07-06 | Lenco distilled, 6/12 design HTMLs, `SELECTION.md` | Founder supplied materials |
+| 1 — Mountains | ✅ CLOSED 2026-07-06 | `01-mountains.md` (16 mountains), `CLAUDE.md` | Approved by invoking Phase 2 |
+| 2 — Pebbles & Waves | ✅ COMPLETE 2026-07-06 — 🟡 AWAITING APPROVAL | `02-pebbles/M01…M16` (**141 pebbles**), `03-waves.md` (**19 waves W0–W18**) | — |
+| 3 — Cursor prompts | ▶ next (`Phase 3` after approval) | `prompts/_header.md` + per-pebble prompts, generated **per wave** | — |
 | 4 — Review loop | not started | verdicts logged here | — |
+
+## Phase 2 key structural decisions (review these at the gate)
+
+- **19 waves** (W0 sequential foundations → W18 launch QA); exact pebble→wave map in `03-waves.md`, count reconciles 141=141.
+- **Conflict-free parallelism via conventions:** router auto-discovery (no `main.py` edits), no ui barrel file (deep imports), one migration file per pebble (numbers assigned at Phase 3 prompt time), per-namespace i18n files placed one-per-wave.
+- **Schema freeze after Wave 4** (M03-P01–P08 merged); Wave 5 proves it (full RLS isolation matrix + seed) before any feature wave dispatches.
+- **Perf budgets police PRs from Wave 10** (M16-P01 pulled early), not retrofitted.
+- **⚙ Intra-wave interface edges** (M08-P04→P03, M08-P10→P09, M09-P06→M08-P08, M10-P04↔P06, M06-P03→P02, M13-P06→M08-P05): dependent pebble codes against merged contracts/stubs; Phase 4 review verifies integration. Flagged in `03-waves.md` §6.
+- **M13-P09/M12-P10 dashboards degrade gracefully** for AI-usage data until M06 lands (W15–16).
+
+## Founder-gate overlay for waves
+
+F9b (Lenco sandbox URL/token) **hard-blocks M08-P02 tests → needed before Wave 10** · F9a–f + F5 wanted by W10 · F8 (COD cap) before W9 · F4 counsel + F1/F2 = W18 launch-checklist gates.
 
 ## Lenco integration constraints (recorded 2026-07-06, binding)
 
@@ -19,18 +32,14 @@ Direct MoMo push = MTN+Airtel (Zamtel collections unconfirmed → F9a; Zamtel pa
 
 ## Locked decisions (full detail: `00-decisions.md`)
 
-Brand **Vergeo5** / vergeo5.com · all 5 verticals thin-sliced into v1 (products, services-RFQ, events+QR tickets, supplies-lite, directory) · free vendor tier at launch, paid tiers feature-flagged · commissions 5/8/10/12/5 (+3% supplies, config-table) · **Lenco** payments+escrow (founder has API access), instant-MoMo payouts, ≤48h promise · COD ≤K500 (⚠ F8 confirm) · Turnover-Tax posture, ZRA/VSDC-ready invoicing · official WhatsApp Cloud API (guide in `docs/ops/`), SMS fallback, **no WAHA** · Lusaka manual-dispatch delivery + nationwide pickup · two-lane returns (faulty=full refund; change-of-mind=vendor-opt-in, fees) · **FastAPI + Supabase** · **Next.js 15 + Tailwind + PWA** · **3 apps in one monorepo** (customer/vendor/admin) · OCI (new account) + Vercel + Supabase cloud + Cloudflare, ≤$50/mo · hybrid search (Postgres FTS + pgvector RRF) = RAG store · "Ask Vergeo" AI tab (guest 3 / free 25 Q/mo, $15 kill-switch) · canonical Product+VendorListing + first-class Event tables · Claude seeds catalog · Cloudinary public media + Supabase Storage private · EN launch with full i18n scaffolding → Bemba/Nyanja → French.
-
-## Blocking items
-
-- None for Phase 1.
-- Pre-launch gates: F4 (counsel review of escrow under NPS Act 2026); F5 (WhatsApp number verified); F1/F2 (domain, PACRA returns + company TPIN).
-- Design inputs still missing (7 of 12 HTML files + live-prototype audit) — see `docs/designs/SOURCES.md`; needed at Phase 1 start for the design-element selection, not for mountain definition.
+Brand **Vergeo5** / vergeo5.com · all 5 verticals thin-sliced into v1 · free vendor tier at launch, paid tiers feature-flagged · commissions 5/8/10/12/5 (+3% supplies, config-table) · **Lenco** payments+escrow, instant-MoMo payouts, ≤48h promise · COD ≤K500 (⚠ F8) · Turnover-Tax posture, ZRA/VSDC-ready invoicing · official WhatsApp Cloud API, SMS fallback, **no WAHA** · Lusaka manual-dispatch delivery + nationwide pickup · two-lane returns · **FastAPI + Supabase** · **Next.js 15 + Tailwind + PWA** · **3 apps, one monorepo** · OCI + Vercel + Supabase cloud + Cloudflare ≤$50/mo · hybrid search (FTS + pgvector RRF) = RAG store · "Ask Vergeo" (guest 3 / free 25 Q/mo, $15 kill-switch) · canonical Product+VendorListing + first-class Event tables · Claude seeds catalog · Cloudinary public + Supabase Storage private · EN launch → Bemba/Nyanja → French.
 
 ## Founder actions open
 
-F1 domain · F2 PACRA returns + company TPIN · ~~F3 Lenco docs~~ ✅ committed+distilled · F4 counsel (launch gate) · F5 Meta/WhatsApp setup · F6 courier MOUs (post-beta) · F7 remaining 6 design files (+ optional prototype-domain allowlist) · F8 confirm COD ≤K500 · **F9 ask Lenco support**: a) Zamtel collections? b) sandbox REST base URL + token c) fee schedule + limits d) bulk transfer spec e) register webhook URLs f) settlement type per rail (details in `docs/ops/lenco/lenco-api-distilled.md`).
+F1 domain · F2 PACRA returns + company TPIN · ~~F3 Lenco docs~~ ✅ · F4 counsel (launch gate) · F5 Meta/WhatsApp setup (**by W10**) · F6 courier MOUs (post-beta) · F7 remaining 6 design files (merch variant library only — tokens locked) · F8 confirm COD ≤K500 (**by W9**) · F9 Lenco support a–f (**F9b by W10, hard-blocking**).
 
 ## Wave/pebble status
 
-_Begins after Phase 2._
+| Wave | Pebbles | Status |
+|------|---------|--------|
+| W0–W18 | 141 total (map in `03-waves.md`) | ⬜ not dispatched — Phase 3 generates prompts per wave |
