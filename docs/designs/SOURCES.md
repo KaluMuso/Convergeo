@@ -15,13 +15,13 @@ Cloud sessions cannot run `/design-login`; files arrive by founder upload or "Se
 | 5 | `Vergeo_v1_Standalone.html` ("Vergeo — Zambia's National Marketplace", 7.0MB) | https://claude.ai/design/p/9ae07f0f-7f21-4939-9446-415db8e7a993?file=Vergeo+v1.html | ✅ 2026-07-06 |
 | 6 | `Convergeo.html` | https://claude.ai/design/p/5c86be3d-0c2a-42fa-8559-d15ada8c94f5?file=Convergeo.html | ⬜ |
 | 7 | `Vergeo_Prototype_offline.html` ("Vergeo — Multi-Vendor Platform · Zambia", 1.4MB) | one of the two "Vergeo Prototype" projects (7e374452… / 019dc6e5…) | ✅ 2026-07-06 |
-| 8 | second `Vergeo Prototype` variant | https://claude.ai/design/p/019dc6e5-8c31-771b-a417-3226a31baa37?file=Vergeo+Prototype.html | ⬜ |
+| 8 | `Vergeo_Prototype_Standalone.html` ("Vergeo — Platform Prototype", 1.5MB) | https://claude.ai/design/p/019dc6e5-8c31-771b-a417-3226a31baa37?file=Vergeo+Prototype.html (presumed) | ✅ 2026-07-06 |
 | 9 | `Convergeo_Events_Desktop.html` | https://claude.ai/design/p/019dcaa2-6bd4-71d2-af53-e3d062bed2ce?file=Convergeo+Events+Desktop.html | ⬜ |
 | 10 | `Convergeo_Customer_Desktop.html` | https://claude.ai/design/p/019dce70-f5c9-755b-ab24-6dcfac816a79?file=Convergeo+Customer+Desktop.html | ⬜ |
 | 11 | `Convergeo_Platform_Standalone.html` ("Convergeo — Platform Prototype", 1.4MB) | https://claude.ai/design/p/019dce70-f5c9-755b-ab24-6dcfac816a79?file=Convergeo+Platform.html | ✅ 2026-07-06 |
 | 12 | `Convergeo_Catalogue.html` | https://claude.ai/design/p/019dcaed-c3ef-7c19-9e4d-ee645a98a075?file=Convergeo+Catalogue.html | ⬜ |
 
-**Still missing (7):** Vergeo Mobile · Vergeo Standalone · Convergeo.html · second Vergeo Prototype · Convergeo Events Desktop · Convergeo Customer Desktop · Convergeo Catalogue. Events Desktop and Catalogue matter most (events is a v1 vertical; catalogue = product-grid reference).
+**Still missing (6):** Vergeo Mobile · Vergeo Standalone · Convergeo.html · Convergeo Events Desktop · Convergeo Customer Desktop · Convergeo Catalogue. Events Desktop and Catalogue matter most (events is a v1 vertical; catalogue = product-grid reference).
 
 ## Live prototype
 

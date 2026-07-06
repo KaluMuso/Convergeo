@@ -248,3 +248,15 @@ _Pending._ Requires visual + DOM evidence.
 - Working scratch dir for this attempt:
   `/tmp/claude-0/-home-user-Convergeo/ca3bf6a9-5ac0-59de-8d61-e7dcc0c18e35/scratchpad/proto-audit/`
   (`render.js` = the minimal repro that produced the `ERR_TUNNEL_CONNECTION_FAILED` proof).
+
+---
+
+## Observed via founder screenshot (2026-07-06) — partial audit unblocked
+
+Homepage of https://vergeo-21ffc.web.app/ as seen in founder's browser (desktop, Edge):
+- **Layout:** hero carousel (pagination dots) → "Upcoming Events" card row → "Featured Products" card row, horizontal carousel arrows both rows. Material-Design-era styling (flat white cards, blue link-titles, grey icon buttons).
+- **Event cards:** image area with diagonal corner ribbon (SOLD OUT grey / PROMOTION red / PUBLIC purple), title as blue link, 👍/👎 counts (thumbs voting), date, price ("K 250.00", "Free"), cart/info icon button. Demo events dated 2020 (Miss Zambia 2020, Kitwe Jazz Festival, Kitwe Color Festival, Presidential Corona Address, Church Youth Talk) — includes Kitwe/Copperbelt events.
+- **Product cards:** image, star rating "4.5 (413)", title link ("Checker Board Canvas"), vendor line ("Product Client One"), "K 240.00", cart icon.
+- **Browser tabs visible:** "Vergeo Products", "Vergeo Viewpoints", "Vergeo Events", "Vergeo Services", "Home" — confirms the old prototype already sectioned Products / Events / Services (+ a "Viewpoints" content/opinion feature not in current scope).
+
+**Assessment:** 2020-era demo with placeholder data; confirms the Phase-0 stance — **design/behaviour reference only, rebuild**. Elements worth noting for the new design system: corner-ribbon status badges on event cards (SOLD OUT / PROMOTION visual language), events-before-products homepage order (matches Master Plan homepage IA), K-price formatting. Elements to drop: thumbs up/down voting on listings (replaced by verified-purchase reviews), dated Material look. Full headless audit still pending domain allowlist (see above).
