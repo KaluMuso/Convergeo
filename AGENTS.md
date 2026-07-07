@@ -2,6 +2,12 @@
 
 Project overview, decisions, and conventions live in `CLAUDE.md` and `docs/`. Standard commands are in `README.md` (JS/TS) and `services/api/README.md` (Python API).
 
+## Git branching (Cursor Cloud)
+
+- **Base branch:** `master` — branch from `master`, open PRs against `master`.
+- **Do not use** `claude/nice-knuth-ijvthu` (deleted); it was a stale ex-default branch that caused Wave-1 tangles.
+- Feature branches: `cursor/<descriptive-name>-<suffix>` off `master`.
+
 ## Cursor Cloud specific instructions
 
 Environment refresh (nvm node + pnpm, uv + API deps) is handled by the startup update script. Notes below are the non-obvious caveats for running/testing in this VM.

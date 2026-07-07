@@ -4,7 +4,7 @@
 
 ## ⚠ ORCHESTRATION RULE (violated twice — fix in Cursor before Wave 2)
 
-**Cursor MUST branch from and open PRs against `master`.** Wave-1 PRs #20/#21 were merged into the dead ex-default branch `claude/nice-knuth-ijvthu` and #23–#25 targeted it or stacked on each other; Claude converged everything into master manually (merge commits 2026-07-07, all tests green) and closed #22–#25 as absorbed. Delete `claude/nice-knuth-ijvthu` in GitHub UI (push-delete returns 403) and set Cursor's default/base branch to `master`. Also: **batch B pebbles must wait for batch A merges** — running M03-P01/P07 early forced both to bundle duplicate pipeline files, which caused the conflicts.
+**Cursor MUST branch from and open PRs against `master`.** Wave-1 PRs #20/#21 were merged into the dead ex-default branch `claude/nice-knuth-ijvthu` and #23–#25 targeted it or stacked on each other; Claude converged everything into master manually (merge commits 2026-07-07, all tests green) and closed #22–#25 as absorbed. **`claude/nice-knuth-ijvthu` deleted 2026-07-07** (remote + local); GitHub default branch is `master`. Set Cursor Cloud's base branch to `master` in the dashboard if agents still target the old branch. Also: **batch B pebbles must wait for batch A merges** — running M03-P01/P07 early forced both to bundle duplicate pipeline files, which caused the conflicts.
 
 ## Phase 4 verdicts — Wave 1 (2026-07-07)
 
