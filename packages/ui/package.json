@@ -20,7 +20,8 @@
     "./src/*": "./src/*.tsx"
   },
   "dependencies": {
-    "next": "^15.2.4"
+    "next": "^15.2.4",
+    "@vergeo/i18n": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",

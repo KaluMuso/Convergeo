@@ -200,6 +200,9 @@ jobs:
         with:
           version: latest
 
+      - name: Start local database
+        run: supabase db start
+
       - name: Reset local database
         run: supabase db reset --no-seed
 
