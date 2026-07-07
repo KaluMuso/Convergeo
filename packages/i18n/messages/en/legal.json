@@ -1,5 +1,236 @@
 {
-  "legal.terms.title": "Terms of service",
-  "legal.privacy.title": "Privacy policy",
-  "legal.updated": "Last updated {date}"
+  "updated": "Last updated {date}",
+  "onThisPage": "On this page",
+  "counselNote": "Pending legal review (F4). These documents are drafts until Zambian counsel approves them for live money flows.",
+  "footer": {
+    "legalHeading": "Legal",
+    "helpHeading": "Help",
+    "sellHeading": "Sell on Vergeo5",
+    "paymentNote": "MoMo · Airtel · Zamtel · Card",
+    "copyright": "© {year} {appName}. All rights reserved.",
+    "links": {
+      "terms": "Terms of service",
+      "privacy": "Privacy policy",
+      "returns": "Returns & refunds",
+      "vendorAgreement": "Vendor agreement",
+      "help": "Help centre",
+      "contact": "Contact us",
+      "sell": "Start selling"
+    }
+  },
+  "terms": {
+    "title": "Terms of service",
+    "description": "How Vergeo5 works for buyers and sellers in Zambia — escrow, payments, and platform rules.",
+    "sections": {
+      "introduction": {
+        "heading": "Introduction",
+        "body": "Vergeo5 (vergeo5.com) is a mobile-first marketplace connecting buyers and vendors across Zambia. By using our customer app, you agree to these terms. If you do not agree, please do not use the platform."
+      },
+      "marketplace": {
+        "heading": "Marketplace role",
+        "body": "Vergeo5 is a discovery and commerce platform. Vendors list their own products, services, events, and supplies. We facilitate payments and escrow but are not the seller unless explicitly stated."
+      },
+      "escrow": {
+        "heading": "Escrow & payments",
+        "body": "Customer payments are collected through Lenco and held in a Lenco-managed escrow account until delivery is confirmed or the dispute window closes. Vergeo5 maintains a platform ledger of record for releases and payouts — we do not pool customer funds in our own bank account. Mobile money (MTN, Airtel, Zamtel) and card payments are supported where available."
+      },
+      "pricing": {
+        "heading": "Pricing & currency",
+        "body": "All prices are shown in Zambian Kwacha (ZMW). The amount charged at checkout is the total you authorise, including item price, delivery fees, and applicable charges shown before payment."
+      },
+      "orders": {
+        "heading": "Orders & delivery",
+        "body": "When you place an order, you enter a contract with the vendor. Delivery options (Lusaka dispatch, nationwide pickup, or courier freight) depend on the listing. Track your order status in your account. Cash on delivery may be offered for eligible orders up to K500."
+      },
+      "tax": {
+        "heading": "Tax posture",
+        "body": "Vergeo5 launches under Turnover Tax (5%, below the K5M threshold) with ZRA-ready sequential invoicing from day one. VAT is off at launch; invoices and receipts are architected for future Smart Invoice VSDC activation when VAT registration applies."
+      },
+      "prohibited": {
+        "heading": "Prohibited use",
+        "body": "You may not use Vergeo5 for unlawful activity, fraud, harassment, or to list prohibited categories (see our Vendor Agreement). We may suspend accounts that breach these rules."
+      },
+      "liability": {
+        "heading": "Liability",
+        "body": "To the extent permitted by Zambian law, Vergeo5 is not liable for indirect losses. Our role is limited to platform services described here. Disputes between buyers and vendors are handled through our returns and dispute process."
+      },
+      "changes": {
+        "heading": "Changes",
+        "body": "We may update these terms. Material changes will be noted on this page with an updated date. Continued use after changes constitutes acceptance."
+      },
+      "contact": {
+        "heading": "Contact",
+        "body": "Questions about these terms? Contact us through the Help centre or support channels listed in the app."
+      }
+    }
+  },
+  "privacy": {
+    "title": "Privacy policy",
+    "description": "How Vergeo5 collects, uses, and protects your personal data under the Zambia Data Protection Act.",
+    "sections": {
+      "introduction": {
+        "heading": "Introduction",
+        "body": "Vergeo5 respects your privacy. This policy explains what data we collect, why we collect it, how long we keep it, and your rights under the Zambia Data Protection Act (DPA)."
+      },
+      "controller": {
+        "heading": "Data controller",
+        "body": "Vergeo5 operates vergeo5.com and is the data controller for personal data processed through the customer app, subject to applicable Zambian law."
+      },
+      "dataCollected": {
+        "heading": "Data we collect",
+        "body": "We collect account details (phone, email, name), order and payment references, delivery addresses (landmark + GPS where provided), device and usage data, communications (WhatsApp, SMS, email), and KYC documents for vendors. Payment card data is handled by Lenco's hosted widget — we do not store full card numbers."
+      },
+      "legalBasis": {
+        "heading": "Legal basis & consent",
+        "body": "We process data based on contract performance (fulfilling orders), legitimate interests (fraud prevention, platform security), legal obligations (tax and regulatory records), and consent where required (marketing, optional features). You may withdraw consent for optional processing without affecting core order services."
+      },
+      "use": {
+        "heading": "How we use data",
+        "body": "We use your data to operate the marketplace, process payments and escrow, deliver notifications, improve search and recommendations, comply with law, and resolve disputes. We do not sell your personal data."
+      },
+      "sharing": {
+        "heading": "Sharing",
+        "body": "We share data with vendors (fulfilment), payment partners (Lenco), messaging providers (WhatsApp Cloud API, Africa's Talking, Resend), cloud hosts (Supabase, Vercel, OCI), and authorities when legally required. All processors are bound by contract."
+      },
+      "retention": {
+        "heading": "Retention",
+        "body": "Account data is kept while your account is active. Order and payment records are retained for at least seven years for tax and dispute purposes. Marketing consent logs are kept for three years. Anonymised analytics may be retained longer."
+      },
+      "security": {
+        "heading": "Security",
+        "body": "We use encryption in transit, row-level security on database tables, server-side secrets, and access controls. Sensitive documents (KYC, invoices) are stored in private buckets with strict access rules."
+      },
+      "dataRights": {
+        "heading": "Your data rights",
+        "body": "You may request access, correction, export, or deletion of your personal data. Use your <link>account data settings</link> to submit export or deletion requests. Note: this route is planned — full data export and deletion flows will ship in a future account release (M04-P06). Some data must be retained for legal or financial obligations."
+      },
+      "cookies": {
+        "heading": "Cookies & analytics",
+        "body": "We use essential cookies for sessions and security. Analytics (e.g. GA4) may be used with consent where required. You can manage preferences in your browser."
+      },
+      "children": {
+        "heading": "Children",
+        "body": "Vergeo5 is not directed at children under 16. We do not knowingly collect data from children."
+      },
+      "changes": {
+        "heading": "Changes",
+        "body": "We will update this policy when practices change. Check the date at the top of this page."
+      },
+      "contact": {
+        "heading": "Contact",
+        "body": "Privacy questions or DPA requests: contact us through the Help centre. We respond within statutory timeframes."
+      }
+    }
+  },
+  "returns": {
+    "title": "Returns & refunds",
+    "description": "Two-lane returns policy for Vergeo5 orders — faulty items and optional change-of-mind returns.",
+    "sections": {
+      "introduction": {
+        "heading": "Overview",
+        "body": "Vergeo5 protects buyers with a clear two-lane returns policy aligned with CCPC expectations. Lane 1 covers faulty, wrong, or not-as-described items. Lane 2 covers change-of-mind returns where the vendor opts in per listing."
+      },
+      "lane1": {
+        "heading": "Lane 1 — Faulty, wrong, or not as described",
+        "body": "Report the issue within 48 hours of delivery with photo evidence through your order page or support. You receive a full refund including delivery fees from escrow. Return shipping is charged to the vendor. If buyer and vendor disagree, Vergeo5 admin arbitrates the dispute."
+      },
+      "lane1Steps": {
+        "heading": "Lane 1 — How to report",
+        "body": "1. Open your order in Account → Orders. 2. Select Report a problem within 48 hours of delivery. 3. Upload clear photos showing the issue. 4. Keep the item in received condition until instructed. 5. Admin reviews and releases escrow refund or arranges return."
+      },
+      "lane2": {
+        "heading": "Lane 2 — Change of mind (vendor opt-in)",
+        "body": "Some listings allow change-of-mind returns. The vendor sets returnable yes/no and a window between 48 hours and 7 days after delivery. Items must be unused and in original condition with tags/packaging where applicable."
+      },
+      "lane2Refund": {
+        "heading": "Lane 2 — Refund calculation",
+        "body": "Refund = item price minus outbound delivery fee minus return transport cost minus a 10% restocking fee (configurable between 5% and 15% per platform settings). Refunds go to your mobile money number or instant store credit when the wallet feature is available."
+      },
+      "lane2Steps": {
+        "heading": "Lane 2 — How to return",
+        "body": "1. Confirm the listing shows Returns accepted. 2. Request a return within the vendor's window. 3. Ship or drop off the item as instructed. 4. Vendor confirms receipt in original condition. 5. Refund is processed per the formula above."
+      },
+      "escrow": {
+        "heading": "Escrow & post-release refunds",
+        "body": "Refunds before escrow release come directly from held funds. After release to the vendor, refunds are clawed back from the vendor's next payouts. Reverse logistics are manual in v1 — our team coordinates where needed."
+      },
+      "exclusions": {
+        "heading": "Exclusions",
+        "body": "Perishable goods, personalised items, digital event tickets after scan, and prohibited categories are generally not returnable unless Lane 1 applies. Event refund rules follow the event's stated policy."
+      },
+      "contact": {
+        "heading": "Need help?",
+        "body": "Contact support through your order page or the Help centre. Include your order number and photos for faster resolution."
+      }
+    }
+  },
+  "vendorAgreement": {
+    "title": "Vendor agreement",
+    "description": "Commission rates, payouts, and listing rules for selling on Vergeo5 in Zambia.",
+    "sections": {
+      "introduction": {
+        "heading": "Introduction",
+        "body": "By registering as a vendor on Vergeo5, you agree to this Vendor Agreement alongside our Terms of Service and Privacy Policy. This document covers commissions, payouts, and what you may list."
+      },
+      "commissions": {
+        "heading": "Commission rates",
+        "body": "Vergeo5 charges a category-based commission on successful sales. Rates are shown before you publish a listing. Free events are charged 0% commission. Authoritative rates live in the platform config table and may be updated quarterly."
+      },
+      "payouts": {
+        "heading": "Payouts & settlement",
+        "body": "Funds are released from escrow when the customer confirms delivery or after 48 hours auto-confirm following delivered status (7-day fallback after shipping). Payouts are sent via Lenco API: mobile money typically within 5 minutes; bank transfers within 24–36 hours. Marketing promise: paid out in minutes on mobile money — always within 48 hours."
+      },
+      "listing": {
+        "heading": "Listing standards",
+        "body": "Listings must be accurate, priced in ZMW, and include clear photos (up to 8 per listing). You are responsible for fulfilment, delivery updates, and customer communication. Misleading listings may be removed."
+      },
+      "returns": {
+        "heading": "Returns obligations",
+        "body": "You must honour Lane 1 returns (faulty/wrong/not-as-described). Lane 2 change-of-mind returns are optional — enable per listing with your chosen window (48 hours to 7 days). Restocking fees follow platform config (default 10%, range 5–15%)."
+      },
+      "prohibited": {
+        "heading": "Prohibited items",
+        "body": "You may not list: second-hand clothing (salaula), used phones, fresh produce, alcohol, pharmaceuticals, live animals, or heavy building materials (cement, sand, heavy aggregates). Launch categories are limited to approved departments — see platform category tree."
+      },
+      "kyc": {
+        "heading": "KYC & compliance",
+        "body": "Vendors must complete identity verification before payouts. We may request TPIN and business documents for tax invoicing. ZRA-ready invoices are generated for qualifying transactions."
+      },
+      "termination": {
+        "heading": "Suspension & termination",
+        "body": "We may suspend or terminate vendor accounts for policy breaches, fraud, or repeated customer complaints. Outstanding escrow obligations survive termination."
+      },
+      "changes": {
+        "heading": "Changes",
+        "body": "Commission rates and policies may change with notice on this page. Continued selling after changes constitutes acceptance."
+      },
+      "contact": {
+        "heading": "Vendor support",
+        "body": "Questions? Contact vendor support through the vendor app or Help centre."
+      }
+    },
+    "commissions": {
+      "categoryHeader": "Category",
+      "rateHeader": "Commission",
+      "electronics": "Electronics",
+      "electronicsRate": "5%",
+      "homeGoods": "Home goods",
+      "homeGoodsRate": "8%",
+      "fashionBeauty": "Fashion & beauty",
+      "fashionBeautyRate": "10%",
+      "services": "Services",
+      "servicesRate": "12%",
+      "eventTickets": "Event tickets",
+      "eventTicketsRate": "5%",
+      "suppliesWholesale": "Supplies & wholesale",
+      "suppliesWholesaleRate": "3%",
+      "groceriesStaples": "Groceries & staples",
+      "groceriesStaplesRate": "5%",
+      "defaultCategory": "Default (unmapped categories)",
+      "defaultRate": "8%",
+      "freeEvents": "Free events",
+      "freeEventsRate": "0%",
+      "footnote": "Rates mirror platform config (basis points: 500/800/1000/1200/500/300/500/800/0). Admin may adjust — your dashboard shows the rate before publish."
+    }
+  }
 }
