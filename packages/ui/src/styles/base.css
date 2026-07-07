@@ -1,0 +1,245 @@
+/**
+ * Vergeo5 base styles — CSS custom properties mirror src/tokens.ts.
+ * Import in app globals after tailwindcss: @import "@vergeo/ui/styles/base.css";
+ */
+
+:root {
+  /* ── Ground & surfaces ── */
+  --bg: #faf7f2;
+  --bg-2: #f3ede3;
+  --surface: #ffffff;
+  --border: #e8dfd0;
+
+  /* ── Dark panels (aubergine) ── */
+  --panel: #241b30;
+  --panel-2: #2e2440;
+  --panel-text: #eeeae3;
+  --panel-muted: #9f94b0;
+  --panel-border: rgba(255, 255, 255, 0.08);
+
+  /* ── Ink & display ── */
+  --text: #2a2118;
+  --text-2: #6b5a3e;
+  --text-3: #9c8a72;
+  --display-ink: #23324e;
+
+  /* ── Brand & semantic ── */
+  --primary: #2d4a7a;
+  --primary-deep: #1f3557;
+  --primary-tint: #e8f0fa;
+  --accent: #c8861a;
+  --success: #3a7a4a;
+  --danger: #c0392b;
+  --warning: #d4a020;
+  --info: #2a6a9a;
+
+  /* ── Category pastels ── */
+  --cat-beauty: #c9a88a;
+  --cat-health: #7aab8a;
+  --cat-food: #c9836a;
+  --cat-fitness: #7a9ab5;
+  --cat-home: #b5a07a;
+  --cat-auto: #8a8ab5;
+
+  /* ── Type ── */
+  --font-display: "DM Serif Display", Georgia, serif;
+  --font-display-alt: "Cormorant Garamond", Georgia, serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --fs-hero: clamp(2rem, 6vw, 3.9rem);
+  --fs-h1: 1.75rem;
+  --fs-h2: clamp(1.35rem, 2.4vw, 2.1rem);
+  --fs-h3: 1.0625rem;
+  --fs-body: 0.9375rem;
+  --fs-sm: 0.8125rem;
+  --fs-micro: 0.6875rem;
+  --fs-price: 1.02rem;
+
+  /* ── Space (4px base) ── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+
+  /* ── Radii ── */
+  --r-sm: 8px;
+  --r: 12px;
+  --r-lg: 18px;
+  --r-pill: 999px;
+
+  /* ── Shadows ── */
+  --shadow-1: 0 1px 4px rgba(28, 19, 8, 0.05);
+  --shadow-2: 0 4px 24px rgba(28, 19, 8, 0.07);
+  --shadow-3: 0 12px 48px rgba(28, 19, 8, 0.13);
+  --focus-ring: 0 0 0 3px rgba(45, 74, 122, 0.18);
+
+  /* ── Motion ── */
+  --dur-fast: 150ms;
+  --dur: 250ms;
+  --dur-slow: 400ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --ease-std: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dark {
+  --bg: var(--panel);
+  --bg-2: var(--panel-2);
+  --surface: var(--panel-2);
+  --border: var(--panel-border);
+  --text: var(--panel-text);
+  --text-2: var(--panel-muted);
+  --text-3: #7a7088;
+  --display-ink: var(--panel-text);
+}
+
+/* ── Global keyframes ── */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes float-a {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes float-b {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-dots {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  @keyframes page-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes toast-out {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes fadeSlideUp {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes shimmer,
+  @keyframes float-a,
+  @keyframes float-b,
+  @keyframes pulse-dots {
+    from,
+    to {
+      opacity: 1;
+      transform: none;
+      background-position: 0 0;
+    }
+  }
+}
