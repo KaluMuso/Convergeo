@@ -12,11 +12,19 @@ updates:
         update-types:
           - minor
           - patch
+    ignore:
+      # Majors deferred until post-launch — mid-build major bumps churn the
+      # foundations every parallel wave depends on. Revisit at M16 launch QA.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: pip
     directory: /services/api
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
