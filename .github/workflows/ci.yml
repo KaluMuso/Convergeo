@@ -1,0 +1,189 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  js:
+    name: JavaScript / TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile
+
+      - name: Resolve Turbo filter
+        id: turbo
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "filter=...[${{ github.event.pull_request.base.sha }}]" >> "$GITHUB_OUTPUT"
+          else
+            echo "filter=...[HEAD^1]" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lint
+        run: pnpm turbo run lint --filter="${{ steps.turbo.outputs.filter }}"
+
+      - name: Typecheck
+        run: pnpm turbo run typecheck --filter="${{ steps.turbo.outputs.filter }}"
+
+      - name: Test
+        run: pnpm turbo run test --filter="${{ steps.turbo.outputs.filter }}"
+
+      - name: Build
+        run: pnpm turbo run build --filter="${{ steps.turbo.outputs.filter }}"
+
+  python:
+    name: Python API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: services/api/.python-version
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Ruff
+        run: uv run ruff check .
+
+      - name: Mypy
+        run: uv run mypy app tests scripts
+
+      - name: Pytest
+        run: uv run pytest
+        env:
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          SUPABASE_ANON_KEY: test-anon-key
+
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deps-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile
+
+      - name: pnpm audit (high+)
+        continue-on-error: true
+        run: pnpm audit --audit-level=high
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: services/api/.python-version
+
+      - name: pip-audit (API)
+        continue-on-error: true
+        working-directory: services/api
+        run: |
+          uv sync --dev
+          uv tool run pip-audit
+
+  i18n-lint:
+    name: i18n hardcoded strings (warn)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile
+
+      - name: Run hardcoded-string lint (warn)
+        run: |
+          cat > .github/i18n-eslint.ci.mjs <<'EOF'
+          import plugin from "../packages/i18n/eslint-no-hardcoded-strings.js";
+          import tseslint from "typescript-eslint";
+
+          export default tseslint.config(
+            { ignores: ["**/node_modules/**", "**/.next/**"] },
+            ...tseslint.configs.recommended,
+            {
+              files: ["apps/**/app/**/*.{tsx,jsx}"],
+              plugins: { i18n: plugin },
+              rules: { "i18n/no-hardcoded-strings": "warn" },
+            },
+          );
+          EOF
+          pnpm exec eslint \
+            "apps/customer/app" \
+            "apps/vendor/app" \
+            "apps/admin/app" \
+            --config .github/i18n-eslint.ci.mjs \
+            --max-warnings 9999

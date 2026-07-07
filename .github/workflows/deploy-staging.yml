@@ -1,0 +1,38 @@
+name: Deploy staging (stub)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-images:
+    name: Build container images (stub)
+    runs-on: ubuntu-latest
+    steps:
+      - name: TODO — build API/admin images
+        run: |
+          echo "TODO(M01-P06): docker build services/api and apps/admin"
+          echo "Secrets required: none for build (registry push uses OCI_REGISTRY_TOKEN)"
+
+  deploy-oci:
+    name: Deploy to OCI (stub)
+    runs-on: ubuntu-latest
+    needs: build-images
+    steps:
+      - name: TODO — deploy Docker Compose stack on OCI VM
+        run: |
+          echo "TODO(M01-P06): pull tagged images and compose up on staging VM"
+          echo "Secrets required: OCI_API_KEY, OCI_TENANCY_OCID, OCI_USER_OCID, OCI_FINGERPRINT, OCI_PRIVATE_KEY, OCI_COMPARTMENT_ID"
+          echo "Reference only — values live in GitHub secrets, never in repo"
+
+  deploy-vercel:
+    name: Deploy customer app to Vercel (stub)
+    runs-on: ubuntu-latest
+    needs: build-images
+    steps:
+      - name: TODO — vercel deploy customer app
+        run: |
+          echo "TODO(M01-P06): vercel deploy --prebuilt for apps/customer"
+          echo "Secret required: VERCEL_TOKEN (and VERCEL_ORG_ID / VERCEL_PROJECT_ID as needed)"
