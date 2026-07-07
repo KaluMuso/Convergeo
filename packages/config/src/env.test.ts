@@ -11,6 +11,9 @@ const validEnv: EnvSource = {
   OPENROUTER_API_KEY: "openrouter-key",
   WHATSAPP_TOKEN: "whatsapp-token",
   AT_API_KEY: "at-key",
+  AT_USERNAME: "at-username",
+  AT_SENDER_ID: "VERGEO5",
+  SEND_SMS_HOOK_SECRET: "v1,whsec_dGhpcyBpcyBhIHZlcnlnZW81IHRlc3Qgc2VjcmV0IQ==",
   RESEND_API_KEY: "resend-key",
   CLOUDINARY_URL: "cloudinary://key:secret@cloud",
 };

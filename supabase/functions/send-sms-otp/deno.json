@@ -1,0 +1,8 @@
+{
+  "tasks": {
+    "test": "deno test --allow-env index.test.ts"
+  },
+  "compilerOptions": {
+    "strict": true
+  }
+}
