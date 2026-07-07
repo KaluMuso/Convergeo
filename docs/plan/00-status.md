@@ -1,6 +1,22 @@
 # Vergeo5 — Project Status
 
-**Updated:** 2026-07-07 · **Mode:** GATED · **Current phase:** Phase 3 ▶ **Wave 0 prompts delivered** — run them in Cursor (sequentially, P01→P07), paste Implementation Reports for Phase 4 review. Wave 1 prompts generated after all W0 PRs merge.
+**Updated:** 2026-07-07 · **Mode:** GATED · **Current phase:** Phase 4 review loop active ▶ **Wave 0 MERGED & REVIEWED** (PRs #3–#19) · **Wave 1 prompts ready** — batch A (M01-P08 gap-fill ∥ M02-P01 ∥ M02-P02) dispatch now in parallel; batch B (M03-P01 ∥ M03-P07) after M01-P08 merges.
+
+## ⚠ Wave 0 as-built note (2026-07-07)
+
+Wave 0 executed from the **draft-A pebble decomposition** (P02=shared packages, P03=FastAPI, P04=3 app shells, P05=CI, P06=infra, P07=backups) with the canonical header — not the canonical split. Functionally sound; accepted as-built. **Gap:** the canonical Supabase pipeline pebble never ran → filled by `prompts/M01-P08-supabase-pipeline-gapfill.md` (blocks all M03 schema pebbles). Canonical `M01-foundations.md` remains the spec of record for *what exists*; as-built file locations differ (api-client in `packages/config`, envelope includes `request_id`, `/healthz`+`/readyz` instead of `/health`).
+
+## Phase 4 verdicts — Wave 0 (2026-07-07)
+
+| Report | Verdict | Notes |
+|---|---|---|
+| M01-P01 + fix1 | ✅ APPROVED | packages/config relocation + `@vergeo/ui/*` deep-import alias verified; lint-staged `--config` deviation sound |
+| M01-P02 (shared pkgs) | ✅ APPROVED | formatK correct (5 cases); server/public env boundary via `./server` subpath is good practice |
+| M01-P03 (FastAPI) | ✅ APPROVED | Envelope+request_id (superset of spec — keep); router auto-discovery in; service-role client documented. 🟢 add `CORS_ORIGINS` to root `.env.example` next time that file is owned |
+| M01-P04 (app shells) | ✅ APPROVED w/ fix | 🟡 report claimed admin robots-noindex — **was absent**; `output:"standalone"` also missing on vendor+admin (infra Caddyfile assumes it). Fixed directly on master (<20-line rule): `apps/admin/app/robots.ts`, `output:"standalone"` both apps |
+| M01-P05 (CI) | ✅ APPROVED | 🟢 db job (supabase reset + typegen drift) missing — added to M01-P08 scope; runtime-generated i18n eslint config acceptable |
+| M01-P06 (infra) | ✅ APPROVED | **Q answered: YES** — defer Caddy rate-limit to Cloudflare edge rules (free) for launch; real enforcement is API-level (M04-P07); keep stock caddy image. 🟢 pin caddy/n8n by digest at deploy; `host.docker.internal` needs `extra_hosts: host-gateway` on Linux — deploy-time TODO |
+| M01-P07 (backups) | ✅ APPROVED | Drill PASS; prod-guard good. 🟢 importable n8n JSON (vs schedule doc) lands with M14; compose backup volume noted for P06 owner |
 
 ## Phase gate log
 
@@ -44,5 +60,10 @@ F1 domain · F2 PACRA returns + company TPIN · ~~F3 Lenco docs~~ ✅ · F4 coun
 
 | Wave | Pebbles | Status |
 |------|---------|--------|
-| **W0** | M01-P01…P07 (7, sequential) | 🟨 **prompts ready** (`prompts/M01-P01…P07`) — dispatch one at a time, in order |
-| W1–W18 | 134 (map in `03-waves.md`) | ⬜ not dispatched — prompts generated per wave after W0 merges |
+| **W0** | M01-P01…P07 (as-built draft-A split) + fix1 | ✅ **MERGED** (PRs #3,#4,#5,#6,#7,#13,#19) · reviewed 2026-07-07, all approved · +micro-fixes on master (admin robots, standalone output) |
+| **W0 gap** | M01-P08 Supabase pipeline | 🟨 **prompt ready** (`prompts/M01-P08-supabase-pipeline-gapfill.md`) — dispatch in batch A |
+| **W1 batch A** | M01-P08 ∥ M02-P01 (tokens) ∥ M02-P02 (i18n completion) | 🟨 **prompts ready — dispatch all 3 in PARALLEL now** (disjoint files; only M02-P01 touches pnpm-lock) |
+| **W1 batch B** | M03-P01 (identity schema) ∥ M03-P07 (config tables) | 🟨 prompts ready — **dispatch after M01-P08 merges**; both regenerate `db.ts` (second-to-merge rebases) |
+| W2–W18 | remaining (map in `03-waves.md`) | ⬜ prompts generated per wave |
+
+**Dependabot policy (2026-07-07):** major-version bumps ignored via `dependabot.yml` until M16 launch QA (mid-build major churn risk); majors #14–#18 closed; GitHub-Actions bumps #8–#12 fine to merge when CI is green on them.
