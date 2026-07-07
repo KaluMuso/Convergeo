@@ -4,6 +4,8 @@ import importPlugin from "eslint-plugin-import";
 import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
 
+import vergeoPlugin from "./eslint-rules/no-hardcoded-strings.js";
+
 /** @type {import("eslint").Linter.Config[]} */
 export default tseslint.config(
   {
@@ -53,7 +55,15 @@ export default tseslint.config(
         },
       ],
       "@typescript-eslint/no-unused-vars": "off",
-      // Placeholder slot for no-hardcoded-strings (next-intl) rule — wired in M02+
+    },
+  },
+  {
+    files: ["apps/**", "packages/ui/**"],
+    plugins: {
+      "@vergeo": vergeoPlugin,
+    },
+    rules: {
+      "@vergeo/no-hardcoded-strings": "warn",
     },
   },
 );

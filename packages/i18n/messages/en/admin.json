@@ -1,0 +1,5 @@
+{
+  "admin.title": "Admin console",
+  "admin.users.count": "{count, plural, one {# user} other {# users}}",
+  "admin.action.confirm": "Confirm {action}?"
+}

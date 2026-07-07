@@ -1,0 +1,5 @@
+{
+  "catalog.title": "Browse products",
+  "catalog.results": "{count, plural, one {# result} other {# results}}",
+  "catalog.compare": "Compare {count} items"
+}
