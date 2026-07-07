@@ -1,0 +1,67 @@
+name: vergeo5
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: infra/api.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - vergeo5
+
+  caddy:
+    image: caddy:2.9.1-alpine
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      n8n:
+        condition: service_started
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - .env
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - vergeo5
+
+  n8n:
+    image: docker.io/n8nio/n8n:1.82.1
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - n8n_data:/home/node/.n8n
+    expose:
+      - "5678"
+    networks:
+      - vergeo5
+
+networks:
+  vergeo5:
+    name: vergeo5
+
+volumes:
+  caddy_data:
+  caddy_config:
+  n8n_data:
