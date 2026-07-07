@@ -1,33 +1,33 @@
 # Vergeo5 — Project Status
 
-**Updated:** 2026-07-07 · **Mode:** GATED · **Current phase:** Phase 4 review loop active ▶ **Wave 0 MERGED & REVIEWED** (PRs #3–#19) · **Wave 1 prompts ready** — batch A (M01-P08 gap-fill ∥ M02-P01 ∥ M02-P02) dispatch now in parallel; batch B (M03-P01 ∥ M03-P07) after M01-P08 merges.
+**Updated:** 2026-07-07 · **Mode:** GATED · **Current phase:** Phase 4 loop ▶ **Wave 1 MERGED & REVIEWED** (M01-P08 gap-fill + M02-P01 + M02-P02 + M03-P01 + M03-P07, all ✅) · **Next: say "Phase 3 Wave 2"** to generate the 7 Wave-2 prompts (M02-P03..P06, M02-P08, M03-P02, M03-P03).
 
-## ⚠ Wave 0 as-built note (2026-07-07)
+## ⚠ ORCHESTRATION RULE (violated twice — fix in Cursor before Wave 2)
 
-Wave 0 executed from the **draft-A pebble decomposition** (P02=shared packages, P03=FastAPI, P04=3 app shells, P05=CI, P06=infra, P07=backups) with the canonical header — not the canonical split. Functionally sound; accepted as-built. **Gap:** the canonical Supabase pipeline pebble never ran → filled by `prompts/M01-P08-supabase-pipeline-gapfill.md` (blocks all M03 schema pebbles). Canonical `M01-foundations.md` remains the spec of record for *what exists*; as-built file locations differ (api-client in `packages/config`, envelope includes `request_id`, `/healthz`+`/readyz` instead of `/health`).
+**Cursor MUST branch from and open PRs against `master`.** Wave-1 PRs #20/#21 were merged into the dead ex-default branch `claude/nice-knuth-ijvthu` and #23–#25 targeted it or stacked on each other; Claude converged everything into master manually (merge commits 2026-07-07, all tests green) and closed #22–#25 as absorbed. Delete `claude/nice-knuth-ijvthu` in GitHub UI (push-delete returns 403) and set Cursor's default/base branch to `master`. Also: **batch B pebbles must wait for batch A merges** — running M03-P01/P07 early forced both to bundle duplicate pipeline files, which caused the conflicts.
 
-## Phase 4 verdicts — Wave 0 (2026-07-07)
+## Phase 4 verdicts — Wave 1 (2026-07-07)
 
-| Report | Verdict | Notes |
-|---|---|---|
-| M01-P01 + fix1 | ✅ APPROVED | packages/config relocation + `@vergeo/ui/*` deep-import alias verified; lint-staged `--config` deviation sound |
-| M01-P02 (shared pkgs) | ✅ APPROVED | formatK correct (5 cases); server/public env boundary via `./server` subpath is good practice |
-| M01-P03 (FastAPI) | ✅ APPROVED | Envelope+request_id (superset of spec — keep); router auto-discovery in; service-role client documented. 🟢 add `CORS_ORIGINS` to root `.env.example` next time that file is owned |
-| M01-P04 (app shells) | ✅ APPROVED w/ fix | 🟡 report claimed admin robots-noindex — **was absent**; `output:"standalone"` also missing on vendor+admin (infra Caddyfile assumes it). Fixed directly on master (<20-line rule): `apps/admin/app/robots.ts`, `output:"standalone"` both apps |
-| M01-P05 (CI) | ✅ APPROVED | 🟢 db job (supabase reset + typegen drift) missing — added to M01-P08 scope; runtime-generated i18n eslint config acceptable |
-| M01-P06 (infra) | ✅ APPROVED | **Q answered: YES** — defer Caddy rate-limit to Cloudflare edge rules (free) for launch; real enforcement is API-level (M04-P07); keep stock caddy image. 🟢 pin caddy/n8n by digest at deploy; `host.docker.internal` needs `extra_hosts: host-gateway` on Linux — deploy-time TODO |
-| M01-P07 (backups) | ✅ APPROVED | Drill PASS; prod-guard good. 🟢 importable n8n JSON (vs schedule doc) lands with M14; compose backup volume noted for P06 owner |
+| Report           | Verdict            | Notes                                                                                                                                |
+| ---------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| M01-P08 pipeline | ✅ APPROVED        | PG 15 config kept (Supabase local images skip 16); CI db job is reset/typegen authority                                              |
+| M02-P01 tokens   | ✅ APPROVED        | --text-3/--accent decorative-only AA exclusion accepted (SELECTION-conformant); default Tailwind palette removal is a nice hardening |
+| M02-P02 i18n     | ✅ APPROVED w/ fix | 🟡 flat dotted keys in common.json rendered raw (next-intl nests on dots) — fixed on master: nested JSON + dot-path resolveMessage   |
+| M03-P01 identity | ✅ APPROVED        | FORCE RLS + session_user guard triggers = good judgment; role-escalation matrix 25/25                                                |
+| M03-P07 config   | ✅ APPROVED        | platform_config authenticated-select deviation accepted (API reads via service role); placeholder zone fees fine, admin-editable     |
+
+**Convergence fixes applied on master:** db.ts = union of both hand-generated halves (0002+0008, compiles; CI db job regenerates authoritatively) · config.toml PG 15 kept over PG 16 (no Supabase 16 image) · common.json nesting + resolveMessage dot-path walk. Full suite green: 32 tests, typecheck 7/7, lint 4/4.
 
 ## Phase gate log
 
-| Phase | Status | Output | Approval |
-|-------|--------|--------|----------|
-| 0 — Discovery | ✅ CLOSED 2026-07-06 | `00-discovery.md` + `00-decisions.md` (LOCKED) + `research/*` | Founder answered all 28 Qs |
-| 0b — Addendum | ✅ 2026-07-06 | Lenco distilled, 6/12 design HTMLs, `SELECTION.md` | Founder supplied materials |
-| 1 — Mountains | ✅ CLOSED 2026-07-06 | `01-mountains.md` (16 mountains), `CLAUDE.md` | Approved by invoking Phase 2 |
-| 2 — Pebbles & Waves | ✅ CLOSED 2026-07-06 | `02-pebbles/M01…M16` (**141 pebbles**), `03-waves.md` (**19 waves W0–W18**) | Approved by merging PR #1 + requesting Phase 3 |
-| 3 — Cursor prompts | ◐ IN PROGRESS 2026-07-07 | `prompts/_header.md` + **Wave 0: `M01-P01…P07`** (7/7). Later waves generated per-wave at dispatch. | 🟡 W0 prompts awaiting founder use/review |
-| 4 — Review loop | not started | verdicts logged here | — |
+| Phase               | Status                   | Output                                                                                              | Approval                                       |
+| ------------------- | ------------------------ | --------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| 0 — Discovery       | ✅ CLOSED 2026-07-06     | `00-discovery.md` + `00-decisions.md` (LOCKED) + `research/*`                                       | Founder answered all 28 Qs                     |
+| 0b — Addendum       | ✅ 2026-07-06            | Lenco distilled, 6/12 design HTMLs, `SELECTION.md`                                                  | Founder supplied materials                     |
+| 1 — Mountains       | ✅ CLOSED 2026-07-06     | `01-mountains.md` (16 mountains), `CLAUDE.md`                                                       | Approved by invoking Phase 2                   |
+| 2 — Pebbles & Waves | ✅ CLOSED 2026-07-06     | `02-pebbles/M01…M16` (**141 pebbles**), `03-waves.md` (**19 waves W0–W18**)                         | Approved by merging PR #1 + requesting Phase 3 |
+| 3 — Cursor prompts  | ◐ IN PROGRESS 2026-07-07 | `prompts/_header.md` + **Wave 0: `M01-P01…P07`** (7/7). Later waves generated per-wave at dispatch. | 🟡 W0 prompts awaiting founder use/review      |
+| 4 — Review loop     | not started              | verdicts logged here                                                                                | —                                              |
 
 > **Session note (2026-07-07):** a parallel session drafted an alternative Phase 2 + W0 prompts from a pre-PR#1 clone (branch `claude/adoring-dirac-a5w0pg`, commit `5192c86`). That duplicate Phase 2 was **discarded** in favor of this merged/approved plan; the W0 prompts were **rewritten against the canonical M01 pebble specs** (router auto-discovery, no barrels, `NNNN_slug.sql`, per-namespace i18n) before merging.
 
@@ -58,12 +58,12 @@ F1 domain · F2 PACRA returns + company TPIN · ~~F3 Lenco docs~~ ✅ · F4 coun
 
 ## Wave/pebble status
 
-| Wave | Pebbles | Status |
-|------|---------|--------|
-| **W0** | M01-P01…P07 (as-built draft-A split) + fix1 | ✅ **MERGED** (PRs #3,#4,#5,#6,#7,#13,#19) · reviewed 2026-07-07, all approved · +micro-fixes on master (admin robots, standalone output) |
-| **W0 gap** | M01-P08 Supabase pipeline | 🟨 **prompt ready** (`prompts/M01-P08-supabase-pipeline-gapfill.md`) — dispatch in batch A |
-| **W1 batch A** | M01-P08 ∥ M02-P01 (tokens) ∥ M02-P02 (i18n completion) | 🟨 **prompts ready — dispatch all 3 in PARALLEL now** (disjoint files; only M02-P01 touches pnpm-lock) |
-| **W1 batch B** | M03-P01 (identity schema) ∥ M03-P07 (config tables) | 🟨 prompts ready — **dispatch after M01-P08 merges**; both regenerate `db.ts` (second-to-merge rebases) |
-| W2–W18 | remaining (map in `03-waves.md`) | ⬜ prompts generated per wave |
+| Wave           | Pebbles                                                | Status                                                                                                                                    |
+| -------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **W0**         | M01-P01…P07 (as-built draft-A split) + fix1            | ✅ **MERGED** (PRs #3,#4,#5,#6,#7,#13,#19) · reviewed 2026-07-07, all approved · +micro-fixes on master (admin robots, standalone output) |
+| **W0 gap**     | M01-P08 Supabase pipeline                              | 🟨 **prompt ready** (`prompts/M01-P08-supabase-pipeline-gapfill.md`) — dispatch in batch A                                                |
+| **W1 batch A** | M01-P08 ∥ M02-P01 (tokens) ∥ M02-P02 (i18n completion) | 🟨 **prompts ready — dispatch all 3 in PARALLEL now** (disjoint files; only M02-P01 touches pnpm-lock)                                    |
+| **W1 batch B** | M03-P01 (identity schema) ∥ M03-P07 (config tables)    | 🟨 prompts ready — **dispatch after M01-P08 merges**; both regenerate `db.ts` (second-to-merge rebases)                                   |
+| W2–W18         | remaining (map in `03-waves.md`)                       | ⬜ prompts generated per wave                                                                                                             |
 
 **Dependabot policy (2026-07-07):** major-version bumps ignored via `dependabot.yml` until M16 launch QA (mid-build major churn risk); majors #14–#18 closed; GitHub-Actions bumps #8–#12 fine to merge when CI is green on them.
