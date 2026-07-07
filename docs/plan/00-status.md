@@ -1,6 +1,6 @@
 # Vergeo5 — Project Status
 
-**Updated:** 2026-07-07 · **Mode:** GATED · **Current phase:** Phase 4 loop ▶ **Wave 1 MERGED & REVIEWED** (M01-P08 gap-fill + M02-P01 + M02-P02 + M03-P01 + M03-P07, all ✅) · **Next: say "Phase 3 Wave 2"** to generate the 7 Wave-2 prompts (M02-P03..P06, M02-P08, M03-P02, M03-P03).
+**Updated:** 2026-07-07 · **Mode:** GATED · **Current phase:** Phase 3 ▶ **Wave 2 prompts ready — dispatch all 7 in PARALLEL from `master`** (`prompts/M02-P03..P06`, `M02-P08`, `M03-P02`, `M03-P03`). Wave 1 merged & reviewed (all ✅). Pre-wave enabler on master: @vergeo/ui test toolchain (react+RTL+jsdom devDeps, `./src/*` wildcard export, jsx react-jsx) so no Wave-2 pebble touches pnpm-lock/package.json; component tests use a `// @vitest-environment jsdom` docblock (no vitest.config.ts — it breaks the snapshot client).
 
 ## ⚠ ORCHESTRATION RULE (violated twice — fix in Cursor before Wave 2)
 
