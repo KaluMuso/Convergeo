@@ -1,6 +1,6 @@
 # Vergeo5 — Project Status
 
-**Updated:** 2026-07-06 · **Mode:** GATED · **Current phase:** Phase 2 ✅ COMPLETE — gate open (approve to start Phase 3 prompts)
+**Updated:** 2026-07-07 · **Mode:** GATED · **Current phase:** Phase 3 ▶ **Wave 0 prompts delivered** — run them in Cursor (sequentially, P01→P07), paste Implementation Reports for Phase 4 review. Wave 1 prompts generated after all W0 PRs merge.
 
 ## Phase gate log
 
@@ -9,9 +9,11 @@
 | 0 — Discovery | ✅ CLOSED 2026-07-06 | `00-discovery.md` + `00-decisions.md` (LOCKED) + `research/*` | Founder answered all 28 Qs |
 | 0b — Addendum | ✅ 2026-07-06 | Lenco distilled, 6/12 design HTMLs, `SELECTION.md` | Founder supplied materials |
 | 1 — Mountains | ✅ CLOSED 2026-07-06 | `01-mountains.md` (16 mountains), `CLAUDE.md` | Approved by invoking Phase 2 |
-| 2 — Pebbles & Waves | ✅ COMPLETE 2026-07-06 — 🟡 AWAITING APPROVAL | `02-pebbles/M01…M16` (**141 pebbles**), `03-waves.md` (**19 waves W0–W18**) | — |
-| 3 — Cursor prompts | ▶ next (`Phase 3` after approval) | `prompts/_header.md` + per-pebble prompts, generated **per wave** | — |
+| 2 — Pebbles & Waves | ✅ CLOSED 2026-07-06 | `02-pebbles/M01…M16` (**141 pebbles**), `03-waves.md` (**19 waves W0–W18**) | Approved by merging PR #1 + requesting Phase 3 |
+| 3 — Cursor prompts | ◐ IN PROGRESS 2026-07-07 | `prompts/_header.md` + **Wave 0: `M01-P01…P07`** (7/7). Later waves generated per-wave at dispatch. | 🟡 W0 prompts awaiting founder use/review |
 | 4 — Review loop | not started | verdicts logged here | — |
+
+> **Session note (2026-07-07):** a parallel session drafted an alternative Phase 2 + W0 prompts from a pre-PR#1 clone (branch `claude/adoring-dirac-a5w0pg`, commit `5192c86`). That duplicate Phase 2 was **discarded** in favor of this merged/approved plan; the W0 prompts were **rewritten against the canonical M01 pebble specs** (router auto-discovery, no barrels, `NNNN_slug.sql`, per-namespace i18n) before merging.
 
 ## Phase 2 key structural decisions (review these at the gate)
 
@@ -42,4 +44,5 @@ F1 domain · F2 PACRA returns + company TPIN · ~~F3 Lenco docs~~ ✅ · F4 coun
 
 | Wave | Pebbles | Status |
 |------|---------|--------|
-| W0–W18 | 141 total (map in `03-waves.md`) | ⬜ not dispatched — Phase 3 generates prompts per wave |
+| **W0** | M01-P01…P07 (7, sequential) | 🟨 **prompts ready** (`prompts/M01-P01…P07`) — dispatch one at a time, in order |
+| W1–W18 | 134 (map in `03-waves.md`) | ⬜ not dispatched — prompts generated per wave after W0 merges |
