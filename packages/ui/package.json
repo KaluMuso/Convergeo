@@ -1,0 +1,30 @@
+{
+  "name": "@vergeo/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "tsc --noEmit"
+  },
+  "exports": {
+    "./tailwind-preset": "./tailwind-preset.ts",
+    "./tokens": "./src/tokens.ts",
+    "./fonts": "./src/fonts.ts",
+    "./styles/base.css": "./src/styles/base.css"
+  },
+  "dependencies": {
+    "next": "^15.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "tailwindcss": "^4.0.14",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.9"
+  }
+}

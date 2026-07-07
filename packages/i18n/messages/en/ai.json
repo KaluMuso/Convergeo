@@ -1,0 +1,5 @@
+{
+  "ai.ask.title": "Ask Vergeo",
+  "ai.quota.remaining": "{count, plural, one {# question left} other {# questions left}} this month",
+  "ai.disclaimer": "AI answers are suggestions — verify before you buy"
+}

@@ -1,0 +1,5 @@
+{
+  "checkout.title": "Checkout",
+  "checkout.itemCount": "{count, plural, one {# item} other {# items}}",
+  "checkout.total": "Total: {amount}"
+}

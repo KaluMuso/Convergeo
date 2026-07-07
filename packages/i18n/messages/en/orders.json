@@ -1,0 +1,5 @@
+{
+  "orders.title": "Your orders",
+  "orders.status": "Order {id} is {status}",
+  "orders.empty": "You have no orders yet"
+}

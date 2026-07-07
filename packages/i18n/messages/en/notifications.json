@@ -1,0 +1,5 @@
+{
+  "notifications.title": "Notifications",
+  "notifications.unread": "{count, plural, one {# unread} other {# unread}}",
+  "notifications.order.shipped": "Order {id} has shipped"
+}
