@@ -1,0 +1,59 @@
+{
+  email {$ACME_EMAIL:ops@vergeo5.com}
+}
+
+(common_security) {
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Content-Security-Policy "frame-ancestors 'none'"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    -Server
+  }
+}
+
+# Rate limiting: standard Caddy build has no rate_limit directive.
+# TODO(M15+): enable via xcaddy + github.com/mholt/caddy-ratelimit OR enforce at Cloudflare WAF.
+# rate_limit {
+#   zone api {
+#     key {remote_host}
+#     events 100
+#     window 1m
+#   }
+# }
+
+{$API_DOMAIN:api.vergeo5.com} {
+  import common_security
+
+  reverse_proxy api:8000
+}
+
+{$VENDOR_DOMAIN:vendor.vergeo5.com} {
+  import common_security
+
+  # Vendor Next.js app is built separately (standalone on OCI). Upstream set via VENDOR_UPSTREAM.
+  reverse_proxy {$VENDOR_UPSTREAM:host.docker.internal:3001}
+}
+
+{$ADMIN_DOMAIN:admin.vergeo5.com} {
+  import common_security
+
+  # D20: admin is a separate hardened origin — IP allowlist placeholder (set ADMIN_ALLOWED_IPS at deploy).
+  # Consider Cloudflare Access in addition to CIDR allowlisting.
+  @allowed remote_ip {$ADMIN_ALLOWED_IPS:127.0.0.1/32}
+
+  handle @allowed {
+    reverse_proxy {$ADMIN_UPSTREAM:host.docker.internal:3002}
+  }
+
+  handle {
+    respond "Forbidden" 403
+  }
+}
+
+{$N8N_DOMAIN:n8n.vergeo5.com} {
+  import common_security
+
+  reverse_proxy n8n:5678
+}
