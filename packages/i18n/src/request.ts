@@ -23,7 +23,7 @@ export const NAMESPACES = [
 
 export type Namespace = (typeof NAMESPACES)[number];
 
-type Messages = Record<string, string>;
+type Messages = { [key: string]: string | Messages };
 
 const namespaceCache = new Map<string, Messages>();
 
@@ -106,6 +106,21 @@ function parseMessageKey(key: string): { namespace: Namespace; messageKey: strin
   return { namespace: "common", messageKey: key };
 }
 
+function getMessage(messages: Messages, key: string): string | undefined {
+  const direct = messages[key];
+  if (typeof direct === "string") {
+    return direct;
+  }
+  let node: string | Messages | undefined = messages;
+  for (const part of key.split(".")) {
+    if (typeof node !== "object" || node === undefined) {
+      return undefined;
+    }
+    node = node[part];
+  }
+  return typeof node === "string" ? node : undefined;
+}
+
 export async function resolveMessage(
   locale: Locale,
   key: string,
@@ -116,7 +131,8 @@ export async function resolveMessage(
   const fallbackMessages =
     locale === DEFAULT_LOCALE ? messages : await loadNamespace(DEFAULT_LOCALE, namespace);
 
-  const template = messages[messageKey] ?? fallbackMessages[messageKey] ?? key;
+  const template =
+    getMessage(messages, messageKey) ?? getMessage(fallbackMessages, messageKey) ?? key;
   return interpolate(template, values);
 }
 
