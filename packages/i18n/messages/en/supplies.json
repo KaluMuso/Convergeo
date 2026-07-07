@@ -1,0 +1,5 @@
+{
+  "supplies.title": "Supplies",
+  "supplies.tier.price": "From {amount} at {qty}+ units",
+  "supplies.moq": "Minimum order: {qty} units"
+}

@@ -1,0 +1,5 @@
+{
+  "vendor.dashboard.title": "Vendor dashboard",
+  "vendor.listings.count": "{count, plural, one {# listing} other {# listings}}",
+  "vendor.payout.pending": "Pending payout: {amount}"
+}

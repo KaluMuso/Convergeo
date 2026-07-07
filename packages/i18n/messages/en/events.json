@@ -1,0 +1,5 @@
+{
+  "events.title": "Events",
+  "events.tickets.remaining": "{count, plural, one {# ticket left} other {# tickets left}}",
+  "events.date": "On {date} at {venue}"
+}

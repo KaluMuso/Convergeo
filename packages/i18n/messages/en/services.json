@@ -1,0 +1,5 @@
+{
+  "services.title": "Services",
+  "services.rfq.sent": "RFQ sent to {count, plural, one {# vendor} other {# vendors}}",
+  "services.quote.received": "Quote from {vendor}: {amount}"
+}

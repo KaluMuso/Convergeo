@@ -1,0 +1,5 @@
+{
+  "account.title": "My account",
+  "account.profile.updated": "Profile updated for {name}",
+  "account.address.count": "{count, plural, one {# saved address} other {# saved addresses}}"
+}

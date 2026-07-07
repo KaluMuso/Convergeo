@@ -1,0 +1,5 @@
+{
+  "directory.title": "Business directory",
+  "directory.results": "{count, plural, one {# business} other {# businesses}} in {city}",
+  "directory.verified": "Verified since {year}"
+}
