@@ -1,17 +1,21 @@
 from __future__ import annotations
 
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from typing import Literal, Self
 
 from pydantic import Field, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.media.cloudinary_signing import parse_cloudinary_url
+
 SECRET_FIELDS = frozenset(
     {
         "supabase_service_role_key",
         "supabase_anon_key",
+        "cloudinary_url",
         "SUPABASE_SERVICE_ROLE_KEY",
         "SUPABASE_ANON_KEY",
+        "CLOUDINARY_URL",
     }
 )
 
@@ -28,6 +32,7 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS",
         default="http://localhost:3000,http://localhost:3001,http://localhost:3002",
     )
+    cloudinary_url: str = Field(alias="CLOUDINARY_URL", default="")
 
     @model_validator(mode="after")
     def validate_cors_origins(self) -> Self:
@@ -40,6 +45,24 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @cached_property
+    def cloudinary_cloud_name(self) -> str:
+        return self._cloudinary_credentials[0]
+
+    @cached_property
+    def cloudinary_api_key(self) -> str:
+        return self._cloudinary_credentials[1]
+
+    @cached_property
+    def cloudinary_api_secret(self) -> str:
+        return self._cloudinary_credentials[2]
+
+    @cached_property
+    def _cloudinary_credentials(self) -> tuple[str, str, str]:
+        if not self.cloudinary_url:
+            raise ValueError("CLOUDINARY_URL is required for media signing")
+        return parse_cloudinary_url(self.cloudinary_url)
 
 
 def format_settings_error(error: ValidationError) -> str:
