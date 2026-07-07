@@ -1,0 +1,7 @@
+{
+  "app.name": "Vergeo5",
+  "common.loading": "Loading…",
+  "common.retry": "Try again",
+  "nav.home": "Home",
+  "greeting": "Hello, {name}!"
+}
