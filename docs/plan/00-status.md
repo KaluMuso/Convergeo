@@ -1,6 +1,6 @@
 # Vergeo5 — Project Status
 
-**Updated:** 2026-07-07 · **Mode:** GATED · **Current phase:** Phase 3 ▶ **Wave 2 prompts ready — dispatch all 7 in PARALLEL from `master`** (`prompts/M02-P03..P06`, `M02-P08`, `M03-P02`, `M03-P03`). Wave 1 merged & reviewed (all ✅). Pre-wave enabler on master: @vergeo/ui test toolchain (react+RTL+jsdom devDeps, `./src/*` wildcard export, jsx react-jsx) so no Wave-2 pebble touches pnpm-lock/package.json; component tests use a `// @vitest-environment jsdom` docblock (no vitest.config.ts — it breaks the snapshot client).
+**Updated:** 2026-07-07 · **Mode:** GATED · **Current phase:** Phase 3 ▶ **Wave 3 prompts ready — dispatch all 5 in PARALLEL from `master`** (`prompts/M02-P07`, `M03-P04`, `M04-P01`, `M05-P10`, `M15-P06`). Wave 2 merged & reviewed (all ✅). File-ownership verified disjoint (zero exact-path collisions).
 
 ## ⚠ ORCHESTRATION RULE (violated twice — fix in Cursor before Wave 2)
 
@@ -17,6 +17,36 @@
 | M03-P07 config   | ✅ APPROVED        | platform_config authenticated-select deviation accepted (API reads via service role); placeholder zone fees fine, admin-editable     |
 
 **Convergence fixes applied on master:** db.ts = union of both hand-generated halves (0002+0008, compiles; CI db job regenerates authoritatively) · config.toml PG 15 kept over PG 16 (no Supabase 16 image) · common.json nesting + resolveMessage dot-path walk. Full suite green: 32 tests, typecheck 7/7, lint 4/4.
+
+## Phase 4 verdicts — Wave 2 (2026-07-07)
+
+| Report                         | Verdict            | Notes                                                                                                                                                                                                               |
+| ------------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M02-P03 forms                  | ✅ APPROVED        | 27 tests; OTP paste/auto-advance solid; native inputs, ≥44px                                                                                                                                                        |
+| M02-P04 cards/price            | ✅ APPROVED w/ fix | 🟡 inlined a copy of formatK (claimed rootDir blocked workspace import) — **fixed on master**: dropped ui `rootDir` (no-op under noEmit), added `@vergeo/i18n` dep, imported the real formatK. One money path again |
+| M02-P05 overlays               | ✅ APPROVED        | 32 tests; focus-trap/scroll-lock/drag-dismiss/toast-queue all covered                                                                                                                                               |
+| M02-P06 nav                    | ✅ APPROVED        | 20 tests; config-driven BottomNav, load-more primary, LinkComponent seam                                                                                                                                            |
+| M02-P08 media                  | ✅ APPROVED        | 21 tests; `sanitizePublicId` neutralizes protocol smuggling; 360/720/1080 srcset + LQIP                                                                                                                             |
+| M03-P02 catalog (0003)         | ✅ APPROVED        | 18 assertions; ≤8-image + status guard triggers; EXPLAIN shows index use; moderation status pinned                                                                                                                  |
+| M03-P03 services/events (0004) | ✅ APPROVED        | 17 tests; **quote-privacy proven** (provider A cannot read B's quote); ticket secrets holder/organiser-only; free-RSVP price-0 constraint                                                                           |
+
+**Convergence fixes on master (verified: 123 ui tests, suite 10/10, typecheck 7/7, 3 app builds):**
+
+- **CI db job was broken** — ran `supabase db reset` without `supabase db start` (the failure that forced PR #32's admin-override merge). Added `supabase db start` first.
+- **formatK de-duplicated** (M02-P04) — removed the inlined copy, imported `@vergeo/i18n`; removed ui `rootDir`.
+- **db.ts** = union of catalog (0003) + services/events (0004) tables (both hand-generated in-cloud; CI db job regenerates authoritatively).
+
+> **Wave-2 orchestration: FIXED.** All 7 PRs (#26,#34,#33,#28,#27,#31,#32) branched from and merged to `master` correctly — the branch-target rule held. One residual: PR #32 needed admin-override due to the CI db-job bug (now fixed) + a db.ts conflict with #31 (resolved by combining table sets).
+
+## Wave-3 grounding audit (2026-07-07)
+
+Before writing the 5 Wave-3 prompts, audited the real merged tree (Workflow harness hit a permission-stream error → done via direct parallel reads). Findings baked into the prompts:
+
+- **M05-P10 duplication caught**: the planned `packages/ui/src/media/url.ts` already exists as merged `cloudinary-url.ts` (M02-P08) → prompt owns ONLY the backend signing endpoint + docs; the existing file IS the D26 seam.
+- **M15-P06 flat-key bug caught**: `legal.json` has flat dotted keys (next-intl nests on dots — same class as the `common.json` fix) → prompt must nest it.
+- **M04-P01 grounded**: config.toml already has a full `[auth]` section (edit surgically); Africa's Talking → Send SMS Hook (not a built-in provider); profile-bootstrap = migration `0010` (trigger on auth.users); env names reused (`AT_API_KEY` etc.); sole owner of config.toml this wave.
+- **Auth seam**: M04-P02 (API auth dependency) not merged → M05-P10 signing authz gates behind a documented, injectable seam.
+- **M04-P06 not merged** → M15-P06 privacy page links data-rights to a documented stub route `/{locale}/account/data`.
 
 ## Phase gate log
 
