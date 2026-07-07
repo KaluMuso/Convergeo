@@ -412,6 +412,78 @@ export type Database = {
           },
         ];
       };
+      addresses: {
+        Row: {
+          created_at: string;
+          id: string;
+          label: string | null;
+          landmark: string;
+          lat: number | null;
+          lng: number | null;
+          phone: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          label?: string | null;
+          landmark: string;
+          lat?: number | null;
+          lng?: number | null;
+          phone?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          label?: string | null;
+          landmark?: string;
+          lat?: number | null;
+          lng?: number | null;
+          phone?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      checkout_groups: {
+        Row: {
+          created_at: string;
+          customer_id: string;
+          delivery_fee_ngwee: number;
+          id: string;
+          idempotency_key: string;
+          status: string;
+          subtotal_ngwee: number;
+          total_ngwee: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          customer_id: string;
+          delivery_fee_ngwee: number;
+          id?: string;
+          idempotency_key: string;
+          status?: string;
+          subtotal_ngwee: number;
+          total_ngwee: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          customer_id?: string;
+          delivery_fee_ngwee?: number;
+          id?: string;
+          idempotency_key?: string;
+          status?: string;
+          subtotal_ngwee?: number;
+          total_ngwee?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       config_audit: {
         Row: {
           id: string;
@@ -710,6 +782,275 @@ export type Database = {
         };
         Relationships: [];
       };
+      order_events: {
+        Row: {
+          actor: string | null;
+          created_at: string;
+          from_status: string | null;
+          id: string;
+          note: string | null;
+          order_id: string;
+          to_status: string | null;
+        };
+        Insert: {
+          actor?: string | null;
+          created_at?: string;
+          from_status?: string | null;
+          id?: string;
+          note?: string | null;
+          order_id: string;
+          to_status?: string | null;
+        };
+        Update: {
+          actor?: string | null;
+          created_at?: string;
+          from_status?: string | null;
+          id?: string;
+          note?: string | null;
+          order_id?: string;
+          to_status?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_events_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      order_item_products: {
+        Row: {
+          listing_id: string;
+          order_item_id: string;
+          product_id: string | null;
+        };
+        Insert: {
+          listing_id: string;
+          order_item_id: string;
+          product_id?: string | null;
+        };
+        Update: {
+          listing_id?: string;
+          order_item_id?: string;
+          product_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_item_products_listing_id_fkey";
+            columns: ["listing_id"];
+            isOneToOne: false;
+            referencedRelation: "vendor_listings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_item_products_order_item_id_fkey";
+            columns: ["order_item_id"];
+            isOneToOne: true;
+            referencedRelation: "order_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_item_products_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      order_item_services: {
+        Row: {
+          job_id: string | null;
+          order_item_id: string;
+          quote_id: string | null;
+        };
+        Insert: {
+          job_id?: string | null;
+          order_item_id: string;
+          quote_id?: string | null;
+        };
+        Update: {
+          job_id?: string | null;
+          order_item_id?: string;
+          quote_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_item_services_job_id_fkey";
+            columns: ["job_id"];
+            isOneToOne: false;
+            referencedRelation: "jobs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_item_services_order_item_id_fkey";
+            columns: ["order_item_id"];
+            isOneToOne: true;
+            referencedRelation: "order_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_item_services_quote_id_fkey";
+            columns: ["quote_id"];
+            isOneToOne: false;
+            referencedRelation: "job_quotes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      order_item_tickets: {
+        Row: {
+          instance_id: string;
+          order_item_id: string;
+          ticket_type_id: string;
+        };
+        Insert: {
+          instance_id: string;
+          order_item_id: string;
+          ticket_type_id: string;
+        };
+        Update: {
+          instance_id?: string;
+          order_item_id?: string;
+          ticket_type_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_item_tickets_instance_id_fkey";
+            columns: ["instance_id"];
+            isOneToOne: false;
+            referencedRelation: "event_instances";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_item_tickets_order_item_id_fkey";
+            columns: ["order_item_id"];
+            isOneToOne: true;
+            referencedRelation: "order_items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "order_item_tickets_ticket_type_id_fkey";
+            columns: ["ticket_type_id"];
+            isOneToOne: false;
+            referencedRelation: "ticket_types";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      order_items: {
+        Row: {
+          created_at: string;
+          id: string;
+          item_kind: string;
+          order_id: string;
+          qty: number;
+          title_snapshot: string | null;
+          unit_price_ngwee: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          item_kind: string;
+          order_id: string;
+          qty: number;
+          title_snapshot?: string | null;
+          unit_price_ngwee: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          item_kind?: string;
+          order_id?: string;
+          qty?: number;
+          title_snapshot?: string | null;
+          unit_price_ngwee?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      orders: {
+        Row: {
+          address_id: string | null;
+          checkout_group_id: string;
+          cod: boolean;
+          commission_snapshot: Json;
+          created_at: string;
+          customer_id: string;
+          delivery_fee_ngwee: number;
+          delivery_zone: string | null;
+          fulfilment: string;
+          id: string;
+          status: string;
+          updated_at: string;
+          vendor_id: string;
+        };
+        Insert: {
+          address_id?: string | null;
+          checkout_group_id: string;
+          cod?: boolean;
+          commission_snapshot?: Json;
+          created_at?: string;
+          customer_id: string;
+          delivery_fee_ngwee?: number;
+          delivery_zone?: string | null;
+          fulfilment: string;
+          id?: string;
+          status?: string;
+          updated_at?: string;
+          vendor_id: string;
+        };
+        Update: {
+          address_id?: string | null;
+          checkout_group_id?: string;
+          cod?: boolean;
+          commission_snapshot?: Json;
+          created_at?: string;
+          customer_id?: string;
+          delivery_fee_ngwee?: number;
+          delivery_zone?: string | null;
+          fulfilment?: string;
+          id?: string;
+          status?: string;
+          updated_at?: string;
+          vendor_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "orders_address_id_fkey";
+            columns: ["address_id"];
+            isOneToOne: false;
+            referencedRelation: "addresses";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_checkout_group_id_fkey";
+            columns: ["checkout_group_id"];
+            isOneToOne: false;
+            referencedRelation: "checkout_groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "orders_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       platform_config: {
         Row: {
           key: string;
@@ -862,6 +1203,51 @@ export type Database = {
           },
         ];
       };
+      stock_reservations: {
+        Row: {
+          checkout_group_id: string;
+          created_at: string;
+          expires_at: string;
+          id: string;
+          listing_id: string;
+          qty: number;
+          updated_at: string;
+        };
+        Insert: {
+          checkout_group_id: string;
+          created_at?: string;
+          expires_at: string;
+          id?: string;
+          listing_id: string;
+          qty: number;
+          updated_at?: string;
+        };
+        Update: {
+          checkout_group_id?: string;
+          created_at?: string;
+          expires_at?: string;
+          id?: string;
+          listing_id?: string;
+          qty?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "stock_reservations_checkout_group_id_fkey";
+            columns: ["checkout_group_id"];
+            isOneToOne: false;
+            referencedRelation: "checkout_groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "stock_reservations_listing_id_fkey";
+            columns: ["listing_id"];
+            isOneToOne: false;
+            referencedRelation: "vendor_listings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       ticket_types: {
         Row: {
           created_at: string;
@@ -949,6 +1335,13 @@ export type Database = {
             columns: ["instance_id"];
             isOneToOne: false;
             referencedRelation: "event_instances";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tickets_order_item_id_fkey";
+            columns: ["order_item_id"];
+            isOneToOne: false;
+            referencedRelation: "order_items";
             referencedColumns: ["id"];
           },
           {
