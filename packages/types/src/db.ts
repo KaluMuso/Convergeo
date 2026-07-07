@@ -469,6 +469,184 @@ export type Database = {
         };
         Relationships: [];
       };
+      event_instances: {
+        Row: {
+          capacity: number;
+          created_at: string;
+          event_id: string;
+          id: string;
+          starts_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          capacity: number;
+          created_at?: string;
+          event_id: string;
+          id?: string;
+          starts_at: string;
+          updated_at?: string;
+        };
+        Update: {
+          capacity?: number;
+          created_at?: string;
+          event_id?: string;
+          id?: string;
+          starts_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "event_instances_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      events: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          id: string;
+          images: string[];
+          lat: number | null;
+          lng: number | null;
+          organiser_vendor_id: string;
+          slug: string;
+          status: string;
+          title: string;
+          updated_at: string;
+          venue: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          images?: string[];
+          lat?: number | null;
+          lng?: number | null;
+          organiser_vendor_id: string;
+          slug: string;
+          status?: string;
+          title: string;
+          updated_at?: string;
+          venue?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          description?: string | null;
+          id?: string;
+          images?: string[];
+          lat?: number | null;
+          lng?: number | null;
+          organiser_vendor_id?: string;
+          slug?: string;
+          status?: string;
+          title?: string;
+          updated_at?: string;
+          venue?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "events_organiser_vendor_id_fkey";
+            columns: ["organiser_vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      job_quotes: {
+        Row: {
+          amount_ngwee: number;
+          created_at: string;
+          expires_at: string | null;
+          id: string;
+          job_id: string;
+          message: string | null;
+          provider_vendor_id: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          amount_ngwee: number;
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          job_id: string;
+          message?: string | null;
+          provider_vendor_id: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          amount_ngwee?: number;
+          created_at?: string;
+          expires_at?: string | null;
+          id?: string;
+          job_id?: string;
+          message?: string | null;
+          provider_vendor_id?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "job_quotes_job_id_fkey";
+            columns: ["job_id"];
+            isOneToOne: false;
+            referencedRelation: "jobs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "job_quotes_provider_vendor_id_fkey";
+            columns: ["provider_vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      jobs: {
+        Row: {
+          budget_band_max_ngwee: number | null;
+          budget_band_min_ngwee: number | null;
+          category: string;
+          created_at: string;
+          customer_id: string;
+          description: string;
+          id: string;
+          preferred_date: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          budget_band_max_ngwee?: number | null;
+          budget_band_min_ngwee?: number | null;
+          category: string;
+          created_at?: string;
+          customer_id: string;
+          description: string;
+          id?: string;
+          preferred_date?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          budget_band_max_ngwee?: number | null;
+          budget_band_min_ngwee?: number | null;
+          category?: string;
+          created_at?: string;
+          customer_id?: string;
+          description?: string;
+          id?: string;
+          preferred_date?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       feature_flags: {
         Row: {
           flag: string;
@@ -630,6 +808,154 @@ export type Database = {
             columns: ["merged_into_id"];
             isOneToOne: false;
             referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      services: {
+        Row: {
+          category: string;
+          created_at: string;
+          description: string | null;
+          from_price_ngwee: number | null;
+          id: string;
+          portfolio_images: string[];
+          service_area: string | null;
+          status: string;
+          title: string;
+          updated_at: string;
+          vendor_id: string;
+        };
+        Insert: {
+          category: string;
+          created_at?: string;
+          description?: string | null;
+          from_price_ngwee?: number | null;
+          id?: string;
+          portfolio_images?: string[];
+          service_area?: string | null;
+          status?: string;
+          title: string;
+          updated_at?: string;
+          vendor_id: string;
+        };
+        Update: {
+          category?: string;
+          created_at?: string;
+          description?: string | null;
+          from_price_ngwee?: number | null;
+          id?: string;
+          portfolio_images?: string[];
+          service_area?: string | null;
+          status?: string;
+          title?: string;
+          updated_at?: string;
+          vendor_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "services_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      ticket_types: {
+        Row: {
+          created_at: string;
+          event_id: string;
+          id: string;
+          kind: string;
+          name: string;
+          price_ngwee: number;
+          qty_cap: number | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          event_id: string;
+          id?: string;
+          kind: string;
+          name: string;
+          price_ngwee: number;
+          qty_cap?: number | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          event_id?: string;
+          id?: string;
+          kind?: string;
+          name?: string;
+          price_ngwee?: number;
+          qty_cap?: number | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ticket_types_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      tickets: {
+        Row: {
+          checked_in_at: string | null;
+          created_at: string;
+          holder_user_id: string;
+          id: string;
+          instance_id: string;
+          order_item_id: string | null;
+          pin_hash: string | null;
+          qr_secret: string | null;
+          status: string;
+          ticket_type_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          checked_in_at?: string | null;
+          created_at?: string;
+          holder_user_id: string;
+          id?: string;
+          instance_id: string;
+          order_item_id?: string | null;
+          pin_hash?: string | null;
+          qr_secret?: string | null;
+          status?: string;
+          ticket_type_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          checked_in_at?: string | null;
+          created_at?: string;
+          holder_user_id?: string;
+          id?: string;
+          instance_id?: string;
+          order_item_id?: string | null;
+          pin_hash?: string | null;
+          qr_secret?: string | null;
+          status?: string;
+          ticket_type_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tickets_instance_id_fkey";
+            columns: ["instance_id"];
+            isOneToOne: false;
+            referencedRelation: "event_instances";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "tickets_ticket_type_id_fkey";
+            columns: ["ticket_type_id"];
+            isOneToOne: false;
+            referencedRelation: "ticket_types";
             referencedColumns: ["id"];
           },
         ];
