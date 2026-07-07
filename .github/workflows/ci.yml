@@ -187,3 +187,24 @@ jobs:
             "apps/admin/app" \
             --config .github/i18n-eslint.ci.mjs \
             --max-warnings 9999
+
+  db:
+    name: Database / typegen drift
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+
+      - name: Reset local database
+        run: supabase db reset --no-seed
+
+      - name: Regenerate types
+        run: bash scripts/gen-types.sh
+
+      - name: Fail on stale committed types
+        run: git diff --exit-code packages/types/src/db.ts

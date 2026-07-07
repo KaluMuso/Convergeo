@@ -12,7 +12,8 @@
   "scripts": {
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "gen:types": "bash ../../scripts/gen-types.sh"
   },
   "devDependencies": {
     "vitest": "^3.0.9"
