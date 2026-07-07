@@ -8,8 +8,8 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "prettier --config packages/config/prettier.config.mjs --write .",
+    "format:check": "prettier --config packages/config/prettier.config.mjs --check .",
     "verify-scaffold": "node scripts/verify-scaffold.mjs",
     "prepare": "lefthook install"
   },
@@ -29,6 +29,6 @@
     "typescript-eslint": "^8.28.0"
   },
   "lint-staged": {
-    "*": "prettier --write --ignore-unknown"
+    "*": "prettier --config packages/config/prettier.config.mjs --write --ignore-unknown"
   }
 }
