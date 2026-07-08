@@ -258,7 +258,7 @@ def config_store(monkeypatch: pytest.MonkeyPatch) -> FakeConfigStore:
     service_client = FakeServiceClient()
     store.audit_rows = audit_rows  # type: ignore[attr-defined]
     monkeypatch.setattr(
-        "app.routers.admin_config.get_supabase_service_client",
+        "app.deps.get_supabase_service_client",
         lambda: service_client,
     )
     monkeypatch.setattr(

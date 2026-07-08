@@ -4,9 +4,9 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
+from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
-from app.supabase_client import SupabaseServiceClient, get_supabase_service_client
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
@@ -189,7 +189,7 @@ def _extract_json_int(value: Any) -> int:
     )
 
 
-def _table(client: SupabaseServiceClient, name: str) -> Any:
+def _table(client: Any, name: str) -> Any:
     return client.client.table(name)
 
 
@@ -308,7 +308,7 @@ class CategoryReorderRequest(BaseModel):
 # ---------------------------------------------------------------------------
 @config_router.get("/commissions", response_model=list[CommissionRateOut])
 async def list_commission_rates(
-    service_client: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> list[CommissionRateOut]:
     response = (
         _table(service_client, "commission_rates")
@@ -325,7 +325,7 @@ async def update_commission_rate(
     category_key: str,
     body: CommissionRateUpdate,
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
-    service_client: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> CommissionRateOut:
     validate_rate_bps(body.rate_bps)
 
@@ -367,7 +367,7 @@ async def update_commission_rate(
 # ---------------------------------------------------------------------------
 @config_router.get("/delivery-zones", response_model=list[DeliveryZoneOut])
 async def list_delivery_zones(
-    service_client: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> list[DeliveryZoneOut]:
     response = _table(service_client, "delivery_zones").select("*").order("zone_key").execute()
     rows = response.data if isinstance(response.data, list) else []
@@ -379,7 +379,7 @@ async def update_delivery_zone(
     zone_key: str,
     body: DeliveryZoneUpdate,
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
-    service_client: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> DeliveryZoneOut:
     if body.fee_ngwee is not None:
         validate_zone_fee_ngwee(body.fee_ngwee)
@@ -433,7 +433,7 @@ async def update_delivery_zone(
 # ---------------------------------------------------------------------------
 @config_router.get("/platform", response_model=list[PlatformConfigOut])
 async def list_platform_config(
-    service_client: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> list[PlatformConfigOut]:
     response = (
         _table(service_client, "platform_config")
@@ -460,7 +460,7 @@ async def update_platform_config(
     key: str,
     body: PlatformConfigUpdate,
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
-    service_client: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> PlatformConfigOut:
     if key not in EDITABLE_PLATFORM_KEYS:
         raise AppError(
@@ -507,7 +507,7 @@ async def update_platform_config(
 # ---------------------------------------------------------------------------
 @config_router.get("/flags", response_model=list[FeatureFlagOut])
 async def list_feature_flags(
-    service_client: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> list[FeatureFlagOut]:
     response = _table(service_client, "feature_flags").select("*").order("flag").execute()
     rows = response.data if isinstance(response.data, list) else []
@@ -519,7 +519,7 @@ async def update_feature_flag(
     flag: str,
     body: FeatureFlagUpdate,
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
-    service_client: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> FeatureFlagOut:
     before_row = _single_row(
         _table(service_client, "feature_flags").select("*").eq("flag", flag).execute().data,
@@ -549,7 +549,7 @@ async def update_feature_flag(
 # ---------------------------------------------------------------------------
 # Category tree
 # ---------------------------------------------------------------------------
-def _load_categories(service_client: SupabaseServiceClient) -> list[dict[str, Any]]:
+def _load_categories(service_client: Any) -> list[dict[str, Any]]:
     response = (
         _table(service_client, "categories")
         .select(
@@ -594,14 +594,14 @@ def _descendant_ids(categories: list[dict[str, Any]], root_id: str) -> list[str]
 
 @config_router.get("/categories", response_model=list[CategoryOut])
 async def list_categories(
-    service_client: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> list[CategoryOut]:
     rows = _load_categories(service_client)
     return [CategoryOut.model_validate(row) for row in rows]
 
 
 def _apply_category_parent_change(
-    service_client: SupabaseServiceClient,
+    service_client: Any,
     *,
     category_id: str,
     new_parent_id: str | None,
@@ -715,7 +715,7 @@ async def update_category(
     category_id: UUID,
     body: CategoryUpdate,
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
-    service_client: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> CategoryOut:
     category_id_str = str(category_id)
     categories = _load_categories(service_client)
@@ -770,7 +770,7 @@ async def update_category(
 async def reorder_categories(
     body: CategoryReorderRequest,
     recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
-    service_client: Annotated[SupabaseServiceClient, Depends(get_supabase_service_client)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> list[CategoryOut]:
     categories = _load_categories(service_client)
     before_snapshot = [dict(row) for row in categories]
