@@ -1,0 +1,249 @@
+{
+  "vendors": [
+    {
+      "id_key": "demo_sandbox",
+      "owner_key": "admin",
+      "slug": "demo-sandbox",
+      "display_name": "Demo Sandbox Shop",
+      "description": "Sandbox vendor for demos and QA",
+      "status": "active",
+      "kyc_tier": 1,
+      "caps_snapshot": { "sandbox": true }
+    },
+    {
+      "id_key": "shop_a",
+      "owner_key": "vendor_a_owner",
+      "slug": "lusaka-electronics",
+      "display_name": "Lusaka Electronics Hub",
+      "description": "Phones, accessories, and gadgets",
+      "status": "active",
+      "kyc_tier": 2,
+      "caps_snapshot": {}
+    },
+    {
+      "id_key": "shop_b",
+      "owner_key": "vendor_b_owner",
+      "slug": "zed-fashion",
+      "display_name": "Zed Fashion House",
+      "description": "Chitenge, fabrics, and tailoring supplies",
+      "status": "active",
+      "kyc_tier": 2,
+      "caps_snapshot": {}
+    }
+  ],
+  "vendor_locations": [
+    {
+      "id": "b0000000-0000-0000-0000-000000000001",
+      "vendor_key": "shop_a",
+      "lat": -15.4167,
+      "lng": 28.2833,
+      "landmark": "East Park Mall, Lusaka"
+    },
+    {
+      "id": "b0000000-0000-0000-0000-000000000002",
+      "vendor_key": "shop_b",
+      "lat": -15.3875,
+      "lng": 28.3228,
+      "landmark": "Kabulonga, Lusaka"
+    }
+  ],
+  "categories": [
+    {
+      "id_key": "electronics",
+      "name": "Electronics",
+      "slug": "electronics",
+      "path": "electronics",
+      "commission_key": "electronics"
+    },
+    {
+      "id_key": "fashion",
+      "name": "Fashion & Beauty",
+      "slug": "fashion-beauty",
+      "path": "fashion-beauty",
+      "commission_key": "fashion_beauty"
+    },
+    {
+      "id_key": "services",
+      "name": "Services",
+      "slug": "services",
+      "path": "services",
+      "commission_key": "services"
+    }
+  ],
+  "products": [
+    {
+      "id_key": "phone",
+      "name": "Smartphone X1",
+      "slug": "smartphone-x1",
+      "category_key": "electronics",
+      "status": "active",
+      "aliases": ["foni", "phone"]
+    },
+    {
+      "id_key": "chitenge",
+      "name": "Premium Chitenge Fabric",
+      "slug": "premium-chitenge",
+      "category_key": "fashion",
+      "status": "active",
+      "aliases": ["chitenge", "chitange"]
+    }
+  ],
+  "listings": [
+    {
+      "id_key": "phone_a",
+      "vendor_key": "shop_a",
+      "product_key": "phone",
+      "title_override": "Smartphone X1 — 128GB",
+      "price_ngwee": 450000,
+      "condition": "new",
+      "stock_mode": "tracked",
+      "stock_qty": 12,
+      "status": "active"
+    },
+    {
+      "id_key": "chitenge_b",
+      "vendor_key": "shop_b",
+      "product_key": "chitenge",
+      "title_override": "Premium Chitenge — 6 yards",
+      "price_ngwee": 85000,
+      "condition": "new",
+      "stock_mode": "tracked",
+      "stock_qty": 40,
+      "status": "active"
+    },
+    {
+      "id_key": "demo_gadget",
+      "vendor_key": "demo_sandbox",
+      "product_key": "phone",
+      "title_override": "Demo Gadget (sandbox)",
+      "price_ngwee": 10000,
+      "condition": "new",
+      "stock_mode": "always_available",
+      "stock_qty": 0,
+      "status": "active"
+    }
+  ],
+  "listing_images": [
+    {
+      "id": "b2000000-0000-0000-0000-000000000001",
+      "listing_key": "phone_a",
+      "cloudinary_public_id": "vergeo5/demo/phone-a",
+      "position": 1
+    },
+    {
+      "id": "b2000000-0000-0000-0000-000000000002",
+      "listing_key": "chitenge_b",
+      "cloudinary_public_id": "vergeo5/demo/chitenge-b",
+      "position": 1
+    }
+  ],
+  "services": [
+    {
+      "id_key": "plumbing",
+      "vendor_key": "shop_a",
+      "category": "plumbing",
+      "title": "Emergency Plumbing",
+      "description": "Leaks, blockages, and geyser installs in Lusaka",
+      "service_area": "Lusaka",
+      "from_price_ngwee": 150000,
+      "status": "active"
+    }
+  ],
+  "events": [
+    {
+      "id_key": "festival",
+      "organiser_key": "shop_b",
+      "title": "Zed Summer Festival",
+      "slug": "zed-summer-festival",
+      "venue": "Lusaka Showgrounds",
+      "lat": -15.4167,
+      "lng": 28.2833,
+      "status": "published"
+    }
+  ],
+  "event_instances": [
+    {
+      "id_key": "festival_night",
+      "event_key": "festival",
+      "starts_at": "2026-08-15T18:00:00Z",
+      "capacity": 500
+    }
+  ],
+  "ticket_types": [
+    {
+      "id_key": "ga",
+      "event_key": "festival",
+      "kind": "fixed",
+      "name": "General Admission",
+      "price_ngwee": 75000,
+      "qty_cap": 400
+    }
+  ],
+  "jobs": [
+    {
+      "id_key": "open_job",
+      "customer_key": "customer_a",
+      "category": "plumbing",
+      "description": "Kitchen sink blocked — need plumber this week",
+      "budget_band_min_ngwee": 100000,
+      "budget_band_max_ngwee": 250000,
+      "status": "open"
+    }
+  ],
+  "job_quotes": [
+    {
+      "id_key": "quote_a",
+      "job_key": "open_job",
+      "provider_key": "shop_a",
+      "amount_ngwee": 180000,
+      "message": "Can attend tomorrow morning",
+      "status": "submitted"
+    },
+    {
+      "id_key": "quote_b",
+      "job_key": "open_job",
+      "provider_key": "shop_b",
+      "amount_ngwee": 200000,
+      "message": "Available Friday",
+      "status": "submitted"
+    }
+  ],
+  "orders": [
+    {
+      "id_key": "pending",
+      "checkout_group_key": "pending",
+      "vendor_key": "shop_a",
+      "customer_key": "customer_a",
+      "status": "placed",
+      "fulfilment": "delivery",
+      "delivery_zone": "lusaka_central"
+    },
+    {
+      "id_key": "paid",
+      "checkout_group_key": "paid",
+      "vendor_key": "shop_a",
+      "customer_key": "customer_a",
+      "status": "confirmed",
+      "fulfilment": "pickup",
+      "delivery_zone": null
+    },
+    {
+      "id_key": "delivered",
+      "checkout_group_key": "paid",
+      "vendor_key": "shop_b",
+      "customer_key": "customer_a",
+      "status": "delivered",
+      "fulfilment": "delivery",
+      "delivery_zone": "lusaka_central"
+    },
+    {
+      "id_key": "completed",
+      "checkout_group_key": "paid",
+      "vendor_key": "shop_b",
+      "customer_key": "customer_b",
+      "status": "completed",
+      "fulfilment": "pickup",
+      "delivery_zone": null
+    }
+  ]
+}
