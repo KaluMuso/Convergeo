@@ -169,7 +169,7 @@ jobs:
       - name: Run hardcoded-string lint (warn)
         run: |
           cat > .github/i18n-eslint.ci.mjs <<'EOF'
-          import plugin from "../packages/i18n/eslint-no-hardcoded-strings.js";
+          import plugin from "../packages/config/eslint-rules/no-hardcoded-strings.js";
           import tseslint from "typescript-eslint";
 
           export default tseslint.config(
