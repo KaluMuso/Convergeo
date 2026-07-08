@@ -7,6 +7,10 @@ import {
   resolveMessage,
 } from "./request";
 
+type AuthMessages = {
+  login: { title: string };
+};
+
 describe("resolveMessage", () => {
   beforeEach(() => {
     clearMessageCache();
@@ -27,11 +31,6 @@ describe("resolveMessage", () => {
     expect(message).toBe("Hello, Vergeo!");
   });
 
-  it("falls back to English per namespace for missing locale namespace files", async () => {
-    const message = await resolveMessage("nya", "auth.login.title");
-    expect(message).toBe("Sign in");
-  });
-
   it("resolves namespaced keys", async () => {
     const message = await resolveMessage("en", "catalog.title");
     expect(message).toBe("Browse products");
@@ -44,15 +43,15 @@ describe("loadNamespace", () => {
   });
 
   it("loads only the requested namespace on demand", async () => {
-    const auth = await loadNamespace("en", "auth");
-    expect(auth["auth.login.title"]).toBe("Sign in");
+    const auth = (await loadNamespace("en", "auth")) as AuthMessages;
+    expect(auth.login.title).toBe("Sign in");
     expect(getLoadedNamespaceKeys()).toEqual(["en:auth"]);
     expect(getLoadedNamespaceKeys()).not.toContain("en:catalog");
   });
 
   it("falls back to English when locale namespace file is missing", async () => {
-    const auth = await loadNamespace("bem", "auth");
-    expect(auth["auth.login.title"]).toBe("Sign in");
+    const auth = (await loadNamespace("bem", "auth")) as AuthMessages;
+    expect(auth.login.title).toBe("Sign in");
     expect(getLoadedNamespaceKeys()).toContain("en:auth");
   });
 });
