@@ -1,5 +1,24 @@
 {
-  "admin.title": "Admin console",
-  "admin.users.count": "{count, plural, one {# user} other {# users}}",
-  "admin.action.confirm": "Confirm {action}?"
+  "title": "Admin console",
+  "shell": {
+    "eyebrow": "Vergeo5 operations",
+    "environment": "Hardened admin origin",
+    "signOut": "Sign out"
+  },
+  "nav": {
+    "home": "Dashboard",
+    "kyc": "KYC queue",
+    "moderation": "Moderation",
+    "disputes": "Disputes",
+    "orders": "Orders",
+    "config": "Configuration",
+    "merch": "Merchandising",
+    "support": "Support"
+  },
+  "users": {
+    "count": "{count, plural, one {# user} other {# users}}"
+  },
+  "action": {
+    "confirm": "Confirm {action}?"
+  }
 }
