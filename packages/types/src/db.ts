@@ -448,6 +448,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      audit_log: {
+        Row: {
+          id: string;
+          actor: string | null;
+          action: string;
+          entity_type: string;
+          entity_id: string | null;
+          before: Json | null;
+          after: Json | null;
+          at: string;
+        };
+        Insert: {
+          id?: string;
+          actor?: string | null;
+          action: string;
+          entity_type: string;
+          entity_id?: string | null;
+          before?: Json | null;
+          after?: Json | null;
+          at?: string;
+        };
+        Update: {
+          id?: string;
+          actor?: string | null;
+          action?: string;
+          entity_type?: string;
+          entity_id?: string | null;
+          before?: Json | null;
+          after?: Json | null;
+          at?: string;
+        };
+        Relationships: [];
+      };
       checkout_groups: {
         Row: {
           created_at: string;
@@ -540,6 +573,50 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [];
+      };
+      disputes: {
+        Row: {
+          id: string;
+          order_id: string;
+          opener_user_id: string;
+          evidence_paths: string[];
+          vendor_response: string | null;
+          admin_decision: string | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          opener_user_id: string;
+          evidence_paths?: string[];
+          vendor_response?: string | null;
+          admin_decision?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          opener_user_id?: string;
+          evidence_paths?: string[];
+          vendor_response?: string | null;
+          admin_decision?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "disputes_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       event_instances: {
         Row: {
@@ -743,6 +820,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      flags: {
+        Row: {
+          id: string;
+          entity_type: string;
+          entity_id: string;
+          reason: string;
+          reporter_user_id: string;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          entity_type: string;
+          entity_id: string;
+          reason: string;
+          reporter_user_id: string;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          entity_type?: string;
+          entity_id?: string;
+          reason?: string;
+          reporter_user_id?: string;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       merch_slots: {
         Row: {
           id: string;
@@ -777,6 +887,45 @@ export type Database = {
           schedule_to?: string | null;
           position?: number;
           active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      notification_outbox: {
+        Row: {
+          id: string;
+          dedupe_key: string;
+          channel: string;
+          template: string | null;
+          payload: Json;
+          status: string;
+          attempts: number;
+          next_retry_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          dedupe_key: string;
+          channel: string;
+          template?: string | null;
+          payload?: Json;
+          status?: string;
+          attempts?: number;
+          next_retry_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          dedupe_key?: string;
+          channel?: string;
+          template?: string | null;
+          payload?: Json;
+          status?: string;
+          attempts?: number;
+          next_retry_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -1383,76 +1532,55 @@ export type Database = {
         };
         Relationships: [];
       };
-      audit_log: {
+      invoice_counters: {
         Row: {
-          id: string;
-          actor: string | null;
-          action: string;
-          entity_type: string;
-          entity_id: string | null;
-          before: Json | null;
-          after: Json | null;
-          at: string;
+          next_no: number;
+          series: string;
         };
         Insert: {
-          id?: string;
-          actor?: string | null;
-          action: string;
-          entity_type: string;
-          entity_id?: string | null;
-          before?: Json | null;
-          after?: Json | null;
-          at?: string;
+          next_no?: number;
+          series: string;
         };
         Update: {
-          id?: string;
-          actor?: string | null;
-          action?: string;
-          entity_type?: string;
-          entity_id?: string | null;
-          before?: Json | null;
-          after?: Json | null;
-          at?: string;
+          next_no?: number;
+          series?: string;
         };
         Relationships: [];
       };
-      disputes: {
+      invoices: {
         Row: {
-          id: string;
-          order_id: string;
-          opener_user_id: string;
-          evidence_paths: string[];
-          vendor_response: string | null;
-          admin_decision: string | null;
-          status: string;
           created_at: string;
-          updated_at: string;
+          id: string;
+          no: number;
+          order_id: string;
+          series: string;
+          snapshot: Json;
+          vat_flag: boolean;
+          vat_ngwee: number;
         };
         Insert: {
-          id?: string;
-          order_id: string;
-          opener_user_id: string;
-          evidence_paths?: string[];
-          vendor_response?: string | null;
-          admin_decision?: string | null;
-          status?: string;
           created_at?: string;
-          updated_at?: string;
+          id?: string;
+          no: number;
+          order_id: string;
+          series: string;
+          snapshot?: Json;
+          vat_flag?: boolean;
+          vat_ngwee?: number;
         };
         Update: {
-          id?: string;
-          order_id?: string;
-          opener_user_id?: string;
-          evidence_paths?: string[];
-          vendor_response?: string | null;
-          admin_decision?: string | null;
-          status?: string;
           created_at?: string;
-          updated_at?: string;
+          id?: string;
+          no?: number;
+          order_id?: string;
+          series?: string;
+          snapshot?: Json;
+          vat_flag?: boolean;
+          vat_ngwee?: number;
         };
         Relationships: [
           {
-            foreignKeyName: "disputes_order_id_fkey";
+            foreignKeyName: "invoices_order_id_fkey";
             columns: ["order_id"];
             isOneToOne: false;
             referencedRelation: "orders";
@@ -1460,77 +1588,287 @@ export type Database = {
           },
         ];
       };
-      flags: {
+      ledger_accounts: {
         Row: {
-          id: string;
-          entity_type: string;
-          entity_id: string;
-          reason: string;
-          reporter_user_id: string;
-          status: string;
           created_at: string;
+          id: string;
+          kind: string;
           updated_at: string;
+          vendor_id: string | null;
         };
         Insert: {
-          id?: string;
-          entity_type: string;
-          entity_id: string;
-          reason: string;
-          reporter_user_id: string;
-          status?: string;
           created_at?: string;
+          id?: string;
+          kind: string;
           updated_at?: string;
+          vendor_id?: string | null;
         };
         Update: {
-          id?: string;
-          entity_type?: string;
-          entity_id?: string;
-          reason?: string;
-          reporter_user_id?: string;
-          status?: string;
           created_at?: string;
+          id?: string;
+          kind?: string;
           updated_at?: string;
+          vendor_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "ledger_accounts_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+        ];
       };
-      notification_outbox: {
+      ledger_postings: {
         Row: {
-          id: string;
-          dedupe_key: string;
-          channel: string;
-          template: string | null;
-          payload: Json;
-          status: string;
-          attempts: number;
-          next_retry_at: string | null;
+          account_id: string;
+          amount_ngwee: number;
           created_at: string;
+          id: string;
+          transaction_id: string;
+        };
+        Insert: {
+          account_id: string;
+          amount_ngwee: number;
+          created_at?: string;
+          id?: string;
+          transaction_id: string;
+        };
+        Update: {
+          account_id?: string;
+          amount_ngwee?: number;
+          created_at?: string;
+          id?: string;
+          transaction_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ledger_postings_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "ledger_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ledger_postings_transaction_id_fkey";
+            columns: ["transaction_id"];
+            isOneToOne: false;
+            referencedRelation: "ledger_transactions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      ledger_transactions: {
+        Row: {
+          checkout_group_id: string | null;
+          created_at: string;
+          id: string;
+          kind: string;
+          order_id: string | null;
+          payment_id: string | null;
+          payout_id: string | null;
+          refund_id: string | null;
+        };
+        Insert: {
+          checkout_group_id?: string | null;
+          created_at?: string;
+          id?: string;
+          kind: string;
+          order_id?: string | null;
+          payment_id?: string | null;
+          payout_id?: string | null;
+          refund_id?: string | null;
+        };
+        Update: {
+          checkout_group_id?: string | null;
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          order_id?: string | null;
+          payment_id?: string | null;
+          payout_id?: string | null;
+          refund_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ledger_transactions_checkout_group_id_fkey";
+            columns: ["checkout_group_id"];
+            isOneToOne: false;
+            referencedRelation: "checkout_groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ledger_transactions_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ledger_transactions_payment_id_fkey";
+            columns: ["payment_id"];
+            isOneToOne: false;
+            referencedRelation: "payments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ledger_transactions_payout_id_fkey";
+            columns: ["payout_id"];
+            isOneToOne: false;
+            referencedRelation: "payouts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ledger_transactions_refund_id_fkey";
+            columns: ["refund_id"];
+            isOneToOne: false;
+            referencedRelation: "refunds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payments: {
+        Row: {
+          amount_ngwee: number;
+          checkout_group_id: string;
+          created_at: string;
+          id: string;
+          lenco_reference: string;
+          provider: string;
+          rail: string;
+          raw: Json;
+          status: string;
           updated_at: string;
         };
         Insert: {
-          id?: string;
-          dedupe_key: string;
-          channel: string;
-          template?: string | null;
-          payload?: Json;
-          status?: string;
-          attempts?: number;
-          next_retry_at?: string | null;
+          amount_ngwee: number;
+          checkout_group_id: string;
           created_at?: string;
+          id?: string;
+          lenco_reference: string;
+          provider: string;
+          rail: string;
+          raw?: Json;
+          status?: string;
           updated_at?: string;
         };
         Update: {
-          id?: string;
-          dedupe_key?: string;
-          channel?: string;
-          template?: string | null;
-          payload?: Json;
-          status?: string;
-          attempts?: number;
-          next_retry_at?: string | null;
+          amount_ngwee?: number;
+          checkout_group_id?: string;
           created_at?: string;
+          id?: string;
+          lenco_reference?: string;
+          provider?: string;
+          rail?: string;
+          raw?: Json;
+          status?: string;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "payments_checkout_group_id_fkey";
+            columns: ["checkout_group_id"];
+            isOneToOne: false;
+            referencedRelation: "checkout_groups";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payouts: {
+        Row: {
+          amount_ngwee: number;
+          created_at: string;
+          id: string;
+          lenco_reference: string;
+          rail: string;
+          resolve_snapshot: Json;
+          status: string;
+          updated_at: string;
+          vendor_id: string;
+        };
+        Insert: {
+          amount_ngwee: number;
+          created_at?: string;
+          id?: string;
+          lenco_reference: string;
+          rail: string;
+          resolve_snapshot?: Json;
+          status?: string;
+          updated_at?: string;
+          vendor_id: string;
+        };
+        Update: {
+          amount_ngwee?: number;
+          created_at?: string;
+          id?: string;
+          lenco_reference?: string;
+          rail?: string;
+          resolve_snapshot?: Json;
+          status?: string;
+          updated_at?: string;
+          vendor_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payouts_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      refunds: {
+        Row: {
+          amount_ngwee: number;
+          breakdown: Json;
+          created_at: string;
+          id: string;
+          lane: number;
+          order_id: string;
+          payout_ref: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          amount_ngwee: number;
+          breakdown?: Json;
+          created_at?: string;
+          id?: string;
+          lane: number;
+          order_id: string;
+          payout_ref?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          amount_ngwee?: number;
+          breakdown?: Json;
+          created_at?: string;
+          id?: string;
+          lane?: number;
+          order_id?: string;
+          payout_ref?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "refunds_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "refunds_payout_ref_fkey";
+            columns: ["payout_ref"];
+            isOneToOne: false;
+            referencedRelation: "payouts";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       returns: {
         Row: {
@@ -1699,13 +2037,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      webhook_events: {
+        Row: {
+          created_at: string;
+          event_id: string;
+          id: string;
+          processed_at: string | null;
+          provider: string;
+          raw: Json;
+          signature_valid: boolean;
+        };
+        Insert: {
+          created_at?: string;
+          event_id: string;
+          id?: string;
+          processed_at?: string | null;
+          provider: string;
+          raw?: Json;
+          signature_valid?: boolean;
+        };
+        Update: {
+          created_at?: string;
+          event_id?: string;
+          id?: string;
+          processed_at?: string | null;
+          provider?: string;
+          raw?: Json;
+          signature_valid?: boolean;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
+      expand_search_terms: { Args: { p_query: string }; Returns: string };
       has_role: { Args: { required_role: string }; Returns: boolean };
       is_valid_price_tiers: { Args: { tiers: Json }; Returns: boolean };
+      next_invoice_no: { Args: { p_series: string }; Returns: number };
       search_rrf: {
         Args: {
           query: string;
@@ -1728,7 +2098,6 @@ export type Database = {
           rrf_score: number;
         }[];
       };
-      expand_search_terms: { Args: { p_query: string }; Returns: string };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
     };

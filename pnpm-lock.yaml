@@ -50,6 +50,9 @@ importers:
 
   apps/admin:
     dependencies:
+      '@vergeo/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@vergeo/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -90,6 +93,9 @@ importers:
 
   apps/customer:
     dependencies:
+      '@vergeo/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@vergeo/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -133,6 +139,9 @@ importers:
 
   apps/vendor:
     dependencies:
+      '@vergeo/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@vergeo/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -170,6 +179,34 @@ importers:
       vitest:
         specifier: ^3.0.9
         version: 3.2.7(@types/node@26.1.0)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.32.0)(yaml@2.9.0)
+
+  packages/auth:
+    dependencies:
+      '@supabase/ssr':
+        specifier: ^0.6.1
+        version: 0.6.1(@supabase/supabase-js@2.110.1)
+      '@supabase/supabase-js':
+        specifier: ^2.49.1
+        version: 2.110.1
+    devDependencies:
+      '@types/node':
+        specifier: ^22.13.10
+        version: 22.20.0
+      '@types/react':
+        specifier: ^19.0.12
+        version: 19.2.17
+      next:
+        specifier: ^15.2.4
+        version: 15.5.20(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.7
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.9
+        version: 3.2.7(@types/node@22.20.0)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.32.0)(yaml@2.9.0)
 
   packages/config:
     dependencies:
@@ -1067,6 +1104,38 @@ packages:
   '@schummar/icu-type-parser@1.21.5':
     resolution: {integrity: sha512-bXHSaW5jRTmke9Vd0h5P7BtWZG9Znqb8gSDxZnxaGSJnGwPLDPfS+3g0BKzeWqzgZPsIVZkM7m2tbo18cm5HBw==}
 
+  '@supabase/auth-js@2.110.1':
+    resolution: {integrity: sha512-8EJUoRoqzAYWkieHrLCrGrxs3cBbRB94xK8GzHe0aSLlSa4mt1enYLCiMgLiKJOF8GNYeX6PLTBNef0XAhILgw==}
+    engines: {node: '>=22.0.0'}
+
+  '@supabase/functions-js@2.110.1':
+    resolution: {integrity: sha512-Pm9HD9Qth6zQO0aOGZ3DxYb6QlCzrkTkP6eUEOvhTlbvcvYRDSCZXIJ5dkDLpqxD+gdrXfWDFOpU9BpRKYjsIQ==}
+    engines: {node: '>=22.0.0'}
+
+  '@supabase/phoenix@0.4.4':
+    resolution: {integrity: sha512-Gt0pqoXuIqX/8dvG0OKp/wMCobXNH3klNbUPBNyOfN0YA1IswrM3HyWFMOPk1Jy+BRaIyDPcFx4jLBwHNmlyfQ==}
+
+  '@supabase/postgrest-js@2.110.1':
+    resolution: {integrity: sha512-BILNhS40oGlP2bn/VJjh/1hCyrWNMmpGZGcCrPvqd5R3s8gf8Bd5qyKoHZdMwTKynGCuJGjagRXa069abhibMw==}
+    engines: {node: '>=22.0.0'}
+
+  '@supabase/realtime-js@2.110.1':
+    resolution: {integrity: sha512-JmWCpMoe2iJPNrXIdHqIvf2Mie6NfSuWHS9Ve6YCmLkn1mNl3vrK3a67IukJ5lPjgmAzB+jFagyMz2oSIX+Xnw==}
+    engines: {node: '>=22.0.0'}
+
+  '@supabase/ssr@0.6.1':
+    resolution: {integrity: sha512-QtQgEMvaDzr77Mk3vZ3jWg2/y+D8tExYF7vcJT+wQ8ysuvOeGGjYbZlvj5bHYsj/SpC0bihcisnwPrM4Gp5G4g==}
+    peerDependencies:
+      '@supabase/supabase-js': ^2.43.4
+
+  '@supabase/storage-js@2.110.1':
+    resolution: {integrity: sha512-UqJGzhFMiIRBe8vT7a6ZtrN2U5YufH4Tk9nyc9KKfa2TUtV11BkSg/v3lyy/c4A8SbekVH3UywTF0s42zpF4zw==}
+    engines: {node: '>=22.0.0'}
+
+  '@supabase/supabase-js@2.110.1':
+    resolution: {integrity: sha512-MiJh0THZgyAvTWm91FOLknjH5dYjXRKOdxpuUsyTVZVXIf7FxCShzevIm4KGCubHRU2n25Gyt8PhTXIFzcD9FA==}
+    engines: {node: '>=22.0.0'}
+
   '@swc/core-darwin-arm64@1.15.43':
     resolution: {integrity: sha512-v1aVuvXdo/BHxJzco9V2xpHrvwWmhfS8t6gziY5wJxd+Z2h8AeJRnAwPD8itCDaGXVBwJ/CaKfxEzTkG0Va0OA==}
     engines: {node: '>=10'}
@@ -1634,6 +1703,10 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
+  cookie@1.1.1:
+    resolution: {integrity: sha512-ei8Aos7ja0weRpFzJnEA9UHJ/7XQmqglbRwnf2ATjcB9Wq874VKH9kfjjirM6UhU2/E5fFYadylyhFldcqSidQ==}
+    engines: {node: '>=18'}
+
   cosmiconfig-typescript-loader@6.3.0:
     resolution: {integrity: sha512-Akr82WH1Wfqatyiqpj8HDkO2o2KmJRu1FhKfSNJP3K4IdXwHfEyL7MOb62i1AGQVLtIQM+iCE9CGOtrfhR+mmA==}
     engines: {node: '>=v18'}
@@ -2090,6 +2163,10 @@ packages:
   human-signals@5.0.0:
     resolution: {integrity: sha512-AXcZb6vzzrFAUE61HnN4mpLqd/cSIwNQjtNWR0euPm6y0iqx3G4gOXaIDdtdDwZmhwe82LA6+zinmW4UBWVePQ==}
     engines: {node: '>=16.17.0'}
+
+  iceberg-js@0.8.1:
+    resolution: {integrity: sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA==}
+    engines: {node: '>=20.0.0'}
 
   iconv-lite@0.6.3:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
@@ -3952,6 +4029,43 @@ snapshots:
 
   '@schummar/icu-type-parser@1.21.5': {}
 
+  '@supabase/auth-js@2.110.1':
+    dependencies:
+      tslib: 2.8.1
+
+  '@supabase/functions-js@2.110.1':
+    dependencies:
+      tslib: 2.8.1
+
+  '@supabase/phoenix@0.4.4': {}
+
+  '@supabase/postgrest-js@2.110.1':
+    dependencies:
+      tslib: 2.8.1
+
+  '@supabase/realtime-js@2.110.1':
+    dependencies:
+      '@supabase/phoenix': 0.4.4
+      tslib: 2.8.1
+
+  '@supabase/ssr@0.6.1(@supabase/supabase-js@2.110.1)':
+    dependencies:
+      '@supabase/supabase-js': 2.110.1
+      cookie: 1.1.1
+
+  '@supabase/storage-js@2.110.1':
+    dependencies:
+      iceberg-js: 0.8.1
+      tslib: 2.8.1
+
+  '@supabase/supabase-js@2.110.1':
+    dependencies:
+      '@supabase/auth-js': 2.110.1
+      '@supabase/functions-js': 2.110.1
+      '@supabase/postgrest-js': 2.110.1
+      '@supabase/realtime-js': 2.110.1
+      '@supabase/storage-js': 2.110.1
+
   '@swc/core-darwin-arm64@1.15.43':
     optional: true
 
@@ -4532,6 +4646,8 @@ snapshots:
       meow: 12.1.1
       split2: 4.2.0
 
+  cookie@1.1.1: {}
+
   cosmiconfig-typescript-loader@6.3.0(@types/node@26.1.0)(cosmiconfig@9.0.2(typescript@5.9.3))(typescript@5.9.3):
     dependencies:
       '@types/node': 26.1.0
@@ -5088,6 +5204,8 @@ snapshots:
       - supports-color
 
   human-signals@5.0.0: {}
+
+  iceberg-js@0.8.1: {}
 
   iconv-lite@0.6.3:
     dependencies:
