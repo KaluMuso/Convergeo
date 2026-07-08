@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@vergeo/auth": "workspace:*",
     "@vergeo/config": "workspace:*",
     "@vergeo/i18n": "workspace:*",
     "next": "^15.2.4",

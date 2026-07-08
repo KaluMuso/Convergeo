@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@vergeo/auth": "workspace:*",
     "@vergeo/config": "workspace:*",
     "@vergeo/i18n": "workspace:*",
     "@vergeo/ui": "workspace:*",
