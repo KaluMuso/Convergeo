@@ -249,6 +249,13 @@ def seed_matrix_fixtures(conn: PgConn) -> None:
     ids = load_fixture_ids()
     entities = load_fixture_entities()
 
+    # Real Supabase stacks ship auth.users without service_role DML grants.
+    grant = conn.run(
+        "GRANT INSERT, SELECT, UPDATE, DELETE ON auth.users TO service_role"
+    )
+    if not grant.ok:
+        raise PgError(f"auth.users grant failed: {grant.error}", grant.sqlstate)
+
     users = ids["users"]
     sql_parts = [
         "BEGIN;",
