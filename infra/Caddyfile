@@ -39,12 +39,25 @@
 {$ADMIN_DOMAIN:admin.vergeo5.com} {
   import common_security
 
-  # D20: admin is a separate hardened origin — IP allowlist placeholder (set ADMIN_ALLOWED_IPS at deploy).
-  # Consider Cloudflare Access in addition to CIDR allowlisting.
+  # D20 / M13-P01: hardened admin origin — layered IP allowlist + Cloudflare Access.
+  # Real CIDRs and CF policies live in deploy secrets (see docs/ops/admin-access.md).
+  # ADMIN_ALLOWED_IPS: comma-separated CIDRs (founder office, VPN, break-glass bastion).
+  # ADMIN_REQUIRE_CF_ACCESS=true in prod rejects requests without Cf-Access-Jwt-Assertion.
   @allowed remote_ip {$ADMIN_ALLOWED_IPS:127.0.0.1/32}
+  @cf_access_required expression {env.ADMIN_REQUIRE_CF_ACCESS} == "true"
+  @missing_cf_access not header Cf-Access-Jwt-Assertion *
 
   handle @allowed {
-    reverse_proxy {$ADMIN_UPSTREAM:host.docker.internal:3002}
+    handle @cf_access_required {
+      handle @missing_cf_access {
+        respond "Forbidden — Cloudflare Access required" 403
+      }
+      reverse_proxy {$ADMIN_UPSTREAM:host.docker.internal:3002}
+    }
+
+    handle {
+      reverse_proxy {$ADMIN_UPSTREAM:host.docker.internal:3002}
+    }
   }
 
   handle {
