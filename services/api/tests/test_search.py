@@ -1,0 +1,321 @@
+from __future__ import annotations
+
+from collections.abc import Generator
+from typing import Any
+from uuid import UUID
+
+import pytest
+from app.main import create_app
+from app.services.search import call_search_rrf
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+ITEL_ID = UUID("00000000-0000-4000-8000-000000000133")
+CHITENGE_ID = UUID("00000000-0000-4000-8000-000000000136")
+DRESS_ID = UUID("00000000-0000-4000-8000-000000000039")
+KITCHEN_ID = UUID("00000000-0000-4000-8000-000000000073")
+
+
+def _hit(
+    *,
+    entity_id: UUID,
+    title: str,
+    entity_kind: str = "product",
+    category_path: str | None = None,
+    price_min_ngwee: int | None = None,
+    price_max_ngwee: int | None = None,
+    locale_terms: list[str] | None = None,
+    score: float = 0.9,
+) -> dict[str, Any]:
+    return {
+        "id": str(UUID(int=entity_id.int % (2**128 - 1))),
+        "entity_kind": entity_kind,
+        "entity_id": str(entity_id),
+        "title": title,
+        "body": None,
+        "category_path": category_path,
+        "price_min_ngwee": price_min_ngwee,
+        "price_max_ngwee": price_max_ngwee,
+        "lat": None,
+        "lng": None,
+        "locale_terms": locale_terms,
+        "boost_signals": {},
+        "rrf_score": score,
+    }
+
+
+ITEL_HIT = _hit(
+    entity_id=ITEL_ID,
+    title="Itel A70 Smartphone",
+    category_path="electronics/phones",
+    price_min_ngwee=450000,
+    price_max_ngwee=450000,
+    score=1.2,
+)
+CHITENGE_HIT = _hit(
+    entity_id=CHITENGE_ID,
+    title="6-Yard Chitenge Print",
+    category_path="fashion-beauty/chitenge-fabric",
+    locale_terms=["chitenge", "chitange"],
+    score=1.0,
+)
+DRESS_HIT = _hit(
+    entity_id=DRESS_ID,
+    title="Women's Clothing Standard",
+    category_path="fashion-beauty/womens-clothing",
+    locale_terms=["dress", "nguwafwila"],
+    score=0.95,
+)
+KITCHEN_HIT = _hit(
+    entity_id=KITCHEN_ID,
+    title="Kitchenware Standard",
+    category_path="home-living/kitchenware",
+    locale_terms=["kitchenware", "pots", "pans"],
+    score=0.7,
+)
+
+
+class FakeRpcResponse:
+    def __init__(self, data: list[Any]) -> None:
+        self.data = data
+
+
+class FakeRpc:
+    def __init__(self, name: str, params: dict[str, Any], handler: Any) -> None:
+        self.name = name
+        self.params = params
+        self._handler = handler
+
+    def execute(self) -> FakeRpcResponse:
+        return FakeRpcResponse(self._handler(self.name, self.params))
+
+
+class FakeSupabaseClient:
+    def __init__(self, handler: Any) -> None:
+        self._handler = handler
+        self.calls: list[tuple[str, dict[str, Any]]] = []
+
+    def rpc(self, name: str, params: dict[str, Any]) -> FakeRpc:
+        self.calls.append((name, params))
+        return FakeRpc(name, params, self._handler)
+
+
+def _default_rpc_handler(name: str, params: dict[str, Any]) -> list[Any]:
+    if name == "expand_search_terms":
+        query = str(params.get("p_query", ""))
+        if query.lower() == "chitange":
+            return [f"{query} chitenge"]
+        return [query]
+
+    if name != "search_rrf":
+        return []
+
+    query = str(params.get("query", "")).lower()
+    filters = params.get("filters") or {}
+    entity_kind = filters.get("entity_kind")
+    category_path = filters.get("category_path")
+    price_min = filters.get("price_min_ngwee")
+    price_max = filters.get("price_max_ngwee")
+
+    candidates: list[dict[str, Any]] = []
+    if "itel" in query:
+        candidates.append(ITEL_HIT)
+    if "chitange" in query or "chitenge" in query:
+        candidates.append(CHITENGE_HIT)
+    if "dress" in query or "kitchen" in query or "party" in query:
+        candidates.extend([DRESS_HIT, KITCHEN_HIT])
+
+    if not candidates and query:
+        candidates = [ITEL_HIT, CHITENGE_HIT, DRESS_HIT]
+
+    filtered: list[dict[str, Any]] = []
+    for row in candidates:
+        if entity_kind is not None and row["entity_kind"] != entity_kind:
+            continue
+        row_path = row.get("category_path")
+        if category_path is not None and (
+            not isinstance(row_path, str) or not row_path.startswith(str(category_path))
+        ):
+            continue
+        row_max = row.get("price_max_ngwee")
+        if price_min is not None and row_max is not None and row_max < price_min:
+            continue
+        row_min = row.get("price_min_ngwee")
+        if price_max is not None and row_min is not None and row_min > price_max:
+            continue
+        filtered.append(row)
+
+    return filtered
+
+
+@pytest.fixture
+def fake_supabase() -> FakeSupabaseClient:
+    return FakeSupabaseClient(_default_rpc_handler)
+
+
+@pytest.fixture
+def search_client(
+    fake_supabase: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Generator[TestClient, None, None]:
+    from app.deps import get_supabase_client
+
+    class FakeServiceClient:
+        def __init__(self, client: FakeSupabaseClient) -> None:
+            self.client = client
+
+    def override() -> FakeServiceClient:
+        return FakeServiceClient(fake_supabase)
+
+    monkeypatch.setattr(
+        "app.services.search.fetch_query_embedding",
+        _semantic_embedding_fetcher,
+    )
+    app: FastAPI = create_app()
+    app.dependency_overrides[get_supabase_client] = override
+    with TestClient(app, raise_server_exceptions=False) as client:
+        yield client
+    app.dependency_overrides.clear()
+
+
+async def _semantic_embedding_fetcher(query: str) -> list[float] | None:
+    if "dress" in query.lower() and "kitchen" in query.lower():
+        return [0.1] * 384
+    return None
+
+
+async def _failing_embedding_fetcher(_query: str) -> list[float] | None:
+    raise RuntimeError("embedding service unavailable")
+
+
+def test_exact_query_returns_itel_a70(search_client: TestClient) -> None:
+    response = search_client.get("/search", params={"q": "itel A70"})
+    assert response.status_code == 200
+    body = response.json()
+    titles = [item["title"] for item in body["results"]]
+    assert any("Itel A70" in title for title in titles)
+    assert body["total"] >= 1
+
+
+def test_fuzzy_query_chitange_returns_chitenge(search_client: TestClient) -> None:
+    response = search_client.get("/search", params={"q": "chitange"})
+    assert response.status_code == 200
+    body = response.json()
+    assert "chitenge" in body["expanded_query"].lower()
+    titles = [item["title"].lower() for item in body["results"]]
+    assert any("chitenge" in title for title in titles)
+
+
+def test_semantic_query_returns_dress_results(search_client: TestClient) -> None:
+    response = search_client.get("/search", params={"q": "dress for kitchen party"})
+    assert response.status_code == 200
+    body = response.json()
+    titles = [item["title"].lower() for item in body["results"]]
+    assert any("women" in title or "dress" in title for title in titles)
+    assert body["degraded"] is False
+
+
+def test_embedding_failure_degrades_without_500(
+    fake_supabase: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.deps import get_supabase_client
+
+    class FakeServiceClient:
+        def __init__(self, client: FakeSupabaseClient) -> None:
+            self.client = client
+
+    monkeypatch.setattr(
+        "app.services.search.fetch_query_embedding",
+        _failing_embedding_fetcher,
+    )
+    app = create_app()
+    app.dependency_overrides[get_supabase_client] = lambda: FakeServiceClient(fake_supabase)
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.get("/search", params={"q": "itel A70"})
+        assert response.status_code == 200
+        body = response.json()
+        assert body["degraded"] is True
+        assert body["total"] >= 1
+    app.dependency_overrides.clear()
+
+
+def test_facet_filters_compose(search_client: TestClient) -> None:
+    response = search_client.get(
+        "/search",
+        params={
+            "q": "itel",
+            "kind": "products",
+            "category_path": "electronics",
+            "price_min_ngwee": 400000,
+            "price_max_ngwee": 500000,
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["results"][0]["title"] == "Itel A70 Smartphone"
+
+
+def test_injection_safe_tsquery_string(search_client: TestClient) -> None:
+    malicious = 'foo & bar | baz !"()'
+    response = search_client.get("/search", params={"q": malicious})
+    assert response.status_code == 200
+    body = response.json()
+    assert "results" in body
+    assert body["total"] >= 0
+
+
+def test_suggest_returns_prefix_matches(search_client: TestClient) -> None:
+    response = search_client.get("/search/suggest", params={"q": "itel"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["suggestions"]
+    assert all(item["title"].lower().startswith("itel") for item in body["suggestions"])
+
+
+def test_search_rrf_uses_bound_parameters(fake_supabase: FakeSupabaseClient) -> None:
+    hits = call_search_rrf(
+        fake_supabase,
+        query='foo & bar | baz',
+        embedding=None,
+        filters={"entity_kind": "product"},
+    )
+    assert isinstance(hits, list)
+    rpc_calls = [call for call in fake_supabase.calls if call[0] == "search_rrf"]
+    assert rpc_calls
+    _, params = rpc_calls[-1]
+    assert params["query"] == 'foo & bar | baz'
+    assert "query_embedding" not in params
+
+
+def test_zero_result_is_logged(
+    fake_supabase: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from app.services.search import run_search
+
+    def empty_handler(name: str, params: dict[str, Any]) -> list[Any]:
+        if name == "expand_search_terms":
+            return [str(params.get("p_query", ""))]
+        return []
+
+    empty_client = FakeSupabaseClient(empty_handler)
+    monkeypatch.setattr(
+        "app.services.search.fetch_query_embedding",
+        _semantic_embedding_fetcher,
+    )
+
+    with caplog.at_level("INFO"):
+        import asyncio
+
+        result = asyncio.run(
+            run_search(
+                empty_client,
+                query="absolutely-nothing-matches-xyz",
+            )
+        )
+
+    assert result.total == 0
+    assert any(record.message == "search_zero_result" for record in caplog.records)

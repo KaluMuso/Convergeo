@@ -290,7 +290,7 @@ jobs:
 
       - name: Seed demo data
         continue-on-error: true
-        run: python ../../scripts/seed.py --env local
+        run: uv run python ../../scripts/seed.py --env local
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
