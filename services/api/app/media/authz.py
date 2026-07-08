@@ -1,27 +1,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from functools import lru_cache
 from typing import Annotated, Any
 
-import jwt
 from fastapi import Depends, Request
-from jwt import PyJWKClient
-from jwt.exceptions import InvalidTokenError
 
+from app.core.auth import CurrentUser, get_current_user, get_request_jwt_claims
 from app.errors import AppError
-from app.settings import Settings, get_settings
 
 
 @dataclass(frozen=True, slots=True)
 class VendorScope:
     vendor_id: str
-
-
-@lru_cache
-def _jwks_client(supabase_url: str) -> PyJWKClient:
-    jwks_url = f"{supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
-    return PyJWKClient(jwks_url, cache_keys=True)
 
 
 def _extract_vendor_id(claims: dict[str, Any]) -> str | None:
@@ -44,63 +34,19 @@ def _extract_vendor_id(claims: dict[str, Any]) -> str | None:
     return None
 
 
-def _verify_supabase_jwt(token: str, settings: Settings) -> dict[str, Any]:
-    jwks_client = _jwks_client(settings.supabase_url)
-    signing_key = jwks_client.get_signing_key_from_jwt(token)
-    issuer = f"{settings.supabase_url.rstrip('/')}/auth/v1"
-    return jwt.decode(
-        token,
-        signing_key.key,
-        algorithms=["RS256", "ES256", "HS256"],
-        audience="authenticated",
-        issuer=issuer,
-        options={"require": ["sub", "exp"]},
-    )
-
-
 async def require_vendor_scope(
     request: Request,
-    settings: Annotated[Settings, Depends(get_settings)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
 ) -> VendorScope:
     """Resolve the authenticated vendor scope for media signing.
 
     TODO(M04-P02): verify vendor role + ownership against the vendors table before
-    issuing upload signatures. Today we only verify the Supabase JWT and derive
-    vendor_id from JWT claims (vendor_id metadata when present, otherwise sub).
+    issuing upload signatures. JWT verification is centralized in app.core.auth;
+    vendor_id is still derived from JWT claims (vendor_id metadata when present,
+    otherwise sub).
     """
-    authorization = request.headers.get("Authorization")
-    if not authorization or not authorization.startswith("Bearer "):
-        raise AppError(
-            code="unauthorized",
-            message="Missing or invalid Authorization header",
-            http_status=401,
-        )
-
-    token = authorization.removeprefix("Bearer ").strip()
-    if not token:
-        raise AppError(
-            code="unauthorized",
-            message="Missing or invalid Authorization header",
-            http_status=401,
-        )
-
-    try:
-        claims = _verify_supabase_jwt(token, settings)
-    except InvalidTokenError as exc:
-        raise AppError(
-            code="unauthorized",
-            message="Invalid or expired access token",
-            http_status=401,
-            details={"reason": exc.__class__.__name__},
-        ) from exc
-    except Exception as exc:
-        raise AppError(
-            code="forbidden",
-            message="Unable to verify access token",
-            http_status=403,
-            details={"reason": exc.__class__.__name__},
-        ) from exc
-
+    _ = current_user
+    claims = get_request_jwt_claims(request)
     vendor_id = _extract_vendor_id(claims)
     if not vendor_id:
         raise AppError(
