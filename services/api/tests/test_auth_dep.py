@@ -235,7 +235,7 @@ def test_get_user_client_sets_bearer_token(monkeypatch: pytest.MonkeyPatch) -> N
     client = get_user_client("user-access-token")
     assert isinstance(client, FakeClient)
     assert created["url"] == "https://example.supabase.co"
-    assert created["key"] == "anon-key"
+    assert created["key"] == get_settings().supabase_anon_key
     assert created["token"] == "user-access-token"
 
 

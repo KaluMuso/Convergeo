@@ -290,7 +290,7 @@ jobs:
 
       - name: Seed demo data
         continue-on-error: true
-        run: python ../../scripts/seed.py --env local
+        run: uv run python ../../scripts/seed.py --env local
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
@@ -300,7 +300,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          python-version-file: .python-version
+          python-version-file: services/api/.python-version
 
       - name: Install dependencies
         run: uv sync --dev
