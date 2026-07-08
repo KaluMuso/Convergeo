@@ -68,7 +68,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
@@ -132,7 +132,7 @@ jobs:
         run: pnpm audit --audit-level=high
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -293,7 +293,7 @@ jobs:
         run: uv run python ../../scripts/seed.py --env local
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
