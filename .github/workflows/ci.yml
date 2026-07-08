@@ -300,7 +300,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          python-version-file: .python-version
+          python-version-file: services/api/.python-version
 
       - name: Install dependencies
         run: uv sync --dev
