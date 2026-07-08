@@ -1499,6 +1499,13 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "reviews": {
+        # NOTE: the insert probe uses `INSERT ... DEFAULT VALUES`, which cannot
+        # satisfy reviews' data-dependent RLS WITH CHECK (needs a real owned,
+        # delivered order_item). So non-admin inserts trip the policy ("denied");
+        # admin passes the policy and instead hits NOT NULL (not a permission
+        # error). This matches every other data-gated table (addresses, disputes,
+        # returns, flags). Legitimate-insert authz is proven by the verified-
+        # purchase pgTAP tests in 0007 + the cross-tenant tests below.
         Persona.ANON: {
             "select": "deny",
             "insert": "deny",
@@ -1507,25 +1514,25 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.CUSTOMER: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
         Persona.VENDOR: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
@@ -1727,6 +1734,11 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "tickets": {
+        # Tickets are issued by the checkout flow (service-role), never inserted
+        # directly by clients. The DEFAULT VALUES insert probe is denied for every
+        # non-admin persona (no client insert path / data-dependent check); admin
+        # passes RLS and hits NOT NULL (not a permission error). Same convention as
+        # reviews/addresses/disputes/returns/flags.
         Persona.ANON: {
             "select": "deny",
             "insert": "deny",
@@ -1735,25 +1747,25 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.CUSTOMER: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
         Persona.VENDOR: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
-            "insert": "permit",
+            "insert": "deny",
             "update": "permit",
             "delete": "permit",
         },
