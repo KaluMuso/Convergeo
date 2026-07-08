@@ -1383,6 +1383,243 @@ export type Database = {
         };
         Relationships: [];
       };
+      audit_log: {
+        Row: {
+          id: string;
+          actor: string | null;
+          action: string;
+          entity_type: string;
+          entity_id: string | null;
+          before: Json | null;
+          after: Json | null;
+          at: string;
+        };
+        Insert: {
+          id?: string;
+          actor?: string | null;
+          action: string;
+          entity_type: string;
+          entity_id?: string | null;
+          before?: Json | null;
+          after?: Json | null;
+          at?: string;
+        };
+        Update: {
+          id?: string;
+          actor?: string | null;
+          action?: string;
+          entity_type?: string;
+          entity_id?: string | null;
+          before?: Json | null;
+          after?: Json | null;
+          at?: string;
+        };
+        Relationships: [];
+      };
+      disputes: {
+        Row: {
+          id: string;
+          order_id: string;
+          opener_user_id: string;
+          evidence_paths: string[];
+          vendor_response: string | null;
+          admin_decision: string | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          opener_user_id: string;
+          evidence_paths?: string[];
+          vendor_response?: string | null;
+          admin_decision?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          opener_user_id?: string;
+          evidence_paths?: string[];
+          vendor_response?: string | null;
+          admin_decision?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "disputes_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      flags: {
+        Row: {
+          id: string;
+          entity_type: string;
+          entity_id: string;
+          reason: string;
+          reporter_user_id: string;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          entity_type: string;
+          entity_id: string;
+          reason: string;
+          reporter_user_id: string;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          entity_type?: string;
+          entity_id?: string;
+          reason?: string;
+          reporter_user_id?: string;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      notification_outbox: {
+        Row: {
+          id: string;
+          dedupe_key: string;
+          channel: string;
+          template: string | null;
+          payload: Json;
+          status: string;
+          attempts: number;
+          next_retry_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          dedupe_key: string;
+          channel: string;
+          template?: string | null;
+          payload?: Json;
+          status?: string;
+          attempts?: number;
+          next_retry_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          dedupe_key?: string;
+          channel?: string;
+          template?: string | null;
+          payload?: Json;
+          status?: string;
+          attempts?: number;
+          next_retry_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      returns: {
+        Row: {
+          id: string;
+          order_item_id: string;
+          lane: number;
+          evidence_paths: string[];
+          fee_breakdown: Json;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_item_id: string;
+          lane: number;
+          evidence_paths?: string[];
+          fee_breakdown?: Json;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_item_id?: string;
+          lane?: number;
+          evidence_paths?: string[];
+          fee_breakdown?: Json;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "returns_order_item_id_fkey";
+            columns: ["order_item_id"];
+            isOneToOne: false;
+            referencedRelation: "order_items";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      reviews: {
+        Row: {
+          id: string;
+          order_item_id: string;
+          rating: number;
+          body: string | null;
+          photos: string[];
+          vendor_reply: string | null;
+          vendor_reply_at: string | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_item_id: string;
+          rating: number;
+          body?: string | null;
+          photos?: string[];
+          vendor_reply?: string | null;
+          vendor_reply_at?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_item_id?: string;
+          rating?: number;
+          body?: string | null;
+          photos?: string[];
+          vendor_reply?: string | null;
+          vendor_reply_at?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "reviews_order_item_id_fkey";
+            columns: ["order_item_id"];
+            isOneToOne: true;
+            referencedRelation: "order_items";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
