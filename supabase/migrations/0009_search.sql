@@ -5,6 +5,28 @@
 -- Tables
 -- ---------------------------------------------------------------------------
 
+-- IMMUTABLE wrapper so the generated `tsv` column is valid: array_to_string is
+-- only STABLE (its stability comes from element output functions; with text[] +
+-- a constant delimiter it is deterministic), and to_tsvector(text, text) is
+-- STABLE because the config name is resolved via search_path. Pinning the config
+-- to a regconfig literal and confining the join to this IMMUTABLE function makes
+-- the whole expression immutable while preserving 'simple' normalization.
+create or replace function public.search_document_tsv(
+  p_title text,
+  p_body text,
+  p_locale_terms text[]
+) returns tsvector
+language sql
+immutable
+set search_path = public
+as $$
+  select to_tsvector(
+    'simple'::regconfig,
+    coalesce(p_title, '') || ' ' || coalesce(p_body, '') || ' '
+      || array_to_string(coalesce(p_locale_terms, '{}'), ' ')
+  );
+$$;
+
 create table public.search_documents (
   id uuid primary key default gen_random_uuid(),
   entity_kind text not null
@@ -19,11 +41,7 @@ create table public.search_documents (
   lng double precision,
   locale_terms text[],
   tsv tsvector generated always as (
-    to_tsvector(
-      'simple',
-      coalesce(title, '') || ' ' || coalesce(body, '') || ' '
-        || array_to_string(coalesce(locale_terms, '{}'), ' ')
-    )
+    public.search_document_tsv(title, body, locale_terms)
   ) stored,
   embedding vector(384),
   boost_signals jsonb not null default '{}'::jsonb,
@@ -844,6 +862,7 @@ as $$
     select
       nullif(trim(query), '') as raw_query,
       coalesce(public.expand_search_terms(query), nullif(trim(query), '')) as expanded_query,
+      query_embedding as query_embedding,
       coalesce(filters, '{}'::jsonb) as f,
       60.0::double precision as rrf_k
   ),
