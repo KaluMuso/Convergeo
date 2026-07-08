@@ -191,6 +191,16 @@ jobs:
   db:
     name: Database / typegen drift
     runs-on: ubuntu-latest
+    # config.toml uses env() substitution for the enabled send_sms auth hook and
+    # Google OAuth provider. The Supabase CLI resolves these on `db start`, so the
+    # job cannot bring the stack up without them and previously failed (which let
+    # 0009's migration bugs merge past a red-but-bypassed check). These are dummy
+    # CI-only values — never real secrets.
+    env:
+      SEND_SMS_HOOK_SECRET: "v1,whsec_Y2ktZHVtbXktc2VuZC1zbXMtaG9vay1zZWNyZXQtMDAw"
+      SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "ci-dummy-google-client-id"
+      SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "ci-dummy-google-secret"
+      SUPABASE_AUTH_EXTERNAL_APPLE_SECRET: "ci-dummy-apple-secret"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
