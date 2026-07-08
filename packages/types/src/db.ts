@@ -1870,6 +1870,33 @@ export type Database = {
           },
         ];
       };
+      rate_counters: {
+        Row: {
+          id: string;
+          scope: string;
+          key: string;
+          window_start: string;
+          count: number;
+          expires_at: string;
+        };
+        Insert: {
+          id?: string;
+          scope: string;
+          key: string;
+          window_start: string;
+          count?: number;
+          expires_at: string;
+        };
+        Update: {
+          id?: string;
+          scope?: string;
+          key?: string;
+          window_start?: string;
+          count?: number;
+          expires_at?: string;
+        };
+        Relationships: [];
+      };
       returns: {
         Row: {
           id: string;
