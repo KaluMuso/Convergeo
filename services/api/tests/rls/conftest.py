@@ -249,23 +249,13 @@ def seed_matrix_fixtures(conn: PgConn) -> None:
     ids = load_fixture_ids()
     entities = load_fixture_entities()
 
-    # Real Supabase stacks ship auth.users without service_role DML grants.
-    grant = conn.run(
-        "GRANT INSERT, SELECT, UPDATE, DELETE ON auth.users TO service_role"
-    )
-    if not grant.ok:
-        raise PgError(f"auth.users grant failed: {grant.error}", grant.sqlstate)
-
     users = ids["users"]
-    sql_parts = [
-        "BEGIN;",
-        "SET LOCAL role service_role;",
-        "SET LOCAL \"request.jwt.claims\" = '{\"role\":\"service_role\"}';",
-    ]
 
+    # auth.users is owned by supabase_auth_admin; seed as postgres before SET ROLE.
+    auth_parts = ["BEGIN;"]
     for key, uid in users.items():
         email = f"{key}@rls-matrix.test"
-        sql_parts.append(
+        auth_parts.append(
             f"""
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -277,6 +267,16 @@ INSERT INTO auth.users (
 ) ON CONFLICT (id) DO NOTHING;
 """
         )
+    auth_parts.append("COMMIT;")
+    auth_result = conn.run("\n".join(auth_parts))
+    if not auth_result.ok:
+        raise PgError(f"auth.users seed failed: {auth_result.error}", auth_result.sqlstate)
+
+    sql_parts = [
+        "BEGIN;",
+        "SET LOCAL role service_role;",
+        "SET LOCAL \"request.jwt.claims\" = '{\"role\":\"service_role\"}';",
+    ]
 
     profiles = [
         (users["customer_a"], "+260971000001", "Customer A"),

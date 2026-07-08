@@ -2196,17 +2196,10 @@ export type Database = {
       }
       cart_guest_token: { Args: never; Returns: string }
       cleanup_expired_rate_counters: { Args: never; Returns: number }
-      dearmor: { Args: { "": string }; Returns: string }
       expand_search_terms: { Args: { p_query: string }; Returns: string }
-      gen_random_uuid: { Args: never; Returns: string }
-      gen_salt: { Args: { "": string }; Returns: string }
       has_role: { Args: { required_role: string }; Returns: boolean }
       is_valid_price_tiers: { Args: { tiers: Json }; Returns: boolean }
       next_invoice_no: { Args: { p_series: string }; Returns: number }
-      pgp_armor_headers: {
-        Args: { "": string }
-        Returns: Record<string, unknown>[]
-      }
       search_apply_boost: {
         Args: { p_base_score: number; p_boost_signals: Json }
         Returns: number
