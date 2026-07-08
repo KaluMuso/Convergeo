@@ -106,6 +106,7 @@ jobs:
         uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
 
   deps-audit:
     name: Dependency audit
@@ -188,8 +189,42 @@ jobs:
             --config .github/i18n-eslint.ci.mjs \
             --max-warnings 9999
 
+  migrations:
+    name: Migration replay (fast)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Postgres 16 with pgvector — required for migration 0001 (vector extension).
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Replay migrations (Dockerless pre-flight)
+        run: bash scripts/ci/migration-replay.sh
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+
   db:
     name: Database / typegen drift
+    needs: migrations
     runs-on: ubuntu-latest
     # config.toml uses env() substitution for the enabled send_sms auth hook and
     # Google OAuth provider. The Supabase CLI resolves these on `db start`, so the
@@ -221,3 +256,55 @@ jobs:
 
       - name: Fail on stale committed types
         run: git diff --exit-code packages/types/src/db.ts
+
+  rls:
+    name: RLS isolation matrix
+    runs-on: ubuntu-latest
+    # Same auth-hook/OAuth dummy env as db — stack cannot start without them.
+    env:
+      SEND_SMS_HOOK_SECRET: "v1,whsec_Y2ktZHVtbXktc2VuZC1zbXMtaG9vay1zZWNyZXQtMDAw"
+      SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "ci-dummy-google-client-id"
+      SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "ci-dummy-google-secret"
+      SUPABASE_AUTH_EXTERNAL_APPLE_SECRET: "ci-dummy-apple-secret"
+      SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+      SUPABASE_ANON_KEY: test-anon-key
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+
+      - name: Start local database
+        run: supabase db start
+
+      - name: Reset local database (with seed)
+        run: supabase db reset
+
+      - name: Seed demo data
+        continue-on-error: true
+        run: python ../../scripts/seed.py --env local
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: RLS isolation matrix
+        # Wired for M03-P09 (same wave). Goes green once services/api/tests/rls lands.
+        run: uv run pytest tests/rls -q
