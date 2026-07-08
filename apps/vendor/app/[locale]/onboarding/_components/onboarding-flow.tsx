@@ -291,7 +291,9 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         <StepProgress
           currentStep={currentStep}
           labels={stepLabels}
-          stepAnnouncement={(current, total) => t("stepAnnouncement", { current, total })}
+          stepAnnouncement={(current, total) =>
+            t("onboarding.stepAnnouncement", { current, total })
+          }
           doneIndicator={t("onboarding.doneIndicator")}
         />
       ) : (
