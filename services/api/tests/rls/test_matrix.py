@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Any, Callable, cast
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 from tests.rls.conftest import (

@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, Callable, cast, Literal
+from typing import Any, Literal, cast
 
 import pytest
 
