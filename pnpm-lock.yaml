@@ -96,6 +96,9 @@ importers:
       '@vergeo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@vergeo/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       next:
         specifier: ^15.2.4
         version: 15.5.20(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
