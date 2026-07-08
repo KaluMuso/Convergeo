@@ -1819,33 +1819,6 @@ export type Database = {
           },
         ];
       };
-      rate_counters: {
-        Row: {
-          count: number;
-          expires_at: string;
-          id: string;
-          key: string;
-          scope: string;
-          window_start: string;
-        };
-        Insert: {
-          count?: number;
-          expires_at: string;
-          id?: string;
-          key: string;
-          scope: string;
-          window_start: string;
-        };
-        Update: {
-          count?: number;
-          expires_at?: string;
-          id?: string;
-          key?: string;
-          scope?: string;
-          window_start?: string;
-        };
-        Relationships: [];
-      };
       refunds: {
         Row: {
           amount_ngwee: number;
@@ -2099,19 +2072,6 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      bump_rate_counter: {
-        Args: {
-          p_key: string;
-          p_limit: number;
-          p_scope: string;
-          p_window: string;
-        };
-        Returns: {
-          allowed: boolean;
-          retry_after_seconds: number;
-        };
-      };
-      cleanup_expired_rate_counters: { Args: never; Returns: number };
       expand_search_terms: { Args: { p_query: string }; Returns: string };
       has_role: { Args: { required_role: string }; Returns: boolean };
       is_valid_price_tiers: { Args: { tiers: Json }; Returns: boolean };
