@@ -1,6 +1,6 @@
 # Vergeo5 — Project Status
 
-**Updated:** 2026-07-07 · **Mode:** GATED · **Current phase:** Phase 3 ▶ **Wave 3 prompts ready — dispatch all 5 in PARALLEL from `master`** (`prompts/M02-P07`, `M03-P04`, `M04-P01`, `M05-P10`, `M15-P06`). Wave 2 merged & reviewed (all ✅). File-ownership verified disjoint (zero exact-path collisions).
+**Updated:** 2026-07-07 · **Mode:** GATED · **Current phase:** Phase 4 loop ▶ **Wave 3 MERGED & REVIEWED** (M02-P07, M03-P04, M04-P01, M05-P10, M15-P06 — all ✅). **Next: say "Phase 3 Wave 4"** — the schema-freeze wave (M03-P05 money · M03-P06 trust/ops · M03-P08 search projection · M04-P02 API auth dep · M04-P03 frontend auth guards · M12-P11 vendor pitch page).
 
 ## ⚠ ORCHESTRATION RULE (violated twice — fix in Cursor before Wave 2)
 
@@ -47,6 +47,23 @@ Before writing the 5 Wave-3 prompts, audited the real merged tree (Workflow harn
 - **M04-P01 grounded**: config.toml already has a full `[auth]` section (edit surgically); Africa's Talking → Send SMS Hook (not a built-in provider); profile-bootstrap = migration `0010` (trigger on auth.users); env names reused (`AT_API_KEY` etc.); sole owner of config.toml this wave.
 - **Auth seam**: M04-P02 (API auth dependency) not merged → M05-P10 signing authz gates behind a documented, injectable seam.
 - **M04-P06 not merged** → M15-P06 privacy page links data-rights to a documented stub route `/{locale}/account/data`.
+
+## Phase 4 verdicts — Wave 3 (2026-07-07)
+
+| Report                | Verdict                   | Notes                                                                                                                                                                                                                                                                                                                                                                                                           |
+| --------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M02-P07 preview       | ✅ APPROVED               | 36/36 export-coverage; prod-gate 404s; robots noindex. Its `@vergeo/ui` dep add was lost in a rebase (2 commits) → see fix below                                                                                                                                                                                                                                                                                |
+| M03-P04 orders (0005) | ✅ APPROVED               | 17/17; client status-UPDATE denied (both roles); audit trigger on every status change; tickets.order_item_id FK completed; EXPLAIN index use on both hot paths                                                                                                                                                                                                                                                  |
+| M04-P01 auth+SMS      | ✅ APPROVED (was PARTIAL) | PARTIAL was only local db-reset env limits (Docker overlayfs) — code verified sound: config.toml auth edits surgical + valid TOML (send_sms hook, google, 3 redirect URLs), `0010` bootstrap idempotent + security-definer, `on conflict (user_id,role)` matches the 0002 unique constraint, edge fn 7/7 with signature verify. **CI db job is the reset validator.** `secrets` (plural) per current CLI — fine |
+| M05-P10 media-signing | ✅ APPROVED               | 20 tests; cross-vendor folder injection impossible (server-derived); api_secret never returned; SHA-1 signing golden; authz seam actually verifies Supabase JWT via JWKS (exceeds the stub ask) — TODO-flagged for M04-P02; NO url.ts duplication                                                                                                                                                               |
+| M15-P06 legal         | ✅ APPROVED w/ fix        | legal.json fully nested (0 flat keys); 4 pages SSG × 4 locales; footer 4/4. 🟡 two deviations both rooted in the lost M02-P07 dep (relative-path import + i18n workaround) → fixed below                                                                                                                                                                                                                        |
+
+**Convergence fix on master (verified: typecheck 7/7, lint 4/4, test 10/10, customer build 27 SSG routes):**
+
+- **`@vergeo/ui` dependency was undeclared** in `apps/customer/package.json` (M02-P07's add lost in a rebase). The app relied on it transitively via `transpilePackages`+hoisting — worked, but fragile, and forced M15-P06's `../../../../packages/ui/src/footer` relative import. Declared the dep + switched footer to the canonical `@vergeo/ui/src/footer`.
+- M15-P06's other deviation (layout loads `legal` via `loadNamespace`+`createTranslator` because `request.ts` only auto-loads `common`) is **accepted as-built** — legal pages/footer are server components; correct. A later i18n pass can make namespace loading route-aware.
+
+> **Wave-3 orchestration: clean.** All 5 branched from + merged to `master`. Grounding audit paid off — the 3 flagged conflicts (M05-P10 url.ts duplicate, M15-P06 flat keys, M04-P01 config clobber) were all pre-empted in the prompts and did not occur.
 
 ## Phase gate log
 
