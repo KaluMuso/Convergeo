@@ -4,11 +4,11 @@ import json
 import logging
 import uuid
 from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
-from app.deps import SupabaseServiceClient, get_supabase_client
+from app.deps import get_supabase_client
 from app.errors import AppError
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
@@ -18,6 +18,12 @@ from supabase import Client, create_client
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/account", tags=["privacy"])
+
+
+class ServiceRoleClient(Protocol):
+    @property
+    def client(self) -> Client: ...
+
 
 PRIVATE_EXPORT_BUCKET = "private-artifacts"
 EXPORT_PATH_PREFIX = "data-exports"
@@ -205,7 +211,7 @@ def assemble_export_bundle(user_client: Client, user_id: str) -> dict[str, Any]:
 
 
 def upload_export_bundle(
-    service: SupabaseServiceClient,
+    service: ServiceRoleClient,
     *,
     user_id: str,
     bundle: dict[str, Any],
@@ -277,7 +283,7 @@ def verify_reauth_otp(*, phone: str | None, otp: str, settings: Settings) -> Non
 
 
 def anonymize_and_delete_account(
-    service: SupabaseServiceClient,
+    service: ServiceRoleClient,
     *,
     user_id: str,
 ) -> None:
@@ -391,7 +397,7 @@ def anonymize_and_delete_account(
 async def export_account_data(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     settings: Annotated[Settings, Depends(get_settings)],
-    service: Annotated[SupabaseServiceClient, Depends(get_supabase_client)],
+    service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ExportResponse:
     user_client = get_user_client(current_user.token, settings)
     bundle = assemble_export_bundle(user_client, current_user.id)
@@ -418,7 +424,7 @@ async def delete_account(
     body: DeleteAccountRequest,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     settings: Annotated[Settings, Depends(get_settings)],
-    service: Annotated[SupabaseServiceClient, Depends(get_supabase_client)],
+    service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> DeleteAccountResponse:
     if body.confirmation_phrase.strip() != DELETE_CONFIRMATION_PHRASE:
         raise AppError(
