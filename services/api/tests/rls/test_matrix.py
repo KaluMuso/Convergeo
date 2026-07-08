@@ -1421,6 +1421,7 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "rate_counters": client_invisible(),
     "refunds": {
         Persona.ANON: {
             "select": "deny",
