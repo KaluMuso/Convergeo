@@ -245,7 +245,8 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
         with:
-          version: latest
+          # Pin pre-TS typegen port (v2.106+) — committed db.ts matches Go CLI output.
+          version: 2.105.0
 
       - name: Start local database
         run: supabase db start
@@ -282,7 +283,8 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
         with:
-          version: latest
+          # Pin pre-TS typegen port (v2.106+) — committed db.ts matches Go CLI output.
+          version: 2.105.0
 
       - name: Start local database
         run: supabase db start
