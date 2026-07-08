@@ -6,9 +6,8 @@ title = "Vergeo5 gitleaks"
 [extend]
 useDefault = true
 
-[allowlist]
+[[allowlists]]
 description = "Documentation, test fixtures, and example env files (paths only)"
-
 paths = [
   '''(?i)docs/''',
   '''(?i)services/api/tests/fixtures/''',
@@ -18,10 +17,14 @@ paths = [
   '''(?i)apps/.*/\.env\.example$''',
 ]
 
-[[allowlist.regexes]]
+[[allowlists]]
 description = "Placeholder / example env var names in .env.example (names only, not values)"
-regex = '''(?i)(EXAMPLE|PLACEHOLDER|YOUR_|CHANGE_ME|REPLACE_ME|TODO_SET|DUMMY|CI_DUMMY|ci-dummy)'''
+regexes = [
+  '''(?i)(EXAMPLE|PLACEHOLDER|YOUR_|CHANGE_ME|REPLACE_ME|TODO_SET|DUMMY|CI_DUMMY|ci-dummy)''',
+]
 
-[[allowlist.regexes]]
+[[allowlists]]
 description = "Documented dummy CI values referenced in workflow comments"
-regex = '''ci-dummy-(google|apple)-'''
+regexes = [
+  '''ci-dummy-(google|apple)-''',
+]
