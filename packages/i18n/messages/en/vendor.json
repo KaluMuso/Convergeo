@@ -137,5 +137,117 @@
       "button": "Create your vendor account",
       "loadingLabel": "Opening signup"
     }
+  },
+  "onboarding": {
+    "meta": {
+      "title": "Vendor onboarding — Vergeo5",
+      "description": "Complete your business profile and T1 KYC to start selling on Vergeo5."
+    },
+    "steps": {
+      "business": "Business",
+      "kyc": "Verify ID",
+      "review": "Review"
+    },
+    "stepAnnouncement": "Step {current} of {total}",
+    "doneIndicator": "✓",
+    "business": {
+      "heading": "Business basics",
+      "intro": "Tell buyers who you are. You can edit this later in your profile.",
+      "nameLabel": "Business or shop name",
+      "namePlaceholder": "e.g. Lusaka Electronics",
+      "categoryLabel": "Main category",
+      "categoryPlaceholder": "Select a category",
+      "categories": {
+        "electronics": "Electronics",
+        "home": "Home & living",
+        "fashion_beauty": "Fashion & beauty",
+        "services": "Services",
+        "groceries": "Groceries",
+        "other": "Other"
+      },
+      "continue": "Continue",
+      "saving": "Saving…"
+    },
+    "kyc": {
+      "heading": "T1 verification",
+      "intro": "Upload your NRC and a selfie. We match your mobile-money name. Nothing goes public until approved.",
+      "nrcLabel": "NRC photo",
+      "nrcHelp": "Capture the front of your National Registration Card in good light.",
+      "selfieLabel": "Selfie",
+      "selfieHelp": "Hold your phone at eye level. Face the camera directly.",
+      "momoLabel": "Mobile-money number",
+      "momoPlaceholder": "e.g. 0977123456",
+      "momoHelp": "MTN or Airtel number registered in your name for payouts.",
+      "continue": "Continue",
+      "uploading": "Uploading…",
+      "capture": "Take photo",
+      "retake": "Retake",
+      "usePhoto": "Use this photo",
+      "uploadFailed": "Upload failed. Check your connection and try again.",
+      "uploaded": "Saved",
+      "nrcDone": "NRC photo saved",
+      "selfieDone": "Selfie saved"
+    },
+    "quality": {
+      "heading": "Photo tips",
+      "light": "Use daylight or a bright room — avoid glare on the NRC.",
+      "steady": "Hold still; blurry photos are rejected.",
+      "frame": "Fill the frame — all four corners of the NRC visible.",
+      "face": "Remove hats and sunglasses for the selfie."
+    },
+    "review": {
+      "heading": "Review and submit",
+      "intro": "Check your details. After submission, our team reviews within one business day.",
+      "businessSection": "Business",
+      "docsSection": "Documents",
+      "momoSection": "Mobile money",
+      "nrcUploaded": "NRC photo uploaded",
+      "selfieUploaded": "Selfie uploaded",
+      "notUploaded": "Not uploaded",
+      "submit": "Submit for review",
+      "submitting": "Submitting…",
+      "editBusiness": "Edit business",
+      "editDocs": "Edit documents",
+      "gateNotice": "Your listings stay hidden until KYC is approved."
+    },
+    "status": {
+      "heading": "Verification status",
+      "pending": {
+        "title": "Under review",
+        "body": "We are verifying your documents. You will get a WhatsApp update when done.",
+        "cta": "Back to dashboard"
+      },
+      "approved": {
+        "title": "You are verified",
+        "body": "T1 KYC approved. You can create listings — buyers will see them once you publish.",
+        "cta": "Create your first listing",
+        "t2Link": "Upgrade to T2 (PACRA + TPIN)"
+      },
+      "rejected": {
+        "title": "Verification needs changes",
+        "body": "We could not approve your application.",
+        "reasonLabel": "Reason",
+        "resubmitCta": "Update documents",
+        "gateNotice": "Listings remain hidden until you pass verification."
+      },
+      "resubmit": {
+        "title": "Resubmit documents",
+        "body": "Update the items below and resubmit — you do not need to start over.",
+        "nrcRequired": "NRC photo required",
+        "selfieRequired": "Selfie required",
+        "submit": "Resubmit for review"
+      }
+    },
+    "t2": {
+      "stubLabel": "Upgrade to verified business (T2)",
+      "stubBody": "PACRA certificate and company TPIN — coming soon."
+    },
+    "errors": {
+      "required": "This field is required",
+      "invalidPhone": "Enter a valid Zambian mobile number",
+      "loadFailed": "Could not load your application. Pull to refresh.",
+      "submitFailed": "Submission failed. Try again."
+    },
+    "loading": "Loading…"
   }
 }
