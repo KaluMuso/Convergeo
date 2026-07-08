@@ -5,3 +5,4 @@ dist
 coverage
 .venv
 pnpm-lock.yaml
+packages/types/src/db.ts
