@@ -6,6 +6,9 @@ const SERVER_ENV_KEYS = [
   "OPENROUTER_API_KEY",
   "WHATSAPP_TOKEN",
   "AT_API_KEY",
+  "AT_USERNAME",
+  "AT_SENDER_ID",
+  "SEND_SMS_HOOK_SECRET",
   "RESEND_API_KEY",
   "CLOUDINARY_URL",
 ] as const;
@@ -18,6 +21,9 @@ const serverEnvSchema = z.object({
   OPENROUTER_API_KEY: z.string().min(1),
   WHATSAPP_TOKEN: z.string().min(1),
   AT_API_KEY: z.string().min(1),
+  AT_USERNAME: z.string().min(1),
+  AT_SENDER_ID: z.string().min(1),
+  SEND_SMS_HOOK_SECRET: z.string().min(1),
   RESEND_API_KEY: z.string().min(1),
   CLOUDINARY_URL: z.string().min(1),
 });
