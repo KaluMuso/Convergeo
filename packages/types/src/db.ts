@@ -103,6 +103,81 @@ export type Database = {
         }
         Relationships: []
       }
+      cart_items: {
+        Row: {
+          cart_id: string
+          created_at: string
+          id: string
+          listing_id: string
+          qty: number
+          unit_price_ngwee: number
+          updated_at: string
+          wholesale: boolean
+        }
+        Insert: {
+          cart_id: string
+          created_at?: string
+          id?: string
+          listing_id: string
+          qty: number
+          unit_price_ngwee: number
+          updated_at?: string
+          wholesale?: boolean
+        }
+        Update: {
+          cart_id?: string
+          created_at?: string
+          id?: string
+          listing_id?: string
+          qty?: number
+          unit_price_ngwee?: number
+          updated_at?: string
+          wholesale?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_cart_id_fkey"
+            columns: ["cart_id"]
+            isOneToOne: false
+            referencedRelation: "carts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      carts: {
+        Row: {
+          created_at: string
+          guest_token: string | null
+          id: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          guest_token?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          guest_token?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           commission_key: string
@@ -2119,6 +2194,7 @@ export type Database = {
           retry_after_seconds: number
         }[]
       }
+      cart_guest_token: { Args: never; Returns: string }
       cleanup_expired_rate_counters: { Args: never; Returns: number }
       expand_search_terms: { Args: { p_query: string }; Returns: string }
       has_role: { Args: { required_role: string }; Returns: boolean }
