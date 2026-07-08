@@ -1,6 +1,6 @@
 # Vergeo5 — Project Status
 
-**Updated:** 2026-07-07 · **Mode:** GATED · **Current phase:** Phase 4 loop ▶ **Wave 3 MERGED & REVIEWED** (M02-P07, M03-P04, M04-P01, M05-P10, M15-P06 — all ✅). **Next: say "Phase 3 Wave 4"** — the schema-freeze wave (M03-P05 money · M03-P06 trust/ops · M03-P08 search projection · M04-P02 API auth dep · M04-P03 frontend auth guards · M12-P11 vendor pitch page).
+**Updated:** 2026-07-07 · **Mode:** GATED · **Current phase:** Phase 3 ▶ **Wave 4 prompts ready — the SCHEMA-FREEZE wave** (`prompts/M03-P05`, `M03-P06`, `M03-P08`, `M04-P02`, `M04-P03`, `M12-P11`). Grounded against merged column names; file ownership verified (only `db.ts` shared — by the 3 schema pebbles, append-only + merge-order rule). **After Wave 4 merges → migrations additive-only.**
 
 ## ⚠ ORCHESTRATION RULE (violated twice — fix in Cursor before Wave 2)
 
@@ -64,6 +64,16 @@ Before writing the 5 Wave-3 prompts, audited the real merged tree (Workflow harn
 - M15-P06's other deviation (layout loads `legal` via `loadNamespace`+`createTranslator` because `request.ts` only auto-loads `common`) is **accepted as-built** — legal pages/footer are server components; correct. A later i18n pass can make namespace loading route-aware.
 
 > **Wave-3 orchestration: clean.** All 5 branched from + merged to `master`. Grounding audit paid off — the 3 flagged conflicts (M05-P10 url.ts duplicate, M15-P06 flat keys, M04-P01 config clobber) were all pre-empted in the prompts and did not occur.
+
+## Wave-4 grounding + dispatch notes (2026-07-07)
+
+Grounded against merged column names before writing (schema-freeze wave = high stakes):
+
+- **Schema FKs pinned to real names**: money(0006)/trust(0007) FK `checkout_groups`/`orders(id,customer_id,vendor_id,status)`/`order_items(id,order_id,item_kind)`; search(0009) projects `products`/`vendor_listings`/`services`/`events`/`vendors` in their exact publish states.
+- **M04-P02 consolidates the media-authz duplicate**: M05-P10 left a full JWKS-verify path in `app/media/authz.py` (TODO-flagged). M04-P02 owns + refactors it onto the new shared `core/auth.py` — one verify path, no duplication. Roles read from `user_roles` (never JWT claims) → forged-admin-claim 403 is the headline test.
+- **M04-P03 sole `pnpm-lock` owner** this wave (adds `@supabase/ssr` + `@vergeo/auth`); composes auth with the existing next-intl middleware (locale never dropped); customer browsable logged-out.
+- **M12-P11 kept dep-free**: no live config-read client exists yet on the customer app (M04-P03 parallel) → renders the commission table from a single D4-constant module (= 0008 seed) with a `TODO(config)` to bind live later; uses a code fallback for the vendor-app URL instead of touching `.env.example` (M04-P03 owns it).
+- **db.ts 3-way overlap** is the only shared file — append-only, no sibling reformatting; CI `db` job regenerates authoritatively; later-merging schema PR combines table sets (same pattern that worked W1/W2).
 
 ## Phase gate log
 
