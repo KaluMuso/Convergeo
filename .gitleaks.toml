@@ -1,0 +1,27 @@
+# Vergeo5 gitleaks config — tuned allowlists for docs/fixtures/examples only.
+# Must NOT allowlist real secret shapes (AWS keys, JWTs, private keys, etc.).
+
+title = "Vergeo5 gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documentation, test fixtures, and example env files (paths only)"
+
+paths = [
+  '''(?i)docs/''',
+  '''(?i)services/api/tests/fixtures/''',
+  '''(?i)infra/\.env\.example$''',
+  '''(?i)\.env\.example$''',
+  '''(?i)packages/.*/\.env\.example$''',
+  '''(?i)apps/.*/\.env\.example$''',
+]
+
+[[allowlist.regexes]]
+description = "Placeholder / example env var names in .env.example (names only, not values)"
+regex = '''(?i)(EXAMPLE|PLACEHOLDER|YOUR_|CHANGE_ME|REPLACE_ME|TODO_SET|DUMMY|CI_DUMMY|ci-dummy)'''
+
+[[allowlist.regexes]]
+description = "Documented dummy CI values referenced in workflow comments"
+regex = '''ci-dummy-(google|apple)-'''
