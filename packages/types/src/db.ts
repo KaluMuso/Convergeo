@@ -28,78 +28,116 @@ export type Database = {
   };
   public: {
     Tables: {
-      kyc_records: {
+      addresses: {
         Row: {
           created_at: string;
-          doc_storage_paths: string[];
           id: string;
-          momo_name_match: Json | null;
-          reviewer_notes: string | null;
-          status: string;
-          tier: number;
+          label: string | null;
+          landmark: string;
+          lat: number | null;
+          lng: number | null;
+          phone: string | null;
           updated_at: string;
-          vendor_id: string;
+          user_id: string;
         };
         Insert: {
           created_at?: string;
-          doc_storage_paths?: string[];
           id?: string;
-          momo_name_match?: Json | null;
-          reviewer_notes?: string | null;
-          status?: string;
-          tier: number;
+          label?: string | null;
+          landmark: string;
+          lat?: number | null;
+          lng?: number | null;
+          phone?: string | null;
           updated_at?: string;
-          vendor_id: string;
+          user_id: string;
         };
         Update: {
           created_at?: string;
-          doc_storage_paths?: string[];
           id?: string;
-          momo_name_match?: Json | null;
-          reviewer_notes?: string | null;
-          status?: string;
-          tier?: number;
+          label?: string | null;
+          landmark?: string;
+          lat?: number | null;
+          lng?: number | null;
+          phone?: string | null;
           updated_at?: string;
-          vendor_id?: string;
+          user_id?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "kyc_records_vendor_id_fkey";
-            columns: ["vendor_id"];
-            isOneToOne: false;
-            referencedRelation: "vendors";
-            referencedColumns: ["id"];
-          },
-        ];
+        Relationships: [];
       };
-      listing_images: {
+      audit_log: {
         Row: {
-          cloudinary_public_id: string;
+          action: string;
+          actor: string | null;
+          after: Json | null;
+          at: string;
+          before: Json | null;
+          entity_id: string | null;
+          entity_type: string;
+          id: string;
+        };
+        Insert: {
+          action: string;
+          actor?: string | null;
+          after?: Json | null;
+          at?: string;
+          before?: Json | null;
+          entity_id?: string | null;
+          entity_type: string;
+          id?: string;
+        };
+        Update: {
+          action?: string;
+          actor?: string | null;
+          after?: Json | null;
+          at?: string;
+          before?: Json | null;
+          entity_id?: string | null;
+          entity_type?: string;
+          id?: string;
+        };
+        Relationships: [];
+      };
+      cart_items: {
+        Row: {
+          cart_id: string;
           created_at: string;
           id: string;
           listing_id: string;
-          position: number;
+          qty: number;
+          unit_price_ngwee: number;
           updated_at: string;
+          wholesale: boolean;
         };
         Insert: {
-          cloudinary_public_id: string;
+          cart_id: string;
           created_at?: string;
           id?: string;
           listing_id: string;
-          position: number;
+          qty: number;
+          unit_price_ngwee: number;
           updated_at?: string;
+          wholesale?: boolean;
         };
         Update: {
-          cloudinary_public_id?: string;
+          cart_id?: string;
           created_at?: string;
           id?: string;
           listing_id?: string;
-          position?: number;
+          qty?: number;
+          unit_price_ngwee?: number;
           updated_at?: string;
+          wholesale?: boolean;
         };
         Relationships: [
           {
-            foreignKeyName: "listing_images_listing_id_fkey";
+            foreignKeyName: "cart_items_cart_id_fkey";
+            columns: ["cart_id"];
+            isOneToOne: false;
+            referencedRelation: "carts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "cart_items_listing_id_fkey";
             columns: ["listing_id"];
             isOneToOne: false;
             referencedRelation: "vendor_listings";
@@ -107,258 +145,30 @@ export type Database = {
           },
         ];
       };
-      profiles: {
+      carts: {
         Row: {
           created_at: string;
-          deleted_at: string | null;
-          display_name: string | null;
-          dpa_consent_at: string | null;
+          guest_token: string | null;
           id: string;
-          locale: string;
-          notif_prefs: Json;
-          phone: string | null;
-          updated_at: string;
-        };
-        Insert: {
-          created_at?: string;
-          deleted_at?: string | null;
-          display_name?: string | null;
-          dpa_consent_at?: string | null;
-          id: string;
-          locale?: string;
-          notif_prefs?: Json;
-          phone?: string | null;
-          updated_at?: string;
-        };
-        Update: {
-          created_at?: string;
-          deleted_at?: string | null;
-          display_name?: string | null;
-          dpa_consent_at?: string | null;
-          id?: string;
-          locale?: string;
-          notif_prefs?: Json;
-          phone?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      user_roles: {
-        Row: {
-          created_at: string;
-          id: string;
-          role: string;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          role: string;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          role?: string;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "user_roles_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      vendor_locations: {
-        Row: {
-          created_at: string;
-          hours: Json;
-          id: string;
-          landmark: string;
-          lat: number;
-          lng: number;
-          updated_at: string;
-          vendor_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          hours?: Json;
-          id?: string;
-          landmark: string;
-          lat: number;
-          lng: number;
-          updated_at?: string;
-          vendor_id: string;
-        };
-        Update: {
-          created_at?: string;
-          hours?: Json;
-          id?: string;
-          landmark?: string;
-          lat?: number;
-          lng?: number;
-          updated_at?: string;
-          vendor_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "vendor_locations_vendor_id_fkey";
-            columns: ["vendor_id"];
-            isOneToOne: false;
-            referencedRelation: "vendors";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      vendor_listings: {
-        Row: {
-          condition: string;
-          created_at: string;
-          id: string;
-          moq: number;
-          price_ngwee: number;
-          price_tiers: Json | null;
-          product_id: string | null;
-          return_window_hours: number | null;
-          returnable: boolean;
-          status: string;
-          stock_mode: string;
-          stock_qty: number | null;
-          title_override: string | null;
-          updated_at: string;
-          vendor_id: string;
-          wholesale: boolean;
-        };
-        Insert: {
-          condition: string;
-          created_at?: string;
-          id?: string;
-          moq?: number;
-          price_ngwee: number;
-          price_tiers?: Json | null;
-          product_id?: string | null;
-          return_window_hours?: number | null;
-          returnable?: boolean;
-          status?: string;
-          stock_mode: string;
-          stock_qty?: number | null;
-          title_override?: string | null;
-          updated_at?: string;
-          vendor_id: string;
-          wholesale?: boolean;
-        };
-        Update: {
-          condition?: string;
-          created_at?: string;
-          id?: string;
-          moq?: number;
-          price_ngwee?: number;
-          price_tiers?: Json | null;
-          product_id?: string | null;
-          return_window_hours?: number | null;
-          returnable?: boolean;
-          status?: string;
-          stock_mode?: string;
-          stock_qty?: number | null;
-          title_override?: string | null;
-          updated_at?: string;
-          vendor_id?: string;
-          wholesale?: boolean;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "vendor_listings_product_id_fkey";
-            columns: ["product_id"];
-            isOneToOne: false;
-            referencedRelation: "products";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "vendor_listings_vendor_id_fkey";
-            columns: ["vendor_id"];
-            isOneToOne: false;
-            referencedRelation: "vendors";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      vendors: {
-        Row: {
-          caps_snapshot: Json;
-          created_at: string;
-          description: string | null;
-          display_name: string;
-          id: string;
-          kyc_tier: number | null;
-          logo_url: string | null;
-          owner_user_id: string;
-          preferred_badge: boolean;
-          slug: string;
           status: string;
           updated_at: string;
+          user_id: string | null;
         };
         Insert: {
-          caps_snapshot?: Json;
           created_at?: string;
-          description?: string | null;
-          display_name: string;
+          guest_token?: string | null;
           id?: string;
-          kyc_tier?: number | null;
-          logo_url?: string | null;
-          owner_user_id: string;
-          preferred_badge?: boolean;
-          slug: string;
           status?: string;
           updated_at?: string;
+          user_id?: string | null;
         };
         Update: {
-          caps_snapshot?: Json;
           created_at?: string;
-          description?: string | null;
-          display_name?: string;
+          guest_token?: string | null;
           id?: string;
-          kyc_tier?: number | null;
-          logo_url?: string | null;
-          owner_user_id?: string;
-          preferred_badge?: boolean;
-          slug?: string;
           status?: string;
           updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "vendors_owner_user_id_fkey";
-            columns: ["owner_user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      commission_rates: {
-        Row: {
-          category_key: string;
-          rate_bps: number;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          category_key: string;
-          rate_bps: number;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          category_key?: string;
-          rate_bps?: number;
-          created_at?: string;
-          updated_at?: string;
+          user_id?: string | null;
         };
         Relationships: [];
       };
@@ -412,75 +222,6 @@ export type Database = {
           },
         ];
       };
-      addresses: {
-        Row: {
-          created_at: string;
-          id: string;
-          label: string | null;
-          landmark: string;
-          lat: number | null;
-          lng: number | null;
-          phone: string | null;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          label?: string | null;
-          landmark: string;
-          lat?: number | null;
-          lng?: number | null;
-          phone?: string | null;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          label?: string | null;
-          landmark?: string;
-          lat?: number | null;
-          lng?: number | null;
-          phone?: string | null;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
-      audit_log: {
-        Row: {
-          id: string;
-          actor: string | null;
-          action: string;
-          entity_type: string;
-          entity_id: string | null;
-          before: Json | null;
-          after: Json | null;
-          at: string;
-        };
-        Insert: {
-          id?: string;
-          actor?: string | null;
-          action: string;
-          entity_type: string;
-          entity_id?: string | null;
-          before?: Json | null;
-          after?: Json | null;
-          at?: string;
-        };
-        Update: {
-          id?: string;
-          actor?: string | null;
-          action?: string;
-          entity_type?: string;
-          entity_id?: string | null;
-          before?: Json | null;
-          after?: Json | null;
-          at?: string;
-        };
-        Relationships: [];
-      };
       checkout_groups: {
         Row: {
           created_at: string;
@@ -517,96 +258,117 @@ export type Database = {
         };
         Relationships: [];
       };
-      config_audit: {
+      commission_rates: {
         Row: {
-          id: string;
-          actor: string | null;
-          table_name: string;
-          row_key: string;
-          before: Json | null;
-          after: Json | null;
-          at: string;
+          category_key: string;
+          created_at: string;
+          rate_bps: number;
+          updated_at: string;
         };
         Insert: {
-          id?: string;
-          actor?: string | null;
-          table_name: string;
-          row_key: string;
-          before?: Json | null;
-          after?: Json | null;
-          at?: string;
+          category_key: string;
+          created_at?: string;
+          rate_bps: number;
+          updated_at?: string;
         };
         Update: {
-          id?: string;
+          category_key?: string;
+          created_at?: string;
+          rate_bps?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      config_audit: {
+        Row: {
+          actor: string | null;
+          after: Json | null;
+          at: string;
+          before: Json | null;
+          id: string;
+          row_key: string;
+          table_name: string;
+        };
+        Insert: {
           actor?: string | null;
-          table_name?: string;
-          row_key?: string;
-          before?: Json | null;
           after?: Json | null;
           at?: string;
+          before?: Json | null;
+          id?: string;
+          row_key: string;
+          table_name: string;
+        };
+        Update: {
+          actor?: string | null;
+          after?: Json | null;
+          at?: string;
+          before?: Json | null;
+          id?: string;
+          row_key?: string;
+          table_name?: string;
         };
         Relationships: [];
       };
       delivery_zones: {
         Row: {
-          zone_key: string;
-          label: string;
-          fee_ngwee: number;
           active: boolean;
           created_at: string;
+          fee_ngwee: number;
+          label: string;
           updated_at: string;
+          zone_key: string;
         };
         Insert: {
-          zone_key: string;
-          label: string;
-          fee_ngwee: number;
           active?: boolean;
           created_at?: string;
+          fee_ngwee: number;
+          label: string;
           updated_at?: string;
+          zone_key: string;
         };
         Update: {
-          zone_key?: string;
-          label?: string;
-          fee_ngwee?: number;
           active?: boolean;
           created_at?: string;
+          fee_ngwee?: number;
+          label?: string;
           updated_at?: string;
+          zone_key?: string;
         };
         Relationships: [];
       };
       disputes: {
         Row: {
-          id: string;
-          order_id: string;
-          opener_user_id: string;
-          evidence_paths: string[];
-          vendor_response: string | null;
           admin_decision: string | null;
-          status: string;
           created_at: string;
+          evidence_paths: string[];
+          id: string;
+          opener_user_id: string;
+          order_id: string;
+          status: string;
           updated_at: string;
+          vendor_response: string | null;
         };
         Insert: {
-          id?: string;
-          order_id: string;
-          opener_user_id: string;
-          evidence_paths?: string[];
-          vendor_response?: string | null;
           admin_decision?: string | null;
-          status?: string;
           created_at?: string;
+          evidence_paths?: string[];
+          id?: string;
+          opener_user_id: string;
+          order_id: string;
+          status?: string;
           updated_at?: string;
+          vendor_response?: string | null;
         };
         Update: {
-          id?: string;
-          order_id?: string;
-          opener_user_id?: string;
-          evidence_paths?: string[];
-          vendor_response?: string | null;
           admin_decision?: string | null;
-          status?: string;
           created_at?: string;
+          evidence_paths?: string[];
+          id?: string;
+          opener_user_id?: string;
+          order_id?: string;
+          status?: string;
           updated_at?: string;
+          vendor_response?: string | null;
         };
         Relationships: [
           {
@@ -706,6 +468,119 @@ export type Database = {
           },
         ];
       };
+      feature_flags: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          enabled: boolean;
+          flag: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          enabled?: boolean;
+          flag: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string | null;
+          enabled?: boolean;
+          flag?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      flags: {
+        Row: {
+          created_at: string;
+          entity_id: string;
+          entity_type: string;
+          id: string;
+          reason: string;
+          reporter_user_id: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          entity_id: string;
+          entity_type: string;
+          id?: string;
+          reason: string;
+          reporter_user_id: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          entity_id?: string;
+          entity_type?: string;
+          id?: string;
+          reason?: string;
+          reporter_user_id?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      invoice_counters: {
+        Row: {
+          next_no: number;
+          series: string;
+        };
+        Insert: {
+          next_no?: number;
+          series: string;
+        };
+        Update: {
+          next_no?: number;
+          series?: string;
+        };
+        Relationships: [];
+      };
+      invoices: {
+        Row: {
+          created_at: string;
+          id: string;
+          no: number;
+          order_id: string;
+          series: string;
+          snapshot: Json;
+          vat_flag: boolean;
+          vat_ngwee: number;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          no: number;
+          order_id: string;
+          series: string;
+          snapshot?: Json;
+          vat_flag?: boolean;
+          vat_ngwee?: number;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          no?: number;
+          order_id?: string;
+          series?: string;
+          snapshot?: Json;
+          vat_flag?: boolean;
+          vat_ngwee?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "invoices_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       job_quotes: {
         Row: {
           amount_ngwee: number;
@@ -796,137 +671,299 @@ export type Database = {
         };
         Relationships: [];
       };
-      feature_flags: {
+      kyc_records: {
         Row: {
-          flag: string;
-          enabled: boolean;
-          description: string | null;
           created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          flag: string;
-          enabled?: boolean;
-          description?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          flag?: string;
-          enabled?: boolean;
-          description?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      flags: {
-        Row: {
+          doc_storage_paths: string[];
           id: string;
-          entity_type: string;
-          entity_id: string;
-          reason: string;
-          reporter_user_id: string;
+          momo_name_match: Json | null;
+          reviewer_notes: string | null;
           status: string;
+          tier: number;
+          updated_at: string;
+          vendor_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          doc_storage_paths?: string[];
+          id?: string;
+          momo_name_match?: Json | null;
+          reviewer_notes?: string | null;
+          status?: string;
+          tier: number;
+          updated_at?: string;
+          vendor_id: string;
+        };
+        Update: {
+          created_at?: string;
+          doc_storage_paths?: string[];
+          id?: string;
+          momo_name_match?: Json | null;
+          reviewer_notes?: string | null;
+          status?: string;
+          tier?: number;
+          updated_at?: string;
+          vendor_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "kyc_records_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      ledger_accounts: {
+        Row: {
           created_at: string;
+          id: string;
+          kind: string;
+          updated_at: string;
+          vendor_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          kind: string;
+          updated_at?: string;
+          vendor_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          updated_at?: string;
+          vendor_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ledger_accounts_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      ledger_postings: {
+        Row: {
+          account_id: string;
+          amount_ngwee: number;
+          created_at: string;
+          id: string;
+          transaction_id: string;
+        };
+        Insert: {
+          account_id: string;
+          amount_ngwee: number;
+          created_at?: string;
+          id?: string;
+          transaction_id: string;
+        };
+        Update: {
+          account_id?: string;
+          amount_ngwee?: number;
+          created_at?: string;
+          id?: string;
+          transaction_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ledger_postings_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "ledger_accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ledger_postings_transaction_id_fkey";
+            columns: ["transaction_id"];
+            isOneToOne: false;
+            referencedRelation: "ledger_transactions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      ledger_transactions: {
+        Row: {
+          checkout_group_id: string | null;
+          created_at: string;
+          id: string;
+          kind: string;
+          order_id: string | null;
+          payment_id: string | null;
+          payout_id: string | null;
+          refund_id: string | null;
+        };
+        Insert: {
+          checkout_group_id?: string | null;
+          created_at?: string;
+          id?: string;
+          kind: string;
+          order_id?: string | null;
+          payment_id?: string | null;
+          payout_id?: string | null;
+          refund_id?: string | null;
+        };
+        Update: {
+          checkout_group_id?: string | null;
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          order_id?: string | null;
+          payment_id?: string | null;
+          payout_id?: string | null;
+          refund_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ledger_transactions_checkout_group_id_fkey";
+            columns: ["checkout_group_id"];
+            isOneToOne: false;
+            referencedRelation: "checkout_groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ledger_transactions_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ledger_transactions_payment_id_fkey";
+            columns: ["payment_id"];
+            isOneToOne: false;
+            referencedRelation: "payments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ledger_transactions_payout_id_fkey";
+            columns: ["payout_id"];
+            isOneToOne: false;
+            referencedRelation: "payouts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ledger_transactions_refund_id_fkey";
+            columns: ["refund_id"];
+            isOneToOne: false;
+            referencedRelation: "refunds";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      listing_images: {
+        Row: {
+          cloudinary_public_id: string;
+          created_at: string;
+          id: string;
+          listing_id: string;
+          position: number;
           updated_at: string;
         };
         Insert: {
-          id?: string;
-          entity_type: string;
-          entity_id: string;
-          reason: string;
-          reporter_user_id: string;
-          status?: string;
+          cloudinary_public_id: string;
           created_at?: string;
+          id?: string;
+          listing_id: string;
+          position: number;
           updated_at?: string;
         };
         Update: {
-          id?: string;
-          entity_type?: string;
-          entity_id?: string;
-          reason?: string;
-          reporter_user_id?: string;
-          status?: string;
+          cloudinary_public_id?: string;
           created_at?: string;
+          id?: string;
+          listing_id?: string;
+          position?: number;
           updated_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "listing_images_listing_id_fkey";
+            columns: ["listing_id"];
+            isOneToOne: false;
+            referencedRelation: "vendor_listings";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       merch_slots: {
         Row: {
-          id: string;
-          slot_key: string;
-          variant_key: string;
-          payload: Json;
-          schedule_from: string | null;
-          schedule_to: string | null;
-          position: number;
           active: boolean;
           created_at: string;
+          id: string;
+          payload: Json;
+          position: number;
+          schedule_from: string | null;
+          schedule_to: string | null;
+          slot_key: string;
           updated_at: string;
+          variant_key: string;
         };
         Insert: {
-          id?: string;
-          slot_key: string;
-          variant_key: string;
-          payload?: Json;
-          schedule_from?: string | null;
-          schedule_to?: string | null;
-          position?: number;
           active?: boolean;
           created_at?: string;
+          id?: string;
+          payload?: Json;
+          position?: number;
+          schedule_from?: string | null;
+          schedule_to?: string | null;
+          slot_key: string;
           updated_at?: string;
+          variant_key: string;
         };
         Update: {
-          id?: string;
-          slot_key?: string;
-          variant_key?: string;
-          payload?: Json;
-          schedule_from?: string | null;
-          schedule_to?: string | null;
-          position?: number;
           active?: boolean;
           created_at?: string;
+          id?: string;
+          payload?: Json;
+          position?: number;
+          schedule_from?: string | null;
+          schedule_to?: string | null;
+          slot_key?: string;
           updated_at?: string;
+          variant_key?: string;
         };
         Relationships: [];
       };
       notification_outbox: {
         Row: {
-          id: string;
-          dedupe_key: string;
+          attempts: number;
           channel: string;
-          template: string | null;
+          created_at: string;
+          dedupe_key: string;
+          id: string;
+          next_retry_at: string | null;
           payload: Json;
           status: string;
-          attempts: number;
-          next_retry_at: string | null;
-          created_at: string;
+          template: string | null;
           updated_at: string;
         };
         Insert: {
-          id?: string;
-          dedupe_key: string;
+          attempts?: number;
           channel: string;
-          template?: string | null;
+          created_at?: string;
+          dedupe_key: string;
+          id?: string;
+          next_retry_at?: string | null;
           payload?: Json;
           status?: string;
-          attempts?: number;
-          next_retry_at?: string | null;
-          created_at?: string;
+          template?: string | null;
           updated_at?: string;
         };
         Update: {
-          id?: string;
-          dedupe_key?: string;
+          attempts?: number;
           channel?: string;
-          template?: string | null;
+          created_at?: string;
+          dedupe_key?: string;
+          id?: string;
+          next_retry_at?: string | null;
           payload?: Json;
           status?: string;
-          attempts?: number;
-          next_retry_at?: string | null;
-          created_at?: string;
+          template?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -1200,48 +1237,118 @@ export type Database = {
           },
         ];
       };
+      payments: {
+        Row: {
+          amount_ngwee: number;
+          checkout_group_id: string;
+          created_at: string;
+          id: string;
+          lenco_reference: string;
+          provider: string;
+          rail: string;
+          raw: Json;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          amount_ngwee: number;
+          checkout_group_id: string;
+          created_at?: string;
+          id?: string;
+          lenco_reference: string;
+          provider: string;
+          rail: string;
+          raw?: Json;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          amount_ngwee?: number;
+          checkout_group_id?: string;
+          created_at?: string;
+          id?: string;
+          lenco_reference?: string;
+          provider?: string;
+          rail?: string;
+          raw?: Json;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payments_checkout_group_id_fkey";
+            columns: ["checkout_group_id"];
+            isOneToOne: false;
+            referencedRelation: "checkout_groups";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      payouts: {
+        Row: {
+          amount_ngwee: number;
+          created_at: string;
+          id: string;
+          lenco_reference: string;
+          rail: string;
+          resolve_snapshot: Json;
+          status: string;
+          updated_at: string;
+          vendor_id: string;
+        };
+        Insert: {
+          amount_ngwee: number;
+          created_at?: string;
+          id?: string;
+          lenco_reference: string;
+          rail: string;
+          resolve_snapshot?: Json;
+          status?: string;
+          updated_at?: string;
+          vendor_id: string;
+        };
+        Update: {
+          amount_ngwee?: number;
+          created_at?: string;
+          id?: string;
+          lenco_reference?: string;
+          rail?: string;
+          resolve_snapshot?: Json;
+          status?: string;
+          updated_at?: string;
+          vendor_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "payouts_vendor_id_fkey";
+            columns: ["vendor_id"];
+            isOneToOne: false;
+            referencedRelation: "vendors";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       platform_config: {
         Row: {
-          key: string;
-          value: Json;
+          created_at: string;
           description: string | null;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
           key: string;
+          updated_at: string;
           value: Json;
-          description?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          key?: string;
-          value?: Json;
-          description?: string | null;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      prohibited_categories: {
-        Row: {
-          key: string;
-          reason: string;
-          created_at: string;
-          updated_at: string;
         };
         Insert: {
-          key: string;
-          reason: string;
           created_at?: string;
+          description?: string | null;
+          key: string;
           updated_at?: string;
+          value: Json;
         };
         Update: {
-          key?: string;
-          reason?: string;
           created_at?: string;
+          description?: string | null;
+          key?: string;
           updated_at?: string;
+          value?: Json;
         };
         Relationships: [];
       };
@@ -1301,6 +1408,289 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      profiles: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          display_name: string | null;
+          dpa_consent_at: string | null;
+          id: string;
+          locale: string;
+          notif_prefs: Json;
+          phone: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          display_name?: string | null;
+          dpa_consent_at?: string | null;
+          id: string;
+          locale?: string;
+          notif_prefs?: Json;
+          phone?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          display_name?: string | null;
+          dpa_consent_at?: string | null;
+          id?: string;
+          locale?: string;
+          notif_prefs?: Json;
+          phone?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      prohibited_categories: {
+        Row: {
+          created_at: string;
+          key: string;
+          reason: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          key: string;
+          reason: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          key?: string;
+          reason?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      rate_counters: {
+        Row: {
+          count: number;
+          expires_at: string;
+          id: string;
+          key: string;
+          scope: string;
+          window_start: string;
+        };
+        Insert: {
+          count?: number;
+          expires_at: string;
+          id?: string;
+          key: string;
+          scope: string;
+          window_start: string;
+        };
+        Update: {
+          count?: number;
+          expires_at?: string;
+          id?: string;
+          key?: string;
+          scope?: string;
+          window_start?: string;
+        };
+        Relationships: [];
+      };
+      refunds: {
+        Row: {
+          amount_ngwee: number;
+          breakdown: Json;
+          created_at: string;
+          id: string;
+          lane: number;
+          order_id: string;
+          payout_ref: string | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          amount_ngwee: number;
+          breakdown?: Json;
+          created_at?: string;
+          id?: string;
+          lane: number;
+          order_id: string;
+          payout_ref?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          amount_ngwee?: number;
+          breakdown?: Json;
+          created_at?: string;
+          id?: string;
+          lane?: number;
+          order_id?: string;
+          payout_ref?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "refunds_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "refunds_payout_ref_fkey";
+            columns: ["payout_ref"];
+            isOneToOne: false;
+            referencedRelation: "payouts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      returns: {
+        Row: {
+          created_at: string;
+          evidence_paths: string[];
+          fee_breakdown: Json;
+          id: string;
+          lane: number;
+          order_item_id: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          evidence_paths?: string[];
+          fee_breakdown?: Json;
+          id?: string;
+          lane: number;
+          order_item_id: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          evidence_paths?: string[];
+          fee_breakdown?: Json;
+          id?: string;
+          lane?: number;
+          order_item_id?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "returns_order_item_id_fkey";
+            columns: ["order_item_id"];
+            isOneToOne: false;
+            referencedRelation: "order_items";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      reviews: {
+        Row: {
+          body: string | null;
+          created_at: string;
+          id: string;
+          order_item_id: string;
+          photos: string[];
+          rating: number;
+          status: string;
+          updated_at: string;
+          vendor_reply: string | null;
+          vendor_reply_at: string | null;
+        };
+        Insert: {
+          body?: string | null;
+          created_at?: string;
+          id?: string;
+          order_item_id: string;
+          photos?: string[];
+          rating: number;
+          status?: string;
+          updated_at?: string;
+          vendor_reply?: string | null;
+          vendor_reply_at?: string | null;
+        };
+        Update: {
+          body?: string | null;
+          created_at?: string;
+          id?: string;
+          order_item_id?: string;
+          photos?: string[];
+          rating?: number;
+          status?: string;
+          updated_at?: string;
+          vendor_reply?: string | null;
+          vendor_reply_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "reviews_order_item_id_fkey";
+            columns: ["order_item_id"];
+            isOneToOne: true;
+            referencedRelation: "order_items";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      search_documents: {
+        Row: {
+          body: string;
+          boost_signals: Json;
+          category_path: string | null;
+          created_at: string;
+          embedding: string | null;
+          entity_id: string;
+          entity_kind: string;
+          id: string;
+          is_public: boolean;
+          lat: number | null;
+          lng: number | null;
+          locale_terms: string[] | null;
+          price_max_ngwee: number | null;
+          price_min_ngwee: number | null;
+          title: string;
+          tsv: unknown;
+          updated_at: string;
+        };
+        Insert: {
+          body?: string;
+          boost_signals?: Json;
+          category_path?: string | null;
+          created_at?: string;
+          embedding?: string | null;
+          entity_id: string;
+          entity_kind: string;
+          id?: string;
+          is_public?: boolean;
+          lat?: number | null;
+          lng?: number | null;
+          locale_terms?: string[] | null;
+          price_max_ngwee?: number | null;
+          price_min_ngwee?: number | null;
+          title?: string;
+          tsv?: unknown;
+          updated_at?: string;
+        };
+        Update: {
+          body?: string;
+          boost_signals?: Json;
+          category_path?: string | null;
+          created_at?: string;
+          embedding?: string | null;
+          entity_id?: string;
+          entity_kind?: string;
+          id?: string;
+          is_public?: boolean;
+          lat?: number | null;
+          lng?: number | null;
+          locale_terms?: string[] | null;
+          price_max_ngwee?: number | null;
+          price_min_ngwee?: number | null;
+          title?: string;
+          tsv?: unknown;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       services: {
         Row: {
@@ -1396,6 +1786,27 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      synonyms: {
+        Row: {
+          canonical: string;
+          created_at: string;
+          id: string;
+          term: string;
+        };
+        Insert: {
+          canonical: string;
+          created_at?: string;
+          id?: string;
+          term: string;
+        };
+        Update: {
+          canonical?: string;
+          created_at?: string;
+          id?: string;
+          term?: string;
+        };
+        Relationships: [];
       };
       ticket_types: {
         Row: {
@@ -1502,117 +1913,103 @@ export type Database = {
           },
         ];
       };
-      vendor_quotas: {
-        Row: {
-          tier: number;
-          max_listings: number;
-          first_orders_cap_ngwee: number | null;
-          first_orders_count: number | null;
-          payout_velocity: Json;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          tier: number;
-          max_listings: number;
-          first_orders_cap_ngwee?: number | null;
-          first_orders_count?: number | null;
-          payout_velocity?: Json;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          tier?: number;
-          max_listings?: number;
-          first_orders_cap_ngwee?: number | null;
-          first_orders_count?: number | null;
-          payout_velocity?: Json;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      invoice_counters: {
-        Row: {
-          next_no: number;
-          series: string;
-        };
-        Insert: {
-          next_no?: number;
-          series: string;
-        };
-        Update: {
-          next_no?: number;
-          series?: string;
-        };
-        Relationships: [];
-      };
-      invoices: {
+      user_roles: {
         Row: {
           created_at: string;
           id: string;
-          no: number;
-          order_id: string;
-          series: string;
-          snapshot: Json;
-          vat_flag: boolean;
-          vat_ngwee: number;
+          role: string;
+          updated_at: string;
+          user_id: string;
         };
         Insert: {
           created_at?: string;
           id?: string;
-          no: number;
-          order_id: string;
-          series: string;
-          snapshot?: Json;
-          vat_flag?: boolean;
-          vat_ngwee?: number;
+          role: string;
+          updated_at?: string;
+          user_id: string;
         };
         Update: {
           created_at?: string;
           id?: string;
-          no?: number;
-          order_id?: string;
-          series?: string;
-          snapshot?: Json;
-          vat_flag?: boolean;
-          vat_ngwee?: number;
+          role?: string;
+          updated_at?: string;
+          user_id?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "invoices_order_id_fkey";
-            columns: ["order_id"];
+            foreignKeyName: "user_roles_user_id_fkey";
+            columns: ["user_id"];
             isOneToOne: false;
-            referencedRelation: "orders";
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
       };
-      ledger_accounts: {
+      vendor_listings: {
         Row: {
+          condition: string;
           created_at: string;
           id: string;
-          kind: string;
+          moq: number;
+          price_ngwee: number;
+          price_tiers: Json | null;
+          product_id: string | null;
+          return_window_hours: number | null;
+          returnable: boolean;
+          status: string;
+          stock_mode: string;
+          stock_qty: number | null;
+          title_override: string | null;
           updated_at: string;
-          vendor_id: string | null;
+          vendor_id: string;
+          wholesale: boolean;
         };
         Insert: {
+          condition: string;
           created_at?: string;
           id?: string;
-          kind: string;
+          moq?: number;
+          price_ngwee: number;
+          price_tiers?: Json | null;
+          product_id?: string | null;
+          return_window_hours?: number | null;
+          returnable?: boolean;
+          status?: string;
+          stock_mode: string;
+          stock_qty?: number | null;
+          title_override?: string | null;
           updated_at?: string;
-          vendor_id?: string | null;
+          vendor_id: string;
+          wholesale?: boolean;
         };
         Update: {
+          condition?: string;
           created_at?: string;
           id?: string;
-          kind?: string;
+          moq?: number;
+          price_ngwee?: number;
+          price_tiers?: Json | null;
+          product_id?: string | null;
+          return_window_hours?: number | null;
+          returnable?: boolean;
+          status?: string;
+          stock_mode?: string;
+          stock_qty?: number | null;
+          title_override?: string | null;
           updated_at?: string;
-          vendor_id?: string | null;
+          vendor_id?: string;
+          wholesale?: boolean;
         };
         Relationships: [
           {
-            foreignKeyName: "ledger_accounts_vendor_id_fkey";
+            foreignKeyName: "vendor_listings_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "vendor_listings_vendor_id_fkey";
             columns: ["vendor_id"];
             isOneToOne: false;
             referencedRelation: "vendors";
@@ -1620,198 +2017,40 @@ export type Database = {
           },
         ];
       };
-      ledger_postings: {
+      vendor_locations: {
         Row: {
-          account_id: string;
-          amount_ngwee: number;
           created_at: string;
+          hours: Json;
           id: string;
-          transaction_id: string;
-        };
-        Insert: {
-          account_id: string;
-          amount_ngwee: number;
-          created_at?: string;
-          id?: string;
-          transaction_id: string;
-        };
-        Update: {
-          account_id?: string;
-          amount_ngwee?: number;
-          created_at?: string;
-          id?: string;
-          transaction_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "ledger_postings_account_id_fkey";
-            columns: ["account_id"];
-            isOneToOne: false;
-            referencedRelation: "ledger_accounts";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "ledger_postings_transaction_id_fkey";
-            columns: ["transaction_id"];
-            isOneToOne: false;
-            referencedRelation: "ledger_transactions";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      ledger_transactions: {
-        Row: {
-          checkout_group_id: string | null;
-          created_at: string;
-          id: string;
-          kind: string;
-          order_id: string | null;
-          payment_id: string | null;
-          payout_id: string | null;
-          refund_id: string | null;
-        };
-        Insert: {
-          checkout_group_id?: string | null;
-          created_at?: string;
-          id?: string;
-          kind: string;
-          order_id?: string | null;
-          payment_id?: string | null;
-          payout_id?: string | null;
-          refund_id?: string | null;
-        };
-        Update: {
-          checkout_group_id?: string | null;
-          created_at?: string;
-          id?: string;
-          kind?: string;
-          order_id?: string | null;
-          payment_id?: string | null;
-          payout_id?: string | null;
-          refund_id?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "ledger_transactions_checkout_group_id_fkey";
-            columns: ["checkout_group_id"];
-            isOneToOne: false;
-            referencedRelation: "checkout_groups";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "ledger_transactions_order_id_fkey";
-            columns: ["order_id"];
-            isOneToOne: false;
-            referencedRelation: "orders";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "ledger_transactions_payment_id_fkey";
-            columns: ["payment_id"];
-            isOneToOne: false;
-            referencedRelation: "payments";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "ledger_transactions_payout_id_fkey";
-            columns: ["payout_id"];
-            isOneToOne: false;
-            referencedRelation: "payouts";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "ledger_transactions_refund_id_fkey";
-            columns: ["refund_id"];
-            isOneToOne: false;
-            referencedRelation: "refunds";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      payments: {
-        Row: {
-          amount_ngwee: number;
-          checkout_group_id: string;
-          created_at: string;
-          id: string;
-          lenco_reference: string;
-          provider: string;
-          rail: string;
-          raw: Json;
-          status: string;
-          updated_at: string;
-        };
-        Insert: {
-          amount_ngwee: number;
-          checkout_group_id: string;
-          created_at?: string;
-          id?: string;
-          lenco_reference: string;
-          provider: string;
-          rail: string;
-          raw?: Json;
-          status?: string;
-          updated_at?: string;
-        };
-        Update: {
-          amount_ngwee?: number;
-          checkout_group_id?: string;
-          created_at?: string;
-          id?: string;
-          lenco_reference?: string;
-          provider?: string;
-          rail?: string;
-          raw?: Json;
-          status?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "payments_checkout_group_id_fkey";
-            columns: ["checkout_group_id"];
-            isOneToOne: false;
-            referencedRelation: "checkout_groups";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      payouts: {
-        Row: {
-          amount_ngwee: number;
-          created_at: string;
-          id: string;
-          lenco_reference: string;
-          rail: string;
-          resolve_snapshot: Json;
-          status: string;
+          landmark: string;
+          lat: number;
+          lng: number;
           updated_at: string;
           vendor_id: string;
         };
         Insert: {
-          amount_ngwee: number;
           created_at?: string;
+          hours?: Json;
           id?: string;
-          lenco_reference: string;
-          rail: string;
-          resolve_snapshot?: Json;
-          status?: string;
+          landmark: string;
+          lat: number;
+          lng: number;
           updated_at?: string;
           vendor_id: string;
         };
         Update: {
-          amount_ngwee?: number;
           created_at?: string;
+          hours?: Json;
           id?: string;
-          lenco_reference?: string;
-          rail?: string;
-          resolve_snapshot?: Json;
-          status?: string;
+          landmark?: string;
+          lat?: number;
+          lng?: number;
           updated_at?: string;
           vendor_id?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "payouts_vendor_id_fkey";
+            foreignKeyName: "vendor_locations_vendor_id_fkey";
             columns: ["vendor_id"];
             isOneToOne: false;
             referencedRelation: "vendors";
@@ -1819,250 +2058,88 @@ export type Database = {
           },
         ];
       };
-      refunds: {
+      vendor_quotas: {
         Row: {
-          amount_ngwee: number;
-          breakdown: Json;
           created_at: string;
+          first_orders_cap_ngwee: number | null;
+          first_orders_count: number | null;
+          max_listings: number;
+          payout_velocity: Json;
+          tier: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          first_orders_cap_ngwee?: number | null;
+          first_orders_count?: number | null;
+          max_listings: number;
+          payout_velocity?: Json;
+          tier: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          first_orders_cap_ngwee?: number | null;
+          first_orders_count?: number | null;
+          max_listings?: number;
+          payout_velocity?: Json;
+          tier?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      vendors: {
+        Row: {
+          caps_snapshot: Json;
+          created_at: string;
+          description: string | null;
+          display_name: string;
           id: string;
-          lane: number;
-          order_id: string;
-          payout_ref: string | null;
+          kyc_tier: number | null;
+          logo_url: string | null;
+          owner_user_id: string;
+          preferred_badge: boolean;
+          slug: string;
           status: string;
           updated_at: string;
         };
         Insert: {
-          amount_ngwee: number;
-          breakdown?: Json;
+          caps_snapshot?: Json;
           created_at?: string;
+          description?: string | null;
+          display_name: string;
           id?: string;
-          lane: number;
-          order_id: string;
-          payout_ref?: string | null;
+          kyc_tier?: number | null;
+          logo_url?: string | null;
+          owner_user_id: string;
+          preferred_badge?: boolean;
+          slug: string;
           status?: string;
           updated_at?: string;
         };
         Update: {
-          amount_ngwee?: number;
-          breakdown?: Json;
+          caps_snapshot?: Json;
           created_at?: string;
+          description?: string | null;
+          display_name?: string;
           id?: string;
-          lane?: number;
-          order_id?: string;
-          payout_ref?: string | null;
+          kyc_tier?: number | null;
+          logo_url?: string | null;
+          owner_user_id?: string;
+          preferred_badge?: boolean;
+          slug?: string;
           status?: string;
           updated_at?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "refunds_order_id_fkey";
-            columns: ["order_id"];
+            foreignKeyName: "vendors_owner_user_id_fkey";
+            columns: ["owner_user_id"];
             isOneToOne: false;
-            referencedRelation: "orders";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "refunds_payout_ref_fkey";
-            columns: ["payout_ref"];
-            isOneToOne: false;
-            referencedRelation: "payouts";
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
-      };
-      rate_counters: {
-        Row: {
-          id: string;
-          scope: string;
-          key: string;
-          window_start: string;
-          count: number;
-          expires_at: string;
-        };
-        Insert: {
-          id?: string;
-          scope: string;
-          key: string;
-          window_start: string;
-          count?: number;
-          expires_at: string;
-        };
-        Update: {
-          id?: string;
-          scope?: string;
-          key?: string;
-          window_start?: string;
-          count?: number;
-          expires_at?: string;
-        };
-        Relationships: [];
-      };
-      returns: {
-        Row: {
-          id: string;
-          order_item_id: string;
-          lane: number;
-          evidence_paths: string[];
-          fee_breakdown: Json;
-          status: string;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          order_item_id: string;
-          lane: number;
-          evidence_paths?: string[];
-          fee_breakdown?: Json;
-          status?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          order_item_id?: string;
-          lane?: number;
-          evidence_paths?: string[];
-          fee_breakdown?: Json;
-          status?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "returns_order_item_id_fkey";
-            columns: ["order_item_id"];
-            isOneToOne: false;
-            referencedRelation: "order_items";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      reviews: {
-        Row: {
-          id: string;
-          order_item_id: string;
-          rating: number;
-          body: string | null;
-          photos: string[];
-          vendor_reply: string | null;
-          vendor_reply_at: string | null;
-          status: string;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          order_item_id: string;
-          rating: number;
-          body?: string | null;
-          photos?: string[];
-          vendor_reply?: string | null;
-          vendor_reply_at?: string | null;
-          status?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          order_item_id?: string;
-          rating?: number;
-          body?: string | null;
-          photos?: string[];
-          vendor_reply?: string | null;
-          vendor_reply_at?: string | null;
-          status?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "reviews_order_item_id_fkey";
-            columns: ["order_item_id"];
-            isOneToOne: true;
-            referencedRelation: "order_items";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      search_documents: {
-        Row: {
-          id: string;
-          entity_kind: string;
-          entity_id: string;
-          title: string;
-          body: string;
-          category_path: string | null;
-          price_min_ngwee: number | null;
-          price_max_ngwee: number | null;
-          lat: number | null;
-          lng: number | null;
-          locale_terms: string[] | null;
-          tsv: unknown;
-          embedding: string | null;
-          boost_signals: Json;
-          is_public: boolean;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          entity_kind: string;
-          entity_id: string;
-          title?: string;
-          body?: string;
-          category_path?: string | null;
-          price_min_ngwee?: number | null;
-          price_max_ngwee?: number | null;
-          lat?: number | null;
-          lng?: number | null;
-          locale_terms?: string[] | null;
-          embedding?: string | null;
-          boost_signals?: Json;
-          is_public?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          entity_kind?: string;
-          entity_id?: string;
-          title?: string;
-          body?: string;
-          category_path?: string | null;
-          price_min_ngwee?: number | null;
-          price_max_ngwee?: number | null;
-          lat?: number | null;
-          lng?: number | null;
-          locale_terms?: string[] | null;
-          embedding?: string | null;
-          boost_signals?: Json;
-          is_public?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      synonyms: {
-        Row: {
-          id: string;
-          term: string;
-          canonical: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          term: string;
-          canonical: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          term?: string;
-          canonical?: string;
-          created_at?: string;
-        };
-        Relationships: [];
       };
       webhook_events: {
         Row: {
@@ -2094,111 +2171,90 @@ export type Database = {
         };
         Relationships: [];
       };
-      cart_items: {
-        Row: {
-          cart_id: string;
-          created_at: string;
-          id: string;
-          listing_id: string;
-          qty: number;
-          unit_price_ngwee: number;
-          updated_at: string;
-          wholesale: boolean;
-        };
-        Insert: {
-          cart_id: string;
-          created_at?: string;
-          id?: string;
-          listing_id: string;
-          qty: number;
-          unit_price_ngwee: number;
-          updated_at?: string;
-          wholesale?: boolean;
-        };
-        Update: {
-          cart_id?: string;
-          created_at?: string;
-          id?: string;
-          listing_id?: string;
-          qty?: number;
-          unit_price_ngwee?: number;
-          updated_at?: string;
-          wholesale?: boolean;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "cart_items_cart_id_fkey";
-            columns: ["cart_id"];
-            isOneToOne: false;
-            referencedRelation: "carts";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "cart_items_listing_id_fkey";
-            columns: ["listing_id"];
-            isOneToOne: false;
-            referencedRelation: "vendor_listings";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      carts: {
-        Row: {
-          created_at: string;
-          guest_token: string | null;
-          id: string;
-          status: string;
-          updated_at: string;
-          user_id: string | null;
-        };
-        Insert: {
-          created_at?: string;
-          guest_token?: string | null;
-          id?: string;
-          status?: string;
-          updated_at?: string;
-          user_id?: string | null;
-        };
-        Update: {
-          created_at?: string;
-          guest_token?: string | null;
-          id?: string;
-          status?: string;
-          updated_at?: string;
-          user_id?: string | null;
-        };
-        Relationships: [];
-      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
+      bump_rate_counter: {
+        Args: {
+          p_key: string;
+          p_limit: number;
+          p_scope: string;
+          p_window: string;
+        };
+        Returns: {
+          allowed: boolean;
+          retry_after_seconds: number;
+        }[];
+      };
+      cart_guest_token: { Args: never; Returns: string };
+      cleanup_expired_rate_counters: { Args: never; Returns: number };
+      dearmor: { Args: { "": string }; Returns: string };
       expand_search_terms: { Args: { p_query: string }; Returns: string };
+      gen_random_uuid: { Args: never; Returns: string };
+      gen_salt: { Args: { "": string }; Returns: string };
       has_role: { Args: { required_role: string }; Returns: boolean };
       is_valid_price_tiers: { Args: { tiers: Json }; Returns: boolean };
       next_invoice_no: { Args: { p_series: string }; Returns: number };
+      pgp_armor_headers: {
+        Args: { "": string };
+        Returns: Record<string, unknown>[];
+      };
+      search_apply_boost: {
+        Args: { p_base_score: number; p_boost_signals: Json };
+        Returns: number;
+      };
+      search_cascade_vendor_children: {
+        Args: { p_vendor_id: string };
+        Returns: undefined;
+      };
+      search_document_tsv: {
+        Args: { p_body: string; p_locale_terms: string[]; p_title: string };
+        Returns: unknown;
+      };
+      search_mark_unpublished: {
+        Args: { p_entity_id: string; p_entity_kind: string };
+        Returns: undefined;
+      };
+      search_remove_document: {
+        Args: { p_entity_id: string; p_entity_kind: string };
+        Returns: undefined;
+      };
       search_rrf: {
-        Args: {
-          query: string;
-          query_embedding?: string | null;
-          filters?: Json;
-        };
+        Args: { filters?: Json; query: string; query_embedding?: string };
         Returns: {
-          id: string;
-          entity_kind: string;
-          entity_id: string;
-          title: string;
           body: string;
-          category_path: string | null;
-          price_min_ngwee: number | null;
-          price_max_ngwee: number | null;
-          lat: number | null;
-          lng: number | null;
-          locale_terms: string[] | null;
           boost_signals: Json;
+          category_path: string;
+          entity_id: string;
+          entity_kind: string;
+          id: string;
+          lat: number;
+          lng: number;
+          locale_terms: string[];
+          price_max_ngwee: number;
+          price_min_ngwee: number;
           rrf_score: number;
+          title: string;
         }[];
+      };
+      search_upsert_event: { Args: { p_event_id: string }; Returns: undefined };
+      search_upsert_listing: {
+        Args: { p_listing_id: string };
+        Returns: undefined;
+      };
+      search_upsert_product: {
+        Args: { p_product_id: string };
+        Returns: undefined;
+      };
+      search_upsert_service: {
+        Args: { p_service_id: string };
+        Returns: undefined;
+      };
+      search_upsert_vendor: {
+        Args: { p_vendor_id: string };
+        Returns: undefined;
       };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
