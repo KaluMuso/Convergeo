@@ -1,11 +1,10 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { Footer } from "@vergeo/ui/src/footer";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
-
-import { Footer } from "../../../../packages/ui/src/footer";
 
 import { type LegalTranslator } from "./(marketing)/legal/_components/legal-shell";
 
