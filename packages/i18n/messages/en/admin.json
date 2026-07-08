@@ -20,5 +20,88 @@
   },
   "action": {
     "confirm": "Confirm {action}?"
+  },
+  "config": {
+    "title": "Platform configuration",
+    "subtitle": "Live edits — effective immediately for new orders and sessions.",
+    "nav": {
+      "commissions": "Commissions",
+      "deliveryZones": "Delivery zones",
+      "platform": "Platform knobs",
+      "flags": "Feature flags",
+      "categories": "Category tree"
+    },
+    "common": {
+      "save": "Save changes",
+      "cancel": "Cancel",
+      "confirm": "Confirm change",
+      "loading": "Loading…",
+      "error": "Could not load configuration",
+      "retry": "Retry",
+      "active": "Active",
+      "inactive": "Inactive",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "prohibited": "Prohibited",
+      "allowed": "Allowed",
+      "position": "Position",
+      "key": "Key",
+      "value": "Value",
+      "label": "Label",
+      "description": "Description"
+    },
+    "confirm": {
+      "title": "Confirm configuration change",
+      "body": "Review the change below. This takes effect immediately for new activity.",
+      "dangerous": "This is a sensitive setting — double-check before saving.",
+      "from": "Current",
+      "to": "New"
+    },
+    "commissions": {
+      "title": "Commission rates",
+      "subtitle": "Basis points per category. Snapshotted at checkout — existing orders unaffected.",
+      "categoryKey": "Category",
+      "rateBps": "Rate (bps)",
+      "dangerousHint": "Commission changes apply only to new orders."
+    },
+    "deliveryZones": {
+      "title": "Delivery zones",
+      "subtitle": "Lusaka delivery bands and fees (ngwee).",
+      "zoneKey": "Zone",
+      "feeNgwee": "Fee (ngwee)",
+      "active": "Active"
+    },
+    "platform": {
+      "title": "Platform settings",
+      "subtitle": "COD cap, AI quotas, escrow release windows, and reservation TTL.",
+      "codCap": "COD cap (ngwee)",
+      "freeDelivery": "Free delivery threshold (ngwee)",
+      "reservationTtl": "Reservation TTL (minutes)",
+      "aiGuestQuota": "AI guest quota",
+      "aiFreeQuota": "AI free monthly quota",
+      "aiCapUsd": "AI monthly cap (USD)",
+      "releaseDelivered": "Auto-release after delivered (hours)",
+      "releaseShipped": "Auto-release after shipped (days)",
+      "dangerousHint": "COD cap changes affect new checkout eligibility only."
+    },
+    "flags": {
+      "title": "Feature flags",
+      "subtitle": "Toggle launch features without a deploy.",
+      "flag": "Flag",
+      "enabled": "Status"
+    },
+    "categories": {
+      "title": "Category tree",
+      "subtitle": "Reorder categories, toggle prohibition, and move subtrees safely.",
+      "name": "Name",
+      "path": "Path",
+      "prohibited": "Prohibited",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "moveChildrenPrompt": "This category has children. Move the entire subtree?",
+      "moveChildrenConfirm": "Move with children",
+      "orphanWarning": "Cannot move without children — enable move-with-children.",
+      "rootOption": "Root (no parent)"
+    }
   }
 }
