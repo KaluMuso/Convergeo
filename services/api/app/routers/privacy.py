@@ -8,10 +8,9 @@ from typing import Annotated, Any
 
 from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
-from app.deps import get_supabase_client
+from app.deps import SupabaseServiceClient, get_supabase_client
 from app.errors import AppError
 from app.settings import Settings, get_settings
-from app.supabase_client import SupabaseServiceClient
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 from supabase import Client, create_client
