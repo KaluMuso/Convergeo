@@ -1620,6 +1620,85 @@ export type Database = {
           },
         ];
       };
+      search_documents: {
+        Row: {
+          id: string;
+          entity_kind: string;
+          entity_id: string;
+          title: string;
+          body: string;
+          category_path: string | null;
+          price_min_ngwee: number | null;
+          price_max_ngwee: number | null;
+          lat: number | null;
+          lng: number | null;
+          locale_terms: string[] | null;
+          tsv: unknown;
+          embedding: string | null;
+          boost_signals: Json;
+          is_public: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          entity_kind: string;
+          entity_id: string;
+          title?: string;
+          body?: string;
+          category_path?: string | null;
+          price_min_ngwee?: number | null;
+          price_max_ngwee?: number | null;
+          lat?: number | null;
+          lng?: number | null;
+          locale_terms?: string[] | null;
+          embedding?: string | null;
+          boost_signals?: Json;
+          is_public?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          entity_kind?: string;
+          entity_id?: string;
+          title?: string;
+          body?: string;
+          category_path?: string | null;
+          price_min_ngwee?: number | null;
+          price_max_ngwee?: number | null;
+          lat?: number | null;
+          lng?: number | null;
+          locale_terms?: string[] | null;
+          embedding?: string | null;
+          boost_signals?: Json;
+          is_public?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      synonyms: {
+        Row: {
+          id: string;
+          term: string;
+          canonical: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          term: string;
+          canonical: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          term?: string;
+          canonical?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -1627,6 +1706,29 @@ export type Database = {
     Functions: {
       has_role: { Args: { required_role: string }; Returns: boolean };
       is_valid_price_tiers: { Args: { tiers: Json }; Returns: boolean };
+      search_rrf: {
+        Args: {
+          query: string;
+          query_embedding?: string | null;
+          filters?: Json;
+        };
+        Returns: {
+          id: string;
+          entity_kind: string;
+          entity_id: string;
+          title: string;
+          body: string;
+          category_path: string | null;
+          price_min_ngwee: number | null;
+          price_max_ngwee: number | null;
+          lat: number | null;
+          lng: number | null;
+          locale_terms: string[] | null;
+          boost_signals: Json;
+          rrf_score: number;
+        }[];
+      };
+      expand_search_terms: { Args: { p_query: string }; Returns: string };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { "": string }; Returns: string[] };
     };

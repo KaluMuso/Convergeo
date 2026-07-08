@@ -1,5 +1,141 @@
 {
   "vendor.dashboard.title": "Vendor dashboard",
   "vendor.listings.count": "{count, plural, one {# listing} other {# listings}}",
-  "vendor.payout.pending": "Pending payout: {amount}"
+  "vendor.payout.pending": "Pending payout: {amount}",
+  "pitch": {
+    "meta": {
+      "title": "Sell on Vergeo5 — free to list, pay only when you sell",
+      "description": "Join Zambia's marketplace for products, services, events, supplies, and directory listings. Free tier: 30 listings. Transparent commissions. Mobile-money payouts in minutes."
+    },
+    "hero": {
+      "eyebrow": "Sell on Vergeo5",
+      "headline": "Free to list.",
+      "headlineEmphasis": "Pay only when you sell.",
+      "subheadline": "Reach buyers across Zambia with products, services, events, supplies, and your business profile — all from one vendor app.",
+      "primaryCta": "Start selling",
+      "secondaryCta": "See commissions",
+      "freeTierNote": "Free tier includes up to 30 listings with full selling features."
+    },
+    "valueProps": {
+      "heading": "Five ways to grow",
+      "products": {
+        "title": "Products",
+        "description": "List on our canonical catalog — buyers compare prices across vendors."
+      },
+      "services": {
+        "title": "Services",
+        "description": "Offer beauty, catering, repairs, printing, and more with RFQ support."
+      },
+      "events": {
+        "title": "Events",
+        "description": "Sell tickets with dynamic QR check-in. Free RSVP events at 0% commission."
+      },
+      "supplies": {
+        "title": "Supplies",
+        "description": "Wholesale tier pricing for verified businesses (T2+)."
+      },
+      "directory": {
+        "title": "Directory",
+        "description": "Get discovered with your storefront, hours, and location on the map."
+      }
+    },
+    "commission": {
+      "heading": "Transparent commissions",
+      "intro": "Rates are shown before you publish each listing. You only pay when you make a sale.",
+      "categoryColumn": "Category",
+      "rateColumn": "Commission",
+      "footnote": "Rates may be reviewed quarterly. Free events stay at 0% forever.",
+      "categories": {
+        "electronics": "Electronics",
+        "home": "Home & living",
+        "fashion_beauty": "Fashion & beauty",
+        "services": "Services",
+        "event_tickets": "Event tickets",
+        "supplies": "Supplies & wholesale",
+        "groceries": "Groceries & staples",
+        "default": "All other categories",
+        "free_events": "Free RSVP events"
+      },
+      "rate": "{rate}%"
+    },
+    "howItWorks": {
+      "heading": "How it works",
+      "steps": {
+        "signup": {
+          "title": "Sign up in minutes",
+          "description": "Create your vendor account on mobile or desktop — no upfront fees."
+        },
+        "kyc": {
+          "title": "Verify with T1 KYC",
+          "description": "Upload your NRC and a selfie. We match your mobile-money name. Same-day approval."
+        },
+        "list": {
+          "title": "List your first products",
+          "description": "Attach to our catalog or quick-list. See your commission before you publish."
+        },
+        "sell": {
+          "title": "Sell and get paid",
+          "description": "Orders flow to your dashboard. Escrow protects buyers; payouts hit your MoMo fast."
+        }
+      }
+    },
+    "kyc": {
+      "heading": "Verification tiers",
+      "intro": "No unverified listings go public. Start at T1 and upgrade as you grow.",
+      "tiers": {
+        "t1": {
+          "badge": "T1 · Seller",
+          "title": "Same-day selling",
+          "description": "NRC photo + selfie + mobile-money name match. Up to 30 listings; first 5 orders capped at K500 each."
+        },
+        "t2": {
+          "badge": "T2 · Verified business",
+          "title": "Lift your caps",
+          "description": "PACRA certificate + company TPIN. Verified badge, supplies tab, and higher limits."
+        },
+        "t3": {
+          "badge": "T3 · Premium",
+          "title": "Invited partners",
+          "description": "API access and banner placement eligibility for high-volume sellers."
+        },
+        "preferred": {
+          "badge": "Vergeo5 Preferred",
+          "title": "Earned trust badge",
+          "description": "≥20 orders, ≥4.5★ rating, <2% disputes, <5% cancellations — reviewed monthly."
+        }
+      }
+    },
+    "payout": {
+      "heading": "Fast mobile-money payouts",
+      "promise": "Paid out in minutes on mobile money — always within 48 hours.",
+      "body": "Buyer payments are held in escrow until delivery is confirmed (or auto-confirmed after 48 hours). Once released, MTN and Airtel payouts typically arrive in under five minutes. Bank transfers take 24–36 hours."
+    },
+    "faq": {
+      "heading": "Frequently asked questions",
+      "items": {
+        "fees": {
+          "question": "Are there monthly fees?",
+          "answer": "No. Vergeo5 is free to list at launch. You pay a commission only when you sell. The free tier includes up to 30 listings."
+        },
+        "payout": {
+          "question": "When do I get paid?",
+          "answer": "After escrow releases on delivery confirmation. Mobile-money payouts usually arrive in minutes; we guarantee payout within 48 hours."
+        },
+        "whatCanISell": {
+          "question": "What can I sell?",
+          "answer": "Products, services, event tickets, wholesale supplies, and directory listings across our launch categories — groceries, beauty, fashion, electronics, home goods, and more. Prohibited items (used phones, alcohol, pharma, etc.) are blocked."
+        },
+        "kyc": {
+          "question": "How long does verification take?",
+          "answer": "T1 sellers with a valid NRC, selfie, and matching MoMo name are typically approved the same day. Nothing goes live until you pass KYC."
+        }
+      }
+    },
+    "cta": {
+      "heading": "Ready to reach buyers across Zambia?",
+      "body": "Join hundreds of vendors building on Vergeo5. Set up your store in under ten minutes.",
+      "button": "Create your vendor account",
+      "loadingLabel": "Opening signup"
+    }
+  }
 }
