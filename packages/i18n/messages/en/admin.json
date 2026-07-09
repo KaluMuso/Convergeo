@@ -103,5 +103,77 @@
       "orphanWarning": "Cannot move without children — enable move-with-children.",
       "rootOption": "Root (no parent)"
     }
+  },
+  "kyc": {
+    "title": "KYC review queue",
+    "subtitle": "Pending vendor verifications — oldest submissions first.",
+    "queue": {
+      "empty": "No pending KYC submissions.",
+      "loading": "Loading queue…",
+      "error": "Could not load the KYC queue.",
+      "retry": "Retry",
+      "vendor": "Vendor",
+      "tier": "Tier {tier}",
+      "submitted": "Submitted",
+      "slaColumn": "SLA",
+      "review": "Review",
+      "sla": {
+        "on_track": "On track",
+        "due_soon": "Due soon",
+        "overdue": "Overdue"
+      }
+    },
+    "detail": {
+      "back": "Back to queue",
+      "loading": "Loading application…",
+      "error": "Could not load this KYC application.",
+      "retry": "Retry",
+      "vendorContext": "Vendor",
+      "vendorSummary": "{context}: {slug} · {tierLabel} · {statusLabel}: {status}",
+      "status": "Status",
+      "tierLabel": "Tier {tier}",
+      "statusLabel": "Status",
+      "missingValue": "Not available",
+      "tier": "Tier {tier}",
+      "momoMatch": "Mobile money name match",
+      "momoPhone": "Phone",
+      "momoOperator": "Operator",
+      "legalName": "Legal name",
+      "resolvedName": "MoMo registered name",
+      "matchScore": "Match score",
+      "matchResult": "Result",
+      "matched": "Matched",
+      "notMatched": "Mismatch flagged",
+      "documents": "Identity documents",
+      "nrc": "NRC photo",
+      "selfie": "Selfie",
+      "otherDoc": "Document",
+      "docsUnavailable": "Document preview is temporarily unavailable (storage bucket dependency).",
+      "docsExpired": "Signed preview links expire after 5 minutes — refresh to view again.",
+      "noPreview": "Preview unavailable",
+      "decisions": "Decision",
+      "approve": "Approve",
+      "reject": "Reject",
+      "requestResubmit": "Request resubmit",
+      "reviewerNotes": "Reviewer notes (optional)",
+      "reasonTemplate": "Reason template",
+      "freeText": "Additional notes",
+      "docsRequested": "Documents to re-upload",
+      "confirmApprove": "Approve this vendor for tier {tier}?",
+      "confirmReject": "Reject this application?",
+      "confirmResubmit": "Ask the vendor to resubmit documents?",
+      "confirmAction": "Confirm",
+      "cancel": "Cancel",
+      "submitting": "Saving decision…",
+      "success": "Decision recorded — vendor will be notified.",
+      "failure": "Could not save decision."
+    },
+    "reasons": {
+      "blurry_document": "Document is blurry or unreadable",
+      "name_mismatch": "Name does not match MoMo registration",
+      "expired_id": "ID document appears expired",
+      "incomplete_submission": "Submission is incomplete",
+      "other": "Other (specify below)"
+    }
   }
 }
