@@ -4,10 +4,12 @@ import { notFound, redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { BuyBox, type BuyBoxListing } from "../../_components/pdp/buy-box";
-import { PdpGallery } from "../../_components/pdp/gallery";
+import {
+  PdpInteractiveBody,
+  type ComparisonListing,
+  type ProductListing,
+} from "../../_components/pdp/comparison";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
-import { VendorBlock } from "../../_components/pdp/vendor-block";
 
 import type { ListingCondition } from "../../_components/pdp/condition-badge";
 import type { Metadata } from "next";
@@ -66,6 +68,32 @@ type ProductDetail = {
   images: ProductImage[];
   listings: Listing[];
   listing_count: number;
+};
+
+type ComparisonApiListing = {
+  id: string;
+  price_ngwee: number;
+  condition: ListingCondition;
+  vendor: {
+    id: string;
+    slug: string;
+    display_name: string;
+    preferred_badge: boolean;
+    rating_avg: number | null;
+    rating_count: number;
+    lat: number | null;
+    lng: number | null;
+    landmark: string | null;
+  };
+  delivery_available: boolean;
+  pickup_available: boolean;
+};
+
+type ComparisonApiResponse = {
+  product_id: string;
+  product_slug: string;
+  listing_count: number;
+  listings: ComparisonApiListing[];
 };
 
 function getApiBaseUrl(): string {
@@ -130,6 +158,35 @@ async function fetchProduct(
   }
 }
 
+async function fetchComparison(slug: string): Promise<ComparisonApiResponse | null> {
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl()}/products/${encodeURIComponent(slug)}/comparison`,
+      {
+        next: {
+          revalidate,
+          tags: [productCacheTag(slug), "products", "comparison"],
+        },
+      },
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as ComparisonApiResponse;
+  } catch {
+    const client = createApiClient({ baseUrl: getApiBaseUrl() });
+    try {
+      return await client.request<ComparisonApiResponse>(
+        `/products/${encodeURIComponent(slug)}/comparison`,
+      );
+    } catch {
+      return null;
+    }
+  }
+}
+
 function selectListing(listings: Listing[], listingId?: string): Listing | null {
   if (listings.length === 0) {
     return null;
@@ -154,6 +211,76 @@ function galleryImages(
   return source.map((image) => ({
     publicId: image.public_id,
     alt,
+  }));
+}
+
+function toProductListings(product: ProductDetail, alt: string): ProductListing[] {
+  return product.listings.map((listing) => ({
+    id: listing.id,
+    title: listing.title,
+    priceNgwee: listing.price_ngwee,
+    condition: listing.condition,
+    stockMode: listing.stock_mode,
+    stockQty: listing.stock_qty,
+    moq: listing.moq,
+    inStock: listing.in_stock,
+    vendor: {
+      slug: listing.vendor.slug,
+      displayName: listing.vendor.display_name,
+      preferredBadge: listing.vendor.preferred_badge,
+      ratingAvg: listing.vendor.rating_avg,
+      ratingCount: listing.vendor.rating_count,
+      landmark: listing.vendor.location?.landmark ?? null,
+    },
+    images: listing.images.map((image) => ({
+      publicId: image.public_id,
+      alt,
+    })),
+  }));
+}
+
+function toComparisonListings(
+  comparison: ComparisonApiResponse | null,
+  product: ProductDetail,
+): ComparisonListing[] {
+  if (comparison) {
+    return comparison.listings.map((listing) => ({
+      id: listing.id,
+      priceNgwee: listing.price_ngwee,
+      condition: listing.condition,
+      vendor: {
+        id: listing.vendor.id,
+        slug: listing.vendor.slug,
+        displayName: listing.vendor.display_name,
+        preferredBadge: listing.vendor.preferred_badge,
+        ratingAvg: listing.vendor.rating_avg,
+        ratingCount: listing.vendor.rating_count,
+        lat: listing.vendor.lat,
+        lng: listing.vendor.lng,
+        landmark: listing.vendor.landmark,
+      },
+      deliveryAvailable: listing.delivery_available,
+      pickupAvailable: listing.pickup_available,
+    }));
+  }
+
+  return product.listings.map((listing) => ({
+    id: listing.id,
+    priceNgwee: listing.price_ngwee,
+    condition: listing.condition,
+    vendor: {
+      id: listing.vendor.id,
+      slug: listing.vendor.slug,
+      displayName: listing.vendor.display_name,
+      preferredBadge: listing.vendor.preferred_badge,
+      ratingAvg: listing.vendor.rating_avg,
+      ratingCount: listing.vendor.rating_count,
+      lat: listing.vendor.location?.lat ?? null,
+      lng: listing.vendor.location?.lng ?? null,
+      landmark: listing.vendor.location?.landmark ?? null,
+    },
+    deliveryAvailable: listing.vendor.location !== null,
+    pickupAvailable: listing.vendor.location !== null,
   }));
 }
 
@@ -234,7 +361,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
   setRequestLocale(locale);
   const t = await getCatalogTranslator(locale);
-  const result = await fetchProduct(slug);
+  const [result, comparison] = await Promise.all([fetchProduct(slug), fetchComparison(slug)]);
 
   if (!result) {
     notFound();
@@ -250,19 +377,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const specRows = specRowsFromJson(product.spec);
   const images = galleryImages(product, selectedListing, product.name);
   const jsonLd = buildProductJsonLd(product, selectedListing);
-
-  const buyBoxListing: BuyBoxListing | null = selectedListing
-    ? {
-        id: selectedListing.id,
-        title: selectedListing.title,
-        priceNgwee: selectedListing.price_ngwee,
-        condition: selectedListing.condition,
-        stockMode: selectedListing.stock_mode,
-        stockQty: selectedListing.stock_qty,
-        moq: selectedListing.moq,
-        inStock: selectedListing.in_stock,
-      }
-    : null;
+  const productListings = toProductListings(product, product.name);
+  const comparisonListings = toComparisonListings(comparison, product);
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6">
@@ -278,65 +394,68 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         <h1 className="font-display text-2xl font-semibold text-text">{product.name}</h1>
       </header>
 
-      <PdpGallery
-        images={images}
+      <PdpInteractiveBody
+        locale={locale}
+        productImages={images}
+        listings={productListings}
+        comparisonListings={comparisonListings}
+        initialListingId={listingId}
+        singleVendor={singleVendor}
         cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
-        emptyLabel={t("pdp.gallery.empty")}
-        indicatorLabel={(current, total) => t("pdp.gallery.indicator", { current, total })}
-        previousLabel={t("pdp.gallery.previous")}
-        nextLabel={t("pdp.gallery.next")}
+        galleryLabels={{
+          empty: t("pdp.gallery.empty"),
+          indicator: (current, total) => t("pdp.gallery.indicator", { current, total }),
+          previous: t("pdp.gallery.previous"),
+          next: t("pdp.gallery.next"),
+        }}
+        buyBoxLabels={{
+          priceLabel: t("pdp.buyBox.priceLabel"),
+          quantityLabel: t("pdp.buyBox.quantityLabel"),
+          decreaseLabel: t("pdp.buyBox.decrease"),
+          increaseLabel: t("pdp.buyBox.increase"),
+          decreaseSymbol: t("pdp.buyBox.decreaseSymbol"),
+          increaseSymbol: t("pdp.buyBox.increaseSymbol"),
+          addToCartLabel: t("pdp.buyBox.addToCart"),
+          addToCartSoonLabel: t("pdp.buyBox.addToCartSoon"),
+          inStockLabel: t("pdp.buyBox.inStock"),
+          outOfStockLabel: t("pdp.buyBox.outOfStock"),
+          lowStockLabel: (count) => t("pdp.buyBox.lowStock", { count }),
+          alwaysAvailableLabel: t("pdp.buyBox.alwaysAvailable"),
+          singleVendorLabel: t("pdp.buyBox.singleVendor"),
+          moqLabel: (count) => t("pdp.buyBox.moq", { count }),
+          conditionNewLabel: t("pdp.condition.new"),
+          conditionRefurbishedLabel: t("pdp.condition.refurbished"),
+        }}
+        comparisonLabels={{
+          heading: t("comparison.heading"),
+          vendorCount: t("comparison.vendorCount"),
+          sortLabel: t("comparison.sortLabel"),
+          sortPrice: t("comparison.sortPrice"),
+          sortDistance: t("comparison.sortDistance"),
+          price: t("comparison.price"),
+          condition: t("comparison.condition"),
+          distance: t("comparison.distance"),
+          vendor: t("comparison.vendor"),
+          fulfillment: t("comparison.fulfillment"),
+          delivery: t("comparison.delivery"),
+          pickup: t("comparison.pickup"),
+          selectListing: t("comparison.selectListing"),
+          selectedListing: t("comparison.selectedListing"),
+          preferredBadge: t("comparison.preferredBadge"),
+          noReviews: t("comparison.noReviews"),
+          rating: t("comparison.rating"),
+          conditionNew: t("comparison.conditionNew"),
+          conditionRefurbished: t("comparison.conditionRefurbished"),
+          usingFallbackLocation: t("comparison.usingFallbackLocation"),
+        }}
+        vendorLabels={{
+          heading: t("pdp.vendor.heading"),
+          preferredBadge: t("pdp.vendor.preferredBadge"),
+          noReviews: t("pdp.vendor.noReviews"),
+          rating: (rating, count) => t("pdp.vendor.rating", { rating, count }),
+          viewStore: t("pdp.vendor.viewStore"),
+        }}
       />
-
-      {buyBoxListing ? (
-        <BuyBox
-          listing={buyBoxListing}
-          singleVendor={singleVendor}
-          labels={{
-            priceLabel: t("pdp.buyBox.priceLabel"),
-            quantityLabel: t("pdp.buyBox.quantityLabel"),
-            decreaseLabel: t("pdp.buyBox.decrease"),
-            increaseLabel: t("pdp.buyBox.increase"),
-            decreaseSymbol: t("pdp.buyBox.decreaseSymbol"),
-            increaseSymbol: t("pdp.buyBox.increaseSymbol"),
-            addToCartLabel: t("pdp.buyBox.addToCart"),
-            addToCartSoonLabel: t("pdp.buyBox.addToCartSoon"),
-            inStockLabel: t("pdp.buyBox.inStock"),
-            outOfStockLabel: t("pdp.buyBox.outOfStock"),
-            lowStockLabel: (count) => t("pdp.buyBox.lowStock", { count }),
-            alwaysAvailableLabel: t("pdp.buyBox.alwaysAvailable"),
-            singleVendorLabel: t("pdp.buyBox.singleVendor"),
-            moqLabel: (count) => t("pdp.buyBox.moq", { count }),
-            conditionNewLabel: t("pdp.condition.new"),
-            conditionRefurbishedLabel: t("pdp.condition.refurbished"),
-          }}
-        />
-      ) : null}
-
-      {selectedListing ? (
-        <VendorBlock
-          locale={locale}
-          vendor={{
-            slug: selectedListing.vendor.slug,
-            displayName: selectedListing.vendor.display_name,
-            preferredBadge: selectedListing.vendor.preferred_badge,
-            ratingAvg: selectedListing.vendor.rating_avg,
-            ratingCount: selectedListing.vendor.rating_count,
-            landmark: selectedListing.vendor.location?.landmark ?? null,
-          }}
-          heading={t("pdp.vendor.heading")}
-          preferredBadgeLabel={t("pdp.vendor.preferredBadge")}
-          noReviewsLabel={t("pdp.vendor.noReviews")}
-          ratingLabel={
-            selectedListing.vendor.rating_avg !== null && selectedListing.vendor.rating_count > 0
-              ? t("pdp.vendor.rating", {
-                  rating: selectedListing.vendor.rating_avg,
-                  count: selectedListing.vendor.rating_count,
-                })
-              : t("pdp.vendor.noReviews")
-          }
-          viewStoreLabel={t("pdp.vendor.viewStore")}
-        />
-      ) : null}
 
       <SpecsTable
         rows={specRows}
