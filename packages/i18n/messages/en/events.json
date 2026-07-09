@@ -1,5 +1,48 @@
 {
-  "events.title": "Events",
-  "events.tickets.remaining": "{count, plural, one {# ticket left} other {# tickets left}}",
-  "events.date": "On {date} at {venue}"
+  "title": "Events",
+  "browse": {
+    "title": "Events",
+    "subtitle": "Discover workshops, shows, and community gatherings across Zambia.",
+    "emptyTitle": "No events in this window",
+    "emptyBody": "Try another date filter or check back soon for new listings.",
+    "soldOut": "Sold out",
+    "free": "Free",
+    "viewEvent": "View event",
+    "calendarLabel": "Dates with events this month"
+  },
+  "filters": {
+    "tonight": "Tonight",
+    "thisWeekend": "This Weekend",
+    "allDates": "All upcoming",
+    "categoryLabel": "Category"
+  },
+  "categories": {
+    "all": "All",
+    "workshops": "Workshops & education",
+    "comedy-theatre": "Comedy & theatre",
+    "pop-up-dinners": "Pop-up dinners",
+    "cultural-arts": "Cultural & arts",
+    "lifestyle-community": "Lifestyle & community",
+    "free-rsvp": "Free RSVP"
+  },
+  "detail": {
+    "metaTitle": "{title} — Events",
+    "metaDescription": "{title} at {venue}. View dates, tickets, and venue details on Vergeo5.",
+    "about": "About this event",
+    "dates": "Dates & times",
+    "tickets": "Tickets",
+    "venue": "Venue",
+    "landmark": "Near {landmark}",
+    "mapHint": "Open in maps",
+    "organiser": "Organised by",
+    "organiserCta": "View organiser",
+    "soldOut": "Sold out",
+    "free": "Free RSVP",
+    "fromPrice": "From {price}",
+    "ticketRemaining": "{count, plural, one {# left} other {# left}}",
+    "getTickets": "Get tickets",
+    "getTicketsSoon": "Ticket sales coming soon",
+    "pastInstance": "Past",
+    "spots": "{sold} / {total} spots"
+  }
 }
