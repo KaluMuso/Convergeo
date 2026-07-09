@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal, Protocol, cast
 from app.deps import get_supabase_client
 from app.errors import AppError
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/directory", tags=["directory"])
@@ -508,7 +509,27 @@ def _is_in_stock(stock_mode: str, stock_qty: int | None) -> bool:
     return False
 
 
-def get_vendor_profile(client: Any, slug: str) -> VendorProfileResponse:
+def _resolve_previous_slug(client: Any, slug: str) -> str | None:
+    """A vendor may change its slug once (M12-P09), which records the old slug in
+    ``caps_snapshot.previous_slug``. Map an old slug to the vendor's current slug so
+    a stale link 301s instead of 404ing."""
+    response = (
+        client.table("vendors")
+        .select("slug, status, caps_snapshot")
+        .eq("caps_snapshot->>previous_slug", slug)
+        .eq("status", "active")
+        .limit(1)
+        .execute()
+    )
+    data = getattr(response, "data", None)
+    if isinstance(data, list) and data and isinstance(data[0], dict):
+        current = data[0].get("slug")
+        if isinstance(current, str) and current and current != slug:
+            return current
+    return None
+
+
+def get_vendor_profile(client: Any, slug: str) -> VendorProfileResponse | RedirectResponse:
     vendor_response = (
         client.table("vendors")
         .select(
@@ -522,6 +543,9 @@ def get_vendor_profile(client: Any, slug: str) -> VendorProfileResponse:
     )
     row = vendor_response.data
     if not isinstance(row, dict):
+        redirect_slug = _resolve_previous_slug(client, slug)
+        if redirect_slug:
+            return RedirectResponse(url=f"/directory/{redirect_slug}", status_code=301)
         raise AppError("vendor.not_found", "Vendor not found", 404)
 
     status = str(row.get("status") or "")
@@ -656,7 +680,7 @@ async def list_directory(
 async def get_directory_vendor(
     slug: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
-) -> VendorProfileResponse:
+) -> VendorProfileResponse | RedirectResponse:
     cleaned = _sanitize_query(slug)
     if not cleaned:
         raise AppError("vendor.not_found", "Vendor not found", 404)

@@ -3,7 +3,6 @@ from __future__ import annotations
 import csv
 import io
 import json
-import re
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol, cast
 
@@ -40,8 +39,6 @@ OPTIONAL_COLUMNS = frozenset(
 )
 
 ALL_COLUMNS = REQUIRED_COLUMNS | OPTIONAL_COLUMNS
-
-SKU_TITLE_PREFIX = re.compile(r"^sku:([^|]+)\|")
 
 
 class SupabaseTableClient(Protocol):
@@ -83,19 +80,6 @@ class ImportSummary:
     accepted: int
     rejected: int
     rows: list[RowImportResult]
-
-
-def encode_title_override(sku: str, title: str) -> str:
-    return f"sku:{sku.strip()}|{title.strip()}"
-
-
-def extract_sku_from_title_override(title_override: str | None) -> str | None:
-    if not title_override:
-        return None
-    match = SKU_TITLE_PREFIX.match(title_override)
-    if match is None:
-        return None
-    return match.group(1)
 
 
 def is_valid_price_tiers(tiers: list[PriceTierRow]) -> list[str]:
@@ -412,16 +396,14 @@ def _load_existing_sku_map(
 ) -> dict[str, dict[str, Any]]:
     response = (
         client.table("vendor_listings")
-        .select("id, title_override, status")
+        .select("id, sku, status")
         .eq("vendor_id", vendor_id)
         .execute()
     )
     sku_map: dict[str, dict[str, Any]] = {}
     for row in _rows(response):
-        sku = extract_sku_from_title_override(
-            row.get("title_override") if isinstance(row.get("title_override"), str) else None
-        )
-        if sku is not None:
+        sku = row.get("sku")
+        if isinstance(sku, str) and sku:
             sku_map[sku] = row
     return sku_map
 
@@ -436,7 +418,8 @@ def _listing_payload(vendor_id: str, parsed: ParsedListingRow) -> dict[str, Any]
     return {
         "vendor_id": vendor_id,
         "product_id": None,
-        "title_override": encode_title_override(parsed.sku, parsed.title),
+        "sku": parsed.sku,
+        "title_override": parsed.title,
         "price_ngwee": parsed.price_ngwee,
         "condition": parsed.condition,
         "stock_mode": parsed.stock_mode,

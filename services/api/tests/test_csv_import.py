@@ -8,7 +8,7 @@ import pytest
 from app.deps import get_supabase_client
 from app.main import create_app
 from app.services.kyc.caps import clear_vendor_cap_cache
-from app.services.listings.csv_import import build_template_csv, encode_title_override
+from app.services.listings.csv_import import build_template_csv
 from app.supabase_client import get_supabase_service_client
 from fastapi.testclient import TestClient
 
@@ -152,7 +152,8 @@ def _seed_base(fake: FakeSupabaseClient, *, listing_count: int = 0, kyc_tier: in
             {
                 "id": f"listing-{index:02d}",
                 "vendor_id": VENDOR_ID,
-                "title_override": f"sku:EXIST-{index:02d}|Existing item {index}",
+                "sku": f"EXIST-{index:02d}",
+                "title_override": f"Existing item {index}",
                 "status": "active",
             }
         )
@@ -338,7 +339,29 @@ def test_idempotent_reimport_updates_same_sku(
     assert second_body["rows"][0]["listing_id"] == first_id
     stored = fake_client.tables["vendor_listings"].rows[0]
     assert stored["price_ngwee"] == 7500
-    assert stored["title_override"] == encode_title_override("IDEM-001", "Updated title")
+    # SKU lives in its own column; title_override holds the real, un-encoded title.
+    assert stored["sku"] == "IDEM-001"
+    assert stored["title_override"] == "Updated title"
+
+
+def test_import_stores_plain_display_title_not_encoded_sku(
+    import_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    # Regression: title_override is the customer-facing display title (search
+    # projection, PDP, cart, checkout all read it). The SKU must NOT be smuggled
+    # into it — it belongs in the dedicated sku column.
+    response = import_client.post(
+        "/listings/import",
+        headers={**_auth_headers(), "Content-Type": "application/json"},
+        json={"rows": [_valid_json_row("DISP-001", title="Fresh tomatoes per kg")]},
+    )
+    assert response.status_code == 200
+    assert response.json()["accepted"] == 1
+    stored = fake_client.tables["vendor_listings"].rows[0]
+    assert stored["title_override"] == "Fresh tomatoes per kg"
+    assert stored["sku"] == "DISP-001"
+    assert "sku:" not in str(stored["title_override"])
 
 
 def test_cap_overflow_rejected_at_boundary_in_file_order(
@@ -351,7 +374,8 @@ def test_cap_overflow_rejected_at_boundary_in_file_order(
             {
                 "id": f"listing-{index:02d}",
                 "vendor_id": VENDOR_ID,
-                "title_override": f"sku:EXIST-{index:02d}|Existing item {index}",
+                "sku": f"EXIST-{index:02d}",
+                "title_override": f"Existing item {index}",
                 "status": "active",
             }
         )
