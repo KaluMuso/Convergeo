@@ -350,6 +350,43 @@
       "product_not_active": "This product cannot be attached yet",
       "category_not_found": "Category not found",
       "invalid_tiers": "Price tiers must rise in quantity and fall in unit price"
+    },
+    "import": {
+      "meta": {
+        "title": "Import listings — Vergeo5 Vendor",
+        "description": "Bulk upload vendor listings from a CSV file with row-level validation feedback."
+      },
+      "title": "Import listings",
+      "intro": "Upload a CSV to add or update many listings at once. Re-importing the same SKU updates the existing listing.",
+      "loading": "Loading…",
+      "signInRequired": "Sign in to import listings.",
+      "template": {
+        "heading": "Download template",
+        "body": "Use our CSV template with example rows. Prices are in ngwee (integer). SKU is your unique code per listing.",
+        "download": "Download CSV template"
+      },
+      "upload": {
+        "heading": "Upload CSV",
+        "fileLabel": "Choose CSV file",
+        "selected": "Selected: {name}",
+        "submit": "Import listings",
+        "uploading": "Importing…"
+      },
+      "results": {
+        "accepted": "{count, plural, one {# row accepted} other {# rows accepted}}",
+        "rejected": "{count, plural, one {# row rejected} other {# rows rejected}}",
+        "row": "Row",
+        "status": "Status",
+        "details": "Details",
+        "ok": "OK",
+        "failed": "Failed",
+        "imported": "Imported"
+      },
+      "errors": {
+        "uploadFailed": "Import failed. Check your file and try again.",
+        "no_file": "CSV file is required",
+        "no_payload": "Provide a CSV file or JSON rows"
+      }
     }
   }
 }
