@@ -175,5 +175,32 @@
       "incomplete_submission": "Submission is incomplete",
       "other": "Other (specify below)"
     }
+  },
+  "moderation": {
+    "title": "Canonical product moderation",
+    "subtitle": "Review likely duplicate canonical products and merge into one survivor.",
+    "queue": {
+      "empty": "No duplicate product pairs detected.",
+      "loading": "Loading duplicate pairs…",
+      "error": "Could not load duplicate product pairs.",
+      "retry": "Retry",
+      "similarity": "Similarity",
+      "similarityPercent": "Similarity: {value}%",
+      "category": "Category",
+      "status": "Status",
+      "aliases": "Aliases",
+      "noAliases": "—",
+      "merge": "Merge (pick survivor)",
+      "confirmTitle": "Confirm product merge",
+      "confirmBody": "Listings for the losing product will move to the survivor. The old slug will 301 redirect and aliases will be combined.",
+      "confirmSurvivor": "Keep as survivor",
+      "confirmLoser": "Merge into survivor",
+      "confirmAction": "Confirm merge",
+      "cancel": "Cancel",
+      "submitting": "Merging…",
+      "success": "Products merged successfully.",
+      "failure": "Could not merge products.",
+      "idempotent": "These products were already merged — no changes made."
+    }
   }
 }
