@@ -1,0 +1,263 @@
+import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { createTranslator, type AbstractIntlMessages } from "next-intl";
+import { getMessages, setRequestLocale } from "next-intl/server";
+
+import { decodePlpFilters, FacetPanel, type FacetCounts } from "../../_components/plp/facet-panel";
+import { type CatalogListing } from "../../_components/plp/listing-grid";
+import { PlpBrowseClient } from "../../_components/plp/load-more";
+import { type CatalogSort, SortBar } from "../../_components/plp/sort-bar";
+
+import type { Metadata } from "next";
+
+export const revalidate = 60;
+
+type CatalogApiResponse = {
+  items: Array<{
+    id: string;
+    title: string;
+    product_slug: string | null;
+    vendor_name: string;
+    price_ngwee: number;
+    condition: string;
+    in_stock: boolean;
+    image_public_id: string | null;
+    rating: number;
+    review_count: number;
+    distance_m: number | null;
+  }>;
+  facets: FacetCounts;
+  total: number;
+  next_cursor: string | null;
+};
+
+type PageProps = {
+  params: Promise<{ locale: string; slug: string[] }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+type CatalogTranslator = {
+  (key: string, values?: Record<string, string | number>): string;
+};
+
+function getApiBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+}
+
+async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> {
+  const baseMessages = await getMessages();
+  const catalogMessages = await loadNamespace(locale as Locale, "catalog");
+  const messages = { ...baseMessages, catalog: catalogMessages } as AbstractIntlMessages;
+
+  return createTranslator({
+    locale,
+    messages,
+    namespace: "catalog",
+  }) as unknown as CatalogTranslator;
+}
+
+function slugToCategoryPath(slug: string[]): string | undefined {
+  if (slug.length === 0) {
+    return undefined;
+  }
+  if (slug.length === 1 && slug[0] === "all") {
+    return undefined;
+  }
+  return slug.join("/");
+}
+
+function categoryTitleFromPath(path: string | undefined): string {
+  if (!path) {
+    return "";
+  }
+  const leaf = path.split("/").at(-1) ?? path;
+  return leaf
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function buildCatalogQuery(
+  categoryPath: string | undefined,
+  searchParams: Record<string, string | string[] | undefined>,
+): string {
+  const params = new URLSearchParams();
+  if (categoryPath) {
+    params.set("category_path", categoryPath);
+  }
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (value === undefined || key === "slug") {
+      continue;
+    }
+    if (Array.isArray(value)) {
+      if (value[0]) {
+        params.set(key, value[0]);
+      }
+    } else {
+      params.set(key, value);
+    }
+  }
+  return params.toString();
+}
+
+async function fetchCatalog(queryString: string): Promise<CatalogApiResponse | null> {
+  const suffix = queryString ? `?${queryString}` : "";
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/catalog/listings${suffix}`, {
+      next: { revalidate: 60 },
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as CatalogApiResponse;
+  } catch {
+    return null;
+  }
+}
+
+function mapListing(item: CatalogApiResponse["items"][number]): CatalogListing {
+  return {
+    id: item.id,
+    title: item.title,
+    productSlug: item.product_slug,
+    vendorName: item.vendor_name,
+    priceNgwee: item.price_ngwee,
+    condition: item.condition,
+    inStock: item.in_stock,
+    imagePublicId: item.image_public_id,
+    rating: item.rating,
+    reviewCount: item.review_count,
+    distanceM: item.distance_m,
+  };
+}
+
+export function generateStaticParams() {
+  return LOCALES.flatMap((locale) => [
+    { locale, slug: ["all"] },
+    { locale, slug: ["electronics"] },
+    { locale, slug: ["fashion-beauty"] },
+  ]);
+}
+
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const resolvedSearch = await searchParams;
+  const t = await getCatalogTranslator(locale);
+  const categoryPath = slugToCategoryPath(slug);
+  const categoryName = categoryTitleFromPath(categoryPath) || t("plp.defaultCategory");
+
+  const canonicalPath = `/${locale}/c/${slug.join("/")}`;
+  const hasFilters = Object.keys(resolvedSearch).some((key) => !["lat", "lng"].includes(key));
+
+  return {
+    title: t("plp.title", { category: categoryName }),
+    description: t("plp.results", { count: 0 }).replace("0", categoryName),
+    alternates: {
+      canonical: canonicalPath,
+    },
+    robots: {
+      index: !hasFilters,
+      follow: true,
+    },
+  };
+}
+
+export default async function CategoryPlpPage({ params, searchParams }: PageProps) {
+  const { locale, slug } = await params;
+  const resolvedSearch = await searchParams;
+  setRequestLocale(locale);
+
+  const t = await getCatalogTranslator(locale);
+  const categoryPath = slugToCategoryPath(slug);
+  const categoryName = categoryTitleFromPath(categoryPath) || t("plp.defaultCategory");
+  const queryString = buildCatalogQuery(categoryPath, resolvedSearch);
+  const catalog = await fetchCatalog(queryString);
+
+  const filterState = decodePlpFilters(new URLSearchParams(queryString));
+  const sort = (resolvedSearch.sort as CatalogSort | undefined) ?? "relevance";
+  const hasLocation = Boolean(filterState.lat && filterState.lng);
+
+  const listings = (catalog?.items ?? []).map(mapListing);
+  const facets: FacetCounts = catalog?.facets ?? {
+    condition: [],
+    availability: [],
+    rating: [],
+  };
+  const total = catalog?.total ?? 0;
+
+  const gridLabels = {
+    vendor: t("plp.card.vendor"),
+    noReviews: t("plp.card.noReviews"),
+    reviewCount: t("plp.card.reviewCount"),
+    quickAdd: t("plp.card.quickAdd"),
+    wishlist: t("plp.card.wishlist"),
+    outOfStock: t("plp.card.outOfStock"),
+    distance: t("plp.card.distance"),
+  };
+
+  return (
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4">
+      <header className="flex flex-col gap-1">
+        <h1 className="font-display text-[var(--fs-h1)] text-[var(--text)]">
+          {t("plp.title", { category: categoryName })}
+        </h1>
+        <p className="text-sm text-[var(--text-2)]">{t("plp.results", { count: total })}</p>
+      </header>
+
+      <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <FacetPanel
+          labels={{
+            heading: t("plp.facets.heading"),
+            price: t("plp.facets.price"),
+            minPrice: t("plp.facets.minPrice"),
+            maxPrice: t("plp.facets.maxPrice"),
+            condition: t("plp.facets.condition"),
+            conditionNew: t("plp.facets.conditionNew"),
+            conditionRefurbished: t("plp.facets.conditionRefurbished"),
+            availability: t("plp.facets.availability"),
+            inStock: t("plp.facets.inStock"),
+            outOfStock: t("plp.facets.outOfStock"),
+            rating: t("plp.facets.rating"),
+            rating4Plus: t("plp.facets.rating4Plus"),
+            rating3Plus: t("plp.facets.rating3Plus"),
+            location: t("plp.facets.location"),
+            radiusKm: t("plp.facets.radiusKm"),
+            apply: t("plp.facets.apply"),
+            clear: t("plp.facets.clear"),
+          }}
+          facets={facets}
+          initialState={filterState}
+        />
+
+        <section className="flex min-w-0 flex-col gap-4">
+          <SortBar
+            labels={{
+              label: t("plp.sort.label"),
+              relevance: t("plp.sort.relevance"),
+              cheapest: t("plp.sort.cheapest"),
+              nearest: t("plp.sort.nearest"),
+              newest: t("plp.sort.newest"),
+            }}
+            value={sort}
+            hasLocation={hasLocation}
+          />
+
+          {listings.length === 0 ? (
+            <EmptyState title={t("plp.emptyTitle")} body={t("plp.emptyBody")} />
+          ) : (
+            <PlpBrowseClient
+              locale={locale}
+              initialListings={listings}
+              gridLabels={gridLabels}
+              apiBaseUrl={getApiBaseUrl()}
+              queryString={queryString}
+              nextCursor={catalog?.next_cursor ?? null}
+              loadMoreLabel={t("plp.loadMore")}
+              loadingLabel={t("plp.loading")}
+            />
+          )}
+        </section>
+      </div>
+    </main>
+  );
+}
