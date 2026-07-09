@@ -1,5 +1,71 @@
 {
   "checkout.title": "Checkout",
   "checkout.itemCount": "{count, plural, one {# item} other {# items}}",
-  "checkout.total": "Total: {amount}"
+  "checkout.total": "Total: {amount}",
+  "checkout": {
+    "pageTitle": "Checkout",
+    "stepAnnouncement": "Step {current} of {total}",
+    "doneIndicator": "✓",
+    "steps": {
+      "contact": "Contact",
+      "fulfilment": "Delivery",
+      "payment": "Payment",
+      "review": "Review"
+    },
+    "contact": {
+      "title": "Your contact details",
+      "subtitle": "We'll use this to send order updates on WhatsApp or SMS.",
+      "phoneLabel": "Mobile number",
+      "phoneHelp": "MTN, Airtel, or Zamtel — we'll send a one-time code.",
+      "phonePlaceholder": "97X XXX XXX",
+      "countryCode": "Country code",
+      "nationalNumber": "Mobile number",
+      "sendOtp": "Send code",
+      "verifyOtp": "Verify & continue",
+      "otpAria": "Enter the 6-digit verification code",
+      "otpDigit": "Digit {position} of {total}",
+      "resend": "Resend code",
+      "resendIn": "Resend in {seconds}s",
+      "changePhone": "Change number",
+      "loading": "Please wait…",
+      "required": "Enter your mobile number",
+      "invalidPhone": "Enter a valid Zambian mobile number",
+      "sendFailed": "Could not send the code. Try again.",
+      "wrongCode": "That code is incorrect",
+      "expired": "Code expired — request a new one",
+      "throttled": "Too many attempts — wait {seconds}s",
+      "generic": "Verification failed. Try again.",
+      "skippedLoggedIn": "Using your account phone number"
+    },
+    "fulfilment": {
+      "title": "How should we deliver?",
+      "subtitle": "Choose delivery or pickup for each seller.",
+      "delivery": "Lusaka delivery",
+      "pickup": "Pickup",
+      "landmarkLabel": "Landmark & area",
+      "landmarkPlaceholder": "e.g. Woodlands Stage 2, near the church",
+      "landmarkHelp": "Describe where you are — we'll match a delivery zone.",
+      "zoneFee": "Delivery fee: {amount}",
+      "zoneFree": "Free delivery",
+      "zoneLabel": "Zone: {zone}",
+      "pickupAt": "Pickup at {landmark}",
+      "pickupHours": "Hours: {hours}",
+      "outsideZone": "Outside Lusaka delivery — pickup only for this address",
+      "mixedHint": "You can mix delivery and pickup across sellers.",
+      "continue": "Continue",
+      "subtotal": "Subtotal",
+      "deliveryFees": "Delivery fees",
+      "total": "Total"
+    },
+    "countdown": {
+      "label": "Items reserved for",
+      "expired": "Reservation expired",
+      "ariaLive": "Reservation time remaining: {time}"
+    },
+    "reservationExpired": "Your reservation expired — items were returned to your cart.",
+    "stockUnavailable": "An item is no longer available. Check your cart.",
+    "emptyCart": "Your cart is empty.",
+    "loading": "Starting checkout…",
+    "error": "Something went wrong. Try again."
+  }
 }
