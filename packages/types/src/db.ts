@@ -1962,6 +1962,7 @@ export type Database = {
           product_id: string | null
           return_window_hours: number | null
           returnable: boolean
+          sku: string | null
           status: string
           stock_mode: string
           stock_qty: number | null
@@ -1980,6 +1981,7 @@ export type Database = {
           product_id?: string | null
           return_window_hours?: number | null
           returnable?: boolean
+          sku?: string | null
           status?: string
           stock_mode: string
           stock_qty?: number | null
@@ -1998,6 +2000,7 @@ export type Database = {
           product_id?: string | null
           return_window_hours?: number | null
           returnable?: boolean
+          sku?: string | null
           status?: string
           stock_mode?: string
           stock_qty?: number | null

@@ -108,6 +108,7 @@ class FakeQuery:
         self._filters: list[tuple[str, str, Any]] = []
         self._order: tuple[str, bool] | None = None
         self._maybe_single = False
+        self._limit: int | None = None
 
     def select(self, columns: str, count: str | None = None) -> FakeQuery:
         return self
@@ -118,6 +119,10 @@ class FakeQuery:
 
     def in_(self, column: str, values: list[Any]) -> FakeQuery:
         self._filters.append(("in", column, values))
+        return self
+
+    def limit(self, count: int) -> FakeQuery:
+        self._limit = count
         return self
 
     def order(self, column: str, desc: bool = False) -> FakeQuery:
@@ -142,6 +147,8 @@ class FakeQuery:
             rows = sorted(rows, key=sort_key, reverse=desc)
         if self._maybe_single:
             return FakeResponse(rows[0] if rows else None)
+        if self._limit is not None:
+            rows = rows[: self._limit]
         return FakeResponse(rows)
 
 
@@ -167,6 +174,10 @@ class FakeSupabaseStore:
 
     @staticmethod
     def _match_eq(row: dict[str, Any], column: str, value: Any) -> bool:
+        if "->>" in column:
+            base, _, key = column.partition("->>")
+            container = row.get(base)
+            return bool(isinstance(container, dict) and container.get(key) == value)
         return bool(row.get(column) == value)
 
 
@@ -271,6 +282,26 @@ class TestDirectoryVisibility:
         ]
 
         response = client.get("/directory/pending-shop")
+        assert response.status_code == 404
+
+    def test_old_slug_301_redirects_to_current_slug(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        # M12-P09 records the old slug in caps_snapshot.previous_slug when a vendor
+        # changes its slug once; the old link must 301 to the current slug, not 404.
+        vendor = _vendor_row(slug="new-shop-name")
+        vendor["caps_snapshot"] = {"slug_locked": True, "previous_slug": "old-shop-name"}
+        store.vendors = [vendor]
+
+        response = client.get("/directory/old-shop-name", follow_redirects=False)
+        assert response.status_code == 301
+        assert response.headers["location"] == "/directory/new-shop-name"
+
+    def test_unknown_slug_still_404s(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        store.vendors = [_vendor_row(slug="real-shop")]
+        response = client.get("/directory/does-not-exist", follow_redirects=False)
         assert response.status_code == 404
 
 
