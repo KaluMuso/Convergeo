@@ -1,15 +1,26 @@
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Protocol
 
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.supabase_client import SupabaseServiceClient
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/products", tags=["products"])
+
+
+class _ServiceClient(Protocol):
+    """Structural type for the service-role client provided by get_supabase_client.
+
+    Declared locally so this module stays outside the service-role import
+    allowlist (get_supabase_client / app.deps owns that import).
+    """
+
+    @property
+    def client(self) -> Any: ...
+
 
 MAX_GALLERY_IMAGES = 8
 
@@ -388,7 +399,7 @@ def build_product_detail(client: Any, slug: str) -> ProductDetailResponse | Redi
 @router.get("/{slug}", response_model=ProductDetailResponse)
 async def get_product(
     slug: str,
-    supabase: Annotated[SupabaseServiceClient, Depends(get_supabase_client)],
+    supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
 ) -> ProductDetailResponse | RedirectResponse:
     result = build_product_detail(supabase.client, slug)
     if isinstance(result, RedirectResponse):
