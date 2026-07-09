@@ -2,6 +2,53 @@
   "catalog.title": "Browse products",
   "catalog.results": "{count, plural, one {# result} other {# results}}",
   "catalog.compare": "Compare {count} items",
+  "home": {
+    "meta": {
+      "title": "Discover Zambia",
+      "description": "Shop products, book services, and find events across Zambia on Vergeo5."
+    },
+    "nav": {
+      "ariaLabel": "Shop navigation",
+      "bottomAriaLabel": "Primary shop navigation",
+      "home": "Home",
+      "browse": "Browse",
+      "ask": "Ask",
+      "orders": "Orders",
+      "account": "Account",
+      "cart": "Cart",
+      "searchPlaceholder": "Search products, services, events…"
+    },
+    "hero": {
+      "eyebrow": "Zambia's marketplace",
+      "fallbackTitle": "Discover products, services, and events across Zambia",
+      "fallbackSubtitle": "Compare prices from verified vendors, pay with mobile money, and get fast delivery in Lusaka.",
+      "primaryCta": "Start browsing",
+      "secondaryCta": "Sell on Vergeo5",
+      "placeholder": {
+        "title": "Welcome to Vergeo5",
+        "subtitle": "Your config-driven storefront will appear here as merchandising slots go live."
+      }
+    },
+    "bannerRow": {
+      "title": "Deals & highlights"
+    },
+    "events": {
+      "title": "Upcoming events",
+      "viewAll": "See all",
+      "free": "Free",
+      "capacity": "{filled} of {total} spots filled",
+      "cta": "Get tickets"
+    },
+    "featured": {
+      "title": "Featured for you",
+      "noReviews": "No reviews yet",
+      "quickAdd": "Quick add",
+      "wishlist": "Save"
+    },
+    "categories": {
+      "title": "Shop by category"
+    }
+  },
   "pdp": {
     "meta": {
       "notFoundTitle": "Product not found",
