@@ -124,6 +124,14 @@ file_size_limit = "50MiB"
 # allowed_mime_types = ["image/png", "image/jpeg"]
 # objects_path = "./images"
 
+# Private KYC document bucket (NRC/selfie). Private => RLS on storage.objects
+# denies all client access by default; the API (service-role) issues short-lived
+# signed upload/download URLs, gated by vendor/admin authz. See M12-P02b.
+[storage.buckets.kyc-docs]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp"]
+
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
 enabled = true
