@@ -1,5 +1,48 @@
 {
   "catalog.title": "Browse products",
   "catalog.results": "{count, plural, one {# result} other {# results}}",
-  "catalog.compare": "Compare {count} items"
+  "catalog.compare": "Compare {count} items",
+  "pdp": {
+    "meta": {
+      "notFoundTitle": "Product not found",
+      "descriptionFallback": "Shop {name} on Vergeo5"
+    },
+    "gallery": {
+      "empty": "No images yet",
+      "indicator": "Image {current} of {total}",
+      "previous": "Previous image",
+      "next": "Next image"
+    },
+    "specs": {
+      "heading": "Specifications",
+      "empty": "No specifications listed"
+    },
+    "buyBox": {
+      "priceLabel": "Price",
+      "quantityLabel": "Quantity",
+      "decrease": "Decrease quantity",
+      "increase": "Increase quantity",
+      "decreaseSymbol": "-",
+      "increaseSymbol": "+",
+      "addToCart": "Add to cart",
+      "addToCartSoon": "Add to cart (coming soon)",
+      "inStock": "In stock",
+      "outOfStock": "Out of stock",
+      "lowStock": "Only {count} left",
+      "alwaysAvailable": "Available",
+      "singleVendor": "Sold by this vendor only",
+      "moq": "Minimum order: {count}"
+    },
+    "vendor": {
+      "heading": "Seller",
+      "preferredBadge": "Preferred seller",
+      "noReviews": "No reviews yet",
+      "rating": "{rating} ({count, plural, one {# review} other {# reviews}})",
+      "viewStore": "View store"
+    },
+    "condition": {
+      "new": "New",
+      "refurbished": "Refurbished"
+    }
+  }
 }
