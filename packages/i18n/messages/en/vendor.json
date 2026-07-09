@@ -254,6 +254,25 @@
     "loading": "Loading…"
   },
   "listings": {
+    "images": {
+      "heading": "Photos",
+      "intro": "{count} of {max} photos. The first is your cover.",
+      "alt": "Listing photo {position}",
+      "cover_badge": "Cover",
+      "position_label": "Photo {position}",
+      "move_up": "Move up",
+      "move_down": "Move down",
+      "set_cover": "Set as cover",
+      "remove": "Remove",
+      "drop_label": "Drag photos here",
+      "browse_label": "Browse",
+      "compress_hint": "Photos are resized before upload to save data.",
+      "limit_reached": "You've reached the photo limit.",
+      "upload": "Add photos",
+      "uploading": "Uploading…",
+      "upload_failed": "Upload failed",
+      "retry": "Retry"
+    },
     "meta": {
       "title": "Create listing — Vergeo5 Vendor",
       "description": "Attach to the catalog, submit a new product, or quick-list a commodity."
