@@ -252,5 +252,104 @@
       "submitFailed": "Submission failed. Try again."
     },
     "loading": "Loading…"
+  },
+  "listings": {
+    "images": {
+      "heading": "Photos",
+      "intro": "{count} of {max} photos. The first is your cover.",
+      "alt": "Listing photo {position}",
+      "cover_badge": "Cover",
+      "position_label": "Photo {position}",
+      "move_up": "Move up",
+      "move_down": "Move down",
+      "set_cover": "Set as cover",
+      "remove": "Remove",
+      "drop_label": "Drag photos here",
+      "browse_label": "Browse",
+      "compress_hint": "Photos are resized before upload to save data.",
+      "limit_reached": "You've reached the photo limit.",
+      "upload": "Add photos",
+      "uploading": "Uploading…",
+      "upload_failed": "Upload failed",
+      "retry": "Retry"
+    },
+    "meta": {
+      "title": "Create listing — Vergeo5 Vendor",
+      "description": "Attach to the catalog, submit a new product, or quick-list a commodity."
+    },
+    "title": "Create listing",
+    "intro": "Choose how you want to list. Commission is shown before you publish.",
+    "loading": "Loading…",
+    "tabs": {
+      "ariaLabel": "Listing creation mode",
+      "attach": "Catalog",
+      "newCanonical": "New product",
+      "quickList": "Quick list"
+    },
+    "commission": {
+      "heading": "Commission on this listing",
+      "body": "You only pay when you sell. Rate is fixed for this category.",
+      "rate": "{rate}%"
+    },
+    "attach": {
+      "searchPlaceholder": "Search catalog products",
+      "searching": "Searching…",
+      "empty": "No matching products. Try another name or submit a new product.",
+      "hint": "Search the Vergeo5 catalog to attach your offer.",
+      "changeProduct": "← Change product",
+      "specHeading": "Product specs",
+      "publish": "Publish listing",
+      "publishing": "Publishing…"
+    },
+    "newCanonical": {
+      "heading": "Submit new product",
+      "intro": "We will review your product before it appears in the catalog.",
+      "nameLabel": "Product name",
+      "namePlaceholder": "e.g. Wireless earbuds",
+      "brandLabel": "Brand (optional)",
+      "brandPlaceholder": "e.g. Samsung",
+      "categoryLabel": "Category",
+      "categoryPlaceholder": "Select category",
+      "submit": "Submit for review",
+      "submitting": "Submitting…",
+      "moderationNotice": "Your listing stays in draft until our team approves the product."
+    },
+    "quickList": {
+      "heading": "Quick list",
+      "intro": "For commodities without a catalog match — fresh produce, bulk goods, etc.",
+      "titleLabel": "Listing title",
+      "titlePlaceholder": "e.g. Tomatoes per kg",
+      "publish": "Publish listing",
+      "publishing": "Publishing…"
+    },
+    "fields": {
+      "priceLabel": "Your price (ZMW)",
+      "pricePlaceholder": "0.00",
+      "priceHelp": "Enter kwacha and ngwee, e.g. 1,234.56",
+      "priceInvalid": "Enter a valid price like 1234.56",
+      "conditionLabel": "Condition",
+      "conditionNew": "New",
+      "conditionRefurbished": "Refurbished",
+      "stockModeLabel": "Stock",
+      "stockTracked": "Tracked quantity",
+      "stockAlways": "Always available",
+      "stockQtyLabel": "Quantity in stock",
+      "wholesaleLabel": "Wholesale tiers",
+      "wholesaleHelp": "T2+ verified businesses only",
+      "moqLabel": "Minimum order quantity"
+    },
+    "success": {
+      "live": "Listing is live!",
+      "moderation": "Submitted for review — we will notify you on WhatsApp."
+    },
+    "errors": {
+      "required": "This field is required",
+      "submitFailed": "Could not create listing. Try again.",
+      "wholesale_requires_t2": "Wholesale requires T2 verification",
+      "product_not_found": "Product not found",
+      "product_not_active": "This product cannot be attached yet",
+      "category_not_found": "Category not found",
+      "invalid_tiers": "Price tiers must rise in quantity and fall in unit price"
+    }
   }
 }
