@@ -37,7 +37,7 @@ export function createStorageClient(getToken: () => string | null | Promise<stri
       docType: KycDocType,
       fileSizeBytes: number,
     ): Promise<KycSignUploadResponse> {
-      const response = await client.request<KycSignUploadResponse>("/media/sign", {
+      const response = await client.request<KycSignUploadResponse>("/media/kyc-doc/sign", {
         method: "POST",
         body: JSON.stringify({
           resource_kind: "kyc_doc",
