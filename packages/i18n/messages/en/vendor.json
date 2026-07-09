@@ -350,6 +350,68 @@
       "product_not_active": "This product cannot be attached yet",
       "category_not_found": "Category not found",
       "invalid_tiers": "Price tiers must rise in quantity and fall in unit price"
+    },
+    "manage": {
+      "meta": {
+        "title": "Your listings — Vergeo5 Vendor",
+        "description": "View stock, pause listings, and edit prices."
+      },
+      "title": "Your listings",
+      "intro": "Tap a listing to edit price, stock, and returns.",
+      "loading": "Loading…",
+      "empty": "No listings yet.",
+      "createCta": "Create listing",
+      "editCta": "Edit",
+      "stockLabel": "Stock",
+      "stockValue": "{qty}",
+      "stockAlways": "Always available",
+      "decreaseSymbol": "−",
+      "increaseSymbol": "+",
+      "decreaseStock": "Decrease stock",
+      "increaseStock": "Increase stock",
+      "status": {
+        "draft": "Draft",
+        "active": "Live",
+        "paused": "Paused"
+      },
+      "edit": {
+        "meta": {
+          "title": "Edit listing — Vergeo5 Vendor",
+          "description": "Update price, stock, condition, and return policy."
+        },
+        "title": "Edit listing",
+        "save": "Save changes",
+        "saving": "Saving…",
+        "pause": "Pause listing",
+        "pausing": "Pausing…",
+        "unpause": "Resume listing",
+        "unpausing": "Resuming…",
+        "delete": "Delete listing",
+        "deleting": "Deleting…",
+        "returnableLabel": "Accept returns",
+        "returnableHelp": "Lane-2 return policy for this listing.",
+        "returnWindowLabel": "Return window (hours)",
+        "tierHeading": "Wholesale tiers",
+        "tierQtyLabel": "Min quantity",
+        "tierPriceLabel": "Unit price (ZMW)",
+        "addTier": "Add tier",
+        "removeTier": "Remove tier",
+        "saved": "Changes saved.",
+        "pausedNotice": "Listing paused because it has open orders.",
+        "deleted": "Listing removed.",
+        "priceChangedNotice": "Price updated — carts will be revalidated on next view."
+      },
+      "delete": {
+        "paused_instead": "This listing has open orders and was paused instead of deleted.",
+        "removed": "Listing removed."
+      },
+      "errors": {
+        "loadFailed": "Could not load listings. Pull to refresh.",
+        "saveFailed": "Could not save changes. Try again.",
+        "stockNotTracked": "Stock adjustments apply only to tracked listings.",
+        "stockQtyRequired": "Enter a stock quantity for tracked listings.",
+        "returnWindowRequired": "Enter a return window when returns are enabled."
+      }
     }
   }
 }
