@@ -2,6 +2,50 @@
   "catalog.title": "Browse products",
   "catalog.results": "{count, plural, one {# result} other {# results}}",
   "catalog.compare": "Compare {count} items",
+  "plp": {
+    "title": "Browse {category}",
+    "defaultCategory": "All products",
+    "results": "{count, plural, one {# listing} other {# listings}}",
+    "emptyTitle": "No listings found",
+    "emptyBody": "Try clearing filters or browsing another category.",
+    "sort": {
+      "label": "Sort by",
+      "relevance": "Relevance",
+      "cheapest": "Lowest price",
+      "nearest": "Nearest",
+      "newest": "Newest"
+    },
+    "facets": {
+      "heading": "Filters",
+      "price": "Price (K)",
+      "minPrice": "Min",
+      "maxPrice": "Max",
+      "condition": "Condition",
+      "conditionNew": "New",
+      "conditionRefurbished": "Refurbished",
+      "availability": "Availability",
+      "inStock": "In stock",
+      "outOfStock": "Out of stock",
+      "rating": "Rating",
+      "rating4Plus": "4★ & up",
+      "rating3Plus": "3★ & up",
+      "location": "Near me",
+      "radiusKm": "Within {km} km",
+      "apply": "Apply filters",
+      "clear": "Clear filters"
+    },
+    "card": {
+      "vendor": "Sold by {vendor}",
+      "noReviews": "No reviews yet",
+      "reviewCount": "({count})",
+      "quickAdd": "Quick add",
+      "wishlist": "Save to wishlist",
+      "outOfStock": "Out of stock",
+      "distance": "{distance} away"
+    },
+    "loadMore": "Load more",
+    "loading": "Loading…"
+  },
   "home": {
     "meta": {
       "title": "Discover Zambia",
