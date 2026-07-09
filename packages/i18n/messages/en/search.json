@@ -1,5 +1,56 @@
 {
-  "search.placeholder": "Search Vergeo5",
-  "search.noResults": "No results for \"{query}\"",
-  "search.suggestions": "Try searching for {term}"
+  "title": "Search",
+  "placeholder": "Search Vergeo5",
+  "submit": "Search",
+  "recent": {
+    "title": "Recent searches",
+    "clear": "Clear all",
+    "remove": "Remove {term}"
+  },
+  "tabs": {
+    "ariaLabel": "Filter results by type",
+    "all": "All",
+    "products": "Products",
+    "services": "Services",
+    "events": "Events",
+    "supplies": "Supplies",
+    "vendors": "Vendors",
+    "count": "{label} ({count})"
+  },
+  "noResults": {
+    "title": "No results for \"{query}\"",
+    "suggestionsTitle": "Try searching for",
+    "categoriesTitle": "Browse categories"
+  },
+  "suggestions": {
+    "term": "Try searching for {term}"
+  },
+  "categories": {
+    "electronics": "Electronics",
+    "fashion": "Fashion & beauty",
+    "home": "Home & living",
+    "groceries": "Groceries"
+  },
+  "askVergeo": {
+    "title": "Ask Vergeo",
+    "teaser": "Not sure what to search? Ask Vergeo for help finding what you need.",
+    "slotLabel": "Ask Vergeo assistant slot"
+  },
+  "results": {
+    "count": "{count, plural, one {# result} other {# results}}",
+    "degraded": "Showing keyword matches (semantic search unavailable)"
+  },
+  "input": {
+    "ariaLabel": "Search",
+    "suggestionsLabel": "Search suggestions",
+    "noSuggestions": "No suggestions"
+  },
+  "pagination": {
+    "loadMore": "Load more",
+    "loading": "Loading more…"
+  },
+  "result": {
+    "priceFrom": "From {price}",
+    "category": "In {category}"
+  }
 }
