@@ -1,5 +1,68 @@
 {
-  "directory.title": "Business directory",
-  "directory.results": "{count, plural, one {# business} other {# businesses}} in {city}",
-  "directory.verified": "Verified since {year}"
+  "index": {
+    "title": "Business directory",
+    "subtitle": "Discover verified vendors across Zambia",
+    "results": "{count, plural, one {# business} other {# businesses}}",
+    "searchPlaceholder": "Search businesses",
+    "searchLabel": "Search directory",
+    "viewProfile": "View store"
+  },
+  "filters": {
+    "heading": "Filters",
+    "category": "Category",
+    "location": "Location",
+    "badges": "Badges",
+    "allCategories": "All categories",
+    "allLocations": "All locations",
+    "preferred": "Preferred vendor",
+    "verified": "Verified",
+    "apply": "Apply filters",
+    "clear": "Clear filters",
+    "facetCount": "{label} ({count})",
+    "categories": {
+      "electronics": "Electronics",
+      "fashion-beauty": "Fashion & beauty",
+      "home-living": "Home & living",
+      "groceries": "Groceries"
+    }
+  },
+  "card": {
+    "listings": "Listings",
+    "reviews": "Reviews",
+    "rating": "{rating, number, ::.1} ({count})",
+    "noReviews": "No reviews yet",
+    "verifiedSince": "Verified since {year}",
+    "preferredBadge": "Preferred",
+    "verifiedBadge": "Verified",
+    "defaultLocation": "Zambia"
+  },
+  "empty": {
+    "title": "No businesses found",
+    "body": "Try clearing filters or searching for another business."
+  },
+  "profile": {
+    "metaDescription": "Shop from {name} on Vergeo5",
+    "about": "About",
+    "hours": "Opening hours",
+    "location": "Location",
+    "landmark": "Landmark",
+    "landmarkValue": "{landmark}",
+    "hoursLine": "{day}: {hours}",
+    "listingsHeading": "Products from this store",
+    "reviewsHeading": "Customer reviews",
+    "reviewsSummary": "{rating, number, ::.1} average from {count, plural, one {# review} other {# reviews}}",
+    "noReviews": "No reviews yet",
+    "preferredBadge": "Preferred vendor",
+    "verifiedBadge": "Verified vendor",
+    "shareTitle": "{name} on Vergeo5"
+  },
+  "listings": {
+    "vendor": "Sold by {vendor}",
+    "noReviews": "No reviews yet",
+    "reviewCount": "({count})",
+    "quickAdd": "Quick add",
+    "wishlist": "Save to wishlist",
+    "outOfStock": "Out of stock",
+    "distance": "{distance} away"
+  }
 }
