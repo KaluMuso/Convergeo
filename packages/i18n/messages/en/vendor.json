@@ -413,5 +413,98 @@
         "returnWindowRequired": "Enter a return window when returns are enabled."
       }
     }
+  },
+  "profile": {
+    "meta": {
+      "title": "Storefront profile — Vergeo5 Vendor",
+      "description": "Edit your public storefront: logo, description, hours, location, and shop URL."
+    },
+    "title": "Storefront profile",
+    "intro": "This is what buyers see on your directory page. Complete your profile to rank higher.",
+    "loading": "Loading profile…",
+    "sections": {
+      "basics": "Business details",
+      "logo": "Logo",
+      "location": "Location"
+    },
+    "fields": {
+      "displayNameLabel": "Display name",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Tell buyers what you sell and why they should choose you…",
+      "descriptionHelp": "Aim for at least 50 characters — it helps buyers trust your shop.",
+      "slugLabel": "Shop URL",
+      "slugPlaceholder": "lusaka-electronics",
+      "landmarkLabel": "Landmark",
+      "landmarkPlaceholder": "e.g. Near Manda Hill Mall",
+      "latLabel": "Latitude",
+      "latPlaceholder": "-15.3875",
+      "lngLabel": "Longitude",
+      "lngPlaceholder": "28.3228",
+      "locationHelp": "Pin your shop on the map with GPS plus a nearby landmark buyers know.",
+      "hoursLabel": "Opening hours",
+      "hoursHelp": "Overnight hours are supported (e.g. close after midnight)."
+    },
+    "slug": {
+      "onceWarning": "You can only change your shop URL once. The old link will redirect automatically.",
+      "locked": "Your shop URL is locked after the one-time change.",
+      "previous": "Old URL {slug} redirects to your current shop page."
+    },
+    "hours": {
+      "days": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
+      },
+      "open": "Opens",
+      "close": "Closes",
+      "closed": "Closed"
+    },
+    "logo": {
+      "alt": "Shop logo",
+      "empty": "No logo",
+      "upload": "Upload logo",
+      "uploading": "Uploading…",
+      "uploadFailed": "Logo upload failed. Try again.",
+      "help": "Square images work best. Resized before upload to save data."
+    },
+    "badge": {
+      "preferred": "Vergeo5 Preferred badge earned",
+      "hint": "Earn the Preferred badge with great service — ≥20 orders, ≥4.5★, low disputes."
+    },
+    "completeness": {
+      "heading": "Profile completeness",
+      "score": "{score}% complete",
+      "fields": {
+        "logo": "Logo uploaded",
+        "description": "Description (50+ characters)",
+        "hours": "Opening hours set",
+        "location": "Location + landmark",
+        "badge": "Preferred badge earned"
+      }
+    },
+    "actions": {
+      "save": "Save profile",
+      "saving": "Saving…"
+    },
+    "success": {
+      "saved": "Profile saved. Changes appear on your public page within a minute."
+    },
+    "errors": {
+      "loadFailed": "Could not load your profile. Pull to refresh.",
+      "saveFailed": "Could not save your profile. Try again.",
+      "authRequired": "Sign in to edit your storefront profile.",
+      "slug_locked": "Your shop URL is already locked.",
+      "slug_taken": "That shop URL is already taken.",
+      "slug_charset": "Use only lowercase letters, numbers, and hyphens.",
+      "hours_empty": "Add at least one day of opening hours.",
+      "hours_invalid": "Check your opening and closing times.",
+      "hours_invalid_day": "One of the day names is invalid.",
+      "hours_all_closed": "Mark at least one day as open.",
+      "location_required": "Add your location before setting hours."
+    }
   }
 }
