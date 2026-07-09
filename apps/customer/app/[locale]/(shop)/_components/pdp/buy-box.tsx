@@ -4,6 +4,8 @@ import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { useCallback, useMemo, useState } from "react";
 
+import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
+
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
 
 export type BuyBoxListing = {
@@ -40,6 +42,7 @@ export type BuyBoxProps = {
   listing: BuyBoxListing;
   labels: BuyBoxLabels;
   singleVendor: boolean;
+  onAddedToCart?: () => void;
 };
 
 export function getMaxQuantity(listing: BuyBoxListing): number | null {
@@ -83,8 +86,11 @@ export function getStockLabel(
   return labels.inStockLabel;
 }
 
-export function BuyBox({ listing, labels, singleVendor }: BuyBoxProps) {
+export function BuyBox({ listing, labels, singleVendor, onAddedToCart }: BuyBoxProps) {
   const [quantity, setQuantity] = useState(() => clampQuantity(listing.moq, listing));
+  const [adding, setAdding] = useState(false);
+  const [addedMessage, setAddedMessage] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
 
   const maxQuantity = useMemo(() => getMaxQuantity(listing), [listing]);
   const stockLabel = useMemo(() => getStockLabel(listing, labels), [listing, labels]);
@@ -98,6 +104,36 @@ export function BuyBox({ listing, labels, singleVendor }: BuyBoxProps) {
   const increase = useCallback(() => {
     setQuantity((current) => clampQuantity(current + 1, listing));
   }, [listing]);
+
+  const handleAddToCart = useCallback(async () => {
+    if (!listing.inStock || adding) {
+      return;
+    }
+
+    setAdding(true);
+    setAddError(null);
+    setAddedMessage(null);
+
+    try {
+      await addCartItem(listing.id, quantity);
+      setAddedMessage(labels.addToCartLabel);
+      setLastAddedMessage(labels.addToCartLabel);
+      openMiniCart();
+      onAddedToCart?.();
+    } catch {
+      setAddError(labels.addToCartSoonLabel);
+    } finally {
+      setAdding(false);
+    }
+  }, [
+    adding,
+    labels.addToCartLabel,
+    labels.addToCartSoonLabel,
+    listing.id,
+    listing.inStock,
+    onAddedToCart,
+    quantity,
+  ]);
 
   const atMin = quantity <= Math.max(1, listing.moq);
   const atMax = maxQuantity !== null && quantity >= maxQuantity;
@@ -176,14 +212,29 @@ export function BuyBox({ listing, labels, singleVendor }: BuyBoxProps) {
         variant="primary"
         size="lg"
         className="w-full"
-        disabled
-        loading={false}
+        disabled={!listing.inStock || adding}
+        loading={adding}
         loadingLabel={labels.addToCartSoonLabel}
         data-testid="pdp-add-to-cart"
-        aria-label={labels.addToCartSoonLabel}
+        aria-label={listing.inStock ? labels.addToCartLabel : labels.addToCartSoonLabel}
+        onClick={() => void handleAddToCart()}
       >
-        {labels.addToCartSoonLabel}
+        {labels.addToCartLabel}
       </Button>
+
+      <p className="sr-only" aria-live="polite">
+        {addedMessage}
+      </p>
+      {addError ? (
+        <p className="text-sm text-danger" role="alert" data-testid="pdp-add-to-cart-error">
+          {addError}
+        </p>
+      ) : null}
+      {addedMessage ? (
+        <p className="text-sm font-medium text-success" data-testid="pdp-add-to-cart-success">
+          {addedMessage}
+        </p>
+      ) : null}
     </section>
   );
 }

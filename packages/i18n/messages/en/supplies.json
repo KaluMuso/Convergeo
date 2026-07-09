@@ -1,5 +1,41 @@
 {
-  "supplies.title": "Supplies",
-  "supplies.tier.price": "From {amount} at {qty}+ units",
-  "supplies.moq": "Minimum order: {qty} units"
+  "title": "Supplies",
+  "description": "Wholesale listings with tier pricing and minimum order quantities.",
+  "results": "{count, plural, one {# wholesale listing} other {# wholesale listings}}",
+  "t2Notice": {
+    "title": "T2 verified sellers only",
+    "body": "Wholesale supplies on Vergeo5 are listed by T2-verified businesses. Retail-only vendors cannot publish tier-priced listings."
+  },
+  "sort": {
+    "label": "Sort by",
+    "moq": "Lowest MOQ",
+    "unitPrice": "Best unit price"
+  },
+  "empty": {
+    "title": "No wholesale listings yet",
+    "body": "Check back soon — verified suppliers are adding bulk stock with tier pricing."
+  },
+  "card": {
+    "vendor": "Sold by {vendor}",
+    "quantityLabel": "Preview quantity",
+    "decrease": "Decrease quantity",
+    "increase": "Increase quantity",
+    "decreaseSymbol": "−",
+    "increaseSymbol": "+",
+    "noImage": "No image",
+    "viewListing": "View listing"
+  },
+  "tier": {
+    "quantityHeader": "Qty",
+    "priceHeader": "Unit price",
+    "priceFrom": "From {amount} at {qty}+ units"
+  },
+  "moq": {
+    "badge": "MOQ {qty}",
+    "label": "Minimum order:",
+    "tableLabel": "MOQ:"
+  },
+  "preview": {
+    "line": "{qty} × {unitPrice} = {total}"
+  }
 }

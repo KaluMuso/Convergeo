@@ -1,0 +1,173 @@
+import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { createTranslator, type AbstractIntlMessages } from "next-intl";
+import { getMessages, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
+
+import {
+  DateFilterChips,
+  EVENT_CATEGORIES,
+  type EventCategory,
+  type EventDateWindow,
+} from "../_components/events/date-filter-chips";
+import { EventGrid, type EventBrowseItem } from "../_components/events/event-grid";
+
+import type { Metadata } from "next";
+
+export const revalidate = 60;
+
+type EventsApiResponse = {
+  items: EventBrowseItem[];
+  total: number;
+  categories: string[];
+  calendar_dates: string[];
+};
+
+type PageProps = {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{
+    date_window?: string;
+    category?: string;
+  }>;
+};
+
+type EventsTranslator = {
+  (key: string, values?: Record<string, string | number>): string;
+};
+
+function getApiBaseUrl(): string {
+  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+}
+
+function parseDateWindow(value: string | undefined): EventDateWindow {
+  if (value === "this_weekend" || value === "all") {
+    return value;
+  }
+  return "tonight";
+}
+
+function parseCategory(value: string | undefined): EventCategory | null {
+  if (!value) {
+    return null;
+  }
+  if ((EVENT_CATEGORIES as readonly string[]).includes(value)) {
+    return value as EventCategory;
+  }
+  return null;
+}
+
+async function getEventsTranslator(locale: string): Promise<EventsTranslator> {
+  const baseMessages = await getMessages();
+  const eventsMessages = await loadNamespace(locale as Locale, "events");
+  const messages = { ...baseMessages, events: eventsMessages } as AbstractIntlMessages;
+
+  return createTranslator({
+    locale,
+    messages,
+    namespace: "events",
+  }) as unknown as EventsTranslator;
+}
+
+async function fetchEvents(params: {
+  dateWindow: EventDateWindow;
+  category: EventCategory | null;
+}): Promise<EventsApiResponse | null> {
+  const search = new URLSearchParams();
+  if (params.dateWindow !== "all") {
+    search.set("date_window", params.dateWindow);
+  }
+  if (params.category) {
+    search.set("category", params.category);
+  }
+
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/events${suffix}`, {
+      next: { revalidate, tags: ["events"] },
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as EventsApiResponse;
+  } catch {
+    return null;
+  }
+}
+
+export function generateStaticParams() {
+  return LOCALES.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getEventsTranslator(locale);
+
+  return {
+    title: t("browse.title"),
+    description: t("browse.subtitle"),
+  };
+}
+
+export default async function EventsPage({ params, searchParams }: PageProps) {
+  const { locale } = await params;
+  const query = await searchParams;
+  setRequestLocale(locale);
+
+  const t = await getEventsTranslator(locale);
+  const dateWindow = parseDateWindow(query.date_window);
+  const category = parseCategory(query.category);
+  const data = await fetchEvents({ dateWindow, category });
+  const items = data?.items ?? [];
+  const calendarDates = data?.calendar_dates ?? [];
+
+  const filterLabels = {
+    tonight: t("filters.tonight"),
+    thisWeekend: t("filters.thisWeekend"),
+    allDates: t("filters.allDates"),
+    categoryLabel: t("filters.categoryLabel"),
+    calendarLabel: t("browse.calendarLabel"),
+    categories: {
+      all: t("categories.all"),
+      workshops: t("categories.workshops"),
+      "comedy-theatre": t("categories.comedy-theatre"),
+      "pop-up-dinners": t("categories.pop-up-dinners"),
+      "cultural-arts": t("categories.cultural-arts"),
+      "lifestyle-community": t("categories.lifestyle-community"),
+      "free-rsvp": t("categories.free-rsvp"),
+    },
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-col gap-1">
+        <h1 className="font-display text-h1 text-display-ink">{t("browse.title")}</h1>
+        <p className="text-sm text-text-2">{t("browse.subtitle")}</p>
+      </header>
+
+      <Suspense fallback={null}>
+        <DateFilterChips
+          labels={filterLabels}
+          calendarDates={calendarDates}
+          activeDateWindow={dateWindow}
+          activeCategory={category}
+        />
+      </Suspense>
+
+      {items.length === 0 ? (
+        <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
+      ) : (
+        <EventGrid
+          items={items}
+          locale={locale}
+          labels={{
+            free: t("browse.free"),
+            soldOut: t("browse.soldOut"),
+            viewEvent: t("browse.viewEvent"),
+            capacityTemplate: t("detail.spots", { sold: "{sold}", total: "{total}" }),
+          }}
+        />
+      )}
+    </div>
+  );
+}

@@ -1,9 +1,17 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../cart/mini-cart-drawer", () => ({
+  addCartItem: vi.fn().mockResolvedValue({ items: [{ qty: 2 }] }),
+  openMiniCart: vi.fn(),
+  setLastAddedMessage: vi.fn(),
+}));
+
+import { addCartItem, openMiniCart } from "../cart/mini-cart-drawer";
 
 import {
   BuyBox,
@@ -16,6 +24,7 @@ import {
 
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
 });
 
 const labels: BuyBoxLabels = {
@@ -81,10 +90,23 @@ describe("BuyBox", () => {
 
     expect(screen.getByTestId("pdp-stock-state")).toHaveTextContent("Only 5 left");
     expect(screen.getByTestId("pdp-price")).toHaveTextContent("K4,500.00");
-    expect(screen.getByTestId("pdp-add-to-cart")).toBeDisabled();
+    expect(screen.getByTestId("pdp-add-to-cart")).toBeEnabled();
 
     await user.click(screen.getByTestId("pdp-qty-increase"));
     expect(screen.getByTestId("pdp-qty-value")).toHaveTextContent("2");
+  });
+
+  it("adds to cart from the buy box", async () => {
+    const user = userEvent.setup();
+    render(<BuyBox listing={inStockListing} labels={labels} singleVendor={false} />);
+
+    await user.click(screen.getByTestId("pdp-add-to-cart"));
+
+    await waitFor(() => {
+      expect(addCartItem).toHaveBeenCalledWith("listing-1", 1);
+      expect(openMiniCart).toHaveBeenCalled();
+      expect(screen.getByTestId("pdp-add-to-cart-success")).toHaveTextContent("Add to cart");
+    });
   });
 
   it("renders out-of-stock state with disabled stepper", () => {
