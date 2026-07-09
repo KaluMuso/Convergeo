@@ -1,0 +1,189 @@
+"use client";
+
+import { formatK } from "@vergeo/i18n";
+import { Button } from "@vergeo/ui/src/button";
+import { useCallback, useMemo, useState } from "react";
+
+import { ConditionBadge, type ListingCondition } from "./condition-badge";
+
+export type BuyBoxListing = {
+  id: string;
+  title: string;
+  priceNgwee: number;
+  condition: ListingCondition;
+  stockMode: "tracked" | "always_available";
+  stockQty: number | null;
+  moq: number;
+  inStock: boolean;
+};
+
+export type BuyBoxLabels = {
+  priceLabel: string;
+  quantityLabel: string;
+  decreaseLabel: string;
+  increaseLabel: string;
+  decreaseSymbol: string;
+  increaseSymbol: string;
+  addToCartLabel: string;
+  addToCartSoonLabel: string;
+  inStockLabel: string;
+  outOfStockLabel: string;
+  lowStockLabel: (count: number) => string;
+  alwaysAvailableLabel: string;
+  singleVendorLabel: string;
+  moqLabel: (count: number) => string;
+  conditionNewLabel: string;
+  conditionRefurbishedLabel: string;
+};
+
+export type BuyBoxProps = {
+  listing: BuyBoxListing;
+  labels: BuyBoxLabels;
+  singleVendor: boolean;
+};
+
+export function getMaxQuantity(listing: BuyBoxListing): number | null {
+  if (!listing.inStock) {
+    return listing.moq;
+  }
+  if (listing.stockMode === "always_available") {
+    return 99;
+  }
+  if (listing.stockQty === null) {
+    return 99;
+  }
+  return Math.max(listing.moq, listing.stockQty);
+}
+
+export function clampQuantity(value: number, listing: BuyBoxListing): number {
+  const min = Math.max(1, listing.moq);
+  const max = getMaxQuantity(listing);
+  if (max === null) {
+    return Math.max(min, value);
+  }
+  return Math.min(Math.max(min, value), max);
+}
+
+export function getStockLabel(
+  listing: BuyBoxListing,
+  labels: Pick<
+    BuyBoxLabels,
+    "inStockLabel" | "outOfStockLabel" | "lowStockLabel" | "alwaysAvailableLabel"
+  >,
+): string {
+  if (!listing.inStock) {
+    return labels.outOfStockLabel;
+  }
+  if (listing.stockMode === "always_available") {
+    return labels.alwaysAvailableLabel;
+  }
+  if (listing.stockQty !== null && listing.stockQty <= 5) {
+    return labels.lowStockLabel(listing.stockQty);
+  }
+  return labels.inStockLabel;
+}
+
+export function BuyBox({ listing, labels, singleVendor }: BuyBoxProps) {
+  const [quantity, setQuantity] = useState(() => clampQuantity(listing.moq, listing));
+
+  const maxQuantity = useMemo(() => getMaxQuantity(listing), [listing]);
+  const stockLabel = useMemo(() => getStockLabel(listing, labels), [listing, labels]);
+  const conditionLabel =
+    listing.condition === "new" ? labels.conditionNewLabel : labels.conditionRefurbishedLabel;
+
+  const decrease = useCallback(() => {
+    setQuantity((current) => clampQuantity(current - 1, listing));
+  }, [listing]);
+
+  const increase = useCallback(() => {
+    setQuantity((current) => clampQuantity(current + 1, listing));
+  }, [listing]);
+
+  const atMin = quantity <= Math.max(1, listing.moq);
+  const atMax = maxQuantity !== null && quantity >= maxQuantity;
+
+  return (
+    <section
+      data-testid="pdp-buy-box"
+      data-in-stock={listing.inStock ? "true" : "false"}
+      className="flex flex-col gap-4 rounded border border-border bg-surface p-4"
+      style={{ borderRadius: "var(--r)" }}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <ConditionBadge condition={listing.condition} label={conditionLabel} />
+        {singleVendor ? (
+          <p className="text-sm text-text-2" data-testid="pdp-single-vendor">
+            {labels.singleVendorLabel}
+          </p>
+        ) : null}
+      </div>
+
+      <div>
+        <p className="text-sm text-text-2">{labels.priceLabel}</p>
+        <p className="font-mono text-2xl font-semibold text-text" data-testid="pdp-price">
+          {formatK(listing.priceNgwee)}
+        </p>
+      </div>
+
+      <p
+        className={`text-sm font-medium ${listing.inStock ? "text-success" : "text-danger"}`}
+        data-testid="pdp-stock-state"
+      >
+        {stockLabel}
+      </p>
+
+      {listing.moq > 1 ? (
+        <p className="text-sm text-text-2" data-testid="pdp-moq">
+          {labels.moqLabel(listing.moq)}
+        </p>
+      ) : null}
+
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium text-text">{labels.quantityLabel}</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={labels.decreaseLabel}
+            data-testid="pdp-qty-decrease"
+            onClick={decrease}
+            disabled={!listing.inStock || atMin}
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span aria-hidden="true">{labels.decreaseSymbol}</span>
+          </button>
+          <output
+            data-testid="pdp-qty-value"
+            className="min-w-12 text-center font-mono text-lg"
+            aria-live="polite"
+          >
+            {quantity}
+          </output>
+          <button
+            type="button"
+            aria-label={labels.increaseLabel}
+            data-testid="pdp-qty-increase"
+            onClick={increase}
+            disabled={!listing.inStock || atMax}
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span aria-hidden="true">{labels.increaseSymbol}</span>
+          </button>
+        </div>
+      </div>
+
+      <Button
+        type="button"
+        variant="primary"
+        size="lg"
+        className="w-full"
+        disabled
+        loading={false}
+        loadingLabel={labels.addToCartSoonLabel}
+        data-testid="pdp-add-to-cart"
+        aria-label={labels.addToCartSoonLabel}
+      >
+        {labels.addToCartSoonLabel}
+      </Button>
+    </section>
+  );
+}
