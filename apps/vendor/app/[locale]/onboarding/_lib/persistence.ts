@@ -9,6 +9,7 @@ export const DEFAULT_DRAFT: OnboardingDraft = {
   step: 0,
   businessName: "",
   businessCategory: "",
+  legalName: "",
   momoPhone: "",
   nrcPath: null,
   selfiePath: null,
@@ -74,6 +75,8 @@ export function mergeDraftWithServer(
     step: base.step,
     businessName: base.businessName || server.business_name || "",
     businessCategory: base.businessCategory || server.business_category || "",
+    // legal_name is collected + persisted client-side only (no server field).
+    legalName: base.legalName || "",
     momoPhone: base.momoPhone || server.momo_phone || "",
     nrcPath: base.nrcPath ?? server.nrc_path,
     selfiePath: base.selfiePath ?? server.selfie_path,
@@ -92,7 +95,7 @@ export function resolveResumeStep(
     return stepIndexFromKey("business");
   }
 
-  if (!draft.nrcPath || !draft.selfiePath || !draft.momoPhone.trim()) {
+  if (!draft.nrcPath || !draft.selfiePath || !draft.momoPhone.trim() || !draft.legalName.trim()) {
     return stepIndexFromKey("kyc");
   }
 

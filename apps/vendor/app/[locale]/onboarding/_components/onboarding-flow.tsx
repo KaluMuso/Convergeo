@@ -44,7 +44,6 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
   const [application, setApplication] = useState<KycApplication | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resubmitMode, setResubmitMode] = useState(false);
@@ -125,6 +124,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
               step: 0,
               businessName: "",
               businessCategory: "",
+              legalName: "",
               momoPhone: "",
               nrcPath: null,
               selfiePath: null,
@@ -156,20 +156,6 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
     });
   }, []);
 
-  const persistDraft = useCallback(
-    async (patch: Partial<OnboardingDraft>) => {
-      const momo = patch.momoPhone ? normalizeZmPhone(patch.momoPhone) : undefined;
-      await kycClient.saveDraft({
-        business_name: patch.businessName,
-        business_category: patch.businessCategory,
-        momo_phone: momo,
-        nrc_path: patch.nrcPath,
-        selfie_path: patch.selfiePath,
-      });
-    },
-    [kycClient],
-  );
-
   const goToStep = useCallback(
     (step: number) => {
       setCurrentStep(step);
@@ -178,49 +164,26 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
     [updateDraft],
   );
 
-  const handleBusinessContinue = useCallback(async () => {
+  const handleBusinessContinue = useCallback(() => {
     if (!draft) {
       return;
     }
-    setSaving(true);
     setError(null);
-    try {
-      await persistDraft({
-        businessName: draft.businessName,
-        businessCategory: draft.businessCategory,
-      });
-      goToStep(stepIndexFromKey("kyc"));
-    } catch {
-      setError(t("onboarding.errors.submitFailed"));
-    } finally {
-      setSaving(false);
-    }
-  }, [draft, goToStep, persistDraft, t]);
+    goToStep(stepIndexFromKey("kyc"));
+  }, [draft, goToStep]);
 
-  const handleKycContinue = useCallback(async () => {
+  const handleKycContinue = useCallback(() => {
     if (!draft) {
       return;
     }
     const momo = normalizeZmPhone(draft.momoPhone);
-    if (!isValidZmMobile(momo)) {
+    if (!isValidZmMobile(momo) || draft.legalName.trim().length < 2) {
       return;
     }
-    setSaving(true);
     setError(null);
-    try {
-      await persistDraft({
-        momoPhone: momo,
-        nrcPath: draft.nrcPath,
-        selfiePath: draft.selfiePath,
-      });
-      updateDraft({ momoPhone: momo });
-      goToStep(stepIndexFromKey("review"));
-    } catch {
-      setError(t("onboarding.errors.submitFailed"));
-    } finally {
-      setSaving(false);
-    }
-  }, [draft, goToStep, persistDraft, t, updateDraft]);
+    updateDraft({ momoPhone: momo });
+    goToStep(stepIndexFromKey("review"));
+  }, [draft, goToStep, updateDraft]);
 
   const handleUpload = useCallback(
     async (docType: "nrc" | "selfie", file: File) => {
@@ -228,40 +191,40 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
       const path = await storageClient.uploadSigned(file, signed);
       if (docType === "nrc") {
         updateDraft({ nrcPath: path });
-        await persistDraft({ nrcPath: path });
       } else {
         updateDraft({ selfiePath: path });
-        await persistDraft({ selfiePath: path });
       }
       return path;
     },
-    [persistDraft, storageClient, updateDraft],
+    [storageClient, updateDraft],
   );
 
   const handleSubmit = useCallback(async () => {
     if (!draft) {
       return;
     }
+    const docPaths = [draft.nrcPath, draft.selfiePath].filter((path): path is string =>
+      Boolean(path),
+    );
+    if (docPaths.length === 0 || draft.legalName.trim().length < 2) {
+      setError(t("onboarding.errors.submitFailed"));
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      const momo = normalizeZmPhone(draft.momoPhone);
-      await persistDraft({
-        businessName: draft.businessName,
-        businessCategory: draft.businessCategory,
-        momoPhone: momo,
-        nrcPath: draft.nrcPath,
-        selfiePath: draft.selfiePath,
-      });
+      const payload = {
+        tier: 1,
+        doc_storage_paths: docPaths,
+        momo_phone: normalizeZmPhone(draft.momoPhone),
+        momo_operator: null,
+        legal_name: draft.legalName.trim(),
+      };
 
       if (resubmitMode) {
-        await kycClient.resubmit({
-          nrc_path: draft.nrcPath ?? undefined,
-          selfie_path: draft.selfiePath ?? undefined,
-          momo_phone: momo,
-        });
+        await kycClient.resubmit(payload);
       } else {
-        await kycClient.submit();
+        await kycClient.submit(payload);
       }
 
       clearLocalDraft();
@@ -271,7 +234,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
     } finally {
       setSubmitting(false);
     }
-  }, [draft, kycClient, locale, persistDraft, resubmitMode, router, t]);
+  }, [draft, kycClient, locale, resubmitMode, router, t]);
 
   if (sessionLoading || loading || !draft) {
     return (
@@ -312,8 +275,8 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
           businessCategory={draft.businessCategory}
           onBusinessNameChange={(value) => updateDraft({ businessName: value })}
           onBusinessCategoryChange={(value) => updateDraft({ businessCategory: value })}
-          onContinue={() => void handleBusinessContinue()}
-          saving={saving}
+          onContinue={() => handleBusinessContinue()}
+          saving={false}
           labels={{
             heading: t("onboarding.business.heading"),
             intro: t("onboarding.business.intro"),
@@ -332,17 +295,19 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
       {stepKey === "kyc" || resubmitMode ? (
         <KycDocsStep
           momoPhone={draft.momoPhone}
+          legalName={draft.legalName}
           nrcPath={draft.nrcPath}
           selfiePath={draft.selfiePath}
           rejectedDocs={application?.rejected_docs}
           onMomoPhoneChange={(value) => updateDraft({ momoPhone: value })}
+          onLegalNameChange={(value) => updateDraft({ legalName: value })}
           onNrcUploaded={(path) => updateDraft({ nrcPath: path })}
           onSelfieUploaded={(path) => updateDraft({ selfiePath: path })}
           onContinue={() => {
             if (resubmitMode) {
               void handleSubmit();
             } else {
-              void handleKycContinue();
+              handleKycContinue();
             }
           }}
           onUpload={handleUpload}
@@ -355,6 +320,9 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
             nrcHelp: t("onboarding.kyc.nrcHelp"),
             selfieLabel: t("onboarding.kyc.selfieLabel"),
             selfieHelp: t("onboarding.kyc.selfieHelp"),
+            legalNameLabel: t("onboarding.kyc.legalNameLabel"),
+            legalNamePlaceholder: t("onboarding.kyc.legalNamePlaceholder"),
+            legalNameHelp: t("onboarding.kyc.legalNameHelp"),
             momoLabel: t("onboarding.kyc.momoLabel"),
             momoPlaceholder: t("onboarding.kyc.momoPlaceholder"),
             momoHelp: t("onboarding.kyc.momoHelp"),

@@ -28,6 +28,7 @@ export type OnboardingDraft = {
   step: number;
   businessName: string;
   businessCategory: string;
+  legalName: string;
   momoPhone: string;
   nrcPath: string | null;
   selfiePath: string | null;
@@ -46,4 +47,6 @@ export type BusinessCategory = (typeof BUSINESS_CATEGORIES)[number];
 
 export const LOCAL_STORAGE_KEY = "vergeo5-vendor-onboarding";
 
-export const PRIVATE_KYC_BUCKET = "private";
+// Private Supabase Storage bucket for KYC docs (created in config.toml by
+// M12-P02b, which also adds the signed-upload endpoint used by storage.ts).
+export const PRIVATE_KYC_BUCKET = "kyc-docs";

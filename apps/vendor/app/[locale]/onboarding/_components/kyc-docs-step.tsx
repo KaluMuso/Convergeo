@@ -13,10 +13,12 @@ import type { ChangeEvent, FormEvent } from "react";
 
 type KycDocsStepProps = {
   momoPhone: string;
+  legalName: string;
   nrcPath: string | null;
   selfiePath: string | null;
   rejectedDocs?: KycDocType[] | null;
   onMomoPhoneChange: (value: string) => void;
+  onLegalNameChange: (value: string) => void;
   onNrcUploaded: (path: string) => void;
   onSelfieUploaded: (path: string) => void;
   onContinue: () => void;
@@ -28,6 +30,9 @@ type KycDocsStepProps = {
     nrcHelp: string;
     selfieLabel: string;
     selfieHelp: string;
+    legalNameLabel: string;
+    legalNamePlaceholder: string;
+    legalNameHelp: string;
     momoLabel: string;
     momoPlaceholder: string;
     momoHelp: string;
@@ -54,10 +59,12 @@ type KycDocsStepProps = {
 
 export function KycDocsStep({
   momoPhone,
+  legalName,
   nrcPath,
   selfiePath,
   rejectedDocs = null,
   onMomoPhoneChange,
+  onLegalNameChange,
   onNrcUploaded,
   onSelfieUploaded,
   onContinue,
@@ -76,10 +83,13 @@ export function KycDocsStep({
       ? labels.invalidPhone
       : undefined;
 
+  const legalNameError = legalName.trim().length < 2 ? labels.required : undefined;
+
   const canContinue =
     (!needsNrc || Boolean(nrcPath)) &&
     (!needsSelfie || Boolean(selfiePath)) &&
     !phoneError &&
+    !legalNameError &&
     !uploading;
 
   const handleUpload = async (docType: KycDocType, file: File) => {
@@ -165,6 +175,21 @@ export function KycDocsStep({
           ) : null}
         </div>
       ) : null}
+
+      <FormField
+        label={labels.legalNameLabel}
+        helpText={labels.legalNameHelp}
+        errorMessage={legalNameError}
+      >
+        <Input
+          type="text"
+          autoComplete="name"
+          value={legalName}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => onLegalNameChange(event.target.value)}
+          placeholder={labels.legalNamePlaceholder}
+          error={Boolean(legalNameError)}
+        />
+      </FormField>
 
       <FormField label={labels.momoLabel} helpText={labels.momoHelp} errorMessage={phoneError}>
         <Input
