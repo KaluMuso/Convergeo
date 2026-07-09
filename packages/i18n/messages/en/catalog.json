@@ -135,5 +135,27 @@
       "new": "New",
       "refurbished": "Refurbished"
     }
+  },
+  "comparison": {
+    "heading": "Compare sellers",
+    "vendorCount": "{count} sellers offering this product",
+    "sortLabel": "Sort by",
+    "sortPrice": "Lowest price",
+    "sortDistance": "Nearest",
+    "price": "Price",
+    "condition": "Condition",
+    "distance": "{distance} away",
+    "vendor": "Seller",
+    "fulfillment": "Options",
+    "delivery": "Delivery",
+    "pickup": "Pickup",
+    "selectListing": "Select",
+    "selectedListing": "Selected",
+    "preferredBadge": "Preferred seller",
+    "noReviews": "No reviews yet",
+    "rating": "{rating} ({count} reviews)",
+    "conditionNew": "New",
+    "conditionRefurbished": "Refurbished",
+    "usingFallbackLocation": "Distances shown from Lusaka CBD until you share your location."
   }
 }
