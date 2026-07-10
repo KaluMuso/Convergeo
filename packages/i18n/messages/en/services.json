@@ -82,5 +82,58 @@
       "saveFailed": "Could not save service.",
       "authRequired": "Sign in to manage your services."
     }
+  },
+  "postJob": {
+    "title": "Post a job",
+    "subtitle": "Describe what you need — matching providers will send quotes.",
+    "category": {
+      "label": "Service category",
+      "beauty": "Beauty",
+      "food_catering": "Food & catering",
+      "auto": "Auto",
+      "printing_creative": "Printing & creative",
+      "home_services": "Home services",
+      "tech_services": "Tech services",
+      "cleaning": "Cleaning",
+      "tailoring": "Tailoring"
+    },
+    "description": {
+      "label": "What do you need done?",
+      "placeholder": "E.g. Fix a leaking kitchen tap before Saturday"
+    },
+    "serviceArea": {
+      "label": "Area",
+      "placeholder": "E.g. Lusaka, Woodlands"
+    },
+    "preferredDate": {
+      "label": "Preferred date (optional)"
+    },
+    "budgetBand": {
+      "label": "Budget range",
+      "under_500": "Under K500",
+      "500_2000": "K500 – K2,000",
+      "2000_5000": "K2,000 – K5,000",
+      "over_5000": "Over K5,000",
+      "flexible": "Flexible / not sure"
+    },
+    "photos": {
+      "label": "Photos (optional)",
+      "help": "Up to 8 photos to help providers understand the job.",
+      "add": "Add photo"
+    },
+    "submit": "Post job",
+    "submitting": "Posting…",
+    "authRequired": "Sign in to post your job",
+    "authCta": "Continue with phone",
+    "draftSaved": "Your draft is saved on this device until you sign in.",
+    "ack": {
+      "sent": "We notified matching providers. Quotes usually arrive within a day.",
+      "noMatch": "We could not find matching providers right now, but we will keep looking and notify you."
+    },
+    "errors": {
+      "required": "Please fill in all required fields.",
+      "generic": "Something went wrong. Please try again.",
+      "rateLimited": "Too many requests. Please wait a moment."
+    }
   }
 }
