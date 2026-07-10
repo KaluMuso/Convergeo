@@ -150,5 +150,40 @@
     },
     "evidenceCount": "{count, plural, one {# file attached} other {# files attached}}",
     "timelineNote": "— {note}"
+  },
+  "return": {
+    "title": "Request a return",
+    "body": "Faulty or wrong items can be returned within 48 hours of delivery. Photo evidence is required.",
+    "back": "Back to order",
+    "lane1": {
+      "title": "Faulty or wrong item",
+      "body": "Full refund including delivery. Return shipping is charged to the vendor."
+    },
+    "lane2": {
+      "title": "Change of mind",
+      "unavailable": "Change-of-mind returns are not available for this item."
+    },
+    "evidence": {
+      "label": "Photo evidence (required)",
+      "help": "Add at least one photo showing the fault or wrong item. Max 8 photos, 10 MB each.",
+      "add": "Add photo",
+      "uploading": "Uploading…",
+      "required": "Add at least one photo before submitting."
+    },
+    "breakdown": {
+      "title": "Refund preview",
+      "item": "Item refund",
+      "delivery": "Delivery refund",
+      "total": "Total refund"
+    },
+    "windowExpired": "The 48-hour return window has ended.",
+    "loading": "Loading return form…",
+    "submit": "Submit return request",
+    "submitting": "Submitting…",
+    "success": "Your return request was submitted. The vendor will accept or contest it.",
+    "error": "Could not submit your return. Please try again.",
+    "errors": {
+      "rateLimited": "Too many requests. Please wait and try again."
+    }
   }
 }
