@@ -9,6 +9,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from app.errors import AppError
 from app.services.disputes.state import (
     ActorRole,
     DisputeEvent,
@@ -556,9 +557,11 @@ class TestResolutionDispatch:
         fake = FakeSupabaseClient()
         _seed_fake_dispute(fake, dispute_id=dispute_id, order_id=order_id)
         service = _FakeServiceWrapper(fake)
-        mock_refund.return_value = MagicMock(refund_id=str(uuid.uuid4()))
-
         partial = 50_000
+        mock_refund.return_value = MagicMock(
+            refund_id=str(uuid.uuid4()), amount_ngwee=partial
+        )
+
         record = resolve(
             service,
             dispute_id=dispute_id,
@@ -587,6 +590,75 @@ class TestResolutionDispatch:
             restocking_fee_bps=1000,
         )
         assert rederived.refund_ngwee == partial
+
+    @patch("app.services.disputes.service.evaluate_and_release")
+    @patch("app.services.disputes.service.execute_refund")
+    def test_failed_refund_leaves_dispute_under_review_redrivable(
+        self,
+        mock_refund: MagicMock,
+        mock_release: MagicMock,
+    ) -> None:
+        """Atomicity: money moves before the terminal commit — a thrown refund must
+        leave the dispute in under_review (not resolved-but-unpaid) so it can retry."""
+        from app.services.disputes.service import resolve
+
+        order_id = str(uuid.uuid4())
+        dispute_id = str(uuid.uuid4())
+        fake = FakeSupabaseClient()
+        _seed_fake_dispute(fake, dispute_id=dispute_id, order_id=order_id)
+        service = _FakeServiceWrapper(fake)
+        mock_refund.side_effect = RuntimeError("lenco unavailable")
+
+        with pytest.raises(RuntimeError):
+            resolve(
+                service,
+                dispute_id=dispute_id,
+                admin_user_id=ADMIN_ID,
+                decision="resolved_refund",
+                admin_decision="Full refund to customer",
+                customer_momo=CUSTOMER_MOMO,
+            )
+
+        # Status untouched → admin can re-drive the resolution.
+        assert fake.tables["disputes"].rows[0]["status"] == "under_review"
+        mock_release.assert_not_called()
+
+    @patch("app.services.disputes.service.load_restocking_fee_bps", return_value=1000)
+    @patch("app.services.disputes.service.evaluate_and_release")
+    @patch("app.services.disputes.service.execute_refund")
+    def test_partial_amount_drift_raises_before_commit(
+        self,
+        mock_refund: MagicMock,
+        mock_release: MagicMock,
+        _mock_bps: MagicMock,
+    ) -> None:
+        """TOCTOU guard: if the executed refund diverges from the decided amount,
+        raise 409 and do NOT commit the resolution or release."""
+        from app.services.disputes.service import resolve
+
+        order_id = str(uuid.uuid4())
+        dispute_id = str(uuid.uuid4())
+        fake = FakeSupabaseClient()
+        _seed_fake_dispute(fake, dispute_id=dispute_id, order_id=order_id)
+        service = _FakeServiceWrapper(fake)
+        # Executed amount (49_999) != decided (50_000) → drift.
+        mock_refund.return_value = MagicMock(
+            refund_id=str(uuid.uuid4()), amount_ngwee=49_999
+        )
+
+        with pytest.raises(AppError) as excinfo:
+            resolve(
+                service,
+                dispute_id=dispute_id,
+                admin_user_id=ADMIN_ID,
+                decision="resolved_partial",
+                admin_decision="Partial",
+                customer_momo=CUSTOMER_MOMO,
+                partial_refund_ngwee=50_000,
+            )
+        assert excinfo.value.code == "partial_refund_amount_drift"
+        assert fake.tables["disputes"].rows[0]["status"] == "under_review"
+        mock_release.assert_not_called()
 
 
 class TestRlsIsolation:

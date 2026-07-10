@@ -11,9 +11,11 @@ from app.services.disputes.state import (
     ActorRole,
     DisputeEvent,
     DisputeStatus,
+    DisputeTransitionError,
     ServiceRoleClient,
     load_dispute_by_order,
     load_dispute_snapshot,
+    resolve_transition,
     transition_dispute,
     write_dispute_audit_log,
 )
@@ -337,15 +339,22 @@ def resolve(
                 http_status=422,
             )
 
-    transition_dispute(
-        service_client,
-        dispute_id=dispute_id,
-        event=event,
-        actor_role=ActorRole.ADMIN,
-        actor_id=admin_user_id,
-        note=admin_decision,
-        extra_updates={"admin_decision": admin_decision},
-    )
+    # Move money BEFORE committing the terminal status, so a thrown refund/release
+    # leaves the dispute in `under_review` and re-drivable — not stuck resolved-but-
+    # unpaid. Pre-check the guard here (transition_dispute re-checks + optimistic-locks
+    # on commit); all M08 calls are idempotency-keyed, so a retry can never double-pay.
+    if (
+        resolve_transition(
+            from_status=snapshot.status, event=event, actor_role=ActorRole.ADMIN
+        )
+        is None
+    ):
+        raise DisputeTransitionError(
+            "Dispute cannot be resolved from its current state",
+            from_status=snapshot.status.value,
+            event=event.value,
+            actor_role=ActorRole.ADMIN.value,
+        )
 
     order_id = snapshot.order_id
     if decision == "resolved_refund":
@@ -366,7 +375,7 @@ def resolve(
             order_id=order_id,
             partial_refund_ngwee=partial_refund_ngwee or 0,
         )
-        execute_refund(
+        refund_result = execute_refund(
             service_client=service_client,
             order_id=order_id,
             lane=2,
@@ -376,7 +385,30 @@ def resolve(
             dispute_id=dispute_id,
             idempotency_key=f"dispute-{dispute_id}-partial",
         )
+        # Close the TOCTOU: execute_refund re-reads item/delivery/bps independently of
+        # the back-solve snapshot. Assert the executed amount is exactly the admin
+        # decision before committing the resolution (still re-drivable if this raises).
+        if refund_result.amount_ngwee != partial_refund_ngwee:
+            raise AppError(
+                code="partial_refund_amount_drift",
+                message="Executed partial refund did not match the decided amount",
+                http_status=409,
+                details={
+                    "decided_ngwee": partial_refund_ngwee,
+                    "executed_ngwee": refund_result.amount_ngwee,
+                },
+            )
         evaluate_and_release(service_client, order_id)
+
+    transition_dispute(
+        service_client,
+        dispute_id=dispute_id,
+        event=event,
+        actor_role=ActorRole.ADMIN,
+        actor_id=admin_user_id,
+        note=admin_decision,
+        extra_updates={"admin_decision": admin_decision},
+    )
 
     return _load_dispute_row(service_client, dispute_id)
 
