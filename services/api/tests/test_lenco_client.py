@@ -6,7 +6,7 @@ import hashlib
 import hmac
 import json
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import pytest
@@ -151,7 +151,7 @@ def _route_handler(routes: dict[tuple[str, str], Any]) -> Callable[[httpx.Reques
             return httpx.Response(404, json={"status": False, "message": "not found"})
         spec = routes[key]
         if callable(spec):
-            return spec(request)
+            return cast(httpx.Response, spec(request))
         status_code, body = spec
         return httpx.Response(status_code, json=body)
 
