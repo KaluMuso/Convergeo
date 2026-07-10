@@ -137,6 +137,11 @@ def _validate_payout_operator(operator: str) -> str:
     )
 
 
+def _envelope_error_code(envelope: dict[str, Any]) -> str | None:
+    raw = envelope.get("errorCode")
+    return str(raw) if raw else None
+
+
 class LencoClient:
     """Low-level async HTTP client for the Lenco REST API."""
 
@@ -218,21 +223,21 @@ class LencoClient:
                     await asyncio.sleep(RETRY_BACKOFF_BASE_SECONDS * (2**attempt))
                     continue
                 raise_lenco_failure(
-                    error_code=str(envelope.get("errorCode")) if envelope.get("errorCode") else None,
+                    error_code=_envelope_error_code(envelope),
                     message=str(envelope.get("message", "server error")),
                     http_status=response.status_code,
                 )
 
             if response.status_code >= 400:
                 raise_lenco_failure(
-                    error_code=str(envelope.get("errorCode")) if envelope.get("errorCode") else None,
+                    error_code=_envelope_error_code(envelope),
                     message=str(envelope.get("message", "client error")),
                     http_status=response.status_code,
                 )
 
             if envelope.get("status") is False:
                 raise_lenco_failure(
-                    error_code=str(envelope.get("errorCode")) if envelope.get("errorCode") else None,
+                    error_code=_envelope_error_code(envelope),
                     message=str(envelope.get("message", "request failed")),
                 )
 
