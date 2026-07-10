@@ -479,5 +479,75 @@
       "statusChange": "{from} → {to}",
       "missing": "—"
     }
+  },
+  "dashboard": {
+    "title": "Operations dashboard",
+    "subtitle": "Platform aggregates — ledger liabilities, reconciliation, and funnel snapshot.",
+    "loading": "Loading dashboard…",
+    "error": "Could not load dashboard aggregates.",
+    "retry": "Retry",
+    "cachedAt": "Aggregates cached at {at}",
+    "liabilitiesTotal": "Total payout liabilities: {amount}",
+    "gmv": {
+      "title": "GMV",
+      "subtitle": "Gross merchandise value (non-cancelled orders)"
+    },
+    "payoutLiabilities": {
+      "title": "Payout liabilities",
+      "subtitle": "Escrow-held plus released-unpaid (ledger-derived)",
+      "escrowHeld": "Escrow held",
+      "releasedUnpaid": "Released, unpaid",
+      "total": "Total liability"
+    },
+    "reconciliation": {
+      "title": "Reconciliation",
+      "subtitle": "Latest daily Lenco-vs-ledger report",
+      "statusGreen": "Balanced",
+      "statusRed": "Mismatch flagged",
+      "reportDate": "Report date: {date}",
+      "noReport": "No reconciliation report yet.",
+      "drillIn": "View report details",
+      "hideDrillIn": "Hide details",
+      "mismatchAlert": "Ledger mismatch detected — investigate discrepancies.",
+      "cleanDay": "No discrepancies on the latest report."
+    },
+    "orders": {
+      "title": "Orders by status",
+      "subtitle": "Live order pipeline counts",
+      "statuses": {
+        "placed": "Placed",
+        "confirmed": "Confirmed",
+        "processing": "Processing",
+        "ready": "Ready",
+        "shipped": "Shipped",
+        "delivered": "Delivered",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      }
+    },
+    "counts": {
+      "title": "Catalog scale",
+      "subtitle": "Vendors, listings, and canonical products",
+      "vendors": "Vendors",
+      "listings": "Listings",
+      "products": "Products"
+    },
+    "aiUsage": {
+      "title": "Ask Vergeo AI",
+      "subtitle": "Monthly spend vs platform cap",
+      "noData": "No usage data yet",
+      "noDataHint": "AI usage metering ships in a later wave. Cap remains ${cap}/mo.",
+      "spendVsCap": "${spend} of ${cap} monthly cap"
+    },
+    "funnel": {
+      "title": "Funnel snapshot",
+      "subtitle": "Checkout and order conversion (server-side events)",
+      "steps": {
+        "checkout_started": "Checkouts started",
+        "checkout_completed": "Checkouts completed",
+        "orders_placed": "Orders placed",
+        "orders_completed": "Orders completed"
+      }
+    }
   }
 }
