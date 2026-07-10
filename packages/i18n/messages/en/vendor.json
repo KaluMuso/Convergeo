@@ -1037,5 +1037,51 @@
       "loadFailed": "Could not load return requests. Pull to refresh.",
       "actionFailed": "Action failed. Try again."
     }
+  },
+  "jobs": {
+    "eyebrow": "RFQ inbox",
+    "title": "Matched jobs",
+    "intro": "Jobs broadcast to you — submit a quote before others expire.",
+    "loading": "Loading jobs…",
+    "authRequired": "Sign in to view matched jobs.",
+    "empty": "No open jobs match your services right now.",
+    "posted": "Posted {date}",
+    "yourQuote": "Your quote: {amount}",
+    "status": {
+      "new": "Awaiting quote",
+      "quoted": "Quote sent"
+    },
+    "categories": {
+      "beauty": "Beauty",
+      "food_catering": "Food & catering",
+      "auto": "Auto",
+      "printing_creative": "Printing & creative",
+      "home_services": "Home services",
+      "tech_services": "Tech services",
+      "cleaning": "Cleaning",
+      "tailoring": "Tailoring"
+    },
+    "quoteForm": {
+      "open": "Send quote",
+      "amountLabel": "Your price (ZMW)",
+      "amountPlaceholder": "e.g. 1,500.00",
+      "amountInvalid": "Enter a valid price greater than zero.",
+      "messageLabel": "Message (optional)",
+      "messagePlaceholder": "When you can start, what's included…",
+      "validityLabel": "Quote valid for (days)",
+      "validityInvalid": "Validity must be between 1 and 30 days.",
+      "submit": "Submit quote",
+      "submitting": "Submitting…",
+      "cancel": "Cancel",
+      "withdraw": "Withdraw quote",
+      "withdrawing": "Withdrawing…"
+    },
+    "errors": {
+      "loadFailed": "Could not load matched jobs. Pull to refresh.",
+      "submitFailed": "Could not submit quote. Try again.",
+      "withdrawFailed": "Could not withdraw quote. Try again.",
+      "notMatched": "You were not matched to this job.",
+      "alreadyQuoted": "You already have an active quote on this job."
+    }
   }
 }
