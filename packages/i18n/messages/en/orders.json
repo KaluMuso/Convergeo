@@ -1,5 +1,79 @@
 {
-  "orders.title": "Your orders",
-  "orders.status": "Order {id} is {status}",
-  "orders.empty": "You have no orders yet"
+  "title": "Your orders",
+  "empty": {
+    "title": "No orders yet",
+    "body": "When you buy from Vergeo5 vendors, your orders and tracking will appear here.",
+    "cta": "Start shopping"
+  },
+  "list": {
+    "checkoutGroup": "Checkout {date}",
+    "vendorOrder": "From {vendor}",
+    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "total": "Total {amount}",
+    "viewOrder": "View order",
+    "status": "Status: {status}",
+    "paymentCod": "Pay on delivery",
+    "paymentPrepaid": "Paid upfront"
+  },
+  "detail": {
+    "title": "Order details",
+    "orderId": "Order {id}",
+    "vendor": "Sold by {vendor}",
+    "fulfilmentPickup": "Pickup",
+    "fulfilmentDelivery": "Delivery",
+    "subtotal": "Items subtotal",
+    "lineQty": "{title} × {qty}",
+    "deliveryFee": "Delivery fee",
+    "total": "Order total",
+    "relatedTitle": "Other vendors in this checkout",
+    "back": "Back to orders"
+  },
+  "status": {
+    "placed": "Placed",
+    "confirmed": "Confirmed",
+    "processing": "Processing",
+    "ready": "Ready for pickup",
+    "shipped": "Shipped",
+    "delivered": "Delivered",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "refunded": "Refund processing"
+  },
+  "timeline": {
+    "title": "Order progress",
+    "placed": "Order placed",
+    "paymentHeld": "You paid — held by Vergeo5",
+    "paymentCod": "Pay the vendor on delivery",
+    "confirmed": "Vendor confirmed your order",
+    "processing": "Vendor is preparing your order",
+    "ready": "Ready for pickup",
+    "shipped": "On the way to you",
+    "delivered": "Delivered",
+    "completed": "Payment released to vendor",
+    "cancelled": "Order cancelled",
+    "refunded": "Refund to your mobile money"
+  },
+  "escrow": {
+    "held": "Your payment is held safely by Vergeo5 until you receive your order.",
+    "released": "Funds were released to the vendor after fulfilment.",
+    "refunded": "A refund is being returned to your mobile money wallet.",
+    "cod": "Pay the vendor in cash or mobile money when you receive the order."
+  },
+  "pickup": {
+    "title": "Pickup details",
+    "qrLabel": "Show this QR code at the vendor",
+    "pinLabel": "Or give this PIN",
+    "stubBody": "Pickup QR and PIN will appear here when the vendor marks your order ready.",
+    "pinAria": "Pickup PIN: {pin}"
+  },
+  "invoice": {
+    "title": "Receipt & invoice",
+    "download": "Download receipt",
+    "stubHelp": "PDF download will be available soon.",
+    "unavailable": "Receipt not available yet"
+  },
+  "errors": {
+    "loadFailed": "Could not load your orders. Please try again.",
+    "notFound": "Order not found"
+  }
 }
