@@ -674,6 +674,79 @@
       "loadFailed": "Could not load orders. Pull to refresh."
     }
   },
+  "payouts": {
+    "meta": {
+      "title": "Payouts — Vergeo5 Vendor",
+      "description": "View escrow-held and released balances, payout history, and download monthly statements."
+    },
+    "eyebrow": "Money",
+    "title": "Payouts",
+    "intro": "Balances come straight from the ledger — no separate bookkeeping.",
+    "loading": "Loading payouts…",
+    "balances": {
+      "heading": "Your balances",
+      "escrowHeld": "Held in escrow",
+      "released": "Released & available",
+      "paidOut": "Paid out",
+      "ledgerNote": "These figures match your ledger accounts exactly."
+    },
+    "hold": {
+      "noticeTitle": "Payouts paused for 24 hours",
+      "noticeBody": "After changing your mobile-money number, payouts are held for 24 hours while we verify the change. You will be notified when payouts resume."
+    },
+    "history": {
+      "heading": "Payout history",
+      "empty": "No payouts yet.",
+      "status": {
+        "pending": "Pending",
+        "processing": "Processing",
+        "paid": "Paid",
+        "failed": "Failed"
+      }
+    },
+    "statement": {
+      "heading": "Monthly statement",
+      "monthLabel": "Month",
+      "downloadCsv": "Download CSV",
+      "downloading": "Preparing CSV…",
+      "pdfStub": "PDF statements are coming soon — CSV is available now."
+    },
+    "method": {
+      "meta": {
+        "title": "Payout method — Vergeo5 Vendor",
+        "description": "Change the mobile-money number where your payouts are sent."
+      },
+      "link": "Change payout method",
+      "back": "← Back to payouts",
+      "title": "Payout method",
+      "intro": "Enter the MTN, Airtel, or Zamtel number registered in your name. We re-verify via Lenco before saving.",
+      "msisdnLabel": "Mobile-money number",
+      "msisdnPlaceholder": "e.g. 0977123456",
+      "railLabel": "Network",
+      "rails": {
+        "mtn": "MTN",
+        "airtel": "Airtel",
+        "zamtel": "Zamtel"
+      },
+      "otpLabel": "Verification code",
+      "otpPlaceholder": "6-digit OTP",
+      "otpHelp": "We sent a code to your registered phone. Enter it to confirm this change.",
+      "submit": "Save payout method",
+      "saving": "Saving…",
+      "success": "Payout method updated. Payouts are paused for 24 hours."
+    },
+    "errors": {
+      "loadFailed": "Could not load payouts. Pull to refresh.",
+      "statementFailed": "Could not download the statement. Try again.",
+      "methodFailed": "Could not update payout method. Try again.",
+      "otpFailed": "Invalid or expired verification code.",
+      "nameMismatch": "That MoMo name does not match your verified legal name.",
+      "kycRequired": "Complete KYC before changing your payout method.",
+      "payoutsPaused": "Payouts are paused after a payout method change.",
+      "rateLimited": "Too many requests. Try again shortly.",
+      "methodChangeLimit": "Too many payout method changes today. Try again tomorrow."
+    }
+  },
   "scan": {
     "meta": {
       "title": "Pickup scanner — Vergeo5 Vendor",
