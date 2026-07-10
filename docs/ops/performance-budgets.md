@@ -58,13 +58,13 @@ Per-route overrides **require** a `justification` string in config. Routes above
 
 ## Audited shop URLs (Lighthouse)
 
-| Route          | URL                                      |
-| -------------- | ---------------------------------------- |
-| Home           | `http://localhost:3000/en`               |
-| PLP            | `http://localhost:3000/en/c/electronics` |
-| PDP            | `http://localhost:3000/en/p/itel-a70`    |
-| Search         | `http://localhost:3000/en/search`        |
-| Checkout entry | `http://localhost:3000/en/checkout`      |
+| Route          | URL                                        |
+| -------------- | ------------------------------------------ |
+| Home           | `http://localhost:3000/en`                 |
+| PLP            | `http://localhost:3000/en/c/electronics`   |
+| PDP            | `http://localhost:3000/en/p/smartphone-x1` |
+| Search         | `http://localhost:3000/en/search`          |
+| Checkout entry | `http://localhost:3000/en/checkout`        |
 
 ## Related
 

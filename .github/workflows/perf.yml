@@ -96,9 +96,9 @@ jobs:
           for attempt in $(seq 1 30); do
             if curl -sf http://127.0.0.1:8000/healthz >/dev/null; then
               echo "API ready on :8000"
-              if ! curl -sf http://127.0.0.1:8000/products/itel-a70 >/dev/null; then
-                echo "API product fixture missing for /products/itel-a70" >&2
-                curl -i http://127.0.0.1:8000/products/itel-a70 || true
+              if ! curl -sf http://127.0.0.1:8000/products/smartphone-x1 >/dev/null; then
+                echo "API product fixture missing for /products/smartphone-x1" >&2
+                curl -i http://127.0.0.1:8000/products/smartphone-x1 || true
                 exit 1
               fi
               exit 0
@@ -172,7 +172,7 @@ jobs:
           for url in \
             http://localhost:3000/en \
             http://localhost:3000/en/c/electronics \
-            http://localhost:3000/en/p/itel-a70 \
+            http://localhost:3000/en/p/smartphone-x1 \
             http://localhost:3000/en/search \
             http://localhost:3000/en/checkout; do
             code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
