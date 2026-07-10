@@ -14,6 +14,11 @@ jobs:
   perf:
     name: Bundle, image lint & Lighthouse
     runs-on: ubuntu-latest
+    env:
+      # CI-only dummy values — middleware requires Supabase public env at runtime.
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
     steps:
       - name: Checkout (head)
         uses: actions/checkout@v7
