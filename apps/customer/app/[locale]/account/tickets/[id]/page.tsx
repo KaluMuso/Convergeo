@@ -1,35 +1,23 @@
-"use client";
-
-import { useSession } from "@vergeo/auth/use-session";
-import { ApiError, createApiClient } from "@vergeo/config";
+import { ApiError } from "@vergeo/config";
+import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { notFound } from "next/navigation";
+import { createTranslator, type AbstractIntlMessages } from "next-intl";
+import { getMessages, setRequestLocale } from "next-intl/server";
 
-type WalletEvent = {
-  id: string;
-  title: string;
-  venue: string | null;
-  slug: string;
+import { getAccountAccessToken } from "../../_components/account-server";
+
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
-type WalletInstance = {
-  id: string;
-  starts_at: string;
-};
-
-type WalletTicketType = {
-  id: string;
-  name: string;
-  kind: string;
-};
-
-type WalletQr = {
-  window: number;
-  code: string;
-  qr_payload: string;
-  seconds_remaining: number;
+type PageProps = {
+  params: Promise<{ locale: string; id: string }>;
 };
 
 type WalletTicketDetail = {
@@ -37,77 +25,80 @@ type WalletTicketDetail = {
   status: "issued" | "checked_in" | "transferred" | "void";
   pin: string | null;
   pin_available: boolean;
-  qr: WalletQr | null;
-  event: WalletEvent;
-  instance: WalletInstance;
-  ticket_type: WalletTicketType;
+  qr: {
+    window: number;
+    code: string;
+    qr_payload: string;
+    seconds_remaining: number;
+  } | null;
+  event: {
+    id: string;
+    title: string;
+    venue: string | null;
+    slug: string;
+  };
+  instance: {
+    id: string;
+    starts_at: string;
+  };
+  ticket_type: {
+    id: string;
+    name: string;
+    kind: string;
+  };
 };
 
-type HorizonEntry = {
-  window: number;
-  code: string;
-  qr_payload: string;
-};
-
-type HorizonCache = {
+type HorizonResponse = {
   ticket_id: string;
   from_window: number;
   last_window: number;
   pin: string | null;
-  entries: HorizonEntry[];
-  cached_at: string;
+  entries: Array<{
+    window: number;
+    code: string;
+    qr_payload: string;
+  }>;
 };
-
-const HORIZON_STORAGE_PREFIX = "vergeo5:ticket-horizon:";
-const WINDOW_SECONDS = 60;
 
 function getApiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 }
 
-function currentWindow(nowMs: number = Date.now()): number {
-  return Math.floor(nowMs / 1000 / WINDOW_SECONDS);
+async function fetchTicketDetail(
+  accessToken: string,
+  ticketId: string,
+): Promise<WalletTicketDetail> {
+  const response = await fetch(`${getApiBaseUrl()}/account/tickets/${ticketId}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+  if (response.status === 404) {
+    throw new ApiError("not_found", "Ticket not found", { status: 404 });
+  }
+  if (!response.ok) {
+    throw new Error(`Ticket detail failed: ${response.status}`);
+  }
+  return (await response.json()) as WalletTicketDetail;
 }
 
-function secondsRemaining(nowMs: number = Date.now()): number {
-  const elapsed = Math.floor(nowMs / 1000) % WINDOW_SECONDS;
-  return WINDOW_SECONDS - elapsed;
-}
-
-function readHorizonCache(ticketId: string): HorizonCache | null {
-  if (typeof window === "undefined") {
+async function fetchHorizon(
+  accessToken: string,
+  ticketId: string,
+): Promise<HorizonResponse | null> {
+  const response = await fetch(`${getApiBaseUrl()}/account/tickets/${ticketId}/horizon`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+  if (!response.ok) {
     return null;
   }
-  const raw = window.localStorage.getItem(`${HORIZON_STORAGE_PREFIX}${ticketId}`);
-  if (!raw) {
-    return null;
-  }
-  try {
-    return JSON.parse(raw) as HorizonCache;
-  } catch {
-    return null;
-  }
-}
-
-function writeHorizonCache(cache: HorizonCache): void {
-  window.localStorage.setItem(`${HORIZON_STORAGE_PREFIX}${cache.ticket_id}`, JSON.stringify(cache));
-}
-
-function useOnline(): boolean {
-  const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
-
-  useEffect(() => {
-    const onOnline = () => setOnline(true);
-    const onOffline = () => setOnline(false);
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
-    return () => {
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
-    };
-  }, []);
-
-  return online;
+  return (await response.json()) as HorizonResponse;
 }
 
 function ProgressRing({ progress }: { progress: number }) {
@@ -141,200 +132,62 @@ function ProgressRing({ progress }: { progress: number }) {
         strokeLinecap="round"
         strokeDasharray={circumference}
         strokeDashoffset={offset}
+        data-ticket-ring="progress"
       />
     </svg>
   );
 }
 
-function QrPayloadDisplay({ payload, label }: { payload: string; label: string }) {
-  return (
-    <div
-      aria-label={label}
-      className="flex h-full w-full items-center justify-center rounded bg-surface p-2"
-      role="img"
-    >
-      <p className="break-all text-center font-mono text-[10px] leading-tight text-display-ink">
-        {payload}
-      </p>
-    </div>
-  );
+export function generateStaticParams() {
+  return LOCALES.map((locale) => ({ locale, id: "00000000-0000-0000-0000-000000000000" }));
 }
 
-export default function AccountTicketDetailPage() {
-  const params = useParams<{ locale: string; id: string }>();
-  const locale = params.locale;
-  const ticketId = params.id;
-  const t = useTranslations("events.wallet.detail");
-  const online = useOnline();
-  const { session } = useSession();
+export default async function AccountTicketDetailPage({ params }: PageProps) {
+  const { locale, id } = await params;
 
-  const [detail, setDetail] = useState<WalletTicketDetail | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [nowMs, setNowMs] = useState(Date.now());
-  const [horizonCache, setHorizonCache] = useState<HorizonCache | null>(null);
-  const [syncingHorizon, setSyncingHorizon] = useState(false);
-
-  const client = useMemo(
-    () =>
-      createApiClient({
-        baseUrl: getApiBaseUrl(),
-        getToken: () => session?.access_token ?? null,
-      }),
-    [session?.access_token],
-  );
-
-  const syncHorizon = useCallback(async () => {
-    if (!ticketId || !session?.access_token) {
-      return;
-    }
-    setSyncingHorizon(true);
-    try {
-      const body = await client.request<{
-        ticket_id: string;
-        from_window: number;
-        last_window: number;
-        pin: string | null;
-        entries: HorizonEntry[];
-      }>(`/account/tickets/${ticketId}/horizon`);
-      const cache: HorizonCache = {
-        ticket_id: body.ticket_id,
-        from_window: body.from_window,
-        last_window: body.last_window,
-        pin: body.pin,
-        entries: body.entries,
-        cached_at: new Date().toISOString(),
-      };
-      writeHorizonCache(cache);
-      setHorizonCache(cache);
-    } catch {
-      // offline or ticket unusable — keep existing cache
-    } finally {
-      setSyncingHorizon(false);
-    }
-  }, [client, session?.access_token, ticketId]);
-
-  useEffect(() => {
-    setHorizonCache(readHorizonCache(ticketId));
-  }, [ticketId]);
-
-  useEffect(() => {
-    if (!session?.access_token || !ticketId) {
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    client
-      .request<WalletTicketDetail>(`/account/tickets/${ticketId}`)
-      .then((body) => {
-        if (!cancelled) {
-          setDetail(body);
-          setError(null);
-        }
-      })
-      .catch((fetchError: unknown) => {
-        if (!cancelled) {
-          if (fetchError instanceof ApiError && fetchError.status === 404) {
-            setError("not_found");
-          } else {
-            setError("load_failed");
-          }
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [client, session?.access_token, ticketId]);
-
-  useEffect(() => {
-    if (!online || !detail || detail.status !== "issued") {
-      return;
-    }
-    void syncHorizon();
-  }, [detail, online, syncHorizon]);
-
-  useEffect(() => {
-    if (!online || !detail || detail.status !== "issued") {
-      return;
-    }
-    const cached = horizonCache ?? readHorizonCache(ticketId);
-    const activeWindow = currentWindow();
-    if (!cached || activeWindow > cached.last_window) {
-      void syncHorizon();
-    }
-  }, [detail, horizonCache, nowMs, online, syncHorizon, ticketId]);
-
-  useEffect(() => {
-    if (!online || !session?.access_token || !ticketId) {
-      return;
-    }
-    const timer = window.setInterval(() => {
-      void client
-        .request<WalletTicketDetail>(`/account/tickets/${ticketId}`)
-        .then(setDetail)
-        .catch(() => undefined);
-    }, WINDOW_SECONDS * 1000);
-    return () => window.clearInterval(timer);
-  }, [client, online, session?.access_token, ticketId]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const windowNow = currentWindow(nowMs);
-  const remaining = secondsRemaining(nowMs);
-  const progress = (WINDOW_SECONDS - remaining) / WINDOW_SECONDS;
-
-  const livePayload = useMemo(() => {
-    if (!detail || detail.status !== "issued") {
-      return null;
-    }
-    const cached = horizonCache ?? readHorizonCache(ticketId);
-    const cachedEntry = cached?.entries.find((item) => item.window === windowNow);
-    if (cachedEntry) {
-      return cachedEntry.qr_payload;
-    }
-    if (online && detail.qr && detail.qr.window === windowNow) {
-      return detail.qr.qr_payload;
-    }
+  if (!LOCALES.includes(locale as Locale)) {
     return null;
-  }, [detail, horizonCache, online, ticketId, windowNow]);
-
-  const horizonExpired =
-    !online &&
-    detail?.status === "issued" &&
-    (horizonCache?.last_window ?? -1) < windowNow &&
-    livePayload == null;
-
-  const pinValue = detail?.pin ?? horizonCache?.pin ?? null;
-
-  if (loading) {
-    return <p className="text-sm text-text-2">{t("syncHorizon")}</p>;
   }
 
-  if (error === "not_found" || !detail) {
-    return (
-      <section className="space-y-3 rounded border border-border bg-surface p-6 text-center">
-        <p className="text-sm text-text-2">{t("voidBanner")}</p>
-        <Link
-          href={`/${locale}/account/tickets`}
-          className="inline-flex min-h-11 items-center justify-center rounded border border-primary px-4 text-sm font-medium text-primary"
-        >
-          {t("back")}
-        </Link>
-      </section>
-    );
+  setRequestLocale(locale);
+  const accessToken = await getAccountAccessToken(locale);
+  const baseMessages = await getMessages();
+  const eventsMessages = await loadNamespace(locale as Locale, "events");
+  const messages = { ...baseMessages, events: eventsMessages } as AbstractIntlMessages;
+  const t = createTranslator({ locale, messages, namespace: "events.wallet.detail" }) as (
+    key: string,
+    values?: Record<string, string | number>,
+  ) => string;
+
+  let detail: WalletTicketDetail;
+  try {
+    detail = await fetchTicketDetail(accessToken, id);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      notFound();
+    }
+    throw error;
   }
+
+  const horizon = detail.status === "issued" ? await fetchHorizon(accessToken, id) : null;
+  const remaining = detail.qr?.seconds_remaining ?? 60;
+  const progress = (60 - remaining) / 60;
+  const livePayload = detail.qr?.qr_payload ?? null;
 
   const startsAt = new Date(detail.instance.starts_at).toLocaleString(locale, {
     dateStyle: "full",
     timeStyle: "short",
+  });
+
+  const walletScript = JSON.stringify({
+    ticketId: id,
+    horizon,
+    labels: {
+      refreshInTemplate: t("refreshIn", { seconds: "__SEC__" }),
+      offlineTitle: t("offlineTitle"),
+      offlineBody: t("offlineBody"),
+      offlineExpired: t("offlineExpired"),
+    },
   });
 
   return (
@@ -346,15 +199,16 @@ export default function AccountTicketDetailPage() {
         {t("back")}
       </Link>
 
-      {!online ? (
-        <div
-          className="rounded border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-display-ink"
-          role="status"
-        >
-          <p className="font-medium">{t("offlineTitle")}</p>
-          <p className="text-text-2">{horizonExpired ? t("offlineExpired") : t("offlineBody")}</p>
-        </div>
-      ) : null}
+      <div
+        className="hidden rounded border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-display-ink"
+        data-ticket-offline-banner
+        role="status"
+      >
+        <p className="font-medium">{t("offlineTitle")}</p>
+        <p className="text-text-2" data-ticket-offline-body>
+          {t("offlineBody")}
+        </p>
+      </div>
 
       {detail.status === "transferred" ? (
         <p className="rounded border border-border bg-bg-2 px-4 py-3 text-sm text-text-2">
@@ -399,7 +253,7 @@ export default function AccountTicketDetailPage() {
             <h3 id="ticket-qr-heading" className="font-display text-h3 text-display-ink">
               {t("qrLabel")}
             </h3>
-            <p className="font-mono text-xs text-text-2">
+            <p className="font-mono text-xs text-text-2" data-ticket-countdown>
               {t("refreshIn", { seconds: remaining })}
             </p>
           </div>
@@ -408,10 +262,19 @@ export default function AccountTicketDetailPage() {
             <ProgressRing progress={progress} />
             <div className="absolute inset-3 rounded bg-surface p-2">
               {livePayload ? (
-                <QrPayloadDisplay label={t("qrAria")} payload={livePayload} />
+                <div
+                  aria-label={t("qrAria")}
+                  className="flex h-full w-full items-center justify-center rounded bg-surface p-2"
+                  data-ticket-qr-payload
+                  role="img"
+                >
+                  <p className="break-all text-center font-mono text-[10px] leading-tight text-display-ink">
+                    {livePayload}
+                  </p>
+                </div>
               ) : (
                 <div className="flex h-full items-center justify-center text-center text-xs text-text-2">
-                  {syncingHorizon ? t("syncHorizon") : t("offlineExpired")}
+                  {t("offlineExpired")}
                 </div>
               )}
             </div>
@@ -426,17 +289,26 @@ export default function AccountTicketDetailPage() {
         <h3 id="ticket-pin-heading" className="font-display text-h3 text-display-ink">
           {t("pinLabel")}
         </h3>
-        {pinValue ? (
+        {detail.pin ? (
           <p
-            aria-label={t("pinAria", { pin: pinValue })}
+            aria-label={t("pinAria", { pin: detail.pin })}
             className="rounded bg-bg-2 p-3 text-center font-mono text-2xl tracking-[0.35em] text-display-ink"
+            data-ticket-pin
           >
-            {pinValue}
+            {detail.pin}
           </p>
         ) : (
           <p className="text-sm text-text-2">{t("pinUnavailable")}</p>
         )}
       </section>
+
+      {detail.status === "issued" ? (
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var cfg=${walletScript};var KEY="vergeo5:ticket-horizon:"+cfg.ticketId;var WINDOW=60;var R=46;var C=2*Math.PI*R;function cw(){return Math.floor(Date.now()/1000/WINDOW)}function sr(){return WINDOW-(Math.floor(Date.now()/1000)%WINDOW)}function read(){try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){return null}}function write(h){if(h)localStorage.setItem(KEY,JSON.stringify(h))}function payloadFor(w){var c=read();if(c&&Array.isArray(c.entries)){var e=c.entries.find(function(x){return x.window===w});if(e)return e.qr_payload}if(cfg.horizon&&Array.isArray(cfg.horizon.entries)){var e2=cfg.horizon.entries.find(function(x){return x.window===w});if(e2)return e2.qr_payload}return null}function setOffline(on,expired){var b=document.querySelector("[data-ticket-offline-banner]");var body=document.querySelector("[data-ticket-offline-body]");if(!b||!body)return;b.classList.toggle("hidden",!on);if(on)body.textContent=expired?cfg.labels.offlineExpired:cfg.labels.offlineBody}function tick(){var rem=sr();var prog=(WINDOW-rem)/WINDOW;var cd=document.querySelector("[data-ticket-countdown]");if(cd)cd.textContent=cfg.labels.refreshInTemplate.replace("__SEC__",String(rem));var ring=document.querySelector("[data-ticket-ring=progress]");if(ring)ring.setAttribute("stroke-dashoffset",String(C*(1-prog)));var node=document.querySelector("[data-ticket-qr-payload] p");var p=payloadFor(cw());if(node&&p)node.textContent=p;var offline=!navigator.onLine;var cache=read();var expired=offline&&(!cache||cw()>cache.last_window)&&!p;setOffline(offline,expired);if(rem<=1&&navigator.onLine)location.reload()}if(cfg.horizon)write({ticket_id:cfg.horizon.ticket_id,from_window:cfg.horizon.from_window,last_window:cfg.horizon.last_window,pin:cfg.horizon.pin,entries:cfg.horizon.entries,cached_at:new Date().toISOString()});tick();setInterval(tick,1000);window.addEventListener("online",tick);window.addEventListener("offline",tick)})();`,
+          }}
+        />
+      ) : null}
     </section>
   );
 }
