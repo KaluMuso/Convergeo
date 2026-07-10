@@ -172,6 +172,7 @@ function printViolations(violations) {
 function usage() {
   console.log(`Usage:
   node scripts/ci/bundle-guard.mjs [--baseline <snapshot.json>] [--write-baseline <snapshot.json>]
+  node scripts/ci/bundle-guard.mjs --write-baseline <snapshot.json> --write-baseline-only [--manifest <path>] [--next-dir <path>]
   node scripts/ci/bundle-guard.mjs --self-test`);
 }
 
@@ -207,6 +208,11 @@ function runSelfTest() {
   process.exit(failed ? 1 : 0);
 }
 
+function argValue(args, flag) {
+  const idx = args.indexOf(flag);
+  return idx >= 0 ? args[idx + 1] : null;
+}
+
 function main() {
   const args = process.argv.slice(2);
   if (args.includes("--help") || args.includes("-h")) {
@@ -218,15 +224,19 @@ function main() {
     return;
   }
 
-  const baselineIdx = args.indexOf("--baseline");
-  const writeIdx = args.indexOf("--write-baseline");
-  const baselinePath = baselineIdx >= 0 ? args[baselineIdx + 1] : null;
-  const writePath = writeIdx >= 0 ? args[writeIdx + 1] : null;
+  const manifestPath = argValue(args, "--manifest") ?? MANIFEST_PATH;
+  const nextDir = argValue(args, "--next-dir") ?? join(CUSTOMER_DIR, ".next");
+  const baselinePath = argValue(args, "--baseline");
+  const writePath = argValue(args, "--write-baseline");
+  const writeOnly = args.includes("--write-baseline-only");
 
-  const sizes = collectRouteSizes();
+  const sizes = collectRouteSizes(manifestPath, nextDir);
   if (writePath) {
     writeSnapshot(sizes, resolve(writePath));
     console.log(`Wrote bundle snapshot (${Object.keys(sizes).length} routes) → ${writePath}`);
+    if (writeOnly) {
+      return;
+    }
   }
 
   const config = loadBudgetConfig();

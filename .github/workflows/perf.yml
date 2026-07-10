@@ -39,10 +39,15 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          cp scripts/ci/bundle-guard.mjs /tmp/bundle-guard.mjs
           cp -r apps/customer/.next /tmp/head-next
           git checkout "$BASE_SHA"
           pnpm --filter customer build
-          node scripts/ci/bundle-guard.mjs --write-baseline /tmp/base-bundle.json
+          node /tmp/bundle-guard.mjs \
+            --manifest "$GITHUB_WORKSPACE/apps/customer/.next/app-build-manifest.json" \
+            --next-dir "$GITHUB_WORKSPACE/apps/customer/.next" \
+            --write-baseline /tmp/base-bundle.json \
+            --write-baseline-only
           rm -rf apps/customer/.next
           git checkout -
           mv /tmp/head-next apps/customer/.next
