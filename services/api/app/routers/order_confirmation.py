@@ -39,8 +39,7 @@ SUPPORT_REQUEST_TEMPLATE = "order-support-request"
 
 
 class _StorageServiceClient(Protocol):
-    @property
-    def client(self) -> Any: ...
+    client: Any
 
 
 class ConfirmReceivedResponse(StrictModel):
@@ -272,29 +271,16 @@ def _create_dispute(
     customer_id: str,
     evidence_paths: list[str],
 ) -> str:
-    response = (
-        service_client.client.table("disputes")
-        .insert(
-            {
-                "order_id": order_id,
-                "opener_user_id": customer_id,
-                "evidence_paths": evidence_paths,
-                "status": "open",
-            }
-        )
-        .execute()
+    from app.services.disputes.service import open_dispute
+
+    result = open_dispute(
+        service_client,
+        order_id=order_id,
+        opener_user_id=customer_id,
+        evidence_paths=evidence_paths,
+        note="Customer reported order not delivered",
     )
-    row = _single_row(response)
-    if row is None:
-        rows = _rows(response)
-        row = rows[0] if rows else None
-    if row is None or not row.get("id"):
-        raise AppError(
-            code="internal_error",
-            message="Could not create dispute",
-            http_status=500,
-        )
-    return str(row["id"])
+    return result.dispute_id
 
 
 @router.post("/{order_id}/confirm-received", response_model=ConfirmReceivedResponse)

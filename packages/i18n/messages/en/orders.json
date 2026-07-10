@@ -119,5 +119,36 @@
     "tracking": "Tracking note",
     "empty": "Dispatch details will appear here once your order is on the way.",
     "statusUpdates": "Status updates"
+  },
+  "dispute": {
+    "title": "Order dispute",
+    "body": "We are holding your payment in escrow while we investigate with the vendor.",
+    "holdTrust": "Held by Vergeo5 — escrow is paused until this dispute is resolved",
+    "statusLabel": "Dispute status",
+    "statusDisplay": "Dispute status: {status}",
+    "evidenceLabel": "Your evidence",
+    "evidenceHelp": "Up to 8 photos or PDFs, max 10 MB each.",
+    "addEvidence": "Add photo or PDF",
+    "uploading": "Uploading…",
+    "descriptionLabel": "What happened?",
+    "descriptionPlaceholder": "Describe why you are disputing this order.",
+    "submit": "Open dispute",
+    "submitting": "Opening dispute…",
+    "success": "Your dispute is open. We will review it with the vendor.",
+    "error": "Could not open dispute. Please try again.",
+    "notFound": "No dispute found for this order",
+    "back": "Back to order",
+    "timelineTitle": "Dispute progress",
+    "status": {
+      "open": "Open — under investigation",
+      "vendor_responded": "Vendor responded",
+      "under_review": "Under admin review",
+      "resolved_refund": "Resolved — refund issued",
+      "resolved_release": "Resolved — payment released",
+      "resolved_partial": "Resolved — partial refund",
+      "rejected": "Dispute rejected"
+    },
+    "evidenceCount": "{count, plural, one {# file attached} other {# files attached}}",
+    "timelineNote": "— {note}"
   }
 }
