@@ -1,0 +1,136 @@
+{
+  "__fallback": "en",
+  "title": "Notifications",
+  "unread": "{count, plural, one {# unread} other {# unread}}",
+  "order": {
+    "shipped": {
+      "__fallback": "en"
+    }
+  },
+  "compliance": {
+    "stopReply": "Lembani STOP kuleka.",
+    "stopKeyword": "STOP",
+    "startKeyword": "START",
+    "stopConfirmation": {
+      "__fallback": "en"
+    },
+    "startConfirmation": {
+      "__fallback": "en"
+    }
+  },
+  "whatsapp": {
+    "order_confirmed": {
+      "body": "Order yanu ya Vergeo5 {order_reference} yatsimikizidwa. Total {total}. Onani: {track_url} Lembani STOP kuleka."
+    },
+    "payment_received": {
+      "body": "{trust_narrative} Order {order_reference}. Lembani STOP kuleka.",
+      "trust_narrative": "K{amount} yanu ikusungidwa ndi Vergeo5 mpaka kutumiza."
+    },
+    "order_shipped": {
+      "body": "Order yanu {order_reference} yatumizidwa. {tracking_info} Lembani STOP kuleka."
+    },
+    "order_ready_pickup": {
+      "body": "Order yanu {order_reference} akuyenera kutengedwa. {pickup_details} Lembani STOP kuleka."
+    },
+    "order_delivered": {
+      "body": "Order yanu {order_reference} adafika. Lembani ndemanga: {review_url} Lembani STOP kuleka."
+    },
+    "vendor_new_order": {
+      "body": "Order yatsopano {order_reference} pa Vergeo5: {product_title} × {quantity}. Tsimikizani mu vendor app."
+    },
+    "otp_login": {
+      "body": "Code yanu yolowera mu Vergeo5 ndi {otp_code}. Imatha mu mphindi 10. Musagawane code iyi."
+    }
+  },
+  "sms": {
+    "order_confirmed": {
+      "__fallback": "en"
+    },
+    "payment_received": {
+      "__fallback": "en"
+    },
+    "order_shipped": {
+      "__fallback": "en"
+    },
+    "order_ready_pickup": {
+      "__fallback": "en"
+    },
+    "order_delivered": {
+      "__fallback": "en"
+    },
+    "vendor_new_order": {
+      "__fallback": "en"
+    },
+    "otp_login": {
+      "__fallback": "en"
+    },
+    "review_request": {
+      "__fallback": "en"
+    },
+    "abandoned_cart_recovery": {
+      "__fallback": "en"
+    },
+    "kyc_nudge": {
+      "__fallback": "en"
+    },
+    "low_stock_alert": {
+      "__fallback": "en"
+    },
+    "payout_failure_alert": {
+      "__fallback": "en"
+    }
+  },
+  "email": {
+    "receipt": {
+      "subject": {
+        "__fallback": "en"
+      },
+      "body": {
+        "__fallback": "en"
+      }
+    },
+    "order_receipt": {
+      "subject": {
+        "__fallback": "en"
+      },
+      "body": {
+        "__fallback": "en"
+      }
+    },
+    "kyc": {
+      "approved": {
+        "subject": {
+          "__fallback": "en"
+        },
+        "body": {
+          "__fallback": "en"
+        }
+      },
+      "rejected": {
+        "subject": {
+          "__fallback": "en"
+        },
+        "body": {
+          "__fallback": "en"
+        }
+      }
+    }
+  },
+  "marketing": {
+    "review_request": {
+      "__fallback": "en"
+    },
+    "abandoned_cart_recovery": {
+      "__fallback": "en"
+    },
+    "kyc_nudge": {
+      "__fallback": "en"
+    },
+    "low_stock_alert": {
+      "__fallback": "en"
+    },
+    "payout_failure_alert": {
+      "__fallback": "en"
+    }
+  }
+}
