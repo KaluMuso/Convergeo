@@ -14,6 +14,13 @@ import { useCallback, useEffect, useState } from "react";
 
 import { ReservationCountdown } from "./reservation-countdown";
 import { StepContact, type ContactStepLabels } from "./step-contact";
+import {
+  StepPayment,
+  type PaymentOptions,
+  type PaymentStepLabels,
+  type ValidatedPayment,
+} from "./step-payment";
+import { StepReview, type ReviewPayment, type ReviewStepLabels } from "./step-review";
 
 export type PickupLocation = {
   landmark: string;
@@ -82,6 +89,12 @@ type GroupChoice = {
   fulfilment: "delivery" | "pickup";
 };
 
+type FulfilmentTotals = {
+  subtotal_ngwee: number;
+  delivery_fee_ngwee: number;
+  total_ngwee: number;
+};
+
 type StepFulfilmentProps = {
   locale: string;
   session: CheckoutSession;
@@ -90,6 +103,7 @@ type StepFulfilmentProps = {
   countdownLabels: CountdownLabels;
   reservationExpiredMessage: string;
   cartPath: string;
+  onComplete?: (totals: FulfilmentTotals) => void;
 };
 
 function getApiBaseUrl(): string {
@@ -112,6 +126,7 @@ export function StepFulfilment({
   countdownLabels,
   reservationExpiredMessage,
   cartPath,
+  onComplete,
 }: StepFulfilmentProps) {
   const router = useRouter();
   const [landmark, setLandmark] = useState("");
@@ -167,6 +182,7 @@ export function StepFulfilment({
         }),
       });
       setTotals(response);
+      onComplete?.(response);
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.code === "checkout.reservation_expired") {
@@ -340,6 +356,31 @@ export type CheckoutShellLabels = {
     pickupAtTemplate: string;
     pickupHoursTemplate: string;
   };
+  payment: Omit<PaymentStepLabels, "codIneligible"> & { codIneligibleTemplate: string };
+  review: {
+    title: string;
+    subtitle: string;
+    lineItems: string;
+    qtyTemplate: string;
+    subtotal: string;
+    deliveryFees: string;
+    total: string;
+    paymentMethod: string;
+    methodMomoTemplate: string;
+    methodCard: string;
+    methodCod: string;
+    railMtn: string;
+    railAirtel: string;
+    payerNumberTemplate: string;
+    escrowTitle: string;
+    escrowStep1: string;
+    escrowStep2: string;
+    escrowStep3: string;
+    consentLabel: string;
+    consentRequired: string;
+    placeOrder: string;
+    loading: string;
+  };
   countdown: Omit<CountdownLabels, "ariaLive"> & { ariaLiveTemplate: string };
   reservationExpired: string;
   loading: string;
@@ -361,6 +402,8 @@ type ResolvedCheckoutLabels = {
   steps: CheckoutShellLabels["steps"];
   contact: ContactStepLabels;
   fulfilment: FulfilmentStepLabels;
+  payment: PaymentStepLabels;
+  review: ReviewStepLabels;
   countdown: CountdownLabels;
   reservationExpired: string;
   loading: string;
@@ -423,6 +466,54 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       loading: messages.fulfilment.loading,
       error: messages.fulfilment.error,
     },
+    payment: {
+      title: messages.payment.title,
+      subtitle: messages.payment.subtitle,
+      momo: messages.payment.momo,
+      card: messages.payment.card,
+      cod: messages.payment.cod,
+      railMtn: messages.payment.railMtn,
+      railAirtel: messages.payment.railAirtel,
+      payerLabel: messages.payment.payerLabel,
+      payerHelp: messages.payment.payerHelp,
+      payerPlaceholder: messages.payment.payerPlaceholder,
+      countryCode: messages.payment.countryCode,
+      nationalNumber: messages.payment.nationalNumber,
+      cardExplainer: messages.payment.cardExplainer,
+      codIneligible: (cap) => fillTemplate(messages.payment.codIneligibleTemplate, { cap }),
+      continue: messages.payment.continue,
+      loading: messages.payment.loading,
+      required: messages.payment.required,
+      invalidPayer: messages.payment.invalidPayer,
+      railRequired: messages.payment.railRequired,
+      codRejected: messages.payment.codRejected,
+      railRejected: messages.payment.railRejected,
+      error: messages.payment.error,
+    },
+    review: {
+      title: messages.review.title,
+      subtitle: messages.review.subtitle,
+      lineItems: messages.review.lineItems,
+      qtyTemplate: messages.review.qtyTemplate,
+      subtotal: messages.review.subtotal,
+      deliveryFees: messages.review.deliveryFees,
+      total: messages.review.total,
+      paymentMethod: messages.review.paymentMethod,
+      methodMomo: messages.review.methodMomoTemplate,
+      methodCard: messages.review.methodCard,
+      methodCod: messages.review.methodCod,
+      railMtn: messages.review.railMtn,
+      railAirtel: messages.review.railAirtel,
+      payerNumber: messages.review.payerNumberTemplate,
+      escrowTitle: messages.review.escrowTitle,
+      escrowStep1: messages.review.escrowStep1,
+      escrowStep2: messages.review.escrowStep2,
+      escrowStep3: messages.review.escrowStep3,
+      consentLabel: messages.review.consentLabel,
+      consentRequired: messages.review.consentRequired,
+      placeOrder: messages.review.placeOrder,
+      loading: messages.review.loading,
+    },
     countdown: {
       label: messages.countdown.label,
       expired: messages.countdown.expired,
@@ -446,6 +537,9 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
   const { session, loading: sessionLoading } = useSession();
   const [step, setStep] = useState(0);
   const [checkoutSession, setCheckoutSession] = useState<CheckoutSession | null>(null);
+  const [fulfilmentTotals, setFulfilmentTotals] = useState<FulfilmentTotals | null>(null);
+  const [paymentSelection, setPaymentSelection] = useState<ValidatedPayment | null>(null);
+  const [paymentOptions, setPaymentOptions] = useState<PaymentOptions | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(false);
 
@@ -557,6 +651,34 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
           countdownLabels={labels.countdown}
           reservationExpiredMessage={labels.reservationExpired}
           cartPath={cartPath}
+          onComplete={(totals) => {
+            setFulfilmentTotals(totals);
+            setStep(2);
+          }}
+        />
+      ) : null}
+
+      {step === 2 && checkoutSession && session?.access_token ? (
+        <StepPayment
+          locale={locale}
+          sessionId={checkoutSession.session_id}
+          accessToken={session.access_token}
+          labels={labels.payment}
+          onComplete={(payment, options) => {
+            setPaymentSelection(payment);
+            setPaymentOptions(options);
+            setStep(3);
+          }}
+        />
+      ) : null}
+
+      {step === 3 && checkoutSession && fulfilmentTotals && paymentSelection && paymentOptions ? (
+        <StepReview
+          locale={locale}
+          session={checkoutSession}
+          totals={paymentOptions}
+          payment={paymentSelection as ReviewPayment}
+          labels={labels.review}
         />
       ) : null}
     </div>
