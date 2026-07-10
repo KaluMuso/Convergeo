@@ -673,5 +673,78 @@
     "errors": {
       "loadFailed": "Could not load orders. Pull to refresh."
     }
+  },
+  "scan": {
+    "meta": {
+      "title": "Pickup scanner — Vergeo5 Vendor",
+      "description": "Scan customer pickup QR codes or enter PINs to mark orders as collected."
+    },
+    "eyebrow": "Pickup",
+    "title": "Scan pickup",
+    "intro": "Scan the customer's QR or enter their order ID and PIN. Verification needs an internet connection.",
+    "verifying": "Verifying pickup…",
+    "offline": {
+      "title": "You're offline",
+      "body": "Pickup verification needs connectivity. Reconnect to verify QR codes or PINs."
+    },
+    "camera": {
+      "hint": "Centre the pickup QR inside the frame",
+      "loading": "Starting camera…",
+      "denied": "Camera access blocked",
+      "deniedBody": "Allow camera access in your browser settings, or enter the customer's PIN instead.",
+      "usePin": "Enter PIN instead"
+    },
+    "pin": {
+      "heading": "Enter pickup PIN",
+      "intro": "The customer received a 6-digit PIN on WhatsApp. Enter their order ID and PIN.",
+      "orderIdLabel": "Order ID",
+      "orderIdPlaceholder": "Paste or type order ID",
+      "pinLabel": "6-digit PIN",
+      "pinPlaceholder": "000000",
+      "submit": "Verify pickup",
+      "submitting": "Verifying…",
+      "useCamera": "Use camera instead"
+    },
+    "success": {
+      "title": "Pickup verified",
+      "body": "Order {orderId} marked as collected.",
+      "scanAnother": "Scan another"
+    },
+    "errors": {
+      "retry": "Try again",
+      "wrongQr": {
+        "title": "Not a pickup code",
+        "body": "This looks like an event ticket or another QR — not an order pickup code. Ask the customer to open their order pickup QR from WhatsApp or the Vergeo5 app."
+      },
+      "offline": {
+        "title": "Cannot verify offline",
+        "body": "Connect to the internet to verify pickup codes."
+      },
+      "verifyFailed": {
+        "title": "Verification failed",
+        "body": "We could not verify this pickup. Check the code and try again."
+      },
+      "invalidPin": {
+        "title": "Invalid PIN",
+        "body": "The PIN does not match this order. Ask the customer to check their WhatsApp message."
+      },
+      "alreadyClaimed": {
+        "title": "Already collected",
+        "body": "This pickup was already verified. If you think this is wrong, contact support."
+      },
+      "staleToken": {
+        "title": "Code expired",
+        "body": "The customer may have a newer pickup code. Ask them to refresh their order page or WhatsApp message."
+      },
+      "forbidden": {
+        "title": "Not your order",
+        "body": "This pickup belongs to another vendor. Only scan orders from your shop."
+      }
+    },
+    "recent": {
+      "heading": "Recent this session",
+      "empty": "No verifications yet",
+      "order": "Order {orderId}"
+    }
   }
 }
