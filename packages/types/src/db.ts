@@ -797,6 +797,7 @@ export type Database = {
           checkout_group_id: string | null
           created_at: string
           id: string
+          idempotency_key: string | null
           kind: string
           order_id: string | null
           payment_id: string | null
@@ -807,6 +808,7 @@ export type Database = {
           checkout_group_id?: string | null
           created_at?: string
           id?: string
+          idempotency_key?: string | null
           kind: string
           order_id?: string | null
           payment_id?: string | null
@@ -817,6 +819,7 @@ export type Database = {
           checkout_group_id?: string | null
           created_at?: string
           id?: string
+          idempotency_key?: string | null
           kind?: string
           order_id?: string | null
           payment_id?: string | null
