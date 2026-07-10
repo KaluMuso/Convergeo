@@ -112,5 +112,12 @@
       "lane1": "You are within the 48-hour window for a full return including delivery.",
       "expired": "The 48-hour return window has ended. Contact support for further options."
     }
+  },
+  "dispatch": {
+    "title": "Delivery updates",
+    "courier": "Courier",
+    "tracking": "Tracking note",
+    "empty": "Dispatch details will appear here once your order is on the way.",
+    "statusUpdates": "Status updates"
   }
 }
