@@ -1010,5 +1010,32 @@
         "rejected": "Dispute rejected"
       }
     }
+  },
+  "returns": {
+    "meta": {
+      "title": "Return requests — Vergeo5 Vendor",
+      "description": "Accept or contest customer return requests for faulty or wrong items."
+    },
+    "title": "Return requests",
+    "intro": "Customers reported faulty or wrong items. Accept to issue a full refund, or contest for admin review.",
+    "loading": "Loading returns…",
+    "empty": "No return requests waiting on you.",
+    "card": {
+      "item": "{title} × {qty}",
+      "order": "Order {id}",
+      "refund": "Refund if accepted: {amount}",
+      "evidence": "{count, plural, one {# photo attached} other {# photos attached}}",
+      "viewOrder": "View order"
+    },
+    "actions": {
+      "accept": "Accept return",
+      "accepting": "Accepting…",
+      "contest": "Contest — send to admin",
+      "contesting": "Sending…"
+    },
+    "errors": {
+      "loadFailed": "Could not load return requests. Pull to refresh.",
+      "actionFailed": "Action failed. Try again."
+    }
   }
 }
