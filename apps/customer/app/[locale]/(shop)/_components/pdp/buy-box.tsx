@@ -68,10 +68,9 @@ export function clampQuantity(value: number, listing: BuyBoxListing): number {
 
 export function getStockLabel(
   listing: BuyBoxListing,
-  labels: Pick<
-    BuyBoxLabels,
-    "inStockLabel" | "outOfStockLabel" | "lowStockLabel" | "alwaysAvailableLabel"
-  >,
+  labels: Pick<BuyBoxLabels, "inStockLabel" | "outOfStockLabel" | "alwaysAvailableLabel"> & {
+    lowStockLabel: (count: number) => string;
+  },
 ): string {
   if (!listing.inStock) {
     return labels.outOfStockLabel;
