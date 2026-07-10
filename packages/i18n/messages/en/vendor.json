@@ -1037,5 +1037,33 @@
       "loadFailed": "Could not load return requests. Pull to refresh.",
       "actionFailed": "Action failed. Try again."
     }
+  },
+  "reviews": {
+    "meta": {
+      "title": "Customer reviews — Vergeo5 Vendor",
+      "description": "Reply to verified-purchase reviews on your listings."
+    },
+    "title": "Customer reviews",
+    "intro": "Reply once per review. You can edit your reply for 24 hours.",
+    "loading": "Loading reviews…",
+    "empty": "No customer reviews yet.",
+    "starFilled": "★",
+    "starEmpty": "☆",
+    "card": {
+      "unknownItem": "Order item",
+      "photoAlt": "Customer review photo",
+      "replyLabel": "Your reply",
+      "editReply": "Edit your reply",
+      "yourReply": "Your reply"
+    },
+    "actions": {
+      "submit": "Post reply",
+      "update": "Update reply",
+      "submitting": "Saving…"
+    },
+    "errors": {
+      "loadFailed": "Could not load reviews. Pull to refresh.",
+      "replyFailed": "Could not save your reply. Try again."
+    }
   }
 }
