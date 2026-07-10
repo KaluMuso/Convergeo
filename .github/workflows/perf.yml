@@ -55,7 +55,15 @@ jobs:
         run: supabase start -x edge-runtime
 
       - name: Reset local database (with seed)
-        run: supabase db reset
+        run: |
+          for attempt in 1 2 3; do
+            if supabase db reset; then
+              exit 0
+            fi
+            echo "supabase db reset attempt ${attempt} failed; retrying in 20s..."
+            sleep 20
+          done
+          exit 1
 
       - name: Load local Supabase credentials
         run: |
