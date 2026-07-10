@@ -2306,7 +2306,7 @@ export type Database = {
           entity_id: string
           entity_kind: string
           job_id: string
-          locale_terms: string[] | null
+          locale_terms: string[]
           search_document_id: string
           title: string
         }[]
