@@ -1188,6 +1188,10 @@ export type Database = {
           delivery_zone: string | null
           fulfilment: string
           id: string
+          pickup_collected_at: string | null
+          pickup_pin_hash: string | null
+          pickup_qr_secret: string | null
+          pickup_token_version: number
           status: string
           updated_at: string
           vendor_id: string
@@ -1203,6 +1207,10 @@ export type Database = {
           delivery_zone?: string | null
           fulfilment: string
           id?: string
+          pickup_collected_at?: string | null
+          pickup_pin_hash?: string | null
+          pickup_qr_secret?: string | null
+          pickup_token_version?: number
           status?: string
           updated_at?: string
           vendor_id: string
@@ -1218,6 +1226,10 @@ export type Database = {
           delivery_zone?: string | null
           fulfilment?: string
           id?: string
+          pickup_collected_at?: string | null
+          pickup_pin_hash?: string | null
+          pickup_qr_secret?: string | null
+          pickup_token_version?: number
           status?: string
           updated_at?: string
           vendor_id?: string
