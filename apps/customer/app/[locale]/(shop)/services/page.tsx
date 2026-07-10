@@ -123,6 +123,8 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
     verticalLabel: t("browse.verticalLabel"),
     areaLabel: t("browse.areaLabel"),
     areaPlaceholder: t("browse.areaPlaceholder"),
+    filterSubmit: t("browse.filterSubmit"),
+    preferredBadge: t("browse.preferredBadge"),
     categories: {
       all: t("categories.all"),
       beauty: t("categories.beauty"),
@@ -168,6 +170,7 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
               same_day: t("badges.same_day"),
               slow: t("badges.slow"),
             },
+            preferredBadge: t("browse.preferredBadge"),
           }}
         />
       )}

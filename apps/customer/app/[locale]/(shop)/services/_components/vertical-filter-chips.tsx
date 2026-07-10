@@ -19,6 +19,8 @@ type VerticalFilterChipsProps = {
     verticalLabel: string;
     areaLabel: string;
     areaPlaceholder: string;
+    filterSubmit: string;
+    preferredBadge: string;
     categories: Record<string, string>;
   };
   activeCategory: string | null;
@@ -95,7 +97,7 @@ export function VerticalFilterChips({
               type="submit"
               className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm font-semibold"
             >
-              Filter
+              {labels.filterSubmit}
             </button>
           </div>
         </label>

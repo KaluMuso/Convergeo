@@ -29,6 +29,7 @@ type ServiceGridProps = {
     fromPrice: string;
     askForQuote: string;
     badges: Record<string, string>;
+    preferredBadge: string;
   };
 };
 
@@ -71,7 +72,7 @@ export function ServiceGrid({ items, locale, labels }: ServiceGridProps) {
                     <Badge variant={badgeVariant(tier)} label={labels.badges[tier] ?? tier} />
                   ) : null}
                   {item.provider.preferred_badge ? (
-                    <Badge variant="public" label="Preferred" />
+                    <Badge variant="public" label={labels.preferredBadge} />
                   ) : null}
                 </div>
                 <h2 className="font-display text-h3 text-display-ink">{item.title}</h2>

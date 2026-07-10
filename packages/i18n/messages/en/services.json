@@ -12,6 +12,8 @@
     "fromPrice": "From {price}",
     "areaLabel": "Area",
     "areaPlaceholder": "e.g. Lusaka",
+    "filterSubmit": "Filter",
+    "preferredBadge": "Preferred",
     "verticalLabel": "Category"
   },
   "categories": {

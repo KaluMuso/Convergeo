@@ -145,7 +145,9 @@ export default async function ServiceDetailPage({ params }: PageProps) {
           {tier ? (
             <Badge variant={badgeVariant(tier)} label={t(`badges.${tier}` as "badges.fast")} />
           ) : null}
-          {service.provider.preferred_badge ? <Badge variant="public" label="Preferred" /> : null}
+          {service.provider.preferred_badge ? (
+            <Badge variant="public" label={t("browse.preferredBadge")} />
+          ) : null}
         </div>
         <h1 className="font-display text-h1 text-display-ink">{service.title}</h1>
         {service.service_area ? (
