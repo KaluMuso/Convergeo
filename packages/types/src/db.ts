@@ -386,6 +386,56 @@ export type Database = {
           },
         ]
       }
+      embedding_jobs: {
+        Row: {
+          attempts: number
+          batch_cost_usd: number | null
+          created_at: string
+          entity_id: string
+          entity_kind: string
+          id: string
+          last_error: string | null
+          processed_at: string | null
+          search_document_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          batch_cost_usd?: number | null
+          created_at?: string
+          entity_id: string
+          entity_kind: string
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          search_document_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          batch_cost_usd?: number | null
+          created_at?: string
+          entity_id?: string
+          entity_kind?: string
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          search_document_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "embedding_jobs_search_document_id_fkey"
+            columns: ["search_document_id"]
+            isOneToOne: false
+            referencedRelation: "search_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_instances: {
         Row: {
           capacity: number
@@ -2249,7 +2299,27 @@ export type Database = {
         }[]
       }
       cart_guest_token: { Args: never; Returns: string }
+      claim_embedding_jobs: {
+        Args: { p_limit: number }
+        Returns: {
+          body: string
+          entity_id: string
+          entity_kind: string
+          job_id: string
+          locale_terms: string[] | null
+          search_document_id: string
+          title: string
+        }[]
+      }
       cleanup_expired_rate_counters: { Args: never; Returns: number }
+      embedding_enqueue_document: {
+        Args: {
+          p_entity_id: string
+          p_entity_kind: string
+          p_search_document_id: string
+        }
+        Returns: undefined
+      }
       expand_search_terms: { Args: { p_query: string }; Returns: string }
       has_role: { Args: { required_role: string }; Returns: boolean }
       is_valid_price_tiers: { Args: { tiers: Json }; Returns: boolean }

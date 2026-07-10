@@ -294,8 +294,9 @@ async def test_process_embedding_tick_is_idempotent_on_second_run(
         new_callable=AsyncMock,
         return_value=(_vectors(1), 0.00042),
     ):
-        first = await process_embedding_tick(cast(SupabaseEmbeddingService, fake_service), limit=64)
-        second = await process_embedding_tick(cast(SupabaseEmbeddingService, fake_service), limit=64)
+        service = cast(SupabaseEmbeddingService, fake_service)
+        first = await process_embedding_tick(service, limit=64)
+        second = await process_embedding_tick(service, limit=64)
 
     assert first.processed == 1
     assert second.processed == 0
@@ -314,7 +315,10 @@ async def test_dead_letter_after_five_attempts() -> None:
         new_callable=AsyncMock,
         side_effect=RuntimeError("provider down"),
     ):
-        result = await process_embedding_tick(cast(SupabaseEmbeddingService, service), limit=64)
+        result = await process_embedding_tick(
+            cast(SupabaseEmbeddingService, service),
+            limit=64,
+        )
 
     job = store.tables["embedding_jobs"][0]
     assert result.dead == 1
