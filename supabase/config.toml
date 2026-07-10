@@ -132,6 +132,13 @@ public = false
 file_size_limit = "10MiB"
 allowed_mime_types = ["image/jpeg", "image/png", "image/webp"]
 
+# Private order-problem evidence (photos/PDF). RLS on storage.objects denies
+# client access by default; the API issues owner-scoped signed upload URLs. M09-P06.
+[storage.buckets.order-evidence]
+public = false
+file_size_limit = "10MiB"
+allowed_mime_types = ["image/jpeg", "image/png", "image/webp", "application/pdf"]
+
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
 enabled = true
