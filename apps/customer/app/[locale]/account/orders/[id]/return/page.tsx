@@ -1,5 +1,6 @@
 import { ApiError } from "@vergeo/config";
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -12,9 +13,9 @@ import {
   type OrderItem,
 } from "../../_components/orders-api";
 
-import { ReturnForm } from "./_components/return-form";
-
 import type { Metadata } from "next";
+
+const ReturnForm = dynamic(() => import("./_components/return-form").then((mod) => mod.ReturnForm));
 
 export const metadata: Metadata = {
   robots: {
