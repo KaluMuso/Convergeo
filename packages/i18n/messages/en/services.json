@@ -1,5 +1,84 @@
 {
   "services.title": "Services",
   "services.rfq.sent": "RFQ sent to {count, plural, one {# vendor} other {# vendors}}",
-  "services.quote.received": "Quote from {vendor}: {amount}"
+  "services.quote.received": "Quote from {vendor}: {amount}",
+  "browse": {
+    "title": "Services",
+    "subtitle": "Find trusted providers across Zambia — from beauty to home repairs.",
+    "emptyTitle": "No services match your filters",
+    "emptyBody": "Try another category or area, or check back soon for new listings.",
+    "viewService": "View service",
+    "askForQuote": "Ask for quote",
+    "fromPrice": "From {price}",
+    "areaLabel": "Area",
+    "areaPlaceholder": "e.g. Lusaka",
+    "verticalLabel": "Category"
+  },
+  "categories": {
+    "all": "All",
+    "beauty": "Beauty",
+    "food-catering": "Food & catering",
+    "auto": "Auto & mechanics",
+    "printing-creative": "Printing & creative",
+    "home-services": "Home services",
+    "tech-services": "Tech services",
+    "cleaning": "Cleaning",
+    "tailoring": "Tailoring"
+  },
+  "badges": {
+    "fast": "Fast responder",
+    "same_day": "Same-day response",
+    "slow": "Usually responds within a day"
+  },
+  "detail": {
+    "metaTitle": "{title} — Services",
+    "metaDescription": "{title} in {area}. View portfolio and request a quote on Vergeo5.",
+    "about": "About this service",
+    "serviceArea": "Service area",
+    "portfolio": "Portfolio",
+    "fromPrice": "From {price}",
+    "askForQuote": "Ask for quote",
+    "requestQuote": "Request a quote",
+    "requestQuoteHint": "Describe your job and get quotes from matching providers.",
+    "provider": "Provider",
+    "providerCta": "View provider profile",
+    "imageAlt": "Portfolio photo {position}"
+  },
+  "vendor": {
+    "eyebrow": "Services",
+    "list": {
+      "title": "Your services",
+      "intro": "Manage service listings customers can browse and request quotes for.",
+      "createCta": "Add service",
+      "editCta": "Edit",
+      "empty": "You have no service listings yet.",
+      "loading": "Loading services…",
+      "noArea": "Area not set"
+    },
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "paused": "Paused"
+    },
+    "form": {
+      "createTitle": "New service",
+      "editTitle": "Edit service",
+      "titleLabel": "Title",
+      "categoryLabel": "Category",
+      "descriptionLabel": "Description",
+      "areaLabel": "Service area",
+      "fromPriceLabel": "From price (optional)",
+      "fromPriceHint": "Leave blank to show \"ask for quote\"",
+      "statusLabel": "Status",
+      "save": "Save",
+      "publish": "Publish",
+      "pause": "Pause",
+      "saving": "Saving…"
+    },
+    "errors": {
+      "loadFailed": "Could not load services.",
+      "saveFailed": "Could not save service.",
+      "authRequired": "Sign in to manage your services."
+    }
+  }
 }
