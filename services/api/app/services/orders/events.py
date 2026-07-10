@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.services.analytics.funnel import record_event
 from app.services.notifications.events import (
     EVENT_REGISTRY,
     Audience,
@@ -99,4 +100,34 @@ def emit_order_lifecycle(
         entity_id=order_id,
         recipient_id=recipient_id,
         payload=payload,
+    )
+
+
+def emit_payment_start_funnel(
+    *,
+    checkout_group_id: str,
+    customer_id: str,
+    snapshot: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Record payment_start when the customer initiates payment."""
+    return record_event(
+        stage="payment_start",
+        checkout_group_id=checkout_group_id,
+        customer_id=customer_id,
+        snapshot=snapshot,
+    )
+
+
+def emit_order_placed_funnel(
+    *,
+    checkout_group_id: str,
+    customer_id: str,
+    snapshot: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Record order_placed when checkout completes into orders."""
+    return record_event(
+        stage="order_placed",
+        checkout_group_id=checkout_group_id,
+        customer_id=customer_id,
+        snapshot=snapshot,
     )
