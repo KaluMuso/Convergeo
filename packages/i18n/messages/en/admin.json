@@ -549,5 +549,94 @@
         "orders_completed": "Orders completed"
       }
     }
+  },
+  "disputes": {
+    "title": "Disputes console",
+    "subtitle": "Review open disputes — sorted by age or order value.",
+    "queue": {
+      "empty": "No open disputes in the queue.",
+      "loading": "Loading disputes…",
+      "error": "Could not load the dispute queue.",
+      "retry": "Retry",
+      "sortLabel": "Sort by",
+      "sortAge": "Oldest first",
+      "sortValue": "Highest value",
+      "order": "Order",
+      "orderIdShort": "{id}…",
+      "vendor": "Vendor",
+      "value": "Value",
+      "opened": "Opened",
+      "slaColumn": "SLA",
+      "review": "Review",
+      "sla": {
+        "on_track": "On track",
+        "due_soon": "Due soon",
+        "overdue": "Overdue"
+      }
+    },
+    "detail": {
+      "back": "Back to queue",
+      "loading": "Loading dispute…",
+      "error": "Could not load this dispute.",
+      "retry": "Retry",
+      "title": "Dispute review",
+      "summary": "Order {orderId} · {status} · {vendor}",
+      "vendorResponse": "Vendor response",
+      "evidenceTitle": "Evidence",
+      "contextTitle": "Order context",
+      "evidence": {
+        "customer": "Customer evidence",
+        "vendor": "Vendor evidence",
+        "empty": "No evidence uploaded.",
+        "unavailable": "Evidence preview is temporarily unavailable.",
+        "noneCustomer": "No customer evidence.",
+        "noneVendor": "No vendor evidence.",
+        "noPreview": "Preview unavailable",
+        "openDocument": "Open document",
+        "expires": "Link expires {at}"
+      },
+      "context": {
+        "summary": "Summary",
+        "vendor": "Vendor",
+        "customer": "Customer",
+        "orderStatus": "Order status",
+        "orderTotal": "Order total",
+        "items": "Line items",
+        "itemsEmpty": "No line items.",
+        "itemLine": "{title} × {qty} @ {price}",
+        "payments": "Payments",
+        "paymentsEmpty": "No payments.",
+        "paymentLine": "{rail} · {status} · {amount} · {at}",
+        "ledger": "Ledger",
+        "ledgerEmpty": "No ledger transactions.",
+        "ledgerBalance": "Σ postings: {balance} ngwee"
+      },
+      "decision": {
+        "title": "Decision",
+        "subtitle": "Choose an outcome — money moves via the dispute resolver (mandatory note).",
+        "outcome": "Outcome",
+        "fullRefund": "Full refund to customer",
+        "partialRefund": "Partial refund (ngwee) + release remainder",
+        "release": "Release to vendor",
+        "partialAmount": "Partial refund (ngwee, max {max})",
+        "customerMomo": "Customer MoMo number",
+        "customerRail": "MoMo rail",
+        "rails": {
+          "mtn": "MTN",
+          "airtel": "Airtel",
+          "zamtel": "Zamtel"
+        },
+        "note": "Decision note (required)",
+        "noteRequired": "A decision note is required.",
+        "partialRequired": "Enter a valid partial refund amount.",
+        "partialTooHigh": "Partial refund cannot exceed {max}.",
+        "momoRequired": "Customer MoMo number is required.",
+        "submit": "Record decision",
+        "submitting": "Processing…",
+        "success": "Decision recorded — parties will be notified.",
+        "failure": "Could not record decision.",
+        "alreadyResolved": "This dispute has already been resolved."
+      }
+    }
   }
 }
