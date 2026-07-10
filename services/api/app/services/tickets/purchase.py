@@ -12,8 +12,14 @@ from uuid import UUID
 from app.errors import AppError
 from app.services.cart.totals import line_total_ngwee
 from app.services.commissions.engine import FREE_EVENTS_CATEGORY
-from app.services.stock.claim import run_sql_script, sql_int, sql_uuid
+from app.services.stock.claim import (
+    get_reservation_ttl_minutes,
+    run_sql_script,
+    sql_int,
+    sql_uuid,
+)
 from app.services.tickets.inventory import claim_ticket_or_raise
+from app.services.tickets.qr import generate_pin, generate_qr_secret, seal_pin_storage
 
 EVENT_TICKETS_CATEGORY = "event_tickets"
 EVENT_TICKETS_RATE_BPS = 500
@@ -55,6 +61,12 @@ class IssueTicketsResult:
 class ReleaseClaimResult:
     checkout_group_id: str
     voided_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class ReleaseStaleClaimsResult:
+    voided_count: int
+    ttl_minutes: int
 
 
 def _validate_uuid(value: str, field: str) -> None:
@@ -356,23 +368,42 @@ WHERE order_item_id = {item_sql} AND status <> 'void';
     return int(result.rows[0])
 
 
+def _sql_text(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+
+def _ticket_secrets(ticket_id: str) -> tuple[str, str]:
+    qr_secret = generate_qr_secret()
+    pin_hash = seal_pin_storage(pin=generate_pin(), ticket_id=ticket_id)
+    return qr_secret, pin_hash
+
+
 def _link_claimed_tickets(order_item_id: str, ticket_ids: tuple[str, ...]) -> int:
     if not ticket_ids:
         return 0
     item_sql = sql_uuid(order_item_id, "order_item_id")
-    ids_sql = ", ".join(sql_uuid(tid, "ticket_id") for tid in ticket_ids)
-    result = run_sql_script(
-        f"""
+    linked = 0
+    for ticket_id in ticket_ids:
+        tid_sql = sql_uuid(ticket_id, "ticket_id")
+        qr_secret, pin_hash = _ticket_secrets(ticket_id)
+        result = run_sql_script(
+            f"""
 UPDATE public.tickets
-SET order_item_id = {item_sql}
-WHERE id IN ({ids_sql})
+SET
+  order_item_id = {item_sql},
+  qr_secret = {_sql_text(qr_secret)},
+  pin_hash = {_sql_text(pin_hash)}
+WHERE id = {tid_sql}
   AND order_item_id IS NULL
-  AND status <> 'void';
+  AND status <> 'void'
+RETURNING id::text;
 """
-    )
-    if not result.ok:
-        raise RuntimeError(f"link claimed tickets failed: {result.error}")
-    return len(ticket_ids)
+        )
+        if not result.ok:
+            raise RuntimeError(f"link claimed tickets failed: {result.error}")
+        if result.rows:
+            linked += 1
+    return linked
 
 
 def _insert_issued_tickets(
@@ -383,17 +414,29 @@ def _insert_issued_tickets(
     holder_user_id: str,
     qty: int,
 ) -> int:
+    if qty <= 0:
+        return 0
     item_sql = sql_uuid(order_item_id, "order_item_id")
     instance_sql = sql_uuid(instance_id, "instance_id")
     type_sql = sql_uuid(ticket_type_id, "ticket_type_id")
     holder_sql = sql_uuid(holder_user_id, "holder_user_id")
-    qty_sql = sql_int(qty, "qty")
+    value_rows: list[str] = []
+    for _ in range(qty):
+        ticket_id = str(uuid.uuid4())
+        tid_sql = sql_uuid(ticket_id, "ticket_id")
+        qr_secret, pin_hash = _ticket_secrets(ticket_id)
+        value_rows.append(
+            f"({tid_sql}, {instance_sql}, {type_sql}, {holder_sql}, {item_sql}, "
+            f"'issued', {_sql_text(qr_secret)}, {_sql_text(pin_hash)})"
+        )
+    values_sql = ",\n".join(value_rows)
     script = f"""
 INSERT INTO public.tickets (
-  instance_id, ticket_type_id, holder_user_id, order_item_id, status
+  id, instance_id, ticket_type_id, holder_user_id, order_item_id, status,
+  qr_secret, pin_hash
 )
-SELECT {instance_sql}, {type_sql}, {holder_sql}, {item_sql}, 'issued'
-FROM generate_series(1, {qty_sql});
+VALUES
+{values_sql};
 """
     result = run_sql_script(script)
     if not result.ok:
@@ -625,10 +668,44 @@ def rsvp(
     )
 
 
+def release_stale_ticket_claims(
+    service_client: Any,
+    *,
+    ttl_minutes: int | None = None,
+) -> ReleaseStaleClaimsResult:
+    """Void unpaid ticket holds older than the reservation TTL (capacity recovery)."""
+    del service_client
+    ttl = ttl_minutes if ttl_minutes is not None else get_reservation_ttl_minutes()
+    if ttl <= 0:
+        raise ValueError("ttl_minutes must be positive")
+    script = f"""
+WITH stale AS (
+  SELECT id
+  FROM public.tickets
+  WHERE order_item_id IS NULL
+    AND status = 'issued'
+    AND created_at < timezone('utc', now()) - interval '{ttl} minutes'
+),
+voided AS (
+  UPDATE public.tickets t
+  SET status = 'void'
+  FROM stale s
+  WHERE t.id = s.id
+  RETURNING t.id
+)
+SELECT count(*)::text FROM voided;
+"""
+    result = run_sql_script(script)
+    if not result.ok:
+        raise RuntimeError(f"release_stale_ticket_claims failed: {result.error}")
+    voided = int(result.rows[0]) if result.rows else 0
+    return ReleaseStaleClaimsResult(voided_count=voided, ttl_minutes=ttl)
+
+
 def find_orders_pending_ticket_issue(service_client: Any) -> list[str]:
     """Orders with successful payment and ticket items not fully issued."""
     script = """
-SELECT DISTINCT o.id::text
+SELECT o.id::text
 FROM public.orders o
 INNER JOIN public.checkout_groups cg ON cg.id = o.checkout_group_id
 INNER JOIN public.payments p ON p.checkout_group_id = cg.id AND p.status = 'success'
@@ -639,6 +716,7 @@ LEFT JOIN LATERAL (
   WHERE t.order_item_id = oi.id AND t.status <> 'void'
 ) counts ON true
 WHERE coalesce(counts.issued, 0) < oi.qty
+GROUP BY o.id
 ORDER BY o.id;
 """
     result = run_sql_script(script)
