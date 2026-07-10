@@ -212,7 +212,37 @@ def test_double_confirm_idempotent_single_release(
     assert second.json()["already_confirmed"] is True
 
     mock_transition.assert_called_once()
-    mock_release.assert_called_once_with(ORDER_A_ID)
+    mock_release.assert_called_once()
+    # _evaluate_and_release(service_client, order_id) — order_id is the 2nd positional arg.
+    assert mock_release.call_args.args[1] == ORDER_A_ID
+
+
+@patch("app.routers.order_confirmation.transition_order")
+def test_confirm_calls_real_release_with_client_and_order_id(
+    mock_transition: MagicMock,
+) -> None:
+    """Regression: confirm-received must call the M08-P08 engine as
+    evaluate_and_release(service_client, order_id) — NOT order_id= alone (which
+    raises TypeError against the real signature and 500s the endpoint)."""
+    import app.services.escrow.release as release_mod
+
+    calls: list[tuple[Any, str]] = []
+
+    # Spy carries the REAL M08-P08 signature; a mis-call would TypeError here.
+    def _spy(service_client: Any, order_id: str, *, now: Any = None) -> None:
+        calls.append((service_client, order_id))
+
+    fake = FakeSupabaseClient()
+    _seed_order(fake, order_id=ORDER_A_ID, customer_id=CUSTOMER_A_ID, status="delivered")
+    mock_transition.return_value = _transition_outcome()
+    client = _make_client(customer_id=CUSTOMER_A_ID, fake=fake)
+
+    with patch.object(release_mod, "evaluate_and_release", _spy):
+        response = client.post(f"/orders/{ORDER_A_ID}/confirm-received")
+
+    assert response.status_code == 200, response.text
+    assert len(calls) == 1
+    assert calls[0][1] == ORDER_A_ID  # order_id passed positionally as the 2nd arg
 
 
 @patch("app.routers.order_confirmation._within_report_window", return_value=True)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import logging
 import time
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal, Protocol
@@ -21,6 +22,8 @@ from app.services.orders.state import (
 )
 from fastapi import APIRouter, Depends
 from pydantic import Field
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/orders", tags=["order-confirmation"])
 
@@ -77,16 +80,25 @@ class EvidenceSignResponse(StrictModel):
     signed_url: str
 
 
-def _evaluate_and_release(order_id: str) -> None:
-    """Fire escrow release (M08-P08). Stubbed when the release engine is unmerged."""
+def _evaluate_and_release(service_client: Any, order_id: str) -> None:
+    """Fire escrow release (M08-P08). No-op if the engine is unmerged; failures are
+    swallowed (the M08-P08 hourly release-job sweeper retries buyer-confirmed orders)."""
     try:
         release_module = importlib.import_module("app.services.escrow.release")
     except ModuleNotFoundError:
-        # TODO(M08-P08): replace stub with merged release engine.
         return
     evaluate_and_release = getattr(release_module, "evaluate_and_release", None)
-    if callable(evaluate_and_release):
-        evaluate_and_release(order_id=order_id)
+    if not callable(evaluate_and_release):
+        return
+    try:
+        # M08-P08 signature: evaluate_and_release(service_client, order_id, *, now).
+        evaluate_and_release(service_client, order_id)
+    except Exception:
+        logger.warning(
+            "inline escrow release after confirm-received failed; sweeper will retry",
+            extra={"order_id": order_id},
+            exc_info=True,
+        )
 
 
 def _single_row(response: Any) -> dict[str, Any] | None:
@@ -330,7 +342,7 @@ async def confirm_received(
             )
         raise
 
-    _evaluate_and_release(order_id)
+    _evaluate_and_release(service_client, order_id)
     return ConfirmReceivedResponse(
         order_id=order_id,
         status="completed",
