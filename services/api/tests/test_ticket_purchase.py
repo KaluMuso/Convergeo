@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import uuid
 from collections.abc import Generator
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from app.errors import AppError
@@ -177,7 +177,7 @@ def _load_order_snapshot(conn: PgConn, order_id: str) -> dict[str, Any]:
         f"SELECT commission_snapshot::text FROM public.orders WHERE id = '{order_id}';"
     )
     assert result.ok and result.rows
-    return json.loads(result.rows[0])
+    return cast(dict[str, Any], json.loads(result.rows[0]))
 
 
 def _paid_checkout_fixture(conn: PgConn) -> dict[str, str]:
