@@ -536,7 +536,10 @@ class TestResolutionDispatch:
         mock_release.assert_called_once_with(service, order_id)
         mock_refund.assert_not_called()
 
-    @patch("app.services.refunds.config.load_restocking_fee_bps", return_value=1000)
+    # Patch the symbol as bound into disputes.service (it does
+    # `from app.services.refunds.config import load_restocking_fee_bps`),
+    # not the origin module — patching `refunds.config` here is a no-op.
+    @patch("app.services.disputes.service.load_restocking_fee_bps", return_value=1000)
     @patch("app.services.disputes.service.evaluate_and_release")
     @patch("app.services.disputes.service.execute_refund")
     def test_resolved_partial_calls_both_m08_paths(
@@ -546,6 +549,7 @@ class TestResolutionDispatch:
         _mock_bps: MagicMock,
     ) -> None:
         from app.services.disputes.service import resolve
+        from app.services.refunds.math import compute_lane2_refund
 
         order_id = str(uuid.uuid4())
         dispute_id = str(uuid.uuid4())
@@ -554,6 +558,7 @@ class TestResolutionDispatch:
         service = _FakeServiceWrapper(fake)
         mock_refund.return_value = MagicMock(refund_id=str(uuid.uuid4()))
 
+        partial = 50_000
         record = resolve(
             service,
             dispute_id=dispute_id,
@@ -561,11 +566,27 @@ class TestResolutionDispatch:
             decision="resolved_partial",
             admin_decision="Partial refund + release remainder",
             customer_momo=CUSTOMER_MOMO,
-            partial_refund_ngwee=50_000,
+            partial_refund_ngwee=partial,
         )
         assert record.status == "resolved_partial"
-        mock_refund.assert_called_once()
         mock_release.assert_called_once_with(service, order_id)
+
+        # Core invariant of this pebble: the executed lane-2 refund must equal
+        # the admin-decided partial amount exactly. `execute_refund` is mocked,
+        # so assert on the args and re-derive the amount via the real lane-2
+        # formula from the back-solved return_transport it was handed.
+        mock_refund.assert_called_once()
+        kwargs = mock_refund.call_args.kwargs
+        assert kwargs["lane"] == 2
+        # item=200_000, delivery=0, restocking 10%=20_000 → return_transport=130_000
+        assert kwargs["return_transport_ngwee"] == 130_000
+        rederived = compute_lane2_refund(
+            item_ngwee=GROSS_NGEWEE,
+            outbound_delivery_ngwee=0,
+            return_transport_ngwee=kwargs["return_transport_ngwee"],
+            restocking_fee_bps=1000,
+        )
+        assert rederived.refund_ngwee == partial
 
 
 class TestRlsIsolation:
