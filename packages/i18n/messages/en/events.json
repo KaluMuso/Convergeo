@@ -48,6 +48,31 @@
   "organiser": {
     "imageAlt": "Event photo {position}"
   },
+  "ticketPurchase": {
+    "selectInstance": "Select date",
+    "selectType": "Ticket type",
+    "quantity": "Quantity",
+    "decrease": "Decrease quantity",
+    "decreaseSymbol": "−",
+    "increase": "Increase quantity",
+    "increaseSymbol": "+",
+    "total": "Total",
+    "freeRsvpCta": "Reserve free spot",
+    "payCta": "Get tickets",
+    "processing": "Processing…",
+    "successRsvp": "Spot reserved",
+    "successCheckout": "Added — continue to payment",
+    "soldOut": "Sold out",
+    "remaining": "{count, plural, one {# left} other {# left}}",
+    "perCustomerCap": "Max {count} per person",
+    "loginRequired": "Sign in to get tickets",
+    "errors": {
+      "generic": "Could not complete request. Try again.",
+      "freeUseRsvp": "This is a free event — use Reserve.",
+      "paidUseCheckout": "This ticket requires payment.",
+      "oversell": "No longer available"
+    }
+  },
   "wallet": {
     "title": "My tickets",
     "emptyTitle": "No tickets yet",
