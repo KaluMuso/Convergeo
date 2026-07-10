@@ -51,7 +51,7 @@ jobs:
           version: latest
 
       - name: Start local Supabase stack
-        run: supabase start
+        run: supabase start -x edge-runtime
 
       - name: Reset local database (with seed)
         run: supabase db reset
