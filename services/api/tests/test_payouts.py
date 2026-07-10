@@ -402,6 +402,133 @@ async def test_retry_after_timeout_status_requery_no_double_pay(
 
 
 @pytest.mark.asyncio
+async def test_customer_refund_payout_sends_to_customer_and_skips_vendor_ledger(
+    service_client: FakeServiceClient,
+    fake_client: FakeSupabaseClient,
+    bank_payout_mock: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A customer-refund payout row (M08-P10) is sent to the customer momo, NOT the
+    vendor, and does NOT post the vendor `payout_executed` ledger (refund legs were
+    already posted by execute_refund). No vendor row is seeded — the customer-refund
+    branch must not touch load_vendor_payout_profile."""
+    monkeypatch.setenv("LENCO_ACCOUNT_ID", "lenco-acct-1")
+    customer_momo = "260971234567"
+    payout_id = str(uuid.uuid4())
+    fake_client.tables["payouts"].rows.append(
+        {
+            "id": payout_id,
+            "vendor_id": VENDOR_ID,
+            "amount_ngwee": 42_000,
+            "rail": "mtn",
+            "lenco_reference": "rfd-abc123",
+            "status": "pending",
+            "resolve_snapshot": {
+                "kind": "customer_refund",
+                "refund_id": "rf-1",
+                "customer_momo": customer_momo,
+                "rail": "mtn",
+                "retry_attempts": 0,
+            },
+        }
+    )
+
+    # Never sent yet → provider has no record → proceed to send.
+    query_client = MagicMock()
+    query_client.query_transfer_status = AsyncMock(
+        return_value=LencoTransferStatusResponse(status=True, message="not found", data=None)
+    )
+    momo_payout = AsyncMock(
+        return_value=InitiatePayoutResult(
+            provider_reference="lenco-rfd-1",
+            status=TransferStatus.SUCCESSFUL,
+            amount_major="420.00",
+        )
+    )
+
+    with patch("app.services.payouts.retry._post_payout_ledger") as ledger_mock:
+        outcome = await retry_payout_row(
+            service_client,
+            fake_client.tables["payouts"].rows[0],
+            query_transfer_status=query_client,
+            initiate_momo_payout=momo_payout,
+            initiate_bank_payout=bank_payout_mock,
+        )
+
+    assert outcome == "completed"
+    # Sent to the CUSTOMER's momo, not the vendor.
+    momo_payout.assert_awaited_once()
+    sent_request = momo_payout.await_args.args[0]
+    assert sent_request.phone == customer_momo
+    assert sent_request.amount_ngwee == 42_000
+    # Refund payout must NOT post the vendor payout_executed ledger.
+    ledger_mock.assert_not_called()
+
+    updated = fake_client.tables["payouts"].rows[0]
+    assert updated["status"] == "paid"
+    assert "ledger_transaction_id" not in updated["resolve_snapshot"]
+
+
+@pytest.mark.asyncio
+async def test_customer_refund_requery_paid_skips_vendor_ledger(
+    service_client: FakeServiceClient,
+    fake_client: FakeSupabaseClient,
+    bank_payout_mock: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Requery says a customer-refund transfer already succeeded → mark paid without
+    posting the vendor ledger and without re-sending."""
+    monkeypatch.setenv("LENCO_ACCOUNT_ID", "lenco-acct-1")
+    lenco_ref = "rfd-req-1"
+    fake_client.tables["payouts"].rows.append(
+        {
+            "id": str(uuid.uuid4()),
+            "vendor_id": VENDOR_ID,
+            "amount_ngwee": 15_000,
+            "rail": "airtel",
+            "lenco_reference": lenco_ref,
+            "status": "processing",
+            "resolve_snapshot": {
+                "kind": "customer_refund",
+                "customer_momo": "260961112222",
+                "rail": "airtel",
+                "retry_attempts": 1,
+            },
+        }
+    )
+    query_client = MagicMock()
+    query_client.query_transfer_status = AsyncMock(
+        return_value=LencoTransferStatusResponse(
+            status=True,
+            message="ok",
+            data=LencoTransferData(
+                id="tx-9",
+                amount="150.00",
+                currency="ZMW",
+                reference=lenco_ref,
+                lenco_reference="lenco-9",
+                status="successful",
+            ),
+        )
+    )
+    momo_payout = AsyncMock()
+
+    with patch("app.services.payouts.retry._post_payout_ledger") as ledger_mock:
+        outcome = await retry_payout_row(
+            service_client,
+            fake_client.tables["payouts"].rows[0],
+            query_transfer_status=query_client,
+            initiate_momo_payout=momo_payout,
+            initiate_bank_payout=bank_payout_mock,
+        )
+
+    assert outcome == "completed"
+    momo_payout.assert_not_called()
+    ledger_mock.assert_not_called()
+    assert fake_client.tables["payouts"].rows[0]["status"] == "paid"
+
+
+@pytest.mark.asyncio
 async def test_velocity_cap_boundary_at_cap_ok_plus_one_deferred(
     service_client: FakeServiceClient,
     fake_client: FakeSupabaseClient,

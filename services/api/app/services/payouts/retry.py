@@ -19,12 +19,39 @@ from app.services.payouts.execution import (
     _settlement_expectation,
     _update_payout_row,
 )
-from app.services.payouts.resolve_check import load_vendor_payout_profile
+from app.services.payouts.resolve_check import VendorPayoutProfile, load_vendor_payout_profile
 
 logger = logging.getLogger(__name__)
 
 MAX_PAYOUT_ATTEMPTS = 5
 RETRY_BACKOFF_BASE_SECONDS = 120
+
+
+def _is_customer_refund(snapshot: dict[str, Any]) -> bool:
+    """Refund payouts (M08-P10) are tagged so the sweeper sends to the customer,
+    not the vendor, and skips the vendor `payout_executed` ledger post — the refund
+    ledger legs were already posted by `execute_refund` at decision time."""
+    return snapshot.get("kind") == "customer_refund"
+
+
+def _payout_destination_profile(
+    service_client: ServiceRoleClient,
+    *,
+    payout_row: dict[str, Any],
+    snapshot: dict[str, Any],
+) -> VendorPayoutProfile:
+    """Vendor payout → vendor KYC profile; customer refund → customer momo destination."""
+    if _is_customer_refund(snapshot):
+        rail = str(payout_row.get("rail", "mtn"))
+        return VendorPayoutProfile(
+            vendor_id=str(payout_row.get("vendor_id", "")),
+            owner_user_id="",
+            phone=str(snapshot.get("customer_momo", "")),
+            operator=rail,
+            legal_name="",
+            rail=rail,
+        )
+    return load_vendor_payout_profile(service_client, str(payout_row["vendor_id"]))
 
 
 class ServiceRoleClient(Protocol):
@@ -149,18 +176,18 @@ async def retry_payout_row(
     if query_response.data is not None:
         provider_status = _provider_status_to_db(query_response.data.status)
         if provider_status == "paid":
-            ledger_id = _post_payout_ledger(
-                payout_id=payout_id,
-                vendor_id=vendor_id,
-                amount_ngwee=amount_ngwee,
-                lenco_reference=lenco_reference,
-            )
             merged = {
                 **snapshot,
                 "reconciled_via": "status_requery",
                 "provider_status": query_response.data.status,
-                "ledger_transaction_id": ledger_id,
             }
+            if not _is_customer_refund(snapshot):
+                merged["ledger_transaction_id"] = _post_payout_ledger(
+                    payout_id=payout_id,
+                    vendor_id=vendor_id,
+                    amount_ngwee=amount_ngwee,
+                    lenco_reference=lenco_reference,
+                )
             _update_payout_row(
                 service_client,
                 payout_id,
@@ -203,7 +230,9 @@ async def retry_payout_row(
         )
         return "dead_lettered"
 
-    profile = load_vendor_payout_profile(service_client, vendor_id)
+    profile = _payout_destination_profile(
+        service_client, payout_row=payout_row, snapshot=snapshot
+    )
     try:
         transfer = await _send_lenco_payout(
             profile,
@@ -254,13 +283,13 @@ async def retry_payout_row(
     }
 
     if terminal_status == "paid":
-        ledger_id = _post_payout_ledger(
-            payout_id=payout_id,
-            vendor_id=vendor_id,
-            amount_ngwee=amount_ngwee,
-            lenco_reference=lenco_reference,
-        )
-        merged["ledger_transaction_id"] = ledger_id
+        if not _is_customer_refund(snapshot):
+            merged["ledger_transaction_id"] = _post_payout_ledger(
+                payout_id=payout_id,
+                vendor_id=vendor_id,
+                amount_ngwee=amount_ngwee,
+                lenco_reference=lenco_reference,
+            )
         _update_payout_row(
             service_client,
             payout_id,

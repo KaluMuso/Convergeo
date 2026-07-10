@@ -1,4 +1,13 @@
-"""Thin customer-refund payout port — stub until M08-P09 merges."""
+"""Customer-refund payout port.
+
+Records the refund payout row; the actual Lenco send + status re-query is done by the
+shared payout sweeper (`app.services.payouts.retry.retry_payout_row`), which is now
+customer-refund-aware via the ``kind: customer_refund`` tag on ``resolve_snapshot``
+(sends to the customer momo, and skips the vendor ``payout_executed`` ledger post since
+the refund legs were already posted by ``execute_refund``). The row is created
+``pending`` (never sent inline — the refund callers are sync). Remaining piece: the
+scheduled dispatch job that scans ``pending``/``processing`` payouts and drives the
+sweeper (F9b-gated — needs Lenco creds)."""
 
 from __future__ import annotations
 
@@ -22,9 +31,6 @@ class CustomerRefundPayoutResult:
     amount_ngwee: int
 
 
-# TODO(M08-P09): replace stub with payouts service execution + Lenco transfer
-
-
 def initiate_customer_refund_payout(
     *,
     service_client: ServiceRoleClient,
@@ -34,9 +40,11 @@ def initiate_customer_refund_payout(
     rail: CustomerRail,
     customer_momo: str,
 ) -> CustomerRefundPayoutResult:
-    """Create a refund payout row and return idempotent rfd-* reference.
+    """Create a customer-refund payout row and return its idempotent rfd-* reference.
 
-    Stub: persists ``payouts`` row with status ``processing``; live Lenco send is M08-P09.
+    Persists a ``payouts`` row tagged ``kind: customer_refund`` with status ``pending``
+    (never sent inline). The shared sweeper sends it to ``customer_momo`` on the given
+    rail; live delivery is F9b-gated.
     """
     if amount_ngwee <= 0:
         msg = "refund payout amount must be positive"
@@ -50,12 +58,13 @@ def initiate_customer_refund_payout(
         "amount_ngwee": amount_ngwee,
         "rail": rail,
         "lenco_reference": lenco_reference,
-        "status": "processing",
+        "status": "pending",
         "resolve_snapshot": {
             "kind": "customer_refund",
             "refund_id": refund_id,
             "customer_momo": customer_momo,
-            "stub": True,
+            "rail": rail,
+            "retry_attempts": 0,
         },
     }
     response = service_client.client.table("payouts").insert(row).execute()
