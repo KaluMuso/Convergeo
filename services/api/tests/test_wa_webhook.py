@@ -1,0 +1,487 @@
+from __future__ import annotations
+
+import copy
+import hashlib
+import hmac
+import json
+import uuid
+from collections.abc import Generator
+from datetime import UTC, datetime
+from typing import Any
+from unittest.mock import MagicMock
+
+import pytest
+from app.deps import get_supabase_client
+from app.main import create_app
+from app.routers.webhooks_whatsapp import verify_hub_signature
+from app.supabase_client import SupabaseServiceClient
+from fastapi.testclient import TestClient
+
+VERIFY_TOKEN = "test-verify-token"
+APP_SECRET = "test-app-secret"
+PROFILE_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+PHONE_E164 = "+260971234567"
+PHONE_WA = "260971234567"
+WAMID = "wamid.HBgLMjYwOTcxMjM0NTY3FQIAERgSQjJDNDVFNkY3ODkwMTIzNDUAA=="
+
+
+class _FakeQuery:
+    def __init__(self, store: InMemoryStore, table: str) -> None:
+        self._store = store
+        self._table = table
+        self._operation = "select"
+        self._filters: list[tuple[str, str, Any]] = []
+        self._contains: dict[str, Any] | None = None
+        self._limit: int | None = None
+        self._payload: dict[str, Any] | None = None
+        self._single = False
+
+    def select(self, *_columns: str) -> _FakeQuery:
+        self._operation = "select"
+        return self
+
+    def update(self, payload: dict[str, Any]) -> _FakeQuery:
+        self._operation = "update"
+        self._payload = payload
+        return self
+
+    def eq(self, column: str, value: Any) -> _FakeQuery:
+        self._filters.append(("eq", column, value))
+        return self
+
+    def contains(self, column: str, value: dict[str, Any]) -> _FakeQuery:
+        self._contains = {column: value}
+        return self
+
+    def limit(self, value: int) -> _FakeQuery:
+        self._limit = value
+        return self
+
+    def maybe_single(self) -> _FakeQuery:
+        self._single = True
+        return self
+
+    def execute(self) -> MagicMock:
+        if self._table == "notification_outbox":
+            if self._operation == "update":
+                assert self._payload is not None
+                updated = self._store.update_outbox(self._filters, self._payload)
+                return MagicMock(data=updated)
+            rows = self._store.select_outbox(
+                filters=self._filters,
+                contains=self._contains,
+                limit=self._limit,
+                single=self._single,
+            )
+            if self._single:
+                return MagicMock(data=rows[0] if rows else None)
+            return MagicMock(data=rows)
+
+        if self._table == "profiles":
+            if self._operation == "update":
+                assert self._payload is not None
+                updated = self._store.update_profile(self._filters, self._payload)
+                return MagicMock(data=updated)
+            rows = self._store.select_profiles(self._filters, single=self._single)
+            if self._single:
+                return MagicMock(data=rows[0] if rows else None)
+            return MagicMock(data=rows)
+
+        raise AssertionError(f"Unexpected table: {self._table}")
+
+
+class InMemoryStore:
+    def __init__(self) -> None:
+        self.outbox: dict[str, dict[str, Any]] = {}
+        self.profiles: dict[str, dict[str, Any]] = {}
+        self.outbox_updates = 0
+        self.profile_updates = 0
+
+    def table(self, name: str) -> _FakeQuery:
+        return _FakeQuery(self, name)
+
+    def seed_outbox(
+        self,
+        *,
+        whatsapp_message_id: str,
+        status: str = "sent",
+        delivery_status: str | None = None,
+    ) -> dict[str, Any]:
+        row_id = str(uuid.uuid4())
+        payload: dict[str, Any] = {"whatsapp_message_id": whatsapp_message_id}
+        if delivery_status is not None:
+            payload["delivery_status"] = delivery_status
+        now = datetime.now(UTC).isoformat()
+        row = {
+            "id": row_id,
+            "dedupe_key": f"test:{whatsapp_message_id}",
+            "channel": "whatsapp",
+            "template": "order_confirmed",
+            "payload": payload,
+            "status": status,
+            "attempts": 0,
+            "next_retry_at": None,
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.outbox[row_id] = row
+        return copy.deepcopy(row)
+
+    def seed_profile(
+        self,
+        *,
+        profile_id: str = PROFILE_ID,
+        phone: str = PHONE_E164,
+        notif_prefs: dict[str, bool] | None = None,
+    ) -> dict[str, Any]:
+        row = {
+            "id": profile_id,
+            "phone": phone,
+            "notif_prefs": notif_prefs
+            or {"whatsapp": True, "sms": True, "email": True},
+        }
+        self.profiles[profile_id] = row
+        return copy.deepcopy(row)
+
+    def select_outbox(
+        self,
+        *,
+        filters: list[tuple[str, str, Any]],
+        contains: dict[str, Any] | None,
+        limit: int | None,
+        single: bool,
+    ) -> list[dict[str, Any]]:
+        rows = [copy.deepcopy(row) for row in self.outbox.values()]
+        for op, column, value in filters:
+            if op == "eq":
+                rows = [row for row in rows if row.get(column) == value]
+        if contains is not None:
+            for column, expected in contains.items():
+                if column == "payload":
+                    rows = [
+                        row
+                        for row in rows
+                        if isinstance(row.get("payload"), dict)
+                        and all(
+                            row["payload"].get(key) == val for key, val in expected.items()
+                        )
+                    ]
+        if limit is not None:
+            rows = rows[:limit]
+        if single:
+            return rows[:1]
+        return rows
+
+    def update_outbox(
+        self,
+        filters: list[tuple[str, str, Any]],
+        payload: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        self.outbox_updates += 1
+        updated: list[dict[str, Any]] = []
+        for row in self.outbox.values():
+            if all(row.get(col) == val for op, col, val in filters if op == "eq"):
+                row.update(copy.deepcopy(payload))
+                if "payload" in payload and isinstance(payload["payload"], dict):
+                    merged = dict(row.get("payload", {}))
+                    merged.update(payload["payload"])
+                    row["payload"] = merged
+                updated.append(copy.deepcopy(row))
+        return updated
+
+    def select_profiles(
+        self,
+        filters: list[tuple[str, str, Any]],
+        *,
+        single: bool,
+    ) -> list[dict[str, Any]]:
+        rows = [copy.deepcopy(row) for row in self.profiles.values()]
+        for op, column, value in filters:
+            if op == "eq":
+                rows = [row for row in rows if row.get(column) == value]
+        if single:
+            return rows[:1]
+        return rows
+
+    def update_profile(
+        self,
+        filters: list[tuple[str, str, Any]],
+        payload: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        self.profile_updates += 1
+        updated: list[dict[str, Any]] = []
+        for row in self.profiles.values():
+            if all(row.get(col) == val for op, col, val in filters if op == "eq"):
+                row.update(copy.deepcopy(payload))
+                updated.append(copy.deepcopy(row))
+        return updated
+
+
+def _sign_body(body: bytes, secret: str = APP_SECRET) -> str:
+    digest = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+    return f"sha256={digest}"
+
+
+def _status_payload(*, message_id: str = WAMID, status: str = "delivered") -> dict[str, Any]:
+    return {
+        "object": "whatsapp_business_account",
+        "entry": [
+            {
+                "id": "WABA_ID",
+                "changes": [
+                    {
+                        "value": {
+                            "messaging_product": "whatsapp",
+                            "metadata": {"phone_number_id": "123"},
+                            "statuses": [
+                                {
+                                    "id": message_id,
+                                    "status": status,
+                                    "timestamp": "1710000000",
+                                    "recipient_id": PHONE_WA,
+                                }
+                            ],
+                        },
+                        "field": "messages",
+                    }
+                ],
+            }
+        ],
+    }
+
+
+def _inbound_payload(*, body: str, sender: str = PHONE_WA) -> dict[str, Any]:
+    return {
+        "object": "whatsapp_business_account",
+        "entry": [
+            {
+                "id": "WABA_ID",
+                "changes": [
+                    {
+                        "value": {
+                            "messaging_product": "whatsapp",
+                            "metadata": {"phone_number_id": "123"},
+                            "contacts": [{"profile": {"name": "Test"}, "wa_id": sender}],
+                            "messages": [
+                                {
+                                    "from": sender,
+                                    "id": "wamid.inbound",
+                                    "timestamp": "1710000001",
+                                    "text": {"body": body},
+                                    "type": "text",
+                                }
+                            ],
+                        },
+                        "field": "messages",
+                    }
+                ],
+            }
+        ],
+    }
+
+
+@pytest.fixture
+def store() -> InMemoryStore:
+    return InMemoryStore()
+
+
+@pytest.fixture
+def webhook_client(
+    store: InMemoryStore,
+    monkeypatch: pytest.MonkeyPatch,
+) -> Generator[TestClient, None, None]:
+    monkeypatch.setenv("WHATSAPP_WEBHOOK_VERIFY_TOKEN", VERIFY_TOKEN)
+    monkeypatch.setenv("WHATSAPP_APP_SECRET", APP_SECRET)
+
+    service_wrapper = MagicMock(spec=SupabaseServiceClient)
+    service_wrapper.client = store
+
+    app = create_app()
+    app.dependency_overrides[get_supabase_client] = lambda: service_wrapper
+
+    with TestClient(app, raise_server_exceptions=False) as client:
+        yield client
+
+    app.dependency_overrides.clear()
+
+
+def test_verify_token_handshake(webhook_client: TestClient) -> None:
+    response = webhook_client.get(
+        "/webhooks/whatsapp",
+        params={
+            "hub.mode": "subscribe",
+            "hub.verify_token": VERIFY_TOKEN,
+            "hub.challenge": "1234567890",
+        },
+    )
+    assert response.status_code == 200
+    assert response.text == "1234567890"
+
+
+def test_verify_token_rejects_bad_token(webhook_client: TestClient) -> None:
+    response = webhook_client.get(
+        "/webhooks/whatsapp",
+        params={
+            "hub.mode": "subscribe",
+            "hub.verify_token": "wrong",
+            "hub.challenge": "1234567890",
+        },
+    )
+    assert response.status_code == 403
+
+
+def test_forged_post_rejected_nothing_applied(
+    webhook_client: TestClient,
+    store: InMemoryStore,
+) -> None:
+    store.seed_outbox(whatsapp_message_id=WAMID)
+    store.seed_profile()
+    body = json.dumps(_status_payload()).encode("utf-8")
+
+    response = webhook_client.post(
+        "/webhooks/whatsapp",
+        content=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Hub-Signature-256": "sha256=deadbeef",
+        },
+    )
+
+    assert response.status_code == 403
+    assert store.outbox_updates == 0
+    assert store.profile_updates == 0
+    row = next(iter(store.outbox.values()))
+    assert row["status"] == "sent"
+    assert store.profiles[PROFILE_ID]["notif_prefs"] == {
+        "whatsapp": True,
+        "sms": True,
+        "email": True,
+    }
+
+
+def test_stop_disables_all_channels(
+    webhook_client: TestClient,
+    store: InMemoryStore,
+) -> None:
+    store.seed_profile()
+    body = json.dumps(_inbound_payload(body="STOP")).encode("utf-8")
+
+    response = webhook_client.post(
+        "/webhooks/whatsapp",
+        content=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Hub-Signature-256": _sign_body(body),
+        },
+    )
+
+    assert response.status_code == 200
+    prefs = store.profiles[PROFILE_ID]["notif_prefs"]
+    assert prefs == {"whatsapp": False, "sms": False, "email": False}
+
+
+def test_start_reenables_all_channels(
+    webhook_client: TestClient,
+    store: InMemoryStore,
+) -> None:
+    store.seed_profile(
+        notif_prefs={"whatsapp": False, "sms": False, "email": False},
+    )
+    body = json.dumps(_inbound_payload(body="start")).encode("utf-8")
+
+    response = webhook_client.post(
+        "/webhooks/whatsapp",
+        content=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Hub-Signature-256": _sign_body(body),
+        },
+    )
+
+    assert response.status_code == 200
+    prefs = store.profiles[PROFILE_ID]["notif_prefs"]
+    assert prefs == {"whatsapp": True, "sms": True, "email": True}
+
+
+def test_duplicate_status_events_are_idempotent(
+    webhook_client: TestClient,
+    store: InMemoryStore,
+) -> None:
+    store.seed_outbox(whatsapp_message_id=WAMID, status="sent", delivery_status="delivered")
+    body = json.dumps(_status_payload(status="delivered")).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "X-Hub-Signature-256": _sign_body(body),
+    }
+
+    first = webhook_client.post("/webhooks/whatsapp", content=body, headers=headers)
+    second = webhook_client.post("/webhooks/whatsapp", content=body, headers=headers)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert store.outbox_updates == 0
+    row = next(iter(store.outbox.values()))
+    assert row["status"] == "sent"
+    assert row["payload"]["delivery_status"] == "delivered"
+
+
+def test_status_callback_updates_outbox(
+    webhook_client: TestClient,
+    store: InMemoryStore,
+) -> None:
+    store.seed_outbox(whatsapp_message_id=WAMID, status="sent")
+    body = json.dumps(_status_payload(status="failed")).encode("utf-8")
+
+    response = webhook_client.post(
+        "/webhooks/whatsapp",
+        content=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Hub-Signature-256": _sign_body(body),
+        },
+    )
+
+    assert response.status_code == 200
+    assert store.outbox_updates == 1
+    row = next(iter(store.outbox.values()))
+    assert row["status"] == "failed"
+    assert row["payload"]["delivery_status"] == "failed"
+
+
+def test_unknown_sender_logged_and_200(
+    webhook_client: TestClient,
+    store: InMemoryStore,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    body = json.dumps(_inbound_payload(body="Hello support", sender="260999999999")).encode(
+        "utf-8"
+    )
+
+    with caplog.at_level("INFO"):
+        response = webhook_client.post(
+            "/webhooks/whatsapp",
+            content=body,
+            headers={
+                "Content-Type": "application/json",
+                "X-Hub-Signature-256": _sign_body(body),
+            },
+        )
+
+    assert response.status_code == 200
+    assert store.profile_updates == 0
+    assert any(
+        "whatsapp support inbound" in record.message
+        and record.__dict__.get("event") == "unknown_inbound"
+        for record in caplog.records
+    ) or any("unknown_inbound" in str(record.__dict__) for record in caplog.records)
+
+
+def test_verify_hub_signature_unit() -> None:
+    body = b'{"test":true}'
+    signature = _sign_body(body)
+    assert verify_hub_signature(raw_body=body, signature_header=signature, app_secret=APP_SECRET)
+    assert not verify_hub_signature(
+        raw_body=body,
+        signature_header="sha256=deadbeef",
+        app_secret=APP_SECRET,
+    )
