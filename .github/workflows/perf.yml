@@ -24,6 +24,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
+      NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: demo
       SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
       ENV: development
       CORS_ORIGINS: http://localhost:3000
