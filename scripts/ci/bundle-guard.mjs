@@ -16,7 +16,7 @@ const MANIFEST_PATH = join(CUSTOMER_DIR, ".next/app-build-manifest.json");
 const LIGHTHOUSE_RC = join(ROOT, "lighthouserc.json");
 const REGRESSION_TOLERANCE_KB = 0.5;
 
-/** @typedef {{ defaultMaxKbGz: number, defaultJustification: string, routes: Record<string, { maxKbGz: number, justification: string }> }} BundleBudgetConfig */
+/** @typedef {{ defaultMaxKbGz: number, defaultJustification: string, routes: Record<string, { maxKbGz: number, justification: string }>, auditRoutes?: string[] }} BundleBudgetConfig */
 
 /**
  * @returns {BundleBudgetConfig}
@@ -30,6 +30,18 @@ export function loadBudgetConfig() {
     );
   }
   return bundle;
+}
+
+/**
+ * @param {BundleBudgetConfig} config
+ * @returns {Set<string>}
+ */
+export function auditRouteSet(config) {
+  const routes = config.auditRoutes;
+  if (!Array.isArray(routes) || routes.length === 0) {
+    return new Set();
+  }
+  return new Set(routes);
 }
 
 /**
@@ -103,6 +115,7 @@ export function routeToLabel(route) {
 export function evaluateRoutes(current, config, baseline) {
   /** @type {Array<{ route: string, label: string, sizeKb: number, maxKb: number, deltaKb: number | null, reason: string }>} */
   const violations = [];
+  const audited = auditRouteSet(config);
 
   for (const [route, sizeKb] of Object.entries(current)) {
     const override = config.routes?.[route];
@@ -122,7 +135,8 @@ export function evaluateRoutes(current, config, baseline) {
       continue;
     }
 
-    if (baseKb != null && sizeKb > baseKb + REGRESSION_TOLERANCE_KB) {
+    const trackRegression = audited.size === 0 || audited.has(route);
+    if (trackRegression && baseKb != null && sizeKb > baseKb + REGRESSION_TOLERANCE_KB) {
       violations.push({
         route,
         label: routeToLabel(route),

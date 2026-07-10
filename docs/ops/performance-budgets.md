@@ -24,7 +24,7 @@ Wave 10 (`M16-P01`) enforces Vergeo5 performance budgets on every pull request v
 `scripts/ci/bundle-guard.mjs` reads `apps/customer/.next/app-build-manifest.json`, sums **gzip-compressed** sizes of all `.js` chunks listed for each `*/page` route, and compares to:
 
 1. **Absolute ceiling** — `vergeo.bundle.defaultMaxKbGz` (150) or a per-route `maxKbGz` override
-2. **Regression vs base** — on PRs, rebuilds the base commit and fails if any route grows more than **0.5 KB gz** vs base (reports **route name + delta**)
+2. **Regression vs base** — on PRs, rebuilds the base commit and fails if any **audited shop route** (`vergeo.bundle.auditRoutes`) grows more than **0.5 KB gz** vs base (reports **route name + delta**). Absolute ceilings still apply to every `*/page` route.
 
 Per-route overrides **require** a `justification` string in config. Routes above 150 KB gz at M16-P01 merge carry baseline ceilings documented in `lighthouserc.json` with a target to return to 150 KB gz.
 
