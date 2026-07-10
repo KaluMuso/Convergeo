@@ -1860,9 +1860,9 @@ export type Database = {
           id: string
           kind: string
           name: string
+          per_customer_cap: number | null
           price_ngwee: number
           qty_cap: number | null
-          per_customer_cap: number | null
           updated_at: string
         }
         Insert: {
@@ -1871,9 +1871,9 @@ export type Database = {
           id?: string
           kind: string
           name: string
+          per_customer_cap?: number | null
           price_ngwee: number
           qty_cap?: number | null
-          per_customer_cap?: number | null
           updated_at?: string
         }
         Update: {
@@ -1882,9 +1882,9 @@ export type Database = {
           id?: string
           kind?: string
           name?: string
+          per_customer_cap?: number | null
           price_ngwee?: number
           qty_cap?: number | null
-          per_customer_cap?: number | null
           updated_at?: string
         }
         Relationships: [
