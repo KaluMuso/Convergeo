@@ -470,6 +470,64 @@ async def test_customer_refund_payout_sends_to_customer_and_skips_vendor_ledger(
 
 
 @pytest.mark.asyncio
+async def test_retry_pending_batch_dispatches_customer_refund_to_customer(
+    service_client: FakeServiceClient,
+    fake_client: FakeSupabaseClient,
+    bank_payout_mock: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """End-to-end wiring: the batch dispatch (retry_pending_payouts, driven by
+    POST /internal/payouts/retry-tick) selects a `pending` customer-refund row and
+    sends it to the customer momo — no separate dispatch job needed."""
+    from app.services.payouts.retry import retry_pending_payouts
+
+    monkeypatch.setenv("LENCO_ACCOUNT_ID", "lenco-acct-1")
+    customer_momo = "260955550000"
+    fake_client.tables["payouts"].rows.append(
+        {
+            "id": str(uuid.uuid4()),
+            "vendor_id": VENDOR_ID,
+            "amount_ngwee": 30_000,
+            "rail": "mtn",
+            "lenco_reference": "rfd-batch-1",
+            "status": "pending",
+            "resolve_snapshot": {
+                "kind": "customer_refund",
+                "customer_momo": customer_momo,
+                "rail": "mtn",
+                "retry_attempts": 0,
+            },
+        }
+    )
+    query_client = MagicMock()
+    query_client.query_transfer_status = AsyncMock(
+        return_value=LencoTransferStatusResponse(status=True, message="none", data=None)
+    )
+    momo_payout = AsyncMock(
+        return_value=InitiatePayoutResult(
+            provider_reference="lenco-rfd-batch",
+            status=TransferStatus.SUCCESSFUL,
+            amount_major="300.00",
+        )
+    )
+
+    with patch("app.services.payouts.retry._post_payout_ledger") as ledger_mock:
+        stats = await retry_pending_payouts(
+            service_client,
+            query_transfer_status=query_client,
+            initiate_momo_payout=momo_payout,
+            initiate_bank_payout=bank_payout_mock,
+        )
+
+    assert stats.scanned == 1
+    assert stats.completed == 1
+    momo_payout.assert_awaited_once()
+    assert momo_payout.await_args.args[0].phone == customer_momo
+    ledger_mock.assert_not_called()
+    assert fake_client.tables["payouts"].rows[0]["status"] == "paid"
+
+
+@pytest.mark.asyncio
 async def test_customer_refund_requery_paid_skips_vendor_ledger(
     service_client: FakeServiceClient,
     fake_client: FakeSupabaseClient,

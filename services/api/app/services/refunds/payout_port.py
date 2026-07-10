@@ -5,9 +5,10 @@ shared payout sweeper (`app.services.payouts.retry.retry_payout_row`), which is 
 customer-refund-aware via the ``kind: customer_refund`` tag on ``resolve_snapshot``
 (sends to the customer momo, and skips the vendor ``payout_executed`` ledger post since
 the refund legs were already posted by ``execute_refund``). The row is created
-``pending`` (never sent inline — the refund callers are sync). Remaining piece: the
-scheduled dispatch job that scans ``pending``/``processing`` payouts and drives the
-sweeper (F9b-gated — needs Lenco creds)."""
+``pending`` (never sent inline — the refund callers are sync); the existing dispatch
+job ``POST /internal/payouts/retry-tick`` → ``retry_pending_payouts`` scans
+``pending``/``processing`` payouts and drives the sweeper. Live delivery is F9b-gated
+(needs Lenco creds for the payout adapters)."""
 
 from __future__ import annotations
 
