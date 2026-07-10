@@ -16,7 +16,7 @@ from app.services.orders.state import SYSTEM_ACTOR_ID
 DEFAULT_RELEASE_AFTER_DELIVERED_HOURS = 48
 DEFAULT_RELEASE_AFTER_SHIPPED_DAYS = 7
 
-OPEN_DISPUTE_STATUSES = frozenset({"open", "vendor_responded"})
+OPEN_DISPUTE_STATUSES = frozenset({"open", "vendor_responded", "under_review"})
 
 RELEASE_ELIGIBLE_STATUSES = frozenset({"shipped", "delivered", "completed"})
 
