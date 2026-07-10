@@ -115,6 +115,7 @@ class FakeSupabaseClient:
             "orders": FakeTable(),
             "order_events": FakeTable(),
             "disputes": FakeTable(),
+            "audit_log": FakeTable(),
             "notification_outbox": FakeTable(),
         }
         self._storage_recorder = recorder if recorder is not None else {}

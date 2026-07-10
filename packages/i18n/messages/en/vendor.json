@@ -967,5 +967,48 @@
       "oversell": "Sold out — no tickets left at this cap",
       "unauthorized": "Sign in to manage ticket types"
     }
+  },
+  "disputes": {
+    "meta": {
+      "title": "Disputes",
+      "description": "View and respond to customer disputes on your orders."
+    },
+    "list": {
+      "title": "Disputes",
+      "empty": "No disputes on your orders",
+      "order": "Order {orderId}",
+      "status": "Status: {status}",
+      "view": "View dispute"
+    },
+    "detail": {
+      "title": "Dispute details",
+      "order": "Order {orderId}",
+      "statusLabel": "Status",
+      "statusDisplay": "Status: {status}",
+      "customerEvidence": "Customer evidence",
+      "evidenceCount": "{count, plural, one {# file} other {# files}}",
+      "yourResponse": "Your response",
+      "responseLabel": "Explain your side",
+      "responsePlaceholder": "What happened from your perspective?",
+      "evidenceLabel": "Add evidence",
+      "evidenceHelp": "Photos or PDFs, max 10 MB each.",
+      "addEvidence": "Add photo or PDF",
+      "uploading": "Uploading…",
+      "submit": "Submit response",
+      "submitting": "Submitting…",
+      "success": "Your response was submitted.",
+      "error": "Could not submit response. Please try again.",
+      "back": "Back to disputes",
+      "alreadyResponded": "You have already responded to this dispute.",
+      "status": {
+        "open": "Awaiting your response",
+        "vendor_responded": "Response submitted",
+        "under_review": "Under admin review",
+        "resolved_refund": "Resolved — refund to customer",
+        "resolved_release": "Resolved — payment released",
+        "resolved_partial": "Resolved — partial refund",
+        "rejected": "Dispute rejected"
+      }
+    }
   }
 }
