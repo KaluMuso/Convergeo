@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Annotated, Any, Literal, Protocol
 
 from app.core.auth import CurrentUser, require_role
@@ -7,6 +8,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.notifications.dedupe import enqueue_outbox_row
+from app.services.orders.events import emit_order_lifecycle
 from app.services.orders.state import (
     ActorRole,
     OrderEvent,
@@ -15,8 +17,11 @@ from app.services.orders.state import (
     resolve_transition,
     transition_order,
 )
+from app.services.pickup import issue_pickup_tokens
 from fastapi import APIRouter, Depends
 from pydantic import Field
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/vendor/orders", tags=["vendor-orders"])
 
@@ -467,7 +472,7 @@ def ready_for_pickup_vendor_order(
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     order_row = _load_order_row(service_client, order_id)
     _assert_vendor_owns_order(vendor_id=str(vendor["id"]), order_row=order_row)
-    return _execute_vendor_action(
+    action = _execute_vendor_action(
         service_client=service_client,
         vendor_id=str(vendor["id"]),
         actor_user_id=current_user.id,
@@ -475,3 +480,32 @@ def ready_for_pickup_vendor_order(
         event=OrderEvent.READY_FOR_PICKUP,
         note="Order ready for pickup",
     )
+
+    # Order is now `ready`. For pickup fulfilment, mint the QR + PIN and notify
+    # the customer. Never fail the (already-committed) transition on issuance or
+    # notification problems — log and move on.
+    if str(order_row.get("fulfilment")) == "pickup":
+        try:
+            issue_result = issue_pickup_tokens(order_id=order_id)
+            emit_order_lifecycle(
+                service_client.client,
+                event="order_ready_pickup",
+                order_row=order_row,
+                # `pickup_details` is the template's dynamic slot ({{2}} — "pickup
+                # details / QR link"); it MUST be present or the WhatsApp render
+                # raises. Carry the single-use PIN so the customer receives it;
+                # pin/qr also kept for the in-app (M09-P05) + email paths.
+                extra={
+                    "pickup_details": f"PIN {issue_result.pin}",
+                    "pickup_pin": issue_result.pin,
+                    "pickup_qr_token": issue_result.qr_token,
+                },
+            )
+        except Exception:
+            logger.warning(
+                "Pickup token issuance / notification failed after ready transition",
+                extra={"order_id": order_id},
+                exc_info=True,
+            )
+
+    return action
