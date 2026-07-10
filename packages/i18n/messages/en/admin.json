@@ -345,5 +345,139 @@
       "publishFailure": "Could not publish.",
       "confirmPublish": "Publish draft to live home?"
     }
+  },
+  "orders": {
+    "title": "Order operations",
+    "subtitle": "Search any order and run manual dispatch, status interventions, or escrow holds.",
+    "search": {
+      "orderId": "Order ID",
+      "orderIdPlaceholder": "UUID",
+      "phone": "Customer phone",
+      "phonePlaceholder": "+260…",
+      "vendor": "Vendor slug or name",
+      "vendorPlaceholder": "lusaka-electronics",
+      "status": "Status",
+      "statusAny": "Any status",
+      "submit": "Search orders",
+      "searching": "Searching…",
+      "needFilter": "Enter at least one filter.",
+      "error": "Could not search orders.",
+      "empty": "No orders matched your filters.",
+      "open": "Open",
+      "columns": {
+        "order": "Order",
+        "vendor": "Vendor",
+        "phone": "Phone",
+        "status": "Status"
+      },
+      "statuses": {
+        "placed": "Placed",
+        "confirmed": "Confirmed",
+        "processing": "Processing",
+        "ready": "Ready",
+        "shipped": "Shipped",
+        "delivered": "Delivered",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      }
+    },
+    "detail": {
+      "back": "Back to search",
+      "loading": "Loading order…",
+      "error": "Could not load this order.",
+      "retry": "Retry",
+      "summary": "{vendor} · {customer} · {fulfilment}",
+      "itemsTitle": "Line items",
+      "paymentsTitle": "Payments",
+      "paymentsEmpty": "No payments for this checkout group.",
+      "ledgerTitle": "Ledger",
+      "ledgerEmpty": "No ledger transactions yet.",
+      "ledgerBalance": "Σ postings: {balance} ngwee",
+      "timelineTitle": "Timeline",
+      "itemLine": "{title} × {qty}",
+      "paymentLine": "{rail} · {status}",
+      "statuses": {
+        "placed": "Placed",
+        "confirmed": "Confirmed",
+        "processing": "Processing",
+        "ready": "Ready",
+        "shipped": "Shipped",
+        "delivered": "Delivered",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      },
+      "fulfilment": {
+        "delivery": "Delivery",
+        "pickup": "Pickup"
+      }
+    },
+    "dispatch": {
+      "title": "Manual dispatch",
+      "subtitle": "Book a courier and advance fulfilment — recorded on the customer timeline.",
+      "courier": "Courier",
+      "couriers": {
+        "yango": "Yango",
+        "indrive": "inDrive",
+        "other": "Other"
+      },
+      "courierOther": "Courier name",
+      "trackingNote": "Tracking note",
+      "trackingPlaceholder": "Driver name, plate, ETA…",
+      "statusEvent": "Status update",
+      "events": {
+        "ship": "Mark shipped",
+        "mark_delivered": "Mark delivered"
+      },
+      "submit": "Record dispatch",
+      "submitting": "Saving…",
+      "success": "Dispatch recorded on the order timeline.",
+      "failure": "Could not record dispatch."
+    },
+    "intervention": {
+      "title": "Status intervention",
+      "subtitle": "Current status: {status}. Illegal transitions are rejected by the state machine.",
+      "event": "Transition event",
+      "events": {
+        "confirm": "Confirm order",
+        "reject": "Reject order",
+        "cancel": "Cancel order",
+        "start_processing": "Start processing",
+        "ready_for_pickup": "Ready for pickup",
+        "ship": "Ship",
+        "verify_pickup": "Verify pickup",
+        "mark_delivered": "Mark delivered",
+        "confirm_received": "Confirm received"
+      },
+      "reason": "Reason (required)",
+      "reasonPlaceholder": "Why is this intervention needed?",
+      "refundPath": "Paid cancellation — refund path acknowledged",
+      "submit": "Apply intervention",
+      "submitting": "Applying…",
+      "success": "Status updated via state machine.",
+      "failure": "Transition rejected or failed."
+    },
+    "escrow": {
+      "title": "Manual escrow hold / release",
+      "subtitle": "Posts a balanced ledger transaction with the manual flag. Both notes are required.",
+      "confirmationHint": "Type exactly “{phrase}” to confirm.",
+      "operation": "Operation",
+      "operations": {
+        "hold": "Hold in escrow",
+        "release": "Release from escrow"
+      },
+      "amountNgwee": "Amount (ngwee)",
+      "reason": "Reason",
+      "confirmationPhrase": "Confirmation phrase",
+      "submit": "Post manual escrow",
+      "submitting": "Posting…",
+      "success": "Manual escrow transaction posted.",
+      "failure": "Could not post manual escrow — check both notes.",
+      "invalidAmount": "Enter a positive ngwee amount."
+    },
+    "timeline": {
+      "empty": "No timeline events yet.",
+      "statusChange": "{from} → {to}",
+      "missing": "—"
+    }
   }
 }
