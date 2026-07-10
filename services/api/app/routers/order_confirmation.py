@@ -39,8 +39,7 @@ SUPPORT_REQUEST_TEMPLATE = "order-support-request"
 
 
 class _StorageServiceClient(Protocol):
-    @property
-    def client(self) -> Any: ...
+    client: Any
 
 
 class ConfirmReceivedResponse(StrictModel):

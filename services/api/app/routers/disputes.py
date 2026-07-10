@@ -29,8 +29,7 @@ MAX_EVIDENCE_BYTES = 10_485_760
 
 
 class _ServiceRoleClient(Protocol):
-    @property
-    def client(self) -> Any: ...
+    client: Any
 
 
 class OpenDisputeRequest(StrictModel):
