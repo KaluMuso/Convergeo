@@ -416,7 +416,9 @@ def test_manual_escrow_rejects_missing_confirmation_via_api(
 
 def test_manual_escrow_ledger_balance_stub(
     fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr("app.routers.admin_orders._load_ledger_post_transaction", lambda: None)
     service_wrapper = MagicMock()
     service_wrapper.client = fake_client
     _seed_search_fixtures(fake_client)

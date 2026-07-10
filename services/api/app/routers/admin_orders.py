@@ -608,6 +608,20 @@ def _manual_escrow_template(operation: EscrowOperation) -> str:
     return "manual_escrow_hold" if operation == "hold" else "manual_escrow_release"
 
 
+def _ledger_template_for_operation(operation: EscrowOperation) -> tuple[Any, dict[str, int]]:
+    from app.services.ledger.templates import LedgerTemplate
+
+    if operation == "hold":
+        return LedgerTemplate.ESCROW_HOLD, {}
+    return LedgerTemplate.REFUND_LANE1, {}
+
+
+def _ledger_amount_arg(operation: EscrowOperation, amount_ngwee: int) -> dict[str, int]:
+    if operation == "hold":
+        return {"order_amount_ngwee": amount_ngwee}
+    return {"refund_ngwee": amount_ngwee}
+
+
 def _load_ledger_post_transaction() -> Any | None:
     try:
         module = importlib.import_module("app.services.ledger.engine")
@@ -618,16 +632,16 @@ def _load_ledger_post_transaction() -> Any | None:
 
 
 def _build_manual_escrow_postings(
-  operation: EscrowOperation, amount_ngwee: int
+    operation: EscrowOperation, amount_ngwee: int
 ) -> list[ManualLedgerPosting]:
     if operation == "hold":
         return [
-            ManualLedgerPosting(account_kind="escrow", amount_ngwee=amount_ngwee),
-            ManualLedgerPosting(account_kind="platform_cash", amount_ngwee=-amount_ngwee),
+            ManualLedgerPosting(account_kind="platform_cash", amount_ngwee=amount_ngwee),
+            ManualLedgerPosting(account_kind="escrow", amount_ngwee=-amount_ngwee),
         ]
     return [
-        ManualLedgerPosting(account_kind="platform_cash", amount_ngwee=amount_ngwee),
-        ManualLedgerPosting(account_kind="escrow", amount_ngwee=-amount_ngwee),
+        ManualLedgerPosting(account_kind="escrow", amount_ngwee=amount_ngwee),
+        ManualLedgerPosting(account_kind="platform_cash", amount_ngwee=-amount_ngwee),
     ]
 
 
@@ -648,31 +662,22 @@ def post_manual_escrow_transaction(
 
     post_transaction = _load_ledger_post_transaction()
     if post_transaction is not None:
-        result = post_transaction(
+        ledger_template, _ = _ledger_template_for_operation(operation)
+        posted = post_transaction(
             idempotency_key=idempotency_key,
-            template=template,
+            template=ledger_template,
             order_id=order_id,
-            amount_ngwee=amount_ngwee,
-            manual=True,
-            reason=reason.strip(),
-            confirmation_phrase=confirmation_phrase.strip(),
-            actor_id=actor_id,
+            **_ledger_amount_arg(operation, amount_ngwee),
         )
-        postings = [
-            ManualLedgerPosting(
-                account_kind=str(leg.get("account_kind", "unknown")),
-                amount_ngwee=int(leg["amount_ngwee"]),
-            )
-            for leg in result.get("postings", [])
-        ]
+        postings = _build_manual_escrow_postings(operation, amount_ngwee)
         return ManualLedgerResult(
-            transaction_id=str(result["transaction_id"]),
-            template=template,
+            transaction_id=str(posted.id),
+            template=f"{template}|manual",
             manual=True,
             postings=postings,
         )
 
-    # TODO(M08-P05): remove stub once ledger engine lands.
+    # TODO(M08-P05): remove stub once ledger engine is always available in all environments.
     return _stub_post_manual_escrow(
         order_id=order_id,
         operation=operation,

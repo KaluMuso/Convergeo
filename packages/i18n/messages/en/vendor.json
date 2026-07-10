@@ -543,5 +543,81 @@
       "hours_all_closed": "Mark at least one day as open.",
       "location_required": "Add your location before setting hours."
     }
+  },
+  "orders": {
+    "meta": {
+      "title": "Order detail — Vergeo5 Vendor",
+      "description": "View order items, payment context, timeline, and fulfilment actions."
+    },
+    "title": "Order",
+    "loading": "Loading order…",
+    "back": "Back to orders",
+    "status": {
+      "placed": "Placed",
+      "confirmed": "Confirmed",
+      "processing": "Processing",
+      "ready": "Ready for pickup",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "fulfilment": {
+      "delivery": "Delivery",
+      "pickup": "Pickup"
+    },
+    "payment": {
+      "heading": "Payment",
+      "cod": "Cash on delivery",
+      "paid": "Paid — held in escrow",
+      "unpaid": "Awaiting payment"
+    },
+    "items": {
+      "heading": "Items",
+      "qty": "Qty {qty}",
+      "empty": "No line items"
+    },
+    "timeline": {
+      "heading": "Timeline",
+      "empty": "No events yet",
+      "note": "Note: {note}"
+    },
+    "actions": {
+      "heading": "Actions",
+      "confirm": "Confirm order",
+      "reject": "Reject order",
+      "pack": "Start packing",
+      "ship": "Mark shipped",
+      "ready_for_pickup": "Ready for pickup",
+      "confirming": "Confirming…",
+      "rejecting": "Rejecting…",
+      "packing": "Packing…",
+      "shipping": "Shipping…",
+      "markingReady": "Updating…",
+      "rejectPrompt": "Tell the customer why you cannot fulfil this order.",
+      "rejectLabel": "Reason (shown to customer)",
+      "rejectPlaceholder": "e.g. Out of stock — sorry for the inconvenience",
+      "shipPrompt": "Add tracking or courier details for the buyer.",
+      "shipLabel": "Tracking note",
+      "shipPlaceholder": "e.g. Yango courier — driver John 0977…",
+      "submitReject": "Reject with reason",
+      "submitShip": "Mark as shipped",
+      "cancel": "Cancel"
+    },
+    "success": {
+      "confirmed": "Order confirmed.",
+      "rejected": "Order rejected.",
+      "packed": "Order is now processing.",
+      "shipped": "Order marked shipped.",
+      "ready": "Order ready for pickup."
+    },
+    "errors": {
+      "loadFailed": "Could not load this order. Pull to refresh.",
+      "actionFailed": "Action failed. Try again.",
+      "forbidden": "You can only manage your own orders.",
+      "invalidTransition": "That action is not available for this order.",
+      "reasonRequired": "A reason is required when rejecting.",
+      "trackingRequired": "A tracking note is required when shipping."
+    }
   }
 }
