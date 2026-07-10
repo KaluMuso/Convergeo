@@ -1,6 +1,7 @@
 import { LOCALES } from "@vergeo/i18n";
-import Link from "next/link";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+
+import { DashboardBoard } from "./_components/DashboardBoard";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -13,24 +14,15 @@ export function generateStaticParams() {
 export default async function HomePage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("common");
-  const switchLocale = locale === "en" ? "fr" : "en";
+  const t = await getTranslations("admin.dashboard");
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[360px] flex-col gap-4 p-4">
+    <div className="space-y-4">
       <header className="space-y-1">
-        <p className="text-xs uppercase tracking-wide text-gray-500">{t("app.name")}</p>
-        <h1 className="text-xl font-semibold">{t("nav.home")}</h1>
+        <h1 className="font-serif text-xl text-[#2A2118]">{t("title")}</h1>
+        <p className="text-sm text-[#6B5E4C]">{t("subtitle")}</p>
       </header>
-      <p className="text-sm text-gray-700">{t("greeting", { name: t("app.name") })}</p>
-      <nav>
-        <Link
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-gray-300 px-4 text-sm font-medium"
-          href={`/${switchLocale}`}
-        >
-          {switchLocale.toUpperCase()}
-        </Link>
-      </nav>
-    </main>
+      <DashboardBoard locale={locale} />
+    </div>
   );
 }
