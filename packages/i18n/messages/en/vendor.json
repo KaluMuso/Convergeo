@@ -619,5 +619,59 @@
       "reasonRequired": "A reason is required when rejecting.",
       "trackingRequired": "A tracking note is required when shipping."
     }
+  },
+  "home": {
+    "title": "Today",
+    "eyebrow": "Vendor home",
+    "loading": "Loading dashboard…",
+    "offlineNotice": "Showing saved data — connect to refresh.",
+    "takings": {
+      "label": "Today's takings",
+      "caption": "Confirmed revenue for {date} (Lusaka time)"
+    },
+    "needsAction": {
+      "heading": "Needs action",
+      "empty": "You're all caught up — no orders waiting on you."
+    },
+    "actions": {
+      "openQueue": "Open order queue",
+      "confirmOrders": "Confirm new orders"
+    },
+    "errors": {
+      "loadFailed": "Could not load your dashboard. Pull to refresh."
+    }
+  },
+  "queue": {
+    "meta": {
+      "title": "Order queue — Vergeo5 Vendor",
+      "description": "Filter and fulfil orders with one-tap actions."
+    },
+    "title": "Orders",
+    "intro": "Tap an action to move orders forward. Pull down to refresh.",
+    "loading": "Loading orders…",
+    "refreshing": "Refreshing…",
+    "pullToRefresh": "Release to refresh",
+    "offlineNotice": "Offline — showing your last saved queue.",
+    "empty": "No orders in this view.",
+    "emptyCta": "Back to home",
+    "filters": {
+      "needsAction": "Needs action",
+      "placed": "New",
+      "confirmed": "Confirmed",
+      "processing": "Packing",
+      "all": "All"
+    },
+    "card": {
+      "items": "{count, plural, one {# item} other {# items}}"
+    },
+    "sheet": {
+      "title": "{action}?",
+      "body": "{title} · {amount}",
+      "confirm": "Yes, continue",
+      "cancel": "Not now"
+    },
+    "errors": {
+      "loadFailed": "Could not load orders. Pull to refresh."
+    }
   }
 }
