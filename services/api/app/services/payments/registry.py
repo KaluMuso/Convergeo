@@ -2,20 +2,8 @@
 
 from __future__ import annotations
 
-from app.services.payments.base import (
-    InitiateCollectionRequest,
-    InitiateCollectionResult,
-    InitiatePayoutRequest,
-    InitiatePayoutResult,
-    PaymentProviderError,
-    PaymentStrategy,
-    QueryStatusRequest,
-    QueryStatusResult,
-    ResolveAccountRequest,
-    ResolveAccountResult,
-    VerifyWebhookRequest,
-    VerifyWebhookResult,
-)
+from app.services.payments.base import PaymentProviderError, PaymentStrategy
+from app.services.payments.lenco.client import LencoStrategy
 
 LENCO_PROVIDER = "lenco"
 
@@ -43,26 +31,4 @@ def get(provider: str) -> PaymentStrategy:
         raise UnknownProviderError(provider) from exc
 
 
-class _LencoPlaceholderStrategy:
-    """Registered by name only — real HTTP client lands in M08-P02."""
-
-    async def initiate_collection(
-        self,
-        request: InitiateCollectionRequest,
-    ) -> InitiateCollectionResult:
-        raise NotImplementedError("Lenco client not implemented (M08-P02)")
-
-    async def query_status(self, request: QueryStatusRequest) -> QueryStatusResult:
-        raise NotImplementedError("Lenco client not implemented (M08-P02)")
-
-    async def initiate_payout(self, request: InitiatePayoutRequest) -> InitiatePayoutResult:
-        raise NotImplementedError("Lenco client not implemented (M08-P02)")
-
-    async def resolve_account(self, request: ResolveAccountRequest) -> ResolveAccountResult:
-        raise NotImplementedError("Lenco client not implemented (M08-P02)")
-
-    async def verify_webhook(self, request: VerifyWebhookRequest) -> VerifyWebhookResult:
-        raise NotImplementedError("Lenco client not implemented (M08-P02)")
-
-
-register(LENCO_PROVIDER, _LencoPlaceholderStrategy())
+register(LENCO_PROVIDER, LencoStrategy())
