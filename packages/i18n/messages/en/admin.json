@@ -202,5 +202,68 @@
       "failure": "Could not merge products.",
       "idempotent": "These products were already merged — no changes made."
     }
+  },
+  "flags": {
+    "title": "Flag queue",
+    "subtitle": "Listing, review, and prohibited-category reports — oldest first.",
+    "common": {
+      "cancel": "Cancel",
+      "submitting": "Saving…",
+      "noteLabel": "Moderator note (optional)",
+      "notePlaceholder": "Internal note for audit trail"
+    },
+    "queue": {
+      "empty": "No open flags in the queue.",
+      "loading": "Loading flags…",
+      "error": "Could not load the flag queue.",
+      "retry": "Retry",
+      "success": "Action recorded — parties will be notified where applicable.",
+      "filterEntity": "Filter",
+      "vendor": "Vendor: {name}",
+      "reported": "Reported {at}",
+      "repeatOffender": "{count, plural, one {# prior actioned flag} other {# prior actioned flags}}",
+      "entityType": {
+        "all": "All",
+        "listing": "Listing",
+        "review": "Review",
+        "prohibited": "Prohibited"
+      }
+    },
+    "actions": {
+      "failure": "Could not complete this action.",
+      "dismiss": {
+        "button": "Dismiss",
+        "title": "Dismiss flag",
+        "body": "Close this report without taking content action.",
+        "confirm": "Dismiss"
+      },
+      "unpublish": {
+        "button": "Unpublish",
+        "title": "Unpublish listing",
+        "body": "Hide this listing from public search and catalog (≤1 min).",
+        "warning": "The listing will no longer appear publicly.",
+        "confirm": "Unpublish"
+      },
+      "remove": {
+        "button": "Remove",
+        "title": "Remove content",
+        "body": "Permanently remove the flagged listing or review.",
+        "warning": "This cannot be undone by the vendor.",
+        "confirm": "Remove"
+      },
+      "warn-vendor": {
+        "button": "Warn vendor",
+        "title": "Warn vendor",
+        "body": "Send a policy warning to the vendor via WhatsApp.",
+        "confirm": "Send warning"
+      },
+      "escalate-suspend": {
+        "button": "Suspend vendor",
+        "title": "Suspend vendor",
+        "body": "Suspend the vendor account. Listings stop surfacing; in-flight orders and payouts are unaffected.",
+        "warning": "Existing orders will continue — no cascade cancellation.",
+        "confirm": "Suspend vendor"
+      }
+    }
   }
 }
