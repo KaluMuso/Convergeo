@@ -198,7 +198,7 @@ def _seed_ticket_graph(
             "holder_user_id": holder_user_id,
             "status": status,
             "qr_secret": qr_secret,
-            "pin_hash": seal_pin_storage(pin=pin, ticket_id=ticket_id, secret="service-role-key"),
+            "pin_hash": seal_pin_storage(pin=pin, ticket_id=ticket_id),
             "instance_id": instance_id,
             "ticket_type_id": ticket_type_id,
             "created_at": "2026-07-10T12:00:00Z",
@@ -326,13 +326,9 @@ def test_horizon_expiry_requires_resync(monkeypatch: pytest.MonkeyPatch) -> None
 
 def test_pin_verify_round_trip() -> None:
     ticket_id = str(uuid.uuid4())
-    stored = seal_pin_storage(pin="654321", ticket_id=ticket_id, secret="service-role-key")
-    assert verify_pin(
-        pin="654321", ticket_id=ticket_id, pin_hash=stored, secret="service-role-key"
-    )
-    assert not verify_pin(
-        pin="000000", ticket_id=ticket_id, pin_hash=stored, secret="service-role-key"
-    )
+    stored = seal_pin_storage(pin="654321", ticket_id=ticket_id)
+    assert verify_pin(pin="654321", ticket_id=ticket_id, pin_hash=stored)
+    assert not verify_pin(pin="000000", ticket_id=ticket_id, pin_hash=stored)
 
 
 def test_wallet_detail_rls_other_holder_404(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -438,7 +434,6 @@ def test_wallet_integration_db_rls(db: PgConn, db_url_env: None) -> None:
     pin_hash = seal_pin_storage(
         pin="112233",
         ticket_id=ticket_id,
-        secret="service-role-key",
     )
     _insert_ticket(
         db,
