@@ -153,6 +153,23 @@ class NotificationDispatcher:
             logger.debug("Failed to load notif_prefs for recipient", exc_info=True)
         return {}
 
+    def fetch_recipient(self, recipient_id: str) -> dict[str, Any]:
+        """Load the recipient's contact + prefs (phone, locale, notif_prefs)."""
+        try:
+            response = (
+                self.client.table(PROFILES_TABLE)
+                .select("phone, locale, notif_prefs")
+                .eq("id", recipient_id)
+                .maybe_single()
+                .execute()
+            )
+            row = response.data
+            if isinstance(row, dict):
+                return row
+        except Exception:
+            logger.debug("Failed to load recipient profile", exc_info=True)
+        return {}
+
     def fetch_row(self, row_id: str) -> dict[str, Any] | None:
         response = (
             self.client.table(OUTBOX_TABLE).select("*").eq("id", row_id).maybe_single().execute()
@@ -222,11 +239,22 @@ class NotificationDispatcher:
             return "skipped"
 
         payload = fresh.get("payload")
-        payload_dict = payload if isinstance(payload, dict) else {}
+        payload_dict = dict(payload) if isinstance(payload, dict) else {}
         recipient_id = payload_dict.get("recipient_id")
-        notif_prefs = (
-            self.fetch_notif_prefs(str(recipient_id)) if recipient_id is not None else {}
-        )
+        recipient = self.fetch_recipient(str(recipient_id)) if recipient_id is not None else {}
+        notif_prefs_raw = recipient.get("notif_prefs")
+        notif_prefs = notif_prefs_raw if isinstance(notif_prefs_raw, dict) else {}
+
+        # Inject the recipient's destination contact so the adapters/templates can
+        # address them: WhatsApp render needs `to` (E.164), SMS needs `phone`,
+        # WhatsApp locale selection reads `locale`. Enqueue-time payload wins if set.
+        phone = recipient.get("phone")
+        if isinstance(phone, str) and phone:
+            payload_dict.setdefault("to", phone)
+            payload_dict.setdefault("phone", phone)
+        locale = recipient.get("locale")
+        if isinstance(locale, str) and locale:
+            payload_dict.setdefault("locale", locale)
 
         requested_channel = str(fresh.get("channel", "whatsapp"))
         channel = resolve_channel(requested_channel, notif_prefs)

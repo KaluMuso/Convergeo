@@ -5,7 +5,7 @@ from typing import Annotated, Any
 
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.services.notifications.adapters.base import NoopAdapter
+from app.services.notifications.adapter_registry import build_adapters
 from app.services.notifications.dispatcher import run_dispatch_batch
 from fastapi import APIRouter, Depends, Request
 
@@ -32,12 +32,7 @@ async def require_internal_dispatch_token(request: Request) -> None:
 
 
 def _build_adapters() -> dict[str, Any]:
-    noop = NoopAdapter()
-    return {
-        "whatsapp": noop,
-        "sms": noop,
-        "email": noop,
-    }
+    return build_adapters()
 
 
 @router.post(
