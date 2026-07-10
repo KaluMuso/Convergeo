@@ -746,5 +746,59 @@
       "empty": "No verifications yet",
       "order": "Order {orderId}"
     }
+  },
+  "tickets": {
+    "meta": {
+      "title": "Ticket types",
+      "description": "Configure ticket types, pricing, and purchase caps for your event."
+    },
+    "heading": "Ticket types",
+    "subheading": "Set pricing tiers and caps before you publish.",
+    "addType": "Add ticket type",
+    "empty": "No ticket types yet. Add a fixed price, tier, or free RSVP type.",
+    "loading": "Loading ticket types…",
+    "saving": "Saving…",
+    "saved": "Ticket type saved",
+    "deleted": "Ticket type removed",
+    "backToEvent": "Back to event",
+    "fields": {
+      "kindLabel": "Type",
+      "kindFixed": "Fixed price",
+      "kindTier": "Tier (e.g. Standard / VIP)",
+      "kindFreeRsvp": "Free RSVP",
+      "nameLabel": "Name",
+      "namePlaceholder": "General Admission",
+      "priceLabel": "Price (ZMW)",
+      "pricePlaceholder": "75.00",
+      "priceHelp": "Enter amount in kwacha; stored as ngwee (no decimals in DB).",
+      "priceFreeHelp": "Free RSVP is always K0.00.",
+      "qtyCapLabel": "Quantity cap (optional)",
+      "qtyCapPlaceholder": "Unlimited",
+      "qtyCapHelp": "Max tickets of this type across all sales.",
+      "perCustomerCapLabel": "Per-customer cap (optional)",
+      "perCustomerCapPlaceholder": "Unlimited",
+      "perCustomerCapHelp": "Max tickets one buyer can hold for this type.",
+      "soldLabel": "{count, plural, one {# sold} other {# sold}}"
+    },
+    "actions": {
+      "save": "Save type",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Delete this ticket type?"
+    },
+    "errors": {
+      "loadFailed": "Could not load ticket types. Try again.",
+      "saveFailed": "Could not save ticket type.",
+      "deleteFailed": "Could not delete ticket type.",
+      "required": "This field is required",
+      "priceInvalid": "Enter a valid price (e.g. 75.00)",
+      "freeMustBeZero": "Free RSVP must be K0.00",
+      "paidMustBePositive": "Paid types must be greater than K0.00",
+      "duplicateTier": "A tier with this name already exists",
+      "duplicateFixed": "This event already has a fixed-price type",
+      "oversell": "Sold out — no tickets left at this cap",
+      "unauthorized": "Sign in to manage ticket types"
+    }
   }
 }
