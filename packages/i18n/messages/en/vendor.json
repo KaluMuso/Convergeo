@@ -819,5 +819,99 @@
       "empty": "No verifications yet",
       "order": "Order {orderId}"
     }
+  },
+  "events": {
+    "eyebrow": "Events",
+    "list": {
+      "meta": {
+        "title": "Your events — Vergeo5 Vendor",
+        "description": "Create and manage ticketed events and free RSVPs."
+      },
+      "title": "Your events",
+      "intro": "Create workshops, shows, and community gatherings. Publish when you are ready to sell tickets.",
+      "loading": "Loading events…",
+      "empty": "No events yet.",
+      "createCta": "Create event",
+      "editCta": "Edit event",
+      "noVenue": "Venue TBD",
+      "ticketsSold": "{count, plural, one {# ticket sold} other {# tickets sold}}"
+    },
+    "form": {
+      "createMeta": {
+        "title": "Create event — Vergeo5 Vendor",
+        "description": "Set up a new event with dates, venue, and photos."
+      },
+      "editMeta": {
+        "title": "Edit event — Vergeo5 Vendor",
+        "description": "Update event details, instances, and publish status."
+      },
+      "createTitle": "Create event",
+      "editTitle": "Edit event",
+      "title": "Event title",
+      "titlePlaceholder": "e.g. Lusaka Comedy Night",
+      "description": "Description",
+      "descriptionPlaceholder": "Tell attendees what to expect…",
+      "venue": "Venue",
+      "venuePlaceholder": "e.g. East Park Mall car park",
+      "landmark": "Landmark",
+      "landmarkPlaceholder": "e.g. Near Shoprite entrance",
+      "lat": "Latitude",
+      "latPlaceholder": "-15.3875",
+      "lng": "Longitude",
+      "lngPlaceholder": "28.3228",
+      "save": "Save draft",
+      "saving": "Saving…",
+      "saved": "Changes saved.",
+      "backToList": "Back to events",
+      "ticketsSold": "{count, plural, one {# ticket sold} other {# tickets sold}}"
+    },
+    "instances": {
+      "heading": "Dates & capacity",
+      "label": "Instance {index}",
+      "add": "Add date",
+      "remove": "Remove",
+      "startsAt": "Starts",
+      "capacity": "Capacity",
+      "sold": "{count, plural, one {# ticket sold — capacity cannot go lower} other {# tickets sold — capacity cannot go lower}}"
+    },
+    "images": {
+      "heading": "Photos",
+      "intro": "{count} of {max} photos.",
+      "upload": "Add photos",
+      "uploading": "Uploading…",
+      "upload_failed": "Upload failed. Try again.",
+      "remove": "Remove",
+      "limit_reached": "You can add up to 8 photos."
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published",
+      "cancelled": "Cancelled",
+      "completed": "Ended"
+    },
+    "actions": {
+      "publish": "Publish event",
+      "publishing": "Publishing…",
+      "publishSuccess": "Event is live.",
+      "cancel": "Cancel event",
+      "cancelling": "Cancelling…",
+      "cancelSuccess": "Event cancelled.",
+      "end": "Mark as ended",
+      "ending": "Ending…",
+      "endSuccess": "Event marked as ended."
+    },
+    "errors": {
+      "authRequired": "Sign in to manage events.",
+      "loadFailed": "Could not load events. Pull to refresh.",
+      "saveFailed": "Could not save event. Try again.",
+      "actionFailed": "Action failed. Try again.",
+      "notFound": "Event not found.",
+      "required": "This field is required",
+      "kyc_required": "Complete KYC verification before creating events.",
+      "capacity_below_sold": "Capacity cannot be lower than tickets already sold.",
+      "past_instance": "Move past dates forward before publishing.",
+      "not_editable": "This event can no longer be edited.",
+      "invalid_transition": "That action is not available for this event."
+    }
   }
 }
