@@ -490,7 +490,9 @@ class TestWithdrawal:
 
 
 class TestAuthz:
-    def test_non_matched_provider_cannot_submit_quote(self, seeded_fake: FakeSupabaseClient) -> None:
+    def test_non_matched_provider_cannot_submit_quote(
+        self, seeded_fake: FakeSupabaseClient
+    ) -> None:
         unmatched_vendor_id = "99999999-9999-9999-9999-999999999999"
         unmatched_owner = "88888888-8888-8888-8888-888888888888"
         _seed_vendor(
