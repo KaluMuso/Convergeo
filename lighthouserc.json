@@ -56,6 +56,10 @@
           "maxKbGz": 189,
           "justification": "M16-P01 baseline (multi-step checkout). Target: code-split payment/fulfilment steps to ≤150 KB gz."
         },
+        "/[locale]/(shop)/checkout/card/[paymentId]/page": {
+          "maxKbGz": 186,
+          "justification": "M08-P06 card widget page shares checkout auth shell. Target: ≤150 KB gz after auth chunk split."
+        },
         "/[locale]/(shop)/p/[slug]/page": {
           "maxKbGz": 190,
           "justification": "M16-P01 baseline (PDP gallery + comparison). Target: lazy-load comparison module to ≤150 KB gz."
