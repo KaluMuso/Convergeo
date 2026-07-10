@@ -32,7 +32,7 @@ TOKEN_B = "vendor-b-token"
 
 
 class FakeQuery:
-    def __init__(self, parent: "FakeTable", filters: list[tuple[str, str, Any]]) -> None:
+    def __init__(self, parent: FakeTable, filters: list[tuple[str, str, Any]]) -> None:
         self._parent = parent
         self._filters = filters
         self._maybe_single = False
@@ -130,7 +130,7 @@ class FakeQuery:
 
 
 class FakeTable:
-    def __init__(self, store: "FakeSupabaseClient", name: str) -> None:
+    def __init__(self, store: FakeSupabaseClient, name: str) -> None:
         self.store = store
         self.name = name
         self.rows: list[dict[str, Any]] = []

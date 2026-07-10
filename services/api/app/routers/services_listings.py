@@ -4,7 +4,7 @@ import re
 import statistics
 import uuid
 from datetime import UTC, datetime
-from typing import Annotated, Any, Literal, Protocol
+from typing import Annotated, Any, Literal, Protocol, cast
 
 from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
@@ -229,7 +229,7 @@ def _cached_response_time_tier(caps_snapshot: Any) -> ResponseTimeTier | None:
         return None
     raw = caps_snapshot.get("response_time_tier")
     if raw in ("fast", "same_day", "slow"):
-        return raw
+        return cast(ResponseTimeTier, raw)
     return None
 
 
@@ -408,11 +408,18 @@ def _to_browse_item(
         service_area=row.get("service_area"),
         from_price_ngwee=row.get("from_price_ngwee"),
         portfolio_images=_parse_images(row.get("portfolio_images")),
-        provider=_provider_from_vendor(vendor_row, response_time_tier_value=response_time_tier_value),
+        provider=_provider_from_vendor(
+            vendor_row,
+            response_time_tier_value=response_time_tier_value,
+        ),
     )
 
 
-def _to_detail(row: dict[str, Any], *, response_time_tier_value: ResponseTimeTier | None) -> ServiceDetailResponse:
+def _to_detail(
+    row: dict[str, Any],
+    *,
+    response_time_tier_value: ResponseTimeTier | None,
+) -> ServiceDetailResponse:
     service_id = str(row["id"])
     vendor_row = _parse_vendor_embed(row.get("vendors"))
     return ServiceDetailResponse(
@@ -424,7 +431,10 @@ def _to_detail(row: dict[str, Any], *, response_time_tier_value: ResponseTimeTie
         service_area=row.get("service_area"),
         from_price_ngwee=row.get("from_price_ngwee"),
         portfolio_images=_parse_images(row.get("portfolio_images")),
-        provider=_provider_from_vendor(vendor_row, response_time_tier_value=response_time_tier_value),
+        provider=_provider_from_vendor(
+            vendor_row,
+            response_time_tier_value=response_time_tier_value,
+        ),
     )
 
 
