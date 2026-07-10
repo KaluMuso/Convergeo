@@ -458,6 +458,7 @@ async def test_customer_refund_payout_sends_to_customer_and_skips_vendor_ledger(
     assert outcome == "completed"
     # Sent to the CUSTOMER's momo, not the vendor.
     momo_payout.assert_awaited_once()
+    assert momo_payout.await_args is not None
     sent_request = momo_payout.await_args.args[0]
     assert sent_request.phone == customer_momo
     assert sent_request.amount_ngwee == 42_000
@@ -522,6 +523,7 @@ async def test_retry_pending_batch_dispatches_customer_refund_to_customer(
     assert stats.scanned == 1
     assert stats.completed == 1
     momo_payout.assert_awaited_once()
+    assert momo_payout.await_args is not None
     assert momo_payout.await_args.args[0].phone == customer_momo
     ledger_mock.assert_not_called()
     assert fake_client.tables["payouts"].rows[0]["status"] == "paid"
