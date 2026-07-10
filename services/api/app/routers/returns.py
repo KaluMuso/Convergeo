@@ -180,41 +180,11 @@ async def preview_return(
         )
 
     order_id = ""
-    fee_breakdown: dict[str, Any] = {}
     load_order_item = getattr(lane2, "_load_order_item_context", None)
     if callable(load_order_item):
         try:
             order_item = load_order_item(service_client, order_item_id=order_item_id)
             order_id = str(order_item["order_id"])
-            if result.eligible:
-                compute_breakdown = getattr(lane2, "compute_lane2_breakdown", None)
-                load_order = getattr(lane2, "_load_order", None)
-                prorated_delivery = getattr(lane2, "_prorated_outbound_delivery", None)
-                item_ngwee = getattr(lane2, "_item_ngwee", None)
-                load_restocking = getattr(lane2, "load_restocking_pct", None)
-                if all(
-                    callable(fn)
-                    for fn in (
-                        compute_breakdown,
-                        load_order,
-                        prorated_delivery,
-                        item_ngwee,
-                        load_restocking,
-                    )
-                ):
-                    order = load_order(service_client, order_id=order_id)
-                    breakdown = compute_breakdown(
-                        item_ngwee=item_ngwee(order_item),
-                        outbound_delivery_ngwee=prorated_delivery(
-                            service_client,
-                            order_id=order_id,
-                            order_item=order_item,
-                            delivery_fee_ngwee=int(order.get("delivery_fee_ngwee", 0)),
-                        ),
-                        return_transport_ngwee=0,
-                        restocking_pct=load_restocking(service_client),
-                    )
-                    fee_breakdown = breakdown.as_dict()
         except AppError:
             pass
 
@@ -227,7 +197,7 @@ async def preview_return(
         order_item_id=order_item_id,
         order_id=order_id,
         within_window=within_window,
-        fee_breakdown=fee_breakdown,
+        fee_breakdown={},
         lane2_eligible=result.eligible,
         lane2_reason=result.reason,
     )
