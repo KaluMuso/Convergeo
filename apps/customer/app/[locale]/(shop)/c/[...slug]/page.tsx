@@ -9,9 +9,10 @@ import {
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { decodePlpFilters, FacetPanel, type FacetCounts } from "../../_components/plp/facet-panel";
+import { FacetPanel, type FacetCounts } from "../../_components/plp/facet-panel";
 import { type CatalogListing } from "../../_components/plp/listing-grid";
 import { PlpBrowseClient } from "../../_components/plp/load-more";
+import { decodePlpFilters } from "../../_components/plp/plp-filters";
 import { type CatalogSort, SortBar } from "../../_components/plp/sort-bar";
 
 import type { Metadata } from "next";
