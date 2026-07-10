@@ -60,6 +60,10 @@
           "maxKbGz": 183,
           "justification": "M07-P07 pending USSD wait — shares checkout client shell. Target: code-split to ≤150 KB gz."
         },
+        "/[locale]/(shop)/checkout/card/[paymentId]/page": {
+          "maxKbGz": 186,
+          "justification": "M08-P06 card widget page shares checkout auth shell. Target: ≤150 KB gz after auth chunk split."
+        },
         "/[locale]/(shop)/p/[slug]/page": {
           "maxKbGz": 190,
           "justification": "M16-P01 baseline (PDP gallery + comparison). Target: lazy-load comparison module to ≤150 KB gz."

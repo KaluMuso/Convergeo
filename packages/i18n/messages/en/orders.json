@@ -75,5 +75,42 @@
   "errors": {
     "loadFailed": "Could not load your orders. Please try again.",
     "notFound": "Order not found"
+  },
+  "confirm": {
+    "title": "Received your order?",
+    "body": "Confirming releases payment from Vergeo5 escrow to the vendor. Only confirm when you have received everything.",
+    "trust": "Held by Vergeo5 → Released to vendor",
+    "button": "Confirm received",
+    "confirming": "Confirming…",
+    "done": "You confirmed receipt",
+    "doneBody": "Payment has been released to the vendor.",
+    "error": "Could not confirm receipt. Please try again."
+  },
+  "report": {
+    "title": "Report a problem",
+    "body": "Tell us what went wrong. You can attach photos or a PDF as evidence.",
+    "categoryLabel": "What is the issue?",
+    "categoryFaulty": "Item is faulty or damaged",
+    "categoryWrong": "Wrong item received",
+    "categoryNotDelivered": "Order not delivered",
+    "categoryOther": "Something else",
+    "descriptionLabel": "Describe the problem",
+    "descriptionPlaceholder": "What happened? Include any details that help us investigate.",
+    "evidenceLabel": "Add evidence (optional)",
+    "evidenceHelp": "Up to 8 photos or PDFs, max 10 MB each.",
+    "addEvidence": "Add photo or PDF",
+    "uploading": "Uploading…",
+    "submit": "Submit report",
+    "submitting": "Submitting…",
+    "successLane1": "We have recorded your return request. Our returns team will guide you through the next steps.",
+    "successDispute": "We opened a dispute and will investigate with the vendor.",
+    "successSupport": "Our support team will contact you shortly.",
+    "successGuidance": "The 48-hour return window has passed. Please contact support for help.",
+    "error": "Could not submit your report. Please try again.",
+    "requiredDescription": "Please describe the problem.",
+    "guidance": {
+      "lane1": "You are within the 48-hour window for a full return including delivery.",
+      "expired": "The 48-hour return window has ended. Contact support for further options."
+    }
   }
 }
