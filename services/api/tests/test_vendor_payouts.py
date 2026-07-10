@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -156,7 +156,8 @@ class FakeRpc:
         return self
 
     def execute(self) -> MagicMock:
-        key = f"{self._params.get('p_scope')}|{self._params.get('p_key')}"
+        params = self._params or {}
+        key = f"{params.get('p_scope')}|{params.get('p_key')}"
         rows = self._results.get(key, [{"allowed": True, "retry_after_seconds": 0}])
         return MagicMock(data=rows)
 
@@ -296,7 +297,7 @@ def test_balance_derivation_matches_ledger_accounts(fake_client: FakeSupabaseCli
         ),
     ):
         balances = compute_vendor_balances(
-            fake_client,
+            cast(Any, fake_client),
             vendor_id=VENDOR_A_ID,
             payout_msisdn=None,
             payout_rail=None,
