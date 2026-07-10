@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
+from enum import StrEnum
 from typing import Any, Protocol
+from zoneinfo import ZoneInfo
 
 from app.services.notifications.adapters.base import (
     ChannelAdapter,
@@ -28,6 +30,93 @@ DEFAULT_CHANNEL_PACE_SECONDS: dict[str, float] = {
     "sms": 0.05,
     "email": 0.05,
 }
+
+DEFAULT_RECIPIENT_TZ = "Africa/Lusaka"
+QUIET_HOURS_START = 21
+QUIET_HOURS_END = 7
+
+
+class TemplateClass(StrEnum):
+    TRANSACTIONAL = "transactional"
+    MARKETING = "marketing"
+
+
+TEMPLATE_CLASSIFICATION: dict[str, TemplateClass] = {
+    # WhatsApp lifecycle (utility / transactional)
+    "order_confirmed": TemplateClass.TRANSACTIONAL,
+    "payment_received": TemplateClass.TRANSACTIONAL,
+    "order_shipped": TemplateClass.TRANSACTIONAL,
+    "order_ready_pickup": TemplateClass.TRANSACTIONAL,
+    "order_delivered": TemplateClass.TRANSACTIONAL,
+    "vendor_new_order": TemplateClass.TRANSACTIONAL,
+    "otp_login": TemplateClass.TRANSACTIONAL,
+    # Email receipts & KYC outcomes
+    "payment_receipt": TemplateClass.TRANSACTIONAL,
+    "order_receipt": TemplateClass.TRANSACTIONAL,
+    "kyc_approved": TemplateClass.TRANSACTIONAL,
+    "kyc_rejected": TemplateClass.TRANSACTIONAL,
+    # n8n operational — founder/vendor alerts are transactional
+    "payout_failure_alert": TemplateClass.TRANSACTIONAL,
+    "low_stock_alert": TemplateClass.TRANSACTIONAL,
+    # Engagement / nudge — quiet hours apply
+    "review_request": TemplateClass.MARKETING,
+    "abandoned_cart_recovery": TemplateClass.MARKETING,
+    "kyc_nudge": TemplateClass.MARKETING,
+}
+
+
+def get_template_class(template: str | None) -> TemplateClass:
+    if not template:
+        return TemplateClass.TRANSACTIONAL
+    return TEMPLATE_CLASSIFICATION.get(template, TemplateClass.TRANSACTIONAL)
+
+
+def is_quiet_hours(local_time: datetime) -> bool:
+    """Return True when local time is inside marketing quiet hours (21:00–07:00)."""
+    hour = local_time.hour
+    return hour >= QUIET_HOURS_START or hour < QUIET_HOURS_END
+
+
+def should_send_now(
+    template_class: TemplateClass,
+    now: datetime,
+    tz: str = DEFAULT_RECIPIENT_TZ,
+) -> bool:
+    """Marketing messages defer during quiet hours; transactional always sends."""
+    if template_class is TemplateClass.TRANSACTIONAL:
+        return True
+    local = now.astimezone(ZoneInfo(tz))
+    return not is_quiet_hours(local)
+
+
+def next_marketing_send_at(now: datetime, tz: str = DEFAULT_RECIPIENT_TZ) -> datetime:
+    """Next UTC instant when marketing sends are allowed (07:00 local)."""
+    local = now.astimezone(ZoneInfo(tz))
+    if not is_quiet_hours(local):
+        return now
+
+    target_date = local.date()
+    if local.hour >= QUIET_HOURS_START:
+        target_date += timedelta(days=1)
+
+    target_local = datetime.combine(
+        target_date,
+        time(QUIET_HOURS_END, 0),
+        tzinfo=local.tzinfo,
+    )
+    return target_local.astimezone(UTC)
+
+
+def resolve_recipient_timezone(
+    notif_prefs: dict[str, Any] | None,
+    payload: dict[str, Any] | None,
+) -> str:
+    prefs = notif_prefs or {}
+    data = payload or {}
+    for candidate in (prefs.get("timezone"), data.get("timezone")):
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return DEFAULT_RECIPIENT_TZ
 
 
 class SupabaseService(Protocol):
@@ -255,6 +344,18 @@ class NotificationDispatcher:
         locale = recipient.get("locale")
         if isinstance(locale, str) and locale:
             payload_dict.setdefault("locale", locale)
+
+        template_name = fresh.get("template") if isinstance(fresh.get("template"), str) else None
+        template_class = get_template_class(template_name)
+        recipient_tz = resolve_recipient_timezone(notif_prefs, payload_dict)
+        if not should_send_now(template_class, now, recipient_tz):
+            next_at = next_marketing_send_at(now, recipient_tz)
+            self.schedule_retry(
+                row_id,
+                attempts=int(fresh.get("attempts", 0)),
+                next_retry_at=next_at,
+            )
+            return "skipped"
 
         requested_channel = str(fresh.get("channel", "whatsapp"))
         channel = resolve_channel(requested_channel, notif_prefs)

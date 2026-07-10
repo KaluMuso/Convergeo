@@ -1,5 +1,113 @@
 {
-  "notifications.title": "Notifications",
-  "notifications.unread": "{count, plural, one {# unread} other {# unread}}",
-  "notifications.order.shipped": "Order {id} has shipped"
+  "title": "Notifications",
+  "unread": "{count, plural, one {# unread} other {# unread}}",
+  "order": {
+    "shipped": "Order {id} has shipped"
+  },
+  "compliance": {
+    "stopReply": "Reply STOP to opt out.",
+    "stopKeyword": "STOP",
+    "startKeyword": "START",
+    "stopConfirmation": "You have been unsubscribed from Vergeo5 marketing messages. Order updates will still be sent.",
+    "startConfirmation": "You are subscribed to Vergeo5 updates. Reply STOP to opt out."
+  },
+  "whatsapp": {
+    "order_confirmed": {
+      "body": "Your Vergeo5 order {order_reference} is confirmed. Total {total}. Track: {track_url} Reply STOP to opt out."
+    },
+    "payment_received": {
+      "body": "{trust_narrative} Order {order_reference}. Reply STOP to opt out.",
+      "trust_narrative": "Your {amount} is held safely by Vergeo5 until delivery."
+    },
+    "order_shipped": {
+      "body": "Your Vergeo5 order {order_reference} has shipped. {tracking_info} Reply STOP to opt out."
+    },
+    "order_ready_pickup": {
+      "body": "Your Vergeo5 order {order_reference} is ready for pickup. {pickup_details} Reply STOP to opt out."
+    },
+    "order_delivered": {
+      "body": "Your Vergeo5 order {order_reference} was delivered. Share your experience: {review_url} Reply STOP to opt out."
+    },
+    "vendor_new_order": {
+      "body": "New order {order_reference} on Vergeo5: {product_title} × {quantity}. Confirm in the vendor app."
+    },
+    "otp_login": {
+      "body": "Your Vergeo5 login code is {otp_code}. It expires in 10 minutes. Do not share this code."
+    }
+  },
+  "sms": {
+    "order_confirmed": {
+      "body": "Vergeo5: order {order_reference} confirmed. Total {total}. {track_url}"
+    },
+    "payment_received": {
+      "body": "Vergeo5: payment received for {order_reference}. {trust_narrative}"
+    },
+    "order_shipped": {
+      "body": "Vergeo5: order {order_reference} shipped. {tracking_info}"
+    },
+    "order_ready_pickup": {
+      "body": "Vergeo5: order {order_reference} ready for pickup. {pickup_details}"
+    },
+    "order_delivered": {
+      "body": "Vergeo5: order {order_reference} delivered. Review: {review_url}"
+    },
+    "vendor_new_order": {
+      "body": "Vergeo5 vendor: new order {order_reference} — {product_title} × {quantity}"
+    },
+    "otp_login": {
+      "body": "Vergeo5 code: {otp_code}. Expires in 10 min. Do not share."
+    },
+    "review_request": {
+      "body": "How was your Vergeo5 order {order_reference}? Leave a review: {review_url} Reply STOP to opt out."
+    },
+    "abandoned_cart_recovery": {
+      "body": "You left items in your Vergeo5 cart. Complete checkout: {checkout_url} Reply STOP to opt out."
+    },
+    "kyc_nudge": {
+      "body": "Your Vergeo5 vendor verification is waiting. Finish in the vendor app to start selling."
+    },
+    "low_stock_alert": {
+      "body": "Vergeo5: {title} is low ({stock_qty} left). Restock in the vendor app."
+    },
+    "payout_failure_alert": {
+      "body": "Vergeo5 payout failed: {vendor_name} {amount} ref {lenco_reference}. Check admin."
+    }
+  },
+  "email": {
+    "receipt": {
+      "subject": "Your Vergeo5 receipt — order {order_id}",
+      "body": "<p>Thank you for your payment.</p><p><strong>Order:</strong> {order_id}</p><p><strong>Amount:</strong> K{amount}</p><p>Funds are held safely by Vergeo5 until delivery.</p>"
+    },
+    "order_receipt": {
+      "subject": "Your Vergeo5 receipt — order {order_id}",
+      "body": "<p>Thank you for your order.</p><p><strong>Order:</strong> {order_id}</p><p><strong>Total:</strong> K{amount}</p>"
+    },
+    "kyc": {
+      "approved": {
+        "subject": "Your Vergeo5 vendor verification is approved",
+        "body": "<p>Good news — your vendor identity verification is approved.</p><p>You can now publish listings and receive payouts on Vergeo5.</p>"
+      },
+      "rejected": {
+        "subject": "Your Vergeo5 vendor verification needs attention",
+        "body": "<p>We could not approve your vendor verification.</p><p><strong>Reason:</strong> {reason}</p><p>Please resubmit your documents from the vendor app.</p>"
+      }
+    }
+  },
+  "marketing": {
+    "review_request": {
+      "body": "How was your Vergeo5 order {order_reference} from {vendor_name}? Share your review: {review_url} Reply STOP to opt out."
+    },
+    "abandoned_cart_recovery": {
+      "body": "You still have items waiting in your Vergeo5 cart. Pick up where you left off: {checkout_url} Reply STOP to opt out."
+    },
+    "kyc_nudge": {
+      "body": "Your Vergeo5 vendor application has been waiting 48 hours. Complete verification to start selling."
+    },
+    "low_stock_alert": {
+      "body": "Low stock on Vergeo5: {title} has {stock_qty} units left (threshold {threshold}). Update stock in the vendor app."
+    },
+    "payout_failure_alert": {
+      "body": "Payout failure alert: {vendor_name} — {amount} (ref {lenco_reference}). Review in admin."
+    }
+  }
 }
