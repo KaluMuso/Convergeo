@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 import re
 from datetime import datetime
 from typing import Annotated, Any, Literal, Protocol, cast
@@ -607,6 +608,15 @@ def _manual_escrow_template(operation: EscrowOperation) -> str:
     return "manual_escrow_hold" if operation == "hold" else "manual_escrow_release"
 
 
+def _load_ledger_post_transaction() -> Any | None:
+    try:
+        module = importlib.import_module("app.services.ledger.engine")
+    except ImportError:
+        return None
+    post_transaction = getattr(module, "post_transaction", None)
+    return post_transaction if callable(post_transaction) else None
+
+
 def _build_manual_escrow_postings(
   operation: EscrowOperation, amount_ngwee: int
 ) -> list[ManualLedgerPosting]:
@@ -636,9 +646,8 @@ def post_manual_escrow_transaction(
     template = _manual_escrow_template(operation)
     idempotency_key = f"manual-{operation}-{order_id}-{amount_ngwee}-{reason.strip()[:40]}"
 
-    try:
-        from app.services.ledger.engine import post_transaction  # type: ignore[import-untyped]  # noqa: PLC0415
-
+    post_transaction = _load_ledger_post_transaction()
+    if post_transaction is not None:
         result = post_transaction(
             idempotency_key=idempotency_key,
             template=template,
@@ -662,19 +671,19 @@ def post_manual_escrow_transaction(
             manual=True,
             postings=postings,
         )
-    except ImportError:
-        # TODO(M08-P05): remove stub once ledger engine lands.
-        return _stub_post_manual_escrow(
-            order_id=order_id,
-            operation=operation,
-            amount_ngwee=amount_ngwee,
-            reason=reason,
-            confirmation_phrase=confirmation_phrase,
-            actor_id=actor_id,
-            service_client=service_client,
-            idempotency_key=idempotency_key,
-            template=template,
-        )
+
+    # TODO(M08-P05): remove stub once ledger engine lands.
+    return _stub_post_manual_escrow(
+        order_id=order_id,
+        operation=operation,
+        amount_ngwee=amount_ngwee,
+        reason=reason,
+        confirmation_phrase=confirmation_phrase,
+        actor_id=actor_id,
+        service_client=service_client,
+        idempotency_key=idempotency_key,
+        template=template,
+    )
 
 
 def _stub_post_manual_escrow(
