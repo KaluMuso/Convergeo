@@ -155,6 +155,27 @@
       "consentRequired": "Accept the Terms & Conditions to continue",
       "placeOrder": "Place order",
       "loading": "Please wait…"
+    },
+    "card": {
+      "pageTitle": "Pay with card",
+      "subtitle": "Complete your payment securely on Lenco. Vergeo5 never sees your card details.",
+      "loading": "Preparing secure payment…",
+      "openingWidget": "Opening Lenco secure payment…",
+      "verifying": "Verifying your payment…",
+      "successTitle": "Payment confirmed",
+      "successBody": "Your payment was verified. You can view your order details now.",
+      "viewOrders": "View your orders",
+      "failedTitle": "Payment not completed",
+      "failedBody": "The card payment did not go through. You can try again from checkout.",
+      "retryPayment": "Back to payment",
+      "heldTitle": "Payment under review",
+      "heldBody": "We could not verify this payment automatically. Our team has been alerted — do not pay again until we confirm.",
+      "pendingTitle": "Still processing",
+      "pendingBody": "We are waiting for final confirmation from Lenco. This page will update shortly.",
+      "error": "Something went wrong. Try again.",
+      "widgetUnavailable": "Card payments are temporarily unavailable. Try mobile money or try again later.",
+      "widgetLabel": "Vergeo5 order",
+      "secureNote": "Secured by Lenco — PCI compliant hosted checkout"
     }
   }
 }
