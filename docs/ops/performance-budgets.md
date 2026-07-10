@@ -17,7 +17,7 @@ Wave 10 (`M16-P01`) enforces Vergeo5 performance budgets on every pull request v
 
 - **Fast-3G / 360×740** mobile emulation (`lighthouserc.json` → `vergeo.lighthouse.profile`)
 - RTT **150 ms**, downlink **1.6 Mbps**, **4×** CPU slowdown
-- Runs against a **local production build** (`pnpm --filter customer build && start` on port 3000) — no staging URL required
+- Runs against a **local production build** (`pnpm --filter customer build && start` on port 3000) with the **FastAPI dev API** on `:8000` backed by a seeded local Supabase stack (`supabase db start && db reset`) so PLP/PDP routes resolve — no Vercel preview required.
 
 ### Bundle measurement
 

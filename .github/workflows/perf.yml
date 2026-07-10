@@ -14,11 +14,17 @@ jobs:
   perf:
     name: Bundle, image lint & Lighthouse
     runs-on: ubuntu-latest
+    # Same auth-hook/OAuth dummy env as CI db/rls — Supabase CLI cannot start without them.
     env:
-      # CI-only dummy values — middleware requires Supabase public env at runtime.
+      SEND_SMS_HOOK_SECRET: "v1,whsec_Y2ktZHVtbXktc2VuZC1zbXMtaG9vay1zZWNyZXQtMDAw"
+      SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "ci-dummy-google-client-id"
+      SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "ci-dummy-google-secret"
+      SUPABASE_AUTH_EXTERNAL_APPLE_SECRET: "ci-dummy-apple-secret"
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      ENV: development
+      CORS_ORIGINS: http://localhost:3000
     steps:
       - name: Checkout (head)
         uses: actions/checkout@v7
@@ -36,6 +42,53 @@ jobs:
 
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+
+      - name: Start local database
+        run: supabase db start
+
+      - name: Reset local database (with seed)
+        run: supabase db reset
+
+      - name: Load local Supabase credentials
+        run: |
+          eval "$(supabase status -o env)"
+          {
+            echo "SUPABASE_URL=${API_URL}"
+            echo "SUPABASE_ANON_KEY=${ANON_KEY}"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}"
+            echo "NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000"
+          } >> "$GITHUB_ENV"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: services/api/.python-version
+
+      - name: Start API
+        working-directory: services/api
+        run: |
+          uv sync
+          uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 &
+          echo $! > /tmp/api-pid
+          for attempt in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8000/healthz >/dev/null; then
+              echo "API ready on :8000"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API failed to become ready"
+          exit 1
 
       - name: Build customer app (head)
         run: pnpm --filter customer build
@@ -90,21 +143,39 @@ jobs:
           for attempt in $(seq 1 60); do
             if curl -sf http://localhost:3000/en/health >/dev/null; then
               echo "Customer app ready on :3000"
-              exit 0
+              break
             fi
             sleep 2
           done
-          echo "Server failed to become ready"
-          exit 1
+          if ! curl -sf http://localhost:3000/en/health >/dev/null; then
+            echo "Server failed to become ready"
+            exit 1
+          fi
+          for url in \
+            http://localhost:3000/en \
+            http://localhost:3000/en/c/electronics \
+            http://localhost:3000/en/p/itel-a70 \
+            http://localhost:3000/en/search \
+            http://localhost:3000/en/checkout; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
+            echo "$url -> $code"
+            if [ "$code" != "200" ]; then
+              echo "Lighthouse target not ready: $url"
+              exit 1
+            fi
+          done
 
       - name: Lighthouse CI
         run: pnpm exec lhci autorun --config=lighthouserc.json
 
-      - name: Stop production server
+      - name: Stop servers
         if: always()
         run: |
           if [ -f /tmp/customer-pid ]; then
             kill "$(cat /tmp/customer-pid)" 2>/dev/null || true
+          fi
+          if [ -f /tmp/api-pid ]; then
+            kill "$(cat /tmp/api-pid)" 2>/dev/null || true
           fi
 
       - name: Upload Lighthouse reports
