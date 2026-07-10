@@ -2,6 +2,8 @@
 
 Wave 10 (`M16-P01`) enforces Vergeo5 performance budgets on every pull request via [`.github/workflows/perf.yml`](../../.github/workflows/perf.yml). Thresholds are **config-file-tunable** in [`lighthouserc.json`](../../lighthouserc.json) (`vergeo.bundle` and `ci.assert`).
 
+> **Blocking vs advisory.** The **bundle guard (≤150 KB gz per route) and image lint are hard per-PR gates** — a violation fails the PR. **Lighthouse is advisory** (`ci.assert` uses `warn`; the step is `continue-on-error`) until it runs against a real Vercel preview: LHCI on a cold local `next start` (cloudinary `demo` images, no CDN, 4× CPU throttle) under-scores vs production, so gating on it would be noise. The Lighthouse thresholds below remain the **targets** and are reported per-PR; wiring LHCI to a preview deployment + shrinking the seven baseline-over-budget routes toward 150 KB gz is tracked follow-up work.
+
 ## Budgets
 
 | Metric                        | Threshold                                          | Scope                                        |

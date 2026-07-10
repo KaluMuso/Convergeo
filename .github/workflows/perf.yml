@@ -184,7 +184,11 @@ jobs:
             fi
           done
 
-      - name: Lighthouse CI
+      - name: Lighthouse CI (advisory — see lighthouserc.json)
+        # Advisory until LHCI runs against a real Vercel preview: assertions are
+        # `warn` (never non-zero) and this step is non-blocking so a CI-environment
+        # score dip or LHCI flake can't fail a PR. Blocking gate = bundle-guard + image-lint above.
+        continue-on-error: true
         run: pnpm exec lhci autorun --config=lighthouserc.json
 
       - name: Stop servers
