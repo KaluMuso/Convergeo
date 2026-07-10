@@ -3,6 +3,7 @@
 import { formatK } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
@@ -92,7 +93,6 @@ export type PdpInteractiveBodyProps = {
   cloudName?: string;
   galleryLabels: {
     empty: string;
-    indicator: (current: number, total: number) => string;
     previous: string;
     next: string;
   };
@@ -102,7 +102,6 @@ export type PdpInteractiveBodyProps = {
     heading: string;
     preferredBadge: string;
     noReviews: string;
-    rating: (rating: number, count: number) => string;
     viewStore: string;
   };
 };
@@ -385,6 +384,7 @@ export function PdpInteractiveBody({
   comparisonLabels,
   vendorLabels,
 }: PdpInteractiveBodyProps) {
+  const t = useTranslations("catalog");
   const [selectedListingId, setSelectedListingId] = useState<string | null>(
     () => selectListingById(listings, initialListingId)?.id ?? null,
   );
@@ -424,7 +424,6 @@ export function PdpInteractiveBody({
         images={galleryImages}
         cloudName={cloudName}
         emptyLabel={galleryLabels.empty}
-        indicatorLabel={galleryLabels.indicator}
         previousLabel={galleryLabels.previous}
         nextLabel={galleryLabels.next}
       />
@@ -456,10 +455,10 @@ export function PdpInteractiveBody({
           noReviewsLabel={vendorLabels.noReviews}
           ratingLabel={
             selectedListing.vendor.ratingAvg !== null && selectedListing.vendor.ratingCount > 0
-              ? vendorLabels.rating(
-                  selectedListing.vendor.ratingAvg,
-                  selectedListing.vendor.ratingCount,
-                )
+              ? t("pdp.vendor.rating", {
+                  rating: selectedListing.vendor.ratingAvg,
+                  count: selectedListing.vendor.ratingCount,
+                })
               : vendorLabels.noReviews
           }
           viewStoreLabel={vendorLabels.viewStore}

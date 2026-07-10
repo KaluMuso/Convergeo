@@ -1,6 +1,8 @@
 "use client";
 
 import { ImageGallery } from "@vergeo/ui/src/media/image-gallery";
+import { useTranslations } from "next-intl";
+import { useCallback } from "react";
 
 export type PdpGalleryImage = {
   publicId: string;
@@ -11,7 +13,6 @@ export type PdpGalleryProps = {
   images: PdpGalleryImage[];
   cloudName?: string;
   emptyLabel: string;
-  indicatorLabel: (current: number, total: number) => string;
   previousLabel: string;
   nextLabel: string;
 };
@@ -20,10 +21,14 @@ export function PdpGallery({
   images,
   cloudName,
   emptyLabel,
-  indicatorLabel,
   previousLabel,
   nextLabel,
 }: PdpGalleryProps) {
+  const t = useTranslations("catalog");
+  const indicatorLabel = useCallback(
+    (current: number, total: number) => t("pdp.gallery.indicator", { current, total }),
+    [t],
+  );
   if (images.length === 0) {
     return (
       <div

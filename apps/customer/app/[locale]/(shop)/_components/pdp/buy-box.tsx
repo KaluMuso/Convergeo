@@ -2,6 +2,7 @@
 
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
+import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 
 import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
@@ -30,10 +31,8 @@ export type BuyBoxLabels = {
   addToCartSoonLabel: string;
   inStockLabel: string;
   outOfStockLabel: string;
-  lowStockLabel: (count: number) => string;
   alwaysAvailableLabel: string;
   singleVendorLabel: string;
-  moqLabel: (count: number) => string;
   conditionNewLabel: string;
   conditionRefurbishedLabel: string;
 };
@@ -87,13 +86,21 @@ export function getStockLabel(
 }
 
 export function BuyBox({ listing, labels, singleVendor, onAddedToCart }: BuyBoxProps) {
+  const t = useTranslations("catalog");
   const [quantity, setQuantity] = useState(() => clampQuantity(listing.moq, listing));
   const [adding, setAdding] = useState(false);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
 
   const maxQuantity = useMemo(() => getMaxQuantity(listing), [listing]);
-  const stockLabel = useMemo(() => getStockLabel(listing, labels), [listing, labels]);
+  const stockLabel = useMemo(
+    () =>
+      getStockLabel(listing, {
+        ...labels,
+        lowStockLabel: (count) => t("pdp.buyBox.lowStock", { count }),
+      }),
+    [listing, labels, t],
+  );
   const conditionLabel =
     listing.condition === "new" ? labels.conditionNewLabel : labels.conditionRefurbishedLabel;
 
@@ -170,7 +177,7 @@ export function BuyBox({ listing, labels, singleVendor, onAddedToCart }: BuyBoxP
 
       {listing.moq > 1 ? (
         <p className="text-sm text-text-2" data-testid="pdp-moq">
-          {labels.moqLabel(listing.moq)}
+          {t("pdp.buyBox.moq", { count: listing.moq })}
         </p>
       ) : null}
 
