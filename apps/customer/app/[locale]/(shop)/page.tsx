@@ -1,4 +1,5 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
@@ -43,15 +44,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: t("home.meta.title"),
     description: t("home.meta.description"),
-    alternates: {
-      canonical: `/${locale}`,
-    },
+    alternates: buildCanonicalAlternates(locale),
     openGraph: {
       title: t("home.meta.title"),
       description: t("home.meta.description"),
       type: "website",
       locale,
-      url: `/${locale}`,
+      url: buildLocaleCanonical(locale),
     },
     robots: {
       index: true,

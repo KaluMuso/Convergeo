@@ -3,6 +3,13 @@ import { Badge } from "@vergeo/ui/src/badge";
 import { Button } from "@vergeo/ui/src/button";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { PriceBlock } from "@vergeo/ui/src/price-block";
+import {
+  buildCanonicalAlternates,
+  buildEventJsonLd,
+  buildLocaleCanonical,
+  JsonLdScript,
+  resolveCloudinaryImageUrls,
+} from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -121,21 +128,42 @@ export function generateStaticParams() {
   return LOCALES.flatMap((locale) => [{ locale, slug: "zed-summer-festival" }]);
 }
 
+function eventImageUrls(images: string[]): string[] {
+  return resolveCloudinaryImageUrls(images);
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const event = await fetchEvent(slug);
   const t = await getEventsTranslator(locale);
 
   if (!event) {
-    return { title: t("browse.title") };
+    return { title: t("browse.title"), robots: { index: false, follow: false } };
+  }
+
+  const description = t("detail.metaDescription", {
+    title: event.title,
+    venue: event.venue ?? event.organiser.display_name,
+  });
+  const canonicalPath = buildLocaleCanonical(locale, "e", event.slug);
+  const ogParams = new URLSearchParams({ name: event.title });
+  if (!event.is_free && event.min_price_ngwee) {
+    ogParams.set("price", formatK(event.min_price_ngwee));
   }
 
   return {
     title: t("detail.metaTitle", { title: event.title }),
-    description: t("detail.metaDescription", {
+    description,
+    alternates: buildCanonicalAlternates(locale, "e", event.slug),
+    openGraph: {
       title: event.title,
-      venue: event.venue ?? event.organiser.display_name,
-    }),
+      description,
+      type: "website",
+      locale,
+      url: canonicalPath,
+      images: [{ url: `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}` }],
+    },
+    robots: { index: true, follow: true },
   };
 }
 
@@ -151,9 +179,30 @@ export default async function EventDetailPage({ params }: PageProps) {
   }
 
   const heroImage = event.images[0];
+  const jsonLd = buildEventJsonLd({
+    name: event.title,
+    slug: event.slug,
+    locale,
+    description: event.description,
+    venue: event.venue,
+    landmark: event.landmark,
+    lat: event.lat,
+    lng: event.lng,
+    imageUrls: eventImageUrls(event.images),
+    instances: event.instances.map((instance) => ({ startsAt: instance.starts_at })),
+    ticketTypes: event.ticket_types.map((ticket) => ({
+      name: ticket.name,
+      priceNgwee: ticket.price_ngwee,
+      isFree: ticket.is_free,
+      isSoldOut: ticket.is_sold_out,
+    })),
+    organiserName: event.organiser.display_name,
+    isFree: event.is_free,
+  });
 
   return (
     <article className="flex flex-col gap-6 pb-8">
+      <JsonLdScript data={jsonLd} />
       <header className="flex flex-col gap-3">
         {heroImage ? (
           <div className="overflow-hidden rounded-lg border border-border">

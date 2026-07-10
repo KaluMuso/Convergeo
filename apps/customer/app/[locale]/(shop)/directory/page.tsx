@@ -1,5 +1,6 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
@@ -99,6 +100,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: t("index.title"),
     description: t("index.subtitle"),
+    alternates: buildCanonicalAlternates(locale, "directory"),
+    openGraph: {
+      title: t("index.title"),
+      description: t("index.subtitle"),
+      type: "website",
+      locale,
+      url: buildLocaleCanonical(locale, "directory"),
+    },
+    robots: { index: true, follow: true },
   };
 }
 

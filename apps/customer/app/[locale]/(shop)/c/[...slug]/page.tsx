@@ -1,5 +1,11 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
+import {
+  buildBreadcrumbListJsonLd,
+  buildCanonicalAlternates,
+  buildLocaleCanonical,
+  JsonLdScript,
+} from "@vergeo/ui/src/seo/json-ld";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
@@ -146,14 +152,19 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const categoryPath = slugToCategoryPath(slug);
   const categoryName = categoryTitleFromPath(categoryPath) || t("plp.defaultCategory");
 
-  const canonicalPath = `/${locale}/c/${slug.join("/")}`;
+  const canonicalPath = buildLocaleCanonical(locale, "c", ...slug);
   const hasFilters = Object.keys(resolvedSearch).some((key) => !["lat", "lng"].includes(key));
 
   return {
     title: t("plp.title", { category: categoryName }),
     description: t("plp.results", { count: 0 }).replace("0", categoryName),
-    alternates: {
-      canonical: canonicalPath,
+    alternates: buildCanonicalAlternates(locale, "c", ...slug),
+    openGraph: {
+      title: t("plp.title", { category: categoryName }),
+      description: t("plp.results", { count: 0 }).replace("0", categoryName),
+      type: "website",
+      locale,
+      url: canonicalPath,
     },
     robots: {
       index: !hasFilters,
@@ -195,8 +206,14 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
     distance: t("plp.card.distance"),
   };
 
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [
+    { name: t("home.nav.home"), path: "" },
+    { name: categoryName, path: `c/${slug.join("/")}` },
+  ]);
+
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4">
+      <JsonLdScript data={breadcrumbJsonLd} />
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-[var(--fs-h1)] text-[var(--text)]">
           {t("plp.title", { category: categoryName })}

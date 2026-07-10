@@ -1,5 +1,11 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
+import {
+  buildCanonicalAlternates,
+  buildLocaleCanonical,
+  buildLocalBusinessJsonLd,
+  JsonLdScript,
+} from "@vergeo/ui/src/seo/json-ld";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -96,61 +102,54 @@ function formatHours(
   return Object.entries(hours).map(([day, value]) => formatLine(day, value));
 }
 
-function buildLocalBusinessJsonLd(
+function buildVendorJsonLd(
   vendor: VendorProfileApiResponse["vendor"],
   reviews: VendorProfileApiResponse["reviews_summary"],
   locale: string,
 ): Record<string, unknown> {
-  const location = vendor.location;
-  return {
-    "@context": "https://schema.org",
-    "@type": "LocalBusiness",
+  return buildLocalBusinessJsonLd({
     name: vendor.display_name,
-    description: vendor.description ?? undefined,
-    image: vendor.logo_url ?? undefined,
-    url: `https://vergeo5.com/${locale}/v/${vendor.slug}`,
-    address: location
-      ? {
-          "@type": "PostalAddress",
-          streetAddress: location.landmark,
-          addressLocality: "Lusaka",
-          addressCountry: "ZM",
-        }
-      : undefined,
-    geo: location
-      ? {
-          "@type": "GeoCoordinates",
-          latitude: location.lat,
-          longitude: location.lng,
-        }
-      : undefined,
+    slug: vendor.slug,
+    locale,
+    description: vendor.description,
+    logoUrl: vendor.logo_url,
+    landmark: vendor.location?.landmark ?? null,
+    lat: vendor.location?.lat ?? null,
+    lng: vendor.location?.lng ?? null,
     aggregateRating:
       reviews.rating_count > 0 && reviews.rating_avg !== null
-        ? {
-            "@type": "AggregateRating",
-            ratingValue: reviews.rating_avg,
-            reviewCount: reviews.rating_count,
-          }
-        : undefined,
-  };
+        ? { ratingValue: reviews.rating_avg, reviewCount: reviews.rating_count }
+        : null,
+  });
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const profile = await fetchVendorProfile(slug);
   if (!profile) {
-    return { title: "Vendor not found" };
+    return { title: "Vendor not found", robots: { index: false, follow: false } };
   }
 
   const t = await getDirectoryTranslator(locale);
+  const description = t("profile.metaDescription", { name: profile.vendor.display_name });
+  const canonicalPath = buildLocaleCanonical(locale, "v", profile.vendor.slug);
+  const ogParams = new URLSearchParams({ name: profile.vendor.display_name });
+
   return {
     title: t("profile.shareTitle", { name: profile.vendor.display_name }),
-    description: t("profile.metaDescription", { name: profile.vendor.display_name }),
+    description,
+    alternates: buildCanonicalAlternates(locale, "v", profile.vendor.slug),
     openGraph: {
       title: profile.vendor.display_name,
-      description: profile.vendor.description ?? undefined,
-      images: profile.vendor.logo_url ? [profile.vendor.logo_url] : undefined,
+      description: profile.vendor.description ?? description,
+      type: "website",
+      locale,
+      url: canonicalPath,
+      images: profile.vendor.logo_url
+        ? [profile.vendor.logo_url]
+        : [{ url: `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}` }],
     },
+    robots: { index: true, follow: true },
   };
 }
 
@@ -189,14 +188,11 @@ export default async function VendorProfilePage({ params }: PageProps) {
     distanceM: null,
   }));
 
-  const jsonLd = buildLocalBusinessJsonLd(vendor, reviews, locale);
+  const jsonLd = buildVendorJsonLd(vendor, reviews, locale);
 
   return (
     <div className="space-y-6">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLdScript data={jsonLd} />
 
       <header
         className="space-y-3 rounded border border-border bg-surface p-4"

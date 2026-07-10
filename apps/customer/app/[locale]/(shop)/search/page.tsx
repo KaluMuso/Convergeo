@@ -1,5 +1,6 @@
 import { createApiClient } from "@vergeo/config";
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
@@ -88,12 +89,28 @@ async function fetchTabCounts(query: string): Promise<TabCounts> {
   return Object.fromEntries(responses) as TabCounts;
 }
 
-export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+  const { locale } = await params;
   const { q } = await searchParams;
   const trimmed = q?.trim();
+  const searchMessages = await loadNamespace(locale as Locale, "search");
+  const t = createTranslator({
+    locale,
+    messages: { search: searchMessages },
+    namespace: "search",
+  }) as (key: string, values?: Record<string, string | number>) => string;
 
   return {
-    title: trimmed ? `Search: ${trimmed}` : "Search",
+    title: trimmed ? `${t("title")} — ${trimmed}` : t("title"),
+    description: t("placeholder"),
+    alternates: buildCanonicalAlternates(locale, "search"),
+    openGraph: {
+      title: trimmed ? `${t("title")} — ${trimmed}` : t("title"),
+      description: t("placeholder"),
+      type: "website",
+      locale,
+      url: buildLocaleCanonical(locale, "search"),
+    },
     robots: {
       index: Boolean(trimmed),
       follow: true,
