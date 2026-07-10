@@ -5,7 +5,7 @@ import json
 import uuid
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -35,7 +35,7 @@ TOKEN_B = "vendor-b-token"
 
 
 def _load_ids() -> dict[str, Any]:
-    return json.loads((FIXTURES_DIR / "ids.json").read_text())
+    return cast(dict[str, Any], json.loads((FIXTURES_DIR / "ids.json").read_text()))
 
 
 @pytest.fixture(scope="module")
@@ -199,11 +199,13 @@ class _FakeQuery:
 
     def execute(self) -> MagicMock:
         if self._pending_op == "insert":
-            rows = self._payload if isinstance(self._payload, list) else [self._payload]
+            payload_rows: list[dict[str, Any]] = []
+            if isinstance(self._payload, list):
+                payload_rows = [row for row in self._payload if isinstance(row, dict)]
+            elif isinstance(self._payload, dict):
+                payload_rows = [self._payload]
             inserted: list[dict[str, Any]] = []
-            for row in rows:
-                if not isinstance(row, dict):
-                    continue
+            for row in payload_rows:
                 stored = dict(row)
                 stored.setdefault("id", str(uuid.uuid4()))
                 self._parent.rows.append(stored)
