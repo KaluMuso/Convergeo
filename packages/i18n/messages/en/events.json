@@ -47,5 +47,47 @@
   },
   "organiser": {
     "imageAlt": "Event photo {position}"
+  },
+  "wallet": {
+    "title": "My tickets",
+    "emptyTitle": "No tickets yet",
+    "emptyBody": "Tickets you buy or RSVP to will appear here with a rotating QR code for entry.",
+    "emptyCta": "Browse events",
+    "list": {
+      "viewTicket": "View ticket",
+      "status": {
+        "issued": "Ready to scan",
+        "checked_in": "Checked in",
+        "transferred": "Transferred",
+        "void": "Void"
+      },
+      "startsAt": "Starts {datetime}"
+    },
+    "detail": {
+      "metaTitle": "Ticket — {event}",
+      "back": "Back to tickets",
+      "eventLabel": "Event",
+      "venueLabel": "Venue",
+      "startsLabel": "Starts",
+      "typeLabel": "Ticket type",
+      "qrLabel": "Show this QR at the gate",
+      "qrAria": "Rotating entry QR code",
+      "pinLabel": "PIN backup",
+      "pinAria": "Six-digit entry PIN {pin}",
+      "pinUnavailable": "PIN was sent when you bought this ticket. Check your messages if you need it.",
+      "refreshIn": "Refreshes in {seconds}s",
+      "offlineTitle": "You are offline",
+      "offlineBody": "Using cached entry codes. Sync when back online for fresh codes.",
+      "offlineExpired": "Cached codes expired — use your PIN at the gate.",
+      "syncHorizon": "Syncing offline codes…",
+      "status": {
+        "issued": "Ready to scan",
+        "checked_in": "Checked in",
+        "transferred": "This ticket was transferred and can no longer be used.",
+        "void": "This ticket is no longer valid."
+      },
+      "transferBanner": "Transferred tickets cannot be scanned. The recipient has a new QR and PIN.",
+      "voidBanner": "This ticket has been voided and cannot be used for entry."
+    }
   }
 }
