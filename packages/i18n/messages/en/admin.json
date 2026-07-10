@@ -265,5 +265,85 @@
         "confirm": "Suspend vendor"
       }
     }
+  },
+  "merch": {
+    "title": "Merchandising",
+    "subtitle": "Compose the customer home — hero, banners, collections, and schedules without a deploy.",
+    "board": {
+      "loading": "Loading slots…",
+      "error": "Could not load merchandising slots.",
+      "retry": "Retry",
+      "empty": "No merchandising slots configured yet.",
+      "slotKey": "Section",
+      "variant": "Variant",
+      "position": "Position",
+      "schedule": "Schedule",
+      "status": "Status",
+      "draft": "Draft pending",
+      "published": "Published",
+      "edit": "Edit",
+      "saveDraft": "Save draft",
+      "publish": "Publish",
+      "preview": "Preview on home",
+      "previewHint": "Opens customer home with draft overlay (token-gated).",
+      "active": "Active",
+      "inactive": "Inactive",
+      "scheduleOpen": "Always on",
+      "scheduleRange": "{from} → {to}",
+      "lusakaTz": "Schedules use Africa/Lusaka (CAT, UTC+2)."
+    },
+    "hero": {
+      "title": "Hero variant",
+      "subtitle": "Pick a design variant — thumbnails reflect the live component set.",
+      "variantLabel": "Variant",
+      "titleKey": "Title message key",
+      "subtitleKey": "Subtitle message key",
+      "imagePublicId": "Hero image (Cloudinary public ID)",
+      "primaryCtaHref": "Primary CTA href",
+      "secondaryCtaHref": "Secondary CTA href"
+    },
+    "banner": {
+      "title": "Banner row",
+      "subtitle": "Up to four promo tiles with image, link, and optional schedule.",
+      "addItem": "Add banner",
+      "removeItem": "Remove",
+      "itemTitle": "Banner title",
+      "itemHref": "Link href",
+      "itemImage": "Image public ID",
+      "scheduleFrom": "Schedule from",
+      "scheduleTo": "Schedule to"
+    },
+    "collection": {
+      "title": "Featured collections",
+      "subtitle": "Build curated rows from listings, category, or tag queries.",
+      "addCollection": "Add collection",
+      "collectionTitleKey": "Collection title key",
+      "queryType": "Query type",
+      "queryListingIds": "Listing IDs (comma-separated)",
+      "queryCategory": "Category slug",
+      "queryTag": "Tag",
+      "queryOrder": "Sort order",
+      "orderPosition": "Position",
+      "orderNewest": "Newest",
+      "orderPriceAsc": "Price low → high",
+      "orderPriceDesc": "Price high → low"
+    },
+    "slots": {
+      "hero": "Hero",
+      "banner_row": "Banner row",
+      "events_row": "Events row",
+      "featured_collections": "Featured collections",
+      "category_grid": "Category grid"
+    },
+    "common": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "success": "Saved.",
+      "failure": "Could not save.",
+      "publishSuccess": "Published to live home.",
+      "publishFailure": "Could not publish.",
+      "confirmPublish": "Publish draft to live home?"
+    }
   }
 }
