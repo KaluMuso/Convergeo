@@ -83,6 +83,10 @@
         "/[locale]/account/privacy/page": {
           "maxKbGz": 183,
           "justification": "M16-P01 baseline (account shell + privacy content). Target: slim account layout JS to ≤150 KB gz."
+        },
+        "/[locale]/(shop)/services/post-job/page": {
+          "maxKbGz": 182,
+          "justification": "M11-P02 post-job form shares auth + checkout form shell. Target: code-split session client to ≤150 KB gz."
         }
       },
       "auditRoutes": [
