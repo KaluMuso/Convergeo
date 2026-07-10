@@ -1,5 +1,12 @@
 import { createApiClient } from "@vergeo/config";
-import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import {
+  buildCanonicalAlternates,
+  buildLocaleCanonical,
+  buildProductJsonLd,
+  JsonLdScript,
+  resolveCloudinaryImageUrls,
+} from "@vergeo/ui/src/seo/json-ld";
 import { notFound, redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -284,27 +291,18 @@ function toComparisonListings(
   }));
 }
 
-function buildProductJsonLd(product: ProductDetail, selectedListing: Listing | null) {
-  const offers = product.listings.map((listing) => ({
-    "@type": "Offer",
-    priceCurrency: "ZMW",
-    price: (listing.price_ngwee / 100).toFixed(2),
-    availability: listing.in_stock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-    seller: {
-      "@type": "Organization",
-      name: listing.vendor.display_name,
-    },
-  }));
+function productImageUrls(product: ProductDetail): string[] {
+  return resolveCloudinaryImageUrls(product.images.map((image) => image.public_id));
+}
 
-  return {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name,
-    brand: product.brand ? { "@type": "Brand", name: product.brand } : undefined,
-    offers: offers.length === 1 ? offers[0] : offers,
-    image: product.images.map((image) => image.public_id),
-    sku: selectedListing?.id,
-  };
+function lowestListingPriceNgwee(listings: Listing[]): number | null {
+  if (listings.length === 0) {
+    return null;
+  }
+  return listings.reduce(
+    (lowest, listing) => Math.min(lowest, listing.price_ngwee),
+    listings[0]?.price_ngwee ?? Number.POSITIVE_INFINITY,
+  );
 }
 
 type PageProps = {
@@ -330,19 +328,25 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const product = result.data;
   const description = t("pdp.meta.descriptionFallback", { name: product.name });
+  const canonicalPath = buildLocaleCanonical(locale, "p", product.slug);
+  const minPrice = lowestListingPriceNgwee(product.listings);
+  const ogParams = new URLSearchParams({ name: product.name });
+  if (minPrice !== null) {
+    ogParams.set("price", formatK(minPrice));
+  }
+  const ogImagePath = `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}`;
 
   return {
     title: product.name,
     description,
-    alternates: {
-      canonical: `/${locale}/p/${product.slug}`,
-    },
+    alternates: buildCanonicalAlternates(locale, "p", product.slug),
     openGraph: {
       title: product.name,
       description,
       type: "website",
       locale,
-      url: `/${locale}/p/${product.slug}`,
+      url: canonicalPath,
+      images: [{ url: ogImagePath }],
     },
     robots: {
       index: true,
@@ -376,16 +380,26 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const singleVendor = product.listing_count === 1;
   const specRows = specRowsFromJson(product.spec);
   const images = galleryImages(product, selectedListing, product.name);
-  const jsonLd = buildProductJsonLd(product, selectedListing);
+  const jsonLd = buildProductJsonLd({
+    name: product.name,
+    slug: product.slug,
+    locale,
+    brand: product.brand,
+    description: t("pdp.meta.descriptionFallback", { name: product.name }),
+    imageUrls: productImageUrls(product),
+    sku: selectedListing?.id,
+    offers: product.listings.map((listing) => ({
+      priceNgwee: listing.price_ngwee,
+      inStock: listing.in_stock,
+      sellerName: listing.vendor.display_name,
+    })),
+  });
   const productListings = toProductListings(product, product.name);
   const comparisonListings = toComparisonListings(comparison, product);
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <JsonLdScript data={jsonLd} />
 
       <header className="flex flex-col gap-2">
         {product.brand ? (

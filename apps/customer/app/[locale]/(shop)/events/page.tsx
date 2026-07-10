@@ -1,5 +1,6 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
@@ -99,13 +100,25 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { locale } = await params;
+  const query = await searchParams;
   const t = await getEventsTranslator(locale);
+  const hasFilters =
+    (query.date_window !== undefined && query.date_window !== "tonight") || Boolean(query.category);
 
   return {
     title: t("browse.title"),
     description: t("browse.subtitle"),
+    alternates: buildCanonicalAlternates(locale, "events"),
+    openGraph: {
+      title: t("browse.title"),
+      description: t("browse.subtitle"),
+      type: "website",
+      locale,
+      url: buildLocaleCanonical(locale, "events"),
+    },
+    robots: { index: !hasFilters, follow: true },
   };
 }
 
