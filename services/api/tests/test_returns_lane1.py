@@ -1,4 +1,7 @@
-"""M09-P07 — returns lane 1 (faulty/wrong) tests."""
+"""M09-P07 — returns lane 1 (faulty/wrong) tests.
+
+CI: unit tests only; DB integration tests require psql locally.
+"""
 
 from __future__ import annotations
 
