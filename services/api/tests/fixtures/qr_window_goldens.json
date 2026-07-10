@@ -1,0 +1,103 @@
+{
+  "algorithm": {
+    "hmac": "SHA256",
+    "key": "ticket_secret (qr_secret)",
+    "message": "str(window)",
+    "window_seconds": 60,
+    "truncate_hex": 16,
+    "payload_format": "{ticket_id}:{window}:{code}",
+    "verify_tolerance_windows": 1
+  },
+  "vectors": [
+    {
+      "secret": "test-secret-alpha-001",
+      "window": 28990123,
+      "code": "a2eedc6e06c4dc27"
+    },
+    {
+      "secret": "test-secret-alpha-001",
+      "window": 28990124,
+      "code": "c24a558e4d64a9af"
+    },
+    {
+      "secret": "test-secret-alpha-001",
+      "window": 28990125,
+      "code": "6c49285dc0775417"
+    },
+    {
+      "secret": "test-secret-alpha-001",
+      "window": 0,
+      "code": "8dea58933c18f38f"
+    },
+    {
+      "secret": "test-secret-alpha-001",
+      "window": 1,
+      "code": "e4c907815f6237ed"
+    },
+    {
+      "secret": "test-secret-alpha-001",
+      "window": 999999999,
+      "code": "d3c69d3ed57664f4"
+    },
+    {
+      "secret": "test-secret-bravo-002",
+      "window": 28990123,
+      "code": "66e73ae37ec40cd7"
+    },
+    {
+      "secret": "test-secret-bravo-002",
+      "window": 28990124,
+      "code": "6293ae8a2d9ab142"
+    },
+    {
+      "secret": "test-secret-bravo-002",
+      "window": 28990125,
+      "code": "2d6363f8a6da91de"
+    },
+    {
+      "secret": "test-secret-bravo-002",
+      "window": 0,
+      "code": "6cf119db90a91ac8"
+    },
+    {
+      "secret": "test-secret-bravo-002",
+      "window": 1,
+      "code": "e7221f14a10d666a"
+    },
+    {
+      "secret": "test-secret-bravo-002",
+      "window": 999999999,
+      "code": "3de47c48fe5d2332"
+    },
+    {
+      "secret": "golden-fixture-key-42",
+      "window": 28990123,
+      "code": "52e83d26c759d53d"
+    },
+    {
+      "secret": "golden-fixture-key-42",
+      "window": 28990124,
+      "code": "150dd1f171c9d05e"
+    },
+    {
+      "secret": "golden-fixture-key-42",
+      "window": 28990125,
+      "code": "abdd184e151b0f2d"
+    },
+    {
+      "secret": "golden-fixture-key-42",
+      "window": 0,
+      "code": "63cfba9f063338c2"
+    },
+    {
+      "secret": "golden-fixture-key-42",
+      "window": 1,
+      "code": "d292586bd5e46455"
+    },
+    {
+      "secret": "golden-fixture-key-42",
+      "window": 999999999,
+      "code": "798370f0ef745e72"
+    }
+  ]
+}
