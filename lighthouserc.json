@@ -1,0 +1,92 @@
+{
+  "ci": {
+    "collect": {
+      "numberOfRuns": 1,
+      "url": [
+        "http://localhost:3000/en",
+        "http://localhost:3000/en/c/electronics",
+        "http://localhost:3000/en/p/itel-a70",
+        "http://localhost:3000/en/search",
+        "http://localhost:3000/en/checkout"
+      ],
+      "settings": {
+        "formFactor": "mobile",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 360,
+          "height": 740,
+          "deviceScaleFactor": 2,
+          "disabled": false
+        },
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1600,
+          "requestLatencyMs": 150,
+          "downloadThroughputKbps": 1600,
+          "uploadThroughputKbps": 750,
+          "cpuSlowdownMultiplier": 4
+        },
+        "onlyCategories": ["performance", "accessibility", "seo"]
+      }
+    },
+    "assert": {
+      "assertions": {
+        "largest-contentful-paint": ["error", { "maxNumericValue": 2500 }],
+        "categories:performance": ["error", { "minScore": 0.9 }],
+        "categories:seo": ["error", { "minScore": 0.95 }],
+        "categories:accessibility": ["error", { "minScore": 0.95 }]
+      }
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": ".lighthouseci"
+    }
+  },
+  "vergeo": {
+    "bundle": {
+      "defaultMaxKbGz": 150,
+      "defaultJustification": "CLAUDE.md convention #7 — customer routes ≤150 KB gz first-load JS on Fast-3G/360px devices.",
+      "routes": {
+        "/[locale]/(shop)/cart/page": {
+          "maxKbGz": 186,
+          "justification": "M16-P01 baseline (cart + mini-cart drawer). Target: reduce shared auth/cart chunks to ≤150 KB gz."
+        },
+        "/[locale]/(shop)/checkout/page": {
+          "maxKbGz": 189,
+          "justification": "M16-P01 baseline (multi-step checkout). Target: code-split payment/fulfilment steps to ≤150 KB gz."
+        },
+        "/[locale]/(shop)/p/[slug]/page": {
+          "maxKbGz": 190,
+          "justification": "M16-P01 baseline (PDP gallery + comparison). Target: lazy-load comparison module to ≤150 KB gz."
+        },
+        "/[locale]/(auth)/login/page": {
+          "maxKbGz": 183,
+          "justification": "M16-P01 baseline (auth shell shared with OTP/signup). Target: extract shared auth bundle to ≤150 KB gz."
+        },
+        "/[locale]/(auth)/signup/page": {
+          "maxKbGz": 183,
+          "justification": "M16-P01 baseline (auth shell shared with login/OTP). Target: extract shared auth bundle to ≤150 KB gz."
+        },
+        "/[locale]/(auth)/otp/page": {
+          "maxKbGz": 182,
+          "justification": "M16-P01 baseline (OTP form + auth shell). Target: extract shared auth bundle to ≤150 KB gz."
+        },
+        "/[locale]/account/privacy/page": {
+          "maxKbGz": 183,
+          "justification": "M16-P01 baseline (account shell + privacy content). Target: slim account layout JS to ≤150 KB gz."
+        }
+      },
+      "auditRoutes": [
+        "/[locale]/(shop)/page",
+        "/[locale]/(shop)/c/[...slug]/page",
+        "/[locale]/(shop)/p/[slug]/page",
+        "/[locale]/(shop)/search/page",
+        "/[locale]/(shop)/checkout/page"
+      ]
+    },
+    "lighthouse": {
+      "profile": "Fast-3G / 360×740 mobile",
+      "justification": "Zambia 3G guardrail from docs/plan/00-discovery.md — RTT 150ms, 1.6 Mbps downlink, 4× CPU slowdown."
+    }
+  }
+}
