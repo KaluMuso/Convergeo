@@ -54,7 +54,7 @@ class FakeQuery:
         rows = [row for row in self._parent.rows if self._row_matches(row)]
         if self._order is not None:
             column, desc = self._order
-            rows = sorted(rows, key=lambda row: row.get(column), reverse=desc)
+            rows = sorted(rows, key=lambda row: str(row.get(column, "")), reverse=desc)
         total = len(rows)
         if self._limit is not None:
             rows = rows[: self._limit]
