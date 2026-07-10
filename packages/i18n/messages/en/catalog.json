@@ -136,6 +136,9 @@
       "refurbished": "Refurbished"
     }
   },
+  "returnableBadge": {
+    "label": "Returnable within {days} days"
+  },
   "comparison": {
     "heading": "Compare sellers",
     "vendorCount": "{count} sellers offering this product",

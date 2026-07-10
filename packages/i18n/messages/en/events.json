@@ -44,5 +44,8 @@
     "getTicketsSoon": "Ticket sales coming soon",
     "pastInstance": "Past",
     "spots": "{sold} / {total} spots"
+  },
+  "organiser": {
+    "imageAlt": "Event photo {position}"
   }
 }

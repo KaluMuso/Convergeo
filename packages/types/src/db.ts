@@ -2149,6 +2149,9 @@ export type Database = {
           kyc_tier: number | null
           logo_url: string | null
           owner_user_id: string
+          payout_hold_until: string | null
+          payout_msisdn: string | null
+          payout_rail: string | null
           preferred_badge: boolean
           slug: string
           status: string
@@ -2163,6 +2166,9 @@ export type Database = {
           kyc_tier?: number | null
           logo_url?: string | null
           owner_user_id: string
+          payout_hold_until?: string | null
+          payout_msisdn?: string | null
+          payout_rail?: string | null
           preferred_badge?: boolean
           slug: string
           status?: string
@@ -2177,6 +2183,9 @@ export type Database = {
           kyc_tier?: number | null
           logo_url?: string | null
           owner_user_id?: string
+          payout_hold_until?: string | null
+          payout_msisdn?: string | null
+          payout_rail?: string | null
           preferred_badge?: boolean
           slug?: string
           status?: string

@@ -16,6 +16,13 @@ import {
 } from "../_components/orders-api";
 import { PickupCredentialsBlock } from "../_components/pickup-credentials";
 
+import {
+  buildDispatchStatusUpdates,
+  DispatchTimeline,
+  extractDispatchFromEvents,
+  type DispatchOrderEvent,
+} from "./_components/dispatch-timeline";
+
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -89,6 +96,10 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
     (related: OrderSummary) => related.id !== order.id,
   );
 
+  const dispatchEvents =
+    (order as OrderDetail & { dispatch_events?: DispatchOrderEvent[] }).dispatch_events ?? [];
+  const dispatchDetails = extractDispatchFromEvents(dispatchEvents);
+
   return (
     <section className="space-y-6">
       <header className="space-y-2">
@@ -112,6 +123,29 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
       </header>
 
       <OrderTimeline timeline={order.timeline} labels={timelineLabels} />
+
+      <DispatchTimeline
+        fulfilment={order.fulfilment}
+        status={order.status}
+        courier={dispatchDetails.courier}
+        trackingNote={dispatchDetails.trackingNote}
+        statusUpdates={buildDispatchStatusUpdates(
+          order.timeline,
+          {
+            processing: t("timeline.processing"),
+            shipped: t("timeline.shipped"),
+            delivered: t("timeline.delivered"),
+          },
+          dispatchEvents,
+        )}
+        labels={{
+          title: t("dispatch.title"),
+          courier: t("dispatch.courier"),
+          tracking: t("dispatch.tracking"),
+          empty: t("dispatch.empty"),
+          statusUpdates: t("dispatch.statusUpdates"),
+        }}
+      />
 
       {order.pickup ? (
         <PickupCredentialsBlock

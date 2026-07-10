@@ -99,6 +99,84 @@ def lenco_account_id() -> str:
     return account_id
 
 
+def _vendor_payout_method_fields(
+    service_client: ServiceRoleClient,
+    vendor_id: str,
+) -> dict[str, Any]:
+    response = (
+        service_client.client.table("vendors")
+        .select("payout_msisdn, payout_rail, payout_hold_until")
+        .eq("id", vendor_id)
+        .maybe_single()
+        .execute()
+    )
+    row = _single_row(response)
+    return row if row is not None else {}
+
+
+def _parse_hold_until(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        normalized = str(value).replace("Z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
+def assert_payout_method_not_held(
+    service_client: ServiceRoleClient,
+    vendor_id: str,
+) -> None:
+    """Block payout initiation while payout_hold_until is active (M12-P08)."""
+    fields = _vendor_payout_method_fields(service_client, vendor_id)
+    hold_until = _parse_hold_until(fields.get("payout_hold_until"))
+    if hold_until is not None and hold_until > datetime.now(UTC):
+        raise AppError(
+            code="payout_method_held",
+            message="Payouts are paused after a payout method change",
+            http_status=409,
+            details={
+                "message_key": "vendor.payouts.errors.payoutsPaused",
+                "payout_hold_until": hold_until.isoformat(),
+            },
+        )
+
+
+def _apply_vendor_payout_destination(
+    profile: VendorPayoutProfile,
+    fields: dict[str, Any],
+) -> VendorPayoutProfile:
+    """Prefer vendors.payout_msisdn/payout_rail when set (0021), else KYC profile."""
+    msisdn = fields.get("payout_msisdn")
+    rail = fields.get("payout_rail")
+    if not isinstance(msisdn, str) or not msisdn.strip():
+        return profile
+    operator = (
+        str(rail).strip().lower()
+        if isinstance(rail, str) and rail.strip()
+        else profile.operator
+    )
+    if operator not in MOMO_RAILS:
+        operator = profile.operator
+    return VendorPayoutProfile(
+        vendor_id=profile.vendor_id,
+        owner_user_id=profile.owner_user_id,
+        phone=msisdn.strip(),
+        operator=operator,
+        legal_name=profile.legal_name,
+        rail=operator,
+        account_number=profile.account_number,
+        bank_id=profile.bank_id,
+    )
+
+
 def _insert_payout_row(
     service_client: ServiceRoleClient,
     *,
@@ -245,7 +323,12 @@ async def execute_vendor_payout(
     skip_velocity: bool = False,
 ) -> PayoutExecutionResult:
     """Full payout pipeline: eligibility → resolve → send → ledger."""
-    profile = load_vendor_payout_profile(service_client, vendor_id)
+    assert_payout_method_not_held(service_client, vendor_id)
+    method_fields = _vendor_payout_method_fields(service_client, vendor_id)
+    profile = _apply_vendor_payout_destination(
+        load_vendor_payout_profile(service_client, vendor_id),
+        method_fields,
+    )
     snapshot_pre = compute_amount_and_eligibility(
         service_client,
         vendor_id=vendor_id,
@@ -253,6 +336,7 @@ async def execute_vendor_payout(
         skip_velocity=skip_velocity,
     )
     if snapshot_pre.deferred:
+        assert_payout_method_not_held(service_client, vendor_id)
         payout_id = str(uuid.uuid4())
         lenco_reference = make_payment_reference(payout_id)
         held_snapshot = {
@@ -290,6 +374,7 @@ async def execute_vendor_payout(
     lenco_reference = make_payment_reference(payout_id)
 
     if resolve_result.held:
+        assert_payout_method_not_held(service_client, vendor_id)
         with _vendor_lock(vendor_id):
             _insert_payout_row(
                 service_client,
@@ -317,6 +402,7 @@ async def execute_vendor_payout(
         )
 
     with _vendor_lock(vendor_id):
+        assert_payout_method_not_held(service_client, vendor_id)
         check_payout_eligible_unlocked(
             service_client,
             vendor_id=vendor_id,
