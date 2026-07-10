@@ -1514,6 +1514,30 @@ export type Database = {
         }
         Relationships: []
       }
+      reconciliation_reports: {
+        Row: {
+          created_at: string
+          discrepancies: Json
+          id: string
+          report_date: string
+          summary: Json
+        }
+        Insert: {
+          created_at?: string
+          discrepancies?: Json
+          id?: string
+          report_date: string
+          summary?: Json
+        }
+        Update: {
+          created_at?: string
+          discrepancies?: Json
+          id?: string
+          report_date?: string
+          summary?: Json
+        }
+        Relationships: []
+      }
       refunds: {
         Row: {
           amount_ngwee: number
