@@ -425,7 +425,7 @@ def test_authz_cross_vendor_404() -> None:
     assert response.status_code == 404
 
 
-def test_lane2_stubbed_returns_501() -> None:
+def test_lane2_requires_unused_declaration() -> None:
     fake = FakeSupabaseClient()
     _seed_fixture(fake, delivered_at=datetime.now(tz=UTC) - timedelta(hours=1))
     client = _make_client(user_id=CUSTOMER_A_ID, roles=frozenset({"customer"}), fake=fake)
@@ -435,14 +435,13 @@ def test_lane2_stubbed_returns_501() -> None:
         json={
             "order_item_id": ORDER_ITEM_A_ID,
             "lane": 2,
-            "evidence_paths": [EVIDENCE_PATH],
-            "unused_declaration": True,
+            "unused_declaration": False,
         },
     )
 
-    assert response.status_code == 501
+    assert response.status_code == 422
     body = response.json()
-    assert body["error"]["details"]["todo"] == "M09-P08"
+    assert body["error"]["details"]["reason"] == "unused_not_declared"
 
 
 def test_submit_return_api_success() -> None:

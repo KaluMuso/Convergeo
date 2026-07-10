@@ -162,19 +162,74 @@ async def preview_return(
             lane2_reason="lane2_unavailable",
         )
 
-    result = check_eligibility(
-        service_client,
-        order_item_id=order_item_id,
-        customer_id=current_user.id,
+    try:
+        result = check_eligibility(
+            service_client,
+            order_item_id=order_item_id,
+            customer_id=current_user.id,
+        )
+    except AppError:
+        return ReturnPreviewResponse(
+            lane=2,
+            order_item_id=order_item_id,
+            order_id="",
+            within_window=False,
+            fee_breakdown={},
+            lane2_eligible=False,
+            lane2_reason="listing_not_returnable",
+        )
+
+    order_id = ""
+    fee_breakdown: dict[str, Any] = {}
+    load_order_item = getattr(lane2, "_load_order_item_context", None)
+    if callable(load_order_item):
+        try:
+            order_item = load_order_item(service_client, order_item_id=order_item_id)
+            order_id = str(order_item["order_id"])
+            if result.eligible:
+                compute_breakdown = getattr(lane2, "compute_lane2_breakdown", None)
+                load_order = getattr(lane2, "_load_order", None)
+                prorated_delivery = getattr(lane2, "_prorated_outbound_delivery", None)
+                item_ngwee = getattr(lane2, "_item_ngwee", None)
+                load_restocking = getattr(lane2, "load_restocking_pct", None)
+                if all(
+                    callable(fn)
+                    for fn in (
+                        compute_breakdown,
+                        load_order,
+                        prorated_delivery,
+                        item_ngwee,
+                        load_restocking,
+                    )
+                ):
+                    order = load_order(service_client, order_id=order_id)
+                    breakdown = compute_breakdown(
+                        item_ngwee=item_ngwee(order_item),
+                        outbound_delivery_ngwee=prorated_delivery(
+                            service_client,
+                            order_id=order_id,
+                            order_item=order_item,
+                            delivery_fee_ngwee=int(order.get("delivery_fee_ngwee", 0)),
+                        ),
+                        return_transport_ngwee=0,
+                        restocking_pct=load_restocking(service_client),
+                    )
+                    fee_breakdown = breakdown.as_dict()
+        except AppError:
+            pass
+
+    within_window = result.eligible or result.reason not in (
+        "return_window_expired",
+        "order_not_delivered",
     )
     return ReturnPreviewResponse(
         lane=2,
         order_item_id=order_item_id,
-        order_id=str(result.get("order_id", "")),
-        within_window=bool(result.get("within_window", False)),
-        fee_breakdown=result.get("fee_breakdown", {}),
-        lane2_eligible=bool(result.get("eligible", False)),
-        lane2_reason=result.get("reason"),
+        order_id=order_id,
+        within_window=within_window,
+        fee_breakdown=fee_breakdown,
+        lane2_eligible=result.eligible,
+        lane2_reason=result.reason,
     )
 
 
@@ -220,19 +275,18 @@ async def submit_return(
             details={"lane": 2, "todo": "M09-P08"},
         )
 
-    row = create_lane2(
+    record = create_lane2(
         service_client,
         order_item_id=body.order_item_id,
         customer_id=current_user.id,
-        evidence_paths=body.evidence_paths,
-        unused_declaration=bool(body.unused_declaration),
+        unused_declared=bool(body.unused_declaration),
     )
     return SubmitReturnResponse(
-        id=str(row["id"]),
-        order_item_id=str(row["order_item_id"]),
+        id=record.return_id,
+        order_item_id=record.order_item_id,
         lane=2,
-        status=str(row["status"]),
-        fee_breakdown=row.get("fee_breakdown", {}),
+        status="requested",
+        fee_breakdown=record.fee_breakdown,
     )
 
 
