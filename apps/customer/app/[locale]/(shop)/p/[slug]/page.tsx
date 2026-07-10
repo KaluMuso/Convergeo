@@ -418,7 +418,6 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
         galleryLabels={{
           empty: t("pdp.gallery.empty"),
-          indicator: (current, total) => t("pdp.gallery.indicator", { current, total }),
           previous: t("pdp.gallery.previous"),
           next: t("pdp.gallery.next"),
         }}
@@ -433,10 +432,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           addToCartSoonLabel: t("pdp.buyBox.addToCartSoon"),
           inStockLabel: t("pdp.buyBox.inStock"),
           outOfStockLabel: t("pdp.buyBox.outOfStock"),
-          lowStockLabel: (count) => t("pdp.buyBox.lowStock", { count }),
           alwaysAvailableLabel: t("pdp.buyBox.alwaysAvailable"),
           singleVendorLabel: t("pdp.buyBox.singleVendor"),
-          moqLabel: (count) => t("pdp.buyBox.moq", { count }),
           conditionNewLabel: t("pdp.condition.new"),
           conditionRefurbishedLabel: t("pdp.condition.refurbished"),
         }}
@@ -466,7 +463,6 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           heading: t("pdp.vendor.heading"),
           preferredBadge: t("pdp.vendor.preferredBadge"),
           noReviews: t("pdp.vendor.noReviews"),
-          rating: (rating, count) => t("pdp.vendor.rating", { rating, count }),
           viewStore: t("pdp.vendor.viewStore"),
         }}
       />

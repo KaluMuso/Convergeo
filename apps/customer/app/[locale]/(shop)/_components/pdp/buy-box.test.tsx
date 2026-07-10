@@ -11,6 +11,18 @@ vi.mock("../cart/mini-cart-drawer", () => ({
   setLastAddedMessage: vi.fn(),
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, number>) => {
+    if (key === "pdp.buyBox.lowStock") {
+      return `Only ${values?.count ?? 0} left`;
+    }
+    if (key === "pdp.buyBox.moq") {
+      return `MOQ ${values?.count ?? 0}`;
+    }
+    return key;
+  },
+}));
+
 import { addCartItem, openMiniCart } from "../cart/mini-cart-drawer";
 
 import {
@@ -38,10 +50,8 @@ const labels: BuyBoxLabels = {
   addToCartSoonLabel: "Add to cart (coming soon)",
   inStockLabel: "In stock",
   outOfStockLabel: "Out of stock",
-  lowStockLabel: (count) => `Only ${count} left`,
   alwaysAvailableLabel: "Available",
   singleVendorLabel: "Single vendor",
-  moqLabel: (count) => `MOQ ${count}`,
   conditionNewLabel: "New",
   conditionRefurbishedLabel: "Refurbished",
 };
@@ -70,10 +80,17 @@ describe("buy-box helpers", () => {
   });
 
   it("reports stock labels", () => {
-    expect(getStockLabel(inStockListing, labels)).toBe("Only 5 left");
-    expect(getStockLabel(outOfStockListing, labels)).toBe("Out of stock");
+    const withLowStock = {
+      ...labels,
+      lowStockLabel: (count: number) => `Only ${count} left`,
+    };
+    expect(getStockLabel(inStockListing, withLowStock)).toBe("Only 5 left");
+    expect(getStockLabel(outOfStockListing, withLowStock)).toBe("Out of stock");
     expect(
-      getStockLabel({ ...inStockListing, stockMode: "always_available", stockQty: null }, labels),
+      getStockLabel(
+        { ...inStockListing, stockMode: "always_available", stockQty: null },
+        withLowStock,
+      ),
     ).toBe("Available");
   });
 
