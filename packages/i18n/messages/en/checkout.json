@@ -156,6 +156,35 @@
       "placeOrder": "Place order",
       "loading": "Please wait…"
     },
+    "pending": {
+      "pageTitle": "Approve payment",
+      "loading": "Checking payment status…",
+      "error": "Could not load payment status. Try again.",
+      "pollAria": "Waiting for mobile money approval",
+      "successRedirect": "Payment received — taking you to your order…",
+      "codTitle": "Order placed — pay on delivery",
+      "codBody": "Have {amount} ready in cash when your order arrives. Our courier will collect payment at delivery.",
+      "codCta": "View order details",
+      "cancelledTitle": "Payment cancelled",
+      "cancelledBody": "You declined the mobile money prompt. You can try again or choose a different payment method at checkout.",
+      "cancelledCta": "Back to checkout",
+      "timeoutTitle": "Payment timed out",
+      "timeoutBody": "The USSD prompt expired before approval. Check your phone has network signal, then retry — we will send a fresh prompt for the same order.",
+      "retry": "Retry payment",
+      "retrying": "Sending a new prompt…",
+      "retryError": "Could not retry payment. Check your connection and try again.",
+      "viewOrder": "View order"
+    },
+    "ussd": {
+      "title": "Check your phone",
+      "subtitle": "Approve the {amount} prompt on your phone to complete payment.",
+      "amountLabel": "Amount to approve",
+      "mtnHelp": "Open the MTN MoMo prompt on your phone and enter your PIN to approve {amount}.",
+      "airtelHelp": "Open the Airtel Money prompt on your phone and enter your PIN to approve {amount}.",
+      "genericHelp": "A mobile money prompt was sent to your phone. Enter your PIN to approve {amount}.",
+      "waiting": "Waiting for approval…",
+      "doNotClose": "Keep this page open while you approve on your phone."
+    },
     "card": {
       "pageTitle": "Pay with card",
       "subtitle": "Complete your payment securely on Lenco. Vergeo5 never sees your card details.",
