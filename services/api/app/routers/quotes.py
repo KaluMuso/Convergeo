@@ -13,6 +13,7 @@ from app.routers.products import _aggregate_vendor_ratings
 from app.routers.services_listings import ResponseTimeTier, _fetch_response_tiers
 from app.routers.vendor_orders import _load_vendor_for_owner
 from app.schemas.base import NgweeInt, StrictModel
+from app.services.moderation.contact_strip import strip_contacts
 from app.services.rfq.broadcast import RFQ_MATCH_EVENT, match_providers
 from fastapi import APIRouter, Depends, Request
 from pydantic import Field
@@ -22,6 +23,15 @@ router = APIRouter(tags=["quotes"])
 QUOTE_STATUSES = frozenset({"submitted", "accepted", "declined", "expired"})
 COMPARE_VISIBLE_STATUSES = frozenset({"submitted", "accepted"})
 JOB_QUOTABLE_STATUSES = frozenset({"open", "quoted"})
+
+# Contact-stripping moderation (M11-P06). Applied ONLY on the pre-acceptance
+# quote-submit message path (job status in JOB_QUOTABLE_STATUSES); once a quote
+# is accepted the job leaves that set and messages flow untouched.
+CONTACT_STRIP_ACTION = "quote.contact_stripped"
+CONTACT_EVASION_FLAG_REASON = "rfq_contact_evasion"
+CONTACT_EVASION_FLAG_THRESHOLD = 3
+# System actor for moderation audit rows (audit_log.actor is nullable, no FK).
+MODERATION_ACTOR_ID = "00000000-0000-0000-0000-000000000001"
 
 
 class _ServiceRoleClient(Protocol):
@@ -351,6 +361,96 @@ def _maybe_mark_job_quoted(client: Any, job_id: str) -> None:
     ).execute()
 
 
+def _count_contact_evasions(client: Any, vendor_id: str) -> int:
+    response = (
+        client.table("audit_log")
+        .select("id")
+        .eq("action", CONTACT_STRIP_ACTION)
+        .eq("entity_type", "vendor")
+        .eq("entity_id", vendor_id)
+        .execute()
+    )
+    return len(_rows(response))
+
+
+def _maybe_flag_contact_evasion(client: Any, *, vendor_id: str, reporter_user_id: str) -> None:
+    """Flag the provider once logged evasions reach the threshold (idempotent)."""
+    if _count_contact_evasions(client, vendor_id) < CONTACT_EVASION_FLAG_THRESHOLD:
+        return
+    existing = (
+        client.table("flags")
+        .select("id")
+        .eq("entity_type", "vendor")
+        .eq("entity_id", vendor_id)
+        .eq("reason", CONTACT_EVASION_FLAG_REASON)
+        .eq("status", "open")
+        .limit(1)
+        .execute()
+    )
+    if _rows(existing):
+        return
+    client.table("flags").insert(
+        {
+            "entity_type": "vendor",
+            "entity_id": vendor_id,
+            "reason": CONTACT_EVASION_FLAG_REASON,
+            "reporter_user_id": reporter_user_id,
+            "status": "open",
+        }
+    ).execute()
+
+
+def _record_contact_evasion(
+    client: Any,
+    *,
+    vendor_id: str,
+    job_id: str,
+    reporter_user_id: str,
+    stripped_spans: list[str],
+    hit_count: int,
+) -> None:
+    """Log stripped originals server-side (never shown to counterparty) then flag."""
+    client.table("audit_log").insert(
+        {
+            "actor": MODERATION_ACTOR_ID,
+            "action": CONTACT_STRIP_ACTION,
+            "entity_type": "vendor",
+            "entity_id": vendor_id,
+            "before": None,
+            "after": {
+                "job_id": job_id,
+                "hit_count": hit_count,
+                "stripped": stripped_spans,
+            },
+        }
+    ).execute()
+    _maybe_flag_contact_evasion(client, vendor_id=vendor_id, reporter_user_id=reporter_user_id)
+
+
+def _clean_pre_acceptance_message(
+    client: Any,
+    *,
+    message: str | None,
+    vendor_id: str,
+    job_id: str,
+    reporter_user_id: str,
+) -> str | None:
+    """Strip contact info from a pre-acceptance quote message; log + flag evasion."""
+    if not message:
+        return None
+    result = strip_contacts(message)
+    if result.hit_count > 0:
+        _record_contact_evasion(
+            client,
+            vendor_id=vendor_id,
+            job_id=job_id,
+            reporter_user_id=reporter_user_id,
+            stripped_spans=result.stripped_spans,
+            hit_count=result.hit_count,
+        )
+    return result.clean_text.strip() or None
+
+
 @router.get("/provider/jobs", response_model=MatchedJobsResponse)
 async def list_matched_jobs(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
@@ -452,12 +552,23 @@ async def submit_quote(
             http_status=409,
         )
 
+    # Pre-acceptance disintermediation guard: strip contact info before persist.
+    # This path is reachable only while the job is quotable (open/quoted) — i.e.
+    # strictly pre-acceptance — so post-acceptance messages are never stripped.
+    clean_message = _clean_pre_acceptance_message(
+        service_client.client,
+        message=body.message,
+        vendor_id=vendor_id,
+        job_id=job_id,
+        reporter_user_id=str(job["customer_id"]),
+    )
+
     expires_at = datetime.now(tz=UTC) + timedelta(days=body.validity_days)
     insert_row = {
         "job_id": job_id,
         "provider_vendor_id": vendor_id,
         "amount_ngwee": body.amount_ngwee,
-        "message": body.message.strip() if body.message else None,
+        "message": clean_message,
         "status": "submitted",
         "expires_at": expires_at.isoformat(),
     }
