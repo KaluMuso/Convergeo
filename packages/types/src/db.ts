@@ -1811,6 +1811,33 @@ export type Database = {
           },
         ]
       }
+      review_aggregates: {
+        Row: {
+          entity_id: string
+          entity_kind: string
+          rating_bayes: number
+          rating_count: number
+          rating_sum: number
+          updated_at: string
+        }
+        Insert: {
+          entity_id: string
+          entity_kind: string
+          rating_bayes?: number
+          rating_count?: number
+          rating_sum?: number
+          updated_at?: string
+        }
+        Update: {
+          entity_id?: string
+          entity_kind?: string
+          rating_bayes?: number
+          rating_count?: number
+          rating_sum?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reviews: {
         Row: {
           body: string | null
@@ -2568,6 +2595,15 @@ export type Database = {
       has_role: { Args: { required_role: string }; Returns: boolean }
       is_valid_price_tiers: { Args: { tiers: Json }; Returns: boolean }
       next_invoice_no: { Args: { p_series: string }; Returns: number }
+      recompute_all_review_aggregates: { Args: never; Returns: number }
+      recompute_review_aggregate: {
+        Args: { p_entity_id: string; p_entity_kind: string }
+        Returns: undefined
+      }
+      recompute_review_aggregate_for_order_item: {
+        Args: { p_order_item_id: string }
+        Returns: undefined
+      }
       reserve_ask_quota: {
         Args: {
           p_client_ip: unknown
@@ -2584,6 +2620,10 @@ export type Database = {
       reset_ask_kill_switch: {
         Args: { p_month_key?: string }
         Returns: boolean
+      }
+      review_bayes_value: {
+        Args: { p_rating_count: number; p_rating_sum: number }
+        Returns: number
       }
       search_apply_boost: {
         Args: { p_base_score: number; p_boost_signals: Json }
