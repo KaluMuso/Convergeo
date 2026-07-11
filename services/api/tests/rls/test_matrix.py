@@ -640,6 +640,14 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "funnel_events": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "invoice_counters": {
         Persona.ANON: {
             "select": "deny",
