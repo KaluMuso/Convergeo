@@ -1,4 +1,4 @@
-import type { InvoiceLink } from "./orders-api";
+import { invoiceDownloadUrl, type InvoiceLink } from "./orders-api";
 
 export type InvoiceLinkLabels = {
   title: string;
@@ -22,6 +22,8 @@ export function InvoiceLinkBlock({ invoice, labels }: InvoiceLinkBlockProps) {
     );
   }
 
+  const downloadHref = invoiceDownloadUrl(invoice);
+
   return (
     <section
       aria-labelledby="invoice-link-heading"
@@ -30,16 +32,16 @@ export function InvoiceLinkBlock({ invoice, labels }: InvoiceLinkBlockProps) {
       <h3 id="invoice-link-heading" className="font-display text-h3 text-display-ink">
         {labels.title}
       </h3>
-      {invoice.download_url ? (
+      {downloadHref ? (
         <a
-          href={invoice.download_url}
+          href={downloadHref}
           className="inline-flex min-h-11 items-center rounded bg-primary px-4 text-sm font-medium text-surface hover:opacity-90"
-          aria-disabled={invoice.stub}
         >
           {labels.download}
         </a>
-      ) : null}
-      {invoice.stub ? <p className="text-xs text-text-2">{labels.stubHelp}</p> : null}
+      ) : (
+        <p className="text-sm text-text-2">{labels.unavailable}</p>
+      )}
     </section>
   );
 }
