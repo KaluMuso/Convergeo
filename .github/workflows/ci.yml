@@ -245,7 +245,10 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
         with:
-          version: latest
+          # Pinned (not `latest`) so setup-cli skips the unauthenticated
+          # GitHub "resolve latest release" API call, which intermittently
+          # hits rate limits and fails the db/rls/bundle jobs. Bump manually.
+          version: 2.109.1
 
       - name: Start local database
         run: supabase db start
@@ -282,7 +285,10 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
         with:
-          version: latest
+          # Pinned (not `latest`) so setup-cli skips the unauthenticated
+          # GitHub "resolve latest release" API call, which intermittently
+          # hits rate limits and fails the db/rls/bundle jobs. Bump manually.
+          version: 2.109.1
 
       - name: Start local database
         run: supabase db start
