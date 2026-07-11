@@ -638,5 +638,93 @@
         "alreadyResolved": "This dispute has already been resolved."
       }
     }
+  },
+  "support": {
+    "title": "Support inbox",
+    "subtitle": "Look up customers by phone or ID, send canned replies via outbox, and review interaction history.",
+    "lookup": {
+      "label": "Phone or ID",
+      "placeholder": "+260… or order/customer UUID",
+      "submit": "Look up",
+      "searching": "Searching…",
+      "needQuery": "Enter a partial phone number or ID.",
+      "error": "Could not run support lookup.",
+      "empty": "No matching customers or orders.",
+      "multiple": "Multiple matches — select a customer"
+    },
+    "context": {
+      "title": "Customer context",
+      "summary": "{name} · {phone}",
+      "unknownName": "Unknown customer",
+      "unknownPhone": "No phone",
+      "customerId": "Customer ID",
+      "openOrders": "Open orders",
+      "latestStatus": "Latest order status",
+      "noOrders": "No orders",
+      "locale": "Locale",
+      "recentOrders": "Recent orders",
+      "orderLine": "{status} · {date}",
+      "statuses": {
+        "placed": "Placed",
+        "confirmed": "Confirmed",
+        "processing": "Processing",
+        "ready": "Ready",
+        "shipped": "Shipped",
+        "delivered": "Delivered",
+        "completed": "Completed",
+        "cancelled": "Cancelled"
+      }
+    },
+    "reply": {
+      "title": "Send reply",
+      "subtitle": "Canned templates enqueue via WhatsApp → SMS → email fallback.",
+      "modeCanned": "Canned template",
+      "modeFreeText": "Free text",
+      "templateLabel": "Template",
+      "templatePlaceholder": "Choose a template…",
+      "freeTextLabel": "Message",
+      "freeTextPlaceholder": "Type a custom message to the customer…",
+      "freeTextAudit": "Free-text sends are written to the audit log.",
+      "submit": "Send via outbox",
+      "submitting": "Sending…",
+      "success": "Queued on {channel}.",
+      "successDeduped": "Already queued on {channel} (deduped).",
+      "failure": "Could not send message."
+    },
+    "log": {
+      "title": "Interaction log",
+      "subtitle": "Outbound support messages for this customer.",
+      "loading": "Loading log…",
+      "error": "Could not load interaction log.",
+      "retry": "Retry",
+      "empty": "No support messages yet.",
+      "kindCanned": "Canned",
+      "kindFreeText": "Free text"
+    },
+    "templates": {
+      "order_status_update": {
+        "label": "Order status update",
+        "body": "Hi from Vergeo5 support — we're checking on your order and will update you shortly."
+      },
+      "delivery_eta": {
+        "label": "Delivery ETA",
+        "body": "Hi from Vergeo5 — your delivery is on the way. We'll share an ETA as soon as the courier confirms."
+      },
+      "payment_reminder": {
+        "label": "Payment reminder",
+        "body": "Hi from Vergeo5 — your order is awaiting payment. Open the app to complete checkout when ready."
+      },
+      "apology_delay": {
+        "label": "Apology for delay",
+        "body": "Hi from Vergeo5 — we're sorry for the delay on your order. Our team is prioritising it now."
+      },
+      "pickup_ready": {
+        "label": "Pickup ready",
+        "body": "Hi from Vergeo5 — your order is ready for pickup. Bring your order reference when you arrive."
+      }
+    },
+    "errors": {
+      "rateLimited": "Too many support messages — try again shortly."
+    }
   }
 }

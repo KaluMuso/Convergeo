@@ -185,5 +185,22 @@
     "errors": {
       "rateLimited": "Too many requests. Please wait and try again."
     }
+  },
+  "reviewPrompt": {
+    "title": "How was your order?",
+    "body": "Share a verified review to help other shoppers. You can edit it for 7 days.",
+    "itemLabel": "Item",
+    "ratingLabel": "Your rating",
+    "starsAria": "{rating} out of 5 stars",
+    "bodyLabel": "Your review (optional)",
+    "bodyPlaceholder": "What did you like or dislike?",
+    "submit": "Submit review",
+    "submitting": "Submitting…",
+    "success": "Thanks — your review is live.",
+    "error": "Could not submit your review. Please try again.",
+    "editNotice": "You can update this review for up to 7 days.",
+    "loading": "Loading review form…",
+    "starFilled": "★",
+    "starEmpty": "☆"
   }
 }
