@@ -2,14 +2,45 @@
   email {$ACME_EMAIL:ops@vergeo5.com}
 }
 
+# ─── Security headers (M15-P03) ──────────────────────────────────────────────
+# Per-origin header blocks. Baseline (`common_security`) is constant across every
+# origin. API is strict (no app in front → Caddy owns its CSP). Vendor/admin run a
+# Next.js standalone server that sets its own nonce-based CSP + Permissions-Policy;
+# Caddy must NOT set those there or it would clobber the richer per-route app values
+# (e.g. the vendor scanner's `camera=(self)`). Admin/API/n8n are never framed.
+# Full policy + report-only→enforce runbook: docs/ops/security-headers.md.
+
 (common_security) {
   header {
-    Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
     X-Content-Type-Options "nosniff"
-    X-Frame-Options "DENY"
-    Content-Security-Policy "frame-ancestors 'none'"
     Referrer-Policy "strict-origin-when-cross-origin"
+    Cross-Origin-Opener-Policy "same-origin"
     -Server
+  }
+}
+
+# API origin: no downstream app manages headers, so Caddy enforces the full strict
+# set. API returns JSON only → lock everything down. Cross-origin reads from the
+# customer app are governed by FastAPI CORS (do not set CORP here — it can break
+# the customer→API fetch).
+(api_security) {
+  import common_security
+  header {
+    X-Frame-Options "DENY"
+    Permissions-Policy "camera=(), microphone=(), geolocation=(), browsing-topics=(), payment=(), usb=()"
+    Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+  }
+}
+
+# Admin/n8n edge: strictest framing + feature denial. The admin Next app sets its
+# own `frame-ancestors 'none'` CSP; edge adds defense-in-depth X-Frame-Options DENY.
+(hardened_edge) {
+  import common_security
+  header {
+    X-Frame-Options "DENY"
+    Permissions-Policy "camera=(), microphone=(), geolocation=(), browsing-topics=(), payment=(), usb=()"
+    Cross-Origin-Resource-Policy "same-origin"
   }
 }
 
@@ -24,12 +55,15 @@
 # }
 
 {$API_DOMAIN:api.vergeo5.com} {
-  import common_security
+  import api_security
 
   reverse_proxy api:8000
 }
 
 {$VENDOR_DOMAIN:vendor.vergeo5.com} {
+  # Baseline only — the vendor Next app owns CSP, Permissions-Policy (camera scoped
+  # to the scanner routes) and X-Frame-Options. Setting them here would clobber the
+  # app's per-route values.
   import common_security
 
   # Vendor Next.js app is built separately (standalone on OCI). Upstream set via VENDOR_UPSTREAM.
@@ -37,7 +71,7 @@
 }
 
 {$ADMIN_DOMAIN:admin.vergeo5.com} {
-  import common_security
+  import hardened_edge
 
   # D20 / M13-P01: hardened admin origin — layered IP allowlist + Cloudflare Access.
   # Real CIDRs and CF policies live in deploy secrets (see docs/ops/admin-access.md).
@@ -66,7 +100,7 @@
 }
 
 {$N8N_DOMAIN:n8n.vergeo5.com} {
-  import common_security
+  import hardened_edge
 
   reverse_proxy n8n:5678
 }
