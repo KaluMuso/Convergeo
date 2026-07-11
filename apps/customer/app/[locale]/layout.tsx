@@ -1,3 +1,4 @@
+import { AnalyticsProvider } from "@vergeo/analytics/provider";
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { Footer } from "@vergeo/ui/src/footer";
 import Link from "next/link";
@@ -119,6 +120,9 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     <html lang={locale}>
       <body className="flex min-h-dvh flex-col antialiased">
         <NextIntlClientProvider messages={messages}>
+          {/* Consent-aware GA4 mirror; SSR-safe (renders null, no CLS). GA4 fires
+              only on consent — the anonymized server log is the source of truth. */}
+          <AnalyticsProvider measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID} />
           <div className="flex flex-1 flex-col">{children}</div>
           <Footer
             appName={appName}
