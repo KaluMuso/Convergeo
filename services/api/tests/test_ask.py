@@ -17,6 +17,20 @@ LISTING_B = UUID("00000000-0000-4000-8000-000000000102")
 FABRICATED = UUID("00000000-0000-4000-8000-000000000199")
 
 
+@pytest.fixture(autouse=True)
+def _stub_ask_quota(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Isolate ask-pipeline tests from M06-P03 quota enforcement.
+
+    run_ask calls app.services.ask.quota when it is importable; these tests
+    exercise the retrieval/answer pipeline (quota is covered by
+    test_ask_quota.py), so stub the reserve/record hooks to no-ops.
+    """
+    import app.services.ask.quota as quota
+
+    monkeypatch.setattr(quota, "check_and_reserve", lambda **_: None)
+    monkeypatch.setattr(quota, "record_answer", lambda **_: None)
+
+
 def _doc(
     *,
     entity_id: UUID,
@@ -288,7 +302,15 @@ async def test_cache_miss_calls_model_and_record_answer(
     assert response.answer == "The Itel A70 is available."
     assert [item.entity_id for item in response.citations] == [str(LISTING_A)]
     assert normalize_query("itel phone") in client.cache_store
-    assert recorded == [{"tokens": 42, "model": "test-model"}]
+    assert recorded == [
+        {
+            "client": client,
+            "user_id": "user-1",
+            "guest_key": "ip:127.0.0.1",
+            "tokens": 42,
+            "model": "test-model",
+        }
+    ]
 
 
 @pytest.mark.asyncio

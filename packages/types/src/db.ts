@@ -94,6 +94,78 @@ export type Database = {
         }
         Relationships: []
       }
+      ask_spend_monthly: {
+        Row: {
+          admin_reset_at: string | null
+          created_at: string
+          killed_at: string | null
+          month_key: string
+          total_usd_micros: number
+          updated_at: string
+        }
+        Insert: {
+          admin_reset_at?: string | null
+          created_at?: string
+          killed_at?: string | null
+          month_key: string
+          total_usd_micros?: number
+          updated_at?: string
+        }
+        Update: {
+          admin_reset_at?: string | null
+          created_at?: string
+          killed_at?: string | null
+          month_key?: string
+          total_usd_micros?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ask_usage: {
+        Row: {
+          answered_at: string | null
+          client_ip: unknown
+          created_at: string
+          guest_key: string | null
+          id: string
+          model: string | null
+          month_key: string
+          question_hash: string | null
+          status: string
+          tokens: number
+          usd_micros: number
+          user_id: string | null
+        }
+        Insert: {
+          answered_at?: string | null
+          client_ip?: unknown
+          created_at?: string
+          guest_key?: string | null
+          id?: string
+          model?: string | null
+          month_key: string
+          question_hash?: string | null
+          status?: string
+          tokens?: number
+          usd_micros?: number
+          user_id?: string | null
+        }
+        Update: {
+          answered_at?: string | null
+          client_ip?: unknown
+          created_at?: string
+          guest_key?: string | null
+          id?: string
+          model?: string | null
+          month_key?: string
+          question_hash?: string | null
+          status?: string
+          tokens?: number
+          usd_micros?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string
@@ -2307,9 +2379,23 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ask_usage_monthly: {
+        Row: {
+          answered_count: number | null
+          month_key: string | null
+          total_tokens: number | null
+          total_usd_micros: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      ask_current_month_key: { Args: never; Returns: string }
+      ask_monthly_cap_usd_micros: { Args: never; Returns: number }
+      ask_read_config_int: {
+        Args: { p_default: number; p_key: string }
+        Returns: number
+      }
       bump_rate_counter: {
         Args: {
           p_key: string
@@ -2345,9 +2431,39 @@ export type Database = {
         Returns: undefined
       }
       expand_search_terms: { Args: { p_query: string }; Returns: string }
+      finalize_ask_answer: {
+        Args: {
+          p_model: string
+          p_reservation_id: string
+          p_tokens: number
+          p_usd_micros: number
+        }
+        Returns: {
+          killed: boolean
+          month_total_usd_micros: number
+          success: boolean
+        }[]
+      }
       has_role: { Args: { required_role: string }; Returns: boolean }
       is_valid_price_tiers: { Args: { tiers: Json }; Returns: boolean }
       next_invoice_no: { Args: { p_series: string }; Returns: number }
+      reserve_ask_quota: {
+        Args: {
+          p_client_ip: unknown
+          p_guest_key: string
+          p_question_hash: string
+          p_user_id: string
+        }
+        Returns: {
+          allowed: boolean
+          reason: string
+          reservation_id: string
+        }[]
+      }
+      reset_ask_kill_switch: {
+        Args: { p_month_key?: string }
+        Returns: boolean
+      }
       search_apply_boost: {
         Args: { p_base_score: number; p_boost_signals: Json }
         Returns: number

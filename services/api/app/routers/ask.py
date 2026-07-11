@@ -43,7 +43,9 @@ class AskResponse(StrictModel):
     message_key: str | None = None
 
 
-def _optional_quota_check_and_reserve(*, user_id: str | None, guest_key: str) -> None:
+def _optional_quota_check_and_reserve(
+    *, client: Any, user_id: str | None, guest_key: str, question: str
+) -> None:
     try:
         quota = importlib.import_module("app.services.ask.quota")
     except ImportError:
@@ -51,10 +53,14 @@ def _optional_quota_check_and_reserve(*, user_id: str | None, guest_key: str) ->
 
     check_and_reserve = getattr(quota, "check_and_reserve", None)
     if callable(check_and_reserve):
-        check_and_reserve(user_id=user_id, guest_key=guest_key)
+        check_and_reserve(
+            client=client, user_id=user_id, guest_key=guest_key, question=question
+        )
 
 
-def _optional_quota_record_answer(*, tokens: int, model: str) -> None:
+def _optional_quota_record_answer(
+    *, client: Any, user_id: str | None, guest_key: str, tokens: int, model: str
+) -> None:
     try:
         quota = importlib.import_module("app.services.ask.quota")
     except ImportError:
@@ -62,7 +68,13 @@ def _optional_quota_record_answer(*, tokens: int, model: str) -> None:
 
     record_answer = getattr(quota, "record_answer", None)
     if callable(record_answer):
-        record_answer(tokens=tokens, model=model)
+        record_answer(
+            client=client,
+            user_id=user_id,
+            guest_key=guest_key,
+            tokens=tokens,
+            model=model,
+        )
 
 
 async def _optional_current_user(request: Request) -> CurrentUser | None:
@@ -175,7 +187,9 @@ async def run_ask(
     if cached is not None:
         return _response_from_cache(trimmed, cached)
 
-    _optional_quota_check_and_reserve(user_id=user_id, guest_key=guest_key)
+    _optional_quota_check_and_reserve(
+        client=client, user_id=user_id, guest_key=guest_key, question=normalized
+    )
 
     extracted = extract_filters(trimmed)
     retrieve = retriever or top_k
@@ -194,7 +208,9 @@ async def run_ask(
             },
             cited_ids=[],
         )
-        _optional_quota_record_answer(tokens=0, model="none")
+        _optional_quota_record_answer(
+            client=client, user_id=user_id, guest_key=guest_key, tokens=0, model="none"
+        )
         return refusal
 
     prompt = build_prompt(query=trimmed, docs=docs)
@@ -220,7 +236,13 @@ async def run_ask(
         },
         cited_ids=[item.entity_id for item in validated.citations],
     )
-    _optional_quota_record_answer(tokens=model_result.total_tokens, model=model_result.model)
+    _optional_quota_record_answer(
+        client=client,
+        user_id=user_id,
+        guest_key=guest_key,
+        tokens=model_result.total_tokens,
+        model=model_result.model,
+    )
 
     return _response_from_validated(query=trimmed, validated=validated, cached=False)
 
