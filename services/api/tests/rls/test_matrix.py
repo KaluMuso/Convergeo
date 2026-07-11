@@ -129,6 +129,23 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "ask_cache": client_invisible(),
+    "ask_spend_monthly": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
+    "ask_usage": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "audit_log": {
         Persona.ANON: {
             "select": "deny",

@@ -9,5 +9,8 @@
   "ai.quota.rateLimited": "Too many questions too quickly. Please wait a moment.",
   "ai.quota.duplicate": "Please ask a different question.",
   "ai.quota.offTopic": "Ask Vergeo can only help with products, services, and events on Vergeo5.",
-  "ai.quota.signupPrompt": "Sign up for 25 free questions per month."
+  "ai.quota.signupPrompt": "Sign up for 25 free questions per month.",
+  "ai.answer.not_found": "I couldn't find that on Vergeo5.",
+  "ai.answer.rate_limited": "Too many questions — please wait a moment and try again.",
+  "ai.answer.unavailable": "Ask Vergeo is temporarily unavailable. Please try again shortly."
 }

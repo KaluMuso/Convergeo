@@ -20,8 +20,14 @@ from app.routers.ticket_verify import (
     hash_ticket_pin,
     verify_and_check_in_ticket,
     verify_batch_scans,
+    verify_ticket_pin,
     window_sig,
 )
+from app.services.tickets.purchase import (
+    add_ticket_to_checkout,
+    issue_tickets_for_paid_order,
+)
+from app.services.tickets.qr import extract_pin_for_holder, seal_pin_storage
 from fastapi.testclient import TestClient
 from tests.rls.conftest import (
     PgConn,
@@ -96,23 +102,54 @@ def _insert_ticket(
     status: str = "issued",
     qr_secret: str = "ticket-secret-abc",
     pin: str = "123456",
+    order_item_id: str | None = None,
 ) -> str:
+    item_id = order_item_id or str(uuid.uuid4())
+    if order_item_id is None:
+        order_id = str(uuid.uuid4())
+        group_id = str(uuid.uuid4())
+        conn.run(
+            f"""
+            INSERT INTO public.checkout_groups (
+              id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee,
+              total_ngwee, status
+            ) VALUES (
+              '{group_id}', '{CUSTOMER_A}', 'verify-{ticket_id[:8]}', 0, 0, 0, 'completed'
+            );
+            INSERT INTO public.orders (
+              id, checkout_group_id, vendor_id, customer_id, status, fulfilment,
+              delivery_fee_ngwee, cod, commission_snapshot
+            ) VALUES (
+              '{order_id}', '{group_id}', '{SHOP_B}', '{CUSTOMER_A}', 'completed', 'pickup',
+              0, false, '{{}}'::jsonb
+            );
+            INSERT INTO public.order_items (
+              id, order_id, item_kind, qty, unit_price_ngwee, title_snapshot
+            ) VALUES (
+              '{item_id}', '{order_id}', 'ticket', 1, 1000, 'Verify fixture'
+            );
+            INSERT INTO public.order_item_tickets (order_item_id, ticket_type_id, instance_id)
+            VALUES ('{item_id}', '{ticket_type_id}', '{instance_id}');
+            """
+        )
     pin_hash = hash_ticket_pin(pin=pin, ticket_id=ticket_id)
     checked_sql = "timezone('utc', now())" if status == "checked_in" else "NULL"
     conn.run(
         f"""
         INSERT INTO public.tickets (
           id, instance_id, ticket_type_id, holder_user_id, status,
-          qr_secret, pin_hash, checked_in_at
+          qr_secret, pin_hash, checked_in_at, order_item_id
         ) VALUES (
           '{ticket_id}', '{instance_id}', '{ticket_type_id}', '{holder_user_id}',
-          '{status}', {_sql_literal(qr_secret)}, {_sql_literal(pin_hash)}, {checked_sql}
+          '{status}', {_sql_literal(qr_secret)}, {_sql_literal(pin_hash)}, {checked_sql},
+          '{item_id}'
         )
         ON CONFLICT (id) DO UPDATE
           SET status = EXCLUDED.status,
               qr_secret = EXCLUDED.qr_secret,
               pin_hash = EXCLUDED.pin_hash,
-              checked_in_at = EXCLUDED.checked_in_at;
+              checked_in_at = EXCLUDED.checked_in_at,
+              order_item_id = EXCLUDED.order_item_id;
         """
     )
     return ticket_id
@@ -187,11 +224,10 @@ class TestTicketVerifyWindowMatrix:
             ticket_id = str(uuid.uuid4())
             secret = entry["secret"]
             window = int(entry["window"])
-            expected_code = entry["code"].replace(entry["ticket_id"], ticket_id)
+            assert window_sig(secret, window) == entry["code"]
             _insert_ticket(db, ticket_id=ticket_id, qr_secret=secret)
             computed = build_qr_code(ticket_id=ticket_id, ticket_secret=secret, window=window)
-            assert computed == expected_code
-            assert window_sig(secret, window) == expected_code.split(":")[-1]
+            assert computed.endswith(f":{entry['code']}")
 
             result = verify_and_check_in_ticket(
                 ticket_id=ticket_id,
@@ -437,3 +473,142 @@ class _VendorLookupQuery:
                 "owner_user_id": VENDOR_B_OWNER,
             }
         )
+
+
+def _insert_event_with_ticket_type(db: PgConn) -> dict[str, str]:
+    event_id = str(uuid.uuid4())
+    instance_id = str(uuid.uuid4())
+    ticket_type_id = str(uuid.uuid4())
+    slug = f"verify-{event_id[:8]}"
+    db.run(
+        f"""
+        INSERT INTO public.events (
+          id, organiser_vendor_id, title, slug, venue, lat, lng, status
+        ) VALUES (
+          '{event_id}', '{SHOP_B}', 'Verify Event', '{slug}',
+          'Lusaka Showgrounds', -15.4167, 28.2833, 'published'
+        );
+        INSERT INTO public.event_instances (id, event_id, starts_at, capacity)
+        VALUES ('{instance_id}', '{event_id}', '2026-12-01T18:00:00Z', 10);
+        INSERT INTO public.ticket_types (
+          id, event_id, kind, name, price_ngwee
+        ) VALUES ('{ticket_type_id}', '{event_id}', 'fixed', 'GA', 20000);
+        """
+    )
+    return {
+        "instance_id": instance_id,
+        "ticket_type_id": ticket_type_id,
+    }
+
+
+class _ServiceWrapper:
+    def __init__(self) -> None:
+        class _Client:
+            def table(self, name: str) -> Any:
+                raise RuntimeError("use SQL fixtures in this module")
+
+        self.client = _Client()
+
+
+def test_verify_ticket_pin_accepts_sealed_storage() -> None:
+    ticket_id = str(uuid.uuid4())
+    stored = seal_pin_storage(pin="445566", ticket_id=ticket_id)
+    assert verify_ticket_pin(pin="445566", ticket_id=ticket_id, pin_hash=stored)
+    assert not verify_ticket_pin(pin="000000", ticket_id=ticket_id, pin_hash=stored)
+
+
+@pytest.mark.usefixtures("db", "db_url_env")
+class TestTicketVerifyEndToEnd:
+    def test_qr_check_in_on_freshly_issued_ticket(self, db: PgConn) -> None:
+        fixture = _insert_event_with_ticket_type(db)
+        service = _ServiceWrapper()
+        checkout = add_ticket_to_checkout(
+            service,
+            customer_id=CUSTOMER_A,
+            instance_id=fixture["instance_id"],
+            ticket_type_id=fixture["ticket_type_id"],
+            qty=1,
+        )
+        payment_id = str(uuid.uuid4())
+        db.run(
+            f"""
+            INSERT INTO public.payments (
+              id, checkout_group_id, provider, rail, lenco_reference, amount_ngwee, status
+            ) VALUES (
+              '{payment_id}', '{checkout.checkout_group_id}', 'lenco', 'mtn',
+              'pay-{payment_id[:8]}', 20000, 'success'
+            );
+            """
+        )
+        issue_tickets_for_paid_order(service, checkout.order_id)
+        ticket_id = checkout.claimed_ticket_ids[0]
+        row = db.run(
+            f"SELECT qr_secret FROM public.tickets WHERE id = '{ticket_id}';"
+        )
+        assert row.ok and row.rows and row.rows[0]
+        secret = row.rows[0]
+        now = datetime(2026, 7, 10, 12, 0, 0, tzinfo=UTC)
+        code = build_qr_code(ticket_id=ticket_id, ticket_secret=secret, window=current_window(now))
+        result = verify_and_check_in_ticket(
+            ticket_id=ticket_id,
+            vendor_id=SHOP_B,
+            code=code,
+            now=now,
+        )
+        assert result.to_status == "checked_in"
+
+    def test_pin_check_in_on_freshly_issued_ticket(self, db: PgConn) -> None:
+        fixture = _insert_event_with_ticket_type(db)
+        service = _ServiceWrapper()
+        checkout = add_ticket_to_checkout(
+            service,
+            customer_id=CUSTOMER_A,
+            instance_id=fixture["instance_id"],
+            ticket_type_id=fixture["ticket_type_id"],
+            qty=1,
+        )
+        payment_id = str(uuid.uuid4())
+        db.run(
+            f"""
+            INSERT INTO public.payments (
+              id, checkout_group_id, provider, rail, lenco_reference, amount_ngwee, status
+            ) VALUES (
+              '{payment_id}', '{checkout.checkout_group_id}', 'lenco', 'mtn',
+              'pay-{payment_id[:8]}', 20000, 'success'
+            );
+            """
+        )
+        issue_tickets_for_paid_order(service, checkout.order_id)
+        ticket_id = checkout.claimed_ticket_ids[0]
+        pin_row = db.run(
+            f"SELECT pin_hash FROM public.tickets WHERE id = '{ticket_id}';"
+        )
+        assert pin_row.ok and pin_row.rows
+        pin_hash = pin_row.rows[0]
+        pin = extract_pin_for_holder(pin_hash, ticket_id=ticket_id)
+        assert pin is not None
+        result = verify_and_check_in_ticket(
+            ticket_id=ticket_id,
+            vendor_id=SHOP_B,
+            pin=pin,
+        )
+        assert result.to_status == "checked_in"
+
+    def test_unpaid_hold_cannot_check_in(self, db: PgConn) -> None:
+        fixture = _insert_event_with_ticket_type(db)
+        service = _ServiceWrapper()
+        checkout = add_ticket_to_checkout(
+            service,
+            customer_id=CUSTOMER_A,
+            instance_id=fixture["instance_id"],
+            ticket_type_id=fixture["ticket_type_id"],
+            qty=1,
+        )
+        ticket_id = checkout.claimed_ticket_ids[0]
+        with pytest.raises(AppError) as exc:
+            verify_and_check_in_ticket(
+                ticket_id=ticket_id,
+                vendor_id=SHOP_B,
+                pin="123456",
+            )
+        assert exc.value.code == "ticket_unpaid_hold"

@@ -633,9 +633,9 @@ class TestGuestIpHeuristic:
 
 class TestMigrationReplayNote:
     def test_migration_file_is_documented_reversible(self) -> None:
-        from pathlib import Path
+        from tests.rls.conftest import MIGRATIONS_DIR
 
-        sql = Path("/workspace/supabase/migrations/0024_ask_usage.sql").read_text(encoding="utf-8")
+        sql = (MIGRATIONS_DIR / "0024_ask_usage.sql").read_text(encoding="utf-8")
         assert "Reversible rollback" in sql
         assert "ask_usage" in sql
         assert "ask_spend_monthly" in sql
