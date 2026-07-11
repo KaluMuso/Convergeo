@@ -677,6 +677,41 @@ export type Database = {
         }
         Relationships: []
       }
+      funnel_events: {
+        Row: {
+          checkout_group_id: string | null
+          created_at: string
+          customer_id: string | null
+          id: string
+          snapshot: Json
+          stage: string
+        }
+        Insert: {
+          checkout_group_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          snapshot?: Json
+          stage: string
+        }
+        Update: {
+          checkout_group_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          snapshot?: Json
+          stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funnel_events_checkout_group_id_fkey"
+            columns: ["checkout_group_id"]
+            isOneToOne: false
+            referencedRelation: "checkout_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_counters: {
         Row: {
           next_no: number
