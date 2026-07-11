@@ -72,6 +72,20 @@ function getApiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 }
 
+// Point the invoice link at the real signed download endpoint (M15-P07).
+// The API returns a relative stub path (`/account/orders/{id}/invoice`); we lift the
+// order id out of it and target the owner-scoped `/invoices/{id}` PDF stream.
+export function invoiceDownloadUrl(invoice: InvoiceLink): string | null {
+  if (!invoice.download_url) {
+    return null;
+  }
+  const match = invoice.download_url.match(/\/orders\/([^/]+)\/invoice/);
+  if (!match) {
+    return null;
+  }
+  return `${getApiBaseUrl()}/invoices/${match[1]}`;
+}
+
 export function createOrdersApiClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
 
