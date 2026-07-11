@@ -95,6 +95,10 @@
         "/[locale]/account/tickets/[id]/transfer/page": {
           "maxKbGz": 183,
           "justification": "M10-P07 transfer form shares the account/session client shell (useSession + phone-input form). Authenticated route. Target: code-split @vergeo/auth session client to ≤150 KB gz."
+        },
+        "/[locale]/account/tickets/page": {
+          "maxKbGz": 182,
+          "justification": "M10-P07 wallet now mounts the inbound-transfer claim banner (useSession + api client), pulling in the account/session shell. Authenticated route. Target: code-split @vergeo/auth session client to ≤150 KB gz."
         }
       },
       "auditRoutes": [
