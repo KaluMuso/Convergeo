@@ -36,6 +36,16 @@ TOKEN_A = "customer-a-token"
 TOKEN_B = "customer-b-token"
 
 
+class FakeNotQuery:
+    def __init__(self, parent: FakeQuery) -> None:
+        self._parent = parent
+
+    def is_(self, column: str, value: Any) -> FakeQuery:
+        if value == "null":
+            self._parent._filters.append(("not_null", column, None))
+        return self._parent
+
+
 class FakeQuery:
     def __init__(self, parent: FakeTable, filters: list[tuple[str, str, Any]]) -> None:
         self._parent = parent
@@ -43,6 +53,7 @@ class FakeQuery:
         self._maybe_single = False
         self._order: tuple[str, bool] | None = None
         self._limit: int | None = None
+        self.not_ = FakeNotQuery(self)
 
     def select(self, columns: str, *, count: str | None = None) -> FakeQuery:
         _ = columns, count
@@ -80,6 +91,8 @@ class FakeQuery:
         for op, column, value in self._filters:
             if op == "eq":
                 rows = [row for row in rows if row.get(column) == value]
+            elif op == "not_null":
+                rows = [row for row in rows if row.get(column) is not None]
         return rows
 
 
@@ -201,6 +214,7 @@ def _seed_ticket_graph(
             "pin_hash": seal_pin_storage(pin=pin, ticket_id=ticket_id),
             "instance_id": instance_id,
             "ticket_type_id": ticket_type_id,
+            "order_item_id": str(uuid.uuid4()),
             "created_at": "2026-07-10T12:00:00Z",
         }
     )
@@ -418,6 +432,65 @@ def test_horizon_rejects_non_issued_ticket(monkeypatch: pytest.MonkeyPatch) -> N
         )
         assert response.status_code == 409
         assert response.json()["error"]["code"] == "ticket_unusable"
+
+
+def test_wallet_excludes_unpaid_holds(monkeypatch: pytest.MonkeyPatch) -> None:
+    paid_id = str(uuid.uuid4())
+    hold_id = str(uuid.uuid4())
+    fake = FakeSupabaseClient()
+    _seed_ticket_graph(fake, ticket_id=paid_id)
+    hold_event_id = str(uuid.uuid4())
+    hold_instance_id = str(uuid.uuid4())
+    hold_type_id = str(uuid.uuid4())
+    fake.tables["events"].rows.append(
+        {
+            "id": hold_event_id,
+            "title": "Hold Event",
+            "venue": "Arena",
+            "slug": f"hold-{hold_event_id[:8]}",
+        }
+    )
+    fake.tables["event_instances"].rows.append(
+        {
+            "id": hold_instance_id,
+            "event_id": hold_event_id,
+            "starts_at": "2026-12-02T18:00:00Z",
+        }
+    )
+    fake.tables["ticket_types"].rows.append(
+        {
+            "id": hold_type_id,
+            "name": "Hold GA",
+            "kind": "fixed",
+        }
+    )
+    fake.tables["tickets"].rows.append(
+        {
+            "id": hold_id,
+            "holder_user_id": CUSTOMER_A,
+            "status": "issued",
+            "qr_secret": None,
+            "pin_hash": None,
+            "instance_id": hold_instance_id,
+            "ticket_type_id": hold_type_id,
+            "order_item_id": None,
+            "created_at": "2026-07-10T11:00:00Z",
+        }
+    )
+    _mock_auth(monkeypatch, CUSTOMER_A)
+    service_wrapper = _mock_supabase(monkeypatch, fake)
+    app = create_app()
+    _apply_supabase_overrides(app, service_wrapper)
+
+    with TestClient(app) as client:
+        listed = client.get(
+            "/account/tickets",
+            headers={"Authorization": f"Bearer {TOKEN_A}"},
+        )
+        assert listed.status_code == 200
+        ticket_ids = {row["id"] for row in listed.json()["tickets"]}
+        assert paid_id in ticket_ids
+        assert hold_id not in ticket_ids
 
 
 def test_wallet_integration_db_rls(db: PgConn, db_url_env: None) -> None:

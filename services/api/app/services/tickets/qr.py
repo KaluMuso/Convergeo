@@ -106,6 +106,11 @@ def generate_pin() -> str:
     return f"{secrets.randbelow(1_000_000):06d}"
 
 
+def generate_qr_secret() -> str:
+    """Per-ticket rotating QR secret (64 hex chars)."""
+    return secrets.token_hex(32)
+
+
 def hash_pin(*, pin: str, ticket_id: str, secret: str | None = None) -> str:
     if not _PIN_RE.match(pin):
         raise ValueError("PIN must be exactly 6 digits")

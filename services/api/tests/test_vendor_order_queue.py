@@ -193,7 +193,10 @@ def _seed_orders(fake: FakeSupabaseClient) -> None:
         {
             "order_id": ORDER_CONFIRMED_ID,
             "to_status": "confirmed",
-            "created_at": "2026-07-10T21:30:00+00:00",
+            # Seed the confirmation inside "today" so takings (current Lusaka day,
+            # computed against the endpoint's real now()) counts it regardless of
+            # the calendar date the suite runs on. A fixed date here time-bombs.
+            "created_at": datetime.now(UTC).isoformat(),
         }
     )
 

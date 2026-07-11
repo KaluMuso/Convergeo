@@ -160,5 +160,23 @@
     "conditionNew": "New",
     "conditionRefurbished": "Refurbished",
     "usingFallbackLocation": "Distances shown from Lusaka CBD until you share your location."
+  },
+  "reviews": {
+    "heading": "Customer reviews",
+    "empty": "No reviews yet — be the first after purchase.",
+    "writeCta": "Write a review",
+    "starsAria": "{rating} out of 5 stars",
+    "photoAlt": "Review photo",
+    "vendorReply": "Seller reply",
+    "galleryPrevious": "Previous photo",
+    "galleryNext": "Next photo",
+    "galleryIndicator": "Photo {current} of {total}",
+    "loadError": "Could not load reviews.",
+    "loading": "Loading reviews…",
+    "starFilled": "★",
+    "starEmpty": "☆",
+    "errors": {
+      "rateLimited": "Too many review requests. Please wait and try again."
+    }
   }
 }
