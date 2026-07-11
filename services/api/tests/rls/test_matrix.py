@@ -185,11 +185,17 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "cart_items": {
+        # 0012 grants anon full DML for guest carts, scoped by the
+        # `request.cart_guest_token` GUC. The matrix harness runs anon with no
+        # guest token, so select/update/delete execute but RLS filters to zero
+        # rows (secure no-op → classified "permit"); insert is denied because
+        # the WITH CHECK guest_token match fails. Same shape as owner-scoped
+        # tables like `addresses`.
         Persona.ANON: {
-            "select": "deny",
+            "select": "permit",
             "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
+            "update": "permit",
+            "delete": "permit",
         },
         Persona.CUSTOMER: {
             "select": "permit",
@@ -223,11 +229,14 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "carts": {
+        # See cart_items above: anon guest-cart DML is granted but token-scoped,
+        # so with no guest token select/update/delete are RLS-filtered no-ops
+        # (permit) and insert is denied by the WITH CHECK.
         Persona.ANON: {
-            "select": "deny",
+            "select": "permit",
             "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
+            "update": "permit",
+            "delete": "permit",
         },
         Persona.CUSTOMER: {
             "select": "permit",

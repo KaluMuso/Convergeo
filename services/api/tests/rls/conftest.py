@@ -286,9 +286,15 @@ INSERT INTO auth.users (
         (users["admin"], "+260971000005", "Admin User"),
     ]
     for uid, phone, name in profiles:
+        # The 0010 on_auth_user_created trigger inserts a bare profile row
+        # (id only) the moment we seed auth.users above, so ON CONFLICT DO
+        # NOTHING would silently drop the seed phone/display_name. DO UPDATE so
+        # the intended values actually land for tests that read profiles.phone.
         sql_parts.append(
             f"INSERT INTO public.profiles (id, phone, display_name) "
-            f"VALUES ('{uid}', '{phone}', '{name}') ON CONFLICT (id) DO NOTHING;"
+            f"VALUES ('{uid}', '{phone}', '{name}') "
+            f"ON CONFLICT (id) DO UPDATE SET "
+            f"phone = EXCLUDED.phone, display_name = EXCLUDED.display_name;"
         )
 
     roles = [

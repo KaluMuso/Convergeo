@@ -1,9 +1,11 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import Link from "next/link";
-import { createTranslator, type AbstractIntlMessages } from "next-intl";
+import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { getAccountAccessToken } from "../_components/account-server";
+
+import { TicketTransferClaimBanner } from "./_components/claim-banner";
 
 import type { Metadata } from "next";
 
@@ -80,23 +82,37 @@ export default async function AccountTicketsPage({ params }: PageProps) {
 
   const tickets = await fetchWalletTickets(accessToken);
 
+  // Inbound-transfer claim banner (M10-P07). Wrapped in its own provider so the
+  // client component gets the `events` namespace regardless of the default
+  // client message bundle. Shown above both states — a recipient claiming their
+  // first ticket has an empty wallet, so it must render in the empty state too.
+  const claimBanner = (
+    <NextIntlClientProvider locale={locale} messages={{ events: eventsMessages }}>
+      <TicketTransferClaimBanner />
+    </NextIntlClientProvider>
+  );
+
   if (tickets.length === 0) {
     return (
-      <section className="space-y-4 rounded border border-border bg-surface p-6 text-center">
-        <h2 className="font-display text-h2 text-display-ink">{t("emptyTitle")}</h2>
-        <p className="text-sm text-text-2">{t("emptyBody")}</p>
-        <Link
-          href={`/${locale}/events`}
-          className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-5 text-sm font-medium text-surface"
-        >
-          {t("emptyCta")}
-        </Link>
-      </section>
+      <div className="space-y-6">
+        {claimBanner}
+        <section className="space-y-4 rounded border border-border bg-surface p-6 text-center">
+          <h2 className="font-display text-h2 text-display-ink">{t("emptyTitle")}</h2>
+          <p className="text-sm text-text-2">{t("emptyBody")}</p>
+          <Link
+            href={`/${locale}/events`}
+            className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-5 text-sm font-medium text-surface"
+          >
+            {t("emptyCta")}
+          </Link>
+        </section>
+      </div>
     );
   }
 
   return (
     <section className="space-y-6">
+      {claimBanner}
       <header className="space-y-1">
         <h2 className="font-display text-h2 text-display-ink">{t("title")}</h2>
       </header>
