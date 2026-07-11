@@ -86,7 +86,7 @@ class FakeQuery:
         rows = self._apply_filters(self._parent.rows)
         if self._order is not None:
             column, desc = self._order
-            rows = sorted(rows, key=lambda row: row.get(column), reverse=desc)
+            rows = sorted(rows, key=lambda row: row[column], reverse=desc)
         if self._limit is not None:
             rows = rows[: self._limit]
         if self._maybe_single:
@@ -170,7 +170,7 @@ class FakeSupabaseClient:
                     return int(value)
         return default
 
-    def _handle_rpc(self, fn: str, params: dict[str, Any]) -> list[dict[str, Any]]:
+    def _handle_rpc(self, fn: str, params: dict[str, Any]) -> list[Any]:
         if fn == "reserve_ask_quota":
             return [self._reserve_ask_quota(params)]
         if fn == "finalize_ask_answer":
@@ -251,13 +251,12 @@ class FakeSupabaseClient:
                     None,
                 )
                 total = int(spend_row.get("total_usd_micros", 0)) if spend_row else 0
+                admin_reset = spend_row.get("admin_reset_at") if spend_row else None
+                killed_at_val = spend_row.get("killed_at") if spend_row else None
                 killed = bool(
                     spend_row
-                    and spend_row.get("killed_at")
-                    and (
-                        spend_row.get("admin_reset_at") is None
-                        or spend_row.get("admin_reset_at") < spend_row.get("killed_at")
-                    )
+                    and killed_at_val
+                    and (admin_reset is None or admin_reset < killed_at_val)
                 )
                 return {
                     "success": True,
@@ -299,10 +298,9 @@ class FakeSupabaseClient:
             killed = False
             if spend_row["total_usd_micros"] >= cap and spend_row.get("killed_at") is None:
                 spend_row["killed_at"] = datetime.now(UTC).isoformat()
-            if spend_row.get("killed_at") and (
-                spend_row.get("admin_reset_at") is None
-                or spend_row.get("admin_reset_at") < spend_row.get("killed_at")
-            ):
+            admin_reset = spend_row.get("admin_reset_at")
+            killed_at_val = spend_row.get("killed_at")
+            if killed_at_val and (admin_reset is None or admin_reset < killed_at_val):
                 killed = True
 
             return {
