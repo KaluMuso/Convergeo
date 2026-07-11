@@ -7,6 +7,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.kyc.state_machine import ServiceRoleClient
+from app.services.moderation.prohibited import screen_listing
 from app.services.stock.revalidate import CartLineSnapshot, RevalidateResult, revalidate_lines
 from fastapi import APIRouter, Depends
 from pydantic import Field, field_validator, model_validator
@@ -453,6 +454,19 @@ async def update_vendor_listing(
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     listing = _load_listing(service_client, listing_id)
     _assert_listing_owned_by_vendor(listing, str(vendor["id"]), listing_id=listing_id)
+
+    guard = screen_listing(title=_listing_title(listing))
+    if not guard.allowed:
+        raise AppError(
+            code="prohibited_listing",
+            message="Listing contains a prohibited category or keyword",
+            http_status=422,
+            details={
+                "message_key": "vendor.listings.errors.submitFailed",
+                "reason": guard.reason,
+                "matched": guard.matched,
+            },
+        )
 
     updated, revalidation = _apply_listing_update(
         service_client,
