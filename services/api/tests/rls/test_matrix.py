@@ -1796,6 +1796,51 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "ticket_transfers": {
+        # M10-P07: transfer-to-friend. Only sender (from_user_id) and admin have a
+        # SELECT policy; there is no insert/update/delete policy for `authenticated`
+        # at all — initiate/cancel/claim are server-controlled transitions executed
+        # with the service-role client (see app/routers/ticket_transfer.py). No
+        # grant to anon at all, so anon is denied on every verb. Update/delete probes
+        # use `WHERE false` (see _update_probe_sql/_probe_delete) so they succeed
+        # trivially for any role with a table GRANT — same convention as tickets.
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+    },
     "ticket_types": {
         Persona.ANON: {
             "select": "permit",
