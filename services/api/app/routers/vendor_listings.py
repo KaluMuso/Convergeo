@@ -10,6 +10,7 @@ from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.kyc.caps import VendorCapLimits, require_listing_cap
 from app.services.kyc.state_machine import ServiceRoleClient
+from app.services.moderation.prohibited import screen_listing
 from fastapi import APIRouter, Depends
 from pydantic import Field, field_validator, model_validator
 
@@ -361,6 +362,19 @@ async def create_listing(
 ) -> ListingCreateResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     vendor_id = str(vendor["id"])
+
+    guard = screen_listing(title=body.title_override or body.product_name, description=body.brand)
+    if not guard.allowed:
+        raise AppError(
+            code="prohibited_listing",
+            message="Listing contains a prohibited category or keyword",
+            http_status=422,
+            details={
+                "message_key": "vendor.listings.errors.submitFailed",
+                "reason": guard.reason,
+                "matched": guard.matched,
+            },
+        )
 
     _enforce_wholesale_tier(vendor, body)
     if body.price_tiers:

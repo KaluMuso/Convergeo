@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Literal, Protocol, cast
 
 from app.services.kyc.caps import LISTING_COUNT_STATUSES, VendorCapLimits
+from app.services.moderation.prohibited import screen_listing
 
 ListingCondition = Literal["new", "refurbished"]
 StockMode = Literal["tracked", "always_available"]
@@ -466,6 +467,18 @@ def import_listing_rows(
 
         assert parsed is not None
         sku = parsed.sku
+
+        guard = screen_listing(title=parsed.title)
+        if not guard.allowed:
+            rejected += 1
+            results.append(
+                RowImportResult(
+                    row=index,
+                    ok=False,
+                    errors=[f"prohibited listing blocked ({guard.reason}): {guard.matched}"],
+                )
+            )
+            continue
 
         if sku in seen_skus_in_file:
             rejected += 1
