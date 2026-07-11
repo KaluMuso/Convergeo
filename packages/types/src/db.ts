@@ -1918,6 +1918,42 @@ export type Database = {
         }
         Relationships: []
       }
+      search_query_log: {
+        Row: {
+          created_at: string
+          entity_counts: Json
+          id: string
+          kind: string
+          normalized_term: string
+          term: string
+          usd_micros: number
+          user_id: string | null
+          zero_result: boolean
+        }
+        Insert: {
+          created_at?: string
+          entity_counts?: Json
+          id?: string
+          kind: string
+          normalized_term: string
+          term: string
+          usd_micros?: number
+          user_id?: string | null
+          zero_result?: boolean
+        }
+        Update: {
+          created_at?: string
+          entity_counts?: Json
+          id?: string
+          kind?: string
+          normalized_term?: string
+          term?: string
+          usd_micros?: number
+          user_id?: string | null
+          zero_result?: boolean
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           category: string
