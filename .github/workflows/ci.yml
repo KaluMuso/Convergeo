@@ -314,7 +314,7 @@ jobs:
         run: uv sync --dev
 
       - name: Ticket fulfilment integration
-        run: uv run pytest tests/test_ticket_purchase.py tests/test_ticket_verify.py tests/test_ticket_wallet.py -q
+        run: uv run pytest tests/test_ticket_purchase.py tests/test_ticket_verify.py tests/test_ticket_wallet.py tests/test_ticket_scan_sync.py tests/test_ticket_transfer.py tests/test_event_release.py -q
 
       - name: RLS isolation matrix
         # Wired for M03-P09 (same wave). Goes green once services/api/tests/rls lands.
