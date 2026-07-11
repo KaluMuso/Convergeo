@@ -818,6 +818,87 @@
       "heading": "Recent this session",
       "empty": "No verifications yet",
       "order": "Order {orderId}"
+    },
+    "eventCheckIn": {
+      "meta": {
+        "title": "Event scanner — Vergeo5 Vendor",
+        "description": "Scan attendee ticket QR codes to check them in, online or offline."
+      },
+      "eyebrow": "Event check-in",
+      "title": "Scan tickets",
+      "intro": "Sync before doors open so scans keep working without a connection.",
+      "instanceLabel": "Session",
+      "sync": {
+        "button": "Sync tickets",
+        "syncing": "Syncing…",
+        "success": "Synced {count} tickets",
+        "error": "Sync failed — check your connection",
+        "lastSynced": "Last synced {time}",
+        "neverSynced": "Not synced yet — connect and sync before doors open"
+      },
+      "offline": {
+        "title": "You're offline",
+        "body": "Scans are validated from your last sync and queued. They'll confirm automatically once you're back online."
+      },
+      "camera": {
+        "hint": "Centre the ticket QR inside the frame",
+        "loading": "Starting camera…",
+        "denied": "Camera access blocked",
+        "deniedBody": "Allow camera access in your browser settings to scan tickets."
+      },
+      "count": {
+        "checkedIn": "{count, plural, one {# checked in} other {# checked in}}",
+        "pending": "{count, plural, one {# pending sync} other {# pending sync}}"
+      },
+      "result": {
+        "valid": {
+          "title": "Checked in",
+          "body": "Ticket {ticketId} admitted."
+        },
+        "queued": {
+          "title": "Checked in (offline)",
+          "body": "Ticket {ticketId} queued — will confirm once you're back online."
+        },
+        "conflict": {
+          "title": "Already checked in",
+          "body": "Ticket {ticketId} was already admitted."
+        },
+        "rejected": {
+          "title": "Rejected",
+          "body": "Ticket {ticketId} could not be checked in."
+        },
+        "unknownTicket": {
+          "title": "Not recognised",
+          "body": "This ticket isn't in your synced list. Reconnect and sync, then try again."
+        },
+        "staleWindow": {
+          "title": "Code expired",
+          "body": "This QR code has expired. Ask the guest to refresh their ticket."
+        },
+        "notSynced": {
+          "title": "Outside synced window",
+          "body": "This code is outside your synced check-in window. Re-sync closer to the event."
+        },
+        "invalidSig": {
+          "title": "Invalid code",
+          "body": "This QR code does not match a valid ticket."
+        },
+        "invalidFormat": {
+          "title": "Not a ticket code",
+          "body": "This does not look like an event ticket QR."
+        },
+        "scanAnother": "Scan another"
+      },
+      "recent": {
+        "heading": "Recent scans",
+        "empty": "No scans yet",
+        "ticket": "Ticket {ticketId}"
+      },
+      "errors": {
+        "loadEventFailed": "Could not load event details",
+        "noInstances": "This event has no sessions to check in",
+        "unauthorized": "Sign in as the event organiser to scan tickets"
+      }
     }
   },
   "events": {
