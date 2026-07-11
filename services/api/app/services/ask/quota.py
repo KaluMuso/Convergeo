@@ -153,7 +153,11 @@ def _screen_abuse(
         limit=ASK_RATE_LIMIT_PER_MINUTE,
     )
     if not allowed:
-        raise_rate_limited(retry_after)
+        raise_rate_limited(
+            retry_after=retry_after,
+            message_key="ai.quota.rateLimited",
+            message="Too many questions",
+        )
 
     q_hash = question_hash(normalized)
     recent = (
