@@ -2034,6 +2034,56 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_transfers: {
+        Row: {
+          cancelled_at: string | null
+          claimed_at: string | null
+          claimed_by_user_id: string | null
+          created_at: string
+          expires_at: string
+          from_user_id: string
+          id: string
+          status: string
+          ticket_id: string
+          to_phone: string
+          updated_at: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          claimed_at?: string | null
+          claimed_by_user_id?: string | null
+          created_at?: string
+          expires_at: string
+          from_user_id: string
+          id?: string
+          status?: string
+          ticket_id: string
+          to_phone: string
+          updated_at?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          claimed_at?: string | null
+          claimed_by_user_id?: string | null
+          created_at?: string
+          expires_at?: string
+          from_user_id?: string
+          id?: string
+          status?: string
+          ticket_id?: string
+          to_phone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_transfers_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_types: {
         Row: {
           created_at: string
