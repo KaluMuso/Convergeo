@@ -1,4 +1,4 @@
-> **Prepend `prompts/_header.md` (PROJECT HEADER) above this prompt.** Branch from and PR against **`master`**. Wave 15 (ticketing sub-batch, dispatched after M10-FIX merged). **Touch ONLY your files below.** **Run the FULL `uv run pytest` before reporting.**
+> **Prepend `prompts/_header.md` (PROJECT HEADER) above this prompt.** Branch from and PR against **`master`**. Wave 15 (ticketing sub-batch, dispatched after M10-FIX merged). **Touch ONLY your files below.** **Run the FULL `uv run pytest` before reporting.** **⚙ CI GATING (M10 lesson):** your `test_ticket_scan_sync.py` DB file must be **isolation-clean** (seed AND tear down your own rows — assume a shared Postgres running alongside other suites) and green via `uv run pytest tests/test_ticket_scan_sync.py` against a **real DB**. Per-pebble seeding is CI-invisible — it hid all 6 M10 ticket seam bugs. **Do NOT edit `.github/workflows/ci.yml`** — the converger wires your file into the rls-job blocking step at merge (M10-FIX pattern).
 
 # M10-P05 — Organiser scanner PWA
 
