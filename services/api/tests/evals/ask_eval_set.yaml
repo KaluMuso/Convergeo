@@ -1,0 +1,424 @@
+# Ask Vergeo grounding eval set (M06-P05).
+#
+# Deterministic, no live API key: each entry ships a fixture retrieval set and a
+# recorded model answer. The harness (test_ask_grounding.py) injects both into
+# run_ask() and asserts the grounding invariants:
+#   * no cited entity_id outside the retrieved fixture_docs (no fabrication);
+#   * refusal on trap / no-answer questions (empty fixture_docs);
+#   * ZMW ngwee -> decimal correctness surfaced in the citation price_display.
+#
+# Prices are integer ngwee (100 ngwee = K1.00). zmw_contains is checked against
+# the pipeline-computed citation price_display, so it proves format_k() end to end.
+#
+# Categories: exact | fuzzy | semantic | price_filtered | no_answer.
+
+# --- exact (4) --------------------------------------------------------------
+- id: exact-01
+  category: exact
+  query: "Itel A70 smartphone price"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000101"
+      title: "Itel A70 Smartphone"
+      body: "Itel A70 4G smartphone, 128GB storage, dual SIM. Available in Lusaka."
+      price_min_ngwee: 450000
+      price_max_ngwee: 450000
+  recorded_answer:
+    answer_text: "The Itel A70 is available for K4,500.00 in Lusaka."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000101"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 48
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000101"
+    zmw_contains: "K4,500.00"
+
+- id: exact-02
+  category: exact
+  query: "Samsung Galaxy A05 availability"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000102"
+      title: "Samsung Galaxy A05"
+      body: "Samsung Galaxy A05, 4GB RAM, 64GB, sealed. Pickup nationwide."
+      price_min_ngwee: 320000
+      price_max_ngwee: 320000
+  recorded_answer:
+    answer_text: "Yes, the Samsung Galaxy A05 is listed for K3,200.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000102"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 41
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000102"
+    zmw_contains: "K3,200.00"
+
+- id: exact-03-strips-fabricated
+  category: exact
+  query: "HP LaserJet printer"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000103"
+      title: "HP LaserJet M111w Printer"
+      body: "HP LaserJet M111w wireless mono printer. Warranty included."
+      price_min_ngwee: 280000
+      price_max_ngwee: 280000
+  recorded_answer:
+    # Model hallucinates a second id (...1099) that was never retrieved.
+    answer_text: "The HP LaserJet M111w is available for K2,800.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000103"
+      - "00000000-0000-4000-8000-000000001099"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 55
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000103"
+    zmw_contains: "K2,800.00"
+
+- id: exact-04-multi
+  category: exact
+  query: "compare Itel and Tecno budget phones"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000104"
+      title: "Itel P55"
+      body: "Itel P55 5000mAh battery, 128GB storage."
+      price_min_ngwee: 380000
+      price_max_ngwee: 380000
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000105"
+      title: "Tecno Spark 20"
+      body: "Tecno Spark 20, 256GB storage, 50MP camera."
+      price_min_ngwee: 520000
+      price_max_ngwee: 520000
+  recorded_answer:
+    answer_text: "The Itel P55 is K3,800.00 and the Tecno Spark 20 is K5,200.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000104"
+      - "00000000-0000-4000-8000-000000000105"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 72
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000104"
+      - "00000000-0000-4000-8000-000000000105"
+
+# --- fuzzy (4) --------------------------------------------------------------
+- id: fuzzy-01
+  category: fuzzy
+  query: "smart fone with big batery"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000106"
+      title: "Redmi 13C"
+      body: "Redmi 13C smartphone with 5000mAh battery and 128GB storage."
+      price_min_ngwee: 410000
+      price_max_ngwee: 410000
+  recorded_answer:
+    answer_text: "The Redmi 13C has a 5000mAh battery and is listed for K4,100.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000106"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 44
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000106"
+
+- id: fuzzy-02
+  category: fuzzy
+  query: "chitengi fabrik for a dres"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000107"
+      title: "Chitenge Fabric 6 Yards"
+      body: "Vibrant Zambian chitenge fabric, 6 yards, wax print cotton."
+      price_min_ngwee: 18000
+      price_max_ngwee: 18000
+  recorded_answer:
+    answer_text: "This 6-yard chitenge fabric is available for K180.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000107"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 39
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000107"
+
+- id: fuzzy-03
+  category: fuzzy
+  query: "samsng galxy tablit"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000108"
+      title: "Samsung Galaxy Tab A9"
+      body: "Samsung Galaxy Tab A9 8.7-inch tablet, 64GB, WiFi."
+      price_min_ngwee: 620000
+      price_max_ngwee: 620000
+  recorded_answer:
+    answer_text: "The Samsung Galaxy Tab A9 is listed for K6,200.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000108"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 43
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000108"
+
+- id: fuzzy-04
+  category: fuzzy
+  query: "hp laptup for ofice work"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000109"
+      title: "HP 250 G9 Laptop"
+      body: "HP 250 G9, Core i5, 8GB RAM, 512GB SSD. Ideal for office work."
+      price_min_ngwee: 1450000
+      price_max_ngwee: 1450000
+  recorded_answer:
+    answer_text: "The HP 250 G9 laptop is a good office option at K14,500.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000109"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 51
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000109"
+
+# --- semantic (4) -----------------------------------------------------------
+- id: semantic-01
+  category: semantic
+  query: "something to keep my drinks cold"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000110"
+      title: "Hisense 120L Refrigerator"
+      body: "Hisense 120L single-door fridge, energy efficient, ideal for drinks."
+      price_min_ngwee: 2100000
+      price_max_ngwee: 2100000
+  recorded_answer:
+    answer_text: "The Hisense 120L refrigerator keeps drinks cold and is K21,000.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000110"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 47
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000110"
+
+- id: semantic-02
+  category: semantic
+  query: "a device to browse the internet on the go"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000111"
+      title: "MTN 4G MiFi Router"
+      body: "Portable MTN 4G MiFi router, connects up to 10 devices anywhere."
+      price_min_ngwee: 95000
+      price_max_ngwee: 95000
+  recorded_answer:
+    answer_text: "The MTN 4G MiFi router lets you browse on the go for K950.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000111"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 46
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000111"
+
+- id: semantic-03
+  category: semantic
+  query: "footwear suitable for jogging"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000112"
+      title: "Nike Revolution Running Shoes"
+      body: "Nike Revolution lightweight running shoes, breathable mesh."
+      price_min_ngwee: 340000
+      price_max_ngwee: 340000
+  recorded_answer:
+    answer_text: "The Nike Revolution running shoes suit jogging and cost K3,400.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000112"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 45
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000112"
+
+- id: semantic-04
+  category: semantic
+  query: "traditional cloth for a ceremony"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000113"
+      title: "Premium Chitenge Wrapper"
+      body: "Premium chitenge wrapper for weddings and traditional ceremonies."
+      price_min_ngwee: 26000
+      price_max_ngwee: 26000
+  recorded_answer:
+    answer_text: "This premium chitenge wrapper suits ceremonies and is K260.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000113"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 42
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000113"
+
+# --- price_filtered (4) -----------------------------------------------------
+- id: price-01-under-500
+  category: price_filtered
+  query: "phones under K500"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000114"
+      title: "Nokia 105 Feature Phone"
+      body: "Nokia 105 dual-SIM feature phone, long battery life."
+      price_min_ngwee: 45000
+      price_max_ngwee: 45000
+  recorded_answer:
+    answer_text: "Under K500 you can get the Nokia 105 for K450.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000114"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 40
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000114"
+    zmw_contains: "K450.00"
+
+- id: price-02-below-10000
+  category: price_filtered
+  query: "laptops below K10000"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000115"
+      title: "Lenovo IdeaPad 1"
+      body: "Lenovo IdeaPad 1, Celeron, 4GB RAM, 128GB SSD."
+      price_min_ngwee: 999900
+      price_max_ngwee: 999900
+  recorded_answer:
+    answer_text: "Below K10,000 the Lenovo IdeaPad 1 is available for K9,999.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000115"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 49
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000115"
+    zmw_contains: "K9,999.00"
+
+- id: price-03-between-1000-3000
+  category: price_filtered
+  query: "fridges between K1000 and K3000"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000116"
+      title: "Bruhm 90L Bar Fridge"
+      body: "Bruhm 90L compact bar fridge, quiet operation."
+      price_min_ngwee: 250000
+      price_max_ngwee: 250000
+  recorded_answer:
+    answer_text: "In that range, the Bruhm 90L bar fridge is K2,500.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000116"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 46
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000116"
+    zmw_contains: "K2,500.00"
+
+- id: price-04-under-300
+  category: price_filtered
+  query: "running shoes under K300"
+  fixture_docs:
+    - entity_kind: listing
+      entity_id: "00000000-0000-4000-8000-000000000117"
+      title: "Bata Canvas Trainers"
+      body: "Bata canvas trainers, durable rubber sole."
+      price_min_ngwee: 25000
+      price_max_ngwee: 25000
+  recorded_answer:
+    answer_text: "Under K300, the Bata canvas trainers are K250.00."
+    cited_entity_ids:
+      - "00000000-0000-4000-8000-000000000117"
+    model: "recorded/gemini-2.0-flash"
+    total_tokens: 38
+  expect:
+    refused: false
+    cited_ids:
+      - "00000000-0000-4000-8000-000000000117"
+    zmw_contains: "K250.00"
+
+# --- no_answer traps (4) ----------------------------------------------------
+# Empty fixture_docs => run_ask refuses before the model is ever called.
+- id: trap-01-off-catalog
+  category: no_answer
+  query: "Do you sell live elephants?"
+  fixture_docs: []
+  recorded_answer:
+    answer_text: "I couldn't find that on Vergeo5."
+    cited_entity_ids: []
+    model: "none"
+    total_tokens: 0
+  expect:
+    refused: true
+    cited_ids: []
+
+- id: trap-02-general-knowledge
+  category: no_answer
+  query: "What is the capital of France?"
+  fixture_docs: []
+  recorded_answer:
+    answer_text: "I couldn't find that on Vergeo5."
+    cited_entity_ids: []
+    model: "none"
+    total_tokens: 0
+  expect:
+    refused: true
+    cited_ids: []
+
+- id: trap-03-out-of-scope-service
+  category: no_answer
+  query: "Book me a flight to Dubai next week"
+  fixture_docs: []
+  recorded_answer:
+    answer_text: "I couldn't find that on Vergeo5."
+    cited_entity_ids: []
+    model: "none"
+    total_tokens: 0
+  expect:
+    refused: true
+    cited_ids: []
+
+- id: trap-04-nonexistent-product
+  category: no_answer
+  query: "quantum flux capacitor in stock"
+  fixture_docs: []
+  recorded_answer:
+    answer_text: "I couldn't find that on Vergeo5."
+    cited_entity_ids: []
+    model: "none"
+    total_tokens: 0
+  expect:
+    refused: true
+    cited_ids: []
