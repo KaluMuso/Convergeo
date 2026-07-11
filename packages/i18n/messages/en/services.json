@@ -135,5 +135,51 @@
       "generic": "Something went wrong. Please try again.",
       "rateLimited": "Too many requests. Please wait a moment."
     }
+  },
+  "quotes": {
+    "list": {
+      "title": "Your jobs",
+      "intro": "Compare quotes from providers and choose the best fit.",
+      "emptyTitle": "No jobs yet",
+      "emptyBody": "Post a job to receive quotes from matching providers.",
+      "postJobCta": "Post a job",
+      "posted": "Posted {date}",
+      "status": "Status: {status}",
+      "budget": "Budget {min} – {max}",
+      "budgetFlexible": "Flexible budget",
+      "compareCta": "Compare quotes"
+    },
+    "compareTitle": "Compare quotes",
+    "compareIntro": "Sorted by price, then provider rating. Withdrawn and expired quotes are hidden.",
+    "loading": "Loading quotes…",
+    "authRequired": "Sign in to compare quotes.",
+    "back": "← Back to jobs",
+    "empty": "No active quotes yet — providers usually respond within a day.",
+    "unknownProvider": "Provider",
+    "preferredBadge": "Vergeo5 Preferred",
+    "rating": "{rating}★ ({count, plural, one {# review} other {# reviews}})",
+    "validUntil": "Valid until {date}",
+    "status": {
+      "open": "Open",
+      "quoted": "Quotes received",
+      "accepted": "Accepted",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "decline": {
+      "open": "Decline quote",
+      "reasonLabel": "Reason (optional)",
+      "reasonPlaceholder": "e.g. Price too high, need sooner date…",
+      "submit": "Decline",
+      "submitting": "Declining…",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "loadFailed": "Could not load quotes. Try again.",
+      "forbidden": "You can only compare quotes on your own jobs.",
+      "declineFailed": "Could not decline quote. Try again.",
+      "rateLimited": "Too many requests. Please wait a moment.",
+      "notMatched": "This provider was not matched to the job."
+    }
   }
 }
