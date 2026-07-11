@@ -91,6 +91,10 @@
         "/[locale]/account/jobs/[id]/page": {
           "maxKbGz": 185,
           "justification": "M11-P03 quote-compare page shares the account/session client shell (useSession + quote-action forms). Authenticated route (not public discovery). Target: code-split @vergeo/auth session client to ≤150 KB gz."
+        },
+        "/[locale]/account/tickets/[id]/transfer/page": {
+          "maxKbGz": 183,
+          "justification": "M10-P07 transfer form shares the account/session client shell (useSession + phone-input form). Authenticated route. Target: code-split @vergeo/auth session client to ≤150 KB gz."
         }
       },
       "auditRoutes": [

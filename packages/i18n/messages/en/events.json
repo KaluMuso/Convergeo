@@ -114,5 +114,40 @@
       "transferBanner": "Transferred tickets cannot be scanned. The recipient has a new QR and PIN.",
       "voidBanner": "This ticket has been voided and cannot be used for entry."
     }
+  },
+  "transfer": {
+    "back": "Back to ticket",
+    "title": "Transfer ticket",
+    "subtitle": "Send this ticket to a friend for free. They'll sign in with the phone number below to claim it.",
+    "phoneLabel": "Recipient's phone number",
+    "phonePlaceholder": "e.g. 0977 123 456",
+    "cutoffNotice": "Transfers close 6 hours before the event starts.",
+    "submitCta": "Send transfer",
+    "submitting": "Sending…",
+    "successBody": "We've notified {phone}. They can claim this ticket by signing in with that number.",
+    "cancelCta": "Cancel transfer",
+    "cancelling": "Cancelling…",
+    "cancelledNotice": "Transfer cancelled.",
+    "pendingNotice": "Pending transfer to {phone}",
+    "claimBanner": {
+      "title": "A friend sent you a ticket",
+      "body": "{event} starts {datetime}. Claim it before it expires.",
+      "claimCta": "Claim ticket",
+      "claiming": "Claiming…",
+      "claimedNotice": "Ticket claimed — find it in My tickets.",
+      "dismiss": "Dismiss"
+    },
+    "errors": {
+      "generic": "Could not complete request. Try again.",
+      "notFound": "Ticket not found.",
+      "notHolder": "Only the ticket holder can transfer this ticket.",
+      "notTransferable": "This ticket can no longer be transferred.",
+      "cutoffPassed": "Transfers close 6 hours before the event starts.",
+      "pendingExists": "This ticket already has a pending transfer.",
+      "notPending": "This transfer is no longer pending.",
+      "expired": "This transfer offer has expired.",
+      "phoneMismatch": "Sign in with the phone number the ticket was sent to.",
+      "rateLimited": "Too many requests. Try again shortly."
+    }
   }
 }
