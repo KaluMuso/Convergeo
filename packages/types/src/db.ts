@@ -75,6 +75,30 @@ export type Database = {
         }
         Relationships: []
       }
+      ask_cache: {
+        Row: {
+          answer: Json
+          cited_ids: string[]
+          created_at: string
+          expires_at: string
+          normalized_query: string
+        }
+        Insert: {
+          answer: Json
+          cited_ids?: string[]
+          created_at?: string
+          expires_at: string
+          normalized_query: string
+        }
+        Update: {
+          answer?: Json
+          cited_ids?: string[]
+          created_at?: string
+          expires_at?: string
+          normalized_query?: string
+        }
+        Relationships: []
+      }
       audit_log: {
         Row: {
           action: string

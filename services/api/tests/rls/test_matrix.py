@@ -129,6 +129,7 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "ask_cache": client_invisible(),
     "audit_log": {
         Persona.ANON: {
             "select": "deny",

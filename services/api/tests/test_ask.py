@@ -327,8 +327,8 @@ async def test_no_results_refuse_gracefully(monkeypatch: pytest.MonkeyPatch) -> 
 
 def test_migration_0023_replay_note() -> None:
     """0023_ask_cache.sql is additive; rollback is DROP TABLE public.ask_cache."""
-    from pathlib import Path
+    from tests.rls.conftest import MIGRATIONS_DIR
 
-    sql = Path("/workspace/supabase/migrations/0023_ask_cache.sql").read_text(encoding="utf-8")
+    sql = (MIGRATIONS_DIR / "0023_ask_cache.sql").read_text(encoding="utf-8")
     assert "create table public.ask_cache" in sql
     assert "DROP TABLE IF EXISTS public.ask_cache" in sql
