@@ -307,8 +307,13 @@ jobs:
       - name: Install dependencies
         run: uv sync --dev
 
-      - name: Ticket fulfilment integration
-        run: uv run pytest tests/test_ticket_purchase.py tests/test_ticket_verify.py tests/test_ticket_wallet.py -q
+      - name: DB-backed integration suite
+        # Runs the FULL suite against real Postgres (SUPABASE_DB_URL), so the
+        # DB-gated integration tests EXECUTE here instead of skipping (as they do
+        # in the no-DB "Python API" job). This is the gate that catches cross-file
+        # seam bugs — the class of defect that slipped through when each pebble
+        # only seeded its own rows (see M10-FIX). Blocking.
+        run: uv run pytest -q
 
       - name: RLS isolation matrix
         # Wired for M03-P09 (same wave). Goes green once services/api/tests/rls lands.
