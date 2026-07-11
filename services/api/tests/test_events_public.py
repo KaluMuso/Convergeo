@@ -360,8 +360,21 @@ def test_detail_orders_instances_and_shows_free_rsvp(store: FakeSupabaseStore) -
     assert detail.is_free is True
 
 
+class _FrozenDateTime(datetime):
+    """Freezes `datetime.now()` to REF_THURSDAY so the route sees the same
+    "now" as every other test in this file (which pass `ref=REF_THURSDAY`
+    directly) — the live route has no `ref` override, so without this the
+    fixture's fixed-calendar-date instances silently age into the past."""
+
+    @classmethod
+    def now(cls, tz: Any = None) -> _FrozenDateTime:
+        frozen = REF_THURSDAY.astimezone(tz) if tz else REF_THURSDAY
+        return cls.fromtimestamp(frozen.timestamp(), tz=frozen.tzinfo)
+
+
 def test_list_events_endpoint(client: TestClient) -> None:
-    response = client.get("/events")
+    with patch("app.routers.events_public.datetime", _FrozenDateTime):
+        response = client.get("/events")
     assert response.status_code == 200
     payload = response.json()
     assert payload["total"] >= 1
