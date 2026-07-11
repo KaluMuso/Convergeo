@@ -181,5 +181,24 @@
       "rateLimited": "Too many requests. Please wait a moment.",
       "notMatched": "This provider was not matched to the job."
     }
+  },
+  "accept": {
+    "title": "Accept this quote",
+    "intro": "Pay a {pct}% deposit now to secure {vendor}. The balance is due when the work is done.",
+    "quoteFrom": "Quote from {vendor}",
+    "totalLabel": "Total job value",
+    "depositLabel": "Deposit due now",
+    "balanceLabel": "Balance on completion",
+    "escrowNote": "Your deposit is held safely by Vergeo5 and only released to the provider once the work is confirmed.",
+    "confirmCta": "Pay deposit of {amount}",
+    "submitting": "Setting up your deposit…",
+    "cancel": "Not now",
+    "errors": {
+      "notOwner": "You can only accept quotes on your own jobs.",
+      "mismatch": "That quote does not belong to this job.",
+      "invalidStatus": "This job or quote can no longer be accepted.",
+      "generic": "Could not start the deposit. Please try again.",
+      "rateLimited": "Too many requests. Please wait a moment."
+    }
   }
 }

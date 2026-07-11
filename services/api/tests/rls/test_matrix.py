@@ -1733,6 +1733,18 @@ EXPECTATIONS: TableExpectations = {
             "delete": "deny",
         },
     },
+    "search_query_log": {
+        # M06-P06: admin-read / service-role-write query analytics. Same shape as
+        # funnel_events — authenticated gets a SELECT grant + admin-only RLS policy
+        # (non-admins execute but see zero rows → permit), no client insert/update/
+        # delete grant (→ deny), and anon has no grant at all (→ deny_all).
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "services": {
         Persona.ANON: {
             "select": "permit",

@@ -1,0 +1,158 @@
+{
+  "name": "Founder Daily Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily At 06:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/internal/digest",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Token",
+              "value": "={{$env.INTERNAL_DIGEST_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "admin-digest-fetch",
+      "name": "Fetch Founder Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 Internal Digest"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "digest-text",
+              "name": "message",
+              "type": "string",
+              "value": "=Vergeo5 daily digest\nGMV: K{{ ($json.gmv_ngwee / 100).toFixed(2) }}\nOrders: {{ $json.orders.total }}\nPayouts due: {{ $json.payouts_due.count }} (K{{ ($json.payouts_due.amount_ngwee / 100).toFixed(2) }})\nReconciliation: {{ $json.reconciliation.status }}\nKYC queue: {{ $json.kyc_queue_depth }}\nFlags pending: {{ $json.flags_pending }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "admin-digest-format",
+      "name": "Format Digest Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [780, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.WHATSAPP_CLOUD_API_URL}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.WHATSAPP_CLOUD_API_TOKEN}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{$env.FOUNDER_WHATSAPP_TO}}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": {{ JSON.stringify($json.message) }} }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "admin-digest-send",
+      "name": "Send Founder Digest WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1040, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 WhatsApp Cloud API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily At 06:00 UTC": {
+      "main": [
+        [
+          {
+            "node": "Fetch Founder Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Founder Digest": {
+      "main": [
+        [
+          {
+            "node": "Format Digest Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Digest Message": {
+      "main": [
+        [
+          {
+            "node": "Send Founder Digest WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "m13-p11-admin-digest",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "M13",
+      "createdAt": "2026-07-11T00:00:00.000Z",
+      "updatedAt": "2026-07-11T00:00:00.000Z"
+    }
+  ]
+}
