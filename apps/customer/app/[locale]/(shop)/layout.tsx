@@ -47,7 +47,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       key: "ask",
       icon: navIcon("✦"),
       label: t("home.nav.ask"),
-      href: `/${locale}/search?q=ask`,
+      href: `/${locale}/ask`,
       active: false,
     },
     {

@@ -23,7 +23,7 @@ export type ZeroResultsProps = {
   labels: ZeroResultsLabels;
 };
 
-export function ZeroResults({ query: _query, locale, labels }: ZeroResultsProps) {
+export function ZeroResults({ query, locale, labels }: ZeroResultsProps) {
   return (
     <div className="space-y-6" data-testid="search-zero-results">
       <div className="rounded-lg border border-border bg-surface p-4 text-center">
@@ -74,12 +74,15 @@ export function ZeroResults({ query: _query, locale, labels }: ZeroResultsProps)
           {labels.askVergeoTitle}
         </h2>
         <p className="mb-3 text-sm text-text-2">{labels.askVergeoTeaser}</p>
-        <div
+        <Link
           id="ask-vergeo-slot"
           data-testid="ask-vergeo-slot"
+          href={`/${locale}/ask?q=${encodeURIComponent(query)}`}
           aria-label={labels.askVergeoSlotLabel}
-          className="min-h-24 rounded-md border border-border bg-surface"
-        />
+          className="flex min-h-24 items-center justify-center rounded-md border border-border bg-surface px-3 text-center text-sm font-medium text-primary hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+        >
+          {labels.askVergeoTitle}
+        </Link>
       </section>
     </div>
   );
