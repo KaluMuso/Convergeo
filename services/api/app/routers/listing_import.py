@@ -14,6 +14,7 @@ from app.services.listings.csv_import import (
     import_csv_bytes,
     import_listing_rows,
 )
+from app.services.moderation.prohibited import screen_listing
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import PlainTextResponse
 from pydantic import Field
@@ -156,6 +157,20 @@ async def import_listings(
 
     if "application/json" in content_type:
         payload = ListingImportJsonRequest.model_validate(await request.json())
+        for index, row in enumerate(payload.rows, start=1):
+            guard = screen_listing(title=row.title)
+            if not guard.allowed:
+                raise AppError(
+                    code="prohibited_listing",
+                    message="Import contains a prohibited category or keyword",
+                    http_status=422,
+                    details={
+                        "message_key": "vendor.listings.errors.submitFailed",
+                        "row": index,
+                        "reason": guard.reason,
+                        "matched": guard.matched,
+                    },
+                )
         raw_rows = [_json_row_to_raw(row) for row in payload.rows]
         summary = import_listing_rows(
             client,

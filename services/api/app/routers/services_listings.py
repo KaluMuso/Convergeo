@@ -11,6 +11,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.kyc.state_machine import ServiceRoleClient
+from app.services.moderation.prohibited import screen_listing
 from fastapi import APIRouter, Depends, Query
 from pydantic import Field, field_validator
 
@@ -575,6 +576,20 @@ def create_vendor_service(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ServiceMutationResponse:
     vendor = _load_vendor_for_owner(service_client, user.id)
+    guard = screen_listing(
+        title=payload.title, description=payload.description, category=payload.category
+    )
+    if not guard.allowed:
+        raise AppError(
+            code="prohibited_listing",
+            message="Service listing contains a prohibited category or keyword",
+            http_status=422,
+            details={
+                "message_key": "vendor.listings.errors.submitFailed",
+                "reason": guard.reason,
+                "matched": guard.matched,
+            },
+        )
     insert_row = {
         "id": str(uuid.uuid4()),
         "vendor_id": vendor["id"],
