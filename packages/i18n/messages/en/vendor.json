@@ -1,4 +1,45 @@
 {
+  "analytics": {
+    "meta": {
+      "title": "Analytics — Vergeo5 Vendor",
+      "description": "Track your sales, orders, and views over the last 7 or 30 days, see your top listings, and gauge conversion."
+    },
+    "eyebrow": "Your storefront",
+    "title": "Analytics",
+    "intro": "A quick read on how your storefront is performing.",
+    "loading": "Loading analytics…",
+    "window": {
+      "label": "Time window",
+      "7d": "7 days",
+      "30d": "30 days"
+    },
+    "cards": {
+      "sales": "Sales",
+      "orders": "Orders",
+      "views": "Views"
+    },
+    "sparkline": {
+      "sales": "Daily sales trend",
+      "orders": "Daily orders trend",
+      "views": "Daily views trend"
+    },
+    "top": {
+      "heading": "Top listings",
+      "empty": "No sales yet in this window.",
+      "untitled": "Untitled listing",
+      "units": "{count, plural, one {# sold} other {# sold}}"
+    },
+    "conversion": {
+      "heading": "Conversion",
+      "summary": "{orders, plural, one {# order} other {# orders}} from {views, plural, one {# view} other {# views}}",
+      "pct": "{pct}% conversion",
+      "empty": "Not enough activity yet to estimate conversion."
+    },
+    "errors": {
+      "loadFailed": "We could not load your analytics. Please try again.",
+      "invalidWindow": "Choose a 7 or 30 day window."
+    }
+  },
   "vendor.dashboard.title": "Vendor dashboard",
   "vendor.listings.count": "{count, plural, one {# listing} other {# listings}}",
   "vendor.payout.pending": "Pending payout: {amount}",
