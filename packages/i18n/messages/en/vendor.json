@@ -1111,5 +1111,36 @@
       "loadFailed": "Could not load reviews. Pull to refresh.",
       "replyFailed": "Could not save your reply. Try again."
     }
+  },
+  "eventDashboard": {
+    "meta": {
+      "title": "Event dashboard",
+      "description": "Sales by ticket type, check-in progress, and escrow status for your event."
+    },
+    "heading": "Event dashboard",
+    "subheading": "Sales, check-in progress, and escrow status at a glance.",
+    "backToEvent": "Back to event",
+    "loading": "Loading dashboard…",
+    "empty": "No ticket types yet.",
+    "massRefundFlagged": "This event was cancelled. Ticket holders are flagged for a refund; our team will process it shortly.",
+    "checkInProgress": "{checkedIn, number} of {issued, number} tickets checked in",
+    "sections": {
+      "revenue": "Revenue",
+      "checkIn": "Check-in progress",
+      "escrow": "Escrow",
+      "salesByType": "Sales by ticket type"
+    },
+    "labels": {
+      "pending": "Pending release",
+      "released": "Released to you",
+      "eventStatus": "Event status",
+      "soldCheckedIn": "{sold, plural, one {# sold} other {# sold}} · {checkedIn, plural, one {# checked in} other {# checked in}}"
+    },
+    "errors": {
+      "loadFailed": "Could not load the dashboard. Pull to refresh.",
+      "unauthorized": "Sign in as an organiser to view this dashboard.",
+      "notFound": "Event not found.",
+      "forbidden": "You may only view the dashboard for your own events."
+    }
   }
 }
