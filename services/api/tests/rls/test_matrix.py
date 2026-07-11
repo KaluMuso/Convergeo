@@ -1608,6 +1608,48 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "review_aggregates": {
+        # M15-P02: Bayesian review aggregate — the public star-rating source for
+        # cards/PDP. Public read (anon + authenticated); writes are service_role /
+        # 0028-trigger only, so every persona (incl. admin) is select-permit and
+        # insert/update/delete-deny. Same shape as search_documents.
+        Persona.ANON: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+    },
     "reviews": {
         # NOTE: the insert probe uses `INSERT ... DEFAULT VALUES`, which cannot
         # satisfy reviews' data-dependent RLS WITH CHECK (needs a real owned,
