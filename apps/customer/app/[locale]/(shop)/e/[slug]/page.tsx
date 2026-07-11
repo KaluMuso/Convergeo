@@ -3,9 +3,7 @@ import { Badge } from "@vergeo/ui/src/badge";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import {
   buildCanonicalAlternates,
-  buildEventJsonLd,
   buildLocaleCanonical,
-  JsonLdScript,
   resolveCloudinaryImageUrls,
 } from "@vergeo/ui/src/seo/json-ld";
 import dynamic from "next/dynamic";
@@ -13,6 +11,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
+
+import { EventJsonLd, isEventIndexable, type EventJsonLdInput } from "./_components/event-jsonld";
 
 import type { Metadata } from "next";
 
@@ -89,7 +89,10 @@ function getApiBaseUrl(): string {
 async function getEventsTranslator(locale: string): Promise<EventsTranslator> {
   const baseMessages = await getMessages();
   const eventsMessages = await loadNamespace(locale as Locale, "events");
-  const messages = { ...baseMessages, events: eventsMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    events: eventsMessages,
+  } as AbstractIntlMessages;
 
   return createTranslator({
     locale,
@@ -143,13 +146,41 @@ function eventImageUrls(images: string[]): string[] {
   return resolveCloudinaryImageUrls(images);
 }
 
+function toEventJsonLdInput(event: EventDetail, locale: string): EventJsonLdInput {
+  return {
+    name: event.title,
+    slug: event.slug,
+    locale,
+    description: event.description,
+    venue: event.venue,
+    landmark: event.landmark,
+    lat: event.lat,
+    lng: event.lng,
+    imageUrls: eventImageUrls(event.images),
+    instances: event.instances.map((instance) => ({
+      startsAt: instance.starts_at,
+    })),
+    ticketTypes: event.ticket_types.map((ticket) => ({
+      name: ticket.name,
+      priceNgwee: ticket.price_ngwee,
+      isFree: ticket.is_free,
+      isSoldOut: ticket.is_sold_out,
+    })),
+    organiserName: event.organiser.display_name,
+    isFree: event.is_free,
+  };
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
   const event = await fetchEvent(slug);
   const t = await getEventsTranslator(locale);
 
   if (!event) {
-    return { title: t("browse.title"), robots: { index: false, follow: false } };
+    return {
+      title: t("browse.title"),
+      robots: { index: false, follow: false },
+    };
   }
 
   const description = t("detail.metaDescription", {
@@ -162,6 +193,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ogParams.set("price", formatK(event.min_price_ngwee));
   }
 
+  // Past events whose last instance ended >30d ago drop out of the index.
+  const indexable = isEventIndexable(
+    event.instances.map((instance) => ({ startsAt: instance.starts_at })),
+  );
+
   return {
     title: t("detail.metaTitle", { title: event.title }),
     description,
@@ -172,9 +208,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       type: "website",
       locale,
       url: canonicalPath,
-      images: [{ url: `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}` }],
+      images: [
+        {
+          url: `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}`,
+        },
+      ],
     },
-    robots: { index: true, follow: true },
+    robots: { index: indexable, follow: true },
   };
 }
 
@@ -190,30 +230,10 @@ export default async function EventDetailPage({ params }: PageProps) {
   }
 
   const heroImage = event.images[0];
-  const jsonLd = buildEventJsonLd({
-    name: event.title,
-    slug: event.slug,
-    locale,
-    description: event.description,
-    venue: event.venue,
-    landmark: event.landmark,
-    lat: event.lat,
-    lng: event.lng,
-    imageUrls: eventImageUrls(event.images),
-    instances: event.instances.map((instance) => ({ startsAt: instance.starts_at })),
-    ticketTypes: event.ticket_types.map((ticket) => ({
-      name: ticket.name,
-      priceNgwee: ticket.price_ngwee,
-      isFree: ticket.is_free,
-      isSoldOut: ticket.is_sold_out,
-    })),
-    organiserName: event.organiser.display_name,
-    isFree: event.is_free,
-  });
 
   return (
     <article className="flex flex-col gap-6 pb-8">
-      <JsonLdScript data={jsonLd} />
+      <EventJsonLd event={toEventJsonLdInput(event, locale)} />
       <header className="flex flex-col gap-3">
         {heroImage ? (
           <div className="overflow-hidden rounded-lg border border-border">

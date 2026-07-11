@@ -1,6 +1,8 @@
 import { LOCALES } from "@vergeo/i18n";
 import { buildAbsoluteUrl, buildLocaleCanonical, getSiteUrl } from "@vergeo/ui/src/seo/json-ld";
 
+import { fetchEventSitemapSlugs } from "./sitemap-events";
+
 import type { MetadataRoute } from "next";
 
 const CHUNK_SIZE = 5000;
@@ -25,10 +27,6 @@ type DirectoryListResponse = {
   total: number;
   page: number;
   page_size: number;
-};
-
-type EventsListResponse = {
-  items: Array<{ slug: string }>;
 };
 
 function getApiBaseUrl(): string {
@@ -113,21 +111,6 @@ async function fetchVendorSlugs(): Promise<string[]> {
   return slugs;
 }
 
-async function fetchEventSlugs(): Promise<string[]> {
-  try {
-    const response = await fetch(`${getApiBaseUrl()}/events?date_window=all`, {
-      next: { revalidate: 3600 },
-    });
-    if (!response.ok) {
-      return [];
-    }
-    const payload = (await response.json()) as EventsListResponse;
-    return payload.items.map((item) => item.slug);
-  } catch {
-    return [];
-  }
-}
-
 type SitemapManifest = {
   productChunks: number;
 };
@@ -206,7 +189,7 @@ export default async function sitemap(props: {
   }
 
   if (id === eventChunkId) {
-    const eventSlugs = await fetchEventSlugs();
+    const eventSlugs = await fetchEventSitemapSlugs();
     const entries: MetadataRoute.Sitemap = [];
     for (const locale of LOCALES) {
       for (const slug of eventSlugs) {
