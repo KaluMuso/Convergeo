@@ -200,5 +200,39 @@
       "generic": "Could not start the deposit. Please try again.",
       "rateLimited": "Too many requests. Please wait a moment."
     }
+  },
+  "completion": {
+    "provider": {
+      "title": "Mark this job complete",
+      "intro": "Let the customer know the work is done. They have 48 hours to confirm before it is auto-confirmed and your payment is released.",
+      "markCta": "Mark job complete",
+      "marking": "Marking complete…",
+      "marked": "Marked complete. Waiting for the customer to confirm.",
+      "alreadyMarked": "You already marked this job complete.",
+      "backToJobs": "Back to jobs",
+      "errors": {
+        "notProvider": "Only the assigned provider can mark this job complete.",
+        "notFound": "This job could not be found.",
+        "generic": "Could not mark the job complete. Please try again.",
+        "rateLimited": "Too many requests. Please wait a moment."
+      }
+    },
+    "customer": {
+      "title": "Confirm the work is done",
+      "intro": "Confirm to release the balance to your provider. If you do nothing, we auto-confirm after 48 hours.",
+      "balanceLabel": "Balance due on completion",
+      "confirmCta": "Confirm and pay {amount}",
+      "confirming": "Confirming…",
+      "confirmed": "Confirmed. Your provider has been paid.",
+      "awaitingProvider": "Waiting for your provider to mark the job complete.",
+      "escrowNote": "You paid → Held by Vergeo5 → Released to your provider once you confirm.",
+      "reviewUnlocked": "Thanks! You can now leave a review for this provider.",
+      "errors": {
+        "notOwner": "You can only confirm your own jobs.",
+        "notMarked": "Your provider has not marked this job complete yet.",
+        "generic": "Could not confirm the job. Please try again.",
+        "rateLimited": "Too many requests. Please wait a moment."
+      }
+    }
   }
 }
