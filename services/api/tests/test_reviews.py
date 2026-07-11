@@ -119,7 +119,7 @@ class FakeQuery:
 
         if self._pending_op is None and self._parent.name == "order_item_products":
             rows = self._filtered_rows()
-            enriched: list[dict[str, Any]] = []
+            enriched = []
             for row in rows:
                 copy = dict(row)
                 listing = copy.pop("vendor_listings", None)
@@ -680,7 +680,7 @@ class TestReviewsRls:
         customer = role_factory(Persona.CUSTOMER)
         other = role_factory(Persona.OTHER_CUSTOMER)
 
-        ok = customer.run(
+        ok = customer.execute(
             f"""
             INSERT INTO public.reviews (order_item_id, rating, body)
             VALUES ('{order_item_id}', 5, 'Verified purchase');
@@ -688,7 +688,7 @@ class TestReviewsRls:
         )
         assert ok.ok, ok.error
 
-        denied = other.run(
+        denied = other.execute(
             f"""
             INSERT INTO public.reviews (order_item_id, rating, body)
             VALUES ('{order_item_id}', 1, 'Fake review');
@@ -712,7 +712,7 @@ class TestReviewsRls:
         )
 
         customer = role_factory(Persona.CUSTOMER)
-        denied = customer.run(
+        denied = customer.execute(
             f"""
             INSERT INTO public.reviews (order_item_id, rating, body)
             VALUES ('{order_item_id}', 5, 'Too early');
