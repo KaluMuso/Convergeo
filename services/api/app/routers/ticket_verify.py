@@ -18,6 +18,7 @@ from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.orders.audit import run_sql_script
 from app.services.orders.state import sql_uuid
+from app.services.tickets.qr import verify_pin as qr_verify_pin
 from fastapi import APIRouter, Depends, Request
 from pydantic import Field, field_validator, model_validator
 
@@ -78,13 +79,7 @@ def verify_ticket_pin(
     pin_hash: str,
     secret: str | None = None,
 ) -> bool:
-    if not pin_hash:
-        return False
-    try:
-        expected = hash_ticket_pin(pin=pin, ticket_id=ticket_id, secret=secret)
-    except ValueError:
-        return False
-    return hmac.compare_digest(expected, pin_hash)
+    return qr_verify_pin(pin=pin, ticket_id=ticket_id, pin_hash=pin_hash, secret=secret)
 
 
 def parse_qr_code(*, ticket_id: str, code: str) -> tuple[int, str]:
@@ -150,6 +145,7 @@ def assert_window_sig(*, qr_secret: str, window: int, sig: str) -> None:
 class TicketRow:
     ticket_id: str
     status: str
+    order_item_id: str | None
     qr_secret: str | None
     pin_hash: str | None
     checked_in_at: str | None
@@ -201,6 +197,7 @@ def _fetch_ticket_row(ticket_id: str) -> TicketRow:
 SELECT
   t.id::text,
   t.status,
+  t.order_item_id::text,
   t.qr_secret,
   t.pin_hash,
   coalesce(t.checked_in_at::text, ''),
@@ -222,16 +219,18 @@ WHERE t.id = {ticket_sql};
         )
 
     parts = result.rows[0].split("|")
-    if len(parts) != 6:
+    if len(parts) != 7:
         raise RuntimeError("unexpected ticket verify lookup shape")
 
+    order_item_raw = parts[2].strip()
     return TicketRow(
         ticket_id=parts[0],
         status=parts[1],
-        qr_secret=parts[2] or None,
-        pin_hash=parts[3] or None,
-        checked_in_at=parts[4] or None,
-        organiser_vendor_id=parts[5],
+        order_item_id=order_item_raw or None,
+        qr_secret=parts[3] or None,
+        pin_hash=parts[4] or None,
+        checked_in_at=parts[5] or None,
+        organiser_vendor_id=parts[6],
     )
 
 
@@ -241,6 +240,16 @@ def _assert_organiser_scope(*, ticket: TicketRow, vendor_id: str) -> None:
             code="forbidden",
             message="Organiser may only verify tickets for their own events",
             http_status=403,
+            details={"ticket_id": ticket.ticket_id},
+        )
+
+
+def _assert_paid_ticket(ticket: TicketRow) -> None:
+    if not ticket.order_item_id:
+        raise AppError(
+            code="ticket_unpaid_hold",
+            message="Ticket is not paid and cannot be checked in",
+            http_status=409,
             details={"ticket_id": ticket.ticket_id},
         )
 
@@ -361,6 +370,7 @@ def verify_and_check_in_ticket(
 ) -> CheckInResult:
     ticket = _fetch_ticket_row(ticket_id)
     _assert_organiser_scope(ticket=ticket, vendor_id=vendor_id)
+    _assert_paid_ticket(ticket)
     _assert_checkinable_status(ticket)
 
     if code is not None:
@@ -524,6 +534,7 @@ def _process_batch_scan(
         )
 
     try:
+        _assert_paid_ticket(ticket)
         _assert_checkinable_status(ticket)
         if item.code is not None:
             _validate_qr_credentials(ticket=ticket, code=item.code, now=now)

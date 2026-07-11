@@ -11,6 +11,7 @@ from app.services.tickets.purchase import (
     add_ticket_to_checkout,
     find_orders_pending_ticket_issue,
     issue_tickets_for_paid_order,
+    release_stale_ticket_claims,
     rsvp,
 )
 from fastapi import APIRouter, Depends, Request
@@ -127,4 +128,19 @@ async def tickets_issue_tick(
         "scanned": len(pending),
         "issued_orders": issued_orders,
         "tickets_issued": tickets_issued,
+    }
+
+
+@router.post(
+    "/internal/tickets/release-tick",
+    dependencies=[Depends(require_internal_tickets_token)],
+)
+async def tickets_release_tick(
+    service: Annotated[Any, Depends(get_supabase_client)],
+) -> dict[str, int]:
+    """Void stale unpaid ticket holds past the reservation TTL (capacity recovery)."""
+    outcome = release_stale_ticket_claims(service)
+    return {
+        "voided": outcome.voided_count,
+        "ttl_minutes": outcome.ttl_minutes,
     }

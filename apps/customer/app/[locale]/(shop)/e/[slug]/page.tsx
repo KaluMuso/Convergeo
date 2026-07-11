@@ -1,8 +1,6 @@
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
-import { Button } from "@vergeo/ui/src/button";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
-import { PriceBlock } from "@vergeo/ui/src/price-block";
 import {
   buildCanonicalAlternates,
   buildEventJsonLd,
@@ -10,6 +8,7 @@ import {
   JsonLdScript,
   resolveCloudinaryImageUrls,
 } from "@vergeo/ui/src/seo/json-ld";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -18,6 +17,18 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import type { Metadata } from "next";
 
 export const revalidate = 300;
+
+const TicketPicker = dynamic(
+  () => import("./_components/ticket-picker").then((mod) => mod.TicketPicker),
+  {
+    loading: () => (
+      <section
+        className="min-h-24 rounded-lg border border-border bg-surface p-4"
+        aria-busy="true"
+      />
+    ),
+  },
+);
 
 type EventInstance = {
   id: string;
@@ -263,55 +274,12 @@ export default async function EventDetailPage({ params }: PageProps) {
         </ul>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-display text-h3 text-display-ink">{t("detail.tickets")}</h2>
-        <ul className="flex list-none flex-col gap-3 p-0">
-          {event.ticket_types.map((ticket) => (
-            <li
-              key={ticket.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3"
-            >
-              <div className="min-w-0">
-                <p className="font-semibold text-text-1">{ticket.name}</p>
-                {ticket.qty_cap !== null ? (
-                  <p className="text-xs text-text-3">
-                    {t("detail.ticketRemaining", {
-                      count: Math.max(ticket.qty_cap - ticket.tickets_sold, 0),
-                    })}
-                  </p>
-                ) : null}
-              </div>
-              <div className="flex shrink-0 flex-col items-end gap-1">
-                {ticket.is_free ? (
-                  <span className="text-sm font-bold text-success">{t("detail.free")}</span>
-                ) : (
-                  <PriceBlock ngwee={ticket.price_ngwee} />
-                )}
-                {ticket.is_sold_out ? (
-                  <span className="text-xs font-semibold text-danger">{t("detail.soldOut")}</span>
-                ) : null}
-              </div>
-            </li>
-          ))}
-        </ul>
-        {!event.is_free && event.min_price_ngwee ? (
-          <p className="text-sm text-text-2">
-            {t("detail.fromPrice", { price: formatK(event.min_price_ngwee) })}
-          </p>
-        ) : null}
-        <Button
-          type="button"
-          variant="primary"
-          disabled
-          aria-disabled
-          loading={false}
-          loadingLabel={t("detail.getTicketsSoon")}
-          className="w-full"
-        >
-          {t("detail.getTicketsSoon")}
-        </Button>
-        <p className="text-center text-xs text-text-3">{t("detail.getTickets")}</p>
-      </section>
+      <TicketPicker
+        eventSlug={event.slug}
+        instances={event.instances}
+        ticketTypes={event.ticket_types}
+        isSoldOut={event.is_sold_out}
+      />
 
       {event.lat !== null && event.lng !== null ? (
         <section className="flex flex-col gap-2">
