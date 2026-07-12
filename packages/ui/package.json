@@ -17,6 +17,7 @@
     "./tokens": "./src/tokens.ts",
     "./fonts": "./src/fonts.ts",
     "./styles/base.css": "./src/styles/base.css",
+    "./styles/theme.css": "./src/styles/theme.css",
     "./src/*": "./src/*.tsx"
   },
   "dependencies": {

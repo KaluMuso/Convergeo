@@ -1,5 +1,6 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
 import { BottomNav } from "@vergeo/ui/src/bottom-nav";
+import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
 import { TopNav } from "@vergeo/ui/src/top-nav";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -24,7 +25,10 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
 
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
-  const messages = { ...baseMessages, catalog: catalogMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    catalog: catalogMessages,
+  } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "catalog" });
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
 
@@ -81,6 +85,14 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           >
             {t("home.nav.searchPlaceholder")}
           </Link>
+        }
+        actions={
+          <ThemeToggle
+            label={tCommon("theme.label")}
+            lightLabel={tCommon("theme.light")}
+            darkLabel={tCommon("theme.dark")}
+            systemLabel={tCommon("theme.system")}
+          />
         }
         cartIcon={navIcon("🛒")}
         cartCount={0}

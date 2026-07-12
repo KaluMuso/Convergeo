@@ -1,6 +1,8 @@
 import { AnalyticsProvider } from "@vergeo/analytics/provider";
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { Footer } from "@vergeo/ui/src/footer";
+import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
+import { ThemeScript } from "@vergeo/ui/src/theme-script";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -47,7 +49,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   setRequestLocale(locale);
   const baseMessages = await getMessages();
   const legalMessages = await loadNamespace(locale as Locale, "legal");
-  const messages = { ...baseMessages, legal: legalMessages } as AbstractIntlMessages;
+  const messages = {
+    ...baseMessages,
+    legal: legalMessages,
+  } as AbstractIntlMessages;
 
   const tLegal = createTranslator({
     locale,
@@ -120,22 +125,29 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
 
   return (
     <html lang={locale}>
+      <head>
+        {/* Pre-paint theme bootstrap — sets <html data-theme> before first paint
+            so the token palette (and body bg/text) never flash. */}
+        <ThemeScript />
+      </head>
       <body className="flex min-h-dvh flex-col antialiased">
-        <NextIntlClientProvider messages={messages}>
-          {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
-          <SentryInit />
-          {/* Consent-aware GA4 mirror; SSR-safe (renders null, no CLS). GA4 fires
-              only on consent — the anonymized server log is the source of truth. */}
-          <AnalyticsProvider measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID} />
-          <div className="flex flex-1 flex-col">{children}</div>
-          <Footer
-            appName={appName}
-            copyright={tLegal("footer.copyright", { year, appName })}
-            columns={footerColumns}
-            paymentNote={tLegal("footer.paymentNote")}
-            LinkComponent={Link}
-          />
-        </NextIntlClientProvider>
+        <ThemeProvider>
+          <NextIntlClientProvider messages={messages}>
+            {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
+            <SentryInit />
+            {/* Consent-aware GA4 mirror; SSR-safe (renders null, no CLS). GA4 fires
+                only on consent — the anonymized server log is the source of truth. */}
+            <AnalyticsProvider measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID} />
+            <div className="flex flex-1 flex-col">{children}</div>
+            <Footer
+              appName={appName}
+              copyright={tLegal("footer.copyright", { year, appName })}
+              columns={footerColumns}
+              paymentNote={tLegal("footer.paymentNote")}
+              LinkComponent={Link}
+            />
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
