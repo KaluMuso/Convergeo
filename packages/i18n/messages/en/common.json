@@ -9,6 +9,12 @@
   "nav": {
     "home": "Home"
   },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
   "greeting": "Hello, {name}!",
   "offline": {
     "code": "Offline",

@@ -1,0 +1,107 @@
+/**
+ * Vergeo5 Tailwind v4 theme bridge.
+ *
+ * Import in every app's globals.css AFTER `@import "tailwindcss"`:
+ *   @import "@vergeo/ui/styles/theme.css";
+ *
+ * It (1) pulls in the raw design-token CSS custom properties (base.css), then
+ * (2) maps them onto Tailwind's theme namespaces so utilities like `bg-bg`,
+ * `text-text`, `bg-primary`, `border-border`, `text-accent`, `rounded-pill`,
+ * `shadow-1`, `duration-fast` resolve to the tokens — and (3) registers the
+ * `dark:` variant driven by `[data-theme="dark"]` on <html>.
+ *
+ * Colors are mapped with `@theme inline` so each utility emits `var(--<token>)`
+ * directly; because base.css re-points those token vars under `[data-theme=dark]`,
+ * every color utility flips to the dark palette automatically — no `dark:` needed
+ * for token-driven colors (the `dark:` variant is available for the shell bits
+ * that still hardcode raw hex/neutral classes).
+ */
+
+@import "./base.css";
+
+/* Dark variant: applies when the element is inside (or is) [data-theme="dark"]. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ── Color tokens → Tailwind color utilities (bg-*, text-*, border-*, ring-*). ──
+   `inline` keeps the reference live so [data-theme=dark] repoints flip them. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-2: var(--bg-2);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-panel-text: var(--panel-text);
+  --color-panel-muted: var(--panel-muted);
+  --color-panel-border: var(--panel-border);
+
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-muted: var(--text-2);
+  --color-display-ink: var(--display-ink);
+
+  --color-primary: var(--primary);
+  --color-primary-deep: var(--primary-deep);
+  --color-primary-tint: var(--primary-tint);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+
+  --color-cat-beauty: var(--cat-beauty);
+  --color-cat-health: var(--cat-health);
+  --color-cat-food: var(--cat-food);
+  --color-cat-fitness: var(--cat-fitness);
+  --color-cat-home: var(--cat-home);
+  --color-cat-auto: var(--cat-auto);
+}
+
+/* ── Non-color tokens → Tailwind utilities. ──
+   Fonts use a live `var()` so next/font overrides on <html>/<body> win; the rest
+   are theme-invariant literals. Kept out of the `inline` block on purpose. */
+@theme {
+  --font-display: "DM Serif Display", Georgia, serif;
+  --font-display-alt: "Cormorant Garamond", Georgia, serif;
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* font-size utilities (text-hero … text-price) with paired line-heights. */
+  --text-hero: clamp(2rem, 6vw, 3.9rem);
+  --text-hero--line-height: 1.1;
+  --text-h1: 1.75rem;
+  --text-h1--line-height: 1.15;
+  --text-h2: clamp(1.35rem, 2.4vw, 2.1rem);
+  --text-h2--line-height: 1.2;
+  --text-h3: 1.0625rem;
+  --text-h3--line-height: 1.3;
+  --text-h3--font-weight: 600;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.55;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.45;
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.3;
+  --text-micro--letter-spacing: 0.08em;
+  --text-price: 1.02rem;
+  --text-price--line-height: 1.2;
+  --text-price--font-weight: 700;
+
+  --radius-sm: 8px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  --shadow-1: 0 1px 4px rgba(28, 19, 8, 0.05);
+  --shadow-2: 0 4px 24px rgba(28, 19, 8, 0.07);
+  --shadow-3: 0 12px 48px rgba(28, 19, 8, 0.13);
+  --shadow-focusRing: 0 0 0 3px rgba(45, 74, 122, 0.18);
+
+  --duration-fast: 150ms;
+  --duration-slow: 400ms;
+
+  --ease-out: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --ease-std: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}

@@ -65,6 +65,9 @@ importers:
       '@vergeo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@vergeo/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       next:
         specifier: ^15.2.4
         version: 15.5.20(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -181,6 +184,9 @@ importers:
       '@vergeo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@vergeo/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       jsqr:
         specifier: ^1.4.0
         version: 1.4.0

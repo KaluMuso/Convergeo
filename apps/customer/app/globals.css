@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@vergeo/ui/styles/theme.css";
 
 html,
 body {
@@ -8,6 +9,11 @@ body {
 
 body {
   min-height: 100dvh;
-  background-color: #ffffff;
-  color: #111827;
+  /* Ground palette from design tokens; flips with [data-theme="dark"]. */
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  transition:
+    background-color var(--dur) var(--ease-std),
+    color var(--dur) var(--ease-std);
 }
