@@ -495,7 +495,9 @@ async def create_card_widget_session(
     customer = _widget_customer(profile)
 
     payment_id = str(uuid4())
-    lenco_reference = make_order_reference(checkout_group_id)
+    # Salt with this attempt's payment_id so a retried card session on the same
+    # checkout group gets a distinct reference (no UNIQUE lenco_reference clash).
+    lenco_reference = make_order_reference(checkout_group_id, attempt=payment_id)
     amount_major = ngwee_to_major_str(total_raw)
 
     insert_row = {
