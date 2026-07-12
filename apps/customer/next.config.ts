@@ -46,6 +46,10 @@ const GA4_IMG = "https://*.google-analytics.com https://*.googletagmanager.com";
 // Lenco hosted card widget — customer checkout card route ONLY (prod + sandbox).
 const LENCO_WIDGET = "https://pay.lenco.co https://pay.sandbox.lenco.co";
 const LENCO_API = "https://api.lenco.co https://api.sandbox.lenco.co";
+// Sentry ingest (M16-P06) — browser SDK POSTs events here. Scoped to the ingest
+// subdomains only (incl. region variants), NOT a blanket sentry.io allowance.
+const SENTRY_INGEST =
+  "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
 
 const HSTS = "max-age=63072000; includeSubDomains; preload";
 const PERMISSIONS_POLICY =
@@ -73,7 +77,7 @@ function buildReportOnlyCsp(lenco: boolean): string {
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: ${CLOUDINARY} ${GA4_IMG}`,
     "font-src 'self' data:",
-    `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${GA4_CONNECT}${connectExtra}`,
+    `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${GA4_CONNECT} ${SENTRY_INGEST}${connectExtra}`,
     `frame-src 'self'${frameExtra}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
@@ -133,4 +137,9 @@ const nextConfig: NextConfig = {
 };
 
 // Compose: next-intl(serwist(config)). withSerwist preserves `headers()`/CSP.
+// NOTE (M16-P06): Sentry is deliberately NOT wired via `withSentryConfig` here — that
+// plugin injects the browser SDK into every route's FIRST-LOAD JS (~+63 KB gz), which
+// breaks CLAUDE.md #7 (customer routes ≤150 KB gz). Instead the SDK is lazy-loaded in
+// an async chunk (`app/sentry-init.tsx` → dynamic `import('@sentry/nextjs')`). Client
+// source-map upload runs as a separate gated build step — see docs/ops/observability.md.
 export default withNextIntl(withSerwist(nextConfig));

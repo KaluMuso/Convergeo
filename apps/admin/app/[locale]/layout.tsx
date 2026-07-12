@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { SentryInit } from "../sentry-init";
+
 import type { Metadata, Viewport } from "next";
 
 import "../globals.css";
@@ -68,6 +70,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     <html lang={locale}>
       <body className="antialiased">
         <NextIntlClientProvider messages={messages}>
+          {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
+          <SentryInit />
           <div className="min-h-dvh bg-[#FAF7F2] text-[#2A2118]">
             <header className="border-b border-[#E8DFD0] bg-[#241B30] text-[#EEEAE3]">
               <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">

@@ -7,6 +7,8 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { SentryInit } from "../sentry-init";
+
 import { type LegalTranslator } from "./(marketing)/legal/_components/legal-shell";
 
 import type { Metadata, Viewport } from "next";
@@ -120,6 +122,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     <html lang={locale}>
       <body className="flex min-h-dvh flex-col antialiased">
         <NextIntlClientProvider messages={messages}>
+          {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
+          <SentryInit />
           {/* Consent-aware GA4 mirror; SSR-safe (renders null, no CLS). GA4 fires
               only on consent — the anonymized server log is the source of truth. */}
           <AnalyticsProvider measurementId={process.env.NEXT_PUBLIC_GA4_MEASUREMENT_ID} />

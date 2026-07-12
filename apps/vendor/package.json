@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@sentry/nextjs": "^9.0.0",
     "@vergeo/auth": "workspace:*",
     "@vergeo/config": "workspace:*",
     "@vergeo/i18n": "workspace:*",

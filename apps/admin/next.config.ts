@@ -22,6 +22,10 @@ const NONCE = "'nonce-{{CSP_NONCE}}'";
 const CLOUDINARY = "https://res.cloudinary.com";
 const SUPABASE = "https://*.supabase.co";
 const SUPABASE_WS = "wss://*.supabase.co";
+// Sentry ingest (M16-P06) — browser SDK POSTs events here. Scoped to the ingest
+// subdomains only (incl. region variants), NOT a blanket sentry.io allowance.
+const SENTRY_INGEST =
+  "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
 
 const HSTS = "max-age=63072000; includeSubDomains; preload";
 // Strictest: deny every powerful feature outright.
@@ -46,7 +50,7 @@ const REPORT_ONLY_CSP = [
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${CLOUDINARY}`,
   "font-src 'self' data:",
-  `connect-src 'self' ${SUPABASE} ${SUPABASE_WS}`,
+  `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${SENTRY_INGEST}`,
   "frame-src 'none'",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
@@ -94,4 +98,6 @@ const nextConfig: NextConfig = {
   },
 };
 
+// NOTE (M16-P06): Sentry is lazy-loaded off first-load JS (`app/sentry-init.tsx`), not
+// wired via `withSentryConfig`, which would inject the SDK into every route's first-load.
 export default withNextIntl(nextConfig);

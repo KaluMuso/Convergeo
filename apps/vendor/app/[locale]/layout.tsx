@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { SentryInit } from "../sentry-init";
+
 import type { Metadata, Viewport } from "next";
 
 import "../globals.css";
@@ -38,7 +40,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   return (
     <html lang={locale}>
       <body className="antialiased">
-        <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider messages={messages}>
+          {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
+          <SentryInit />
+          {children}
+        </NextIntlClientProvider>
       </body>
     </html>
   );
