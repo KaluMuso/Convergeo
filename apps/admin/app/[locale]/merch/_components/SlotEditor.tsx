@@ -191,54 +191,54 @@ export function SlotEditor({ slot, variants, onSaved, onClose }: SlotEditorProps
   };
 
   return (
-    <div className="space-y-4 rounded-lg border border-[#E8DFD0] bg-white p-4 shadow-sm">
+    <div className="space-y-4 rounded-lg border border-border bg-surface p-4 shadow-sm">
       {slot.slot_key === "hero" ? (
         <>
           <HeroVariantPicker variants={variants} selected={variantKey} onSelect={setVariantKey} />
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1 text-xs text-[#6B5E4C]">
+            <label className="flex flex-col gap-1 text-xs text-muted">
               {tHero("titleKey")}
               <input
                 type="text"
                 value={titleKey}
                 onChange={(event) => setTitleKey(event.target.value)}
-                className="min-h-11 rounded-md border border-[#E8DFD0] px-3 text-sm"
+                className="min-h-11 rounded-md border border-border px-3 text-sm"
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs text-[#6B5E4C]">
+            <label className="flex flex-col gap-1 text-xs text-muted">
               {tHero("subtitleKey")}
               <input
                 type="text"
                 value={subtitleKey}
                 onChange={(event) => setSubtitleKey(event.target.value)}
-                className="min-h-11 rounded-md border border-[#E8DFD0] px-3 text-sm"
+                className="min-h-11 rounded-md border border-border px-3 text-sm"
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs text-[#6B5E4C]">
+            <label className="flex flex-col gap-1 text-xs text-muted">
               {tHero("imagePublicId")}
               <input
                 type="text"
                 value={imagePublicId}
                 onChange={(event) => setImagePublicId(event.target.value)}
-                className="min-h-11 rounded-md border border-[#E8DFD0] px-3 text-sm"
+                className="min-h-11 rounded-md border border-border px-3 text-sm"
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs text-[#6B5E4C]">
+            <label className="flex flex-col gap-1 text-xs text-muted">
               {tHero("primaryCtaHref")}
               <input
                 type="text"
                 value={primaryHref}
                 onChange={(event) => setPrimaryHref(event.target.value)}
-                className="min-h-11 rounded-md border border-[#E8DFD0] px-3 text-sm"
+                className="min-h-11 rounded-md border border-border px-3 text-sm"
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs text-[#6B5E4C]">
+            <label className="flex flex-col gap-1 text-xs text-muted">
               {tHero("secondaryCtaHref")}
               <input
                 type="text"
                 value={secondaryHref}
                 onChange={(event) => setSecondaryHref(event.target.value)}
-                className="min-h-11 rounded-md border border-[#E8DFD0] px-3 text-sm"
+                className="min-h-11 rounded-md border border-border px-3 text-sm"
               />
             </label>
           </div>
@@ -261,16 +261,16 @@ export function SlotEditor({ slot, variants, onSaved, onClose }: SlotEditorProps
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className="flex flex-col gap-1 text-xs text-[#6B5E4C]">
+        <label className="flex flex-col gap-1 text-xs text-muted">
           {tBoard("position")}
           <input
             type="number"
             value={position}
             onChange={(event) => setPosition(Number(event.target.value))}
-            className="min-h-11 rounded-md border border-[#E8DFD0] px-3 text-sm"
+            className="min-h-11 rounded-md border border-border px-3 text-sm"
           />
         </label>
-        <label className="flex items-center gap-2 text-sm text-[#2A2118]">
+        <label className="flex items-center gap-2 text-sm text-text">
           <input
             type="checkbox"
             checked={active}
@@ -281,21 +281,21 @@ export function SlotEditor({ slot, variants, onSaved, onClose }: SlotEditorProps
         </label>
       </div>
 
-      {error ? <p className="text-sm text-[#9B2C2C]">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
           disabled={saving}
           onClick={() => void saveDraft()}
-          className="inline-flex min-h-11 items-center rounded-md bg-[#2D4A7A] px-4 text-sm font-medium text-white disabled:opacity-60"
+          className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
         >
           {saving ? tCommon("saving") : tCommon("save")}
         </button>
         <button
           type="button"
           onClick={onClose}
-          className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
         >
           {tCommon("cancel")}
         </button>

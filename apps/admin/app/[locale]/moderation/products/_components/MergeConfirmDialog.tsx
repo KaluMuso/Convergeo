@@ -47,33 +47,33 @@ export function MergeConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[#241B30]/50 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-panel/50 p-4 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="merge-dialog-title"
     >
-      <div className="w-full max-w-lg space-y-4 rounded-lg border border-[#E8DFD0] bg-white p-4 shadow-lg">
+      <div className="w-full max-w-lg space-y-4 rounded-lg border border-border bg-surface p-4 shadow-lg">
         <header className="space-y-1">
-          <h2 id="merge-dialog-title" className="font-serif text-lg text-[#2A2118]">
+          <h2 id="merge-dialog-title" className="font-serif text-lg text-text">
             {t("confirmTitle")}
           </h2>
-          <p className="text-sm text-[#6B5E4C]">{t("confirmBody")}</p>
+          <p className="text-sm text-muted">{t("confirmBody")}</p>
         </header>
         <div className="space-y-2 text-sm">
           <p>
-            <span className="text-[#6B5E4C]">{t("confirmSurvivor")}</span>
-            <span className="font-medium text-[#2A2118]"> {survivor.name}</span>
+            <span className="text-muted">{t("confirmSurvivor")}</span>
+            <span className="font-medium text-text"> {survivor.name}</span>
           </p>
           <p>
-            <span className="text-[#6B5E4C]">{t("confirmLoser")}</span>
-            <span className="font-medium text-[#2A2118]"> {loser.name}</span>
+            <span className="text-muted">{t("confirmLoser")}</span>
+            <span className="font-medium text-text"> {loser.name}</span>
           </p>
         </div>
-        {error ? <p className="text-sm text-[#9B2C2C]">{error}</p> : null}
+        {error ? <p className="text-sm text-danger">{error}</p> : null}
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
-            className="inline-flex min-h-11 items-center justify-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+            className="inline-flex min-h-11 items-center justify-center rounded-md border border-border px-4 text-sm"
             onClick={onCancel}
             disabled={submitting}
           >
@@ -81,7 +81,7 @@ export function MergeConfirmDialog({
           </button>
           <button
             type="button"
-            className="inline-flex min-h-11 items-center justify-center rounded-md bg-[#2D4A7A] px-4 text-sm font-medium text-white"
+            className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-white"
             onClick={() => void handleConfirm()}
             disabled={submitting}
           >

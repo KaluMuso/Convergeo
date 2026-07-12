@@ -29,11 +29,11 @@ export async function ConfigPageShell({
   return (
     <div className="space-y-4">
       <header className="space-y-1">
-        <h2 className="font-serif text-xl text-[#2A2118]">{t(titleKey)}</h2>
-        <p className="text-sm text-[#6B5E4C]">{t(subtitleKey)}</p>
+        <h2 className="font-serif text-xl text-text">{t(titleKey)}</h2>
+        <p className="text-sm text-muted">{t(subtitleKey)}</p>
       </header>
 
-      <nav aria-label={t("title")} className="flex flex-wrap gap-2 border-b border-[#E8DFD0] pb-3">
+      <nav aria-label={t("title")} className="flex flex-wrap gap-2 border-b border-border pb-3">
         {TABS.map((tab) => {
           const href = `/${locale}/config/${tab.slug}`;
           const isActive = tab.slug === active;
@@ -44,8 +44,8 @@ export async function ConfigPageShell({
               className={[
                 "inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium",
                 isActive
-                  ? "bg-[#2D4A7A] text-white"
-                  : "border border-[#E8DFD0] bg-[#FAF7F2] text-[#2A2118] hover:border-[#2D4A7A]",
+                  ? "bg-primary text-white"
+                  : "border border-border bg-bg text-text hover:border-primary",
               ].join(" ")}
             >
               {t(`nav.${tab.key}`)}

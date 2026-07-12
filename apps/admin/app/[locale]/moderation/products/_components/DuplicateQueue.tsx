@@ -51,16 +51,16 @@ export function DuplicateQueue() {
   };
 
   if (loading) {
-    return <p className="text-sm text-[#6B5E4C]">{t("loading")}</p>;
+    return <p className="text-sm text-muted">{t("loading")}</p>;
   }
 
   if (error) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-[#9B2C2C]">{error}</p>
+        <p className="text-sm text-danger">{error}</p>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
           onClick={() => void load()}
         >
           {t("retry")}
@@ -70,19 +70,19 @@ export function DuplicateQueue() {
   }
 
   if (pairs.length === 0) {
-    return <p className="text-sm text-[#6B5E4C]">{t("empty")}</p>;
+    return <p className="text-sm text-muted">{t("empty")}</p>;
   }
 
   return (
     <div className="space-y-4">
-      {message ? <p className="text-sm text-[#2D4A7A]">{message}</p> : null}
+      {message ? <p className="text-sm text-primary">{message}</p> : null}
       <div className="space-y-4">
         {pairs.map((pair) => {
           const pairKey = `${pair.product_a.id}:${pair.product_b.id}`;
           return (
-            <article key={pairKey} className="space-y-3 rounded-lg border border-[#E8DFD0] p-4">
+            <article key={pairKey} className="space-y-3 rounded-lg border border-border p-4">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs uppercase tracking-wide text-[#6B5E4C]">
+                <p className="text-xs uppercase tracking-wide text-muted">
                   {t("similarityPercent", { value: (pair.similarity * 100).toFixed(1) })}
                 </p>
               </div>

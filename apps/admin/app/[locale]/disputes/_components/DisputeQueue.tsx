@@ -36,16 +36,16 @@ export function DisputeQueue({ locale }: DisputeQueueProps) {
   }, [load]);
 
   if (loading) {
-    return <p className="text-sm text-[#6B5E4C]">{t("loading")}</p>;
+    return <p className="text-sm text-muted">{t("loading")}</p>;
   }
 
   if (error) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-[#9B2C2C]">{error}</p>
+        <p className="text-sm text-danger">{error}</p>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
           onClick={() => void load()}
         >
           {t("retry")}
@@ -57,12 +57,12 @@ export function DisputeQueue({ locale }: DisputeQueueProps) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <label className="text-sm text-[#6B5E4C]" htmlFor="dispute-sort">
+        <label className="text-sm text-muted" htmlFor="dispute-sort">
           {t("sortLabel")}
         </label>
         <select
           id="dispute-sort"
-          className="min-h-11 rounded-md border border-[#E8DFD0] px-2 text-sm"
+          className="min-h-11 rounded-md border border-border px-2 text-sm"
           value={sort}
           onChange={(event) => setSort(event.target.value as QueueSort)}
         >
@@ -72,12 +72,12 @@ export function DisputeQueue({ locale }: DisputeQueueProps) {
       </div>
 
       {items.length === 0 ? (
-        <p className="text-sm text-[#6B5E4C]">{t("empty")}</p>
+        <p className="text-sm text-muted">{t("empty")}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-[#E8DFD0] text-xs uppercase tracking-wide text-[#6B5E4C]">
+              <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
                 <th className="px-2 py-3 font-medium">{t("order")}</th>
                 <th className="px-2 py-3 font-medium">{t("vendor")}</th>
                 <th className="px-2 py-3 font-medium">{t("value")}</th>
@@ -88,18 +88,18 @@ export function DisputeQueue({ locale }: DisputeQueueProps) {
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id} className="border-b border-[#F0E9DE]">
-                  <td className="px-2 py-3 font-mono text-xs text-[#2A2118]">
+                <tr key={item.id} className="border-b border-border">
+                  <td className="px-2 py-3 font-mono text-xs text-text">
                     {t("orderIdShort", { id: item.order_id.slice(0, 8) })}
                   </td>
                   <td className="px-2 py-3">
-                    <div className="font-medium text-[#2A2118]">{item.vendor_display_name}</div>
-                    <div className="text-xs text-[#6B5E4C]">{item.customer_phone ?? "—"}</div>
+                    <div className="font-medium text-text">{item.vendor_display_name}</div>
+                    <div className="text-xs text-muted">{item.customer_phone ?? "—"}</div>
                   </td>
-                  <td className="px-2 py-3 font-mono text-[#2A2118]">
+                  <td className="px-2 py-3 font-mono text-text">
                     {formatK(item.order_total_ngwee)}
                   </td>
-                  <td className="px-2 py-3 text-[#6B5E4C]">
+                  <td className="px-2 py-3 text-muted">
                     {new Date(item.created_at).toLocaleString(locale)}
                   </td>
                   <td className="px-2 py-3">
@@ -107,7 +107,7 @@ export function DisputeQueue({ locale }: DisputeQueueProps) {
                   </td>
                   <td className="px-2 py-3 text-right">
                     <a
-                      className="inline-flex min-h-11 items-center rounded-md border border-[#2D4A7A] px-4 text-sm font-medium text-[#2D4A7A]"
+                      className="inline-flex min-h-11 items-center rounded-md border border-primary px-4 text-sm font-medium text-primary"
                       href={`/${locale}/disputes/${item.id}`}
                     >
                       {t("review")}

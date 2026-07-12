@@ -64,10 +64,10 @@ export function ReplyComposer({ customerId, orderId, onSent }: ReplyComposerProp
   };
 
   return (
-    <section className="space-y-4 rounded-lg border border-[#E8DFD0] bg-white p-4">
+    <section className="space-y-4 rounded-lg border border-border bg-surface p-4">
       <header className="space-y-1">
-        <h2 className="font-serif text-lg text-[#2A2118]">{t("title")}</h2>
-        <p className="text-sm text-[#6B5E4C]">{t("subtitle")}</p>
+        <h2 className="font-serif text-lg text-text">{t("title")}</h2>
+        <p className="text-sm text-muted">{t("subtitle")}</p>
       </header>
 
       <div className="flex flex-wrap gap-2">
@@ -75,8 +75,8 @@ export function ReplyComposer({ customerId, orderId, onSent }: ReplyComposerProp
           type="button"
           className={`inline-flex min-h-11 items-center rounded-md border px-3 text-sm ${
             mode === "canned"
-              ? "border-[#2D4A7A] bg-[#EEF3FA] text-[#2D4A7A]"
-              : "border-[#E8DFD0] text-[#2A2118]"
+              ? "border-primary bg-primary-tint text-primary"
+              : "border-border text-text"
           }`}
           onClick={() => setMode("canned")}
         >
@@ -86,8 +86,8 @@ export function ReplyComposer({ customerId, orderId, onSent }: ReplyComposerProp
           type="button"
           className={`inline-flex min-h-11 items-center rounded-md border px-3 text-sm ${
             mode === "free_text"
-              ? "border-[#2D4A7A] bg-[#EEF3FA] text-[#2D4A7A]"
-              : "border-[#E8DFD0] text-[#2A2118]"
+              ? "border-primary bg-primary-tint text-primary"
+              : "border-border text-text"
           }`}
           onClick={() => setMode("free_text")}
         >
@@ -97,9 +97,9 @@ export function ReplyComposer({ customerId, orderId, onSent }: ReplyComposerProp
 
       {mode === "canned" ? (
         <label className="block space-y-1 text-sm">
-          <span className="text-[#6B5E4C]">{t("templateLabel")}</span>
+          <span className="text-muted">{t("templateLabel")}</span>
           <select
-            className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-3"
+            className="min-h-11 w-full rounded-md border border-border px-3"
             value={templateKey}
             onChange={(event) => setTemplateKey(event.target.value)}
           >
@@ -111,34 +111,34 @@ export function ReplyComposer({ customerId, orderId, onSent }: ReplyComposerProp
             ))}
           </select>
           {templateKey ? (
-            <p className="text-xs text-[#6B5E4C]">{tTemplates(`${templateKey}.body`)}</p>
+            <p className="text-xs text-muted">{tTemplates(`${templateKey}.body`)}</p>
           ) : null}
         </label>
       ) : (
         <label className="block space-y-1 text-sm">
-          <span className="text-[#6B5E4C]">{t("freeTextLabel")}</span>
+          <span className="text-muted">{t("freeTextLabel")}</span>
           <textarea
-            className="min-h-28 w-full rounded-md border border-[#E8DFD0] px-3 py-2"
+            className="min-h-28 w-full rounded-md border border-border px-3 py-2"
             value={freeText}
             onChange={(event) => setFreeText(event.target.value)}
             placeholder={t("freeTextPlaceholder")}
             maxLength={2000}
           />
-          <p className="text-xs text-[#6B5E4C]">{t("freeTextAudit")}</p>
+          <p className="text-xs text-muted">{t("freeTextAudit")}</p>
         </label>
       )}
 
       <button
         type="button"
-        className="inline-flex min-h-11 items-center rounded-md bg-[#2D4A7A] px-4 text-sm font-medium text-white disabled:opacity-60"
+        className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
         disabled={submitting || (mode === "canned" ? !templateKey : freeText.trim().length === 0)}
         onClick={() => void send()}
       >
         {submitting ? t("submitting") : t("submit")}
       </button>
 
-      {error ? <p className="text-sm text-[#9B2C2C]">{error}</p> : null}
-      {success ? <p className="text-sm text-[#2F6B3A]">{success}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {success ? <p className="text-sm text-success">{success}</p> : null}
     </section>
   );
 }

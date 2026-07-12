@@ -58,36 +58,36 @@ export function OrderSearch({ locale }: OrderSearchProps) {
         }}
       >
         <label className="space-y-1 text-sm">
-          <span className="text-[#6B5E4C]">{t("orderId")}</span>
+          <span className="text-muted">{t("orderId")}</span>
           <input
-            className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-3"
+            className="min-h-11 w-full rounded-md border border-border px-3"
             value={orderId}
             onChange={(event) => setOrderId(event.target.value)}
             placeholder={t("orderIdPlaceholder")}
           />
         </label>
         <label className="space-y-1 text-sm">
-          <span className="text-[#6B5E4C]">{t("phone")}</span>
+          <span className="text-muted">{t("phone")}</span>
           <input
-            className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-3"
+            className="min-h-11 w-full rounded-md border border-border px-3"
             value={phone}
             onChange={(event) => setPhone(event.target.value)}
             placeholder={t("phonePlaceholder")}
           />
         </label>
         <label className="space-y-1 text-sm">
-          <span className="text-[#6B5E4C]">{t("vendor")}</span>
+          <span className="text-muted">{t("vendor")}</span>
           <input
-            className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-3"
+            className="min-h-11 w-full rounded-md border border-border px-3"
             value={vendor}
             onChange={(event) => setVendor(event.target.value)}
             placeholder={t("vendorPlaceholder")}
           />
         </label>
         <label className="space-y-1 text-sm">
-          <span className="text-[#6B5E4C]">{t("status")}</span>
+          <span className="text-muted">{t("status")}</span>
           <select
-            className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-3"
+            className="min-h-11 w-full rounded-md border border-border px-3"
             value={status}
             onChange={(event) => setStatus(event.target.value)}
           >
@@ -113,7 +113,7 @@ export function OrderSearch({ locale }: OrderSearchProps) {
         <div className="sm:col-span-2">
           <button
             type="submit"
-            className="inline-flex min-h-11 items-center rounded-md bg-[#2D4A7A] px-4 text-sm font-medium text-white"
+            className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white"
             disabled={loading}
           >
             {loading ? t("searching") : t("submit")}
@@ -121,17 +121,17 @@ export function OrderSearch({ locale }: OrderSearchProps) {
         </div>
       </form>
 
-      {error ? <p className="text-sm text-[#9B2C2C]">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       {searched && !loading && results.length === 0 ? (
-        <p className="text-sm text-[#6B5E4C]">{t("empty")}</p>
+        <p className="text-sm text-muted">{t("empty")}</p>
       ) : null}
 
       {results.length > 0 ? (
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-[#E8DFD0] text-xs uppercase tracking-wide text-[#6B5E4C]">
+              <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
                 <th className="px-2 py-3 font-medium">{t("columns.order")}</th>
                 <th className="px-2 py-3 font-medium">{t("columns.vendor")}</th>
                 <th className="px-2 py-3 font-medium">{t("columns.phone")}</th>
@@ -141,18 +141,18 @@ export function OrderSearch({ locale }: OrderSearchProps) {
             </thead>
             <tbody>
               {results.map((item) => (
-                <tr key={item.id} className="border-b border-[#F0E9DE]">
+                <tr key={item.id} className="border-b border-border">
                   <td className="px-2 py-3 font-mono text-xs">{item.id}</td>
                   <td className="px-2 py-3">
                     <div className="font-medium">{item.vendor_display_name}</div>
-                    <div className="text-xs text-[#6B5E4C]">{item.vendor_slug}</div>
+                    <div className="text-xs text-muted">{item.vendor_slug}</div>
                   </td>
-                  <td className="px-2 py-3 text-[#6B5E4C]">{item.customer_phone ?? "—"}</td>
+                  <td className="px-2 py-3 text-muted">{item.customer_phone ?? "—"}</td>
                   <td className="px-2 py-3">{t(`statuses.${item.status}`)}</td>
                   <td className="px-2 py-3 text-right">
                     <button
                       type="button"
-                      className="inline-flex min-h-11 items-center rounded-md border border-[#2D4A7A] px-4 text-sm font-medium text-[#2D4A7A]"
+                      className="inline-flex min-h-11 items-center rounded-md border border-primary px-4 text-sm font-medium text-primary"
                       onClick={() => router.push(`/${locale}/orders/${item.id}`)}
                     >
                       {t("open")}

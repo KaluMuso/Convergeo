@@ -105,16 +105,16 @@ export function MerchBoard({ locale }: MerchBoardProps) {
   };
 
   if (loading) {
-    return <p className="text-sm text-[#6B5E4C]">{tBoard("loading")}</p>;
+    return <p className="text-sm text-muted">{tBoard("loading")}</p>;
   }
 
   if (error) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-[#9B2C2C]">{error}</p>
+        <p className="text-sm text-danger">{error}</p>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
           onClick={() => void load()}
         >
           {tBoard("retry")}
@@ -124,33 +124,33 @@ export function MerchBoard({ locale }: MerchBoardProps) {
   }
 
   if (orderedSlots.length === 0) {
-    return <p className="text-sm text-[#6B5E4C]">{tBoard("empty")}</p>;
+    return <p className="text-sm text-muted">{tBoard("empty")}</p>;
   }
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-[#6B5E4C]">{tBoard("lusakaTz")}</p>
+      <p className="text-xs text-muted">{tBoard("lusakaTz")}</p>
 
       {preview ? (
-        <div className="rounded-md border border-[#E8DFD0] bg-[#FAF7F2] p-3 text-sm">
+        <div className="rounded-md border border-border bg-bg p-3 text-sm">
           <a
             href={`${CUSTOMER_ORIGIN}${preview.customer_path}`}
             target="_blank"
             rel="noreferrer"
-            className="font-medium text-[#2D4A7A] underline"
+            className="font-medium text-primary underline"
           >
             {tBoard("preview")}
           </a>
-          <p className="mt-1 text-xs text-[#6B5E4C]">{tBoard("previewHint")}</p>
+          <p className="mt-1 text-xs text-muted">{tBoard("previewHint")}</p>
         </div>
       ) : null}
 
-      {message ? <p className="text-sm text-[#2D4A7A]">{message}</p> : null}
+      {message ? <p className="text-sm text-primary">{message}</p> : null}
 
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm">
           <thead>
-            <tr className="border-b border-[#E8DFD0] text-xs uppercase tracking-wide text-[#6B5E4C]">
+            <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
               <th className="px-2 py-3 font-medium">{tBoard("slotKey")}</th>
               <th className="px-2 py-3 font-medium">{tBoard("variant")}</th>
               <th className="px-2 py-3 font-medium">{tBoard("position")}</th>
@@ -161,13 +161,13 @@ export function MerchBoard({ locale }: MerchBoardProps) {
           </thead>
           <tbody>
             {orderedSlots.map((slot) => (
-              <tr key={slot.id} className="border-b border-[#F0E9DE] align-top">
-                <td className="px-2 py-3 font-medium text-[#2A2118]">
+              <tr key={slot.id} className="border-b border-border align-top">
+                <td className="px-2 py-3 font-medium text-text">
                   {tSlots(slot.slot_key as SlotKey)}
                 </td>
-                <td className="px-2 py-3 text-[#6B5E4C]">{slot.variant_key}</td>
-                <td className="px-2 py-3 text-[#6B5E4C]">{slot.position}</td>
-                <td className="px-2 py-3 text-[#6B5E4C]">
+                <td className="px-2 py-3 text-muted">{slot.variant_key}</td>
+                <td className="px-2 py-3 text-muted">{slot.position}</td>
+                <td className="px-2 py-3 text-muted">
                   {formatSchedule(
                     slot.schedule_from,
                     slot.schedule_to,
@@ -180,14 +180,12 @@ export function MerchBoard({ locale }: MerchBoardProps) {
                   <span
                     className={[
                       "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
-                      slot.has_draft
-                        ? "bg-[#FEF3C7] text-[#92400E]"
-                        : "bg-[#E8F5E9] text-[#1B5E20]",
+                      slot.has_draft ? "bg-warning/10 text-warning" : "bg-success/10 text-success",
                     ].join(" ")}
                   >
                     {slot.has_draft ? tBoard("draft") : tBoard("published")}
                   </span>
-                  <div className="mt-1 text-xs text-[#6B5E4C]">
+                  <div className="mt-1 text-xs text-muted">
                     {slot.active ? tBoard("active") : tBoard("inactive")}
                   </div>
                 </td>
@@ -195,7 +193,7 @@ export function MerchBoard({ locale }: MerchBoardProps) {
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-3 text-xs"
+                      className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-xs"
                       onClick={() => setEditingId(editingId === slot.id ? null : slot.id)}
                     >
                       {tBoard("edit")}
@@ -203,7 +201,7 @@ export function MerchBoard({ locale }: MerchBoardProps) {
                     {slot.has_draft ? (
                       <button
                         type="button"
-                        className="inline-flex min-h-11 items-center rounded-md bg-[#2D4A7A] px-3 text-xs text-white"
+                        className="inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-xs text-white"
                         onClick={() => void publishSlot(slot)}
                       >
                         {tBoard("publish")}

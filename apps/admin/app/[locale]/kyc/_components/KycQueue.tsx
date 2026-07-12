@@ -34,16 +34,16 @@ export function KycQueue({ locale }: KycQueueProps) {
   }, [load]);
 
   if (loading) {
-    return <p className="text-sm text-[#6B5E4C]">{t("loading")}</p>;
+    return <p className="text-sm text-muted">{t("loading")}</p>;
   }
 
   if (error) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-[#9B2C2C]">{error}</p>
+        <p className="text-sm text-danger">{error}</p>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
           onClick={() => void load()}
         >
           {t("retry")}
@@ -53,14 +53,14 @@ export function KycQueue({ locale }: KycQueueProps) {
   }
 
   if (items.length === 0) {
-    return <p className="text-sm text-[#6B5E4C]">{t("empty")}</p>;
+    return <p className="text-sm text-muted">{t("empty")}</p>;
   }
 
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-[#E8DFD0] text-xs uppercase tracking-wide text-[#6B5E4C]">
+          <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
             <th className="px-2 py-3 font-medium">{t("vendor")}</th>
             <th className="px-2 py-3 font-medium">{t("submitted")}</th>
             <th className="px-2 py-3 font-medium">{t("slaColumn")}</th>
@@ -69,12 +69,12 @@ export function KycQueue({ locale }: KycQueueProps) {
         </thead>
         <tbody>
           {items.map((item) => (
-            <tr key={item.id} className="border-b border-[#F0E9DE]">
+            <tr key={item.id} className="border-b border-border">
               <td className="px-2 py-3">
-                <div className="font-medium text-[#2A2118]">{item.vendor_display_name}</div>
-                <div className="text-xs text-[#6B5E4C]">{t("tier", { tier: item.tier })}</div>
+                <div className="font-medium text-text">{item.vendor_display_name}</div>
+                <div className="text-xs text-muted">{t("tier", { tier: item.tier })}</div>
               </td>
-              <td className="px-2 py-3 text-[#6B5E4C]">
+              <td className="px-2 py-3 text-muted">
                 {new Date(item.updated_at).toLocaleString(locale)}
               </td>
               <td className="px-2 py-3">
@@ -82,7 +82,7 @@ export function KycQueue({ locale }: KycQueueProps) {
               </td>
               <td className="px-2 py-3 text-right">
                 <a
-                  className="inline-flex min-h-11 items-center rounded-md border border-[#2D4A7A] px-4 text-sm font-medium text-[#2D4A7A]"
+                  className="inline-flex min-h-11 items-center rounded-md border border-primary px-4 text-sm font-medium text-primary"
                   href={`/${locale}/kyc/${item.id}`}
                 >
                   {t("review")}

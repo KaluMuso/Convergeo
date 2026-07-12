@@ -15,9 +15,7 @@ export function GmvTile({ gmvNgwee, locale }: GmvTileProps) {
 
   return (
     <TileShell title={t("title")} subtitle={t("subtitle")}>
-      <p className="font-mono text-2xl font-semibold text-[#2A2118]">
-        {formatK(gmvNgwee, { locale })}
-      </p>
+      <p className="font-mono text-2xl font-semibold text-text">{formatK(gmvNgwee, { locale })}</p>
     </TileShell>
   );
 }

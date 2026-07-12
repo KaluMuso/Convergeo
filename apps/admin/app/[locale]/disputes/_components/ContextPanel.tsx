@@ -16,31 +16,31 @@ export function ContextPanel({ order, locale }: ContextPanelProps) {
   return (
     <div className="space-y-6">
       <section className="space-y-2">
-        <h3 className="text-sm font-semibold text-[#2A2118]">{t("summary")}</h3>
+        <h3 className="text-sm font-semibold text-text">{t("summary")}</h3>
         <dl className="grid gap-2 text-sm sm:grid-cols-2">
           <div>
-            <dt className="text-[#6B5E4C]">{t("vendor")}</dt>
+            <dt className="text-muted">{t("vendor")}</dt>
             <dd>{order.vendor_display_name}</dd>
           </div>
           <div>
-            <dt className="text-[#6B5E4C]">{t("customer")}</dt>
+            <dt className="text-muted">{t("customer")}</dt>
             <dd>{order.customer_display_name ?? order.customer_phone ?? "—"}</dd>
           </div>
           <div>
-            <dt className="text-[#6B5E4C]">{t("orderStatus")}</dt>
+            <dt className="text-muted">{t("orderStatus")}</dt>
             <dd>{order.status}</dd>
           </div>
           <div>
-            <dt className="text-[#6B5E4C]">{t("orderTotal")}</dt>
+            <dt className="text-muted">{t("orderTotal")}</dt>
             <dd className="font-mono">{formatK(order.order_total_ngwee)}</dd>
           </div>
         </dl>
       </section>
 
       <section className="space-y-2">
-        <h3 className="text-sm font-semibold text-[#2A2118]">{t("items")}</h3>
+        <h3 className="text-sm font-semibold text-text">{t("items")}</h3>
         {order.items.length === 0 ? (
-          <p className="text-sm text-[#6B5E4C]">{t("itemsEmpty")}</p>
+          <p className="text-sm text-muted">{t("itemsEmpty")}</p>
         ) : (
           <ul className="space-y-1 text-sm">
             {order.items.map((item) => (
@@ -57,9 +57,9 @@ export function ContextPanel({ order, locale }: ContextPanelProps) {
       </section>
 
       <section className="space-y-2">
-        <h3 className="text-sm font-semibold text-[#2A2118]">{t("payments")}</h3>
+        <h3 className="text-sm font-semibold text-text">{t("payments")}</h3>
         {order.payments.length === 0 ? (
-          <p className="text-sm text-[#6B5E4C]">{t("paymentsEmpty")}</p>
+          <p className="text-sm text-muted">{t("paymentsEmpty")}</p>
         ) : (
           <ul className="space-y-1 text-sm">
             {order.payments.map((payment) => (
@@ -77,17 +77,17 @@ export function ContextPanel({ order, locale }: ContextPanelProps) {
       </section>
 
       <section className="space-y-2">
-        <h3 className="text-sm font-semibold text-[#2A2118]">{t("ledger")}</h3>
+        <h3 className="text-sm font-semibold text-text">{t("ledger")}</h3>
         {order.ledger.length === 0 ? (
-          <p className="text-sm text-[#6B5E4C]">{t("ledgerEmpty")}</p>
+          <p className="text-sm text-muted">{t("ledgerEmpty")}</p>
         ) : (
           <ul className="space-y-2 text-sm">
             {order.ledger.map((txn) => {
               const balance = txn.postings.reduce((sum, posting) => sum + posting.amount_ngwee, 0);
               return (
-                <li key={txn.id} className="rounded-md border border-[#E8DFD0] p-2">
+                <li key={txn.id} className="rounded-md border border-border p-2">
                   <p className="font-medium">{txn.kind}</p>
-                  <p className="text-xs text-[#6B5E4C]">
+                  <p className="text-xs text-muted">
                     {new Date(txn.created_at).toLocaleString(locale)}
                   </p>
                   <p className="font-mono text-xs">{t("ledgerBalance", { balance })}</p>

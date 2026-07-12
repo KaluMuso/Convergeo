@@ -26,11 +26,11 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
 
   if (!detail.decidable) {
     return (
-      <section className="rounded-md border border-[#E8DFD0] p-4">
-        <h2 className="text-sm font-semibold text-[#2A2118]">{t("title")}</h2>
-        <p className="mt-2 text-sm text-[#6B5E4C]">{t("alreadyResolved")}</p>
+      <section className="rounded-md border border-border p-4">
+        <h2 className="text-sm font-semibold text-text">{t("title")}</h2>
+        <p className="mt-2 text-sm text-muted">{t("alreadyResolved")}</p>
         {detail.admin_decision ? (
-          <p className="mt-2 text-sm text-[#2A2118]">{detail.admin_decision}</p>
+          <p className="mt-2 text-sm text-text">{detail.admin_decision}</p>
         ) : null}
       </section>
     );
@@ -84,12 +84,12 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
   };
 
   return (
-    <section className="space-y-4 rounded-md border border-[#E8DFD0] p-4">
-      <h2 className="text-sm font-semibold text-[#2A2118]">{t("title")}</h2>
-      <p className="text-sm text-[#6B5E4C]">{t("subtitle")}</p>
+    <section className="space-y-4 rounded-md border border-border p-4">
+      <h2 className="text-sm font-semibold text-text">{t("title")}</h2>
+      <p className="text-sm text-muted">{t("subtitle")}</p>
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-[#2A2118]">{t("outcome")}</legend>
+        <legend className="text-sm font-medium text-text">{t("outcome")}</legend>
         <label className="flex min-h-11 items-center gap-2 text-sm">
           <input
             checked={decision === "full_refund"}
@@ -126,7 +126,7 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
         <label className="block space-y-1 text-sm">
           <span>{t("partialAmount", { max: formatK(detail.order.order_total_ngwee) })}</span>
           <input
-            className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-2 font-mono"
+            className="min-h-11 w-full rounded-md border border-border px-2 font-mono"
             inputMode="numeric"
             type="number"
             value={partialNgwee}
@@ -139,7 +139,7 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
         <label className="block space-y-1 text-sm">
           <span>{t("customerMomo")}</span>
           <input
-            className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-2"
+            className="min-h-11 w-full rounded-md border border-border px-2"
             type="tel"
             value={customerMomo}
             onChange={(event) => setCustomerMomo(event.target.value)}
@@ -148,7 +148,7 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
         <label className="block space-y-1 text-sm">
           <span>{t("customerRail")}</span>
           <select
-            className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-2"
+            className="min-h-11 w-full rounded-md border border-border px-2"
             value={customerRail}
             onChange={(event) => setCustomerRail(event.target.value as (typeof RAILS)[number])}
           >
@@ -164,7 +164,7 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
       <label className="block space-y-1 text-sm">
         <span>{t("note")}</span>
         <textarea
-          className="min-h-24 w-full rounded-md border border-[#E8DFD0] p-2"
+          className="min-h-24 w-full rounded-md border border-border p-2"
           value={note}
           onChange={(event) => setNote(event.target.value)}
         />
@@ -173,14 +173,14 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
       <button
         type="button"
         disabled={submitting}
-        className="inline-flex min-h-11 items-center rounded-md bg-[#2D4A7A] px-4 text-sm font-medium text-white disabled:opacity-60"
+        className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
         onClick={() => void submit()}
       >
         {submitting ? t("submitting") : t("submit")}
       </button>
 
-      {message ? <p className="text-sm text-[#2D6A4F]">{message}</p> : null}
-      {error ? <p className="text-sm text-[#9B2C2C]">{error}</p> : null}
+      {message ? <p className="text-sm text-success">{message}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
     </section>
   );
 }

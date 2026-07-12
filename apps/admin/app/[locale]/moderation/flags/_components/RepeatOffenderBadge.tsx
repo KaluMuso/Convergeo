@@ -14,7 +14,7 @@ export function RepeatOffenderBadge({ count }: RepeatOffenderBadgeProps) {
   }
 
   return (
-    <span className="inline-flex items-center rounded-full bg-[#9B2C2C]/10 px-2 py-0.5 text-xs font-medium text-[#9B2C2C]">
+    <span className="inline-flex items-center rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
       {t("repeatOffender", { count })}
     </span>
   );

@@ -39,16 +39,16 @@ export function DisputeReviewDetail({ locale, disputeId }: DisputeReviewDetailPr
   }, [load]);
 
   if (loading) {
-    return <p className="text-sm text-[#6B5E4C]">{t("loading")}</p>;
+    return <p className="text-sm text-muted">{t("loading")}</p>;
   }
 
   if (error || !detail) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-[#9B2C2C]">{error ?? t("error")}</p>
+        <p className="text-sm text-danger">{error ?? t("error")}</p>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
           onClick={() => void load()}
         >
           {t("retry")}
@@ -61,7 +61,7 @@ export function DisputeReviewDetail({ locale, disputeId }: DisputeReviewDetailPr
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
-          className="text-sm font-medium text-[#2D4A7A] underline-offset-2 hover:underline"
+          className="text-sm font-medium text-primary underline-offset-2 hover:underline"
           href={`/${locale}/disputes`}
         >
           {t("back")}
@@ -70,8 +70,8 @@ export function DisputeReviewDetail({ locale, disputeId }: DisputeReviewDetailPr
       </div>
 
       <header className="space-y-1">
-        <h1 className="font-serif text-xl text-[#2A2118]">{t("title")}</h1>
-        <p className="text-sm text-[#6B5E4C]">
+        <h1 className="font-serif text-xl text-text">{t("title")}</h1>
+        <p className="text-sm text-muted">
           {t("summary", {
             orderId: detail.order_id,
             status: detail.status,
@@ -81,19 +81,19 @@ export function DisputeReviewDetail({ locale, disputeId }: DisputeReviewDetailPr
       </header>
 
       {detail.vendor_response ? (
-        <section className="space-y-2 rounded-md border border-[#E8DFD0] p-4">
-          <h2 className="text-sm font-semibold text-[#2A2118]">{t("vendorResponse")}</h2>
-          <p className="text-sm text-[#2A2118]">{detail.vendor_response}</p>
+        <section className="space-y-2 rounded-md border border-border p-4">
+          <h2 className="text-sm font-semibold text-text">{t("vendorResponse")}</h2>
+          <p className="text-sm text-text">{detail.vendor_response}</p>
         </section>
       ) : null}
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-[#2A2118]">{t("evidenceTitle")}</h2>
+        <h2 className="text-sm font-semibold text-text">{t("evidenceTitle")}</h2>
         <EvidenceViewer evidence={detail.evidence} evidenceAvailable={detail.evidence_available} />
       </section>
 
-      <section className="space-y-3 rounded-md border border-[#E8DFD0] p-4">
-        <h2 className="text-sm font-semibold text-[#2A2118]">{t("contextTitle")}</h2>
+      <section className="space-y-3 rounded-md border border-border p-4">
+        <h2 className="text-sm font-semibold text-text">{t("contextTitle")}</h2>
         <ContextPanel locale={locale} order={detail.order} />
       </section>
 

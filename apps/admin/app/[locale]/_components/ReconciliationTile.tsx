@@ -22,37 +22,37 @@ export function ReconciliationTile({ reconciliation, locale }: ReconciliationTil
         <p
           className={
             isRed
-              ? "inline-flex min-h-8 items-center rounded-full bg-[#FDE8E8] px-3 text-sm font-medium text-[#9B2C2C]"
-              : "inline-flex min-h-8 items-center rounded-full bg-[#E6F4EA] px-3 text-sm font-medium text-[#1E6B3A]"
+              ? "inline-flex min-h-8 items-center rounded-full bg-danger/10 px-3 text-sm font-medium text-danger"
+              : "inline-flex min-h-8 items-center rounded-full bg-success/10 px-3 text-sm font-medium text-success"
           }
         >
           {isRed ? t("statusRed") : t("statusGreen")}
         </p>
         {reconciliation.report_date ? (
-          <p className="text-sm text-[#6B5E4C]">
+          <p className="text-sm text-muted">
             {t("reportDate", {
               date: new Date(reconciliation.report_date).toLocaleDateString(locale),
             })}
           </p>
         ) : (
-          <p className="text-sm text-[#6B5E4C]">{t("noReport")}</p>
+          <p className="text-sm text-muted">{t("noReport")}</p>
         )}
         {reconciliation.report_id ? (
           <button
             type="button"
-            className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-3 text-sm font-medium text-[#2D4A7A]"
+            className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm font-medium text-primary"
             onClick={() => setExpanded((value) => !value)}
           >
             {expanded ? t("hideDrillIn") : t("drillIn")}
           </button>
         ) : null}
         {expanded && reconciliation.report_id ? (
-          <div className="rounded-md border border-[#F0E9DE] bg-[#FAF7F2] p-3 text-sm">
-            <p className="font-mono text-xs text-[#6B5E4C]">{reconciliation.report_id}</p>
+          <div className="rounded-md border border-border bg-bg p-3 text-sm">
+            <p className="font-mono text-xs text-muted">{reconciliation.report_id}</p>
             {isRed ? (
-              <p className="mt-2 text-[#9B2C2C]">{t("mismatchAlert")}</p>
+              <p className="mt-2 text-danger">{t("mismatchAlert")}</p>
             ) : (
-              <p className="mt-2 text-[#1E6B3A]">{t("cleanDay")}</p>
+              <p className="mt-2 text-success">{t("cleanDay")}</p>
             )}
           </div>
         ) : null}

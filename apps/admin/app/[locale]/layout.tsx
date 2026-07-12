@@ -86,15 +86,15 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
           <NextIntlClientProvider messages={messages}>
             {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
             <SentryInit />
-            <div className="min-h-dvh bg-[#FAF7F2] text-[#2A2118]">
-              <header className="border-b border-[#E8DFD0] bg-[#241B30] text-[#EEEAE3]">
+            <div className="min-h-dvh bg-bg text-text">
+              <header className="border-b border-border bg-panel text-panel-text">
                 <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-1">
-                    <p className="text-xs uppercase tracking-wide text-[#9F94B0]">
+                    <p className="text-xs uppercase tracking-wide text-panel-muted">
                       {t("shell.eyebrow")}
                     </p>
-                    <h1 className="font-serif text-xl text-[#EEEAE3]">{t("title")}</h1>
-                    <p className="text-xs text-[#9F94B0]">{t("shell.environment")}</p>
+                    <h1 className="font-serif text-xl text-panel-text">{t("title")}</h1>
+                    <p className="text-xs text-panel-muted">{t("shell.environment")}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <ThemeToggle
@@ -102,10 +102,10 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
                       lightLabel={tCommon("theme.light")}
                       darkLabel={tCommon("theme.dark")}
                       systemLabel={tCommon("theme.system")}
-                      className="border-[#9F94B0]/40 bg-transparent text-[#EEEAE3] hover:border-[#EEEAE3] hover:text-[#EEEAE3]"
+                      className="border-panel-muted/40 bg-transparent text-panel-text hover:border-panel-text hover:text-panel-text"
                     />
                     <Link
-                      className="inline-flex min-h-11 items-center justify-center rounded-md border border-[#9F94B0]/40 px-4 text-sm font-medium text-[#EEEAE3]"
+                      className="inline-flex min-h-11 items-center justify-center rounded-md border border-panel-muted/40 px-4 text-sm font-medium text-panel-text"
                       href={`/${locale}/login`}
                     >
                       {t("shell.signOut")}
@@ -124,7 +124,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
                     return (
                       <Link
                         key={item.key}
-                        className="inline-flex min-h-11 shrink-0 items-center rounded-md border border-[#E8DFD0] bg-white px-3 text-sm font-medium text-[#2A2118] hover:border-[#2D4A7A] hover:text-[#2D4A7A]"
+                        className="inline-flex min-h-11 shrink-0 items-center rounded-md border border-border bg-surface px-3 text-sm font-medium text-text hover:border-primary hover:text-primary"
                         href={href}
                       >
                         {t(`nav.${item.key}`)}
@@ -133,7 +133,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
                   })}
                 </nav>
 
-                <main className="min-w-0 flex-1 rounded-lg border border-[#E8DFD0] bg-white p-4 shadow-sm">
+                <main className="min-w-0 flex-1 rounded-lg border border-border bg-surface p-4 shadow-sm">
                   {children}
                 </main>
               </div>

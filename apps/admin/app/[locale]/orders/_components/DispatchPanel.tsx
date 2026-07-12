@@ -46,14 +46,14 @@ export function DispatchPanel({ order, onSuccess }: DispatchPanelProps) {
   };
 
   return (
-    <section className="space-y-3 rounded-md border border-[#E8DFD0] p-4">
-      <h2 className="font-medium text-[#2A2118]">{t("title")}</h2>
-      <p className="text-sm text-[#6B5E4C]">{t("subtitle")}</p>
+    <section className="space-y-3 rounded-md border border-border p-4">
+      <h2 className="font-medium text-text">{t("title")}</h2>
+      <p className="text-sm text-muted">{t("subtitle")}</p>
 
       <label className="block space-y-1 text-sm">
-        <span className="text-[#6B5E4C]">{t("courier")}</span>
+        <span className="text-muted">{t("courier")}</span>
         <select
-          className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-3"
+          className="min-h-11 w-full rounded-md border border-border px-3"
           value={courier}
           onChange={(event) => setCourier(event.target.value as typeof courier)}
         >
@@ -65,9 +65,9 @@ export function DispatchPanel({ order, onSuccess }: DispatchPanelProps) {
 
       {courier === "other" ? (
         <label className="block space-y-1 text-sm">
-          <span className="text-[#6B5E4C]">{t("courierOther")}</span>
+          <span className="text-muted">{t("courierOther")}</span>
           <input
-            className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-3"
+            className="min-h-11 w-full rounded-md border border-border px-3"
             value={courierOther}
             onChange={(event) => setCourierOther(event.target.value)}
           />
@@ -75,9 +75,9 @@ export function DispatchPanel({ order, onSuccess }: DispatchPanelProps) {
       ) : null}
 
       <label className="block space-y-1 text-sm">
-        <span className="text-[#6B5E4C]">{t("trackingNote")}</span>
+        <span className="text-muted">{t("trackingNote")}</span>
         <textarea
-          className="min-h-20 w-full rounded-md border border-[#E8DFD0] px-3 py-2"
+          className="min-h-20 w-full rounded-md border border-border px-3 py-2"
           value={trackingNote}
           onChange={(event) => setTrackingNote(event.target.value)}
           placeholder={t("trackingPlaceholder")}
@@ -85,9 +85,9 @@ export function DispatchPanel({ order, onSuccess }: DispatchPanelProps) {
       </label>
 
       <label className="block space-y-1 text-sm">
-        <span className="text-[#6B5E4C]">{t("statusEvent")}</span>
+        <span className="text-muted">{t("statusEvent")}</span>
         <select
-          className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-3"
+          className="min-h-11 w-full rounded-md border border-border px-3"
           value={event}
           onChange={(event) => setEvent(event.target.value as OrderEvent)}
         >
@@ -99,12 +99,12 @@ export function DispatchPanel({ order, onSuccess }: DispatchPanelProps) {
         </select>
       </label>
 
-      {error ? <p className="text-sm text-[#9B2C2C]">{error}</p> : null}
-      {success ? <p className="text-sm text-[#276749]">{t("success")}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {success ? <p className="text-sm text-success">{t("success")}</p> : null}
 
       <button
         type="button"
-        className="inline-flex min-h-11 items-center rounded-md bg-[#2D4A7A] px-4 text-sm font-medium text-white disabled:opacity-60"
+        className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
         disabled={submitting || !trackingNote.trim()}
         onClick={() => void submit()}
       >

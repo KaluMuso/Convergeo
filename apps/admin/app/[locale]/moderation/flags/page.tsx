@@ -19,8 +19,8 @@ export default async function FlagModerationPage({ params }: PageProps) {
   return (
     <div className="space-y-4">
       <header className="space-y-1">
-        <h1 className="font-serif text-xl text-[#2A2118]">{t("title")}</h1>
-        <p className="text-sm text-[#6B5E4C]">{t("subtitle")}</p>
+        <h1 className="font-serif text-xl text-text">{t("title")}</h1>
+        <p className="text-sm text-muted">{t("subtitle")}</p>
       </header>
       <FlagQueue locale={locale} />
     </div>

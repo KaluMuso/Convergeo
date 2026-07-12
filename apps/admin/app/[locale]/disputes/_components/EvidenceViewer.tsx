@@ -23,19 +23,19 @@ export function EvidenceViewer({ evidence, evidenceAvailable }: EvidenceViewerPr
   const t = useTranslations("admin.disputes.detail.evidence");
 
   if (!evidenceAvailable) {
-    return <p className="text-sm text-[#6B5E4C]">{t("unavailable")}</p>;
+    return <p className="text-sm text-muted">{t("unavailable")}</p>;
   }
 
   if (evidence.length === 0) {
-    return <p className="text-sm text-[#6B5E4C]">{t("empty")}</p>;
+    return <p className="text-sm text-muted">{t("empty")}</p>;
   }
 
   const customerEvidence = evidence.filter((item) => item.side === "customer");
   const vendorEvidence = evidence.filter((item) => item.side === "vendor");
 
   const renderItem = (item: SignedEvidenceUrl) => (
-    <li key={item.path} className="space-y-2 rounded-md border border-[#E8DFD0] p-3">
-      <p className="text-xs text-[#6B5E4C]">{item.path.split("/").pop()}</p>
+    <li key={item.path} className="space-y-2 rounded-md border border-border p-3">
+      <p className="text-xs text-muted">{item.path.split("/").pop()}</p>
       {item.signed_url ? (
         isImagePath(item.path) ? (
           <img
@@ -45,7 +45,7 @@ export function EvidenceViewer({ evidence, evidenceAvailable }: EvidenceViewerPr
           />
         ) : (
           <a
-            className="text-sm font-medium text-[#2D4A7A] underline-offset-2 hover:underline"
+            className="text-sm font-medium text-primary underline-offset-2 hover:underline"
             href={item.signed_url}
             rel="noopener noreferrer"
             target="_blank"
@@ -54,10 +54,10 @@ export function EvidenceViewer({ evidence, evidenceAvailable }: EvidenceViewerPr
           </a>
         )
       ) : (
-        <p className="text-sm text-[#6B5E4C]">{t("noPreview")}</p>
+        <p className="text-sm text-muted">{t("noPreview")}</p>
       )}
       {item.expires_at ? (
-        <p className="text-xs text-[#6B5E4C]">
+        <p className="text-xs text-muted">
           {t("expires", { at: new Date(item.expires_at).toLocaleString() })}
         </p>
       ) : null}
@@ -67,17 +67,17 @@ export function EvidenceViewer({ evidence, evidenceAvailable }: EvidenceViewerPr
   return (
     <div className="grid gap-6 md:grid-cols-2">
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-[#2A2118]">{t("customer")}</h3>
+        <h3 className="text-sm font-semibold text-text">{t("customer")}</h3>
         {customerEvidence.length === 0 ? (
-          <p className="text-sm text-[#6B5E4C]">{t("noneCustomer")}</p>
+          <p className="text-sm text-muted">{t("noneCustomer")}</p>
         ) : (
           <ul className="space-y-3">{customerEvidence.map(renderItem)}</ul>
         )}
       </section>
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-[#2A2118]">{t("vendor")}</h3>
+        <h3 className="text-sm font-semibold text-text">{t("vendor")}</h3>
         {vendorEvidence.length === 0 ? (
-          <p className="text-sm text-[#6B5E4C]">{t("noneVendor")}</p>
+          <p className="text-sm text-muted">{t("noneVendor")}</p>
         ) : (
           <ul className="space-y-3">{vendorEvidence.map(renderItem)}</ul>
         )}

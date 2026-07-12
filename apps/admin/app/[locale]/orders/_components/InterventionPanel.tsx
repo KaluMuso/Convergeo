@@ -54,14 +54,14 @@ export function InterventionPanel({ order, onSuccess }: InterventionPanelProps) 
   };
 
   return (
-    <section className="space-y-3 rounded-md border border-[#E8DFD0] p-4">
-      <h2 className="font-medium text-[#2A2118]">{t("title")}</h2>
-      <p className="text-sm text-[#6B5E4C]">{t("subtitle", { status: order.status })}</p>
+    <section className="space-y-3 rounded-md border border-border p-4">
+      <h2 className="font-medium text-text">{t("title")}</h2>
+      <p className="text-sm text-muted">{t("subtitle", { status: order.status })}</p>
 
       <label className="block space-y-1 text-sm">
-        <span className="text-[#6B5E4C]">{t("event")}</span>
+        <span className="text-muted">{t("event")}</span>
         <select
-          className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-3"
+          className="min-h-11 w-full rounded-md border border-border px-3"
           value={event}
           onChange={(event) => setEvent(event.target.value as OrderEvent)}
         >
@@ -74,9 +74,9 @@ export function InterventionPanel({ order, onSuccess }: InterventionPanelProps) 
       </label>
 
       <label className="block space-y-1 text-sm">
-        <span className="text-[#6B5E4C]">{t("reason")}</span>
+        <span className="text-muted">{t("reason")}</span>
         <textarea
-          className="min-h-20 w-full rounded-md border border-[#E8DFD0] px-3 py-2"
+          className="min-h-20 w-full rounded-md border border-border px-3 py-2"
           value={reason}
           onChange={(event) => setReason(event.target.value)}
           placeholder={t("reasonPlaceholder")}
@@ -92,12 +92,12 @@ export function InterventionPanel({ order, onSuccess }: InterventionPanelProps) 
         <span>{t("refundPath")}</span>
       </label>
 
-      {error ? <p className="text-sm text-[#9B2C2C]">{error}</p> : null}
-      {success ? <p className="text-sm text-[#276749]">{t("success")}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {success ? <p className="text-sm text-success">{t("success")}</p> : null}
 
       <button
         type="button"
-        className="inline-flex min-h-11 items-center rounded-md border border-[#9B2C2C] px-4 text-sm font-medium text-[#9B2C2C] disabled:opacity-60"
+        className="inline-flex min-h-11 items-center rounded-md border border-danger px-4 text-sm font-medium text-danger disabled:opacity-60"
         disabled={submitting || !reason.trim()}
         onClick={() => void submit()}
       >

@@ -67,16 +67,16 @@ export function PlatformEditor() {
   };
 
   if (loading) {
-    return <p className="text-sm text-[#6B5E4C]">{t("common.loading")}</p>;
+    return <p className="text-sm text-muted">{t("common.loading")}</p>;
   }
 
   if (error) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-[#9B2C2C]">{error}</p>
+        <p className="text-sm text-danger">{error}</p>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
           onClick={() => void load()}
         >
           {t("common.retry")}
@@ -87,24 +87,24 @@ export function PlatformEditor() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-[#9B2C2C]">{t("platform.dangerousHint")}</p>
+      <p className="text-sm text-danger">{t("platform.dangerousHint")}</p>
       <div className="space-y-3">
         {rows.map((row) => (
           <div
             key={row.key}
-            className="flex flex-col gap-2 rounded-md border border-[#E8DFD0] p-3 sm:flex-row sm:items-center sm:justify-between"
+            className="flex flex-col gap-2 rounded-md border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
           >
             <div>
-              <p className="text-sm font-medium text-[#2A2118]">
+              <p className="text-sm font-medium text-text">
                 {t(PLATFORM_LABEL_KEYS[row.key] ?? "common.key")}
               </p>
-              <p className="text-xs text-[#6B5E4C]">{row.description}</p>
+              <p className="text-xs text-muted">{row.description}</p>
             </div>
             <div className="flex items-center gap-2">
               <input
                 type="number"
                 min={0}
-                className="min-h-11 w-32 rounded-md border border-[#E8DFD0] px-2 font-mono"
+                className="min-h-11 w-32 rounded-md border border-border px-2 font-mono"
                 value={drafts[row.key] ?? row.value}
                 onChange={(event) =>
                   setDrafts((prev) => ({ ...prev, [row.key]: Number(event.target.value) }))
@@ -112,7 +112,7 @@ export function PlatformEditor() {
               />
               <button
                 type="button"
-                className="inline-flex min-h-11 items-center rounded-md bg-[#2D4A7A] px-3 text-sm font-medium text-white"
+                className="inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-sm font-medium text-white"
                 onClick={() => requestSave(row.key)}
               >
                 {t("common.save")}

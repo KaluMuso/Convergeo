@@ -11,21 +11,21 @@ type TileShellProps = {
 };
 
 const STATUS_BORDER: Record<NonNullable<TileShellProps["status"]>, string> = {
-  success: "border-[#B7DFC5]",
-  danger: "border-[#E8B4B4]",
-  warning: "border-[#F0D49A]",
+  success: "border-success/30",
+  danger: "border-danger/30",
+  warning: "border-warning/40",
 };
 
 export function TileShell({ title, subtitle, status, className = "", children }: TileShellProps) {
-  const borderClass = status ? STATUS_BORDER[status] : "border-[#F0E9DE]";
+  const borderClass = status ? STATUS_BORDER[status] : "border-border";
 
   return (
     <section
-      className={`rounded-lg border ${borderClass} bg-white p-4 shadow-sm ${className}`.trim()}
+      className={`rounded-lg border ${borderClass} bg-surface p-4 shadow-sm ${className}`.trim()}
     >
       <header className="mb-3 space-y-1">
-        <h2 className="font-serif text-base text-[#2A2118]">{title}</h2>
-        {subtitle ? <p className="text-xs text-[#6B5E4C]">{subtitle}</p> : null}
+        <h2 className="font-serif text-base text-text">{title}</h2>
+        {subtitle ? <p className="text-xs text-muted">{subtitle}</p> : null}
       </header>
       {children}
     </section>
