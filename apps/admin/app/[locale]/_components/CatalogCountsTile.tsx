@@ -16,16 +16,16 @@ export function CatalogCountsTile({ counts }: CatalogCountsTileProps) {
     <TileShell title={t("title")} subtitle={t("subtitle")}>
       <dl className="space-y-2 text-sm">
         <div className="flex items-center justify-between gap-2">
-          <dt className="text-[#6B5E4C]">{t("vendors")}</dt>
-          <dd className="font-mono font-medium text-[#2A2118]">{counts.vendors}</dd>
+          <dt className="text-muted">{t("vendors")}</dt>
+          <dd className="font-mono font-medium text-text">{counts.vendors}</dd>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <dt className="text-[#6B5E4C]">{t("listings")}</dt>
-          <dd className="font-mono font-medium text-[#2A2118]">{counts.listings}</dd>
+          <dt className="text-muted">{t("listings")}</dt>
+          <dd className="font-mono font-medium text-text">{counts.listings}</dd>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <dt className="text-[#6B5E4C]">{t("products")}</dt>
-          <dd className="font-mono font-medium text-[#2A2118]">{counts.products}</dd>
+          <dt className="text-muted">{t("products")}</dt>
+          <dd className="font-mono font-medium text-text">{counts.products}</dd>
         </div>
       </dl>
     </TileShell>

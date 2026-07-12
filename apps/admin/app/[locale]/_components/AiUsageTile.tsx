@@ -19,7 +19,7 @@ export function AiUsageTile({ aiUsage }: AiUsageTileProps) {
       status={aiUsage.flagged ? "warning" : undefined}
     >
       {aiUsage.data_available ? (
-        <p className="text-sm text-[#2A2118]">
+        <p className="text-sm text-text">
           {t("spendVsCap", {
             spend: aiUsage.spend_usd ?? 0,
             cap: aiUsage.cap_usd,
@@ -27,10 +27,10 @@ export function AiUsageTile({ aiUsage }: AiUsageTileProps) {
         </p>
       ) : (
         <div className="space-y-2">
-          <p className="inline-flex min-h-8 items-center rounded-full bg-[#FFF4E5] px-3 text-sm font-medium text-[#8A5A00]">
+          <p className="inline-flex min-h-8 items-center rounded-full bg-warning/10 px-3 text-sm font-medium text-warning">
             {t("noData")}
           </p>
-          <p className="text-xs text-[#6B5E4C]">{t("noDataHint", { cap: aiUsage.cap_usd })}</p>
+          <p className="text-xs text-muted">{t("noDataHint", { cap: aiUsage.cap_usd })}</p>
         </div>
       )}
     </TileShell>

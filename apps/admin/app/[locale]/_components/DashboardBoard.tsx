@@ -41,16 +41,16 @@ export function DashboardBoard({ locale }: DashboardBoardProps) {
   }, [load]);
 
   if (loading) {
-    return <p className="text-sm text-[#6B5E4C]">{t("loading")}</p>;
+    return <p className="text-sm text-muted">{t("loading")}</p>;
   }
 
   if (error || !data) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-[#9B2C2C]">{error ?? t("error")}</p>
+        <p className="text-sm text-danger">{error ?? t("error")}</p>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
           onClick={() => void load()}
         >
           {t("retry")}
@@ -61,7 +61,7 @@ export function DashboardBoard({ locale }: DashboardBoardProps) {
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-[#6B5E4C]">
+      <p className="text-xs text-muted">
         {t("cachedAt", { at: new Date(data.cached_at).toLocaleString(locale) })}
       </p>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -73,7 +73,7 @@ export function DashboardBoard({ locale }: DashboardBoardProps) {
         <AiUsageTile aiUsage={data.ai_usage} />
         <FunnelTile funnel={data.funnel} className="sm:col-span-2 xl:col-span-3" />
       </div>
-      <p className="font-mono text-xs text-[#6B5E4C]">
+      <p className="font-mono text-xs text-muted">
         {t("liabilitiesTotal", {
           amount: formatK(data.payout_liabilities.total_ngwee, { locale }),
         })}

@@ -108,17 +108,17 @@ export function CategoryTreeEditor() {
     return (
       <li key={node.id} className="space-y-2">
         <div
-          className="flex flex-col gap-2 rounded-md border border-[#E8DFD0] p-3 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-2 rounded-md border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
           style={{ marginLeft: depth * 12 }}
         >
           <div>
-            <p className="text-sm font-medium text-[#2A2118]">{node.name}</p>
-            <p className="font-mono text-xs text-[#6B5E4C]">{node.path}</p>
+            <p className="text-sm font-medium text-text">{node.name}</p>
+            <p className="font-mono text-xs text-muted">{node.path}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-3 text-sm"
+              className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm"
               disabled={index <= 0}
               onClick={() => void reorderSibling(node, -1)}
             >
@@ -126,7 +126,7 @@ export function CategoryTreeEditor() {
             </button>
             <button
               type="button"
-              className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-3 text-sm"
+              className="inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm"
               disabled={index < 0 || index >= siblings.length - 1}
               onClick={() => void reorderSibling(node, 1)}
             >
@@ -141,7 +141,7 @@ export function CategoryTreeEditor() {
               {node.prohibited ? t("common.prohibited") : t("common.allowed")}
             </label>
             <select
-              className="min-h-11 rounded-md border border-[#E8DFD0] px-2 text-sm"
+              className="min-h-11 rounded-md border border-border px-2 text-sm"
               value={node.parent_id ?? ""}
               onChange={(event) => {
                 const value = event.target.value;
@@ -162,13 +162,13 @@ export function CategoryTreeEditor() {
 
         {moveChildrenId === node.id ? (
           <div
-            className="rounded-md border border-[#F0C987] bg-[#FFF8EB] p-3 text-sm"
+            className="rounded-md border border-warning/50 bg-warning/10 p-3 text-sm"
             style={{ marginLeft: depth * 12 }}
           >
             <p>{t("categories.moveChildrenPrompt")}</p>
             <button
               type="button"
-              className="mt-2 inline-flex min-h-11 items-center rounded-md bg-[#2D4A7A] px-3 text-sm font-medium text-white"
+              className="mt-2 inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-sm font-medium text-white"
               onClick={() => void moveUnderParent(node, node.parent_id)}
             >
               {t("categories.moveChildrenConfirm")}
@@ -186,16 +186,16 @@ export function CategoryTreeEditor() {
   };
 
   if (loading) {
-    return <p className="text-sm text-[#6B5E4C]">{t("common.loading")}</p>;
+    return <p className="text-sm text-muted">{t("common.loading")}</p>;
   }
 
   if (error) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-[#9B2C2C]">{error}</p>
+        <p className="text-sm text-danger">{error}</p>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
           onClick={() => void load()}
         >
           {t("common.retry")}

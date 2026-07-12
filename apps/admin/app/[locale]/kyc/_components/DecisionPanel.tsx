@@ -75,27 +75,27 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
   };
 
   return (
-    <section className="space-y-4 rounded-md border border-[#E8DFD0] p-4">
-      <h2 className="text-sm font-semibold text-[#2A2118]">{td("decisions")}</h2>
+    <section className="space-y-4 rounded-md border border-border p-4">
+      <h2 className="text-sm font-semibold text-text">{td("decisions")}</h2>
 
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md bg-[#2D6A4F] px-4 text-sm font-medium text-white"
+          className="inline-flex min-h-11 items-center rounded-md bg-success px-4 text-sm font-medium text-white"
           onClick={() => setMode("approve")}
         >
           {td("approve")}
         </button>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#9B2C2C] px-4 text-sm font-medium text-[#9B2C2C]"
+          className="inline-flex min-h-11 items-center rounded-md border border-danger px-4 text-sm font-medium text-danger"
           onClick={() => setMode("reject")}
         >
           {td("reject")}
         </button>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#B7791F] px-4 text-sm font-medium text-[#B7791F]"
+          className="inline-flex min-h-11 items-center rounded-md border border-warning px-4 text-sm font-medium text-warning"
           onClick={() => setMode("resubmit")}
         >
           {td("requestResubmit")}
@@ -104,11 +104,11 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
 
       {mode === "approve" ? (
         <div className="space-y-3">
-          <p className="text-sm text-[#6B5E4C]">{td("confirmApprove", { tier: detail.tier })}</p>
+          <p className="text-sm text-muted">{td("confirmApprove", { tier: detail.tier })}</p>
           <label className="block space-y-1 text-sm">
             <span>{td("reviewerNotes")}</span>
             <textarea
-              className="min-h-20 w-full rounded-md border border-[#E8DFD0] p-2"
+              className="min-h-20 w-full rounded-md border border-border p-2"
               value={reviewerNotes}
               onChange={(event) => setReviewerNotes(event.target.value)}
             />
@@ -118,13 +118,13 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
 
       {mode === "reject" || mode === "resubmit" ? (
         <div className="space-y-3">
-          <p className="text-sm text-[#6B5E4C]">
+          <p className="text-sm text-muted">
             {mode === "reject" ? td("confirmReject") : td("confirmResubmit")}
           </p>
           <label className="block space-y-1 text-sm">
             <span>{td("reasonTemplate")}</span>
             <select
-              className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-2"
+              className="min-h-11 w-full rounded-md border border-border px-2"
               value={reasonTemplate}
               onChange={(event) => setReasonTemplate(event.target.value as RejectReasonTemplate)}
             >
@@ -138,7 +138,7 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
           <label className="block space-y-1 text-sm">
             <span>{td("freeText")}</span>
             <textarea
-              className="min-h-20 w-full rounded-md border border-[#E8DFD0] p-2"
+              className="min-h-20 w-full rounded-md border border-border p-2"
               value={freeText}
               onChange={(event) => setFreeText(event.target.value)}
             />
@@ -172,14 +172,14 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
           <button
             type="button"
             disabled={submitting}
-            className="inline-flex min-h-11 items-center rounded-md bg-[#2D4A7A] px-4 text-sm font-medium text-white disabled:opacity-60"
+            className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
             onClick={() => void submit()}
           >
             {submitting ? td("submitting") : td("confirmAction")}
           </button>
           <button
             type="button"
-            className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+            className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
             onClick={() => setMode(null)}
           >
             {td("cancel")}
@@ -187,8 +187,8 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
         </div>
       ) : null}
 
-      {message ? <p className="text-sm text-[#2D6A4F]">{message}</p> : null}
-      {error ? <p className="text-sm text-[#9B2C2C]">{error}</p> : null}
+      {message ? <p className="text-sm text-success">{message}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
     </section>
   );
 }

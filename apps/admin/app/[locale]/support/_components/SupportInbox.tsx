@@ -60,9 +60,9 @@ export function SupportInbox({ locale }: SupportInboxProps) {
         }}
       >
         <label className="min-w-0 flex-1 space-y-1 text-sm">
-          <span className="text-[#6B5E4C]">{t("lookup.label")}</span>
+          <span className="text-muted">{t("lookup.label")}</span>
           <input
-            className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-3"
+            className="min-h-11 w-full rounded-md border border-border px-3"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("lookup.placeholder")}
@@ -71,7 +71,7 @@ export function SupportInbox({ locale }: SupportInboxProps) {
         <div className="flex items-end">
           <button
             type="submit"
-            className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-[#2D4A7A] px-4 text-sm font-medium text-white sm:w-auto"
+            className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-white sm:w-auto"
             disabled={loading}
           >
             {loading ? t("lookup.searching") : t("lookup.submit")}
@@ -79,15 +79,15 @@ export function SupportInbox({ locale }: SupportInboxProps) {
         </div>
       </form>
 
-      {error ? <p className="text-sm text-[#9B2C2C]">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
 
       {searched && !loading && matches.length === 0 ? (
-        <p className="text-sm text-[#6B5E4C]">{t("lookup.empty")}</p>
+        <p className="text-sm text-muted">{t("lookup.empty")}</p>
       ) : null}
 
       {matches.length > 1 ? (
         <div className="space-y-2">
-          <p className="text-sm font-medium text-[#2A2118]">{t("lookup.multiple")}</p>
+          <p className="text-sm font-medium text-text">{t("lookup.multiple")}</p>
           <div className="flex flex-wrap gap-2">
             {matches.map((match) => (
               <button
@@ -95,8 +95,8 @@ export function SupportInbox({ locale }: SupportInboxProps) {
                 type="button"
                 className={`inline-flex min-h-11 items-center rounded-md border px-3 text-sm ${
                   selected?.customer.id === match.customer.id
-                    ? "border-[#2D4A7A] bg-[#EEF3FA] text-[#2D4A7A]"
-                    : "border-[#E8DFD0] text-[#2A2118]"
+                    ? "border-primary bg-primary-tint text-primary"
+                    : "border-border text-text"
                 }`}
                 onClick={() => setSelected(match)}
               >

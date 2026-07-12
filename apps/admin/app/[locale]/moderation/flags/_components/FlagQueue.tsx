@@ -86,16 +86,16 @@ export function FlagQueue({ locale }: FlagQueueProps) {
   };
 
   if (loading) {
-    return <p className="text-sm text-[#6B5E4C]">{t("loading")}</p>;
+    return <p className="text-sm text-muted">{t("loading")}</p>;
   }
 
   if (error) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-[#9B2C2C]">{error}</p>
+        <p className="text-sm text-danger">{error}</p>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
           onClick={() => void load()}
         >
           {t("retry")}
@@ -107,15 +107,15 @@ export function FlagQueue({ locale }: FlagQueueProps) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs uppercase tracking-wide text-[#6B5E4C]">{t("filterEntity")}</span>
+        <span className="text-xs uppercase tracking-wide text-muted">{t("filterEntity")}</span>
         {ENTITY_TYPES.map((value) => (
           <button
             key={value}
             type="button"
             className={`inline-flex min-h-11 items-center rounded-md border px-3 text-sm ${
               entityFilter === value
-                ? "border-[#2D4A7A] bg-[#2D4A7A]/5 text-[#2D4A7A]"
-                : "border-[#E8DFD0] text-[#6B5E4C]"
+                ? "border-primary bg-primary/5 text-primary"
+                : "border-border text-muted"
             }`}
             onClick={() => setEntityFilter(value)}
           >
@@ -124,35 +124,33 @@ export function FlagQueue({ locale }: FlagQueueProps) {
         ))}
       </div>
 
-      {message ? <p className="text-sm text-[#2D4A7A]">{message}</p> : null}
+      {message ? <p className="text-sm text-primary">{message}</p> : null}
 
       {items.length === 0 ? (
-        <p className="text-sm text-[#6B5E4C]">{t("empty")}</p>
+        <p className="text-sm text-muted">{t("empty")}</p>
       ) : (
         <div className="space-y-3">
           {items.map((item) => (
             <article
               key={item.id}
-              className="rounded-lg border border-[#E8DFD0] bg-white p-4 shadow-sm"
+              className="rounded-lg border border-border bg-surface p-4 shadow-sm"
             >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-medium uppercase tracking-wide text-[#6B5E4C]">
+                    <span className="text-xs font-medium uppercase tracking-wide text-muted">
                       {t(`entityType.${item.entity_type}`)}
                     </span>
                     <RepeatOffenderBadge count={item.repeat_offender_count} />
                   </div>
-                  <h2 className="font-medium text-[#2A2118]">
-                    {item.entity_label ?? item.entity_id}
-                  </h2>
+                  <h2 className="font-medium text-text">{item.entity_label ?? item.entity_id}</h2>
                   {item.vendor_display_name ? (
-                    <p className="text-sm text-[#6B5E4C]">
+                    <p className="text-sm text-muted">
                       {t("vendor", { name: item.vendor_display_name })}
                     </p>
                   ) : null}
-                  <p className="text-sm text-[#6B5E4C]">{item.reason}</p>
-                  <p className="text-xs text-[#6B5E4C]">
+                  <p className="text-sm text-muted">{item.reason}</p>
+                  <p className="text-xs text-muted">
                     {t("reported", { at: new Date(item.created_at).toLocaleString(locale) })}
                   </p>
                 </div>
@@ -163,8 +161,8 @@ export function FlagQueue({ locale }: FlagQueueProps) {
                       type="button"
                       className={`inline-flex min-h-11 items-center rounded-md border px-3 text-sm ${
                         action === "remove" || action === "escalate-suspend"
-                          ? "border-[#9B2C2C] text-[#9B2C2C]"
-                          : "border-[#2D4A7A] text-[#2D4A7A]"
+                          ? "border-danger text-danger"
+                          : "border-primary text-primary"
                       }`}
                       onClick={() => openAction(item, action)}
                     >

@@ -50,17 +50,17 @@ export function EscrowPanel({ order, onSuccess }: EscrowPanelProps) {
   };
 
   return (
-    <section className="space-y-3 rounded-md border border-[#E8DFD0] p-4">
-      <h2 className="font-medium text-[#2A2118]">{t("title")}</h2>
-      <p className="text-sm text-[#6B5E4C]">{t("subtitle")}</p>
-      <p className="text-xs text-[#6B5E4C]">
+    <section className="space-y-3 rounded-md border border-border p-4">
+      <h2 className="font-medium text-text">{t("title")}</h2>
+      <p className="text-sm text-muted">{t("subtitle")}</p>
+      <p className="text-xs text-muted">
         {t("confirmationHint", { phrase: MANUAL_ESCROW_CONFIRMATION })}
       </p>
 
       <label className="block space-y-1 text-sm">
-        <span className="text-[#6B5E4C]">{t("operation")}</span>
+        <span className="text-muted">{t("operation")}</span>
         <select
-          className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-3"
+          className="min-h-11 w-full rounded-md border border-border px-3"
           value={operation}
           onChange={(event) => setOperation(event.target.value as typeof operation)}
         >
@@ -70,9 +70,9 @@ export function EscrowPanel({ order, onSuccess }: EscrowPanelProps) {
       </label>
 
       <label className="block space-y-1 text-sm">
-        <span className="text-[#6B5E4C]">{t("amountNgwee")}</span>
+        <span className="text-muted">{t("amountNgwee")}</span>
         <input
-          className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-3 font-mono"
+          className="min-h-11 w-full rounded-md border border-border px-3 font-mono"
           inputMode="numeric"
           value={amountNgwee}
           onChange={(event) => setAmountNgwee(event.target.value)}
@@ -80,30 +80,30 @@ export function EscrowPanel({ order, onSuccess }: EscrowPanelProps) {
       </label>
 
       <label className="block space-y-1 text-sm">
-        <span className="text-[#6B5E4C]">{t("reason")}</span>
+        <span className="text-muted">{t("reason")}</span>
         <textarea
-          className="min-h-20 w-full rounded-md border border-[#E8DFD0] px-3 py-2"
+          className="min-h-20 w-full rounded-md border border-border px-3 py-2"
           value={reason}
           onChange={(event) => setReason(event.target.value)}
         />
       </label>
 
       <label className="block space-y-1 text-sm">
-        <span className="text-[#6B5E4C]">{t("confirmationPhrase")}</span>
+        <span className="text-muted">{t("confirmationPhrase")}</span>
         <input
-          className="min-h-11 w-full rounded-md border border-[#E8DFD0] px-3 font-mono"
+          className="min-h-11 w-full rounded-md border border-border px-3 font-mono"
           value={confirmationPhrase}
           onChange={(event) => setConfirmationPhrase(event.target.value)}
           placeholder={MANUAL_ESCROW_CONFIRMATION}
         />
       </label>
 
-      {error ? <p className="text-sm text-[#9B2C2C]">{error}</p> : null}
-      {success ? <p className="text-sm text-[#276749]">{t("success")}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {success ? <p className="text-sm text-success">{t("success")}</p> : null}
 
       <button
         type="button"
-        className="inline-flex min-h-11 items-center rounded-md bg-[#9B2C2C] px-4 text-sm font-medium text-white disabled:opacity-60"
+        className="inline-flex min-h-11 items-center rounded-md bg-danger px-4 text-sm font-medium text-white disabled:opacity-60"
         disabled={submitting || !reason.trim() || !confirmationPhrase.trim()}
         onClick={() => void submit()}
       >

@@ -41,36 +41,36 @@ export function ConfirmDiffDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-diff-title"
-        className="w-full max-w-md rounded-lg border border-[#E8DFD0] bg-white p-4 shadow-lg"
+        className="w-full max-w-md rounded-lg border border-border bg-surface p-4 shadow-lg"
         onClick={(event) => event.stopPropagation()}
       >
-        <h3 id="confirm-diff-title" className="font-serif text-lg text-[#2A2118]">
+        <h3 id="confirm-diff-title" className="font-serif text-lg text-text">
           {t("confirm.title")}
         </h3>
-        <p className="mt-2 text-sm text-[#6B5E4C]">{t("confirm.body")}</p>
+        <p className="mt-2 text-sm text-muted">{t("confirm.body")}</p>
         {dangerous ? (
-          <p className="mt-2 text-sm font-medium text-[#9B2C2C]">{t("confirm.dangerous")}</p>
+          <p className="mt-2 text-sm font-medium text-danger">{t("confirm.dangerous")}</p>
         ) : null}
 
-        <dl className="mt-4 grid grid-cols-2 gap-3 rounded-md bg-[#FAF7F2] p-3 text-sm">
+        <dl className="mt-4 grid grid-cols-2 gap-3 rounded-md bg-bg p-3 text-sm">
           <div>
-            <dt className="text-xs uppercase tracking-wide text-[#6B5E4C]">
+            <dt className="text-xs uppercase tracking-wide text-muted">
               {fromLabel || t("confirm.from")}
             </dt>
-            <dd className="mt-1 font-mono text-[#2A2118]">{fromValue}</dd>
+            <dd className="mt-1 font-mono text-text">{fromValue}</dd>
           </div>
           <div>
-            <dt className="text-xs uppercase tracking-wide text-[#6B5E4C]">
+            <dt className="text-xs uppercase tracking-wide text-muted">
               {toLabel || t("confirm.to")}
             </dt>
-            <dd className="mt-1 font-mono font-semibold text-[#2D4A7A]">{toValue}</dd>
+            <dd className="mt-1 font-mono font-semibold text-primary">{toValue}</dd>
           </div>
         </dl>
 
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
-            className="inline-flex min-h-11 items-center justify-center rounded-md border border-[#E8DFD0] px-4 text-sm font-medium"
+            className="inline-flex min-h-11 items-center justify-center rounded-md border border-border px-4 text-sm font-medium"
             onClick={onCancel}
             disabled={pending}
           >
@@ -78,7 +78,7 @@ export function ConfirmDiffDialog({
           </button>
           <button
             type="button"
-            className="inline-flex min-h-11 items-center justify-center rounded-md bg-[#2D4A7A] px-4 text-sm font-medium text-white disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
             disabled={pending}
             onClick={async () => {
               setPending(true);

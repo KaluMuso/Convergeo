@@ -24,9 +24,9 @@ export function FunnelTile({ funnel, className }: FunnelTileProps) {
     <TileShell title={t("title")} subtitle={t("subtitle")} className={className}>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {steps.map((step) => (
-          <div key={step.key} className="rounded-md border border-[#F0E9DE] bg-[#FAF7F2] p-3">
-            <p className="text-xs text-[#6B5E4C]">{t(`steps.${step.key}`)}</p>
-            <p className="mt-1 font-mono text-xl font-semibold text-[#2A2118]">{step.value}</p>
+          <div key={step.key} className="rounded-md border border-border bg-bg p-3">
+            <p className="text-xs text-muted">{t(`steps.${step.key}`)}</p>
+            <p className="mt-1 font-mono text-xl font-semibold text-text">{step.value}</p>
           </div>
         ))}
       </div>

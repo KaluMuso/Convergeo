@@ -37,16 +37,16 @@ export function FlagEditor() {
   };
 
   if (loading) {
-    return <p className="text-sm text-[#6B5E4C]">{t("common.loading")}</p>;
+    return <p className="text-sm text-muted">{t("common.loading")}</p>;
   }
 
   if (error) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-[#9B2C2C]">{error}</p>
+        <p className="text-sm text-danger">{error}</p>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
           onClick={() => void load()}
         >
           {t("common.retry")}
@@ -60,11 +60,11 @@ export function FlagEditor() {
       {rows.map((row) => (
         <div
           key={row.flag}
-          className="flex flex-col gap-2 rounded-md border border-[#E8DFD0] p-3 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-2 rounded-md border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
         >
           <div>
-            <p className="font-mono text-sm text-[#2A2118]">{row.flag}</p>
-            <p className="text-xs text-[#6B5E4C]">{row.description}</p>
+            <p className="font-mono text-sm text-text">{row.flag}</p>
+            <p className="text-xs text-muted">{row.description}</p>
           </div>
           <label className="inline-flex min-h-11 items-center gap-2">
             <input

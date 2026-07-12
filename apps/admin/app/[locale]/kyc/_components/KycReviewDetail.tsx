@@ -38,16 +38,16 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
   }, [load]);
 
   if (loading) {
-    return <p className="text-sm text-[#6B5E4C]">{t("loading")}</p>;
+    return <p className="text-sm text-muted">{t("loading")}</p>;
   }
 
   if (error || !detail) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-[#9B2C2C]">{error ?? t("error")}</p>
+        <p className="text-sm text-danger">{error ?? t("error")}</p>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
           onClick={() => void load()}
         >
           {t("retry")}
@@ -62,7 +62,7 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
-          className="text-sm font-medium text-[#2D4A7A] underline-offset-2 hover:underline"
+          className="text-sm font-medium text-primary underline-offset-2 hover:underline"
           href={`/${locale}/kyc`}
         >
           {t("back")}
@@ -71,8 +71,8 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
       </div>
 
       <header className="space-y-1">
-        <h1 className="font-serif text-xl text-[#2A2118]">{detail.vendor_display_name}</h1>
-        <p className="text-sm text-[#6B5E4C]">
+        <h1 className="font-serif text-xl text-text">{detail.vendor_display_name}</h1>
+        <p className="text-sm text-muted">
           {t("vendorSummary", {
             context: t("vendorContext"),
             slug: detail.vendor_slug,
@@ -84,43 +84,43 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
       </header>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-[#2A2118]">{t("momoMatch")}</h2>
+        <h2 className="text-sm font-semibold text-text">{t("momoMatch")}</h2>
         {momo ? (
           <dl className="grid gap-2 text-sm sm:grid-cols-2">
             <div>
-              <dt className="text-[#6B5E4C]">{t("momoPhone")}</dt>
+              <dt className="text-muted">{t("momoPhone")}</dt>
               <dd>{momo.phone}</dd>
             </div>
             <div>
-              <dt className="text-[#6B5E4C]">{t("momoOperator")}</dt>
+              <dt className="text-muted">{t("momoOperator")}</dt>
               <dd>{momo.operator}</dd>
             </div>
             <div>
-              <dt className="text-[#6B5E4C]">{t("legalName")}</dt>
+              <dt className="text-muted">{t("legalName")}</dt>
               <dd>{momo.legal_name}</dd>
             </div>
             <div>
-              <dt className="text-[#6B5E4C]">{t("resolvedName")}</dt>
+              <dt className="text-muted">{t("resolvedName")}</dt>
               <dd>{momo.resolved_name ?? t("missingValue")}</dd>
             </div>
             <div>
-              <dt className="text-[#6B5E4C]">{t("matchScore")}</dt>
+              <dt className="text-muted">{t("matchScore")}</dt>
               <dd>{momo.match_score.toFixed(2)}</dd>
             </div>
             <div>
-              <dt className="text-[#6B5E4C]">{t("matchResult")}</dt>
-              <dd className={momo.matched ? "text-[#2D6A4F]" : "text-[#9B2C2C]"}>
+              <dt className="text-muted">{t("matchResult")}</dt>
+              <dd className={momo.matched ? "text-success" : "text-danger"}>
                 {momo.matched ? t("matched") : t("notMatched")}
               </dd>
             </div>
           </dl>
         ) : (
-          <p className="text-sm text-[#6B5E4C]">{t("missingValue")}</p>
+          <p className="text-sm text-muted">{t("missingValue")}</p>
         )}
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-[#2A2118]">{t("documents")}</h2>
+        <h2 className="text-sm font-semibold text-text">{t("documents")}</h2>
         <DocViewer documents={detail.documents} docsAvailable={detail.docs_available} />
       </section>
 

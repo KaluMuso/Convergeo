@@ -41,16 +41,16 @@ export function DeliveryZoneEditor() {
   };
 
   if (loading) {
-    return <p className="text-sm text-[#6B5E4C]">{t("common.loading")}</p>;
+    return <p className="text-sm text-muted">{t("common.loading")}</p>;
   }
 
   if (error) {
     return (
       <div className="space-y-2">
-        <p className="text-sm text-[#9B2C2C]">{error}</p>
+        <p className="text-sm text-danger">{error}</p>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-[#E8DFD0] px-4 text-sm"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
           onClick={() => void load()}
         >
           {t("common.retry")}
@@ -62,7 +62,7 @@ export function DeliveryZoneEditor() {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-left text-sm">
-        <thead className="border-b border-[#E8DFD0] text-xs uppercase text-[#6B5E4C]">
+        <thead className="border-b border-border text-xs uppercase text-muted">
           <tr>
             <th className="px-2 py-2">{t("deliveryZones.zoneKey")}</th>
             <th className="px-2 py-2">{t("common.label")}</th>
@@ -73,11 +73,11 @@ export function DeliveryZoneEditor() {
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={row.zone_key} className="border-b border-[#F0E8DC]">
+            <tr key={row.zone_key} className="border-b border-border">
               <td className="px-2 py-3 font-mono">{row.zone_key}</td>
               <td className="px-2 py-3">
                 <input
-                  className="min-h-11 w-full min-w-40 rounded-md border border-[#E8DFD0] px-2"
+                  className="min-h-11 w-full min-w-40 rounded-md border border-border px-2"
                   value={row.label}
                   onChange={(event) =>
                     setRows((prev) =>
@@ -92,7 +92,7 @@ export function DeliveryZoneEditor() {
                 <input
                   type="number"
                   min={0}
-                  className="min-h-11 w-28 rounded-md border border-[#E8DFD0] px-2 font-mono"
+                  className="min-h-11 w-28 rounded-md border border-border px-2 font-mono"
                   value={row.fee_ngwee}
                   onChange={(event) =>
                     setRows((prev) =>
@@ -122,7 +122,7 @@ export function DeliveryZoneEditor() {
               <td className="px-2 py-3">
                 <button
                   type="button"
-                  className="inline-flex min-h-11 items-center rounded-md bg-[#2D4A7A] px-3 text-sm font-medium text-white"
+                  className="inline-flex min-h-11 items-center rounded-md bg-primary px-3 text-sm font-medium text-white"
                   onClick={() => void saveRow(row)}
                 >
                   {t("common.save")}

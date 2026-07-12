@@ -29,10 +29,10 @@ export function OrdersStatusTile({ ordersByStatus }: OrdersStatusTileProps) {
         {STATUS_KEYS.map((status) => (
           <li
             key={status}
-            className="flex items-center justify-between gap-2 rounded-md bg-[#FAF7F2] px-2 py-1.5"
+            className="flex items-center justify-between gap-2 rounded-md bg-bg px-2 py-1.5"
           >
-            <span className="text-[#6B5E4C]">{t(`statuses.${status}`)}</span>
-            <span className="font-mono font-medium text-[#2A2118]">{ordersByStatus[status]}</span>
+            <span className="text-muted">{t(`statuses.${status}`)}</span>
+            <span className="font-mono font-medium text-text">{ordersByStatus[status]}</span>
           </li>
         ))}
       </ul>

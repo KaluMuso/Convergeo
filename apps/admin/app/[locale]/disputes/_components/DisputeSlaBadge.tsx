@@ -9,9 +9,9 @@ type DisputeSlaBadgeProps = {
 };
 
 const BADGE_STYLES: Record<SlaBadge, string> = {
-  on_track: "border-[#2D6A4F] bg-[#E8F5EE] text-[#1B4332]",
-  due_soon: "border-[#B7791F] bg-[#FFF8E6] text-[#744210]",
-  overdue: "border-[#9B2C2C] bg-[#FDECEC] text-[#742A2A]",
+  on_track: "border-success bg-success/10 text-success",
+  due_soon: "border-warning bg-warning/10 text-warning",
+  overdue: "border-danger bg-danger/10 text-danger",
 };
 
 export function DisputeSlaBadge({ badge }: DisputeSlaBadgeProps) {
