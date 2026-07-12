@@ -273,6 +273,82 @@ async def test_poller_closes_webhook_gap_via_state_machine(fake_service: FakeSer
 
 
 @pytest.mark.asyncio
+async def test_poller_isolates_poison_pill_and_continues_batch(
+    fake_service: FakeServiceClient,
+) -> None:
+    """One illegal transition must not abort the tick; healthy payments still process.
+
+    The poison pill is an INITIATED payment for which Lenco reports ``successful``
+    (no INITIATED->success edge). It is logged/skipped while the healthy
+    USSD_PUSHED payments in the same batch are reconciled to SUCCESS.
+    """
+    stale_at = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
+    payments_table = fake_service.client.tables["payments"]
+
+    poison_id = str(uuid.uuid4())
+    payments_table.rows.append(
+        {
+            "id": poison_id,
+            "checkout_group_id": CHECKOUT_GROUP_ID,
+            "status": PaymentStatus.INITIATED.value,  # no edge to success
+            "lenco_reference": "ord-poison-1",
+            "amount_ngwee": 15_000,
+            "rail": "mtn",
+            "provider": "lenco",
+            "raw": {},
+            "updated_at": stale_at,
+        }
+    )
+
+    healthy_ids: list[str] = []
+    for idx in range(3):
+        healthy_id = str(uuid.uuid4())
+        healthy_ids.append(healthy_id)
+        payments_table.rows.append(
+            {
+                "id": healthy_id,
+                "checkout_group_id": CHECKOUT_GROUP_ID,
+                "status": PaymentStatus.USSD_PUSHED.value,
+                "lenco_reference": f"ord-healthy-{idx}",
+                "amount_ngwee": 20_000,
+                "rail": "mtn",
+                "provider": "lenco",
+                "raw": {},
+                "updated_at": stale_at,
+            }
+        )
+
+    async def query_status(request: Any) -> QueryStatusResult:
+        return QueryStatusResult(
+            reference=request.reference,
+            status="successful",
+            amount_major="200.00",
+        )
+
+    result = await poll_non_terminal_payments(
+        fake_service,
+        query_status=query_status,
+        older_than_minutes=1,
+    )
+
+    # Tick did NOT abort: all 4 scanned, 3 healthy updated, 1 poison skipped as error.
+    assert result == PollResult(scanned=4, updated=3, unchanged=0, errors=1)
+
+    by_id = {row["id"]: row for row in payments_table.rows}
+    # Every healthy payment was reconciled to SUCCESS.
+    for healthy_id in healthy_ids:
+        assert by_id[healthy_id]["status"] == PaymentStatus.SUCCESS.value
+    # The poison pill was left untouched (guarded transition refused, no raw UPDATE).
+    assert by_id[poison_id]["status"] == PaymentStatus.INITIATED.value
+
+    # Exactly the 3 healthy transitions were audited; the skipped one wrote none.
+    audit_rows = fake_service.client.tables["audit_log"].rows
+    assert len(audit_rows) == 3
+    audited_ids = {row["entity_id"] for row in audit_rows}
+    assert audited_ids == set(healthy_ids)
+
+
+@pytest.mark.asyncio
 async def test_poller_idempotent_rerun(fake_service: FakeServiceClient) -> None:
     payment_id = str(uuid.uuid4())
     stale_at = (datetime.now(UTC) - timedelta(minutes=10)).isoformat()
