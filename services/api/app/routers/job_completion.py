@@ -38,7 +38,12 @@ from app.schemas.base import StrictModel
 from app.services.escrow.release import compute_net_ngwee, release_idempotency_key
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
-from app.services.orders.audit import run_sql_script, sql_literal
+from app.services.orders.audit import (
+    ORDER_ACTOR_GUC,
+    ORDER_NOTE_GUC,
+    run_sql_script,
+    sql_literal,
+)
 from app.services.rfq.engagement import create_balance_item
 from app.services.stock.claim import sql_uuid
 from fastapi import APIRouter, Depends, Request
@@ -229,18 +234,30 @@ VALUES ({actor_sql}, {sql_literal(action)}, 'job', {job_sql}, {sql_literal(after
     )
 
 
-def _complete_order(order_id: str) -> None:
+def _complete_order(order_id: str, *, actor_id: str, is_system: bool) -> None:
     """Flip the service order placed → completed (server-controlled status update).
 
-    Guarded by ``guard_orders_status_update`` (the service connection is permitted);
-    the audit trigger writes the placed→completed ``order_events`` row automatically.
+    Guarded by ``guard_orders_status_update`` (the service connection is permitted).
+    The audit trigger (0014) writes the placed→completed ``order_events`` row from the
+    transaction-local ``app.order_actor``/``app.order_note`` GUCs. Because each
+    ``run_sql_script`` spawns its OWN psql process, the GUCs are primed in the SAME
+    script (and transaction) as the UPDATE — otherwise the trigger falls back to a
+    NULL ``auth.uid()`` and records a NULL actor (#8). The idempotent ``status =
+    placed`` guard makes a re-run a safe no-op.
     """
     order_sql = sql_uuid(order_id, "order_id")
+    note = (
+        "service job auto-confirmed" if is_system else "service job confirmed by customer"
+    )
     run_sql_script(
         f"""
+BEGIN;
+SELECT set_config('{ORDER_ACTOR_GUC}', {sql_literal(actor_id)}, true);
+SELECT set_config('{ORDER_NOTE_GUC}', {sql_literal(note)}, true);
 UPDATE public.orders
 SET status = '{COMPLETED_ORDER_STATUS}'
 WHERE id = {order_sql} AND status = '{PENDING_ORDER_STATUS}';
+COMMIT;
 """
     )
 
@@ -407,16 +424,27 @@ def confirm_job_completion(
             details={"message_key": "services.completion.errors.notMarked"},
         )
 
+    # These steps run as independent psql processes (no enclosing transaction), so
+    # ordering must preserve the net invariant on any partial failure:
+    #   an order can NEVER be 'completed' unless its vendor RELEASE has posted.
+    # The release, balance leg, and settlement are each idempotent (keyed by
+    # order_id), so a partial failure leaves the order at 'placed' and a re-run —
+    # interactive retry or the auto-confirm tick — safely re-drives to completion
+    # with the release posted exactly once. The release therefore precedes the
+    # placed→completed flip; nothing between them can strand escrow.
+    #
     # 1. Balance leg on the SAME order (idempotent; commission snapshot untouched).
     balance = create_balance_item(order.order_id)
     # 2. Settle the balance collection into escrow (M08 charge; idempotent).
     _settle_balance(order.order_id, balance.balance_ngwee)
-    # 3. Complete the order (unlocks the verified-engagement review).
-    _complete_order(order.order_id)
-    # 4. Release the whole order to the vendor EXACTLY ONCE.
+    # 3. Release the whole order to the vendor EXACTLY ONCE — BEFORE completing, so
+    #    completion implies the vendor has been paid (no stranded escrow).
     release_created, net_ngwee = _release_service_order(
         order.order_id, order.vendor_id, order.delivery_fee_ngwee
     )
+    # 4. Complete the order (unlocks the verified-engagement review); audited with the
+    #    real confirming actor via the app.order_actor/app.order_note GUCs.
+    _complete_order(order.order_id, actor_id=actor_id, is_system=is_system)
     # 5. Complete the job.
     _complete_job(job_id)
     _record_audit(

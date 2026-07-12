@@ -91,7 +91,10 @@ async def initiate_checkout_payment(
 
     payment_id = str(uuid4())
     reference_source = request.order_id or request.checkout_group_id
-    lenco_reference = make_order_reference(reference_source)
+    # Salt the reference with this attempt's payment_id so a retry after a
+    # failed/expired attempt gets a distinct, still-decodable reference and does
+    # not collide on the UNIQUE payments.lenco_reference constraint.
+    lenco_reference = make_order_reference(reference_source, attempt=payment_id)
 
     insert_row = {
         "id": payment_id,

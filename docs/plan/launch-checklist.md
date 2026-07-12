@@ -88,7 +88,7 @@ Founder actions from `docs/plan/00-decisions.md`. **Each is a hard NO-GO for
 real-money public launch until cleared.** They are founder-side, not code — do
 **not** check them here on the founder's behalf.
 
-- [ ] **F1 — Domain:** buy **vergeo5.com** (+ vergeo5.co.zm). Needed before Meta verify (F5) + email. — **Owner: Founder** — Evidence: _____
+- [x] **F1 — Domain:** ✅ **vergeo5.com purchased** (Porkbun, 2026-07-12). — **Owner: Founder** — Evidence: founder-confirmed in Porkbun account. _(Follow-up: vergeo5.co.zm still to acquire.)_
 - [ ] **F2 — PACRA + TPIN:** annual-returns renewal + company TPIN (personal TPIN won't do for Lenco settlement / ZRA). — **Owner: Founder** — Evidence: _____
 - [ ] **F3 — Lenco docs:** API docs + credential _names_ committed to `docs/ops/lenco/` (never secrets). — **Owner: Founder** — Evidence: `docs/ops/lenco/lenco-api-distilled.md` _(confirm complete)_
 - [ ] **F4 — Counsel (escrow / NPS Act 2026):** Zambian counsel review of the Lenco-held escrow flow — **pre-real-money launch gate.** — **Owner: Founder + Counsel** — Evidence: _____
