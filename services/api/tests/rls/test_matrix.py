@@ -197,6 +197,19 @@ EXPECTATIONS: TableExpectations = {
             "delete": "deny",
         },
     },
+    "beta_invites": {
+        # M16-P09 (0030): admin-read / service-role-write invite table. authenticated
+        # gets a SELECT grant + admin-only RLS policy (non-admins run SELECT but see
+        # zero rows -> permit); no client insert/update/delete grant (-> deny); anon
+        # has no grant (-> deny_all). Redemption goes through the SECURITY DEFINER
+        # redeem_beta_invite() function, not a direct table write.
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "cart_items": {
         # 0012 grants anon full DML for guest carts, scoped by the
         # `request.cart_guest_token` GUC. The matrix harness runs anon with no

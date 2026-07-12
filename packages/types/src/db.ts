@@ -232,6 +232,42 @@ export type Database = {
         }
         Relationships: []
       }
+      beta_invites: {
+        Row: {
+          active: boolean
+          capacity: number
+          code: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          note: string | null
+          updated_at: string
+          used_count: number
+        }
+        Insert: {
+          active?: boolean
+          capacity: number
+          code: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          note?: string | null
+          updated_at?: string
+          used_count?: number
+        }
+        Update: {
+          active?: boolean
+          capacity?: number
+          code?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          note?: string | null
+          updated_at?: string
+          used_count?: number
+        }
+        Relationships: []
+      }
       cart_items: {
         Row: {
           cart_id: string
@@ -2650,6 +2686,13 @@ export type Database = {
       recompute_review_aggregate_for_order_item: {
         Args: { p_order_item_id: string }
         Returns: undefined
+      }
+      redeem_beta_invite: {
+        Args: { p_code: string }
+        Returns: {
+          outcome: string
+          remaining: number
+        }[]
       }
       reserve_ask_quota: {
         Args: {
