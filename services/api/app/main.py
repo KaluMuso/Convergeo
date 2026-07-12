@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.core.ratelimit_policies import assert_all_mutating_routes_covered
 from app.errors import (
     AppError,
     app_error_handler,
@@ -72,6 +73,9 @@ def create_app() -> FastAPI:
 
     for router in discover_routers():
         app.include_router(router)
+
+    # Fail fast if any mutating route lacks a declared rate-limit policy.
+    assert_all_mutating_routes_covered(app)
 
     return app
 
