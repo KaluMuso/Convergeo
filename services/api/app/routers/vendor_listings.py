@@ -255,7 +255,7 @@ def _load_category_commission_key(
 ) -> tuple[str, str]:
     response = (
         service_client.client.table("categories")
-        .select("id, name, commission_key")
+        .select("id, name, commission_key, prohibited")
         .eq("id", category_id)
         .maybe_single()
         .execute()
@@ -267,6 +267,18 @@ def _load_category_commission_key(
             message="Category not found",
             http_status=404,
             details={"message_key": "vendor.listings.errors.category_not_found"},
+        )
+    if bool(row.get("prohibited")):
+        # D8 geo-fence: a category flagged prohibited may never be listed.
+        raise AppError(
+            code="prohibited_listing",
+            message="Listing contains a prohibited category or keyword",
+            http_status=422,
+            details={
+                "message_key": "vendor.listings.errors.submitFailed",
+                "reason": "category",
+                "matched": str(row.get("name", "")),
+            },
         )
     return str(row["name"]), str(row["commission_key"])
 
@@ -363,7 +375,22 @@ async def create_listing(
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     vendor_id = str(vendor["id"])
 
-    guard = screen_listing(title=body.title_override or body.product_name, description=body.brand)
+    # Resolve the vendor-supplied category up front so the moderation screen's
+    # category-block layer runs and DB-flagged prohibited categories are rejected
+    # (D8) before anything is written.
+    category_name: str | None = None
+    resolved_commission_key: str | None = None
+    if body.mode == "new_canonical" and body.category_id:
+        category_name, resolved_commission_key = _load_category_commission_key(
+            service_client,
+            body.category_id,
+        )
+
+    guard = screen_listing(
+        title=body.title_override or body.product_name,
+        description=body.brand,
+        category=category_name,
+    )
     if not guard.allowed:
         raise AppError(
             code="prohibited_listing",
@@ -406,11 +433,8 @@ async def create_listing(
     elif body.mode == "new_canonical":
         assert body.product_name is not None
         assert body.category_id is not None
-        category_name, commission_key = _load_category_commission_key(
-            service_client,
-            body.category_id,
-        )
-        commission = _load_commission(service_client, commission_key)
+        assert resolved_commission_key is not None
+        commission = _load_commission(service_client, resolved_commission_key)
         slug = _unique_product_slug(service_client, body.product_name)
         product_insert = (
             client.table("products")
