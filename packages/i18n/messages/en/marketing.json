@@ -1,0 +1,156 @@
+{
+  "about": {
+    "meta": {
+      "title": "About Vergeo5",
+      "description": "Vergeo5 is Zambia's mobile-first marketplace for products, services and events — with money held safely in escrow until you get what you paid for."
+    },
+    "hero": {
+      "eyebrow": "About us",
+      "headline": "Zambia's marketplace, built for trust",
+      "subhead": "Vergeo5 brings products, services and events into one place — with escrow that holds your money until delivery is confirmed."
+    },
+    "mission": {
+      "heading": "Our mission",
+      "body": "Make buying and selling online in Zambia safe, simple and fast — even on a slow connection. Every order is protected by escrow, every payout reaches vendors in minutes on mobile money, and every conversation can happen on WhatsApp."
+    },
+    "values": {
+      "heading": "What we stand for",
+      "trust": {
+        "title": "Trust first",
+        "body": "You pay, we hold, the vendor ships, you confirm — then funds release. No hoping a stranger delivers."
+      },
+      "local": {
+        "title": "Built for Zambia",
+        "body": "Mobile-money-first (MTN, Airtel), landmark addressing, Lusaka delivery and nationwide pickup, priced in Kwacha."
+      },
+      "fast": {
+        "title": "Fast on any network",
+        "body": "Designed for 360px screens and 3G. Light pages, small images, no wasted data."
+      },
+      "fair": {
+        "title": "Fair to vendors",
+        "body": "Transparent commissions shown before you publish, and payouts within 48 hours — usually minutes on mobile money."
+      }
+    },
+    "howItWorks": {
+      "heading": "How Vergeo5 works",
+      "step1": "Discover products, services and events from verified vendors across Zambia.",
+      "step2": "Pay by mobile money, card or cash on delivery for orders up to K500.",
+      "step3": "Your money is held safely in escrow until you confirm delivery.",
+      "step4": "We release funds to the vendor — and step in if anything goes wrong."
+    },
+    "cta": {
+      "heading": "Ready to explore?",
+      "browse": "Browse the marketplace",
+      "sell": "Start selling",
+      "help": "Visit the Help Centre"
+    }
+  },
+  "contact": {
+    "meta": {
+      "title": "Contact Vergeo5",
+      "description": "Reach the Vergeo5 team on WhatsApp for the fastest reply, or send us a message and we'll get back to you by email."
+    },
+    "hero": {
+      "eyebrow": "Contact",
+      "headline": "Talk to a human",
+      "subhead": "WhatsApp is the fastest way to reach us. Prefer to write? Send a message below and we'll reply by email."
+    },
+    "whatsapp": {
+      "heading": "Chat on WhatsApp",
+      "body": "Message our support team directly — we usually reply within a few hours during business days.",
+      "cta": "Open WhatsApp chat",
+      "hint": "Opens WhatsApp with a message ready to send."
+    },
+    "hours": {
+      "heading": "When we're around",
+      "body": "Monday to Saturday, 08:00–18:00 (CAT). Messages sent outside these hours are answered the next working day."
+    },
+    "form": {
+      "heading": "Send a message",
+      "nameLabel": "Your name",
+      "namePlaceholder": "e.g. Chanda Mwansa",
+      "phoneLabel": "Phone or email (optional)",
+      "phonePlaceholder": "So we can reply to you",
+      "messageLabel": "Message",
+      "messagePlaceholder": "How can we help?",
+      "requiredMarker": "*",
+      "submit": "Send message",
+      "submitting": "Sending…",
+      "success": "Thanks — your message is on its way. We'll be in touch soon.",
+      "errorGeneric": "Something went wrong. Please try again, or reach us on WhatsApp.",
+      "errorRateLimited": "You've sent a few messages already. Please wait a moment before sending another.",
+      "validation": {
+        "nameRequired": "Please tell us your name.",
+        "nameTooLong": "That name is too long.",
+        "messageRequired": "Please write a message.",
+        "messageTooShort": "Please add a little more detail.",
+        "messageTooLong": "That message is too long — please shorten it.",
+        "contactTooLong": "That contact detail is too long."
+      }
+    }
+  },
+  "help": {
+    "meta": {
+      "title": "Help Centre",
+      "description": "Answers about escrow, payments, delivery, returns, tickets and selling on Vergeo5."
+    },
+    "hero": {
+      "eyebrow": "Help Centre",
+      "headline": "How can we help?",
+      "subhead": "Search our guides, or browse by topic. Still stuck? Message us on WhatsApp."
+    },
+    "search": {
+      "label": "Search help articles",
+      "placeholder": "Search — e.g. escrow, delivery, refund",
+      "clear": "Clear search",
+      "resultsCount": "{count, plural, =0 {No articles found} one {# article} other {# articles}}",
+      "noResults": "No articles matched your search.",
+      "noResultsHint": "Try a different word, or message us on WhatsApp."
+    },
+    "categories": {
+      "buying": "Buying & payments",
+      "escrow": "Escrow & safety",
+      "delivery": "Delivery & pickup",
+      "returns": "Returns & refunds",
+      "events": "Events & tickets",
+      "selling": "Selling on Vergeo5",
+      "account": "Account & privacy"
+    },
+    "article": {
+      "backToHelp": "Back to Help Centre",
+      "inCategory": "In {category}",
+      "relatedHeading": "Related articles",
+      "notHelpful": "Still need help?",
+      "contactCta": "Contact support"
+    },
+    "cta": {
+      "heading": "Didn't find your answer?",
+      "body": "Our team is a message away.",
+      "whatsapp": "Chat on WhatsApp",
+      "contact": "Send us a message"
+    }
+  },
+  "notFound": {
+    "meta": {
+      "title": "Page not found"
+    },
+    "code": "404",
+    "heading": "We can't find that page",
+    "body": "The page you're looking for may have moved or no longer exists.",
+    "home": "Go to homepage",
+    "search": "Search the marketplace",
+    "help": "Visit the Help Centre"
+  },
+  "error": {
+    "meta": {
+      "title": "Something went wrong"
+    },
+    "code": "500",
+    "heading": "Something went wrong",
+    "body": "We hit an unexpected problem. Please try again — if it keeps happening, let us know.",
+    "retry": "Try again",
+    "home": "Go to homepage",
+    "help": "Visit the Help Centre"
+  }
+}

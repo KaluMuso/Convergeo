@@ -129,6 +129,19 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "analytics_events": {
+        # M16-P05: admin-read / service-role-write superset analytics sink. Same
+        # shape as funnel_events / search_query_log — authenticated gets a SELECT
+        # grant + admin-only RLS policy (non-admins see zero rows → permit), no
+        # client insert/update/delete grant (→ deny), anon has no grant (→ deny_all).
+        # The analytics_event_stream view is not a base table → no matrix entry.
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "ask_cache": client_invisible(),
     "ask_spend_monthly": {
         Persona.ANON: deny_all(),
