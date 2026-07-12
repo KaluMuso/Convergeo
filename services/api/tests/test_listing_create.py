@@ -393,6 +393,77 @@ def test_canonical_preview_returns_commission(listing_client: TestClient) -> Non
     assert body["commission"]["rate_percent"] == 5.0
 
 
+PROHIBITED_CATEGORY_ID = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+
+
+def test_prohibited_category_rejected(
+    listing_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    fake_client.tables["categories"].rows.append(
+        {
+            "id": PROHIBITED_CATEGORY_ID,
+            "name": "Alcohol",
+            "commission_key": "alcohol",
+            "prohibited": True,
+        }
+    )
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="new_canonical",
+            product_id=None,
+            product_name="Case of soft drinks",
+            category_id=PROHIBITED_CATEGORY_ID,
+        ),
+    )
+    assert response.status_code == 422
+    error = response.json()["error"]
+    assert error["code"] == "prohibited_listing"
+    assert error["details"]["message_key"] == "vendor.listings.errors.submitFailed"
+    assert error["details"]["reason"] == "category"
+    # No canonical product should have been created for a rejected category.
+    assert len(fake_client.tables["products"].rows) == 1
+
+
+def test_benign_category_new_canonical_passes(
+    listing_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="new_canonical",
+            product_id=None,
+            product_name="New Gadget Pro",
+            category_id=CATEGORY_ID,
+        ),
+    )
+    assert response.status_code == 200
+    assert response.json()["mode"] == "new_canonical"
+    assert len(fake_client.tables["products"].rows) == 2
+
+
+def test_keyword_screen_still_fires_on_title(listing_client: TestClient) -> None:
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="new_canonical",
+            product_id=None,
+            product_name="Bottle of whisky",
+            category_id=CATEGORY_ID,
+        ),
+    )
+    assert response.status_code == 422
+    error = response.json()["error"]
+    assert error["code"] == "prohibited_listing"
+    assert error["details"]["reason"] == "keyword"
+    assert error["details"]["message_key"] == "vendor.listings.errors.submitFailed"
+
+
 def test_t2_wholesale_allowed(
     monkeypatch: pytest.MonkeyPatch,
     fake_client: FakeSupabaseClient,
