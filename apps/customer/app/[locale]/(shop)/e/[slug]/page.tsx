@@ -232,7 +232,7 @@ export default async function EventDetailPage({ params }: PageProps) {
   const heroImage = event.images[0];
 
   return (
-    <article className="flex flex-col gap-6 pb-8">
+    <article className="flex flex-col gap-6 pb-8 lg:mx-auto lg:w-full lg:max-w-3xl">
       <EventJsonLd event={toEventJsonLdInput(event, locale)} />
       <header className="flex flex-col gap-3">
         {heroImage ? (

@@ -69,5 +69,9 @@ export default async function CartPage({ params }: CartPageProps) {
     },
   };
 
-  return <CartPageView locale={locale} labels={labels} />;
+  return (
+    <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
+      <CartPageView locale={locale} labels={labels} />
+    </div>
+  );
 }

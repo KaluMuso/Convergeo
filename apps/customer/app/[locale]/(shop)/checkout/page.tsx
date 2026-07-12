@@ -147,5 +147,9 @@ export default async function CheckoutPage({ params }: PageProps) {
   const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
   const labels = buildCheckoutLabels(locale, messages);
 
-  return <CheckoutShell locale={locale} labels={labels} />;
+  return (
+    <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
+      <CheckoutShell locale={locale} labels={labels} />
+    </div>
+  );
 }

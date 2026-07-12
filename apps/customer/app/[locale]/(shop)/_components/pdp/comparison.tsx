@@ -419,51 +419,64 @@ export function PdpInteractiveBody({
   }, []);
 
   return (
-    <>
-      <PdpGallery
-        images={galleryImages}
-        cloudName={cloudName}
-        emptyLabel={galleryLabels.empty}
-        previousLabel={galleryLabels.previous}
-        nextLabel={galleryLabels.next}
-      />
+    /* Mobile (<1024px): unchanged single column (DOM order = gallery, buy-box,
+       comparison, vendor). lg+: two-column grid — gallery left, sticky buy-box
+       right; comparison + vendor span the full width below. */
+    <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start lg:gap-8">
+      <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+        <PdpGallery
+          images={galleryImages}
+          cloudName={cloudName}
+          emptyLabel={galleryLabels.empty}
+          previousLabel={galleryLabels.previous}
+          nextLabel={galleryLabels.next}
+        />
+      </div>
 
       {buyBoxListing ? (
-        <BuyBox listing={buyBoxListing} singleVendor={singleVendor} labels={buyBoxLabels} />
+        <div className="lg:sticky lg:top-20 lg:col-start-2 lg:row-start-1">
+          <BuyBox listing={buyBoxListing} singleVendor={singleVendor} labels={buyBoxLabels} />
+        </div>
       ) : null}
 
-      <Comparison
-        listings={comparisonListings}
-        selectedListingId={selectedListingId}
-        labels={comparisonLabels}
-        onSelect={handleSelect}
-      />
+      {shouldShowComparison(comparisonListings.length) ? (
+        <div className="min-w-0 lg:col-span-2">
+          <Comparison
+            listings={comparisonListings}
+            selectedListingId={selectedListingId}
+            labels={comparisonLabels}
+            onSelect={handleSelect}
+          />
+        </div>
+      ) : null}
 
       {selectedListing ? (
-        <VendorBlock
-          locale={locale}
-          vendor={{
-            slug: selectedListing.vendor.slug,
-            displayName: selectedListing.vendor.displayName,
-            preferredBadge: selectedListing.vendor.preferredBadge,
-            ratingAvg: selectedListing.vendor.ratingAvg,
-            ratingCount: selectedListing.vendor.ratingCount,
-            landmark: selectedListing.vendor.landmark,
-          }}
-          heading={vendorLabels.heading}
-          preferredBadgeLabel={vendorLabels.preferredBadge}
-          noReviewsLabel={vendorLabels.noReviews}
-          ratingLabel={
-            selectedListing.vendor.ratingAvg !== null && selectedListing.vendor.ratingCount > 0
-              ? t("pdp.vendor.rating", {
-                  rating: selectedListing.vendor.ratingAvg,
-                  count: selectedListing.vendor.ratingCount,
-                })
-              : vendorLabels.noReviews
-          }
-          viewStoreLabel={vendorLabels.viewStore}
-        />
+        <div className="min-w-0 lg:col-span-2">
+          <VendorBlock
+            locale={locale}
+            vendor={{
+              slug: selectedListing.vendor.slug,
+              displayName: selectedListing.vendor.displayName,
+              preferredBadge: selectedListing.vendor.preferredBadge,
+              ratingAvg: selectedListing.vendor.ratingAvg,
+              ratingCount: selectedListing.vendor.ratingCount,
+              landmark: selectedListing.vendor.landmark,
+            }}
+            heading={vendorLabels.heading}
+            preferredBadgeLabel={vendorLabels.preferredBadge}
+            noReviewsLabel={vendorLabels.noReviews}
+            ratingLabel={
+              selectedListing.vendor.ratingAvg !== null && selectedListing.vendor.ratingCount > 0
+                ? t("pdp.vendor.rating", {
+                    rating: selectedListing.vendor.ratingAvg,
+                    count: selectedListing.vendor.ratingCount,
+                  })
+                : vendorLabels.noReviews
+            }
+            viewStoreLabel={vendorLabels.viewStore}
+          />
+        </div>
       ) : null}
-    </>
+    </div>
   );
 }

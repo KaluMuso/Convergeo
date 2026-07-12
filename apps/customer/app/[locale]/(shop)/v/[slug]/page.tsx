@@ -191,7 +191,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
   const jsonLd = buildVendorJsonLd(vendor, reviews, locale);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 lg:mx-auto lg:w-full lg:max-w-3xl">
       <JsonLdScript data={jsonLd} />
 
       <header

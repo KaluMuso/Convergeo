@@ -167,7 +167,7 @@ export default async function SuppliesPage({ params, searchParams }: PageProps) 
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 lg:mx-auto lg:w-full lg:max-w-3xl">
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-[var(--fs-h1)] text-[var(--text)]">{t("title")}</h1>
         <p className="text-sm text-[var(--text-2)]">
