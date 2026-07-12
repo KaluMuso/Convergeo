@@ -1,5 +1,7 @@
 # Phase 4 — Risk-Critical Review Findings
 
+> **✅ ALL 9 RESOLVED & MERGED (2026-07-12).** FIX-A #173 (0031) · FIX-B #172 (0032) · FIX-C #169 (3 retry paths) · FIX-D #168 · FIX-E #170 · FIX-F #171 · FIX-G #167. Each shipped a concurrency/regression test proving the specific defect closed. Follow-ups flagged: `payouts.lenco_reference` has no DB unique constraint (dedup via stable reference + return-existing + Lenco idempotency — accepted); a 4th payment retry path was found & salted during FIX-C.
+
 **Date:** 2026-07-12 · **Method:** 6 parallel risk-dimension reviewers (money/authz/races/webhooks/secrets/validation) → each finding adversarially verified by an independent skeptic (default not-a-bug unless the code path was traced). All findings below are high-confidence, verified.
 
 **Result:** 9 confirmed defects — 2 critical, 5 major, 2 minor.

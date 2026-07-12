@@ -83,7 +83,7 @@ DELETE FROM public.order_items WHERE order_id IN (
     SELECT id FROM public.checkout_groups WHERE idempotency_key LIKE 'analytics-fixture%'));
 DELETE FROM public.orders WHERE checkout_group_id IN (
   SELECT id FROM public.checkout_groups WHERE idempotency_key LIKE 'analytics-fixture%');
-DELETE FROM public.checkout_groups WHERE idempotency_key = 'analytics-fixture';
+DELETE FROM public.checkout_groups WHERE idempotency_key LIKE 'analytics-fixture%';
 """
     vendors = [
         (VENDOR_A, OWNER_A, "analytics-a", "Analytics Vendor A"),
