@@ -96,8 +96,87 @@ def _sql_json(value: dict[str, Any]) -> str:
     return sql_literal(json.dumps(value, separators=(",", ":"), sort_keys=True))
 
 
+# Marker raised inside the locked transaction when the checkout group is no longer
+# `pending` (a concurrent submit already completed it) — Python maps it to an
+# idempotent replay instead of a hard failure.
+_ALREADY_COMPLETED_MARKER = "FIXA_CHECKOUT_ALREADY_COMPLETED"
+# Marker raised when a tracked hold vanished or no longer covers the ordered qty
+# between the pre-transaction check and the in-tx consumption (#4 oversell guard).
+_HOLD_INVALID_MARKER = "FIXA_HOLD_INVALID"
+
+
+def _lock_and_recheck_sql(session_sql: str, customer_sql: str) -> str:
+    """Lock the checkout group and re-verify status='pending' INSIDE the transaction.
+
+    This lock + recheck is the real serialization for #2: a second concurrent
+    submit blocks on the row lock, then observes the now-`completed` status the
+    first submit committed and aborts via ``_ALREADY_COMPLETED_MARKER`` — so only
+    one order set is ever created. The UNIQUE index (migration 0031) is the DB
+    backstop behind it.
+    """
+    return f"""
+DO $lock$
+DECLARE
+  v_status text;
+BEGIN
+  SELECT status INTO v_status
+  FROM public.checkout_groups
+  WHERE id = {session_sql} AND customer_id = {customer_sql}
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'checkout group not found';
+  END IF;
+  IF v_status <> 'pending' THEN
+    RAISE EXCEPTION '{_ALREADY_COMPLETED_MARKER}:%', v_status;
+  END IF;
+END
+$lock$;
+"""
+
+
+def _consume_reservation_conditional_sql(
+    *, checkout_group_id: str, listing_id: str, qty: int
+) -> str:
+    """Consume one tracked hold, aborting the tx if it is gone or too small (#4).
+
+    Stock is decremented at claim time; consuming the hold just deletes its row.
+    A conditional DELETE that must return a row proves the hold still existed and
+    still covered the ordered qty. If a sweeper reclaimed (restocked) the hold in
+    the meantime, no row matches and we abort the whole transaction — no partial
+    order, no oversell. Non-tracked listings (e.g. always_available) never hold a
+    reservation, so they are skipped.
+    """
+    group_sql = sql_uuid(checkout_group_id, "checkout_group_id")
+    listing_sql = sql_uuid(listing_id, "listing_id")
+    listing_literal = sql_literal(listing_id)
+    qty_sql = str(int(qty))
+    return f"""
+DO $consume$
+DECLARE
+  v_mode text;
+  v_deleted int;
+BEGIN
+  SELECT stock_mode INTO v_mode
+  FROM public.vendor_listings
+  WHERE id = {listing_sql};
+  IF v_mode = 'tracked' THEN
+    DELETE FROM public.stock_reservations
+    WHERE checkout_group_id = {group_sql}
+      AND listing_id = {listing_sql}
+      AND qty >= {qty_sql};
+    GET DIAGNOSTICS v_deleted = ROW_COUNT;
+    IF v_deleted = 0 THEN
+      RAISE EXCEPTION '{_HOLD_INVALID_MARKER}:%', {listing_literal};
+    END IF;
+  END IF;
+END
+$consume$;
+"""
+
+
 def _consume_reservations_sql(checkout_group_id: str) -> str:
-    """Delete held reservations without restocking (stock already decremented at claim)."""
+    """Delete any leftover reservations for the group (cleanup after conditional
+    consumption; stock already decremented at claim, so no restock)."""
     group_sql = sql_uuid(checkout_group_id, "checkout_group_id")
     return f"DELETE FROM public.stock_reservations WHERE checkout_group_id = {group_sql};"
 
@@ -320,6 +399,34 @@ def _result_from_group(
     )
 
 
+def _resolve_completed_after_race(
+    client: Any,
+    *,
+    session_id: str,
+    customer_id: str,
+    idempotency_key: str,
+) -> CreateOrdersResult:
+    """Return the idempotent result after a concurrent submit completed the group.
+
+    Applies the same rule as the pre-transaction guard: a submit replaying its own
+    idempotency_key gets the existing order set back; a distinct key hitting an
+    already-completed session is a conflict.
+    """
+    completed = _fetch_checkout_session(
+        client, session_id=session_id, customer_id=customer_id
+    )
+    if str(completed.get("status")) == "completed" and (
+        str(completed.get("idempotency_key")) == idempotency_key
+    ):
+        return _result_from_group(completed, client=client, replayed=True)
+    raise AppError(
+        code="orders.session_already_completed",
+        message="Checkout session already completed",
+        http_status=409,
+        details={"session_id": session_id},
+    )
+
+
 def _validate_vendor_groups(
     *,
     vendor_groups: list[VendorFulfilmentInput],
@@ -507,13 +614,7 @@ def create_orders_atomic(
     status_placed = OrderStatus.PLACED.value
 
     statements: list[str] = ["BEGIN;"]
-    statements.append(
-        f"""
-SELECT id::text FROM public.checkout_groups
-WHERE id = {session_sql} AND customer_id = {customer_sql}
-FOR UPDATE;
-"""
-    )
+    statements.append(_lock_and_recheck_sql(session_sql, customer_sql))
 
     for order, vendor_lines in planned_orders:
         order_sql = sql_uuid(order.order_id, "order_id")
@@ -581,6 +682,14 @@ INSERT INTO public.notification_outbox (
 """
         )
 
+    for line in cart_lines:
+        statements.append(
+            _consume_reservation_conditional_sql(
+                checkout_group_id=session_id,
+                listing_id=line.listing_id,
+                qty=line.qty,
+            )
+        )
     statements.append(_consume_reservations_sql(session_id))
     statements.append(
         f"""
@@ -602,15 +711,31 @@ WHERE id = {session_sql};
 
     result = run_sql_script("\n".join(statements))
     if not result.ok:
+        error = result.error or ""
         if inject_failure == "before_commit":
-            raise RuntimeError(f"order creation failed: {result.error}")
-        if "duplicate key value violates unique constraint" in (result.error or ""):
-            replay = _fetch_existing_by_idempotency_key(
-                client, idempotency_key=idempotency_key, customer_id=customer_id
+            raise RuntimeError(f"order creation failed: {error}")
+        # A concurrent submit won the row lock and completed the group first (#2):
+        # our in-tx recheck aborted. Resolve to the same idempotent result the
+        # pre-transaction guard would have returned — never a second order set.
+        if _ALREADY_COMPLETED_MARKER in error or (
+            "duplicate key value violates unique constraint" in error
+        ):
+            return _resolve_completed_after_race(
+                client,
+                session_id=session_id,
+                customer_id=customer_id,
+                idempotency_key=idempotency_key,
             )
-            if replay is not None and str(replay.get("status")) == "completed":
-                return _result_from_group(replay, client=client, replayed=True)
-        raise RuntimeError(f"order creation failed: {result.error}")
+        # A tracked hold vanished / no longer covers the qty between pre-check and
+        # tx (#4). The whole tx rolled back: no partial order, no oversell.
+        if _HOLD_INVALID_MARKER in error:
+            raise AppError(
+                code="checkout.reservation_expired",
+                message="Your reservation has expired",
+                http_status=410,
+                details={"session_id": session_id},
+            )
+        raise RuntimeError(f"order creation failed: {error}")
 
     completed = _fetch_checkout_session(client, session_id=session_id, customer_id=customer_id)
     return _result_from_group(completed, client=client, replayed=False)
