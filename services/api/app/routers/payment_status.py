@@ -268,7 +268,9 @@ async def _create_retry_payment_attempt(
 
     payment_id = str(uuid4())
     reference_source = request.order_id or request.checkout_group_id
-    lenco_reference = make_order_reference(reference_source)
+    # Salt with this retry attempt's payment_id so the new reference is distinct
+    # and cannot collide on the UNIQUE payments.lenco_reference constraint.
+    lenco_reference = make_order_reference(reference_source, attempt=payment_id)
 
     insert_row = {
         "id": payment_id,

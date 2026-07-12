@@ -14,6 +14,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from app.routers.payment_status import _create_retry_payment_attempt
 from app.services.payments.base import CollectionStatus, InitiateCollectionResult
 from app.services.payments.initiate import InitiatePaymentRequest, initiate_checkout_payment
 from app.services.payments.references import (
@@ -193,6 +194,33 @@ class TestRetryReference:
         rows = service.client.tables["payments"].rows
         assert len(rows) == 1
         assert rows[0]["lenco_reference"] == result.lenco_reference
+
+    @pytest.mark.asyncio
+    async def test_payment_status_retry_path_gets_distinct_reference(self) -> None:
+        # The customer-facing retry helper (_create_retry_payment_attempt) shares the
+        # same salted encoder: two retry attempts on the same order must not collide.
+        service = _service_with_unique_payments()
+
+        first_id, first_status = await _create_retry_payment_attempt(
+            service, request=_request(), actor_id=ACTOR_ID, strategy=_pending_strategy()
+        )
+        second_id, second_status = await _create_retry_payment_attempt(
+            service, request=_request(), actor_id=ACTOR_ID, strategy=_pending_strategy()
+        )
+
+        assert first_id != second_id
+        assert first_status == second_status == PaymentStatus.USSD_PUSHED
+
+        by_id = {r["id"]: r for r in service.client.tables["payments"].rows}
+        first_ref = by_id[first_id]["lenco_reference"]
+        second_ref = by_id[second_id]["lenco_reference"]
+        assert first_ref != second_ref
+
+        # Both still round-trip back to the same checkout group for the webhook.
+        for ref in (first_ref, second_ref):
+            kind, decoded = parse_reference(ref)
+            assert kind == "order"
+            assert decoded == CHECKOUT_GROUP_ID
 
     def test_encoder_salt_is_unique_and_decodable(self) -> None:
         order_id = CHECKOUT_GROUP_ID
