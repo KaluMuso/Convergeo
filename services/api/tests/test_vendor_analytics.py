@@ -77,12 +77,12 @@ DELETE FROM public.funnel_events
 DELETE FROM public.order_item_products WHERE order_item_id IN (
   SELECT id FROM public.order_items WHERE order_id IN (
     SELECT id FROM public.orders WHERE checkout_group_id IN (
-      SELECT id FROM public.checkout_groups WHERE idempotency_key = 'analytics-fixture')));
+      SELECT id FROM public.checkout_groups WHERE idempotency_key LIKE 'analytics-fixture%')));
 DELETE FROM public.order_items WHERE order_id IN (
   SELECT id FROM public.orders WHERE checkout_group_id IN (
-    SELECT id FROM public.checkout_groups WHERE idempotency_key = 'analytics-fixture'));
+    SELECT id FROM public.checkout_groups WHERE idempotency_key LIKE 'analytics-fixture%'));
 DELETE FROM public.orders WHERE checkout_group_id IN (
-  SELECT id FROM public.checkout_groups WHERE idempotency_key = 'analytics-fixture');
+  SELECT id FROM public.checkout_groups WHERE idempotency_key LIKE 'analytics-fixture%');
 DELETE FROM public.checkout_groups WHERE idempotency_key = 'analytics-fixture';
 """
     vendors = [
@@ -109,14 +109,6 @@ INSERT INTO public.vendor_listings (
 ON CONFLICT (id) DO NOTHING;
 """
 
-    script += f"""
-INSERT INTO public.checkout_groups (
-  id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee, total_ngwee, status
-) VALUES (
-  '{CHECKOUT_GROUP}', '{CUSTOMER_A}', 'analytics-fixture', 0, 0, 0, 'completed'
-);
-"""
-
     orders = [
         (ORDER_A1, VENDOR_A, "delivered", "now()"),
         (ORDER_A2, VENDOR_A, "delivered", "now() - interval '3 days'"),
@@ -124,12 +116,22 @@ INSERT INTO public.checkout_groups (
         (ORDER_A4, VENDOR_A, "delivered", "now() - interval '10 days'"),
         (ORDER_B1, VENDOR_B, "delivered", "now()"),
     ]
-    for oid, vid, status, created in orders:
+    # One checkout group per order. Migration 0031 adds a UNIQUE index on
+    # orders(checkout_group_id, vendor_id) — the production invariant that a
+    # checkout produces at most one order per vendor. The fixture must therefore
+    # give each order its own checkout group rather than sharing one.
+    for idx, (oid, vid, status, created) in enumerate(orders):
+        cg = f"a9c00000-0000-0000-0000-0000000000{idx:02d}"
         script += f"""
+INSERT INTO public.checkout_groups (
+  id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee, total_ngwee, status
+) VALUES (
+  '{cg}', '{CUSTOMER_A}', 'analytics-fixture-{idx}', 0, 0, 0, 'completed'
+);
 INSERT INTO public.orders (
   id, checkout_group_id, vendor_id, customer_id, status, fulfilment, created_at
 ) VALUES (
-  '{oid}', '{CHECKOUT_GROUP}', '{vid}', '{CUSTOMER_A}', '{status}', 'delivery',
+  '{oid}', '{cg}', '{vid}', '{CUSTOMER_A}', '{status}', 'delivery',
   timezone('utc', {created})
 );
 """
