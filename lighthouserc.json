@@ -65,8 +65,8 @@
           "justification": "M08-P06 card widget page shares checkout auth shell. Target: ≤150 KB gz after auth chunk split."
         },
         "/[locale]/(shop)/p/[slug]/page": {
-          "maxKbGz": 190,
-          "justification": "M16-P01 baseline (PDP gallery + comparison). Target: lazy-load comparison module to ≤150 KB gz."
+          "maxKbGz": 191,
+          "justification": "M16-P01 baseline (PDP gallery + comparison); +0.2 KB from M16-P04 registering the marketing i18n namespace in the shared loader. Target: lazy-load comparison module to ≤150 KB gz."
         },
         "/[locale]/(auth)/login/page": {
           "maxKbGz": 183,
@@ -85,8 +85,8 @@
           "justification": "M16-P01 baseline (account shell + privacy content). Target: slim account layout JS to ≤150 KB gz."
         },
         "/[locale]/(shop)/services/post-job/page": {
-          "maxKbGz": 182,
-          "justification": "M11-P02 post-job form shares auth + checkout form shell. Target: code-split session client to ≤150 KB gz."
+          "maxKbGz": 183,
+          "justification": "M11-P02 post-job form shares auth + checkout form shell; +0.1 KB from M16-P04 registering the marketing i18n namespace in the shared loader. Target: code-split session client to ≤150 KB gz."
         },
         "/[locale]/(shop)/ask/page": {
           "maxKbGz": 183,
