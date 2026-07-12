@@ -49,15 +49,15 @@ function PrivacyIntro({ locale }: { locale: string }) {
   return (
     <>
       <header className="space-y-2">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted">
           <Link className="underline underline-offset-2" href={`/${locale}/account`}>
             {t("backToAccount")}
           </Link>
         </p>
         <h1 className="font-display text-2xl font-semibold tracking-tight">{t("title")}</h1>
-        <p className="text-sm leading-relaxed text-muted-foreground">{t("description")}</p>
+        <p className="text-sm leading-relaxed text-muted">{t("description")}</p>
       </header>
-      <p className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+      <p className="rounded-lg border border-border bg-bg-2/60 px-4 py-3 text-sm leading-relaxed text-muted">
         {t("retentionNote")}
       </p>
     </>
@@ -88,7 +88,9 @@ function ExportSection({ locale }: { locale: string }) {
     setError(null);
     setDownloadUrl(null);
     try {
-      const result = await api.request<ExportResponse>("/account/export", { method: "POST" });
+      const result = await api.request<ExportResponse>("/account/export", {
+        method: "POST",
+      });
       setDownloadUrl(result.download_url);
     } catch {
       setError(t("error"));
@@ -105,7 +107,7 @@ function ExportSection({ locale }: { locale: string }) {
       <h2 id="export-heading" className="text-lg font-semibold">
         {t("title")}
       </h2>
-      <p className="text-sm leading-relaxed text-muted-foreground">{t("description")}</p>
+      <p className="text-sm leading-relaxed text-muted">{t("description")}</p>
       <Button
         className="min-h-11 w-full"
         loading={loading}
@@ -126,8 +128,8 @@ function ExportSection({ locale }: { locale: string }) {
           </a>
         </p>
       ) : null}
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <p className="text-xs text-muted-foreground">
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      <p className="text-xs text-muted">
         <Link className="underline underline-offset-2" href={`/${locale}/legal/privacy`}>
           {t("policyLink")}
         </Link>
@@ -219,13 +221,13 @@ function DeleteSection({ locale }: { locale: string }) {
   return (
     <section
       aria-labelledby="delete-heading"
-      className="space-y-4 rounded-xl border border-destructive/40 p-4"
+      className="space-y-4 rounded-xl border border-danger/40 p-4"
     >
-      <h2 id="delete-heading" className="text-lg font-semibold text-destructive">
+      <h2 id="delete-heading" className="text-lg font-semibold text-danger">
         {t("title")}
       </h2>
-      <p className="text-sm leading-relaxed text-muted-foreground">{t("description")}</p>
-      <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm leading-relaxed text-destructive">
+      <p className="text-sm leading-relaxed text-muted">{t("description")}</p>
+      <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm leading-relaxed text-danger">
         {t("warning")}
       </p>
 
@@ -235,7 +237,7 @@ function DeleteSection({ locale }: { locale: string }) {
         </label>
         <input
           autoComplete="off"
-          className="min-h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+          className="min-h-11 w-full rounded-md border border-border bg-surface px-3 text-sm"
           id="delete-phrase"
           onChange={(event) => setPhrase(event.target.value)}
           placeholder={t("confirmPhraseHint")}
@@ -281,13 +283,13 @@ function DeleteSection({ locale }: { locale: string }) {
       </Button>
 
       {done ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted">
           <Link className="underline underline-offset-2" href={`/${locale}/login`}>
             {t("returnToLogin")}
           </Link>
         </p>
       ) : null}
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
     </section>
   );
 }

@@ -194,7 +194,7 @@ export function PostJobForm({ locale }: PostJobFormProps) {
       <FormField id="post-job-category" label={t("postJob.category.label")}>
         <select
           id="post-job-category"
-          className="min-h-11 w-full rounded-md border border-border bg-surface px-3 font-body text-sm text-text-1"
+          className="min-h-11 w-full rounded-md border border-border bg-surface px-3 font-body text-sm text-text"
           value={category}
           onChange={(event) => setCategory(event.target.value as ServiceCategory)}
           required
@@ -241,7 +241,7 @@ export function PostJobForm({ locale }: PostJobFormProps) {
       <FormField id="post-job-budget" label={t("postJob.budgetBand.label")}>
         <select
           id="post-job-budget"
-          className="min-h-11 w-full rounded-md border border-border bg-surface px-3 font-body text-sm text-text-1"
+          className="min-h-11 w-full rounded-md border border-border bg-surface px-3 font-body text-sm text-text"
           value={budgetBand}
           onChange={(event) => setBudgetBand(event.target.value as BudgetBand)}
           required
@@ -255,7 +255,7 @@ export function PostJobForm({ locale }: PostJobFormProps) {
       </FormField>
 
       <div className="space-y-1">
-        <p className="font-body text-sm font-medium text-text-1">{t("postJob.photos.label")}</p>
+        <p className="font-body text-sm font-medium text-text">{t("postJob.photos.label")}</p>
         <p className="font-body text-xs text-text-3">{t("postJob.photos.help")}</p>
       </div>
 

@@ -213,7 +213,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
   ]);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 motion-rise">
       <JsonLdScript data={breadcrumbJsonLd} />
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-[var(--fs-h1)] text-[var(--text)]">

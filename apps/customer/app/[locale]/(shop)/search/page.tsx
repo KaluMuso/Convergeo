@@ -160,7 +160,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   const suggestionTerms = ["itel A70", "chitenge", "kitchenware", "Lusaka vendors"];
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-4 sm:py-6">
+    <main className="mx-auto w-full max-w-3xl px-4 py-4 motion-rise sm:py-6">
       <header className="mb-4 space-y-3">
         <h1 className="font-display text-h1 text-display-ink">{t("title")}</h1>
         <SearchInput

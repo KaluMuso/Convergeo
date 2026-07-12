@@ -153,7 +153,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
         {service.service_area ? (
           <p className="text-sm text-text-2">{service.service_area}</p>
         ) : null}
-        <p className="text-sm font-semibold text-text-1">
+        <p className="text-sm font-semibold text-text">
           {service.from_price_ngwee
             ? t("detail.fromPrice", { price: formatK(service.from_price_ngwee) })
             : t("detail.askForQuote")}
@@ -206,7 +206,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
         <p className="text-xs font-semibold uppercase tracking-wide text-text-3">
           {t("detail.provider")}
         </p>
-        <p className="mt-1 font-semibold text-text-1">{service.provider.display_name}</p>
+        <p className="mt-1 font-semibold text-text">{service.provider.display_name}</p>
         {service.provider.slug ? (
           <Link
             href={`/${locale}/v/${service.provider.slug}`}

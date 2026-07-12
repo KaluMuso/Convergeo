@@ -223,7 +223,7 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium text-text-2">{t("selectInstance")}</span>
           <select
-            className="min-h-11 rounded-md border border-border bg-bg-1 px-3 text-text-1"
+            className="min-h-11 rounded-md border border-border bg-bg px-3 text-text"
             value={selectedInstanceId}
             onChange={(event) => {
               setSelectedInstanceId(event.target.value);
@@ -243,7 +243,7 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
       <label className="flex flex-col gap-1.5 text-sm">
         <span className="font-medium text-text-2">{t("selectType")}</span>
         <select
-          className="min-h-11 rounded-md border border-border bg-bg-1 px-3 text-text-1"
+          className="min-h-11 rounded-md border border-border bg-bg px-3 text-text"
           value={selectedTypeId}
           onChange={(event) => {
             setSelectedTypeId(event.target.value);
@@ -273,7 +273,7 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-md border border-border text-lg font-semibold text-text-1"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-md border border-border text-lg font-semibold text-text"
             aria-label={t("decrease")}
             disabled={qty <= 1 || maxQty === 0}
             onClick={() => setQty((value) => Math.max(1, value - 1))}
@@ -283,7 +283,7 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
           <span className="min-w-8 text-center font-mono text-sm font-semibold">{qty}</span>
           <button
             type="button"
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-md border border-border text-lg font-semibold text-text-1"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-md border border-border text-lg font-semibold text-text"
             aria-label={t("increase")}
             disabled={qty >= maxQty || maxQty === 0}
             onClick={() => setQty((value) => Math.min(maxQty, value + 1))}

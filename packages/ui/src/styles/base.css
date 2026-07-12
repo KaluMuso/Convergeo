@@ -33,6 +33,11 @@
   --warning: #d4a020;
   --info: #2a6a9a;
 
+  /* Primary-button on-color pairing (kept AA in BOTH themes — see the dark block).
+     Light: deep-blue bg + white text; hover deepens to --primary-deep. */
+  --primary-btn-fg: var(--surface);
+  --primary-btn-hover: var(--primary-deep);
+
   /* ── Category pastels ── */
   --cat-beauty: #c9a88a;
   --cat-health: #7aab8a;
@@ -108,6 +113,11 @@
   --primary: #6f9bd1;
   --primary-deep: #4d7bb0;
   --primary-tint: #2e2440;
+  /* Primary button in dark: the lightened blue bg needs DARK text for AA, and the
+     hover must stay light (deepening would drop contrast below AA). ~5.7:1 rest,
+     ~7:1 hover against --panel ink. */
+  --primary-btn-fg: var(--panel);
+  --primary-btn-hover: #8bb0dc;
   --shadow-1: 0 1px 4px rgba(0, 0, 0, 0.3);
   --shadow-2: 0 4px 24px rgba(0, 0, 0, 0.4);
   --shadow-3: 0 12px 48px rgba(0, 0, 0, 0.55);

@@ -277,7 +277,7 @@ export default async function EventDetailPage({ params }: PageProps) {
                 className="rounded-lg border border-border bg-surface px-4 py-3 text-sm"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-medium text-text-1">
+                  <p className="font-medium text-text">
                     {formatInstanceDate(instance.starts_at, locale)}
                   </p>
                   {past ? <Badge variant="public" label={t("detail.pastInstance")} /> : null}
@@ -319,7 +319,7 @@ export default async function EventDetailPage({ params }: PageProps) {
         <p className="text-xs font-semibold uppercase tracking-wide text-text-3">
           {t("detail.organiser")}
         </p>
-        <p className="mt-1 font-semibold text-text-1">{event.organiser.display_name}</p>
+        <p className="mt-1 font-semibold text-text">{event.organiser.display_name}</p>
         {event.organiser.slug ? (
           <Link
             href={`/${locale}/v/${event.organiser.slug}`}

@@ -68,7 +68,7 @@ export function EventGrid({ items, locale, labels }: EventGridProps) {
 
         return (
           <li key={item.id}>
-            <Link href={`/${locale}/e/${item.slug}`} className="block">
+            <Link href={`/${locale}/e/${item.slug}`} className="tap block">
               <EventCard
                 title={item.title}
                 dateLabel={dateLabel}

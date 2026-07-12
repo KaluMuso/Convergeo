@@ -31,13 +31,18 @@ export function StaticMapPreview({
   return (
     <svg
       viewBox="0 0 360 144"
-      className="h-36 w-full rounded border border-border bg-[#e8f0e8]"
+      className="h-36 w-full rounded border border-border bg-bg-2"
       role="img"
       aria-label={alt}
     >
       <defs>
         <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
-          <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#c8d8c8" strokeWidth="1" />
+          <path
+            d="M 24 0 L 0 0 0 24"
+            fill="none"
+            strokeWidth="1"
+            style={{ stroke: "var(--border)" }}
+          />
         </pattern>
       </defs>
       <rect width="360" height="144" fill="url(#grid)" />
@@ -45,11 +50,16 @@ export function StaticMapPreview({
         cx={Math.min(350, Math.max(10, (x / 100) * 360))}
         cy={Math.min(134, Math.max(10, (y / 100) * 144))}
         r="8"
-        fill="#c0392b"
-        stroke="#fff"
         strokeWidth="2"
+        style={{ fill: "var(--danger)", stroke: "var(--surface)" }}
       />
-      <text x="12" y="20" fill="#4a5d4a" fontSize="11" fontFamily="system-ui, sans-serif">
+      <text
+        x="12"
+        y="20"
+        fontSize="11"
+        fontFamily="system-ui, sans-serif"
+        style={{ fill: "var(--text-2)" }}
+      >
         {coordsLabel}
       </text>
     </svg>
