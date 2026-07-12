@@ -1,0 +1,99 @@
+name: E2E (Playwright · staging)
+
+# Staging-dependent suite — NOT a required per-PR gate. Runs nightly against the
+# deployed staging target and on demand before a release. The customer flows run
+# on any live target; the Lenco-sandbox pay and WhatsApp-mock legs only activate
+# when their secrets are present (founder gate F9b).
+on:
+  schedule:
+    # 02:30 UTC nightly.
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Override E2E_BASE_URL (else uses the E2E_BASE_URL secret)"
+        required: false
+        type: string
+      pre_release:
+        description: "Pre-release gate run"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright critical paths (Fast-3G · 360px)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: "true"
+      # Target + locale.
+      E2E_BASE_URL: ${{ inputs.base_url || secrets.E2E_BASE_URL }}
+      E2E_VENDOR_BASE_URL: ${{ secrets.E2E_VENDOR_BASE_URL }}
+      E2E_ADMIN_BASE_URL: ${{ secrets.E2E_ADMIN_BASE_URL }}
+      E2E_LOCALE: en
+      # Deterministic seed reset (staging-only, token-guarded).
+      E2E_SEED_RESET_URL: ${{ secrets.E2E_SEED_RESET_URL }}
+      E2E_SEED_TOKEN: ${{ secrets.E2E_SEED_TOKEN }}
+      # OTP test creds (Supabase staging test-OTP map).
+      E2E_TEST_PHONE: ${{ secrets.E2E_TEST_PHONE }}
+      E2E_TEST_OTP: ${{ secrets.E2E_TEST_OTP }}
+      E2E_TICKET_QR: ${{ secrets.E2E_TICKET_QR }}
+      # Lenco sandbox pay leg — founder gate F9b. Absent secrets => leg skips.
+      LENCO_SANDBOX: ${{ secrets.LENCO_SANDBOX }}
+      LENCO_SANDBOX_PUBLIC_KEY: ${{ secrets.LENCO_SANDBOX_PUBLIC_KEY }}
+      LENCO_SANDBOX_SECRET_KEY: ${{ secrets.LENCO_SANDBOX_SECRET_KEY }}
+      LENCO_SANDBOX_MOMO_NUMBER: ${{ secrets.LENCO_SANDBOX_MOMO_NUMBER }}
+      # WhatsApp mock adapter outbox.
+      WHATSAPP_MOCK: ${{ secrets.WHATSAPP_MOCK }}
+      WHATSAPP_MOCK_OUTBOX_URL: ${{ secrets.WHATSAPP_MOCK_OUTBOX_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Guard — E2E_BASE_URL must be set
+        run: |
+          if [ -z "${E2E_BASE_URL}" ]; then
+            echo "::warning::E2E_BASE_URL not set — staging target unknown. Set the E2E_BASE_URL secret (or dispatch input). Skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+        id: guard
+
+      - name: Setup Node.js
+        if: steps.guard.outputs.skip != 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install E2E deps
+        if: steps.guard.outputs.skip != 'true'
+        working-directory: e2e
+        run: npm install --no-package-lock
+
+      - name: Install Playwright Chromium
+        if: steps.guard.outputs.skip != 'true'
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E suite
+        if: steps.guard.outputs.skip != 'true'
+        working-directory: e2e
+        run: npx playwright test
+
+      - name: Upload trace/video artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts-${{ github.run_id }}
+          path: |
+            e2e/playwright-report
+            e2e/results
+          retention-days: 14
+          if-no-files-found: ignore
