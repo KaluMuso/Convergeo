@@ -342,7 +342,9 @@ def resolve(
     # Move money BEFORE committing the terminal status, so a thrown refund/release
     # leaves the dispute in `under_review` and re-drivable — not stuck resolved-but-
     # unpaid. Pre-check the guard here (transition_dispute re-checks + optimistic-locks
-    # on commit); all M08 calls are idempotency-keyed, so a retry can never double-pay.
+    # on commit); execute_refund threads this idempotency_key into post_transaction +
+    # the payout reference and is backstopped by the refunds(order_id) partial unique
+    # index (0032), so a retry collapses to one ledger drain + one payout.
     if (
         resolve_transition(
             from_status=snapshot.status, event=event, actor_role=ActorRole.ADMIN
