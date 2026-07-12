@@ -1,0 +1,107 @@
+{
+  "name": "Uptime Downtime Founder Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "uptime-alert",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "uptimerobot-webhook",
+      "name": "UptimeRobot Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "webhookId": "uptime-alert"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.alertType}}",
+              "operation": "equal",
+              "value2": "1"
+            }
+          ]
+        }
+      },
+      "id": "is-down",
+      "name": "Only When Down",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.WHATSAPP_CLOUD_API_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{$env.FOUNDER_WHATSAPP_TO}}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"ops_uptime_alert\",\n    \"language\": { \"code\": \"en\" },\n    \"components\": [\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          { \"type\": \"text\", \"text\": \"{{$json.body.monitorFriendlyName}}\" },\n          { \"type\": \"text\", \"text\": \"{{$json.body.alertDetails}}\" },\n          { \"type\": \"text\", \"text\": \"{{$json.body.alertDateTime}}\" }\n        ]\n      }\n    ]\n  }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "page-founder-whatsapp",
+      "name": "Page Founder On WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [780, 220]
+    }
+  ],
+  "connections": {
+    "UptimeRobot Webhook": {
+      "main": [
+        [
+          {
+            "node": "Only When Down",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Only When Down": {
+      "main": [
+        [
+          {
+            "node": "Page Founder On WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "m16-p06-uptime-alert",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "M16",
+      "createdAt": "2026-07-12T00:00:00.000Z",
+      "updatedAt": "2026-07-12T00:00:00.000Z"
+    }
+  ]
+}

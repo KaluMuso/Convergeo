@@ -33,6 +33,12 @@ class Settings(BaseSettings):
         default="http://localhost:3000,http://localhost:3001,http://localhost:3002",
     )
     cloudinary_url: str = Field(alias="CLOUDINARY_URL", default="")
+    # Observability (M16-P06). DSN unset -> Sentry is a strict no-op (dev/CI safe);
+    # never commit a DSN. release = git sha, environment defaults to `env`.
+    sentry_dsn: str = Field(alias="SENTRY_DSN", default="")
+    sentry_environment: str = Field(alias="SENTRY_ENVIRONMENT", default="")
+    sentry_release: str = Field(alias="SENTRY_RELEASE", default="")
+    sentry_traces_sample_rate: float = Field(alias="SENTRY_TRACES_SAMPLE_RATE", default=0.0)
 
     @model_validator(mode="after")
     def validate_cors_origins(self) -> Self:
@@ -81,6 +87,11 @@ def format_settings_error(error: ValidationError) -> str:
 @lru_cache
 def get_settings() -> Settings:
     try:
-        return Settings()  # type: ignore[call-arg]
+        settings = Settings()  # type: ignore[call-arg]
     except ValidationError as exc:
         raise ValueError(format_settings_error(exc)) from exc
+    # Initialise Sentry once per process (no-op unless SENTRY_DSN is set).
+    from app.core.sentry import init_sentry
+
+    init_sentry(settings)
+    return settings

@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import createNextIntlPlugin from "next-intl/plugin";
 
 import type { NextConfig } from "next";
@@ -22,6 +23,10 @@ const NONCE = "'nonce-{{CSP_NONCE}}'";
 const CLOUDINARY = "https://res.cloudinary.com";
 const SUPABASE = "https://*.supabase.co";
 const SUPABASE_WS = "wss://*.supabase.co";
+// Sentry ingest (M16-P06) — browser SDK POSTs events here. Scoped to the ingest
+// subdomains only (incl. region variants), NOT a blanket sentry.io allowance.
+const SENTRY_INGEST =
+  "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
 
 const HSTS = "max-age=63072000; includeSubDomains; preload";
 // Strictest: deny every powerful feature outright.
@@ -46,7 +51,7 @@ const REPORT_ONLY_CSP = [
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${CLOUDINARY}`,
   "font-src 'self' data:",
-  `connect-src 'self' ${SUPABASE} ${SUPABASE_WS}`,
+  `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${SENTRY_INGEST}`,
   "frame-src 'none'",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
@@ -94,4 +99,21 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+/**
+ * Sentry build wiring — M16-P06 (admin — strictest client init). Composed
+ * OUTERMOST, around `withNextIntl(...)`, so the M15-P03 `headers()`/CSP block is
+ * preserved untouched. Source-map upload is gated on `SENTRY_AUTH_TOKEN` so a
+ * missing token never fails the build.
+ */
+const sentryBuildOptions = {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+  telemetry: false,
+  widenClientFileUpload: true,
+  disableLogger: true,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+};
+
+export default withSentryConfig(withNextIntl(nextConfig), sentryBuildOptions);

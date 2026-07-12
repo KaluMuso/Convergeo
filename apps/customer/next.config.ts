@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import withSerwistInit from "@serwist/next";
 import createNextIntlPlugin from "next-intl/plugin";
 
@@ -46,6 +47,10 @@ const GA4_IMG = "https://*.google-analytics.com https://*.googletagmanager.com";
 // Lenco hosted card widget — customer checkout card route ONLY (prod + sandbox).
 const LENCO_WIDGET = "https://pay.lenco.co https://pay.sandbox.lenco.co";
 const LENCO_API = "https://api.lenco.co https://api.sandbox.lenco.co";
+// Sentry ingest (M16-P06) — browser SDK POSTs events here. Scoped to the ingest
+// subdomains only (incl. region variants), NOT a blanket sentry.io allowance.
+const SENTRY_INGEST =
+  "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
 
 const HSTS = "max-age=63072000; includeSubDomains; preload";
 const PERMISSIONS_POLICY =
@@ -73,7 +78,7 @@ function buildReportOnlyCsp(lenco: boolean): string {
     "style-src 'self' 'unsafe-inline'",
     `img-src 'self' data: blob: ${CLOUDINARY} ${GA4_IMG}`,
     "font-src 'self' data:",
-    `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${GA4_CONNECT}${connectExtra}`,
+    `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${GA4_CONNECT} ${SENTRY_INGEST}${connectExtra}`,
     `frame-src 'self'${frameExtra}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
@@ -132,5 +137,24 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Compose: next-intl(serwist(config)). withSerwist preserves `headers()`/CSP.
-export default withNextIntl(withSerwist(nextConfig));
+/**
+ * Sentry build wiring — M16-P06. Composed OUTERMOST, around
+ * `withNextIntl(withSerwist(nextConfig))`, so the M16-P02 serwist SW compile and
+ * the M15-P03 `headers()`/CSP block are preserved untouched. Source-map upload is
+ * gated on `SENTRY_AUTH_TOKEN` so a missing token never fails the build; release
+ * defaults to the git sha auto-detected by the Sentry CLI at deploy.
+ */
+const sentryBuildOptions = {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+  telemetry: false,
+  widenClientFileUpload: true,
+  disableLogger: true,
+  // No auth token (dev/CI) -> skip source-map upload; the SDK still bundles.
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+};
+
+// Compose: sentry(next-intl(serwist(config))). Inner wrappers preserve `headers()`/CSP.
+export default withSentryConfig(withNextIntl(withSerwist(nextConfig)), sentryBuildOptions);

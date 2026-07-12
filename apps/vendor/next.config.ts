@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import createNextIntlPlugin from "next-intl/plugin";
 
 import type { NextConfig } from "next";
@@ -26,6 +27,10 @@ const GA4_SCRIPT = "https://*.googletagmanager.com";
 const GA4_CONNECT =
   "https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com";
 const GA4_IMG = "https://*.google-analytics.com https://*.googletagmanager.com";
+// Sentry ingest (M16-P06) — browser SDK POSTs events here. Scoped to the ingest
+// subdomains only (incl. region variants), NOT a blanket sentry.io allowance.
+const SENTRY_INGEST =
+  "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
 
 const HSTS = "max-age=63072000; includeSubDomains; preload";
 
@@ -48,7 +53,7 @@ const REPORT_ONLY_CSP = [
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${CLOUDINARY} ${GA4_IMG}`,
   "font-src 'self' data:",
-  `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${GA4_CONNECT}`,
+  `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${GA4_CONNECT} ${SENTRY_INGEST}`,
   "frame-src 'self'",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
@@ -109,4 +114,20 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+/**
+ * Sentry build wiring — M16-P06. Composed OUTERMOST, around `withNextIntl(...)`,
+ * so the M15-P03 `headers()`/CSP block is preserved untouched. Source-map upload is
+ * gated on `SENTRY_AUTH_TOKEN` so a missing token never fails the build.
+ */
+const sentryBuildOptions = {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+  telemetry: false,
+  widenClientFileUpload: true,
+  disableLogger: true,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+};
+
+export default withSentryConfig(withNextIntl(nextConfig), sentryBuildOptions);

@@ -8,6 +8,7 @@ dependencies = [
   "fastapi>=0.115.0",
   "httpx>=0.28.0",
   "pydantic-settings>=2.8.0",
+  "sentry-sdk>=2.20.0",
   "slowapi>=0.1.9",
   "supabase>=2.13.0",
   "uvicorn[standard]>=0.34.0",
