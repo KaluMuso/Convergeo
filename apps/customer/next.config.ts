@@ -1,8 +1,24 @@
+import withSerwistInit from "@serwist/next";
 import createNextIntlPlugin from "next-intl/plugin";
 
 import type { NextConfig } from "next";
 
 const withNextIntl = createNextIntlPlugin("../../packages/i18n/src/request.ts");
+
+/**
+ * PWA / serwist — M16-P02. Compiles the unified `sw.ts` to `public/sw.js` and
+ * auto-registers it. Disabled in dev so HMR is not shadowed by a cached shell.
+ * Composed AROUND `nextConfig` and UNDER `withNextIntl` so the M15-P03
+ * `headers()`/CSP block is preserved untouched (CSP already allows
+ * `worker-src 'self' blob:` + `manifest-src 'self'`).
+ */
+const withSerwist = withSerwistInit({
+  swSrc: "sw.ts",
+  swDest: "public/sw.js",
+  cacheOnNavigation: true,
+  reloadOnOnline: true,
+  disable: process.env.NODE_ENV === "development",
+});
 
 /**
  * Security headers & CSP — M15-P03 (customer / Vercel origin).
@@ -116,4 +132,5 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+// Compose: next-intl(serwist(config)). withSerwist preserves `headers()`/CSP.
+export default withNextIntl(withSerwist(nextConfig));

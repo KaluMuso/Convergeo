@@ -9,5 +9,20 @@
   "nav": {
     "home": "Home"
   },
-  "greeting": "Hello, {name}!"
+  "greeting": "Hello, {name}!",
+  "offline": {
+    "code": "Offline",
+    "heading": "You're offline",
+    "body": "No connection right now. Pages you've already viewed still work — reconnect to browse everything else.",
+    "retry": "Try again",
+    "home": "Go home"
+  },
+  "install": {
+    "title": "Install Vergeo5",
+    "body": "Add Vergeo5 to your home screen for faster access and a full-screen app.",
+    "action": "Install app",
+    "dismiss": "Not now",
+    "updateBody": "A new version of Vergeo5 is ready.",
+    "updateAction": "Reload to update"
+  }
 }
