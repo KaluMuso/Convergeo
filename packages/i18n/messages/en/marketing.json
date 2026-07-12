@@ -152,5 +152,60 @@
     "retry": "Try again",
     "home": "Go to homepage",
     "help": "Visit the Help Centre"
+  },
+  "beta": {
+    "meta": {
+      "title": "Vergeo5 beta access",
+      "description": "Vergeo5 is in invite-only beta. Enter your invite code to get early access to Zambia's marketplace."
+    },
+    "hero": {
+      "eyebrow": "Private beta",
+      "headline": "You're early",
+      "subhead": "Vergeo5 is in invite-only beta. Enter your invite code below to get in."
+    },
+    "form": {
+      "codeLabel": "Invite code",
+      "codePlaceholder": "e.g. LUSAKA-2026",
+      "requiredMarker": "*",
+      "submit": "Unlock access",
+      "submitting": "Checking…"
+    },
+    "success": {
+      "heading": "You're in!",
+      "body": "Your invite worked. Welcome to the Vergeo5 beta.",
+      "cta": "Start exploring"
+    },
+    "errors": {
+      "empty": "Please enter your invite code.",
+      "invalid": "That invite code isn't valid. Check it and try again.",
+      "expired": "This invite code has expired. Ask for a fresh one.",
+      "exhausted": "This invite code has been fully used up.",
+      "inactive": "This invite code isn't active yet.",
+      "generic": "Something went wrong. Please try again in a moment.",
+      "rateLimited": "Too many tries. Please wait a moment and try again."
+    },
+    "feedback": {
+      "trigger": "Feedback",
+      "heading": "Send beta feedback",
+      "close": "Close feedback",
+      "categoryLabel": "Type",
+      "categoryBug": "Something's broken",
+      "categoryIdea": "An idea",
+      "categoryConfusing": "This is confusing",
+      "categoryPraise": "I like this",
+      "categoryOther": "Other",
+      "messageLabel": "Your feedback",
+      "messagePlaceholder": "Tell us what's on your mind…",
+      "screenshotLabel": "Attach a screenshot of this page",
+      "requiredMarker": "*",
+      "submit": "Send feedback",
+      "submitting": "Sending…",
+      "success": "Thanks! Your feedback is on its way to the team.",
+      "errorGeneric": "Couldn't send that. Please try again.",
+      "errorRateLimited": "You've sent a lot of feedback — please wait a moment.",
+      "validation": {
+        "messageRequired": "Please add a little detail before sending."
+      }
+    }
   }
 }
