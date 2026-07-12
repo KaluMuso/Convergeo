@@ -14,7 +14,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-surface hover:bg-primary-deep disabled:bg-text-3 disabled:text-surface",
+  primary:
+    "bg-primary text-[var(--primary-btn-fg)] hover:bg-[var(--primary-btn-hover)] disabled:bg-text-3 disabled:text-surface",
   secondary:
     "bg-surface text-text border border-border hover:bg-bg-2 disabled:bg-bg-2 disabled:text-text-3",
   ghost: "bg-transparent text-primary hover:bg-primary-tint disabled:text-text-3",
@@ -54,10 +55,10 @@ export function Button({
       aria-label={loading ? loadingLabel : ariaLabel}
       className={cx(
         "inline-flex items-center justify-center rounded font-body font-medium",
-        "transition-[background-color,box-shadow,opacity] duration-fast ease-std",
-        "motion-reduce:transition-none",
+        "transition-[background-color,box-shadow,opacity,transform] duration-fast ease-std",
+        "active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100",
         "focus-visible:outline-none focus-visible:shadow-focusRing",
-        "disabled:cursor-not-allowed disabled:opacity-60",
+        "disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100",
         variantClasses[variant],
         sizeClasses[size],
         className,

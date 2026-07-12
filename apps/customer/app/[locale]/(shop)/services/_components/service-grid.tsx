@@ -53,7 +53,7 @@ export function ServiceGrid({ items, locale, labels }: ServiceGridProps) {
           <li key={item.id}>
             <Link
               href={`/${locale}/s/${item.slug}`}
-              className="flex h-full flex-col overflow-hidden rounded-lg border border-border bg-surface"
+              className="tap flex h-full flex-col overflow-hidden rounded-lg border border-border bg-surface transition-shadow duration-fast ease-std hover:shadow-2"
             >
               {hero ? (
                 <CloudinaryImage
@@ -80,7 +80,7 @@ export function ServiceGrid({ items, locale, labels }: ServiceGridProps) {
                 {item.service_area ? (
                   <p className="text-xs text-text-3">{item.service_area}</p>
                 ) : null}
-                <p className="mt-auto text-sm font-semibold text-text-1">
+                <p className="mt-auto text-sm font-semibold text-text">
                   {item.from_price_ngwee
                     ? labels.fromPrice.replace("{price}", formatK(item.from_price_ngwee))
                     : labels.askForQuote}

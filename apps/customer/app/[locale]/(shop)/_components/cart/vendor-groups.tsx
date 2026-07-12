@@ -3,6 +3,7 @@
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { Skeleton } from "@vergeo/ui/src/skeleton";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -288,9 +289,28 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
           </footer>
         </>
       ) : (
-        <p className="text-sm text-text-2" aria-live="polite">
-          {labels.line.updating}
-        </p>
+        <div data-testid="cart-loading">
+          <p className="sr-only" aria-live="polite">
+            {labels.line.updating}
+          </p>
+          <div className="flex flex-col gap-3 motion-stagger" aria-hidden="true">
+            {[0, 1].map((groupIndex) => (
+              <section key={groupIndex} className="flex flex-col gap-3">
+                <Skeleton shape="line" width="10rem" />
+                <Skeleton height="4rem" />
+                {[0, 1].map((lineIndex) => (
+                  <div key={lineIndex} className="flex gap-3">
+                    <Skeleton width="4rem" height="4rem" />
+                    <div className="flex flex-1 flex-col gap-2 py-1">
+                      <Skeleton shape="line" width="75%" />
+                      <Skeleton shape="line" width="40%" />
+                    </div>
+                  </div>
+                ))}
+              </section>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
