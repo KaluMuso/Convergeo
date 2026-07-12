@@ -95,6 +95,13 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
     {
         ("POST", "/ask"),
         ("POST", "/auth/guard/otp-quota"),
+        # M16-P09 beta gate: pre-login invite gate + feedback. redeem/gate are
+        # inherently pre-auth; feedback is optional-auth (attaches user_id if a
+        # valid token is present) — all IP rate-limited. Admin invite routes
+        # (/beta/invites) are role-guarded and classified automatically.
+        ("GET", "/beta/gate"),
+        ("POST", "/beta/redeem"),
+        ("POST", "/beta/feedback"),
         ("GET", "/cart"),
         ("POST", "/cart/items"),
         ("DELETE", "/cart/items/{listing_id}"),
