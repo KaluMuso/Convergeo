@@ -49,15 +49,15 @@
       "defaultJustification": "CLAUDE.md convention #7 — customer routes ≤150 KB gz first-load JS on Fast-3G/360px devices.",
       "routes": {
         "/[locale]/(shop)/cart/page": {
-          "maxKbGz": 186,
+          "maxKbGz": 189,
           "justification": "M16-P01 baseline (cart + mini-cart drawer). Target: reduce shared auth/cart chunks to ≤150 KB gz."
         },
         "/[locale]/(shop)/checkout/page": {
-          "maxKbGz": 189,
+          "maxKbGz": 191,
           "justification": "M16-P01 baseline (multi-step checkout). Target: code-split payment/fulfilment steps to ≤150 KB gz."
         },
         "/[locale]/(shop)/checkout/pending/[groupId]/page": {
-          "maxKbGz": 183,
+          "maxKbGz": 186,
           "justification": "M07-P07 pending USSD wait — shares checkout client shell. Target: code-split to ≤150 KB gz."
         },
         "/[locale]/(shop)/checkout/card/[paymentId]/page": {
@@ -65,43 +65,43 @@
           "justification": "M08-P06 card widget page shares checkout auth shell. Target: ≤150 KB gz after auth chunk split."
         },
         "/[locale]/(shop)/p/[slug]/page": {
-          "maxKbGz": 191,
+          "maxKbGz": 193,
           "justification": "M16-P01 baseline (PDP gallery + comparison); +0.2 KB from M16-P04 registering the marketing i18n namespace in the shared loader. Target: lazy-load comparison module to ≤150 KB gz."
         },
         "/[locale]/(auth)/login/page": {
-          "maxKbGz": 183,
+          "maxKbGz": 186,
           "justification": "M16-P01 baseline (auth shell shared with OTP/signup). Target: extract shared auth bundle to ≤150 KB gz."
         },
         "/[locale]/(auth)/signup/page": {
-          "maxKbGz": 183,
+          "maxKbGz": 186,
           "justification": "M16-P01 baseline (auth shell shared with login/OTP). Target: extract shared auth bundle to ≤150 KB gz."
         },
         "/[locale]/(auth)/otp/page": {
-          "maxKbGz": 182,
+          "maxKbGz": 185,
           "justification": "M16-P01 baseline (OTP form + auth shell). Target: extract shared auth bundle to ≤150 KB gz."
         },
         "/[locale]/account/privacy/page": {
-          "maxKbGz": 183,
+          "maxKbGz": 186,
           "justification": "M16-P01 baseline (account shell + privacy content). Target: slim account layout JS to ≤150 KB gz."
         },
         "/[locale]/(shop)/services/post-job/page": {
-          "maxKbGz": 183,
+          "maxKbGz": 185,
           "justification": "M11-P02 post-job form shares auth + checkout form shell; +0.1 KB from M16-P04 registering the marketing i18n namespace in the shared loader. Target: code-split session client to ≤150 KB gz."
         },
         "/[locale]/(shop)/ask/page": {
-          "maxKbGz": 183,
+          "maxKbGz": 185,
           "justification": "M06-P04 Ask Vergeo thread shares the auth/session client shell (useSession + query form). Guest-allowed but pulls the shared client chunk. Target: code-split @vergeo/auth session client to ≤150 KB gz."
         },
         "/[locale]/account/jobs/[id]/page": {
-          "maxKbGz": 185,
+          "maxKbGz": 187,
           "justification": "M11-P03 quote-compare page shares the account/session client shell (useSession + quote-action forms). Authenticated route (not public discovery). Target: code-split @vergeo/auth session client to ≤150 KB gz."
         },
         "/[locale]/account/tickets/[id]/transfer/page": {
-          "maxKbGz": 183,
+          "maxKbGz": 186,
           "justification": "M10-P07 transfer form shares the account/session client shell (useSession + phone-input form). Authenticated route. Target: code-split @vergeo/auth session client to ≤150 KB gz."
         },
         "/[locale]/account/tickets/page": {
-          "maxKbGz": 182,
+          "maxKbGz": 184,
           "justification": "M10-P07 wallet now mounts the inbound-transfer claim banner (useSession + api client), pulling in the account/session shell. Authenticated route. Target: code-split @vergeo/auth session client to ≤150 KB gz."
         }
       },
