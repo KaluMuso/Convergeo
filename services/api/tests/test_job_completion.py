@@ -14,6 +14,7 @@ from typing import Any
 
 import pytest
 from app.errors import AppError
+from app.routers import job_completion as jc
 from app.routers.job_completion import (
     PROVIDER_COMPLETE_ACTION,
     auto_confirm_due_jobs,
@@ -353,3 +354,125 @@ class TestReviewGating:
         assert _order_status(db, accepted.order_id) == "completed"
         assert _order_status(db, accepted.order_id) in REVIEWABLE_ORDER_STATUSES
         assert job_review_unlocked(job_id) is True
+
+
+# ---------------------------------------------------------------------------
+# Failure-injection: partial-confirm never strands escrow (net invariant)
+# ---------------------------------------------------------------------------
+
+
+def _job_id_for(db: PgConn, order_id: str) -> str:
+    row = db.run(
+        f"SELECT ois.job_id::text FROM public.order_item_services ois "
+        f"JOIN public.order_items oi ON oi.id = ois.order_item_id "
+        f"WHERE oi.order_id = '{order_id}' AND oi.item_kind = 'service_deposit';"
+    )
+    assert row.ok and row.rows
+    return row.rows[0]
+
+
+def _completion_event_actor(db: PgConn, order_id: str) -> str | None:
+    """actor of the most recent placed→completed order_events row (None if NULL/absent)."""
+    result = db.run(
+        f"SELECT coalesce(actor::text, '') FROM public.order_events "
+        f"WHERE order_id = '{order_id}' AND to_status = 'completed' "
+        f"ORDER BY created_at DESC, id DESC LIMIT 1;"
+    )
+    assert result.ok and result.rows, "expected a placed→completed order_events row"
+    return result.rows[0] or None
+
+
+class TestConfirmFailureNoStrand:
+    def test_failure_after_release_before_complete_then_rerun_completes_single_release(
+        self, db: PgConn, db_url_env: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Inject a failure between the vendor RELEASE and the order completion.
+
+        The release has already posted, but the crash pre-empts the placed→completed
+        flip. Net invariant: the order is NOT left completed-without-release — it stays
+        'placed' (never falsely done), and a re-run re-drives to completion with the
+        release posted EXACTLY ONCE (idempotency key ``release-{order_id}``).
+        """
+        accepted = _accept(db, total=280_000)
+        provider = _vendor_owner(db, accepted.vendor_id)
+        job_id = _job_id_for(db, accepted.order_id)
+        mark_job_complete(job_id, provider)
+
+        def _boom(*_args: Any, **_kwargs: Any) -> None:
+            raise RuntimeError("injected crash after release, before complete")
+
+        monkeypatch.setattr(jc, "_complete_order", _boom)
+        with pytest.raises(RuntimeError):
+            confirm_job_completion(job_id, actor_id=CUSTOMER_A)
+
+        # Release posted, but the order is NOT stranded as completed — it stays 'placed'.
+        assert _order_status(db, accepted.order_id) == "placed"
+        assert _release_count(db, accepted.order_id) == 1
+
+        # Re-run drives to completion; the release is still posted exactly once.
+        monkeypatch.undo()
+        recovered = confirm_job_completion(job_id, actor_id=CUSTOMER_A)
+        assert recovered.already_confirmed is False
+        assert recovered.release_created is False  # release already posted on the first pass
+        assert _order_status(db, accepted.order_id) == "completed"
+        assert _release_count(db, accepted.order_id) == 1
+        assert _balance_item_count(db, accepted.order_id) == 1
+
+    def test_failure_during_release_leaves_order_placed_no_release(
+        self, db: PgConn, db_url_env: None, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A crash inside the release step must not complete the order (release is first)."""
+        accepted = _accept(db, total=260_000)
+        provider = _vendor_owner(db, accepted.vendor_id)
+        job_id = _job_id_for(db, accepted.order_id)
+        mark_job_complete(job_id, provider)
+
+        def _boom(*_args: Any, **_kwargs: Any) -> tuple[bool, int]:
+            raise RuntimeError("injected crash during release")
+
+        monkeypatch.setattr(jc, "_release_service_order", _boom)
+        with pytest.raises(RuntimeError):
+            confirm_job_completion(job_id, actor_id=CUSTOMER_A)
+
+        assert _order_status(db, accepted.order_id) == "placed"
+        assert _release_count(db, accepted.order_id) == 0
+
+        # Recovery: full re-run completes with a single release.
+        monkeypatch.undo()
+        confirm_job_completion(job_id, actor_id=CUSTOMER_A)
+        assert _order_status(db, accepted.order_id) == "completed"
+        assert _release_count(db, accepted.order_id) == 1
+
+
+# ---------------------------------------------------------------------------
+# Audit actor — the completion order_events row records the real confirmer (#8)
+# ---------------------------------------------------------------------------
+
+
+class TestCompletionAuditActor:
+    def test_customer_confirm_records_actor(self, db: PgConn, db_url_env: None) -> None:
+        accepted = _accept(db, total=240_000)
+        provider = _vendor_owner(db, accepted.vendor_id)
+        job_id = _job_id_for(db, accepted.order_id)
+        mark_job_complete(job_id, provider)
+
+        confirm_job_completion(job_id, actor_id=CUSTOMER_A)
+
+        actor = _completion_event_actor(db, accepted.order_id)
+        assert actor is not None, "completion audit row must not have a NULL actor"
+        assert actor == CUSTOMER_A
+
+    def test_auto_confirm_records_system_actor(self, db: PgConn, db_url_env: None) -> None:
+        from app.routers.job_completion import SYSTEM_ACTOR_ID
+
+        accepted = _accept(db, total=220_000)
+        provider = _vendor_owner(db, accepted.vendor_id)
+        job_id = _job_id_for(db, accepted.order_id)
+        mark_job_complete(job_id, provider)
+        marked_at = _marker_at(db, job_id)
+
+        auto_confirm_due_jobs(now=marked_at + timedelta(hours=49))
+
+        assert _order_status(db, accepted.order_id) == "completed"
+        actor = _completion_event_actor(db, accepted.order_id)
+        assert actor == SYSTEM_ACTOR_ID
