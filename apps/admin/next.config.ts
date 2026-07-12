@@ -1,4 +1,3 @@
-import { withSentryConfig } from "@sentry/nextjs";
 import createNextIntlPlugin from "next-intl/plugin";
 
 import type { NextConfig } from "next";
@@ -99,21 +98,6 @@ const nextConfig: NextConfig = {
   },
 };
 
-/**
- * Sentry build wiring — M16-P06 (admin — strictest client init). Composed
- * OUTERMOST, around `withNextIntl(...)`, so the M15-P03 `headers()`/CSP block is
- * preserved untouched. Source-map upload is gated on `SENTRY_AUTH_TOKEN` so a
- * missing token never fails the build.
- */
-const sentryBuildOptions = {
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  authToken: process.env.SENTRY_AUTH_TOKEN,
-  silent: true,
-  telemetry: false,
-  widenClientFileUpload: true,
-  disableLogger: true,
-  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
-};
-
-export default withSentryConfig(withNextIntl(nextConfig), sentryBuildOptions);
+// NOTE (M16-P06): Sentry is lazy-loaded off first-load JS (`app/sentry-init.tsx`), not
+// wired via `withSentryConfig`, which would inject the SDK into every route's first-load.
+export default withNextIntl(nextConfig);

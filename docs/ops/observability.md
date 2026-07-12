@@ -15,16 +15,26 @@ everything ships as a strict no-op until the env is populated.
 
 Four init targets, one PII-scrubbing invariant.
 
-| Target        | Init site                               | Notes                                              |
-| ------------- | --------------------------------------- | -------------------------------------------------- |
-| API (FastAPI) | `services/api/app/core/sentry.py`       | `init_sentry()` called from settings load          |
-| customer web  | `apps/customer/sentry.client.config.ts` | browser SDK; serwist/CSP preserved                 |
-| vendor web    | `apps/vendor/sentry.client.config.ts`   | browser SDK                                        |
-| admin web     | `apps/admin/sentry.client.config.ts`    | strictest: no tracing, console/http crumbs dropped |
+| Target        | Init site                                                                       | Notes                                              |
+| ------------- | ------------------------------------------------------------------------------- | -------------------------------------------------- |
+| API (FastAPI) | `services/api/app/core/sentry.py`                                               | `init_sentry()` called from settings load          |
+| customer web  | `apps/customer/sentry.client.config.ts` (lazy-loaded via `app/sentry-init.tsx`) | errors-only browser SDK; serwist/CSP preserved     |
+| vendor web    | `apps/vendor/sentry.client.config.ts` (lazy-loaded via `app/sentry-init.tsx`)   | errors-only browser SDK                            |
+| admin web     | `apps/admin/sentry.client.config.ts` (lazy-loaded via `app/sentry-init.tsx`)    | strictest: no tracing, console/http crumbs dropped |
 
 **No-op without a DSN.** Every target checks its DSN env var first
 (`SENTRY_DSN` on the API, `NEXT_PUBLIC_SENTRY_DSN` in the browser) and does nothing when
 it is unset. Dev and CI therefore never emit events and never need a secret.
+
+**Bundle discipline — the browser SDK is lazy-loaded off first-load.** `@sentry/nextjs`
+is ~63 KB gz; wiring it the default way (`withSentryConfig`) injects it into every route's
+**first-load JS**, blowing the ≤150 KB gz budget (CLAUDE.md #7). Instead, each app mounts a
+tiny `"use client"` loader (`app/sentry-init.tsx`) that, after hydration and only when a
+DSN is present, does `import('@sentry/nextjs')` — landing the SDK in an **async chunk**,
+never in a route's first-load manifest. `sentry.client.config.ts` uses `import type` only
+(zero runtime SDK), so importing it into the loader costs ~nothing. Net first-load delta:
+~flat (within the bundle-guard regression tolerance). SSR/server-side Next errors are not
+captured (acceptable for launch — the FastAPI backend has full Sentry coverage).
 
 **PII scrubbing (the core invariant).** Both the API and every client run the same
 scrubber on `before_send` (event body) AND `before_breadcrumb` (every breadcrumb):
@@ -42,9 +52,19 @@ The API scrubber is unit-proven in `services/api/tests/test_sentry_scrubber.py`
 (phone / address / email / token masked in both event and breadcrumb).
 
 **Release & source maps.** `release` = git SHA (`SENTRY_RELEASE` / `NEXT_PUBLIC_SENTRY_RELEASE`).
-Client source-map upload is wired through `withSentryConfig` but **gated on
-`SENTRY_AUTH_TOKEN`** — a missing token disables upload so a build never fails for lack of
-a secret.
+Because `withSentryConfig` is intentionally NOT used (it forces the SDK into first-load),
+client source-map upload runs as a **separate, gated deploy step** rather than at build
+time. On the deploy host, when `SENTRY_AUTH_TOKEN` (+ `SENTRY_ORG`, `SENTRY_PROJECT`) are
+set, run after the build:
+
+```bash
+# gated: no token -> skip, never fails the build
+[ -n "$SENTRY_AUTH_TOKEN" ] && npx @sentry/cli sourcemaps inject apps/<app>/.next \
+  && npx @sentry/cli sourcemaps upload --release "$SENTRY_RELEASE" apps/<app>/.next
+```
+
+A missing token is a no-op, so dev/CI/DSN-less deploys never fail for lack of a secret.
+The API uploads no browser maps; its `release` is the same git SHA for cross-linking.
 
 **CSP.** The browser SDK POSTs to `*.ingest.sentry.io` (and region variants
 `*.ingest.us.sentry.io`, `*.ingest.de.sentry.io`). Those hosts — and only those — were

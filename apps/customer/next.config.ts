@@ -1,4 +1,3 @@
-import { withSentryConfig } from "@sentry/nextjs";
 import withSerwistInit from "@serwist/next";
 import createNextIntlPlugin from "next-intl/plugin";
 
@@ -137,24 +136,10 @@ const nextConfig: NextConfig = {
   },
 };
 
-/**
- * Sentry build wiring — M16-P06. Composed OUTERMOST, around
- * `withNextIntl(withSerwist(nextConfig))`, so the M16-P02 serwist SW compile and
- * the M15-P03 `headers()`/CSP block are preserved untouched. Source-map upload is
- * gated on `SENTRY_AUTH_TOKEN` so a missing token never fails the build; release
- * defaults to the git sha auto-detected by the Sentry CLI at deploy.
- */
-const sentryBuildOptions = {
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  authToken: process.env.SENTRY_AUTH_TOKEN,
-  silent: true,
-  telemetry: false,
-  widenClientFileUpload: true,
-  disableLogger: true,
-  // No auth token (dev/CI) -> skip source-map upload; the SDK still bundles.
-  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
-};
-
-// Compose: sentry(next-intl(serwist(config))). Inner wrappers preserve `headers()`/CSP.
-export default withSentryConfig(withNextIntl(withSerwist(nextConfig)), sentryBuildOptions);
+// Compose: next-intl(serwist(config)). withSerwist preserves `headers()`/CSP.
+// NOTE (M16-P06): Sentry is deliberately NOT wired via `withSentryConfig` here — that
+// plugin injects the browser SDK into every route's FIRST-LOAD JS (~+63 KB gz), which
+// breaks CLAUDE.md #7 (customer routes ≤150 KB gz). Instead the SDK is lazy-loaded in
+// an async chunk (`app/sentry-init.tsx` → dynamic `import('@sentry/nextjs')`). Client
+// source-map upload runs as a separate gated build step — see docs/ops/observability.md.
+export default withNextIntl(withSerwist(nextConfig));

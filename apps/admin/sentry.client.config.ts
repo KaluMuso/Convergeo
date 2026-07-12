@@ -1,13 +1,14 @@
 /**
  * Sentry browser init — admin app (M16-P06, STRICTEST).
  *
- * No-op unless `NEXT_PUBLIC_SENTRY_DSN` is set (dev/CI never emit; no DSN committed).
- * Same PII scrubber as customer/vendor, but hardened for the admin origin: no
- * performance tracing (`tracesSampleRate: 0`), fewer breadcrumbs, and console/http
- * breadcrumbs are dropped entirely so admin action detail never reaches Sentry.
- * Release = git sha (injected at build).
+ * SDK-free at load time (`import type` only): the heavy `@sentry/nextjs` SDK is passed
+ * in by the lazy loader (`app/sentry-init.tsx`), which `import()`s it in an async chunk
+ * after hydration, keeping it off first-load JS. Same PII scrubber as customer/vendor,
+ * hardened for the admin origin: errors only (no tracing/replay), fewer breadcrumbs, and
+ * console/http breadcrumbs dropped entirely so admin action detail never reaches Sentry.
+ * No-op unless `NEXT_PUBLIC_SENTRY_DSN` is set. Release = git sha.
  */
-import * as Sentry from "@sentry/nextjs";
+import type * as SentryType from "@sentry/nextjs";
 
 const REDACTED = "[redacted]";
 const EMAIL_MASK = "[redacted-email]";
@@ -53,7 +54,7 @@ function keyIsSensitive(key: string): boolean {
   return SENSITIVE_KEY_PARTS.some((part) => lowered.includes(part));
 }
 
-function scrub(value: unknown): unknown {
+export function scrub(value: unknown): unknown {
   if (typeof value === "string") return scrubText(value);
   if (Array.isArray(value)) return value.map(scrub);
   if (value && typeof value === "object") {
@@ -66,17 +67,22 @@ function scrub(value: unknown): unknown {
   return value;
 }
 
-const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+export function initClientSentry(Sentry: typeof SentryType): void {
+  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+  if (!dsn) return;
 
-if (dsn) {
   Sentry.init({
     dsn,
     environment: process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,
     release: process.env.NEXT_PUBLIC_SENTRY_RELEASE,
     sendDefaultPii: false,
-    // Strictest: no tracing, minimal breadcrumbs.
+    // Strictest: no tracing, no replay, minimal breadcrumbs.
     tracesSampleRate: 0,
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: 0,
     maxBreadcrumbs: 20,
+    integrations: (defaults) =>
+      defaults.filter((i) => !/(BrowserTracing|Replay|Feedback)/.test(i.name)),
     beforeSend: (event) => scrub(event) as typeof event,
     // Drop console/http breadcrumbs entirely; scrub whatever remains.
     beforeBreadcrumb: (crumb) => {
