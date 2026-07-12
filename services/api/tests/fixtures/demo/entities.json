@@ -235,15 +235,6 @@
       "status": "delivered",
       "fulfilment": "delivery",
       "delivery_zone": "lusaka_central"
-    },
-    {
-      "id_key": "completed",
-      "checkout_group_key": "paid",
-      "vendor_key": "shop_b",
-      "customer_key": "customer_b",
-      "status": "completed",
-      "fulfilment": "pickup",
-      "delivery_zone": null
     }
   ]
 }
