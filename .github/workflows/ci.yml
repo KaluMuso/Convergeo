@@ -91,6 +91,9 @@ jobs:
         run: uv run mypy app tests scripts
 
       - name: Pytest
+        # Blocking full suite (testpaths=tests) — includes the route x role authz
+        # matrix (tests/test_authz_matrix.py) and the rate-limit fuzz suite
+        # (tests/fuzz, once M15-P04 lands) as security gates.
         run: uv run pytest
         env:
           SUPABASE_URL: https://example.supabase.co
@@ -187,9 +190,35 @@ jobs:
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
 
-      - name: pnpm audit (high+)
-        continue-on-error: true
-        run: pnpm audit --audit-level=high
+      - name: pnpm audit (fail on high)
+        # Blocking (M15-P05): any high/critical advisory fails the pipeline, EXCEPT a
+        # written allowlist of accepted advisories. Accepted:
+        #   GHSA-ph9p-34f9-6g65 — tmp<0.2.6 path traversal, transitive via @lhci/cli
+        #     (Lighthouse CI). Dev/CI-only, never bundled into a shipped app or the API
+        #     runtime => no production exposure. See docs/ops/owasp-audit.md (A06/F1).
+        #     Remove this entry once @lhci/cli ships a tmp>=0.2.6.
+        run: |
+          ALLOWLIST="GHSA-ph9p-34f9-6g65"
+          pnpm audit --audit-level=high --json > audit.json || true
+          ALLOWLIST="$ALLOWLIST" python3 - <<'PY'
+          import json, os, sys
+          allow = set(os.environ["ALLOWLIST"].split())
+          data = json.load(open("audit.json"))
+          blocking = []
+          for adv in data.get("advisories", {}).values():
+              if adv.get("severity") in ("high", "critical"):
+                  ghsa = adv.get("github_advisory_id", "")
+                  if ghsa in allow:
+                      print(f"::notice::allowlisted {ghsa} ({adv.get('module_name')}) — see owasp-audit.md")
+                      continue
+                  blocking.append(f"{adv.get('severity')} {ghsa} {adv.get('module_name')}")
+          if blocking:
+              print("::error::blocking high/critical advisories:")
+              for b in blocking:
+                  print(f"  - {b}")
+              sys.exit(1)
+          print("pnpm audit: no blocking high/critical advisories")
+          PY
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
@@ -199,12 +228,54 @@ jobs:
         with:
           python-version-file: services/api/.python-version
 
-      - name: pip-audit (API)
-        continue-on-error: true
+      - name: pip-audit (API, fail on high)
+        # Blocking (M15-P05): pip-audit is non-zero on any known vulnerability.
         working-directory: services/api
         run: |
           uv sync --dev
           uv tool run pip-audit
+
+  security-gates:
+    name: Security gates (headers + authz matrix)
+    # Blocking (M15-P05). Runs in parallel with `python`, so the redundant authz-matrix
+    # run adds no wall-clock time while giving a named, required security check.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+
+      - name: Security headers manifest check
+        # M15-P03 shipped scripts/ci/check-headers.mjs (node stdlib only, no install).
+        run: node scripts/ci/check-headers.mjs
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: services/api/.python-version
+
+      - name: Install API dependencies
+        working-directory: services/api
+        run: uv sync --dev
+
+      - name: Route x role authz matrix (no DB)
+        # Isolation-clean (dependency overrides, guard short-circuits before any DB
+        # call). Also runs under the full `python` job; named here as the security gate.
+        working-directory: services/api
+        run: uv run pytest tests/test_authz_matrix.py -q
+        env:
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          SUPABASE_ANON_KEY: test-anon-key
 
   i18n-lint:
     name: i18n hardcoded strings (warn)
