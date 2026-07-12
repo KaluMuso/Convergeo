@@ -36,6 +36,7 @@ def initiate_customer_refund_payout(
     *,
     service_client: ServiceRoleClient,
     refund_id: str,
+    reference_key: str,
     vendor_id: str,
     amount_ngwee: int,
     rail: CustomerRail,
@@ -46,13 +47,17 @@ def initiate_customer_refund_payout(
     Persists a ``payouts`` row tagged ``kind: customer_refund`` with status ``pending``
     (never sent inline). The shared sweeper sends it to ``customer_momo`` on the given
     rail; live delivery is F9b-gated.
+
+    The Lenco ``rfd-*`` reference is derived from ``reference_key`` (the caller's stable
+    idempotency key), NOT from the per-call ``refund_id`` — so a retried refund resolves
+    to the same reference and Lenco collapses it to a single payout instead of sending twice.
     """
     if amount_ngwee <= 0:
         msg = "refund payout amount must be positive"
         raise ValueError(msg)
 
     payout_id = str(uuid.uuid4())
-    lenco_reference = make_refund_reference(refund_id)
+    lenco_reference = make_refund_reference(reference_key)
     row = {
         "id": payout_id,
         "vendor_id": vendor_id,

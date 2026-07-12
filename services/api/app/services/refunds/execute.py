@@ -20,9 +20,23 @@ from app.services.refunds.math import (
 )
 from app.services.refunds.payout_port import CustomerRail, initiate_customer_refund_payout
 from app.services.refunds.release import order_funds_released
+from postgrest.exceptions import APIError
 
 Lane = Literal[1, 2]
 ACTIVE_REFUND_STATUSES = frozenset({"pending", "processing", "completed"})
+# Postgres unique_violation SQLSTATE — raised when the 0032 partial unique index
+# (one active/settled refund per order) rejects a concurrent/retried second insert.
+_UNIQUE_VIOLATION = "23505"
+
+
+def _stable_ledger_key_base(idempotency_key: str | None, order_id: str) -> str:
+    """Stable idempotency base shared by ledger keys + payout reference.
+
+    Derived from the caller's idempotency_key so a retry collapses to one ledger
+    posting and one payout. Falls back to the order id (at most one active refund per
+    order under the 0032 index), never to the per-call refund_id.
+    """
+    return idempotency_key if idempotency_key else f"refund-order-{order_id}"
 
 
 class RefundPhase(StrEnum):
@@ -172,6 +186,7 @@ def _post_pre_release_ledger(
     *,
     lane: Lane,
     refund_id: str,
+    ledger_key_base: str,
     order_id: str,
     vendor_id: str,
     lane1: Lane1RefundAmount | None,
@@ -181,7 +196,7 @@ def _post_pre_release_ledger(
     if lane == 1:
         assert lane1 is not None
         posted = post_transaction(
-            idempotency_key=f"refund-{refund_id}-ledger",
+            idempotency_key=f"{ledger_key_base}-ledger",
             template=LedgerTemplate.REFUND_LANE1,
             order_id=order_id,
             refund_id=refund_id,
@@ -191,7 +206,7 @@ def _post_pre_release_ledger(
     else:
         assert lane2 is not None
         posted = post_transaction(
-            idempotency_key=f"refund-{refund_id}-ledger",
+            idempotency_key=f"{ledger_key_base}-ledger",
             template=LedgerTemplate.REFUND_LANE2,
             order_id=order_id,
             refund_id=refund_id,
@@ -208,12 +223,13 @@ def _post_pre_release_ledger(
 def _post_post_release_clawback(
     *,
     refund_id: str,
+    ledger_key_base: str,
     order_id: str,
     vendor_id: str,
     clawback_ngwee: int,
 ) -> str:
     posted = post_transaction(
-        idempotency_key=f"refund-{refund_id}-clawback",
+        idempotency_key=f"{ledger_key_base}-clawback",
         template=LedgerTemplate.CLAWBACK,
         order_id=order_id,
         refund_id=refund_id,
@@ -283,6 +299,8 @@ def execute_refund(
     if idempotency_key:
         breakdown["idempotency_key"] = idempotency_key
 
+    ledger_key_base = _stable_ledger_key_base(idempotency_key, order_id)
+
     insert_row = {
         "id": refund_id,
         "order_id": order_id,
@@ -291,7 +309,19 @@ def execute_refund(
         "amount_ngwee": refund_amount,
         "status": "processing",
     }
-    insert_response = service_client.client.table("refunds").insert(insert_row).execute()
+    try:
+        insert_response = service_client.client.table("refunds").insert(insert_row).execute()
+    except APIError as exc:
+        # The 0032 partial unique index rejected a concurrent/retried second refund for
+        # this order. Return the already-created refund WITHOUT posting a second ledger
+        # transaction or payout. If it is not yet visible (race with the winner's insert),
+        # re-raise so the caller retries rather than silently minting a duplicate.
+        if getattr(exc, "code", None) != _UNIQUE_VIOLATION:
+            raise
+        existing = _find_existing_refund(service_client, order_id)
+        if existing is None:
+            raise
+        return _result_from_existing(existing)
     inserted = _single_row(insert_response)
     if inserted is not None:
         refund_id = str(inserted.get("id", refund_id))
@@ -302,6 +332,7 @@ def execute_refund(
             _post_pre_release_ledger(
                 lane=lane,
                 refund_id=refund_id,
+                ledger_key_base=ledger_key_base,
                 order_id=order_id,
                 vendor_id=vendor_id,
                 lane1=lane1,
@@ -312,6 +343,7 @@ def execute_refund(
         ledger_ids.append(
             _post_post_release_clawback(
                 refund_id=refund_id,
+                ledger_key_base=ledger_key_base,
                 order_id=order_id,
                 vendor_id=vendor_id,
                 clawback_ngwee=refund_amount,
@@ -321,6 +353,7 @@ def execute_refund(
     payout = initiate_customer_refund_payout(
         service_client=service_client,
         refund_id=refund_id,
+        reference_key=ledger_key_base,
         vendor_id=vendor_id,
         amount_ngwee=refund_amount,
         rail=customer_rail,
