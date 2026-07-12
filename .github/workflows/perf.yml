@@ -46,6 +46,17 @@ jobs:
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
 
+      # Blocking i18n completeness gate (M16-P03). Pure-node + offline, so it
+      # runs BEFORE the expensive Supabase/build steps and fails fast. Covers
+      # hardcoded strings (template/aria/meta), missing keys (used-vs-defined),
+      # formatK bypasses, plus the en-XA pseudo-locale coverage smoke. The
+      # --self-test asserts the detectors still have teeth against a seeded fixture.
+      - name: i18n completeness sweep (blocking)
+        run: |
+          node scripts/ci/i18n-lint.mjs --self-test
+          node scripts/ci/i18n-lint.mjs --pseudo-smoke
+          node scripts/ci/i18n-lint.mjs
+
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
         with:

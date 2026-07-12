@@ -1,5 +1,6 @@
 "use client";
 
+import { formatK } from "@vergeo/i18n";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
@@ -14,10 +15,6 @@ type OrderDetailViewProps = {
   locale: string;
   orderId: string;
 };
-
-function formatNgwee(value: number): string {
-  return `K${(value / 100).toFixed(2)}`;
-}
 
 export function OrderDetailView({ locale, orderId }: OrderDetailViewProps) {
   const t = useTranslations("admin.orders.detail");
@@ -97,7 +94,7 @@ export function OrderDetailView({ locale, orderId }: OrderDetailViewProps) {
                   qty: item.qty,
                 })}
               </span>
-              <span className="font-mono">{formatNgwee(item.unit_price_ngwee * item.qty)}</span>
+              <span className="font-mono">{formatK(item.unit_price_ngwee * item.qty)}</span>
             </li>
           ))}
         </ul>
@@ -113,7 +110,7 @@ export function OrderDetailView({ locale, orderId }: OrderDetailViewProps) {
               <li key={payment.id} className="px-3 py-2 text-sm">
                 <div className="flex justify-between gap-3">
                   <span>{t("paymentLine", { rail: payment.rail, status: payment.status })}</span>
-                  <span className="font-mono">{formatNgwee(payment.amount_ngwee)}</span>
+                  <span className="font-mono">{formatK(payment.amount_ngwee)}</span>
                 </div>
                 <p className="font-mono text-xs text-[#6B5E4C]">{payment.lenco_reference}</p>
               </li>
