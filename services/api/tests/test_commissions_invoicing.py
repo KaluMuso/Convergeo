@@ -16,7 +16,11 @@ from app.services.commissions.engine import (
     compute_order_commission,
     effective_rate_bps,
 )
-from app.services.invoicing.allocation import allocate_invoice_number
+from app.services.invoicing.allocation import (
+    InvoiceAllocationError,
+    allocate_and_persist_invoice,
+    allocate_invoice_number,
+)
 from app.services.invoicing.builder import (
     VAT_ENABLED_AT_LAUNCH,
     InvoiceInputLine,
@@ -27,6 +31,7 @@ from app.services.invoicing.builder import (
 from app.services.invoicing.vsdc import submit_to_vsdc_stub
 from app.services.ledger.engine import account_balance_ngwee, post_transaction
 from app.services.ledger.templates import LedgerTemplate
+from app.services.orders.audit import SqlResult
 from tests.rls.conftest import (
     MIGRATIONS_DIR,
     PgConn,
@@ -355,6 +360,151 @@ class TestInvoicingGapless:
         persisted = {(parts[0], int(parts[1])) for parts in (r.split("|") for r in rows.rows)}
         assert (receipt.series, receipt.invoice_no) in persisted
         assert (tax_invoice.series, tax_invoice.invoice_no) in persisted
+
+    def _persist_one(self, *, series: str, order_id: str) -> int:
+        payload = build_invoice_payload(
+            kind="receipt",
+            series=series,
+            invoice_no=0,
+            order_id=order_id,
+            lines=(InvoiceInputLine(description="Item", qty=1, unit_price_ngwee=1_000),),
+            payment_id=str(uuid.uuid4()),
+        )
+        return allocate_and_persist_invoice(
+            series=series,
+            invoice_id=payload.invoice_id,
+            order_id=order_id,
+            snapshot=payload.to_snapshot(),
+            vat_flag=payload.vat_flag,
+            vat_ngwee=payload.vat_ngwee,
+        )
+
+    def test_failed_persist_leaves_no_gap(self, db: PgConn) -> None:
+        """A failed row insert must roll the number back — the series never gaps."""
+        series = f"FAIL-{uuid.uuid4().hex[:8]}"
+        good_order = _insert_order(db)
+        missing_order = str(uuid.uuid4())  # no such order -> invoices.order_id FK fails
+
+        payload = build_invoice_payload(
+            kind="receipt",
+            series=series,
+            invoice_no=0,
+            order_id=missing_order,
+            lines=(InvoiceInputLine(description="Item", qty=1, unit_price_ngwee=1_000),),
+            payment_id=str(uuid.uuid4()),
+        )
+        with pytest.raises(InvoiceAllocationError):
+            allocate_and_persist_invoice(
+                series=series,
+                invoice_id=payload.invoice_id,
+                order_id=missing_order,
+                snapshot=payload.to_snapshot(),
+                vat_flag=False,
+                vat_ngwee=0,
+            )
+
+        # The allocate+insert ran in ONE transaction, so the aborted insert also
+        # rolled back next_invoice_no: no counter row was ever committed.
+        counter = db.run(
+            f"SELECT count(*)::text FROM public.invoice_counters WHERE series = '{series}';"
+        )
+        assert counter.ok and counter.rows == ["0"]
+
+        # The next *successful* invoice reuses number 1 — no hole in the sequence.
+        reused = self._persist_one(series=series, order_id=good_order)
+        assert reused == 1
+        after = db.run(
+            f"SELECT next_no::text FROM public.invoice_counters WHERE series = '{series}';"
+        )
+        assert after.ok and after.rows == ["2"]
+
+    def test_issued_invoices_contiguous_per_series(self, db: PgConn) -> None:
+        """Happy path: numbers issued for a series are contiguous 1..count."""
+        series = f"SEQ-{uuid.uuid4().hex[:8]}"
+        order_id = _insert_order(db)
+        count = 5
+
+        issued = [self._persist_one(series=series, order_id=order_id) for _ in range(count)]
+
+        assert sorted(issued) == list(range(1, count + 1))
+        assert min(issued) == 1
+        assert max(issued) == count
+
+        rows = db.run(
+            f"SELECT no::text FROM public.invoices WHERE series = '{series}' ORDER BY no;"
+        )
+        assert rows.ok and rows.rows == [str(n) for n in range(1, count + 1)]
+
+        # The allocated number is stamped into the persisted snapshot too.
+        stamped = db.run(
+            f"SELECT (snapshot->>'invoice_no') FROM public.invoices "
+            f"WHERE series = '{series}' ORDER BY no;"
+        )
+        assert stamped.ok and stamped.rows == [str(n) for n in range(1, count + 1)]
+
+
+class TestGaplessTransactionShape:
+    """DB-free proof that allocation + insert share one BEGIN…COMMIT transaction."""
+
+    def _snapshot(self) -> dict[str, Any]:
+        return build_invoice_payload(
+            kind="receipt",
+            series="RCP",
+            invoice_no=0,
+            order_id=str(uuid.uuid4()),
+            lines=(InvoiceInputLine(description="Item", qty=1, unit_price_ngwee=1_000),),
+        ).to_snapshot()
+
+    def test_allocate_and_insert_are_one_transaction(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        captured: dict[str, str] = {}
+
+        def fake_run(script: str) -> SqlResult:
+            captured["script"] = script
+            return SqlResult(ok=True, rows=["INSERT 0 1", "7"])
+
+        monkeypatch.setattr(
+            "app.services.invoicing.allocation.run_sql_script", fake_run
+        )
+
+        allocated = allocate_and_persist_invoice(
+            series="RCP",
+            invoice_id=str(uuid.uuid4()),
+            order_id=str(uuid.uuid4()),
+            snapshot=self._snapshot(),
+            vat_flag=False,
+            vat_ngwee=0,
+        )
+        # `_last_int` skips the `INSERT 0 1` status tag and reads the echoed number.
+        assert allocated == 7
+
+        script = captured["script"]
+        assert script.count("BEGIN;") == 1
+        assert script.count("COMMIT;") == 1
+        assert "public.next_invoice_no" in script
+        assert "INSERT INTO public.invoices" in script
+        # Allocation is consumed before — and in the same block as — the insert.
+        assert script.index("next_invoice_no") < script.index("INSERT INTO public.invoices")
+        assert script.index("BEGIN;") < script.index("next_invoice_no")
+        assert script.index("INSERT INTO public.invoices") < script.rindex("COMMIT;")
+
+    def test_persist_failure_raises_no_number(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            "app.services.invoicing.allocation.run_sql_script",
+            lambda script: SqlResult(ok=False, rows=[], error="insert failed"),
+        )
+        with pytest.raises(InvoiceAllocationError):
+            allocate_and_persist_invoice(
+                series="RCP",
+                invoice_id=str(uuid.uuid4()),
+                order_id=str(uuid.uuid4()),
+                snapshot=self._snapshot(),
+                vat_flag=False,
+                vat_ngwee=0,
+            )
 
 
 class TestInvoicingVatOff:

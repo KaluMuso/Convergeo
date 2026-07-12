@@ -2,19 +2,20 @@
 
 from __future__ import annotations
 
-import json
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from app.services.invoicing.allocation import allocate_invoice_number
-from app.services.orders.audit import run_sql_script, sql_literal
+from app.services.invoicing.allocation import allocate_and_persist_invoice
 
 RECEIPT_SERIES = "RCP"
 TAX_INVOICE_SERIES = "TAX"
 VAT_ENABLED_AT_LAUNCH = False
 VAT_RATE_BPS_AT_LAUNCH = 0
+# Placeholder number before atomic allocation; the real gapless number is
+# assigned inside the allocate+insert transaction (see _persist_invoice).
+_UNALLOCATED_INVOICE_NO = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -141,27 +142,23 @@ def build_invoice_payload(
     )
 
 
-def _persist_invoice(payload: InvoicePayload) -> None:
-    snapshot_sql = sql_literal(json.dumps(payload.to_snapshot(), separators=(",", ":")))
-    order_sql = sql_literal(payload.order_id)
-    series_sql = sql_literal(payload.series)
-    script = f"""
-INSERT INTO public.invoices (
-  id, series, no, order_id, snapshot, vat_flag, vat_ngwee
-)
-VALUES (
-  '{payload.invoice_id}'::uuid,
-  {series_sql},
-  {payload.invoice_no},
-  {order_sql}::uuid,
-  {snapshot_sql}::jsonb,
-  {'true' if payload.vat_flag else 'false'},
-  {payload.vat_ngwee}
-);
-"""
-    result = run_sql_script(script)
-    if not result.ok:
-        raise RuntimeError(f"invoice persist failed: {result.error}")
+def _persist_invoice(payload: InvoicePayload) -> InvoicePayload:
+    """Allocate a gapless number and insert the invoice row in ONE transaction.
+
+    Delegates to :func:`allocate_and_persist_invoice`, which consumes the series
+    number and persists the row atomically — the number is rolled back if the
+    insert fails, so the sequence never gains a gap. Returns the payload with the
+    actually-allocated ``invoice_no`` stamped in.
+    """
+    allocated_no = allocate_and_persist_invoice(
+        series=payload.series,
+        invoice_id=payload.invoice_id,
+        order_id=payload.order_id,
+        snapshot=payload.to_snapshot(),
+        vat_flag=payload.vat_flag,
+        vat_ngwee=payload.vat_ngwee,
+    )
+    return replace(payload, invoice_no=allocated_no)
 
 
 def issue_receipt(
@@ -172,19 +169,17 @@ def issue_receipt(
     seller_tpin: str | None = None,
 ) -> InvoicePayload:
     """Issue a payment-success receipt with a gapless sequential number."""
-    invoice_no = allocate_invoice_number(RECEIPT_SERIES)
     payload = build_invoice_payload(
         kind="receipt",
         series=RECEIPT_SERIES,
-        invoice_no=invoice_no,
+        invoice_no=_UNALLOCATED_INVOICE_NO,
         order_id=order_id,
         lines=lines,
         payment_id=payment_id,
         seller_tpin=seller_tpin,
         vat_flag=VAT_ENABLED_AT_LAUNCH,
     )
-    _persist_invoice(payload)
-    return payload
+    return _persist_invoice(payload)
 
 
 def issue_tax_invoice(
@@ -194,15 +189,13 @@ def issue_tax_invoice(
     seller_tpin: str | None = None,
 ) -> InvoicePayload:
     """Issue order-completion tax-invoice data with a gapless sequential number."""
-    invoice_no = allocate_invoice_number(TAX_INVOICE_SERIES)
     payload = build_invoice_payload(
         kind="tax_invoice",
         series=TAX_INVOICE_SERIES,
-        invoice_no=invoice_no,
+        invoice_no=_UNALLOCATED_INVOICE_NO,
         order_id=order_id,
         lines=lines,
         seller_tpin=seller_tpin,
         vat_flag=VAT_ENABLED_AT_LAUNCH,
     )
-    _persist_invoice(payload)
-    return payload
+    return _persist_invoice(payload)
