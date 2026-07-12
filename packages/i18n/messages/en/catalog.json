@@ -60,7 +60,11 @@
       "orders": "Orders",
       "account": "Account",
       "cart": "Cart",
-      "searchPlaceholder": "Search products, services, events…"
+      "searchPlaceholder": "Search products, services, events…",
+      "services": "Services",
+      "events": "Events",
+      "askVergeo": "Ask Vergeo",
+      "desktopAriaLabel": "Primary navigation"
     },
     "hero": {
       "eyebrow": "Zambia's marketplace",
@@ -71,7 +75,11 @@
       "placeholder": {
         "title": "Welcome to Vergeo5",
         "subtitle": "Your config-driven storefront will appear here as merchandising slots go live."
-      }
+      },
+      "escrowLine": "Pay with mobile money — Vergeo5 holds your payment safely until your order arrives.",
+      "escrowStep1": "You pay",
+      "escrowStep2": "Held by Vergeo5",
+      "escrowStep3": "Released on delivery"
     },
     "bannerRow": {
       "title": "Deals & highlights"
@@ -91,6 +99,16 @@
     },
     "categories": {
       "title": "Shop by category"
+    },
+    "rails": {
+      "newTitle": "New on Vergeo5",
+      "departmentTitle": "New in {category}",
+      "viewAll": "View all"
+    },
+    "sellCta": {
+      "title": "Grow your business with Vergeo5",
+      "body": "Reach customers across Zambia with your own storefront. Free setup, mobile-money payouts — you only pay when you sell.",
+      "cta": "Start selling"
     }
   },
   "pdp": {

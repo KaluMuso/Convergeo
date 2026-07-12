@@ -9,6 +9,13 @@ import { EventsRow } from "./_components/events-row";
 import { FeaturedCollections } from "./_components/featured-collections";
 import { HomeHero } from "./_components/hero";
 import {
+  hasDefaultHomeContent,
+  HomeHeroBand,
+  HomeProductRail,
+  HomeSellCta,
+  loadHomeDefaultData,
+} from "./_components/home-default";
+import {
   getRenderableSectionKeys,
   loadHomeMerchData,
   pickSlot,
@@ -107,17 +114,76 @@ export default async function ShopHomePage({ params }: PageProps) {
 
   const [tRaw, data] = await Promise.all([getCatalogTranslator(locale), loadHomeMerchData()]);
   const t = tRaw as unknown as CatalogTranslator;
-  const sectionKeys = getRenderableSectionKeys(data.slots, data.categories);
+
+  // Admin merch config always wins: when any active slot exists, render the
+  // config-driven sections exactly as before.
+  const hasMerchConfig = data.slots.length > 0;
+
+  if (hasMerchConfig) {
+    const sectionKeys = getRenderableSectionKeys(data.slots, data.categories);
+
+    return (
+      <div className="flex flex-col gap-6 lg:gap-10">
+        {sectionKeys.length > 0 ? (
+          sectionKeys.map((sectionKey) =>
+            renderSection(sectionKey, locale, t, data.slots, data.categories),
+          )
+        ) : (
+          <HomeHero locale={locale} t={t} />
+        )}
+      </div>
+    );
+  }
+
+  // No merch config: data-driven default homepage (UI-P4). Every rail is
+  // empty-safe; with a fully empty catalog we keep the welcome hero fallback.
+  const defaultData = await loadHomeDefaultData(data.categories);
+
+  if (!hasDefaultHomeContent(data.categories, defaultData)) {
+    return (
+      <div className="flex flex-col gap-6 lg:gap-10">
+        <HomeHero locale={locale} t={t} />
+      </div>
+    );
+  }
+
+  const railLabels = {
+    vendor: t("plp.card.vendor"),
+    noReviews: t("plp.card.noReviews"),
+    reviewCount: t("plp.card.reviewCount"),
+    quickAdd: t("plp.card.quickAdd"),
+    wishlist: t("plp.card.wishlist"),
+    outOfStock: t("plp.card.outOfStock"),
+    distance: t("plp.card.distance"),
+  };
 
   return (
-    <div className="flex flex-col gap-6">
-      {sectionKeys.length > 0 ? (
-        sectionKeys.map((sectionKey) =>
-          renderSection(sectionKey, locale, t, data.slots, data.categories),
-        )
-      ) : (
-        <HomeHero locale={locale} t={t} />
-      )}
+    <div className="flex flex-col gap-6 lg:gap-10">
+      <HomeHeroBand locale={locale} t={t} />
+      <CategoryGrid categories={data.categories} locale={locale} t={t} />
+      <HomeProductRail
+        id="home-rail-new"
+        title={t("home.rails.newTitle")}
+        viewAllHref={`/${locale}/c/all`}
+        viewAllLabel={t("home.rails.viewAll")}
+        listings={defaultData.newest}
+        locale={locale}
+        labels={railLabels}
+        priorityCount={2}
+      />
+      {defaultData.departmentRails.map((rail) => (
+        <HomeProductRail
+          key={rail.category.id}
+          id={`home-rail-${rail.category.slug}`}
+          title={t("home.rails.departmentTitle", { category: rail.category.name })}
+          viewAllHref={`/${locale}/c/${rail.category.slug}`}
+          viewAllLabel={t("home.rails.viewAll")}
+          listings={rail.listings}
+          locale={locale}
+          labels={railLabels}
+        />
+      ))}
+      <HomeSellCta locale={locale} t={t} />
     </div>
   );
 }

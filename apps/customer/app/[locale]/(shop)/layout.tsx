@@ -6,6 +6,8 @@ import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { DesktopHeader } from "./_components/desktop-header";
+
 type ShopLayoutProps = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
@@ -72,7 +74,10 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
 
   return (
     <>
+      {/* Mobile/tablet chrome (<1024px) — unchanged. Hidden on lg+ where the
+          desktop header below takes over. */}
       <TopNav
+        className="lg:hidden"
         logo={
           <Link href={`/${locale}`} className="font-display text-lg text-primary">
             {tCommon("app.name")}
@@ -103,13 +108,35 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         LinkComponent={Link}
         condensed
       />
-      <main id="shop-main" className="mx-auto w-full max-w-lg flex-1 px-4 pb-20 pt-4">
+      <DesktopHeader
+        locale={locale}
+        labels={{
+          appName: tCommon("app.name"),
+          navAriaLabel: t("home.nav.desktopAriaLabel"),
+          searchPlaceholder: t("home.nav.searchPlaceholder"),
+          browse: t("home.nav.browse"),
+          services: t("home.nav.services"),
+          events: t("home.nav.events"),
+          askVergeo: t("home.nav.askVergeo"),
+          account: t("home.nav.account"),
+          cart: t("home.nav.cart"),
+          themeLabel: tCommon("theme.label"),
+          themeLight: tCommon("theme.light"),
+          themeDark: tCommon("theme.dark"),
+          themeSystem: tCommon("theme.system"),
+        }}
+      />
+      <main
+        id="shop-main"
+        className="mx-auto w-full max-w-lg flex-1 px-4 pb-20 pt-4 lg:max-w-7xl lg:px-6 lg:pb-12 lg:pt-6"
+      >
         {children}
       </main>
       <BottomNav
         items={bottomItems}
         ariaLabel={t("home.nav.bottomAriaLabel")}
         LinkComponent={Link}
+        desktopHiddenClassName="lg:hidden"
       />
     </>
   );

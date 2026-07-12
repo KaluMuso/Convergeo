@@ -152,7 +152,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 lg:mx-auto lg:w-full lg:max-w-3xl">
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-h1 text-display-ink">{t("browse.title")}</h1>
         <p className="text-sm text-text-2">{t("browse.subtitle")}</p>

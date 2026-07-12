@@ -42,7 +42,7 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
       <h2 id="home-categories-heading" className="font-display text-h2 text-display-ink">
         {t("home.categories.title")}
       </h2>
-      <ul className="grid list-none grid-cols-2 gap-3 p-0">
+      <ul className="grid list-none grid-cols-2 gap-3 p-0 lg:grid-cols-4 lg:gap-4">
         {categories.map((category, index) => {
           const isWide = index === wideIndex;
           const fill = pastelForIndex(index);

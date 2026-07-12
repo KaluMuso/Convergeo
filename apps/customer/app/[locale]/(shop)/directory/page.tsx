@@ -157,7 +157,7 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
   }));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 lg:mx-auto lg:w-full lg:max-w-3xl">
       <header className="space-y-1">
         <h1 className="font-display text-h1 text-display-ink">{t("index.title")}</h1>
         <p className="text-sm text-text-2">{t("index.subtitle")}</p>

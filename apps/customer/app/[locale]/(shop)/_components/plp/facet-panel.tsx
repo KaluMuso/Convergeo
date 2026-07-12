@@ -90,7 +90,7 @@ export function FacetPanel({ labels, facets, initialState }: FacetPanelProps) {
 
   return (
     <aside
-      className="flex flex-col gap-4 rounded-[var(--r-lg)] border border-[var(--border)] bg-[var(--surface)] p-4"
+      className="flex flex-col gap-4 rounded-[var(--r-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 lg:sticky lg:top-20 lg:self-start"
       aria-label={labels.heading}
     >
       <h2 className="text-[var(--fs-h3)] font-semibold text-[var(--text)]">{labels.heading}</h2>

@@ -71,7 +71,9 @@ export default async function AskPage({ params, searchParams }: PageProps) {
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages as AbstractIntlMessages}>
-      <AskThread locale={locale} initialQuery={q?.trim() ?? ""} />
+      <div className="lg:mx-auto lg:w-full lg:max-w-3xl">
+        <AskThread locale={locale} initialQuery={q?.trim() ?? ""} />
+      </div>
     </NextIntlClientProvider>
   );
 }

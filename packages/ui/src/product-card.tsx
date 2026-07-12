@@ -55,7 +55,7 @@ function ProductCardSkeleton({ className }: { className?: string }) {
       <div style={{ ...shimmerBlock, aspectRatio: "4 / 3", width: "100%" }} />
       <div
         style={{
-          padding: "var(--sp-3)",
+          padding: "var(--card-pad, var(--sp-3))",
           display: "flex",
           flexDirection: "column",
           gap: "var(--sp-2)",
@@ -168,9 +168,11 @@ export function ProductCard({
           </button>
         ) : null}
       </div>
+      {/* Content padding is themeable per app/breakpoint via --card-pad
+          (falls back to the mobile-tuned --sp-3). */}
       <div
         style={{
-          padding: "var(--sp-3)",
+          padding: "var(--card-pad, var(--sp-3))",
           display: "flex",
           flexDirection: "column",
           gap: "var(--sp-2)",

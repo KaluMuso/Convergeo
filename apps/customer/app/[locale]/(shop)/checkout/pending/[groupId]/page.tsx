@@ -74,5 +74,9 @@ export default async function PendingCheckoutPage({ params }: PageProps) {
   const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
   const labels = buildPendingLabels(locale, messages);
 
-  return <PendingPaymentShell locale={locale} groupId={groupId} labels={labels} />;
+  return (
+    <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
+      <PendingPaymentShell locale={locale} groupId={groupId} labels={labels} />
+    </div>
+  );
 }

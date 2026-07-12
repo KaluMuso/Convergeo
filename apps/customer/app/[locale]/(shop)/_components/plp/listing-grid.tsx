@@ -31,6 +31,8 @@ type ListingGridProps = {
   locale: string;
   listings: CatalogListing[];
   labels: ListingGridLabels;
+  /** How many leading cards get priority image loading (LCP). Default keeps PLP behaviour. */
+  priorityCount?: number;
 };
 
 function formatDistance(meters: number | null): string | null {
@@ -43,7 +45,7 @@ function formatDistance(meters: number | null): string | null {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
-export function ListingGrid({ locale, listings, labels }: ListingGridProps) {
+export function ListingGrid({ locale, listings, labels, priorityCount = 2 }: ListingGridProps) {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
       {listings.map((listing, index) => {
@@ -80,7 +82,7 @@ export function ListingGrid({ locale, listings, labels }: ListingGridProps) {
                     alt={listing.title}
                     width={360}
                     ratio="4/3"
-                    priority={index < 2}
+                    priority={index < priorityCount}
                     sizes="(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw"
                     className="h-full w-full object-cover"
                   />

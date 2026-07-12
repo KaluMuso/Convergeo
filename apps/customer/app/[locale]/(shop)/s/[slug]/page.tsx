@@ -128,7 +128,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
   const quoteHref = `/${locale}/services/post-job?category=${encodeURIComponent(service.category)}`;
 
   return (
-    <article className="flex flex-col gap-6 pb-8">
+    <article className="flex flex-col gap-6 pb-8 lg:mx-auto lg:w-full lg:max-w-3xl">
       <header className="flex flex-col gap-3">
         {service.portfolio_images[0] ? (
           <div className="overflow-hidden rounded-lg border border-border">

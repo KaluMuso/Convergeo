@@ -398,7 +398,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const comparisonListings = toComparisonListings(comparison, product);
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6 motion-rise">
+    <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6 motion-rise lg:max-w-6xl">
       <JsonLdScript data={jsonLd} />
 
       <header className="flex flex-col gap-2">

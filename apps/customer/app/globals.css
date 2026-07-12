@@ -17,3 +17,12 @@ body {
     background-color var(--dur) var(--ease-std),
     color var(--dur) var(--ease-std);
 }
+
+/* UI-P4 desktop layer: card content density on lg+ per SELECTION.md §5
+   ("card padding 12–16 mobile / 16–20 desktop"). Consumed by the shared
+   ProductCard via var(--card-pad, var(--sp-3)); mobile keeps --sp-3. */
+@media (min-width: 64rem) {
+  :root {
+    --card-pad: var(--sp-4);
+  }
+}
