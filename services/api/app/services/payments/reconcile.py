@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
@@ -17,9 +18,12 @@ from app.services.payments.money import major_str_to_ngwee
 from app.services.payments.state import (
     SYSTEM_ACTOR_ID,
     PaymentStatus,
+    PaymentTransitionError,
     apply_payment_status,
     lenco_collection_status_to_payment_status,
 )
+
+logger = logging.getLogger(__name__)
 
 # Non-terminal payment states polled every ~30 min (closes lost-webhook gaps).
 NON_TERMINAL_POLL_STATUSES: tuple[str, ...] = (
@@ -359,37 +363,67 @@ async def poll_non_terminal_payments(
     errors = 0
 
     for payment in pending:
-        payment_id = str(payment["id"])
-        reference = str(payment["lenco_reference"])
-        current_status = PaymentStatus(str(payment["status"]))
-
+        payment_id = str(payment.get("id", ""))
+        # Per-payment isolation: one bad payment (illegal/unexpected transition or
+        # any error) is logged and skipped so the tick reconciles the rest of the
+        # batch instead of aborting on the first poison pill.
         try:
-            query_result: QueryStatusResult = await query_status(
-                QueryStatusRequest(reference=reference)
+            reference = str(payment["lenco_reference"])
+            current_status = PaymentStatus(str(payment["status"]))
+
+            try:
+                query_result: QueryStatusResult = await query_status(
+                    QueryStatusRequest(reference=reference)
+                )
+            except Exception:
+                logger.exception(
+                    "reconciliation poll: Lenco re-query failed for payment %s",
+                    payment_id,
+                )
+                errors += 1
+                continue
+
+            incoming = lenco_collection_status_to_payment_status(query_result.status)
+            if incoming is None:
+                unchanged += 1
+                continue
+
+            outcome = apply_payment_status(
+                service_client,
+                payment_id=payment_id,
+                incoming_status=incoming,
+                actor_id=SYSTEM_ACTOR_ID,
+                note="Reconciliation poller re-query",
             )
-        except Exception:
+            if outcome is None:
+                unchanged += 1
+            else:
+                updated += 1
+                if outcome.to_status == current_status:
+                    unchanged += 1
+                    updated -= 1
+        except PaymentTransitionError as exc:
+            # The state machine has no edge for the status Lenco reports from the
+            # payment's current status (e.g. an INITIATED row that never advanced
+            # to ussd_pushed now reporting success/failed). Not a valid guarded
+            # transition — surface it as a reconciliation anomaly for admin/alert
+            # and skip rather than raw-UPDATE around the guard.
+            logger.warning(
+                "reconciliation anomaly: illegal transition for payment %s "
+                "(from_status=%s event=%s) — skipping",
+                payment_id,
+                exc.details.get("from_status"),
+                exc.details.get("event"),
+            )
             errors += 1
             continue
-
-        incoming = lenco_collection_status_to_payment_status(query_result.status)
-        if incoming is None:
-            unchanged += 1
+        except Exception:
+            logger.exception(
+                "reconciliation poll: unexpected error for payment %s — skipping",
+                payment_id,
+            )
+            errors += 1
             continue
-
-        outcome = apply_payment_status(
-            service_client,
-            payment_id=payment_id,
-            incoming_status=incoming,
-            actor_id=SYSTEM_ACTOR_ID,
-            note="Reconciliation poller re-query",
-        )
-        if outcome is None:
-            unchanged += 1
-        else:
-            updated += 1
-            if outcome.to_status == current_status:
-                unchanged += 1
-                updated -= 1
 
     return PollResult(
         scanned=len(pending),
