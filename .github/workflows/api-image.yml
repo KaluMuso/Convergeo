@@ -37,6 +37,9 @@ jobs:
         id: img
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/convergeo-api" >> "$GITHUB_OUTPUT"
 
+      - name: Set up QEMU (arm64 emulation)
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -45,7 +48,8 @@ jobs:
         with:
           context: .
           file: infra/api.Dockerfile
-          platforms: linux/amd64
+          # amd64 for the x86 micro VM; arm64 for a potential A1.Flex free box.
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ${{ steps.img.outputs.name }}:latest
