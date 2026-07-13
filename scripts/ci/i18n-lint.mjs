@@ -60,10 +60,9 @@ const IGNORED_SEGMENTS = [
 // formatK-bypass checks on them, and still catches NEW missing keys everywhere
 // else + in the seeded fixture. Keep this list SHRINKING, never growing.
 const DEFERRED_MISSING_KEY_FILES = new Set([
-  // M04-P06 DPA page references an account.privacy.export.* / .delete.* key
-  // subtree never added to account.json (legally-adjacent copy, account/DPA
-  // namespace owner's fix). Tracked in docs/plan/i18n-audit.md.
-  "apps/customer/app/[locale]/account/privacy/page.tsx",
+  // (empty — the M04-P06 account/privacy DPA debt was resolved by adding the
+  // account.privacy.export.* / .delete.* subtrees to account.json; see
+  // docs/plan/i18n-audit.md.)
 ]);
 
 // User-facing attributes whose hardcoded string/template values are violations.

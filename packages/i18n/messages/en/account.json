@@ -72,6 +72,7 @@
   "privacy": {
     "title": "Data & privacy",
     "description": "Export or delete your personal data under the Zambia Data Protection Act.",
+    "backToAccount": "Back to account",
     "exportCta": "Export my data",
     "exportDescription": "Download a JSON bundle of your profile, addresses, orders, and reviews.",
     "exportConfirmTitle": "Request data export?",
@@ -82,7 +83,36 @@
     "deleteConfirmBody": "This cannot be undone. Type DELETE MY DATA to confirm, then verify with OTP.",
     "deletePhraseLabel": "Confirmation phrase",
     "deletePhrasePlaceholder": "DELETE MY DATA",
-    "retentionNote": "Orders, payments, and tax records are retained in anonymised form for at least seven years as required by Zambian law. Ledger entries are never deleted."
+    "retentionNote": "Orders, payments, and tax records are retained in anonymised form for at least seven years as required by Zambian law. Ledger entries are never deleted.",
+    "export": {
+      "title": "Export my data",
+      "description": "Download a copy of the personal data Vergeo5 holds about you — your profile, addresses, orders, tickets, and reviews — as a JSON file, as provided for under the Zambia Data Protection Act.",
+      "button": "Request data export",
+      "loading": "Preparing your export…",
+      "success": "Your export is ready — download it now. The link expires after a short time.",
+      "error": "We could not prepare your export. Please try again.",
+      "policyLink": "Read the Vergeo5 privacy policy"
+    },
+    "delete": {
+      "title": "Delete my account",
+      "description": "Permanently close your Vergeo5 account. Your sign-in is removed and your personal details are anonymised. To protect your account, deletion requires a typed confirmation phrase and a one-time code sent to your verified phone.",
+      "warning": "This cannot be undone. Your profile, saved addresses, and preferences will be permanently removed, and you will lose access to your order history. Orders, payments, and tax records are retained in anonymised form as required by Zambian law.",
+      "confirmPhraseLabel": "To confirm, type DELETE MY ACCOUNT",
+      "confirmPhraseHint": "DELETE MY ACCOUNT",
+      "otpLabel": "Verify with a one-time code",
+      "sendOtp": "Send code",
+      "otpResend": "Resend code",
+      "otpSending": "Sending code…",
+      "otpAria": "One-time code",
+      "otpDigit": "Digit {position} of {total}",
+      "phoneRequired": "Your account has no verified phone number, so we cannot send a confirmation code. Please contact support to delete your account.",
+      "otpSendFailed": "We could not send the code to your phone. Please try again.",
+      "loading": "Deleting your account…",
+      "submit": "Delete my account permanently",
+      "success": "Account deleted",
+      "returnToLogin": "Your account has been deleted. Return to sign in",
+      "error": "We could not delete your account. Check the code and try again."
+    }
   },
   "common": {
     "loading": "Loading…",
