@@ -98,7 +98,22 @@ image-lint, and Lighthouse steps are unchanged.
 After the fix the sweep is **clean** (0 hardcoded strings, 0 missing keys, 0
 formatK bypasses across `apps/`, `services/`, `packages/`).
 
-### Deferred (documented)
+### Deferred (documented) — since RESOLVED
+
+> **Resolved (2026-07-13, `fix/account-privacy-i18n-keys`):** the missing
+> `account.privacy.export.*` / `account.privacy.delete.*` subtrees (plus
+> `account.privacy.backToAccount`) — 26 keys in total — were added to
+> `packages/i18n/messages/en/account.json` with DPA-appropriate EN copy
+> (bem/nya/fr fall back to EN by design). The page itself is unchanged. The
+> file was removed from `DEFERRED_MISSING_KEY_FILES` in
+> `scripts/ci/i18n-lint.mjs` (the allowlist is now empty), so missing-key
+> detection has full teeth on the privacy page again, and a render test
+> (`apps/customer/app/[locale]/account/privacy/page.test.tsx`) mounts the page
+> with the real EN messages and throws on any `MISSING_MESSAGE`. The legacy
+> flat `privacy.*` keys (`exportCta`, `deleteCta`, `deletePhrasePlaceholder`:
+> "DELETE MY DATA", …) are retained — `account-components.test.tsx` asserts
+> them — but note they are dead copy: the page's confirmation phrase is
+> "DELETE MY ACCOUNT". The table below is kept for history.
 
 | File                                                  | Issue                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  | Why deferred                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -110,11 +125,12 @@ checks still run on the deferred file, and missing-key detection still has full
 teeth everywhere else + against the seeded fixture. The list must **shrink,
 never grow**.
 
-**Follow-up for the account/DPA owner:** reconcile
+**Follow-up for the account/DPA owner:** ~~reconcile
 `apps/customer/app/[locale]/account/privacy/page.tsx` with `account.json` — add
 the `privacy.export.*` / `privacy.delete.*` blocks (or re-scope the page to the
 existing flat keys + `account.common.backToAccount` / `account.common.loading`),
-then remove the file from `DEFERRED_MISSING_KEY_FILES`.
+then remove the file from `DEFERRED_MISSING_KEY_FILES`.~~ **Done** — see the
+resolution note above.
 
 ## Scope notes
 
