@@ -12,6 +12,7 @@ from app.core.auth import require_role
 from app.deps import get_supabase_client
 from app.services.business.access import ServiceRoleClient
 from app.services.business.store import load_by_id, set_decision
+from app.services.notifications import enqueue_outbox_row
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
@@ -35,6 +36,42 @@ class BusinessBuyerOut(BaseModel):
     reviewer_notes: str | None = None
     verified_at: str | None = None
     created_at: str | None = None
+    # Set only on verify/reject responses; always False on list rows.
+    notification_enqueued: bool = False
+
+
+def _enqueue_business_notification(
+    service: ServiceRoleClient,
+    *,
+    buyer: dict[str, Any],
+    template: str,
+    reason: str | None = None,
+) -> bool:
+    """Queue a buyer-facing decision notification (mirrors admin KYC decisions).
+
+    Delivery rides the shared notification outbox + dispatcher (provider bring-up
+    is env-gated); ``recipient_id`` lets the dispatcher resolve the buyer's contact.
+    """
+    user_id = str(buyer.get("user_id") or "")
+    if not user_id:
+        return False
+    payload: dict[str, Any] = {
+        "recipient_id": user_id,
+        "user_id": user_id,
+        "business_buyer_id": str(buyer.get("id") or ""),
+        "legal_name": str(buyer.get("legal_name") or ""),
+    }
+    if reason is not None:
+        payload["reason"] = reason
+    row = enqueue_outbox_row(
+        service.client,
+        event_type=template,
+        entity_id=str(buyer.get("id") or ""),
+        channel="email",
+        template=template,
+        payload=payload,
+    )
+    return row is not None
 
 
 class VerifyBusinessRequest(BaseModel):
@@ -97,14 +134,19 @@ async def verify_business_buyer(
         verified_at=datetime.now(UTC).isoformat(),
         reviewer_notes=body.reviewer_notes,
     )
+    notified = _enqueue_business_notification(
+        service, buyer=after, template="business_verified"
+    )
     recorder.record(
         action="business.verify",
         entity_type="business_buyer",
         entity_id=buyer_id,
         before={"status": before.get("status")},
-        after={"status": "verified"},
+        after={"status": "verified", "notification_enqueued": notified},
     )
-    return _serialize(after)
+    result = _serialize(after)
+    result.notification_enqueued = notified
+    return result
 
 
 @router.post("/{buyer_id}/reject", response_model=BusinessBuyerOut)
@@ -122,11 +164,20 @@ async def reject_business_buyer(
         verified_at=None,
         reviewer_notes=body.reviewer_notes,
     )
+    notified = _enqueue_business_notification(
+        service, buyer=after, template="business_rejected", reason=body.reviewer_notes
+    )
     recorder.record(
         action="business.reject",
         entity_type="business_buyer",
         entity_id=buyer_id,
         before={"status": before.get("status")},
-        after={"status": "rejected", "reviewer_notes": body.reviewer_notes},
+        after={
+            "status": "rejected",
+            "reviewer_notes": body.reviewer_notes,
+            "notification_enqueued": notified,
+        },
     )
-    return _serialize(after)
+    result = _serialize(after)
+    result.notification_enqueued = notified
+    return result

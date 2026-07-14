@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 from app.errors import AppError
 from app.main import create_app
+from app.routers.admin_business import _enqueue_business_notification
 from app.routers.catalog import list_wholesale_supplies
 from app.services.business.access import (
     BusinessAccess,
@@ -242,6 +243,37 @@ class TestWholesaleSupplies:
         assert item.moq == 10
         assert item.price_tiers == [{"min_qty": 10, "price_ngwee": 45_000}]
         assert item.image_public_id == "img1"
+
+
+class TestAdminBusinessNotification:
+    def test_verify_enqueues_email_to_buyer(self) -> None:
+        store: dict[str, list[dict[str, Any]]] = {"notification_outbox": []}
+        buyer = {"id": "b1", "user_id": USER, "legal_name": "Acme Ltd"}
+        enqueued = _enqueue_business_notification(
+            _service(store), buyer=buyer, template="business_verified"
+        )
+        assert enqueued is True
+        rows = store["notification_outbox"]
+        assert len(rows) == 1
+        assert rows[0]["template"] == "business_verified"
+        assert rows[0]["channel"] == "email"
+        assert rows[0]["payload"]["recipient_id"] == USER
+
+    def test_reject_includes_reason(self) -> None:
+        store: dict[str, list[dict[str, Any]]] = {"notification_outbox": []}
+        buyer = {"id": "b1", "user_id": USER, "legal_name": "Acme"}
+        _enqueue_business_notification(
+            _service(store), buyer=buyer, template="business_rejected", reason="Invalid PACRA no."
+        )
+        assert store["notification_outbox"][0]["payload"]["reason"] == "Invalid PACRA no."
+
+    def test_missing_user_id_skips(self) -> None:
+        store: dict[str, list[dict[str, Any]]] = {"notification_outbox": []}
+        enqueued = _enqueue_business_notification(
+            _service(store), buyer={"id": "b1", "user_id": ""}, template="business_verified"
+        )
+        assert enqueued is False
+        assert store["notification_outbox"] == []
 
 
 class TestWholesaleEndpointGating:

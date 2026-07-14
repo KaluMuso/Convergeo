@@ -71,6 +71,30 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             ),
         },
     },
+    "business_verified": {
+        "en": {
+            "subject_key": "notifications.email.business.verified.subject",
+            "subject": "Your Vergeo5 business account is verified",
+            "body_key": "notifications.email.business.verified.body",
+            "body": (
+                "<p>Good news — your business account is verified.</p>"
+                "<p>Business mode is now on: you can browse and buy wholesale "
+                "supplies with tier pricing across Vergeo5.</p>"
+            ),
+        },
+    },
+    "business_rejected": {
+        "en": {
+            "subject_key": "notifications.email.business.rejected.subject",
+            "subject": "Your Vergeo5 business verification needs attention",
+            "body_key": "notifications.email.business.rejected.body",
+            "body": (
+                "<p>We could not verify your business account.</p>"
+                "<p><strong>Reason:</strong> {reason}</p>"
+                "<p>Please update your details and resubmit from your account.</p>"
+            ),
+        },
+    },
 }
 
 
