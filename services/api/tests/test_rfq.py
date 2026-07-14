@@ -11,6 +11,10 @@ import pytest
 from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.main import create_app
+from app.services.notifications.templates.whatsapp import (
+    WHATSAPP_TEMPLATES,
+    render_whatsapp_template,
+)
 from app.services.rfq import broadcast as broadcast_service
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -360,6 +364,34 @@ class TestBroadcastJob:
         assert result.no_match is False
         assert result.matched_count == 1
         assert len(fake.tables["notification_outbox"].rows) == 1
+        row = fake.tables["notification_outbox"].rows[0]
+        # Regression guard: previously template=None (the WhatsApp adapter permanently
+        # rejects templateless messages) and the payload used recipient_user_id, so the
+        # dispatcher never resolved a `to`/locale — providers were never notified.
+        assert row["template"] == broadcast_service.RFQ_MATCH_TEMPLATE
+        assert row["channel"] == "whatsapp"
+        assert row["payload"]["recipient_id"] == VENDOR_OWNER_A
+        assert "recipient_user_id" not in row["payload"]
+
+    def test_rfq_template_registered_and_renders(self) -> None:
+        # The dispatcher renders each outbox row through the WhatsApp template registry;
+        # an unregistered template raises TemplateRenderError. Prove rfq_job_broadcast is
+        # registered and its variable mapper produces the expected body parameters (the
+        # `to`/locale are injected by the dispatcher from recipient_id).
+        assert broadcast_service.RFQ_MATCH_TEMPLATE in WHATSAPP_TEMPLATES
+        rendered = render_whatsapp_template(
+            broadcast_service.RFQ_MATCH_TEMPLATE,
+            {
+                "to": "+260970000000",
+                "locale": "en",
+                "category": "home_services",
+                "service_area": "Lusaka",
+                "description_preview": "Fix kitchen sink",
+            },
+        )
+        assert rendered.meta_template_name == "rfq_job_broadcast"
+        assert rendered.to_e164 == "+260970000000"
+        assert rendered.body_parameters == ("home_services", "Lusaka", "Fix kitchen sink")
 
 
 class TestJobsAuthz:

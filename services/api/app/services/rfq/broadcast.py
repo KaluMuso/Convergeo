@@ -10,6 +10,7 @@ from app.services.notifications.dedupe import enqueue_outbox_row
 DEFAULT_BROADCAST_CAP = 8
 CONFIG_KEY_BROADCAST_CAP = "rfq_broadcast_cap"
 RFQ_MATCH_EVENT = "rfq_job_broadcast"
+RFQ_MATCH_TEMPLATE = "rfq_job_broadcast"
 RFQ_NO_MATCH_FLAG_REASON = "rfq_no_matching_providers"
 SYSTEM_REPORTER_ID = "00000000-0000-0000-0000-000000000001"
 
@@ -335,14 +336,16 @@ def broadcast_job(
             "category": category,
             "service_area": service_area,
             "description_preview": description[:160],
-            "recipient_user_id": provider.owner_user_id,
+            # The dispatcher resolves the provider's phone/`to` and locale from this
+            # canonical key (payload['recipient_id']) before rendering the template.
+            "recipient_id": provider.owner_user_id,
         }
         row = enqueue_outbox_row(
             client,
             event_type=RFQ_MATCH_EVENT,
             entity_id=f"{job_id}:{provider.vendor_id}",
             channel="whatsapp",
-            template=None,
+            template=RFQ_MATCH_TEMPLATE,
             payload=payload,
         )
         if row is not None:

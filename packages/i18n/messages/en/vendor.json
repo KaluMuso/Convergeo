@@ -2,7 +2,7 @@
   "analytics": {
     "meta": {
       "title": "Analytics — Vergeo5 Vendor",
-      "description": "Track your sales, orders, and views over the last 7 or 30 days, see your top listings, and gauge conversion."
+      "description": "Track your sales, orders, and cart activity over the last 7 or 30 days, see your top listings, and gauge cart-to-order conversion."
     },
     "eyebrow": "Your storefront",
     "title": "Analytics",
@@ -16,12 +16,12 @@
     "cards": {
       "sales": "Sales",
       "orders": "Orders",
-      "views": "Views"
+      "views": "Cart activity"
     },
     "sparkline": {
       "sales": "Daily sales trend",
       "orders": "Daily orders trend",
-      "views": "Daily views trend"
+      "views": "Daily cart activity trend"
     },
     "top": {
       "heading": "Top listings",
@@ -31,8 +31,8 @@
     },
     "conversion": {
       "heading": "Conversion",
-      "summary": "{orders, plural, one {# order} other {# orders}} from {views, plural, one {# view} other {# views}}",
-      "pct": "{pct}% conversion",
+      "summary": "{orders, plural, one {# order} other {# orders}} from {views, plural, one {# cart action} other {# cart actions}}",
+      "pct": "{pct}% cart-to-order",
       "empty": "Not enough activity yet to estimate conversion."
     },
     "errors": {
