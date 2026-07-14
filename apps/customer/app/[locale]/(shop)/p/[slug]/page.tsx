@@ -17,6 +17,7 @@ import {
   type ProductListing,
 } from "../../_components/pdp/comparison";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
+import { ReviewsSection } from "./_components/reviews-section";
 
 import type { ListingCondition } from "../../_components/pdp/condition-badge";
 import type { Metadata } from "next";
@@ -471,6 +472,27 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         rows={specRows}
         heading={t("pdp.specs.heading")}
         emptyLabel={t("pdp.specs.empty")}
+      />
+
+      <ReviewsSection
+        locale={locale}
+        productId={product.id}
+        cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
+        labels={{
+          heading: t("reviews.heading"),
+          empty: t("reviews.empty"),
+          writeCta: t("reviews.writeCta"),
+          starsAria: t("reviews.starsAria"),
+          photoAlt: t("reviews.photoAlt"),
+          vendorReply: t("reviews.vendorReply"),
+          galleryPrevious: t("reviews.galleryPrevious"),
+          galleryNext: t("reviews.galleryNext"),
+          galleryIndicator: t("reviews.galleryIndicator"),
+          loadError: t("reviews.loadError"),
+          loading: t("reviews.loading"),
+          starFilled: t("reviews.starFilled"),
+          starEmpty: t("reviews.starEmpty"),
+        }}
       />
     </main>
   );

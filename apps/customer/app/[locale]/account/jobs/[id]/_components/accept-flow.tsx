@@ -59,10 +59,7 @@ export function AcceptFlow({
   );
   const balanceNgwee = totalNgwee - depositNgwee;
 
-  const getToken = useCallback(
-    () => session?.access_token ?? null,
-    [session?.access_token],
-  );
+  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
 
   const handleAccept = useCallback(async () => {
     setSubmitting(true);
@@ -93,9 +90,7 @@ export function AcceptFlow({
     <section className="space-y-4 rounded border border-border bg-surface p-4">
       <header className="space-y-1">
         <h3 className="font-display text-h3 text-display-ink">{t("title")}</h3>
-        <p className="text-sm text-text-2">
-          {t("intro", { pct: depositPct, vendor: vendorName })}
-        </p>
+        <p className="text-sm text-text-2">{t("intro", { pct: depositPct, vendor: vendorName })}</p>
       </header>
 
       <dl className="space-y-2 text-sm">
@@ -115,7 +110,7 @@ export function AcceptFlow({
         </div>
       </dl>
 
-      <p className="rounded bg-surface-2 p-3 text-xs text-text-2">{t("escrowNote")}</p>
+      <p className="rounded bg-bg-2 p-3 text-xs text-text-2">{t("escrowNote")}</p>
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
 

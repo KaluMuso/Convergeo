@@ -16,7 +16,10 @@ export type TopNavProps = {
   cartCount?: number;
   cartHref?: string;
   cartLabel: ReactNode;
+  /** Id of the main-content landmark this nav's skip link jumps to. */
   skipLinkTargetId: string;
+  /** Localised "Skip to content" label. When provided, a keyboard-visible skip link renders first. */
+  skipLinkLabel?: string;
   navAriaLabel: string;
   LinkComponent?: ComponentType<TopNavLinkProps>;
   className?: string;
@@ -43,6 +46,7 @@ export function TopNav({
   cartHref = "#",
   cartLabel,
   skipLinkTargetId,
+  skipLinkLabel,
   navAriaLabel,
   LinkComponent = "a" as unknown as ComponentType<TopNavLinkProps>,
   className,
@@ -72,7 +76,6 @@ export function TopNav({
 
   return (
     <header
-      id={skipLinkTargetId}
       className={mergeClasses(
         "sticky top-0 z-50 border-b border-border bg-bg",
         scrolled && "top-nav--scrolled",
@@ -83,6 +86,14 @@ export function TopNav({
         transition: "box-shadow var(--dur) var(--ease-std)",
       }}
     >
+      {skipLinkLabel ? (
+        <a
+          href={`#${skipLinkTargetId}`}
+          className="sr-only rounded bg-primary text-sm font-medium text-surface focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:inline-flex focus:min-h-11 focus:items-center focus:px-4 focus:shadow-focusRing"
+        >
+          {skipLinkLabel}
+        </a>
+      ) : null}
       <nav
         aria-label={navAriaLabel}
         className={mergeClasses(
