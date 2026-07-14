@@ -210,6 +210,39 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: select_only(),
         Persona.ADMIN: select_only(),
     },
+    "business_buyers": {
+        # 0035 buyer-side B2B identity: owner select/insert/update + admin-all, no
+        # owner DELETE policy, no anon grant. Same owner-scoped shape as `addresses`:
+        # non-owners SELECT own zero rows (permit), DEFAULT VALUES insert trips the
+        # owner WITH CHECK / NOT NULL (deny), update/delete are RLS-filtered no-ops
+        # (permit); admin passes admin-all then hits NOT NULL on insert (permit).
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.ADMIN: all_permit(),
+    },
     "cart_items": {
         # 0012 grants anon full DML for guest carts, scoped by the
         # `request.cart_guest_token` GUC. The matrix harness runs anon with no

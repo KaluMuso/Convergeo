@@ -19,6 +19,12 @@ from pydantic import BaseModel, Field, field_validator
 
 router = APIRouter(prefix="/kyc", tags=["kyc"])
 
+# Business archetypes persisted onto the vendor (must match vendors_archetype_check
+# in migration 0034 and BUSINESS_CATEGORIES in the vendor onboarding UI).
+VENDOR_ARCHETYPES = frozenset(
+    {"electronics", "home", "fashion_beauty", "services", "groceries", "other"}
+)
+
 
 class KycSubmitRequest(BaseModel):
     tier: Literal[1, 2, 3]
@@ -26,6 +32,7 @@ class KycSubmitRequest(BaseModel):
     momo_phone: str = Field(min_length=8, max_length=20)
     momo_operator: MomoOperator | None = None
     legal_name: str = Field(min_length=2, max_length=200)
+    archetype: str | None = Field(default=None, max_length=40)
 
     @field_validator("doc_storage_paths")
     @classmethod
@@ -33,6 +40,18 @@ class KycSubmitRequest(BaseModel):
         cleaned = [path.strip() for path in paths if path.strip()]
         if not cleaned:
             raise ValueError("At least one document path is required")
+        return cleaned
+
+    @field_validator("archetype")
+    @classmethod
+    def validate_archetype(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+        if cleaned not in VENDOR_ARCHETYPES:
+            raise ValueError("Unsupported vendor archetype")
         return cleaned
 
 
@@ -55,6 +74,8 @@ class KycStatusResponse(BaseModel):
     doc_storage_paths: list[str]
     momo_name_match: MomoNameMatchResponse | None
     reviewer_notes: str | None
+    archetype: str | None = None
+    business_name: str | None = None
 
 
 class KycSubmitResponse(BaseModel):
@@ -69,7 +90,7 @@ def _load_vendor_for_owner(
 ) -> dict[str, Any]:
     response = (
         service_client.client.table("vendors")
-        .select("id, owner_user_id, status, kyc_tier")
+        .select("id, owner_user_id, status, kyc_tier, archetype, display_name")
         .eq("owner_user_id", owner_user_id)
         .maybe_single()
         .execute()
@@ -106,6 +127,22 @@ async def require_vendor_owner(
     return _load_vendor_for_owner(service_client, current_user.id)
 
 
+def _persist_vendor_archetype(
+    service_client: ServiceRoleClient,
+    vendor_id: str,
+    archetype: str | None,
+) -> None:
+    """Persist the onboarding-selected business archetype onto the vendor row.
+
+    Fixes the audit gap where the archetype lived only in browser localStorage.
+    """
+    if not archetype:
+        return
+    service_client.client.table("vendors").update({"archetype": archetype}).eq(
+        "id", vendor_id
+    ).execute()
+
+
 def _serialize_momo_match(payload: dict[str, Any] | None) -> MomoNameMatchResponse | None:
     if payload is None:
         return None
@@ -129,6 +166,8 @@ def _build_status_response(
     kyc_record: KycRecordSnapshot | None,
 ) -> KycStatusResponse:
     momo = _serialize_momo_match(kyc_record.momo_name_match if kyc_record else None)
+    archetype = vendor.get("archetype")
+    business_name = vendor.get("display_name")
     return KycStatusResponse(
         application_status=application_status,
         vendor_status=str(vendor.get("status", "draft")),
@@ -139,6 +178,10 @@ def _build_status_response(
         doc_storage_paths=kyc_record.doc_storage_paths if kyc_record else [],
         momo_name_match=momo,
         reviewer_notes=kyc_record.reviewer_notes if kyc_record else None,
+        archetype=str(archetype) if isinstance(archetype, str) and archetype else None,
+        business_name=(
+            str(business_name) if isinstance(business_name, str) and business_name else None
+        ),
     )
 
 
@@ -172,6 +215,7 @@ async def submit_kyc(
         momo_name_match=momo_result.to_json(),
         service_client=service_client,
     )
+    _persist_vendor_archetype(service_client, str(vendor["id"]), body.archetype)
     kyc_record_id = str(result["kyc_record"]["id"])
     return KycSubmitResponse(
         application_status=KycApplicationStatus.SUBMITTED,
@@ -220,6 +264,7 @@ async def resubmit_kyc(
         momo_name_match=momo_result.to_json(),
         service_client=service_client,
     )
+    _persist_vendor_archetype(service_client, str(vendor["id"]), body.archetype)
     return KycSubmitResponse(
         application_status=KycApplicationStatus.SUBMITTED,
         kyc_record_id=str(result["kyc_record"]["id"]),

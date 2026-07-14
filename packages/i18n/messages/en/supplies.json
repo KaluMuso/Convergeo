@@ -37,5 +37,16 @@
   },
   "preview": {
     "line": "{qty} × {unitPrice} = {total}"
+  },
+  "gate": {
+    "title": "Business mode required",
+    "body": "Wholesale supplies with tier pricing are reserved for verified businesses. Enable business mode to browse and buy in bulk.",
+    "signInBody": "Sign in with a verified business account to view wholesale supplies.",
+    "pendingTitle": "Verification in review",
+    "pendingBody": "We're reviewing your business details. You'll get wholesale access as soon as you're verified.",
+    "rejectedTitle": "Business not verified",
+    "rejectedBody": "We couldn't verify your business. Update your details and resubmit to unlock wholesale.",
+    "apply": "Enable business mode",
+    "signIn": "Sign in"
   }
 }

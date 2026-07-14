@@ -100,7 +100,9 @@ class TestMoq:
 
     def test_validate_item_qty_for_listing_raises_on_moq(self) -> None:
         with pytest.raises(AppError) as exc_info:
-            validate_item_qty_for_listing(listing=_wholesale_listing(), qty=5)
+            validate_item_qty_for_listing(
+                listing=_wholesale_listing(), qty=5, business_eligible=True
+            )
         assert exc_info.value.code == "cart.moq_violation"
 
 
@@ -170,6 +172,7 @@ class TestMergeMatrix:
                 }
             ],
             listings_by_id={LISTING_WHOLESALE: listing},
+            business_eligible=True,
         )
         assert len(merged) == 1
         assert merged[0].qty == 50
@@ -195,6 +198,7 @@ class TestMergeMatrix:
                 }
             ],
             listings_by_id={LISTING_WHOLESALE: listing},
+            business_eligible=True,
         )
         assert merged == []
         assert len(conflicts) == 1
@@ -219,6 +223,56 @@ class TestMergeMatrix:
         assert len(merged) == 1
         assert merged[0].unit_price_ngwee == 12_000
         assert any(c.code == "cart.price_changed" for c in conflicts)
+
+
+class TestWholesaleBusinessGating:
+    """Wholesale pricing/MOQ must be gated on verified-business eligibility, not the
+    listing alone — a consumer never gets B2B pricing (strategy alignment fix)."""
+
+    def test_consumer_forced_to_retail_no_moq(self) -> None:
+        # qty below the listing MOQ (10) must NOT raise for a non-business buyer,
+        # and the price must be the retail base price (not a wholesale tier).
+        unit_price, wholesale = validate_item_qty_for_listing(
+            listing=_wholesale_listing(), qty=5, business_eligible=False
+        )
+        assert wholesale is False
+        assert unit_price == 50_000
+
+    def test_consumer_bulk_qty_still_retail(self) -> None:
+        # Even at a qty that would unlock a wholesale tier, a consumer pays base.
+        unit_price, wholesale = validate_item_qty_for_listing(
+            listing=_wholesale_listing(), qty=60, business_eligible=False
+        )
+        assert wholesale is False
+        assert unit_price == 50_000
+
+    def test_business_buyer_gets_wholesale_tier(self) -> None:
+        unit_price, wholesale = validate_item_qty_for_listing(
+            listing=_wholesale_listing(), qty=60, business_eligible=True
+        )
+        assert wholesale is True
+        assert unit_price == 40_000
+
+    def test_merge_consumer_forces_retail_ignoring_stored_flag(self) -> None:
+        # A guest line claims wholesale=True + a wholesale price, but a non-business
+        # merge must re-derive to retail (no MOQ conflict, base price).
+        merged, conflicts = merge_cart_items(
+            user_items=[],
+            guest_items=[
+                {
+                    "listing_id": LISTING_WHOLESALE,
+                    "qty": 3,
+                    "unit_price_ngwee": 45_000,
+                    "wholesale": True,
+                }
+            ],
+            listings_by_id={LISTING_WHOLESALE: _wholesale_listing()},
+            business_eligible=False,
+        )
+        assert conflicts == []
+        assert len(merged) == 1
+        assert merged[0].wholesale is False
+        assert merged[0].unit_price_ngwee == 50_000
 
 
 class TestGroupingAndTotals:
