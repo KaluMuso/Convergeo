@@ -13,8 +13,11 @@ from unittest.mock import patch
 
 import pytest
 from app.services.escrow.event_release import (
+    FULL_RELEASE_DELAY_HOURS,
     PHASE1_LEAD_DAYS,
+    PHASE2_DELAY_DAYS,
     PHASED_THRESHOLD_DAYS,
+    _EventOrderContext,
     determine_branch,
     evaluate_event_release,
     full_release_key,
@@ -720,3 +723,116 @@ class TestOrganiserStatsAuthz:
                 "blocked_cancelled": 0,
                 "next_cursor": None,
             }
+
+
+# ---------------------------------------------------------------------------
+# End-anchored release timing (0034 ends_at) — DB-free unit tests.
+#
+# These patch the SQL-backed context loader so they exercise the pure timing
+# decision without a Postgres instance, and prove the release now anchors on the
+# event's END rather than its START.
+# ---------------------------------------------------------------------------
+
+_EVR = "app.services.escrow.event_release"
+
+
+def _synthetic_context(
+    *,
+    starts_at: datetime,
+    ends_at: datetime | None,
+    lead_days: int,
+    order_id: str = "ord-unit-release",
+    event_status: str = "published",
+) -> _EventOrderContext:
+    return _EventOrderContext(
+        order_id=order_id,
+        vendor_id=VENDOR_A,
+        checkout_group_id="cg-unit-release",
+        gross_ngwee=UNIT_PRICE_NGWEE,
+        commission_snapshot=_commission_snapshot(ticket_type_id="tt-unit", instance_id="inst-unit"),
+        purchased_at=starts_at - timedelta(days=lead_days),
+        instance_id="inst-unit",
+        event_id="evt-unit",
+        starts_at=starts_at,
+        ends_at=ends_at,
+        event_status=event_status,
+        is_paid=True,
+        has_open_dispute=False,
+    )
+
+
+def test_full_release_anchors_on_ends_at_not_starts_at() -> None:
+    # Short-lead (<=14d) multi-day event -> single full release, now end-anchored.
+    starts_at = datetime(2026, 10, 1, 8, 0, tzinfo=UTC)
+    ends_at = datetime(2026, 10, 3, 16, 0, tzinfo=UTC)  # ~2.3 days long
+    ctx = _synthetic_context(starts_at=starts_at, ends_at=ends_at, lead_days=3)
+
+    with (
+        patch(f"{_EVR}._load_event_order_context", return_value=ctx),
+        patch(f"{_EVR}._posted_release_keys", return_value=set()),
+        patch(f"{_EVR}._post_event_release", return_value="txn-unit") as post,
+    ):
+        # starts_at + 24h was the OLD due time; the event has not ended yet.
+        early = evaluate_event_release(
+            _SERVICE, ctx.order_id, now=starts_at + timedelta(hours=FULL_RELEASE_DELAY_HOURS)
+        )
+        assert early.outcome == "not_eligible"
+        assert early.reason == "timers_not_met"
+        post.assert_not_called()
+
+        # 24h after the real END -> release fires.
+        due = evaluate_event_release(
+            _SERVICE, ctx.order_id, now=ends_at + timedelta(hours=FULL_RELEASE_DELAY_HOURS)
+        )
+        assert due.outcome == "released"
+        assert due.branch == "full"
+        assert due.phases_posted == ("full",)
+        post.assert_called_once()
+
+
+def test_legacy_null_ends_at_keeps_starts_at_anchor() -> None:
+    # No ends_at (pre-0034 row) -> falls back to starts_at, unchanged legacy timing.
+    starts_at = datetime(2026, 10, 1, 8, 0, tzinfo=UTC)
+    ctx = _synthetic_context(starts_at=starts_at, ends_at=None, lead_days=3)
+
+    with (
+        patch(f"{_EVR}._load_event_order_context", return_value=ctx),
+        patch(f"{_EVR}._posted_release_keys", return_value=set()),
+        patch(f"{_EVR}._post_event_release", return_value="txn-unit") as post,
+    ):
+        due = evaluate_event_release(
+            _SERVICE, ctx.order_id, now=starts_at + timedelta(hours=FULL_RELEASE_DELAY_HOURS)
+        )
+        assert due.outcome == "released"
+        assert due.phases_posted == ("full",)
+        post.assert_called_once()
+
+
+def test_phased_final_release_anchors_on_ends_at() -> None:
+    # Long-lead (>14d) multi-day event -> phase 2 (the +1d tail) is end-anchored.
+    starts_at = datetime(2026, 11, 1, 8, 0, tzinfo=UTC)
+    ends_at = datetime(2026, 11, 4, 16, 0, tzinfo=UTC)
+    ctx = _synthetic_context(starts_at=starts_at, ends_at=ends_at, lead_days=30)
+    # Pretend phase 1 already posted so we isolate the phase-2 decision.
+    posted = {phase1_release_key(ctx.order_id)}
+
+    with (
+        patch(f"{_EVR}._load_event_order_context", return_value=ctx),
+        patch(f"{_EVR}._posted_release_keys", return_value=posted),
+        patch(f"{_EVR}._post_event_release", return_value="txn-unit") as post,
+    ):
+        # starts_at + 1d was the OLD phase-2 due time; event still running.
+        early = evaluate_event_release(
+            _SERVICE, ctx.order_id, now=starts_at + timedelta(days=PHASE2_DELAY_DAYS)
+        )
+        assert early.outcome == "not_eligible"
+        post.assert_not_called()
+
+        # 1 day after the real END -> phase 2 fires.
+        due = evaluate_event_release(
+            _SERVICE, ctx.order_id, now=ends_at + timedelta(days=PHASE2_DELAY_DAYS)
+        )
+        assert due.outcome == "released"
+        assert due.branch == "phased"
+        assert due.phases_posted == ("phase2",)
+        post.assert_called_once()

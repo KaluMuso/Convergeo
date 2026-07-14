@@ -4,9 +4,13 @@ Ticket orders never reach the shipped/delivered/completed statuses the order-del
 release engine (``release.py``) keys off of, so the order engine never auto-releases
 them. This module is the event-date-anchored release path for ticket orders only.
 
-Timing rules (D5), anchored on the purchased ticket's ``event_instances.starts_at``:
-  - Event <= 14 days out at purchase time -> single full release at starts_at + 24h.
-  - Event > 14 days out at purchase time -> 50% at starts_at - 7d, 50% at starts_at + 1d.
+Timing rules (D5). The <=14d / >14d branch is decided by the lead time from
+purchase to ``event_instances.starts_at``; the release *due* times anchor on the
+instance's END — ``ends_at``, falling back to ``starts_at`` for legacy rows with
+no end time (see ``instance_settlement_end``) — so a multi-day event's funds no
+longer release mid-event:
+  - Event <= 14 days out at purchase time -> single full release at end + 24h.
+  - Event > 14 days out at purchase time -> 50% at starts_at - 7d, 50% at end + 1d.
   - Cancelled event -> block all further releases + flag for admin-executed mass refund.
   - Open dispute (same OPEN_DISPUTE_STATUSES as the order engine) -> hold.
 
@@ -25,6 +29,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, Protocol
 
 from app.services.escrow.release import OPEN_DISPUTE_STATUSES, compute_net_ngwee
+from app.services.events.timing import instance_settlement_end
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.orders.audit import run_sql_script, sql_literal
@@ -80,6 +85,7 @@ class _EventOrderContext:
     instance_id: str
     event_id: str
     starts_at: datetime
+    ends_at: datetime | None
     event_status: str
     is_paid: bool
     has_open_dispute: bool
@@ -206,6 +212,7 @@ SELECT
   o.checkout_group_id::text,
   ei.id::text,
   ei.starts_at::text,
+  coalesce(ei.ends_at::text, ''),
   e.id::text,
   e.status
 FROM public.orders o
@@ -221,8 +228,8 @@ LIMIT 1;
     if not result.ok or not result.rows:
         return None
 
-    parts = result.rows[0].split("|", 7)
-    if len(parts) != 8:
+    parts = result.rows[0].split("|", 8)
+    if len(parts) != 9:
         return None
 
     (
@@ -232,12 +239,14 @@ LIMIT 1;
         checkout_group_id,
         instance_id,
         starts_at_raw,
+        ends_at_raw,
         event_id,
         event_status,
     ) = parts
 
     purchased_at = _parse_timestamp(created_at_raw)
     starts_at = _parse_timestamp(starts_at_raw)
+    ends_at = _parse_timestamp(ends_at_raw)
     if purchased_at is None or starts_at is None:
         return None
 
@@ -261,6 +270,7 @@ LIMIT 1;
         instance_id=instance_id,
         event_id=event_id,
         starts_at=starts_at,
+        ends_at=ends_at,
         event_status=event_status,
         is_paid=_has_successful_payment(checkout_group_id),
         has_open_dispute=_has_open_dispute(order_id),
@@ -388,8 +398,12 @@ def evaluate_event_release(
     transaction_ids: list[str] = []
     total_net = 0
 
+    # Post-event releases anchor on the instance's end (ends_at, or starts_at for
+    # legacy rows). The pre-event phase-1 partial stays anchored on starts_at.
+    settlement_end = instance_settlement_end(context.starts_at, context.ends_at)
+
     if branch == "full":
-        due_at = context.starts_at + timedelta(hours=FULL_RELEASE_DELAY_HOURS)
+        due_at = settlement_end + timedelta(hours=FULL_RELEASE_DELAY_HOURS)
         key = full_release_key(order_id)
         if key not in posted_keys and effective_now >= due_at:
             txn_id = _post_event_release(
@@ -406,7 +420,7 @@ def evaluate_event_release(
         phase1_amount = net_ngwee // 2
         phase2_amount = net_ngwee - phase1_amount
         phase1_due = context.starts_at - timedelta(days=PHASE1_LEAD_DAYS)
-        phase2_due = context.starts_at + timedelta(days=PHASE2_DELAY_DAYS)
+        phase2_due = settlement_end + timedelta(days=PHASE2_DELAY_DAYS)
         phase1_key = phase1_release_key(order_id)
         phase2_key = phase2_release_key(order_id)
 

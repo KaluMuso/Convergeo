@@ -9,7 +9,7 @@ builder from ``events_public`` — no event data/schema change.
 from __future__ import annotations
 
 import os
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Annotated, Any, Protocol
 
 from app.deps import get_supabase_client
@@ -18,8 +18,8 @@ from fastapi import APIRouter, Depends, Response
 
 router = APIRouter(prefix="/events", tags=["events"])
 
-# Instances carry only a start time; assume a default duration for DTEND.
-DEFAULT_EVENT_DURATION = timedelta(hours=2)
+# DTEND now comes from each instance's effective end time (EventInstanceResponse
+# already coalesces a null ends_at to starts_at + the shared default duration).
 ICS_PRODID = "-//Vergeo5//Events//EN"
 _MAX_ICS_LINE_OCTETS = 75
 
@@ -96,7 +96,7 @@ def build_event_ics(event: EventDetailResponse, *, now: datetime) -> str:
 
     for instance in event.instances:
         start = instance.starts_at
-        end = start + DEFAULT_EVENT_DURATION
+        end = instance.ends_at
         lines.extend(
             [
                 "BEGIN:VEVENT",

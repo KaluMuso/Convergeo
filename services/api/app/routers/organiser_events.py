@@ -47,6 +47,7 @@ _SCHEDULE_CHANGE_EVENT = "event_schedule_changed"
 class EventInstanceInput(StrictModel):
     id: str | None = None
     starts_at: str
+    ends_at: str | None = None
     capacity: int = Field(ge=0)
 
     @field_validator("starts_at")
@@ -55,10 +56,18 @@ class EventInstanceInput(StrictModel):
         _parse_starts_at(value)
         return value
 
+    @field_validator("ends_at")
+    @classmethod
+    def validate_ends_at(cls, value: str | None) -> str | None:
+        if value is not None:
+            _parse_starts_at(value)
+        return value
+
 
 class EventInstanceResponse(StrictModel):
     id: str
     starts_at: datetime
+    ends_at: datetime | None = None
     capacity: int
     tickets_sold: int = 0
 
@@ -172,6 +181,30 @@ def _parse_starts_at(value: Any) -> datetime:
             return parsed.replace(tzinfo=UTC)
         return parsed
     raise ValueError(f"Unsupported datetime value: {value!r}")
+
+
+def _instance_ends_at(row: dict[str, Any]) -> datetime | None:
+    """Parse an instance row's optional ends_at (NULL for pre-0034 rows)."""
+    raw = row.get("ends_at")
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        return None
+    return _parse_starts_at(raw)
+
+
+def _instance_write_payload(event_id: str, instance: EventInstanceInput) -> dict[str, Any]:
+    """DB payload for an instance insert/update.
+
+    ends_at is included only when supplied. On update this preserves any existing
+    end time when a (still-optional) client omits the field, rather than wiping it.
+    """
+    payload: dict[str, Any] = {
+        "event_id": event_id,
+        "starts_at": _parse_starts_at(instance.starts_at).astimezone(UTC).isoformat(),
+        "capacity": instance.capacity,
+    }
+    if instance.ends_at is not None:
+        payload["ends_at"] = _parse_starts_at(instance.ends_at).astimezone(UTC).isoformat()
+    return payload
 
 
 def _slugify(title: str) -> str:
@@ -316,7 +349,7 @@ def _load_event_for_vendor(
 def _fetch_instances(client: Any, event_id: str) -> list[dict[str, Any]]:
     response = (
         client.table("event_instances")
-        .select("id, event_id, starts_at, capacity")
+        .select("id, event_id, starts_at, ends_at, capacity")
         .eq("event_id", event_id)
         .order("starts_at")
         .execute()
@@ -355,6 +388,7 @@ def _serialize_event_detail(
         EventInstanceResponse(
             id=str(row["id"]),
             starts_at=_parse_starts_at(row["starts_at"]),
+            ends_at=_instance_ends_at(row),
             capacity=int(row.get("capacity") or 0),
             tickets_sold=sold_by_instance.get(str(row["id"]), 0),
         )
@@ -411,6 +445,27 @@ def _serialize_event_summary(
     )
 
 
+def _validate_instance_time_order(instances: list[EventInstanceInput]) -> None:
+    """Reject any instance whose ends_at is not strictly after its starts_at.
+
+    Mirrors the DB CHECK (event_instances_ends_after_starts_chk) so the client
+    gets a clean 422 with an i18n key instead of a database error.
+    """
+    for instance in instances:
+        if instance.ends_at is None:
+            continue
+        if _parse_starts_at(instance.ends_at) <= _parse_starts_at(instance.starts_at):
+            raise AppError(
+                code="ends_before_starts",
+                message="Instance end time must be after its start time",
+                http_status=422,
+                details={
+                    "message_key": "vendor.events.errors.ends_before_starts",
+                    "instance_id": instance.id,
+                },
+            )
+
+
 def _validate_instances_capacity(
     instances: list[EventInstanceInput],
     *,
@@ -449,6 +504,12 @@ def _instances_changed(
             return True
         if _parse_starts_at(prior["starts_at"]) != _parse_starts_at(item.starts_at):
             return True
+        # Only treat ends_at as changed when the client actually supplies one
+        # (still-optional field); an omitted end preserves the stored value.
+        if item.ends_at is not None:
+            prior_ends = _instance_ends_at(prior)
+            if prior_ends is None or prior_ends != _parse_starts_at(item.ends_at):
+                return True
         if int(prior.get("capacity") or 0) != item.capacity:
             return True
     return False
@@ -538,11 +599,7 @@ def _sync_instances(
             client.table("event_instances").delete().eq("id", row_id).execute()
 
     for instance in instances:
-        payload = {
-            "event_id": event_id,
-            "starts_at": _parse_starts_at(instance.starts_at).astimezone(UTC).isoformat(),
-            "capacity": instance.capacity,
-        }
+        payload = _instance_write_payload(event_id, instance)
         if instance.id and instance.id in existing_ids:
             client.table("event_instances").update(payload).eq("id", instance.id).execute()
         else:
@@ -646,6 +703,7 @@ async def create_organiser_event(
 ) -> EventMutationResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     _require_active_kyc_vendor(vendor)
+    _validate_instance_time_order(body.instances)
     vendor_id = str(vendor["id"])
     client = service_client.client
 
@@ -678,11 +736,7 @@ async def create_organiser_event(
     event_id = str(event_row["id"])
     for instance in body.instances:
         client.table("event_instances").insert(
-            {
-                "event_id": event_id,
-                "starts_at": _parse_starts_at(instance.starts_at).astimezone(UTC).isoformat(),
-                "capacity": instance.capacity,
-            }
+            _instance_write_payload(event_id, instance)
         ).execute()
 
     instances = _fetch_instances(client, event_id)
@@ -742,6 +796,7 @@ async def update_organiser_event(
 
     if body.instances is not None:
         _validate_instances_capacity(body.instances, sold_by_instance=sold_by_instance)
+        _validate_instance_time_order(body.instances)
 
     visible_description, meta = _split_event_description(
         event_row.get("description") if isinstance(event_row.get("description"), str) else None

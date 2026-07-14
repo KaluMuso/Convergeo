@@ -355,6 +355,29 @@ def test_create_and_list_events(
     assert len(listed.json()["items"]) == 1
 
 
+def test_create_event_with_ends_at(organiser_client: TestClient) -> None:
+    payload = _create_payload(starts_at="2026-09-01T18:00:00+02:00")
+    payload["instances"][0]["ends_at"] = "2026-09-01T22:00:00+02:00"
+    response = organiser_client.post(
+        "/organiser/events", headers=_auth_headers(), json=payload
+    )
+    assert response.status_code == 200
+    instances = response.json()["event"]["instances"]
+    assert len(instances) == 1
+    assert instances[0]["ends_at"] is not None
+    # 22:00 +02:00 stored as UTC.
+    assert instances[0]["ends_at"].startswith("2026-09-01T20:00:00")
+
+
+def test_create_event_rejects_ends_at_before_starts_at(organiser_client: TestClient) -> None:
+    payload = _create_payload(starts_at="2026-09-01T18:00:00+02:00")
+    payload["instances"][0]["ends_at"] = "2026-09-01T17:00:00+02:00"  # before start
+    response = organiser_client.post(
+        "/organiser/events", headers=_auth_headers(), json=payload
+    )
+    assert response.status_code == 422
+
+
 def test_pre_sale_venue_and_date_edit_allowed(
     organiser_client: TestClient,
     fake_client: FakeSupabaseClient,

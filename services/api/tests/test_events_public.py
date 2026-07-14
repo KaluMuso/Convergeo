@@ -308,6 +308,68 @@ def test_browse_excludes_past_events(store: FakeSupabaseStore) -> None:
     assert "past-show" not in slugs
 
 
+def test_browse_includes_in_progress_event(store: FakeSupabaseStore) -> None:
+    # ends_at (0034) regression: an event that has STARTED but not yet ENDED must
+    # stay discoverable. Before the fix the starts_at >= now filter dropped it.
+    event_id = "0e000000-0000-0000-0000-0000000000aa"
+    store.events.append(
+        _event_row(event_id=event_id, slug="in-progress-gig", title="In Progress Gig")
+    )
+    store.event_instances.append(
+        {
+            "id": "0e000000-0000-0000-0000-0000000000ab",
+            "event_id": event_id,
+            "starts_at": "2026-07-09T17:00:00+02:00",  # 1h before REF_THURSDAY (18:00)
+            "ends_at": "2026-07-09T21:00:00+02:00",  # still running at REF
+            "capacity": 100,
+        }
+    )
+    store.ticket_types.append(
+        {
+            "id": "0e000000-0000-0000-0000-0000000000ac",
+            "event_id": event_id,
+            "kind": "fixed",
+            "name": "GA",
+            "price_ngwee": 50000,
+            "qty_cap": 100,
+        }
+    )
+    response = build_browse_response(store, ref=REF_THURSDAY)
+    assert "in-progress-gig" in {item.slug for item in response.items}
+    # ends_at also flows through the detail projection.
+    detail = build_detail_response(store, "in-progress-gig")
+    assert detail.instances[0].ends_at == datetime.fromisoformat("2026-07-09T21:00:00+02:00")
+
+
+def test_browse_excludes_just_ended_event(store: FakeSupabaseStore) -> None:
+    # Boundary: once ends_at passes, the event drops from discovery.
+    event_id = "0e000000-0000-0000-0000-0000000000ba"
+    store.events.append(
+        _event_row(event_id=event_id, slug="just-ended-gig", title="Just Ended Gig")
+    )
+    store.event_instances.append(
+        {
+            "id": "0e000000-0000-0000-0000-0000000000bb",
+            "event_id": event_id,
+            "starts_at": "2026-07-09T14:00:00+02:00",
+            "ends_at": "2026-07-09T17:30:00+02:00",  # ended 30m before REF (18:00)
+            "capacity": 100,
+        }
+    )
+    store.ticket_types.append(
+        {
+            "id": "0e000000-0000-0000-0000-0000000000bc",
+            "event_id": event_id,
+            "kind": "fixed",
+            "name": "GA",
+            "price_ngwee": 50000,
+            "qty_cap": 100,
+        }
+    )
+    response = build_browse_response(store, ref=REF_THURSDAY)
+    assert "just-ended-gig" not in {item.slug for item in response.items}
+
+
 def test_browse_tonight_filter(store: FakeSupabaseStore) -> None:
     response = build_browse_response(store, date_window="tonight", ref=REF_THURSDAY)
     slugs = {item.slug for item in response.items}
