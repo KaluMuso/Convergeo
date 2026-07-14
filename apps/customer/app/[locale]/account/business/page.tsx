@@ -111,7 +111,14 @@ export default async function AccountBusinessPage({ params }: PageProps) {
         </div>
       ) : null}
 
-      {showForm ? <BusinessApplyForm locale={locale} initial={status} labels={formLabels} /> : null}
+      {showForm ? (
+        <BusinessApplyForm
+          locale={locale}
+          initial={status}
+          labels={formLabels}
+          accessToken={accessToken}
+        />
+      ) : null}
     </section>
   );
 }

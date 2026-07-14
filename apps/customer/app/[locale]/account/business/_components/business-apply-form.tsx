@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "@vergeo/auth/use-session";
 import { ApiError } from "@vergeo/config";
 import { Button } from "@vergeo/ui/src/button";
 import { useRouter } from "next/navigation";
@@ -29,6 +28,10 @@ type BusinessApplyFormProps = {
   locale: string;
   initial: BusinessStatus;
   labels: BusinessApplyLabels;
+  // Passed from the server page (which already resolved it) so this client bundle
+  // does not pull in the Supabase browser client via useSession — keeps the route
+  // under the 150 KB gz budget, matching PreferencesForm/AddressForm.
+  accessToken: string;
 };
 
 function messageForError(error: unknown, labels: BusinessApplyLabels): string {
@@ -43,9 +46,13 @@ function messageForError(error: unknown, labels: BusinessApplyLabels): string {
   return labels.errorFailed;
 }
 
-export function BusinessApplyForm({ locale, initial, labels }: BusinessApplyFormProps) {
+export function BusinessApplyForm({
+  locale,
+  initial,
+  labels,
+  accessToken,
+}: BusinessApplyFormProps) {
   const router = useRouter();
-  const { session } = useSession();
 
   const [legalName, setLegalName] = useState(initial.legal_name ?? "");
   const [registrationNo, setRegistrationNo] = useState(initial.registration_no ?? "");
@@ -54,7 +61,7 @@ export function BusinessApplyForm({ locale, initial, labels }: BusinessApplyForm
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const getToken = useCallback(() => accessToken, [accessToken]);
 
   const isResubmit = initial.status === "rejected";
 
