@@ -27,7 +27,7 @@ type PhoneFormLabels = {
   required: string;
   invalidPhone: string;
   sendFailed: string;
-  throttled: (seconds: number) => string;
+  throttled: string;
 };
 
 type PhoneFormProps = {
@@ -73,7 +73,7 @@ export function PhoneForm({ locale, labels, otpPath, mode = "login" }: PhoneForm
       if (error) {
         const parsed = parseAuthError(error);
         if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-          setErrorMessage(labels.throttled(parsed.retryAfterSeconds));
+          setErrorMessage(labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)));
         } else {
           setErrorMessage(labels.sendFailed);
         }
@@ -91,7 +91,7 @@ export function PhoneForm({ locale, labels, otpPath, mode = "login" }: PhoneForm
           body = undefined;
         }
         const retryAfter = parseRetryAfterFromResponse(response, body) ?? 60;
-        setErrorMessage(labels.throttled(retryAfter));
+        setErrorMessage(labels.throttled.replace("{seconds}", String(retryAfter)));
         return;
       }
       setErrorMessage(labels.sendFailed);

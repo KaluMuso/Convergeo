@@ -53,20 +53,20 @@ const phoneLabels = {
   required: "Required",
   invalidPhone: "Invalid phone",
   sendFailed: "Send failed",
-  throttled: (seconds: number) => `Try again in ${seconds} seconds`,
+  throttled: "Try again in {seconds} seconds",
 };
 
 const otpLabels = {
   ariaGroup: "Verification code",
-  digitLabel: (position: number, total: number) => `Digit ${position} of ${total}`,
+  digitLabel: "Digit {position} of {total}",
   submit: "Verify",
   loading: "Verifying",
   resend: "Resend code",
-  resendIn: (seconds: number) => `Resend in ${seconds}s`,
+  resendIn: "Resend in {seconds}s",
   changePhone: "Change phone",
   wrongCode: "Wrong code",
   expired: "Expired",
-  throttled: (seconds: number) => `Try again in ${seconds} seconds`,
+  throttled: "Try again in {seconds} seconds",
   generic: "Generic error",
   sendFailed: "Send failed",
 };
@@ -182,7 +182,7 @@ describe("ResendCountdown", () => {
         cooldownSeconds={3}
         onResend={onResend}
         resendLabel="Resend code"
-        resendInLabel={(seconds) => `Resend in ${seconds}s`}
+        resendInLabel="Resend in {seconds}s"
         loadingLabel="Loading"
       />,
     );

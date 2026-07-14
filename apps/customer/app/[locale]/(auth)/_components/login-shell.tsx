@@ -26,7 +26,7 @@ export type AuthLoginLabels = {
     required: string;
     invalidPhone: string;
     sendFailed: string;
-    throttled: (seconds: number) => string;
+    throttled: string;
   };
   email: {
     emailLabel: string;
@@ -37,7 +37,7 @@ export type AuthLoginLabels = {
     invalidEmail: string;
     invalidPassword: string;
     generic: string;
-    throttled: (seconds: number) => string;
+    throttled: string;
   };
   divider: string;
   emailToggle: string;

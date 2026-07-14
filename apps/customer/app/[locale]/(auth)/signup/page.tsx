@@ -27,8 +27,8 @@ export default async function SignupPage({ params, searchParams }: PageProps) {
   const messages = { ...baseMessages, auth: authMessages } as AbstractIntlMessages;
 
   const t = createTranslator({ locale, messages, namespace: "auth" });
-  const throttled = (seconds: number) =>
-    t("errors.throttled").replace("{seconds}", String(seconds));
+  // Serializable string label (client interpolates `{seconds}`) — see auth-labels.ts.
+  const throttled = String(t.raw("errors.throttled"));
 
   const labels = {
     title: t("signup.title"),
