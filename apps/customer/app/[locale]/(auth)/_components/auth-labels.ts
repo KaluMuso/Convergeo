@@ -17,8 +17,10 @@ export function createLoginLabels(
     admin: t("chrome.adminTagline"),
   };
 
-  const throttled = (seconds: number) =>
-    t("errors.throttled").replace("{seconds}", String(seconds));
+  // Passed to client components, so this must be a serializable string (not a
+  // function): the `{seconds}` placeholder is interpolated client-side. Use
+  // t.raw so the literal ICU template survives (t() would drop the placeholder).
+  const throttled = String(t.raw("errors.throttled"));
 
   return {
     title: t("login.title"),

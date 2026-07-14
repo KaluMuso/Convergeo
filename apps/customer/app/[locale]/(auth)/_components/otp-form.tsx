@@ -17,15 +17,15 @@ import { ResendCountdown } from "./resend-countdown";
 
 type OtpFormLabels = {
   ariaGroup: string;
-  digitLabel: (position: number, total: number) => string;
+  digitLabel: string;
   submit: string;
   loading: string;
   resend: string;
-  resendIn: (seconds: number) => string;
+  resendIn: string;
   changePhone: string;
   wrongCode: string;
   expired: string;
-  throttled: (seconds: number) => string;
+  throttled: string;
   generic: string;
   sendFailed: string;
 };
@@ -71,7 +71,7 @@ export function OtpForm({
       if (error) {
         const parsed = parseAuthError(error);
         if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-          setErrorMessage(labels.throttled(parsed.retryAfterSeconds));
+          setErrorMessage(labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)));
         } else if (parsed.code === "wrong_code") {
           setErrorMessage(labels.wrongCode);
         } else if (parsed.code === "expired") {
@@ -94,7 +94,7 @@ export function OtpForm({
           body = undefined;
         }
         const retryAfter = parseRetryAfterFromResponse(response, body) ?? 60;
-        setErrorMessage(labels.throttled(retryAfter));
+        setErrorMessage(labels.throttled.replace("{seconds}", String(retryAfter)));
         return;
       }
       setErrorMessage(labels.generic);
@@ -111,7 +111,7 @@ export function OtpForm({
     if (error) {
       const parsed = parseAuthError(error);
       if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-        setErrorMessage(labels.throttled(parsed.retryAfterSeconds));
+        setErrorMessage(labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)));
       } else {
         setErrorMessage(labels.sendFailed);
       }
@@ -130,7 +130,9 @@ export function OtpForm({
           }}
           disabled={loading}
           ariaLabel={labels.ariaGroup}
-          getDigitAriaLabel={(index) => labels.digitLabel(index + 1, 6)}
+          getDigitAriaLabel={(index) =>
+            labels.digitLabel.replace("{position}", String(index + 1)).replace("{total}", "6")
+          }
         />
         {errorMessage ? (
           <p role="alert" className="text-center font-body text-sm text-danger">

@@ -18,7 +18,7 @@ type EmailFormLabels = {
   invalidEmail: string;
   invalidPassword: string;
   generic: string;
-  throttled: (seconds: number) => string;
+  throttled: string;
 };
 
 type EmailFormProps = {
@@ -67,7 +67,9 @@ export function EmailForm({ locale, labels, mode, defaultNextPath, nextParam }: 
         if (error) {
           const parsed = parseAuthError(error);
           if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-            setErrorMessage(labels.throttled(parsed.retryAfterSeconds));
+            setErrorMessage(
+              labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)),
+            );
           } else {
             setErrorMessage(labels.generic);
           }
@@ -78,7 +80,9 @@ export function EmailForm({ locale, labels, mode, defaultNextPath, nextParam }: 
         if (error) {
           const parsed = parseAuthError(error);
           if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-            setErrorMessage(labels.throttled(parsed.retryAfterSeconds));
+            setErrorMessage(
+              labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)),
+            );
           } else {
             setErrorMessage(labels.generic);
           }

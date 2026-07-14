@@ -30,9 +30,9 @@ export type ContactStepLabels = {
   sendOtp: string;
   verifyOtp: string;
   otpAria: string;
-  otpDigit: (position: number, total: number) => string;
+  otpDigit: string;
   resend: string;
-  resendIn: (seconds: number) => string;
+  resendIn: string;
   changePhone: string;
   loading: string;
   required: string;
@@ -40,7 +40,7 @@ export type ContactStepLabels = {
   sendFailed: string;
   wrongCode: string;
   expired: string;
-  throttled: (seconds: number) => string;
+  throttled: string;
   generic: string;
   skippedLoggedIn: string;
 };
@@ -129,7 +129,7 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
       if (error) {
         const parsed = parseAuthError(error);
         if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-          setErrorMessage(labels.throttled(parsed.retryAfterSeconds));
+          setErrorMessage(labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)));
         } else {
           setErrorMessage(labels.sendFailed);
         }
@@ -164,7 +164,7 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
         } else if (parsed.code === "expired") {
           setErrorMessage(labels.expired);
         } else if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-          setErrorMessage(labels.throttled(parsed.retryAfterSeconds));
+          setErrorMessage(labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)));
         } else {
           setErrorMessage(labels.generic);
         }
@@ -259,7 +259,9 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
           }}
           disabled={loading}
           ariaLabel={labels.otpAria}
-          getDigitAriaLabel={(index) => labels.otpDigit(index + 1, 6)}
+          getDigitAriaLabel={(index) =>
+            labels.otpDigit.replace("{position}", String(index + 1)).replace("{total}", "6")
+          }
         />
         {errorMessage ? (
           <p role="alert" className="text-center font-body text-sm text-danger">

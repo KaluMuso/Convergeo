@@ -7,7 +7,7 @@ type ResendCountdownProps = {
   cooldownSeconds: number;
   onResend: () => void | Promise<void>;
   resendLabel: string;
-  resendInLabel: (seconds: number) => string;
+  resendInLabel: string;
   loadingLabel: string;
 };
 
@@ -64,7 +64,7 @@ export function ResendCountdown({
         void handleResend();
       }}
     >
-      {secondsLeft > 0 ? resendInLabel(secondsLeft) : resendLabel}
+      {secondsLeft > 0 ? resendInLabel.replace("{seconds}", String(secondsLeft)) : resendLabel}
     </Button>
   );
 }

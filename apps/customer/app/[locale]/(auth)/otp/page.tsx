@@ -34,12 +34,13 @@ export default async function OtpPage({ params, searchParams }: PageProps) {
   const messages = { ...baseMessages, auth: authMessages } as AbstractIntlMessages;
 
   const t = createTranslator({ locale, messages, namespace: "auth" });
-  const throttled = (seconds: number) =>
-    t("errors.throttled").replace("{seconds}", String(seconds));
-  const digitLabel = (position: number, total: number) =>
-    t("otp.digitLabel").replace("{position}", String(position)).replace("{total}", String(total));
-  const resendIn = (seconds: number) => t("otp.resendIn").replace("{seconds}", String(seconds));
-  const sentMessage = t("otp.sent").replace("{phone}", maskPhone(phone));
+  // These labels cross the server→client boundary, so they must be serializable
+  // strings, not functions. Client components interpolate the `{…}` placeholders.
+  // t.raw returns the literal ICU template (t() would drop unfilled placeholders).
+  const throttled = String(t.raw("errors.throttled"));
+  const digitLabel = String(t.raw("otp.digitLabel"));
+  const resendIn = String(t.raw("otp.resendIn"));
+  const sentMessage = String(t.raw("otp.sent")).replace("{phone}", maskPhone(phone));
 
   const labels = {
     ariaGroup: t("otp.ariaGroup"),
