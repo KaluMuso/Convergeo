@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from datetime import UTC, datetime
@@ -9,11 +10,14 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.events.cancellation import process_event_cancellation
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.notifications.dedupe import enqueue_outbox_row
 from app.services.notifications.events import emit_event
 from fastapi import APIRouter, Depends
 from pydantic import Field, field_validator
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/organiser/events", tags=["organiser-events"])
 
@@ -869,6 +873,17 @@ async def cancel_organiser_event(
         from_statuses=frozenset({"draft", "published"}),
         to_status="cancelled",
     )
+    # Post-commit side-effects (D3, approach b): queue admin refunds + notify
+    # buyers/holders. Best-effort — the event is already cancelled and the escrow
+    # sweep re-flags refunds on its next run, so a transient failure here must not
+    # fail the cancellation or leave the organiser unable to retry.
+    try:
+        process_event_cancellation(
+            service_client, event_id=event_id, event_title=str(event_row.get("title") or "")
+        )
+    except Exception:
+        logger.exception("event cancellation side-effects failed", extra={"event_id": event_id})
+
     sold = _count_sold_tickets(client, [str(row["id"]) for row in instances if row.get("id")])
     return EventMutationResponse(
         event=_serialize_event_detail(event_row, instances, sold_by_instance=sold)

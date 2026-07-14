@@ -40,7 +40,7 @@ FULL_RELEASE_DELAY_HOURS = 24
 PHASE1_LEAD_DAYS = 7
 PHASE2_DELAY_DAYS = 1
 
-_MASS_REFUND_FLAG_ACTION = "event_release.mass_refund_flagged"
+MASS_REFUND_FLAG_ACTION = "event_release.mass_refund_flagged"
 
 EventReleaseBranch = Literal["full", "phased"]
 EventReleaseOutcome = Literal[
@@ -279,7 +279,7 @@ LIMIT 1;
 
 def _mass_refund_already_flagged(order_id: str) -> bool:
     order_sql = _sql_uuid(order_id, "order_id")
-    action_sql = sql_literal(_MASS_REFUND_FLAG_ACTION)
+    action_sql = sql_literal(MASS_REFUND_FLAG_ACTION)
     script = f"""
 SELECT id::text
 FROM public.audit_log
@@ -305,7 +305,7 @@ def _flag_mass_refund(*, order_id: str, event_id: str) -> None:
         return
     order_sql = _sql_uuid(order_id, "order_id")
     actor_sql = _sql_uuid(SYSTEM_ACTOR_ID, "actor")
-    action_sql = sql_literal(_MASS_REFUND_FLAG_ACTION)
+    action_sql = sql_literal(MASS_REFUND_FLAG_ACTION)
     after_payload = json.dumps({"event_id": event_id, "order_id": order_id})
     after_sql = sql_literal(after_payload) + "::jsonb"
     script = f"""

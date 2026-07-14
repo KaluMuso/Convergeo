@@ -26,9 +26,9 @@ sequences the rest.
 
 | ID | Defect | Status |
 | --- | --- | --- |
-| **D1** | Event instances have no end time → escrow releases mid-event, discovery drops events at start, `.ics` assumes 2h | **Fixed on this branch** (§3) |
-| **D2** | Category + landmark stored inside an HTML comment in `events.description`; browse/detail hardcode `category=None`, so non-free category filters return nothing | **Designed, not started** (§4) |
-| **D3** | Organiser cancellation only flags an admin audit row — no automatic refund or buyer notification | **Designed, needs a decision** (§5) |
+| **D1** | Event instances have no end time → escrow releases mid-event, discovery drops events at start, `.ics` assumes 2h | **Fixed** (§3) |
+| **D2** | Category + landmark stored inside an HTML comment in `events.description`; browse/detail hardcode `category=None`, so non-free category filters return nothing | **Fixed** (§4) |
+| **D3** | Organiser cancellation only flags an admin audit row — no automatic refund or buyer notification | **Fixed — approach (b)** (§5) |
 
 ## 3. D1 — Event end time (DONE)
 
@@ -70,45 +70,57 @@ assumption, which is *not a regression*:
   read `ends_at` (all still assume 2h).
 - Regenerate `packages/types/src/db.ts` `event_instances` to include `ends_at`.
 
-## 4. D2 — Category normalisation (designed)
+## 4. D2 — Category normalisation (DONE)
 
-`organiser_events.py` serialises `{category, landmark}` into
-`<!--vergeo5:event-meta:{…}-->` appended to the description and parses it back at runtime.
-Consequences: category isn't indexed or constrained; **`events_public` browse/detail set
-`category=None` and never read the meta, so filtering by any of the 5 non-free categories
-returns nothing**; landmark lives outside the geo model; and expanding categories needs
-code, not data.
+Category + landmark were serialised into `<!--vergeo5:event-meta:{…}-->` appended to
+`events.description` and parsed at runtime. Beyond fragility this was a live bug:
+`events_public` browse/detail hardcoded `category=None` and never read the meta, so
+filtering by any of the 5 non-free categories returned nothing.
 
-**Plan (additive):**
+**Shipped:**
 
-1. `event_categories` table (`slug`, `parent_slug`, `label_key`, `sort`), seeded with the
-   6 launch categories — extensible toward the strategy's ~11 top-level / ~65 subcategories
-   without code changes.
-2. `events.category_slug` FK (nullable during transition) + index; move landmark onto the
-   event/geo model.
-3. Backfill `category_slug`/landmark from the parsed meta comment; keep a compatibility
-   read during transition; drop the meta writer once backfilled.
-4. Wire `events_public` browse/detail (and search projection) to the real column — this
-   fixes the category-filter bug.
+- `0035_event_categories.sql` — `event_categories` taxonomy table (`slug`, `parent_slug`,
+  `label_key`, `sort`), seeded with the 6 launch categories (`parent_slug` ready for the
+  strategy's ~11 top-level / ~65 subcategory nesting); `events.category_slug` FK + index;
+  `events.landmark` column; backfill from the meta comment + strip it from the description.
+  Additive + reversible.
+- organiser create/edit write `category_slug` + `landmark` columns and a clean description;
+  reads come from the columns. The HTML-comment reader/writer is fully removed.
+- `events_public` browse filters on the real `category_slug` (fixes the filter bug); detail
+  surfaces the event-specific landmark (fallback to the organiser's vendor-location
+  landmark).
+- Tests: category-slug filtering, detail category/landmark, organiser category/landmark edit.
 
-## 5. D3 — Cancellation → automatic refund + notification (needs a decision)
+**Follow-up (not blocking):** event search documents still index a generic `category_path`
+of `events` rather than the specific category — a search-ranking refinement, separate from
+the acute browse-filter bug fixed here.
 
-Today: `organiser_events` cancel sets `status='cancelled'`; the escrow sweep blocks release
-and writes an `event_release.mass_refund_flagged` audit row for a human. Strategy promises
-automatic 100% refund + buyer notification.
+## 5. D3 — Cancellation → refund queue + notification (DONE — approach (b))
 
-**Plan:** on cancel, enqueue an idempotent refund per paid ticket order via the existing
-refund ledger path (`rfd-*`) and emit an `event_cancelled` outbox notification to each
-holder.
+Cancel previously only set `status='cancelled'`; refunds were flagged lazily by the escrow
+sweep and buyers were never notified.
 
-**Decision required (this moves money):**
+**Shipped (approach (b) — money stays behind a human gate):** `app/services/events/
+cancellation.py::process_event_cancellation`, invoked from the cancel endpoint after the
+status transition (best-effort; the escrow sweep re-flags on failure):
 
-- **(a) Full auto-refund on cancel** — strongest trust promise; highest abuse surface.
-- **(b) Auto-enqueue + notify immediately, admin executes payout** — keeps a human gate on
-  outbound money (recommended default; smallest change to the current escrow model).
-- **(c) Threshold split** — auto for small totals, admin gate above a limit.
+- flags each **paid** ticket order for admin mass-refund immediately, reusing the escrow
+  sweep's `MASS_REFUND_FLAG_ACTION` audit signal (idempotent + cross-deduped with the sweep);
+- notifies every affected **buyer and current ticket holder** via the outbox
+  (`event_cancelled`);
+- **does not move money** — an admin still executes each refund payout via the untouched
+  `services.refunds.execute_refund`.
 
-I'll implement once you pick; (b) is the safest first step and can upgrade to (a) later.
+Note: pre-creating `refunds` rows was rejected on purpose — `execute_refund` short-circuits
+on any active (`pending`/`processing`/`completed`) refund and the unique-active-refund index
+forbids duplicates, so a pre-created `pending` row would *block* execution rather than queue
+it. The refund row is therefore still born at admin execution time.
+
+Tests: paid-order flag + buyer/holder notification, idempotency, unpaid-order skip, and the
+end-to-end cancel endpoint wiring.
+
+**Upgrade path to (a):** when desired, call `execute_refund` per flagged order automatically
+(full auto-refund) instead of leaving it to the admin — no schema change needed.
 
 ## 6. The ~60 roadmap gaps — sequencing (not bugs)
 
