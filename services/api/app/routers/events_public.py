@@ -381,6 +381,7 @@ def _fetch_published_events(client: Any) -> list[dict[str, Any]]:
         client.table("events")
         .select(
             "id, slug, title, description, venue, lat, lng, images, status, "
+            "category_slug, landmark, "
             "organiser_vendor_id, vendors!events_organiser_vendor_id_fkey("
             "id, slug, display_name, preferred_badge, vendor_locations(landmark)"
             ")"
@@ -397,6 +398,7 @@ def _fetch_event_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
         client.table("events")
         .select(
             "id, slug, title, description, venue, lat, lng, images, status, "
+            "category_slug, landmark, "
             "organiser_vendor_id, vendors!events_organiser_vendor_id_fkey("
             "id, slug, display_name, preferred_badge, vendor_locations(landmark)"
             ")"
@@ -484,7 +486,8 @@ def build_browse_response(
         event_id = str(event["id"])
         event_instances = order_instances(instances_by_event.get(event_id, []))
         event_ticket_types = ticket_types_by_event.get(event_id, [])
-        event_category: str | None = None
+        raw_category = event.get("category_slug")
+        event_category: str | None = raw_category if isinstance(raw_category, str) else None
 
         if not _matches_category(
             category,
@@ -564,7 +567,16 @@ def build_detail_response(client: Any, slug: str) -> EventDetailResponse:
     vendor_raw = event.get("vendors")
     vendor_row = vendor_raw if isinstance(vendor_raw, dict) else None
     organiser = _parse_organiser(vendor_row)
-    landmark = organiser.landmark
+    # Prefer the event's own landmark (0035 column); fall back to the organiser's
+    # vendor-location landmark.
+    event_landmark = event.get("landmark")
+    landmark = (
+        event_landmark.strip()
+        if isinstance(event_landmark, str) and event_landmark.strip()
+        else organiser.landmark
+    )
+    raw_category = event.get("category_slug")
+    category = raw_category if isinstance(raw_category, str) else None
 
     instance_responses = [
         _build_instance_response(row, spots_sold=tickets_by_instance.get(str(row["id"]), 0))
@@ -586,7 +598,7 @@ def build_detail_response(client: Any, slug: str) -> EventDetailResponse:
         lng=float(event["lng"]) if event.get("lng") is not None else None,
         landmark=landmark,
         images=_parse_images(event.get("images")),
-        category=None,
+        category=category,
         instances=instance_responses,
         ticket_types=ticket_type_responses,
         min_price_ngwee=_min_price_ngwee(ticket_types),

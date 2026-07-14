@@ -193,10 +193,9 @@ def _seed_event(
             "organiser_vendor_id": vendor_id,
             "title": "Summer Jam",
             "slug": "summer-jam",
-            "description": (
-                'Fun night\n<!--vergeo5:event-meta:'
-                '{"category":"workshops","landmark":"East Park"}-->'
-            ),
+            "description": "Fun night",
+            "category_slug": "workshops",
+            "landmark": "East Park",
             "venue": venue,
             "lat": -15.4,
             "lng": 28.3,
@@ -376,6 +375,23 @@ def test_create_event_rejects_ends_at_before_starts_at(organiser_client: TestCli
         "/organiser/events", headers=_auth_headers(), json=payload
     )
     assert response.status_code == 422
+
+
+def test_update_event_category_and_landmark(
+    organiser_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    # D2: category + landmark are real columns now, editable independently.
+    _seed_event(fake_client)  # seeded as category workshops / landmark East Park
+    response = organiser_client.patch(
+        f"/organiser/events/{EVENT_A_ID}",
+        headers=_auth_headers(),
+        json={"category": "comedy-theatre", "landmark": "Manda Hill"},
+    )
+    assert response.status_code == 200
+    event = response.json()["event"]
+    assert event["category"] == "comedy-theatre"
+    assert event["landmark"] == "Manda Hill"
 
 
 def test_pre_sale_venue_and_date_edit_allowed(

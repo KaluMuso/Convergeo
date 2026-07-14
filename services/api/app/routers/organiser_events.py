@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import re
 import uuid
 from datetime import UTC, datetime
@@ -40,7 +39,6 @@ EventStatus = Literal["draft", "published", "cancelled", "completed"]
 EDITABLE_STATUSES = frozenset({"draft", "published"})
 SOLD_TICKET_STATUSES = frozenset({"issued", "checked_in"})
 MAX_EVENT_IMAGES = 8
-_EVENT_META_RE = re.compile(r"\n?<!--vergeo5:event-meta:(\{.*?\})-->\s*$", re.DOTALL)
 _SCHEDULE_CHANGE_EVENT = "event_schedule_changed"
 
 
@@ -230,51 +228,16 @@ def _unique_event_slug(service_client: ServiceRoleClient, base_title: str) -> st
     return f"{base}-{uuid.uuid4().hex[:8]}"
 
 
-def _split_event_description(raw: str | None) -> tuple[str, dict[str, Any]]:
-    if not raw:
-        return "", {}
-    match = _EVENT_META_RE.search(raw)
-    if not match:
-        return raw.strip(), {}
-    try:
-        meta = json.loads(match.group(1))
-    except json.JSONDecodeError:
-        return raw.strip(), {}
-    if not isinstance(meta, dict):
-        meta = {}
-    visible = raw[: match.start()].strip()
-    return visible, meta
-
-
-def _merge_event_description(
-    visible: str | None,
-    *,
-    category: str | None,
-    landmark: str | None,
-) -> str | None:
-    body = (visible or "").strip()
-    meta: dict[str, str] = {}
-    if category:
-        meta["category"] = category
-    if landmark:
-        meta["landmark"] = landmark.strip()
-    if not meta:
-        return body or None
-    meta_json = json.dumps(meta, separators=(",", ":"))
-    if body:
-        return f"{body}\n<!--vergeo5:event-meta:{meta_json}-->"
-    return f"<!--vergeo5:event-meta:{meta_json}-->"
-
-
-def _parse_category(meta: dict[str, Any]) -> EventCategory | None:
-    raw = meta.get("category")
+def _category_from_row(row: dict[str, Any]) -> EventCategory | None:
+    """Read events.category_slug (0035), guarding against unknown values."""
+    raw = row.get("category_slug")
     if isinstance(raw, str) and raw in EVENT_CATEGORIES:
         return raw  # type: ignore[return-value]
     return None
 
 
-def _parse_landmark(meta: dict[str, Any]) -> str | None:
-    raw = meta.get("landmark")
+def _landmark_from_row(row: dict[str, Any]) -> str | None:
+    raw = row.get("landmark")
     if isinstance(raw, str) and raw.strip():
         return raw.strip()
     return None
@@ -329,7 +292,8 @@ def _load_event_for_vendor(
     response = (
         service_client.client.table("events")
         .select(
-            "id, organiser_vendor_id, title, slug, description, venue, lat, lng, images, status"
+            "id, organiser_vendor_id, title, slug, description, venue, lat, lng, images, "
+            "status, category_slug, landmark"
         )
         .eq("id", event_id)
         .maybe_single()
@@ -381,7 +345,7 @@ def _serialize_event_detail(
     *,
     sold_by_instance: dict[str, int],
 ) -> EventDetailResponse:
-    description, meta = _split_event_description(
+    description = (
         event_row.get("description") if isinstance(event_row.get("description"), str) else None
     )
     instances = [
@@ -403,12 +367,12 @@ def _serialize_event_detail(
         title=str(event_row.get("title") or ""),
         slug=str(event_row.get("slug") or ""),
         status=status,  # type: ignore[arg-type]
-        category=_parse_category(meta),
+        category=_category_from_row(event_row),
         description=description or None,
         venue=event_row.get("venue") if isinstance(event_row.get("venue"), str) else None,
         lat=float(event_row["lat"]) if event_row.get("lat") is not None else None,
         lng=float(event_row["lng"]) if event_row.get("lng") is not None else None,
-        landmark=_parse_landmark(meta),
+        landmark=_landmark_from_row(event_row),
         images=_parse_images(event_row.get("images")),
         instances=instances,
         tickets_sold=tickets_sold,
@@ -421,9 +385,6 @@ def _serialize_event_summary(
     *,
     sold_by_instance: dict[str, int],
 ) -> EventSummary:
-    _, meta = _split_event_description(
-        event_row.get("description") if isinstance(event_row.get("description"), str) else None
-    )
     next_starts_at: datetime | None = None
     if instance_rows:
         next_starts_at = _parse_starts_at(instance_rows[0]["starts_at"])
@@ -435,9 +396,9 @@ def _serialize_event_summary(
         title=str(event_row.get("title") or ""),
         slug=str(event_row.get("slug") or ""),
         status=status,  # type: ignore[arg-type]
-        category=_parse_category(meta),
+        category=_category_from_row(event_row),
         venue=event_row.get("venue") if isinstance(event_row.get("venue"), str) else None,
-        landmark=_parse_landmark(meta),
+        landmark=_landmark_from_row(event_row),
         images=_parse_images(event_row.get("images")),
         next_starts_at=next_starts_at,
         instance_count=len(instance_rows),
@@ -680,7 +641,7 @@ async def list_organiser_events(
 
     response = (
         client.table("events")
-        .select("id, title, slug, description, venue, images, status")
+        .select("id, title, slug, description, venue, images, status, category_slug, landmark")
         .eq("organiser_vendor_id", vendor_id)
         .order("updated_at", desc=True)
         .execute()
@@ -708,16 +669,13 @@ async def create_organiser_event(
     client = service_client.client
 
     slug = _unique_event_slug(service_client, body.title)
-    description = _merge_event_description(
-        body.description,
-        category=body.category,
-        landmark=body.landmark,
-    )
     insert_payload = {
         "organiser_vendor_id": vendor_id,
         "title": body.title.strip(),
         "slug": slug,
-        "description": description,
+        "description": (body.description or "").strip() or None,
+        "category_slug": body.category,
+        "landmark": body.landmark.strip() if body.landmark else None,
         "venue": body.venue.strip() if body.venue else None,
         "lat": body.lat,
         "lng": body.lng,
@@ -798,33 +756,18 @@ async def update_organiser_event(
         _validate_instances_capacity(body.instances, sold_by_instance=sold_by_instance)
         _validate_instance_time_order(body.instances)
 
-    visible_description, meta = _split_event_description(
-        event_row.get("description") if isinstance(event_row.get("description"), str) else None
-    )
-    next_category = body.category if body.category is not None else _parse_category(meta)
-    next_landmark = (
-        body.landmark.strip()
-        if body.landmark is not None
-        else _parse_landmark(meta)
-    )
-    next_visible = body.description if body.description is not None else visible_description
-
     venue_before = event_row.get("venue")
     instances_before = [dict(row) for row in existing_instances]
 
     updates: dict[str, Any] = {}
     if body.title is not None:
         updates["title"] = body.title.strip()
-    if (
-        body.description is not None
-        or body.category is not None
-        or body.landmark is not None
-    ):
-        updates["description"] = _merge_event_description(
-            next_visible,
-            category=next_category,
-            landmark=next_landmark,
-        )
+    if body.description is not None:
+        updates["description"] = body.description.strip() or None
+    if body.category is not None:
+        updates["category_slug"] = body.category
+    if body.landmark is not None:
+        updates["landmark"] = body.landmark.strip() or None
     if body.venue is not None:
         updates["venue"] = body.venue.strip() or None
     if body.lat is not None:
