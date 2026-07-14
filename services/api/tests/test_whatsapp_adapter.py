@@ -82,6 +82,10 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
         payload["quantity"] = 2
     elif template_id == "otp_login":
         payload["otp_code"] = "482913"
+    elif template_id == "rfq_job_broadcast":
+        payload["category"] = "home_services"
+        payload["service_area"] = "Lusaka"
+        payload["description_preview"] = "Fix kitchen sink"
     return payload
 
 

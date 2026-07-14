@@ -16,6 +16,7 @@ WhatsAppTemplateId = Literal[
     "order_delivered",
     "vendor_new_order",
     "otp_login",
+    "rfq_job_broadcast",
 ]
 
 SUPPORTED_LOCALES = frozenset({"en", "bem", "nya"})
@@ -172,6 +173,20 @@ def _map_otp_login(payload: Mapping[str, Any]) -> tuple[str, ...]:
     return (code,)
 
 
+def _map_rfq_job_broadcast(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    # Provider RFQ broadcast: category (required), plus service area and a short
+    # description preview. The latter two fall back to non-empty text because Meta
+    # rejects template sends with empty body parameters.
+    category = _require_str(payload, "category")
+    area = payload.get("service_area")
+    area_str = area.strip() if isinstance(area, str) and area.strip() else "Zambia"
+    preview = payload.get("description_preview")
+    preview_str = (
+        preview.strip() if isinstance(preview, str) and preview.strip() else "New job request"
+    )
+    return (category, area_str, preview_str)
+
+
 @dataclass(frozen=True, slots=True)
 class WhatsAppTemplateDefinition:
     template_id: WhatsAppTemplateId
@@ -216,6 +231,11 @@ WHATSAPP_TEMPLATES: dict[WhatsAppTemplateId, WhatsAppTemplateDefinition] = {
         meta_template_name="otp_login",
         map_variables=_map_otp_login,
         has_copy_code_button=True,
+    ),
+    "rfq_job_broadcast": WhatsAppTemplateDefinition(
+        template_id="rfq_job_broadcast",
+        meta_template_name="rfq_job_broadcast",
+        map_variables=_map_rfq_job_broadcast,
     ),
 }
 
