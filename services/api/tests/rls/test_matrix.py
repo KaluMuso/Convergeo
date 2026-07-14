@@ -36,6 +36,17 @@ def all_permit() -> dict[Verb, Outcome]:
     return {verb: "permit" for verb in VERBS}
 
 
+def admin_read_orphan_write_grants() -> dict[Verb, Outcome]:
+    """SELECT + all write grants to authenticated, but only an admin SELECT policy.
+
+    Under FORCE RLS the insert is rejected by the missing WITH CHECK policy (42501 ->
+    deny); the WHERE-false update/delete probes match zero rows through the missing
+    USING policy and raise no error (permit). One-off shape for reconciliation_reports
+    (0018), whose write grants to authenticated are effectively dead.
+    """
+    return {"select": "permit", "insert": "deny", "update": "permit", "delete": "permit"}
+
+
 def public_read_admin_write() -> PersonaExpectations:
     return {
         Persona.ANON: select_only(),
@@ -1571,17 +1582,19 @@ EXPECTATIONS: TableExpectations = {
     },
     "rate_counters": client_invisible(),
     "reconciliation_reports": {
-        # M08: daily Lenco-vs-ledger reconciliation. admin-read / service-role-write.
-        # authenticated has a SELECT grant + admin-only RLS policy (non-admins see
-        # zero rows → permit); it also holds insert/update/delete grants but there is
-        # no matching write policy, so writes deny under FORCE RLS (→ deny). anon has
-        # no grant (→ deny_all).
+        # M08: daily Lenco-vs-ledger reconciliation. admin-read / service-role-write,
+        # but authenticated also holds effectively-dead insert/update/delete grants with
+        # no matching write policy. Verified probe outcomes under FORCE RLS: select is
+        # admin-only (non-admins see zero rows → permit); insert hits the missing WITH
+        # CHECK policy → 42501 (deny); the WHERE-false update/delete probes match zero
+        # rows → no error (permit). ADMIN is identical — there is no admin WRITE policy.
+        # anon has no grant at all (deny_all).
         Persona.ANON: deny_all(),
-        Persona.CUSTOMER: select_only(),
-        Persona.OTHER_CUSTOMER: select_only(),
-        Persona.VENDOR: select_only(),
-        Persona.OTHER_VENDOR: select_only(),
-        Persona.ADMIN: select_only(),
+        Persona.CUSTOMER: admin_read_orphan_write_grants(),
+        Persona.OTHER_CUSTOMER: admin_read_orphan_write_grants(),
+        Persona.VENDOR: admin_read_orphan_write_grants(),
+        Persona.OTHER_VENDOR: admin_read_orphan_write_grants(),
+        Persona.ADMIN: admin_read_orphan_write_grants(),
     },
     "refunds": {
         Persona.ANON: {
