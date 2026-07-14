@@ -561,6 +561,18 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "embedding_jobs": {
+        # M06-P01: admin-read / service-role-write embedding queue. authenticated
+        # gets a SELECT grant + admin-only RLS policy (non-admins see zero rows →
+        # permit); no client write grant and writes are service_role only (→ deny);
+        # anon has no grant (→ deny_all). Same shape as analytics_events.
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "events": {
         Persona.ANON: {
             "select": "permit",
@@ -1558,6 +1570,19 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "rate_counters": client_invisible(),
+    "reconciliation_reports": {
+        # M08: daily Lenco-vs-ledger reconciliation. admin-read / service-role-write.
+        # authenticated has a SELECT grant + admin-only RLS policy (non-admins see
+        # zero rows → permit); it also holds insert/update/delete grants but there is
+        # no matching write policy, so writes deny under FORCE RLS (→ deny). anon has
+        # no grant (→ deny_all).
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "refunds": {
         Persona.ANON: {
             "select": "deny",
