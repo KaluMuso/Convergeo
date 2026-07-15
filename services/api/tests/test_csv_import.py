@@ -114,6 +114,7 @@ class FakeSupabaseClient:
             "vendor_quotas": FakeTable(),
             "platform_config": FakeTable(),
             "orders": FakeTable(),
+            "products": FakeTable(),
         }
 
     def table(self, name: str) -> FakeTable:
@@ -429,3 +430,222 @@ def test_build_template_csv_has_example_rows() -> None:
     template = build_template_csv()
     assert "TOM-001" in template
     assert "price_ngwee" in template
+
+
+def test_build_template_csv_offers_optional_product_id_column() -> None:
+    header = build_template_csv().splitlines()[0]
+    assert "product_id" in header.split(",")
+
+
+# ---------------------------------------------------------------------------
+# Canonical-match suggestions (pure, no DB)
+# ---------------------------------------------------------------------------
+
+PHONE_PRODUCT_ID = "b0000000-0000-0000-0000-000000000001"
+CHITENGE_PRODUCT_ID = "b0000000-0000-0000-0000-000000000002"
+
+
+def test_suggest_matches_ranks_exact_name_first() -> None:
+    from app.services.listings.canonical_match import CanonicalCandidate, suggest_matches
+
+    candidates = [
+        CanonicalCandidate(product_id=PHONE_PRODUCT_ID, name="Itel A70 Smartphone"),
+        CanonicalCandidate(product_id=CHITENGE_PRODUCT_ID, name="Chitenge Fabric 6yd"),
+    ]
+    results = suggest_matches("Itel A70 Smartphone", candidates)
+    assert results
+    assert results[0].product_id == PHONE_PRODUCT_ID
+    assert results[0].score == 1.0
+
+
+def test_suggest_matches_uses_aliases() -> None:
+    from app.services.listings.canonical_match import CanonicalCandidate, suggest_matches
+
+    candidates = [
+        CanonicalCandidate(
+            product_id=CHITENGE_PRODUCT_ID,
+            name="Chitenge Fabric 6yd",
+            aliases=("chitenje", "chitange"),
+        ),
+    ]
+    # A locale spelling variant that barely overlaps the canonical name still
+    # matches through the alias set.
+    results = suggest_matches("chitange", candidates)
+    assert results
+    assert results[0].product_id == CHITENGE_PRODUCT_ID
+    assert results[0].score >= 0.9
+
+
+def test_suggest_matches_filters_below_threshold_and_caps_limit() -> None:
+    from app.services.listings.canonical_match import CanonicalCandidate, suggest_matches
+
+    candidates = [
+        CanonicalCandidate(product_id=f"p{i}", name=f"Widget model {i}") for i in range(10)
+    ]
+    # Nothing resembling the query -> no suggestions.
+    assert suggest_matches("zzzzz completely unrelated", candidates) == []
+    # Many close matches -> capped at the limit.
+    capped = suggest_matches("Widget model 1", candidates, limit=3)
+    assert len(capped) <= 3
+
+
+# ---------------------------------------------------------------------------
+# product_id attach + preview (API)
+# ---------------------------------------------------------------------------
+
+
+def _seed_product(
+    fake: FakeSupabaseClient,
+    *,
+    product_id: str,
+    name: str,
+    status: str = "active",
+) -> None:
+    fake.tables["products"].rows.append(
+        {"id": product_id, "name": name, "status": status, "aliases": []}
+    )
+
+
+def test_import_attaches_valid_product_id(
+    import_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    _seed_product(fake_client, product_id=PHONE_PRODUCT_ID, name="Itel A70 Smartphone")
+    row = _valid_json_row("ATT-001")
+    row["product_id"] = PHONE_PRODUCT_ID
+    response = import_client.post(
+        "/listings/import",
+        headers={**_auth_headers(), "Content-Type": "application/json"},
+        json={"rows": [row]},
+    )
+    assert response.status_code == 200
+    assert response.json()["accepted"] == 1
+    stored = fake_client.tables["vendor_listings"].rows[0]
+    assert stored["product_id"] == PHONE_PRODUCT_ID
+
+
+def test_import_rejects_unknown_product_id(
+    import_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    # No product seeded -> the id references nothing active.
+    row = _valid_json_row("ATT-002")
+    row["product_id"] = PHONE_PRODUCT_ID
+    response = import_client.post(
+        "/listings/import",
+        headers={**_auth_headers(), "Content-Type": "application/json"},
+        json={"rows": [row]},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["accepted"] == 0
+    assert body["rejected"] == 1
+    assert "active canonical product" in body["rows"][0]["errors"][0]
+    assert len(fake_client.tables["vendor_listings"].rows) == 0
+
+
+def test_import_rejects_inactive_product_id(
+    import_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    _seed_product(
+        fake_client, product_id=PHONE_PRODUCT_ID, name="Pending phone", status="pending_moderation"
+    )
+    row = _valid_json_row("ATT-003")
+    row["product_id"] = PHONE_PRODUCT_ID
+    response = import_client.post(
+        "/listings/import",
+        headers={**_auth_headers(), "Content-Type": "application/json"},
+        json={"rows": [row]},
+    )
+    assert response.status_code == 200
+    assert response.json()["rejected"] == 1
+
+
+def test_preview_suggests_canonical_for_unmatched_title(
+    import_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    _seed_product(fake_client, product_id=PHONE_PRODUCT_ID, name="Itel A70 Smartphone")
+    row = _valid_json_row("PRV-001", title="Itel A70 Smartphone")
+    response = import_client.post(
+        "/listings/import/preview",
+        headers={**_auth_headers(), "Content-Type": "application/json"},
+        json={"rows": [row]},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1
+    assert body["valid"] == 1
+    preview_row = body["rows"][0]
+    assert preview_row["ok"] is True
+    assert preview_row["product_id"] is None
+    assert preview_row["suggestions"]
+    assert preview_row["suggestions"][0]["product_id"] == PHONE_PRODUCT_ID
+    # Preview is a dry run — nothing was written.
+    assert len(fake_client.tables["vendor_listings"].rows) == 0
+
+
+def test_preview_resolves_supplied_product_id_to_matched_name(
+    import_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    _seed_product(fake_client, product_id=PHONE_PRODUCT_ID, name="Itel A70 Smartphone")
+    row = _valid_json_row("PRV-002")
+    row["product_id"] = PHONE_PRODUCT_ID
+    response = import_client.post(
+        "/listings/import/preview",
+        headers={**_auth_headers(), "Content-Type": "application/json"},
+        json={"rows": [row]},
+    )
+    assert response.status_code == 200
+    preview_row = response.json()["rows"][0]
+    assert preview_row["ok"] is True
+    assert preview_row["product_id"] == PHONE_PRODUCT_ID
+    assert preview_row["matched_name"] == "Itel A70 Smartphone"
+    assert preview_row["suggestions"] == []
+
+
+def test_preview_flags_invalid_product_id_row(
+    import_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    row = _valid_json_row("PRV-003")
+    row["product_id"] = PHONE_PRODUCT_ID  # nothing seeded
+    response = import_client.post(
+        "/listings/import/preview",
+        headers={**_auth_headers(), "Content-Type": "application/json"},
+        json={"rows": [row]},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["invalid"] == 1
+    assert body["rows"][0]["ok"] is False
+
+
+def test_apply_raw_rows_attaches_confirmed_product(
+    import_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    # Mirrors the preview->confirm->apply flow: the client takes the echoed raw
+    # row, sets the chosen product_id, and applies it back via raw_rows.
+    _seed_product(fake_client, product_id=PHONE_PRODUCT_ID, name="Itel A70 Smartphone")
+    raw = {
+        "sku": "RAW-001",
+        "title": "Itel A70 Smartphone",
+        "price_ngwee": "450000",
+        "stock_mode": "tracked",
+        "stock_qty": "5",
+        "condition": "new",
+        "product_id": PHONE_PRODUCT_ID,
+    }
+    response = import_client.post(
+        "/listings/import",
+        headers={**_auth_headers(), "Content-Type": "application/json"},
+        json={"raw_rows": [raw]},
+    )
+    assert response.status_code == 200
+    assert response.json()["accepted"] == 1
+    stored = fake_client.tables["vendor_listings"].rows[0]
+    assert stored["product_id"] == PHONE_PRODUCT_ID
+    assert stored["sku"] == "RAW-001"
