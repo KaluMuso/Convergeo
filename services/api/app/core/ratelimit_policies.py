@@ -163,6 +163,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /kyc/{kyc_record_id}/reject": ADMIN_WRITE,
     "POST /kyc/{kyc_record_id}/request-resubmit": ADMIN_WRITE,
     "POST /listings/import": STANDARD_WRITE,
+    "POST /listings/import/preview": STANDARD_WRITE,
     "POST /media/kyc-doc/sign": SENSITIVE_WRITE,
     "POST /media/sign": SENSITIVE_WRITE,
     "POST /merch/slots": ADMIN_WRITE,
