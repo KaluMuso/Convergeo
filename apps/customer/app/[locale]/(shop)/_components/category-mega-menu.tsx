@@ -99,6 +99,10 @@ export function CategoryMegaMenu({
   }, [loadCategories]);
 
   useEffect(() => {
+    // Reset on (re)mount — React StrictMode runs mount→cleanup→mount in dev, and
+    // without restoring this the load guards below would stay false for the
+    // component's whole life, wedging the panel on "Loading…".
+    mountedRef.current = true;
     return () => {
       mountedRef.current = false;
     };

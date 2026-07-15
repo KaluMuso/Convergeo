@@ -5,6 +5,7 @@ import { CategoryMegaMenu } from "./category-mega-menu";
 
 type DesktopHeaderLabels = {
   appName: string;
+  skipToContent: string;
   navAriaLabel: string;
   searchPlaceholder: string;
   searchSubmit: string;
@@ -44,6 +45,12 @@ export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 hidden border-b border-border bg-surface shadow-1 lg:block">
+      <a
+        href="#shop-main"
+        className="sr-only rounded bg-primary text-sm font-medium text-surface focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:inline-flex focus:min-h-11 focus:items-center focus:px-4 focus:shadow-focusRing"
+      >
+        {labels.skipToContent}
+      </a>
       <nav
         aria-label={labels.navAriaLabel}
         className="mx-auto flex h-16 w-full max-w-7xl items-center gap-6 px-6"
