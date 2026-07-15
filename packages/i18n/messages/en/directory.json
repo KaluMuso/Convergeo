@@ -5,7 +5,9 @@
     "results": "{count, plural, one {# business} other {# businesses}}",
     "searchPlaceholder": "Search businesses",
     "searchLabel": "Search directory",
-    "viewProfile": "View store"
+    "viewProfile": "View store",
+    "becomeVendor": "Become a vendor",
+    "heroPitch": "List your business, reach customers across Zambia, and get paid securely."
   },
   "filters": {
     "heading": "Filters",
@@ -54,7 +56,10 @@
     "noReviews": "No reviews yet",
     "preferredBadge": "Preferred vendor",
     "verifiedBadge": "Verified vendor",
-    "shareTitle": "{name} on Vergeo5"
+    "shareTitle": "{name} on Vergeo5",
+    "statRating": "Rating",
+    "statReviews": "Reviews",
+    "statListings": "Products"
   },
   "listings": {
     "vendor": "Sold by {vendor}",
