@@ -9,7 +9,12 @@ from urllib.parse import parse_qs
 
 import httpx
 import pytest
-from app.services.notifications.adapters.base import FailureKind, NoopAdapter, OutboxMessage
+from app.services.notifications.adapters.base import (
+    FailureKind,
+    NoopAdapter,
+    OutboxMessage,
+    SendResult,
+)
 from app.services.notifications.adapters.email import (
     ResendEmailAdapter,
     render_email_html,
@@ -566,3 +571,117 @@ async def test_forced_whatsapp_failure_enqueues_sms_via_dispatcher_tick(
     stats = await dispatcher.run_batch()
     assert stats.sent == 1
     assert any(msg.channel == CHANNEL_SMS for msg in noop.sent)
+
+
+class _AlwaysFailAdapter:
+    """ChannelAdapter that always fails — simulates WhatsApp Cloud API unavailable."""
+
+    def __init__(self, failure_kind: FailureKind = FailureKind.PERMANENT) -> None:
+        self.failure_kind = failure_kind
+        self.calls = 0
+
+    async def send(self, message: OutboxMessage) -> SendResult:
+        self.calls += 1
+        return SendResult(success=False, failure_kind=self.failure_kind, message="forced failure")
+
+
+@pytest.mark.asyncio
+async def test_dispatcher_auto_enqueues_sms_fallback_on_whatsapp_failure(
+    store: InMemoryOutboxStore,
+    noop: NoopAdapter,
+) -> None:
+    # The dispatcher itself must fail a WhatsApp send OVER to SMS (not just dead-letter
+    # it). This is the wiring that was missing: fallback.py existed but nothing invoked it.
+    store.profiles["user-9"] = {
+        "id": "user-9",
+        "phone": "+260970000000",
+        "locale": "en",
+        "notif_prefs": {},
+    }
+    whatsapp_row = enqueue_outbox_row(
+        store,
+        event_type="order_confirmed",
+        entity_id="ord-9",
+        channel=CHANNEL_WHATSAPP,
+        template="order_confirmed",
+        payload={"recipient_id": "user-9", "order_reference": "ord-9", "total_ngwee": 150000},
+    )
+    assert whatsapp_row is not None
+
+    service = SupabaseServiceClient(MagicMock())
+    service._client = store  # type: ignore[assignment]
+    dispatcher = NotificationDispatcher(
+        service,
+        {"whatsapp": _AlwaysFailAdapter(FailureKind.PERMANENT), "sms": noop, "email": noop},
+        max_attempts=1,
+        channel_pace_seconds={"whatsapp": 0, "sms": 0, "email": 0},
+    )
+
+    await dispatcher.run_batch()
+
+    rows = list(store.outbox.values())
+    whatsapp = next(row for row in rows if row["channel"] == CHANNEL_WHATSAPP)
+    assert whatsapp["status"] == "failed"
+    sms_rows = [row for row in rows if row["channel"] == CHANNEL_SMS]
+    assert len(sms_rows) == 1
+    sms = sms_rows[0]
+    assert sms["dedupe_key"] == build_dedupe_key("order_confirmed", "ord-9", CHANNEL_SMS)
+    assert sms["template"] == "order_confirmed"
+    assert sms["status"] == "pending"
+    assert sms["payload"]["order_reference"] == "ord-9"
+    assert sms["payload"]["phone"] == "+260970000000"  # recipient contact carried over
+    assert "fallback" in sms["payload"]  # audit trail attached
+
+    # A second tick delivers the SMS fallback row via the (noop) SMS adapter.
+    stats = await dispatcher.run_batch()
+    assert stats.sent == 1
+    assert any(msg.channel == CHANNEL_SMS for msg in noop.sent)
+
+
+def test_render_sms_body_covers_lifecycle_templates() -> None:
+    from app.services.notifications.templates.sms import SMS_TEMPLATES, render_sms_body
+
+    payload = {
+        "order_reference": "ord-77",
+        "total_ngwee": 150000,
+        "amount_ngwee": 150000,
+        "tracking_info": "Yango driver arriving 4pm",
+        "pickup_details": "Kamwala stand 12",
+        "product_title": "Samsung A15",
+        "quantity": 2,
+        "category": "plumbing",
+        "service_area": "Lusaka",
+        "description_preview": "Fix a burst pipe",
+    }
+    for template in SMS_TEMPLATES:
+        body = render_sms_body(template, payload)
+        assert body is not None
+        assert body.startswith("Vergeo5")
+    assert "ord-77" in (render_sms_body("order_confirmed", payload) or "")
+    assert "K1500.00" in (render_sms_body("payment_received", payload) or "")
+    assert render_sms_body("unknown_template", payload) is None
+    assert render_sms_body(None, payload) is None
+
+
+def test_email_renders_lifecycle_templates_with_order_reference() -> None:
+    subject, html_body, _subject_key, _body_key = render_email_html(
+        "order_confirmed",
+        locale="en",
+        payload={"order_reference": "ord-88", "total_ngwee": 250000},
+    )
+    assert "ord-88" in subject
+    assert "ord-88" in html_body
+    assert "K2500.00" in html_body
+
+    rfq_subject, rfq_body, _sk, _bk = render_email_html(
+        "rfq_job_broadcast",
+        locale="en",
+        payload={
+            "category": "catering",
+            "service_area": "Ndola",
+            "description_preview": "Wedding for 100",
+        },
+    )
+    assert "catering" in rfq_subject
+    assert "Ndola" in rfq_body
+    assert "Wedding for 100" in rfq_body

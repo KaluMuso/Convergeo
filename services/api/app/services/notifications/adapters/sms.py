@@ -12,6 +12,7 @@ from app.services.notifications.adapters.base import (
     OutboxMessage,
     SendResult,
 )
+from app.services.notifications.templates.sms import render_sms_body
 
 logger = logging.getLogger(__name__)
 
@@ -137,6 +138,10 @@ class AfricasTalkingSmsAdapter:
             or message.payload.get("message")
             or ""
         ).strip()
+        if not body_text:
+            # No pre-rendered body: render from the per-event SMS template registry
+            # (fallback path — the payload carries the same fields as the WA template).
+            body_text = render_sms_body(message.template, message.payload) or ""
         if not body_text:
             return SendResult(
                 success=False,
