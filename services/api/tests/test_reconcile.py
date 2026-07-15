@@ -104,8 +104,9 @@ class FakeQuery:
 
         rows = [row for row in self._parent.rows if self._row_matches(row)]
         if self._order_column is not None:
+            order_column = self._order_column
             rows.sort(
-                key=lambda r: str(r.get(self._order_column, "")),
+                key=lambda r: str(r.get(order_column, "")),
                 reverse=self._order_desc,
             )
         if self._limit is not None:
