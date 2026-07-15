@@ -1,8 +1,8 @@
-"""below_median search boost signal (0034).
+"""below_median search boost signal (0038).
 
 0009's `search_apply_boost` gives a +0.05 RRF lift when
 `boost_signals->>'below_median'` is true, but the projection hard-coded the
-signal to false, so it never fired. 0034 computes it as "priced below the median
+signal to false, so it never fired. 0038 computes it as "priced below the median
 of all active/publishable listings for the SAME canonical product".
 
 These tests require a real Postgres (the migration chain + triggers) and skip
@@ -133,9 +133,9 @@ def _teardown(conn: PgConn, scratch: Scratch) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_migration_0034_shipped_and_replaces_projection(db: PgConn) -> None:
-    """0034 exists and the live function body actually computes the median."""
-    assert MIGRATIONS_DIR.joinpath("0034_listing_below_median.sql").exists()
+def test_migration_0038_shipped_and_replaces_projection(db: PgConn) -> None:
+    """0038 exists and the live function body actually computes the median."""
+    assert MIGRATIONS_DIR.joinpath("0038_listing_below_median.sql").exists()
     body = db.run(
         "SELECT pg_get_functiondef('public.search_upsert_listing(uuid)'::regprocedure)"
     )

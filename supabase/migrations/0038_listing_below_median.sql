@@ -1,4 +1,8 @@
--- 0034: Make the `below_median` search boost signal real for vendor listings.
+-- 0038: Make the `below_median` search boost signal real for vendor listings.
+-- (Renumbered from 0034 → 0038: master merged 0034_search_rating_boost + 0035–0037
+--  while this branch was open. That 0034 wired the *rating* boost into
+--  search_apply_boost and kept the below_median term; this migration is the
+--  complementary fix that finally *populates* below_median in the projection.)
 --
 -- Background: 0009's `search_apply_boost` multiplies a listing's RRF score by
 -- +0.05 when `boost_signals->>'below_median'` is true, but every projection
