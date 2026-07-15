@@ -146,7 +146,7 @@ class FakeSupabaseClient:
         }
 
     def table(self, name: str) -> FakeTable:
-        return self.tables[name]
+        return self.tables.setdefault(name, FakeTable())
 
 
 def _future_iso(hours: int = 48) -> str:
@@ -193,10 +193,9 @@ def _seed_event(
             "organiser_vendor_id": vendor_id,
             "title": "Summer Jam",
             "slug": "summer-jam",
-            "description": (
-                'Fun night\n<!--vergeo5:event-meta:'
-                '{"category":"workshops","landmark":"East Park"}-->'
-            ),
+            "description": "Fun night",
+            "category_slug": "workshops",
+            "landmark": "East Park",
             "venue": venue,
             "lat": -15.4,
             "lng": 28.3,
@@ -355,6 +354,46 @@ def test_create_and_list_events(
     assert len(listed.json()["items"]) == 1
 
 
+def test_create_event_with_ends_at(organiser_client: TestClient) -> None:
+    payload = _create_payload(starts_at="2026-09-01T18:00:00+02:00")
+    payload["instances"][0]["ends_at"] = "2026-09-01T22:00:00+02:00"
+    response = organiser_client.post(
+        "/organiser/events", headers=_auth_headers(), json=payload
+    )
+    assert response.status_code == 200
+    instances = response.json()["event"]["instances"]
+    assert len(instances) == 1
+    assert instances[0]["ends_at"] is not None
+    # 22:00 +02:00 stored as UTC.
+    assert instances[0]["ends_at"].startswith("2026-09-01T20:00:00")
+
+
+def test_create_event_rejects_ends_at_before_starts_at(organiser_client: TestClient) -> None:
+    payload = _create_payload(starts_at="2026-09-01T18:00:00+02:00")
+    payload["instances"][0]["ends_at"] = "2026-09-01T17:00:00+02:00"  # before start
+    response = organiser_client.post(
+        "/organiser/events", headers=_auth_headers(), json=payload
+    )
+    assert response.status_code == 422
+
+
+def test_update_event_category_and_landmark(
+    organiser_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    # D2: category + landmark are real columns now, editable independently.
+    _seed_event(fake_client)  # seeded as category workshops / landmark East Park
+    response = organiser_client.patch(
+        f"/organiser/events/{EVENT_A_ID}",
+        headers=_auth_headers(),
+        json={"category": "comedy-theatre", "landmark": "Manda Hill"},
+    )
+    assert response.status_code == 200
+    event = response.json()["event"]
+    assert event["category"] == "comedy-theatre"
+    assert event["landmark"] == "Manda Hill"
+
+
 def test_pre_sale_venue_and_date_edit_allowed(
     organiser_client: TestClient,
     fake_client: FakeSupabaseClient,
@@ -492,3 +531,33 @@ def test_publish_cancel_end_transitions(
     )
     assert cancel.status_code == 200
     assert cancel.json()["event"]["status"] == "cancelled"
+
+
+def test_cancel_event_queues_refund_and_notifies(
+    organiser_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    # D3: cancelling flags each paid order for admin refund and notifies buyers.
+    _seed_event(fake_client, event_id=EVENT_A_ID, status="published")
+    _seed_ticket(fake_client)  # holder HOLDER_ID on INSTANCE_A_ID
+    fake_client.table("order_item_tickets").rows.append(
+        {"order_item_id": "oi-1", "instance_id": INSTANCE_A_ID}
+    )
+    fake_client.table("order_items").rows.append({"id": "oi-1", "order_id": "ord-1"})
+    fake_client.table("orders").rows.append(
+        {"id": "ord-1", "customer_id": "buyer-1", "checkout_group_id": "cg-1"}
+    )
+    fake_client.table("payments").rows.append({"checkout_group_id": "cg-1", "status": "success"})
+
+    cancel = organiser_client.post(
+        f"/organiser/events/{EVENT_A_ID}/cancel", headers=_auth_headers()
+    )
+    assert cancel.status_code == 200
+    assert cancel.json()["event"]["status"] == "cancelled"
+
+    flags = fake_client.table("audit_log").rows
+    assert any(row.get("entity_id") == "ord-1" for row in flags)
+    outbox = fake_client.table("notification_outbox").rows
+    notified = {row["payload"]["recipient_id"] for row in outbox}
+    assert "buyer-1" in notified  # buyer
+    assert HOLDER_ID in notified  # attendee

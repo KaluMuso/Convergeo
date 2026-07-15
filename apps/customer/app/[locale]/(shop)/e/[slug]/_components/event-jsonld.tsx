@@ -13,7 +13,7 @@ import {
  * owns the events discovery shape. No client JS — emitted as inline ld+json.
  */
 
-/** Instances carry only a start time; assume a default duration for `endDate`. */
+/** Fallback duration for `endDate` when an instance carries no explicit end. */
 const EVENT_DURATION_MS = 2 * 60 * 60 * 1000;
 
 /** A past event stays indexable for this grace window after its last instance. */
@@ -22,7 +22,19 @@ const GRACE_MS = EVENT_NOINDEX_GRACE_DAYS * 24 * 60 * 60 * 1000;
 
 export type EventJsonLdInstance = {
   startsAt: string;
+  endsAt?: string | null;
 };
+
+/** Effective end millis: explicit endsAt, else startsAt + the default duration. */
+function instanceEndMs(instance: EventJsonLdInstance): number {
+  if (instance.endsAt) {
+    const end = new Date(instance.endsAt).getTime();
+    if (Number.isFinite(end)) {
+      return end;
+    }
+  }
+  return new Date(instance.startsAt).getTime() + EVENT_DURATION_MS;
+}
 
 export type EventJsonLdTicket = {
   name: string;
@@ -61,6 +73,12 @@ export function latestInstanceStart(instances: EventJsonLdInstance[]): number | 
   return times.length > 0 ? Math.max(...times) : null;
 }
 
+/** Millis of the latest-ending instance (using effective ends), or null. */
+export function latestInstanceEnd(instances: EventJsonLdInstance[]): number | null {
+  const times = instances.map(instanceEndMs).filter((time) => Number.isFinite(time));
+  return times.length > 0 ? Math.max(...times) : null;
+}
+
 /**
  * An event is indexable unless ALL its instances ended more than the grace
  * window ago (past-but-recent events stay indexable). Eventless events index.
@@ -69,11 +87,11 @@ export function isEventIndexable(
   instances: EventJsonLdInstance[],
   now: number = Date.now(),
 ): boolean {
-  const latest = latestInstanceStart(instances);
-  if (latest === null) {
+  const latestEnd = latestInstanceEnd(instances);
+  if (latestEnd === null) {
     return true;
   }
-  return latest + EVENT_DURATION_MS >= now - GRACE_MS;
+  return latestEnd >= now - GRACE_MS;
 }
 
 /**
@@ -153,7 +171,7 @@ export function buildEventJsonLd(input: EventJsonLdInput): Record<string, unknow
     ...(primary
       ? {
           startDate: primary.startsAt,
-          endDate: new Date(new Date(primary.startsAt).getTime() + EVENT_DURATION_MS).toISOString(),
+          endDate: new Date(instanceEndMs(primary)).toISOString(),
         }
       : {}),
     ...(input.imageUrls && input.imageUrls.length > 0 ? { image: input.imageUrls } : {}),

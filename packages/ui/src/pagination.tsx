@@ -51,7 +51,7 @@ export function LoadMorePagination({
         aria-busy={loading}
         className={mergeClasses(
           "inline-flex min-h-11 min-w-44 items-center justify-center rounded-lg border border-border bg-surface px-6 py-2 text-sm font-semibold text-primary transition-colors",
-          "hover:bg-primary-tint focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+          "hover:bg-primary-tint focus-visible:outline-none focus-visible:shadow-focusRing disabled:cursor-not-allowed disabled:opacity-50",
         )}
         style={{ transitionTimingFunction: "var(--ease-std)" }}
       >
@@ -76,7 +76,7 @@ function PageButton({ page, current, onClick, label }: PageButtonProps) {
       aria-current={current ? "page" : undefined}
       aria-label={typeof label === "string" ? label : undefined}
       className={mergeClasses(
-        "inline-flex min-h-11 min-w-11 items-center justify-center rounded text-sm font-medium transition-colors",
+        "inline-flex min-h-11 min-w-11 items-center justify-center rounded text-sm font-medium transition-colors focus-visible:outline-none focus-visible:shadow-focusRing",
         current ? "bg-primary text-surface" : "text-primary hover:bg-primary-tint",
       )}
       style={{ transitionTimingFunction: "var(--ease-std)" }}
@@ -110,7 +110,7 @@ export function NumberedPagination({
         disabled={!canGoPrev}
         className={mergeClasses(
           "inline-flex min-h-11 items-center justify-center rounded px-3 text-sm font-medium text-primary",
-          "hover:bg-primary-tint focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+          "hover:bg-primary-tint focus-visible:outline-none focus-visible:shadow-focusRing disabled:cursor-not-allowed disabled:opacity-50",
         )}
         style={{ transitionTimingFunction: "var(--ease-std)" }}
       >
@@ -133,7 +133,7 @@ export function NumberedPagination({
         disabled={!canGoNext}
         className={mergeClasses(
           "inline-flex min-h-11 items-center justify-center rounded px-3 text-sm font-medium text-primary",
-          "hover:bg-primary-tint focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+          "hover:bg-primary-tint focus-visible:outline-none focus-visible:shadow-focusRing disabled:cursor-not-allowed disabled:opacity-50",
         )}
         style={{ transitionTimingFunction: "var(--ease-std)" }}
       >

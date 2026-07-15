@@ -1,11 +1,11 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
-import { BottomNav } from "@vergeo/ui/src/bottom-nav";
 import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
 import { TopNav } from "@vergeo/ui/src/top-nav";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { BottomNavClient } from "./_components/bottom-nav-client";
 import { DesktopHeader } from "./_components/desktop-header";
 
 type ShopLayoutProps = {
@@ -40,35 +40,30 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       icon: navIcon("🏠"),
       label: t("home.nav.home"),
       href: `/${locale}`,
-      active: true,
     },
     {
       key: "browse",
       icon: navIcon("🔍"),
       label: t("home.nav.browse"),
       href: `/${locale}/search`,
-      active: false,
     },
     {
       key: "ask",
       icon: navIcon("✦"),
       label: t("home.nav.ask"),
       href: `/${locale}/ask`,
-      active: false,
     },
     {
       key: "orders",
       icon: navIcon("📋"),
       label: t("home.nav.orders"),
       href: `/${locale}/account`,
-      active: false,
     },
     {
       key: "account",
       icon: navIcon("👤"),
       label: t("home.nav.account"),
       href: `/${locale}/account`,
-      active: false,
     },
   ];
 
@@ -104,6 +99,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         cartHref={`/${locale}/cart`}
         cartLabel={t("home.nav.cart")}
         skipLinkTargetId="shop-main"
+        skipLinkLabel={tCommon("nav.skipToContent")}
         navAriaLabel={t("home.nav.ariaLabel")}
         LinkComponent={Link}
         condensed
@@ -114,6 +110,10 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           appName: tCommon("app.name"),
           navAriaLabel: t("home.nav.desktopAriaLabel"),
           searchPlaceholder: t("home.nav.searchPlaceholder"),
+          searchSubmit: t("home.nav.searchSubmit"),
+          allCategories: t("home.nav.allCategories"),
+          categoriesPanelAria: t("home.nav.categoriesPanelAria"),
+          categoriesLoading: t("home.nav.categoriesLoading"),
           browse: t("home.nav.browse"),
           services: t("home.nav.services"),
           events: t("home.nav.events"),
@@ -132,11 +132,10 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       >
         {children}
       </main>
-      <BottomNav
+      <BottomNavClient
         items={bottomItems}
         ariaLabel={t("home.nav.bottomAriaLabel")}
-        LinkComponent={Link}
-        desktopHiddenClassName="lg:hidden"
+        locale={locale}
       />
     </>
   );

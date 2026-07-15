@@ -127,7 +127,10 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
         const messageKey = caught.details.message_key;
         if (typeof messageKey === "string" && messageKey.startsWith("vendor.events.errors.")) {
           const key = messageKey.replace("vendor.events.", "") as
-            "errors.required" | "errors.capacity_below_sold" | "errors.past_instance";
+            | "errors.required"
+            | "errors.capacity_below_sold"
+            | "errors.past_instance"
+            | "errors.ends_before_starts";
           setError(t(`events.${key}`));
           return;
         }

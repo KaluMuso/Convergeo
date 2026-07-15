@@ -1,9 +1,12 @@
 """Vendor analytics — lightweight, vendor-scoped 7/30-day aggregates.
 
 Numbers reconcile with orders truth: sales/orders are derived from the vendor's
-own `orders` + `order_items` rows (cancelled excluded); views are counted from
-`funnel_events` whose cart snapshot references one of the vendor's listings.
-All money is integer ngwee; the client renders via `formatK`.
+own `orders` + `order_items` rows (cancelled excluded). The "cart activity"
+metric (API field `views`, shown in the UI as "Cart activity") counts distinct
+add-to-cart / checkout-start `funnel_events` whose cart snapshot references one of
+the vendor's listings — buying-intent activity, not raw storefront impressions,
+so `conversion` is a cart-to-order rate. All money is integer ngwee; the client
+renders via `formatK`.
 """
 
 from __future__ import annotations

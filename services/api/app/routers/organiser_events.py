@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import json
+import logging
 import re
 import uuid
 from datetime import UTC, datetime
@@ -10,11 +10,14 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.events.cancellation import process_event_cancellation
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.notifications.dedupe import enqueue_outbox_row
 from app.services.notifications.events import emit_event
 from fastapi import APIRouter, Depends
 from pydantic import Field, field_validator
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/organiser/events", tags=["organiser-events"])
 
@@ -40,13 +43,13 @@ EventStatus = Literal["draft", "published", "cancelled", "completed"]
 EDITABLE_STATUSES = frozenset({"draft", "published"})
 SOLD_TICKET_STATUSES = frozenset({"issued", "checked_in"})
 MAX_EVENT_IMAGES = 8
-_EVENT_META_RE = re.compile(r"\n?<!--vergeo5:event-meta:(\{.*?\})-->\s*$", re.DOTALL)
 _SCHEDULE_CHANGE_EVENT = "event_schedule_changed"
 
 
 class EventInstanceInput(StrictModel):
     id: str | None = None
     starts_at: str
+    ends_at: str | None = None
     capacity: int = Field(ge=0)
 
     @field_validator("starts_at")
@@ -55,10 +58,18 @@ class EventInstanceInput(StrictModel):
         _parse_starts_at(value)
         return value
 
+    @field_validator("ends_at")
+    @classmethod
+    def validate_ends_at(cls, value: str | None) -> str | None:
+        if value is not None:
+            _parse_starts_at(value)
+        return value
+
 
 class EventInstanceResponse(StrictModel):
     id: str
     starts_at: datetime
+    ends_at: datetime | None = None
     capacity: int
     tickets_sold: int = 0
 
@@ -174,6 +185,30 @@ def _parse_starts_at(value: Any) -> datetime:
     raise ValueError(f"Unsupported datetime value: {value!r}")
 
 
+def _instance_ends_at(row: dict[str, Any]) -> datetime | None:
+    """Parse an instance row's optional ends_at (NULL for pre-0035 rows)."""
+    raw = row.get("ends_at")
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        return None
+    return _parse_starts_at(raw)
+
+
+def _instance_write_payload(event_id: str, instance: EventInstanceInput) -> dict[str, Any]:
+    """DB payload for an instance insert/update.
+
+    ends_at is included only when supplied. On update this preserves any existing
+    end time when a (still-optional) client omits the field, rather than wiping it.
+    """
+    payload: dict[str, Any] = {
+        "event_id": event_id,
+        "starts_at": _parse_starts_at(instance.starts_at).astimezone(UTC).isoformat(),
+        "capacity": instance.capacity,
+    }
+    if instance.ends_at is not None:
+        payload["ends_at"] = _parse_starts_at(instance.ends_at).astimezone(UTC).isoformat()
+    return payload
+
+
 def _slugify(title: str) -> str:
     slug = re.sub(r"[^\w\s-]", "", title.lower())
     slug = re.sub(r"[-\s]+", "-", slug).strip("-")
@@ -197,51 +232,16 @@ def _unique_event_slug(service_client: ServiceRoleClient, base_title: str) -> st
     return f"{base}-{uuid.uuid4().hex[:8]}"
 
 
-def _split_event_description(raw: str | None) -> tuple[str, dict[str, Any]]:
-    if not raw:
-        return "", {}
-    match = _EVENT_META_RE.search(raw)
-    if not match:
-        return raw.strip(), {}
-    try:
-        meta = json.loads(match.group(1))
-    except json.JSONDecodeError:
-        return raw.strip(), {}
-    if not isinstance(meta, dict):
-        meta = {}
-    visible = raw[: match.start()].strip()
-    return visible, meta
-
-
-def _merge_event_description(
-    visible: str | None,
-    *,
-    category: str | None,
-    landmark: str | None,
-) -> str | None:
-    body = (visible or "").strip()
-    meta: dict[str, str] = {}
-    if category:
-        meta["category"] = category
-    if landmark:
-        meta["landmark"] = landmark.strip()
-    if not meta:
-        return body or None
-    meta_json = json.dumps(meta, separators=(",", ":"))
-    if body:
-        return f"{body}\n<!--vergeo5:event-meta:{meta_json}-->"
-    return f"<!--vergeo5:event-meta:{meta_json}-->"
-
-
-def _parse_category(meta: dict[str, Any]) -> EventCategory | None:
-    raw = meta.get("category")
+def _category_from_row(row: dict[str, Any]) -> EventCategory | None:
+    """Read events.category_slug (0036), guarding against unknown values."""
+    raw = row.get("category_slug")
     if isinstance(raw, str) and raw in EVENT_CATEGORIES:
         return raw  # type: ignore[return-value]
     return None
 
 
-def _parse_landmark(meta: dict[str, Any]) -> str | None:
-    raw = meta.get("landmark")
+def _landmark_from_row(row: dict[str, Any]) -> str | None:
+    raw = row.get("landmark")
     if isinstance(raw, str) and raw.strip():
         return raw.strip()
     return None
@@ -296,7 +296,8 @@ def _load_event_for_vendor(
     response = (
         service_client.client.table("events")
         .select(
-            "id, organiser_vendor_id, title, slug, description, venue, lat, lng, images, status"
+            "id, organiser_vendor_id, title, slug, description, venue, lat, lng, images, "
+            "status, category_slug, landmark"
         )
         .eq("id", event_id)
         .maybe_single()
@@ -316,7 +317,7 @@ def _load_event_for_vendor(
 def _fetch_instances(client: Any, event_id: str) -> list[dict[str, Any]]:
     response = (
         client.table("event_instances")
-        .select("id, event_id, starts_at, capacity")
+        .select("id, event_id, starts_at, ends_at, capacity")
         .eq("event_id", event_id)
         .order("starts_at")
         .execute()
@@ -348,13 +349,14 @@ def _serialize_event_detail(
     *,
     sold_by_instance: dict[str, int],
 ) -> EventDetailResponse:
-    description, meta = _split_event_description(
+    description = (
         event_row.get("description") if isinstance(event_row.get("description"), str) else None
     )
     instances = [
         EventInstanceResponse(
             id=str(row["id"]),
             starts_at=_parse_starts_at(row["starts_at"]),
+            ends_at=_instance_ends_at(row),
             capacity=int(row.get("capacity") or 0),
             tickets_sold=sold_by_instance.get(str(row["id"]), 0),
         )
@@ -369,12 +371,12 @@ def _serialize_event_detail(
         title=str(event_row.get("title") or ""),
         slug=str(event_row.get("slug") or ""),
         status=status,  # type: ignore[arg-type]
-        category=_parse_category(meta),
+        category=_category_from_row(event_row),
         description=description or None,
         venue=event_row.get("venue") if isinstance(event_row.get("venue"), str) else None,
         lat=float(event_row["lat"]) if event_row.get("lat") is not None else None,
         lng=float(event_row["lng"]) if event_row.get("lng") is not None else None,
-        landmark=_parse_landmark(meta),
+        landmark=_landmark_from_row(event_row),
         images=_parse_images(event_row.get("images")),
         instances=instances,
         tickets_sold=tickets_sold,
@@ -387,9 +389,6 @@ def _serialize_event_summary(
     *,
     sold_by_instance: dict[str, int],
 ) -> EventSummary:
-    _, meta = _split_event_description(
-        event_row.get("description") if isinstance(event_row.get("description"), str) else None
-    )
     next_starts_at: datetime | None = None
     if instance_rows:
         next_starts_at = _parse_starts_at(instance_rows[0]["starts_at"])
@@ -401,14 +400,35 @@ def _serialize_event_summary(
         title=str(event_row.get("title") or ""),
         slug=str(event_row.get("slug") or ""),
         status=status,  # type: ignore[arg-type]
-        category=_parse_category(meta),
+        category=_category_from_row(event_row),
         venue=event_row.get("venue") if isinstance(event_row.get("venue"), str) else None,
-        landmark=_parse_landmark(meta),
+        landmark=_landmark_from_row(event_row),
         images=_parse_images(event_row.get("images")),
         next_starts_at=next_starts_at,
         instance_count=len(instance_rows),
         tickets_sold=sum(sold_by_instance.values()),
     )
+
+
+def _validate_instance_time_order(instances: list[EventInstanceInput]) -> None:
+    """Reject any instance whose ends_at is not strictly after its starts_at.
+
+    Mirrors the DB CHECK (event_instances_ends_after_starts_chk) so the client
+    gets a clean 422 with an i18n key instead of a database error.
+    """
+    for instance in instances:
+        if instance.ends_at is None:
+            continue
+        if _parse_starts_at(instance.ends_at) <= _parse_starts_at(instance.starts_at):
+            raise AppError(
+                code="ends_before_starts",
+                message="Instance end time must be after its start time",
+                http_status=422,
+                details={
+                    "message_key": "vendor.events.errors.ends_before_starts",
+                    "instance_id": instance.id,
+                },
+            )
 
 
 def _validate_instances_capacity(
@@ -449,6 +469,12 @@ def _instances_changed(
             return True
         if _parse_starts_at(prior["starts_at"]) != _parse_starts_at(item.starts_at):
             return True
+        # Only treat ends_at as changed when the client actually supplies one
+        # (still-optional field); an omitted end preserves the stored value.
+        if item.ends_at is not None:
+            prior_ends = _instance_ends_at(prior)
+            if prior_ends is None or prior_ends != _parse_starts_at(item.ends_at):
+                return True
         if int(prior.get("capacity") or 0) != item.capacity:
             return True
     return False
@@ -538,11 +564,7 @@ def _sync_instances(
             client.table("event_instances").delete().eq("id", row_id).execute()
 
     for instance in instances:
-        payload = {
-            "event_id": event_id,
-            "starts_at": _parse_starts_at(instance.starts_at).astimezone(UTC).isoformat(),
-            "capacity": instance.capacity,
-        }
+        payload = _instance_write_payload(event_id, instance)
         if instance.id and instance.id in existing_ids:
             client.table("event_instances").update(payload).eq("id", instance.id).execute()
         else:
@@ -623,7 +645,7 @@ async def list_organiser_events(
 
     response = (
         client.table("events")
-        .select("id, title, slug, description, venue, images, status")
+        .select("id, title, slug, description, venue, images, status, category_slug, landmark")
         .eq("organiser_vendor_id", vendor_id)
         .order("updated_at", desc=True)
         .execute()
@@ -646,20 +668,18 @@ async def create_organiser_event(
 ) -> EventMutationResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     _require_active_kyc_vendor(vendor)
+    _validate_instance_time_order(body.instances)
     vendor_id = str(vendor["id"])
     client = service_client.client
 
     slug = _unique_event_slug(service_client, body.title)
-    description = _merge_event_description(
-        body.description,
-        category=body.category,
-        landmark=body.landmark,
-    )
     insert_payload = {
         "organiser_vendor_id": vendor_id,
         "title": body.title.strip(),
         "slug": slug,
-        "description": description,
+        "description": (body.description or "").strip() or None,
+        "category_slug": body.category,
+        "landmark": body.landmark.strip() if body.landmark else None,
         "venue": body.venue.strip() if body.venue else None,
         "lat": body.lat,
         "lng": body.lng,
@@ -678,11 +698,7 @@ async def create_organiser_event(
     event_id = str(event_row["id"])
     for instance in body.instances:
         client.table("event_instances").insert(
-            {
-                "event_id": event_id,
-                "starts_at": _parse_starts_at(instance.starts_at).astimezone(UTC).isoformat(),
-                "capacity": instance.capacity,
-            }
+            _instance_write_payload(event_id, instance)
         ).execute()
 
     instances = _fetch_instances(client, event_id)
@@ -742,17 +758,7 @@ async def update_organiser_event(
 
     if body.instances is not None:
         _validate_instances_capacity(body.instances, sold_by_instance=sold_by_instance)
-
-    visible_description, meta = _split_event_description(
-        event_row.get("description") if isinstance(event_row.get("description"), str) else None
-    )
-    next_category = body.category if body.category is not None else _parse_category(meta)
-    next_landmark = (
-        body.landmark.strip()
-        if body.landmark is not None
-        else _parse_landmark(meta)
-    )
-    next_visible = body.description if body.description is not None else visible_description
+        _validate_instance_time_order(body.instances)
 
     venue_before = event_row.get("venue")
     instances_before = [dict(row) for row in existing_instances]
@@ -760,16 +766,12 @@ async def update_organiser_event(
     updates: dict[str, Any] = {}
     if body.title is not None:
         updates["title"] = body.title.strip()
-    if (
-        body.description is not None
-        or body.category is not None
-        or body.landmark is not None
-    ):
-        updates["description"] = _merge_event_description(
-            next_visible,
-            category=next_category,
-            landmark=next_landmark,
-        )
+    if body.description is not None:
+        updates["description"] = body.description.strip() or None
+    if body.category is not None:
+        updates["category_slug"] = body.category
+    if body.landmark is not None:
+        updates["landmark"] = body.landmark.strip() or None
     if body.venue is not None:
         updates["venue"] = body.venue.strip() or None
     if body.lat is not None:
@@ -871,6 +873,17 @@ async def cancel_organiser_event(
         from_statuses=frozenset({"draft", "published"}),
         to_status="cancelled",
     )
+    # Post-commit side-effects (D3, approach b): queue admin refunds + notify
+    # buyers/holders. Best-effort — the event is already cancelled and the escrow
+    # sweep re-flags refunds on its next run, so a transient failure here must not
+    # fail the cancellation or leave the organiser unable to retry.
+    try:
+        process_event_cancellation(
+            service_client, event_id=event_id, event_title=str(event_row.get("title") or "")
+        )
+    except Exception:
+        logger.exception("event cancellation side-effects failed", extra={"event_id": event_id})
+
     sold = _count_sold_tickets(client, [str(row["id"]) for row in instances if row.get("id")])
     return EventMutationResponse(
         event=_serialize_event_detail(event_row, instances, sold_by_instance=sold)

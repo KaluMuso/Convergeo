@@ -14,6 +14,7 @@ from app.routers.services_listings import ResponseTimeTier, _fetch_response_tier
 from app.routers.vendor_orders import _load_vendor_for_owner
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.moderation.contact_strip import strip_contacts
+from app.services.notifications.dedupe import build_dedupe_key
 from app.services.rfq.broadcast import RFQ_MATCH_EVENT, match_providers
 from fastapi import APIRouter, Depends, Request
 from pydantic import Field
@@ -187,12 +188,15 @@ def _load_job_service_area(client: Any, job_id: str) -> str:
 
 
 def _provider_notified_for_job(client: Any, *, job_id: str, vendor_id: str) -> bool:
+    # notification_outbox has no event_type/entity_id columns — enqueue_outbox_row
+    # folds them into dedupe_key ({event}:{entity}:{channel}). RFQ broadcasts always
+    # enqueue on the whatsapp channel, so match that row's dedupe_key exactly.
     entity_id = f"{job_id}:{vendor_id}"
+    dedupe_key = build_dedupe_key(RFQ_MATCH_EVENT, entity_id, "whatsapp")
     response = (
         client.table("notification_outbox")
         .select("id")
-        .eq("event_type", RFQ_MATCH_EVENT)
-        .eq("entity_id", entity_id)
+        .eq("dedupe_key", dedupe_key)
         .limit(1)
         .execute()
     )

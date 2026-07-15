@@ -21,6 +21,7 @@ from app.services.payments.state import (
     PaymentTransitionError,
     apply_payment_status,
     lenco_collection_status_to_payment_status,
+    process_webhook_event,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,19 @@ class PollResult:
     updated: int
     unchanged: int
     errors: int
+
+
+@dataclass(frozen=True, slots=True)
+class DrainResult:
+    scanned: int
+    applied: int
+    skipped: int
+    errors: int
+
+
+# Cap the batch so one tick can't scan an unbounded backlog. Ordered oldest-first
+# so a stuck (error) row can never starve newer webhooks within the same batch.
+DEFAULT_WEBHOOK_DRAIN_LIMIT = 200
 
 
 @dataclass(frozen=True, slots=True)
@@ -429,6 +443,91 @@ async def poll_non_terminal_payments(
         scanned=len(pending),
         updated=updated,
         unchanged=unchanged,
+        errors=errors,
+    )
+
+
+def _fetch_pending_webhook_events(
+    service_client: ServiceRoleClient,
+    *,
+    limit: int,
+) -> list[dict[str, Any]]:
+    """Unprocessed Lenco webhook rows, oldest first (uses provider+processed_at idx)."""
+    response = (
+        service_client.client.table("webhook_events")
+        .select("id, provider, processed_at")
+        .eq("provider", "lenco")
+        .is_("processed_at", "null")
+        .order("created_at", desc=False)
+        .limit(limit)
+        .execute()
+    )
+    return _rows(response)
+
+
+def drain_pending_webhook_events(
+    service_client: ServiceRoleClient,
+    *,
+    limit: int = DEFAULT_WEBHOOK_DRAIN_LIMIT,
+) -> DrainResult:
+    """Consume stored Lenco webhook rows and drive the payment state machine.
+
+    The webhook endpoint (M08-P02) only verifies + persists each event to
+    ``webhook_events`` and fast-acks; this drain applies them via
+    ``process_webhook_event`` so the MoMo/USSD push path confirms from the
+    webhook we already hold — seconds after receipt on the next tick — instead
+    of waiting on the slower re-query poller. Idempotent: each row is marked
+    ``processed_at`` by ``process_webhook_event`` and skipped next tick.
+
+    Per-row isolation mirrors the reconciliation poller: an anomalous row (e.g.
+    a webhook status with no legal transition from the payment's current state)
+    is logged and counted, never aborting the batch. Such a row is left
+    unprocessed so the re-query poller and admin monitoring still see it rather
+    than it being silently swallowed.
+    """
+    pending = _fetch_pending_webhook_events(service_client, limit=limit)
+    applied = 0
+    skipped = 0
+    errors = 0
+
+    for event in pending:
+        webhook_event_id = str(event.get("id", ""))
+        try:
+            outcome = process_webhook_event(
+                service_client,
+                webhook_event_id=webhook_event_id,
+            )
+        except PaymentTransitionError as exc:
+            # Webhook status has no legal edge from the payment's current state
+            # (e.g. a row stuck at INITIATED now reporting success/failed). A
+            # reconciliation anomaly, not a valid guarded transition — surface it
+            # and skip rather than raw-UPDATE around the state-machine guard.
+            logger.warning(
+                "webhook drain anomaly: illegal transition for webhook_event %s "
+                "(from_status=%s event=%s) — skipping",
+                webhook_event_id,
+                exc.details.get("from_status"),
+                exc.details.get("event"),
+            )
+            errors += 1
+            continue
+        except Exception:
+            logger.exception(
+                "webhook drain: unexpected error for webhook_event %s — skipping",
+                webhook_event_id,
+            )
+            errors += 1
+            continue
+
+        if outcome is None:
+            skipped += 1
+        else:
+            applied += 1
+
+    return DrainResult(
+        scanned=len(pending),
+        applied=applied,
+        skipped=skipped,
         errors=errors,
     )
 

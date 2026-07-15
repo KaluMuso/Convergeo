@@ -601,10 +601,43 @@ export type Database = {
           },
         ]
       }
+      event_categories: {
+        Row: {
+          created_at: string
+          label_key: string
+          parent_slug: string | null
+          slug: string
+          sort: number
+        }
+        Insert: {
+          created_at?: string
+          label_key: string
+          parent_slug?: string | null
+          slug: string
+          sort?: number
+        }
+        Update: {
+          created_at?: string
+          label_key?: string
+          parent_slug?: string | null
+          slug?: string
+          sort?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_categories_parent_slug_fkey"
+            columns: ["parent_slug"]
+            isOneToOne: false
+            referencedRelation: "event_categories"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
       event_instances: {
         Row: {
           capacity: number
           created_at: string
+          ends_at: string | null
           event_id: string
           id: string
           starts_at: string
@@ -613,6 +646,7 @@ export type Database = {
         Insert: {
           capacity: number
           created_at?: string
+          ends_at?: string | null
           event_id: string
           id?: string
           starts_at: string
@@ -621,6 +655,7 @@ export type Database = {
         Update: {
           capacity?: number
           created_at?: string
+          ends_at?: string | null
           event_id?: string
           id?: string
           starts_at?: string
@@ -638,10 +673,12 @@ export type Database = {
       }
       events: {
         Row: {
+          category_slug: string | null
           created_at: string
           description: string | null
           id: string
           images: string[]
+          landmark: string | null
           lat: number | null
           lng: number | null
           organiser_vendor_id: string
@@ -652,10 +689,12 @@ export type Database = {
           venue: string | null
         }
         Insert: {
+          category_slug?: string | null
           created_at?: string
           description?: string | null
           id?: string
           images?: string[]
+          landmark?: string | null
           lat?: number | null
           lng?: number | null
           organiser_vendor_id: string
@@ -666,10 +705,12 @@ export type Database = {
           venue?: string | null
         }
         Update: {
+          category_slug?: string | null
           created_at?: string
           description?: string | null
           id?: string
           images?: string[]
+          landmark?: string | null
           lat?: number | null
           lng?: number | null
           organiser_vendor_id?: string
@@ -680,6 +721,13 @@ export type Database = {
           venue?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "events_category_slug_fkey"
+            columns: ["category_slug"]
+            isOneToOne: false
+            referencedRelation: "event_categories"
+            referencedColumns: ["slug"]
+          },
           {
             foreignKeyName: "events_organiser_vendor_id_fkey"
             columns: ["organiser_vendor_id"]

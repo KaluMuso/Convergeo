@@ -75,7 +75,7 @@ export function RecentScans({ items }: RecentScansProps) {
                 fontSize: "var(--fs-small)",
                 padding: "var(--sp-2) var(--sp-3)",
                 borderRadius: "var(--r)",
-                background: "var(--surface-2)",
+                background: "var(--bg-2)",
                 borderLeft: `3px solid ${STATUS_COLOR[item.status]}`,
               }}
             >
