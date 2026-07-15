@@ -2,7 +2,7 @@
 
 **Branch:** `claude/convergeo-strategy-gaps-06qyby`
 **Source report:** the Codex "Events Strategy" audit (traceability matrix + branch inventory)
-**Baseline:** `master` (migrations through `0033`)
+**Baseline:** `master` (migrations through `0034`)
 
 ## 1. Read this first: what the Codex report is (and isn't)
 
@@ -37,7 +37,7 @@ end from a fixed 2h assumption.
 
 **Shipped (backend, non-breaking):**
 
-- `0034_event_instance_ends_at.sql` — nullable `ends_at` + `CHECK (ends_at IS NULL OR
+- `0035_event_instance_ends_at.sql` — nullable `ends_at` + `CHECK (ends_at IS NULL OR
   ends_at > starts_at)` + index; existing rows backfilled to `starts_at + 2h`. Additive
   and reversible (down = drop column).
 - `app/services/events/timing.py` — single source for the two deliberately different
@@ -79,7 +79,7 @@ filtering by any of the 5 non-free categories returned nothing.
 
 **Shipped:**
 
-- `0035_event_categories.sql` — `event_categories` taxonomy table (`slug`, `parent_slug`,
+- `0036_event_categories.sql` — `event_categories` taxonomy table (`slug`, `parent_slug`,
   `label_key`, `sort`), seeded with the 6 launch categories (`parent_slug` ready for the
   strategy's ~11 top-level / ~65 subcategory nesting); `events.category_slug` FK + index;
   `events.landmark` column; backfill from the meta comment + strip it from the description.

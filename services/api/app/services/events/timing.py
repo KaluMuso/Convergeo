@@ -1,6 +1,6 @@
 """Shared event-instance timing helpers.
 
-``event_instances.ends_at`` is nullable (migration 0034) for backward
+``event_instances.ends_at`` is nullable (migration 0035) for backward
 compatibility, so every consumer must resolve an *effective* end time rather
 than reading the column directly. There are two deliberately different
 fallbacks, kept here so the codebase agrees on them:

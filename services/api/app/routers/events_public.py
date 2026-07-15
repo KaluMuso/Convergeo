@@ -128,7 +128,7 @@ def parse_starts_at(value: Any) -> datetime:
 
 
 def _parse_ends_at(row: dict[str, Any]) -> datetime | None:
-    """Parse an instance row's optional ends_at (NULL for pre-0034 rows)."""
+    """Parse an instance row's optional ends_at (NULL for pre-0035 rows)."""
     raw = row.get("ends_at")
     if raw is None or (isinstance(raw, str) and not raw.strip()):
         return None
@@ -567,7 +567,7 @@ def build_detail_response(client: Any, slug: str) -> EventDetailResponse:
     vendor_raw = event.get("vendors")
     vendor_row = vendor_raw if isinstance(vendor_raw, dict) else None
     organiser = _parse_organiser(vendor_row)
-    # Prefer the event's own landmark (0035 column); fall back to the organiser's
+    # Prefer the event's own landmark (0036 column); fall back to the organiser's
     # vendor-location landmark.
     event_landmark = event.get("landmark")
     landmark = (

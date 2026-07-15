@@ -186,7 +186,7 @@ def _parse_starts_at(value: Any) -> datetime:
 
 
 def _instance_ends_at(row: dict[str, Any]) -> datetime | None:
-    """Parse an instance row's optional ends_at (NULL for pre-0034 rows)."""
+    """Parse an instance row's optional ends_at (NULL for pre-0035 rows)."""
     raw = row.get("ends_at")
     if raw is None or (isinstance(raw, str) and not raw.strip()):
         return None
@@ -233,7 +233,7 @@ def _unique_event_slug(service_client: ServiceRoleClient, base_title: str) -> st
 
 
 def _category_from_row(row: dict[str, Any]) -> EventCategory | None:
-    """Read events.category_slug (0035), guarding against unknown values."""
+    """Read events.category_slug (0036), guarding against unknown values."""
     raw = row.get("category_slug")
     if isinstance(raw, str) and raw in EVENT_CATEGORIES:
         return raw  # type: ignore[return-value]

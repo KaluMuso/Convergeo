@@ -309,7 +309,7 @@ def test_browse_excludes_past_events(store: FakeSupabaseStore) -> None:
 
 
 def test_browse_includes_in_progress_event(store: FakeSupabaseStore) -> None:
-    # ends_at (0034) regression: an event that has STARTED but not yet ENDED must
+    # ends_at (0035) regression: an event that has STARTED but not yet ENDED must
     # stay discoverable. Before the fix the starts_at >= now filter dropped it.
     event_id = "0e000000-0000-0000-0000-0000000000aa"
     store.events.append(

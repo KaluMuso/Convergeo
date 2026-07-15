@@ -726,7 +726,7 @@ class TestOrganiserStatsAuthz:
 
 
 # ---------------------------------------------------------------------------
-# End-anchored release timing (0034 ends_at) — DB-free unit tests.
+# End-anchored release timing (0035 ends_at) — DB-free unit tests.
 #
 # These patch the SQL-backed context loader so they exercise the pure timing
 # decision without a Postgres instance, and prove the release now anchors on the
@@ -791,7 +791,7 @@ def test_full_release_anchors_on_ends_at_not_starts_at() -> None:
 
 
 def test_legacy_null_ends_at_keeps_starts_at_anchor() -> None:
-    # No ends_at (pre-0034 row) -> falls back to starts_at, unchanged legacy timing.
+    # No ends_at (pre-0035 row) -> falls back to starts_at, unchanged legacy timing.
     starts_at = datetime(2026, 10, 1, 8, 0, tzinfo=UTC)
     ctx = _synthetic_context(starts_at=starts_at, ends_at=None, lead_days=3)
 
