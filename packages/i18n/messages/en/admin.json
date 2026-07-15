@@ -367,6 +367,7 @@
     "slots": {
       "hero": "Hero",
       "banner_row": "Banner row",
+      "flash_deal": "Flash deal",
       "events_row": "Events row",
       "featured_collections": "Featured collections",
       "category_grid": "Category grid"

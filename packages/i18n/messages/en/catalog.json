@@ -132,6 +132,17 @@
       "title": "Grow your business with Vergeo5",
       "body": "Reach customers across Zambia with your own storefront. Free setup, mobile-money payouts — you only pay when you sell.",
       "cta": "Start selling"
+    },
+    "flash": {
+      "defaultTag": "⚡ Flash deal",
+      "defaultHeadline": "Limited-time offers",
+      "defaultCta": "Shop the deals",
+      "days": "Days",
+      "hours": "Hrs",
+      "minutes": "Min",
+      "seconds": "Sec",
+      "expired": "Deal ended",
+      "ariaLabel": "Ends in {time}"
     }
   },
   "pdp": {
