@@ -180,11 +180,11 @@ export function PostJobForm({ locale }: PostJobFormProps) {
       </header>
 
       {!session?.access_token ? (
-        <div className="rounded-lg border border-border bg-surface-2 p-3">
+        <div className="rounded-lg border border-border bg-bg-2 p-3">
           <p className="font-body text-sm text-text-2">{t("postJob.draftSaved")}</p>
           <Link
             href={`/${locale}/login?next=/${locale}/services/post-job`}
-            className="mt-2 inline-flex min-h-11 items-center font-body text-sm font-medium text-accent"
+            className="mt-2 inline-flex min-h-11 items-center font-body text-sm font-medium text-primary underline underline-offset-2"
           >
             {t("postJob.authCta")}
           </Link>

@@ -90,7 +90,11 @@ export function ServiceCard({
   }
 
   return (
-    <Component className={className} data-testid="service-card" style={cardBaseStyle}>
+    <Component
+      className={["card-lift", className].filter(Boolean).join(" ")}
+      data-testid="service-card"
+      style={cardBaseStyle}
+    >
       <div style={{ aspectRatio: "3 / 2", backgroundColor: "var(--bg-2)" }}>{media}</div>
       <div
         style={{

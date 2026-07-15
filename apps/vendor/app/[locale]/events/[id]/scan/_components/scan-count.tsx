@@ -18,7 +18,7 @@ export function ScanCount({ checkedInCount, pendingCount }: ScanCountProps) {
         justifyContent: "space-between",
         alignItems: "baseline",
         borderRadius: "var(--r)",
-        background: "var(--surface-2)",
+        background: "var(--bg-2)",
         padding: "var(--sp-3) var(--sp-4)",
       }}
     >

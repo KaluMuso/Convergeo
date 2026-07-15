@@ -89,7 +89,11 @@ export function EventCard({
     spotsTotal > 0 ? Math.min(100, Math.round((spotsFilled / spotsTotal) * 100)) : 0;
 
   return (
-    <Component className={className} data-testid="event-card" style={cardBaseStyle}>
+    <Component
+      className={["card-lift", className].filter(Boolean).join(" ")}
+      data-testid="event-card"
+      style={cardBaseStyle}
+    >
       <div style={{ position: "relative", aspectRatio: "16 / 9", backgroundColor: "var(--bg-2)" }}>
         {media}
         {badge ? (

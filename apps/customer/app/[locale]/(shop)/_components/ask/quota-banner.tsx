@@ -23,7 +23,7 @@ export function QuotaBanner({ message, signup = null }: QuotaBannerProps) {
     <div
       role="status"
       data-testid="ask-quota-banner"
-      className="space-y-2 rounded-lg border border-border bg-surface-2 p-3"
+      className="space-y-2 rounded-lg border border-border bg-bg-2 p-3"
     >
       <p className="text-sm text-text-2">{message}</p>
       {signup ? (
@@ -32,7 +32,7 @@ export function QuotaBanner({ message, signup = null }: QuotaBannerProps) {
           <Link
             href={signup.href}
             data-testid="ask-signup-cta"
-            className="inline-flex min-h-11 items-center text-sm font-medium text-accent"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-2"
           >
             {signup.ctaLabel}
           </Link>

@@ -1,10 +1,16 @@
 import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
 import Link from "next/link";
 
+import { CategoryMegaMenu } from "./category-mega-menu";
+
 type DesktopHeaderLabels = {
   appName: string;
   navAriaLabel: string;
   searchPlaceholder: string;
+  searchSubmit: string;
+  allCategories: string;
+  categoriesPanelAria: string;
+  categoriesLoading: string;
   browse: string;
   services: string;
   events: string;
@@ -49,14 +55,42 @@ export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
           {labels.appName}
         </Link>
 
-        <Link
-          href={`/${locale}/search`}
-          className="flex h-11 min-w-0 max-w-xl flex-1 items-center rounded-pill border border-border bg-bg px-4 text-sm text-text-3"
+        {/* Native GET form → /{locale}/search?q=… — works without JS; the search
+            page reads searchParams.q. */}
+        <form
+          role="search"
+          action={`/${locale}/search`}
+          className="flex h-11 min-w-0 max-w-xl flex-1 items-center gap-2 rounded-pill border border-border bg-bg px-4 transition-colors focus-within:border-primary focus-within:shadow-focusRing"
         >
-          {labels.searchPlaceholder}
-        </Link>
+          <input
+            type="search"
+            name="q"
+            aria-label={labels.searchPlaceholder}
+            placeholder={labels.searchPlaceholder}
+            className="min-w-0 flex-1 bg-transparent text-sm text-text placeholder:text-text-3 focus-visible:outline-none"
+          />
+          <button
+            type="submit"
+            aria-label={labels.searchSubmit}
+            className="inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-pill text-base text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+          >
+            <span aria-hidden className="leading-none">
+              {"\u{1F50D}"}
+            </span>
+          </button>
+        </form>
 
         <ul className="flex shrink-0 list-none items-center gap-1 p-0">
+          <li>
+            <CategoryMegaMenu
+              locale={locale}
+              labels={{
+                trigger: labels.allCategories,
+                panelAria: labels.categoriesPanelAria,
+                loading: labels.categoriesLoading,
+              }}
+            />
+          </li>
           {navLinks.map((link) => (
             <li key={link.key}>
               <Link

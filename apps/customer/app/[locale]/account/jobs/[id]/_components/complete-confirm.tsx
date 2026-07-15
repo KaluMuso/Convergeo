@@ -84,7 +84,7 @@ export function CompleteConfirm({
         </div>
       </dl>
 
-      <p className="rounded bg-surface-2 p-3 text-xs text-text-2">{t("escrowNote")}</p>
+      <p className="rounded bg-bg-2 p-3 text-xs text-text-2">{t("escrowNote")}</p>
 
       {confirmed ? (
         <div className="space-y-1">
