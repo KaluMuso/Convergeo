@@ -11,6 +11,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.identity import lookup_user_email
 from app.services.payments.base import PaymentStrategy, QueryStatusRequest
 from app.services.payments.lenco.config import LencoEnvironment, get_lenco_environment
 from app.services.payments.money import ngwee_to_major_str
@@ -153,9 +154,11 @@ def _load_customer_profile(
     *,
     customer_id: str,
 ) -> dict[str, Any]:
+    # profiles has no email column (email lives in auth.users) and the name
+    # column is display_name — select only what actually exists.
     response = (
         service_client.client.table("profiles")
-        .select("id, email, phone, full_name")
+        .select("id, phone, display_name")
         .eq("id", customer_id)
         .maybe_single()
         .execute()
@@ -170,17 +173,17 @@ def _load_customer_profile(
     return row
 
 
-def _split_name(full_name: str | None) -> tuple[str, str]:
-    if not full_name or not full_name.strip():
+def _split_name(display_name: str | None) -> tuple[str, str]:
+    if not display_name or not display_name.strip():
         return "Customer", "Vergeo5"
-    parts = full_name.strip().split()
+    parts = display_name.strip().split()
     if len(parts) == 1:
         return parts[0], "Customer"
     return parts[0], " ".join(parts[1:])
 
 
-def _widget_customer(profile: dict[str, Any]) -> WidgetCustomerOut:
-    email = profile.get("email")
+def _widget_customer(profile: dict[str, Any], *, email: str | None) -> WidgetCustomerOut:
+    # email is resolved from auth.users (not profiles) by the caller.
     phone = profile.get("phone")
     if not isinstance(email, str) or not email.strip():
         raise AppError(
@@ -197,7 +200,7 @@ def _widget_customer(profile: dict[str, Any]) -> WidgetCustomerOut:
             details={"field": "phone"},
         )
     first_name, last_name = _split_name(
-        profile.get("full_name") if isinstance(profile.get("full_name"), str) else None
+        profile.get("display_name") if isinstance(profile.get("display_name"), str) else None
     )
     return WidgetCustomerOut(
         email=email.strip(),
@@ -492,7 +495,8 @@ async def create_card_widget_session(
         )
 
     profile = _load_customer_profile(service_client, customer_id=customer_id)
-    customer = _widget_customer(profile)
+    email = lookup_user_email(service_client, user_id=customer_id)
+    customer = _widget_customer(profile, email=email)
 
     payment_id = str(uuid4())
     # Salt with this attempt's payment_id so a retried card session on the same
@@ -562,7 +566,8 @@ async def get_card_session(
         payment, customer_id=current_user.id, service_client=service_client
     )
     profile = _load_customer_profile(service_client, customer_id=current_user.id)
-    customer = _widget_customer(profile)
+    email = lookup_user_email(service_client, user_id=current_user.id)
+    customer = _widget_customer(profile, email=email)
     amount_ngwee = int(payment["amount_ngwee"])
     return CreateCardSessionResponse(
         payment_id=payment_id,
