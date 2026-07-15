@@ -34,6 +34,7 @@ type VendorProfileApiResponse = {
     kyc_tier: number | null;
     verified: boolean;
     location: VendorLocation | null;
+    locations: VendorLocation[];
     created_at: string | null;
   };
   listings: Array<{
@@ -169,11 +170,6 @@ export default async function VendorProfilePage({ params }: PageProps) {
   }
 
   const { vendor, listings, reviews_summary: reviews } = profile;
-  const hoursLines = vendor.location
-    ? formatHours(vendor.location.hours, (day, hoursValue) =>
-        t("profile.hoursLine", { day, hours: hoursValue }),
-      )
-    : [];
   const listingsForGrid: CatalogListing[] = listings.map((listing) => ({
     id: listing.id,
     title: listing.title,
@@ -251,7 +247,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
         </dl>
       </header>
 
-      {vendor.description || vendor.location ? (
+      {vendor.description || vendor.locations.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {vendor.description ? (
             <section className="rounded-lg border border-border bg-surface p-4">
@@ -260,22 +256,28 @@ export default async function VendorProfilePage({ params }: PageProps) {
             </section>
           ) : null}
 
-          {vendor.location ? (
-            <section className="space-y-2 rounded-lg border border-border bg-surface p-4">
+          {vendor.locations.length > 0 ? (
+            <section className="space-y-3 rounded-lg border border-border bg-surface p-4">
               <h2 className="text-sm font-semibold text-text">{t("profile.location")}</h2>
-              <p className="text-sm text-text-2">
-                {t("profile.landmarkValue", { landmark: vendor.location.landmark })}
-              </p>
-              {hoursLines.length > 0 ? (
-                <div>
-                  <h3 className="mb-1 text-sm font-semibold text-text">{t("profile.hours")}</h3>
-                  <ul className="space-y-1 text-sm text-text-2">
-                    {hoursLines.map((line) => (
-                      <li key={line}>{line}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
+              {vendor.locations.map((branch, index) => {
+                const branchHours = formatHours(branch.hours, (day, hoursValue) =>
+                  t("profile.hoursLine", { day, hours: hoursValue }),
+                );
+                return (
+                  <div key={`${branch.landmark}-${index}`} className="space-y-1">
+                    <p className="text-sm font-medium text-text-2">
+                      {t("profile.landmarkValue", { landmark: branch.landmark })}
+                    </p>
+                    {branchHours.length > 0 ? (
+                      <ul className="space-y-1 text-sm text-text-3">
+                        {branchHours.map((line) => (
+                          <li key={line}>{line}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                );
+              })}
             </section>
           ) : null}
         </div>

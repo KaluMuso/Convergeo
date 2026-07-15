@@ -72,6 +72,8 @@ type EventDetail = {
     display_name: string;
     preferred_badge: boolean;
     landmark: string | null;
+    logo_url: string | null;
+    description: string | null;
   };
 };
 
@@ -137,6 +139,27 @@ function isPastInstance(iso: string): boolean {
 
 function mapsUrl(lat: number, lng: number): string {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+}
+
+function organiserLogo(logoUrl: string) {
+  if (logoUrl.startsWith("http://") || logoUrl.startsWith("https://")) {
+    return (
+      <div
+        aria-hidden
+        className="h-full w-full bg-cover bg-center"
+        style={{ backgroundImage: `url(${logoUrl})` }}
+      />
+    );
+  }
+  return (
+    <CloudinaryImage
+      publicId={logoUrl}
+      alt=""
+      width={96}
+      ratio="1/1"
+      className="h-full w-full object-cover"
+    />
+  );
 }
 
 export function generateStaticParams() {
@@ -331,15 +354,27 @@ export default async function EventDetailPage({ params }: PageProps) {
             <p className="text-xs font-semibold uppercase tracking-wide text-text-3">
               {t("detail.organiser")}
             </p>
-            <p className="mt-1 font-semibold text-text">{event.organiser.display_name}</p>
-            {event.organiser.slug ? (
-              <Link
-                href={`/${locale}/v/${event.organiser.slug}`}
-                className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
-              >
-                {t("detail.organiserCta")}
-              </Link>
-            ) : null}
+            <div className="mt-2 flex items-start gap-3">
+              {event.organiser.logo_url ? (
+                <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border border-border bg-bg">
+                  {organiserLogo(event.organiser.logo_url)}
+                </div>
+              ) : null}
+              <div className="min-w-0">
+                <p className="font-semibold text-text">{event.organiser.display_name}</p>
+                {event.organiser.description ? (
+                  <p className="mt-1 text-sm text-text-2">{event.organiser.description}</p>
+                ) : null}
+                {event.organiser.slug ? (
+                  <Link
+                    href={`/${locale}/v/${event.organiser.slug}`}
+                    className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
+                  >
+                    {t("detail.organiserCta")}
+                  </Link>
+                ) : null}
+              </div>
+            </div>
           </section>
         </div>
 

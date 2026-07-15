@@ -93,6 +93,7 @@ class VendorProfileDetail(BaseModel):
     kyc_tier: int | None = None
     verified: bool = False
     location: VendorLocationDetail | None = None
+    locations: list[VendorLocationDetail] = Field(default_factory=list)
     created_at: str | None = None
 
 
@@ -149,6 +150,27 @@ def _first_location(row: dict[str, Any]) -> dict[str, Any] | None:
         if isinstance(first, dict):
             return first
     return None
+
+
+def _parse_locations(row: dict[str, Any]) -> list[VendorLocationDetail]:
+    """All of a vendor's branches (a vendor may have many vendor_locations rows)."""
+    raw = row.get("vendor_locations")
+    if not isinstance(raw, list):
+        return []
+    parsed: list[VendorLocationDetail] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        hours = item.get("hours")
+        parsed.append(
+            VendorLocationDetail(
+                landmark=str(item.get("landmark") or ""),
+                lat=float(item.get("lat") or 0),
+                lng=float(item.get("lng") or 0),
+                hours=hours if isinstance(hours, dict) else {},
+            )
+        )
+    return parsed
 
 
 def _aggregate_vendor_ratings(
@@ -553,20 +575,14 @@ def get_vendor_profile(client: Any, slug: str) -> VendorProfileResponse | Redire
         raise AppError("vendor.not_found", "Vendor not found", 404)
 
     vendor_id = str(row["id"])
-    location_row = _first_location(row)
     kyc_tier = row.get("kyc_tier")
     parsed_tier = int(kyc_tier) if kyc_tier is not None else None
     preferred_badge = bool(row.get("preferred_badge"))
 
-    location: VendorLocationDetail | None = None
-    if location_row is not None:
-        hours = location_row.get("hours")
-        location = VendorLocationDetail(
-            landmark=str(location_row.get("landmark") or ""),
-            lat=float(location_row.get("lat") or 0),
-            lng=float(location_row.get("lng") or 0),
-            hours=hours if isinstance(hours, dict) else {},
-        )
+    # `location` (singular) stays for backward compatibility; `locations` is the
+    # full branch list.
+    locations = _parse_locations(row)
+    location = locations[0] if locations else None
 
     listings_response = (
         client.table("vendor_listings")
@@ -637,6 +653,7 @@ def get_vendor_profile(client: Any, slug: str) -> VendorProfileResponse | Redire
             kyc_tier=parsed_tier,
             verified=_is_verified(parsed_tier, preferred_badge),
             location=location,
+            locations=locations,
             created_at=row.get("created_at"),
         ),
         listings=listings,
