@@ -47,6 +47,8 @@ class EventOrganiserResponse(BaseModel):
     display_name: str
     preferred_badge: bool = False
     landmark: str | None = None
+    logo_url: str | None = None
+    description: str | None = None
 
 
 class EventInstanceResponse(BaseModel):
@@ -194,6 +196,10 @@ def _parse_organiser(vendor_row: dict[str, Any] | None) -> EventOrganiserRespons
         display_name=str(vendor_row.get("display_name") or ""),
         preferred_badge=bool(vendor_row.get("preferred_badge")),
         landmark=landmark,
+        logo_url=(str(vendor_row.get("logo_url")) if vendor_row.get("logo_url") else None),
+        description=(
+            str(vendor_row.get("description")) if vendor_row.get("description") else None
+        ),
     )
 
 
@@ -383,7 +389,8 @@ def _fetch_published_events(client: Any) -> list[dict[str, Any]]:
             "id, slug, title, description, venue, lat, lng, images, status, "
             "category_slug, landmark, "
             "organiser_vendor_id, vendors!events_organiser_vendor_id_fkey("
-            "id, slug, display_name, preferred_badge, vendor_locations(landmark)"
+            "id, slug, display_name, preferred_badge, logo_url, description, "
+            "vendor_locations(landmark)"
             ")"
         )
         .eq("status", "published")
@@ -400,7 +407,8 @@ def _fetch_event_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
             "id, slug, title, description, venue, lat, lng, images, status, "
             "category_slug, landmark, "
             "organiser_vendor_id, vendors!events_organiser_vendor_id_fkey("
-            "id, slug, display_name, preferred_badge, vendor_locations(landmark)"
+            "id, slug, display_name, preferred_badge, logo_url, description, "
+            "vendor_locations(landmark)"
             ")"
         )
         .eq("slug", slug)
