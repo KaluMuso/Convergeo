@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field, field_validator
 router = APIRouter(prefix="/kyc", tags=["kyc"])
 
 # Business archetypes persisted onto the vendor (must match vendors_archetype_check
-# in migration 0035 and BUSINESS_CATEGORIES in the vendor onboarding UI).
+# in migration 0037 and BUSINESS_CATEGORIES in the vendor onboarding UI).
 VENDOR_ARCHETYPES = frozenset(
     {"electronics", "home", "fashion_beauty", "services", "groceries", "other"}
 )
