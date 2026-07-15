@@ -167,7 +167,9 @@ class _FakeTable:
 
 class _FakeClient:
     def __init__(self) -> None:
-        self.tables = {"vendor_listings": _FakeTable()}
+        # "products" backs the canonical-match lookup in import_listing_rows
+        # (load_active_candidates); empty here — these rows don't attach.
+        self.tables = {"vendor_listings": _FakeTable(), "products": _FakeTable()}
 
     def table(self, name: str) -> _FakeTable:
         return self.tables[name]
