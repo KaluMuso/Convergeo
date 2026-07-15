@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import uuid
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 from urllib.parse import parse_qs
@@ -128,6 +129,15 @@ class InMemoryOutboxStore:
     def __init__(self) -> None:
         self.outbox: dict[str, dict[str, Any]] = {}
         self.profiles: dict[str, dict[str, Any]] = {}
+        self.user_emails: dict[str, str] = {}
+        # Mirror the supabase client's auth.admin surface used by lookup_user_email.
+        self.auth = SimpleNamespace(
+            admin=SimpleNamespace(get_user_by_id=self._get_user_by_id)
+        )
+
+    def _get_user_by_id(self, user_id: str) -> SimpleNamespace:
+        email = self.user_emails.get(user_id)
+        return SimpleNamespace(user=SimpleNamespace(email=email) if email is not None else None)
 
     def table(self, name: str) -> _FakeQuery:
         return _FakeQuery(self, name)
