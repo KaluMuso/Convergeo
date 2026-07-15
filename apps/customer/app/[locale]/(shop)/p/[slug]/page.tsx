@@ -17,6 +17,7 @@ import {
   type ProductListing,
 } from "../../_components/pdp/comparison";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
+
 import { ReviewsSection, type ReviewRow } from "./_components/reviews-section";
 
 import type { ListingCondition } from "../../_components/pdp/condition-badge";

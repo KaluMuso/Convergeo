@@ -1,11 +1,16 @@
 import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
 import Link from "next/link";
 
+import { CategoryMegaMenu } from "./category-mega-menu";
+
 type DesktopHeaderLabels = {
   appName: string;
   navAriaLabel: string;
   searchPlaceholder: string;
   searchSubmit: string;
+  allCategories: string;
+  categoriesPanelAria: string;
+  categoriesLoading: string;
   browse: string;
   services: string;
   events: string;
@@ -76,6 +81,16 @@ export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
         </form>
 
         <ul className="flex shrink-0 list-none items-center gap-1 p-0">
+          <li>
+            <CategoryMegaMenu
+              locale={locale}
+              labels={{
+                trigger: labels.allCategories,
+                panelAria: labels.categoriesPanelAria,
+                loading: labels.categoriesLoading,
+              }}
+            />
+          </li>
           {navLinks.map((link) => (
             <li key={link.key}>
               <Link
