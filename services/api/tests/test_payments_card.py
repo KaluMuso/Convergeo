@@ -40,12 +40,13 @@ def _current_user() -> CurrentUser:
 def _seed_profile(fake: FakeSupabaseClient) -> None:
     if "profiles" not in fake.tables:
         fake.tables["profiles"] = FakeTable()
+    # Mirror the real schema: profiles has phone + display_name, NOT email
+    # (email lives in auth.users, resolved via lookup_user_email).
     fake.tables["profiles"].rows.append(
         {
             "id": CUSTOMER_ID,
-            "email": "buyer@example.com",
             "phone": "+260961111111",
-            "full_name": "Jane Buyer",
+            "display_name": "Jane Buyer",
         }
     )
 
@@ -321,11 +322,15 @@ class TestCreateCardSession:
         card_service: FakeServiceClient,
     ) -> None:
         client = _client_with_service(card_service)
-        response = client.post(
-            "/payments/card/session",
-            headers={"Authorization": f"Bearer {VALID_TOKEN}"},
-            json={"checkout_group_id": CHECKOUT_GROUP_ID},
-        )
+        with patch(
+            "app.routers.payments_card.lookup_user_email",
+            return_value="buyer@example.com",
+        ):
+            response = client.post(
+                "/payments/card/session",
+                headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+                json={"checkout_group_id": CHECKOUT_GROUP_ID},
+            )
         assert response.status_code == 200
         body = response.json()
         assert body["checkout_group_id"] == CHECKOUT_GROUP_ID
@@ -333,6 +338,28 @@ class TestCreateCardSession:
         assert body["amount_major"] == "100.00"
         assert body["widget_script_url"].endswith("/inline.js")
         assert body["customer"]["email"] == "buyer@example.com"
+        assert body["customer"]["first_name"] == "Jane"
+        assert body["customer"]["last_name"] == "Buyer"
         payment = card_service.client.tables["payments"].rows[0]
         assert payment["rail"] == "card"
         assert payment["status"] == PaymentStatus.USSD_PUSHED.value
+
+    def test_create_session_without_email_is_rejected(
+        self,
+        card_service: FakeServiceClient,
+    ) -> None:
+        """No auth.users email → 422 profile_incomplete (widget needs an email)."""
+        client = _client_with_service(card_service)
+        with patch(
+            "app.routers.payments_card.lookup_user_email",
+            return_value=None,
+        ):
+            response = client.post(
+                "/payments/card/session",
+                headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+                json={"checkout_group_id": CHECKOUT_GROUP_ID},
+            )
+        assert response.status_code == 422
+        assert response.json()["error"]["code"] == "checkout.profile_incomplete"
+        # No payment row is created when the customer can't be addressed.
+        assert card_service.client.tables["payments"].rows == []
