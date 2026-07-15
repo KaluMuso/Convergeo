@@ -1,6 +1,6 @@
--- 0038: Make the `below_median` search boost signal real for vendor listings.
--- (Renumbered from 0034 → 0038: master merged 0034_search_rating_boost + 0035–0037
---  while this branch was open. That 0034 wired the *rating* boost into
+-- 0040: Make the `below_median` search boost signal real for vendor listings.
+-- (Renumbered 0034 → 0040: master merged migrations 0034–0039 while this branch
+--  was open. Master's 0034_search_rating_boost wired the *rating* boost into
 --  search_apply_boost and kept the below_median term; this migration is the
 --  complementary fix that finally *populates* below_median in the projection.)
 --

@@ -135,7 +135,7 @@ def _teardown(conn: PgConn, scratch: Scratch) -> None:
 
 def test_migration_0038_shipped_and_replaces_projection(db: PgConn) -> None:
     """0038 exists and the live function body actually computes the median."""
-    assert MIGRATIONS_DIR.joinpath("0038_listing_below_median.sql").exists()
+    assert MIGRATIONS_DIR.joinpath("0040_listing_below_median.sql").exists()
     body = db.run(
         "SELECT pg_get_functiondef('public.search_upsert_listing(uuid)'::regprocedure)"
     )
