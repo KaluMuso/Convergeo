@@ -14,7 +14,9 @@
     "areaPlaceholder": "e.g. Lusaka",
     "filterSubmit": "Filter",
     "preferredBadge": "Preferred",
-    "verticalLabel": "Category"
+    "verticalLabel": "Category",
+    "providerCta": "List your service",
+    "providerPitch": "Reach customers looking for what you offer."
   },
   "categories": {
     "all": "All",

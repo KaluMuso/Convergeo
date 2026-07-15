@@ -1,3 +1,6 @@
+import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { ServiceCard } from "@vergeo/ui/src/service-card";
+import { VendorCard } from "@vergeo/ui/src/vendor-card";
 import Link from "next/link";
 
 import { ListingGrid, type CatalogListing } from "./plp/listing-grid";
@@ -20,6 +23,8 @@ type CatalogTranslator = {
 const RAIL_DEPARTMENT_COUNT = 3;
 const NEW_RAIL_LIMIT = 8;
 const DEPARTMENT_RAIL_LIMIT = 4;
+const SERVICES_RAIL_LIMIT = 6;
+const VENDORS_RAIL_LIMIT = 6;
 
 type CatalogApiItem = {
   id: string;
@@ -44,9 +49,34 @@ export type DepartmentRail = {
   listings: CatalogListing[];
 };
 
+export type ServiceRailItem = {
+  id: string;
+  slug: string;
+  title: string;
+  providerName: string;
+  fromNgwee: number | null;
+  imagePublicId: string | null;
+};
+
+export type VendorRailItem = {
+  id: string;
+  slug: string;
+  displayName: string;
+  logoUrl: string | null;
+  preferredBadge: boolean;
+  verified: boolean;
+  landmark: string | null;
+  categories: string[];
+  ratingAvg: number | null;
+  ratingCount: number;
+  listingCount: number;
+};
+
 export type HomeDefaultData = {
   newest: CatalogListing[];
   departmentRails: DepartmentRail[];
+  services: ServiceRailItem[];
+  topVendors: VendorRailItem[];
 };
 
 function getApiBaseUrl(): string {
@@ -85,6 +115,84 @@ async function fetchRailListings(query: string): Promise<CatalogListing[]> {
   }
 }
 
+type ServiceApiItem = {
+  id: string;
+  slug: string;
+  title: string;
+  from_price_ngwee: number | null;
+  portfolio_images: string[];
+  provider: { display_name: string };
+};
+
+/** Empty-safe services fetch for the home services rail. */
+async function fetchServicesRail(limit: number): Promise<ServiceRailItem[]> {
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/services`, { next: { revalidate: 60 } });
+    if (!response.ok) {
+      return [];
+    }
+    const data = (await response.json()) as { items?: ServiceApiItem[] };
+    return (data.items ?? []).slice(0, limit).map((item) => ({
+      id: item.id,
+      slug: item.slug,
+      title: item.title,
+      providerName: item.provider.display_name,
+      fromNgwee: item.from_price_ngwee,
+      imagePublicId: item.portfolio_images?.[0] ?? null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+type VendorApiItem = {
+  id: string;
+  slug: string;
+  display_name: string;
+  logo_url: string | null;
+  preferred_badge: boolean;
+  verified: boolean;
+  landmark: string | null;
+  categories: string[];
+  rating_avg: number | null;
+  rating_count: number;
+  listing_count: number;
+};
+
+/** Empty-safe directory fetch, ranked by rating, for the top-vendors rail. */
+async function fetchTopVendorsRail(limit: number): Promise<VendorRailItem[]> {
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/directory`, { next: { revalidate: 60 } });
+    if (!response.ok) {
+      return [];
+    }
+    const data = (await response.json()) as { items?: VendorApiItem[] };
+    return (data.items ?? [])
+      .slice()
+      .sort(
+        (left, right) =>
+          (right.rating_avg ?? 0) - (left.rating_avg ?? 0) ||
+          right.rating_count - left.rating_count,
+      )
+      .slice(0, limit)
+      .map((item) => ({
+        id: item.id,
+        slug: item.slug,
+        displayName: item.display_name,
+        logoUrl: item.logo_url,
+        preferredBadge: item.preferred_badge,
+        verified: item.verified,
+        landmark: item.landmark,
+        categories: item.categories,
+        ratingAvg: item.rating_avg,
+        ratingCount: item.rating_count,
+        listingCount: item.listing_count,
+      }));
+  } catch {
+    return [];
+  }
+}
+
 export function pickRailDepartments(
   categories: CategoryRow[],
   max: number = RAIL_DEPARTMENT_COUNT,
@@ -102,17 +210,23 @@ export function hasDefaultHomeContent(categories: CategoryRow[], data: HomeDefau
 
 export async function loadHomeDefaultData(categories: CategoryRow[]): Promise<HomeDefaultData> {
   const departments = pickRailDepartments(categories);
-  const [newest, ...departmentListings] = await Promise.all([
+  const [newest, services, topVendors, departmentListings] = await Promise.all([
     fetchRailListings(`sort=newest&limit=${NEW_RAIL_LIMIT}`),
-    ...departments.map((category) =>
-      fetchRailListings(
-        `category_path=${encodeURIComponent(category.path)}&sort=newest&limit=${DEPARTMENT_RAIL_LIMIT}`,
+    fetchServicesRail(SERVICES_RAIL_LIMIT),
+    fetchTopVendorsRail(VENDORS_RAIL_LIMIT),
+    Promise.all(
+      departments.map((category) =>
+        fetchRailListings(
+          `category_path=${encodeURIComponent(category.path)}&sort=newest&limit=${DEPARTMENT_RAIL_LIMIT}`,
+        ),
       ),
     ),
   ]);
 
   return {
     newest,
+    services,
+    topVendors,
     departmentRails: departments.map((category, index) => ({
       category,
       listings: departmentListings[index] ?? [],
@@ -259,6 +373,193 @@ export function HomeSellCta({ locale, t }: HomeSellCtaProps) {
       >
         {t("home.sellCta.cta")}
       </Link>
+    </section>
+  );
+}
+
+type ServicesRailLabels = {
+  provider: string;
+  fromPrice: string;
+  noReviews: string;
+  view: string;
+};
+
+type HomeServicesRailProps = {
+  id: string;
+  title: string;
+  viewAllHref: string;
+  viewAllLabel: string;
+  services: ServiceRailItem[];
+  locale: string;
+  labels: ServicesRailLabels;
+};
+
+export function HomeServicesRail({
+  id,
+  title,
+  viewAllHref,
+  viewAllLabel,
+  services,
+  locale,
+  labels,
+}: HomeServicesRailProps) {
+  if (services.length === 0) {
+    return null;
+  }
+
+  return (
+    <section aria-labelledby={id} className="motion-rise flex flex-col gap-3 lg:gap-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id={id} className="font-display text-h2 text-display-ink">
+          {title}
+        </h2>
+        <Link href={viewAllHref} className="shrink-0 text-sm font-medium text-primary">
+          {viewAllLabel}
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+        {services.map((service) => (
+          <Link
+            key={service.id}
+            href={`/${locale}/s/${service.slug}`}
+            className="min-w-0 no-underline"
+          >
+            <ServiceCard
+              title={service.title}
+              providerLabel={labels.provider.replace("{provider}", service.providerName)}
+              media={
+                service.imagePublicId ? (
+                  <CloudinaryImage
+                    publicId={service.imagePublicId}
+                    alt={service.title}
+                    width={360}
+                    ratio="3/2"
+                    sizes="(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw"
+                    className="h-full w-full object-cover"
+                  />
+                ) : undefined
+              }
+              rating={0}
+              reviewCount={0}
+              noReviewsLabel={labels.noReviews}
+              fromNgwee={service.fromNgwee ?? undefined}
+              fromPriceLabel={service.fromNgwee !== null ? labels.fromPrice : undefined}
+              ctaLabel={labels.view}
+            />
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+type VendorsRailLabels = {
+  listings: string;
+  reviews: string;
+  rating: string;
+  noReviews: string;
+  preferred: string;
+  verified: string;
+  location: string;
+  view: string;
+};
+
+type HomeVendorsRailProps = {
+  id: string;
+  title: string;
+  viewAllHref: string;
+  viewAllLabel: string;
+  vendors: VendorRailItem[];
+  locale: string;
+  labels: VendorsRailLabels;
+};
+
+function vendorRailLogo(logoUrl: string) {
+  if (!logoUrl.startsWith("http://") && !logoUrl.startsWith("https://")) {
+    return (
+      <CloudinaryImage
+        publicId={logoUrl}
+        alt=""
+        width={112}
+        ratio="1/1"
+        className="h-full w-full object-cover"
+      />
+    );
+  }
+  return (
+    <div
+      aria-hidden
+      className="h-full w-full bg-cover bg-center"
+      style={{ backgroundImage: `url(${logoUrl})` }}
+    />
+  );
+}
+
+export function HomeVendorsRail({
+  id,
+  title,
+  viewAllHref,
+  viewAllLabel,
+  vendors,
+  locale,
+  labels,
+}: HomeVendorsRailProps) {
+  if (vendors.length === 0) {
+    return null;
+  }
+
+  return (
+    <section aria-labelledby={id} className="motion-rise flex flex-col gap-3 lg:gap-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id={id} className="font-display text-h2 text-display-ink">
+          {title}
+        </h2>
+        <Link href={viewAllHref} className="shrink-0 text-sm font-medium text-primary">
+          {viewAllLabel}
+        </Link>
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {vendors.map((vendor) => {
+          const categoryText =
+            vendor.categories.length > 0 ? vendor.categories.join(", ") : labels.listings;
+          const ratingValue =
+            vendor.ratingAvg !== null && vendor.ratingCount > 0
+              ? labels.rating
+                  .replace("{rating}", vendor.ratingAvg.toFixed(1))
+                  .replace("{count}", String(vendor.ratingCount))
+              : labels.noReviews;
+
+          return (
+            <Link
+              key={vendor.id}
+              href={`/${locale}/v/${vendor.slug}`}
+              className="min-w-0 no-underline"
+            >
+              <VendorCard
+                name={vendor.displayName}
+                categoryLabel={categoryText}
+                locationLabel={vendor.landmark ?? labels.location}
+                avatar={vendor.logoUrl ? vendorRailLogo(vendor.logoUrl) : undefined}
+                trust={
+                  vendor.preferredBadge ? "preferred" : vendor.verified ? "id_verified" : undefined
+                }
+                trustLabel={
+                  vendor.preferredBadge
+                    ? labels.preferred
+                    : vendor.verified
+                      ? labels.verified
+                      : undefined
+                }
+                stats={[
+                  { label: labels.listings, value: String(vendor.listingCount) },
+                  { label: labels.reviews, value: ratingValue },
+                ]}
+                ctaLabel={labels.view}
+              />
+            </Link>
+          );
+        })}
+      </div>
     </section>
   );
 }

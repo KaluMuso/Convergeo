@@ -1,5 +1,5 @@
--- 0037 test: search_upsert_event projects events under their real category path.
--- Requires: 0001–0009, 0036 (events.category_slug + event_categories seed), 0037.
+-- 0039 test: search_upsert_event projects events under their real category path.
+-- Requires: 0001–0009, 0036 (events.category_slug + event_categories seed), 0039.
 -- Run: supabase test db (pgTAP) after db reset.
 
 begin;

@@ -12,6 +12,8 @@ import {
   HomeHeroBand,
   HomeProductRail,
   HomeSellCta,
+  HomeServicesRail,
+  HomeVendorsRail,
   pickRailDepartments,
   type HomeDefaultData,
 } from "./home-default";
@@ -87,7 +89,12 @@ describe("pickRailDepartments", () => {
 });
 
 describe("hasDefaultHomeContent", () => {
-  const emptyData: HomeDefaultData = { newest: [], departmentRails: [] };
+  const emptyData: HomeDefaultData = {
+    newest: [],
+    departmentRails: [],
+    services: [],
+    topVendors: [],
+  };
 
   it("is false with no categories and no listings (welcome fallback)", () => {
     expect(hasDefaultHomeContent([], emptyData)).toBe(false);
@@ -98,7 +105,14 @@ describe("hasDefaultHomeContent", () => {
   });
 
   it("is true when the new-listings rail has data", () => {
-    expect(hasDefaultHomeContent([], { newest: [makeListing()], departmentRails: [] })).toBe(true);
+    expect(
+      hasDefaultHomeContent([], {
+        newest: [makeListing()],
+        departmentRails: [],
+        services: [],
+        topVendors: [],
+      }),
+    ).toBe(true);
   });
 
   it("is true when only a department rail has data", () => {
@@ -106,6 +120,8 @@ describe("hasDefaultHomeContent", () => {
       hasDefaultHomeContent([], {
         newest: [],
         departmentRails: [{ category: makeCategory(), listings: [makeListing()] }],
+        services: [],
+        topVendors: [],
       }),
     ).toBe(true);
   });
@@ -167,5 +183,113 @@ describe("HomeSellCta", () => {
   it("links to the sell page", () => {
     render(<HomeSellCta locale="en" t={t} />);
     expect(screen.getByRole("link", { name: "Start selling" })).toHaveAttribute("href", "/en/sell");
+  });
+});
+
+const servicesRailLabels = {
+  provider: "By {provider}",
+  fromPrice: "From",
+  noReviews: "New provider",
+  view: "View service",
+};
+
+const vendorsRailLabels = {
+  listings: "Products",
+  reviews: "Reviews",
+  rating: "{rating} ({count})",
+  noReviews: "New",
+  preferred: "Preferred",
+  verified: "Verified",
+  location: "Zambia",
+  view: "Visit store",
+};
+
+describe("HomeServicesRail", () => {
+  it("renders nothing for an empty rail", () => {
+    const { container } = render(
+      <HomeServicesRail
+        id="home-rail-services"
+        title="Services near you"
+        viewAllHref="/en/services"
+        viewAllLabel="View all"
+        services={[]}
+        locale="en"
+        labels={servicesRailLabels}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("renders a service card and view-all link when populated", () => {
+    render(
+      <HomeServicesRail
+        id="home-rail-services"
+        title="Services near you"
+        viewAllHref="/en/services"
+        viewAllLabel="View all"
+        services={[
+          {
+            id: "s1",
+            slug: "deep-clean",
+            title: "Deep clean",
+            providerName: "SparkleCo",
+            fromNgwee: 50000,
+            imagePublicId: null,
+          },
+        ]}
+        locale="en"
+        labels={servicesRailLabels}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Services near you" })).toBeInTheDocument();
+    expect(screen.getByTestId("service-card")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View all" })).toHaveAttribute("href", "/en/services");
+  });
+});
+
+describe("HomeVendorsRail", () => {
+  it("renders nothing for an empty rail", () => {
+    const { container } = render(
+      <HomeVendorsRail
+        id="home-rail-vendors"
+        title="Top vendors"
+        viewAllHref="/en/directory"
+        viewAllLabel="View all"
+        vendors={[]}
+        locale="en"
+        labels={vendorsRailLabels}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("renders a vendor card when populated", () => {
+    render(
+      <HomeVendorsRail
+        id="home-rail-vendors"
+        title="Top vendors"
+        viewAllHref="/en/directory"
+        viewAllLabel="View all"
+        vendors={[
+          {
+            id: "v1",
+            slug: "kabwata",
+            displayName: "Kabwata Electronics",
+            logoUrl: null,
+            preferredBadge: true,
+            verified: true,
+            landmark: "Lusaka",
+            categories: ["electronics"],
+            ratingAvg: 4.6,
+            ratingCount: 12,
+            listingCount: 30,
+          },
+        ]}
+        locale="en"
+        labels={vendorsRailLabels}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Top vendors" })).toBeInTheDocument();
+    expect(screen.getByTestId("vendor-card")).toBeInTheDocument();
   });
 });

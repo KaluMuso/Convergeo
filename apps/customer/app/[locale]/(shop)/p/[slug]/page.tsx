@@ -10,6 +10,7 @@ import {
 import { notFound, redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
 
 import {
   PdpInteractiveBody,
@@ -18,7 +19,11 @@ import {
 } from "../../_components/pdp/comparison";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
 
-import { ReviewsSection, type ReviewRow } from "./_components/reviews-section";
+import {
+  ReviewsSection,
+  type ReviewRow,
+  type ReviewsSectionLabels,
+} from "./_components/reviews-section";
 
 import type { ListingCondition } from "../../_components/pdp/condition-badge";
 import type { Metadata } from "next";
@@ -216,6 +221,29 @@ async function fetchReviews(productId: string): Promise<ReviewRow[] | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Reviews are below the fold and the PDP renders dynamically (reads searchParams),
+ * so this is isolated in a Suspense boundary — the review fetch streams in instead
+ * of blocking the document's TTFB. Fails silent: the section is omitted on error.
+ */
+async function ReviewsPanel({
+  locale,
+  productId,
+  cloudName,
+  labels,
+}: {
+  locale: string;
+  productId: string;
+  cloudName?: string;
+  labels: ReviewsSectionLabels;
+}) {
+  const reviews = await fetchReviews(productId);
+  if (!reviews) {
+    return null;
+  }
+  return <ReviewsSection locale={locale} reviews={reviews} cloudName={cloudName} labels={labels} />;
 }
 
 function selectListing(listings: Listing[], listingId?: string): Listing | null {
@@ -420,7 +448,6 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   });
   const productListings = toProductListings(product, product.name);
   const comparisonListings = toComparisonListings(comparison, product);
-  const reviews = await fetchReviews(product.id);
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6 motion-rise lg:max-w-6xl">
@@ -498,10 +525,10 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         emptyLabel={t("pdp.specs.empty")}
       />
 
-      {reviews ? (
-        <ReviewsSection
+      <Suspense fallback={null}>
+        <ReviewsPanel
           locale={locale}
-          reviews={reviews}
+          productId={product.id}
           cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
           labels={{
             heading: t("reviews.heading"),
@@ -517,7 +544,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             starEmpty: t("reviews.starEmpty"),
           }}
         />
-      ) : null}
+      </Suspense>
     </main>
   );
 }
