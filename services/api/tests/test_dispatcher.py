@@ -4,6 +4,7 @@ import copy
 import uuid
 from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -107,7 +108,16 @@ class InMemoryOutboxStore:
     def __init__(self) -> None:
         self.outbox: dict[str, dict[str, Any]] = {}
         self.profiles: dict[str, dict[str, Any]] = {}
+        self.user_emails: dict[str, str] = {}
         self.last_pending_query: dict[str, Any] | None = None
+        # Mirror the supabase client's auth.admin surface used by lookup_user_email.
+        self.auth = SimpleNamespace(
+            admin=SimpleNamespace(get_user_by_id=self._get_user_by_id)
+        )
+
+    def _get_user_by_id(self, user_id: str) -> SimpleNamespace:
+        email = self.user_emails.get(user_id)
+        return SimpleNamespace(user=SimpleNamespace(email=email) if email is not None else None)
 
     def table(self, name: str) -> _FakeQuery:
         return _FakeQuery(self, name)
@@ -421,6 +431,61 @@ async def test_permanent_failure_routes_immediately_to_dead_letter(
     assert stats.failed == 1
     assert store.outbox[row["id"]]["status"] == "failed"
     assert store.outbox[row["id"]]["attempts"] == 1
+
+
+@pytest.mark.asyncio
+async def test_email_channel_injects_recipient_email_from_auth_users(
+    store: InMemoryOutboxStore,
+    noop: NoopAdapter,
+    dispatcher: NotificationDispatcher,
+) -> None:
+    """An email row with no address gets the recipient's auth.users email injected."""
+    store.user_emails["user-1"] = "buyer@example.com"
+    _seed_row(store, event_type="payment_receipt", entity_id="ord-9", channel="email")
+
+    stats = await dispatcher.run_batch()
+
+    assert stats.sent == 1
+    assert len(noop.sent) == 1
+    assert noop.sent[0].channel == "email"
+    assert noop.sent[0].payload["email"] == "buyer@example.com"
+
+
+@pytest.mark.asyncio
+async def test_email_via_prefs_redirect_injects_email(
+    store: InMemoryOutboxStore,
+    noop: NoopAdapter,
+    dispatcher: NotificationDispatcher,
+) -> None:
+    """A whatsapp row that prefs redirect to email is still addressed (resolved channel)."""
+    store.profiles["user-1"] = {
+        "id": "user-1",
+        "phone": "+260970000000",
+        "notif_prefs": {"whatsapp": False, "sms": False, "email": True},
+    }
+    store.user_emails["user-1"] = "buyer@example.com"
+    _seed_row(store, event_type="order_confirmed", entity_id="ord-10", channel="whatsapp")
+
+    stats = await dispatcher.run_batch()
+
+    assert stats.sent == 1
+    assert noop.sent[0].channel == "email"
+    assert noop.sent[0].payload["email"] == "buyer@example.com"
+
+
+@pytest.mark.asyncio
+async def test_email_channel_without_resolved_email_still_processes(
+    store: InMemoryOutboxStore,
+    noop: NoopAdapter,
+    dispatcher: NotificationDispatcher,
+) -> None:
+    """No auth.users email on file → nothing injected; the whatsapp/sms legs are untouched."""
+    _seed_row(store, event_type="payment_receipt", entity_id="ord-11", channel="email")
+
+    stats = await dispatcher.run_batch()
+
+    assert stats.sent == 1
+    assert "email" not in noop.sent[0].payload
 
 
 def test_pending_lookup_uses_status_and_next_retry_at_index(

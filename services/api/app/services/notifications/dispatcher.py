@@ -8,6 +8,7 @@ from enum import StrEnum
 from typing import Any, Protocol
 from zoneinfo import ZoneInfo
 
+from app.services.identity import lookup_user_email
 from app.services.notifications.adapters.base import (
     ChannelAdapter,
     FailureKind,
@@ -410,6 +411,16 @@ class NotificationDispatcher:
             logger.error("No adapter registered for channel", extra={"channel": channel})
             self.mark_failed(row_id, attempts=int(fresh.get("attempts", 0)) + 1)
             return "failed"
+
+        # Email is the tertiary channel and its recipient lives only in auth.users
+        # (profiles has no email column). Resolve it via the admin API only once the
+        # effective channel is email and the payload doesn't already carry an address
+        # — the whatsapp/sms legs never pay for this lookup. Keyed off the *resolved*
+        # channel so a whatsapp/sms row that prefs redirect to email is addressed too.
+        if channel == "email" and recipient_id is not None and not payload_dict.get("email"):
+            resolved_email = lookup_user_email(self._supabase, user_id=str(recipient_id))
+            if resolved_email:
+                payload_dict["email"] = resolved_email
 
         await self._apply_channel_pace(channel, now=now)
 
