@@ -96,6 +96,34 @@ def call_search_rrf(
     return hits
 
 
+def drop_wholesale_listing_hits(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
+    """Remove wholesale (B2B) listing hits from a consumer result set.
+
+    Every active listing is indexed as ``entity_kind='listing'`` regardless of the
+    wholesale flag (see ``search_upsert_listing``), so search would otherwise leak
+    wholesale supplies into consumer results. Only verified business buyers may see
+    them; callers gate this via ``include_wholesale`` (BusinessAccess.eligible).
+    """
+    listing_ids = [hit.entity_id for hit in hits if hit.entity_kind == "listing"]
+    if not listing_ids:
+        return hits
+    response = (
+        client.table("vendor_listings")
+        .select("id")
+        .in_("id", listing_ids)
+        .eq("wholesale", True)
+        .execute()
+    )
+    wholesale_ids = {str(row["id"]) for row in _rows(response) if row.get("id")}
+    if not wholesale_ids:
+        return hits
+    return [
+        hit
+        for hit in hits
+        if not (hit.entity_kind == "listing" and hit.entity_id in wholesale_ids)
+    ]
+
+
 def log_zero_result(*, query: str, filters: dict[str, Any], kind: SearchKind | None) -> None:
     logger.info(
         "search_zero_result",
@@ -119,6 +147,7 @@ async def run_search(
     page: int = DEFAULT_PAGE,
     page_size: int = DEFAULT_PAGE_SIZE,
     embedding_fetcher: EmbeddingFetcher | None = None,
+    include_wholesale: bool = False,
 ) -> SearchResponse:
     trimmed = query.strip()
     expanded_query = expand_query(client, trimmed)
@@ -147,6 +176,8 @@ async def run_search(
         embedding=embedding,
         filters=filters,
     )
+    if not include_wholesale:
+        hits = drop_wholesale_listing_hits(client, hits)
     page_items, total = paginate(hits, page=page, page_size=page_size)
 
     if total == 0 and trimmed:
@@ -169,6 +200,7 @@ def run_suggest(
     query: str,
     kind: SearchKind | None = None,
     limit: int = 8,
+    include_wholesale: bool = False,
 ) -> SuggestResponse:
     prefix = query.strip()
     if not prefix:
@@ -182,6 +214,8 @@ def run_suggest(
         embedding=None,
         filters=filters,
     )
+    if not include_wholesale:
+        hits = drop_wholesale_listing_hits(client, hits)
 
     suggestions: list[SuggestItem] = []
     seen_titles: set[str] = set()

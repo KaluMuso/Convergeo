@@ -4,7 +4,7 @@ Single source of truth for "is this request allowed to see/buy wholesale?" so th
 same rule is enforced identically at every wholesale entry point — discovery
 (``/catalog/listings?wholesale=true``), cart mutation, and checkout. Guests and
 consumers are never eligible; only a user with a ``verified`` ``business_buyers``
-row is (see migration 0038 / ``public.is_verified_business``).
+row is (see migration 0039 / ``public.is_verified_business``).
 """
 
 from __future__ import annotations

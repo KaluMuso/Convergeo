@@ -289,6 +289,125 @@ def test_search_rrf_uses_bound_parameters(fake_supabase: FakeSupabaseClient) -> 
     assert "query_embedding" not in params
 
 
+RETAIL_LISTING_ID = UUID("00000000-0000-4000-8000-0000000004a1")
+WHOLESALE_LISTING_ID = UUID("00000000-0000-4000-8000-0000000004a2")
+
+
+class _ListingTableQuery:
+    """Minimal PostgREST-ish stub for vendor_listings id/wholesale lookups."""
+
+    def __init__(self, rows: list[dict[str, Any]]) -> None:
+        self._rows = rows
+        self._ids: set[str] | None = None
+        self._wholesale_only = False
+
+    def select(self, *_a: Any, **_k: Any) -> _ListingTableQuery:
+        return self
+
+    def in_(self, _column: str, values: list[str]) -> _ListingTableQuery:
+        self._ids = {str(value) for value in values}
+        return self
+
+    def eq(self, column: str, value: Any) -> _ListingTableQuery:
+        if column == "wholesale":
+            self._wholesale_only = bool(value)
+        return self
+
+    def execute(self) -> FakeRpcResponse:
+        rows = self._rows
+        if self._ids is not None:
+            rows = [row for row in rows if str(row.get("id")) in self._ids]
+        if self._wholesale_only:
+            rows = [row for row in rows if row.get("wholesale")]
+        return FakeRpcResponse([{"id": row["id"]} for row in rows])
+
+
+class FakeClientWithListings(FakeSupabaseClient):
+    def __init__(self, handler: Any, listing_rows: list[dict[str, Any]]) -> None:
+        super().__init__(handler)
+        self._listing_rows = listing_rows
+
+    def table(self, _name: str) -> _ListingTableQuery:
+        return _ListingTableQuery(self._listing_rows)
+
+
+async def _no_embedding(_query: str) -> list[float] | None:
+    return None
+
+
+def _charger_handler(name: str, params: dict[str, Any]) -> list[Any]:
+    if name == "expand_search_terms":
+        return [str(params.get("p_query", ""))]
+    if name != "search_rrf":
+        return []
+    retail = _hit(
+        entity_id=RETAIL_LISTING_ID,
+        title="Single Phone Charger",
+        entity_kind="listing",
+    )
+    wholesale = _hit(
+        entity_id=WHOLESALE_LISTING_ID,
+        title="Bulk Chargers — carton of 50",
+        entity_kind="listing",
+    )
+    return [retail, wholesale]
+
+
+def _charger_client() -> FakeClientWithListings:
+    return FakeClientWithListings(
+        _charger_handler,
+        [
+            {"id": str(RETAIL_LISTING_ID), "wholesale": False},
+            {"id": str(WHOLESALE_LISTING_ID), "wholesale": True},
+        ],
+    )
+
+
+def test_search_hides_wholesale_listings_from_consumers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import asyncio
+
+    from app.services.search import run_search
+
+    monkeypatch.setattr("app.services.search.fetch_query_embedding", _no_embedding)
+    result = asyncio.run(
+        run_search(_charger_client(), query="charger", include_wholesale=False)
+    )
+    ids = {hit.entity_id for hit in result.results}
+    assert str(RETAIL_LISTING_ID) in ids
+    assert str(WHOLESALE_LISTING_ID) not in ids
+    assert result.total == 1
+
+
+def test_search_shows_wholesale_listings_to_verified_business(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import asyncio
+
+    from app.services.search import run_search
+
+    monkeypatch.setattr("app.services.search.fetch_query_embedding", _no_embedding)
+    result = asyncio.run(
+        run_search(_charger_client(), query="charger", include_wholesale=True)
+    )
+    ids = {hit.entity_id for hit in result.results}
+    assert str(RETAIL_LISTING_ID) in ids
+    assert str(WHOLESALE_LISTING_ID) in ids
+    assert result.total == 2
+
+
+def test_suggest_hides_wholesale_listings_from_consumers() -> None:
+    from app.services.search import run_suggest
+
+    suggestions = run_suggest(
+        _charger_client(), query="charger", include_wholesale=False
+    ).suggestions
+    titles = {item.title for item in suggestions}
+    assert "Single Phone Charger" in titles
+    assert "Bulk Chargers — carton of 50" not in titles
+
+
 def test_zero_result_is_logged(
     fake_supabase: FakeSupabaseClient,
     monkeypatch: pytest.MonkeyPatch,

@@ -7,7 +7,9 @@ from unittest.mock import patch
 import pytest
 from app.main import create_app
 from app.routers import products as products_router
+from app.services.business.access import BusinessAccess, get_business_access
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.testclient import TestClient
 
 PRODUCT_ID = "p00000133-0000-4000-8000-000000000001"
@@ -64,6 +66,7 @@ def _listing_row(
     stock_qty: int | None = 12,
     title_override: str | None = None,
     product_id: str | None = PRODUCT_ID,
+    wholesale: bool = False,
 ) -> dict[str, Any]:
     return {
         "id": listing_id,
@@ -73,7 +76,7 @@ def _listing_row(
         "stock_mode": stock_mode,
         "stock_qty": stock_qty,
         "moq": 1,
-        "wholesale": False,
+        "wholesale": wholesale,
         "status": "active",
         "product_id": product_id,
         "vendors": _vendor_row(),
@@ -268,6 +271,76 @@ class TestProductErrors:
         response = client.get("/products/old-itel-a70", follow_redirects=False)
         assert response.status_code == 301
         assert response.headers["location"] == "/products/tecno-spark-20"
+
+
+class TestProductDetailWholesale:
+    """Wholesale-only listings are B2B supplies: hidden from the consumer product
+    page unless the caller is a verified business buyer (audit gating fix)."""
+
+    def _seed(self, store: FakeSupabaseStore) -> None:
+        store.products = [_product_row()]
+        store.vendor_listings = [
+            _listing_row(listing_id=LISTING_IN_STOCK, price_ngwee=450_000),
+            _listing_row(
+                listing_id=LISTING_QUICK,
+                price_ngwee=300_000,
+                wholesale=True,
+            ),
+        ]
+
+    def test_build_hides_wholesale_by_default(self, store: FakeSupabaseStore) -> None:
+        self._seed(store)
+        result = products_router.build_product_detail(store, "itel-a70")
+        assert not isinstance(result, RedirectResponse)
+        ids = {listing.id for listing in result.listings}
+        assert ids == {LISTING_IN_STOCK}
+        assert result.listing_count == 1
+
+    def test_build_includes_wholesale_when_eligible(
+        self, store: FakeSupabaseStore
+    ) -> None:
+        self._seed(store)
+        result = products_router.build_product_detail(
+            store, "itel-a70", include_wholesale=True
+        )
+        assert not isinstance(result, RedirectResponse)
+        ids = {listing.id for listing in result.listings}
+        assert ids == {LISTING_IN_STOCK, LISTING_QUICK}
+        assert result.listing_count == 2
+
+    def test_endpoint_guest_hides_wholesale(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        self._seed(store)
+        response = client.get("/products/itel-a70")
+        assert response.status_code == 200
+        ids = {listing["id"] for listing in response.json()["listings"]}
+        assert ids == {LISTING_IN_STOCK}
+
+    def test_endpoint_verified_business_sees_wholesale(
+        self, store: FakeSupabaseStore
+    ) -> None:
+        self._seed(store)
+        app: FastAPI = create_app()
+        app.dependency_overrides[get_business_access] = lambda: BusinessAccess(
+            user_id="11111111-1111-1111-1111-111111111111",
+            status="verified",
+            eligible=True,
+        )
+
+        class FakeServiceClient:
+            def __init__(self) -> None:
+                self.client = store
+
+        with patch(
+            "app.deps.get_supabase_service_client", return_value=FakeServiceClient()
+        ):
+            with TestClient(app, raise_server_exceptions=False) as test_client:
+                response = test_client.get("/products/itel-a70")
+        app.dependency_overrides.clear()
+        assert response.status_code == 200
+        ids = {listing["id"] for listing in response.json()["listings"]}
+        assert ids == {LISTING_IN_STOCK, LISTING_QUICK}
 
 
 class TestProductHelpers:

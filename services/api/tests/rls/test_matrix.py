@@ -222,7 +222,7 @@ EXPECTATIONS: TableExpectations = {
         Persona.ADMIN: select_only(),
     },
     "business_buyers": {
-        # 0038 buyer-side B2B identity: owner select/insert/update + admin-all, no
+        # 0039 buyer-side B2B identity: owner select/insert/update + admin-all, no
         # owner DELETE policy, no anon grant. Same owner-scoped shape as `addresses`:
         # non-owners SELECT own zero rows (permit), DEFAULT VALUES insert trips the
         # owner WITH CHECK / NOT NULL (deny), update/delete are RLS-filtered no-ops

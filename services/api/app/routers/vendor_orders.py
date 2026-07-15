@@ -112,7 +112,7 @@ def _load_vendor_for_owner(
 ) -> dict[str, Any]:
     response = (
         service_client.client.table("vendors")
-        .select("id, owner_user_id, status")
+        .select("id, owner_user_id, status, archetype")
         .eq("owner_user_id", owner_user_id)
         .maybe_single()
         .execute()

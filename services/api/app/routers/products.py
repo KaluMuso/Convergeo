@@ -4,6 +4,7 @@ from typing import Annotated, Any, Protocol
 
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.business.access import BusinessAccess, get_business_access
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
@@ -264,7 +265,12 @@ def _fetch_canonical_slug(client: Any, product_id: str) -> str | None:
     return None
 
 
-def build_product_detail(client: Any, slug: str) -> ProductDetailResponse | RedirectResponse:
+def build_product_detail(
+    client: Any,
+    slug: str,
+    *,
+    include_wholesale: bool = False,
+) -> ProductDetailResponse | RedirectResponse:
     product = _fetch_product_by_slug(client, slug)
     if product is None:
         raise AppError("product.not_found", "Product not found", 404)
@@ -304,6 +310,11 @@ def build_product_detail(client: Any, slug: str) -> ProductDetailResponse | Redi
         .execute()
     )
     listing_rows = listings_response.data or []
+    if not include_wholesale:
+        # Wholesale-only listings are B2B supplies: hidden from the consumer
+        # product page (gallery, vendor comparison, count) unless the caller is
+        # a verified business buyer.
+        listing_rows = [row for row in listing_rows if not row.get("wholesale")]
 
     listing_ids = [str(row["id"]) for row in listing_rows if row.get("id")]
     images_by_listing: dict[str, list[dict[str, Any]]] = {
@@ -400,8 +411,11 @@ def build_product_detail(client: Any, slug: str) -> ProductDetailResponse | Redi
 async def get_product(
     slug: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
+    access: Annotated[BusinessAccess, Depends(get_business_access)],
 ) -> ProductDetailResponse | RedirectResponse:
-    result = build_product_detail(supabase.client, slug)
+    result = build_product_detail(
+        supabase.client, slug, include_wholesale=access.eligible
+    )
     if isinstance(result, RedirectResponse):
         return result
     return result

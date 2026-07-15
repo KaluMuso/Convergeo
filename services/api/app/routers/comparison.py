@@ -6,6 +6,7 @@ from typing import Annotated, Any, Protocol
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.products import _aggregate_vendor_ratings, _parse_vendor_row
+from app.services.business.access import BusinessAccess, get_business_access
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
@@ -113,7 +114,12 @@ def _fetch_product_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
     return row if isinstance(row, dict) else None
 
 
-def build_comparison(client: Any, slug: str) -> ComparisonResponse:
+def build_comparison(
+    client: Any,
+    slug: str,
+    *,
+    include_wholesale: bool = False,
+) -> ComparisonResponse:
     product = _fetch_product_by_slug(client, slug)
     if product is None:
         raise AppError("product.not_found", "Product not found", 404)
@@ -127,7 +133,7 @@ def build_comparison(client: Any, slug: str) -> ComparisonResponse:
     listings_response = (
         client.table("vendor_listings")
         .select(
-            "id, price_ngwee, condition, "
+            "id, price_ngwee, condition, wholesale, "
             "vendors!inner("
             "id, slug, display_name, preferred_badge, status, "
             "vendor_locations(landmark, lat, lng)"
@@ -141,6 +147,10 @@ def build_comparison(client: Any, slug: str) -> ComparisonResponse:
         .execute()
     )
     listing_rows = listings_response.data or []
+    if not include_wholesale:
+        # Wholesale-only listings are B2B supplies: excluded from the consumer
+        # price comparison unless the caller is a verified business buyer.
+        listing_rows = [row for row in listing_rows if not row.get("wholesale")]
 
     vendor_ids: list[str] = []
     for row in listing_rows:
@@ -201,5 +211,6 @@ def build_comparison(client: Any, slug: str) -> ComparisonResponse:
 async def get_product_comparison(
     slug: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
+    access: Annotated[BusinessAccess, Depends(get_business_access)],
 ) -> ComparisonResponse:
-    return build_comparison(supabase.client, slug)
+    return build_comparison(supabase.client, slug, include_wholesale=access.eligible)
