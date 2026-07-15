@@ -993,6 +993,7 @@
       "add": "Add date",
       "remove": "Remove",
       "startsAt": "Starts",
+      "endsAt": "Ends (optional)",
       "capacity": "Capacity",
       "sold": "{count, plural, one {# ticket sold — capacity cannot go lower} other {# tickets sold — capacity cannot go lower}}"
     },
@@ -1032,6 +1033,7 @@
       "kyc_required": "Complete KYC verification before creating events.",
       "capacity_below_sold": "Capacity cannot be lower than tickets already sold.",
       "past_instance": "Move past dates forward before publishing.",
+      "ends_before_starts": "End time must be after the start time.",
       "not_editable": "This event can no longer be edited.",
       "invalid_transition": "That action is not available for this event."
     }

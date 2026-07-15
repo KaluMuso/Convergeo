@@ -10,19 +10,28 @@ export type InstanceDraft = {
   key: string;
   id?: string;
   startsAt: string;
+  endsAt: string;
   capacity: string;
   ticketsSold?: number;
 };
 
 export function toInstanceDraft(
-  instance?: { id: string; starts_at: string; capacity: number; tickets_sold?: number },
+  instance?: {
+    id: string;
+    starts_at: string;
+    ends_at?: string | null;
+    capacity: number;
+    tickets_sold?: number;
+  },
   key?: string,
 ): InstanceDraft {
   const startsAt = instance?.starts_at ? instance.starts_at.slice(0, 16) : "";
+  const endsAt = instance?.ends_at ? instance.ends_at.slice(0, 16) : "";
   return {
     key: key ?? instance?.id ?? `new-${Math.random().toString(36).slice(2)}`,
     id: instance?.id,
     startsAt,
+    endsAt,
     capacity: instance ? String(instance.capacity) : "50",
     ticketsSold: instance?.tickets_sold ?? 0,
   };
@@ -32,6 +41,8 @@ export function draftToPayload(drafts: InstanceDraft[]): EventInstanceInput[] {
   return drafts.map((draft) => ({
     id: draft.id,
     starts_at: new Date(draft.startsAt).toISOString(),
+    // Optional — null when left blank (backend defaults / preserves).
+    ends_at: draft.endsAt ? new Date(draft.endsAt).toISOString() : null,
     capacity: Number.parseInt(draft.capacity, 10) || 0,
   }));
 }
@@ -102,6 +113,16 @@ export function InstanceEditor({ instances, onChange, disabled = false }: Instan
                 onChange={(event) => updateAt(index, { startsAt: event.target.value })}
                 disabled={disabled}
                 required
+              />
+            </FormField>
+
+            <FormField label={t("events.instances.endsAt")}>
+              <Input
+                type="datetime-local"
+                value={instance.endsAt}
+                min={instance.startsAt || undefined}
+                onChange={(event) => updateAt(index, { endsAt: event.target.value })}
+                disabled={disabled}
               />
             </FormField>
 
