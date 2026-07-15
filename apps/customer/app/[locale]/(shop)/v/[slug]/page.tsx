@@ -191,22 +191,30 @@ export default async function VendorProfilePage({ params }: PageProps) {
   const jsonLd = buildVendorJsonLd(vendor, reviews, locale);
 
   return (
-    <div className="space-y-6 lg:mx-auto lg:w-full lg:max-w-3xl">
+    <div className="space-y-6 lg:mx-auto lg:w-full lg:max-w-5xl">
       <JsonLdScript data={jsonLd} />
 
-      <header
-        className="space-y-3 rounded border border-border bg-surface p-4"
-        style={{ borderRadius: "var(--r)" }}
-      >
-        <div className="flex flex-wrap items-start gap-3">
-          {vendor.logo_url ? (
-            <div
-              aria-hidden
-              className="h-16 w-16 rounded-full border border-border bg-cover bg-center"
-              style={{ backgroundImage: `url(${vendor.logo_url})` }}
-            />
-          ) : null}
-          <div className="min-w-0 flex-1 space-y-2">
+      <header className="overflow-hidden rounded-lg border border-border bg-surface">
+        {/* Cover band — gradient fallback (no cover image in the vendor data model yet). */}
+        <div className="h-28 bg-gradient-to-br from-panel to-panel-2 sm:h-40" aria-hidden />
+        <div className="flex flex-col gap-3 px-4 sm:flex-row sm:items-end sm:gap-4">
+          <div className="-mt-12 shrink-0 sm:-mt-16">
+            {vendor.logo_url ? (
+              <div
+                aria-hidden
+                className="h-20 w-20 rounded-full border-4 border-surface bg-cover bg-center sm:h-24 sm:w-24"
+                style={{ backgroundImage: `url(${vendor.logo_url})` }}
+              />
+            ) : (
+              <div
+                aria-hidden
+                className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-surface bg-bg-2 font-display text-h1 text-display-ink sm:h-24 sm:w-24"
+              >
+                {vendor.display_name.charAt(0)}
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1 space-y-2 pb-1 sm:pb-3">
             <h1 className="font-display text-h1 text-display-ink">{vendor.display_name}</h1>
             <div className="flex flex-wrap items-center gap-2">
               {vendor.preferred_badge ? (
@@ -215,48 +223,63 @@ export default async function VendorProfilePage({ params }: PageProps) {
               {vendor.verified ? (
                 <CornerRibbon trust="id_verified" trustLabel={t("profile.verifiedBadge")} />
               ) : null}
+              {vendor.location ? (
+                <span className="text-sm text-text-3">{vendor.location.landmark}</span>
+              ) : null}
             </div>
           </div>
         </div>
-
-        {vendor.description ? (
-          <section>
-            <h2 className="mb-1 text-sm font-semibold text-text">{t("profile.about")}</h2>
-            <p className="text-sm text-text-2">{vendor.description}</p>
-          </section>
-        ) : null}
-
-        {vendor.location ? (
-          <section className="space-y-2">
-            <h2 className="text-sm font-semibold text-text">{t("profile.location")}</h2>
-            <p className="text-sm text-text-2">
-              {t("profile.landmarkValue", { landmark: vendor.location.landmark })}
-            </p>
-            {hoursLines.length > 0 ? (
-              <div>
-                <h3 className="mb-1 text-sm font-semibold text-text">{t("profile.hours")}</h3>
-                <ul className="space-y-1 text-sm text-text-2">
-                  {hoursLines.map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        <section>
-          <h2 className="mb-1 text-sm font-semibold text-text">{t("profile.reviewsHeading")}</h2>
-          <p className="text-sm text-text-2">
-            {reviews.rating_count > 0 && reviews.rating_avg !== null
-              ? t("profile.reviewsSummary", {
-                  rating: reviews.rating_avg,
-                  count: reviews.rating_count,
-                })
-              : t("profile.noReviews")}
-          </p>
-        </section>
+        <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-border px-4 py-3">
+          <div className="text-center">
+            <dd className="font-display text-h3 font-bold text-display-ink">
+              {reviews.rating_avg !== null && reviews.rating_count > 0
+                ? reviews.rating_avg.toFixed(1)
+                : "—"}
+            </dd>
+            <dt className="text-micro text-text-3">{t("profile.statRating")}</dt>
+          </div>
+          <div className="text-center">
+            <dd className="font-display text-h3 font-bold text-display-ink">
+              {reviews.rating_count}
+            </dd>
+            <dt className="text-micro text-text-3">{t("profile.statReviews")}</dt>
+          </div>
+          <div className="text-center">
+            <dd className="font-display text-h3 font-bold text-display-ink">{listings.length}</dd>
+            <dt className="text-micro text-text-3">{t("profile.statListings")}</dt>
+          </div>
+        </dl>
       </header>
+
+      {vendor.description || vendor.location ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {vendor.description ? (
+            <section className="rounded-lg border border-border bg-surface p-4">
+              <h2 className="mb-1 text-sm font-semibold text-text">{t("profile.about")}</h2>
+              <p className="text-sm text-text-2">{vendor.description}</p>
+            </section>
+          ) : null}
+
+          {vendor.location ? (
+            <section className="space-y-2 rounded-lg border border-border bg-surface p-4">
+              <h2 className="text-sm font-semibold text-text">{t("profile.location")}</h2>
+              <p className="text-sm text-text-2">
+                {t("profile.landmarkValue", { landmark: vendor.location.landmark })}
+              </p>
+              {hoursLines.length > 0 ? (
+                <div>
+                  <h3 className="mb-1 text-sm font-semibold text-text">{t("profile.hours")}</h3>
+                  <ul className="space-y-1 text-sm text-text-2">
+                    {hoursLines.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+        </div>
+      ) : null}
 
       <section className="space-y-3">
         <h2 className="font-display text-lg font-semibold text-text">

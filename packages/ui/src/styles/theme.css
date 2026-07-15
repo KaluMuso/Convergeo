@@ -174,12 +174,15 @@
     transform var(--dur) var(--ease-out),
     box-shadow var(--dur) var(--ease-out);
 }
+/* The cards set their base box-shadow as an inline style, which beats a plain
+   selector rule — so the hover/focus elevation must be !important to win. The
+   transform has no inline counterpart and needs no override. */
 @media (hover: hover) {
   .card-lift:hover {
     transform: translateY(-4px);
-    box-shadow: var(--shadow-2);
+    box-shadow: var(--shadow-2) !important;
   }
 }
 .card-lift:focus-within {
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-2) !important;
 }

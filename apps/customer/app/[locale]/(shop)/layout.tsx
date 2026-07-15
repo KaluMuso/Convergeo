@@ -108,6 +108,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         locale={locale}
         labels={{
           appName: tCommon("app.name"),
+          skipToContent: tCommon("nav.skipToContent"),
           navAriaLabel: t("home.nav.desktopAriaLabel"),
           searchPlaceholder: t("home.nav.searchPlaceholder"),
           searchSubmit: t("home.nav.searchSubmit"),
@@ -128,7 +129,8 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       />
       <main
         id="shop-main"
-        className="mx-auto w-full max-w-lg flex-1 px-4 pb-20 pt-4 lg:max-w-7xl lg:px-6 lg:pb-12 lg:pt-6"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-lg flex-1 px-4 pb-20 pt-4 focus-visible:outline-none lg:max-w-7xl lg:px-6 lg:pb-12 lg:pt-6"
       >
         {children}
       </main>

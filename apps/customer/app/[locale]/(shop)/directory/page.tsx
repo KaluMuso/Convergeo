@@ -1,6 +1,7 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
+import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
@@ -157,12 +158,23 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
   }));
 
   return (
-    <div className="space-y-4 lg:mx-auto lg:w-full lg:max-w-3xl">
-      <header className="space-y-1">
-        <h1 className="font-display text-h1 text-display-ink">{t("index.title")}</h1>
-        <p className="text-sm text-text-2">{t("index.subtitle")}</p>
-        <p className="text-sm text-text-3">{t("index.results", { count: total })}</p>
-      </header>
+    <div className="space-y-6 lg:mx-auto lg:w-full lg:max-w-6xl">
+      <section className="overflow-hidden rounded-lg bg-panel px-5 py-8 text-panel-text sm:px-8 sm:py-10">
+        <div className="max-w-2xl space-y-3">
+          <h1 className="font-display text-h1 text-panel-text">{t("index.title")}</h1>
+          <p className="text-body text-panel-muted">{t("index.subtitle")}</p>
+          <p className="text-sm text-panel-muted">{t("index.results", { count: total })}</p>
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <Link
+              href={`/${locale}/sell`}
+              className="inline-flex min-h-11 items-center rounded bg-panel-text px-5 text-sm font-semibold text-panel transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:shadow-focusRing"
+            >
+              {t("index.becomeVendor")}
+            </Link>
+            <span className="text-sm text-panel-muted">{t("index.heroPitch")}</span>
+          </div>
+        </div>
+      </section>
 
       <Suspense fallback={null}>
         <FilterBar
