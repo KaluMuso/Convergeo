@@ -3,10 +3,16 @@ from __future__ import annotations
 import csv
 import io
 import json
+import uuid
 from dataclasses import dataclass
 from typing import Any, Literal, Protocol, cast
 
 from app.services.kyc.caps import LISTING_COUNT_STATUSES, VendorCapLimits
+from app.services.listings.canonical_match import (
+    CanonicalCandidate,
+    load_active_candidates,
+    suggest_matches,
+)
 from app.services.moderation.prohibited import screen_listing
 
 ListingCondition = Literal["new", "refurbished"]
@@ -36,6 +42,9 @@ OPTIONAL_COLUMNS = frozenset(
         "return_window_hours",
         "status",
         "vendor_id",
+        # Optional canonical product to attach to; when blank the vendor can
+        # pick a suggested match in the import preview (see preview_import_rows).
+        "product_id",
     }
 )
 
@@ -66,6 +75,7 @@ class ParsedListingRow:
     returnable: bool
     return_window_hours: int | None
     status: ListingStatus
+    product_id: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -164,6 +174,17 @@ def _parse_price_tiers(raw: str | None) -> list[PriceTierRow] | None:
         )
         tiers.append(PriceTierRow(min_qty=min_qty, price_ngwee=price_ngwee))
     return tiers
+
+
+def _parse_optional_uuid(value: str | None, *, field: str) -> str | None:
+    if value is None or not str(value).strip():
+        return None
+    candidate = str(value).strip()
+    try:
+        uuid.UUID(candidate)
+    except ValueError as exc:
+        raise ValueError(f"{field} must be a valid UUID") from exc
+    return candidate
 
 
 def validate_row_dict(
@@ -274,6 +295,12 @@ def validate_row_dict(
     else:
         status = cast(ListingStatus, status_raw)
 
+    try:
+        product_id = _parse_optional_uuid(raw.get("product_id"), field="product_id")
+    except ValueError as exc:
+        errors.append(str(exc))
+        product_id = None
+
     if wholesale and kyc_tier < 2:
         errors.append("wholesale requires T2 verification or higher")
     if wholesale and not price_tiers:
@@ -299,6 +326,7 @@ def validate_row_dict(
             returnable=returnable,
             return_window_hours=return_window_hours,
             status=status,
+            product_id=product_id,
         ),
         [],
     )
@@ -418,7 +446,9 @@ def _serialize_price_tiers(tiers: list[PriceTierRow] | None) -> list[dict[str, i
 def _listing_payload(vendor_id: str, parsed: ParsedListingRow) -> dict[str, Any]:
     return {
         "vendor_id": vendor_id,
-        "product_id": None,
+        # Attach to the confirmed canonical product when supplied; None keeps the
+        # listing standalone. Existence/active is validated in import_listing_rows.
+        "product_id": parsed.product_id,
         "sku": parsed.sku,
         "title_override": parsed.title,
         "price_ngwee": parsed.price_ngwee,
@@ -450,6 +480,7 @@ def import_listing_rows(
     rejected = 0
 
     sku_map = _load_existing_sku_map(client, vendor_id)
+    valid_product_ids = {candidate.product_id for candidate in load_active_candidates(client)}
     cap_slots_used = limits.listing_count
     max_listings = limits.quota.max_listings
     seen_skus_in_file: set[str] = set()
@@ -491,6 +522,17 @@ def import_listing_rows(
             )
             continue
         seen_skus_in_file.add(sku)
+
+        if parsed.product_id is not None and parsed.product_id not in valid_product_ids:
+            rejected += 1
+            results.append(
+                RowImportResult(
+                    row=index,
+                    ok=False,
+                    errors=["product_id does not match an active canonical product"],
+                )
+            )
+            continue
 
         existing = sku_map.get(sku)
         is_new = existing is None
@@ -552,6 +594,20 @@ def import_listing_rows(
     return ImportSummary(accepted=accepted, rejected=rejected, rows=results)
 
 
+def _decode_and_parse_csv(csv_bytes: bytes) -> tuple[list[dict[str, str]], list[str]]:
+    """Decode + parse CSV bytes. Non-empty error list means the rows are unusable."""
+    if len(csv_bytes) > MAX_CSV_BYTES:
+        return [], [f"CSV exceeds maximum size of {MAX_CSV_BYTES} bytes"]
+    try:
+        csv_text = csv_bytes.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return [], ["CSV must be UTF-8 encoded"]
+    parsed_rows, parse_errors = parse_csv_text(csv_text)
+    if parse_errors:
+        return [], parse_errors
+    return parsed_rows, []
+
+
 def import_csv_bytes(
     client: SupabaseTableClient,
     *,
@@ -559,34 +615,12 @@ def import_csv_bytes(
     limits: VendorCapLimits,
     csv_bytes: bytes,
 ) -> ImportSummary:
-    if len(csv_bytes) > MAX_CSV_BYTES:
+    parsed_rows, errors = _decode_and_parse_csv(csv_bytes)
+    if errors:
         return ImportSummary(
             accepted=0,
             rejected=0,
-            rows=[
-                RowImportResult(
-                    row=0,
-                    ok=False,
-                    errors=[f"CSV exceeds maximum size of {MAX_CSV_BYTES} bytes"],
-                )
-            ],
-        )
-
-    try:
-        csv_text = csv_bytes.decode("utf-8-sig")
-    except UnicodeDecodeError:
-        return ImportSummary(
-            accepted=0,
-            rejected=0,
-            rows=[RowImportResult(row=0, ok=False, errors=["CSV must be UTF-8 encoded"])],
-        )
-
-    parsed_rows, parse_errors = parse_csv_text(csv_text)
-    if parse_errors:
-        return ImportSummary(
-            accepted=0,
-            rejected=0,
-            rows=[RowImportResult(row=0, ok=False, errors=parse_errors)],
+            rows=[RowImportResult(row=0, ok=False, errors=errors)],
         )
 
     return import_listing_rows(
@@ -595,3 +629,161 @@ def import_csv_bytes(
         limits=limits,
         rows=parsed_rows,
     )
+
+
+# ---------------------------------------------------------------------------
+# Dry-run preview with canonical-match suggestions (M12-P06)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class CanonicalSuggestionRow:
+    product_id: str
+    name: str
+    score: float
+
+
+@dataclass(frozen=True, slots=True)
+class RowPreview:
+    row: int
+    ok: bool
+    errors: list[str]
+    sku: str | None
+    title: str | None
+    price_ngwee: int | None
+    product_id: str | None
+    matched_name: str | None
+    suggestions: list[CanonicalSuggestionRow]
+    # Echo of the parsed row so the client can apply it back (with a confirmed
+    # product_id) without re-parsing the CSV itself.
+    raw: dict[str, str]
+
+
+@dataclass(frozen=True, slots=True)
+class ImportPreview:
+    total: int
+    valid: int
+    invalid: int
+    rows: list[RowPreview]
+
+
+def _row_suggestions(
+    title: str,
+    candidates: list[CanonicalCandidate],
+) -> list[CanonicalSuggestionRow]:
+    return [
+        CanonicalSuggestionRow(
+            product_id=suggestion.product_id,
+            name=suggestion.name,
+            score=suggestion.score,
+        )
+        for suggestion in suggest_matches(title, candidates)
+    ]
+
+
+def preview_import_rows(
+    client: SupabaseTableClient,
+    *,
+    limits: VendorCapLimits,
+    rows: list[dict[str, str]],
+) -> ImportPreview:
+    """Validate rows WITHOUT writing and attach canonical-match suggestions.
+
+    Row-level validity mirrors the apply path (format, prohibited screen,
+    product_id existence, in-file duplicate SKU). Cap overflow is a global
+    apply-time constraint and is not evaluated here.
+    """
+    candidates = load_active_candidates(client)
+    valid_product_ids = {candidate.product_id for candidate in candidates}
+    name_by_id = {candidate.product_id: candidate.name for candidate in candidates}
+
+    seen_skus: set[str] = set()
+    previews: list[RowPreview] = []
+    valid = 0
+
+    for index, raw_row in enumerate(rows, start=1):
+        parsed, parse_errors = validate_row_dict(index, raw_row, kyc_tier=limits.kyc_tier)
+        errors = list(parse_errors)
+        sku = str(raw_row.get("sku", "")).strip() or None
+        title = str(raw_row.get("title", "")).strip() or None
+        price: int | None = None
+        product_id: str | None = None
+        matched_name: str | None = None
+        suggestions: list[CanonicalSuggestionRow] = []
+
+        if parsed is not None:
+            sku = parsed.sku
+            title = parsed.title
+            price = parsed.price_ngwee
+            product_id = parsed.product_id
+            guard = screen_listing(title=parsed.title)
+            if not guard.allowed:
+                errors.append(
+                    f"prohibited listing blocked ({guard.reason}): {guard.matched}"
+                )
+            elif parsed.product_id is not None and parsed.product_id not in valid_product_ids:
+                errors.append("product_id does not match an active canonical product")
+            elif parsed.sku in seen_skus:
+                errors.append(f"duplicate sku in file: {parsed.sku}")
+
+        ok = parsed is not None and not errors
+        if ok:
+            valid += 1
+            assert parsed is not None
+            seen_skus.add(parsed.sku)
+            if product_id is not None:
+                matched_name = name_by_id.get(product_id)
+            elif title:
+                suggestions = _row_suggestions(title, candidates)
+
+        previews.append(
+            RowPreview(
+                row=index,
+                ok=ok,
+                errors=errors,
+                sku=sku,
+                title=title,
+                price_ngwee=price,
+                product_id=product_id,
+                matched_name=matched_name,
+                suggestions=suggestions,
+                raw={str(key): str(value) for key, value in raw_row.items()},
+            )
+        )
+
+    return ImportPreview(
+        total=len(rows),
+        valid=valid,
+        invalid=len(rows) - valid,
+        rows=previews,
+    )
+
+
+def preview_import_csv_bytes(
+    client: SupabaseTableClient,
+    *,
+    limits: VendorCapLimits,
+    csv_bytes: bytes,
+) -> ImportPreview:
+    parsed_rows, errors = _decode_and_parse_csv(csv_bytes)
+    if errors:
+        return ImportPreview(
+            total=0,
+            valid=0,
+            invalid=1,
+            rows=[
+                RowPreview(
+                    row=0,
+                    ok=False,
+                    errors=errors,
+                    sku=None,
+                    title=None,
+                    price_ngwee=None,
+                    product_id=None,
+                    matched_name=None,
+                    suggestions=[],
+                    raw={},
+                )
+            ],
+        )
+    return preview_import_rows(client, limits=limits, rows=parsed_rows)

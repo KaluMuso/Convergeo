@@ -403,7 +403,7 @@
       "signInRequired": "Sign in to import listings.",
       "template": {
         "heading": "Download template",
-        "body": "Use our CSV template with example rows. Prices are in ngwee (integer). SKU is your unique code per listing.",
+        "body": "Use our CSV template with example rows. Prices are in ngwee (integer). SKU is your unique code per listing. Leave product_id blank to get catalogue-match suggestions in the preview.",
         "download": "Download CSV template"
       },
       "upload": {
@@ -423,8 +423,26 @@
         "failed": "Failed",
         "imported": "Imported"
       },
+      "preview": {
+        "previewButton": "Preview rows",
+        "previewing": "Checking…",
+        "summary": "{valid} of {total} rows ready to import",
+        "itemColumn": "Item",
+        "matchColumn": "Catalogue match",
+        "suggestionsLabel": "Suggested matches",
+        "attachAction": "Attach: {name}",
+        "attached": "Attached: {name}",
+        "matched": "Matches: {name}",
+        "detach": "Change",
+        "standalone": "No match — lists on its own"
+      },
+      "apply": {
+        "button": "Apply import",
+        "applying": "Applying…"
+      },
       "errors": {
         "uploadFailed": "Import failed. Check your file and try again.",
+        "previewFailed": "Could not check your file. Please try again.",
         "no_file": "CSV file is required",
         "no_payload": "Provide a CSV file or JSON rows"
       }

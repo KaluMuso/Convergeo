@@ -98,9 +98,26 @@ class VendorProfileDetail(BaseModel):
     created_at: str | None = None
 
 
+class VendorServiceItem(BaseModel):
+    id: str
+    title: str
+    category: str | None = None
+    from_price_ngwee: int | None = None
+    image_public_id: str | None = None
+
+
+class VendorEventItem(BaseModel):
+    id: str
+    slug: str
+    title: str
+    image_public_id: str | None = None
+
+
 class VendorProfileResponse(BaseModel):
     vendor: VendorProfileDetail
     listings: list[DirectoryListingItem] = Field(default_factory=list)
+    services: list[VendorServiceItem] = Field(default_factory=list)
+    events: list[VendorEventItem] = Field(default_factory=list)
     reviews_summary: ReviewsSummary
 
 
@@ -552,6 +569,58 @@ def _resolve_previous_slug(client: Any, slug: str) -> str | None:
     return None
 
 
+def _fetch_vendor_services(client: Any, vendor_id: str) -> list[VendorServiceItem]:
+    response = (
+        client.table("services")
+        .select("id, title, category, from_price_ngwee, portfolio_images, status")
+        .eq("vendor_id", vendor_id)
+        .eq("status", "active")
+        .execute()
+    )
+    items: list[VendorServiceItem] = []
+    for row in response.data or []:
+        if not isinstance(row, dict) or not row.get("id"):
+            continue
+        images = row.get("portfolio_images")
+        image = images[0] if isinstance(images, list) and images else None
+        price = row.get("from_price_ngwee")
+        items.append(
+            VendorServiceItem(
+                id=str(row["id"]),
+                title=str(row.get("title") or ""),
+                category=(str(row.get("category")) if row.get("category") else None),
+                from_price_ngwee=(int(price) if price is not None else None),
+                image_public_id=(str(image) if isinstance(image, str) and image else None),
+            )
+        )
+    return items
+
+
+def _fetch_vendor_events(client: Any, vendor_id: str) -> list[VendorEventItem]:
+    response = (
+        client.table("events")
+        .select("id, slug, title, images, status")
+        .eq("organiser_vendor_id", vendor_id)
+        .eq("status", "published")
+        .execute()
+    )
+    items: list[VendorEventItem] = []
+    for row in response.data or []:
+        if not isinstance(row, dict) or not row.get("id"):
+            continue
+        images = row.get("images")
+        image = images[0] if isinstance(images, list) and images else None
+        items.append(
+            VendorEventItem(
+                id=str(row["id"]),
+                slug=str(row.get("slug") or ""),
+                title=str(row.get("title") or ""),
+                image_public_id=(str(image) if isinstance(image, str) and image else None),
+            )
+        )
+    return items
+
+
 def get_vendor_profile(
     client: Any,
     slug: str,
@@ -652,6 +721,8 @@ def get_vendor_profile(
     rating_avg, rating_count = _aggregate_vendor_ratings(client, [vendor_id]).get(
         vendor_id, (None, 0)
     )
+    services = _fetch_vendor_services(client, vendor_id)
+    events = _fetch_vendor_events(client, vendor_id)
 
     return VendorProfileResponse(
         vendor=VendorProfileDetail(
@@ -668,6 +739,8 @@ def get_vendor_profile(
             created_at=row.get("created_at"),
         ),
         listings=listings,
+        services=services,
+        events=events,
         reviews_summary=ReviewsSummary(rating_avg=rating_avg, rating_count=rating_count),
     )
 

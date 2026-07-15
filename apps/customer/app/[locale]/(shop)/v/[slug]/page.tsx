@@ -1,11 +1,14 @@
-import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
+import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import {
   buildCanonicalAlternates,
   buildLocaleCanonical,
   buildLocalBusinessJsonLd,
   JsonLdScript,
 } from "@vergeo/ui/src/seo/json-ld";
+import { Tabs, type TabItem } from "@vergeo/ui/src/tabs";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -44,6 +47,19 @@ type VendorProfileApiResponse = {
     price_ngwee: number;
     condition: string;
     in_stock: boolean;
+    image_public_id: string | null;
+  }>;
+  services: Array<{
+    id: string;
+    title: string;
+    category: string | null;
+    from_price_ngwee: number | null;
+    image_public_id: string | null;
+  }>;
+  events: Array<{
+    id: string;
+    slug: string;
+    title: string;
     image_public_id: string | null;
   }>;
   reviews_summary: {
@@ -154,6 +170,83 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
+function VendorServicesGrid({
+  locale,
+  services,
+  fromLabel,
+}: {
+  locale: string;
+  services: VendorProfileApiResponse["services"];
+  fromLabel: string;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+      {services.map((service) => (
+        <Link
+          key={service.id}
+          href={`/${locale}/s/${service.id}`}
+          className="card-lift block overflow-hidden rounded-lg border border-border bg-surface no-underline shadow-1"
+        >
+          <div className="aspect-[4/3] w-full bg-bg-2">
+            {service.image_public_id ? (
+              <CloudinaryImage
+                publicId={service.image_public_id}
+                alt={service.title}
+                width={360}
+                ratio="4/3"
+                className="h-full w-full object-cover"
+              />
+            ) : null}
+          </div>
+          <div className="space-y-1 p-3">
+            <p className="truncate text-sm font-medium text-text">{service.title}</p>
+            {service.from_price_ngwee !== null ? (
+              <p className="text-sm text-text-2">
+                {fromLabel.replace("{price}", formatK(service.from_price_ngwee))}
+              </p>
+            ) : null}
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+function VendorEventsGrid({
+  locale,
+  events,
+}: {
+  locale: string;
+  events: VendorProfileApiResponse["events"];
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+      {events.map((event) => (
+        <Link
+          key={event.id}
+          href={`/${locale}/e/${event.slug}`}
+          className="card-lift block overflow-hidden rounded-lg border border-border bg-surface no-underline shadow-1"
+        >
+          <div className="aspect-[4/3] w-full bg-bg-2">
+            {event.image_public_id ? (
+              <CloudinaryImage
+                publicId={event.image_public_id}
+                alt={event.title}
+                width={360}
+                ratio="4/3"
+                className="h-full w-full object-cover"
+              />
+            ) : null}
+          </div>
+          <div className="p-3">
+            <p className="truncate text-sm font-medium text-text">{event.title}</p>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 export default async function VendorProfilePage({ params }: PageProps) {
   const { locale, slug } = await params;
 
@@ -169,7 +262,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
     notFound();
   }
 
-  const { vendor, listings, reviews_summary: reviews } = profile;
+  const { vendor, listings, services, events, reviews_summary: reviews } = profile;
   const listingsForGrid: CatalogListing[] = listings.map((listing) => ({
     id: listing.id,
     title: listing.title,
@@ -185,6 +278,51 @@ export default async function VendorProfilePage({ params }: PageProps) {
   }));
 
   const jsonLd = buildVendorJsonLd(vendor, reviews, locale);
+
+  // Offerings shown as tabs when the vendor has more than one type; a single type
+  // renders as a plain section (no tab bar for one tab).
+  const offeringTabs: TabItem[] = [];
+  if (listingsForGrid.length > 0) {
+    offeringTabs.push({
+      key: "products",
+      label: t("profile.tabProducts"),
+      panel: (
+        <ListingGrid
+          locale={locale}
+          listings={listingsForGrid}
+          labels={{
+            vendor: t("listings.vendor"),
+            noReviews: t("listings.noReviews"),
+            reviewCount: t("listings.reviewCount"),
+            quickAdd: t("listings.quickAdd"),
+            wishlist: t("listings.wishlist"),
+            outOfStock: t("listings.outOfStock"),
+            distance: t("listings.distance"),
+          }}
+        />
+      ),
+    });
+  }
+  if (services.length > 0) {
+    offeringTabs.push({
+      key: "services",
+      label: t("profile.tabServices"),
+      panel: (
+        <VendorServicesGrid
+          locale={locale}
+          services={services}
+          fromLabel={t("profile.serviceFrom")}
+        />
+      ),
+    });
+  }
+  if (events.length > 0) {
+    offeringTabs.push({
+      key: "events",
+      label: t("profile.tabEvents"),
+      panel: <VendorEventsGrid locale={locale} events={events} />,
+    });
+  }
 
   return (
     <div className="space-y-6 lg:mx-auto lg:w-full lg:max-w-5xl">
@@ -283,26 +421,14 @@ export default async function VendorProfilePage({ params }: PageProps) {
         </div>
       ) : null}
 
-      <section className="space-y-3">
-        <h2 className="font-display text-lg font-semibold text-text">
-          {t("profile.listingsHeading")}
-        </h2>
-        {listingsForGrid.length > 0 ? (
-          <ListingGrid
-            locale={locale}
-            listings={listingsForGrid}
-            labels={{
-              vendor: t("listings.vendor"),
-              noReviews: t("listings.noReviews"),
-              reviewCount: t("listings.reviewCount"),
-              quickAdd: t("listings.quickAdd"),
-              wishlist: t("listings.wishlist"),
-              outOfStock: t("listings.outOfStock"),
-              distance: t("listings.distance"),
-            }}
-          />
-        ) : null}
-      </section>
+      {offeringTabs.length > 1 ? (
+        <Tabs items={offeringTabs} ariaLabel={t("profile.offeringsAria")} />
+      ) : offeringTabs.length === 1 ? (
+        <section className="space-y-3">
+          <h2 className="font-display text-lg font-semibold text-text">{offeringTabs[0]?.label}</h2>
+          {offeringTabs[0]?.panel}
+        </section>
+      ) : null}
     </div>
   );
 }
