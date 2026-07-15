@@ -128,94 +128,111 @@ export default async function ServiceDetailPage({ params }: PageProps) {
   const quoteHref = `/${locale}/services/post-job?category=${encodeURIComponent(service.category)}`;
 
   return (
-    <article className="flex flex-col gap-6 pb-8 lg:mx-auto lg:w-full lg:max-w-3xl">
-      <header className="flex flex-col gap-3">
+    <article className="flex flex-col gap-6 pb-8 lg:mx-auto lg:w-full lg:max-w-5xl">
+      {/* Themed overlay hero — dark aubergine gradient (no per-category theme data yet). */}
+      <header className="relative overflow-hidden rounded-lg">
         {service.portfolio_images[0] ? (
-          <div className="overflow-hidden rounded-lg border border-border">
-            <CloudinaryImage
-              publicId={service.portfolio_images[0]}
-              alt={service.title}
-              width={960}
-              ratio="16/9"
-              priority
-            />
+          <CloudinaryImage
+            publicId={service.portfolio_images[0]}
+            alt={service.title}
+            width={1280}
+            ratio="16/9"
+            priority
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div
+            className="aspect-[16/9] w-full bg-gradient-to-br from-panel to-panel-2"
+            aria-hidden
+          />
+        )}
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-panel via-panel/40 to-transparent"
+          aria-hidden
+        />
+        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 p-4 sm:p-6">
+          <div className="flex flex-wrap items-center gap-2">
+            {tier ? (
+              <Badge variant={badgeVariant(tier)} label={t(`badges.${tier}` as "badges.fast")} />
+            ) : null}
+            {service.provider.preferred_badge ? (
+              <Badge variant="public" label={t("browse.preferredBadge")} />
+            ) : null}
           </div>
-        ) : null}
-        <div className="flex flex-wrap items-center gap-2">
-          {tier ? (
-            <Badge variant={badgeVariant(tier)} label={t(`badges.${tier}` as "badges.fast")} />
-          ) : null}
-          {service.provider.preferred_badge ? (
-            <Badge variant="public" label={t("browse.preferredBadge")} />
+          <h1 className="font-display text-h1 text-panel-text">{service.title}</h1>
+          {service.service_area ? (
+            <p className="text-sm text-panel-muted">{service.service_area}</p>
           ) : null}
         </div>
-        <h1 className="font-display text-h1 text-display-ink">{service.title}</h1>
-        {service.service_area ? (
-          <p className="text-sm text-text-2">{service.service_area}</p>
-        ) : null}
-        <p className="text-sm font-semibold text-text">
-          {service.from_price_ngwee
-            ? t("detail.fromPrice", { price: formatK(service.from_price_ngwee) })
-            : t("detail.askForQuote")}
-        </p>
       </header>
 
-      {service.description ? (
-        <section className="flex flex-col gap-2">
-          <h2 className="font-display text-h3 text-display-ink">{t("detail.about")}</h2>
-          <p className="text-sm leading-relaxed text-text-2">{service.description}</p>
-        </section>
-      ) : null}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="flex flex-col gap-6">
+          {service.description ? (
+            <section className="flex flex-col gap-2">
+              <h2 className="font-display text-h3 text-display-ink">{t("detail.about")}</h2>
+              <p className="text-sm leading-relaxed text-text-2">{service.description}</p>
+            </section>
+          ) : null}
 
-      {service.portfolio_images.length > 1 ? (
-        <section className="flex flex-col gap-3">
-          <h2 className="font-display text-h3 text-display-ink">{t("detail.portfolio")}</h2>
-          <ul className="grid list-none grid-cols-2 gap-2 p-0">
-            {service.portfolio_images.slice(1).map((publicId, index) => (
-              <li key={publicId} className="overflow-hidden rounded-lg border border-border">
-                <CloudinaryImage
-                  publicId={publicId}
-                  alt={t("detail.imageAlt", { position: index + 2 })}
-                  width={480}
-                  ratio="4/3"
-                />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+          {service.portfolio_images.length > 1 ? (
+            <section className="flex flex-col gap-3">
+              <h2 className="font-display text-h3 text-display-ink">{t("detail.portfolio")}</h2>
+              <ul className="grid list-none grid-cols-2 gap-2 p-0">
+                {service.portfolio_images.slice(1).map((publicId, index) => (
+                  <li key={publicId} className="overflow-hidden rounded-lg border border-border">
+                    <CloudinaryImage
+                      publicId={publicId}
+                      alt={t("detail.imageAlt", { position: index + 2 })}
+                      width={480}
+                      ratio="4/3"
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
-      {service.service_area ? (
-        <section className="flex flex-col gap-2">
-          <h2 className="font-display text-h3 text-display-ink">{t("detail.serviceArea")}</h2>
-          <p className="text-sm text-text-2">{service.service_area}</p>
-        </section>
-      ) : null}
+          {service.service_area ? (
+            <section className="flex flex-col gap-2">
+              <h2 className="font-display text-h3 text-display-ink">{t("detail.serviceArea")}</h2>
+              <p className="text-sm text-text-2">{service.service_area}</p>
+            </section>
+          ) : null}
+        </div>
 
-      <section className="flex flex-col gap-3">
-        <Link
-          href={quoteHref}
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-surface"
-        >
-          {t("detail.requestQuote")}
-        </Link>
-        <p className="text-center text-xs text-text-3">{t("detail.requestQuoteHint")}</p>
-      </section>
-
-      <section className="rounded-lg border border-border bg-bg-2 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-text-3">
-          {t("detail.provider")}
-        </p>
-        <p className="mt-1 font-semibold text-text">{service.provider.display_name}</p>
-        {service.provider.slug ? (
-          <Link
-            href={`/${locale}/v/${service.provider.slug}`}
-            className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
-          >
-            {t("detail.providerCta")}
-          </Link>
-        ) : null}
-      </section>
+        {/* Sticky quote/booking sidebar — RFQ handoff (there is no direct-booking backend). */}
+        <aside className="lg:sticky lg:top-20 lg:h-fit">
+          <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 shadow-1">
+            <p className="text-lg font-semibold text-text">
+              {service.from_price_ngwee
+                ? t("detail.fromPrice", { price: formatK(service.from_price_ngwee) })
+                : t("detail.askForQuote")}
+            </p>
+            <Link
+              href={quoteHref}
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-deep focus-visible:outline-none focus-visible:shadow-focusRing"
+            >
+              {t("detail.requestQuote")}
+            </Link>
+            <p className="text-center text-xs text-text-3">{t("detail.requestQuoteHint")}</p>
+            <div className="border-t border-border pt-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-3">
+                {t("detail.provider")}
+              </p>
+              <p className="mt-1 font-semibold text-text">{service.provider.display_name}</p>
+              {service.provider.slug ? (
+                <Link
+                  href={`/${locale}/v/${service.provider.slug}`}
+                  className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
+                >
+                  {t("detail.providerCta")}
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        </aside>
+      </div>
     </article>
   );
 }

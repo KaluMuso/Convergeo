@@ -13,6 +13,8 @@ import {
   HomeHeroBand,
   HomeProductRail,
   HomeSellCta,
+  HomeServicesRail,
+  HomeVendorsRail,
   loadHomeDefaultData,
 } from "./_components/home-default";
 import {
@@ -183,6 +185,38 @@ export default async function ShopHomePage({ params }: PageProps) {
           labels={railLabels}
         />
       ))}
+      <HomeServicesRail
+        id="home-rail-services"
+        title={t("home.rails.servicesTitle")}
+        viewAllHref={`/${locale}/services`}
+        viewAllLabel={t("home.rails.viewAll")}
+        services={defaultData.services}
+        locale={locale}
+        labels={{
+          provider: t("home.rails.services.provider"),
+          fromPrice: t("home.rails.services.fromPrice"),
+          noReviews: t("home.rails.services.noReviews"),
+          view: t("home.rails.services.view"),
+        }}
+      />
+      <HomeVendorsRail
+        id="home-rail-vendors"
+        title={t("home.rails.vendorsTitle")}
+        viewAllHref={`/${locale}/directory`}
+        viewAllLabel={t("home.rails.viewAll")}
+        vendors={defaultData.topVendors}
+        locale={locale}
+        labels={{
+          listings: t("home.rails.vendors.listings"),
+          reviews: t("home.rails.vendors.reviews"),
+          rating: t("home.rails.vendors.rating"),
+          noReviews: t("home.rails.vendors.noReviews"),
+          preferred: t("home.rails.vendors.preferred"),
+          verified: t("home.rails.vendors.verified"),
+          location: t("home.rails.vendors.location"),
+          view: t("home.rails.vendors.view"),
+        }}
+      />
       <HomeSellCta locale={locale} t={t} />
     </div>
   );

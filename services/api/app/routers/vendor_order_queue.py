@@ -59,7 +59,7 @@ class VendorDashboardResponse(StrictModel):
     takings_date: str
     needs_action: list[OrderQueueItem]
     queue_counts: dict[str, int]
-    # Persisted onboarding archetype (migration 0038); drives the home dashboard's
+    # Persisted onboarding archetype (migration 0037); drives the home dashboard's
     # tailored primary action. None for legacy vendors with no archetype on file.
     archetype: str | None = None
 

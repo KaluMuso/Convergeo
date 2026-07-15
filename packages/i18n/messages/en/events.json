@@ -8,7 +8,9 @@
     "soldOut": "Sold out",
     "free": "Free",
     "viewEvent": "View event",
-    "calendarLabel": "Dates with events this month"
+    "calendarLabel": "Dates with events this month",
+    "hostCta": "Host an event",
+    "hostPitch": "Sell tickets with dynamic QR check-in and get paid securely."
   },
   "filters": {
     "tonight": "Tonight",

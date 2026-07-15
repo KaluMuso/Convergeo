@@ -427,6 +427,33 @@ class TestVendorProfile:
         assert payload["listings"][0]["product_slug"] == "itel-a70"
         assert payload["reviews_summary"]["rating_count"] == 1
         assert payload["reviews_summary"]["rating_avg"] == 5.0
+        # Single-branch vendor: the locations array mirrors the singular location.
+        assert [loc["landmark"] for loc in payload["vendor"]["locations"]] == [
+            "East Park Mall, Lusaka"
+        ]
+
+    def test_profile_returns_all_branch_locations(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.vendors[0]["vendor_locations"].append(
+            {
+                "landmark": "Manda Hill, Lusaka",
+                "lat": LUSAKA_CBD[0],
+                "lng": LUSAKA_CBD[1],
+                "hours": {"mon": "10:00-18:00"},
+            }
+        )
+
+        response = client.get("/directory/tech-hub-lusaka")
+        assert response.status_code == 200
+        payload = response.json()
+        assert [loc["landmark"] for loc in payload["vendor"]["locations"]] == [
+            "East Park Mall, Lusaka",
+            "Manda Hill, Lusaka",
+        ]
+        # `location` (singular) still returns the first branch for backward compat.
+        assert payload["vendor"]["location"]["landmark"] == "East Park Mall, Lusaka"
 
 
 class TestVendorProfileWholesaleGating:

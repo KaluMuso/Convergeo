@@ -108,7 +108,25 @@
     "rails": {
       "newTitle": "New on Vergeo5",
       "departmentTitle": "New in {category}",
-      "viewAll": "View all"
+      "viewAll": "View all",
+      "servicesTitle": "Services near you",
+      "vendorsTitle": "Top vendors",
+      "services": {
+        "provider": "By {provider}",
+        "fromPrice": "From",
+        "noReviews": "New provider",
+        "view": "View service"
+      },
+      "vendors": {
+        "listings": "Products",
+        "reviews": "Reviews",
+        "rating": "{rating} ({count})",
+        "noReviews": "New",
+        "preferred": "Preferred",
+        "verified": "Verified",
+        "location": "Zambia",
+        "view": "Visit store"
+      }
     },
     "sellCta": {
       "title": "Grow your business with Vergeo5",

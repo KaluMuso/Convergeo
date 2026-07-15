@@ -52,6 +52,8 @@ type CreateJobResponse = {
 
 type PostJobFormProps = {
   locale: string;
+  /** Category to preselect, e.g. forwarded from a service page's "Request quote" link. */
+  initialCategory?: string;
 };
 
 const DRAFT_STORAGE_KEY = "vergeo5:post-job-draft";
@@ -83,13 +85,32 @@ function clearDraft(): void {
   window.localStorage.removeItem(DRAFT_STORAGE_KEY);
 }
 
-export function PostJobForm({ locale }: PostJobFormProps) {
+/**
+ * Map a service-listing vertical (hyphenated, e.g. "food-catering") to a job
+ * category (underscored, e.g. "food_catering"), returning undefined when it is
+ * not a recognised category. Reconciles the two taxonomies so a "Request quote"
+ * link from a service page preselects the right category instead of silently
+ * defaulting (or being rejected by the API if it were forwarded verbatim).
+ */
+function normalizeServiceCategory(value: string | undefined): ServiceCategory | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const underscored = value.replace(/-/g, "_");
+  return (SERVICE_CATEGORIES as readonly string[]).includes(underscored)
+    ? (underscored as ServiceCategory)
+    : undefined;
+}
+
+export function PostJobForm({ locale, initialCategory }: PostJobFormProps) {
   const t = useTranslations("services");
   const { session, loading: sessionLoading } = useSession();
   const draft = useMemo(() => readDraft(), []);
 
   const [category, setCategory] = useState<ServiceCategory>(
-    (draft?.category as ServiceCategory) ?? "home_services",
+    normalizeServiceCategory(initialCategory) ??
+      (draft?.category as ServiceCategory) ??
+      "home_services",
   );
   const [description, setDescription] = useState(draft?.description ?? "");
   const [serviceArea, setServiceArea] = useState(draft?.service_area ?? "");

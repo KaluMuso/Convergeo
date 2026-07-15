@@ -43,6 +43,8 @@ def _vendor_row() -> dict[str, Any]:
         "slug": "event-house",
         "display_name": "Event House Lusaka",
         "preferred_badge": True,
+        "logo_url": "vendors/event-house-logo",
+        "description": "Lusaka's premier events organiser.",
         "vendor_locations": [{"landmark": "East Park Mall"}],
     }
 
@@ -513,6 +515,8 @@ def test_get_event_endpoint(client: TestClient) -> None:
     payload = response.json()
     assert payload["slug"] == "tonight-gig"
     assert payload["organiser"]["display_name"] == "Event House Lusaka"
+    assert payload["organiser"]["logo_url"] == "vendors/event-house-logo"
+    assert payload["organiser"]["description"] == "Lusaka's premier events organiser."
 
 
 def test_get_event_not_found(client: TestClient) -> None:
