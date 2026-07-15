@@ -12,11 +12,13 @@ import pytest
 from app.services.payments.base import QueryStatusResult
 from app.services.payments.reconcile import (
     DailyReportResult,
+    DrainResult,
     LedgerDayRow,
     LencoAccountSnapshot,
     LencoTransactionRow,
     PollResult,
     build_reconciliation_diff,
+    drain_pending_webhook_events,
     extract_lenco_reference,
     poll_non_terminal_payments,
     run_daily_reconciliation_report,
@@ -35,6 +37,9 @@ class FakeQuery:
         self._maybe_single = False
         self._pending_op: str | None = None
         self._payload: dict[str, Any] | list[dict[str, Any]] | None = None
+        self._order_column: str | None = None
+        self._order_desc = False
+        self._limit: int | None = None
 
     def select(self, columns: str, *, count: str | None = None) -> FakeQuery:
         _ = columns, count
@@ -50,6 +55,19 @@ class FakeQuery:
 
     def lt(self, column: str, value: Any) -> FakeQuery:
         self._filters.append(("lt", column, value))
+        return self
+
+    def is_(self, column: str, value: Any) -> FakeQuery:
+        self._filters.append(("is", column, value))
+        return self
+
+    def order(self, column: str, *, desc: bool = False) -> FakeQuery:
+        self._order_column = column
+        self._order_desc = desc
+        return self
+
+    def limit(self, count: int) -> FakeQuery:
+        self._limit = count
         return self
 
     def maybe_single(self) -> FakeQuery:
@@ -85,6 +103,13 @@ class FakeQuery:
             return MagicMock(data=updated)
 
         rows = [row for row in self._parent.rows if self._row_matches(row)]
+        if self._order_column is not None:
+            rows.sort(
+                key=lambda r: str(r.get(self._order_column, "")),
+                reverse=self._order_desc,
+            )
+        if self._limit is not None:
+            rows = rows[: self._limit]
         if self._maybe_single:
             return MagicMock(data=rows[0] if rows else None)
         return MagicMock(data=rows)
@@ -98,6 +123,11 @@ class FakeQuery:
                 return False
             if op == "lt" and not (str(cell) < str(value)):
                 return False
+            if op == "is":
+                if value == "null" and cell is not None:
+                    return False
+                if value is None and cell is not None:
+                    return False
         return True
 
 
@@ -567,3 +597,185 @@ class TestMigration0018:
         assert "reconciliation_reports" in content
         assert "report_date" in content
         assert "discrepancies" in content
+
+
+# --- Webhook drain (MoMo/USSD fast-path confirmation) ------------------------
+
+
+def _seed_payment(
+    fake_service: FakeServiceClient,
+    *,
+    payment_id: str,
+    reference: str,
+    status: PaymentStatus,
+) -> None:
+    fake_service.client.tables["payments"].rows.append(
+        {
+            "id": payment_id,
+            "checkout_group_id": CHECKOUT_GROUP_ID,
+            "status": status.value,
+            "lenco_reference": reference,
+            "amount_ngwee": 25_000,
+            "rail": "mtn",
+            "provider": "lenco",
+            "raw": {},
+        }
+    )
+
+
+def _seed_webhook(
+    fake_service: FakeServiceClient,
+    *,
+    event_id: str,
+    event: str,
+    reference: str,
+    status: str,
+    created_at: str,
+    processed_at: str | None = None,
+) -> str:
+    row_id = str(uuid.uuid4())
+    fake_service.client.table("webhook_events").rows.append(
+        {
+            "id": row_id,
+            "provider": "lenco",
+            "event_id": event_id,
+            "signature_valid": True,
+            "processed_at": processed_at,
+            "created_at": created_at,
+            "raw": {
+                "event": event,
+                "data": {"id": event_id, "reference": reference, "status": status},
+            },
+        }
+    )
+    return row_id
+
+
+def test_webhook_drain_applies_stored_success_webhook(fake_service: FakeServiceClient) -> None:
+    """A stored collection.successful webhook confirms the USSD payment on drain."""
+    payment_id = str(uuid.uuid4())
+    _seed_payment(
+        fake_service,
+        payment_id=payment_id,
+        reference="ord-drain-1",
+        status=PaymentStatus.USSD_PUSHED,
+    )
+    webhook_id = _seed_webhook(
+        fake_service,
+        event_id="evt-drain-1",
+        event="collection.successful",
+        reference="ord-drain-1",
+        status="successful",
+        created_at="2026-07-15T10:00:00Z",
+    )
+
+    result = drain_pending_webhook_events(fake_service)
+
+    assert result == DrainResult(scanned=1, applied=1, skipped=0, errors=0)
+    payments = {row["id"]: row for row in fake_service.client.tables["payments"].rows}
+    assert payments[payment_id]["status"] == PaymentStatus.SUCCESS.value
+    webhooks = {row["id"]: row for row in fake_service.client.tables["webhook_events"].rows}
+    assert webhooks[webhook_id]["processed_at"] is not None
+    audit_rows = fake_service.client.tables["audit_log"].rows
+    assert len(audit_rows) == 1
+    assert audit_rows[0]["actor"] == SYSTEM_ACTOR_ID
+
+
+def test_webhook_drain_ignores_already_processed_rows(fake_service: FakeServiceClient) -> None:
+    """Rows with processed_at set are filtered out server-side — never re-scanned."""
+    payment_id = str(uuid.uuid4())
+    _seed_payment(
+        fake_service,
+        payment_id=payment_id,
+        reference="ord-drain-done",
+        status=PaymentStatus.USSD_PUSHED,
+    )
+    _seed_webhook(
+        fake_service,
+        event_id="evt-done",
+        event="collection.successful",
+        reference="ord-drain-done",
+        status="successful",
+        created_at="2026-07-15T09:00:00Z",
+        processed_at="2026-07-15T09:00:05Z",
+    )
+
+    result = drain_pending_webhook_events(fake_service)
+
+    assert result == DrainResult(scanned=0, applied=0, skipped=0, errors=0)
+    payments = {row["id"]: row for row in fake_service.client.tables["payments"].rows}
+    assert payments[payment_id]["status"] == PaymentStatus.USSD_PUSHED.value
+
+
+def test_webhook_drain_marks_unmatched_reference_and_is_idempotent(
+    fake_service: FakeServiceClient,
+) -> None:
+    """A webhook for an unknown payment is marked processed (skipped), not re-scanned."""
+    _seed_webhook(
+        fake_service,
+        event_id="evt-orphan",
+        event="collection.successful",
+        reference="ord-no-such-payment",
+        status="successful",
+        created_at="2026-07-15T10:00:00Z",
+    )
+
+    first = drain_pending_webhook_events(fake_service)
+    second = drain_pending_webhook_events(fake_service)
+
+    assert first == DrainResult(scanned=1, applied=0, skipped=1, errors=0)
+    assert second == DrainResult(scanned=0, applied=0, skipped=0, errors=0)
+
+
+def test_webhook_drain_isolates_anomaly_and_continues_batch(
+    fake_service: FakeServiceClient,
+) -> None:
+    """An illegal-transition webhook is logged/skipped; healthy ones still apply.
+
+    The anomaly is a collection.failed webhook for a payment still at INITIATED
+    (no INITIATED->failed edge). It must not abort the batch, its row stays
+    unprocessed (visible to the re-query poller), and the healthy success webhook
+    in the same batch still confirms its payment.
+    """
+    poison_payment = str(uuid.uuid4())
+    _seed_payment(
+        fake_service,
+        payment_id=poison_payment,
+        reference="ord-anomaly",
+        status=PaymentStatus.INITIATED,  # no edge to failed
+    )
+    poison_webhook = _seed_webhook(
+        fake_service,
+        event_id="evt-anomaly",
+        event="collection.failed",
+        reference="ord-anomaly",
+        status="failed",
+        created_at="2026-07-15T10:00:00Z",
+    )
+
+    healthy_payment = str(uuid.uuid4())
+    _seed_payment(
+        fake_service,
+        payment_id=healthy_payment,
+        reference="ord-healthy",
+        status=PaymentStatus.USSD_PUSHED,
+    )
+    healthy_webhook = _seed_webhook(
+        fake_service,
+        event_id="evt-healthy",
+        event="collection.successful",
+        reference="ord-healthy",
+        status="successful",
+        created_at="2026-07-15T10:00:01Z",
+    )
+
+    result = drain_pending_webhook_events(fake_service)
+
+    assert result == DrainResult(scanned=2, applied=1, skipped=0, errors=1)
+    payments = {row["id"]: row for row in fake_service.client.tables["payments"].rows}
+    assert payments[healthy_payment]["status"] == PaymentStatus.SUCCESS.value
+    assert payments[poison_payment]["status"] == PaymentStatus.INITIATED.value
+    webhooks = {row["id"]: row for row in fake_service.client.tables["webhook_events"].rows}
+    # Healthy row processed; anomalous row left for the poller / admin visibility.
+    assert webhooks[healthy_webhook]["processed_at"] is not None
+    assert webhooks[poison_webhook]["processed_at"] is None
