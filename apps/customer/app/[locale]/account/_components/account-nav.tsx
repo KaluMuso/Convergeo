@@ -9,6 +9,7 @@ export type AccountNavLabels = {
   addresses: string;
   preferences: string;
   privacy: string;
+  business: string;
 };
 
 type AccountNavProps = {
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { key: "profile", segment: "" },
   { key: "addresses", segment: "addresses" },
   { key: "preferences", segment: "preferences" },
+  { key: "business", segment: "business" },
   { key: "privacy", segment: "privacy" },
 ] as const;
 

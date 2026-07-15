@@ -4,7 +4,42 @@
     "profile": "Profile",
     "addresses": "Addresses",
     "preferences": "Notifications",
-    "privacy": "Data & privacy"
+    "privacy": "Data & privacy",
+    "business": "Business mode"
+  },
+  "business": {
+    "title": "Business mode",
+    "description": "Verify your business to unlock wholesale pricing and bulk ordering across Vergeo5.",
+    "statusLabel": "Status",
+    "status": {
+      "none": "Not applied",
+      "pending": "In review",
+      "verified": "Verified",
+      "rejected": "Not verified",
+      "suspended": "Suspended"
+    },
+    "verifiedTitle": "Business mode is active",
+    "verifiedBody": "You can browse and buy wholesale supplies with tier pricing.",
+    "pendingTitle": "Verification in review",
+    "pendingBody": "We're checking your PACRA details. This usually takes 1–2 business days.",
+    "browseSupplies": "Browse supplies",
+    "legalNameLabel": "Registered business name",
+    "legalNamePlaceholder": "As shown on your PACRA certificate",
+    "registrationLabel": "PACRA registration number",
+    "registrationPlaceholder": "e.g. 120200001234",
+    "tpinLabel": "ZRA TPIN (optional)",
+    "tpinPlaceholder": "10-digit TPIN",
+    "submit": "Submit for verification",
+    "submitting": "Submitting…",
+    "resubmit": "Update and resubmit",
+    "submitted": "Submitted — we'll review your business shortly.",
+    "reviewerNotesLabel": "Reviewer notes",
+    "errors": {
+      "required": "Please complete the required fields.",
+      "failed": "Could not submit your business details. Please try again.",
+      "rateLimited": "Too many attempts. Please wait a moment and try again.",
+      "alreadyDecided": "This business account can't be resubmitted. Contact support."
+    }
   },
   "profile": {
     "title": "Profile",

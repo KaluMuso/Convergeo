@@ -46,6 +46,7 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
           profile: t("nav.profile"),
           addresses: t("nav.addresses"),
           preferences: t("nav.preferences"),
+          business: t("nav.business"),
           privacy: t("nav.privacy"),
         }}
       />

@@ -34,6 +34,7 @@ type LayoutProps = {
 const NAV_ITEMS = [
   { href: "", key: "home" },
   { href: "kyc", key: "kyc" },
+  { href: "business", key: "business" },
   { href: "moderation", key: "moderation" },
   { href: "disputes", key: "disputes" },
   { href: "orders", key: "orders" },

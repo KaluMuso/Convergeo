@@ -8,6 +8,7 @@
   "nav": {
     "home": "Dashboard",
     "kyc": "KYC queue",
+    "business": "Business",
     "moderation": "Moderation",
     "disputes": "Disputes",
     "orders": "Orders",
@@ -102,6 +103,41 @@
       "moveChildrenConfirm": "Move with children",
       "orphanWarning": "Cannot move without children — enable move-with-children.",
       "rootOption": "Root (no parent)"
+    }
+  },
+  "business": {
+    "title": "Business verification",
+    "subtitle": "Review and verify PACRA-registered businesses for wholesale access.",
+    "queue": {
+      "filterLabel": "Show",
+      "filter": {
+        "pending": "Pending",
+        "verified": "Verified",
+        "rejected": "Rejected",
+        "suspended": "Suspended",
+        "all": "All"
+      },
+      "loading": "Loading business applications…",
+      "empty": "No business applications in this view.",
+      "error": "Could not load business applications.",
+      "actionError": "Could not update this business. Please try again.",
+      "reasonRequired": "Enter a reason to reject.",
+      "business": "Business",
+      "registration": "PACRA no.",
+      "submitted": "Submitted",
+      "statusColumn": "Status",
+      "tpin": "TPIN {tpin}",
+      "status": {
+        "pending": "Pending",
+        "verified": "Verified",
+        "rejected": "Rejected",
+        "suspended": "Suspended"
+      },
+      "verify": "Verify",
+      "reject": "Reject",
+      "confirmReject": "Confirm reject",
+      "cancel": "Cancel",
+      "reasonPlaceholder": "Reason (shown to the applicant)"
     }
   },
   "kyc": {

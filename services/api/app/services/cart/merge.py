@@ -27,23 +27,21 @@ def merge_cart_items(
     user_items: list[dict[str, Any]],
     guest_items: list[dict[str, Any]],
     listings_by_id: dict[str, dict[str, Any]],
+    business_eligible: bool = False,
 ) -> tuple[list[MergedCartItem], list[MergeConflict]]:
-    """Merge guest + user cart lines: qty-sum duplicates, refresh prices, surface conflicts."""
+    """Merge guest + user cart lines: qty-sum duplicates, refresh prices, surface conflicts.
+
+    The wholesale flag is re-derived from the listing AND ``business_eligible`` — never
+    trusted from the stored line — so a consumer merging a wholesale line always falls
+    back to retail pricing (B2B pricing/MOQ is gated to verified business buyers).
+    """
     merged: dict[str, dict[str, Any]] = {}
 
     for source_items in (user_items, guest_items):
         for item in source_items:
             listing_id = str(item["listing_id"])
-            merged.setdefault(
-                listing_id,
-                {
-                    "qty": 0,
-                    "wholesale": bool(item.get("wholesale", False)),
-                },
-            )
+            merged.setdefault(listing_id, {"qty": 0})
             merged[listing_id]["qty"] += int(item["qty"])
-            if item.get("wholesale"):
-                merged[listing_id]["wholesale"] = True
 
     result: list[MergedCartItem] = []
     conflicts: list[MergeConflict] = []
@@ -51,7 +49,6 @@ def merge_cart_items(
     for listing_id, aggregate in merged.items():
         listing = listings_by_id.get(listing_id)
         qty = int(aggregate["qty"])
-        wholesale = bool(aggregate["wholesale"])
 
         if listing is None:
             conflicts.append(
@@ -75,6 +72,7 @@ def merge_cart_items(
             )
             continue
 
+        wholesale = bool(listing.get("wholesale", False)) and business_eligible
         moq = int(listing.get("moq", 1))
         if wholesale and qty < moq:
             conflicts.append(
@@ -130,9 +128,15 @@ def validate_item_qty_for_listing(
     *,
     listing: dict[str, Any],
     qty: int,
+    business_eligible: bool = False,
 ) -> tuple[int, bool]:
-    """Return refreshed unit price and wholesale flag; raises AppError on MOQ violation."""
-    wholesale = bool(listing.get("wholesale", False))
+    """Return refreshed unit price and wholesale flag; raises AppError on MOQ violation.
+
+    Wholesale pricing/MOQ only apply when the buyer is a verified business
+    (``business_eligible``); otherwise the line is priced at retail regardless of the
+    listing's wholesale flag.
+    """
+    wholesale = bool(listing.get("wholesale", False)) and business_eligible
     moq = int(listing.get("moq", 1))
     validate_moq(wholesale=wholesale, moq=moq, qty=qty)
 

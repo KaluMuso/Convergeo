@@ -9,6 +9,7 @@ import jwt
 from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
 from app.errors import AppError
+from app.services.business.access import fetch_business_buyer
 from app.services.cart.grouping import CartLineView, group_by_vendor
 from app.services.cart.merge import MergeConflict, merge_cart_items, validate_item_qty_for_listing
 from app.services.cart.store import (
@@ -141,6 +142,14 @@ async def _optional_current_user(request: Request) -> CurrentUser | None:
     if not authorization or not authorization.startswith("Bearer "):
         return None
     return await get_current_user(request, get_settings())
+
+
+def _business_eligible_for_user(user_id: str | None) -> bool:
+    """Verified-business gate for wholesale pricing. Guests are never eligible."""
+    if not user_id:
+        return False
+    row = fetch_business_buyer(service_db_client(), user_id)
+    return bool(row and row.get("status") == "verified")
 
 
 def _resolve_guest_token(request: Request, settings: Settings) -> str | None:
@@ -360,7 +369,10 @@ async def add_cart_item(
     request: Request,
 ) -> CartResponse:
     listing = fetch_listing(body.listing_id)
-    unit_price, wholesale = validate_item_qty_for_listing(listing=listing, qty=body.qty)
+    business_eligible = _business_eligible_for_user(owner.user_id)
+    unit_price, wholesale = validate_item_qty_for_listing(
+        listing=listing, qty=body.qty, business_eligible=business_eligible
+    )
 
     client = _db_client_for_owner(
         owner,
@@ -380,7 +392,9 @@ async def add_cart_item(
     rows = existing.data if isinstance(existing.data, list) else []
     if rows and isinstance(rows[0], dict):
         new_qty = int(rows[0]["qty"]) + body.qty
-        unit_price, wholesale = validate_item_qty_for_listing(listing=listing, qty=new_qty)
+        unit_price, wholesale = validate_item_qty_for_listing(
+            listing=listing, qty=new_qty, business_eligible=business_eligible
+        )
         client.table("cart_items").update(
             {
                 "qty": new_qty,
@@ -413,7 +427,10 @@ async def update_cart_item(
     request: Request,
 ) -> CartResponse:
     listing = fetch_listing(listing_id)
-    unit_price, wholesale = validate_item_qty_for_listing(listing=listing, qty=body.qty)
+    business_eligible = _business_eligible_for_user(owner.user_id)
+    unit_price, wholesale = validate_item_qty_for_listing(
+        listing=listing, qty=body.qty, business_eligible=business_eligible
+    )
 
     client = _db_client_for_owner(
         owner,
@@ -515,6 +532,7 @@ async def merge_cart_on_login(
         user_items=user_items,
         guest_items=guest_items,
         listings_by_id=listings,
+        business_eligible=_business_eligible_for_user(current_user.id),
     )
 
     user_client.table("cart_items").delete().eq("cart_id", user_cart_id).execute()

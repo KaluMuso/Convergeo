@@ -219,6 +219,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         momo_phone: normalizeZmPhone(draft.momoPhone),
         momo_operator: null,
         legal_name: draft.legalName.trim(),
+        archetype: draft.businessCategory.trim() || null,
       };
 
       if (resubmitMode) {

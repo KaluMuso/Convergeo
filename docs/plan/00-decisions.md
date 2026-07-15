@@ -7,11 +7,12 @@ Founder answered all 28 discovery questions; where a recommendation was delegate
 **D1 — Brand:** **Vergeo5**, domain **vergeo5.com** (⚠ not yet purchased — founder action F1). Legal entity exists (PACRA) but annual returns lapsed (F2). Product name in UI: "Vergeo5"; company name per PACRA registration.
 
 **D2 — v1 verticals: ALL FIVE — Products, Services, Events, Supplies, Directory** — scoped thin rather than deferred:
-- *Products*: full flow (canonical catalog, listings, cart, checkout, escrow, delivery/pickup).
-- *Services*: RFQ model only — post-a-job → providers quote → accept → deposit/balance via escrow. No booking calendar v1.
-- *Events*: create → list → sell tickets (fixed + multi-tier + free RSVP pricing only) → dynamic QR (60s HMAC rotation) + PIN → organiser scanner PWA. No early-bird schedules/group tables/PWYW v1.
-- *Supplies* (B2B-lite): listings flagged `wholesale` with quantity-tier price arrays + MOQ, discoverable in a Supplies tab. NO credit terms, RFQ-broadcast, business accounts, or account managers v1.
-- *Directory*: vendor profile pages double as directory entries + a browsable/searchable directory index tab. Near-zero marginal build since profiles must exist anyway.
+
+- _Products_: full flow (canonical catalog, listings, cart, checkout, escrow, delivery/pickup).
+- _Services_: RFQ model only — post-a-job → providers quote → accept → deposit/balance via escrow. No booking calendar v1.
+- _Events_: create → list → sell tickets (fixed + multi-tier + free RSVP pricing only) → dynamic QR (60s HMAC rotation) + PIN → organiser scanner PWA. No early-bird schedules/group tables/PWYW v1.
+- _Supplies_ (B2B-lite): listings flagged `wholesale` with quantity-tier price arrays + MOQ, discoverable in a Supplies tab. NO credit terms, RFQ-broadcast, business accounts, or account managers v1.
+- _Directory_: vendor profile pages double as directory entries + a browsable/searchable directory index tab. Near-zero marginal build since profiles must exist anyway.
 
 **D3 — Vendor fees:** **Free-only at launch** ("Free to list. Pay only when you sell."). Paid tiers (Bronze K99 / Silver K249 / Gold K499 — caps/perks per Master Plan L2) ship as a **feature-flagged module** activated at ~300 orders/mo or month 3+, whichever first. Top tier = Gold (Platinum reserved for future). Free tier at launch: up to 30 listings, full selling features, standard analytics.
 
@@ -28,10 +29,11 @@ Founder answered all 28 discovery questions; where a recommendation was delegate
 **D8 — Launch categories (8 departments, per Strategy Bible Ph1):** groceries & staples · personal care & beauty (new/sealed only) · fashion (chitenge + new retail; no salaula) · electronics (selective: phones Itel/Tecno/Samsung-class, accessories, solar kits; no used phones) · home & living · office & stationery · light hardware (no cement/sand/heavy aggregates) · event tickets. Services verticals (8): beauty · food/catering · auto (mechanics/car wash/tyres) · printing & creative · home services · tech services · cleaning · tailoring. Events categories (6): workshops/education · comedy & theatre · music & nightlife · community/lifestyle · cultural & arts · free RSVP events.
 
 **D9 — KYC: 3 tiers + 1 earned badge; NO unverified public listings.**
-- T1 *Seller*: NRC photo + selfie + mobile-money name match → live same day; caps: ≤30 listings, orders ≤K500 each for first 5 orders, payout velocity limits.
-- T2 *Verified Business*: PACRA cert + company TPIN → badge, caps lifted, supplies tab eligible.
-- T3 *Premium/API*: invited/reviewed; API access, banner placement eligibility.
-- *Vergeo5 Preferred*: earned badge (≥20 orders, ≥4.5★, <2% disputes, <5% cancels) — auto-granted/revoked monthly. (The Bible's "5-tier" reading collapses into this: its Tier-0 unverified is rejected; its "Preferred" is a badge, not KYC.)
+
+- T1 _Seller_: NRC photo + selfie + mobile-money name match → live same day; caps: ≤30 listings, orders ≤K500 each for first 5 orders, payout velocity limits.
+- T2 _Verified Business_: PACRA cert + company TPIN → badge, caps lifted, supplies tab eligible.
+- T3 _Premium/API_: invited/reviewed; API access, banner placement eligibility.
+- _Vergeo5 Preferred_: earned badge (≥20 orders, ≥4.5★, <2% disputes, <5% cancels) — auto-granted/revoked monthly. (The Bible's "5-tier" reading collapses into this: its Tier-0 unverified is rejected; its "Preferred" is a badge, not KYC.)
 
 **D10 — Vendor pipeline:** zero committed vendors today — founder recruits with the working product. Consequences baked into plan: polished vendor landing/pitch page is a launch feature; seed/demo catalog required (D25); onboarding must be self-service flawless; CSV bulk import stays in v1.
 
@@ -39,7 +41,7 @@ Founder answered all 28 discovery questions; where a recommendation was delegate
 
 **D11 — Aggregator: Lenco (BroadPay) — confirmed, founder HAS API access + docs.** All three MoMo rails + cards + bank. Payment abstraction layer regardless (strategy pattern) so Flutterwave/PawaPay can slot in later. **Founder action F3: commit Lenco API docs/credential names (never secrets) to `docs/ops/lenco/`** so prompts can reference real contracts.
 
-**D12 — COD:** allowed for orders **≤ K500** (fraud cap per Master Plan Q25); above K500 → pay-at-pickup via mobile-money push or prepay. ⚠ Founder's reply read "greater than 500 is okay" — assumed to be agreement with the ≤K500 cap, **flagged for explicit confirmation** (if you truly want COD only *above* K500, say so — it inverts the fraud logic and is NOT recommended).
+**D12 — COD:** allowed for orders **≤ K500** (fraud cap per Master Plan Q25); above K500 → pay-at-pickup via mobile-money push or prepay. ⚠ Founder's reply read "greater than 500 is okay" — assumed to be agreement with the ≤K500 cap, **flagged for explicit confirmation** (if you truly want COD only _above_ K500, say so — it inverts the fraud logic and is NOT recommended).
 
 **D13 — Tax/legal posture:** launch under **Turnover Tax** (5%, sub-K5M) with company TPIN (F2); ZRA-ready sequential invoicing from day 1, architected for **Smart Invoice VSDC API** activation at VAT registration (K800k/12mo or K200k/3mo threshold). Per-category VAT flag in schema from day 1.
 
@@ -52,8 +54,9 @@ Founder answered all 28 discovery questions; where a recommendation was delegate
 **D16 — Delivery v1:** Lusaka delivery via **manual admin dispatch** (Yango/inDrive/local couriers booked by ops, tracking pasted in; delivery status updates flow to customer via WhatsApp/SMS). Nationwide: vendor listings visible everywhere; fulfilment via customer pickup (QR+PIN) or **bus/courier freight (Platinum couriers et al.) arranged case-by-case**; MOU discussions post-launch (F6). Delivery fee zones (Lusaka bands + intercity flat estimates), free delivery ≥K200 within Lusaka. No courier API integrations v1 — abstraction seam left for Phase 2.
 
 **D17 — Returns & refunds (two lanes):**
-- *Lane 1 — Faulty / wrong / not-as-described* (platform-mandated, CCPC-aligned): report ≤48h of delivery with photo evidence → full refund incl. delivery from escrow; return shipping charged to vendor; admin arbitrates disputes.
-- *Lane 2 — Change-of-mind* (vendor opt-in per listing): vendor sets `returnable: yes/no` + window (48h–7 days). Item unused/original condition. Refund = item price − outbound delivery − return transport − **10% restocking fee** (config 5–15%). Refund to mobile money (or instant store credit when wallet ships).
+
+- _Lane 1 — Faulty / wrong / not-as-described_ (platform-mandated, CCPC-aligned): report ≤48h of delivery with photo evidence → full refund incl. delivery from escrow; return shipping charged to vendor; admin arbitrates disputes.
+- _Lane 2 — Change-of-mind_ (vendor opt-in per listing): vendor sets `returnable: yes/no` + window (48h–7 days). Item unused/original condition. Refund = item price − outbound delivery − return transport − **10% restocking fee** (config 5–15%). Refund to mobile money (or instant store credit when wallet ships).
 - All refunds pre-release come from escrow; post-release refunds claw back from vendor's next payouts. Reverse logistics manual v1.
 
 ## E. Tech stack (LOCKED)
@@ -80,11 +83,13 @@ Founder answered all 28 discovery questions; where a recommendation was delegate
 
 **D27 — Languages:** launch **English** with full i18n/l10n scaffolding (next-intl ICU messages, externalized strings enforced by lint rule, locale-aware ZMW/date/number, RTL-capable layout). Expansion order: **Bemba + Nyanja** (human-reviewed) → **French** (DRC/regional trade corridor) → Tonga + Lozi → others (Arabic/Chinese/Russian/German) only on demonstrated demand. Machine translation allowed for long-tail listing content with "auto-translated" tag, never for checkout/payment/legal copy without review.
 
+**D28 — B2B wholesale gating (strategy-alignment audit, 2026-07-14):** wholesale supply pricing (tier prices + MOQ) and the wholesale discovery feed are **hidden until a buyer is a verified business**, never applied on the listing alone. A buyer-side `business_buyers` identity (PACRA reg + optional TPIN) carries a `pending→verified/rejected/suspended` lifecycle (status server-controlled; admin verifies). A single shared resolver (`is_verified_business` / `app/services/business/access.py`) is the eligibility gate, enforced identically at discovery, cart pricing, and checkout — a consumer always sees retail. The onboarding vendor **archetype** is persisted on the vendor row (not localStorage-only). This is the thin, present-day slice; the **full B2B stack stays OUT of v1** per the scope fence below (credit/Net terms, buyer organisations & roles, account managers, contract pricing, multi-warehouse + lot/batch, wallet/financing) — all Phase 2.
+
 ## G. v1 scope fence
 
 **IN (thin):** all five verticals per D2 · escrow + Lenco payments (MoMo/card/bank) + COD ≤K500 · QR+PIN pickup · manual-dispatch delivery · reviews (1–5★ + text + photos, verified-purchase) · WhatsApp/SMS/email notifications · vendor portal (KYC, listings, CSV import, orders, payouts, basic analytics) · admin (KYC queue, moderation, disputes, refunds, config, dashboards, **merchandising manager: admin-swappable hero/banners/featured collections**) · AI mode + hybrid search · directory tab · PWA + SEO + i18n scaffolding · ZRA-ready invoices · observability (Sentry free + UptimeRobot) · CI/CD + backups.
 
-**OUT of v1 (explicit):** vendor subscription *billing* (module flagged off, D3) · full B2B (credit/Net terms, RFQ-broadcast for goods, business accounts, account managers) · wallet/Vergeo Pay/financing · city guides & AI trip planner · promoted-listing auctions · referral program · multi-warehouse + lot/batch · POS-light · voice search & AR · native Android app · cross-border/Zimbabwe · ticket resale marketplace (simple transfer-to-friend allowed) · Copperbelt delivery ops (listings + pickup still work) · real-time in-app notification center · multi-dimensional reviews · booking calendars for services · early-bird/group/PWYW ticket pricing · salaula, used phones, fresh produce, alcohol, pharma, live animals, heavy building materials categories · same-day delivery promises.
+**OUT of v1 (explicit):** vendor subscription _billing_ (module flagged off, D3) · full B2B (credit/Net terms, RFQ-broadcast for goods, business accounts, account managers) · wallet/Vergeo Pay/financing · city guides & AI trip planner · promoted-listing auctions · referral program · multi-warehouse + lot/batch · POS-light · voice search & AR · native Android app · cross-border/Zimbabwe · ticket resale marketplace (simple transfer-to-friend allowed) · Copperbelt delivery ops (listings + pickup still work) · real-time in-app notification center · multi-dimensional reviews · booking calendars for services · early-bird/group/PWYW ticket pricing · salaula, used phones, fresh produce, alcohol, pharma, live animals, heavy building materials categories · same-day delivery promises.
 
 ## Founder action list (non-blocking for Phase 1–3 planning; blocking where noted)
 

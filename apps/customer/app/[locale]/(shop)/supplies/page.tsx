@@ -1,6 +1,9 @@
+import { createServerClient } from "@vergeo/auth/server-client";
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
+import { cookies } from "next/headers";
+import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
@@ -13,9 +16,13 @@ import {
 
 import type { Metadata } from "next";
 
-export const revalidate = 60;
-
 type SuppliesSort = "moq" | "unit_price";
+
+type BusinessStatusResponse = {
+  has_application: boolean;
+  status: string | null;
+  eligible: boolean;
+};
 
 type CatalogApiListing = {
   id: string;
@@ -71,7 +78,31 @@ function parsePreviewQty(value: string | undefined): number {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
 }
 
-async function fetchWholesaleCatalog(): Promise<CatalogApiResponse | null> {
+async function getOptionalAccessToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(cookieStore);
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
+}
+
+async function fetchBusinessStatus(token: string): Promise<BusinessStatusResponse | null> {
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/business/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      return null;
+    }
+    return (await response.json()) as BusinessStatusResponse;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchWholesaleCatalog(token: string): Promise<CatalogApiResponse | null> {
   const params = new URLSearchParams({
     wholesale: "true",
     limit: "48",
@@ -79,7 +110,8 @@ async function fetchWholesaleCatalog(): Promise<CatalogApiResponse | null> {
 
   try {
     const response = await fetch(`${getApiBaseUrl()}/catalog/listings?${params.toString()}`, {
-      next: { revalidate: 60 },
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
     });
     if (!response.ok) {
       return null;
@@ -128,10 +160,61 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: buildLocaleCanonical(locale, "supplies"),
     },
     robots: {
-      index: true,
-      follow: true,
+      // Wholesale supplies are gated to verified businesses — not public/indexable.
+      index: false,
+      follow: false,
     },
   };
+}
+
+function SuppliesGate({
+  t,
+  locale,
+  signedIn,
+  status,
+}: {
+  t: SuppliesTranslator;
+  locale: string;
+  signedIn: boolean;
+  status: string | null;
+}) {
+  let title = t("gate.title");
+  let body = t("gate.body");
+  let ctaLabel = t("gate.apply");
+  let href = `/${locale}/account/business`;
+
+  if (!signedIn) {
+    body = t("gate.signInBody");
+    ctaLabel = t("gate.signIn");
+    href = `/${locale}/login?next=/${locale}/supplies`;
+  } else if (status === "pending") {
+    title = t("gate.pendingTitle");
+    body = t("gate.pendingBody");
+  } else if (status === "rejected") {
+    title = t("gate.rejectedTitle");
+    body = t("gate.rejectedBody");
+  }
+
+  return (
+    <div className="flex flex-col gap-4 lg:mx-auto lg:w-full lg:max-w-3xl">
+      <header className="flex flex-col gap-1">
+        <h1 className="font-display text-[var(--fs-h1)] text-[var(--text)]">{t("title")}</h1>
+      </header>
+      <div
+        className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-5"
+        data-testid="supplies-business-gate"
+      >
+        <p className="font-display text-h3 text-text">{title}</p>
+        <p className="text-sm text-text-2">{body}</p>
+        <Link
+          href={href}
+          className="inline-flex min-h-11 w-fit items-center rounded-md bg-primary px-4 text-sm font-medium text-surface"
+        >
+          {ctaLabel}
+        </Link>
+      </div>
+    </div>
+  );
 }
 
 export default async function SuppliesPage({ params, searchParams }: PageProps) {
@@ -140,10 +223,25 @@ export default async function SuppliesPage({ params, searchParams }: PageProps) 
   setRequestLocale(locale);
 
   const t = await getSuppliesTranslator(locale);
+
+  // B2B gate: wholesale supplies are visible only to verified business buyers.
+  const accessToken = await getOptionalAccessToken();
+  const business = accessToken ? await fetchBusinessStatus(accessToken) : null;
+  if (!accessToken || !business?.eligible) {
+    return (
+      <SuppliesGate
+        t={t}
+        locale={locale}
+        signedIn={Boolean(accessToken)}
+        status={business?.status ?? null}
+      />
+    );
+  }
+
   const sort = parseSort(resolvedSearch.sort);
   const previewQty = parsePreviewQty(resolvedSearch.qty);
 
-  const catalog = await fetchWholesaleCatalog();
+  const catalog = await fetchWholesaleCatalog(accessToken);
   const wholesaleListings = sortSupplyListings(
     filterWholesaleOnly((catalog?.items ?? []).map(mapListing)),
     sort,
