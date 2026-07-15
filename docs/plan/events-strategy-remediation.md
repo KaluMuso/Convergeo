@@ -6,7 +6,7 @@
 
 ## 1. Read this first: what the Codex report is (and isn't)
 
-The report was requested as a *vulnerability* review but is actually a **product-strategy
+The report was requested as a _vulnerability_ review but is actually a **product-strategy
 compliance audit** against `Convergeo_Events_Strategy.pdf`. That distinction drives
 prioritisation. Of its 122 assessed items:
 
@@ -14,8 +14,8 @@ prioritisation. Of its 122 assessed items:
   strategy. Only one (escrow timing) touches money.
 - **~60 are unbuilt roadmap features** (promo codes, affiliate links, city guides,
   pay-what-you-want, near-me ranking, attendee messaging, team roles, …). Many are
-  **explicitly Phase 2/3** in the strategy itself. *An unscheduled, unbuilt feature is
-  not a vulnerability or a bug.*
+  **explicitly Phase 2/3** in the strategy itself. _An unscheduled, unbuilt feature is
+  not a vulnerability or a bug._
 - The remainder are "Partial", "Later phase", or "Operational evidence" (needs live data).
 
 The Codex traceability matrix remains the row-by-row reference. This document is the
@@ -24,11 +24,11 @@ sequences the rest.
 
 ## 2. Genuine defects
 
-| ID | Defect | Status |
-| --- | --- | --- |
-| **D1** | Event instances have no end time → escrow releases mid-event, discovery drops events at start, `.ics` assumes 2h | **Fixed** (§3) |
-| **D2** | Category + landmark stored inside an HTML comment in `events.description`; browse/detail hardcode `category=None`, so non-free category filters return nothing | **Fixed** (§4) |
-| **D3** | Organiser cancellation only flags an admin audit row — no automatic refund or buyer notification | **Fixed — approach (b)** (§5) |
+| ID     | Defect                                                                                                                                                         | Status                        |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| **D1** | Event instances have no end time → escrow releases mid-event, discovery drops events at start, `.ics` assumes 2h                                               | **Fixed** (§3)                |
+| **D2** | Category + landmark stored inside an HTML comment in `events.description`; browse/detail hardcode `category=None`, so non-free category filters return nothing | **Fixed** (§4)                |
+| **D3** | Organiser cancellation only flags an admin audit row — no automatic refund or buyer notification                                                               | **Fixed — approach (b)** (§5) |
 
 ## 3. D1 — Event end time (DONE)
 
@@ -38,7 +38,7 @@ end from a fixed 2h assumption.
 **Shipped (backend, non-breaking):**
 
 - `0035_event_instance_ends_at.sql` — nullable `ends_at` + `CHECK (ends_at IS NULL OR
-  ends_at > starts_at)` + index; existing rows backfilled to `starts_at + 2h`. Additive
+ends_at > starts_at)` + index; existing rows backfilled to `starts_at + 2h`. Additive
   and reversible (down = drop column).
 - `app/services/events/timing.py` — single source for the two deliberately different
   fallbacks:
@@ -46,9 +46,9 @@ end from a fixed 2h assumption.
     timing unchanged).
   - `instance_display_end` → `ends_at` else **`starts_at + 2h`** (ics/discovery display).
 - **Escrow** (`escrow/event_release.py`): full release now `end + 24h` (was `start +
-  24h`); phased final release `end + 1d`; the pre-event phase-1 partial stays `start −
-  7d`. Instances with no `ends_at` keep their exact prior schedule.
-- **Discovery** (`events_public.py`): an event stays listed until it *ends*, not when it
+24h`); phased final release `end + 1d`; the pre-event phase-1 partial stays `start −
+7d`. Instances with no `ends_at` keep their exact prior schedule.
+- **Discovery** (`events_public.py`): an event stays listed until it _ends_, not when it
   starts. `ends_at` surfaced on the public instance response.
 - **`.ics`** (`event_ics.py`): `DTEND` uses the real end time.
 - **Organiser API** (`organiser_events.py`): create/edit accept an optional `ends_at`,
@@ -61,7 +61,7 @@ discovery keeps an in-progress event and drops a just-ended one; organiser creat
 `ends_at` and rejects `ends_at ≤ starts_at`. All existing event tests stay green.
 
 **Deliberately deferred (frontend follow-up — next pebble).** These currently keep the 2h
-assumption, which is *not a regression*:
+assumption, which is _not a regression_:
 
 - Vendor create/edit **end-time input** (`instance-editor.tsx`, `events-client.ts`,
   `event-form.tsx`) + the `vendor.events.errors.ends_before_starts` i18n key. Until this
@@ -113,7 +113,7 @@ status transition (best-effort; the escrow sweep re-flags on failure):
 
 Note: pre-creating `refunds` rows was rejected on purpose — `execute_refund` short-circuits
 on any active (`pending`/`processing`/`completed`) refund and the unique-active-refund index
-forbids duplicates, so a pre-created `pending` row would *block* execution rather than queue
+forbids duplicates, so a pre-created `pending` row would _block_ execution rather than queue
 it. The refund row is therefore still born at admin execution time.
 
 Tests: paid-order flag + buyer/holder notification, idempotency, unpaid-order skip, and the

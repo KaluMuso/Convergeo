@@ -23,6 +23,8 @@ export type KycSubmitPayload = {
   momo_phone: string;
   momo_operator?: MomoOperator | null;
   legal_name: string;
+  // Vendor business archetype selected at onboarding — persisted onto the vendor.
+  archetype?: string | null;
 };
 
 /** Raw GET /kyc/status response (backend `KycStatusResponse`). */
@@ -36,6 +38,8 @@ type KycStatusResponse = {
   doc_storage_paths: string[];
   momo_name_match: unknown;
   reviewer_notes: string | null;
+  archetype: string | null;
+  business_name: string | null;
 };
 
 function getApiBaseUrl(): string {
@@ -51,9 +55,10 @@ function mapStatusToApplication(status: KycStatusResponse): KycApplication {
     kyc_tier: status.kyc_tier ?? 1,
     kyc_status: status.application_status,
     tier: status.tier ?? 1,
-    // Backend stores none of these — the draft carries them locally.
-    business_name: null,
-    business_category: null,
+    // Persisted server-side now: business_name = vendor display name, archetype =
+    // the onboarding business category (see migration 0034 + /kyc/status).
+    business_name: status.business_name ?? null,
+    business_category: status.archetype ?? null,
     momo_phone: null,
     nrc_path: nrcPath,
     selfie_path: selfiePath,

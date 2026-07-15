@@ -6,6 +6,11 @@ from typing import Annotated, Any, Literal, cast
 
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.business.access import (
+    BusinessAccess,
+    get_business_access,
+    require_wholesale_access,
+)
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
@@ -48,6 +53,10 @@ class CatalogListingItem(BaseModel):
     lng: float | None = None
     distance_m: float | None = None
     landmark: str | None = None
+    # B2B wholesale fields — populated only on the gated wholesale/supplies feed.
+    wholesale: bool | None = None
+    moq: int | None = None
+    price_tiers: list[dict[str, Any]] | None = None
 
 
 class CatalogListResponse(BaseModel):
@@ -639,6 +648,75 @@ def _sort_candidates(
     )
 
 
+class _WholesaleRow(BaseModel):
+    id: str
+    vendor_id: str
+    product_id: str | None = None
+    title_override: str | None = None
+    condition: str = "new"
+    price_ngwee: int
+    moq: int = 1
+    price_tiers: list[dict[str, Any]] | None = None
+
+
+def _fetch_wholesale_listings(client: Any, limit: int) -> list[_WholesaleRow]:
+    response = (
+        client.table("vendor_listings")
+        .select(
+            "id, vendor_id, product_id, title_override, condition, "
+            "price_ngwee, moq, price_tiers, status, wholesale"
+        )
+        .eq("status", "active")
+        .eq("wholesale", True)
+        .limit(limit)
+        .execute()
+    )
+    rows = _response_rows(response)
+    return [_WholesaleRow.model_validate(row) for row in rows]
+
+
+def list_wholesale_supplies(client: Any, *, limit: int) -> CatalogListResponse:
+    """Wholesale/supplies feed. Callers MUST gate this behind verified-business access;
+    the endpoint enforces that, this function assumes it and returns B2B pricing."""
+    listings = _fetch_wholesale_listings(client, limit)
+    vendor_ids = sorted({row.vendor_id for row in listings})
+    product_ids = sorted({row.product_id for row in listings if row.product_id is not None})
+    vendors = _fetch_vendors(client, vendor_ids)
+    products = _fetch_products(client, product_ids)
+    images = _fetch_images(client, [row.id for row in listings])
+
+    items: list[CatalogListingItem] = []
+    for row in listings:
+        vendor = vendors.get(row.vendor_id)
+        if vendor is None:
+            continue  # vendor storefront not active
+        product = products.get(row.product_id) if row.product_id else None
+        title = str(product["name"]) if product else (row.title_override or "")
+        items.append(
+            CatalogListingItem(
+                id=row.id,
+                title=title,
+                product_slug=str(product["slug"]) if product else None,
+                vendor_name=str(vendor["display_name"]),
+                vendor_slug=str(vendor.get("slug")) if vendor.get("slug") else None,
+                price_ngwee=row.price_ngwee,
+                condition=row.condition,
+                in_stock=True,
+                image_public_id=images.get(row.id),
+                wholesale=True,
+                moq=row.moq,
+                price_tiers=row.price_tiers,
+            )
+        )
+
+    return CatalogListResponse(
+        items=items,
+        facets=FacetCounts(),
+        total=len(items),
+        next_cursor=None,
+    )
+
+
 def list_catalog(client: Any, filters: PlpFilterState) -> CatalogListResponse:
     candidates = _build_candidates(client, filters.category_path)
     facets = compute_facet_counts(candidates, filters)
@@ -684,8 +762,10 @@ def list_catalog(client: Any, filters: PlpFilterState) -> CatalogListResponse:
 @router.get("/listings", response_model=CatalogListResponse)
 async def catalog_listings(
     supabase: Annotated[Any, Depends(get_supabase_client)],
+    access: Annotated[BusinessAccess, Depends(get_business_access)],
     category_path: Annotated[str | None, Query(max_length=200)] = None,
     sort: Annotated[CatalogSort, Query()] = "relevance",
+    wholesale: Annotated[bool, Query()] = False,
     min_price: Annotated[int | None, Query(ge=0, alias="min_price")] = None,
     max_price: Annotated[int | None, Query(ge=0, alias="max_price")] = None,
     condition: Annotated[str | None, Query(max_length=40)] = None,
@@ -697,6 +777,11 @@ async def catalog_listings(
     cursor: Annotated[str | None, Query(max_length=32)] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> CatalogListResponse:
+    if wholesale:
+        # B2B supplies feed: hidden from consumers/guests — verified businesses only.
+        require_wholesale_access(access)
+        return list_wholesale_supplies(supabase.client, limit=limit)
+
     raw_params: dict[str, str | list[str] | None] = {
         "category_path": category_path,
         "sort": sort,

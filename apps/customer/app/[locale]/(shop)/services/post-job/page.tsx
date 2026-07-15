@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ category?: string }>;
 };
 
 type ServicesTranslator = {
@@ -40,15 +41,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function PostJobPage({ params }: PageProps) {
+export default async function PostJobPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
+  const { category } = await searchParams;
   setRequestLocale(locale);
   const servicesMessages = await loadNamespace(locale as Locale, "services");
 
   return (
     <main className="px-4 py-6 lg:mx-auto lg:w-full lg:max-w-2xl">
       <NextIntlClientProvider locale={locale} messages={{ services: servicesMessages }}>
-        <PostJobForm locale={locale} />
+        <PostJobForm locale={locale} initialCategory={category} />
       </NextIntlClientProvider>
     </main>
   );

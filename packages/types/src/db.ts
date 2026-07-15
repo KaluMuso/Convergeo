@@ -268,6 +268,53 @@ export type Database = {
         }
         Relationships: []
       }
+      business_buyers: {
+        Row: {
+          created_at: string
+          id: string
+          legal_name: string
+          registration_no: string
+          reviewer_notes: string | null
+          status: string
+          tpin: string | null
+          updated_at: string
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          legal_name: string
+          registration_no: string
+          reviewer_notes?: string | null
+          status?: string
+          tpin?: string | null
+          updated_at?: string
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          legal_name?: string
+          registration_no?: string
+          reviewer_notes?: string | null
+          status?: string
+          tpin?: string | null
+          updated_at?: string
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_buyers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cart_items: {
         Row: {
           cart_id: string
@@ -2552,6 +2599,7 @@ export type Database = {
       }
       vendors: {
         Row: {
+          archetype: string | null
           caps_snapshot: Json
           created_at: string
           description: string | null
@@ -2569,6 +2617,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          archetype?: string | null
           caps_snapshot?: Json
           created_at?: string
           description?: string | null
@@ -2586,6 +2635,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          archetype?: string | null
           caps_snapshot?: Json
           created_at?: string
           description?: string | null
@@ -2725,6 +2775,7 @@ export type Database = {
       }
       has_role: { Args: { required_role: string }; Returns: boolean }
       is_valid_price_tiers: { Args: { tiers: Json }; Returns: boolean }
+      is_verified_business: { Args: { uid: string }; Returns: boolean }
       next_invoice_no: { Args: { p_series: string }; Returns: number }
       recompute_all_review_aggregates: { Args: never; Returns: number }
       recompute_review_aggregate: {
