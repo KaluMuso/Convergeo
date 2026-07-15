@@ -13,6 +13,7 @@ export type EventStatus = "draft" | "published" | "cancelled" | "completed";
 export type EventInstance = {
   id: string;
   starts_at: string;
+  ends_at: string | null;
   capacity: number;
   tickets_sold: number;
 };
@@ -50,6 +51,7 @@ export type EventDetail = {
 export type EventInstanceInput = {
   id?: string;
   starts_at: string;
+  ends_at?: string | null;
   capacity: number;
 };
 
