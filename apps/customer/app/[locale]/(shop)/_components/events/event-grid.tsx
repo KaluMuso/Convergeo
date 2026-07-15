@@ -19,6 +19,7 @@ export type EventBrowseItem = {
   is_sold_out: boolean;
   organiser: {
     display_name: string;
+    preferred_badge: boolean;
   };
 };
 
@@ -27,6 +28,7 @@ type EventGridLabels = {
   soldOut: string;
   viewEvent: string;
   capacityTemplate: string;
+  verified: string;
 };
 
 type EventGridProps = {
@@ -86,6 +88,11 @@ export function EventGrid({ items, locale, labels }: EventGridProps) {
                 ctaLabel={labels.viewEvent}
                 badge={
                   item.is_sold_out ? <Badge variant="sold_out" label={labels.soldOut} /> : undefined
+                }
+                verifiedBadge={
+                  item.organiser.preferred_badge ? (
+                    <Badge variant="public" label={labels.verified} />
+                  ) : undefined
                 }
                 media={
                   imagePublicId ? (
