@@ -451,6 +451,48 @@ class TestVendorProfile:
         # `location` (singular) still returns the first branch for backward compat.
         assert payload["vendor"]["location"]["landmark"] == "East Park Mall, Lusaka"
 
+    def test_profile_returns_vendor_services_and_events(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.services = [
+            {
+                "id": "svc-1",
+                "vendor_id": ACTIVE_VENDOR_ID,
+                "title": "Deep clean",
+                "category": "cleaning",
+                "from_price_ngwee": 50000,
+                "portfolio_images": ["services/clean-1"],
+                "status": "active",
+            },
+            {
+                "id": "svc-2",
+                "vendor_id": ACTIVE_VENDOR_ID,
+                "title": "Draft service (excluded)",
+                "status": "draft",
+            },
+        ]
+        store.events = [
+            {
+                "id": "evt-1",
+                "organiser_vendor_id": ACTIVE_VENDOR_ID,
+                "slug": "summer-fest",
+                "title": "Summer Fest",
+                "images": ["events/fest-1"],
+                "status": "published",
+            },
+        ]
+
+        response = client.get("/directory/tech-hub-lusaka")
+        assert response.status_code == 200
+        payload = response.json()
+        # Only the active service is returned; the draft is excluded.
+        assert [s["title"] for s in payload["services"]] == ["Deep clean"]
+        assert payload["services"][0]["from_price_ngwee"] == 50000
+        assert payload["services"][0]["image_public_id"] == "services/clean-1"
+        assert [e["slug"] for e in payload["events"]] == ["summer-fest"]
+        assert payload["events"][0]["image_public_id"] == "events/fest-1"
+
 
 class TestDirectoryHelpers:
     def test_matches_category_prefix(self) -> None:
