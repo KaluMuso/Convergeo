@@ -59,7 +59,12 @@
     "shareTitle": "{name} on Vergeo5",
     "statRating": "Rating",
     "statReviews": "Reviews",
-    "statListings": "Products"
+    "statListings": "Products",
+    "offeringsAria": "Vendor offerings",
+    "tabProducts": "Products",
+    "tabServices": "Services",
+    "tabEvents": "Events",
+    "serviceFrom": "From {price}"
   },
   "listings": {
     "vendor": "Sold by {vendor}",
