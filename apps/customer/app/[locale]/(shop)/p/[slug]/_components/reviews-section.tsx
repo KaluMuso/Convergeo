@@ -1,12 +1,11 @@
 "use client";
 
-import { createApiClient } from "@vergeo/config";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { ImageGallery, type GalleryImage } from "@vergeo/ui/src/media/image-gallery";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-type ReviewRow = {
+export type ReviewRow = {
   id: string;
   order_item_id: string;
   rating: number;
@@ -27,24 +26,18 @@ export type ReviewsSectionLabels = {
   galleryPrevious: string;
   galleryNext: string;
   galleryIndicator: string;
-  loadError: string;
-  loading: string;
   starFilled: string;
   starEmpty: string;
 };
 
 type ReviewsSectionProps = {
   locale: string;
-  productId: string;
+  /** Reviews fetched server-side (published only). Rendered in the initial HTML for SEO. */
+  reviews: ReviewRow[];
   cloudName?: string;
   labels: ReviewsSectionLabels;
-  accessToken?: string;
   eligibleOrderId?: string;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function StarRow({
   rating,
@@ -72,40 +65,19 @@ function StarRow({
   );
 }
 
+/**
+ * Product reviews. Data is fetched server-side by the PDP and passed in via
+ * `reviews`, so the list renders in the initial HTML (SEO + no client fetch
+ * waterfall). Only the photo lightbox is interactive, hence "use client".
+ */
 export function ReviewsSection({
   locale,
-  productId,
+  reviews,
   cloudName,
   labels,
-  accessToken,
   eligibleOrderId,
 }: ReviewsSectionProps) {
-  const [reviews, setReviews] = useState<ReviewRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | undefined>();
   const [lightbox, setLightbox] = useState<GalleryImage[] | null>(null);
-
-  const loadReviews = useCallback(async () => {
-    setError(undefined);
-    try {
-      const client = createApiClient({
-        baseUrl: getApiBaseUrl(),
-        getToken: accessToken ? () => accessToken : undefined,
-      });
-      const rows = await client.request<ReviewRow[]>(
-        `/reviews?product_id=${encodeURIComponent(productId)}`,
-      );
-      setReviews(rows);
-    } catch {
-      setError(labels.loadError);
-    } finally {
-      setLoading(false);
-    }
-  }, [accessToken, labels.loadError, productId]);
-
-  useEffect(() => {
-    void loadReviews();
-  }, [loadReviews]);
 
   const writeHref = useMemo(() => {
     if (!eligibleOrderId) {
@@ -113,10 +85,6 @@ export function ReviewsSection({
     }
     return `/${locale}/account/orders/${eligibleOrderId}`;
   }, [eligibleOrderId, locale]);
-
-  if (loading) {
-    return <p className="text-sm text-text-2">{labels.loading}</p>;
-  }
 
   return (
     <section aria-labelledby="product-reviews-heading" className="space-y-4">
@@ -127,18 +95,12 @@ export function ReviewsSection({
         {writeHref ? (
           <Link
             href={writeHref}
-            className="inline-flex min-h-11 items-center text-sm font-medium text-primary"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-2"
           >
             {labels.writeCta}
           </Link>
         ) : null}
       </div>
-
-      {error ? (
-        <p className="text-sm text-error" role="alert">
-          {error}
-        </p>
-      ) : null}
 
       {reviews.length === 0 ? (
         <p className="text-sm text-text-2">{labels.empty}</p>
@@ -159,7 +121,7 @@ export function ReviewsSection({
                     <button
                       key={publicId}
                       type="button"
-                      className="h-16 w-16 overflow-hidden rounded border border-border"
+                      className="h-16 w-16 overflow-hidden rounded border border-border focus-visible:outline-none focus-visible:shadow-focusRing"
                       onClick={() =>
                         setLightbox(
                           review.photos.map((photoId) => ({

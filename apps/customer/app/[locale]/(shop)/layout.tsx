@@ -110,6 +110,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           appName: tCommon("app.name"),
           navAriaLabel: t("home.nav.desktopAriaLabel"),
           searchPlaceholder: t("home.nav.searchPlaceholder"),
+          searchSubmit: t("home.nav.searchSubmit"),
           browse: t("home.nav.browse"),
           services: t("home.nav.services"),
           events: t("home.nav.events"),

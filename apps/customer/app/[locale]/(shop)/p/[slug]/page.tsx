@@ -17,7 +17,7 @@ import {
   type ProductListing,
 } from "../../_components/pdp/comparison";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
-import { ReviewsSection } from "./_components/reviews-section";
+import { ReviewsSection, type ReviewRow } from "./_components/reviews-section";
 
 import type { ListingCondition } from "../../_components/pdp/condition-badge";
 import type { Metadata } from "next";
@@ -192,6 +192,28 @@ async function fetchComparison(slug: string): Promise<ComparisonApiResponse | nu
     } catch {
       return null;
     }
+  }
+}
+
+async function fetchReviews(productId: string): Promise<ReviewRow[] | null> {
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl()}/reviews?product_id=${encodeURIComponent(productId)}`,
+      {
+        next: {
+          revalidate,
+          tags: ["reviews", `reviews:${productId}`],
+        },
+      },
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as ReviewRow[];
+  } catch {
+    return null;
   }
 }
 
@@ -397,6 +419,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   });
   const productListings = toProductListings(product, product.name);
   const comparisonListings = toComparisonListings(comparison, product);
+  const reviews = await fetchReviews(product.id);
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6 motion-rise lg:max-w-6xl">
@@ -474,26 +497,26 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         emptyLabel={t("pdp.specs.empty")}
       />
 
-      <ReviewsSection
-        locale={locale}
-        productId={product.id}
-        cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
-        labels={{
-          heading: t("reviews.heading"),
-          empty: t("reviews.empty"),
-          writeCta: t("reviews.writeCta"),
-          starsAria: t("reviews.starsAria"),
-          photoAlt: t("reviews.photoAlt"),
-          vendorReply: t("reviews.vendorReply"),
-          galleryPrevious: t("reviews.galleryPrevious"),
-          galleryNext: t("reviews.galleryNext"),
-          galleryIndicator: t("reviews.galleryIndicator"),
-          loadError: t("reviews.loadError"),
-          loading: t("reviews.loading"),
-          starFilled: t("reviews.starFilled"),
-          starEmpty: t("reviews.starEmpty"),
-        }}
-      />
+      {reviews ? (
+        <ReviewsSection
+          locale={locale}
+          reviews={reviews}
+          cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
+          labels={{
+            heading: t("reviews.heading"),
+            empty: t("reviews.empty"),
+            writeCta: t("reviews.writeCta"),
+            starsAria: t("reviews.starsAria"),
+            photoAlt: t("reviews.photoAlt"),
+            vendorReply: t("reviews.vendorReply"),
+            galleryPrevious: t("reviews.galleryPrevious"),
+            galleryNext: t("reviews.galleryNext"),
+            galleryIndicator: t("reviews.galleryIndicator"),
+            starFilled: t("reviews.starFilled"),
+            starEmpty: t("reviews.starEmpty"),
+          }}
+        />
+      ) : null}
     </main>
   );
 }

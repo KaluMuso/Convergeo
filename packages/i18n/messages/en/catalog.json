@@ -5,6 +5,7 @@
   "plp": {
     "title": "Browse {category}",
     "defaultCategory": "All products",
+    "breadcrumbAria": "Breadcrumb",
     "results": "{count, plural, one {# listing} other {# listings}}",
     "emptyTitle": "No listings found",
     "emptyBody": "Try clearing filters or browsing another category.",
@@ -61,6 +62,7 @@
       "account": "Account",
       "cart": "Cart",
       "searchPlaceholder": "Search products, services, events…",
+      "searchSubmit": "Search",
       "services": "Services",
       "events": "Events",
       "askVergeo": "Ask Vergeo",
