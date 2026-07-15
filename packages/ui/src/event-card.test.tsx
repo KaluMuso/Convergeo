@@ -58,4 +58,23 @@ describe("EventCard", () => {
     await user.click(screen.getByTestId("event-card-cta"));
     expect(onCtaClick).toHaveBeenCalledTimes(1);
   });
+
+  it("renders a verified badge overlay when provided", () => {
+    render(
+      <EventCard {...baseProps} verifiedBadge={<Badge variant="public" label="Verified" />} />,
+    );
+    expect(screen.getByTestId("badge-public")).toHaveTextContent("Verified");
+  });
+
+  it("renders sold-out and verified badges together (separate overlay slots)", () => {
+    render(
+      <EventCard
+        {...baseProps}
+        badge={<Badge variant="sold_out" label="Sold out" />}
+        verifiedBadge={<Badge variant="public" label="Verified" />}
+      />,
+    );
+    expect(screen.getByTestId("badge-sold_out")).toBeInTheDocument();
+    expect(screen.getByTestId("badge-public")).toBeInTheDocument();
+  });
 });

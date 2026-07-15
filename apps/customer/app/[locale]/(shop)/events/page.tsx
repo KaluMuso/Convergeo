@@ -190,6 +190,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
             soldOut: t("browse.soldOut"),
             viewEvent: t("browse.viewEvent"),
             capacityTemplate: t("detail.spots", { sold: "{sold}", total: "{total}" }),
+            verified: t("browse.verified"),
           }}
         />
       )}

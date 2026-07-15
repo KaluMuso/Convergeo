@@ -9,6 +9,7 @@ export type EventCardProps = {
   venueLabel: string;
   media?: ReactNode;
   badge?: ReactNode;
+  verifiedBadge?: ReactNode;
   isFree?: boolean;
   freeLabel?: string;
   ngwee?: number;
@@ -70,6 +71,7 @@ export function EventCard({
   venueLabel,
   media,
   badge,
+  verifiedBadge,
   isFree = false,
   freeLabel,
   ngwee,
@@ -99,6 +101,11 @@ export function EventCard({
         {badge ? (
           <div style={{ position: "absolute", top: "var(--sp-2)", left: "var(--sp-2)" }}>
             {badge}
+          </div>
+        ) : null}
+        {verifiedBadge ? (
+          <div style={{ position: "absolute", top: "var(--sp-2)", right: "var(--sp-2)" }}>
+            {verifiedBadge}
           </div>
         ) : null}
       </div>
