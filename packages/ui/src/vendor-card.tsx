@@ -89,7 +89,11 @@ export function VendorCard({
   }
 
   return (
-    <Component className={className} data-testid="vendor-card" style={cardBaseStyle}>
+    <Component
+      className={["card-lift", className].filter(Boolean).join(" ")}
+      data-testid="vendor-card"
+      style={cardBaseStyle}
+    >
       <div style={{ position: "relative", height: 96, backgroundColor: "var(--bg-2)" }}>
         {cover}
         {avatar ? (

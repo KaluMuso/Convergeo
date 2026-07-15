@@ -33,6 +33,7 @@ const TicketPicker = dynamic(
 type EventInstance = {
   id: string;
   starts_at: string;
+  ends_at: string;
   capacity: number;
   spots_sold: number;
   spots_remaining: number;
@@ -159,6 +160,7 @@ function toEventJsonLdInput(event: EventDetail, locale: string): EventJsonLdInpu
     imageUrls: eventImageUrls(event.images),
     instances: event.instances.map((instance) => ({
       startsAt: instance.starts_at,
+      endsAt: instance.ends_at,
     })),
     ticketTypes: event.ticket_types.map((ticket) => ({
       name: ticket.name,
@@ -195,7 +197,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   // Past events whose last instance ended >30d ago drop out of the index.
   const indexable = isEventIndexable(
-    event.instances.map((instance) => ({ startsAt: instance.starts_at })),
+    event.instances.map((instance) => ({
+      startsAt: instance.starts_at,
+      endsAt: instance.ends_at,
+    })),
   );
 
   return {

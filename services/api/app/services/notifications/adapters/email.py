@@ -95,13 +95,102 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             ),
         },
     },
+    # --- Lifecycle events (also the WhatsApp/SMS template ids, so a WhatsApp send
+    # can fail over to an email row carrying the same template + payload). ---------
+    "order_confirmed": {
+        "en": {
+            "subject_key": "notifications.email.order_confirmed.subject",
+            "subject": "Your Vergeo5 order {order_id} is confirmed",
+            "body_key": "notifications.email.order_confirmed.body",
+            "body": (
+                "<p>Your order is confirmed.</p>"
+                "<p><strong>Order:</strong> {order_id}</p>"
+                "<p><strong>Total:</strong> K{amount}</p>"
+                "<p>Your money is held safely by Vergeo5 until delivery.</p>"
+            ),
+        },
+    },
+    "payment_received": {
+        "en": {
+            "subject_key": "notifications.email.payment_received.subject",
+            "subject": "Payment received — Vergeo5 order {order_id}",
+            "body_key": "notifications.email.payment_received.body",
+            "body": (
+                "<p>We received your payment.</p>"
+                "<p><strong>Order:</strong> {order_id}</p>"
+                "<p><strong>Amount:</strong> K{amount}</p>"
+                "<p>Funds are held safely by Vergeo5 until delivery.</p>"
+            ),
+        },
+    },
+    "order_shipped": {
+        "en": {
+            "subject_key": "notifications.email.order_shipped.subject",
+            "subject": "Your Vergeo5 order {order_id} is on its way",
+            "body_key": "notifications.email.order_shipped.body",
+            "body": (
+                "<p>Your order is on its way.</p>"
+                "<p><strong>Order:</strong> {order_id}</p>"
+                "<p>{tracking_info}</p>"
+            ),
+        },
+    },
+    "order_ready_pickup": {
+        "en": {
+            "subject_key": "notifications.email.order_ready_pickup.subject",
+            "subject": "Your Vergeo5 order {order_id} is ready for pickup",
+            "body_key": "notifications.email.order_ready_pickup.body",
+            "body": (
+                "<p>Your order is ready for pickup.</p>"
+                "<p><strong>Order:</strong> {order_id}</p>"
+                "<p>{pickup_details}</p>"
+            ),
+        },
+    },
+    "order_delivered": {
+        "en": {
+            "subject_key": "notifications.email.order_delivered.subject",
+            "subject": "Your Vergeo5 order {order_id} was delivered",
+            "body_key": "notifications.email.order_delivered.body",
+            "body": (
+                "<p>Your order {order_id} was delivered.</p>"
+                "<p>Thank you for shopping with Vergeo5.</p>"
+            ),
+        },
+    },
+    "vendor_new_order": {
+        "en": {
+            "subject_key": "notifications.email.vendor_new_order.subject",
+            "subject": "New Vergeo5 order {order_id}",
+            "body_key": "notifications.email.vendor_new_order.body",
+            "body": (
+                "<p>You have a new order.</p>"
+                "<p><strong>Order:</strong> {order_id}</p>"
+                "<p><strong>Item:</strong> {quantity} x {product_title}</p>"
+                "<p>Open the vendor app to accept and prepare it.</p>"
+            ),
+        },
+    },
+    "rfq_job_broadcast": {
+        "en": {
+            "subject_key": "notifications.email.rfq_job_broadcast.subject",
+            "subject": "New {category} request on Vergeo5",
+            "body_key": "notifications.email.rfq_job_broadcast.body",
+            "body": (
+                "<p>A customer is looking for {category} near {service_area}.</p>"
+                "<p>{description_preview}</p>"
+                "<p>Open Vergeo5 to send your quote.</p>"
+            ),
+        },
+    },
 }
 
 
 def _format_amount(payload: dict[str, Any]) -> str:
-    amount_ngwee = payload.get("amount_ngwee")
-    if isinstance(amount_ngwee, int):
-        return ngwee_to_major_str(amount_ngwee)
+    for key in ("amount_ngwee", "total_ngwee"):
+        value = payload.get(key)
+        if isinstance(value, int):
+            return ngwee_to_major_str(value)
     amount = payload.get("amount")
     if amount is not None:
         return str(amount)
@@ -119,10 +208,29 @@ def render_email_html(
     locale_templates = EMAIL_TEMPLATES.get(template_name, EMAIL_TEMPLATES["payment_receipt"])
     strings = locale_templates.get(locale) or locale_templates["en"]
 
+    # order_reference is what the lifecycle payloads actually carry (order_id/entity_id
+    # are legacy fallbacks). All values are html-escaped; extra keys are harmless since
+    # .format only consumes the placeholders present in the chosen template.
     vars_map = {
-        "order_id": html.escape(str(payload.get("order_id") or payload.get("entity_id") or "")),
+        "order_id": html.escape(
+            str(
+                payload.get("order_reference")
+                or payload.get("order_id")
+                or payload.get("entity_id")
+                or ""
+            )
+        ),
         "amount": html.escape(_format_amount(payload)),
         "reason": html.escape(str(payload.get("reason") or "Please review your submission")),
+        "tracking_info": html.escape(str(payload.get("tracking_info") or "")),
+        "pickup_details": html.escape(str(payload.get("pickup_details") or "")),
+        "product_title": html.escape(str(payload.get("product_title") or "your item")),
+        "quantity": html.escape(str(payload.get("quantity") or "1")),
+        "category": html.escape(str(payload.get("category") or "a service")),
+        "service_area": html.escape(str(payload.get("service_area") or "your area")),
+        "description_preview": html.escape(str(payload.get("description_preview") or "")),
+        "track_url": html.escape(str(payload.get("track_url") or "")),
+        "review_url": html.escape(str(payload.get("review_url") or "")),
     }
     subject = strings["subject"].format(**vars_map)
     body = strings["body"].format(**vars_map)

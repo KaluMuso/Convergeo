@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.events.timing import instance_display_end
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
@@ -51,6 +52,9 @@ class EventOrganiserResponse(BaseModel):
 class EventInstanceResponse(BaseModel):
     id: str
     starts_at: datetime
+    # Effective end time: the instance's ends_at, or starts_at + default duration
+    # when unset (always populated so clients need no fallback of their own).
+    ends_at: datetime
     capacity: int
     spots_sold: int
     spots_remaining: int
@@ -121,6 +125,14 @@ def parse_starts_at(value: Any) -> datetime:
             return parsed.replace(tzinfo=ZoneInfo("UTC"))
         return parsed
     raise ValueError(f"Unsupported datetime value: {value!r}")
+
+
+def _parse_ends_at(row: dict[str, Any]) -> datetime | None:
+    """Parse an instance row's optional ends_at (NULL for pre-0035 rows)."""
+    raw = row.get("ends_at")
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        return None
+    return parse_starts_at(raw)
 
 
 def tonight_window(ref: datetime | None = None) -> tuple[datetime, datetime]:
@@ -220,9 +232,11 @@ def _build_instance_response(
 ) -> EventInstanceResponse:
     capacity = int(row.get("capacity") or 0)
     remaining = max(capacity - spots_sold, 0)
+    starts_at = parse_starts_at(row["starts_at"])
     return EventInstanceResponse(
         id=str(row["id"]),
-        starts_at=parse_starts_at(row["starts_at"]),
+        starts_at=starts_at,
+        ends_at=instance_display_end(starts_at, _parse_ends_at(row)),
         capacity=capacity,
         spots_sold=spots_sold,
         spots_remaining=remaining,
@@ -296,7 +310,10 @@ def _upcoming_instances(
     upcoming: list[dict[str, Any]] = []
     for row in instance_rows:
         starts_at = parse_starts_at(row["starts_at"])
-        if starts_at >= now:
+        # Keep an instance until it ENDS, not when it starts — an in-progress
+        # event should stay discoverable. ends_at falls back to starts_at + 2h.
+        end = instance_display_end(starts_at, _parse_ends_at(row))
+        if end >= now:
             upcoming.append(row)
     return order_instances(upcoming)
 
@@ -364,6 +381,7 @@ def _fetch_published_events(client: Any) -> list[dict[str, Any]]:
         client.table("events")
         .select(
             "id, slug, title, description, venue, lat, lng, images, status, "
+            "category_slug, landmark, "
             "organiser_vendor_id, vendors!events_organiser_vendor_id_fkey("
             "id, slug, display_name, preferred_badge, vendor_locations(landmark)"
             ")"
@@ -380,6 +398,7 @@ def _fetch_event_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
         client.table("events")
         .select(
             "id, slug, title, description, venue, lat, lng, images, status, "
+            "category_slug, landmark, "
             "organiser_vendor_id, vendors!events_organiser_vendor_id_fkey("
             "id, slug, display_name, preferred_badge, vendor_locations(landmark)"
             ")"
@@ -398,7 +417,7 @@ def _fetch_instances(client: Any, event_ids: list[str]) -> list[dict[str, Any]]:
         return []
     response = (
         client.table("event_instances")
-        .select("id, event_id, starts_at, capacity")
+        .select("id, event_id, starts_at, ends_at, capacity")
         .in_("event_id", event_ids)
         .order("starts_at")
         .execute()
@@ -467,7 +486,8 @@ def build_browse_response(
         event_id = str(event["id"])
         event_instances = order_instances(instances_by_event.get(event_id, []))
         event_ticket_types = ticket_types_by_event.get(event_id, [])
-        event_category: str | None = None
+        raw_category = event.get("category_slug")
+        event_category: str | None = raw_category if isinstance(raw_category, str) else None
 
         if not _matches_category(
             category,
@@ -547,7 +567,16 @@ def build_detail_response(client: Any, slug: str) -> EventDetailResponse:
     vendor_raw = event.get("vendors")
     vendor_row = vendor_raw if isinstance(vendor_raw, dict) else None
     organiser = _parse_organiser(vendor_row)
-    landmark = organiser.landmark
+    # Prefer the event's own landmark (0036 column); fall back to the organiser's
+    # vendor-location landmark.
+    event_landmark = event.get("landmark")
+    landmark = (
+        event_landmark.strip()
+        if isinstance(event_landmark, str) and event_landmark.strip()
+        else organiser.landmark
+    )
+    raw_category = event.get("category_slug")
+    category = raw_category if isinstance(raw_category, str) else None
 
     instance_responses = [
         _build_instance_response(row, spots_sold=tickets_by_instance.get(str(row["id"]), 0))
@@ -569,7 +598,7 @@ def build_detail_response(client: Any, slug: str) -> EventDetailResponse:
         lng=float(event["lng"]) if event.get("lng") is not None else None,
         landmark=landmark,
         images=_parse_images(event.get("images")),
-        category=None,
+        category=category,
         instances=instance_responses,
         ticket_types=ticket_type_responses,
         min_price_ngwee=_min_price_ngwee(ticket_types),

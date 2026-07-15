@@ -137,7 +137,7 @@ export function Tabs({
               disabled={item.disabled}
               onClick={() => setActiveKey(item.key)}
               className={mergeClasses(
-                "min-h-11 shrink-0 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none",
+                "min-h-11 shrink-0 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:shadow-focusRing",
                 selected ? "border-b-2 border-primary text-primary" : "text-text-2 hover:text-text",
                 item.disabled && "cursor-not-allowed opacity-50",
               )}
@@ -161,7 +161,10 @@ export function Tabs({
             aria-labelledby={tabId}
             hidden={!selected}
             tabIndex={0}
-            className={mergeClasses("py-4 focus-visible:outline-none", panelClassName)}
+            className={mergeClasses(
+              "py-4 focus-visible:outline-none focus-visible:shadow-focusRing",
+              panelClassName,
+            )}
           >
             {selected ? item.panel : null}
           </div>

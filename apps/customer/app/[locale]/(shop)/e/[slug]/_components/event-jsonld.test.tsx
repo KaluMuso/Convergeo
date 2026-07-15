@@ -110,6 +110,21 @@ describe("buildEventJsonLd", () => {
     const jsonLd = buildEventJsonLd({ ...BASE, isFree: true });
     expect(jsonLd.offers).toMatchObject({ "@type": "Offer", price: "0" });
   });
+
+  it("uses an explicit instance end for endDate", () => {
+    const jsonLd = buildEventJsonLd({
+      ...BASE,
+      instances: [{ startsAt: "2026-09-12T18:00:00+02:00", endsAt: "2026-09-14T22:00:00+02:00" }],
+    });
+    expect(jsonLd.endDate).toBe(new Date("2026-09-14T22:00:00+02:00").toISOString());
+  });
+
+  it("falls back to a 2h endDate when the instance has no end", () => {
+    const jsonLd = buildEventJsonLd(BASE);
+    expect(jsonLd.endDate).toBe(
+      new Date(new Date("2026-09-12T18:00:00+02:00").getTime() + 2 * 60 * 60 * 1000).toISOString(),
+    );
+  });
 });
 
 describe("isEventIndexable / noindex after +30d", () => {
@@ -132,5 +147,19 @@ describe("isEventIndexable / noindex after +30d", () => {
   it("indexes when there are no instances", () => {
     expect(isEventIndexable([], now)).toBe(true);
     expect(latestInstanceStart([])).toBeNull();
+  });
+
+  it("keeps a multi-day event indexable by its real end, not its start", () => {
+    // Start is well beyond the grace window, but the explicit end is recent —
+    // with the old start+2h logic this would have wrongly noindexed.
+    const start = new Date(now - (EVENT_NOINDEX_GRACE_DAYS + 5) * DAY_MS).toISOString();
+    const end = new Date(now - DAY_MS).toISOString();
+    expect(isEventIndexable([{ startsAt: start, endsAt: end }], now)).toBe(true);
+  });
+
+  it("noindexes when the explicit end is beyond the grace window", () => {
+    const start = new Date(now - (EVENT_NOINDEX_GRACE_DAYS + 10) * DAY_MS).toISOString();
+    const end = new Date(now - (EVENT_NOINDEX_GRACE_DAYS + 2) * DAY_MS).toISOString();
+    expect(isEventIndexable([{ startsAt: start, endsAt: end }], now)).toBe(false);
   });
 });

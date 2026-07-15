@@ -1,4 +1,5 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { Breadcrumbs } from "@vergeo/ui/src/breadcrumbs";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import {
   buildBreadcrumbListJsonLd,
@@ -6,6 +7,7 @@ import {
   buildLocaleCanonical,
   JsonLdScript,
 } from "@vergeo/ui/src/seo/json-ld";
+import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
@@ -215,6 +217,15 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 motion-rise">
       <JsonLdScript data={breadcrumbJsonLd} />
+      <Breadcrumbs
+        ariaLabel={t("plp.breadcrumbAria")}
+        ellipsisLabel="…"
+        LinkComponent={Link}
+        items={[
+          { key: "home", label: t("home.nav.home"), href: `/${locale}` },
+          { key: "category", label: categoryName },
+        ]}
+      />
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-[var(--fs-h1)] text-[var(--text)]">
           {t("plp.title", { category: categoryName })}

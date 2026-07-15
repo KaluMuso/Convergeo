@@ -138,7 +138,7 @@ export function CameraScanner({ disabled, onCodeDetected, onCameraDenied }: Came
           justifyContent: "center",
           minHeight: "14rem",
           borderRadius: "var(--r)",
-          background: "var(--surface-2)",
+          background: "var(--bg-2)",
         }}
       >
         <Spinner label={t("scan.eventCheckIn.camera.loading")} />

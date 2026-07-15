@@ -8,23 +8,26 @@ from unittest.mock import patch
 import pytest
 from app.main import create_app
 from app.routers.event_ics import (
-    DEFAULT_EVENT_DURATION,
     build_event_ics,
     escape_ics_text,
     fold_ics_line,
     format_ics_datetime,
 )
 from app.routers.events_public import build_detail_response
+from app.services.events.timing import DEFAULT_EVENT_DURATION
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 EVENT_PAID = "e2000000-0000-0000-0000-000000000001"
 EVENT_SOLD = "e2000000-0000-0000-0000-000000000002"
+EVENT_MULTIDAY = "e2000000-0000-0000-0000-000000000003"
 VENDOR = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 INSTANCE_PAID = "i2000000-0000-0000-0000-000000000001"
 INSTANCE_SOLD = "i2000000-0000-0000-0000-000000000002"
+INSTANCE_MULTIDAY = "i2000000-0000-0000-0000-000000000003"
 TICKET_PAID = "t2000000-0000-0000-0000-000000000001"
 TICKET_SOLD = "t2000000-0000-0000-0000-000000000002"
+TICKET_MULTIDAY = "t2000000-0000-0000-0000-000000000003"
 
 
 class FakeResponse:
@@ -122,6 +125,19 @@ def seed_store(store: FakeSupabaseStore) -> None:
             "organiser_vendor_id": VENDOR,
             "vendors": _vendor_row(),
         },
+        {
+            "id": EVENT_MULTIDAY,
+            "slug": "harvest-festival",
+            "title": "Harvest Festival",
+            "description": None,
+            "venue": "Botanical Gardens",
+            "lat": None,
+            "lng": None,
+            "images": [],
+            "status": "published",
+            "organiser_vendor_id": VENDOR,
+            "vendors": _vendor_row(),
+        },
     ]
     store.event_instances = [
         {
@@ -135,6 +151,14 @@ def seed_store(store: FakeSupabaseStore) -> None:
             "event_id": EVENT_SOLD,
             "starts_at": "2026-09-13T21:00:00+02:00",
             "capacity": 2,
+        },
+        {
+            # Multi-day event with an explicit end 2 days after the start.
+            "id": INSTANCE_MULTIDAY,
+            "event_id": EVENT_MULTIDAY,
+            "starts_at": "2026-10-01T10:00:00+02:00",
+            "ends_at": "2026-10-03T18:00:00+02:00",
+            "capacity": 500,
         },
     ]
     store.ticket_types = [
@@ -153,6 +177,14 @@ def seed_store(store: FakeSupabaseStore) -> None:
             "name": "Entry",
             "price_ngwee": 25000,
             "qty_cap": 2,
+        },
+        {
+            "id": TICKET_MULTIDAY,
+            "event_id": EVENT_MULTIDAY,
+            "kind": "fixed",
+            "name": "Festival Pass",
+            "price_ngwee": 150000,
+            "qty_cap": 500,
         },
     ]
     store.tickets = [
@@ -245,11 +277,22 @@ def test_build_event_ics_paid_event_structure(store: FakeSupabaseStore) -> None:
 
 
 def test_build_event_ics_dtend_uses_default_duration(store: FakeSupabaseStore) -> None:
+    # Instance has no explicit ends_at -> DTEND falls back to start + 2h default.
     event = build_detail_response(store, "jazz-night")
     ics = build_event_ics(event, now=datetime(2026, 8, 1, tzinfo=UTC))
     start = event.instances[0].starts_at
     expected_end = format_ics_datetime(start + DEFAULT_EVENT_DURATION)
     assert f"DTEND:{expected_end}" in ics
+
+
+def test_build_event_ics_dtend_honours_explicit_ends_at(store: FakeSupabaseStore) -> None:
+    # Multi-day event with a real ends_at -> DTEND is the actual end, not start+2h.
+    event = build_detail_response(store, "harvest-festival")
+    ics = build_event_ics(event, now=datetime(2026, 8, 1, tzinfo=UTC))
+    logical = unfold(ics)
+    assert "DTSTART:20261001T080000Z" in logical  # 10:00 +02:00 -> 08:00 UTC
+    # 18:00 +02:00 end on day 3 -> 16:00 UTC (spans 2 days, not a 2h default).
+    assert "DTEND:20261003T160000Z" in logical
 
 
 # ---- endpoint tests -----------------------------------------------------------
