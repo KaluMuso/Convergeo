@@ -7,6 +7,7 @@ import { BannerRow } from "./_components/banner-row";
 import { CategoryGrid } from "./_components/category-grid";
 import { EventsRow } from "./_components/events-row";
 import { FeaturedCollections } from "./_components/featured-collections";
+import { FlashDeal } from "./_components/flash-deal";
 import { HomeHero } from "./_components/hero";
 import {
   hasDefaultHomeContent,
@@ -81,6 +82,10 @@ function renderSection(
     case "banner_row":
       return (
         <BannerRow key={sectionKey} slot={pickSlot(slots, "banner_row")} locale={locale} t={t} />
+      );
+    case "flash_deal":
+      return (
+        <FlashDeal key={sectionKey} slot={pickSlot(slots, "flash_deal")} locale={locale} t={t} />
       );
     case "events_row":
       return (

@@ -30,6 +30,7 @@ export type HomeMerchData = {
 export const HOME_SECTION_ORDER = [
   "hero",
   "banner_row",
+  "flash_deal",
   "events_row",
   "featured_collections",
   "category_grid",

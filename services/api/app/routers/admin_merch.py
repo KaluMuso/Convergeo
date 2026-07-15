@@ -26,7 +26,7 @@ DEFAULT_PREVIEW_TOKEN = "draft"
 
 HERO_VARIANT_KEYS = frozenset({"editorial-light", "gradient-dark", "carousel", "default"})
 SLOT_KEYS = frozenset(
-    {"hero", "banner_row", "events_row", "featured_collections", "category_grid"}
+    {"hero", "banner_row", "flash_deal", "events_row", "featured_collections", "category_grid"}
 )
 MERCH_SLOT_COLUMNS = (
     "id, slot_key, variant_key, payload, schedule_from, schedule_to, "

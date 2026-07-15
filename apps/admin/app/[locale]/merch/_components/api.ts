@@ -52,6 +52,7 @@ export type PreviewUrl = {
 export const SLOT_ORDER = [
   "hero",
   "banner_row",
+  "flash_deal",
   "events_row",
   "featured_collections",
   "category_grid",

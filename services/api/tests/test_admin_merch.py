@@ -436,6 +436,31 @@ def test_slot_crud_and_audit(
     assert len(audit_rows) == 3
 
 
+def test_create_flash_deal_slot(
+    merch_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"admin"})})
+    _mock_audit_insert(monkeypatch, fake_client)
+    _seed_slots(fake_client)
+
+    response = merch_client.post(
+        "/admin/merch/slots",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        json={
+            "slot_key": "flash_deal",
+            "variant_key": "default",
+            "payload": {"headline": "40% off electronics", "ends_at": "2026-12-31T23:59:00Z"},
+            "position": 2,
+            "active": True,
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["slot_key"] == "flash_deal"
+
+
 def test_publish_without_draft_returns_422(
     merch_client: TestClient,
     fake_client: FakeSupabaseClient,
