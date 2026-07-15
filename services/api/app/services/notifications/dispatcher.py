@@ -16,6 +16,12 @@ from app.services.notifications.adapters.base import (
 from app.services.notifications.dedupe import (
     DEFAULT_CHANNEL_ORDER,
     is_pending_dispatch,
+    split_dedupe_key,
+)
+from app.services.notifications.fallback import (
+    DeliveryContext,
+    enqueue_fallback_row,
+    resolve_fallback_channel,
 )
 
 logger = logging.getLogger(__name__)
@@ -297,6 +303,46 @@ class NotificationDispatcher:
             }
         ).eq("id", row_id).execute()
 
+    def _enqueue_channel_fallback(
+        self,
+        *,
+        dedupe_key: str,
+        channel: str,
+        failure_kind: FailureKind,
+        notif_prefs: dict[str, Any],
+        template: str | None,
+        payload: dict[str, Any],
+        attempts: int,
+    ) -> None:
+        """After a terminal channel failure, queue the next fallback channel (if any).
+
+        whatsapp -> sms -> email per resolve_fallback_channel + recipient prefs. The
+        fallback row reuses the same template + payload (recipient contact already
+        injected) on a distinct dedupe_key, so it never collides with the failed row.
+        A fallback-enqueue error must not break the dispatch loop.
+        """
+        event_type, entity_id = split_dedupe_key(dedupe_key)
+        if not event_type or not entity_id:
+            return
+        decision = resolve_fallback_channel(
+            DeliveryContext(channel=channel, send_failed=True, failure_kind=failure_kind),
+            notif_prefs,
+        )
+        if decision.next_channel is None or decision.next_channel == channel:
+            return
+        try:
+            enqueue_fallback_row(
+                self.client,
+                event_type=event_type,
+                entity_id=entity_id,
+                decision=decision,
+                template=template,
+                payload=payload,
+                attempts=attempts,
+            )
+        except Exception:
+            logger.warning("Failed to enqueue notification fallback row", exc_info=True)
+
     async def run_batch(self, *, now: datetime | None = None) -> DispatchStats:
         current = now or datetime.now(UTC)
         stats = DispatchStats()
@@ -385,6 +431,17 @@ class NotificationDispatcher:
         failure_kind = result.failure_kind or FailureKind.RETRYABLE
 
         if failure_kind is FailureKind.PERMANENT or attempts >= self._max_attempts:
+            # This channel is done; queue the next fallback channel before giving up
+            # so a WhatsApp outage doesn't silently drop the notification.
+            self._enqueue_channel_fallback(
+                dedupe_key=str(fresh.get("dedupe_key", "")),
+                channel=channel,
+                failure_kind=failure_kind,
+                notif_prefs=notif_prefs,
+                template=fresh.get("template") if isinstance(fresh.get("template"), str) else None,
+                payload=payload_dict,
+                attempts=attempts,
+            )
             self.mark_failed(row_id, attempts=attempts)
             return "failed"
 

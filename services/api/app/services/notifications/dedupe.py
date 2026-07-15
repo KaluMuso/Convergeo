@@ -10,6 +10,19 @@ def build_dedupe_key(event_type: str, entity_id: str, channel: str) -> str:
     return f"{event_type}:{entity_id}:{channel}"
 
 
+def split_dedupe_key(dedupe_key: str) -> tuple[str, str]:
+    """Inverse of build_dedupe_key: recover (event_type, entity_id); channel dropped.
+
+    event_type and channel never contain ':', but entity_id may (e.g. the RFQ
+    ``{job_id}:{vendor_id}`` key), so the middle segments rejoin into entity_id.
+    Returns ("", "") for a malformed key.
+    """
+    parts = dedupe_key.split(":")
+    if len(parts) < 3:
+        return "", ""
+    return parts[0], ":".join(parts[1:-1])
+
+
 def is_pending_dispatch(row: dict[str, Any]) -> bool:
     """Return True when a row is eligible for adapter invocation."""
     status = row.get("status")
