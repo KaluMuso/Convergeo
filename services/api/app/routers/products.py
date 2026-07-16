@@ -67,6 +67,7 @@ class ProductDetailResponse(BaseModel):
     name: str
     slug: str
     brand: str | None = None
+    description: str | None = None
     spec: dict[str, Any] = Field(default_factory=dict)
     category_id: str
     images: list[ProductImageResponse] = Field(default_factory=list)
@@ -241,7 +242,7 @@ def _collect_images(
 def _fetch_product_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
     response = (
         client.table("products")
-        .select("id, name, slug, brand, spec, category_id, status, merged_into_id")
+        .select("id, name, slug, brand, description, spec, category_id, status, merged_into_id")
         .eq("slug", slug)
         .maybe_single()
         .execute()
@@ -399,6 +400,11 @@ def build_product_detail(
         name=product_name,
         slug=str(product["slug"]),
         brand=product.get("brand"),
+        description=(
+            str(product["description"]).strip()
+            if isinstance(product.get("description"), str) and product["description"].strip()
+            else None
+        ),
         spec=_parse_spec(product.get("spec")),
         category_id=str(product["category_id"]),
         images=gallery_images,

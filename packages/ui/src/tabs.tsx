@@ -18,6 +18,15 @@ export type TabsProps = {
   className?: string;
   tabListClassName?: string;
   panelClassName?: string;
+  /**
+   * When true, every panel's content is rendered into the DOM (inactive ones are
+   * visually hidden via `hidden`) instead of being mounted only while selected.
+   * Use for SEO-critical content — e.g. a product description/specs/reviews — so
+   * crawlers still see every panel in the server-rendered HTML. Defaults to false
+   * (lazy: inactive panels stay empty until selected), which suits panels holding
+   * expensive client widgets that should not all mount at once.
+   */
+  mountInactivePanels?: boolean;
 };
 
 function mergeClasses(...classes: Array<string | false | undefined>): string {
@@ -37,6 +46,7 @@ export function Tabs({
   className,
   tabListClassName,
   panelClassName,
+  mountInactivePanels = false,
 }: TabsProps) {
   const baseId = useId();
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -166,7 +176,7 @@ export function Tabs({
               panelClassName,
             )}
           >
-            {selected ? item.panel : null}
+            {mountInactivePanels || selected ? item.panel : null}
           </div>
         );
       })}
