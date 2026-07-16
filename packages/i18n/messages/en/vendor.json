@@ -521,6 +521,7 @@
     "sections": {
       "basics": "Business details",
       "contact": "Contact",
+      "cover": "Cover image",
       "logo": "Logo",
       "location": "Location"
     },
@@ -570,6 +571,15 @@
       "uploading": "Uploading…",
       "uploadFailed": "Logo upload failed. Try again.",
       "help": "Square images work best. Resized before upload to save data."
+    },
+    "cover": {
+      "alt": "Shop cover image",
+      "empty": "No cover image",
+      "upload": "Upload cover",
+      "uploading": "Uploading…",
+      "remove": "Remove",
+      "uploadFailed": "Cover upload failed. Try again.",
+      "help": "A wide banner (about 3:1) heads your storefront. Resized before upload to save data."
     },
     "badge": {
       "preferred": "Vergeo5 Preferred badge earned",

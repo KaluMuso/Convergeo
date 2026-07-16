@@ -9,6 +9,7 @@ import { Button, FormField, Input, Spinner, Switch } from "../../listings/new/_l
 import { createProfileClient } from "../_lib/profile-client";
 
 import { CompletenessMeter } from "./completeness-meter";
+import { CoverUpload } from "./cover-upload";
 import { HoursEditor } from "./hours-editor";
 import { LogoUpload } from "./logo-upload";
 import { SlugField } from "./slug-field";
@@ -34,6 +35,7 @@ export function ProfileEditor() {
   const [whatsapp, setWhatsapp] = useState("");
   const [slug, setSlug] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [hours, setHours] = useState<VendorProfile["hours"]>(DEFAULT_HOURS);
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
@@ -68,6 +70,7 @@ export function ProfileEditor() {
         setWhatsapp(loaded.whatsapp_msisdn ?? "");
         setSlug(loaded.slug);
         setLogoUrl(loaded.logo_url);
+        setCoverUrl(loaded.cover_url);
         setHours(Object.keys(loaded.hours).length > 0 ? loaded.hours : DEFAULT_HOURS);
         setLat(loaded.lat?.toString() ?? "");
         setLng(loaded.lng?.toString() ?? "");
@@ -99,6 +102,8 @@ export function ProfileEditor() {
       description: description.trim(),
       whatsapp_msisdn: whatsapp.trim(),
       logo_url: logoUrl ?? undefined,
+      // Empty string (not undefined) so the remove button can clear the cover.
+      cover_url: coverUrl ?? "",
       hours,
     };
 
@@ -121,6 +126,7 @@ export function ProfileEditor() {
       setProfile(updated);
       setSlug(updated.slug);
       setWhatsapp(updated.whatsapp_msisdn ?? "");
+      setCoverUrl(updated.cover_url);
       setSuccess(t("profile.success.saved"));
     } catch (caught) {
       if (caught instanceof ApiError) {
@@ -228,6 +234,17 @@ export function ProfileEditor() {
             />
           </FormField>
           <p className="text-xs text-neutral-500">{t("profile.fields.whatsappHelp")}</p>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-neutral-900">{t("profile.sections.cover")}</h2>
+          <CoverUpload
+            coverUrl={coverUrl}
+            disabled={saving}
+            getToken={getToken}
+            onUploaded={setCoverUrl}
+            onRemove={() => setCoverUrl(null)}
+          />
         </section>
 
         <section className="space-y-3">
