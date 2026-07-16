@@ -2377,10 +2377,41 @@ export type Database = {
           },
         ]
       }
+      ticket_type_price_tiers: {
+        Row: {
+          created_at: string
+          min_qty: number
+          price_ngwee: number
+          ticket_type_id: string
+        }
+        Insert: {
+          created_at?: string
+          min_qty: number
+          price_ngwee: number
+          ticket_type_id: string
+        }
+        Update: {
+          created_at?: string
+          min_qty?: number
+          price_ngwee?: number
+          ticket_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_type_price_tiers_ticket_type_id_fkey"
+            columns: ["ticket_type_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_types: {
         Row: {
           attendee_named: boolean
           created_at: string
+          early_bird_price_ngwee: number | null
+          early_bird_until: string | null
           event_id: string
           id: string
           kind: string
@@ -2393,6 +2424,8 @@ export type Database = {
         Insert: {
           attendee_named?: boolean
           created_at?: string
+          early_bird_price_ngwee?: number | null
+          early_bird_until?: string | null
           event_id: string
           id?: string
           kind: string
@@ -2405,6 +2438,8 @@ export type Database = {
         Update: {
           attendee_named?: boolean
           created_at?: string
+          early_bird_price_ngwee?: number | null
+          early_bird_until?: string | null
           event_id?: string
           id?: string
           kind?: string
