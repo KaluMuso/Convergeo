@@ -6,6 +6,7 @@ import json
 import secrets
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -133,6 +134,76 @@ def _sql_text_array(names: list[str]) -> str:
     return f"ARRAY[{escaped}]::text[]"
 
 
+def _parse_dt(raw: str) -> datetime | None:
+    """Parse a Postgres timestamptz text into an aware UTC datetime (None if empty)."""
+    text = raw.strip()
+    if not text:
+        return None
+    # Postgres renders '2026-08-01 18:00:00+00'; normalise the space + trailing Z.
+    normalized = text.replace(" ", "T", 1).replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
+def _load_price_tiers(ticket_type_id: str) -> list[tuple[int, int]]:
+    """Return (min_qty, price_ngwee) group-pricing tiers for a ticket type.
+
+    Own single-purpose query (both columns are integers, so the pipe split is
+    unambiguous). Empty when the type has no group pricing configured.
+    """
+    type_sql = sql_uuid(ticket_type_id, "ticket_type_id")
+    result = run_sql_script(
+        f"""
+SELECT min_qty::text, price_ngwee::text
+FROM public.ticket_type_price_tiers
+WHERE ticket_type_id = {type_sql}
+ORDER BY min_qty;
+"""
+    )
+    if not result.ok:
+        raise RuntimeError(f"load price tiers failed: {result.error}")
+    tiers: list[tuple[int, int]] = []
+    for row in result.rows:
+        cells = row.split("|")
+        if len(cells) != 2:
+            continue
+        tiers.append((int(cells[0]), int(cells[1])))
+    return tiers
+
+
+def resolve_unit_price(
+    *,
+    base_price_ngwee: int,
+    early_bird_price_ngwee: int | None,
+    early_bird_until: datetime | None,
+    tiers: list[tuple[int, int]],
+    qty: int,
+    now: datetime,
+) -> int:
+    """Server-side per-unit price (M10-P12): the lowest applicable price.
+
+    Candidates are the base price, the early-bird price while ``now`` is before
+    its cutoff, and every group tier whose ``min_qty <= qty``. The minimum wins,
+    so a buyer always gets the best configured discount and the price can never be
+    manipulated from the client. With no early-bird/tier config this returns the
+    base price unchanged.
+    """
+    candidates = [base_price_ngwee]
+    if (
+        early_bird_price_ngwee is not None
+        and early_bird_until is not None
+        and now < early_bird_until
+    ):
+        candidates.append(early_bird_price_ngwee)
+    candidates.extend(price for min_qty, price in tiers if qty >= min_qty)
+    return min(candidates)
+
+
 def _load_ticket_context(
     service_client: Any,
     *,
@@ -155,7 +226,9 @@ SELECT
   e.organiser_vendor_id::text,
   e.title,
   e.status,
-  tt.attendee_named::text
+  tt.attendee_named::text,
+  coalesce(tt.early_bird_price_ngwee::text, ''),
+  coalesce(tt.early_bird_until::text, '')
 FROM public.ticket_types tt
 INNER JOIN public.events e ON e.id = tt.event_id
 INNER JOIN public.event_instances ei ON ei.id = {instance_sql}
@@ -173,7 +246,7 @@ WHERE tt.id = {type_sql};
         )
 
     parts = result.rows[0].split("|")
-    if len(parts) != 12:
+    if len(parts) != 14:
         raise RuntimeError("unexpected ticket context row shape")
 
     if parts[6] != parts[1]:
@@ -199,6 +272,8 @@ WHERE tt.id = {type_sql};
             "name": parts[3],
             "price_ngwee": int(parts[4]),
             "attendee_named": parts[11] == "true",
+            "early_bird_price_ngwee": int(parts[12]) if parts[12].strip() else None,
+            "early_bird_until": _parse_dt(parts[13]),
         },
         "instance": {
             "id": parts[5],
@@ -329,6 +404,7 @@ def add_ticket_to_checkout(
     ticket_type_id: str,
     qty: int = 1,
     attendee_names: list[str] | None = None,
+    now: datetime | None = None,
 ) -> TicketCheckoutResult:
     """Claim ticket capacity and create a pending checkout order for paid tickets."""
     _validate_uuid(customer_id, "customer_id")
@@ -360,7 +436,16 @@ def add_ticket_to_checkout(
         qty=qty,
         attendee_named=bool(ticket_type.get("attendee_named")),
     )
-    unit_price = int(ticket_type["price_ngwee"])
+    # Server resolves the per-unit price (M10-P12): base, active early-bird, and
+    # qualifying group tiers — lowest wins. The client never supplies a price.
+    unit_price = resolve_unit_price(
+        base_price_ngwee=int(ticket_type["price_ngwee"]),
+        early_bird_price_ngwee=ticket_type.get("early_bird_price_ngwee"),
+        early_bird_until=ticket_type.get("early_bird_until"),
+        tiers=_load_price_tiers(ticket_type_id),
+        qty=qty,
+        now=now or datetime.now(UTC),
+    )
     title = str(ticket_type.get("name") or "Ticket")
     provisional_snapshot = _build_ticket_commission_snapshot(
         ticket_type_id=ticket_type_id,
