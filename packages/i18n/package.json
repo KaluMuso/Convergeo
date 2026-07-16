@@ -15,7 +15,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "next-intl": "^4.0.2"
+    "next-intl": "^4.13.2"
   },
   "devDependencies": {
     "vitest": "^3.0.9"

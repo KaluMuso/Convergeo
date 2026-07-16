@@ -18,7 +18,7 @@
     "@vergeo/i18n": "workspace:*",
     "@vergeo/ui": "workspace:*",
     "next": "^15.2.4",
-    "next-intl": "^4.0.2",
+    "next-intl": "^4.13.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
