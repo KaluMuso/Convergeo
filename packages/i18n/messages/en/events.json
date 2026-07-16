@@ -73,7 +73,9 @@
       "generic": "Could not complete request. Try again.",
       "freeUseRsvp": "This is a free event — use Reserve.",
       "paidUseCheckout": "This ticket requires payment.",
-      "oversell": "No longer available"
+      "oversell": "No longer available",
+      "attendeeNamesRequired": "Enter a name for each ticket.",
+      "attendeeNamesMismatch": "Enter exactly one name per ticket."
     }
   },
   "wallet": {

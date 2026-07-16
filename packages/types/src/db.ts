@@ -1460,16 +1460,19 @@ export type Database = {
       }
       order_item_tickets: {
         Row: {
+          attendee_names: Json | null
           instance_id: string
           order_item_id: string
           ticket_type_id: string
         }
         Insert: {
+          attendee_names?: Json | null
           instance_id: string
           order_item_id: string
           ticket_type_id: string
         }
         Update: {
+          attendee_names?: Json | null
           instance_id?: string
           order_item_id?: string
           ticket_type_id?: string
@@ -2331,6 +2334,7 @@ export type Database = {
       }
       ticket_types: {
         Row: {
+          attendee_named: boolean
           created_at: string
           event_id: string
           id: string
@@ -2342,6 +2346,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attendee_named?: boolean
           created_at?: string
           event_id: string
           id?: string
@@ -2353,6 +2358,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attendee_named?: boolean
           created_at?: string
           event_id?: string
           id?: string
@@ -2377,6 +2383,7 @@ export type Database = {
         Row: {
           checked_in_at: string | null
           created_at: string
+          holder_name: string | null
           holder_user_id: string
           id: string
           instance_id: string
@@ -2390,6 +2397,7 @@ export type Database = {
         Insert: {
           checked_in_at?: string | null
           created_at?: string
+          holder_name?: string | null
           holder_user_id: string
           id?: string
           instance_id: string
@@ -2403,6 +2411,7 @@ export type Database = {
         Update: {
           checked_in_at?: string | null
           created_at?: string
+          holder_name?: string | null
           holder_user_id?: string
           id?: string
           instance_id?: string

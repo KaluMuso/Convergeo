@@ -121,22 +121,38 @@ def _insert_ticket_type(
     name: str = "GA",
     price_ngwee: int = 50_000,
     qty_cap: int | None = None,
+    attendee_named: bool = False,
 ) -> str:
     qty_sql = "NULL" if qty_cap is None else str(qty_cap)
+    named_sql = "true" if attendee_named else "false"
     conn.run(
         f"""
         INSERT INTO public.ticket_types (
-          id, event_id, kind, name, price_ngwee, qty_cap
+          id, event_id, kind, name, price_ngwee, qty_cap, attendee_named
         ) VALUES (
-          '{ticket_type_id}', '{event_id}', '{kind}', '{name}', {price_ngwee}, {qty_sql}
+          '{ticket_type_id}', '{event_id}', '{kind}', '{name}', {price_ngwee}, {qty_sql},
+          {named_sql}
         )
         ON CONFLICT (id) DO UPDATE
           SET kind = EXCLUDED.kind,
               price_ngwee = EXCLUDED.price_ngwee,
-              qty_cap = EXCLUDED.qty_cap;
+              qty_cap = EXCLUDED.qty_cap,
+              attendee_named = EXCLUDED.attendee_named;
         """
     )
     return ticket_type_id
+
+
+def _holder_names(conn: PgConn, *, order_item_id: str) -> list[str]:
+    result = conn.run(
+        f"""
+        SELECT coalesce(holder_name, '') FROM public.tickets
+        WHERE order_item_id = '{order_item_id}' AND status <> 'void'
+        ORDER BY created_at, id;
+        """
+    )
+    assert result.ok
+    return [row for row in result.rows]
 
 
 def _ticket_count(conn: PgConn, *, instance_id: str, order_item_id: str | None = None) -> int:
@@ -609,3 +625,91 @@ def test_issue_tick_http_issues_paid_order(
     secrets = _ticket_secrets_for_item(db, checkout.order_item_id)
     assert len(secrets) == 2
     assert all(qr and pin for qr, pin in secrets)
+
+
+# --- M10-P11: per-attendee names ------------------------------------------
+
+
+def test_paid_checkout_captures_and_assigns_attendee_names(
+    db: PgConn, service: _ServiceWrapper
+) -> None:
+    event_id = str(uuid.uuid4())
+    instance_id = str(uuid.uuid4())
+    ticket_type_id = str(uuid.uuid4())
+    _insert_event_with_instance(db, event_id=event_id, instance_id=instance_id, capacity=5)
+    _insert_ticket_type(
+        db,
+        ticket_type_id=ticket_type_id,
+        event_id=event_id,
+        kind="fixed",
+        price_ngwee=20_000,
+        attendee_named=True,
+    )
+
+    checkout = add_ticket_to_checkout(
+        service,
+        customer_id=CUSTOMER_A,
+        instance_id=instance_id,
+        ticket_type_id=ticket_type_id,
+        qty=2,
+        attendee_names=["Alice Banda", "Bob Phiri"],
+    )
+    _insert_success_payment(
+        db, checkout_group_id=checkout.checkout_group_id, amount_ngwee=checkout.subtotal_ngwee
+    )
+    issue_tickets_for_paid_order(service, checkout.order_id)
+
+    assert sorted(_holder_names(db, order_item_id=checkout.order_item_id)) == [
+        "Alice Banda",
+        "Bob Phiri",
+    ]
+
+
+def test_named_ticket_requires_attendee_names(db: PgConn, service: _ServiceWrapper) -> None:
+    event_id = str(uuid.uuid4())
+    instance_id = str(uuid.uuid4())
+    ticket_type_id = str(uuid.uuid4())
+    _insert_event_with_instance(db, event_id=event_id, instance_id=instance_id, capacity=5)
+    _insert_ticket_type(
+        db, ticket_type_id=ticket_type_id, event_id=event_id, attendee_named=True
+    )
+
+    with pytest.raises(AppError) as exc:
+        add_ticket_to_checkout(
+            service,
+            customer_id=CUSTOMER_A,
+            instance_id=instance_id,
+            ticket_type_id=ticket_type_id,
+            qty=1,
+        )
+    assert exc.value.http_status == 422
+    assert exc.value.code == "tickets.attendee_names_required"
+
+
+def test_rsvp_captures_attendee_names(db: PgConn, service: _ServiceWrapper) -> None:
+    event_id = str(uuid.uuid4())
+    instance_id = str(uuid.uuid4())
+    ticket_type_id = str(uuid.uuid4())
+    _insert_event_with_instance(db, event_id=event_id, instance_id=instance_id, capacity=3)
+    _insert_ticket_type(
+        db,
+        ticket_type_id=ticket_type_id,
+        event_id=event_id,
+        kind="free_rsvp",
+        name="Free RSVP",
+        price_ngwee=0,
+        attendee_named=True,
+    )
+
+    result = rsvp(
+        service,
+        customer_id=CUSTOMER_A,
+        instance_id=instance_id,
+        ticket_type_id=ticket_type_id,
+        qty=2,
+        attendee_names=["Chanda Mumba", "Dalitso Zulu"],
+    )
+    assert sorted(_holder_names(db, order_item_id=result.order_item_id)) == [
+        "Chanda Mumba",
+        "Dalitso Zulu",
+    ]
