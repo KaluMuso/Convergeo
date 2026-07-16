@@ -33,6 +33,7 @@ type VendorProfileApiResponse = {
     display_name: string;
     description: string | null;
     logo_url: string | null;
+    cover_url: string | null;
     whatsapp_msisdn: string | null;
     preferred_badge: boolean;
     kyc_tier: number | null;
@@ -330,8 +331,16 @@ export default async function VendorProfilePage({ params }: PageProps) {
       <JsonLdScript data={jsonLd} />
 
       <header className="overflow-hidden rounded-lg border border-border bg-surface">
-        {/* Cover band — gradient fallback (no cover image in the vendor data model yet). */}
-        <div className="h-28 bg-gradient-to-br from-panel to-panel-2 sm:h-40" aria-hidden />
+        {/* Cover band — the vendor's uploaded banner, or a gradient fallback. */}
+        {vendor.cover_url ? (
+          <div
+            aria-hidden
+            className="h-28 bg-cover bg-center sm:h-40"
+            style={{ backgroundImage: `url(${vendor.cover_url})` }}
+          />
+        ) : (
+          <div className="h-28 bg-gradient-to-br from-panel to-panel-2 sm:h-40" aria-hidden />
+        )}
         <div className="flex flex-col gap-3 px-4 sm:flex-row sm:items-end sm:gap-4">
           <div className="-mt-12 shrink-0 sm:-mt-16">
             {vendor.logo_url ? (
