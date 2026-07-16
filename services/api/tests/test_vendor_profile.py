@@ -10,6 +10,7 @@ from app.deps import get_supabase_client
 from app.main import create_app
 from app.routers.vendor_profile import (
     compute_profile_completeness,
+    normalize_whatsapp_msisdn,
     resolve_slug_redirect,
     validate_vendor_hours,
 )
@@ -379,6 +380,83 @@ def test_authz_vendor_cannot_edit_other_vendor(
 
     vendor_a = fake_client.tables["vendors"].rows[0]
     assert vendor_a["display_name"] == "Shop A"
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("0977123456", "260977123456"),
+        ("260977123456", "260977123456"),
+        ("+260 977 123 456", "260977123456"),
+        ("977123456", "260977123456"),
+        ("0967123456", "260967123456"),
+    ],
+)
+def test_normalize_whatsapp_msisdn_accepts_valid(raw: str, expected: str) -> None:
+    assert normalize_whatsapp_msisdn(raw) == expected
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "12345",  # too short
+        "0577123456",  # subscriber does not start with 7 or 9
+        "09771234567",  # too long
+        "",  # empty
+    ],
+)
+def test_normalize_whatsapp_msisdn_rejects_invalid(raw: str) -> None:
+    assert normalize_whatsapp_msisdn(raw) is None
+
+
+def test_patch_sets_and_normalizes_whatsapp(
+    profile_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    response = profile_client.patch(
+        "/vendor/profile",
+        headers=_auth_headers(),
+        json={"whatsapp_msisdn": "0977 123 456"},
+    )
+    assert response.status_code == 200
+    # Stored + returned canonically as E.164 digits, ready for wa.me deep links.
+    assert response.json()["whatsapp_msisdn"] == "260977123456"
+    assert fake_client.tables["vendors"].rows[0]["whatsapp_msisdn"] == "260977123456"
+
+    # And it round-trips on the next GET.
+    fetched = profile_client.get("/vendor/profile", headers=_auth_headers())
+    assert fetched.json()["whatsapp_msisdn"] == "260977123456"
+
+
+def test_patch_whatsapp_invalid_rejected(profile_client: TestClient) -> None:
+    response = profile_client.patch(
+        "/vendor/profile",
+        headers=_auth_headers(),
+        json={"whatsapp_msisdn": "12345"},
+    )
+    assert response.status_code == 400
+    body = response.json()["error"]
+    assert body["code"] == "validation_error"
+    assert body["details"]["message_key"] == "vendor.profile.errors.whatsapp_invalid"
+
+
+def test_patch_whatsapp_cleared_with_blank(
+    profile_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    profile_client.patch(
+        "/vendor/profile",
+        headers=_auth_headers(),
+        json={"whatsapp_msisdn": "0977123456"},
+    )
+    cleared = profile_client.patch(
+        "/vendor/profile",
+        headers=_auth_headers(),
+        json={"whatsapp_msisdn": "  "},
+    )
+    assert cleared.status_code == 200
+    assert cleared.json()["whatsapp_msisdn"] is None
+    assert fake_client.tables["vendors"].rows[0]["whatsapp_msisdn"] is None
 
 
 def test_patch_updates_display_and_location(profile_client: TestClient) -> None:
