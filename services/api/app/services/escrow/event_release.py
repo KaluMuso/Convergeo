@@ -11,6 +11,10 @@ no end time (see ``instance_settlement_end``) — so a multi-day event's funds n
 longer release mid-event:
   - Event <= 14 days out at purchase time -> single full release at end + 24h.
   - Event > 14 days out at purchase time -> 50% at starts_at - 7d, 50% at end + 1d.
+  - Recurring event (event_type, D29/P14) -> single full release at end + 24h
+    regardless of lead time (no >14d phased pre-event advance): a routine series
+    holds funds until after each instance. All other event_types use the lead-time
+    branch above; per-type rules live in services/events/type_policy.py.
   - Cancelled event -> block all further releases + flag for admin-executed mass refund.
   - Open dispute (same OPEN_DISPUTE_STATUSES as the order engine) -> hold.
 
@@ -30,6 +34,7 @@ from typing import Any, Literal, Protocol
 
 from app.services.escrow.release import OPEN_DISPUTE_STATUSES, compute_net_ngwee
 from app.services.events.timing import instance_settlement_end
+from app.services.events.type_policy import policy_for
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.orders.audit import run_sql_script, sql_literal
@@ -87,6 +92,7 @@ class _EventOrderContext:
     starts_at: datetime
     ends_at: datetime | None
     event_status: str
+    event_type: str
     is_paid: bool
     has_open_dispute: bool
 
@@ -128,7 +134,9 @@ def _normalize_now(now: datetime | None) -> datetime:
     return effective_now.astimezone(UTC)
 
 
-def determine_branch(*, purchased_at: datetime, starts_at: datetime) -> EventReleaseBranch:
+def determine_branch(
+    *, purchased_at: datetime, starts_at: datetime, event_type: str | None = None
+) -> EventReleaseBranch:
     """Decide the ≤14d / >14d branch from purchase-time lead vs. the event's starts_at.
 
     There is no snapshot column recording this decision at purchase time (no migration
@@ -137,7 +145,15 @@ def determine_branch(*, purchased_at: datetime, starts_at: datetime) -> EventRel
     Both timestamps are immutable once set (orders.created_at never changes; an
     event's starts_at can only change pre-publish per M10-P05's schedule-change
     guard), so this derivation is stable across repeated evaluations of the same order.
+
+    event_type drives this via the ``type_policy`` map (D29/P14): a ``full_only``
+    settlement rule (a ``recurring`` series) forces a single full release regardless
+    of lead time — no >14d phased pre-event advance, so a routine series holds funds
+    until end+24h. All other types use ``timing_default`` (the lead-time branch,
+    unchanged). event_type defaults to ``standard``, so existing orders are unaffected.
     """
+    if policy_for(event_type).settlement_rule == "full_only":
+        return "full"
     lead = starts_at - purchased_at
     if lead <= timedelta(days=PHASED_THRESHOLD_DAYS):
         return "full"
@@ -214,7 +230,8 @@ SELECT
   ei.starts_at::text,
   coalesce(ei.ends_at::text, ''),
   e.id::text,
-  e.status
+  e.status,
+  e.event_type
 FROM public.orders o
 INNER JOIN public.order_items oi
   ON oi.order_id = o.id AND oi.item_kind = 'ticket'
@@ -228,8 +245,8 @@ LIMIT 1;
     if not result.ok or not result.rows:
         return None
 
-    parts = result.rows[0].split("|", 8)
-    if len(parts) != 9:
+    parts = result.rows[0].split("|", 9)
+    if len(parts) != 10:
         return None
 
     (
@@ -242,6 +259,7 @@ LIMIT 1;
         ends_at_raw,
         event_id,
         event_status,
+        event_type,
     ) = parts
 
     purchased_at = _parse_timestamp(created_at_raw)
@@ -272,6 +290,7 @@ LIMIT 1;
         starts_at=starts_at,
         ends_at=ends_at,
         event_status=event_status,
+        event_type=event_type,
         is_paid=_has_successful_payment(checkout_group_id),
         has_open_dispute=_has_open_dispute(order_id),
     )
@@ -363,7 +382,11 @@ def evaluate_event_release(
         )
 
     effective_now = _normalize_now(now)
-    branch = determine_branch(purchased_at=context.purchased_at, starts_at=context.starts_at)
+    branch = determine_branch(
+        purchased_at=context.purchased_at,
+        starts_at=context.starts_at,
+        event_type=context.event_type,
+    )
 
     required_keys: tuple[str, ...] = (
         (full_release_key(order_id),)

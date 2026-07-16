@@ -138,14 +138,23 @@ def db_url_env(db: PgConn) -> Generator[None, None, None]:
 
 
 def _insert_event(
-    conn: PgConn, *, event_id: str, organiser_vendor_id: str, status: str = "published"
+    conn: PgConn,
+    *,
+    event_id: str,
+    organiser_vendor_id: str,
+    status: str = "published",
+    event_type: str = "standard",
 ) -> None:
     slug = f"evt-{event_id[:8]}"
     conn.run(
         f"""
-        INSERT INTO public.events (id, organiser_vendor_id, title, slug, status)
-        VALUES ('{event_id}', '{organiser_vendor_id}', 'Test Event', '{slug}', '{status}')
-        ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status;
+        INSERT INTO public.events (id, organiser_vendor_id, title, slug, status, event_type)
+        VALUES (
+          '{event_id}', '{organiser_vendor_id}', 'Test Event', '{slug}', '{status}',
+          '{event_type}'
+        )
+        ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status,
+          event_type = EXCLUDED.event_type;
         """
     )
 
@@ -322,6 +331,35 @@ class TestBranchDecision:
         starts = purchased + timedelta(days=PHASED_THRESHOLD_DAYS + 1)
         assert determine_branch(purchased_at=purchased, starts_at=starts) == "phased"
 
+    # --- P14: event_type drives the branch via type_policy (full_only) ---------
+
+    def test_recurring_forces_full_beyond_14_days(self) -> None:
+        purchased = datetime(2026, 7, 1, tzinfo=UTC)
+        starts = purchased + timedelta(days=PHASED_THRESHOLD_DAYS + 20)  # would be phased
+        assert (
+            determine_branch(purchased_at=purchased, starts_at=starts, event_type="recurring")
+            == "full"
+        )
+
+    def test_recurring_within_14_days_still_full(self) -> None:
+        purchased = datetime(2026, 7, 1, tzinfo=UTC)
+        starts = purchased + timedelta(days=3)
+        assert (
+            determine_branch(purchased_at=purchased, starts_at=starts, event_type="recurring")
+            == "full"
+        )
+
+    def test_non_recurring_types_keep_lead_time_branch(self) -> None:
+        purchased = datetime(2026, 7, 1, tzinfo=UTC)
+        starts = purchased + timedelta(days=PHASED_THRESHOLD_DAYS + 5)  # >14d
+        for event_type in ("standard", "private", "free_rsvp", None, "bogus"):
+            assert (
+                determine_branch(
+                    purchased_at=purchased, starts_at=starts, event_type=event_type
+                )
+                == "phased"
+            )
+
 
 class TestIdempotencyKeyDistinctness:
     def test_event_keys_never_collide_with_order_engine_key(self) -> None:
@@ -380,6 +418,51 @@ class TestFullReleaseBranch:
         again = evaluate_event_release(_SERVICE, order_id, now=due + timedelta(days=1))
         assert again.outcome == "already_released"
         assert _txn_count(db, full_release_key(order_id)) == 1
+
+    def test_recurring_releases_full_not_phased_beyond_14_days(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        # A >14d-lead order that would be PHASED for a standard event is forced to
+        # a single full release when the event_type is 'recurring' (P14).
+        event_id = str(uuid.uuid4())
+        instance_id = str(uuid.uuid4())
+        type_id = str(uuid.uuid4())
+        order_id = str(uuid.uuid4())
+        starts_at = datetime(2026, 10, 1, 18, 0, tzinfo=UTC)
+        purchased_at = starts_at - timedelta(days=30)  # >14d: standard would phase
+
+        _insert_event(
+            db, event_id=event_id, organiser_vendor_id=VENDOR_A, event_type="recurring"
+        )
+        _insert_instance(db, instance_id=instance_id, event_id=event_id, starts_at=starts_at)
+        _insert_ticket_type(db, type_id=type_id, event_id=event_id)
+        _insert_ticket_order(
+            db,
+            order_id=order_id,
+            group_id=str(uuid.uuid4()),
+            item_id=str(uuid.uuid4()),
+            instance_id=instance_id,
+            ticket_type_id=type_id,
+            created_at=purchased_at,
+        )
+
+        # At the phase-1 window a standard event would release 50%; recurring must not.
+        phase1_window = starts_at - timedelta(days=PHASE1_LEAD_DAYS)
+        early = evaluate_event_release(_SERVICE, order_id, now=phase1_window)
+        assert early.branch == "full"
+        assert early.outcome == "not_eligible"
+        assert _txn_count(db, phase1_release_key(order_id)) == 0
+
+        # Full release lands at end+24h (no ends_at -> settlement_end == starts_at).
+        due = starts_at + timedelta(hours=24)
+        result = evaluate_event_release(_SERVICE, order_id, now=due)
+        assert result.outcome == "released"
+        assert result.branch == "full"
+        assert result.phases_posted == ("full",)
+        assert result.net_ngwee == NET_NGEWEE
+        assert _txn_count(db, full_release_key(order_id)) == 1
+        assert _txn_count(db, phase1_release_key(order_id)) == 0
+        assert _txn_count(db, phase2_release_key(order_id)) == 0
 
 
 class TestPhasedReleaseBranch:
@@ -743,6 +826,7 @@ def _synthetic_context(
     lead_days: int,
     order_id: str = "ord-unit-release",
     event_status: str = "published",
+    event_type: str = "standard",
 ) -> _EventOrderContext:
     return _EventOrderContext(
         order_id=order_id,
@@ -756,6 +840,7 @@ def _synthetic_context(
         starts_at=starts_at,
         ends_at=ends_at,
         event_status=event_status,
+        event_type=event_type,
         is_paid=True,
         has_open_dispute=False,
     )

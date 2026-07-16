@@ -33,9 +33,9 @@ def test_non_private_types_default_public() -> None:
 
 
 def test_only_recurring_overrides_settlement_rule() -> None:
-    # P10 lands a money-free map: everything settles on today's timing except
-    # recurring, which P14 will read as per-instance.
-    assert policy_for("recurring").settlement_rule == "per_instance"
+    # P14: recurring settles full-only (single release at end+24h, no phased
+    # advance); every other type keeps today's lead-time timing.
+    assert policy_for("recurring").settlement_rule == "full_only"
     assert policy_for("recurring").is_series is True
     for event_type in ("standard", "free_rsvp", "private"):
         assert policy_for(event_type).settlement_rule == "timing_default"

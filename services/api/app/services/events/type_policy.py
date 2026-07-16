@@ -9,9 +9,12 @@ consumer branches on ``event_type`` inline. Consumers:
   when the organiser doesn't set visibility explicitly;
 * discovery (``events_public.py``) surfaces :attr:`is_series` / ``event_type``;
 * escrow settlement (``event_release.py``, **P14**) reads
-  :attr:`settlement_rule` — ``"timing_default"`` means today's timing exactly,
-  so landing P10 changes no money behaviour; only ``"per_instance"`` (recurring)
-  will alter release timing once P14 wires this map in.
+  :attr:`settlement_rule` — ``"timing_default"`` is the current lead-time-based
+  schedule (≤14d full at end+24h; >14d 50% at start−7d + 50% at end+1d), while
+  ``"full_only"`` (recurring) forces a single full release at end+24h with no
+  pre-event phased advance. Only ``recurring`` differs from today's timing, and
+  because ``event_type`` defaults to ``standard`` every existing order is
+  unaffected — recurring is opt-in going forward.
 """
 
 from __future__ import annotations
@@ -21,7 +24,7 @@ from typing import Literal
 
 EventType = Literal["standard", "recurring", "free_rsvp", "private"]
 Visibility = Literal["public", "unlisted", "private"]
-SettlementRule = Literal["timing_default", "per_instance"]
+SettlementRule = Literal["timing_default", "full_only"]
 
 EVENT_TYPES: tuple[EventType, ...] = ("standard", "recurring", "free_rsvp", "private")
 VISIBILITIES: tuple[Visibility, ...] = ("public", "unlisted", "private")
@@ -34,8 +37,9 @@ class EventTypePolicy:
     event_type: EventType
     #: Visibility applied when the organiser doesn't set one explicitly.
     default_visibility: Visibility
-    #: Escrow anchor selection, consumed by ``event_release.py`` (P14).
-    #: ``"timing_default"`` == the current lead-time-based schedule (no change).
+    #: Escrow branch selection, consumed by ``event_release.py`` (P14).
+    #: ``"timing_default"`` == the current lead-time-based schedule; ``"full_only"``
+    #: forces a single full release at end+24h (no >14d phased advance).
     settlement_rule: SettlementRule
     #: UX hint — the event is a recurring series.
     is_series: bool
@@ -45,7 +49,7 @@ class EventTypePolicy:
 
 _POLICIES: dict[EventType, EventTypePolicy] = {
     "standard": EventTypePolicy("standard", "public", "timing_default", False, False),
-    "recurring": EventTypePolicy("recurring", "public", "per_instance", True, False),
+    "recurring": EventTypePolicy("recurring", "public", "full_only", True, False),
     "free_rsvp": EventTypePolicy("free_rsvp", "public", "timing_default", False, True),
     "private": EventTypePolicy("private", "private", "timing_default", False, False),
 }
