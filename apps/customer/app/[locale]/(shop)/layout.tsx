@@ -119,6 +119,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           services: t("home.nav.services"),
           events: t("home.nav.events"),
           askVergeo: t("home.nav.askVergeo"),
+          supplies: t("home.nav.supplies"),
           account: t("home.nav.account"),
           cart: t("home.nav.cart"),
           themeLabel: tCommon("theme.label"),
@@ -138,6 +139,12 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         items={bottomItems}
         ariaLabel={t("home.nav.bottomAriaLabel")}
         locale={locale}
+        suppliesItem={{
+          key: "supplies",
+          icon: navIcon("📦"),
+          label: t("home.nav.supplies"),
+          href: `/${locale}/supplies`,
+        }}
       />
     </>
   );

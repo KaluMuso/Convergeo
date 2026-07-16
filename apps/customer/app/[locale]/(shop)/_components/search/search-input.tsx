@@ -15,7 +15,7 @@ import {
 
 import { addRecentSearch } from "./recent-searches";
 
-export type SearchKind = "products" | "services" | "events" | "supplies" | "vendors";
+export type SearchKind = "products" | "services" | "events" | "vendors";
 
 export type SuggestItem = {
   title: string;

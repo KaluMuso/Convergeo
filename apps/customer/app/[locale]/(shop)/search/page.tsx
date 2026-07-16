@@ -218,7 +218,6 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
               products: t("tabs.products"),
               services: t("tabs.services"),
               events: t("tabs.events"),
-              supplies: t("tabs.supplies"),
               vendors: t("tabs.vendors"),
               count: t("tabs.count"),
               resultsCount: t("results.count", { count: searchResponse.total }),

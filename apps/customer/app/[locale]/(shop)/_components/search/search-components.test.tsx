@@ -43,7 +43,6 @@ const resultsTabsLabels = {
   products: "Products",
   services: "Services",
   events: "Events",
-  supplies: "Supplies",
   vendors: "Vendors",
   count: "{label} ({count})",
   resultsCount: "2 results",
@@ -148,7 +147,6 @@ describe("ResultsTabs tab counts", () => {
           products: 2,
           services: 1,
           events: 0,
-          supplies: 1,
           vendors: 1,
         }}
         labels={resultsTabsLabels}
@@ -159,6 +157,9 @@ describe("ResultsTabs tab counts", () => {
     expect(screen.getByTestId("search-tab-products")).toHaveTextContent("Products (2)");
     expect(screen.getByTestId("search-tab-events")).toHaveTextContent("Events (0)");
     expect(screen.getByTestId("search-results-list")).toBeInTheDocument();
+    // Wholesale supplies are a B2B-gated surface (own /supplies page), not a
+    // global-search tab — it must not render here.
+    expect(screen.queryByTestId("search-tab-supplies")).not.toBeInTheDocument();
   });
 });
 

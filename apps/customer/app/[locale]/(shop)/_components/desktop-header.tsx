@@ -2,6 +2,7 @@ import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
 import Link from "next/link";
 
 import { CategoryMegaMenu } from "./category-mega-menu";
+import { SuppliesNavLink } from "./supplies-nav-link";
 
 type DesktopHeaderLabels = {
   appName: string;
@@ -16,6 +17,7 @@ type DesktopHeaderLabels = {
   services: string;
   events: string;
   askVergeo: string;
+  supplies: string;
   account: string;
   cart: string;
   themeLabel: string;
@@ -108,6 +110,8 @@ export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
               </Link>
             </li>
           ))}
+          {/* Wholesale Supplies — verified business buyers only (client-gated). */}
+          <SuppliesNavLink locale={locale} label={labels.supplies} />
         </ul>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
