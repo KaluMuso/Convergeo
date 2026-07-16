@@ -1,17 +1,13 @@
 "use client";
 
+import { getBrowserAccessToken } from "@vergeo/auth";
 import { createApiClient } from "@vergeo/config";
 
 const API_BASE = process.env.NEXT_PUBLIC_VERGEO_API_URL ?? "http://localhost:8000";
 
 export const supportApi = createApiClient({
   baseUrl: API_BASE,
-  getToken: () => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-    return window.sessionStorage.getItem("vergeo_admin_token");
-  },
+  getToken: getBrowserAccessToken,
 });
 
 export type CustomerSummary = {

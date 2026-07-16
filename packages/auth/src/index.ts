@@ -1,4 +1,8 @@
-export { createBrowserClient, resetBrowserClientForTests } from "./browser-client";
+export {
+  createBrowserClient,
+  getBrowserAccessToken,
+  resetBrowserClientForTests,
+} from "./browser-client";
 export { createCookieMethods, createServerClient } from "./server-client";
 export {
   createLoginRedirect,
