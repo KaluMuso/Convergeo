@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import uuid
 from collections.abc import Generator
+from datetime import UTC, datetime
 from typing import Any, cast
 
 import pytest
@@ -122,25 +123,44 @@ def _insert_ticket_type(
     price_ngwee: int = 50_000,
     qty_cap: int | None = None,
     attendee_named: bool = False,
+    early_bird_price_ngwee: int | None = None,
+    early_bird_until: str | None = None,
 ) -> str:
     qty_sql = "NULL" if qty_cap is None else str(qty_cap)
     named_sql = "true" if attendee_named else "false"
+    eb_price_sql = "NULL" if early_bird_price_ngwee is None else str(early_bird_price_ngwee)
+    eb_until_sql = "NULL" if early_bird_until is None else f"'{early_bird_until}'::timestamptz"
     conn.run(
         f"""
         INSERT INTO public.ticket_types (
-          id, event_id, kind, name, price_ngwee, qty_cap, attendee_named
+          id, event_id, kind, name, price_ngwee, qty_cap, attendee_named,
+          early_bird_price_ngwee, early_bird_until
         ) VALUES (
           '{ticket_type_id}', '{event_id}', '{kind}', '{name}', {price_ngwee}, {qty_sql},
-          {named_sql}
+          {named_sql}, {eb_price_sql}, {eb_until_sql}
         )
         ON CONFLICT (id) DO UPDATE
           SET kind = EXCLUDED.kind,
               price_ngwee = EXCLUDED.price_ngwee,
               qty_cap = EXCLUDED.qty_cap,
-              attendee_named = EXCLUDED.attendee_named;
+              attendee_named = EXCLUDED.attendee_named,
+              early_bird_price_ngwee = EXCLUDED.early_bird_price_ngwee,
+              early_bird_until = EXCLUDED.early_bird_until;
         """
     )
     return ticket_type_id
+
+
+def _insert_price_tier(
+    conn: PgConn, *, ticket_type_id: str, min_qty: int, price_ngwee: int
+) -> None:
+    conn.run(
+        f"""
+        INSERT INTO public.ticket_type_price_tiers (ticket_type_id, min_qty, price_ngwee)
+        VALUES ('{ticket_type_id}', {min_qty}, {price_ngwee})
+        ON CONFLICT (ticket_type_id, min_qty) DO UPDATE SET price_ngwee = EXCLUDED.price_ngwee;
+        """
+    )
 
 
 def _holder_names(conn: PgConn, *, order_item_id: str) -> list[str]:
@@ -713,3 +733,71 @@ def test_rsvp_captures_attendee_names(db: PgConn, service: _ServiceWrapper) -> N
         "Chanda Mumba",
         "Dalitso Zulu",
     ]
+
+
+# --- M10-P12: server-side pricing modes ------------------------------------
+
+
+def test_early_bird_checkout_uses_discounted_price(
+    db: PgConn, service: _ServiceWrapper
+) -> None:
+    event_id = str(uuid.uuid4())
+    instance_id = str(uuid.uuid4())
+    type_id = str(uuid.uuid4())
+    cutoff = "2026-12-01T00:00:00Z"
+    _insert_event_with_instance(db, event_id=event_id, instance_id=instance_id, capacity=100)
+    _insert_ticket_type(
+        db,
+        ticket_type_id=type_id,
+        event_id=event_id,
+        price_ngwee=50_000,
+        early_bird_price_ngwee=40_000,
+        early_bird_until=cutoff,
+    )
+
+    early = add_ticket_to_checkout(
+        service,
+        customer_id=CUSTOMER_A,
+        instance_id=instance_id,
+        ticket_type_id=type_id,
+        qty=2,
+        now=datetime(2026, 11, 1, tzinfo=UTC),  # before cutoff
+    )
+    assert early.subtotal_ngwee == 2 * 40_000
+
+    late = add_ticket_to_checkout(
+        service,
+        customer_id=CUSTOMER_B,
+        instance_id=instance_id,
+        ticket_type_id=type_id,
+        qty=2,
+        now=datetime(2026, 12, 2, tzinfo=UTC),  # after cutoff
+    )
+    assert late.subtotal_ngwee == 2 * 50_000
+
+
+def test_group_tier_checkout_uses_tier_price(db: PgConn, service: _ServiceWrapper) -> None:
+    event_id = str(uuid.uuid4())
+    instance_id = str(uuid.uuid4())
+    type_id = str(uuid.uuid4())
+    _insert_event_with_instance(db, event_id=event_id, instance_id=instance_id, capacity=100)
+    _insert_ticket_type(db, ticket_type_id=type_id, event_id=event_id, price_ngwee=50_000)
+    _insert_price_tier(db, ticket_type_id=type_id, min_qty=5, price_ngwee=45_000)
+
+    bulk = add_ticket_to_checkout(
+        service,
+        customer_id=CUSTOMER_A,
+        instance_id=instance_id,
+        ticket_type_id=type_id,
+        qty=5,  # >= tier threshold -> 45k each
+    )
+    assert bulk.subtotal_ngwee == 5 * 45_000
+
+    small = add_ticket_to_checkout(
+        service,
+        customer_id=CUSTOMER_B,
+        instance_id=instance_id,
+        ticket_type_id=type_id,
+        qty=4,  # below threshold -> base 50k each
+    )
+    assert small.subtotal_ngwee == 4 * 50_000
