@@ -51,6 +51,7 @@ class WalletTicketTypeOut(StrictModel):
 class WalletTicketSummary(StrictModel):
     id: str
     status: TicketStatus
+    holder_name: str | None = None
     event: WalletEventOut
     instance: WalletInstanceOut
     ticket_type: WalletTicketTypeOut
@@ -70,6 +71,7 @@ class WalletQrOut(StrictModel):
 class WalletTicketDetailResponse(StrictModel):
     id: str
     status: TicketStatus
+    holder_name: str | None = None
     pin: str | None = None
     pin_available: bool
     qr: WalletQrOut | None = None
@@ -110,6 +112,11 @@ def _single_row(response: Any) -> dict[str, Any] | None:
     return None
 
 
+def _holder_name(row: dict[str, Any]) -> str | None:
+    value = row.get("holder_name")
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
 def _load_holder_ticket_row(
     service_client: _ServiceRoleClient,
     *,
@@ -119,7 +126,8 @@ def _load_holder_ticket_row(
     response = (
         service_client.client.table("tickets")
         .select(
-            "id, status, qr_secret, pin_hash, instance_id, ticket_type_id, holder_user_id"
+            "id, status, holder_name, qr_secret, pin_hash, instance_id, "
+            "ticket_type_id, holder_user_id"
         )
         .eq("id", ticket_id)
         .eq("holder_user_id", holder_user_id)
@@ -254,7 +262,7 @@ async def list_wallet_tickets(
 ) -> WalletListResponse:
     response = (
         service_client.client.table("tickets")
-        .select("id, status, instance_id, ticket_type_id, created_at")
+        .select("id, status, holder_name, instance_id, ticket_type_id, created_at")
         .eq("holder_user_id", current_user.id)
         .not_.is_("order_item_id", "null")
         .order("created_at", desc=True)
@@ -271,6 +279,7 @@ async def list_wallet_tickets(
             WalletTicketSummary(
                 id=str(row["id"]),
                 status=str(row["status"]),  # type: ignore[arg-type]
+                holder_name=_holder_name(row),
                 event=_build_event_out(event_row),
                 instance=_build_instance_out(instance_row),
                 ticket_type=_build_type_out(type_row),
@@ -304,6 +313,7 @@ async def get_wallet_ticket(
     return WalletTicketDetailResponse(
         id=str(row["id"]),
         status=str(row["status"]),  # type: ignore[arg-type]
+        holder_name=_holder_name(row),
         pin=pin,
         pin_available=pin_available,
         qr=_build_live_qr(

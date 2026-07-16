@@ -15,7 +15,7 @@ from app.services.tickets.purchase import (
     rsvp,
 )
 from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 router = APIRouter(tags=["tickets"])
 
@@ -27,6 +27,16 @@ class TicketPurchaseRequest(BaseModel):
     instance_id: str
     ticket_type_id: str
     qty: int = Field(default=1, ge=1, le=20)
+    # Optional per-attendee names (Wave A/M10-P11). Required only when the ticket
+    # type is attendee_named; enforced server-side in purchase._validate_attendee_names.
+    attendee_names: list[str] | None = Field(default=None, max_length=20)
+
+    @field_validator("attendee_names")
+    @classmethod
+    def _cap_name_lengths(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        return [str(name).strip()[:120] for name in value]
 
 
 class TicketCheckoutResponse(BaseModel):
@@ -82,6 +92,7 @@ async def ticket_checkout(
         instance_id=body.instance_id,
         ticket_type_id=body.ticket_type_id,
         qty=body.qty,
+        attendee_names=body.attendee_names,
     )
     return _to_checkout_response(result)
 
@@ -98,6 +109,7 @@ async def ticket_rsvp(
         instance_id=body.instance_id,
         ticket_type_id=body.ticket_type_id,
         qty=body.qty,
+        attendee_names=body.attendee_names,
     )
     return RsvpResponse(
         checkout_group_id=result.checkout_group_id,

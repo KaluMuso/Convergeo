@@ -80,9 +80,57 @@ def _validate_uuid(value: str, field: str) -> None:
     UUID(value)
 
 
+def _validate_attendee_names(
+    attendee_names: list[str] | None,
+    *,
+    qty: int,
+    attendee_named: bool,
+) -> list[str] | None:
+    """Clean/validate per-attendee names against qty and the type's named flag.
+
+    - attendee_named type ⇒ names required: exactly ``qty``, each non-empty.
+    - otherwise ⇒ names optional; if supplied, still exactly ``qty`` non-empty.
+    Returns the cleaned names, or None when none were supplied for a non-named type.
+    """
+    if attendee_names is None:
+        if attendee_named:
+            raise AppError(
+                code="tickets.attendee_names_required",
+                message="An attendee name is required for each ticket",
+                http_status=422,
+                details={"message_key": "events.ticketPurchase.errors.attendeeNamesRequired"},
+            )
+        return None
+    cleaned = [name.strip() for name in attendee_names]
+    if len(cleaned) != qty or any(not name for name in cleaned):
+        raise AppError(
+            code="tickets.attendee_names_mismatch",
+            message="Provide exactly one non-empty attendee name per ticket",
+            http_status=422,
+            details={
+                "message_key": "events.ticketPurchase.errors.attendeeNamesMismatch",
+                "expected": qty,
+            },
+        )
+    return cleaned
+
+
 def _sql_json(value: dict[str, Any]) -> str:
     payload = json.dumps(value, separators=(",", ":"), sort_keys=True).replace("'", "''")
     return f"'{payload}'::jsonb"
+
+
+def _sql_json_names(names: list[str] | None) -> str:
+    """jsonb literal (or NULL) for order_item_tickets.attendee_names."""
+    if not names:
+        return "NULL"
+    payload = json.dumps(names, separators=(",", ":")).replace("'", "''")
+    return f"'{payload}'::jsonb"
+
+
+def _sql_text_array(names: list[str]) -> str:
+    escaped = ", ".join("'" + name.replace("'", "''") + "'" for name in names)
+    return f"ARRAY[{escaped}]::text[]"
 
 
 def _load_ticket_context(
@@ -106,7 +154,8 @@ SELECT
   ei.capacity::text,
   e.organiser_vendor_id::text,
   e.title,
-  e.status
+  e.status,
+  tt.attendee_named::text
 FROM public.ticket_types tt
 INNER JOIN public.events e ON e.id = tt.event_id
 INNER JOIN public.event_instances ei ON ei.id = {instance_sql}
@@ -124,7 +173,7 @@ WHERE tt.id = {type_sql};
         )
 
     parts = result.rows[0].split("|")
-    if len(parts) != 11:
+    if len(parts) != 12:
         raise RuntimeError("unexpected ticket context row shape")
 
     if parts[6] != parts[1]:
@@ -149,6 +198,7 @@ WHERE tt.id = {type_sql};
             "kind": parts[2],
             "name": parts[3],
             "price_ngwee": int(parts[4]),
+            "attendee_named": parts[11] == "true",
         },
         "instance": {
             "id": parts[5],
@@ -212,6 +262,7 @@ def _insert_checkout_spine(
     commission_snapshot: dict[str, Any],
     checkout_status: str,
     order_status: str,
+    attendee_names: list[str] | None = None,
 ) -> tuple[str, str, str]:
     checkout_group_id = str(uuid.uuid4())
     order_id = str(uuid.uuid4())
@@ -229,6 +280,7 @@ def _insert_checkout_spine(
     qty_sql = sql_int(qty, "qty")
     snapshot_sql = _sql_json(commission_snapshot)
     title_sql = title_snapshot.replace("'", "''")
+    names_sql = _sql_json_names(attendee_names)
 
     script = f"""
 BEGIN;
@@ -249,8 +301,8 @@ INSERT INTO public.order_items (
 ) VALUES (
   {item_sql}, {order_sql}, 'ticket', {qty_sql}, {unit_price_ngwee}, '{title_sql}'
 );
-INSERT INTO public.order_item_tickets (order_item_id, ticket_type_id, instance_id)
-VALUES ({item_sql}, {type_sql}, {instance_sql});
+INSERT INTO public.order_item_tickets (order_item_id, ticket_type_id, instance_id, attendee_names)
+VALUES ({item_sql}, {type_sql}, {instance_sql}, {names_sql});
 COMMIT;
 """
     result = run_sql_script(script)
@@ -276,6 +328,7 @@ def add_ticket_to_checkout(
     instance_id: str,
     ticket_type_id: str,
     qty: int = 1,
+    attendee_names: list[str] | None = None,
 ) -> TicketCheckoutResult:
     """Claim ticket capacity and create a pending checkout order for paid tickets."""
     _validate_uuid(customer_id, "customer_id")
@@ -302,6 +355,11 @@ def add_ticket_to_checkout(
             details={"message_key": "events.ticketPurchase.errors.freeUseRsvp"},
         )
 
+    names = _validate_attendee_names(
+        attendee_names,
+        qty=qty,
+        attendee_named=bool(ticket_type.get("attendee_named")),
+    )
     unit_price = int(ticket_type["price_ngwee"])
     title = str(ticket_type.get("name") or "Ticket")
     provisional_snapshot = _build_ticket_commission_snapshot(
@@ -324,6 +382,7 @@ def add_ticket_to_checkout(
         commission_snapshot=provisional_snapshot,
         checkout_status="pending",
         order_status="placed",
+        attendee_names=names,
     )
 
     claim = claim_ticket_or_raise(
@@ -404,6 +463,56 @@ RETURNING id::text;
         if result.rows:
             linked += 1
     return linked
+
+
+def _load_attendee_names(order_item_id: str) -> list[str] | None:
+    """Read an order item's captured attendee names.
+
+    Single-column query so free-text names never collide with the ``|`` row
+    separator used by the pipe-split issuance queries.
+    """
+    item_sql = sql_uuid(order_item_id, "order_item_id")
+    result = run_sql_script(
+        f"SELECT coalesce(attendee_names::text, '') FROM public.order_item_tickets "
+        f"WHERE order_item_id = {item_sql};"
+    )
+    if not result.ok:
+        raise RuntimeError(f"load attendee names failed: {result.error}")
+    if not result.rows:
+        return None
+    raw = result.rows[0].strip()
+    if not raw:
+        return None
+    parsed = json.loads(raw)
+    if not isinstance(parsed, list) or not parsed:
+        return None
+    return [str(name) for name in parsed]
+
+
+def _assign_holder_names(order_item_id: str, names: list[str]) -> None:
+    """Assign attendee names to an item's tickets by creation order (idempotent)."""
+    if not names:
+        return
+    item_sql = sql_uuid(order_item_id, "order_item_id")
+    array_sql = _sql_text_array(names)
+    script = f"""
+WITH src AS (
+  SELECT name, ord FROM unnest({array_sql}) WITH ORDINALITY AS n(name, ord)
+),
+ordered AS (
+  SELECT id, row_number() OVER (ORDER BY created_at, id) AS rn
+  FROM public.tickets
+  WHERE order_item_id = {item_sql} AND status <> 'void'
+)
+UPDATE public.tickets t
+SET holder_name = src.name
+FROM ordered o
+JOIN src ON src.ord = o.rn
+WHERE t.id = o.id;
+"""
+    result = run_sql_script(script)
+    if not result.ok:
+        raise RuntimeError(f"assign holder names failed: {result.error}")
 
 
 def _insert_issued_tickets(
@@ -532,6 +641,10 @@ WHERE oi.order_id = {order_sql}
         else:
             total_issued += linked
 
+        names = _load_attendee_names(order_item_id)
+        if names:
+            _assign_holder_names(order_item_id, names)
+
     return IssueTicketsResult(
         order_id=order_id,
         issued_count=total_issued,
@@ -587,6 +700,7 @@ def rsvp(
     instance_id: str,
     ticket_type_id: str,
     qty: int = 1,
+    attendee_names: list[str] | None = None,
 ) -> RsvpResult:
     """Free RSVP: claim + issue immediately with 0% commission (no payment)."""
     _validate_uuid(customer_id, "customer_id")
@@ -613,6 +727,11 @@ def rsvp(
             details={"message_key": "events.ticketPurchase.errors.paidUseCheckout"},
         )
 
+    names = _validate_attendee_names(
+        attendee_names,
+        qty=qty,
+        attendee_named=bool(ticket_type.get("attendee_named")),
+    )
     title = str(ticket_type.get("name") or "RSVP")
     unit_price = 1  # schema requires order_items.unit_price_ngwee > 0
 
@@ -645,6 +764,7 @@ def rsvp(
         commission_snapshot=snapshot,
         checkout_status="completed",
         order_status="completed",
+        attendee_names=names,
     )
 
     _link_claimed_tickets(order_item_id, claim.ticket_ids)
@@ -657,6 +777,9 @@ def rsvp(
             holder_user_id=customer_id,
             qty=qty - issued,
         )
+
+    if names:
+        _assign_holder_names(order_item_id, names)
 
     final_ids = claim.ticket_ids
     return RsvpResult(
