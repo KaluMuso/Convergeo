@@ -459,6 +459,32 @@ def test_patch_whatsapp_cleared_with_blank(
     assert fake_client.tables["vendors"].rows[0]["whatsapp_msisdn"] is None
 
 
+def test_patch_sets_and_clears_cover(
+    profile_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    set_response = profile_client.patch(
+        "/vendor/profile",
+        headers=_auth_headers(),
+        json={"cover_url": "https://res.cloudinary.com/demo/cover.png"},
+    )
+    assert set_response.status_code == 200
+    assert set_response.json()["cover_url"] == "https://res.cloudinary.com/demo/cover.png"
+    assert (
+        fake_client.tables["vendors"].rows[0]["cover_url"]
+        == "https://res.cloudinary.com/demo/cover.png"
+    )
+
+    cleared = profile_client.patch(
+        "/vendor/profile",
+        headers=_auth_headers(),
+        json={"cover_url": ""},
+    )
+    assert cleared.status_code == 200
+    assert cleared.json()["cover_url"] is None
+    assert fake_client.tables["vendors"].rows[0]["cover_url"] is None
+
+
 def test_patch_updates_display_and_location(profile_client: TestClient) -> None:
     response = profile_client.patch(
         "/vendor/profile",

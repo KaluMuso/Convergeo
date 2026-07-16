@@ -449,6 +449,22 @@ class TestVendorProfile:
         # Returned as E.164 digits so the storefront can build wa.me/<msisdn>.
         assert response.json()["vendor"]["whatsapp_msisdn"] == "260977123456"
 
+    def test_profile_exposes_cover_image(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        assert store.vendors[0].get("cover_url") is None
+        # Default: no cover set → null (storefront falls back to the gradient).
+        default = client.get("/directory/tech-hub-lusaka")
+        assert default.json()["vendor"]["cover_url"] is None
+
+        store.vendors[0]["cover_url"] = "https://res.cloudinary.com/demo/cover.png"
+        response = client.get("/directory/tech-hub-lusaka")
+        assert response.status_code == 200
+        assert (
+            response.json()["vendor"]["cover_url"] == "https://res.cloudinary.com/demo/cover.png"
+        )
+
     def test_profile_returns_all_branch_locations(
         self, client: TestClient, store: FakeSupabaseStore
     ) -> None:

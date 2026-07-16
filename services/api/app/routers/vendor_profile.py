@@ -46,6 +46,7 @@ class ProfilePatchRequest(StrictModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=5000)
     logo_url: str | None = Field(default=None, max_length=2000)
+    cover_url: str | None = Field(default=None, max_length=2000)
     slug: str | None = Field(default=None, min_length=2, max_length=80)
     whatsapp_msisdn: str | None = Field(default=None, max_length=32)
     hours: dict[str, Any] | None = None
@@ -76,6 +77,7 @@ class VendorProfileResponse(StrictModel):
     display_name: str
     description: str | None
     logo_url: str | None
+    cover_url: str | None
     whatsapp_msisdn: str | None
     preferred_badge: bool
     kyc_tier: int | None
@@ -259,7 +261,7 @@ def _load_vendor_for_owner(
     response = (
         service_client.client.table("vendors")
         .select(
-            "id, owner_user_id, slug, display_name, description, logo_url, "
+            "id, owner_user_id, slug, display_name, description, logo_url, cover_url, "
             "whatsapp_msisdn, status, kyc_tier, preferred_badge, caps_snapshot"
         )
         .eq("owner_user_id", owner_user_id)
@@ -334,6 +336,7 @@ def _serialize_profile(
             else None
         ),
         logo_url=str(vendor["logo_url"]) if isinstance(vendor.get("logo_url"), str) else None,
+        cover_url=str(vendor["cover_url"]) if isinstance(vendor.get("cover_url"), str) else None,
         whatsapp_msisdn=(
             str(vendor["whatsapp_msisdn"])
             if isinstance(vendor.get("whatsapp_msisdn"), str)
@@ -491,6 +494,8 @@ async def patch_vendor_profile(
         vendor_updates["description"] = body.description.strip() or None
     if body.logo_url is not None:
         vendor_updates["logo_url"] = body.logo_url.strip() or None
+    if body.cover_url is not None:
+        vendor_updates["cover_url"] = body.cover_url.strip() or None
     if body.whatsapp_msisdn is not None:
         stripped = body.whatsapp_msisdn.strip()
         if not stripped:

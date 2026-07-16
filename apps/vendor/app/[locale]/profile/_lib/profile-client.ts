@@ -14,6 +14,7 @@ export type VendorProfile = {
   display_name: string;
   description: string | null;
   logo_url: string | null;
+  cover_url: string | null;
   whatsapp_msisdn: string | null;
   preferred_badge: boolean;
   kyc_tier: number | null;
@@ -32,6 +33,7 @@ export type ProfilePatchPayload = {
   display_name?: string;
   description?: string;
   logo_url?: string;
+  cover_url?: string;
   slug?: string;
   whatsapp_msisdn?: string;
   hours?: Record<string, { open?: string; close?: string; closed?: boolean }>;

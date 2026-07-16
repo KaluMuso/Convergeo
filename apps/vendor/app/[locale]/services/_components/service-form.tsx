@@ -32,7 +32,8 @@ export function ServiceForm({ locale, mode, serviceId, initialService }: Service
   const [category, setCategory] = useState<ServiceVertical>(
     initialService?.category ?? "home-services",
   );
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(initialService?.description ?? "");
+  const [includes, setIncludes] = useState((initialService?.includes ?? []).join("\n"));
   const [serviceArea, setServiceArea] = useState(initialService?.service_area ?? "");
   const [fromPrice, setFromPrice] = useState(
     initialService?.from_price_ngwee ? String(initialService.from_price_ngwee / 100) : "",
@@ -60,6 +61,10 @@ export function ServiceForm({ locale, mode, serviceId, initialService }: Service
       from_price_ngwee: fromPriceNgwee,
       status: nextStatus ?? status,
       portfolio_images: initialService?.portfolio_images ?? [],
+      includes: includes
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0),
     };
 
     try {
@@ -138,6 +143,17 @@ export function ServiceForm({ locale, mode, serviceId, initialService }: Service
           className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
         />
       </FormField>
+
+      <FormField id="includes" label={ts("vendor.form.includesLabel")}>
+        <textarea
+          id="includes"
+          value={includes}
+          onChange={(event) => setIncludes(event.target.value)}
+          rows={4}
+          className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
+        />
+      </FormField>
+      <p className="-mt-2 text-xs text-text-3">{ts("vendor.form.includesHint")}</p>
 
       <FormField id="service-area" label={ts("vendor.form.areaLabel")}>
         <Input
