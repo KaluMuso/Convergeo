@@ -6,6 +6,7 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+from app.errors import AppError
 from app.main import create_app
 from app.routers.events_public import (
     LUSAKA_TZ,
@@ -17,6 +18,7 @@ from app.routers.events_public import (
     tonight_window,
     weekend_window,
 )
+from app.services.events.access import hash_access_code
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -55,6 +57,9 @@ def _event_row(
     slug: str,
     title: str,
     status: str = "published",
+    visibility: str = "public",
+    event_type: str = "standard",
+    access_code_hash: str | None = None,
 ) -> dict[str, Any]:
     return {
         "id": event_id,
@@ -66,6 +71,10 @@ def _event_row(
         "lng": 28.2833,
         "images": ["events/sample"],
         "status": status,
+        "visibility": visibility,
+        "event_type": event_type,
+        "access_code_hash": access_code_hash,
+        "age_restriction": None,
         "organiser_vendor_id": VENDOR_A,
         "vendors": _vendor_row(),
     }
@@ -523,3 +532,87 @@ def test_get_event_not_found(client: TestClient) -> None:
     response = client.get("/events/missing-event")
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "event.not_found"
+
+
+# --- Wave A / M10-P10: visibility gating + private-event access code ---------
+
+
+def _add_event(
+    store: FakeSupabaseStore,
+    *,
+    event_id: str,
+    slug: str,
+    visibility: str = "public",
+    event_type: str = "standard",
+    access_code_hash: str | None = None,
+) -> None:
+    store.events.append(
+        _event_row(
+            event_id=event_id,
+            slug=slug,
+            title=slug.replace("-", " ").title(),
+            visibility=visibility,
+            event_type=event_type,
+            access_code_hash=access_code_hash,
+        )
+    )
+    store.event_instances.append(
+        {
+            "id": f"i-{event_id}",
+            "event_id": event_id,
+            "starts_at": "2026-07-11T20:00:00+02:00",
+            "capacity": 50,
+        }
+    )
+
+
+def test_browse_excludes_unlisted_and_private(store: FakeSupabaseStore) -> None:
+    _add_event(store, event_id="e-unlisted", slug="secret-unlisted", visibility="unlisted")
+    _add_event(store, event_id="e-private", slug="secret-private", visibility="private")
+    slugs = {item.slug for item in build_browse_response(store, ref=REF_THURSDAY).items}
+    assert "secret-unlisted" not in slugs
+    assert "secret-private" not in slugs
+
+
+def test_detail_reachable_for_unlisted_by_slug(store: FakeSupabaseStore) -> None:
+    _add_event(store, event_id="e-unlisted", slug="secret-unlisted", visibility="unlisted")
+    detail = build_detail_response(store, "secret-unlisted")
+    assert detail.slug == "secret-unlisted"
+
+
+def test_detail_private_requires_matching_access_code(store: FakeSupabaseStore) -> None:
+    _add_event(
+        store,
+        event_id="e-private",
+        slug="secret-private",
+        visibility="private",
+        access_code_hash=hash_access_code("let-me-in"),
+    )
+    # No code → 404 (must not leak that the event exists).
+    with pytest.raises(AppError) as no_code:
+        build_detail_response(store, "secret-private")
+    assert no_code.value.http_status == 404
+    assert no_code.value.code == "event.not_found"
+    # Wrong code → 404.
+    with pytest.raises(AppError):
+        build_detail_response(store, "secret-private", access_code="wrong")
+    # Correct code → served.
+    detail = build_detail_response(store, "secret-private", access_code="let-me-in")
+    assert detail.slug == "secret-private"
+
+
+def test_detail_private_without_code_set_is_unreachable(store: FakeSupabaseStore) -> None:
+    _add_event(store, event_id="e-private2", slug="private-no-code", visibility="private")
+    with pytest.raises(AppError):
+        build_detail_response(store, "private-no-code", access_code="anything")
+
+
+def test_detail_and_browse_surface_event_type(store: FakeSupabaseStore) -> None:
+    _add_event(store, event_id="e-series", slug="weekly-series", event_type="recurring")
+    detail = build_detail_response(store, "weekly-series")
+    assert detail.event_type == "recurring"
+    series = next(
+        item for item in build_browse_response(store, ref=REF_THURSDAY).items
+        if item.slug == "weekly-series"
+    )
+    assert series.event_type == "recurring"

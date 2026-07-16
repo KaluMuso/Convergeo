@@ -6,7 +6,9 @@ from zoneinfo import ZoneInfo
 
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.events.access import verify_access_code
 from app.services.events.timing import instance_display_end
+from app.services.events.type_policy import normalize_event_type
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
@@ -81,6 +83,7 @@ class EventBrowseItem(BaseModel):
     venue: str | None = None
     images: list[str] = Field(default_factory=list)
     category: str | None = None
+    event_type: str = "standard"
     next_starts_at: datetime | None = None
     min_price_ngwee: int | None = None
     is_free: bool = False
@@ -108,6 +111,8 @@ class EventDetailResponse(BaseModel):
     landmark: str | None = None
     images: list[str] = Field(default_factory=list)
     category: str | None = None
+    event_type: str = "standard"
+    age_restriction: int | None = None
     instances: list[EventInstanceResponse] = Field(default_factory=list)
     ticket_types: list[TicketTypeResponse] = Field(default_factory=list)
     min_price_ngwee: int | None = None
@@ -387,13 +392,16 @@ def _fetch_published_events(client: Any) -> list[dict[str, Any]]:
         client.table("events")
         .select(
             "id, slug, title, description, venue, lat, lng, images, status, "
-            "category_slug, landmark, "
+            "category_slug, landmark, event_type, "
             "organiser_vendor_id, vendors!events_organiser_vendor_id_fkey("
             "id, slug, display_name, preferred_badge, logo_url, description, "
             "vendor_locations(landmark)"
             ")"
         )
         .eq("status", "published")
+        # Browse shows only public events; unlisted/private are excluded here and
+        # reachable only by direct slug (detail endpoint, access-gated).
+        .eq("visibility", "public")
         .execute()
     )
     rows = response.data or []
@@ -405,7 +413,8 @@ def _fetch_event_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
         client.table("events")
         .select(
             "id, slug, title, description, venue, lat, lng, images, status, "
-            "category_slug, landmark, "
+            "category_slug, landmark, event_type, visibility, access_code_hash, "
+            "age_restriction, "
             "organiser_vendor_id, vendors!events_organiser_vendor_id_fkey("
             "id, slug, display_name, preferred_badge, logo_url, description, "
             "vendor_locations(landmark)"
@@ -413,6 +422,8 @@ def _fetch_event_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
         )
         .eq("slug", slug)
         .eq("status", "published")
+        # No visibility filter: unlisted (direct-link) and private (access-gated)
+        # events are found here; access enforcement happens in build_detail_response.
         .maybe_single()
         .execute()
     )
@@ -535,6 +546,7 @@ def build_browse_response(
                 venue=event.get("venue") if isinstance(event.get("venue"), str) else None,
                 images=_parse_images(event.get("images")),
                 category=event_category,
+                event_type=normalize_event_type(event.get("event_type")),
                 next_starts_at=next_starts_at,
                 min_price_ngwee=_min_price_ngwee(event_ticket_types),
                 is_free=_event_is_free(event_ticket_types),
@@ -559,10 +571,22 @@ def build_browse_response(
     return EventBrowseResponse(items=items, total=len(items), calendar_dates=calendar_dates)
 
 
-def build_detail_response(client: Any, slug: str) -> EventDetailResponse:
+def build_detail_response(
+    client: Any, slug: str, *, access_code: str | None = None
+) -> EventDetailResponse:
     event = _fetch_event_by_slug(client, slug)
     if event is None:
         raise AppError("event.not_found", "Event not found", 404)
+
+    # Private events require a matching access code; without it we 404 rather
+    # than reveal the event exists (a private event with no code set is likewise
+    # unreachable, since verify_access_code returns False for a NULL hash).
+    if str(event.get("visibility") or "public") == "private":
+        stored_hash = event.get("access_code_hash")
+        if not verify_access_code(
+            access_code, stored_hash if isinstance(stored_hash, str) else None
+        ):
+            raise AppError("event.not_found", "Event not found", 404)
 
     event_id = str(event["id"])
     instances = order_instances(_fetch_instances(client, [event_id]))
@@ -596,6 +620,7 @@ def build_detail_response(client: Any, slug: str) -> EventDetailResponse:
     ]
 
     now = datetime.now(ZoneInfo("UTC"))
+    age_restriction = event.get("age_restriction")
     return EventDetailResponse(
         id=event_id,
         slug=str(event.get("slug") or ""),
@@ -607,6 +632,8 @@ def build_detail_response(client: Any, slug: str) -> EventDetailResponse:
         landmark=landmark,
         images=_parse_images(event.get("images")),
         category=category,
+        event_type=normalize_event_type(event.get("event_type")),
+        age_restriction=int(age_restriction) if age_restriction is not None else None,
         instances=instance_responses,
         ticket_types=ticket_type_responses,
         min_price_ngwee=_min_price_ngwee(ticket_types),
@@ -640,5 +667,6 @@ def list_events(
 def get_event(
     slug: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
+    access_code: Annotated[str | None, Query()] = None,
 ) -> EventDetailResponse:
-    return build_detail_response(supabase.client, slug)
+    return build_detail_response(supabase.client, slug, access_code=access_code)
