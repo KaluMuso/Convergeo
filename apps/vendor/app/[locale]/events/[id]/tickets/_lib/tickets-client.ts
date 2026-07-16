@@ -23,6 +23,18 @@ export type TicketTypeCreatePayload = {
 
 export type TicketTypeUpdatePayload = Partial<TicketTypeCreatePayload>;
 
+export type AllocationRow = {
+  instance_id: string;
+  starts_at: string;
+  allocation: number | null;
+  sold: number;
+};
+
+export type AllocationInput = {
+  instance_id: string;
+  allocation: number;
+};
+
 function getApiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 }
@@ -59,6 +71,20 @@ export function createTicketsClient(getToken: () => string | null | Promise<stri
       return client.request<void>(`/organiser/ticket-types/${ticketTypeId}`, {
         method: "DELETE",
       });
+    },
+
+    getAllocations(ticketTypeId: string): Promise<AllocationRow[]> {
+      return client.request<AllocationRow[]>(`/organiser/ticket-types/${ticketTypeId}/allocations`);
+    },
+
+    setAllocations(ticketTypeId: string, allocations: AllocationInput[]): Promise<AllocationRow[]> {
+      return client.request<AllocationRow[]>(
+        `/organiser/ticket-types/${ticketTypeId}/allocations`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ allocations }),
+        },
+      );
     },
   };
 }

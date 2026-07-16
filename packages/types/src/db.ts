@@ -2332,6 +2332,45 @@ export type Database = {
           },
         ]
       }
+      ticket_type_instances: {
+        Row: {
+          allocation: number
+          created_at: string
+          instance_id: string
+          ticket_type_id: string
+          updated_at: string
+        }
+        Insert: {
+          allocation: number
+          created_at?: string
+          instance_id: string
+          ticket_type_id: string
+          updated_at?: string
+        }
+        Update: {
+          allocation?: number
+          created_at?: string
+          instance_id?: string
+          ticket_type_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_type_instances_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "event_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_type_instances_ticket_type_id_fkey"
+            columns: ["ticket_type_id"]
+            isOneToOne: false
+            referencedRelation: "ticket_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_types: {
         Row: {
           attendee_named: boolean
