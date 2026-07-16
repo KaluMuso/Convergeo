@@ -274,6 +274,65 @@ class TestProductDetailStates:
         assert listing["stock_mode"] == "always_available"
 
 
+SIBLING_A_ID = "p00000200-0000-4000-8000-000000000001"
+SIBLING_B_ID = "p00000200-0000-4000-8000-000000000002"
+SIBLING_NO_LISTING_ID = "p00000200-0000-4000-8000-000000000003"
+SIBLING_A_LISTING = "44444444-4444-4444-4444-444444444444"
+SIBLING_B_LISTING = "55555555-5555-5555-5555-555555555555"
+
+
+class TestRelatedProducts:
+    def test_related_same_category_excludes_self_and_unshoppable(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        store.products = [
+            _product_row(),  # itel-a70 (the product being viewed)
+            _product_row(slug="tecno-spark", product_id=SIBLING_A_ID),
+            _product_row(slug="samsung-a05", product_id=SIBLING_B_ID),
+            _product_row(slug="ghost-phone", product_id=SIBLING_NO_LISTING_ID),
+        ]
+        store.vendor_listings = [
+            _listing_row(
+                listing_id=SIBLING_B_LISTING, product_id=SIBLING_B_ID, price_ngwee=500_000
+            ),
+            _listing_row(
+                listing_id=SIBLING_A_LISTING, product_id=SIBLING_A_ID, price_ngwee=300_000
+            ),
+        ]
+        store.listing_images = [
+            {
+                "listing_id": SIBLING_A_LISTING,
+                "cloudinary_public_id": "listings/spark",
+                "position": 1,
+            }
+        ]
+
+        response = client.get("/products/itel-a70/related")
+        assert response.status_code == 200
+        payload = response.json()
+        slugs = [item["slug"] for item in payload["items"]]
+        # Excludes the viewed product and the one with no active listing;
+        # ordered cheapest-first (300k before 500k).
+        assert slugs == ["tecno-spark", "samsung-a05"]
+        assert payload["items"][0]["from_price_ngwee"] == 300_000
+        assert payload["items"][0]["image_public_id"] == "listings/spark"
+        assert payload["items"][1]["image_public_id"] is None
+
+    def test_related_unknown_slug_returns_404(self, client: TestClient) -> None:
+        response = client.get("/products/does-not-exist/related")
+        assert response.status_code == 404
+
+    def test_related_empty_when_only_self_in_category(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        store.products = [_product_row()]
+        store.vendor_listings = [_listing_row(listing_id=LISTING_IN_STOCK)]
+
+        response = client.get("/products/itel-a70/related")
+        assert response.status_code == 200
+        assert response.json()["items"] == []
+
+
 class TestProductErrors:
     def test_unknown_slug_returns_404(self, client: TestClient) -> None:
         response = client.get("/products/does-not-exist")

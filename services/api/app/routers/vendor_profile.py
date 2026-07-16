@@ -47,6 +47,7 @@ class ProfilePatchRequest(StrictModel):
     description: str | None = Field(default=None, max_length=5000)
     logo_url: str | None = Field(default=None, max_length=2000)
     slug: str | None = Field(default=None, min_length=2, max_length=80)
+    whatsapp_msisdn: str | None = Field(default=None, max_length=32)
     hours: dict[str, Any] | None = None
     location: VendorLocationInput | None = None
 
@@ -75,6 +76,7 @@ class VendorProfileResponse(StrictModel):
     display_name: str
     description: str | None
     logo_url: str | None
+    whatsapp_msisdn: str | None
     preferred_badge: bool
     kyc_tier: int | None
     status: str
@@ -101,6 +103,26 @@ def _parse_caps_snapshot(raw: Any) -> dict[str, Any]:
     if isinstance(raw, dict):
         return dict(raw)
     return {}
+
+
+def normalize_whatsapp_msisdn(value: str) -> str | None:
+    """Normalise a Zambian mobile number to E.164 digits (``260`` + 9), or None if invalid.
+
+    Accepts local (``0977123456``), national (``977123456``), and international
+    (``+260 977 123 456`` / ``260977123456``) inputs. Zambian mobile subscriber
+    numbers start with 7 or 9 (07x / 09x); anything else is rejected so the wa.me
+    deep link the storefront builds is always dialable.
+    """
+    digits = "".join(ch for ch in value if ch.isdigit())
+    if digits.startswith("260"):
+        national = digits[3:]
+    elif digits.startswith("0"):
+        national = digits[1:]
+    else:
+        national = digits
+    if len(national) != 9 or national[0] not in {"7", "9"}:
+        return None
+    return f"260{national}"
 
 
 def _is_description_complete(description: str | None) -> bool:
@@ -238,7 +260,7 @@ def _load_vendor_for_owner(
         service_client.client.table("vendors")
         .select(
             "id, owner_user_id, slug, display_name, description, logo_url, "
-            "status, kyc_tier, preferred_badge, caps_snapshot"
+            "whatsapp_msisdn, status, kyc_tier, preferred_badge, caps_snapshot"
         )
         .eq("owner_user_id", owner_user_id)
         .maybe_single()
@@ -312,6 +334,11 @@ def _serialize_profile(
             else None
         ),
         logo_url=str(vendor["logo_url"]) if isinstance(vendor.get("logo_url"), str) else None,
+        whatsapp_msisdn=(
+            str(vendor["whatsapp_msisdn"])
+            if isinstance(vendor.get("whatsapp_msisdn"), str)
+            else None
+        ),
         preferred_badge=bool(vendor.get("preferred_badge")),
         kyc_tier=vendor.get("kyc_tier") if isinstance(vendor.get("kyc_tier"), int) else None,
         status=str(vendor.get("status", "draft")),
@@ -464,6 +491,20 @@ async def patch_vendor_profile(
         vendor_updates["description"] = body.description.strip() or None
     if body.logo_url is not None:
         vendor_updates["logo_url"] = body.logo_url.strip() or None
+    if body.whatsapp_msisdn is not None:
+        stripped = body.whatsapp_msisdn.strip()
+        if not stripped:
+            vendor_updates["whatsapp_msisdn"] = None
+        else:
+            normalized = normalize_whatsapp_msisdn(stripped)
+            if normalized is None:
+                raise AppError(
+                    code="validation_error",
+                    message="whatsapp_msisdn is not a valid Zambian mobile number",
+                    http_status=400,
+                    details={"message_key": "vendor.profile.errors.whatsapp_invalid"},
+                )
+            vendor_updates["whatsapp_msisdn"] = normalized
 
     if vendor_updates:
         response = (

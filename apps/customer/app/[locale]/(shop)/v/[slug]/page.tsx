@@ -33,6 +33,7 @@ type VendorProfileApiResponse = {
     display_name: string;
     description: string | null;
     logo_url: string | null;
+    whatsapp_msisdn: string | null;
     preferred_badge: boolean;
     kyc_tier: number | null;
     verified: boolean;
@@ -361,6 +362,16 @@ export default async function VendorProfilePage({ params }: PageProps) {
                 <span className="text-sm text-text-3">{vendor.location.landmark}</span>
               ) : null}
             </div>
+            {vendor.whatsapp_msisdn ? (
+              <a
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded bg-success px-4 text-sm font-medium text-surface no-underline"
+                href={`https://wa.me/${vendor.whatsapp_msisdn}`}
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                {t("profile.whatsappCta")}
+              </a>
+            ) : null}
           </div>
         </div>
         <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-border px-4 py-3">

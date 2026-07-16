@@ -90,6 +90,7 @@ class VendorProfileDetail(BaseModel):
     display_name: str
     description: str | None = None
     logo_url: str | None = None
+    whatsapp_msisdn: str | None = None
     preferred_badge: bool = False
     kyc_tier: int | None = None
     verified: bool = False
@@ -630,7 +631,7 @@ def get_vendor_profile(
     vendor_response = (
         client.table("vendors")
         .select(
-            "id, slug, display_name, description, logo_url, status, "
+            "id, slug, display_name, description, logo_url, whatsapp_msisdn, status, "
             "kyc_tier, preferred_badge, created_at, "
             "vendor_locations(landmark, lat, lng, hours)"
         )
@@ -731,6 +732,7 @@ def get_vendor_profile(
             display_name=str(row["display_name"]),
             description=row.get("description"),
             logo_url=row.get("logo_url"),
+            whatsapp_msisdn=row.get("whatsapp_msisdn"),
             preferred_badge=preferred_badge,
             kyc_tier=parsed_tier,
             verified=_is_verified(parsed_tier, preferred_badge),

@@ -64,7 +64,8 @@
     "tabProducts": "Products",
     "tabServices": "Services",
     "tabEvents": "Events",
-    "serviceFrom": "From {price}"
+    "serviceFrom": "From {price}",
+    "whatsappCta": "Chat on WhatsApp"
   },
   "listings": {
     "vendor": "Sold by {vendor}",

@@ -520,6 +520,7 @@
     "loading": "Loading profile…",
     "sections": {
       "basics": "Business details",
+      "contact": "Contact",
       "logo": "Logo",
       "location": "Location"
     },
@@ -528,6 +529,9 @@
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "Tell buyers what you sell and why they should choose you…",
       "descriptionHelp": "Aim for at least 50 characters — it helps buyers trust your shop.",
+      "whatsappLabel": "WhatsApp number",
+      "whatsappPlaceholder": "e.g. 0977 123456",
+      "whatsappHelp": "Optional. Buyers can message you directly — shown as a “Chat on WhatsApp” button on your storefront.",
       "slugLabel": "Shop URL",
       "slugPlaceholder": "lusaka-electronics",
       "landmarkLabel": "Landmark",
@@ -600,7 +604,8 @@
       "hours_invalid": "Check your opening and closing times.",
       "hours_invalid_day": "One of the day names is invalid.",
       "hours_all_closed": "Mark at least one day as open.",
-      "location_required": "Add your location before setting hours."
+      "location_required": "Add your location before setting hours.",
+      "whatsapp_invalid": "Enter a valid Zambian mobile number (e.g. 0977 123456)."
     }
   },
   "orders": {

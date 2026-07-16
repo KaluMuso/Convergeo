@@ -75,6 +75,21 @@ class ProductDetailResponse(BaseModel):
     listing_count: int = 0
 
 
+class RelatedProductItem(BaseModel):
+    slug: str
+    name: str
+    image_public_id: str | None = None
+    from_price_ngwee: int | None = None
+
+
+class RelatedProductsResponse(BaseModel):
+    product_slug: str
+    items: list[RelatedProductItem] = Field(default_factory=list)
+
+
+RELATED_LIMIT = 8
+
+
 def _parse_spec(value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
         return value
@@ -413,6 +428,108 @@ def build_product_detail(
     )
 
 
+def build_related_products(
+    client: Any,
+    slug: str,
+    *,
+    limit: int = RELATED_LIMIT,
+) -> RelatedProductsResponse:
+    """Other active, shoppable products in the same category as ``slug``.
+
+    "Related" = same canonical category, excluding this product, and only
+    products that carry at least one active listing from an active vendor (so
+    every card links to something buyable). Ordered by lowest available price.
+
+    Scale note: at launch catalog size this scans the category's active products
+    in one pass, which is fine; a category with thousands of products would want
+    a bounded/precomputed feed instead.
+    """
+    product = _fetch_product_by_slug(client, slug)
+    if product is None or str(product.get("status") or "") != "active":
+        raise AppError("product.not_found", "Product not found", 404)
+
+    product_id = str(product["id"])
+    category_id = product.get("category_id")
+    if not category_id:
+        return RelatedProductsResponse(product_slug=slug, items=[])
+
+    siblings_response = (
+        client.table("products")
+        .select("id, name, slug, status")
+        .eq("category_id", category_id)
+        .eq("status", "active")
+        .execute()
+    )
+    sibling_rows = [
+        row
+        for row in (siblings_response.data or [])
+        if row.get("id") and str(row["id"]) != product_id
+    ]
+    if not sibling_rows:
+        return RelatedProductsResponse(product_slug=slug, items=[])
+
+    sibling_ids = [str(row["id"]) for row in sibling_rows]
+    sibling_by_id = {str(row["id"]): row for row in sibling_rows}
+
+    listings_response = (
+        client.table("vendor_listings")
+        .select("id, product_id, price_ngwee, status, vendors!inner(status)")
+        .in_("product_id", sibling_ids)
+        .eq("status", "active")
+        .eq("vendors.status", "active")
+        .order("price_ngwee")
+        .execute()
+    )
+
+    # Cheapest active listing per sibling product (rows arrive price-ascending, so
+    # the first row seen for a product wins).
+    cheapest_by_product: dict[str, dict[str, Any]] = {}
+    for listing_row in listings_response.data or []:
+        pid = str(listing_row.get("product_id") or "")
+        if pid and pid in sibling_by_id and pid not in cheapest_by_product:
+            cheapest_by_product[pid] = listing_row
+
+    if not cheapest_by_product:
+        return RelatedProductsResponse(product_slug=slug, items=[])
+
+    listing_ids = [str(row["id"]) for row in cheapest_by_product.values() if row.get("id")]
+    image_by_listing: dict[str, str] = {}
+    if listing_ids:
+        images_response = (
+            client.table("listing_images")
+            .select("listing_id, cloudinary_public_id, position")
+            .in_("listing_id", listing_ids)
+            .order("position")
+            .execute()
+        )
+        for image_row in images_response.data or []:
+            listing_id = str(image_row.get("listing_id") or "")
+            public_id = image_row.get("cloudinary_public_id")
+            if (
+                listing_id
+                and listing_id not in image_by_listing
+                and isinstance(public_id, str)
+                and public_id
+            ):
+                image_by_listing[listing_id] = public_id
+
+    items: list[RelatedProductItem] = []
+    for pid, listing_row in cheapest_by_product.items():
+        sibling = sibling_by_id[pid]
+        listing_id = str(listing_row.get("id") or "")
+        items.append(
+            RelatedProductItem(
+                slug=str(sibling.get("slug") or ""),
+                name=str(sibling.get("name") or ""),
+                image_public_id=image_by_listing.get(listing_id),
+                from_price_ngwee=int(listing_row.get("price_ngwee") or 0),
+            )
+        )
+
+    items.sort(key=lambda item: (item.from_price_ngwee or 0, item.name))
+    return RelatedProductsResponse(product_slug=slug, items=items[:limit])
+
+
 @router.get("/{slug}", response_model=ProductDetailResponse)
 async def get_product(
     slug: str,
@@ -425,3 +542,11 @@ async def get_product(
     if isinstance(result, RedirectResponse):
         return result
     return result
+
+
+@router.get("/{slug}/related", response_model=RelatedProductsResponse)
+async def get_related_products(
+    slug: str,
+    supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
+) -> RelatedProductsResponse:
+    return build_related_products(supabase.client, slug)
