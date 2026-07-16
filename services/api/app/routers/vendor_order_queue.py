@@ -59,6 +59,9 @@ class VendorDashboardResponse(StrictModel):
     takings_date: str
     needs_action: list[OrderQueueItem]
     queue_counts: dict[str, int]
+    # Persisted onboarding archetype (migration 0037); drives the home dashboard's
+    # tailored primary action. None for legacy vendors with no archetype on file.
+    archetype: str | None = None
 
 
 def _rows(response: Any) -> list[dict[str, Any]]:
@@ -265,6 +268,8 @@ def _filter_orders(
 def _build_dashboard(
     service_client: _ServiceRoleClient,
     vendor_id: str,
+    *,
+    archetype: str | None = None,
 ) -> VendorDashboardResponse:
     now = datetime.now(tz=UTC)
     day_start, day_end = lusaka_day_bounds(now=now)
@@ -305,6 +310,7 @@ def _build_dashboard(
         takings_date=lusaka_today,
         needs_action=needs_action[:10],
         queue_counts=_queue_counts(queue_items),
+        archetype=archetype,
     )
 
 
@@ -314,7 +320,12 @@ def get_vendor_dashboard(
     service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
 ) -> VendorDashboardResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
-    return _build_dashboard(service_client, str(vendor["id"]))
+    archetype = vendor.get("archetype")
+    return _build_dashboard(
+        service_client,
+        str(vendor["id"]),
+        archetype=str(archetype) if isinstance(archetype, str) and archetype else None,
+    )
 
 
 @router.get("/queue", response_model=list[OrderQueueItem])

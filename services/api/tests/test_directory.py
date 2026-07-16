@@ -7,7 +7,9 @@ from unittest.mock import patch
 import pytest
 from app.main import create_app
 from app.routers import directory as directory_module
+from app.services.business.access import BusinessAccess, get_business_access
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.testclient import TestClient
 
 ACTIVE_VENDOR_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
@@ -82,6 +84,7 @@ def _listing_row(
     vendor_id: str,
     product: dict[str, Any],
     price_ngwee: int = 450_000,
+    wholesale: bool = False,
 ) -> dict[str, Any]:
     return {
         "id": listing_id,
@@ -92,6 +95,7 @@ def _listing_row(
         "stock_mode": "tracked",
         "stock_qty": 5,
         "status": "active",
+        "wholesale": wholesale,
         "products": product,
     }
 
@@ -494,6 +498,93 @@ class TestVendorProfile:
         assert payload["services"][0]["image_public_id"] == "services/clean-1"
         assert [e["slug"] for e in payload["events"]] == ["summer-fest"]
         assert payload["events"][0]["image_public_id"] == "events/fest-1"
+
+
+class TestVendorProfileWholesaleGating:
+    """Wholesale-only listings are hidden from a vendor's public storefront profile
+    unless the caller is a verified business buyer (audit gating fix)."""
+
+    def _seed(self, store: FakeSupabaseStore) -> None:
+        store.vendors = [_vendor_row()]
+        store.vendor_listings = [
+            _listing_row(
+                listing_id=LISTING_A,
+                vendor_id=ACTIVE_VENDOR_ID,
+                product=_product_row(
+                    product_id=PRODUCT_A,
+                    slug="itel-a70",
+                    name="Itel A70 Smartphone",
+                    category_id=CATEGORY_ELECTRONICS,
+                    path="electronics/phones",
+                ),
+            ),
+            _listing_row(
+                listing_id=LISTING_B,
+                vendor_id=ACTIVE_VENDOR_ID,
+                product=_product_row(
+                    product_id=PRODUCT_B,
+                    slug="bulk-chargers",
+                    name="Bulk Chargers Carton",
+                    category_id=CATEGORY_ELECTRONICS,
+                    path="electronics/accessories",
+                ),
+                price_ngwee=1_200_000,
+                wholesale=True,
+            ),
+        ]
+
+    def test_build_hides_wholesale_by_default(self, store: FakeSupabaseStore) -> None:
+        self._seed(store)
+        result = directory_module.get_vendor_profile(store, "tech-hub-lusaka")
+        assert not isinstance(result, RedirectResponse)
+        assert {listing.product_slug for listing in result.listings} == {"itel-a70"}
+
+    def test_build_includes_wholesale_when_eligible(
+        self, store: FakeSupabaseStore
+    ) -> None:
+        self._seed(store)
+        result = directory_module.get_vendor_profile(
+            store, "tech-hub-lusaka", include_wholesale=True
+        )
+        assert not isinstance(result, RedirectResponse)
+        assert {listing.product_slug for listing in result.listings} == {
+            "itel-a70",
+            "bulk-chargers",
+        }
+
+    def test_endpoint_guest_hides_wholesale(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        self._seed(store)
+        response = client.get("/directory/tech-hub-lusaka")
+        assert response.status_code == 200
+        slugs = {listing["product_slug"] for listing in response.json()["listings"]}
+        assert slugs == {"itel-a70"}
+
+    def test_endpoint_verified_business_sees_wholesale(
+        self, store: FakeSupabaseStore
+    ) -> None:
+        self._seed(store)
+        app: FastAPI = create_app()
+        app.dependency_overrides[get_business_access] = lambda: BusinessAccess(
+            user_id="11111111-1111-1111-1111-111111111111",
+            status="verified",
+            eligible=True,
+        )
+
+        class FakeServiceClient:
+            def __init__(self) -> None:
+                self.client = store
+
+        with patch(
+            "app.deps.get_supabase_service_client", return_value=FakeServiceClient()
+        ):
+            with TestClient(app, raise_server_exceptions=False) as test_client:
+                response = test_client.get("/directory/tech-hub-lusaka")
+        app.dependency_overrides.clear()
+        assert response.status_code == 200
+        slugs = {listing["product_slug"] for listing in response.json()["listings"]}
+        assert slugs == {"itel-a70", "bulk-chargers"}
 
 
 class TestDirectoryHelpers:

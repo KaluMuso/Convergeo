@@ -6,6 +6,7 @@ from typing import Annotated, Any, Literal, Protocol, cast
 
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.business.access import BusinessAccess, get_business_access
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
@@ -620,7 +621,12 @@ def _fetch_vendor_events(client: Any, vendor_id: str) -> list[VendorEventItem]:
     return items
 
 
-def get_vendor_profile(client: Any, slug: str) -> VendorProfileResponse | RedirectResponse:
+def get_vendor_profile(
+    client: Any,
+    slug: str,
+    *,
+    include_wholesale: bool = False,
+) -> VendorProfileResponse | RedirectResponse:
     vendor_response = (
         client.table("vendors")
         .select(
@@ -656,7 +662,8 @@ def get_vendor_profile(client: Any, slug: str) -> VendorProfileResponse | Redire
     listings_response = (
         client.table("vendor_listings")
         .select(
-            "id, title_override, price_ngwee, condition, stock_mode, stock_qty, status, "
+            "id, title_override, price_ngwee, condition, stock_mode, stock_qty, "
+            "status, wholesale, "
             "products(name, slug, status)"
         )
         .eq("vendor_id", vendor_id)
@@ -665,6 +672,10 @@ def get_vendor_profile(client: Any, slug: str) -> VendorProfileResponse | Redire
         .execute()
     )
     listing_rows = listings_response.data or []
+    if not include_wholesale:
+        # Wholesale-only listings are B2B supplies: hidden from the vendor's
+        # public storefront unless the caller is a verified business buyer.
+        listing_rows = [row for row in listing_rows if not row.get("wholesale")]
     listing_ids = [str(item["id"]) for item in listing_rows if item.get("id")]
 
     images_by_listing: dict[str, str | None] = {listing_id: None for listing_id in listing_ids}
@@ -770,8 +781,9 @@ async def list_directory(
 async def get_directory_vendor(
     slug: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
+    access: Annotated[BusinessAccess, Depends(get_business_access)],
 ) -> VendorProfileResponse | RedirectResponse:
     cleaned = _sanitize_query(slug)
     if not cleaned:
         raise AppError("vendor.not_found", "Vendor not found", 404)
-    return get_vendor_profile(supabase.client, cleaned)
+    return get_vendor_profile(supabase.client, cleaned, include_wholesale=access.eligible)

@@ -153,6 +153,7 @@ class _ListingRow(BaseModel):
     stock_mode: str
     stock_qty: int | None = None
     created_at: str | None = None
+    wholesale: bool = False
 
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -312,7 +313,9 @@ def _fetch_listings(client: Any, listing_ids: list[str]) -> dict[str, _ListingRo
         return {}
     response = (
         client.table("vendor_listings")
-        .select("id,vendor_id,product_id,condition,stock_mode,stock_qty,created_at,status")
+        .select(
+            "id,vendor_id,product_id,condition,stock_mode,stock_qty,created_at,status,wholesale"
+        )
         .in_("id", listing_ids)
         .eq("status", "active")
         .execute()
@@ -717,8 +720,17 @@ def list_wholesale_supplies(client: Any, *, limit: int) -> CatalogListResponse:
     )
 
 
-def list_catalog(client: Any, filters: PlpFilterState) -> CatalogListResponse:
+def list_catalog(
+    client: Any,
+    filters: PlpFilterState,
+    *,
+    include_wholesale: bool = False,
+) -> CatalogListResponse:
     candidates = _build_candidates(client, filters.category_path)
+    if not include_wholesale:
+        # Wholesale-only listings are B2B supplies: hidden from the consumer PLP
+        # (and its facet counts) unless the caller is a verified business buyer.
+        candidates = [row for row in candidates if not row.listing.wholesale]
     facets = compute_facet_counts(candidates, filters)
 
     filtered = [row for row in candidates if _matches_filters(row, filters=filters)]
@@ -797,4 +809,4 @@ async def catalog_listings(
         "limit": str(limit),
     }
     filters = decode_plp_filters(raw_params)
-    return list_catalog(supabase.client, filters)
+    return list_catalog(supabase.client, filters, include_wholesale=access.eligible)

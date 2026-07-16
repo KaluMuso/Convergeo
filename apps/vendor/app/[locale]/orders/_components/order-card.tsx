@@ -28,6 +28,7 @@ export type VendorDashboard = {
   takings_date: string;
   needs_action: OrderQueueItem[];
   queue_counts: Record<string, number>;
+  archetype?: string | null;
 };
 
 const CACHE_KEY = "vergeo5.vendor.orders.queue.v1";
@@ -594,6 +595,35 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
 
   const needsCount = dashboard?.queue_counts.needs_action ?? 0;
 
+  // Archetype-driven guidance: the persisted onboarding business type (migration
+  // 0038) tailors the vendor's primary workflow — service providers manage
+  // services + quote requests; product sellers manage catalogue listings.
+  const archetype = dashboard?.archetype ?? null;
+  const isServicesVendor = archetype === "services";
+  let businessType: string | null = null;
+  switch (archetype) {
+    case "electronics":
+      businessType = t("home.businessTypes.electronics");
+      break;
+    case "home":
+      businessType = t("home.businessTypes.home");
+      break;
+    case "fashion_beauty":
+      businessType = t("home.businessTypes.fashion_beauty");
+      break;
+    case "services":
+      businessType = t("home.businessTypes.services");
+      break;
+    case "groceries":
+      businessType = t("home.businessTypes.groceries");
+      break;
+    case "other":
+      businessType = t("home.businessTypes.other");
+      break;
+    default:
+      businessType = null;
+  }
+
   return (
     <div className="flex flex-col gap-5 pb-8">
       <header className="space-y-1">
@@ -619,6 +649,41 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
           {t("home.takings.caption", { date: dashboard?.takings_date ?? "—" })}
         </p>
       </section>
+
+      {businessType ? (
+        <section className="rounded-2xl border border-neutral-200 bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+            {t("home.quickStart.eyebrow", { businessType })}
+          </p>
+          {isServicesVendor ? (
+            <>
+              <h2 className="mt-1 text-sm font-semibold text-neutral-900">
+                {t("home.quickStart.services.heading")}
+              </h2>
+              <p className="mt-1 text-sm text-neutral-600">{t("home.quickStart.services.body")}</p>
+              <Link
+                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-neutral-900 px-4 text-sm font-semibold text-white"
+                href={`/${locale}/services`}
+              >
+                {t("home.quickStart.services.cta")}
+              </Link>
+            </>
+          ) : (
+            <>
+              <h2 className="mt-1 text-sm font-semibold text-neutral-900">
+                {t("home.quickStart.products.heading")}
+              </h2>
+              <p className="mt-1 text-sm text-neutral-600">{t("home.quickStart.products.body")}</p>
+              <Link
+                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-neutral-900 px-4 text-sm font-semibold text-white"
+                href={`/${locale}/listings`}
+              >
+                {t("home.quickStart.products.cta")}
+              </Link>
+            </>
+          )}
+        </section>
+      ) : null}
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">

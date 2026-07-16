@@ -354,3 +354,78 @@ def test_migration_0023_replay_note() -> None:
     sql = (MIGRATIONS_DIR / "0023_ask_cache.sql").read_text(encoding="utf-8")
     assert "create table public.ask_cache" in sql
     assert "DROP TABLE IF EXISTS public.ask_cache" in sql
+
+
+async def test_top_k_never_surfaces_wholesale_listings() -> None:
+    """Ask retrieval must exclude wholesale (B2B) supplies for every caller — the
+    answer cache is query-keyed, so a leaked wholesale citation would poison it."""
+    from app.services.ask.filters import AskFilters
+    from app.services.ask.retrieve import top_k
+
+    retail_id = "00000000-0000-4000-8000-0000000005a1"
+    wholesale_id = "00000000-0000-4000-8000-0000000005a2"
+
+    def _hit(entity_id: str, title: str) -> dict[str, Any]:
+        return {
+            "id": entity_id,
+            "entity_kind": "listing",
+            "entity_id": entity_id,
+            "title": title,
+            "body": None,
+            "category_path": None,
+            "price_min_ngwee": None,
+            "price_max_ngwee": None,
+            "lat": None,
+            "lng": None,
+            "locale_terms": None,
+            "boost_signals": {},
+            "rrf_score": 0.9,
+        }
+
+    class _Resp:
+        def __init__(self, data: Any) -> None:
+            self.data = data
+
+    class _Rpc:
+        def __init__(self, rows: list[dict[str, Any]]) -> None:
+            self._rows = rows
+
+        def execute(self) -> _Resp:
+            return _Resp(self._rows)
+
+    class _Table:
+        def __init__(self) -> None:
+            self._ids: set[str] = set()
+
+        def select(self, *_a: Any, **_k: Any) -> _Table:
+            return self
+
+        def in_(self, _column: str, values: list[str]) -> _Table:
+            self._ids = {str(value) for value in values}
+            return self
+
+        def eq(self, _column: str, _value: Any) -> _Table:
+            return self
+
+        def execute(self) -> _Resp:
+            return _Resp([{"id": wholesale_id}] if wholesale_id in self._ids else [])
+
+    class _Client:
+        def rpc(self, _name: str, _params: dict[str, Any]) -> _Rpc:
+            return _Rpc([_hit(retail_id, "Single charger"), _hit(wholesale_id, "Bulk carton")])
+
+        def table(self, _name: str) -> _Table:
+            return _Table()
+
+    async def _no_embedding(_query: str) -> list[float] | None:
+        return None
+
+    docs = await top_k(
+        _Client(),
+        query="charger",
+        filters=AskFilters(),
+        embedding_fetcher=_no_embedding,
+    )
+    ids = {doc.entity_id for doc in docs}
+    assert retail_id in ids
+    assert wholesale_id not in ids

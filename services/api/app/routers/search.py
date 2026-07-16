@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated, Any
 
 from app.deps import get_supabase_client
+from app.services.business.access import BusinessAccess, get_business_access
 from app.services.search import SearchResponse, SuggestResponse, run_search, run_suggest
 from app.services.search.query_builder import (
     DEFAULT_PAGE,
@@ -18,6 +19,7 @@ router = APIRouter(prefix="/search", tags=["search"])
 @router.get("", response_model=SearchResponse)
 async def search(
     supabase: Annotated[Any, Depends(get_supabase_client)],
+    access: Annotated[BusinessAccess, Depends(get_business_access)],
     q: Annotated[str, Query(min_length=1, max_length=200)],
     kind: Annotated[SearchKind | None, Query()] = None,
     category_path: Annotated[str | None, Query(max_length=200)] = None,
@@ -35,12 +37,14 @@ async def search(
         price_max_ngwee=price_max_ngwee,
         page=page,
         page_size=page_size,
+        include_wholesale=access.eligible,
     )
 
 
 @router.get("/suggest", response_model=SuggestResponse)
 async def suggest(
     supabase: Annotated[Any, Depends(get_supabase_client)],
+    access: Annotated[BusinessAccess, Depends(get_business_access)],
     q: Annotated[str, Query(min_length=1, max_length=80)],
     kind: Annotated[SearchKind | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=20)] = 8,
@@ -50,4 +54,5 @@ async def suggest(
         query=q,
         kind=kind,
         limit=limit,
+        include_wholesale=access.eligible,
     )

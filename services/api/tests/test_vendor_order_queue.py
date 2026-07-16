@@ -128,14 +128,15 @@ def _magic(**kwargs: Any) -> Any:
     return MagicMock(**kwargs)
 
 
-def _seed_vendor(fake: FakeSupabaseClient) -> None:
-    fake.tables["vendors"].rows.append(
-        {
-            "id": VENDOR_A_ID,
-            "owner_user_id": USER_A_ID,
-            "status": "active",
-        }
-    )
+def _seed_vendor(fake: FakeSupabaseClient, *, archetype: str | None = None) -> None:
+    row: dict[str, Any] = {
+        "id": VENDOR_A_ID,
+        "owner_user_id": USER_A_ID,
+        "status": "active",
+    }
+    if archetype is not None:
+        row["archetype"] = archetype
+    fake.tables["vendors"].rows.append(row)
 
 
 def _seed_orders(fake: FakeSupabaseClient) -> None:
@@ -201,10 +202,13 @@ def _seed_orders(fake: FakeSupabaseClient) -> None:
     )
 
 
-@pytest.fixture
-def queue_client(monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None, None]:
+def _build_queue_app(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    archetype: str | None = None,
+) -> Any:
     fake = FakeSupabaseClient()
-    _seed_vendor(fake)
+    _seed_vendor(fake, archetype=archetype)
     _seed_orders(fake)
 
     monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
@@ -225,6 +229,22 @@ def queue_client(monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None,
 
     app = create_app()
     app.dependency_overrides[get_supabase_client] = lambda: service_wrapper
+    return app
+
+
+@pytest.fixture
+def queue_client(monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None, None]:
+    app = _build_queue_app(monkeypatch)
+    with TestClient(app) as client:
+        yield client
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def queue_client_electronics(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Generator[TestClient, None, None]:
+    app = _build_queue_app(monkeypatch, archetype="electronics")
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
@@ -332,6 +352,18 @@ def test_dashboard_takings_and_needs_action(queue_client: TestClient) -> None:
     assert body["takings_ngwee"] == 12_000
     assert body["needs_action"][0]["status"] == "placed"
     assert body["needs_action"][0]["id"] == ORDER_LATE_ID
+    # Legacy vendor with no archetype on file → null, drives the default UX.
+    assert body["archetype"] is None
+
+
+def test_dashboard_returns_persisted_archetype(
+    queue_client_electronics: TestClient,
+) -> None:
+    response = queue_client_electronics.get(
+        "/vendor/orders/dashboard", headers=_auth_headers()
+    )
+    assert response.status_code == 200
+    assert response.json()["archetype"] == "electronics"
 
 
 def test_queue_filter_status(queue_client: TestClient) -> None:

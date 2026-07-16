@@ -696,6 +696,27 @@
       "openQueue": "Open order queue",
       "confirmOrders": "Confirm new orders"
     },
+    "quickStart": {
+      "eyebrow": "For your {businessType} business",
+      "products": {
+        "heading": "Grow your catalogue",
+        "body": "Add products and keep your stock and prices up to date.",
+        "cta": "Manage your listings"
+      },
+      "services": {
+        "heading": "Grow your services",
+        "body": "Publish your services and reply to customer quote requests.",
+        "cta": "Manage your services"
+      }
+    },
+    "businessTypes": {
+      "electronics": "electronics",
+      "home": "home & living",
+      "fashion_beauty": "fashion & beauty",
+      "services": "services",
+      "groceries": "groceries",
+      "other": "retail"
+    },
     "errors": {
       "loadFailed": "Could not load your dashboard. Pull to refresh."
     }
