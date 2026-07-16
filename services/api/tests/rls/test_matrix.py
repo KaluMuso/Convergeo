@@ -2040,7 +2040,7 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "ticket_type_instances": {
-        # 0044 per-instance tier allocation: same public-read + organiser-write +
+        # 0046 per-instance tier allocation: same public-read + organiser-write +
         # admin-all shape as ticket_types. ANON/customers/vendors may SELECT
         # (published-event read); insert is RLS-denied for non-admins (owner WITH
         # CHECK fails on the DEFAULT VALUES probe's NULL ticket_type_id); update/

@@ -653,7 +653,7 @@ class TestClaimTicketOrRaise:
         assert exc_info.value.http_status == 409
 
 
-class TestMigration0044:
+class TestMigration0046:
     def test_allocation_table_and_column_present(self, db: PgConn) -> None:
         result = db.run(
             """
