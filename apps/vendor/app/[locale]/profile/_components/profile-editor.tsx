@@ -31,6 +31,7 @@ export function ProfileEditor() {
   const [profile, setProfile] = useState<VendorProfile | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [description, setDescription] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [slug, setSlug] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [hours, setHours] = useState<VendorProfile["hours"]>(DEFAULT_HOURS);
@@ -64,6 +65,7 @@ export function ProfileEditor() {
         setProfile(loaded);
         setDisplayName(loaded.display_name);
         setDescription(loaded.description ?? "");
+        setWhatsapp(loaded.whatsapp_msisdn ?? "");
         setSlug(loaded.slug);
         setLogoUrl(loaded.logo_url);
         setHours(Object.keys(loaded.hours).length > 0 ? loaded.hours : DEFAULT_HOURS);
@@ -95,6 +97,7 @@ export function ProfileEditor() {
     const payload: ProfilePatchPayload = {
       display_name: displayName.trim(),
       description: description.trim(),
+      whatsapp_msisdn: whatsapp.trim(),
       logo_url: logoUrl ?? undefined,
       hours,
     };
@@ -117,6 +120,7 @@ export function ProfileEditor() {
       const updated = await profileClient.updateProfile(payload);
       setProfile(updated);
       setSlug(updated.slug);
+      setWhatsapp(updated.whatsapp_msisdn ?? "");
       setSuccess(t("profile.success.saved"));
     } catch (caught) {
       if (caught instanceof ApiError) {
@@ -207,6 +211,23 @@ export function ProfileEditor() {
             />
           </FormField>
           <p className="text-xs text-neutral-500">{t("profile.fields.descriptionHelp")}</p>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-neutral-900">
+            {t("profile.sections.contact")}
+          </h2>
+          <FormField label={t("profile.fields.whatsappLabel")}>
+            <Input
+              type="tel"
+              inputMode="tel"
+              value={whatsapp}
+              onChange={(event) => setWhatsapp(event.target.value)}
+              disabled={saving}
+              placeholder={t("profile.fields.whatsappPlaceholder")}
+            />
+          </FormField>
+          <p className="text-xs text-neutral-500">{t("profile.fields.whatsappHelp")}</p>
         </section>
 
         <section className="space-y-3">

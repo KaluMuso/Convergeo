@@ -38,6 +38,7 @@ def _vendor_row(
     landmark: str = "East Park Mall, Lusaka",
     lat: float = LUSAKA_CBD[0],
     lng: float = LUSAKA_CBD[1],
+    whatsapp_msisdn: str | None = None,
 ) -> dict[str, Any]:
     return {
         "id": vendor_id,
@@ -45,6 +46,7 @@ def _vendor_row(
         "display_name": display_name,
         "description": description,
         "logo_url": "https://example.com/logo.png",
+        "whatsapp_msisdn": whatsapp_msisdn,
         "status": status,
         "kyc_tier": kyc_tier,
         "preferred_badge": preferred_badge,
@@ -425,6 +427,8 @@ class TestVendorProfile:
         assert payload["vendor"]["display_name"] == "Tech Hub Lusaka"
         assert payload["vendor"]["location"]["landmark"] == "East Park Mall, Lusaka"
         assert payload["vendor"]["location"]["hours"]["mon"] == "09:00-17:00"
+        # No contact number set on this vendor → field is null.
+        assert payload["vendor"]["whatsapp_msisdn"] is None
         assert len(payload["listings"]) == 1
         assert payload["listings"][0]["product_slug"] == "itel-a70"
         assert payload["reviews_summary"]["rating_count"] == 1
@@ -433,6 +437,17 @@ class TestVendorProfile:
         assert [loc["landmark"] for loc in payload["vendor"]["locations"]] == [
             "East Park Mall, Lusaka"
         ]
+
+    def test_profile_exposes_whatsapp_contact(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.vendors[0]["whatsapp_msisdn"] = "260977123456"
+
+        response = client.get("/directory/tech-hub-lusaka")
+        assert response.status_code == 200
+        # Returned as E.164 digits so the storefront can build wa.me/<msisdn>.
+        assert response.json()["vendor"]["whatsapp_msisdn"] == "260977123456"
 
     def test_profile_returns_all_branch_locations(
         self, client: TestClient, store: FakeSupabaseStore
