@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 from datetime import date, datetime, time, timedelta
 from typing import Annotated, Any, Literal, Protocol
 from zoneinfo import ZoneInfo
@@ -108,6 +109,9 @@ class EventDetailResponse(BaseModel):
     landmark: str | None = None
     images: list[str] = Field(default_factory=list)
     category: str | None = None
+    event_type: str = "single"
+    # public | unlisted (never 'private' here — private events resolve only with a code)
+    visibility: str = "public"
     instances: list[EventInstanceResponse] = Field(default_factory=list)
     ticket_types: list[TicketTypeResponse] = Field(default_factory=list)
     min_price_ngwee: int | None = None
@@ -383,17 +387,20 @@ def _browse_item_sold_out(
 
 
 def _fetch_published_events(client: Any) -> list[dict[str, Any]]:
+    # Browse surfaces PUBLIC published events only. Unlisted/private events are
+    # reachable by their direct link (see _fetch_event_by_slug) but never listed.
     response = (
         client.table("events")
         .select(
             "id, slug, title, description, venue, lat, lng, images, status, "
-            "category_slug, landmark, "
+            "category_slug, landmark, event_type, visibility, "
             "organiser_vendor_id, vendors!events_organiser_vendor_id_fkey("
             "id, slug, display_name, preferred_badge, logo_url, description, "
             "vendor_locations(landmark)"
             ")"
         )
         .eq("status", "published")
+        .eq("visibility", "public")
         .execute()
     )
     rows = response.data or []
@@ -401,11 +408,13 @@ def _fetch_published_events(client: Any) -> list[dict[str, Any]]:
 
 
 def _fetch_event_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
+    # Detail allows any published event (public/unlisted/private) so a direct link
+    # resolves; the private access-code gate is enforced in build_detail_response.
     response = (
         client.table("events")
         .select(
             "id, slug, title, description, venue, lat, lng, images, status, "
-            "category_slug, landmark, "
+            "category_slug, landmark, event_type, visibility, access_code, "
             "organiser_vendor_id, vendors!events_organiser_vendor_id_fkey("
             "id, slug, display_name, preferred_badge, logo_url, description, "
             "vendor_locations(landmark)"
@@ -418,6 +427,27 @@ def _fetch_event_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
     )
     row = response.data
     return row if isinstance(row, dict) else None
+
+
+def _enforce_visibility_access(event: dict[str, Any], access_code: str | None) -> None:
+    """Gate private events behind a matching access code.
+
+    Public/unlisted events resolve freely by link. A private event requires the correct
+    ``?code=``; a missing or wrong code returns 404 (not 403) so the endpoint never
+    confirms that a private event exists at this slug (no existence oracle).
+    """
+    visibility = str(event.get("visibility") or "public")
+    if visibility != "private":
+        return
+    expected = event.get("access_code")
+    provided = (access_code or "").strip()
+    if (
+        not isinstance(expected, str)
+        or not expected.strip()
+        or not provided
+        or not hmac.compare_digest(provided, expected.strip())
+    ):
+        raise AppError("event.not_found", "Event not found", 404)
 
 
 def _fetch_instances(client: Any, event_ids: list[str]) -> list[dict[str, Any]]:
@@ -559,10 +589,14 @@ def build_browse_response(
     return EventBrowseResponse(items=items, total=len(items), calendar_dates=calendar_dates)
 
 
-def build_detail_response(client: Any, slug: str) -> EventDetailResponse:
+def build_detail_response(
+    client: Any, slug: str, *, access_code: str | None = None
+) -> EventDetailResponse:
     event = _fetch_event_by_slug(client, slug)
     if event is None:
         raise AppError("event.not_found", "Event not found", 404)
+
+    _enforce_visibility_access(event, access_code)
 
     event_id = str(event["id"])
     instances = order_instances(_fetch_instances(client, [event_id]))
@@ -607,6 +641,8 @@ def build_detail_response(client: Any, slug: str) -> EventDetailResponse:
         landmark=landmark,
         images=_parse_images(event.get("images")),
         category=category,
+        event_type=str(event.get("event_type") or "single"),
+        visibility=str(event.get("visibility") or "public"),
         instances=instance_responses,
         ticket_types=ticket_type_responses,
         min_price_ngwee=_min_price_ngwee(ticket_types),
@@ -640,5 +676,6 @@ def list_events(
 def get_event(
     slug: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
+    code: Annotated[str | None, Query(max_length=64)] = None,
 ) -> EventDetailResponse:
-    return build_detail_response(supabase.client, slug)
+    return build_detail_response(supabase.client, slug, access_code=code)

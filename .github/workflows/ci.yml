@@ -444,7 +444,7 @@ jobs:
         run: uv sync --dev
 
       - name: DB-backed integration (curated, isolation-clean)
-        run: uv run pytest tests/test_ticket_purchase.py tests/test_ticket_verify.py tests/test_ticket_wallet.py tests/test_ticket_scan_sync.py tests/test_ticket_transfer.py tests/test_event_release.py tests/test_search_analytics.py tests/test_service_escrow.py tests/test_vendor_analytics.py tests/test_review_aggregate.py tests/test_listing_below_median.py -q
+        run: uv run pytest tests/test_ticket_purchase.py tests/test_ticket_verify.py tests/test_ticket_wallet.py tests/test_ticket_scan_sync.py tests/test_ticket_transfer.py tests/test_event_release.py tests/test_search_analytics.py tests/test_service_escrow.py tests/test_vendor_analytics.py tests/test_review_aggregate.py tests/test_listing_below_median.py tests/test_event_classification_db.py -q
 
       - name: RLS isolation matrix
         # Wired for M03-P09 (same wave). Goes green once services/api/tests/rls lands.

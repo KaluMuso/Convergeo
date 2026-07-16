@@ -66,6 +66,11 @@ def _event_row(
         "lng": 28.2833,
         "images": ["events/sample"],
         "status": status,
+        # Mirror the DB defaults (migration 0041): every event is public/single unless
+        # a test overrides these.
+        "event_type": "single",
+        "visibility": "public",
+        "access_code": None,
         "organiser_vendor_id": VENDOR_A,
         "vendors": _vendor_row(),
     }

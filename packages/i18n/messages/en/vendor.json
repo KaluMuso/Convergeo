@@ -1053,7 +1053,8 @@
       "past_instance": "Move past dates forward before publishing.",
       "ends_before_starts": "End time must be after the start time.",
       "not_editable": "This event can no longer be edited.",
-      "invalid_transition": "That action is not available for this event."
+      "invalid_transition": "That action is not available for this event.",
+      "access_code_required": "A private event needs an access code."
     }
   },
   "tickets": {

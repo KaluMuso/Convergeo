@@ -11,6 +11,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.events.cancellation import process_event_cancellation
+from app.services.events.policy import EVENT_TYPES, EventType
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.notifications.dedupe import enqueue_outbox_row
 from app.services.notifications.events import emit_event
@@ -40,10 +41,29 @@ EventCategory = Literal[
 ]
 
 EventStatus = Literal["draft", "published", "cancelled", "completed"]
+Visibility = Literal["public", "unlisted", "private"]
 EDITABLE_STATUSES = frozenset({"draft", "published"})
+MAX_ACCESS_CODE_LEN = 64
+MAX_TERMS_LEN = 4000
+MAX_REFUND_POLICY_KEY_LEN = 64
 SOLD_TICKET_STATUSES = frozenset({"issued", "checked_in"})
 MAX_EVENT_IMAGES = 8
 _SCHEDULE_CHANGE_EVENT = "event_schedule_changed"
+
+
+def _require_access_code_for_private(visibility: str | None, access_code: str | None) -> None:
+    """Mirror the DB CHECK (events_private_requires_access_code_chk) with a clean 422.
+
+    A private event without a non-empty access code is meaningless — the code is the
+    gate. Enforced here so the client sees an i18n error instead of a DB constraint 500.
+    """
+    if visibility == "private" and not (access_code and access_code.strip()):
+        raise AppError(
+            code="access_code_required",
+            message="A private event requires an access code",
+            http_status=422,
+            details={"message_key": "vendor.events.errors.access_code_required"},
+        )
 
 
 class EventInstanceInput(StrictModel):
@@ -77,6 +97,12 @@ class EventInstanceResponse(StrictModel):
 class EventCreateRequest(StrictModel):
     title: str = Field(min_length=2, max_length=200)
     category: EventCategory
+    event_type: EventType = "single"
+    visibility: Visibility = "public"
+    access_code: str | None = Field(default=None, max_length=MAX_ACCESS_CODE_LEN)
+    refund_policy_key: str | None = Field(default=None, max_length=MAX_REFUND_POLICY_KEY_LEN)
+    age_restriction: int | None = Field(default=None, ge=0, le=125)
+    terms: str | None = Field(default=None, max_length=MAX_TERMS_LEN)
     description: str | None = None
     venue: str | None = None
     lat: float | None = None
@@ -98,6 +124,12 @@ class EventCreateRequest(StrictModel):
 class EventUpdateRequest(StrictModel):
     title: str | None = Field(default=None, min_length=2, max_length=200)
     category: EventCategory | None = None
+    event_type: EventType | None = None
+    visibility: Visibility | None = None
+    access_code: str | None = Field(default=None, max_length=MAX_ACCESS_CODE_LEN)
+    refund_policy_key: str | None = Field(default=None, max_length=MAX_REFUND_POLICY_KEY_LEN)
+    age_restriction: int | None = Field(default=None, ge=0, le=125)
+    terms: str | None = Field(default=None, max_length=MAX_TERMS_LEN)
     description: str | None = None
     venue: str | None = None
     lat: float | None = None
@@ -124,6 +156,8 @@ class EventSummary(StrictModel):
     slug: str
     status: EventStatus
     category: EventCategory | None = None
+    event_type: EventType = "single"
+    visibility: Visibility = "public"
     venue: str | None = None
     landmark: str | None = None
     images: list[str] = Field(default_factory=list)
@@ -138,6 +172,13 @@ class EventDetailResponse(StrictModel):
     slug: str
     status: EventStatus
     category: EventCategory | None = None
+    event_type: EventType = "single"
+    visibility: Visibility = "public"
+    # Organiser-only view: the owner may see their own private access code.
+    access_code: str | None = None
+    refund_policy_key: str | None = None
+    age_restriction: int | None = None
+    terms: str | None = None
     description: str | None = None
     venue: str | None = None
     lat: float | None = None
@@ -247,6 +288,36 @@ def _landmark_from_row(row: dict[str, Any]) -> str | None:
     return None
 
 
+def _event_type_from_row(row: dict[str, Any]) -> EventType:
+    raw = row.get("event_type")
+    if isinstance(raw, str) and raw in EVENT_TYPES:
+        return raw
+    return "single"
+
+
+def _visibility_from_row(row: dict[str, Any]) -> Visibility:
+    raw = row.get("visibility")
+    if isinstance(raw, str) and raw in {"public", "unlisted", "private"}:
+        return raw  # type: ignore[return-value]
+    return "public"
+
+
+def _str_or_none(row: dict[str, Any], key: str) -> str | None:
+    raw = row.get(key)
+    if isinstance(raw, str) and raw.strip():
+        return raw.strip()
+    return None
+
+
+def _int_or_none(row: dict[str, Any], key: str) -> int | None:
+    raw = row.get(key)
+    if isinstance(raw, bool):
+        return None
+    if isinstance(raw, int):
+        return raw
+    return None
+
+
 def _parse_images(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
@@ -297,7 +368,8 @@ def _load_event_for_vendor(
         service_client.client.table("events")
         .select(
             "id, organiser_vendor_id, title, slug, description, venue, lat, lng, images, "
-            "status, category_slug, landmark"
+            "status, category_slug, landmark, event_type, visibility, access_code, "
+            "refund_policy_key, age_restriction, terms"
         )
         .eq("id", event_id)
         .maybe_single()
@@ -372,6 +444,12 @@ def _serialize_event_detail(
         slug=str(event_row.get("slug") or ""),
         status=status,  # type: ignore[arg-type]
         category=_category_from_row(event_row),
+        event_type=_event_type_from_row(event_row),
+        visibility=_visibility_from_row(event_row),
+        access_code=_str_or_none(event_row, "access_code"),
+        refund_policy_key=_str_or_none(event_row, "refund_policy_key"),
+        age_restriction=_int_or_none(event_row, "age_restriction"),
+        terms=_str_or_none(event_row, "terms"),
         description=description or None,
         venue=event_row.get("venue") if isinstance(event_row.get("venue"), str) else None,
         lat=float(event_row["lat"]) if event_row.get("lat") is not None else None,
@@ -401,6 +479,8 @@ def _serialize_event_summary(
         slug=str(event_row.get("slug") or ""),
         status=status,  # type: ignore[arg-type]
         category=_category_from_row(event_row),
+        event_type=_event_type_from_row(event_row),
+        visibility=_visibility_from_row(event_row),
         venue=event_row.get("venue") if isinstance(event_row.get("venue"), str) else None,
         landmark=_landmark_from_row(event_row),
         images=_parse_images(event_row.get("images")),
@@ -645,7 +725,10 @@ async def list_organiser_events(
 
     response = (
         client.table("events")
-        .select("id, title, slug, description, venue, images, status, category_slug, landmark")
+        .select(
+            "id, title, slug, description, venue, images, status, category_slug, landmark, "
+            "event_type, visibility"
+        )
         .eq("organiser_vendor_id", vendor_id)
         .order("updated_at", desc=True)
         .execute()
@@ -669,16 +752,24 @@ async def create_organiser_event(
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     _require_active_kyc_vendor(vendor)
     _validate_instance_time_order(body.instances)
+    _require_access_code_for_private(body.visibility, body.access_code)
     vendor_id = str(vendor["id"])
     client = service_client.client
 
     slug = _unique_event_slug(service_client, body.title)
+    access_code = body.access_code.strip() if body.access_code else None
     insert_payload = {
         "organiser_vendor_id": vendor_id,
         "title": body.title.strip(),
         "slug": slug,
         "description": (body.description or "").strip() or None,
         "category_slug": body.category,
+        "event_type": body.event_type,
+        "visibility": body.visibility,
+        "access_code": access_code,
+        "refund_policy_key": (body.refund_policy_key or "").strip() or None,
+        "age_restriction": body.age_restriction,
+        "terms": (body.terms or "").strip() or None,
         "landmark": body.landmark.strip() if body.landmark else None,
         "venue": body.venue.strip() if body.venue else None,
         "lat": body.lat,
@@ -780,6 +871,24 @@ async def update_organiser_event(
         updates["lng"] = body.lng
     if body.images is not None:
         updates["images"] = body.images
+    if body.event_type is not None:
+        updates["event_type"] = body.event_type
+    if body.visibility is not None:
+        updates["visibility"] = body.visibility
+    if body.access_code is not None:
+        updates["access_code"] = body.access_code.strip() or None
+    if body.refund_policy_key is not None:
+        updates["refund_policy_key"] = body.refund_policy_key.strip() or None
+    if body.age_restriction is not None:
+        updates["age_restriction"] = body.age_restriction
+    if body.terms is not None:
+        updates["terms"] = body.terms.strip() or None
+
+    # Validate the effective (post-update) visibility/access-code pair, so a switch to
+    # private without a code — or clearing the code while private — is rejected cleanly.
+    effective_visibility = updates.get("visibility", _visibility_from_row(event_row))
+    effective_access_code = updates.get("access_code", event_row.get("access_code"))
+    _require_access_code_for_private(effective_visibility, effective_access_code)
 
     if updates:
         response = (
