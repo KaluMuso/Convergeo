@@ -37,7 +37,12 @@ export type SearchResponse = {
 
 export type SearchKindFilter = SearchKind | "all";
 
-export const SEARCH_KINDS: SearchKind[] = ["products", "services", "events", "supplies", "vendors"];
+// Wholesale "supplies" are intentionally excluded from global search: they are a
+// B2B-gated surface with their own /supplies page. Consumer search fetches the API
+// anonymously (public/cacheable), so a supplies tab here would always be empty for
+// everyone; surfacing them would require per-user authenticated search (see D2 —
+// wholesale discovery lives on the Supplies page).
+export const SEARCH_KINDS: SearchKind[] = ["products", "services", "events", "vendors"];
 
 export type TabCounts = Record<SearchKindFilter, number>;
 
@@ -47,7 +52,6 @@ export type ResultsTabsLabels = {
   products: string;
   services: string;
   events: string;
-  supplies: string;
   vendors: string;
   count: string;
   resultsCount: string;
@@ -73,7 +77,6 @@ function tabLabel(labels: ResultsTabsLabels, kind: SearchKindFilter, count: numb
     products: labels.products,
     services: labels.services,
     events: labels.events,
-    supplies: labels.supplies,
     vendors: labels.vendors,
   };
   return labels.count.replace("{label}", nameMap[kind]).replace("{count}", String(count));

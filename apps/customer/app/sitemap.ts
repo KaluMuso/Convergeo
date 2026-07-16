@@ -7,7 +7,10 @@ import type { MetadataRoute } from "next";
 
 const CHUNK_SIZE = 5000;
 
-const STATIC_SHOP_SEGMENTS = ["", "search", "directory", "supplies", "events"] as const;
+// "supplies" is intentionally omitted: the wholesale Supplies page is a B2B-gated
+// route served with robots noindex,nofollow, so it must not be advertised in the
+// sitemap.
+const STATIC_SHOP_SEGMENTS = ["", "search", "directory", "events"] as const;
 
 const CATEGORY_SLUGS = [
   "all",
