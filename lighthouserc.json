@@ -65,8 +65,8 @@
           "justification": "M08-P06 card widget page shares checkout auth shell. Target: ≤150 KB gz after auth chunk split."
         },
         "/[locale]/(shop)/p/[slug]/page": {
-          "maxKbGz": 193,
-          "justification": "M16-P01 baseline (PDP gallery + comparison); +0.2 KB from M16-P04 registering the marketing i18n namespace in the shared loader. Target: lazy-load comparison module to ≤150 KB gz."
+          "maxKbGz": 195,
+          "justification": "M16-P01 baseline (PDP gallery + comparison); +0.2 KB from M16-P04 registering the marketing i18n namespace in the shared loader; +~0.5 KB from M09-P02 (#213) product description + PDP Overview/Specs/Reviews tabs (surfaced when the duplicate-0041 migration fix restored the bundle guard on master). Target: lazy-load comparison module to ≤150 KB gz."
         },
         "/[locale]/(auth)/login/page": {
           "maxKbGz": 186,

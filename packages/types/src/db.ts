@@ -1745,6 +1745,7 @@ export type Database = {
           brand: string | null
           category_id: string
           created_at: string
+          description: string | null
           id: string
           merged_into_id: string | null
           name: string
@@ -1758,6 +1759,7 @@ export type Database = {
           brand?: string | null
           category_id: string
           created_at?: string
+          description?: string | null
           id?: string
           merged_into_id?: string | null
           name: string
@@ -1771,6 +1773,7 @@ export type Database = {
           brand?: string | null
           category_id?: string
           created_at?: string
+          description?: string | null
           id?: string
           merged_into_id?: string | null
           name?: string
