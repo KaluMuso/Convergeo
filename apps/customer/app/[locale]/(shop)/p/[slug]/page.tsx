@@ -1,5 +1,6 @@
 import { createApiClient } from "@vergeo/config";
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import {
   buildCanonicalAlternates,
   buildLocaleCanonical,
@@ -8,6 +9,7 @@ import {
   resolveCloudinaryImageUrls,
 } from "@vergeo/ui/src/seo/json-ld";
 import { Tabs, type TabItem } from "@vergeo/ui/src/tabs";
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -200,6 +202,39 @@ async function fetchComparison(slug: string): Promise<ComparisonApiResponse | nu
     } catch {
       return null;
     }
+  }
+}
+
+type RelatedProduct = {
+  slug: string;
+  name: string;
+  image_public_id: string | null;
+  from_price_ngwee: number | null;
+};
+
+type RelatedApiResponse = {
+  product_slug: string;
+  items: RelatedProduct[];
+};
+
+async function fetchRelated(slug: string): Promise<RelatedProduct[]> {
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl()}/products/${encodeURIComponent(slug)}/related`,
+      {
+        next: {
+          revalidate,
+          tags: [productCacheTag(slug), "products", "related"],
+        },
+      },
+    );
+    if (!response.ok) {
+      return [];
+    }
+    const data = (await response.json()) as RelatedApiResponse;
+    return data.items ?? [];
+  } catch {
+    return [];
   }
 }
 
@@ -429,7 +464,11 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
   setRequestLocale(locale);
   const t = await getCatalogTranslator(locale);
-  const [result, comparison] = await Promise.all([fetchProduct(slug), fetchComparison(slug)]);
+  const [result, comparison, related] = await Promise.all([
+    fetchProduct(slug),
+    fetchComparison(slug),
+    fetchRelated(slug),
+  ]);
 
   if (!result) {
     notFound();
@@ -597,6 +636,44 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
       />
 
       <Tabs items={detailTabs} ariaLabel={t("pdp.tabs.ariaLabel")} mountInactivePanels />
+
+      {related.length > 0 ? (
+        <section aria-labelledby="pdp-related-heading" className="flex flex-col gap-3">
+          <h2 id="pdp-related-heading" className="font-display text-lg font-semibold text-text">
+            {t("pdp.related.heading")}
+          </h2>
+          <ul className="grid list-none grid-cols-2 gap-3 p-0 md:grid-cols-3 lg:grid-cols-4">
+            {related.map((item) => (
+              <li key={item.slug}>
+                <Link
+                  href={`/${locale}/p/${item.slug}`}
+                  className="card-lift block overflow-hidden rounded-lg border border-border bg-surface no-underline shadow-1"
+                >
+                  <div className="aspect-[4/3] w-full bg-bg-2">
+                    {item.image_public_id ? (
+                      <CloudinaryImage
+                        publicId={item.image_public_id}
+                        alt={item.name}
+                        width={360}
+                        ratio="4/3"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="space-y-1 p-3">
+                    <p className="truncate text-sm font-medium text-text">{item.name}</p>
+                    {item.from_price_ngwee !== null ? (
+                      <p className="text-sm text-text-2">
+                        {t("pdp.related.fromPrice", { price: formatK(item.from_price_ngwee) })}
+                      </p>
+                    ) : null}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </main>
   );
 }

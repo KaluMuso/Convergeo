@@ -159,6 +159,10 @@
     "overview": {
       "heading": "Description"
     },
+    "related": {
+      "heading": "More in this category",
+      "fromPrice": "From {price}"
+    },
     "gallery": {
       "empty": "No images yet",
       "indicator": "Image {current} of {total}",
