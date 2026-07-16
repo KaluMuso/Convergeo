@@ -1,4 +1,4 @@
--- 0049: Revoke EXECUTE on SECURITY DEFINER functions from anon/authenticated.
+-- 0050: Revoke EXECUTE on SECURITY DEFINER functions from anon/authenticated.
 --
 -- Supabase's security advisor flags every SECURITY DEFINER function that anon or
 -- authenticated can execute (Postgres grants EXECUTE to PUBLIC by default). Since
