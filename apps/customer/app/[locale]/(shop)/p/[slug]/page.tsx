@@ -7,6 +7,7 @@ import {
   JsonLdScript,
   resolveCloudinaryImageUrls,
 } from "@vergeo/ui/src/seo/json-ld";
+import { Tabs, type TabItem } from "@vergeo/ui/src/tabs";
 import { notFound, redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -77,6 +78,7 @@ type ProductDetail = {
   name: string;
   slug: string;
   brand: string | null;
+  description: string | null;
   spec: Record<string, unknown>;
   category_id: string;
   images: ProductImage[];
@@ -257,6 +259,16 @@ function selectListing(listings: Listing[], listingId?: string): Listing | null 
     }
   }
   return listings[0] ?? null;
+}
+
+function descriptionParagraphs(description: string | null): string[] {
+  if (!description) {
+    return [];
+  }
+  return description
+    .split(/\n+/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph.length > 0);
 }
 
 function galleryImages(
@@ -448,6 +460,71 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   });
   const productListings = toProductListings(product, product.name);
   const comparisonListings = toComparisonListings(comparison, product);
+  const overviewParagraphs = descriptionParagraphs(product.description);
+
+  const reviewsPanel = (
+    <Suspense fallback={null}>
+      <ReviewsPanel
+        locale={locale}
+        productId={product.id}
+        cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
+        labels={{
+          heading: t("reviews.heading"),
+          empty: t("reviews.empty"),
+          writeCta: t("reviews.writeCta"),
+          starsAria: t("reviews.starsAria"),
+          photoAlt: t("reviews.photoAlt"),
+          vendorReply: t("reviews.vendorReply"),
+          galleryPrevious: t("reviews.galleryPrevious"),
+          galleryNext: t("reviews.galleryNext"),
+          galleryIndicator: t("reviews.galleryIndicator"),
+          starFilled: t("reviews.starFilled"),
+          starEmpty: t("reviews.starEmpty"),
+        }}
+      />
+    </Suspense>
+  );
+
+  // mountInactivePanels keeps every panel in the server-rendered HTML, so the
+  // specs and reviews stay crawlable even when Overview is the default tab.
+  const detailTabs: TabItem[] = [
+    ...(overviewParagraphs.length > 0
+      ? [
+          {
+            key: "overview",
+            label: t("pdp.tabs.overview"),
+            panel: (
+              <section className="flex flex-col gap-3">
+                <h2 className="font-display text-lg font-semibold text-text">
+                  {t("pdp.overview.heading")}
+                </h2>
+                <div className="flex flex-col gap-2 text-sm leading-relaxed text-text-2">
+                  {overviewParagraphs.map((paragraph, index) => (
+                    <p key={index}>{paragraph}</p>
+                  ))}
+                </div>
+              </section>
+            ),
+          },
+        ]
+      : []),
+    {
+      key: "specs",
+      label: t("pdp.tabs.specs"),
+      panel: (
+        <SpecsTable
+          rows={specRows}
+          heading={t("pdp.specs.heading")}
+          emptyLabel={t("pdp.specs.empty")}
+        />
+      ),
+    },
+    {
+      key: "reviews",
+      label: t("pdp.tabs.reviews"),
+      panel: reviewsPanel,
+    },
+  ];
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6 motion-rise lg:max-w-6xl">
@@ -519,32 +596,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         }}
       />
 
-      <SpecsTable
-        rows={specRows}
-        heading={t("pdp.specs.heading")}
-        emptyLabel={t("pdp.specs.empty")}
-      />
-
-      <Suspense fallback={null}>
-        <ReviewsPanel
-          locale={locale}
-          productId={product.id}
-          cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
-          labels={{
-            heading: t("reviews.heading"),
-            empty: t("reviews.empty"),
-            writeCta: t("reviews.writeCta"),
-            starsAria: t("reviews.starsAria"),
-            photoAlt: t("reviews.photoAlt"),
-            vendorReply: t("reviews.vendorReply"),
-            galleryPrevious: t("reviews.galleryPrevious"),
-            galleryNext: t("reviews.galleryNext"),
-            galleryIndicator: t("reviews.galleryIndicator"),
-            starFilled: t("reviews.starFilled"),
-            starEmpty: t("reviews.starEmpty"),
-          }}
-        />
-      </Suspense>
+      <Tabs items={detailTabs} ariaLabel={t("pdp.tabs.ariaLabel")} mountInactivePanels />
     </main>
   );
 }

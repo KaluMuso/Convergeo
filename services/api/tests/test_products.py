@@ -25,6 +25,7 @@ def _product_row(
     status: str = "active",
     merged_into_id: str | None = None,
     spec: dict[str, Any] | None = None,
+    description: str | None = None,
     product_id: str = PRODUCT_ID,
 ) -> dict[str, Any]:
     return {
@@ -32,6 +33,7 @@ def _product_row(
         "name": "Itel A70 Smartphone",
         "slug": slug,
         "brand": "Itel",
+        "description": description,
         "spec": spec if spec is not None else {"storage_gb": "128", "ram_gb": "4"},
         "category_id": "d00000027-0000-4000-8000-000000000001",
         "status": status,
@@ -200,6 +202,29 @@ class TestProductDetailStates:
         assert payload["listings"][0]["in_stock"] is True
         assert payload["listings"][0]["stock_qty"] == 8
         assert payload["images"][0]["public_id"] == "listings/phone-cover"
+        # No canonical description set → field is null, not the empty string.
+        assert payload["description"] is None
+
+    def test_description_is_returned(self, client: TestClient, store: FakeSupabaseStore) -> None:
+        store.products = [
+            _product_row(description="  A durable smartphone built for Zambia.  ")
+        ]
+        store.vendor_listings = [_listing_row(listing_id=LISTING_IN_STOCK)]
+
+        response = client.get("/products/itel-a70")
+        assert response.status_code == 200
+        # Trimmed, non-empty description flows to the PDP Overview tab.
+        assert response.json()["description"] == "A durable smartphone built for Zambia."
+
+    def test_blank_description_normalized_to_null(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        store.products = [_product_row(description="   ")]
+        store.vendor_listings = [_listing_row(listing_id=LISTING_IN_STOCK)]
+
+        response = client.get("/products/itel-a70")
+        assert response.status_code == 200
+        assert response.json()["description"] is None
 
     def test_out_of_stock_listing(self, client: TestClient, store: FakeSupabaseStore) -> None:
         store.products = [_product_row()]

@@ -150,6 +150,15 @@
       "notFoundTitle": "Product not found",
       "descriptionFallback": "Shop {name} on Vergeo5"
     },
+    "tabs": {
+      "ariaLabel": "Product details",
+      "overview": "Overview",
+      "specs": "Specs",
+      "reviews": "Reviews"
+    },
+    "overview": {
+      "heading": "Description"
+    },
     "gallery": {
       "empty": "No images yet",
       "indicator": "Image {current} of {total}",
