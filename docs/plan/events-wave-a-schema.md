@@ -76,8 +76,20 @@ Five pebbles (recurrence dropped per D-A4). The event_type→escrow coupling is 
 
 Because D-A1 makes `event_type` a **behavioral driver over escrow**, all per-type behavior lives in one module `services/events/type_policy.py` — a pure `event_type → {discovery_visibility_rule, escrow_anchor_rule, ux_flags}` map with an explicit **default = today's timing-based escrow** for any type not overriding it. `event_release.py` (P14) and `events_public.py` (P10) both read this map; nothing branches on `event_type` inline. This keeps the money seam auditable (one place to review), keeps escrow legs idempotent/guarded exactly as the order engine requires, and means P10 can land the column with zero money-behavior change (default policy) before P14 activates per-type timing.
 
-## 6. Status — decisions locked, build ready
+## 6. Status — ✅ Wave A shipped (management/display follow-ups = Wave B)
 
 D29 is locked; specs above are final. Build order (I implement — Cursor limit reached): **P10 foundation** → **{P11, P13, P14}** → **P12**, one PR per pebble, open-and-merge flow. ⚠ P12 (pricing) and P14 (escrow) are money seams carrying heightened-scrutiny review + failure-path tests.
 
-**Progress:** ✅ **P10** (#211, migration `0043` — renumbered from `0041`), ✅ **P11** (#212, migration `0042`), ✅ **P13** (migration `0048_ticket_type_instances`, allocation cap woven into the oversell-safe claim + organiser allocation API/UI; no denormalised `sold` counter — the claim counts live tickets, drift-free). **Remaining: P14** (escrow timing ⚠money) and **P12** (pricing modes ⚠money, last — shares `organiser_events.py`/`purchase.py`).
+**Progress — ✅ WAVE A COMPLETE (all five merged to master):**
+
+- ✅ **P10** (#211, migration `0043` — renumbered from `0041`): `event_type`/visibility/policy columns + `type_policy.py` foundation.
+- ✅ **P11** (#212, migration `0042`): per-attendee `tickets.holder_name` + `ticket_types.attendee_named`.
+- ✅ **P13** (#215, migration `0048_ticket_type_instances`): per-instance allocation cap woven into the oversell-safe claim + organiser allocation API/UI; no denormalised `sold` counter — the claim counts live tickets, drift-free.
+- ✅ **P14** (#224, **no migration**): `event_type`-driven escrow settlement. `event_release.py` reads `type_policy.py`; `recurring` → `full_only` (funds held to end+24h, buyer-protective), all other types keep today's timing. Zero existing orders affected (`event_type` defaults `standard`).
+- ✅ **P12** (#226, migration `0049_ticket_pricing_modes`, ⚠money seam): early-bird (`early_bird_price_ngwee` + `early_bird_until`, both-or-neither) + group tiers (`ticket_type_price_tiers`). `resolve_unit_price()` = server-side min of {base, active early-bird, qualifying tiers}; client never supplies a price. Purely additive — no config ⇒ today's flat base price. As-built differs from the §3 provisional sketch (single `early_bird_until` cutoff + a discounted-price column, not `sale_starts_at/ends_at`; migration `0049` not `0043`, post-collision renumber).
+
+**Deferred follow-ups (Wave B candidates — foundation-first left these to a management wave):**
+
+- **Organiser pricing-write surface (P12 follow-up):** create/update/delete `ticket_type_price_tiers` + set/clear early-bird on a ticket type. The schema + RLS (organiser-owned writes) are in place; the API endpoint + vendor form UI are not yet built. Reads flow today; writes are service-role only.
+- **Customer-facing price-mode display:** show "early-bird until …" / "buy N+ for K…" on the event detail + checkout so buyers see _why_ the resolved price is lower. Server already resolves it; this is presentation.
+- **Attendee-name capture UI polish (P11 follow-up)** and **per-instance allocation editor UX (P13 follow-up)** if the shipped organiser surfaces need iteration.
