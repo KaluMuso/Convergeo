@@ -1106,6 +1106,24 @@
     "saved": "Ticket type saved",
     "deleted": "Ticket type removed",
     "backToEvent": "Back to event",
+    "allocation": {
+      "toggle": "Per-date limits",
+      "heading": "Per-date limits",
+      "help": "Cap how many of this type sell on each date. Leave a date blank for no limit.",
+      "loading": "Loading limits…",
+      "noInstances": "Add event dates first to set per-date limits.",
+      "placeholder": "No limit",
+      "soldLabel": "{count, plural, =0 {none sold} one {# sold} other {# sold}}",
+      "save": "Save limits",
+      "saving": "Saving…",
+      "saved": "Per-date limits saved",
+      "errors": {
+        "loadFailed": "Could not load per-date limits.",
+        "saveFailed": "Could not save per-date limits.",
+        "belowSold": "A limit is below the number of tickets already sold for that date.",
+        "invalid": "Enter a whole number of tickets (0 or more), or leave a date blank."
+      }
+    },
     "fields": {
       "kindLabel": "Type",
       "kindFixed": "Fixed price",

@@ -128,6 +128,23 @@ def _insert_ticket_type(
     return ticket_type_id
 
 
+def _insert_allocation(
+    conn: PgConn,
+    *,
+    ticket_type_id: str,
+    instance_id: str,
+    allocation: int,
+) -> None:
+    conn.run(
+        f"""
+        INSERT INTO public.ticket_type_instances (ticket_type_id, instance_id, allocation)
+        VALUES ('{ticket_type_id}', '{instance_id}', {allocation})
+        ON CONFLICT (ticket_type_id, instance_id)
+          DO UPDATE SET allocation = EXCLUDED.allocation;
+        """
+    )
+
+
 def _ticket_count(conn: PgConn, instance_id: str) -> int:
     result = conn.run(
         f"""
@@ -159,6 +176,7 @@ class _FakeQuery:
         self._payload: dict[str, Any] | None = None
         self._count_exact = False
         self._order: tuple[str, bool] | None = None
+        self._on_conflict: list[str] = []
 
     def select(self, columns: str, *, count: str | None = None) -> _FakeQuery:
         self._count_exact = count == "exact"
@@ -170,6 +188,10 @@ class _FakeQuery:
 
     def neq(self, column: str, value: Any) -> _FakeQuery:
         self._filters.append(("neq", column, value))
+        return self
+
+    def in_(self, column: str, values: list[Any]) -> _FakeQuery:
+        self._filters.append(("in", column, list(values)))
         return self
 
     def order(self, column: str, *, desc: bool = False) -> _FakeQuery:
@@ -186,6 +208,17 @@ class _FakeQuery:
     def insert(self, payload: dict[str, Any] | list[dict[str, Any]]) -> _FakeQuery:
         self._pending_op = "insert"
         self._payload = payload  # type: ignore[assignment]
+        return self
+
+    def upsert(
+        self,
+        payload: dict[str, Any] | list[dict[str, Any]],
+        *,
+        on_conflict: str,
+    ) -> _FakeQuery:
+        self._pending_op = "upsert"
+        self._payload = payload  # type: ignore[assignment]
+        self._on_conflict = [col.strip() for col in on_conflict.split(",")]
         return self
 
     def update(self, payload: dict[str, Any]) -> _FakeQuery:
@@ -213,6 +246,31 @@ class _FakeQuery:
             if self._maybe_single:
                 return MagicMock(data=inserted[0] if inserted else None, count=len(inserted))
             return MagicMock(data=inserted, count=len(inserted))
+
+        if self._pending_op == "upsert":
+            upsert_rows: list[dict[str, Any]] = []
+            if isinstance(self._payload, list):
+                upsert_rows = [row for row in self._payload if isinstance(row, dict)]
+            elif isinstance(self._payload, dict):
+                upsert_rows = [self._payload]
+            written: list[dict[str, Any]] = []
+            for row in upsert_rows:
+                match = next(
+                    (
+                        existing
+                        for existing in self._parent.rows
+                        if all(existing.get(key) == row.get(key) for key in self._on_conflict)
+                    ),
+                    None,
+                )
+                if match is not None:
+                    match.update(row)
+                    written.append(dict(match))
+                else:
+                    stored = dict(row)
+                    self._parent.rows.append(stored)
+                    written.append(dict(stored))
+            return MagicMock(data=written, count=len(written))
 
         if self._pending_op == "update":
             assert isinstance(self._payload, dict)
@@ -253,10 +311,17 @@ class _FakeQuery:
                 rows = [row for row in rows if row.get(column) == value]
             elif op == "neq":
                 rows = [row for row in rows if row.get(column) != value]
+            elif op == "in":
+                rows = [row for row in rows if row.get(column) in value]
         return rows
 
     def _matches(self, row: dict[str, Any]) -> bool:
-        return all(row.get(column) == value for op, column, value in self._filters if op == "eq")
+        for op, column, value in self._filters:
+            if op == "eq" and row.get(column) != value:
+                return False
+            if op == "in" and row.get(column) not in value:
+                return False
+        return True
 
 
 class _FakeTable:
@@ -268,6 +333,14 @@ class _FakeTable:
 
     def insert(self, payload: dict[str, Any] | list[dict[str, Any]]) -> _FakeQuery:
         return _FakeQuery(self, []).insert(payload)
+
+    def upsert(
+        self,
+        payload: dict[str, Any] | list[dict[str, Any]],
+        *,
+        on_conflict: str,
+    ) -> _FakeQuery:
+        return _FakeQuery(self, []).upsert(payload, on_conflict=on_conflict)
 
     def update(self, payload: dict[str, Any]) -> _FakeQuery:
         return _FakeQuery(self, []).update(payload)
@@ -283,10 +356,12 @@ class _FakeSupabaseClient:
             "events": _FakeTable(),
             "ticket_types": _FakeTable(),
             "tickets": _FakeTable(),
+            "event_instances": _FakeTable(),
+            "ticket_type_instances": _FakeTable(),
         }
 
     def table(self, name: str) -> _FakeTable:
-        return self.tables[name]
+        return self.tables.setdefault(name, _FakeTable())
 
 
 def _seed_fake_organiser_data(fake: _FakeSupabaseClient) -> dict[str, str]:
@@ -576,3 +651,249 @@ class TestClaimTicketOrRaise:
 
         assert exc_info.value.code == "tickets.oversell"
         assert exc_info.value.http_status == 409
+
+
+class TestMigration0048:
+    def test_allocation_table_and_column_present(self, db: PgConn) -> None:
+        result = db.run(
+            """
+            SELECT column_name FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'ticket_type_instances'
+              AND column_name = 'allocation';
+            """
+        )
+        assert result.ok and result.rows
+        assert result.rows[0] == "allocation"
+
+
+class TestAllocationBoundary:
+    def test_allocation_caps_below_instance_capacity(self, db: PgConn) -> None:
+        event_id = str(uuid.uuid4())
+        instance_id = str(uuid.uuid4())
+        ticket_type_id = str(uuid.uuid4())
+        _insert_event_with_instance(db, event_id=event_id, instance_id=instance_id, capacity=10)
+        _insert_ticket_type(db, ticket_type_id=ticket_type_id, event_id=event_id)
+        _insert_allocation(
+            db, ticket_type_id=ticket_type_id, instance_id=instance_id, allocation=1
+        )
+
+        first = claim_ticket(
+            None,
+            instance_id=instance_id,
+            ticket_type_id=ticket_type_id,
+            holder_user_id=CUSTOMER_A,
+        )
+        second = claim_ticket(
+            None,
+            instance_id=instance_id,
+            ticket_type_id=ticket_type_id,
+            holder_user_id=CUSTOMER_B,
+        )
+
+        assert first.claimed
+        assert not second.claimed  # allocation 1 blocks the 2nd despite capacity 10
+        assert _ticket_count(db, instance_id) == 1
+
+    def test_absent_allocation_row_imposes_no_cap(self, db: PgConn) -> None:
+        event_id = str(uuid.uuid4())
+        instance_id = str(uuid.uuid4())
+        ticket_type_id = str(uuid.uuid4())
+        _insert_event_with_instance(db, event_id=event_id, instance_id=instance_id, capacity=10)
+        _insert_ticket_type(db, ticket_type_id=ticket_type_id, event_id=event_id)
+        # No ticket_type_instances row → the allocation clause is a no-op.
+        for holder in (CUSTOMER_A, CUSTOMER_B, CUSTOMER_A):
+            result = claim_ticket(
+                None,
+                instance_id=instance_id,
+                ticket_type_id=ticket_type_id,
+                holder_user_id=holder,
+            )
+            assert result.claimed
+        assert _ticket_count(db, instance_id) == 3
+
+    def test_allocation_is_quantity_aware(self, db: PgConn) -> None:
+        event_id = str(uuid.uuid4())
+        instance_id = str(uuid.uuid4())
+        ticket_type_id = str(uuid.uuid4())
+        _insert_event_with_instance(db, event_id=event_id, instance_id=instance_id, capacity=10)
+        _insert_ticket_type(db, ticket_type_id=ticket_type_id, event_id=event_id)
+        _insert_allocation(
+            db, ticket_type_id=ticket_type_id, instance_id=instance_id, allocation=2
+        )
+
+        first = claim_ticket(
+            None,
+            instance_id=instance_id,
+            ticket_type_id=ticket_type_id,
+            holder_user_id=CUSTOMER_A,
+            qty=2,
+        )
+        # 2 already sold against allocation 2 → any further claim is blocked.
+        third = claim_ticket(
+            None,
+            instance_id=instance_id,
+            ticket_type_id=ticket_type_id,
+            holder_user_id=CUSTOMER_B,
+            qty=1,
+        )
+
+        assert first.claimed
+        assert not third.claimed
+        assert _ticket_count(db, instance_id) == 2
+
+
+class TestConcurrentAllocationClaim:
+    def test_two_concurrent_claims_at_allocation_one(self, db: PgConn) -> None:
+        event_id = str(uuid.uuid4())
+        instance_id = str(uuid.uuid4())
+        ticket_type_id = str(uuid.uuid4())
+        _insert_event_with_instance(db, event_id=event_id, instance_id=instance_id, capacity=10)
+        _insert_ticket_type(db, ticket_type_id=ticket_type_id, event_id=event_id)
+        _insert_allocation(
+            db, ticket_type_id=ticket_type_id, instance_id=instance_id, allocation=1
+        )
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            future_a = executor.submit(
+                claim_ticket,
+                None,
+                instance_id=instance_id,
+                ticket_type_id=ticket_type_id,
+                holder_user_id=CUSTOMER_A,
+                qty=1,
+            )
+            future_b = executor.submit(
+                claim_ticket,
+                None,
+                instance_id=instance_id,
+                ticket_type_id=ticket_type_id,
+                holder_user_id=CUSTOMER_B,
+                qty=1,
+            )
+            results = [future_a.result(), future_b.result()]
+
+        assert len([result for result in results if result.claimed]) == 1
+        assert _ticket_count(db, instance_id) == 1
+
+
+INSTANCE_1 = "eeee1111-1111-1111-1111-111111111111"
+INSTANCE_2 = "eeee2222-2222-2222-2222-222222222222"
+
+
+class TestAllocationApi:
+    """Organiser allocation GET/PUT — authz + validation, against the fake client."""
+
+    def _seed(self, fake: _FakeSupabaseClient) -> dict[str, str]:
+        seeded = _seed_fake_organiser_data(fake)
+        fake.tables["event_instances"].rows.extend(
+            [
+                {
+                    "id": INSTANCE_1,
+                    "event_id": seeded["event_id"],
+                    "starts_at": "2026-12-01T18:00:00Z",
+                },
+                {
+                    "id": INSTANCE_2,
+                    "event_id": seeded["event_id"],
+                    "starts_at": "2026-12-02T18:00:00Z",
+                },
+            ]
+        )
+        return seeded
+
+    def test_put_then_get_reflects_allocations(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        fake = _FakeSupabaseClient()
+        seeded = self._seed(fake)
+        client = _api_client(monkeypatch, VENDOR_B_OWNER, fake)
+
+        resp = client.put(
+            f"/organiser/ticket-types/{seeded['ticket_type_id']}/allocations",
+            json={"allocations": [{"instance_id": INSTANCE_1, "allocation": 5}]},
+            headers={"Authorization": f"Bearer {TOKEN_B}"},
+        )
+        assert resp.status_code == 200
+        by_instance = {row["instance_id"]: row for row in resp.json()}
+        assert by_instance[INSTANCE_1]["allocation"] == 5
+        assert by_instance[INSTANCE_2]["allocation"] is None  # uncapped
+
+        got = client.get(
+            f"/organiser/ticket-types/{seeded['ticket_type_id']}/allocations",
+            headers={"Authorization": f"Bearer {TOKEN_B}"},
+        )
+        assert got.status_code == 200
+        allocations = {row["instance_id"]: row["allocation"] for row in got.json()}
+        assert allocations == {INSTANCE_1: 5, INSTANCE_2: None}
+
+    def test_put_removes_omitted_allocation(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        fake = _FakeSupabaseClient()
+        seeded = self._seed(fake)
+        fake.tables["ticket_type_instances"].rows.append(
+            {
+                "ticket_type_id": seeded["ticket_type_id"],
+                "instance_id": INSTANCE_1,
+                "allocation": 3,
+            }
+        )
+        client = _api_client(monkeypatch, VENDOR_B_OWNER, fake)
+
+        resp = client.put(
+            f"/organiser/ticket-types/{seeded['ticket_type_id']}/allocations",
+            json={"allocations": [{"instance_id": INSTANCE_2, "allocation": 7}]},
+            headers={"Authorization": f"Bearer {TOKEN_B}"},
+        )
+        assert resp.status_code == 200
+        capped = {row["instance_id"] for row in fake.tables["ticket_type_instances"].rows}
+        assert capped == {INSTANCE_2}  # the omitted INSTANCE_1 cap was removed
+
+    def test_put_rejects_allocation_below_sold(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        fake = _FakeSupabaseClient()
+        seeded = self._seed(fake)
+        fake.tables["tickets"].rows.append(
+            {
+                "id": str(uuid.uuid4()),
+                "ticket_type_id": seeded["ticket_type_id"],
+                "instance_id": INSTANCE_1,
+                "status": "issued",
+            }
+        )
+        client = _api_client(monkeypatch, VENDOR_B_OWNER, fake)
+
+        resp = client.put(
+            f"/organiser/ticket-types/{seeded['ticket_type_id']}/allocations",
+            json={"allocations": [{"instance_id": INSTANCE_1, "allocation": 0}]},
+            headers={"Authorization": f"Bearer {TOKEN_B}"},
+        )
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "allocation_below_sold"
+
+    def test_put_rejects_foreign_instance(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        fake = _FakeSupabaseClient()
+        seeded = self._seed(fake)
+        client = _api_client(monkeypatch, VENDOR_B_OWNER, fake)
+
+        resp = client.put(
+            f"/organiser/ticket-types/{seeded['ticket_type_id']}/allocations",
+            json={
+                "allocations": [
+                    {"instance_id": "ffff9999-9999-9999-9999-999999999999", "allocation": 1}
+                ]
+            },
+            headers={"Authorization": f"Bearer {TOKEN_B}"},
+        )
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "invalid_instance"
+
+    def test_non_owner_forbidden(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        fake = _FakeSupabaseClient()
+        seeded = self._seed(fake)
+        # VENDOR_A owns SHOP_A; the event belongs to SHOP_B.
+        client = _api_client(monkeypatch, VENDOR_A_OWNER, fake)
+
+        resp = client.get(
+            f"/organiser/ticket-types/{seeded['ticket_type_id']}/allocations",
+            headers={"Authorization": f"Bearer {TOKEN_A}"},
+        )
+        assert resp.status_code == 403

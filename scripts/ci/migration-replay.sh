@@ -95,6 +95,21 @@ if [[ ${#migrations[@]} -eq 0 ]]; then
   exit 1
 fi
 
+# Fail fast on duplicate numeric prefixes. Supabase keys schema_migrations on the
+# leading digits of the filename, so two files sharing a prefix (e.g. two 0044_*)
+# are a fatal `schema_migrations_pkey` collision when applied via the CLI. That
+# recurs whenever independently-numbered PRs merge, and the raw pkey error surfaces
+# deep in a later job with no hint at the culprit — catch it here in seconds.
+dupes="$(basename -a "${migrations[@]}" | grep -oE '^[0-9]+' | sort | uniq -d)"
+if [[ -n "${dupes}" ]]; then
+  echo "ERROR: duplicate migration prefix(es) — each maps to one schema_migrations version:" >&2
+  while IFS= read -r prefix; do
+    echo "  ${prefix}: $(basename -a "${migrations[@]}" | grep -E "^${prefix}_" | paste -sd ', ' -)" >&2
+  done <<< "${dupes}"
+  echo "Renumber the newer migration(s) above the current max so every prefix is unique." >&2
+  exit 1
+fi
+
 for migration in "${migrations[@]}"; do
   echo "  -> $(basename "${migration}")"
   "${PSQL[@]}" -f "${migration}"

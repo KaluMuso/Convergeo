@@ -2039,6 +2039,50 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "ticket_type_instances": {
+        # 0048 per-instance tier allocation: same public-read + organiser-write +
+        # admin-all shape as ticket_types. ANON/customers/vendors may SELECT
+        # (published-event read); insert is RLS-denied for non-admins (owner WITH
+        # CHECK fails on the DEFAULT VALUES probe's NULL ticket_type_id); update/
+        # delete are RLS-filtered no-ops (probed WHERE false → permit); admin
+        # passes admin-all then trips NOT NULL on insert (permit).
+        Persona.ANON: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "permit",
+            "update": "permit",
+            "delete": "permit",
+        },
+    },
     "tickets": {
         # Tickets are issued by the checkout flow (service-role), never inserted
         # directly by clients. The DEFAULT VALUES insert probe is denied for every

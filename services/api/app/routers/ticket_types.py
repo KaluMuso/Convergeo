@@ -26,6 +26,31 @@ class TicketTypeResponse(StrictModel):
     tickets_sold: int = 0
 
 
+class AllocationInput(StrictModel):
+    instance_id: str = Field(min_length=1)
+    allocation: int = Field(ge=0)
+
+
+class AllocationPutRequest(StrictModel):
+    # Full desired allocation set for the type. An instance present here is capped
+    # to `allocation`; any instance omitted has its cap (if any) removed.
+    allocations: list[AllocationInput] = Field(default_factory=list, max_length=200)
+
+    @model_validator(mode="after")
+    def unique_instances(self) -> AllocationPutRequest:
+        seen = {a.instance_id for a in self.allocations}
+        if len(seen) != len(self.allocations):
+            raise ValueError("duplicate instance_id in allocations")
+        return self
+
+
+class AllocationRow(StrictModel):
+    instance_id: str
+    starts_at: str
+    allocation: int | None = None  # None = no per-instance cap for this type
+    sold: int = 0
+
+
 class TicketTypeCreateRequest(StrictModel):
     kind: TicketKind
     name: str = Field(min_length=1, max_length=120)
@@ -172,6 +197,78 @@ def _count_tickets_sold(service_client: ServiceRoleClient, ticket_type_id: str) 
     )
     count = getattr(response, "count", None)
     return int(count) if isinstance(count, int) else 0
+
+
+def _load_event_instances(
+    service_client: ServiceRoleClient,
+    event_id: str,
+) -> list[dict[str, Any]]:
+    return _rows(
+        service_client.client.table("event_instances")
+        .select("id, starts_at")
+        .eq("event_id", event_id)
+        .order("starts_at")
+        .execute()
+    )
+
+
+def _sold_by_instance(
+    service_client: ServiceRoleClient,
+    ticket_type_id: str,
+) -> dict[str, int]:
+    """Live count of non-void tickets for this type, grouped by instance."""
+    rows = _rows(
+        service_client.client.table("tickets")
+        .select("instance_id")
+        .eq("ticket_type_id", ticket_type_id)
+        .neq("status", "void")
+        .execute()
+    )
+    counts: dict[str, int] = {}
+    for row in rows:
+        instance_id = str(row.get("instance_id") or "")
+        if instance_id:
+            counts[instance_id] = counts.get(instance_id, 0) + 1
+    return counts
+
+
+def _load_allocations(
+    service_client: ServiceRoleClient,
+    ticket_type_id: str,
+) -> dict[str, int]:
+    rows = _rows(
+        service_client.client.table("ticket_type_instances")
+        .select("instance_id, allocation")
+        .eq("ticket_type_id", ticket_type_id)
+        .execute()
+    )
+    result: dict[str, int] = {}
+    for row in rows:
+        instance_id = str(row.get("instance_id") or "")
+        allocation = row.get("allocation")
+        if instance_id and allocation is not None:
+            result[instance_id] = int(allocation)
+    return result
+
+
+def _build_allocation_rows(
+    service_client: ServiceRoleClient,
+    *,
+    event_id: str,
+    ticket_type_id: str,
+) -> list[AllocationRow]:
+    instances = _load_event_instances(service_client, event_id)
+    allocations = _load_allocations(service_client, ticket_type_id)
+    sold = _sold_by_instance(service_client, ticket_type_id)
+    return [
+        AllocationRow(
+            instance_id=str(instance["id"]),
+            starts_at=str(instance.get("starts_at") or ""),
+            allocation=allocations.get(str(instance["id"])),
+            sold=sold.get(str(instance["id"]), 0),
+        )
+        for instance in instances
+    ]
 
 
 def _validate_kind_price(kind: str, price_ngwee: int) -> None:
@@ -402,3 +499,99 @@ def delete_ticket_type(
         )
 
     service_client.client.table("ticket_types").delete().eq("id", ticket_type_id).execute()
+
+
+@router.get(
+    "/ticket-types/{ticket_type_id}/allocations",
+    response_model=list[AllocationRow],
+)
+def list_allocations(
+    ticket_type_id: str,
+    user: Annotated[CurrentUser, Depends(require_role("vendor"))],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> list[AllocationRow]:
+    vendor = _load_vendor_for_owner(service_client, user.id)
+    ticket_type = _load_ticket_type(service_client, ticket_type_id)
+    event_id = str(ticket_type["event_id"])
+    event = _load_event(service_client, event_id)
+    _assert_event_owned(event, str(vendor["id"]), event_id=event_id)
+    return _build_allocation_rows(
+        service_client, event_id=event_id, ticket_type_id=ticket_type_id
+    )
+
+
+@router.put(
+    "/ticket-types/{ticket_type_id}/allocations",
+    response_model=list[AllocationRow],
+)
+def set_allocations(
+    ticket_type_id: str,
+    body: AllocationPutRequest,
+    user: Annotated[CurrentUser, Depends(require_role("vendor"))],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> list[AllocationRow]:
+    vendor = _load_vendor_for_owner(service_client, user.id)
+    ticket_type = _load_ticket_type(service_client, ticket_type_id)
+    event_id = str(ticket_type["event_id"])
+    event = _load_event(service_client, event_id)
+    _assert_event_owned(event, str(vendor["id"]), event_id=event_id)
+
+    valid_instance_ids = {
+        str(instance["id"]) for instance in _load_event_instances(service_client, event_id)
+    }
+    for entry in body.allocations:
+        if entry.instance_id not in valid_instance_ids:
+            raise AppError(
+                code="invalid_instance",
+                message="Instance does not belong to this event",
+                http_status=422,
+                details={
+                    "instance_id": entry.instance_id,
+                    "message_key": "vendor.tickets.errors.allocationInstanceInvalid",
+                },
+            )
+
+    # An allocation may never be set below what has already been sold for that
+    # (type, instance) — that would strand issued tickets.
+    sold = _sold_by_instance(service_client, ticket_type_id)
+    for entry in body.allocations:
+        already = sold.get(entry.instance_id, 0)
+        if entry.allocation < already:
+            raise AppError(
+                code="allocation_below_sold",
+                message="Allocation is below the number of tickets already sold",
+                http_status=422,
+                details={
+                    "instance_id": entry.instance_id,
+                    "allocation": entry.allocation,
+                    "sold": already,
+                    "message_key": "vendor.tickets.errors.allocationBelowSold",
+                },
+            )
+
+    kept = {entry.instance_id for entry in body.allocations}
+    existing = set(_load_allocations(service_client, ticket_type_id))
+    to_delete = sorted(existing - kept)
+
+    # Upsert desired rows first so a cap that should remain is never transiently
+    # dropped, then remove the rows for instances no longer capped.
+    if body.allocations:
+        payload = [
+            {
+                "ticket_type_id": ticket_type_id,
+                "instance_id": entry.instance_id,
+                "allocation": entry.allocation,
+            }
+            for entry in body.allocations
+        ]
+        service_client.client.table("ticket_type_instances").upsert(
+            payload, on_conflict="ticket_type_id,instance_id"
+        ).execute()
+    if to_delete:
+        service_client.client.table("ticket_type_instances").delete().eq(
+            "ticket_type_id", ticket_type_id
+        ).in_("instance_id", to_delete).execute()
+
+    return _build_allocation_rows(
+        service_client, event_id=event_id, ticket_type_id=ticket_type_id
+    )

@@ -43,8 +43,12 @@ def claim_ticket(
 ) -> ClaimResult:
     """Atomically claim ticket inventory under row lock (mirrors M07-P02 stock claim).
 
-    Enforces per-instance capacity, per-type qty_cap, and per_customer_cap under
-    concurrency via ``SELECT … FOR UPDATE`` on the instance row plus conditional insert.
+    Enforces per-instance capacity, per-type qty_cap, per_customer_cap, and — when a
+    ``ticket_type_instances`` row exists for the (type, instance) — the per-instance
+    ``allocation`` (M10-P13), all under concurrency via ``SELECT … FOR UPDATE`` on the
+    instance row plus a conditional insert. Allocation is read inside the same locked
+    transaction and gated against the live per-(instance, type) issued count, so it is
+    drift-free and cannot oversell.
   """
     del service_client  # reserved for future metadata lookups; claim is SQL-atomic
     _validate_uuid(instance_id, "instance_id")
@@ -100,6 +104,16 @@ eligible AS (
   WHERE c.instance_issued + {qty_sql} <= c.capacity
     AND (c.qty_cap IS NULL OR c.type_issued + {qty_sql} <= c.qty_cap)
     AND (c.per_customer_cap IS NULL OR c.holder_issued + {qty_sql} <= c.per_customer_cap)
+    AND (
+      NOT EXISTS (
+        SELECT 1 FROM public.ticket_type_instances tti
+        WHERE tti.ticket_type_id = c.type_id AND tti.instance_id = c.instance_id
+      )
+      OR c.type_issued + {qty_sql} <= (
+        SELECT tti.allocation FROM public.ticket_type_instances tti
+        WHERE tti.ticket_type_id = c.type_id AND tti.instance_id = c.instance_id
+      )
+    )
 ),
 inserted AS (
   INSERT INTO public.tickets (instance_id, ticket_type_id, holder_user_id, status)

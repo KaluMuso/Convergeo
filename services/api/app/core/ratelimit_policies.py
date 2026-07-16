@@ -218,6 +218,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /vendor/payouts/method": PAYMENT_WRITE,
     "POST /vendor/pickup/verify": SENSITIVE_WRITE,
     "POST /vendor/services": STANDARD_WRITE,
+    "PUT /organiser/ticket-types/{ticket_type_id}/allocations": STANDARD_WRITE,
 }
 
 

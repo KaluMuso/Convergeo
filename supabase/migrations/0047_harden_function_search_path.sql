@@ -1,4 +1,4 @@
--- 0043: Pin a fixed search_path on functions flagged by the Supabase security
+-- 0047: Pin a fixed search_path on functions flagged by the Supabase security
 -- linter (`function_search_path_mutable`, lint 0011).
 --
 -- All eight functions are SECURITY INVOKER (they run with the caller's rights,

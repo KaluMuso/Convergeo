@@ -19,6 +19,8 @@ import {
   type TicketTypeSummary,
 } from "../_lib/tickets-client";
 
+import { AllocationEditor } from "./allocation-editor";
+
 type TicketTypeConfigProps = {
   locale: string;
   eventId: string;
@@ -73,6 +75,7 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [draft, setDraft] = useState<TypeDraft>(EMPTY_DRAFT);
+  const [allocationTypeId, setAllocationTypeId] = useState<string | null>(null);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const ticketsClient = useMemo(() => createTicketsClient(getToken), [getToken]);
@@ -277,6 +280,26 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
                   </Button>
                 </div>
               </div>
+              <div className="mt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setAllocationTypeId((current) => (current === type.id ? null : type.id))
+                  }
+                  loadingLabel=""
+                >
+                  {t("tickets.allocation.toggle")}
+                </Button>
+              </div>
+              {allocationTypeId === type.id ? (
+                <AllocationEditor
+                  locale={locale}
+                  ticketTypeId={type.id}
+                  ticketsClient={ticketsClient}
+                />
+              ) : null}
             </li>
           ))}
         </ul>
