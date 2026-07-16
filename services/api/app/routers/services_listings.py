@@ -45,6 +45,14 @@ ResponseTimeTier = Literal["fast", "same_day", "slow"]
 FAST_RESPONSE_SECONDS = 2 * 60 * 60
 SAME_DAY_RESPONSE_SECONDS = 24 * 60 * 60
 MAX_PORTFOLIO_IMAGES = 8
+MAX_INCLUDES = 12
+MAX_INCLUDE_LEN = 160
+
+
+def _clean_includes(items: list[str]) -> list[str]:
+    """Trim, drop empties, cap item length, and cap the count of include bullets."""
+    cleaned = [item.strip()[:MAX_INCLUDE_LEN] for item in items if item.strip()]
+    return cleaned[:MAX_INCLUDES]
 UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     re.IGNORECASE,
@@ -91,6 +99,7 @@ class ServiceDetailResponse(StrictModel):
     service_area: str | None = None
     from_price_ngwee: int | None = None
     portfolio_images: list[str] = Field(default_factory=list)
+    includes: list[str] = Field(default_factory=list)
     provider: ProviderSummary
 
 
@@ -99,10 +108,12 @@ class ServiceSummary(StrictModel):
     slug: str
     title: str
     category: ServiceVertical
+    description: str | None = None
     service_area: str | None = None
     from_price_ngwee: int | None = None
     status: ServiceStatus
     portfolio_images: list[str] = Field(default_factory=list)
+    includes: list[str] = Field(default_factory=list)
 
 
 class ServiceVendorListResponse(StrictModel):
@@ -116,6 +127,7 @@ class ServiceCreateRequest(StrictModel):
     service_area: str | None = None
     from_price_ngwee: NgweeInt | None = None
     portfolio_images: list[str] = Field(default_factory=list, max_length=MAX_PORTFOLIO_IMAGES)
+    includes: list[str] = Field(default_factory=list, max_length=MAX_INCLUDES)
     status: ServiceStatus = "draft"
 
     @field_validator("from_price_ngwee")
@@ -135,6 +147,11 @@ class ServiceCreateRequest(StrictModel):
             raise ValueError(msg)
         return cleaned
 
+    @field_validator("includes")
+    @classmethod
+    def validate_includes(cls, items: list[str]) -> list[str]:
+        return _clean_includes(items)
+
 
 class ServiceUpdateRequest(StrictModel):
     category: ServiceVertical | None = None
@@ -143,6 +160,7 @@ class ServiceUpdateRequest(StrictModel):
     service_area: str | None = None
     from_price_ngwee: NgweeInt | None = None
     portfolio_images: list[str] | None = Field(default=None, max_length=MAX_PORTFOLIO_IMAGES)
+    includes: list[str] | None = Field(default=None, max_length=MAX_INCLUDES)
     status: ServiceStatus | None = None
 
     @field_validator("from_price_ngwee")
@@ -163,6 +181,13 @@ class ServiceUpdateRequest(StrictModel):
             msg = f"At most {MAX_PORTFOLIO_IMAGES} portfolio images are allowed"
             raise ValueError(msg)
         return cleaned
+
+    @field_validator("includes")
+    @classmethod
+    def validate_includes(cls, items: list[str] | None) -> list[str] | None:
+        if items is None:
+            return None
+        return _clean_includes(items)
 
 
 class ServiceMutationResponse(StrictModel):
@@ -393,6 +418,12 @@ def _parse_images(value: Any) -> list[str]:
     return [str(item) for item in value if isinstance(item, str) and item.strip()]
 
 
+def _parse_includes(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return _clean_includes([str(item) for item in value if isinstance(item, str)])
+
+
 def _to_browse_item(
     row: dict[str, Any],
     *,
@@ -432,6 +463,7 @@ def _to_detail(
         service_area=row.get("service_area"),
         from_price_ngwee=row.get("from_price_ngwee"),
         portfolio_images=_parse_images(row.get("portfolio_images")),
+        includes=_parse_includes(row.get("includes")),
         provider=_provider_from_vendor(
             vendor_row,
             response_time_tier_value=response_time_tier_value,
@@ -446,10 +478,12 @@ def _to_summary(row: dict[str, Any]) -> ServiceSummary:
         slug=service_slug(service_id),
         title=str(row.get("title") or ""),
         category=row["category"],
+        description=row.get("description"),
         service_area=row.get("service_area"),
         from_price_ngwee=row.get("from_price_ngwee"),
         status=row["status"],
         portfolio_images=_parse_images(row.get("portfolio_images")),
+        includes=_parse_includes(row.get("includes")),
     )
 
 
@@ -527,7 +561,7 @@ def get_service_detail(
         service_client.client.table("services")
         .select(
             "id, vendor_id, category, title, description, service_area, "
-            "from_price_ngwee, portfolio_images, status, "
+            "from_price_ngwee, portfolio_images, includes, status, "
             "vendors!inner(id, slug, display_name, preferred_badge, status)"
         )
         .eq("id", service_id)
@@ -559,7 +593,8 @@ def list_vendor_services(
     response = (
         service_client.client.table("services")
         .select(
-            "id, category, title, service_area, from_price_ngwee, portfolio_images, status"
+            "id, category, title, description, service_area, from_price_ngwee, "
+            "portfolio_images, includes, status"
         )
         .eq("vendor_id", vendor["id"])
         .order("updated_at", desc=True)
@@ -599,6 +634,7 @@ def create_vendor_service(
         "service_area": payload.service_area,
         "from_price_ngwee": payload.from_price_ngwee,
         "portfolio_images": payload.portfolio_images,
+        "includes": payload.includes,
         "status": payload.status,
     }
     response = service_client.client.table("services").insert(insert_row).execute()

@@ -20,6 +20,7 @@ type ServiceDetail = {
   service_area: string | null;
   from_price_ngwee: number | null;
   portfolio_images: string[];
+  includes: string[];
   provider: {
     id: string;
     slug: string;
@@ -172,6 +173,22 @@ export default async function ServiceDetailPage({ params }: PageProps) {
             <section className="flex flex-col gap-2">
               <h2 className="font-display text-h3 text-display-ink">{t("detail.about")}</h2>
               <p className="text-sm leading-relaxed text-text-2">{service.description}</p>
+            </section>
+          ) : null}
+
+          {service.includes.length > 0 ? (
+            <section className="flex flex-col gap-2">
+              <h2 className="font-display text-h3 text-display-ink">{t("detail.whatsIncluded")}</h2>
+              <ul className="flex list-none flex-col gap-2 p-0">
+                {service.includes.map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-sm text-text-2">
+                    <span aria-hidden className="mt-0.5 text-success">
+                      {t("detail.includeMarker")}
+                    </span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
             </section>
           ) : null}
 

@@ -218,6 +218,7 @@ def _service_row(
     status: str = "active",
     service_area: str = "Lusaka",
     from_price_ngwee: int | None = 35000,
+    includes: list[str] | None = None,
 ) -> dict[str, Any]:
     vendor = next(
         (
@@ -239,6 +240,7 @@ def _service_row(
         "service_area": service_area,
         "from_price_ngwee": from_price_ngwee,
         "portfolio_images": ["services/pipe-1"],
+        "includes": ["On-site visit", "Cleanup after work"] if includes is None else includes,
         "status": status,
         "updated_at": "2026-07-09T10:00:00Z",
         "vendors": vendor,
@@ -412,6 +414,28 @@ def test_public_detail_optional_from_price(
     unpriced = services_client.get("/services/a1000000-0000-4000-8000-000000000099")
     assert unpriced.status_code == 200
     assert unpriced.json()["from_price_ngwee"] is None
+
+
+def test_public_detail_returns_includes(services_client: TestClient) -> None:
+    response = services_client.get(f"/services/{SERVICE_ACTIVE_ID}")
+    assert response.status_code == 200
+    assert response.json()["includes"] == ["On-site visit", "Cleanup after work"]
+
+
+def test_create_normalizes_includes(services_client: TestClient) -> None:
+    create = services_client.post(
+        "/vendor/services",
+        headers=_auth_headers(),
+        json={
+            "category": "cleaning",
+            "title": "Deep Clean",
+            # Whitespace-only and blank entries are dropped; the rest are trimmed.
+            "includes": ["  Mop & polish  ", "", "   ", "Window wash"],
+            "status": "draft",
+        },
+    )
+    assert create.status_code == 200
+    assert create.json()["service"]["includes"] == ["Mop & polish", "Window wash"]
 
 
 def test_draft_detail_not_found(services_client: TestClient) -> None:
