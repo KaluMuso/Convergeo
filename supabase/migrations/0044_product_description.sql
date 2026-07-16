@@ -1,4 +1,11 @@
--- 0041: Add a canonical long-form description to products.
+-- 0044: Add a canonical long-form description to products.
+--
+-- (Renumbered 0041 → 0044: four migrations merged in parallel racing on two slots —
+--  0041 (event_classification + this) and 0042 (ticket_attendee_names + vendor_whatsapp)
+--  — duplicate version prefixes that break `supabase db start` (schema_migrations PK,
+--  SQLSTATE 23505) and redden the db/rls CI jobs on master. 0043 was then taken by
+--  0043_harden_function_search_path, so this independent product migration moves to the
+--  next free slot; body unchanged.)
 --
 -- The PDP shows a "Specifications" table (products.spec, jsonb) and reviews, but
 -- there was no place to hold the human-readable product description the storefront

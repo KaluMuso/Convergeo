@@ -1,4 +1,10 @@
--- 0042: Vendor WhatsApp contact number.
+-- 0045: Vendor WhatsApp contact number.
+--
+-- (Renumbered 0042 → 0045: this migration and 0042_ticket_attendee_names both merged
+--  claiming version 0042 — a duplicate version prefix that breaks `supabase db start`
+--  (schema_migrations PK, SQLSTATE 23505) and reddens the db/rls CI jobs on master.
+--  With 0043_harden and 0044_product_description ahead of it, this independent vendor
+--  migration moves to the next free slot; body unchanged.)
 --
 -- Vergeo5 is WhatsApp-native (Zambia guardrails), but the public vendor storefront
 -- had no way for a shopper to reach a seller directly. This adds an optional
