@@ -720,52 +720,70 @@ export type Database = {
       }
       events: {
         Row: {
+          access_code_hash: string | null
+          age_restriction: number | null
           category_slug: string | null
           created_at: string
           description: string | null
+          event_type: string
           id: string
           images: string[]
           landmark: string | null
           lat: number | null
           lng: number | null
           organiser_vendor_id: string
+          refund_policy_key: string | null
           slug: string
           status: string
+          terms: string | null
           title: string
           updated_at: string
           venue: string | null
+          visibility: string
         }
         Insert: {
+          access_code_hash?: string | null
+          age_restriction?: number | null
           category_slug?: string | null
           created_at?: string
           description?: string | null
+          event_type?: string
           id?: string
           images?: string[]
           landmark?: string | null
           lat?: number | null
           lng?: number | null
           organiser_vendor_id: string
+          refund_policy_key?: string | null
           slug: string
           status?: string
+          terms?: string | null
           title: string
           updated_at?: string
           venue?: string | null
+          visibility?: string
         }
         Update: {
+          access_code_hash?: string | null
+          age_restriction?: number | null
           category_slug?: string | null
           created_at?: string
           description?: string | null
+          event_type?: string
           id?: string
           images?: string[]
           landmark?: string | null
           lat?: number | null
           lng?: number | null
           organiser_vendor_id?: string
+          refund_policy_key?: string | null
           slug?: string
           status?: string
+          terms?: string | null
           title?: string
           updated_at?: string
           venue?: string | null
+          visibility?: string
         }
         Relationships: [
           {

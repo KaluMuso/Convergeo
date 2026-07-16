@@ -368,6 +368,64 @@ def test_create_event_with_ends_at(organiser_client: TestClient) -> None:
     assert instances[0]["ends_at"].startswith("2026-09-01T20:00:00")
 
 
+def test_create_standard_event_defaults_public(organiser_client: TestClient) -> None:
+    response = organiser_client.post(
+        "/organiser/events", headers=_auth_headers(), json=_create_payload()
+    )
+    assert response.status_code == 200
+    body = response.json()["event"]
+    assert body["event_type"] == "standard"
+    assert body["visibility"] == "public"
+    assert body["has_access_code"] is False
+
+
+def test_create_private_event_defaults_visibility_and_hashes_code(
+    organiser_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    payload = _create_payload()
+    payload["event_type"] = "private"
+    payload["access_code"] = "vip-only"
+    response = organiser_client.post(
+        "/organiser/events", headers=_auth_headers(), json=payload
+    )
+    assert response.status_code == 200
+    body = response.json()["event"]
+    assert body["event_type"] == "private"
+    # event_type=private defaults visibility to private (type_policy map).
+    assert body["visibility"] == "private"
+    assert body["has_access_code"] is True
+    # Plaintext code is hashed, never stored or echoed.
+    stored = fake_client.tables["events"].rows[-1]
+    assert stored["access_code_hash"]
+    assert "vip-only" not in stored["access_code_hash"]
+    assert "access_code" not in body
+    assert "access_code_hash" not in body
+
+
+def test_update_event_visibility_and_policy_fields(
+    organiser_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    _seed_event(fake_client, event_id=EVENT_A_ID, vendor_id=VENDOR_A_ID)
+    response = organiser_client.patch(
+        f"/organiser/events/{EVENT_A_ID}",
+        headers=_auth_headers(),
+        json={
+            "visibility": "unlisted",
+            "age_restriction": 18,
+            "refund_policy_key": "no_refunds",
+            "terms": "No re-entry.",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()["event"]
+    assert body["visibility"] == "unlisted"
+    assert body["age_restriction"] == 18
+    assert body["refund_policy_key"] == "no_refunds"
+    assert body["terms"] == "No re-entry."
+
+
 def test_create_event_rejects_ends_at_before_starts_at(organiser_client: TestClient) -> None:
     payload = _create_payload(starts_at="2026-09-01T18:00:00+02:00")
     payload["instances"][0]["ends_at"] = "2026-09-01T17:00:00+02:00"  # before start
