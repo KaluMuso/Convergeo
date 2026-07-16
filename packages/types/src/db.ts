@@ -2176,6 +2176,7 @@ export type Database = {
           description: string | null
           from_price_ngwee: number | null
           id: string
+          includes: string[]
           portfolio_images: string[]
           service_area: string | null
           status: string
@@ -2189,6 +2190,7 @@ export type Database = {
           description?: string | null
           from_price_ngwee?: number | null
           id?: string
+          includes?: string[]
           portfolio_images?: string[]
           service_area?: string | null
           status?: string
@@ -2202,6 +2204,7 @@ export type Database = {
           description?: string | null
           from_price_ngwee?: number | null
           id?: string
+          includes?: string[]
           portfolio_images?: string[]
           service_area?: string | null
           status?: string
@@ -2670,6 +2673,7 @@ export type Database = {
         Row: {
           archetype: string | null
           caps_snapshot: Json
+          cover_url: string | null
           created_at: string
           description: string | null
           display_name: string
@@ -2684,10 +2688,12 @@ export type Database = {
           slug: string
           status: string
           updated_at: string
+          whatsapp_msisdn: string | null
         }
         Insert: {
           archetype?: string | null
           caps_snapshot?: Json
+          cover_url?: string | null
           created_at?: string
           description?: string | null
           display_name: string
@@ -2702,10 +2708,12 @@ export type Database = {
           slug: string
           status?: string
           updated_at?: string
+          whatsapp_msisdn?: string | null
         }
         Update: {
           archetype?: string | null
           caps_snapshot?: Json
+          cover_url?: string | null
           created_at?: string
           description?: string | null
           display_name?: string
@@ -2720,6 +2728,7 @@ export type Database = {
           slug?: string
           status?: string
           updated_at?: string
+          whatsapp_msisdn?: string | null
         }
         Relationships: [
           {

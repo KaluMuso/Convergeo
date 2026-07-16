@@ -1,4 +1,4 @@
--- 0044: Vendor WhatsApp contact number.
+-- 0046: Vendor WhatsApp contact number.
 --
 -- Vergeo5 is WhatsApp-native (Zambia guardrails), but the public vendor storefront
 -- had no way for a shopper to reach a seller directly. This adds an optional
