@@ -17,10 +17,12 @@ export type ServiceSummary = {
   slug: string;
   title: string;
   category: ServiceVertical;
+  description: string | null;
   service_area: string | null;
   from_price_ngwee: number | null;
   status: ServiceStatus;
   portfolio_images: string[];
+  includes: string[];
 };
 
 export type ServiceCreatePayload = {
@@ -30,6 +32,7 @@ export type ServiceCreatePayload = {
   service_area?: string | null;
   from_price_ngwee?: number | null;
   portfolio_images?: string[];
+  includes?: string[];
   status?: ServiceStatus;
 };
 
