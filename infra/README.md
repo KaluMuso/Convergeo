@@ -132,25 +132,35 @@ Caddy routes `vendor.vergeo5.com` and `admin.vergeo5.com` accordingly. Admin req
 
 ## Operations
 
+**Current production reality:** the live VM runs the API as a **standalone
+container** (`vergeo5-api`) from the prebuilt GHCR image, bound to
+`127.0.0.1:8000`, with **Caddy on the host** (systemd) proxying
+`api.vergeo5.com` → `127.0.0.1:8000`. n8n is a container; there is no `api`
+compose service in use on the VM. (`docker-compose.yml` remains the documented
+full-stack/local reference — the API + Caddy there are containerized; the VM's
+API + Caddy are not.)
+
 Redeploy the API after a `services/api` change merges to master (CI has already
-built and pushed the new `ghcr.io/kalumuso/convergeo-api:latest`):
+built `ghcr.io/kalumuso/convergeo-api:latest`) with the idempotent script — copy
+`infra/redeploy-api.sh` to the VM and run it:
 
 ```bash
-cd ~/vergeo5/infra
-docker compose pull api            # pull the freshly-built image
-docker compose up -d api           # recreate the api container (no --build)
-docker compose logs -f api
+./redeploy-api.sh            # pull :latest, recreate vergeo5-api, wait for /healthz
+./redeploy-api.sh <git-sha>  # pin / rollback to a specific build tag
 ```
 
-Verify the new build is live (endpoint only present in the current API):
+It pulls **before** touching the running container, recreates it with the correct
+bind (`127.0.0.1:8000`, overridable via `API_BIND`), health-checks `/healthz`, and
+prints a rollback command if it fails. Do **not** hand-type a bare
+`docker run … <flags> …` — a shell-interpreted placeholder can delete the
+container without recreating it.
+
+Verify publicly (the `related` path only exists in the current API build):
 
 ```bash
 curl -fsS https://api.vergeo5.com/healthz
 curl -fsS -o /dev/null -w '%{http_code}\n' https://api.vergeo5.com/products/rice-grains-standard/related
 ```
-
-To pin/rollback to a specific build, set `API_IMAGE_TAG=<git-sha>` in `infra/.env`
-(the image is also tagged `:<sha>`) and re-run `docker compose up -d api`.
 
 ## Related docs
 
