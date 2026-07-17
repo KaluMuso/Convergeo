@@ -72,7 +72,7 @@
       "body": "Languages are file-based today. A developer wires the locale, then its strings are translated here. Live in-app editing is a planned follow-up.",
       "step1": "Add the locale code to LOCALES (packages/i18n/src/locales.ts) and to the account language-name map.",
       "step2": "Add the code to the middleware matcher in the customer, vendor and admin apps.",
-      "step3": "Create packages/i18n/messages/<code>/ and translate each namespace; missing keys fall back to English."
+      "step3": "Create packages/i18n/messages/'<code>'/ and translate each namespace; missing keys fall back to English."
     }
   },
   "users": {
