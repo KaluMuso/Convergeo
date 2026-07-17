@@ -14,7 +14,57 @@
     "orders": "Orders",
     "config": "Configuration",
     "merch": "Merchandising",
+    "translations": "Translations",
     "support": "Support"
+  },
+  "translations": {
+    "heading": "Translations",
+    "subheading": "Every user-facing string, grouped by where it lives, with per-language coverage. English is the source of truth; untranslated strings fall back to English.",
+    "lensLabel": "View",
+    "lens": {
+      "l10n": "Localization (coverage)",
+      "i18n": "Internationalization (keys)"
+    },
+    "localeSummary": "{locale}: {translated, number} of {total, number} strings translated ({percent}%). The rest fall back to English.",
+    "localeChip": "{locale} · {percent}%",
+    "coverageCount": "{translated, number} / {total, number} · {percent}%",
+    "keyCount": "{count, plural, one {# string} other {# strings}}",
+    "filter": {
+      "all": "All",
+      "missing": "Missing",
+      "translated": "Translated"
+    },
+    "tag": {
+      "translated": "Translated",
+      "missing": "English"
+    },
+    "emptyFiltered": "No strings match this filter.",
+    "pages": {
+      "common": "All apps — shared UI, navigation, theme",
+      "auth": "All apps — sign in and sign up",
+      "catalog": "Customer — product listings, detail, comparison",
+      "search": "Customer — search and suggestions",
+      "checkout": "Customer — cart and checkout",
+      "orders": "Customer & vendor — order history and queue",
+      "vendor": "Vendor app — dashboard, listings, events, payouts",
+      "admin": "Admin app — every admin page",
+      "events": "Customer — event browse, detail, tickets, wallet",
+      "services": "Customer & vendor — services and quotes",
+      "supplies": "Customer — wholesale (B2B)",
+      "directory": "Customer — business directory",
+      "legal": "Customer — legal and policy pages",
+      "notifications": "Server — WhatsApp, SMS and email templates",
+      "account": "Customer — account and privacy",
+      "ai": "Customer — Ask Vergeo",
+      "marketing": "Customer — about, contact, help, sell"
+    },
+    "addLanguage": {
+      "title": "Add a language",
+      "body": "Languages are file-based today. A developer wires the locale, then its strings are translated here. Live in-app editing is a planned follow-up.",
+      "step1": "Add the locale code to LOCALES (packages/i18n/src/locales.ts) and to the account language-name map.",
+      "step2": "Add the code to the middleware matcher in the customer, vendor and admin apps.",
+      "step3": "Create packages/i18n/messages/<code>/ and translate each namespace; missing keys fall back to English."
+    }
   },
   "users": {
     "count": "{count, plural, one {# user} other {# users}}"
