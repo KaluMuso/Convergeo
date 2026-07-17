@@ -219,6 +219,59 @@ def test_forged_signature_returns_401_and_does_not_store(
     )
 
 
+def test_missing_signature_returns_401_and_does_not_store(
+    webhook_client: tuple[TestClient, FakeSupabaseClient],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    # OWASP audit finding F2: an unsigned webhook must be a clean 4xx, not a 500.
+    client, fake = webhook_client
+    payload = _collection_payload(event_id="evt-unsigned-1")
+    raw_body = json.dumps(payload).encode("utf-8")
+
+    with caplog.at_level("WARNING"):
+        response = client.post(WEBHOOK_PATH, content=raw_body)  # no signature header
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "missing_webhook_signature"
+    assert fake.tables["webhook_events"].rows == []
+    assert any(
+        "missing signature header" in record.getMessage() for record in caplog.records
+    )
+
+
+def test_missing_signature_is_401_even_without_token_configured(
+    webhook_client: tuple[TestClient, FakeSupabaseClient],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Regression for OWASP F2: with the Lenco API token absent (the pentest env),
+    # an unsigned request previously 500'd on get_api_token()'s KeyError. The
+    # handler must short-circuit to 401 before ever reaching that path.
+    client, fake = webhook_client
+    monkeypatch.delenv("LENCO_API_TOKEN", raising=False)
+    payload = _collection_payload(event_id="evt-unsigned-2")
+    raw_body = json.dumps(payload).encode("utf-8")
+
+    response = client.post(WEBHOOK_PATH, content=raw_body)  # no signature, no token
+
+    assert response.status_code == 401  # not 500 — KeyError path never reached
+    assert response.json()["error"]["code"] == "missing_webhook_signature"
+    assert fake.tables["webhook_events"].rows == []
+
+
+def test_whitespace_only_signature_returns_401(
+    webhook_client: tuple[TestClient, FakeSupabaseClient],
+) -> None:
+    client, fake = webhook_client
+    payload = _collection_payload(event_id="evt-unsigned-3")
+    raw_body = json.dumps(payload).encode("utf-8")
+
+    response = client.post(WEBHOOK_PATH, content=raw_body, headers={SIGNATURE_HEADER: "   "})
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "missing_webhook_signature"
+    assert fake.tables["webhook_events"].rows == []
+
+
 def test_malformed_json_with_valid_signature_is_stored_and_flagged(
     webhook_client: tuple[TestClient, FakeSupabaseClient],
 ) -> None:

@@ -56,6 +56,27 @@ async def lenco_webhook(
     raw_body = await request.body()
     signature = request.headers.get(SIGNATURE_HEADER, "")
 
+    # A missing/empty signature header is a client error — reject with a clean 401
+    # before attempting verification (which needs the API token). This stops an
+    # unsigned request from surfacing as a 500 (OWASP audit finding F2) and keeps a
+    # client-side missing-signature (401) distinct from a server-side token
+    # misconfiguration (still a 500, correctly, if a *present* signature can't be
+    # checked). The payload is never parsed or persisted.
+    if not signature.strip():
+        logger.warning(
+            "Lenco webhook rejected: missing signature header",
+            extra={
+                "alert": "lenco_webhook_missing_signature",
+                "path": request.url.path,
+                "body_bytes": len(raw_body),
+            },
+        )
+        raise AppError(
+            code="missing_webhook_signature",
+            message="Missing Lenco webhook signature",
+            http_status=401,
+        )
+
     verified = verify_lenco_webhook(raw_body=raw_body, signature=signature)
     if not verified.valid:
         logger.error(
