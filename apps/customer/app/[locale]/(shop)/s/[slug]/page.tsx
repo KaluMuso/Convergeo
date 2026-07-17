@@ -7,6 +7,8 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { ServiceReviewsSection } from "./_components/service-reviews-section";
+
 import type { Metadata } from "next";
 
 export const revalidate = 300;
@@ -71,6 +73,34 @@ async function fetchService(slug: string): Promise<ServiceDetail | null> {
   }
 }
 
+type ServiceReviewsPayload = {
+  items: {
+    id: string;
+    rating: number;
+    body: string | null;
+    vendor_reply: string | null;
+    created_at: string;
+  }[];
+  rating_avg: number | null;
+  rating_count: number;
+};
+
+async function fetchServiceReviews(serviceId: string): Promise<ServiceReviewsPayload> {
+  const empty: ServiceReviewsPayload = { items: [], rating_avg: null, rating_count: 0 };
+  try {
+    const response = await fetch(
+      `${getApiBaseUrl()}/service-reviews?service_id=${encodeURIComponent(serviceId)}`,
+      { next: { revalidate, tags: [`service:${serviceId}`, "service-reviews"] } },
+    );
+    if (!response.ok) {
+      return empty;
+    }
+    return (await response.json()) as ServiceReviewsPayload;
+  } catch {
+    return empty;
+  }
+}
+
 function badgeVariant(tier: ServiceDetail["provider"]["response_time_tier"]) {
   if (tier === "fast") {
     return "free" as const;
@@ -125,6 +155,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  const reviewData = await fetchServiceReviews(service.id);
   const tier = service.provider.response_time_tier;
   const quoteHref = `/${locale}/services/post-job?category=${encodeURIComponent(service.category)}`;
 
@@ -216,6 +247,20 @@ export default async function ServiceDetailPage({ params }: PageProps) {
               <p className="text-sm text-text-2">{service.service_area}</p>
             </section>
           ) : null}
+
+          <ServiceReviewsSection
+            reviews={reviewData.items}
+            ratingAvg={reviewData.rating_avg}
+            ratingCount={reviewData.rating_count}
+            labels={{
+              heading: t("reviews.heading"),
+              subheading: t("reviews.subheading"),
+              empty: t("reviews.empty"),
+              reviewCountLabel: t("reviews.reviewCount", { count: reviewData.rating_count }),
+              starsAria: t("reviews.starsAria", { rating: "{rating}" }),
+              vendorReply: t("reviews.vendorReply"),
+            }}
+          />
         </div>
 
         {/* Sticky quote/booking sidebar — RFQ handoff (there is no direct-booking backend). */}

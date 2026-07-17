@@ -240,5 +240,32 @@
         "rateLimited": "Too many requests. Please wait a moment."
       }
     }
+  },
+  "reviews": {
+    "heading": "Reviews for this provider",
+    "subheading": "From customers whose jobs this provider completed.",
+    "empty": "No reviews yet.",
+    "reviewCount": "{count, plural, one {# review} other {# reviews}}",
+    "starsAria": "{rating} out of 5 stars",
+    "vendorReply": "Provider's reply",
+    "form": {
+      "title": "Rate your provider",
+      "intro": "Your job is complete — share how it went.",
+      "ratingLabel": "Your rating",
+      "ratingAria": "Select a rating from 1 to 5 stars",
+      "bodyLabel": "Your review (optional)",
+      "bodyPlaceholder": "Share how the job went…",
+      "submit": "Submit review",
+      "submitting": "Submitting…",
+      "submitted": "Thanks! Your review is published.",
+      "edit": "Edit your review",
+      "yourReview": "Your review",
+      "loading": "Loading…"
+    },
+    "errors": {
+      "generic": "Could not submit your review. Please try again.",
+      "rateLimited": "Too many review requests. Please wait a moment.",
+      "loadFailed": "Could not load review status."
+    }
   }
 }
