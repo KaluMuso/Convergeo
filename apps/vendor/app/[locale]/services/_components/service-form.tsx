@@ -38,6 +38,10 @@ export function ServiceForm({ locale, mode, serviceId, initialService }: Service
   const [fromPrice, setFromPrice] = useState(
     initialService?.from_price_ngwee ? String(initialService.from_price_ngwee / 100) : "",
   );
+  const [bookable, setBookable] = useState(initialService?.bookable ?? false);
+  const [bookingPrice, setBookingPrice] = useState(
+    initialService?.booking_price_ngwee ? String(initialService.booking_price_ngwee / 100) : "",
+  );
   const [status, setStatus] = useState<ServiceStatus>(initialService?.status ?? "draft");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,9 +53,18 @@ export function ServiceForm({ locale, mode, serviceId, initialService }: Service
     if (!title.trim()) {
       return;
     }
+    const fromPriceNgwee = fromPrice.trim() ? Math.round(Number.parseFloat(fromPrice) * 100) : null;
+    const bookingPriceNgwee = bookingPrice.trim()
+      ? Math.round(Number.parseFloat(bookingPrice) * 100)
+      : null;
+
+    if (bookable && (bookingPriceNgwee === null || bookingPriceNgwee <= 0)) {
+      setError(ts("vendor.errors.bookablePrice"));
+      return;
+    }
+
     setSaving(true);
     setError(null);
-    const fromPriceNgwee = fromPrice.trim() ? Math.round(Number.parseFloat(fromPrice) * 100) : null;
 
     const payload = {
       category,
@@ -59,6 +72,8 @@ export function ServiceForm({ locale, mode, serviceId, initialService }: Service
       description: description.trim() || null,
       service_area: serviceArea.trim() || null,
       from_price_ngwee: fromPriceNgwee,
+      bookable,
+      booking_price_ngwee: bookingPriceNgwee,
       status: nextStatus ?? status,
       portfolio_images: initialService?.portfolio_images ?? [],
       includes: includes
@@ -173,6 +188,34 @@ export function ServiceForm({ locale, mode, serviceId, initialService }: Service
         />
       </FormField>
       <p className="-mt-2 text-xs text-text-3">{ts("vendor.form.fromPriceHint")}</p>
+
+      <label className="flex items-start gap-2 text-sm text-text">
+        <input
+          type="checkbox"
+          checked={bookable}
+          onChange={(event) => setBookable(event.target.checked)}
+          className="mt-0.5 h-4 w-4"
+        />
+        <span>
+          <span className="font-medium">{ts("vendor.form.bookableLabel")}</span>
+          <span className="block text-xs text-text-3">{ts("vendor.form.bookableHint")}</span>
+        </span>
+      </label>
+
+      {bookable ? (
+        <>
+          <FormField id="booking-price" label={ts("vendor.form.bookingPriceLabel")}>
+            <Input
+              id="booking-price"
+              inputMode="decimal"
+              value={bookingPrice}
+              onChange={(event) => setBookingPrice(event.target.value)}
+              placeholder="500"
+            />
+          </FormField>
+          <p className="-mt-2 text-xs text-text-3">{ts("vendor.form.bookingPriceHint")}</p>
+        </>
+      ) : null}
 
       <FormField id="status" label={ts("vendor.form.statusLabel")}>
         <Select

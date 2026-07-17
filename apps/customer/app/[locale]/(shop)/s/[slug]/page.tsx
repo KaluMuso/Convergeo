@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { BookService } from "./_components/book-service";
 import { ServiceReviewsSection } from "./_components/service-reviews-section";
 
 import type { Metadata } from "next";
@@ -21,6 +22,8 @@ type ServiceDetail = {
   description: string | null;
   service_area: string | null;
   from_price_ngwee: number | null;
+  bookable: boolean;
+  booking_price_ngwee: number | null;
   portfolio_images: string[];
   includes: string[];
   provider: {
@@ -263,8 +266,15 @@ export default async function ServiceDetailPage({ params }: PageProps) {
           />
         </div>
 
-        {/* Sticky quote/booking sidebar — RFQ handoff (there is no direct-booking backend). */}
-        <aside className="lg:sticky lg:top-20 lg:h-fit">
+        {/* Sticky sidebar — direct booking (when bookable) alongside the RFQ handoff. */}
+        <aside className="space-y-4 lg:sticky lg:top-20 lg:h-fit">
+          {service.bookable && service.booking_price_ngwee ? (
+            <BookService
+              locale={locale}
+              serviceId={service.id}
+              priceNgwee={service.booking_price_ngwee}
+            />
+          ) : null}
           <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 shadow-1">
             <p className="text-lg font-semibold text-text">
               {service.from_price_ngwee
