@@ -77,6 +77,10 @@
       "areaLabel": "Service area",
       "fromPriceLabel": "From price (optional)",
       "fromPriceHint": "Leave blank to show \"ask for quote\"",
+      "bookableLabel": "Allow direct booking",
+      "bookableHint": "Customers can book and pay a deposit at a fixed price, without requesting a quote first.",
+      "bookingPriceLabel": "Fixed booking price",
+      "bookingPriceHint": "Total price for a direct booking. Customers pay a deposit now and the balance when the job is done.",
       "statusLabel": "Status",
       "save": "Save",
       "publish": "Publish",
@@ -86,6 +90,7 @@
     "errors": {
       "loadFailed": "Could not load services.",
       "saveFailed": "Could not save service.",
+      "bookablePrice": "Set a fixed booking price greater than zero to allow direct booking.",
       "authRequired": "Sign in to manage your services."
     }
   },
@@ -266,6 +271,23 @@
       "generic": "Could not submit your review. Please try again.",
       "rateLimited": "Too many review requests. Please wait a moment.",
       "loadFailed": "Could not load review status."
+    }
+  },
+  "booking": {
+    "title": "Book this service",
+    "intro": "Pay a {pct}% deposit now; the balance is due when the job is done.",
+    "priceLabel": "Fixed price",
+    "depositLabel": "Deposit due now",
+    "balanceLabel": "Balance on completion",
+    "escrowNote": "You pay → Held by Vergeo5 → Released to your provider once you confirm the job is done.",
+    "bookCta": "Book & pay {amount} deposit",
+    "submitting": "Booking…",
+    "errors": {
+      "authRequired": "Please sign in to book this service.",
+      "notBookable": "This service is not available for direct booking right now.",
+      "ownService": "You cannot book your own service.",
+      "rateLimited": "Too many requests. Please wait a moment.",
+      "generic": "Could not start your booking. Please try again."
     }
   }
 }
