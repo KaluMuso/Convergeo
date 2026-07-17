@@ -1,0 +1,855 @@
+{
+  "title": "Console d'administration",
+  "shell": {
+    "eyebrow": "Opérations Vergeo5",
+    "environment": "Origine admin durcie",
+    "signOut": "Déconnexion"
+  },
+  "nav": {
+    "home": "Tableau de bord",
+    "kyc": "File KYC",
+    "business": "Entreprises",
+    "moderation": "Modération",
+    "disputes": "Litiges",
+    "orders": "Commandes",
+    "config": "Configuration",
+    "merch": "Merchandising",
+    "translations": "Traductions",
+    "support": "Support"
+  },
+  "translations": {
+    "heading": "Traductions",
+    "subheading": "Chaque chaîne destinée à l'utilisateur, regroupée par emplacement, avec la couverture par langue. Modifiez une traduction puis cliquez sur Enregistrer pour la stocker ; cliquez sur Télécharger JSON pour la publier dans les fichiers de messages. L'anglais fait foi ; les chaînes non traduites basculent vers l'anglais.",
+    "lensLabel": "Affichage",
+    "lens": {
+      "l10n": "Localisation (couverture)",
+      "i18n": "Internationalisation (clés)"
+    },
+    "localeSummary": "{locale} : {translated, number} chaînes traduites sur {total, number} ({percent} %). Le reste bascule vers l'anglais.",
+    "localeChip": "{locale} · {percent} %",
+    "coverageCount": "{translated, number} / {total, number} · {percent} %",
+    "keyCount": "{count, plural, one {# chaîne} other {# chaînes}}",
+    "filter": {
+      "all": "Toutes",
+      "missing": "Manquantes",
+      "translated": "Traduites"
+    },
+    "tag": {
+      "translated": "Traduite",
+      "missing": "Anglais",
+      "override": "Modifiée"
+    },
+    "emptyFiltered": "Aucune chaîne ne correspond à ce filtre.",
+    "save": "Enregistrer",
+    "clear": "Effacer",
+    "valuePlaceholder": "Traduction…",
+    "exportNamespace": "Télécharger JSON",
+    "errors": {
+      "loadOverrides": "Impossible de charger les modifications enregistrées. Rechargez la page.",
+      "save": "Impossible d'enregistrer. Réessayez."
+    },
+    "pages": {
+      "common": "Toutes les applications — UI partagée, navigation, thème",
+      "auth": "Toutes les applications — connexion et inscription",
+      "catalog": "Client — fiches produits, détail, comparaison",
+      "search": "Client — recherche et suggestions",
+      "checkout": "Client — panier et paiement",
+      "orders": "Client et vendeur — historique et file des commandes",
+      "vendor": "App vendeur — tableau de bord, annonces, événements, versements",
+      "admin": "App admin — toutes les pages d'administration",
+      "events": "Client — parcours des événements, détail, billets, portefeuille",
+      "services": "Client et vendeur — services et devis",
+      "supplies": "Client — vente en gros (B2B)",
+      "directory": "Client — annuaire d'entreprises",
+      "legal": "Client — pages légales et politiques",
+      "notifications": "Serveur — modèles WhatsApp, SMS et e-mail",
+      "account": "Client — compte et confidentialité",
+      "ai": "Client — Ask Vergeo",
+      "marketing": "Client — à propos, contact, aide, vendre"
+    },
+    "addLanguage": {
+      "title": "Ajouter une langue",
+      "body": "Aujourd'hui, les langues reposent sur des fichiers. Un développeur configure la langue, puis ses chaînes sont traduites ici. L'édition en direct dans l'application est une amélioration prévue.",
+      "step1": "Ajoutez le code de langue à LOCALES (packages/i18n/src/locales.ts) et à la table des noms de langue du compte.",
+      "step2": "Ajoutez le code au matcher du middleware dans les applications client, vendeur et admin.",
+      "step3": "Créez packages/i18n/messages/'<code>'/ puis traduisez chaque espace de noms ; les clés manquantes reviennent à l'anglais."
+    }
+  },
+  "users": {
+    "count": "{count, plural, one {# utilisateur} other {# utilisateurs}}"
+  },
+  "action": {
+    "confirm": "Confirmer {action} ?"
+  },
+  "config": {
+    "title": "Configuration de la plateforme",
+    "subtitle": "Modifications en direct — effectives immédiatement pour les nouvelles commandes et sessions.",
+    "nav": {
+      "commissions": "Commissions",
+      "deliveryZones": "Zones de livraison",
+      "platform": "Réglages de la plateforme",
+      "flags": "Fonctionnalités (drapeaux)",
+      "categories": "Arborescence des catégories"
+    },
+    "common": {
+      "save": "Enregistrer les modifications",
+      "cancel": "Annuler",
+      "confirm": "Confirmer la modification",
+      "loading": "Chargement…",
+      "error": "Impossible de charger la configuration",
+      "retry": "Réessayer",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "enabled": "Activé",
+      "disabled": "Désactivé",
+      "prohibited": "Interdit",
+      "allowed": "Autorisé",
+      "position": "Position",
+      "key": "Clé",
+      "value": "Valeur",
+      "label": "Libellé",
+      "description": "Description"
+    },
+    "confirm": {
+      "title": "Confirmer la modification de configuration",
+      "body": "Vérifiez la modification ci-dessous. Elle prend effet immédiatement pour toute nouvelle activité.",
+      "dangerous": "Ce paramètre est sensible — vérifiez-le avant d'enregistrer.",
+      "from": "Actuel",
+      "to": "Nouveau"
+    },
+    "commissions": {
+      "title": "Taux de commission",
+      "subtitle": "Points de base par catégorie. Valeur figée au moment du paiement — les commandes existantes ne sont pas affectées.",
+      "categoryKey": "Catégorie",
+      "rateBps": "Taux (pb)",
+      "dangerousHint": "Les modifications de commission s'appliquent uniquement aux nouvelles commandes."
+    },
+    "deliveryZones": {
+      "title": "Zones de livraison",
+      "subtitle": "Tranches et frais de livraison à Lusaka (ngwee).",
+      "zoneKey": "Zone",
+      "feeNgwee": "Frais (ngwee)",
+      "active": "Active"
+    },
+    "platform": {
+      "title": "Paramètres de la plateforme",
+      "subtitle": "Plafond COD, quotas IA, délais de libération du séquestre et TTL de réservation.",
+      "codCap": "Plafond COD (ngwee)",
+      "freeDelivery": "Seuil de livraison gratuite (ngwee)",
+      "reservationTtl": "TTL de réservation (minutes)",
+      "aiGuestQuota": "Quota IA invité",
+      "aiFreeQuota": "Quota IA gratuit mensuel",
+      "aiCapUsd": "Plafond IA mensuel (USD)",
+      "releaseDelivered": "Libération automatique après livraison (heures)",
+      "releaseShipped": "Libération automatique après expédition (jours)",
+      "dangerousHint": "Les modifications du plafond COD n'affectent l'éligibilité que pour les nouvelles commandes."
+    },
+    "flags": {
+      "title": "Fonctionnalités (drapeaux)",
+      "subtitle": "Activez ou désactivez des fonctionnalités sans déploiement.",
+      "flag": "Fonctionnalité",
+      "enabled": "Statut"
+    },
+    "categories": {
+      "title": "Arborescence des catégories",
+      "subtitle": "Réorganisez les catégories, activez ou désactivez l'interdiction, et déplacez les sous-arborescences en toute sécurité.",
+      "name": "Nom",
+      "path": "Chemin",
+      "prohibited": "Interdit",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "moveChildrenPrompt": "Cette catégorie a des sous-catégories. Déplacer toute la sous-arborescence ?",
+      "moveChildrenConfirm": "Déplacer avec les sous-catégories",
+      "orphanWarning": "Impossible de déplacer sans les sous-catégories — activez le déplacement avec sous-catégories.",
+      "rootOption": "Racine (aucun parent)"
+    }
+  },
+  "business": {
+    "title": "Vérification des entreprises",
+    "subtitle": "Examinez et vérifiez les entreprises enregistrées auprès de la PACRA pour l'accès à la vente en gros.",
+    "queue": {
+      "filterLabel": "Afficher",
+      "filter": {
+        "pending": "En attente",
+        "verified": "Vérifiée",
+        "rejected": "Rejetée",
+        "suspended": "Suspendue",
+        "all": "Toutes"
+      },
+      "loading": "Chargement des demandes d'entreprises…",
+      "empty": "Aucune demande d'entreprise dans cette vue.",
+      "error": "Impossible de charger les demandes d'entreprises.",
+      "actionError": "Impossible de mettre à jour cette entreprise. Réessayez.",
+      "reasonRequired": "Indiquez un motif de rejet.",
+      "business": "Entreprise",
+      "registration": "N° PACRA",
+      "submitted": "Soumis",
+      "statusColumn": "Statut",
+      "tpin": "TPIN {tpin}",
+      "status": {
+        "pending": "En attente",
+        "verified": "Vérifiée",
+        "rejected": "Rejetée",
+        "suspended": "Suspendue"
+      },
+      "verify": "Vérifier",
+      "reject": "Rejeter",
+      "confirmReject": "Confirmer le rejet",
+      "cancel": "Annuler",
+      "reasonPlaceholder": "Motif (visible par le demandeur)"
+    }
+  },
+  "kyc": {
+    "title": "File d'examen KYC",
+    "subtitle": "Vérifications vendeur en attente — soumissions les plus anciennes en premier.",
+    "queue": {
+      "empty": "Aucune soumission KYC en attente.",
+      "loading": "Chargement de la file…",
+      "error": "Impossible de charger la file KYC.",
+      "retry": "Réessayer",
+      "vendor": "Vendeur",
+      "tier": "Palier {tier}",
+      "submitted": "Soumis",
+      "slaColumn": "SLA",
+      "review": "Examiner",
+      "sla": {
+        "on_track": "Dans les délais",
+        "due_soon": "Échéance proche",
+        "overdue": "En retard"
+      }
+    },
+    "detail": {
+      "back": "Retour à la file",
+      "loading": "Chargement de la demande…",
+      "error": "Impossible de charger cette demande KYC.",
+      "retry": "Réessayer",
+      "vendorContext": "Vendeur",
+      "vendorSummary": "{context} : {slug} · {tierLabel} · {statusLabel} : {status}",
+      "status": "Statut",
+      "tierLabel": "Palier {tier}",
+      "statusLabel": "Statut",
+      "missingValue": "Non disponible",
+      "tier": "Palier {tier}",
+      "momoMatch": "Correspondance du nom mobile money",
+      "momoPhone": "Téléphone",
+      "momoOperator": "Opérateur",
+      "legalName": "Nom légal",
+      "resolvedName": "Nom MoMo enregistré",
+      "matchScore": "Score de correspondance",
+      "matchResult": "Résultat",
+      "matched": "Concordant",
+      "notMatched": "Écart signalé",
+      "documents": "Documents d'identité",
+      "nrc": "Photo NRC",
+      "selfie": "Selfie",
+      "otherDoc": "Document",
+      "docsUnavailable": "L'aperçu du document est temporairement indisponible (dépendance au bucket de stockage).",
+      "docsExpired": "Les liens d'aperçu signés expirent après 5 minutes — actualisez pour les revoir.",
+      "noPreview": "Aperçu indisponible",
+      "decisions": "Décision",
+      "approve": "Approuver",
+      "reject": "Rejeter",
+      "requestResubmit": "Demander une nouvelle soumission",
+      "reviewerNotes": "Notes de l'examinateur (facultatif)",
+      "reasonTemplate": "Modèle de motif",
+      "freeText": "Notes supplémentaires",
+      "docsRequested": "Documents à téléverser à nouveau",
+      "confirmApprove": "Approuver ce vendeur pour le palier {tier} ?",
+      "confirmReject": "Rejeter cette demande ?",
+      "confirmResubmit": "Demander au vendeur de soumettre à nouveau ses documents ?",
+      "confirmAction": "Confirmer",
+      "cancel": "Annuler",
+      "submitting": "Enregistrement de la décision…",
+      "success": "Décision enregistrée — le vendeur sera notifié.",
+      "failure": "Impossible d'enregistrer la décision."
+    },
+    "reasons": {
+      "blurry_document": "Le document est flou ou illisible",
+      "name_mismatch": "Le nom ne correspond pas à l'enregistrement MoMo",
+      "expired_id": "La pièce d'identité semble expirée",
+      "incomplete_submission": "La soumission est incomplète",
+      "other": "Autre (précisez ci-dessous)"
+    }
+  },
+  "moderation": {
+    "title": "Modération des produits canoniques",
+    "subtitle": "Examinez les produits canoniques probablement en double et fusionnez-les en un seul survivant.",
+    "queue": {
+      "empty": "Aucune paire de produits en double détectée.",
+      "loading": "Chargement des paires en double…",
+      "error": "Impossible de charger les paires de produits en double.",
+      "retry": "Réessayer",
+      "similarity": "Similarité",
+      "similarityPercent": "Similarité : {value} %",
+      "category": "Catégorie",
+      "status": "Statut",
+      "aliases": "Alias",
+      "noAliases": "—",
+      "merge": "Fusionner (choisir le survivant)",
+      "confirmTitle": "Confirmer la fusion de produits",
+      "confirmBody": "Les annonces du produit perdant seront transférées vers le survivant. L'ancien slug fera l'objet d'une redirection 301 et les alias seront combinés.",
+      "confirmSurvivor": "Conserver comme survivant",
+      "confirmLoser": "Fusionner dans le survivant",
+      "confirmAction": "Confirmer la fusion",
+      "cancel": "Annuler",
+      "submitting": "Fusion en cours…",
+      "success": "Produits fusionnés avec succès.",
+      "failure": "Impossible de fusionner les produits.",
+      "idempotent": "Ces produits étaient déjà fusionnés — aucune modification effectuée."
+    },
+    "related": {
+      "title": "Produits associés sélectionnés",
+      "subtitle": "Sélectionnez manuellement les produits affichés dans le rail « Produits associés » d'une fiche produit. Une fois définis, ils remplacent les suggestions automatiques par catégorie.",
+      "anchorTitle": "Choisissez un produit à gérer",
+      "searchPlaceholder": "Rechercher par nom ou slug…",
+      "searchAction": "Rechercher",
+      "searching": "Recherche en cours…",
+      "noResults": "Aucun produit correspondant.",
+      "searchError": "Impossible de rechercher les produits.",
+      "loadError": "Impossible de charger les associations sélectionnées de ce produit.",
+      "loading": "Chargement…",
+      "pick": "Gérer celui-ci",
+      "changeAnchor": "Changer de produit",
+      "currentTitle": "Sélectionnés ({count}/{max})",
+      "empty": "Aucune association sélectionnée pour l'instant — la suggestion par catégorie est utilisée.",
+      "addTitle": "Ajouter un produit associé",
+      "add": "Ajouter",
+      "isAnchor": "Il s'agit du produit lui-même",
+      "alreadyAdded": "Déjà ajouté",
+      "notActive": "Non actif",
+      "maxReached": "Maximum de {max} produits associés atteint.",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "remove": "Retirer",
+      "save": "Enregistrer la sélection",
+      "saving": "Enregistrement…",
+      "saved": "Sélection enregistrée.",
+      "saveError": "Impossible d'enregistrer la sélection."
+    }
+  },
+  "flags": {
+    "title": "File des signalements",
+    "subtitle": "Signalements d'annonces, d'avis et de catégories interdites — les plus anciens en premier.",
+    "common": {
+      "cancel": "Annuler",
+      "submitting": "Enregistrement…",
+      "noteLabel": "Note du modérateur (facultatif)",
+      "notePlaceholder": "Note interne pour le journal d'audit"
+    },
+    "queue": {
+      "empty": "Aucun signalement ouvert dans la file.",
+      "loading": "Chargement des signalements…",
+      "error": "Impossible de charger la file des signalements.",
+      "retry": "Réessayer",
+      "success": "Action enregistrée — les parties concernées seront notifiées, le cas échéant.",
+      "filterEntity": "Filtrer",
+      "vendor": "Vendeur : {name}",
+      "reported": "Signalé {at}",
+      "repeatOffender": "{count, plural, one {# signalement précédent traité} other {# signalements précédents traités}}",
+      "entityType": {
+        "all": "Tous",
+        "listing": "Annonce",
+        "review": "Avis",
+        "prohibited": "Interdit"
+      }
+    },
+    "actions": {
+      "failure": "Impossible d'effectuer cette action.",
+      "dismiss": {
+        "button": "Ignorer",
+        "title": "Ignorer le signalement",
+        "body": "Fermez ce signalement sans agir sur le contenu.",
+        "confirm": "Ignorer"
+      },
+      "unpublish": {
+        "button": "Dépublier",
+        "title": "Dépublier l'annonce",
+        "body": "Masquez cette annonce de la recherche publique et du catalogue (≤ 1 min).",
+        "warning": "L'annonce n'apparaîtra plus publiquement.",
+        "confirm": "Dépublier"
+      },
+      "remove": {
+        "button": "Supprimer",
+        "title": "Supprimer le contenu",
+        "body": "Supprimez définitivement l'annonce ou l'avis signalé.",
+        "warning": "Cette action ne peut pas être annulée par le vendeur.",
+        "confirm": "Supprimer"
+      },
+      "warn-vendor": {
+        "button": "Avertir le vendeur",
+        "title": "Avertir le vendeur",
+        "body": "Envoyez un avertissement de politique au vendeur via WhatsApp.",
+        "confirm": "Envoyer l'avertissement"
+      },
+      "escalate-suspend": {
+        "button": "Suspendre le vendeur",
+        "title": "Suspendre le vendeur",
+        "body": "Suspendez le compte du vendeur. Les annonces cessent d'être visibles ; les commandes en cours et les versements ne sont pas affectés.",
+        "warning": "Les commandes existantes se poursuivent — aucune annulation en cascade.",
+        "confirm": "Suspendre le vendeur"
+      }
+    }
+  },
+  "merch": {
+    "title": "Merchandising",
+    "subtitle": "Composez la page d'accueil client — bannière principale, bannières, collections et plannings, sans déploiement.",
+    "board": {
+      "loading": "Chargement des emplacements…",
+      "error": "Impossible de charger les emplacements de merchandising.",
+      "retry": "Réessayer",
+      "empty": "Aucun emplacement de merchandising configuré pour le moment.",
+      "slotKey": "Section",
+      "variant": "Variante",
+      "position": "Position",
+      "schedule": "Planning",
+      "status": "Statut",
+      "draft": "Brouillon en attente",
+      "published": "Publié",
+      "edit": "Modifier",
+      "saveDraft": "Enregistrer le brouillon",
+      "publish": "Publier",
+      "preview": "Aperçu sur la page d'accueil",
+      "previewHint": "Ouvre la page d'accueil client avec superposition du brouillon (accès par jeton).",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "scheduleOpen": "Toujours actif",
+      "scheduleRange": "{from} → {to}",
+      "lusakaTz": "Les plannings utilisent le fuseau Africa/Lusaka (CAT, UTC+2)."
+    },
+    "hero": {
+      "title": "Variante de bannière principale",
+      "subtitle": "Choisissez une variante de design — les vignettes reflètent l'ensemble de composants en production.",
+      "variantLabel": "Variante",
+      "titleKey": "Clé du message de titre",
+      "subtitleKey": "Clé du message de sous-titre",
+      "imagePublicId": "Image principale (ID public Cloudinary)",
+      "primaryCtaHref": "Lien du CTA principal",
+      "secondaryCtaHref": "Lien du CTA secondaire"
+    },
+    "banner": {
+      "title": "Rangée de bannières",
+      "subtitle": "Jusqu'à quatre vignettes promotionnelles avec image, lien et planning optionnel.",
+      "addItem": "Ajouter une bannière",
+      "removeItem": "Supprimer",
+      "itemTitle": "Titre de la bannière",
+      "itemHref": "Lien",
+      "itemImage": "ID public de l'image",
+      "scheduleFrom": "Début du planning",
+      "scheduleTo": "Fin du planning"
+    },
+    "collection": {
+      "title": "Collections en vedette",
+      "subtitle": "Créez des rangées sélectionnées à partir de requêtes sur les annonces, catégories ou tags.",
+      "addCollection": "Ajouter une collection",
+      "collectionTitleKey": "Clé du titre de la collection",
+      "queryType": "Type de requête",
+      "queryListingIds": "ID des annonces (séparés par des virgules)",
+      "queryCategory": "Slug de catégorie",
+      "queryTag": "Tag",
+      "queryOrder": "Ordre de tri",
+      "orderPosition": "Position",
+      "orderNewest": "Plus récent",
+      "orderPriceAsc": "Prix croissant",
+      "orderPriceDesc": "Prix décroissant"
+    },
+    "slots": {
+      "hero": "Bannière principale",
+      "banner_row": "Rangée de bannières",
+      "flash_deal": "Offre flash",
+      "events_row": "Rangée d'événements",
+      "featured_collections": "Collections en vedette",
+      "category_grid": "Grille de catégories"
+    },
+    "common": {
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "saving": "Enregistrement…",
+      "success": "Enregistré.",
+      "failure": "Impossible d'enregistrer.",
+      "publishSuccess": "Publié sur la page d'accueil en production.",
+      "publishFailure": "Impossible de publier.",
+      "confirmPublish": "Publier le brouillon sur la page d'accueil en production ?"
+    }
+  },
+  "orders": {
+    "title": "Opérations sur les commandes",
+    "subtitle": "Recherchez n'importe quelle commande pour effectuer une expédition manuelle, des interventions de statut ou des blocages en séquestre.",
+    "search": {
+      "orderId": "ID de commande",
+      "orderIdPlaceholder": "UUID",
+      "phone": "Téléphone du client",
+      "phonePlaceholder": "+260…",
+      "vendor": "Slug ou nom du vendeur",
+      "vendorPlaceholder": "lusaka-electronics",
+      "status": "Statut",
+      "statusAny": "Tous les statuts",
+      "submit": "Rechercher des commandes",
+      "searching": "Recherche…",
+      "needFilter": "Saisissez au moins un filtre.",
+      "error": "Impossible de rechercher les commandes.",
+      "empty": "Aucune commande ne correspond à vos filtres.",
+      "open": "Ouvrir",
+      "columns": {
+        "order": "Commande",
+        "vendor": "Vendeur",
+        "phone": "Téléphone",
+        "status": "Statut"
+      },
+      "statuses": {
+        "placed": "Passée",
+        "confirmed": "Confirmée",
+        "processing": "En traitement",
+        "ready": "Prête",
+        "shipped": "Expédiée",
+        "delivered": "Livrée",
+        "completed": "Terminée",
+        "cancelled": "Annulée"
+      }
+    },
+    "detail": {
+      "back": "Retour à la recherche",
+      "loading": "Chargement de la commande…",
+      "error": "Impossible de charger cette commande.",
+      "retry": "Réessayer",
+      "summary": "{vendor} · {customer} · {fulfilment}",
+      "itemsTitle": "Articles",
+      "paymentsTitle": "Paiements",
+      "paymentsEmpty": "Aucun paiement pour ce groupe de paiement.",
+      "ledgerTitle": "Grand livre",
+      "ledgerEmpty": "Aucune transaction dans le grand livre pour le moment.",
+      "ledgerBalance": "Σ écritures : {balance} ngwee",
+      "timelineTitle": "Chronologie",
+      "itemLine": "{title} × {qty}",
+      "paymentLine": "{rail} · {status}",
+      "statuses": {
+        "placed": "Passée",
+        "confirmed": "Confirmée",
+        "processing": "En traitement",
+        "ready": "Prête",
+        "shipped": "Expédiée",
+        "delivered": "Livrée",
+        "completed": "Terminée",
+        "cancelled": "Annulée"
+      },
+      "fulfilment": {
+        "delivery": "Livraison",
+        "pickup": "Retrait"
+      }
+    },
+    "dispatch": {
+      "title": "Expédition manuelle",
+      "subtitle": "Réservez un livreur et faites avancer le traitement — enregistré dans la chronologie client.",
+      "courier": "Livreur",
+      "couriers": {
+        "yango": "Yango",
+        "indrive": "inDrive",
+        "other": "Autre"
+      },
+      "courierOther": "Nom du livreur",
+      "trackingNote": "Note de suivi",
+      "trackingPlaceholder": "Nom du chauffeur, plaque, ETA…",
+      "statusEvent": "Mise à jour du statut",
+      "events": {
+        "ship": "Marquer comme expédiée",
+        "mark_delivered": "Marquer comme livrée"
+      },
+      "submit": "Enregistrer l'expédition",
+      "submitting": "Enregistrement…",
+      "success": "Expédition enregistrée dans la chronologie de la commande.",
+      "failure": "Impossible d'enregistrer l'expédition."
+    },
+    "intervention": {
+      "title": "Intervention sur le statut",
+      "subtitle": "Statut actuel : {status}. Les transitions non autorisées sont rejetées par la machine à états.",
+      "event": "Événement de transition",
+      "events": {
+        "confirm": "Confirmer la commande",
+        "reject": "Rejeter la commande",
+        "cancel": "Annuler la commande",
+        "start_processing": "Démarrer le traitement",
+        "ready_for_pickup": "Prête pour retrait",
+        "ship": "Expédier",
+        "verify_pickup": "Vérifier le retrait",
+        "mark_delivered": "Marquer comme livrée",
+        "confirm_received": "Confirmer la réception"
+      },
+      "reason": "Motif (obligatoire)",
+      "reasonPlaceholder": "Pourquoi cette intervention est-elle nécessaire ?",
+      "refundPath": "Annulation payée — parcours de remboursement confirmé",
+      "submit": "Appliquer l'intervention",
+      "submitting": "Application…",
+      "success": "Statut mis à jour via la machine à états.",
+      "failure": "Transition rejetée ou échouée."
+    },
+    "escrow": {
+      "title": "Blocage / déblocage manuel en séquestre",
+      "subtitle": "Enregistre une transaction équilibrée dans le grand livre avec l'indicateur manuel. Les deux notes sont obligatoires.",
+      "confirmationHint": "Saisissez exactement « {phrase} » pour confirmer.",
+      "operation": "Opération",
+      "operations": {
+        "hold": "Bloquer en séquestre",
+        "release": "Débloquer du séquestre"
+      },
+      "amountNgwee": "Montant (ngwee)",
+      "reason": "Motif",
+      "confirmationPhrase": "Phrase de confirmation",
+      "submit": "Enregistrer le séquestre manuel",
+      "submitting": "Enregistrement…",
+      "success": "Transaction de séquestre manuelle enregistrée.",
+      "failure": "Impossible d'enregistrer le séquestre manuel — vérifiez les deux notes.",
+      "invalidAmount": "Saisissez un montant en ngwee positif."
+    },
+    "timeline": {
+      "empty": "Aucun événement dans la chronologie pour le moment.",
+      "statusChange": "{from} → {to}",
+      "missing": "—"
+    }
+  },
+  "dashboard": {
+    "title": "Tableau de bord des opérations",
+    "subtitle": "Agrégats de la plateforme — passifs du grand livre, rapprochement et aperçu de l'entonnoir.",
+    "loading": "Chargement du tableau de bord…",
+    "error": "Impossible de charger les agrégats du tableau de bord.",
+    "retry": "Réessayer",
+    "cachedAt": "Agrégats mis en cache à {at}",
+    "liabilitiesTotal": "Total des passifs de versement : {amount}",
+    "gmv": {
+      "title": "GMV",
+      "subtitle": "Volume brut de transactions (commandes non annulées)"
+    },
+    "payoutLiabilities": {
+      "title": "Passifs de versement",
+      "subtitle": "Retenu en séquestre plus libéré, non versé (dérivé du grand livre)",
+      "escrowHeld": "Retenu en séquestre",
+      "releasedUnpaid": "Libéré, non versé",
+      "total": "Passif total"
+    },
+    "reconciliation": {
+      "title": "Rapprochement",
+      "subtitle": "Dernier rapport quotidien Lenco / grand livre",
+      "statusGreen": "Équilibré",
+      "statusRed": "Écart signalé",
+      "reportDate": "Date du rapport : {date}",
+      "noReport": "Aucun rapport de rapprochement pour le moment.",
+      "drillIn": "Voir les détails du rapport",
+      "hideDrillIn": "Masquer les détails",
+      "mismatchAlert": "Écart détecté dans le grand livre — examinez les divergences.",
+      "cleanDay": "Aucune divergence dans le dernier rapport."
+    },
+    "orders": {
+      "title": "Commandes par statut",
+      "subtitle": "Décompte en temps réel du pipeline de commandes",
+      "statuses": {
+        "placed": "Passée",
+        "confirmed": "Confirmée",
+        "processing": "En traitement",
+        "ready": "Prête",
+        "shipped": "Expédiée",
+        "delivered": "Livrée",
+        "completed": "Terminée",
+        "cancelled": "Annulée"
+      }
+    },
+    "counts": {
+      "title": "Taille du catalogue",
+      "subtitle": "Vendeurs, annonces et produits canoniques",
+      "vendors": "Vendeurs",
+      "listings": "Annonces",
+      "products": "Produits"
+    },
+    "aiUsage": {
+      "title": "Ask Vergeo AI",
+      "subtitle": "Dépenses mensuelles par rapport au plafond de la plateforme",
+      "noData": "Aucune donnée d'utilisation pour le moment",
+      "noDataHint": "Le suivi de l'utilisation de l'IA sera livré dans une vague ultérieure. Le plafond reste de ${cap}/mois.",
+      "spendVsCap": "${spend} sur un plafond mensuel de ${cap}"
+    },
+    "funnel": {
+      "title": "Aperçu de l'entonnoir",
+      "subtitle": "Conversion des paiements et des commandes (événements côté serveur)",
+      "steps": {
+        "checkout_started": "Paiements initiés",
+        "checkout_completed": "Paiements terminés",
+        "orders_placed": "Commandes passées",
+        "orders_completed": "Commandes terminées"
+      }
+    }
+  },
+  "disputes": {
+    "title": "Console des litiges",
+    "subtitle": "Examinez les litiges ouverts — triés par ancienneté ou valeur de commande.",
+    "queue": {
+      "empty": "Aucun litige ouvert dans la file d'attente.",
+      "loading": "Chargement des litiges…",
+      "error": "Impossible de charger la file d'attente des litiges.",
+      "retry": "Réessayer",
+      "sortLabel": "Trier par",
+      "sortAge": "Plus ancien d'abord",
+      "sortValue": "Valeur la plus élevée",
+      "order": "Commande",
+      "orderIdShort": "{id}…",
+      "vendor": "Vendeur",
+      "value": "Valeur",
+      "opened": "Ouverture",
+      "slaColumn": "SLA",
+      "review": "Examiner",
+      "sla": {
+        "on_track": "Dans les délais",
+        "due_soon": "Échéance proche",
+        "overdue": "En retard"
+      }
+    },
+    "detail": {
+      "back": "Retour à la file d'attente",
+      "loading": "Chargement du litige…",
+      "error": "Impossible de charger ce litige.",
+      "retry": "Réessayer",
+      "title": "Examen du litige",
+      "summary": "Commande {orderId} · {status} · {vendor}",
+      "vendorResponse": "Réponse du vendeur",
+      "evidenceTitle": "Preuves",
+      "contextTitle": "Contexte de la commande",
+      "evidence": {
+        "customer": "Preuves du client",
+        "vendor": "Preuves du vendeur",
+        "empty": "Aucune preuve téléversée.",
+        "unavailable": "L'aperçu des preuves est temporairement indisponible.",
+        "noneCustomer": "Aucune preuve du client.",
+        "noneVendor": "Aucune preuve du vendeur.",
+        "noPreview": "Aperçu indisponible",
+        "openDocument": "Ouvrir le document",
+        "expires": "Le lien expire {at}"
+      },
+      "context": {
+        "summary": "Résumé",
+        "vendor": "Vendeur",
+        "customer": "Client",
+        "orderStatus": "Statut de la commande",
+        "orderTotal": "Total de la commande",
+        "items": "Articles",
+        "itemsEmpty": "Aucun article.",
+        "itemLine": "{title} × {qty} @ {price}",
+        "payments": "Paiements",
+        "paymentsEmpty": "Aucun paiement.",
+        "paymentLine": "{rail} · {status} · {amount} · {at}",
+        "ledger": "Grand livre",
+        "ledgerEmpty": "Aucune transaction dans le grand livre.",
+        "ledgerBalance": "Σ écritures : {balance} ngwee"
+      },
+      "decision": {
+        "title": "Décision",
+        "subtitle": "Choisissez une issue — les mouvements de fonds passent par le résolveur de litiges (note obligatoire).",
+        "outcome": "Issue",
+        "fullRefund": "Remboursement complet au client",
+        "partialRefund": "Remboursement partiel (ngwee) + libération du solde",
+        "release": "Libérer au vendeur",
+        "partialAmount": "Remboursement partiel (ngwee, max {max})",
+        "customerMomo": "Numéro MoMo du client",
+        "customerRail": "Réseau MoMo",
+        "rails": {
+          "mtn": "MTN",
+          "airtel": "Airtel",
+          "zamtel": "Zamtel"
+        },
+        "note": "Note de décision (obligatoire)",
+        "noteRequired": "Une note de décision est requise.",
+        "partialRequired": "Saisissez un montant de remboursement partiel valide.",
+        "partialTooHigh": "Le remboursement partiel ne peut pas dépasser {max}.",
+        "momoRequired": "Le numéro MoMo du client est requis.",
+        "submit": "Enregistrer la décision",
+        "submitting": "Traitement…",
+        "success": "Décision enregistrée — les parties seront notifiées.",
+        "failure": "Impossible d'enregistrer la décision.",
+        "alreadyResolved": "Ce litige a déjà été résolu."
+      }
+    }
+  },
+  "support": {
+    "title": "Boîte de réception de l'assistance",
+    "subtitle": "Recherchez des clients par téléphone ou ID, envoyez des réponses prédéfinies via la file d'envoi, et consultez l'historique des interactions.",
+    "lookup": {
+      "label": "Téléphone ou ID",
+      "placeholder": "+260… ou UUID de commande/client",
+      "submit": "Rechercher",
+      "searching": "Recherche…",
+      "needQuery": "Saisissez un numéro de téléphone partiel ou un ID.",
+      "error": "Impossible d'effectuer la recherche d'assistance.",
+      "empty": "Aucun client ou commande correspondant.",
+      "multiple": "Plusieurs résultats — sélectionnez un client"
+    },
+    "context": {
+      "title": "Contexte du client",
+      "summary": "{name} · {phone}",
+      "unknownName": "Client inconnu",
+      "unknownPhone": "Aucun téléphone",
+      "customerId": "ID client",
+      "openOrders": "Commandes en cours",
+      "latestStatus": "Statut de la dernière commande",
+      "noOrders": "Aucune commande",
+      "locale": "Langue",
+      "recentOrders": "Commandes récentes",
+      "orderLine": "{status} · {date}",
+      "statuses": {
+        "placed": "Passée",
+        "confirmed": "Confirmée",
+        "processing": "En traitement",
+        "ready": "Prête",
+        "shipped": "Expédiée",
+        "delivered": "Livrée",
+        "completed": "Terminée",
+        "cancelled": "Annulée"
+      }
+    },
+    "reply": {
+      "title": "Envoyer une réponse",
+      "subtitle": "Les modèles prédéfinis sont mis en file d'attente via WhatsApp → SMS → repli e-mail.",
+      "modeCanned": "Modèle prédéfini",
+      "modeFreeText": "Texte libre",
+      "templateLabel": "Modèle",
+      "templatePlaceholder": "Choisissez un modèle…",
+      "freeTextLabel": "Message",
+      "freeTextPlaceholder": "Saisissez un message personnalisé pour le client…",
+      "freeTextAudit": "Les envois en texte libre sont enregistrés dans le journal d'audit.",
+      "submit": "Envoyer via la file d'envoi",
+      "submitting": "Envoi…",
+      "success": "Mis en file d'attente sur {channel}.",
+      "successDeduped": "Déjà en file d'attente sur {channel} (dédupliqué).",
+      "failure": "Impossible d'envoyer le message."
+    },
+    "log": {
+      "title": "Journal des interactions",
+      "subtitle": "Messages d'assistance sortants pour ce client.",
+      "loading": "Chargement du journal…",
+      "error": "Impossible de charger le journal des interactions.",
+      "retry": "Réessayer",
+      "empty": "Aucun message d'assistance pour le moment.",
+      "kindCanned": "Prédéfini",
+      "kindFreeText": "Texte libre"
+    },
+    "templates": {
+      "order_status_update": {
+        "label": "Mise à jour du statut de commande",
+        "body": "Bonjour, ici l'assistance Vergeo5 — nous vérifions l'état de votre commande et vous tiendrons informé sous peu."
+      },
+      "delivery_eta": {
+        "label": "ETA de livraison",
+        "body": "Bonjour, ici Vergeo5 — votre livraison est en cours. Nous vous communiquerons une heure d'arrivée estimée dès que le livreur confirme."
+      },
+      "payment_reminder": {
+        "label": "Rappel de paiement",
+        "body": "Bonjour, ici Vergeo5 — votre commande est en attente de paiement. Ouvrez l'application pour finaliser votre commande dès que vous êtes prêt."
+      },
+      "apology_delay": {
+        "label": "Excuses pour le retard",
+        "body": "Bonjour, ici Vergeo5 — nous sommes désolés pour le retard de votre commande. Notre équipe la traite désormais en priorité."
+      },
+      "pickup_ready": {
+        "label": "Prêt pour retrait",
+        "body": "Bonjour, ici Vergeo5 — votre commande est prête pour le retrait. Apportez votre référence de commande à votre arrivée."
+      }
+    },
+    "errors": {
+      "rateLimited": "Trop de messages d'assistance — réessayez sous peu."
+    }
+  }
+}

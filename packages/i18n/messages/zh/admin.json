@@ -1,0 +1,855 @@
+{
+  "title": "管理控制台",
+  "shell": {
+    "eyebrow": "Vergeo5 运营",
+    "environment": "加固管理源",
+    "signOut": "退出登录"
+  },
+  "nav": {
+    "home": "仪表板",
+    "kyc": "KYC 队列",
+    "business": "商户",
+    "moderation": "内容审核",
+    "disputes": "纠纷",
+    "orders": "订单",
+    "config": "配置",
+    "merch": "商品运营",
+    "translations": "翻译",
+    "support": "客服"
+  },
+  "translations": {
+    "heading": "翻译",
+    "subheading": "所有面向用户的字符串按所在位置分组，并显示各语言的翻译覆盖率。编辑翻译后点击“保存”进行存储；点击“下载 JSON”将其发布到消息文件中。英语为基准语言；未翻译的字符串将回退为英语。",
+    "lensLabel": "视图",
+    "lens": {
+      "l10n": "本地化（覆盖率）",
+      "i18n": "国际化（键）"
+    },
+    "localeSummary": "{locale}：已翻译 {translated, number} / {total, number} 条字符串（{percent}%）。其余回退为英语。",
+    "localeChip": "{locale} · {percent}%",
+    "coverageCount": "{translated, number} / {total, number} · {percent}%",
+    "keyCount": "{count, plural, one {# 条字符串} other {# 条字符串}}",
+    "filter": {
+      "all": "全部",
+      "missing": "缺失",
+      "translated": "已翻译"
+    },
+    "tag": {
+      "translated": "已翻译",
+      "missing": "英语",
+      "override": "已编辑"
+    },
+    "emptyFiltered": "没有符合此筛选条件的字符串。",
+    "save": "保存",
+    "clear": "清除",
+    "valuePlaceholder": "翻译内容…",
+    "exportNamespace": "下载 JSON",
+    "errors": {
+      "loadOverrides": "无法加载已保存的编辑内容，请重新加载页面。",
+      "save": "保存失败，请重试。"
+    },
+    "pages": {
+      "common": "所有应用——共享界面、导航、主题",
+      "auth": "所有应用——登录与注册",
+      "catalog": "客户端——商品列表、详情、对比",
+      "search": "客户端——搜索与建议",
+      "checkout": "客户端——购物车与结账",
+      "orders": "客户端与商家端——订单历史与队列",
+      "vendor": "商家应用——仪表板、列表、活动、提现",
+      "admin": "管理应用——所有管理页面",
+      "events": "客户端——活动浏览、详情、门票、钱包",
+      "services": "客户端与商家端——服务与报价",
+      "supplies": "客户端——批发（B2B）",
+      "directory": "客户端——商户目录",
+      "legal": "客户端——法律与政策页面",
+      "notifications": "服务器端——WhatsApp、短信与邮件模板",
+      "account": "客户端——账户与隐私",
+      "ai": "客户端——Ask Vergeo",
+      "marketing": "客户端——关于、联系、帮助、入驻"
+    },
+    "addLanguage": {
+      "title": "添加语言",
+      "body": "目前语言是基于文件管理的。由开发人员接入该语言后，再在此处翻译其字符串。应用内实时编辑是计划中的后续功能。",
+      "step1": "将语言代码添加到 LOCALES（packages/i18n/src/locales.ts）以及账户语言名称映射表中。",
+      "step2": "将该代码添加到客户端、商家端和管理端应用的 middleware matcher 中。",
+      "step3": "创建 packages/i18n/messages/'<code>'/ 目录并翻译每个命名空间；缺失的键将回退为英语。"
+    }
+  },
+  "users": {
+    "count": "{count, plural, one {# 位用户} other {# 位用户}}"
+  },
+  "action": {
+    "confirm": "确认{action}？"
+  },
+  "config": {
+    "title": "平台配置",
+    "subtitle": "实时编辑——对新订单和新会话立即生效。",
+    "nav": {
+      "commissions": "佣金",
+      "deliveryZones": "配送区域",
+      "platform": "平台参数",
+      "flags": "功能开关",
+      "categories": "分类树"
+    },
+    "common": {
+      "save": "保存更改",
+      "cancel": "取消",
+      "confirm": "确认更改",
+      "loading": "加载中…",
+      "error": "无法加载配置",
+      "retry": "重试",
+      "active": "生效",
+      "inactive": "失效",
+      "enabled": "启用",
+      "disabled": "停用",
+      "prohibited": "禁止",
+      "allowed": "允许",
+      "position": "位置",
+      "key": "键",
+      "value": "值",
+      "label": "标签",
+      "description": "描述"
+    },
+    "confirm": {
+      "title": "确认配置更改",
+      "body": "请查看以下更改。此更改将对新活动立即生效。",
+      "dangerous": "这是一项敏感设置——保存前请仔细核对。",
+      "from": "当前值",
+      "to": "新值"
+    },
+    "commissions": {
+      "title": "佣金费率",
+      "subtitle": "按分类设置的基点数。结账时生成快照——现有订单不受影响。",
+      "categoryKey": "分类",
+      "rateBps": "费率（基点）",
+      "dangerousHint": "佣金更改仅适用于新订单。"
+    },
+    "deliveryZones": {
+      "title": "配送区域",
+      "subtitle": "卢萨卡配送区间与费用（ngwee）。",
+      "zoneKey": "区域",
+      "feeNgwee": "费用（ngwee）",
+      "active": "生效"
+    },
+    "platform": {
+      "title": "平台设置",
+      "subtitle": "货到付款上限、AI 配额、担保资金释放窗口期和库存预留 TTL。",
+      "codCap": "货到付款上限（ngwee）",
+      "freeDelivery": "免运费门槛（ngwee）",
+      "reservationTtl": "库存预留 TTL（分钟）",
+      "aiGuestQuota": "AI 访客配额",
+      "aiFreeQuota": "AI 免费版每月配额",
+      "aiCapUsd": "AI 每月上限（USD）",
+      "releaseDelivered": "送达后自动释放（小时）",
+      "releaseShipped": "发货后自动释放（天）",
+      "dangerousHint": "货到付款上限的更改仅影响新的结账资格。"
+    },
+    "flags": {
+      "title": "功能开关",
+      "subtitle": "无需部署即可切换上线功能。",
+      "flag": "开关",
+      "enabled": "状态"
+    },
+    "categories": {
+      "title": "分类树",
+      "subtitle": "对分类重新排序、切换禁止状态，并安全地移动子树。",
+      "name": "名称",
+      "path": "路径",
+      "prohibited": "禁止",
+      "moveUp": "上移",
+      "moveDown": "下移",
+      "moveChildrenPrompt": "此分类包含子分类。是否移动整个子树？",
+      "moveChildrenConfirm": "连同子分类一起移动",
+      "orphanWarning": "无法在不移动子分类的情况下移动该分类——请启用“连同子分类一起移动”。",
+      "rootOption": "根节点（无父级）"
+    }
+  },
+  "business": {
+    "title": "商户验证",
+    "subtitle": "审核并验证已在 PACRA 注册的商户，以开通批发权限。",
+    "queue": {
+      "filterLabel": "显示",
+      "filter": {
+        "pending": "待处理",
+        "verified": "已验证",
+        "rejected": "已拒绝",
+        "suspended": "已暂停",
+        "all": "全部"
+      },
+      "loading": "正在加载商户申请…",
+      "empty": "此视图中没有商户申请。",
+      "error": "无法加载商户申请。",
+      "actionError": "无法更新此商户，请重试。",
+      "reasonRequired": "请输入拒绝原因。",
+      "business": "商户",
+      "registration": "PACRA 编号",
+      "submitted": "提交时间",
+      "statusColumn": "状态",
+      "tpin": "TPIN {tpin}",
+      "status": {
+        "pending": "待处理",
+        "verified": "已验证",
+        "rejected": "已拒绝",
+        "suspended": "已暂停"
+      },
+      "verify": "验证",
+      "reject": "拒绝",
+      "confirmReject": "确认拒绝",
+      "cancel": "取消",
+      "reasonPlaceholder": "原因（将显示给申请人）"
+    }
+  },
+  "kyc": {
+    "title": "KYC 审核队列",
+    "subtitle": "待处理的商家验证——按提交时间从早到晚排序。",
+    "queue": {
+      "empty": "暂无待处理的 KYC 提交。",
+      "loading": "正在加载队列…",
+      "error": "无法加载 KYC 队列。",
+      "retry": "重试",
+      "vendor": "商家",
+      "tier": "等级 {tier}",
+      "submitted": "提交时间",
+      "slaColumn": "SLA",
+      "review": "审核",
+      "sla": {
+        "on_track": "按期",
+        "due_soon": "即将到期",
+        "overdue": "已逾期"
+      }
+    },
+    "detail": {
+      "back": "返回队列",
+      "loading": "正在加载申请…",
+      "error": "无法加载此 KYC 申请。",
+      "retry": "重试",
+      "vendorContext": "商家",
+      "vendorSummary": "{context}：{slug} · {tierLabel} · {statusLabel}：{status}",
+      "status": "状态",
+      "tierLabel": "等级 {tier}",
+      "statusLabel": "状态",
+      "missingValue": "不可用",
+      "tier": "等级 {tier}",
+      "momoMatch": "移动钱包姓名匹配",
+      "momoPhone": "电话号码",
+      "momoOperator": "运营商",
+      "legalName": "法定姓名",
+      "resolvedName": "MoMo 注册姓名",
+      "matchScore": "匹配分数",
+      "matchResult": "结果",
+      "matched": "已匹配",
+      "notMatched": "已标记不匹配",
+      "documents": "身份证明文件",
+      "nrc": "NRC 照片",
+      "selfie": "自拍照",
+      "otherDoc": "文件",
+      "docsUnavailable": "文件预览暂时不可用（依赖存储桶服务）。",
+      "docsExpired": "签名预览链接 5 分钟后过期——请刷新后重新查看。",
+      "noPreview": "预览不可用",
+      "decisions": "决定",
+      "approve": "批准",
+      "reject": "拒绝",
+      "requestResubmit": "要求重新提交",
+      "reviewerNotes": "审核备注（选填）",
+      "reasonTemplate": "原因模板",
+      "freeText": "补充说明",
+      "docsRequested": "需要重新上传的文件",
+      "confirmApprove": "确认批准该商家达到等级 {tier}？",
+      "confirmReject": "确认拒绝此申请？",
+      "confirmResubmit": "确认要求该商家重新提交文件？",
+      "confirmAction": "确认",
+      "cancel": "取消",
+      "submitting": "正在保存决定…",
+      "success": "决定已记录——商家将收到通知。",
+      "failure": "无法保存决定。"
+    },
+    "reasons": {
+      "blurry_document": "文件模糊或无法辨认",
+      "name_mismatch": "姓名与 MoMo 注册信息不符",
+      "expired_id": "身份证件似乎已过期",
+      "incomplete_submission": "提交材料不完整",
+      "other": "其他（请在下方说明）"
+    }
+  },
+  "moderation": {
+    "title": "标准商品审核",
+    "subtitle": "审核疑似重复的标准商品，并合并为一个保留商品。",
+    "queue": {
+      "empty": "未检测到重复商品对。",
+      "loading": "正在加载重复商品对…",
+      "error": "无法加载重复商品对。",
+      "retry": "重试",
+      "similarity": "相似度",
+      "similarityPercent": "相似度：{value}%",
+      "category": "分类",
+      "status": "状态",
+      "aliases": "别名",
+      "noAliases": "—",
+      "merge": "合并（选择保留商品）",
+      "confirmTitle": "确认合并商品",
+      "confirmBody": "被合并商品下的商品列表将转移至保留商品，旧 slug 将执行 301 重定向，别名将合并。",
+      "confirmSurvivor": "设为保留商品",
+      "confirmLoser": "合并至保留商品",
+      "confirmAction": "确认合并",
+      "cancel": "取消",
+      "submitting": "正在合并…",
+      "success": "商品合并成功。",
+      "failure": "无法合并商品。",
+      "idempotent": "这些商品此前已合并——未做任何更改。"
+    },
+    "related": {
+      "title": "精选相关商品",
+      "subtitle": "手动挑选商品详情页“相关商品”栏中展示的商品。设置后将覆盖自动分类推荐。",
+      "anchorTitle": "选择要精选的商品",
+      "searchPlaceholder": "按名称或 slug 搜索…",
+      "searchAction": "搜索",
+      "searching": "正在搜索…",
+      "noResults": "没有匹配的商品。",
+      "searchError": "无法搜索商品。",
+      "loadError": "无法加载该商品的精选关联。",
+      "loading": "加载中…",
+      "pick": "精选此商品",
+      "changeAnchor": "更换商品",
+      "currentTitle": "已精选（{count}/{max}）",
+      "empty": "暂无精选关联——当前使用分类自动推荐。",
+      "addTitle": "添加相关商品",
+      "add": "添加",
+      "isAnchor": "这是该商品本身",
+      "alreadyAdded": "已添加",
+      "notActive": "失效",
+      "maxReached": "已达到相关商品数量上限（{max} 个）。",
+      "moveUp": "上移",
+      "moveDown": "下移",
+      "remove": "移除",
+      "save": "保存精选设置",
+      "saving": "正在保存…",
+      "saved": "精选设置已保存。",
+      "saveError": "无法保存精选设置。"
+    }
+  },
+  "flags": {
+    "title": "举报队列",
+    "subtitle": "商品列表、评价和违禁分类举报——按提交时间从早到晚排序。",
+    "common": {
+      "cancel": "取消",
+      "submitting": "正在保存…",
+      "noteLabel": "审核员备注（选填）",
+      "notePlaceholder": "用于审计记录的内部备注"
+    },
+    "queue": {
+      "empty": "队列中没有待处理的举报。",
+      "loading": "正在加载举报…",
+      "error": "无法加载举报队列。",
+      "retry": "重试",
+      "success": "操作已记录——相关方将在适用情况下收到通知。",
+      "filterEntity": "筛选",
+      "vendor": "商家：{name}",
+      "reported": "举报于 {at}",
+      "repeatOffender": "{count, plural, one {# 起既往已处理举报} other {# 起既往已处理举报}}",
+      "entityType": {
+        "all": "全部",
+        "listing": "商品列表",
+        "review": "评价",
+        "prohibited": "违禁"
+      }
+    },
+    "actions": {
+      "failure": "无法完成此操作。",
+      "dismiss": {
+        "button": "驳回",
+        "title": "驳回举报",
+        "body": "在不对内容采取处理措施的情况下关闭此举报。",
+        "confirm": "驳回"
+      },
+      "unpublish": {
+        "button": "下架",
+        "title": "下架商品列表",
+        "body": "从公开搜索和目录中隐藏此商品列表（≤1 分钟）。",
+        "warning": "该商品列表将不再公开显示。",
+        "confirm": "下架"
+      },
+      "remove": {
+        "button": "删除",
+        "title": "删除内容",
+        "body": "永久删除被举报的商品列表或评价。",
+        "warning": "商家无法撤销此操作。",
+        "confirm": "删除"
+      },
+      "warn-vendor": {
+        "button": "警告商家",
+        "title": "警告商家",
+        "body": "通过 WhatsApp 向商家发送政策警告。",
+        "confirm": "发送警告"
+      },
+      "escalate-suspend": {
+        "button": "暂停商家",
+        "title": "暂停商家",
+        "body": "暂停该商家账户。其商品列表将停止展示；处理中的订单和提现不受影响。",
+        "warning": "现有订单将继续进行——不会级联取消。",
+        "confirm": "暂停商家"
+      }
+    }
+  },
+  "merch": {
+    "title": "商品运营",
+    "subtitle": "编排客户端首页——主视觉、横幅、专题和排期，无需部署。",
+    "board": {
+      "loading": "正在加载展位…",
+      "error": "无法加载商品运营展位。",
+      "retry": "重试",
+      "empty": "尚未配置商品运营展位。",
+      "slotKey": "板块",
+      "variant": "样式",
+      "position": "位置",
+      "schedule": "排期",
+      "status": "状态",
+      "draft": "草稿待发布",
+      "published": "已发布",
+      "edit": "编辑",
+      "saveDraft": "保存草稿",
+      "publish": "发布",
+      "preview": "预览首页效果",
+      "previewHint": "以草稿叠加层打开客户端首页（需令牌授权）。",
+      "active": "启用",
+      "inactive": "停用",
+      "scheduleOpen": "始终启用",
+      "scheduleRange": "{from} → {to}",
+      "lusakaTz": "排期使用非洲/卢萨卡时区（CAT，UTC+2）。"
+    },
+    "hero": {
+      "title": "主视觉样式",
+      "subtitle": "选择设计样式——缩略图反映线上组件的实际效果。",
+      "variantLabel": "样式",
+      "titleKey": "标题文案键",
+      "subtitleKey": "副标题文案键",
+      "imagePublicId": "主视觉图片（Cloudinary 公共 ID）",
+      "primaryCtaHref": "主按钮链接",
+      "secondaryCtaHref": "次按钮链接"
+    },
+    "banner": {
+      "title": "横幅行",
+      "subtitle": "最多四个推广图块，含图片、链接及可选排期。",
+      "addItem": "添加横幅",
+      "removeItem": "移除",
+      "itemTitle": "横幅标题",
+      "itemHref": "链接地址",
+      "itemImage": "图片公共 ID",
+      "scheduleFrom": "排期开始",
+      "scheduleTo": "排期结束"
+    },
+    "collection": {
+      "title": "推荐专题",
+      "subtitle": "基于商品条目、类目或标签查询构建精选行。",
+      "addCollection": "添加专题",
+      "collectionTitleKey": "专题标题键",
+      "queryType": "查询类型",
+      "queryListingIds": "商品条目 ID（以逗号分隔）",
+      "queryCategory": "类目 slug",
+      "queryTag": "标签",
+      "queryOrder": "排序方式",
+      "orderPosition": "位置",
+      "orderNewest": "最新",
+      "orderPriceAsc": "价格从低到高",
+      "orderPriceDesc": "价格从高到低"
+    },
+    "slots": {
+      "hero": "主视觉",
+      "banner_row": "横幅行",
+      "flash_deal": "限时特惠",
+      "events_row": "活动行",
+      "featured_collections": "推荐专题",
+      "category_grid": "类目网格"
+    },
+    "common": {
+      "save": "保存",
+      "cancel": "取消",
+      "saving": "保存中…",
+      "success": "已保存。",
+      "failure": "无法保存。",
+      "publishSuccess": "已发布至线上首页。",
+      "publishFailure": "无法发布。",
+      "confirmPublish": "将草稿发布至线上首页？"
+    }
+  },
+  "orders": {
+    "title": "订单运营",
+    "subtitle": "搜索任意订单，执行人工调度、状态干预或托管冻结/释放操作。",
+    "search": {
+      "orderId": "订单 ID",
+      "orderIdPlaceholder": "UUID",
+      "phone": "客户电话",
+      "phonePlaceholder": "+260…",
+      "vendor": "商家 slug 或名称",
+      "vendorPlaceholder": "lusaka-electronics",
+      "status": "状态",
+      "statusAny": "任意状态",
+      "submit": "搜索订单",
+      "searching": "搜索中…",
+      "needFilter": "请至少输入一个筛选条件。",
+      "error": "无法搜索订单。",
+      "empty": "没有符合筛选条件的订单。",
+      "open": "打开",
+      "columns": {
+        "order": "订单",
+        "vendor": "商家",
+        "phone": "电话",
+        "status": "状态"
+      },
+      "statuses": {
+        "placed": "已下单",
+        "confirmed": "已确认",
+        "processing": "处理中",
+        "ready": "已就绪",
+        "shipped": "已发货",
+        "delivered": "已送达",
+        "completed": "已完成",
+        "cancelled": "已取消"
+      }
+    },
+    "detail": {
+      "back": "返回搜索",
+      "loading": "正在加载订单…",
+      "error": "无法加载此订单。",
+      "retry": "重试",
+      "summary": "{vendor} · {customer} · {fulfilment}",
+      "itemsTitle": "订单项",
+      "paymentsTitle": "支付记录",
+      "paymentsEmpty": "此结账组暂无支付记录。",
+      "ledgerTitle": "账本",
+      "ledgerEmpty": "暂无账本交易记录。",
+      "ledgerBalance": "过账合计：{balance} ngwee",
+      "timelineTitle": "时间线",
+      "itemLine": "{title} × {qty}",
+      "paymentLine": "{rail} · {status}",
+      "statuses": {
+        "placed": "已下单",
+        "confirmed": "已确认",
+        "processing": "处理中",
+        "ready": "已就绪",
+        "shipped": "已发货",
+        "delivered": "已送达",
+        "completed": "已完成",
+        "cancelled": "已取消"
+      },
+      "fulfilment": {
+        "delivery": "配送",
+        "pickup": "自提"
+      }
+    },
+    "dispatch": {
+      "title": "人工调度",
+      "subtitle": "预约快递员并推进履约——记录至客户时间线。",
+      "courier": "快递员",
+      "couriers": {
+        "yango": "Yango",
+        "indrive": "inDrive",
+        "other": "其他"
+      },
+      "courierOther": "快递员名称",
+      "trackingNote": "跟踪备注",
+      "trackingPlaceholder": "司机姓名、车牌、预计到达时间…",
+      "statusEvent": "状态更新",
+      "events": {
+        "ship": "标记为已发货",
+        "mark_delivered": "标记为已送达"
+      },
+      "submit": "记录调度",
+      "submitting": "保存中…",
+      "success": "调度已记录至订单时间线。",
+      "failure": "无法记录调度。"
+    },
+    "intervention": {
+      "title": "状态干预",
+      "subtitle": "当前状态：{status}。状态机将拒绝非法状态转换。",
+      "event": "转换事件",
+      "events": {
+        "confirm": "确认订单",
+        "reject": "拒绝订单",
+        "cancel": "取消订单",
+        "start_processing": "开始处理",
+        "ready_for_pickup": "待取货",
+        "ship": "发货",
+        "verify_pickup": "核实取货",
+        "mark_delivered": "标记为已送达",
+        "confirm_received": "确认收货"
+      },
+      "reason": "原因（必填）",
+      "reasonPlaceholder": "为何需要此次干预？",
+      "refundPath": "取消已付款订单——已确认走退款流程",
+      "submit": "应用干预",
+      "submitting": "应用中…",
+      "success": "状态已通过状态机更新。",
+      "failure": "转换被拒绝或失败。"
+    },
+    "escrow": {
+      "title": "手动托管冻结/释放",
+      "subtitle": "将提交一笔带有手动标记的平衡账本交易。两项备注均为必填。",
+      "confirmationHint": "请准确输入“{phrase}”以确认。",
+      "operation": "操作",
+      "operations": {
+        "hold": "托管冻结",
+        "release": "托管释放"
+      },
+      "amountNgwee": "金额（ngwee）",
+      "reason": "原因",
+      "confirmationPhrase": "确认短语",
+      "submit": "提交手动托管交易",
+      "submitting": "提交中…",
+      "success": "手动托管交易已提交。",
+      "failure": "无法提交手动托管交易——请检查两项备注。",
+      "invalidAmount": "请输入一个正的 ngwee 金额。"
+    },
+    "timeline": {
+      "empty": "暂无时间线事件。",
+      "statusChange": "{from} → {to}",
+      "missing": "—"
+    }
+  },
+  "dashboard": {
+    "title": "运营仪表板",
+    "subtitle": "平台汇总数据——账本负债、对账及转化漏斗概览。",
+    "loading": "正在加载仪表板…",
+    "error": "无法加载仪表板汇总数据。",
+    "retry": "重试",
+    "cachedAt": "汇总数据缓存于 {at}",
+    "liabilitiesTotal": "结算负债总额：{amount}",
+    "gmv": {
+      "title": "商品交易总额（GMV）",
+      "subtitle": "商品交易总额（不含已取消订单）"
+    },
+    "payoutLiabilities": {
+      "title": "结算负债",
+      "subtitle": "托管冻结金额加已释放未结算金额（源自账本）",
+      "escrowHeld": "托管冻结金额",
+      "releasedUnpaid": "已释放未结算",
+      "total": "负债总额"
+    },
+    "reconciliation": {
+      "title": "对账",
+      "subtitle": "最新的 Lenco 与账本每日对账报告",
+      "statusGreen": "已平账",
+      "statusRed": "标记为不匹配",
+      "reportDate": "报告日期：{date}",
+      "noReport": "暂无对账报告。",
+      "drillIn": "查看报告详情",
+      "hideDrillIn": "隐藏详情",
+      "mismatchAlert": "检测到账本不匹配——请调查差异。",
+      "cleanDay": "最新报告中未发现差异。"
+    },
+    "orders": {
+      "title": "订单状态分布",
+      "subtitle": "实时订单流转数量",
+      "statuses": {
+        "placed": "已下单",
+        "confirmed": "已确认",
+        "processing": "处理中",
+        "ready": "已就绪",
+        "shipped": "已发货",
+        "delivered": "已送达",
+        "completed": "已完成",
+        "cancelled": "已取消"
+      }
+    },
+    "counts": {
+      "title": "商品目录规模",
+      "subtitle": "商家、商品条目和标准商品",
+      "vendors": "商家",
+      "listings": "商品条目",
+      "products": "商品"
+    },
+    "aiUsage": {
+      "title": "Ask Vergeo AI",
+      "subtitle": "月度支出与平台上限对比",
+      "noData": "暂无使用数据",
+      "noDataHint": "AI 使用计量将在后续迭代中上线。上限维持在每月 ${cap}。",
+      "spendVsCap": "已用 ${spend}，月度上限 ${cap}"
+    },
+    "funnel": {
+      "title": "转化漏斗概览",
+      "subtitle": "结账与订单转化（服务端事件）",
+      "steps": {
+        "checkout_started": "开始结账",
+        "checkout_completed": "完成结账",
+        "orders_placed": "下单",
+        "orders_completed": "完成订单"
+      }
+    }
+  },
+  "disputes": {
+    "title": "纠纷控制台",
+    "subtitle": "查看未结纠纷——按时长或订单金额排序。",
+    "queue": {
+      "empty": "队列中暂无未结纠纷。",
+      "loading": "正在加载纠纷…",
+      "error": "无法加载纠纷队列。",
+      "retry": "重试",
+      "sortLabel": "排序方式",
+      "sortAge": "最早优先",
+      "sortValue": "金额最高",
+      "order": "订单",
+      "orderIdShort": "{id}…",
+      "vendor": "商家",
+      "value": "金额",
+      "opened": "发起时间",
+      "slaColumn": "SLA",
+      "review": "查看",
+      "sla": {
+        "on_track": "进度正常",
+        "due_soon": "即将到期",
+        "overdue": "已逾期"
+      }
+    },
+    "detail": {
+      "back": "返回队列",
+      "loading": "正在加载纠纷…",
+      "error": "无法加载此纠纷。",
+      "retry": "重试",
+      "title": "纠纷审核",
+      "summary": "订单 {orderId} · {status} · {vendor}",
+      "vendorResponse": "商家回复",
+      "evidenceTitle": "证据",
+      "contextTitle": "订单背景",
+      "evidence": {
+        "customer": "客户证据",
+        "vendor": "商家证据",
+        "empty": "暂无上传证据。",
+        "unavailable": "证据预览暂时不可用。",
+        "noneCustomer": "客户未提供证据。",
+        "noneVendor": "商家未提供证据。",
+        "noPreview": "预览不可用",
+        "openDocument": "打开文档",
+        "expires": "链接将于 {at} 过期"
+      },
+      "context": {
+        "summary": "摘要",
+        "vendor": "商家",
+        "customer": "客户",
+        "orderStatus": "订单状态",
+        "orderTotal": "订单总额",
+        "items": "订单项",
+        "itemsEmpty": "暂无订单项。",
+        "itemLine": "{title} × {qty} @ {price}",
+        "payments": "支付记录",
+        "paymentsEmpty": "暂无支付记录。",
+        "paymentLine": "{rail} · {status} · {amount} · {at}",
+        "ledger": "账本",
+        "ledgerEmpty": "暂无账本交易记录。",
+        "ledgerBalance": "过账合计：{balance} ngwee"
+      },
+      "decision": {
+        "title": "决定",
+        "subtitle": "选择处理结果——资金通过纠纷处理器划转（备注为必填）。",
+        "outcome": "处理结果",
+        "fullRefund": "全额退款给客户",
+        "partialRefund": "部分退款（ngwee）+ 释放剩余金额",
+        "release": "释放给商家",
+        "partialAmount": "部分退款（ngwee，最高 {max}）",
+        "customerMomo": "客户 MoMo 号码",
+        "customerRail": "MoMo 通道",
+        "rails": {
+          "mtn": "MTN",
+          "airtel": "Airtel",
+          "zamtel": "Zamtel"
+        },
+        "note": "决定备注（必填）",
+        "noteRequired": "决定备注为必填项。",
+        "partialRequired": "请输入有效的部分退款金额。",
+        "partialTooHigh": "部分退款金额不能超过 {max}。",
+        "momoRequired": "客户 MoMo 号码为必填项。",
+        "submit": "记录决定",
+        "submitting": "处理中…",
+        "success": "决定已记录——各方将收到通知。",
+        "failure": "无法记录决定。",
+        "alreadyResolved": "此纠纷已解决。"
+      }
+    }
+  },
+  "support": {
+    "title": "客服收件箱",
+    "subtitle": "按电话或 ID 查找客户，通过发件箱发送预设回复，并查看互动历史。",
+    "lookup": {
+      "label": "电话或 ID",
+      "placeholder": "+260… 或订单/客户 UUID",
+      "submit": "查找",
+      "searching": "搜索中…",
+      "needQuery": "请输入部分电话号码或 ID。",
+      "error": "无法执行客服查找。",
+      "empty": "没有匹配的客户或订单。",
+      "multiple": "存在多个匹配项——请选择一位客户"
+    },
+    "context": {
+      "title": "客户信息",
+      "summary": "{name} · {phone}",
+      "unknownName": "未知客户",
+      "unknownPhone": "无电话",
+      "customerId": "客户 ID",
+      "openOrders": "进行中订单",
+      "latestStatus": "最新订单状态",
+      "noOrders": "暂无订单",
+      "locale": "语言",
+      "recentOrders": "近期订单",
+      "orderLine": "{status} · {date}",
+      "statuses": {
+        "placed": "已下单",
+        "confirmed": "已确认",
+        "processing": "处理中",
+        "ready": "已就绪",
+        "shipped": "已发货",
+        "delivered": "已送达",
+        "completed": "已完成",
+        "cancelled": "已取消"
+      }
+    },
+    "reply": {
+      "title": "发送回复",
+      "subtitle": "预设模板通过 WhatsApp → 短信 → 邮件依次降级发送。",
+      "modeCanned": "预设模板",
+      "modeFreeText": "自由文本",
+      "templateLabel": "模板",
+      "templatePlaceholder": "选择模板…",
+      "freeTextLabel": "消息",
+      "freeTextPlaceholder": "输入发送给客户的自定义消息…",
+      "freeTextAudit": "自由文本发送将写入审计日志。",
+      "submit": "通过发件箱发送",
+      "submitting": "发送中…",
+      "success": "已加入 {channel} 队列。",
+      "successDeduped": "已在 {channel} 队列中（去重跳过）。",
+      "failure": "无法发送消息。"
+    },
+    "log": {
+      "title": "互动记录",
+      "subtitle": "该客户的外发客服消息记录。",
+      "loading": "正在加载记录…",
+      "error": "无法加载互动记录。",
+      "retry": "重试",
+      "empty": "暂无客服消息。",
+      "kindCanned": "预设",
+      "kindFreeText": "自由文本"
+    },
+    "templates": {
+      "order_status_update": {
+        "label": "订单状态更新",
+        "body": "您好，我们是 Vergeo5——正在核实您的订单情况，稍后将为您更新。"
+      },
+      "delivery_eta": {
+        "label": "配送预计到达时间",
+        "body": "您好，我们是 Vergeo5——您的包裹正在配送途中，快递员确认后我们会立即告知预计到达时间。"
+      },
+      "payment_reminder": {
+        "label": "付款提醒",
+        "body": "您好，我们是 Vergeo5——您的订单正在等待付款，请在方便时打开应用完成结账。"
+      },
+      "apology_delay": {
+        "label": "延误致歉",
+        "body": "您好，我们是 Vergeo5——非常抱歉您的订单出现延误，我们的团队正在优先处理。"
+      },
+      "pickup_ready": {
+        "label": "可取货",
+        "body": "您好，我们是 Vergeo5——您的订单已可取货，请在到店时携带订单编号。"
+      }
+    },
+    "errors": {
+      "rateLimited": "客服消息发送过于频繁——请稍后重试。"
+    }
+  }
+}
