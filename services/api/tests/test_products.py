@@ -139,6 +139,7 @@ class FakeQuery:
 class FakeSupabaseStore:
     def __init__(self) -> None:
         self.products: list[dict[str, Any]] = []
+        self.product_relations: list[dict[str, Any]] = []
         self.vendor_listings: list[dict[str, Any]] = []
         self.listing_images: list[dict[str, Any]] = []
         self.order_item_products: list[dict[str, Any]] = []
@@ -317,6 +318,50 @@ class TestRelatedProducts:
         assert payload["items"][0]["from_price_ngwee"] == 300_000
         assert payload["items"][0]["image_public_id"] == "listings/spark"
         assert payload["items"][1]["image_public_id"] is None
+
+    def test_related_prefers_curated_over_category(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        curated_id = "p00000300-0000-4000-8000-000000000001"
+        curated_listing = "66666666-6666-6666-6666-666666666666"
+        store.products = [
+            _product_row(),  # itel-a70 (viewed)
+            _product_row(slug="tecno-spark", product_id=SIBLING_A_ID),  # same-category
+            _product_row(slug="curated-phone", product_id=curated_id),  # curated target
+        ]
+        store.vendor_listings = [
+            _listing_row(
+                listing_id=SIBLING_A_LISTING, product_id=SIBLING_A_ID, price_ngwee=300_000
+            ),
+            _listing_row(
+                listing_id=curated_listing, product_id=curated_id, price_ngwee=999_000
+            ),
+        ]
+        store.product_relations = [
+            {"product_id": PRODUCT_ID, "related_product_id": curated_id, "position": 0},
+        ]
+
+        response = client.get("/products/itel-a70/related")
+        assert response.status_code == 200
+        slugs = [item["slug"] for item in response.json()["items"]]
+        # Curated wins outright — the cheaper same-category sibling is NOT shown.
+        assert slugs == ["curated-phone"]
+
+    def test_related_falls_back_to_category_when_no_curation(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        store.products = [
+            _product_row(),
+            _product_row(slug="tecno-spark", product_id=SIBLING_A_ID),
+        ]
+        store.vendor_listings = [
+            _listing_row(listing_id=SIBLING_A_LISTING, product_id=SIBLING_A_ID),
+        ]
+        store.product_relations = []  # no curation → category fallback
+
+        response = client.get("/products/itel-a70/related")
+        assert response.status_code == 200
+        assert [item["slug"] for item in response.json()["items"]] == ["tecno-spark"]
 
     def test_related_unknown_slug_returns_404(self, client: TestClient) -> None:
         response = client.get("/products/does-not-exist/related")

@@ -189,6 +189,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /payments/card/{payment_id}/verify": PAYMENT_WRITE,
     "POST /payments/retry": PAYMENT_WRITE,
     "POST /products/merge": ADMIN_WRITE,
+    "PUT /products/{product_id}/relations": ADMIN_WRITE,
     "POST /quotes/{quote_id}/decline": STANDARD_WRITE,
     "POST /quotes/{quote_id}/withdraw": STANDARD_WRITE,
     "POST /refunds/execute": PAYMENT_WRITE,

@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 DUPLICATE_SIMILARITY_THRESHOLD = 0.3
 MAX_DUPLICATE_PAIRS = 100
+MAX_RELATED_PRODUCTS = 12
 
 PRODUCT_STATUSES = frozenset({"pending_moderation", "active", "merged"})
 MERGEABLE_STATUSES = frozenset({"pending_moderation", "active"})
@@ -55,6 +56,24 @@ class MergeProductsResponse(BaseModel):
     slug_redirect_from: str
     slug_redirect_to: str
     idempotent: bool
+
+
+class ProductRelationItem(BaseModel):
+    related_product_id: UUID
+    name: str
+    slug: str
+    position: int
+
+
+class ProductRelationsResponse(BaseModel):
+    product_id: UUID
+    related: list[ProductRelationItem] = Field(default_factory=list)
+
+
+class SetProductRelationsRequest(BaseModel):
+    related_product_ids: list[UUID] = Field(
+        default_factory=list, max_length=MAX_RELATED_PRODUCTS
+    )
 
 
 class ProductMergeError(AppError):
@@ -139,6 +158,51 @@ def _load_product(client: ServiceRoleClient, product_id: str) -> dict[str, Any]:
     if row is None:
         raise AppError(code="not_found", message="Product not found", http_status=404)
     return row
+
+
+def _load_product_relations(
+    client: ServiceRoleClient, product_id: str
+) -> list[ProductRelationItem]:
+    """Return the curated related products for `product_id`, ordered by position."""
+    relations = (
+        _table(client, "product_relations")
+        .select("related_product_id, position")
+        .eq("product_id", product_id)
+        .order("position")
+        .execute()
+    )
+    rows = _rows(relations)
+    related_ids = [
+        str(row["related_product_id"])
+        for row in rows
+        if row.get("related_product_id")
+    ]
+    if not related_ids:
+        return []
+
+    products_response = (
+        _table(client, "products")
+        .select("id, name, slug")
+        .in_("id", related_ids)
+        .execute()
+    )
+    product_by_id = {str(row["id"]): row for row in _rows(products_response)}
+
+    items: list[ProductRelationItem] = []
+    for row in rows:
+        related_id = str(row["related_product_id"])
+        product = product_by_id.get(related_id)
+        if product is None:
+            continue
+        items.append(
+            ProductRelationItem(
+                related_product_id=UUID(related_id),
+                name=str(product["name"]),
+                slug=str(product["slug"]),
+                position=int(row.get("position") or 0),
+            )
+        )
+    return items
 
 
 def _pair_key(left_id: str, right_id: str) -> tuple[str, str]:
@@ -453,6 +517,103 @@ async def merge_products(
         slug_redirect_to=str(result["slug_redirect_to"]),
         idempotent=idempotent,
     )
+
+
+@products_router.get("/{product_id}/relations", response_model=ProductRelationsResponse)
+async def get_product_relations(
+    product_id: UUID,
+    _admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> ProductRelationsResponse:
+    product = _load_product(service_client, str(product_id))
+    return ProductRelationsResponse(
+        product_id=UUID(str(product["id"])),
+        related=_load_product_relations(service_client, str(product_id)),
+    )
+
+
+@products_router.put("/{product_id}/relations", response_model=ProductRelationsResponse)
+async def set_product_relations(
+    product_id: UUID,
+    body: SetProductRelationsRequest,
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+) -> ProductRelationsResponse:
+    product_id_str = str(product_id)
+    _load_product(service_client, product_id_str)  # 404 when the anchor product is gone
+
+    # Dedup while preserving the caller's ordering; a product cannot relate to itself.
+    ordered_ids: list[str] = []
+    seen: set[str] = set()
+    for related_id in body.related_product_ids:
+        related_id_str = str(related_id)
+        if related_id_str == product_id_str:
+            raise AppError(
+                code="product_relation_self",
+                message="A product cannot be related to itself",
+                http_status=400,
+            )
+        if related_id_str in seen:
+            continue
+        seen.add(related_id_str)
+        ordered_ids.append(related_id_str)
+
+    # Every related product must exist and be active/shoppable.
+    if ordered_ids:
+        related_response = (
+            _table(service_client, "products")
+            .select("id, status")
+            .in_("id", ordered_ids)
+            .execute()
+        )
+        active_ids = {
+            str(row["id"])
+            for row in _rows(related_response)
+            if str(row.get("status")) == "active"
+        }
+        invalid = [related_id for related_id in ordered_ids if related_id not in active_ids]
+        if invalid:
+            raise AppError(
+                code="product_relation_invalid",
+                message="Related products must exist and be active",
+                http_status=422,
+                details={"invalid_ids": invalid},
+            )
+
+    before = {
+        "related": [
+            item.model_dump(mode="json")
+            for item in _load_product_relations(service_client, product_id_str)
+        ]
+    }
+
+    # Replace-all: clear the existing curation, then re-insert in the requested order.
+    _table(service_client, "product_relations").delete().eq(
+        "product_id", product_id_str
+    ).execute()
+    if ordered_ids:
+        rows = [
+            {
+                "product_id": product_id_str,
+                "related_product_id": related_id,
+                "position": index,
+            }
+            for index, related_id in enumerate(ordered_ids)
+        ]
+        _table(service_client, "product_relations").insert(rows).execute()
+
+    related_items = _load_product_relations(service_client, product_id_str)
+    after = {"related": [item.model_dump(mode="json") for item in related_items]}
+
+    recorder.record(
+        action="admin.products.set_relations",
+        entity_type="product",
+        entity_id=product_id_str,
+        before=before,
+        after=after,
+    )
+
+    return ProductRelationsResponse(product_id=product_id, related=related_items)
 
 
 admin_router.include_router(products_router)
