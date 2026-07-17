@@ -8,6 +8,8 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { isEarlyBirdActive, resolveUnitPriceNgwee } from "../_lib/resolve-price";
+
 export type TicketPickerInstance = {
   id: string;
   starts_at: string;
@@ -26,6 +28,9 @@ export type TicketPickerType = {
   tickets_sold: number;
   is_sold_out: boolean;
   is_free: boolean;
+  early_bird_price_ngwee: number | null;
+  early_bird_until: string | null;
+  tiers: { min_qty: number; price_ngwee: number }[];
 };
 
 export type TicketPickerProps = {
@@ -59,6 +64,14 @@ function formatInstanceDate(iso: string, locale: string): string {
 
 function isPastInstance(iso: string): boolean {
   return new Date(iso).getTime() < Date.now();
+}
+
+function formatEarlyBirdUntil(iso: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    timeZone: "Africa/Lusaka",
+  }).format(new Date(iso));
 }
 
 function maxQtyForType(ticket: TicketPickerType, instance: TicketPickerInstance | null): number {
@@ -109,12 +122,25 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
     return maxQtyForType(selectedType, selectedInstance);
   }, [selectedType, selectedInstance]);
 
-  const lineTotalNgwee = useMemo(() => {
+  // Resolved unit price mirrors the server's resolve_unit_price so the shown total
+  // matches what the buyer will actually pay once early-bird / group discounts apply.
+  const resolvedUnitNgwee = useMemo(() => {
     if (!selectedType || selectedType.is_free) {
       return 0;
     }
-    return selectedType.price_ngwee * qty;
+    return resolveUnitPriceNgwee(selectedType, qty, new Date());
   }, [selectedType, qty]);
+
+  const lineTotalNgwee = resolvedUnitNgwee * qty;
+
+  const earlyBirdActive = useMemo(
+    () => (selectedType ? isEarlyBirdActive(selectedType, new Date()) : false),
+    [selectedType],
+  );
+
+  const hasDiscounts = Boolean(
+    selectedType && !selectedType.is_free && (earlyBirdActive || selectedType.tiers.length > 0),
+  );
 
   const canSubmit =
     !isSoldOut &&
@@ -268,6 +294,33 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
         </p>
       ) : null}
 
+      {hasDiscounts && selectedType ? (
+        <div className="flex flex-col gap-1 rounded-md bg-bg-2 px-3 py-2 text-xs">
+          {earlyBirdActive &&
+          selectedType.early_bird_price_ngwee !== null &&
+          selectedType.early_bird_until !== null ? (
+            <p className="font-medium text-success">
+              {t("earlyBird", {
+                price: formatK(selectedType.early_bird_price_ngwee),
+                until: formatEarlyBirdUntil(selectedType.early_bird_until, locale),
+              })}
+            </p>
+          ) : null}
+          {selectedType.tiers.length > 0 ? (
+            <ul className="flex flex-col gap-0.5 text-text-2">
+              {selectedType.tiers.map((tier) => (
+                <li key={tier.min_qty}>
+                  {t("groupTier", {
+                    minQty: tier.min_qty,
+                    price: formatK(tier.price_ngwee),
+                  })}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-text-2">{t("quantity")}</span>
         <div className="flex items-center gap-2">
@@ -298,6 +351,12 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
           <span className="text-text-2">{t("total")}</span>
           <PriceBlock ngwee={lineTotalNgwee} />
         </div>
+      ) : null}
+
+      {selectedType && !selectedType.is_free && resolvedUnitNgwee < selectedType.price_ngwee ? (
+        <p className="text-right text-xs text-success">
+          {t("discountApplied", { price: formatK(resolvedUnitNgwee) })}
+        </p>
       ) : null}
 
       {isAuthed === false ? (
