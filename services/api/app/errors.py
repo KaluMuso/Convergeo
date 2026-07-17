@@ -5,6 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -73,7 +74,11 @@ def validation_error_handler(request: Request, exc: RequestValidationError) -> J
             code="validation_error",
             message="Request validation failed",
             request_id=request_id,
-            details={"errors": exc.errors()},
+            # jsonable_encoder keeps the payload JSON-safe: a value_error raised by a
+            # field/model validator (e.g. NgweeInt float rejection) carries the raw
+            # exception in ``ctx``, which json.dumps cannot serialize — without this
+            # such validation errors surface as a 500 instead of a 422.
+            details={"errors": jsonable_encoder(exc.errors())},
         ),
         headers={"X-Request-ID": request_id},
     )
