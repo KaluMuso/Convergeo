@@ -24,6 +24,7 @@ class TicketTypeResponse(StrictModel):
     price_ngwee: int
     qty_cap: int | None = None
     per_customer_cap: int | None = None
+    attendee_named: bool = False
     tickets_sold: int = 0
 
 
@@ -112,6 +113,9 @@ class TicketTypeCreateRequest(StrictModel):
     price_ngwee: NgweeInt
     qty_cap: int | None = Field(default=None, gt=0)
     per_customer_cap: int | None = Field(default=None, gt=0)
+    # When true, buyers must supply a name per ticket at purchase (enforced in
+    # purchase._validate_attendee_names). Valid for paid and free types alike.
+    attendee_named: bool = False
 
     @model_validator(mode="after")
     def validate_price_for_kind(self) -> TicketTypeCreateRequest:
@@ -129,6 +133,7 @@ class TicketTypeUpdateRequest(StrictModel):
     price_ngwee: NgweeInt | None = None
     qty_cap: int | None = Field(default=None, gt=0)
     per_customer_cap: int | None = Field(default=None, gt=0)
+    attendee_named: bool | None = None
 
     @field_validator("qty_cap", "per_customer_cap", mode="before")
     @classmethod
@@ -228,7 +233,7 @@ def _load_ticket_type(
         service_client.client.table("ticket_types")
         .select(
             "id, event_id, kind, name, price_ngwee, qty_cap, per_customer_cap, "
-            "early_bird_price_ngwee, early_bird_until"
+            "attendee_named, early_bird_price_ngwee, early_bird_until"
         )
         .eq("id", ticket_type_id)
         .maybe_single()
@@ -393,6 +398,7 @@ def _to_ticket_type_response(
         per_customer_cap=(
             int(row["per_customer_cap"]) if row.get("per_customer_cap") is not None else None
         ),
+        attendee_named=bool(row.get("attendee_named", False)),
         tickets_sold=tickets_sold,
     )
 
@@ -409,7 +415,9 @@ def list_ticket_types(
 
     rows = _rows(
         service_client.client.table("ticket_types")
-        .select("id, event_id, kind, name, price_ngwee, qty_cap, per_customer_cap")
+        .select(
+            "id, event_id, kind, name, price_ngwee, qty_cap, per_customer_cap, attendee_named"
+        )
         .eq("event_id", event_id)
         .order("created_at")
         .execute()
@@ -470,6 +478,7 @@ def create_ticket_type(
         "price_ngwee": body.price_ngwee,
         "qty_cap": body.qty_cap,
         "per_customer_cap": body.per_customer_cap,
+        "attendee_named": body.attendee_named,
     }
     response = service_client.client.table("ticket_types").insert(payload).execute()
     row = _single_row(response)

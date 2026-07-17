@@ -33,6 +33,7 @@ type TypeDraft = {
   priceZmw: string;
   qtyCap: string;
   perCustomerCap: string;
+  attendeeNamed: boolean;
 };
 
 const EMPTY_DRAFT: TypeDraft = {
@@ -41,6 +42,7 @@ const EMPTY_DRAFT: TypeDraft = {
   priceZmw: "",
   qtyCap: "",
   perCustomerCap: "",
+  attendeeNamed: false,
 };
 
 function draftFromType(type: TicketTypeSummary): TypeDraft {
@@ -50,6 +52,7 @@ function draftFromType(type: TicketTypeSummary): TypeDraft {
     priceZmw: type.kind === "free_rsvp" ? "0.00" : ngweeToZmwInput(type.price_ngwee),
     qtyCap: type.qty_cap === null ? "" : String(type.qty_cap),
     perCustomerCap: type.per_customer_cap === null ? "" : String(type.per_customer_cap),
+    attendeeNamed: type.attendee_named,
   };
 }
 
@@ -165,6 +168,7 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
       price_ngwee: priceNgwee,
       qty_cap: parseOptionalPositiveInt(draft.qtyCap),
       per_customer_cap: parseOptionalPositiveInt(draft.perCustomerCap),
+      attendee_named: draft.attendeeNamed,
     };
 
     setSaving(true);
@@ -259,6 +263,11 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
                   <p className="text-xs text-muted-foreground">
                     {t("tickets.fields.soldLabel", { count: type.tickets_sold })}
                   </p>
+                  {type.attendee_named ? (
+                    <p className="text-xs font-medium text-primary">
+                      {t("tickets.fields.attendeeNamedBadge")}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <Button
@@ -387,6 +396,23 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
                 placeholder={t("tickets.fields.perCustomerCapPlaceholder")}
               />
             </FormField>
+
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-border"
+                checked={draft.attendeeNamed}
+                onChange={(event) =>
+                  setDraft((c) => ({ ...c, attendeeNamed: event.target.checked }))
+                }
+              />
+              <span className="flex flex-col gap-0.5">
+                <span className="font-medium">{t("tickets.fields.attendeeNamedLabel")}</span>
+                <span className="text-xs text-muted-foreground">
+                  {t("tickets.fields.attendeeNamedHelp")}
+                </span>
+              </span>
+            </label>
 
             <div className="flex gap-2 pt-1">
               <Button

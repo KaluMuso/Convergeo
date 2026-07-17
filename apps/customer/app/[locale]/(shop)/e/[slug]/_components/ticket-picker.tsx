@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { attendeeNamesComplete, cleanedAttendeeNames, resizeNames } from "../_lib/attendee-names";
 import { isEarlyBirdActive, resolveUnitPriceNgwee } from "../_lib/resolve-price";
 
 export type TicketPickerInstance = {
@@ -28,6 +29,7 @@ export type TicketPickerType = {
   tickets_sold: number;
   is_sold_out: boolean;
   is_free: boolean;
+  attendee_named: boolean;
   early_bird_price_ngwee: number | null;
   early_bird_until: string | null;
   tiers: { min_qty: number; price_ngwee: number }[];
@@ -95,6 +97,7 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
   );
   const [selectedTypeId, setSelectedTypeId] = useState(() => ticketTypes[0]?.id ?? "");
   const [qty, setQty] = useState(1);
+  const [attendeeNames, setAttendeeNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -142,6 +145,18 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
     selectedType && !selectedType.is_free && (earlyBirdActive || selectedType.tiers.length > 0),
   );
 
+  const namesRequired = Boolean(selectedType?.attendee_named);
+
+  // Keep the name inputs in step with quantity while a named type is selected.
+  useEffect(() => {
+    if (!namesRequired) {
+      return;
+    }
+    setAttendeeNames((prev) => resizeNames(prev, qty));
+  }, [namesRequired, qty]);
+
+  const namesComplete = !namesRequired || attendeeNamesComplete(attendeeNames, qty);
+
   const canSubmit =
     !isSoldOut &&
     selectedInstance !== null &&
@@ -149,6 +164,7 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
     maxQty > 0 &&
     qty >= 1 &&
     qty <= maxQty &&
+    namesComplete &&
     !loading;
 
   const checkAuth = useCallback(async () => {
@@ -174,6 +190,11 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
       return;
     }
 
+    if (selectedType.attendee_named && !attendeeNamesComplete(attendeeNames, qty)) {
+      setError(t("errors.attendeeNamesRequired"));
+      return;
+    }
+
     setLoading(true);
     const path = selectedType.is_free ? "/tickets/rsvp" : "/tickets/checkout";
     try {
@@ -188,6 +209,9 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
           instance_id: selectedInstance.id,
           ticket_type_id: selectedType.id,
           qty,
+          ...(selectedType.attendee_named
+            ? { attendee_names: cleanedAttendeeNames(attendeeNames, qty) }
+            : {}),
         }),
       });
 
@@ -203,6 +227,10 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
             : null;
         if (apiError?.code === "tickets.oversell") {
           setError(t("errors.oversell"));
+        } else if (apiError?.code === "tickets.attendee_names_required") {
+          setError(t("errors.attendeeNamesRequired"));
+        } else if (apiError?.code === "tickets.attendee_names_mismatch") {
+          setError(t("errors.attendeeNamesMismatch"));
         } else {
           setError(apiError?.message ?? t("errors.generic"));
         }
@@ -230,7 +258,7 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
     } finally {
       setLoading(false);
     }
-  }, [checkAuth, locale, qty, selectedInstance, selectedType, t]);
+  }, [attendeeNames, checkAuth, locale, qty, selectedInstance, selectedType, t]);
 
   if (ticketTypes.length === 0) {
     return null;
@@ -274,6 +302,7 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
           onChange={(event) => {
             setSelectedTypeId(event.target.value);
             setQty(1);
+            setAttendeeNames([]);
           }}
         >
           {ticketTypes.map((ticket) => (
@@ -345,6 +374,31 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
           </button>
         </div>
       </div>
+
+      {namesRequired ? (
+        <fieldset className="flex flex-col gap-2 border-0 p-0">
+          <legend className="text-sm font-medium text-text-2">{t("attendeeNamesLabel")}</legend>
+          {attendeeNames.map((name, index) => (
+            <input
+              key={index}
+              type="text"
+              className="min-h-11 rounded-md border border-border bg-bg px-3 text-sm text-text"
+              value={name}
+              onChange={(event) => {
+                const next = event.target.value;
+                setAttendeeNames((prev) => {
+                  const copy = resizeNames(prev, qty);
+                  copy[index] = next;
+                  return copy;
+                });
+              }}
+              placeholder={t("attendeeNamePlaceholder")}
+              aria-label={t("attendeeNameLabel", { index: index + 1 })}
+              autoComplete="off"
+            />
+          ))}
+        </fieldset>
+      ) : null}
 
       {selectedType && !selectedType.is_free ? (
         <div className="flex items-center justify-between text-sm">

@@ -1183,7 +1183,10 @@
       "perCustomerCapLabel": "Per-customer cap (optional)",
       "perCustomerCapPlaceholder": "Unlimited",
       "perCustomerCapHelp": "Max tickets one buyer can hold for this type.",
-      "soldLabel": "{count, plural, one {# sold} other {# sold}}"
+      "soldLabel": "{count, plural, one {# sold} other {# sold}}",
+      "attendeeNamedLabel": "Collect attendee names",
+      "attendeeNamedHelp": "Require a name for each ticket at checkout — useful for workshops, dinners, and seated events.",
+      "attendeeNamedBadge": "Names required"
     },
     "actions": {
       "save": "Save type",

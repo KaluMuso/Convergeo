@@ -49,6 +49,7 @@ type TicketType = {
   tickets_sold: number;
   is_sold_out: boolean;
   is_free: boolean;
+  attendee_named: boolean;
   early_bird_price_ngwee: number | null;
   early_bird_until: string | null;
   tiers: { min_qty: number; price_ngwee: number }[];

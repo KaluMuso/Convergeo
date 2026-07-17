@@ -79,6 +79,9 @@ class TicketTypeResponse(BaseModel):
     tickets_sold: int = 0
     is_sold_out: bool = False
     is_free: bool = False
+    # When true the buyer must name each attendee at purchase (M10-P11). Applies to
+    # paid and free types alike; enforced server-side in the purchase path.
+    attendee_named: bool = False
     # Optional discount config (M10-P12) so the buyer sees *why* the resolved price
     # is lower. The authoritative price is still resolved server-side at checkout.
     early_bird_price_ngwee: int | None = None
@@ -293,6 +296,7 @@ def _build_ticket_type_response(
         tickets_sold=tickets_sold,
         is_sold_out=is_sold_out,
         is_free=is_free,
+        attendee_named=bool(row.get("attendee_named", False)),
         early_bird_price_ngwee=(
             int(early_bird_price) if not is_free and early_bird_price is not None else None
         ),
@@ -481,7 +485,7 @@ def _fetch_ticket_types(client: Any, event_ids: list[str]) -> list[dict[str, Any
     response = (
         client.table("ticket_types")
         .select(
-            "id, event_id, kind, name, price_ngwee, qty_cap, "
+            "id, event_id, kind, name, price_ngwee, qty_cap, attendee_named, "
             "early_bird_price_ngwee, early_bird_until"
         )
         .in_("event_id", event_ids)
