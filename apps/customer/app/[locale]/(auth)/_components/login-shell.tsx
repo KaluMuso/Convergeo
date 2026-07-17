@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@vergeo/auth/browser-client";
+import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -86,7 +86,7 @@ export function AuthLoginShell({
         return;
       }
 
-      const supabase = createBrowserClient();
+      const supabase = await getBrowserClient();
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) {
         setOauthError(labels.genericError);
@@ -215,7 +215,7 @@ export function AuthSignupShell({
         return;
       }
 
-      const supabase = createBrowserClient();
+      const supabase = await getBrowserClient();
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) {
         setOauthError(labels.genericError);

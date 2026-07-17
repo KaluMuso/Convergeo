@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@vergeo/auth/browser-client";
+import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { useCallback, useId, useMemo, useState } from "react";
 
 export type ReportReviewReason = {
@@ -57,7 +57,7 @@ export function ReportReview({ reviewId, labels }: ReportReviewProps) {
     setStatus("submitting");
     setMessage(undefined);
     try {
-      const supabase = createBrowserClient();
+      const supabase = await getBrowserClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();

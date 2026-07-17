@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@vergeo/auth";
+import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { ApiError } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { BottomSheet } from "@vergeo/ui/src/bottom-sheet";
@@ -80,7 +80,7 @@ function getApiBaseUrl(): string {
 }
 
 async function getAccessToken(): Promise<string | null> {
-  const supabase = createBrowserClient();
+  const supabase = await getBrowserClient();
   const { data } = await supabase.auth.getSession();
   return data.session?.access_token ?? null;
 }

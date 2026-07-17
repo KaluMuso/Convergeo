@@ -47,65 +47,8 @@
     "bundle": {
       "defaultMaxKbGz": 150,
       "defaultJustification": "CLAUDE.md convention #7 — customer routes ≤150 KB gz first-load JS on Fast-3G/360px devices.",
-      "rebaselineNote": "2026-07: 13 route budgets re-baselined +2–3 KB gz. dependabot #189 bumped next-intl 4.0→4.13 (every route) + @supabase/supabase-js 2.49→2.110 + @supabase/ssr 0.6→0.12, which grew the shared runtime chunk ~1 KB gz across all routes and pushed these already-near-budget routes over. Not a per-PR code regression (the 2 KB regression-vs-base guard still catches new growth). ≤150 KB gz remains the standing target.",
-      "routes": {
-        "/[locale]/(shop)/cart/page": {
-          "maxKbGz": 192,
-          "justification": "M16-P01 baseline (cart + mini-cart drawer). Target: reduce shared auth/cart chunks to ≤150 KB gz."
-        },
-        "/[locale]/(shop)/checkout/page": {
-          "maxKbGz": 194,
-          "justification": "M16-P01 baseline (multi-step checkout). Target: code-split payment/fulfilment steps to ≤150 KB gz."
-        },
-        "/[locale]/(shop)/checkout/pending/[groupId]/page": {
-          "maxKbGz": 188,
-          "justification": "M07-P07 pending USSD wait — shares checkout client shell. Target: code-split to ≤150 KB gz."
-        },
-        "/[locale]/(shop)/checkout/card/[paymentId]/page": {
-          "maxKbGz": 186,
-          "justification": "M08-P06 card widget page shares checkout auth shell. Target: ≤150 KB gz after auth chunk split."
-        },
-        "/[locale]/(shop)/p/[slug]/page": {
-          "maxKbGz": 197,
-          "justification": "M16-P01 baseline (PDP gallery + comparison); +0.2 KB from M16-P04 registering the marketing i18n namespace in the shared loader; +~0.5 KB from M09-P02 (#213) product description + PDP Overview/Specs/Reviews tabs (surfaced when the duplicate-0041 migration fix restored the bundle guard on master). M09-P03 (#220) related-products rail is server-rendered (0 KB client JS). Target: lazy-load comparison module to ≤150 KB gz."
-        },
-        "/[locale]/(auth)/login/page": {
-          "maxKbGz": 188,
-          "justification": "M16-P01 baseline (auth shell shared with OTP/signup). Target: extract shared auth bundle to ≤150 KB gz."
-        },
-        "/[locale]/(auth)/signup/page": {
-          "maxKbGz": 188,
-          "justification": "M16-P01 baseline (auth shell shared with login/OTP). Target: extract shared auth bundle to ≤150 KB gz."
-        },
-        "/[locale]/(auth)/otp/page": {
-          "maxKbGz": 187,
-          "justification": "M16-P01 baseline (OTP form + auth shell). Target: extract shared auth bundle to ≤150 KB gz."
-        },
-        "/[locale]/account/privacy/page": {
-          "maxKbGz": 188,
-          "justification": "M16-P01 baseline (account shell + privacy content). Target: slim account layout JS to ≤150 KB gz."
-        },
-        "/[locale]/(shop)/services/post-job/page": {
-          "maxKbGz": 187,
-          "justification": "M11-P02 post-job form shares auth + checkout form shell; +0.1 KB from M16-P04 registering the marketing i18n namespace in the shared loader. Target: code-split session client to ≤150 KB gz."
-        },
-        "/[locale]/(shop)/ask/page": {
-          "maxKbGz": 187,
-          "justification": "M06-P04 Ask Vergeo thread shares the auth/session client shell (useSession + query form). Guest-allowed but pulls the shared client chunk. Target: code-split @vergeo/auth session client to ≤150 KB gz."
-        },
-        "/[locale]/account/jobs/[id]/page": {
-          "maxKbGz": 189,
-          "justification": "M11-P03 quote-compare page shares the account/session client shell (useSession + quote-action forms). Authenticated route (not public discovery). Target: code-split @vergeo/auth session client to ≤150 KB gz."
-        },
-        "/[locale]/account/tickets/[id]/transfer/page": {
-          "maxKbGz": 188,
-          "justification": "M10-P07 transfer form shares the account/session client shell (useSession + phone-input form). Authenticated route. Target: code-split @vergeo/auth session client to ≤150 KB gz."
-        },
-        "/[locale]/account/tickets/page": {
-          "maxKbGz": 186,
-          "justification": "M10-P07 wallet now mounts the inbound-transfer claim banner (useSession + api client), pulling in the account/session shell. Authenticated route. Target: code-split @vergeo/auth session client to ≤150 KB gz."
-        }
-      },
+      "reductionNote": "2026-07: code-split @vergeo/auth (the Supabase browser client) off first-load via a lazy getBrowserClient accessor — useSession and every direct consumer now import it dynamically. Dropped ~60 KB gz from each customer route (PDP 195→131, auth/checkout/account routes 184–192→120–128), bringing ALL 47 routes under the 150 KB target, so the per-route overrides (previously up to 197 KB) are gone and the default 150 now genuinely gates every route.",
+      "routes": {},
       "auditRoutes": [
         "/[locale]/(shop)/page",
         "/[locale]/(shop)/c/[...slug]/page",

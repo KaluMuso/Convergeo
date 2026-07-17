@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@vergeo/auth/browser-client";
+import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
@@ -62,7 +62,7 @@ export function PhoneForm({ locale, labels, otpPath, mode = "login" }: PhoneForm
     setLoading(true);
 
     try {
-      const supabase = createBrowserClient();
+      const supabase = await getBrowserClient();
       const { error } = await supabase.auth.signInWithOtp({
         phone,
         options: {
