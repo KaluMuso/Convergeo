@@ -476,6 +476,74 @@ def test_vendor_create_and_list(services_client: TestClient) -> None:
     assert "Office Cleaning" in titles
 
 
+def test_create_bookable_with_price(services_client: TestClient) -> None:
+    create = services_client.post(
+        "/vendor/services",
+        headers=_auth_headers(),
+        json={
+            "category": "cleaning",
+            "title": "Fixed-price Deep Clean",
+            "bookable": True,
+            "booking_price_ngwee": 50000,
+            "status": "active",
+        },
+    )
+    assert create.status_code == 200
+    body = create.json()["service"]
+    assert body["bookable"] is True
+    assert body["booking_price_ngwee"] == 50000
+
+
+def test_create_bookable_without_price_rejected(services_client: TestClient) -> None:
+    create = services_client.post(
+        "/vendor/services",
+        headers=_auth_headers(),
+        json={"category": "cleaning", "title": "No price", "bookable": True},
+    )
+    assert create.status_code == 422
+
+
+def test_update_to_bookable_requires_price(services_client: TestClient) -> None:
+    # SERVICE_ACTIVE_ID has no booking price — flipping bookable on alone is rejected.
+    rejected = services_client.patch(
+        f"/vendor/services/{SERVICE_ACTIVE_ID}",
+        headers=_auth_headers(),
+        json={"bookable": True},
+    )
+    assert rejected.status_code == 422
+
+    ok = services_client.patch(
+        f"/vendor/services/{SERVICE_ACTIVE_ID}",
+        headers=_auth_headers(),
+        json={"bookable": True, "booking_price_ngwee": 80000},
+    )
+    assert ok.status_code == 200
+    assert ok.json()["service"]["bookable"] is True
+    assert ok.json()["service"]["booking_price_ngwee"] == 80000
+
+
+def test_public_detail_exposes_bookable(
+    services_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    # Existing services default to not bookable.
+    assert services_client.get(f"/services/{SERVICE_ACTIVE_ID}").json()["bookable"] is False
+
+    bookable = _service_row(
+        service_id="a1000000-0000-4000-8000-0000000000bb",
+        status="active",
+    )
+    bookable["bookable"] = True
+    bookable["booking_price_ngwee"] = 120000
+    fake_client.tables["services"].rows.append(bookable)
+    fake_client.sync_search_for_service(bookable)
+
+    detail = services_client.get("/services/a1000000-0000-4000-8000-0000000000bb")
+    assert detail.status_code == 200
+    assert detail.json()["bookable"] is True
+    assert detail.json()["booking_price_ngwee"] == 120000
+
+
 def test_active_service_projects_to_search_documents(fake_client: FakeSupabaseClient) -> None:
     docs = fake_client.tables["search_documents"].rows
     active_doc = next(
