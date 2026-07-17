@@ -1,0 +1,1414 @@
+{
+  "analytics": {
+    "meta": {
+      "title": "数据分析 —— Vergeo5 商家",
+      "description": "追踪过去 7 天或 30 天的销售额、订单和购物车活动，查看热门商品，并评估购物车到订单的转化率。"
+    },
+    "eyebrow": "您的店铺",
+    "title": "数据分析",
+    "intro": "快速了解您店铺的表现情况。",
+    "loading": "正在加载数据分析…",
+    "window": {
+      "label": "时间范围",
+      "7d": "7 天",
+      "30d": "30 天"
+    },
+    "cards": {
+      "sales": "销售额",
+      "orders": "订单",
+      "views": "购物车活动"
+    },
+    "sparkline": {
+      "sales": "每日销售额趋势",
+      "orders": "每日订单趋势",
+      "views": "每日购物车活动趋势"
+    },
+    "top": {
+      "heading": "热门商品",
+      "empty": "此时间范围内暂无销售。",
+      "untitled": "未命名商品",
+      "units": "{count, plural, one {已售 # 件} other {已售 # 件}}"
+    },
+    "conversion": {
+      "heading": "转化率",
+      "summary": "{orders, plural, one {# 个订单} other {# 个订单}}，来自 {views, plural, one {# 次购物车操作} other {# 次购物车操作}}",
+      "pct": "{pct}% 购物车转订单",
+      "empty": "活动数据尚不足以估算转化率。"
+    },
+    "errors": {
+      "loadFailed": "无法加载您的数据分析，请重试。",
+      "invalidWindow": "请选择 7 天或 30 天的时间范围。"
+    }
+  },
+  "vendor.dashboard.title": "商家仪表板",
+  "vendor.listings.count": "{count, plural, one {# 件商品} other {# 件商品}}",
+  "vendor.payout.pending": "待处理结算：{amount}",
+  "pitch": {
+    "meta": {
+      "title": "在 Vergeo5 上销售——免费上架，售出才付费",
+      "description": "加入赞比亚的商品、服务、活动、供货和商户目录市场平台。免费套餐：30 个商品。佣金透明。移动支付结算几分钟到账。"
+    },
+    "hero": {
+      "eyebrow": "在 Vergeo5 上销售",
+      "headline": "免费上架。",
+      "headlineEmphasis": "售出才付费。",
+      "subheadline": "通过商品、服务、活动、供货和您的商户主页触达赞比亚各地的买家——尽在一个商家应用。",
+      "primaryCta": "开始销售",
+      "secondaryCta": "查看佣金",
+      "freeTierNote": "免费套餐最多可发布 30 个商品，销售功能全部开放。"
+    },
+    "valueProps": {
+      "heading": "五种增长方式",
+      "products": {
+        "title": "商品",
+        "description": "在我们的标准商品目录中上架，买家可比较各商家的价格。"
+      },
+      "services": {
+        "title": "服务",
+        "description": "提供美容、餐饮、维修、印刷等服务，支持询价（RFQ）。"
+      },
+      "events": {
+        "title": "活动",
+        "description": "通过动态 QR 码检票销售门票。免费报名活动 0% 佣金。"
+      },
+      "supplies": {
+        "title": "供货",
+        "description": "为已认证企业（T2+）提供批发分级定价。"
+      },
+      "directory": {
+        "title": "商户目录",
+        "description": "通过店铺主页、营业时间和地图位置被更多人发现。"
+      }
+    },
+    "commission": {
+      "heading": "佣金透明",
+      "intro": "每次发布商品前都会显示费率。只有成交时才付费。",
+      "categoryColumn": "类别",
+      "rateColumn": "佣金",
+      "footnote": "费率可能每季度调整。免费活动永久保持 0%。",
+      "categories": {
+        "electronics": "电子产品",
+        "home": "家居与生活",
+        "fashion_beauty": "时尚与美妆",
+        "services": "服务",
+        "event_tickets": "活动门票",
+        "supplies": "供货与批发",
+        "groceries": "食品杂货与日用品",
+        "default": "所有其他类别",
+        "free_events": "免费报名活动"
+      },
+      "rate": "{rate}%"
+    },
+    "howItWorks": {
+      "heading": "运作方式",
+      "steps": {
+        "signup": {
+          "title": "几分钟即可注册",
+          "description": "在手机或电脑上创建商家账户——无需预付费用。"
+        },
+        "kyc": {
+          "title": "完成 T1 KYC 认证",
+          "description": "上传您的 NRC 和一张自拍。我们会核对您的移动支付实名信息。当天即可通过。"
+        },
+        "list": {
+          "title": "上架您的首批商品",
+          "description": "关联到我们的商品目录或快速上架。发布前即可查看您的佣金。"
+        },
+        "sell": {
+          "title": "销售并收款",
+          "description": "订单直接进入您的仪表板。托管保护买家；结算快速到账您的 MoMo。"
+        }
+      }
+    },
+    "kyc": {
+      "heading": "认证等级",
+      "intro": "未经认证的商品不会公开展示。从 T1 起步，随业务成长逐步升级。",
+      "tiers": {
+        "t1": {
+          "badge": "T1 · 商家",
+          "title": "当天开卖",
+          "description": "NRC 照片 + 自拍 + 移动支付实名核对。最多 30 个商品；前 5 笔订单每笔上限 K500。"
+        },
+        "t2": {
+          "badge": "T2 · 已认证企业",
+          "title": "提升您的限额",
+          "description": "PACRA 证书 + 公司 TPIN。认证徽章、供货标签页和更高限额。"
+        },
+        "t3": {
+          "badge": "T3 · 高级",
+          "title": "受邀合作伙伴",
+          "description": "为高销量商家提供 API 接入和横幅广告位资格。"
+        },
+        "preferred": {
+          "badge": "Vergeo5 优选",
+          "title": "赢得的信任徽章",
+          "description": "≥20 笔订单、≥4.5★ 评分、<2% 纠纷、<5% 取消率——每月审核。"
+        }
+      }
+    },
+    "payout": {
+      "heading": "快速移动支付结算",
+      "promise": "移动支付几分钟结算到账——始终不超过 48 小时。",
+      "body": "买家付款会被托管，直到确认收货（或 48 小时后自动确认）。款项释放后，MTN 和 Airtel 结算通常 5 分钟内到账。银行转账需 24–36 小时。"
+    },
+    "faq": {
+      "heading": "常见问题",
+      "items": {
+        "fees": {
+          "question": "有月费吗？",
+          "answer": "没有。Vergeo5 上线期间免费上架。只有售出时才支付佣金。免费套餐最多包含 30 个商品。"
+        },
+        "payout": {
+          "question": "我什么时候收款？",
+          "answer": "在确认收货、托管款项释放之后。移动支付结算通常几分钟到账；我们保证在 48 小时内结算。"
+        },
+        "whatCanISell": {
+          "question": "我可以卖什么？",
+          "answer": "商品、服务、活动门票、批发供货和商户目录，涵盖我们的上线类别——食品杂货、美妆、时尚、电子产品、家居用品等。违禁物品（二手手机、酒类、药品等）被禁止。"
+        },
+        "kyc": {
+          "question": "认证需要多长时间？",
+          "answer": "拥有有效 NRC、自拍和匹配 MoMo 实名的 T1 商家通常当天即可通过。在您通过 KYC 之前，任何内容都不会上线。"
+        }
+      }
+    },
+    "cta": {
+      "heading": "准备好触达赞比亚各地的买家了吗？",
+      "body": "加入数百家在 Vergeo5 上创业的商家。十分钟内即可建好您的店铺。",
+      "button": "创建您的商家账户",
+      "loadingLabel": "正在打开注册"
+    }
+  },
+  "onboarding": {
+    "meta": {
+      "title": "商家入驻 — Vergeo5",
+      "description": "完善您的商户资料并完成 T1 KYC，即可在 Vergeo5 上开始销售。"
+    },
+    "steps": {
+      "business": "商户",
+      "kyc": "验证身份",
+      "review": "核对"
+    },
+    "stepAnnouncement": "第 {current} 步，共 {total} 步",
+    "doneIndicator": "✓",
+    "business": {
+      "heading": "商户基本信息",
+      "intro": "向买家介绍您是谁。您稍后可在资料中编辑。",
+      "nameLabel": "商户或店铺名称",
+      "namePlaceholder": "例如：卢萨卡电子",
+      "categoryLabel": "主要类别",
+      "categoryPlaceholder": "选择类别",
+      "categories": {
+        "electronics": "电子产品",
+        "home": "家居生活",
+        "fashion_beauty": "时尚美妆",
+        "services": "服务",
+        "groceries": "食品杂货",
+        "other": "其他"
+      },
+      "continue": "继续",
+      "saving": "保存中…"
+    },
+    "kyc": {
+      "heading": "T1 身份验证",
+      "intro": "上传您的 NRC 和一张自拍照。我们会核对您的移动支付账户姓名。审核通过前不会公开任何信息。",
+      "nrcLabel": "NRC 照片",
+      "nrcHelp": "在光线充足处拍摄您国民登记证（NRC）的正面。",
+      "selfieLabel": "自拍照",
+      "selfieHelp": "将手机举至与眼睛齐平，正对镜头。",
+      "legalNameLabel": "全名（须与 NRC 上一致）",
+      "legalNamePlaceholder": "例如：Chanda Mwansa",
+      "legalNameHelp": "须与您移动支付号码登记的姓名一致。",
+      "momoLabel": "移动支付号码",
+      "momoPlaceholder": "例如：0977123456",
+      "momoHelp": "用于收款、以您本人姓名登记的 MTN 或 Airtel 号码。",
+      "continue": "继续",
+      "uploading": "上传中…",
+      "capture": "拍照",
+      "retake": "重拍",
+      "usePhoto": "使用此照片",
+      "uploadFailed": "上传失败。请检查网络连接后重试。",
+      "uploaded": "已保存",
+      "nrcDone": "NRC 照片已保存",
+      "selfieDone": "自拍照已保存"
+    },
+    "quality": {
+      "heading": "拍照提示",
+      "light": "使用日光或在明亮房间拍摄，避免 NRC 反光。",
+      "steady": "保持稳定；模糊的照片将被拒绝。",
+      "frame": "充满画面，NRC 的四个角都要清晰可见。",
+      "face": "自拍时请摘下帽子和墨镜。"
+    },
+    "review": {
+      "heading": "核对并提交",
+      "intro": "请检查您的信息。提交后，我们的团队将在一个工作日内审核。",
+      "businessSection": "商户",
+      "docsSection": "证件",
+      "momoSection": "移动支付",
+      "nrcUploaded": "NRC 照片已上传",
+      "selfieUploaded": "自拍照已上传",
+      "notUploaded": "未上传",
+      "submit": "提交审核",
+      "submitting": "提交中…",
+      "editBusiness": "编辑商户信息",
+      "editDocs": "编辑证件",
+      "gateNotice": "在 KYC 审核通过前，您的商品将保持隐藏。"
+    },
+    "status": {
+      "heading": "身份验证状态",
+      "pending": {
+        "title": "审核中",
+        "body": "我们正在验证您的证件。完成后您将收到 WhatsApp 通知。",
+        "cta": "返回控制台"
+      },
+      "approved": {
+        "title": "您已通过验证",
+        "body": "T1 KYC 已通过。您可以创建商品，发布后买家即可看到。",
+        "cta": "创建您的第一个商品",
+        "t2Link": "升级到 T2（PACRA + TPIN）"
+      },
+      "rejected": {
+        "title": "身份验证需要修改",
+        "body": "我们无法批准您的申请。",
+        "reasonLabel": "原因",
+        "resubmitCta": "更新证件",
+        "gateNotice": "在您通过验证前，商品将保持隐藏。"
+      },
+      "resubmit": {
+        "title": "重新提交证件",
+        "body": "更新以下项目并重新提交，无需从头开始。",
+        "nrcRequired": "需要 NRC 照片",
+        "selfieRequired": "需要自拍照",
+        "submit": "重新提交审核"
+      }
+    },
+    "t2": {
+      "stubLabel": "升级为已验证商户（T2）",
+      "stubBody": "PACRA 证书和公司 TPIN，即将推出。"
+    },
+    "errors": {
+      "required": "此字段为必填项",
+      "invalidPhone": "请输入有效的赞比亚手机号码",
+      "loadFailed": "无法加载您的申请。下拉刷新。",
+      "submitFailed": "提交失败。请重试。"
+    },
+    "loading": "加载中…"
+  },
+  "listings": {
+    "images": {
+      "heading": "照片",
+      "intro": "{count}/{max} 张照片。第一张为封面。",
+      "alt": "商品照片 {position}",
+      "cover_badge": "封面",
+      "position_label": "照片 {position}",
+      "move_up": "上移",
+      "move_down": "下移",
+      "set_cover": "设为封面",
+      "remove": "移除",
+      "drop_label": "将照片拖到此处",
+      "browse_label": "浏览",
+      "compress_hint": "上传前照片会被压缩以节省流量。",
+      "limit_reached": "您已达到照片数量上限。",
+      "upload": "添加照片",
+      "uploading": "上传中…",
+      "upload_failed": "上传失败",
+      "retry": "重试"
+    },
+    "meta": {
+      "title": "创建商品 —— Vergeo5 商家",
+      "description": "关联到目录、提交新产品，或快速上架商品。"
+    },
+    "title": "创建商品",
+    "intro": "选择您的上架方式。发布前将显示佣金。",
+    "loading": "加载中…",
+    "tabs": {
+      "ariaLabel": "商品创建模式",
+      "attach": "目录",
+      "newCanonical": "新产品",
+      "quickList": "快速上架"
+    },
+    "commission": {
+      "heading": "此商品的佣金",
+      "body": "只有成交时才需付费。此类别的费率固定。",
+      "rate": "{rate}%"
+    },
+    "attach": {
+      "searchPlaceholder": "搜索目录产品",
+      "searching": "搜索中…",
+      "empty": "没有匹配的产品。请尝试其他名称或提交新产品。",
+      "hint": "搜索 Vergeo5 目录以关联您的商品。",
+      "changeProduct": "← 更换产品",
+      "specHeading": "产品规格",
+      "publish": "发布商品",
+      "publishing": "发布中…"
+    },
+    "newCanonical": {
+      "heading": "提交新产品",
+      "intro": "我们会先审核您的产品，然后才会将其显示在目录中。",
+      "nameLabel": "产品名称",
+      "namePlaceholder": "例如：无线耳机",
+      "brandLabel": "品牌（可选）",
+      "brandPlaceholder": "例如：Samsung",
+      "categoryLabel": "类别",
+      "categoryPlaceholder": "选择类别",
+      "submit": "提交审核",
+      "submitting": "提交中…",
+      "moderationNotice": "在我们团队批准该产品之前，您的商品将保持草稿状态。"
+    },
+    "quickList": {
+      "heading": "快速上架",
+      "intro": "适用于目录中没有匹配项的商品——生鲜农产品、大宗货物等。",
+      "titleLabel": "商品标题",
+      "titlePlaceholder": "例如：番茄（每公斤）",
+      "publish": "发布商品",
+      "publishing": "发布中…"
+    },
+    "fields": {
+      "priceLabel": "您的价格（ZMW）",
+      "pricePlaceholder": "0.00",
+      "priceHelp": "输入克瓦查和恩格威，例如：1,234.56",
+      "priceInvalid": "请输入有效的价格，例如 1234.56",
+      "conditionLabel": "成色",
+      "conditionNew": "全新",
+      "conditionRefurbished": "翻新",
+      "stockModeLabel": "库存",
+      "stockTracked": "跟踪数量",
+      "stockAlways": "长期有货",
+      "stockQtyLabel": "库存数量",
+      "wholesaleLabel": "批发价格档位",
+      "wholesaleHelp": "仅限 T2+ 认证商家",
+      "moqLabel": "最小起订量"
+    },
+    "success": {
+      "live": "商品已上架！",
+      "moderation": "已提交审核——我们将通过 WhatsApp 通知您。"
+    },
+    "errors": {
+      "required": "此字段为必填项",
+      "submitFailed": "无法创建商品，请重试。",
+      "wholesale_requires_t2": "批发需要 T2 认证",
+      "product_not_found": "未找到产品",
+      "product_not_active": "此产品暂时无法关联",
+      "category_not_found": "未找到类别",
+      "invalid_tiers": "价格档位的数量必须递增，单价必须递减"
+    },
+    "import": {
+      "meta": {
+        "title": "导入商品 —— Vergeo5 商家",
+        "description": "从 CSV 文件批量上传商家商品，并提供逐行验证反馈。"
+      },
+      "title": "导入商品",
+      "intro": "上传 CSV 一次性添加或更新多件商品。重新导入相同的 SKU 会更新现有商品。",
+      "loading": "加载中…",
+      "signInRequired": "请登录以导入商品。",
+      "template": {
+        "heading": "下载模板",
+        "body": "使用我们带有示例行的 CSV 模板。价格以恩格威（整数）为单位。SKU 是每件商品的唯一编码。将 product_id 留空，即可在预览中获得目录匹配建议。",
+        "download": "下载 CSV 模板"
+      },
+      "upload": {
+        "heading": "上传 CSV",
+        "fileLabel": "选择 CSV 文件",
+        "selected": "已选择：{name}",
+        "submit": "导入商品",
+        "uploading": "导入中…"
+      },
+      "results": {
+        "accepted": "{count, plural, one {已接受 # 行} other {已接受 # 行}}",
+        "rejected": "{count, plural, one {已拒绝 # 行} other {已拒绝 # 行}}",
+        "row": "行",
+        "status": "状态",
+        "details": "详情",
+        "ok": "正常",
+        "failed": "失败",
+        "imported": "已导入"
+      },
+      "preview": {
+        "previewButton": "预览行",
+        "previewing": "检查中…",
+        "summary": "{valid} 行（共 {total} 行）可导入",
+        "itemColumn": "商品",
+        "matchColumn": "目录匹配",
+        "suggestionsLabel": "建议匹配",
+        "attachAction": "关联：{name}",
+        "attached": "已关联：{name}",
+        "matched": "匹配：{name}",
+        "detach": "更改",
+        "standalone": "无匹配——单独上架"
+      },
+      "apply": {
+        "button": "应用导入",
+        "applying": "应用中…"
+      },
+      "errors": {
+        "uploadFailed": "导入失败。请检查文件后重试。",
+        "previewFailed": "无法检查您的文件，请重试。",
+        "no_file": "需要 CSV 文件",
+        "no_payload": "请提供 CSV 文件或 JSON 行"
+      }
+    },
+    "manage": {
+      "meta": {
+        "title": "您的商品 —— Vergeo5 商家",
+        "description": "查看库存、暂停商品并编辑价格。"
+      },
+      "title": "您的商品",
+      "intro": "点按商品以编辑价格、库存和退货设置。",
+      "loading": "加载中…",
+      "empty": "暂无商品。",
+      "createCta": "创建商品",
+      "editCta": "编辑",
+      "stockLabel": "库存",
+      "stockValue": "{qty}",
+      "stockAlways": "长期有货",
+      "decreaseSymbol": "−",
+      "increaseSymbol": "+",
+      "decreaseStock": "减少库存",
+      "increaseStock": "增加库存",
+      "status": {
+        "draft": "草稿",
+        "active": "上架",
+        "paused": "已暂停"
+      },
+      "edit": {
+        "meta": {
+          "title": "编辑商品 —— Vergeo5 商家",
+          "description": "更新价格、库存、成色和退货政策。"
+        },
+        "title": "编辑商品",
+        "save": "保存更改",
+        "saving": "保存中…",
+        "pause": "暂停商品",
+        "pausing": "暂停中…",
+        "unpause": "恢复商品",
+        "unpausing": "恢复中…",
+        "delete": "删除商品",
+        "deleting": "删除中…",
+        "returnableLabel": "接受退货",
+        "returnableHelp": "此商品的 Lane-2 退货政策。",
+        "returnWindowLabel": "退货窗口期（小时）",
+        "tierHeading": "批发价格档位",
+        "tierQtyLabel": "最小数量",
+        "tierPriceLabel": "单价（ZMW）",
+        "addTier": "添加档位",
+        "removeTier": "移除档位",
+        "saved": "更改已保存。",
+        "pausedNotice": "由于存在未完成的订单，商品已暂停。",
+        "deleted": "商品已删除。",
+        "priceChangedNotice": "价格已更新——购物车将在下次查看时重新验证。"
+      },
+      "delete": {
+        "paused_instead": "此商品存在未完成的订单，因此已暂停而非删除。",
+        "removed": "商品已删除。"
+      },
+      "errors": {
+        "loadFailed": "无法加载商品。下拉刷新。",
+        "saveFailed": "无法保存更改，请重试。",
+        "stockNotTracked": "库存调整仅适用于跟踪库存的商品。",
+        "stockQtyRequired": "请为跟踪库存的商品输入库存数量。",
+        "returnWindowRequired": "启用退货时，请输入退货窗口期。"
+      }
+    }
+  },
+  "profile": {
+    "meta": {
+      "title": "店铺资料 — Vergeo5 商家",
+      "description": "编辑您的公开店铺：Logo、简介、营业时间、位置和店铺网址。"
+    },
+    "title": "店铺资料",
+    "intro": "这是买家在您名录页面上看到的内容。完善您的资料以获得更高排名。",
+    "loading": "加载资料中…",
+    "sections": {
+      "basics": "商户详情",
+      "contact": "联系方式",
+      "cover": "封面图片",
+      "logo": "Logo",
+      "location": "位置"
+    },
+    "fields": {
+      "displayNameLabel": "显示名称",
+      "descriptionLabel": "简介",
+      "descriptionPlaceholder": "告诉买家您销售什么，以及为何选择您…",
+      "descriptionHelp": "建议至少 50 个字符，有助于买家信任您的店铺。",
+      "whatsappLabel": "WhatsApp 号码",
+      "whatsappPlaceholder": "例如：0977 123456",
+      "whatsappHelp": "可选。买家可直接给您发消息，在您的店铺上显示为“在 WhatsApp 上聊天”按钮。",
+      "slugLabel": "店铺网址",
+      "slugPlaceholder": "lusaka-electronics",
+      "landmarkLabel": "地标",
+      "landmarkPlaceholder": "例如：Manda Hill Mall 附近",
+      "latLabel": "纬度",
+      "latPlaceholder": "-15.3875",
+      "lngLabel": "经度",
+      "lngPlaceholder": "28.3228",
+      "locationHelp": "用 GPS 在地图上标记您的店铺，并附上买家熟知的附近地标。",
+      "hoursLabel": "营业时间",
+      "hoursHelp": "支持跨夜营业时间（例如午夜后关门）。"
+    },
+    "slug": {
+      "onceWarning": "您只能更改一次店铺网址。旧链接将自动重定向。",
+      "locked": "一次性更改后，您的店铺网址将被锁定。",
+      "previous": "旧网址 {slug} 会重定向到您当前的店铺页面。"
+    },
+    "hours": {
+      "days": {
+        "mon": "周一",
+        "tue": "周二",
+        "wed": "周三",
+        "thu": "周四",
+        "fri": "周五",
+        "sat": "周六",
+        "sun": "周日"
+      },
+      "open": "开门",
+      "close": "关门",
+      "closed": "休息"
+    },
+    "logo": {
+      "alt": "店铺 Logo",
+      "empty": "暂无 Logo",
+      "upload": "上传 Logo",
+      "uploading": "上传中…",
+      "uploadFailed": "Logo 上传失败。请重试。",
+      "help": "方形图片效果最佳。上传前会调整尺寸以节省流量。"
+    },
+    "cover": {
+      "alt": "店铺封面图片",
+      "empty": "暂无封面图片",
+      "upload": "上传封面",
+      "uploading": "上传中…",
+      "remove": "移除",
+      "uploadFailed": "封面上传失败。请重试。",
+      "help": "宽幅横幅（约 3:1）显示在您店铺顶部。上传前会调整尺寸以节省流量。"
+    },
+    "badge": {
+      "preferred": "已获得 Vergeo5 优选徽章",
+      "hint": "凭优质服务赢得优选徽章：订单 ≥20、评分 ≥4.5★、纠纷率低。"
+    },
+    "completeness": {
+      "heading": "资料完整度",
+      "score": "已完成 {score}%",
+      "fields": {
+        "logo": "已上传 Logo",
+        "description": "简介（50+ 个字符）",
+        "hours": "已设置营业时间",
+        "location": "位置 + 地标",
+        "badge": "已获得优选徽章"
+      }
+    },
+    "actions": {
+      "save": "保存资料",
+      "saving": "保存中…"
+    },
+    "success": {
+      "saved": "资料已保存。更改将在一分钟内显示在您的公开页面上。"
+    },
+    "errors": {
+      "loadFailed": "无法加载您的资料。下拉刷新。",
+      "saveFailed": "无法保存您的资料。请重试。",
+      "authRequired": "登录以编辑您的店铺资料。",
+      "slug_locked": "您的店铺网址已被锁定。",
+      "slug_taken": "该店铺网址已被占用。",
+      "slug_charset": "仅可使用小写字母、数字和连字符。",
+      "hours_empty": "请至少添加一天的营业时间。",
+      "hours_invalid": "请检查您的开门和关门时间。",
+      "hours_invalid_day": "其中一个日期名称无效。",
+      "hours_all_closed": "请至少将一天标记为营业。",
+      "location_required": "设置营业时间前请先添加您的位置。",
+      "whatsapp_invalid": "请输入有效的赞比亚手机号码（例如：0977 123456）。"
+    }
+  },
+  "orders": {
+    "meta": {
+      "title": "订单详情 — Vergeo5 商家",
+      "description": "查看订单商品、付款信息、时间线和履约操作。"
+    },
+    "title": "订单",
+    "loading": "加载订单中…",
+    "back": "返回订单列表",
+    "status": {
+      "placed": "已下单",
+      "confirmed": "已确认",
+      "processing": "处理中",
+      "ready": "待自提",
+      "shipped": "已发货",
+      "delivered": "已送达",
+      "completed": "已完成",
+      "cancelled": "已取消"
+    },
+    "fulfilment": {
+      "delivery": "配送",
+      "pickup": "自提"
+    },
+    "payment": {
+      "heading": "付款",
+      "cod": "货到付款",
+      "paid": "已付款，款项托管中",
+      "unpaid": "等待付款"
+    },
+    "items": {
+      "heading": "商品",
+      "qty": "数量 {qty}",
+      "empty": "无商品明细"
+    },
+    "timeline": {
+      "heading": "时间线",
+      "empty": "暂无事件",
+      "note": "备注：{note}"
+    },
+    "actions": {
+      "heading": "操作",
+      "confirm": "确认订单",
+      "reject": "拒绝订单",
+      "pack": "开始打包",
+      "ship": "标记为已发货",
+      "ready_for_pickup": "待自提",
+      "confirming": "确认中…",
+      "rejecting": "拒绝中…",
+      "packing": "打包中…",
+      "shipping": "发货中…",
+      "markingReady": "更新中…",
+      "rejectPrompt": "告诉客户您无法履行此订单的原因。",
+      "rejectLabel": "原因（向客户显示）",
+      "rejectPlaceholder": "例如：缺货，抱歉给您带来不便",
+      "shipPrompt": "为买家添加物流跟踪或快递详情。",
+      "shipLabel": "物流备注",
+      "shipPlaceholder": "例如：Yango 快递，司机 John 0977…",
+      "submitReject": "填写原因并拒绝",
+      "submitShip": "标记为已发货",
+      "cancel": "取消"
+    },
+    "success": {
+      "confirmed": "订单已确认。",
+      "rejected": "订单已拒绝。",
+      "packed": "订单现在处理中。",
+      "shipped": "订单已标记为已发货。",
+      "ready": "订单待自提。"
+    },
+    "errors": {
+      "loadFailed": "无法加载此订单。下拉刷新。",
+      "actionFailed": "操作失败。请重试。",
+      "forbidden": "您只能管理自己的订单。",
+      "invalidTransition": "该操作不适用于此订单。",
+      "reasonRequired": "拒绝时必须填写原因。",
+      "trackingRequired": "发货时必须填写物流备注。"
+    }
+  },
+  "home": {
+    "title": "今日",
+    "eyebrow": "商家主页",
+    "loading": "正在加载仪表板…",
+    "offlineNotice": "正在显示已保存的数据——请连接以刷新。",
+    "takings": {
+      "label": "今日收入",
+      "caption": "{date}（卢萨卡时间）的已确认收入"
+    },
+    "needsAction": {
+      "heading": "需要处理",
+      "empty": "您已全部处理完毕——没有需要您处理的订单。"
+    },
+    "actions": {
+      "openQueue": "打开订单队列",
+      "confirmOrders": "确认新订单"
+    },
+    "quickStart": {
+      "eyebrow": "为您的{businessType}业务",
+      "products": {
+        "heading": "拓展您的目录",
+        "body": "添加产品，并保持库存和价格更新。",
+        "cta": "管理您的商品"
+      },
+      "services": {
+        "heading": "拓展您的服务",
+        "body": "发布您的服务并回复客户的报价请求。",
+        "cta": "管理您的服务"
+      }
+    },
+    "businessTypes": {
+      "electronics": "电子产品",
+      "home": "家居生活",
+      "fashion_beauty": "时尚美妆",
+      "services": "服务",
+      "groceries": "食品杂货",
+      "other": "零售"
+    },
+    "errors": {
+      "loadFailed": "无法加载您的仪表板。下拉刷新。"
+    }
+  },
+  "queue": {
+    "meta": {
+      "title": "订单队列 —— Vergeo5 商家",
+      "description": "通过一键操作筛选和履行订单。"
+    },
+    "title": "订单",
+    "intro": "点按操作以推进订单。下拉刷新。",
+    "loading": "正在加载订单…",
+    "refreshing": "刷新中…",
+    "pullToRefresh": "松开以刷新",
+    "offlineNotice": "离线——正在显示上次保存的队列。",
+    "empty": "此视图中没有订单。",
+    "emptyCta": "返回主页",
+    "filters": {
+      "needsAction": "需要处理",
+      "placed": "新订单",
+      "confirmed": "已确认",
+      "processing": "打包中",
+      "all": "全部"
+    },
+    "card": {
+      "items": "{count, plural, one {# 件商品} other {# 件商品}}"
+    },
+    "sheet": {
+      "title": "{action}？",
+      "body": "{title} · {amount}",
+      "confirm": "是，继续",
+      "cancel": "暂不"
+    },
+    "errors": {
+      "loadFailed": "无法加载订单。下拉刷新。"
+    }
+  },
+  "payouts": {
+    "meta": {
+      "title": "结算 — Vergeo5 商家",
+      "description": "查看托管中和已释放的余额、结算记录，并下载月度对账单。"
+    },
+    "eyebrow": "资金",
+    "title": "结算",
+    "intro": "余额直接来自账本——无需单独记账。",
+    "loading": "加载结算中…",
+    "balances": {
+      "heading": "您的余额",
+      "escrowHeld": "托管中",
+      "released": "已释放可用",
+      "paidOut": "已结算",
+      "ledgerNote": "这些数字与您的账本科目完全一致。"
+    },
+    "hold": {
+      "noticeTitle": "结算暂停 24 小时",
+      "noticeBody": "更改移动支付号码后，结算将暂停 24 小时，以便我们核实变更。结算恢复时会通知您。"
+    },
+    "history": {
+      "heading": "结算记录",
+      "empty": "暂无结算。",
+      "status": {
+        "pending": "待处理",
+        "processing": "处理中",
+        "paid": "已付款",
+        "failed": "失败"
+      }
+    },
+    "statement": {
+      "heading": "月度对账单",
+      "monthLabel": "月份",
+      "downloadCsv": "下载 CSV",
+      "downloading": "正在生成 CSV…",
+      "pdfStub": "PDF 对账单即将推出——目前可下载 CSV。"
+    },
+    "method": {
+      "meta": {
+        "title": "结算方式 — Vergeo5 商家",
+        "description": "更改接收结算的移动支付号码。"
+      },
+      "link": "更改结算方式",
+      "back": "← 返回结算",
+      "title": "结算方式",
+      "intro": "输入以您本人名义注册的 MTN、Airtel 或 Zamtel 号码。保存前我们会通过 Lenco 重新核验。",
+      "msisdnLabel": "移动支付号码",
+      "msisdnPlaceholder": "例如：0977123456",
+      "railLabel": "运营商",
+      "rails": {
+        "mtn": "MTN",
+        "airtel": "Airtel",
+        "zamtel": "Zamtel"
+      },
+      "otpLabel": "验证码",
+      "otpPlaceholder": "6 位 OTP",
+      "otpHelp": "我们已向您注册的手机发送验证码。请输入以确认此变更。",
+      "submit": "保存结算方式",
+      "saving": "保存中…",
+      "success": "结算方式已更新。结算暂停 24 小时。"
+    },
+    "errors": {
+      "loadFailed": "无法加载结算。下拉刷新。",
+      "statementFailed": "无法下载对账单。请重试。",
+      "methodFailed": "无法更新结算方式。请重试。",
+      "otpFailed": "验证码无效或已过期。",
+      "nameMismatch": "该 MoMo 实名与您已认证的法定姓名不符。",
+      "kycRequired": "更改结算方式前请先完成 KYC。",
+      "payoutsPaused": "更改结算方式后结算已暂停。",
+      "rateLimited": "请求过于频繁。请稍后重试。",
+      "methodChangeLimit": "今日更改结算方式次数过多。请明天再试。"
+    }
+  },
+  "scan": {
+    "meta": {
+      "title": "取货扫描器 —— Vergeo5 商家",
+      "description": "扫描客户的取货二维码或输入 PIN，将订单标记为已取货。"
+    },
+    "eyebrow": "取货",
+    "title": "扫描取货",
+    "intro": "扫描客户的二维码，或输入其订单 ID 和 PIN。验证需要联网。",
+    "verifying": "正在验证取货…",
+    "offline": {
+      "title": "您已离线",
+      "body": "取货验证需要网络连接。请重新连接以验证二维码或 PIN。"
+    },
+    "camera": {
+      "hint": "将取货二维码对准框内中央",
+      "loading": "正在启动摄像头…",
+      "denied": "摄像头访问被阻止",
+      "deniedBody": "请在浏览器设置中允许摄像头访问，或改为输入客户的 PIN。",
+      "usePin": "改为输入 PIN"
+    },
+    "pin": {
+      "heading": "输入取货 PIN",
+      "intro": "客户已通过 WhatsApp 收到 6 位数 PIN。请输入其订单 ID 和 PIN。",
+      "orderIdLabel": "订单 ID",
+      "orderIdPlaceholder": "粘贴或输入订单 ID",
+      "pinLabel": "6 位数 PIN",
+      "pinPlaceholder": "000000",
+      "submit": "验证取货",
+      "submitting": "验证中…",
+      "useCamera": "改用摄像头"
+    },
+    "success": {
+      "title": "取货已验证",
+      "body": "订单 {orderId} 已标记为已取货。",
+      "scanAnother": "扫描下一个"
+    },
+    "errors": {
+      "retry": "重试",
+      "wrongQr": {
+        "title": "非取货码",
+        "body": "这看起来像是活动门票或其他二维码——而非订单取货码。请让客户从 WhatsApp 或 Vergeo5 应用中打开其订单取货二维码。"
+      },
+      "offline": {
+        "title": "离线时无法验证",
+        "body": "请连接互联网以验证取货码。"
+      },
+      "verifyFailed": {
+        "title": "验证失败",
+        "body": "我们无法验证此次取货。请检查代码后重试。"
+      },
+      "invalidPin": {
+        "title": "PIN 无效",
+        "body": "PIN 与此订单不匹配。请让客户查看其 WhatsApp 消息。"
+      },
+      "alreadyClaimed": {
+        "title": "已取货",
+        "body": "此次取货已验证。如果您认为有误，请联系客服。"
+      },
+      "staleToken": {
+        "title": "代码已过期",
+        "body": "客户可能有更新的取货码。请让其刷新订单页面或 WhatsApp 消息。"
+      },
+      "forbidden": {
+        "title": "非您的订单",
+        "body": "此次取货属于其他商家。请仅扫描您店铺的订单。"
+      }
+    },
+    "recent": {
+      "heading": "本次会话最近记录",
+      "empty": "暂无验证记录",
+      "order": "订单 {orderId}"
+    },
+    "eventCheckIn": {
+      "meta": {
+        "title": "活动扫描器 —— Vergeo5 商家",
+        "description": "扫描参与者的门票二维码为其检票，支持在线或离线。"
+      },
+      "eyebrow": "活动检票",
+      "title": "扫描门票",
+      "intro": "请在开场前同步，以便在没有网络连接时也能扫描。",
+      "instanceLabel": "场次",
+      "sync": {
+        "button": "同步门票",
+        "syncing": "同步中…",
+        "success": "已同步 {count} 张门票",
+        "error": "同步失败——请检查您的网络连接",
+        "lastSynced": "上次同步 {time}",
+        "neverSynced": "尚未同步——请在开场前连接并同步"
+      },
+      "offline": {
+        "title": "您已离线",
+        "body": "扫描将根据您上次同步的数据进行验证并排入队列。恢复联网后将自动确认。"
+      },
+      "camera": {
+        "hint": "将门票二维码对准框内中央",
+        "loading": "正在启动摄像头…",
+        "denied": "摄像头访问被阻止",
+        "deniedBody": "请在浏览器设置中允许摄像头访问以扫描门票。"
+      },
+      "count": {
+        "checkedIn": "{count, plural, one {已检票 # 人} other {已检票 # 人}}",
+        "pending": "{count, plural, one {# 项待同步} other {# 项待同步}}"
+      },
+      "result": {
+        "valid": {
+          "title": "检票成功",
+          "body": "门票 {ticketId} 已入场。"
+        },
+        "queued": {
+          "title": "检票成功（离线）",
+          "body": "门票 {ticketId} 已排队——恢复联网后将确认。"
+        },
+        "conflict": {
+          "title": "已检过票",
+          "body": "门票 {ticketId} 此前已入场。"
+        },
+        "rejected": {
+          "title": "已拒绝",
+          "body": "门票 {ticketId} 无法检票。"
+        },
+        "unknownTicket": {
+          "title": "无法识别",
+          "body": "此门票不在您已同步的列表中。请重新连接并同步，然后重试。"
+        },
+        "staleWindow": {
+          "title": "代码已过期",
+          "body": "此二维码已过期。请让来宾刷新其门票。"
+        },
+        "notSynced": {
+          "title": "超出同步时段",
+          "body": "此代码超出您已同步的检票时段。请在临近活动时重新同步。"
+        },
+        "invalidSig": {
+          "title": "代码无效",
+          "body": "此二维码与任何有效门票都不匹配。"
+        },
+        "invalidFormat": {
+          "title": "非门票代码",
+          "body": "这看起来不像是活动门票二维码。"
+        },
+        "scanAnother": "扫描下一个"
+      },
+      "recent": {
+        "heading": "最近扫描",
+        "empty": "暂无扫描记录",
+        "ticket": "门票 {ticketId}"
+      },
+      "errors": {
+        "loadEventFailed": "无法加载活动详情",
+        "noInstances": "此活动没有可检票的场次",
+        "unauthorized": "请以活动主办方身份登录以扫描门票"
+      }
+    }
+  },
+  "events": {
+    "eyebrow": "活动",
+    "list": {
+      "meta": {
+        "title": "您的活动 — Vergeo5 商家",
+        "description": "创建并管理售票活动和免费报名。"
+      },
+      "title": "您的活动",
+      "intro": "创建工作坊、演出和社区聚会。准备好售票时即可发布。",
+      "loading": "加载活动中…",
+      "empty": "暂无活动。",
+      "createCta": "创建活动",
+      "editCta": "编辑活动",
+      "noVenue": "场地待定",
+      "ticketsSold": "{count, plural, one {已售 # 张门票} other {已售 # 张门票}}"
+    },
+    "form": {
+      "createMeta": {
+        "title": "创建活动 — Vergeo5 商家",
+        "description": "设置日期、场地和照片，创建新活动。"
+      },
+      "editMeta": {
+        "title": "编辑活动 — Vergeo5 商家",
+        "description": "更新活动详情、场次和发布状态。"
+      },
+      "createTitle": "创建活动",
+      "editTitle": "编辑活动",
+      "title": "活动标题",
+      "titlePlaceholder": "例如：卢萨卡喜剧之夜",
+      "description": "描述",
+      "descriptionPlaceholder": "告诉参与者可以期待什么…",
+      "venue": "场地",
+      "venuePlaceholder": "例如：East Park Mall 停车场",
+      "landmark": "地标",
+      "landmarkPlaceholder": "例如：Shoprite 入口附近",
+      "lat": "纬度",
+      "latPlaceholder": "-15.3875",
+      "lng": "经度",
+      "lngPlaceholder": "28.3228",
+      "save": "保存草稿",
+      "saving": "保存中…",
+      "saved": "更改已保存。",
+      "backToList": "返回活动列表",
+      "ticketsSold": "{count, plural, one {已售 # 张门票} other {已售 # 张门票}}"
+    },
+    "instances": {
+      "heading": "日期与容量",
+      "label": "场次 {index}",
+      "add": "添加日期",
+      "remove": "移除",
+      "startsAt": "开始",
+      "endsAt": "结束（可选）",
+      "capacity": "容量",
+      "sold": "{count, plural, one {已售 # 张门票，容量不能再低于此数} other {已售 # 张门票，容量不能再低于此数}}"
+    },
+    "images": {
+      "heading": "照片",
+      "intro": "{count}/{max} 张照片。",
+      "upload": "添加照片",
+      "uploading": "上传中…",
+      "upload_failed": "上传失败。请重试。",
+      "remove": "移除",
+      "limit_reached": "最多可添加 8 张照片。"
+    },
+    "status": {
+      "draft": "草稿",
+      "published": "已发布",
+      "cancelled": "已取消",
+      "completed": "已结束"
+    },
+    "actions": {
+      "publish": "发布活动",
+      "publishing": "发布中…",
+      "publishSuccess": "活动已上线。",
+      "cancel": "取消活动",
+      "cancelling": "取消中…",
+      "cancelSuccess": "活动已取消。",
+      "end": "标记为已结束",
+      "ending": "结束中…",
+      "endSuccess": "活动已标记为结束。"
+    },
+    "errors": {
+      "authRequired": "请登录以管理活动。",
+      "loadFailed": "无法加载活动。下拉刷新。",
+      "saveFailed": "无法保存活动。请重试。",
+      "actionFailed": "操作失败。请重试。",
+      "notFound": "未找到活动。",
+      "required": "此字段为必填项",
+      "kyc_required": "创建活动前请先完成 KYC 认证。",
+      "capacity_below_sold": "容量不能低于已售门票数量。",
+      "past_instance": "发布前请将已过去的日期改到未来。",
+      "ends_before_starts": "结束时间必须晚于开始时间。",
+      "not_editable": "此活动已无法编辑。",
+      "invalid_transition": "该操作不适用于此活动。"
+    }
+  },
+  "tickets": {
+    "meta": {
+      "title": "门票类型",
+      "description": "为您的活动配置门票类型、定价和购买上限。"
+    },
+    "heading": "门票类型",
+    "subheading": "发布前设置定价档位和上限。",
+    "addType": "添加门票类型",
+    "empty": "暂无门票类型。添加固定价格、档位或免费 RSVP 类型。",
+    "loading": "加载门票类型中…",
+    "saving": "保存中…",
+    "saved": "门票类型已保存",
+    "deleted": "门票类型已移除",
+    "backToEvent": "返回活动",
+    "allocation": {
+      "toggle": "按日期限额",
+      "heading": "按日期限额",
+      "help": "限制此类型在每个日期的销售数量。将某个日期留空表示不限。",
+      "loading": "加载限额中…",
+      "noInstances": "请先添加活动日期以设置按日期限额。",
+      "placeholder": "不限",
+      "soldLabel": "{count, plural, =0 {未售出} one {已售 # 张} other {已售 # 张}}",
+      "save": "保存限额",
+      "saving": "保存中…",
+      "saved": "按日期限额已保存",
+      "errors": {
+        "loadFailed": "无法加载按日期限额。",
+        "saveFailed": "无法保存按日期限额。",
+        "belowSold": "某个限额低于该日期已售出的门票数量。",
+        "invalid": "请输入整数张数（0 或以上），或将日期留空。"
+      }
+    },
+    "pricing": {
+      "toggle": "折扣",
+      "heading": "折扣",
+      "baseLabel": "基础价格 {price}。折扣价必须低于此价格。",
+      "loading": "加载定价中…",
+      "saving": "保存中…",
+      "earlyBird": {
+        "heading": "早鸟价",
+        "help": "在截止日期前的优惠价格。在截止日期前购买的买家将支付此价格，而非基础价格。",
+        "priceLabel": "早鸟价（ZMW）",
+        "pricePlaceholder": "60.00",
+        "untilLabel": "截止至",
+        "save": "保存早鸟价",
+        "clear": "清除",
+        "saved": "早鸟价已保存"
+      },
+      "tiers": {
+        "heading": "团购价",
+        "help": "一次购买至少达到此数量时，每张门票的优惠价格。",
+        "minQtyLabel": "最低数量",
+        "minQtyPlaceholder": "5",
+        "priceLabel": "每张价格（ZMW）",
+        "pricePlaceholder": "65.00",
+        "add": "添加档位",
+        "remove": "移除",
+        "save": "保存团购价",
+        "saved": "团购价已保存"
+      },
+      "errors": {
+        "loadFailed": "无法加载定价。",
+        "saveFailed": "无法保存定价。",
+        "priceInvalid": "请输入有效的克瓦查价格。",
+        "notDiscount": "早鸟价必须低于基础价格。",
+        "dateInvalid": "请输入有效的截止日期和时间。",
+        "pastCutoff": "截止时间必须为将来的时间。",
+        "earlyBirdIncomplete": "请同时设置早鸟价和截止时间，或将两者都清除。",
+        "minQtyInvalid": "最低数量必须为 2 或以上的整数。",
+        "duplicateMinQty": "每个团购档位的最低数量必须不同。",
+        "tierNotDiscount": "每个团购价格必须低于基础价格。",
+        "onFree": "折扣仅适用于付费门票类型。"
+      }
+    },
+    "fields": {
+      "kindLabel": "类型",
+      "kindFixed": "固定价格",
+      "kindTier": "档位（例如：普通 / VIP）",
+      "kindFreeRsvp": "免费 RSVP",
+      "nameLabel": "名称",
+      "namePlaceholder": "普通入场",
+      "priceLabel": "价格（ZMW）",
+      "pricePlaceholder": "75.00",
+      "priceHelp": "以克瓦查输入金额；在数据库中以 ngwee 存储（无小数）。",
+      "priceFreeHelp": "免费 RSVP 始终为 K0.00。",
+      "qtyCapLabel": "数量上限（可选）",
+      "qtyCapPlaceholder": "无限制",
+      "qtyCapHelp": "此类型门票的总销售数量上限。",
+      "perCustomerCapLabel": "每位客户上限（可选）",
+      "perCustomerCapPlaceholder": "无限制",
+      "perCustomerCapHelp": "单个买家可持有此类型门票的最大数量。",
+      "soldLabel": "{count, plural, one {已售 # 张} other {已售 # 张}}",
+      "attendeeNamedLabel": "收集参加者姓名",
+      "attendeeNamedHelp": "结账时为每张门票要求填写姓名，适用于研讨会、晚宴和对号入座的活动。",
+      "attendeeNamedBadge": "需要姓名"
+    },
+    "actions": {
+      "save": "保存类型",
+      "cancel": "取消",
+      "edit": "编辑",
+      "delete": "删除",
+      "confirmDelete": "删除此门票类型？"
+    },
+    "errors": {
+      "loadFailed": "无法加载门票类型。请重试。",
+      "saveFailed": "无法保存门票类型。",
+      "deleteFailed": "无法删除门票类型。",
+      "required": "此字段为必填项",
+      "priceInvalid": "请输入有效价格（例如：75.00）",
+      "freeMustBeZero": "免费 RSVP 必须为 K0.00",
+      "paidMustBePositive": "付费类型必须大于 K0.00",
+      "duplicateTier": "已存在同名档位",
+      "duplicateFixed": "此活动已有固定价格类型",
+      "oversell": "已售罄，此上限下已无余票",
+      "unauthorized": "登录以管理门票类型"
+    }
+  },
+  "disputes": {
+    "meta": {
+      "title": "纠纷",
+      "description": "查看并回应客户对您订单的纠纷。"
+    },
+    "list": {
+      "title": "纠纷",
+      "empty": "您的订单没有纠纷",
+      "order": "订单 {orderId}",
+      "status": "状态：{status}",
+      "view": "查看纠纷"
+    },
+    "detail": {
+      "title": "纠纷详情",
+      "order": "订单 {orderId}",
+      "statusLabel": "状态",
+      "statusDisplay": "状态：{status}",
+      "customerEvidence": "客户证据",
+      "evidenceCount": "{count, plural, one {# 个文件} other {# 个文件}}",
+      "yourResponse": "您的回应",
+      "responseLabel": "说明您的情况",
+      "responsePlaceholder": "从您的角度看发生了什么？",
+      "evidenceLabel": "添加证据",
+      "evidenceHelp": "照片或 PDF，每个最大 10 MB。",
+      "addEvidence": "添加照片或 PDF",
+      "uploading": "上传中…",
+      "submit": "提交回应",
+      "submitting": "提交中…",
+      "success": "您的回应已提交。",
+      "error": "无法提交回应。请重试。",
+      "back": "返回纠纷列表",
+      "alreadyResponded": "您已回应过此纠纷。",
+      "status": {
+        "open": "等待您的回应",
+        "vendor_responded": "回应已提交",
+        "under_review": "管理员审核中",
+        "resolved_refund": "已解决：退款给客户",
+        "resolved_release": "已解决：款项已释放",
+        "resolved_partial": "已解决：部分退款",
+        "rejected": "纠纷已驳回"
+      }
+    }
+  },
+  "returns": {
+    "meta": {
+      "title": "退货请求 — Vergeo5 商家",
+      "description": "接受或申诉客户对故障或错发商品的退货请求。"
+    },
+    "title": "退货请求",
+    "intro": "客户反馈了故障或错发商品。接受即可发起全额退款，或申诉交由管理员审核。",
+    "loading": "加载退货中…",
+    "empty": "没有等待您处理的退货请求。",
+    "card": {
+      "item": "{title} × {qty}",
+      "order": "订单 {id}",
+      "refund": "若接受，退款：{amount}",
+      "evidence": "{count, plural, one {已附 # 张照片} other {已附 # 张照片}}",
+      "viewOrder": "查看订单"
+    },
+    "actions": {
+      "accept": "接受退货",
+      "accepting": "接受中…",
+      "contest": "申诉，转交管理员",
+      "contesting": "提交中…"
+    },
+    "errors": {
+      "loadFailed": "无法加载退货请求。下拉刷新。",
+      "actionFailed": "操作失败。请重试。"
+    }
+  },
+  "jobs": {
+    "eyebrow": "询价箱",
+    "title": "匹配的任务",
+    "intro": "推送给您的任务——请在过期前提交报价。",
+    "loading": "加载任务中…",
+    "authRequired": "请登录以查看匹配的任务。",
+    "empty": "目前没有与您服务匹配的开放任务。",
+    "posted": "发布于 {date}",
+    "yourQuote": "您的报价：{amount}",
+    "status": {
+      "new": "等待报价",
+      "quoted": "报价已发送"
+    },
+    "categories": {
+      "beauty": "美容",
+      "food_catering": "餐饮",
+      "auto": "汽车",
+      "printing_creative": "印刷与创意",
+      "home_services": "家政服务",
+      "tech_services": "技术服务",
+      "cleaning": "清洁",
+      "tailoring": "裁缝"
+    },
+    "quoteForm": {
+      "open": "发送报价",
+      "amountLabel": "您的价格（ZMW）",
+      "amountPlaceholder": "例如：1,500.00",
+      "amountInvalid": "请输入大于零的有效价格。",
+      "messageLabel": "留言（可选）",
+      "messagePlaceholder": "何时可以开始、包含哪些内容…",
+      "validityLabel": "报价有效期（天）",
+      "validityInvalid": "有效期必须在 1 到 30 天之间。",
+      "submit": "提交报价",
+      "submitting": "提交中…",
+      "cancel": "取消",
+      "withdraw": "撤回报价",
+      "withdrawing": "撤回中…"
+    },
+    "errors": {
+      "loadFailed": "无法加载匹配的任务。下拉刷新。",
+      "submitFailed": "无法提交报价。请重试。",
+      "withdrawFailed": "无法撤回报价。请重试。",
+      "notMatched": "您未与此任务匹配。",
+      "alreadyQuoted": "您已对此任务提交了有效报价。"
+    }
+  },
+  "reviews": {
+    "meta": {
+      "title": "客户评价 — Vergeo5 商家",
+      "description": "回复您商品的已验证购买评价。"
+    },
+    "title": "客户评价",
+    "intro": "每条评价可回复一次。您可在 24 小时内编辑回复。",
+    "loading": "加载评价中…",
+    "empty": "暂无客户评价。",
+    "starFilled": "★",
+    "starEmpty": "☆",
+    "card": {
+      "unknownItem": "订单商品",
+      "photoAlt": "客户评价照片",
+      "replyLabel": "您的回复",
+      "editReply": "编辑您的回复",
+      "yourReply": "您的回复"
+    },
+    "actions": {
+      "submit": "发布回复",
+      "update": "更新回复",
+      "submitting": "保存中…"
+    },
+    "errors": {
+      "loadFailed": "无法加载评价。下拉刷新。",
+      "replyFailed": "无法保存您的回复。请重试。"
+    }
+  },
+  "eventDashboard": {
+    "meta": {
+      "title": "活动仪表板",
+      "description": "您活动的门票类型销售、检票进度和托管状态。"
+    },
+    "heading": "活动仪表板",
+    "subheading": "销售、检票进度和托管状态一览。",
+    "backToEvent": "返回活动",
+    "loading": "加载仪表板中…",
+    "empty": "暂无门票类型。",
+    "massRefundFlagged": "此活动已取消。持票人已被标记退款；我们的团队将尽快处理。",
+    "checkInProgress": "已检票 {checkedIn, number}/{issued, number} 张门票",
+    "viewRoster": "查看参与者名单",
+    "sections": {
+      "revenue": "收入",
+      "checkIn": "检票进度",
+      "escrow": "托管",
+      "salesByType": "按门票类型销售"
+    },
+    "labels": {
+      "pending": "待释放",
+      "released": "已释放给您",
+      "eventStatus": "活动状态",
+      "soldCheckedIn": "{sold, plural, one {已售 #} other {已售 #}} · {checkedIn, plural, one {已检票 #} other {已检票 #}}"
+    },
+    "errors": {
+      "loadFailed": "无法加载仪表板。下拉刷新。",
+      "unauthorized": "请以主办方身份登录以查看此仪表板。",
+      "notFound": "未找到活动。",
+      "forbidden": "您只能查看自己活动的仪表板。"
+    }
+  },
+  "eventRoster": {
+    "meta": {
+      "title": "参与者名单",
+      "description": "您活动的参与者列表，姓名在结账时采集。"
+    },
+    "heading": "参与者名单",
+    "subheading": "谁会到场，按日期分组。会采集姓名的门票类型将显示姓名。",
+    "backToDashboard": "返回仪表板",
+    "loading": "加载名单中…",
+    "empty": "暂无门票售出。",
+    "noName": "未采集姓名",
+    "summary": "已检票 {checkedIn, number}/{total, number} 人",
+    "truncated": "显示前 {count, number} 名参与者。",
+    "dateCount": "{count, plural, one {# 名参与者} other {# 名参与者}}",
+    "downloadCsv": "下载名单（CSV）",
+    "downloading": "准备中…",
+    "status": {
+      "checkedIn": "已检票",
+      "issued": "未检票"
+    },
+    "errors": {
+      "loadFailed": "无法加载名单。下拉刷新。",
+      "downloadFailed": "无法下载名单。请重试。",
+      "unauthorized": "请以主办方身份登录以查看此名单。"
+    }
+  }
+}
