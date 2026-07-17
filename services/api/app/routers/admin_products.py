@@ -9,7 +9,7 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
 DUPLICATE_SIMILARITY_THRESHOLD = 0.3
@@ -517,6 +517,31 @@ async def merge_products(
         slug_redirect_to=str(result["slug_redirect_to"]),
         idempotent=idempotent,
     )
+
+
+@products_router.get("/search", response_model=list[ProductSummary])
+async def search_products(
+    q: Annotated[str, Query(min_length=1, max_length=120)],
+    _admin: Annotated[CurrentUser, Depends(require_role("admin"))],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+) -> list[ProductSummary]:
+    """Admin type-ahead over the catalog, for picking curation anchors/targets."""
+    # Strip PostgREST or_/ilike metacharacters so the query can't break out of the
+    # filter expression (defense-in-depth even though the route is admin-only).
+    pattern = "".join(char for char in q if char not in ",()%*:").strip()
+    if not pattern:
+        return []
+    response = (
+        _table(service_client, "products")
+        .select("id, name, slug, brand, category_id, status, aliases")
+        .neq("status", "merged")
+        .or_(f"name.ilike.%{pattern}%,slug.ilike.%{pattern}%")
+        .order("name")
+        .limit(limit)
+        .execute()
+    )
+    return [_serialize_product(row) for row in _rows(response)]
 
 
 @products_router.get("/{product_id}/relations", response_model=ProductRelationsResponse)

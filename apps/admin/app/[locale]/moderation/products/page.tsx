@@ -2,6 +2,7 @@ import { LOCALES } from "@vergeo/i18n";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { DuplicateQueue } from "./_components/DuplicateQueue";
+import { RelatedProductsEditor } from "./_components/RelatedProductsEditor";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -23,6 +24,8 @@ export default async function ProductModerationPage({ params }: PageProps) {
         <p className="text-sm text-muted">{t("subtitle")}</p>
       </header>
       <DuplicateQueue />
+      <hr className="border-border" />
+      <RelatedProductsEditor />
     </div>
   );
 }
