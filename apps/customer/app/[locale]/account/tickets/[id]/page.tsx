@@ -23,6 +23,7 @@ type PageProps = {
 type WalletTicketDetail = {
   id: string;
   status: "issued" | "checked_in" | "transferred" | "void";
+  holder_name: string | null;
   pin: string | null;
   pin_available: boolean;
   qr: {
@@ -240,6 +241,12 @@ export default async function AccountTicketDetailPage({ params }: PageProps) {
             <dt className="font-medium text-display-ink">{t("typeLabel")}</dt>
             <dd>{detail.ticket_type.name}</dd>
           </div>
+          {detail.holder_name ? (
+            <div>
+              <dt className="font-medium text-display-ink">{t("holderLabel")}</dt>
+              <dd>{detail.holder_name}</dd>
+            </div>
+          ) : null}
         </dl>
         <p className="mt-2 text-sm font-medium text-primary">{t(`status.${detail.status}`)}</p>
       </header>

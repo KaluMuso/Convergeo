@@ -600,6 +600,70 @@ class TestOrganiserAuthz:
         assert patch_resp.status_code == 403
 
 
+class TestAttendeeNamed:
+    def _seed_event(self, fake: _FakeSupabaseClient) -> str:
+        event_id = str(uuid.uuid4())
+        fake.tables["vendors"].rows.append(
+            {
+                "id": SHOP_B,
+                "owner_user_id": VENDOR_B_OWNER,
+                "status": "active",
+                "kyc_tier": 2,
+            }
+        )
+        fake.tables["events"].rows.append(
+            {
+                "id": event_id,
+                "organiser_vendor_id": SHOP_B,
+                "status": "draft",
+            }
+        )
+        return event_id
+
+    def test_create_defaults_attendee_named_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        fake = _FakeSupabaseClient()
+        event_id = self._seed_event(fake)
+        client = _api_client(monkeypatch, VENDOR_B_OWNER, fake)
+
+        response = client.post(
+            f"/organiser/events/{event_id}/ticket-types",
+            headers={"Authorization": f"Bearer {TOKEN_B}"},
+            json={"kind": "fixed", "name": "General", "price_ngwee": 50000},
+        )
+
+        assert response.status_code == 201
+        assert response.json()["attendee_named"] is False
+
+    def test_create_and_toggle_attendee_named(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        fake = _FakeSupabaseClient()
+        event_id = self._seed_event(fake)
+        client = _api_client(monkeypatch, VENDOR_B_OWNER, fake)
+
+        created = client.post(
+            f"/organiser/events/{event_id}/ticket-types",
+            headers={"Authorization": f"Bearer {TOKEN_B}"},
+            json={
+                "kind": "free_rsvp",
+                "name": "Workshop seat",
+                "price_ngwee": 0,
+                "attendee_named": True,
+            },
+        )
+        assert created.status_code == 201
+        body = created.json()
+        assert body["attendee_named"] is True
+        # A free RSVP may still collect names (workshop roster).
+        assert body["kind"] == "free_rsvp"
+
+        toggled = client.patch(
+            f"/organiser/ticket-types/{body['id']}",
+            headers={"Authorization": f"Bearer {TOKEN_B}"},
+            json={"attendee_named": False},
+        )
+        assert toggled.status_code == 200
+        assert toggled.json()["attendee_named"] is False
+
+
 class TestMigration0020:
     def test_per_customer_cap_column_replay_safe(self, db: PgConn) -> None:
         result = db.run(

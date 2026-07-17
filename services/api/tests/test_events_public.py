@@ -400,6 +400,47 @@ def test_detail_surfaces_early_bird_and_group_tiers(store: FakeSupabaseStore) ->
     assert free_ticket.tiers == []
 
 
+def test_detail_surfaces_attendee_named(store: FakeSupabaseStore) -> None:
+    # The attendee_named flag reaches the buyer so the picker knows to collect a
+    # name per ticket; it applies to paid and free types alike and defaults false.
+    event_id = "0e000000-0000-0000-0000-0000000000e0"
+    named_id = "0e000000-0000-0000-0000-0000000000e1"
+    plain_id = "0e000000-0000-0000-0000-0000000000e2"
+    store.events.append(_event_row(event_id=event_id, slug="named-gig", title="Named Gig"))
+    store.event_instances.append(
+        {
+            "id": "0e000000-0000-0000-0000-0000000000e3",
+            "event_id": event_id,
+            "starts_at": "2026-07-09T20:00:00+02:00",
+            "capacity": 100,
+        }
+    )
+    store.ticket_types.extend(
+        [
+            {
+                "id": named_id,
+                "event_id": event_id,
+                "kind": "free_rsvp",
+                "name": "Workshop seat",
+                "price_ngwee": 0,
+                "attendee_named": True,
+            },
+            {
+                "id": plain_id,
+                "event_id": event_id,
+                "kind": "fixed",
+                "name": "General Admission",
+                "price_ngwee": 50000,
+            },
+        ]
+    )
+
+    detail = build_detail_response(store, "named-gig")
+    by_id = {ticket.id: ticket for ticket in detail.ticket_types}
+    assert by_id[named_id].attendee_named is True
+    assert by_id[plain_id].attendee_named is False
+
+
 def test_browse_excludes_just_ended_event(store: FakeSupabaseStore) -> None:
     # Boundary: once ends_at passes, the event drops from discovery.
     event_id = "0e000000-0000-0000-0000-0000000000ba"
