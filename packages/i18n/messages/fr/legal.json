@@ -1,0 +1,236 @@
+{
+  "updated": "Dernière mise à jour : {date}",
+  "onThisPage": "Sur cette page",
+  "counselNote": "En attente de validation juridique (F4). Ces documents sont des brouillons tant qu'un conseil juridique zambien ne les a pas approuvés pour les flux d'argent réels.",
+  "footer": {
+    "legalHeading": "Mentions légales",
+    "helpHeading": "Aide",
+    "sellHeading": "Vendre sur Vergeo5",
+    "paymentNote": "MoMo · Airtel · Zamtel · Carte",
+    "copyright": "© {year} {appName}. Tous droits réservés.",
+    "links": {
+      "terms": "Conditions d'utilisation",
+      "privacy": "Politique de confidentialité",
+      "returns": "Retours et remboursements",
+      "vendorAgreement": "Contrat vendeur",
+      "help": "Centre d'aide",
+      "contact": "Nous contacter",
+      "sell": "Commencer à vendre"
+    }
+  },
+  "terms": {
+    "title": "Conditions d'utilisation",
+    "description": "Comment Vergeo5 fonctionne pour les acheteurs et les vendeurs en Zambie — séquestre, paiements et règles de la plateforme.",
+    "sections": {
+      "introduction": {
+        "heading": "Introduction",
+        "body": "Vergeo5 (vergeo5.com) est une place de marché conçue mobile d'abord, reliant acheteurs et vendeurs partout en Zambie. En utilisant notre application client, vous acceptez ces conditions. Si vous n'êtes pas d'accord, veuillez ne pas utiliser la plateforme."
+      },
+      "marketplace": {
+        "heading": "Rôle de la place de marché",
+        "body": "Vergeo5 est une plateforme de découverte et de commerce. Les vendeurs publient eux-mêmes leurs produits, services, événements et fournitures. Nous facilitons les paiements et le séquestre, mais nous ne sommes pas le vendeur sauf mention explicite contraire."
+      },
+      "escrow": {
+        "heading": "Séquestre et paiements",
+        "body": "Les paiements des clients sont collectés via Lenco et conservés sur un compte séquestre géré par Lenco jusqu'à la confirmation de la livraison ou la clôture de la fenêtre de litige. Vergeo5 tient un grand livre de plateforme faisant foi pour les versements et paiements — nous ne mutualisons pas les fonds des clients sur notre propre compte bancaire. Le mobile money (MTN, Airtel, Zamtel) et les paiements par carte sont pris en charge lorsqu'ils sont disponibles."
+      },
+      "pricing": {
+        "heading": "Tarification et devise",
+        "body": "Tous les prix sont affichés en kwacha zambien (ZMW). Le montant facturé au paiement est le total que vous autorisez, incluant le prix de l'article, les frais de livraison et les frais applicables affichés avant le paiement."
+      },
+      "orders": {
+        "heading": "Commandes et livraison",
+        "body": "Lorsque vous passez une commande, vous concluez un contrat avec le vendeur. Les options de livraison (expédition à Lusaka, retrait dans tout le pays, ou fret par transporteur) dépendent de l'annonce. Suivez le statut de votre commande dans votre compte. Le paiement à la livraison peut être proposé pour les commandes éligibles jusqu'à K500."
+      },
+      "tax": {
+        "heading": "Régime fiscal",
+        "body": "Vergeo5 démarre sous le régime de la Turnover Tax (5 %, en dessous du seuil de K5M) avec une facturation séquentielle conforme ZRA dès le premier jour. La TVA est désactivée au lancement ; factures et reçus sont conçus pour l'activation future de Smart Invoice VSDC lorsque l'immatriculation à la TVA s'appliquera."
+      },
+      "prohibited": {
+        "heading": "Usage interdit",
+        "body": "Vous ne pouvez pas utiliser Vergeo5 à des fins illégales, frauduleuses, de harcèlement, ni pour publier des catégories interdites (voir notre Contrat vendeur). Nous pouvons suspendre les comptes qui enfreignent ces règles."
+      },
+      "liability": {
+        "heading": "Responsabilité",
+        "body": "Dans la mesure permise par le droit zambien, Vergeo5 n'est pas responsable des pertes indirectes. Notre rôle se limite aux services de plateforme décrits ici. Les litiges entre acheteurs et vendeurs sont traités via notre processus de retours et de litiges."
+      },
+      "changes": {
+        "heading": "Modifications",
+        "body": "Nous pouvons mettre à jour ces conditions. Les changements importants seront signalés sur cette page avec une date de mise à jour. La poursuite de l'utilisation après ces changements vaut acceptation."
+      },
+      "contact": {
+        "heading": "Contact",
+        "body": "Des questions sur ces conditions ? Contactez-nous via le Centre d'aide ou les canaux d'assistance listés dans l'application."
+      }
+    }
+  },
+  "privacy": {
+    "title": "Politique de confidentialité",
+    "description": "Comment Vergeo5 collecte, utilise et protège vos données personnelles en vertu de la loi zambienne sur la protection des données.",
+    "sections": {
+      "introduction": {
+        "heading": "Introduction",
+        "body": "Vergeo5 respecte votre vie privée. Cette politique explique quelles données nous collectons, pourquoi nous les collectons, combien de temps nous les conservons, et vos droits en vertu du Data Protection Act zambien (DPA)."
+      },
+      "controller": {
+        "heading": "Responsable du traitement",
+        "body": "Vergeo5 exploite vergeo5.com et est le responsable du traitement des données personnelles traitées via l'application client, sous réserve du droit zambien applicable."
+      },
+      "dataCollected": {
+        "heading": "Données que nous collectons",
+        "body": "Nous collectons les informations de compte (téléphone, e-mail, nom), les références de commande et de paiement, les adresses de livraison (point de repère + GPS le cas échéant), les données d'appareil et d'utilisation, les communications (WhatsApp, SMS, e-mail), et les documents KYC des vendeurs. Les données de carte bancaire sont traitées par le widget hébergé de Lenco — nous ne stockons pas les numéros de carte complets."
+      },
+      "legalBasis": {
+        "heading": "Base légale et consentement",
+        "body": "Nous traitons les données sur la base de l'exécution du contrat (traitement des commandes), d'intérêts légitimes (prévention de la fraude, sécurité de la plateforme), d'obligations légales (registres fiscaux et réglementaires), et du consentement lorsque requis (marketing, fonctionnalités optionnelles). Vous pouvez retirer votre consentement pour les traitements optionnels sans affecter les services de commande essentiels."
+      },
+      "use": {
+        "heading": "Comment nous utilisons les données",
+        "body": "Nous utilisons vos données pour exploiter la place de marché, traiter les paiements et le séquestre, envoyer des notifications, améliorer la recherche et les recommandations, respecter la loi, et résoudre les litiges. Nous ne vendons pas vos données personnelles."
+      },
+      "sharing": {
+        "heading": "Partage",
+        "body": "Nous partageons des données avec les vendeurs (traitement des commandes), les partenaires de paiement (Lenco), les fournisseurs de messagerie (WhatsApp Cloud API, Africa's Talking, Resend), les hébergeurs cloud (Supabase, Vercel, OCI), et les autorités lorsque la loi l'exige. Tous les sous-traitants sont liés par contrat."
+      },
+      "retention": {
+        "heading": "Conservation",
+        "body": "Les données de compte sont conservées tant que votre compte est actif. Les registres de commande et de paiement sont conservés pendant au moins sept ans à des fins fiscales et de litige. Les journaux de consentement marketing sont conservés pendant trois ans. Les données analytiques anonymisées peuvent être conservées plus longtemps."
+      },
+      "security": {
+        "heading": "Sécurité",
+        "body": "Nous utilisons le chiffrement en transit, la sécurité au niveau des lignes (RLS) sur les tables de base de données, des secrets côté serveur, et des contrôles d'accès. Les documents sensibles (KYC, factures) sont stockés dans des espaces privés avec des règles d'accès strictes."
+      },
+      "dataRights": {
+        "heading": "Vos droits sur vos données",
+        "body": "Vous pouvez demander l'accès, la correction, l'export, ou la suppression de vos données personnelles. Utilisez les <link>paramètres de données de votre compte</link> pour soumettre une demande d'export ou de suppression. Remarque : ce parcours est prévu — les flux complets d'export et de suppression de données seront livrés dans une future version du compte (M04-P06). Certaines données doivent être conservées pour des obligations légales ou financières."
+      },
+      "cookies": {
+        "heading": "Cookies et analytique",
+        "body": "Nous utilisons des cookies essentiels pour les sessions et la sécurité. Des outils analytiques (par ex. GA4) peuvent être utilisés avec votre consentement lorsque requis. Vous pouvez gérer vos préférences dans votre navigateur."
+      },
+      "children": {
+        "heading": "Mineurs",
+        "body": "Vergeo5 ne s'adresse pas aux enfants de moins de 16 ans. Nous ne collectons pas sciemment de données auprès d'enfants."
+      },
+      "changes": {
+        "heading": "Modifications",
+        "body": "Nous mettrons à jour cette politique lorsque nos pratiques évolueront. Consultez la date en haut de cette page."
+      },
+      "contact": {
+        "heading": "Contact",
+        "body": "Questions sur la confidentialité ou demandes liées au DPA : contactez-nous via le Centre d'aide. Nous répondons dans les délais légaux."
+      }
+    }
+  },
+  "returns": {
+    "title": "Retours et remboursements",
+    "description": "Politique de retours à deux volets pour les commandes Vergeo5 — articles défectueux et retours optionnels pour changement d'avis.",
+    "sections": {
+      "introduction": {
+        "heading": "Aperçu",
+        "body": "Vergeo5 protège les acheteurs avec une politique de retours claire à deux volets, alignée sur les attentes de la CCPC. Le volet 1 couvre les articles défectueux, erronés ou non conformes à la description. Le volet 2 couvre les retours pour changement d'avis lorsque le vendeur y consent par annonce."
+      },
+      "lane1": {
+        "heading": "Volet 1 — Défectueux, erroné ou non conforme à la description",
+        "body": "Signalez le problème dans les 48 heures suivant la livraison avec des photos à l'appui, via la page de votre commande ou le support. Vous recevez un remboursement intégral, frais de livraison inclus, depuis le séquestre. Les frais de retour sont à la charge du vendeur. En cas de désaccord entre acheteur et vendeur, l'administration Vergeo5 arbitre le litige."
+      },
+      "lane1Steps": {
+        "heading": "Volet 1 — Comment signaler",
+        "body": "1. Ouvrez votre commande dans Compte → Commandes. 2. Sélectionnez Signaler un problème dans les 48 heures suivant la livraison. 3. Téléversez des photos claires montrant le problème. 4. Conservez l'article dans l'état reçu jusqu'à instruction contraire. 5. L'administration examine et libère le remboursement depuis le séquestre ou organise le retour."
+      },
+      "lane2": {
+        "heading": "Volet 2 — Changement d'avis (au choix du vendeur)",
+        "body": "Certaines annonces autorisent les retours pour changement d'avis. Le vendeur définit si l'article est retournable et une fenêtre entre 48 heures et 7 jours après la livraison. Les articles doivent être non utilisés et dans leur état d'origine, étiquettes et emballage compris le cas échéant."
+      },
+      "lane2Refund": {
+        "heading": "Volet 2 — Calcul du remboursement",
+        "body": "Remboursement = prix de l'article moins les frais de livraison aller moins le coût de transport retour moins des frais de remise en stock de 10 % (ajustables entre 5 % et 15 % selon les paramètres de la plateforme). Les remboursements sont versés sur votre numéro mobile money ou en crédit boutique instantané lorsque la fonctionnalité portefeuille sera disponible."
+      },
+      "lane2Steps": {
+        "heading": "Volet 2 — Comment retourner",
+        "body": "1. Vérifiez que l'annonce indique Retours acceptés. 2. Demandez un retour dans la fenêtre définie par le vendeur. 3. Expédiez ou déposez l'article comme indiqué. 4. Le vendeur confirme la réception en état d'origine. 5. Le remboursement est traité selon la formule ci-dessus."
+      },
+      "escrow": {
+        "heading": "Séquestre et remboursements après versement",
+        "body": "Les remboursements avant le versement au vendeur proviennent directement des fonds détenus. Après le versement au vendeur, les remboursements sont déduits de ses prochains paiements. La logistique retour est manuelle en v1 — notre équipe coordonne en cas de besoin."
+      },
+      "exclusions": {
+        "heading": "Exclusions",
+        "body": "Les denrées périssables, les articles personnalisés, les billets d'événement numériques après scan, et les catégories interdites ne sont généralement pas retournables sauf application du Volet 1. Les règles de remboursement des événements suivent la politique propre à chaque événement."
+      },
+      "contact": {
+        "heading": "Besoin d'aide ?",
+        "body": "Contactez le support via la page de votre commande ou le Centre d'aide. Indiquez votre numéro de commande et des photos pour une résolution plus rapide."
+      }
+    }
+  },
+  "vendorAgreement": {
+    "title": "Contrat vendeur",
+    "description": "Taux de commission, versements et règles d'annonces pour vendre sur Vergeo5 en Zambie.",
+    "sections": {
+      "introduction": {
+        "heading": "Introduction",
+        "body": "En vous inscrivant comme vendeur sur Vergeo5, vous acceptez ce Contrat vendeur ainsi que nos Conditions d'utilisation et notre Politique de confidentialité. Ce document couvre les commissions, les versements et ce que vous pouvez publier."
+      },
+      "commissions": {
+        "heading": "Taux de commission",
+        "body": "Vergeo5 facture une commission par catégorie sur les ventes réussies. Les taux sont affichés avant la publication d'une annonce. Les événements gratuits sont facturés à 0 % de commission. Les taux faisant foi figurent dans la table de configuration de la plateforme et peuvent être mis à jour trimestriellement."
+      },
+      "payouts": {
+        "heading": "Versements et règlement",
+        "body": "Les fonds sont libérés du séquestre lorsque le client confirme la livraison, ou après confirmation automatique 48 heures après le statut livré (avec un repli à 7 jours après l'expédition). Les versements sont envoyés via l'API Lenco : mobile money généralement sous 5 minutes ; virements bancaires sous 24 à 36 heures. Promesse marketing : versé en quelques minutes en mobile money — toujours sous 48 heures."
+      },
+      "listing": {
+        "heading": "Normes d'annonces",
+        "body": "Les annonces doivent être exactes, tarifées en ZMW, et inclure des photos claires (jusqu'à 8 par annonce). Vous êtes responsable du traitement des commandes, des mises à jour de livraison, et de la communication client. Les annonces trompeuses peuvent être retirées."
+      },
+      "returns": {
+        "heading": "Obligations de retour",
+        "body": "Vous devez honorer les retours du Volet 1 (défectueux/erroné/non conforme à la description). Les retours pour changement d'avis du Volet 2 sont optionnels — activez-les par annonce avec la fenêtre de votre choix (48 heures à 7 jours). Les frais de remise en stock suivent la configuration de la plateforme (10 % par défaut, plage 5 à 15 %)."
+      },
+      "prohibited": {
+        "heading": "Articles interdits",
+        "body": "Vous ne pouvez pas publier : vêtements d'occasion (salaula), téléphones d'occasion, produits frais, alcool, produits pharmaceutiques, animaux vivants, ou matériaux de construction lourds (ciment, sable, granulats lourds). Les catégories au lancement sont limitées aux départements approuvés — voir l'arborescence des catégories de la plateforme."
+      },
+      "kyc": {
+        "heading": "KYC et conformité",
+        "body": "Les vendeurs doivent compléter la vérification d'identité avant tout versement. Nous pouvons demander le TPIN et des documents d'entreprise pour la facturation fiscale. Des factures conformes ZRA sont générées pour les transactions éligibles."
+      },
+      "termination": {
+        "heading": "Suspension et résiliation",
+        "body": "Nous pouvons suspendre ou résilier les comptes vendeur en cas de manquement aux règles, de fraude, ou de plaintes clients répétées. Les obligations de séquestre en cours survivent à la résiliation."
+      },
+      "changes": {
+        "heading": "Modifications",
+        "body": "Les taux de commission et les politiques peuvent changer avec notification sur cette page. La poursuite de la vente après ces changements vaut acceptation."
+      },
+      "contact": {
+        "heading": "Support vendeur",
+        "body": "Des questions ? Contactez le support vendeur via l'application vendeur ou le Centre d'aide."
+      }
+    },
+    "commissions": {
+      "categoryHeader": "Catégorie",
+      "rateHeader": "Commission",
+      "electronics": "Électronique",
+      "electronicsRate": "5 %",
+      "homeGoods": "Articles pour la maison",
+      "homeGoodsRate": "8 %",
+      "fashionBeauty": "Mode et beauté",
+      "fashionBeautyRate": "10 %",
+      "services": "Services",
+      "servicesRate": "12 %",
+      "eventTickets": "Billets d'événement",
+      "eventTicketsRate": "5 %",
+      "suppliesWholesale": "Fournitures et gros",
+      "suppliesWholesaleRate": "3 %",
+      "groceriesStaples": "Épicerie et produits de base",
+      "groceriesStaplesRate": "5 %",
+      "defaultCategory": "Par défaut (catégories non mappées)",
+      "defaultRate": "8 %",
+      "freeEvents": "Événements gratuits",
+      "freeEventsRate": "0 %",
+      "footnote": "Les taux reflètent la configuration de la plateforme (points de base : 500/800/1000/1200/500/300/500/800/0). L'administration peut les ajuster — votre tableau de bord affiche le taux avant publication."
+    }
+  }
+}
