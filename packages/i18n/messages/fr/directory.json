@@ -1,0 +1,82 @@
+{
+  "index": {
+    "title": "Annuaire des entreprises",
+    "subtitle": "Découvrez des vendeurs vérifiés dans toute la Zambie",
+    "results": "{count, plural, one {# entreprise} other {# entreprises}}",
+    "searchPlaceholder": "Rechercher des entreprises",
+    "searchLabel": "Rechercher dans l'annuaire",
+    "viewProfile": "Voir la boutique",
+    "becomeVendor": "Devenir vendeur",
+    "heroPitch": "Référencez votre entreprise, touchez des clients dans toute la Zambie et recevez vos paiements en toute sécurité."
+  },
+  "filters": {
+    "heading": "Filtres",
+    "category": "Catégorie",
+    "location": "Emplacement",
+    "badges": "Badges",
+    "allCategories": "Toutes les catégories",
+    "allLocations": "Tous les emplacements",
+    "preferred": "Vendeur privilégié",
+    "verified": "Vérifié",
+    "apply": "Appliquer les filtres",
+    "clear": "Effacer les filtres",
+    "facetCount": "{label} ({count})",
+    "categories": {
+      "electronics": "Électronique",
+      "fashion-beauty": "Mode et beauté",
+      "home-living": "Maison et décoration",
+      "groceries": "Épicerie"
+    }
+  },
+  "card": {
+    "listings": "Produits",
+    "reviews": "Avis",
+    "rating": "{rating, number, ::.1} ({count})",
+    "noReviews": "Pas encore d'avis",
+    "verifiedSince": "Vérifié depuis {year}",
+    "preferredBadge": "Privilégié",
+    "verifiedBadge": "Vérifié",
+    "defaultLocation": "Zambie"
+  },
+  "empty": {
+    "title": "Aucune entreprise trouvée",
+    "body": "Essayez d'effacer les filtres ou de rechercher une autre entreprise."
+  },
+  "profile": {
+    "metaDescription": "Achetez chez {name} sur Vergeo5",
+    "about": "À propos",
+    "hours": "Horaires d'ouverture",
+    "location": "Emplacement",
+    "landmark": "Point de repère",
+    "landmarkValue": "{landmark}",
+    "hoursLine": "{day} : {hours}",
+    "listingsHeading": "Produits de cette boutique",
+    "reviewsHeading": "Avis clients",
+    "reviewsSummary": "{rating, number, ::.1} en moyenne sur {count, plural, one {# avis} other {# avis}}",
+    "noReviews": "Pas encore d'avis",
+    "preferredBadge": "Vendeur privilégié",
+    "verifiedBadge": "Vendeur vérifié",
+    "shareTitle": "{name} sur Vergeo5",
+    "statRating": "Note",
+    "statReviews": "Avis",
+    "statListings": "Produits",
+    "statOrders": "Commandes",
+    "tierBusiness": "Business",
+    "tierPremium": "Premium",
+    "offeringsAria": "Offres du vendeur",
+    "tabProducts": "Produits",
+    "tabServices": "Services",
+    "tabEvents": "Événements",
+    "serviceFrom": "À partir de {price}",
+    "whatsappCta": "Discuter sur WhatsApp"
+  },
+  "listings": {
+    "vendor": "Vendu par {vendor}",
+    "noReviews": "Pas encore d'avis",
+    "reviewCount": "({count})",
+    "quickAdd": "Ajout rapide",
+    "wishlist": "Ajouter aux favoris",
+    "outOfStock": "En rupture de stock",
+    "distance": "À {distance}"
+  }
+}

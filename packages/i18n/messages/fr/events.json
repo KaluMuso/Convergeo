@@ -70,6 +70,7 @@
     "perCustomerCap": "Maximum {count} par personne",
     "earlyBird": "Prévente : {price} jusqu'au {until}",
     "groupTier": "Achetez {minQty}+ pour {price} chacun",
+    "groupUpsell": "Ajoutez {count, plural, one {# de plus} other {# de plus}} pour payer {price} chacun",
     "discountApplied": "Réduction appliquée — {price} chacun",
     "attendeeNamesLabel": "Noms des participants",
     "attendeeNameLabel": "Nom du participant {index}",

@@ -1,0 +1,52 @@
+{
+  "title": "Fournitures",
+  "description": "Annonces de vente en gros avec prix par palier et quantités de commande minimum.",
+  "results": "{count, plural, one {# annonce de vente en gros} other {# annonces de vente en gros}}",
+  "t2Notice": {
+    "title": "Vendeurs vérifiés T2 uniquement",
+    "body": "Les fournitures en gros sur Vergeo5 sont proposées par des entreprises vérifiées T2. Les vendeurs au détail uniquement ne peuvent pas publier d'annonces à prix par palier."
+  },
+  "sort": {
+    "label": "Trier par",
+    "moq": "Commande min. la plus basse",
+    "unitPrice": "Meilleur prix unitaire"
+  },
+  "empty": {
+    "title": "Aucune annonce de vente en gros pour le moment",
+    "body": "Revenez bientôt — des fournisseurs vérifiés ajoutent du stock en gros avec prix par palier."
+  },
+  "card": {
+    "vendor": "Vendu par {vendor}",
+    "quantityLabel": "Quantité d'aperçu",
+    "decrease": "Diminuer la quantité",
+    "increase": "Augmenter la quantité",
+    "decreaseSymbol": "−",
+    "increaseSymbol": "+",
+    "noImage": "Aucune image",
+    "viewListing": "Voir l'annonce"
+  },
+  "tier": {
+    "quantityHeader": "Qté",
+    "priceHeader": "Prix unitaire",
+    "priceFrom": "À partir de {amount} pour {qty}+ unités"
+  },
+  "moq": {
+    "badge": "Min. {qty}",
+    "label": "Commande minimum :",
+    "tableLabel": "Min. :"
+  },
+  "preview": {
+    "line": "{qty} × {unitPrice} = {total}"
+  },
+  "gate": {
+    "title": "Mode entreprise requis",
+    "body": "Les fournitures en gros avec prix par palier sont réservées aux entreprises vérifiées. Activez le mode entreprise pour parcourir et acheter en gros.",
+    "signInBody": "Connectez-vous avec un compte entreprise vérifié pour voir les fournitures en gros.",
+    "pendingTitle": "Vérification en cours d'examen",
+    "pendingBody": "Nous examinons les informations de votre entreprise. Vous obtiendrez l'accès à la vente en gros dès que vous serez vérifié.",
+    "rejectedTitle": "Entreprise non vérifiée",
+    "rejectedBody": "Nous n'avons pas pu vérifier votre entreprise. Mettez à jour vos informations et soumettez à nouveau pour débloquer la vente en gros.",
+    "apply": "Activer le mode entreprise",
+    "signIn": "Se connecter"
+  }
+}

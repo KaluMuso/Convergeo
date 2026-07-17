@@ -1,0 +1,82 @@
+{
+  "index": {
+    "title": "商家目录",
+    "subtitle": "发现赞比亚各地的已验证卖家",
+    "results": "{count, plural, one {# 家商家} other {# 家商家}}",
+    "searchPlaceholder": "搜索商家",
+    "searchLabel": "搜索目录",
+    "viewProfile": "查看店铺",
+    "becomeVendor": "成为卖家",
+    "heroPitch": "登记您的商家，触达赞比亚各地的客户，安全收款。"
+  },
+  "filters": {
+    "heading": "筛选",
+    "category": "类别",
+    "location": "位置",
+    "badges": "徽章",
+    "allCategories": "全部类别",
+    "allLocations": "全部位置",
+    "preferred": "优选卖家",
+    "verified": "已验证",
+    "apply": "应用筛选",
+    "clear": "清除筛选",
+    "facetCount": "{label} ({count})",
+    "categories": {
+      "electronics": "电子产品",
+      "fashion-beauty": "时尚与美容",
+      "home-living": "家居生活",
+      "groceries": "食品杂货"
+    }
+  },
+  "card": {
+    "listings": "商品",
+    "reviews": "评价",
+    "rating": "{rating, number, ::.1} ({count})",
+    "noReviews": "暂无评价",
+    "verifiedSince": "自 {year} 年起已验证",
+    "preferredBadge": "优选",
+    "verifiedBadge": "已验证",
+    "defaultLocation": "赞比亚"
+  },
+  "empty": {
+    "title": "未找到商家",
+    "body": "请尝试清除筛选或搜索其他商家。"
+  },
+  "profile": {
+    "metaDescription": "在 Vergeo5 上从 {name} 购物",
+    "about": "关于",
+    "hours": "营业时间",
+    "location": "位置",
+    "landmark": "地标",
+    "landmarkValue": "{landmark}",
+    "hoursLine": "{day}：{hours}",
+    "listingsHeading": "该店铺的商品",
+    "reviewsHeading": "客户评价",
+    "reviewsSummary": "平均 {rating, number, ::.1} 分，来自 {count, plural, one {# 条评价} other {# 条评价}}",
+    "noReviews": "暂无评价",
+    "preferredBadge": "优选卖家",
+    "verifiedBadge": "已验证卖家",
+    "shareTitle": "Vergeo5 上的 {name}",
+    "statRating": "评分",
+    "statReviews": "评价",
+    "statListings": "商品",
+    "statOrders": "订单",
+    "tierBusiness": "商业版",
+    "tierPremium": "高级版",
+    "offeringsAria": "卖家提供的商品和服务",
+    "tabProducts": "商品",
+    "tabServices": "服务",
+    "tabEvents": "活动",
+    "serviceFrom": "{price} 起",
+    "whatsappCta": "在 WhatsApp 上聊天"
+  },
+  "listings": {
+    "vendor": "由 {vendor} 销售",
+    "noReviews": "暂无评价",
+    "reviewCount": "({count})",
+    "quickAdd": "快速添加",
+    "wishlist": "加入心愿单",
+    "outOfStock": "缺货",
+    "distance": "相距 {distance}"
+  }
+}
