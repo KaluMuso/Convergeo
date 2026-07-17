@@ -134,6 +134,7 @@ class FakeSupabaseStore:
         self.events: list[dict[str, Any]] = []
         self.event_instances: list[dict[str, Any]] = []
         self.ticket_types: list[dict[str, Any]] = []
+        self.ticket_type_price_tiers: list[dict[str, Any]] = []
         self.tickets: list[dict[str, Any]] = []
 
     def table(self, name: str) -> FakeQuery:
@@ -350,6 +351,53 @@ def test_browse_includes_in_progress_event(store: FakeSupabaseStore) -> None:
     # ends_at also flows through the detail projection.
     detail = build_detail_response(store, "in-progress-gig")
     assert detail.instances[0].ends_at == datetime.fromisoformat("2026-07-09T21:00:00+02:00")
+
+
+def test_detail_surfaces_early_bird_and_group_tiers(store: FakeSupabaseStore) -> None:
+    # A paid type carrying discount config exposes it on the detail projection so
+    # the buyer can see why the resolved price is lower; a free type never does.
+    event_id = "0e000000-0000-0000-0000-0000000000d0"
+    type_id = "0e000000-0000-0000-0000-0000000000d1"
+    store.events.append(_event_row(event_id=event_id, slug="discount-gig", title="Discount Gig"))
+    store.event_instances.append(
+        {
+            "id": "0e000000-0000-0000-0000-0000000000d2",
+            "event_id": event_id,
+            "starts_at": "2026-07-09T20:00:00+02:00",
+            "capacity": 100,
+        }
+    )
+    store.ticket_types.append(
+        {
+            "id": type_id,
+            "event_id": event_id,
+            "kind": "fixed",
+            "name": "General Admission",
+            "price_ngwee": 50000,
+            "qty_cap": 100,
+            "early_bird_price_ngwee": 40000,
+            "early_bird_until": "2026-07-01T00:00:00+00:00",
+        }
+    )
+    store.ticket_type_price_tiers.extend(
+        [
+            {"ticket_type_id": type_id, "min_qty": 5, "price_ngwee": 42000},
+            {"ticket_type_id": type_id, "min_qty": 2, "price_ngwee": 45000},
+        ]
+    )
+
+    detail = build_detail_response(store, "discount-gig")
+    ticket = detail.ticket_types[0]
+    assert ticket.early_bird_price_ngwee == 40000
+    assert ticket.early_bird_until == datetime.fromisoformat("2026-07-01T00:00:00+00:00")
+    # Tiers surface ordered by min_qty ascending.
+    assert [(tier.min_qty, tier.price_ngwee) for tier in ticket.tiers] == [(2, 45000), (5, 42000)]
+
+    # A free RSVP type never carries discount config.
+    free_detail = build_detail_response(store, "free-meetup")
+    free_ticket = free_detail.ticket_types[0]
+    assert free_ticket.early_bird_price_ngwee is None
+    assert free_ticket.tiers == []
 
 
 def test_browse_excludes_just_ended_event(store: FakeSupabaseStore) -> None:
