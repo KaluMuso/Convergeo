@@ -46,3 +46,22 @@ export function bestActiveTier(ticket: ResolvablePrice, qty: number): PriceTier 
   }
   return best;
 }
+
+/**
+ * The nearest group tier the buyer has not yet reached that would lower the
+ * current resolved per-unit price — the basis for an "add N more to save" nudge.
+ * Returns null when no higher tier improves on what they already pay (e.g. an
+ * active early-bird already beats every remaining tier).
+ */
+export function nextTierUpsell(ticket: ResolvablePrice, qty: number, now: Date): PriceTier | null {
+  const current = resolveUnitPriceNgwee(ticket, qty, now);
+  let nearest: PriceTier | null = null;
+  for (const tier of ticket.tiers) {
+    if (tier.min_qty > qty && tier.price_ngwee < current) {
+      if (nearest === null || tier.min_qty < nearest.min_qty) {
+        nearest = tier;
+      }
+    }
+  }
+  return nearest;
+}

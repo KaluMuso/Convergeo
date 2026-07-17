@@ -9,7 +9,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { attendeeNamesComplete, cleanedAttendeeNames, resizeNames } from "../_lib/attendee-names";
-import { isEarlyBirdActive, resolveUnitPriceNgwee } from "../_lib/resolve-price";
+import { isEarlyBirdActive, nextTierUpsell, resolveUnitPriceNgwee } from "../_lib/resolve-price";
 
 export type TicketPickerInstance = {
   id: string;
@@ -156,6 +156,14 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
   }, [namesRequired, qty]);
 
   const namesComplete = !namesRequired || attendeeNamesComplete(attendeeNames, qty);
+
+  // Contextual nudge: the nearest higher group tier that would lower the price at
+  // the current quantity ("add N more to pay K… each"). Null when nothing improves.
+  const upsell = useMemo(
+    () =>
+      selectedType && !selectedType.is_free ? nextTierUpsell(selectedType, qty, new Date()) : null,
+    [selectedType, qty],
+  );
 
   const canSubmit =
     !isSoldOut &&
@@ -398,6 +406,19 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
             />
           ))}
         </fieldset>
+      ) : null}
+
+      {upsell && upsell.min_qty <= maxQty ? (
+        <button
+          type="button"
+          className="text-left text-xs font-medium text-primary"
+          onClick={() => setQty(upsell.min_qty)}
+        >
+          {t("groupUpsell", {
+            count: upsell.min_qty - qty,
+            price: formatK(upsell.price_ngwee),
+          })}
+        </button>
       ) : null}
 
       {selectedType && !selectedType.is_free ? (
