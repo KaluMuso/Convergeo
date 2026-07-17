@@ -1499,6 +1499,46 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "translation_overrides": {
+        # Admin-only: translations are managed by admins; the API reads/writes via
+        # the service role. Every non-admin persona is denied every operation.
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.VENDOR: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "permit",
+            "update": "permit",
+            "delete": "permit",
+        },
+    },
     "products": {
         Persona.ANON: {
             "select": "permit",

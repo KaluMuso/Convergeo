@@ -75,6 +75,7 @@ EXEMPT_ROUTE_IDS: frozenset[str] = frozenset(
 # startup. Adding a mutating route without an entry here fails the sweep.
 POLICIES: dict[str, RateLimitPolicy] = {
     "DELETE /account/addresses/{address_id}": STANDARD_WRITE,
+    "DELETE /admin/translations/overrides": ADMIN_WRITE,
     "DELETE /cart/items/{listing_id}": STANDARD_WRITE,
     "DELETE /merch/slots/{slot_id}": ADMIN_WRITE,
     "DELETE /organiser/ticket-types/{ticket_type_id}": STANDARD_WRITE,
@@ -219,6 +220,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /vendor/payouts/method": PAYMENT_WRITE,
     "POST /vendor/pickup/verify": SENSITIVE_WRITE,
     "POST /vendor/services": STANDARD_WRITE,
+    "PUT /admin/translations/overrides": ADMIN_WRITE,
     "PUT /organiser/ticket-types/{ticket_type_id}/allocations": STANDARD_WRITE,
     "PUT /organiser/ticket-types/{ticket_type_id}/early-bird": STANDARD_WRITE,
     "PUT /organiser/ticket-types/{ticket_type_id}/price-tiers": STANDARD_WRITE,

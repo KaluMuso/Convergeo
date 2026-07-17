@@ -14,6 +14,8 @@ export type CatalogKey = {
   en: string;
   /** Non-default locales that define this key (i.e. do NOT fall back to English). */
   present: Locale[];
+  /** Current file value per non-default locale that defines the key (for editing). */
+  values: Record<string, string>;
 };
 
 export type NamespaceCatalog = {
@@ -53,22 +55,25 @@ export async function buildTranslationCatalog(): Promise<TranslationCatalog> {
     const enFlat = enRaw ? flattenMessages(enRaw) : {};
     const enKeys = Object.keys(enFlat);
 
-    const localeKeys: Record<string, Set<string>> = {};
+    const localeFlat: Record<string, Record<string, string>> = {};
     for (const locale of translatable) {
       const raw = await loadRawNamespace(locale, namespace);
-      localeKeys[locale] = new Set(raw ? Object.keys(flattenMessages(raw)) : []);
+      localeFlat[locale] = raw ? flattenMessages(raw) : {};
     }
 
-    const keys: CatalogKey[] = enKeys.map((key) => ({
-      key,
-      en: enFlat[key] ?? "",
-      present: translatable.filter((locale) => localeKeys[locale]?.has(key)),
-    }));
+    const keys: CatalogKey[] = enKeys.map((key) => {
+      const present = translatable.filter((locale) => key in (localeFlat[locale] ?? {}));
+      const values: Record<string, string> = {};
+      for (const locale of present) {
+        values[locale] = localeFlat[locale]?.[key] ?? "";
+      }
+      return { key, en: enFlat[key] ?? "", present, values };
+    });
 
     const perLocale: Record<string, number> = {};
     for (const locale of translatable) {
-      const set = localeKeys[locale];
-      const count = set ? enKeys.filter((key) => set.has(key)).length : 0;
+      const flat = localeFlat[locale] ?? {};
+      const count = enKeys.filter((key) => key in flat).length;
       perLocale[locale] = count;
       grandPerLocale[locale] = (grandPerLocale[locale] ?? 0) + count;
     }
