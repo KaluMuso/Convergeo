@@ -95,6 +95,7 @@ class VendorProfileDetail(BaseModel):
     preferred_badge: bool = False
     kyc_tier: int | None = None
     verified: bool = False
+    order_count: int = 0
     location: VendorLocationDetail | None = None
     locations: list[VendorLocationDetail] = Field(default_factory=list)
     created_at: str | None = None
@@ -142,6 +143,26 @@ def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
 
 def _is_verified(kyc_tier: int | None, preferred_badge: bool) -> bool:
     return bool(preferred_badge or (kyc_tier is not None and kyc_tier >= 2))
+
+
+# Terminal successful order states — the public "orders fulfilled" trust signal.
+COMPLETED_ORDER_STATES = ("delivered", "completed")
+
+
+def _count_completed_orders(client: Any, vendor_id: str) -> int:
+    """Number of the vendor's successfully-fulfilled orders (delivered or completed)."""
+    response = (
+        client.table("orders")
+        .select("id", count="exact")
+        .eq("vendor_id", vendor_id)
+        .in_("status", list(COMPLETED_ORDER_STATES))
+        .execute()
+    )
+    count = getattr(response, "count", None)
+    if isinstance(count, int):
+        return count
+    data = getattr(response, "data", None)
+    return len(data) if isinstance(data, list) else 0
 
 
 def _sanitize_query(value: str | None) -> str | None:
@@ -725,6 +746,7 @@ def get_vendor_profile(
     )
     services = _fetch_vendor_services(client, vendor_id)
     events = _fetch_vendor_events(client, vendor_id)
+    order_count = _count_completed_orders(client, vendor_id)
 
     return VendorProfileResponse(
         vendor=VendorProfileDetail(
@@ -738,6 +760,7 @@ def get_vendor_profile(
             preferred_badge=preferred_badge,
             kyc_tier=parsed_tier,
             verified=_is_verified(parsed_tier, preferred_badge),
+            order_count=order_count,
             location=location,
             locations=locations,
             created_at=row.get("created_at"),
