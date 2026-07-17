@@ -12,6 +12,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { ServiceReviewForm } from "./_components/service-review-form";
+
 type QuoteProvider = {
   vendor_id: string;
   slug: string;
@@ -242,6 +244,8 @@ export default function JobComparePage({ params }: PageProps) {
           ))}
         </div>
       )}
+
+      {jobId ? <ServiceReviewForm jobId={jobId} /> : null}
     </section>
   );
 }
