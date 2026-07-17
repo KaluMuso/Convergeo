@@ -428,49 +428,19 @@ def build_product_detail(
     )
 
 
-def build_related_products(
+def _shoppable_related_items(
     client: Any,
-    slug: str,
-    *,
-    limit: int = RELATED_LIMIT,
-) -> RelatedProductsResponse:
-    """Other active, shoppable products in the same category as ``slug``.
+    sibling_by_id: dict[str, dict[str, Any]],
+) -> dict[str, RelatedProductItem]:
+    """Map each sibling product-id to a card, keeping only shoppable ones.
 
-    "Related" = same canonical category, excluding this product, and only
-    products that carry at least one active listing from an active vendor (so
-    every card links to something buyable). Ordered by lowest available price.
-
-    Scale note: at launch catalog size this scans the category's active products
-    in one pass, which is fine; a category with thousands of products would want
-    a bounded/precomputed feed instead.
+    A product is shoppable when it has at least one active listing from an active
+    vendor; its cheapest such listing supplies the price and image.
     """
-    product = _fetch_product_by_slug(client, slug)
-    if product is None or str(product.get("status") or "") != "active":
-        raise AppError("product.not_found", "Product not found", 404)
+    if not sibling_by_id:
+        return {}
 
-    product_id = str(product["id"])
-    category_id = product.get("category_id")
-    if not category_id:
-        return RelatedProductsResponse(product_slug=slug, items=[])
-
-    siblings_response = (
-        client.table("products")
-        .select("id, name, slug, status")
-        .eq("category_id", category_id)
-        .eq("status", "active")
-        .execute()
-    )
-    sibling_rows = [
-        row
-        for row in (siblings_response.data or [])
-        if row.get("id") and str(row["id"]) != product_id
-    ]
-    if not sibling_rows:
-        return RelatedProductsResponse(product_slug=slug, items=[])
-
-    sibling_ids = [str(row["id"]) for row in sibling_rows]
-    sibling_by_id = {str(row["id"]): row for row in sibling_rows}
-
+    sibling_ids = list(sibling_by_id.keys())
     listings_response = (
         client.table("vendor_listings")
         .select("id, product_id, price_ngwee, status, vendors!inner(status)")
@@ -481,8 +451,7 @@ def build_related_products(
         .execute()
     )
 
-    # Cheapest active listing per sibling product (rows arrive price-ascending, so
-    # the first row seen for a product wins).
+    # Cheapest active listing per product (rows arrive price-ascending).
     cheapest_by_product: dict[str, dict[str, Any]] = {}
     for listing_row in listings_response.data or []:
         pid = str(listing_row.get("product_id") or "")
@@ -490,7 +459,7 @@ def build_related_products(
             cheapest_by_product[pid] = listing_row
 
     if not cheapest_by_product:
-        return RelatedProductsResponse(product_slug=slug, items=[])
+        return {}
 
     listing_ids = [str(row["id"]) for row in cheapest_by_product.values() if row.get("id")]
     image_by_listing: dict[str, str] = {}
@@ -513,20 +482,109 @@ def build_related_products(
             ):
                 image_by_listing[listing_id] = public_id
 
-    items: list[RelatedProductItem] = []
+    items: dict[str, RelatedProductItem] = {}
     for pid, listing_row in cheapest_by_product.items():
         sibling = sibling_by_id[pid]
         listing_id = str(listing_row.get("id") or "")
-        items.append(
-            RelatedProductItem(
-                slug=str(sibling.get("slug") or ""),
-                name=str(sibling.get("name") or ""),
-                image_public_id=image_by_listing.get(listing_id),
-                from_price_ngwee=int(listing_row.get("price_ngwee") or 0),
-            )
+        items[pid] = RelatedProductItem(
+            slug=str(sibling.get("slug") or ""),
+            name=str(sibling.get("name") or ""),
+            image_public_id=image_by_listing.get(listing_id),
+            from_price_ngwee=int(listing_row.get("price_ngwee") or 0),
         )
+    return items
 
-    items.sort(key=lambda item: (item.from_price_ngwee or 0, item.name))
+
+def _curated_related_items(
+    client: Any,
+    product_id: str,
+    *,
+    limit: int,
+) -> list[RelatedProductItem]:
+    """Admin-curated related products (in curated order), shoppable subset only."""
+    relations_response = (
+        client.table("product_relations")
+        .select("related_product_id, position")
+        .eq("product_id", product_id)
+        .order("position")
+        .execute()
+    )
+    ordered_ids: list[str] = []
+    seen: set[str] = set()
+    for row in relations_response.data or []:
+        rid = str(row.get("related_product_id") or "")
+        if rid and rid not in seen:
+            seen.add(rid)
+            ordered_ids.append(rid)
+    if not ordered_ids:
+        return []
+
+    products_response = (
+        client.table("products")
+        .select("id, name, slug, status")
+        .in_("id", ordered_ids)
+        .eq("status", "active")
+        .execute()
+    )
+    sibling_by_id = {
+        str(row["id"]): row for row in (products_response.data or []) if row.get("id")
+    }
+    item_map = _shoppable_related_items(client, sibling_by_id)
+    # Preserve the admin's curated order; drop any that aren't shoppable.
+    items = [item_map[pid] for pid in ordered_ids if pid in item_map]
+    return items[:limit]
+
+
+def build_related_products(
+    client: Any,
+    slug: str,
+    *,
+    limit: int = RELATED_LIMIT,
+) -> RelatedProductsResponse:
+    """Related products for the PDP rail.
+
+    Prefers admin-curated relations (``product_relations``, in curated order);
+    when none exist, falls back to other active, shoppable products in the same
+    canonical category (excluding this product), cheapest first. Only products
+    with an active listing from an active vendor are shown, so every card links
+    to something buyable.
+
+    Scale note: the category fallback scans the category's active products in one
+    pass — fine at launch size; a huge category would want a precomputed feed.
+    """
+    product = _fetch_product_by_slug(client, slug)
+    if product is None or str(product.get("status") or "") != "active":
+        raise AppError("product.not_found", "Product not found", 404)
+
+    product_id = str(product["id"])
+
+    # 1) Admin-curated relations take precedence when present.
+    curated = _curated_related_items(client, product_id, limit=limit)
+    if curated:
+        return RelatedProductsResponse(product_slug=slug, items=curated)
+
+    # 2) Fallback: same-category shoppable products, cheapest first.
+    category_id = product.get("category_id")
+    if not category_id:
+        return RelatedProductsResponse(product_slug=slug, items=[])
+
+    siblings_response = (
+        client.table("products")
+        .select("id, name, slug, status")
+        .eq("category_id", category_id)
+        .eq("status", "active")
+        .execute()
+    )
+    sibling_by_id = {
+        str(row["id"]): row
+        for row in (siblings_response.data or [])
+        if row.get("id") and str(row["id"]) != product_id
+    }
+    item_map = _shoppable_related_items(client, sibling_by_id)
+    items = sorted(
+        item_map.values(),
+        key=lambda item: (item.from_price_ngwee or 0, item.name),
+    )
     return RelatedProductsResponse(product_slug=slug, items=items[:limit])
 
 

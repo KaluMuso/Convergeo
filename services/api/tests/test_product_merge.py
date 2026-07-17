@@ -32,6 +32,11 @@ CROSS_CAT_ID = "a0000016-0000-4000-8000-000000000004"
 LISTING_ONE = "11111111-1111-1111-1111-111111111111"
 LISTING_TWO = "22222222-2222-2222-2222-222222222222"
 
+ANCHOR_ID = "a0000020-0000-4000-8000-000000000010"
+REL_ONE_ID = "a0000021-0000-4000-8000-000000000011"
+REL_TWO_ID = "a0000022-0000-4000-8000-000000000012"
+REL_INACTIVE_ID = "a0000023-0000-4000-8000-000000000013"
+
 
 class FakeQuery:
     def __init__(self, parent: FakeTable, filters: list[tuple[str, str, Any]]) -> None:
@@ -72,7 +77,7 @@ class FakeQuery:
         self._maybe_single = True
         return self
 
-    def insert(self, payload: dict[str, Any]) -> FakeQuery:
+    def insert(self, payload: dict[str, Any] | list[dict[str, Any]]) -> FakeQuery:
         self._pending_op = "insert"
         self._payload = payload
         return self
@@ -82,14 +87,23 @@ class FakeQuery:
         self._payload = payload
         return self
 
+    def delete(self) -> FakeQuery:
+        self._pending_op = "delete"
+        return self
+
     def execute(self) -> MagicMock:
         if self._pending_op == "insert":
-            assert isinstance(self._payload, dict)
-            row = dict(self._payload)
-            if "id" not in row:
-                row["id"] = f"{len(self._parent.rows):08x}-fake-fake-fake-fakefakefake"
-            self._parent.rows.append(row)
-            return MagicMock(data=[row])
+            payload = self._payload
+            incoming = payload if isinstance(payload, list) else [payload]
+            inserted: list[dict[str, Any]] = []
+            for item in incoming:
+                assert isinstance(item, dict)
+                row = dict(item)
+                if "id" not in row:
+                    row["id"] = f"{len(self._parent.rows):08x}-fake-fake-fake-fakefakefake"
+                self._parent.rows.append(row)
+                inserted.append(row)
+            return MagicMock(data=inserted)
 
         if self._pending_op == "update":
             assert isinstance(self._payload, dict)
@@ -99,6 +113,14 @@ class FakeQuery:
                     row.update(self._payload)
                     updated.append(dict(row))
             return MagicMock(data=updated)
+
+        if self._pending_op == "delete":
+            deleted: list[dict[str, Any]] = []
+            remaining: list[dict[str, Any]] = []
+            for row in self._parent.rows:
+                (deleted if self._matches(row) else remaining).append(row)
+            self._parent.rows[:] = remaining
+            return MagicMock(data=deleted)
 
         rows = self._apply_filters(self._parent.rows)
         if self._order is not None:
@@ -131,11 +153,14 @@ class FakeTable:
     def select(self, columns: str, *, count: str | None = None) -> FakeQuery:
         return FakeQuery(self, []).select(columns, count=count)
 
-    def insert(self, payload: dict[str, Any]) -> FakeQuery:
+    def insert(self, payload: dict[str, Any] | list[dict[str, Any]]) -> FakeQuery:
         return FakeQuery(self, []).insert(payload)
 
     def update(self, payload: dict[str, Any]) -> FakeQuery:
         return FakeQuery(self, []).update(payload)
+
+    def delete(self) -> FakeQuery:
+        return FakeQuery(self, []).delete()
 
 
 class FakeSupabaseClient:
@@ -143,6 +168,7 @@ class FakeSupabaseClient:
         self.tables: dict[str, FakeTable] = {
             "products": FakeTable(),
             "vendor_listings": FakeTable(),
+            "product_relations": FakeTable(),
             "audit_log": FakeTable(),
         }
 
@@ -514,3 +540,144 @@ def test_merge_endpoint_admin_success_writes_audit(
     assert "itel-a70-alt" in body["merged_aliases"]
     assert len(audit_rows) == 1
     assert audit_rows[0]["action"] == "admin.products.merge"
+
+
+def _seed_relation_products(fake: FakeSupabaseClient) -> None:
+    fake.tables["products"].rows.extend(
+        [
+            _product_row(product_id=ANCHOR_ID, name="Anchor Phone", slug="anchor-phone"),
+            _product_row(product_id=REL_ONE_ID, name="Related One", slug="related-one"),
+            _product_row(product_id=REL_TWO_ID, name="Related Two", slug="related-two"),
+            _product_row(
+                product_id=REL_INACTIVE_ID,
+                name="Related Inactive",
+                slug="related-inactive",
+                status="pending_moderation",
+            ),
+        ]
+    )
+
+
+def test_set_relations_replaces_orders_and_reads_back(
+    merge_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _seed_relation_products(fake_client)
+    # Pre-existing curation that the PUT must fully replace.
+    fake_client.tables["product_relations"].rows.append(
+        {"product_id": ANCHOR_ID, "related_product_id": REL_TWO_ID, "position": 0}
+    )
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"admin"})})
+    audit_rows = _mock_audit_insert(monkeypatch)
+
+    response = merge_client.put(
+        f"/admin/products/{ANCHOR_ID}/relations",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        json={"related_product_ids": [REL_ONE_ID, REL_TWO_ID]},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert [item["slug"] for item in body["related"]] == ["related-one", "related-two"]
+    assert [item["position"] for item in body["related"]] == [0, 1]
+    assert len(audit_rows) == 1
+    assert audit_rows[0]["action"] == "admin.products.set_relations"
+
+    # Only the two requested relations remain — the old REL_TWO@0 row is gone.
+    stored = fake_client.tables["product_relations"].rows
+    assert len(stored) == 2
+
+    read_back = merge_client.get(
+        f"/admin/products/{ANCHOR_ID}/relations",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+    )
+    assert read_back.status_code == 200
+    assert [item["slug"] for item in read_back.json()["related"]] == [
+        "related-one",
+        "related-two",
+    ]
+
+
+def test_set_relations_empty_clears_curation(
+    merge_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _seed_relation_products(fake_client)
+    fake_client.tables["product_relations"].rows.append(
+        {"product_id": ANCHOR_ID, "related_product_id": REL_ONE_ID, "position": 0}
+    )
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"admin"})})
+    _mock_audit_insert(monkeypatch)
+
+    response = merge_client.put(
+        f"/admin/products/{ANCHOR_ID}/relations",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        json={"related_product_ids": []},
+    )
+    assert response.status_code == 200
+    assert response.json()["related"] == []
+    assert fake_client.tables["product_relations"].rows == []
+
+
+def test_set_relations_rejects_self_reference(
+    merge_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _seed_relation_products(fake_client)
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"admin"})})
+    _mock_audit_insert(monkeypatch)
+
+    response = merge_client.put(
+        f"/admin/products/{ANCHOR_ID}/relations",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        json={"related_product_ids": [ANCHOR_ID]},
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "product_relation_self"
+
+
+def test_set_relations_rejects_inactive_related(
+    merge_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _seed_relation_products(fake_client)
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"admin"})})
+    _mock_audit_insert(monkeypatch)
+
+    response = merge_client.put(
+        f"/admin/products/{ANCHOR_ID}/relations",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        json={"related_product_ids": [REL_INACTIVE_ID]},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "product_relation_invalid"
+
+
+def test_relations_endpoints_require_admin(
+    merge_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _ = fake_client
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"customer"})})
+
+    get_response = merge_client.get(
+        f"/admin/products/{ANCHOR_ID}/relations",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+    )
+    assert get_response.status_code == 403
+
+    put_response = merge_client.put(
+        f"/admin/products/{ANCHOR_ID}/relations",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+        json={"related_product_ids": [REL_ONE_ID]},
+    )
+    assert put_response.status_code == 403
