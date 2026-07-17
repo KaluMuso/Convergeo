@@ -1,0 +1,248 @@
+{
+  "catalog.title": "Parcourir les produits",
+  "catalog.results": "{count, plural, one {# résultat} other {# résultats}}",
+  "catalog.compare": "Comparer {count} articles",
+  "plp": {
+    "title": "Parcourir {category}",
+    "defaultCategory": "Tous les produits",
+    "breadcrumbAria": "Fil d'Ariane",
+    "results": "{count, plural, one {# annonce} other {# annonces}}",
+    "emptyTitle": "Aucune annonce trouvée",
+    "emptyBody": "Essayez d'effacer les filtres ou de parcourir une autre catégorie.",
+    "sort": {
+      "label": "Trier par",
+      "relevance": "Pertinence",
+      "cheapest": "Prix le plus bas",
+      "nearest": "Le plus proche",
+      "newest": "Le plus récent"
+    },
+    "facets": {
+      "heading": "Filtres",
+      "price": "Prix (K)",
+      "minPrice": "Min",
+      "maxPrice": "Max",
+      "condition": "État",
+      "conditionNew": "Neuf",
+      "conditionRefurbished": "Reconditionné",
+      "availability": "Disponibilité",
+      "inStock": "En stock",
+      "outOfStock": "En rupture de stock",
+      "rating": "Note",
+      "rating4Plus": "4★ et plus",
+      "rating3Plus": "3★ et plus",
+      "location": "Près de moi",
+      "radiusKm": "Dans un rayon de {km} km",
+      "apply": "Appliquer les filtres",
+      "clear": "Effacer les filtres"
+    },
+    "card": {
+      "vendor": "Vendu par {vendor}",
+      "noReviews": "Pas encore d'avis",
+      "reviewCount": "({count})",
+      "quickAdd": "Ajout rapide",
+      "wishlist": "Ajouter aux favoris",
+      "outOfStock": "En rupture de stock",
+      "distance": "À {distance}"
+    },
+    "loadMore": "Voir plus",
+    "loading": "Chargement…"
+  },
+  "home": {
+    "meta": {
+      "title": "Découvrez la Zambie",
+      "description": "Achetez des produits, réservez des services et trouvez des événements partout en Zambie sur Vergeo5."
+    },
+    "nav": {
+      "ariaLabel": "Navigation de la boutique",
+      "bottomAriaLabel": "Navigation principale de la boutique",
+      "home": "Accueil",
+      "browse": "Parcourir",
+      "ask": "Demander",
+      "orders": "Commandes",
+      "account": "Compte",
+      "cart": "Panier",
+      "searchPlaceholder": "Rechercher produits, services, événements…",
+      "searchSubmit": "Rechercher",
+      "allCategories": "Toutes les catégories",
+      "categoriesPanelAria": "Toutes les catégories",
+      "categoriesLoading": "Chargement des catégories…",
+      "services": "Services",
+      "events": "Événements",
+      "askVergeo": "Demander à Vergeo",
+      "supplies": "Fournitures",
+      "desktopAriaLabel": "Navigation principale"
+    },
+    "hero": {
+      "eyebrow": "La marketplace de la Zambie",
+      "fallbackTitle": "Découvrez produits, services et événements partout en Zambie",
+      "fallbackSubtitle": "Comparez les prix de vendeurs vérifiés, payez par mobile money et profitez d'une livraison rapide à Lusaka.",
+      "primaryCta": "Commencer à parcourir",
+      "secondaryCta": "Vendre sur Vergeo5",
+      "placeholder": {
+        "title": "Bienvenue sur Vergeo5",
+        "subtitle": "Votre vitrine configurable apparaîtra ici au fur et à mesure de l'activation des espaces de vente."
+      },
+      "escrowLine": "Payez par mobile money — Vergeo5 conserve votre paiement en toute sécurité jusqu'à l'arrivée de votre commande.",
+      "escrowStep1": "Vous payez",
+      "escrowStep2": "Conservé par Vergeo5",
+      "escrowStep3": "Versé à la livraison"
+    },
+    "bannerRow": {
+      "title": "Offres et coups de cœur"
+    },
+    "events": {
+      "title": "Événements à venir",
+      "viewAll": "Voir tout",
+      "free": "Gratuit",
+      "capacity": "{filled} places sur {total} réservées",
+      "cta": "Obtenir des billets"
+    },
+    "featured": {
+      "title": "Sélection pour vous",
+      "noReviews": "Pas encore d'avis",
+      "quickAdd": "Ajout rapide",
+      "wishlist": "Enregistrer"
+    },
+    "categories": {
+      "title": "Acheter par catégorie"
+    },
+    "rails": {
+      "newTitle": "Nouveau sur Vergeo5",
+      "departmentTitle": "Nouveautés dans {category}",
+      "viewAll": "Voir tout",
+      "servicesTitle": "Services près de chez vous",
+      "vendorsTitle": "Meilleurs vendeurs",
+      "services": {
+        "provider": "Par {provider}",
+        "fromPrice": "À partir de",
+        "noReviews": "Nouveau prestataire",
+        "view": "Voir le service"
+      },
+      "vendors": {
+        "listings": "Produits",
+        "reviews": "Avis",
+        "rating": "{rating} ({count})",
+        "noReviews": "Nouveau",
+        "preferred": "Privilégié",
+        "verified": "Vérifié",
+        "location": "Zambie",
+        "view": "Visiter la boutique"
+      }
+    },
+    "sellCta": {
+      "title": "Développez votre activité avec Vergeo5",
+      "body": "Touchez des clients partout en Zambie avec votre propre vitrine. Création gratuite, paiements par mobile money — vous ne payez que lorsque vous vendez.",
+      "cta": "Commencer à vendre"
+    },
+    "flash": {
+      "defaultTag": "⚡ Offre flash",
+      "defaultHeadline": "Offres à durée limitée",
+      "defaultCta": "Voir les offres",
+      "days": "Jours",
+      "hours": "Heures",
+      "minutes": "Min",
+      "seconds": "Sec",
+      "expired": "Offre terminée",
+      "ariaLabel": "Se termine dans {time}"
+    }
+  },
+  "pdp": {
+    "meta": {
+      "notFoundTitle": "Produit introuvable",
+      "descriptionFallback": "Achetez {name} sur Vergeo5"
+    },
+    "tabs": {
+      "ariaLabel": "Détails du produit",
+      "overview": "Aperçu",
+      "specs": "Caractéristiques",
+      "reviews": "Avis"
+    },
+    "overview": {
+      "heading": "Description"
+    },
+    "related": {
+      "heading": "Plus dans cette catégorie",
+      "fromPrice": "À partir de {price}"
+    },
+    "gallery": {
+      "empty": "Pas encore d'images",
+      "indicator": "Image {current} sur {total}",
+      "previous": "Image précédente",
+      "next": "Image suivante"
+    },
+    "specs": {
+      "heading": "Caractéristiques",
+      "empty": "Aucune caractéristique renseignée"
+    },
+    "buyBox": {
+      "priceLabel": "Prix",
+      "quantityLabel": "Quantité",
+      "decrease": "Diminuer la quantité",
+      "increase": "Augmenter la quantité",
+      "decreaseSymbol": "-",
+      "increaseSymbol": "+",
+      "addToCart": "Ajouter au panier",
+      "addToCartSoon": "Ajouter au panier (bientôt disponible)",
+      "inStock": "En stock",
+      "outOfStock": "En rupture de stock",
+      "lowStock": "Plus que {count} en stock",
+      "alwaysAvailable": "Disponible",
+      "singleVendor": "Vendu uniquement par ce vendeur",
+      "moq": "Commande minimum : {count}"
+    },
+    "vendor": {
+      "heading": "Vendeur",
+      "preferredBadge": "Vendeur privilégié",
+      "noReviews": "Pas encore d'avis",
+      "rating": "{rating} ({count, plural, one {# avis} other {# avis}})",
+      "viewStore": "Voir la boutique"
+    },
+    "condition": {
+      "new": "Neuf",
+      "refurbished": "Reconditionné"
+    }
+  },
+  "returnableBadge": {
+    "label": "Retournable sous {days} jours"
+  },
+  "comparison": {
+    "heading": "Comparer les vendeurs",
+    "vendorCount": "{count} vendeurs proposent ce produit",
+    "sortLabel": "Trier par",
+    "sortPrice": "Prix le plus bas",
+    "sortDistance": "Le plus proche",
+    "price": "Prix",
+    "condition": "État",
+    "distance": "À {distance}",
+    "vendor": "Vendeur",
+    "fulfillment": "Options",
+    "delivery": "Livraison",
+    "pickup": "Retrait",
+    "selectListing": "Sélectionner",
+    "selectedListing": "Sélectionné",
+    "preferredBadge": "Vendeur privilégié",
+    "noReviews": "Pas encore d'avis",
+    "rating": "{rating} ({count} avis)",
+    "conditionNew": "Neuf",
+    "conditionRefurbished": "Reconditionné",
+    "usingFallbackLocation": "Distances calculées depuis le centre-ville de Lusaka jusqu'à ce que vous partagiez votre position."
+  },
+  "reviews": {
+    "heading": "Avis des clients",
+    "empty": "Pas encore d'avis — soyez le premier après votre achat.",
+    "writeCta": "Rédiger un avis",
+    "starsAria": "{rating} étoiles sur 5",
+    "photoAlt": "Photo de l'avis",
+    "vendorReply": "Réponse du vendeur",
+    "galleryPrevious": "Photo précédente",
+    "galleryNext": "Photo suivante",
+    "galleryIndicator": "Photo {current} sur {total}",
+    "loadError": "Impossible de charger les avis.",
+    "loading": "Chargement des avis…",
+    "starFilled": "★",
+    "starEmpty": "☆",
+    "errors": {
+      "rateLimited": "Trop de demandes d'avis. Veuillez patienter et réessayer."
+    }
+  }
+}

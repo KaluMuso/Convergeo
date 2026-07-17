@@ -1,0 +1,56 @@
+{
+  "title": "搜索",
+  "placeholder": "搜索 Vergeo5",
+  "submit": "搜索",
+  "recent": {
+    "title": "最近搜索",
+    "clear": "全部清除",
+    "remove": "移除 {term}"
+  },
+  "tabs": {
+    "ariaLabel": "按类型筛选结果",
+    "all": "全部",
+    "products": "商品",
+    "services": "服务",
+    "events": "活动",
+    "supplies": "供应",
+    "vendors": "商家",
+    "count": "{label} ({count})"
+  },
+  "noResults": {
+    "title": "没有找到“{query}”的结果",
+    "suggestionsTitle": "试试搜索",
+    "categoriesTitle": "浏览类别"
+  },
+  "suggestions": {
+    "term": "试试搜索 {term}"
+  },
+  "categories": {
+    "electronics": "电子产品",
+    "fashion": "时尚与美妆",
+    "home": "家居生活",
+    "groceries": "食品杂货"
+  },
+  "askVergeo": {
+    "title": "Ask Vergeo",
+    "teaser": "不知道搜索什么？让 Ask Vergeo 帮您找到所需内容。",
+    "slotLabel": "Ask Vergeo 助手插槽"
+  },
+  "results": {
+    "count": "{count, plural, one {#个结果} other {#个结果}}",
+    "degraded": "显示关键词匹配结果（语义搜索不可用）"
+  },
+  "input": {
+    "ariaLabel": "搜索",
+    "suggestionsLabel": "搜索建议",
+    "noSuggestions": "无建议"
+  },
+  "pagination": {
+    "loadMore": "加载更多",
+    "loading": "加载中…"
+  },
+  "result": {
+    "priceFrom": "{price} 起",
+    "category": "属于 {category}"
+  }
+}

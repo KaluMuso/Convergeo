@@ -1,0 +1,206 @@
+{
+  "title": "您的订单",
+  "empty": {
+    "title": "暂无订单",
+    "body": "当您从 Vergeo5 商家购买商品后，您的订单和物流跟踪将显示在这里。",
+    "cta": "开始购物"
+  },
+  "list": {
+    "checkoutGroup": "{date} 下单",
+    "vendorOrder": "来自 {vendor}",
+    "itemCount": "{count, plural, one {# 件商品} other {# 件商品}}",
+    "total": "总计 {amount}",
+    "viewOrder": "查看订单",
+    "status": "状态：{status}",
+    "paymentCod": "货到付款",
+    "paymentPrepaid": "已预付"
+  },
+  "detail": {
+    "title": "订单详情",
+    "orderId": "订单 {id}",
+    "vendor": "由 {vendor} 销售",
+    "fulfilmentPickup": "自提",
+    "fulfilmentDelivery": "配送",
+    "subtotal": "商品小计",
+    "lineQty": "{title} × {qty}",
+    "deliveryFee": "配送费",
+    "total": "订单总计",
+    "relatedTitle": "本次结算的其他商家",
+    "back": "返回订单列表"
+  },
+  "status": {
+    "placed": "已下单",
+    "confirmed": "已确认",
+    "processing": "处理中",
+    "ready": "可自提",
+    "shipped": "已发货",
+    "delivered": "已送达",
+    "completed": "已完成",
+    "cancelled": "已取消",
+    "refunded": "退款处理中"
+  },
+  "timeline": {
+    "title": "订单进度",
+    "placed": "订单已提交",
+    "paymentHeld": "您已付款——由 Vergeo5 保管",
+    "paymentCod": "收货时向商家付款",
+    "confirmed": "商家已确认您的订单",
+    "processing": "商家正在备货",
+    "ready": "可自提",
+    "shipped": "正在送往您处",
+    "delivered": "已送达",
+    "completed": "款项已放款给商家",
+    "cancelled": "订单已取消",
+    "refunded": "退款至您的移动支付账户"
+  },
+  "escrow": {
+    "held": "在您收到订单之前，您的款项由 Vergeo5 安全保管。",
+    "released": "订单完成后，款项已放款给商家。",
+    "refunded": "退款正在返回至您的移动支付钱包。",
+    "cod": "收到订单时，用现金或移动支付向商家付款。"
+  },
+  "pickup": {
+    "title": "自提详情",
+    "qrLabel": "在商家处出示此二维码",
+    "pinLabel": "或提供此 PIN",
+    "stubBody": "当商家将您的订单标记为可自提时，自提二维码和 PIN 将显示在这里。",
+    "pinAria": "自提 PIN：{pin}"
+  },
+  "invoice": {
+    "title": "收据和发票",
+    "download": "下载收据",
+    "stubHelp": "PDF 下载即将推出。",
+    "unavailable": "收据尚不可用"
+  },
+  "errors": {
+    "loadFailed": "无法加载您的订单。请重试。",
+    "notFound": "未找到订单"
+  },
+  "confirm": {
+    "title": "已收到订单？",
+    "body": "确认后，将从 Vergeo5 保管中放款给商家。请仅在收到全部商品后确认。",
+    "trust": "由 Vergeo5 保管 → 放款给商家",
+    "button": "确认收货",
+    "confirming": "确认中…",
+    "done": "您已确认收货",
+    "doneBody": "款项已放款给商家。",
+    "error": "无法确认收货。请重试。"
+  },
+  "report": {
+    "title": "举报问题",
+    "body": "请告诉我们出了什么问题。您可以附上照片或 PDF 作为证据。",
+    "categoryLabel": "是什么问题？",
+    "categoryFaulty": "商品有故障或损坏",
+    "categoryWrong": "收到错误商品",
+    "categoryNotDelivered": "订单未送达",
+    "categoryOther": "其他问题",
+    "descriptionLabel": "描述问题",
+    "descriptionPlaceholder": "发生了什么？请提供有助于我们调查的任何细节。",
+    "evidenceLabel": "添加证据（可选）",
+    "evidenceHelp": "最多 8 张照片或 PDF，每个最大 10 MB。",
+    "addEvidence": "添加照片或 PDF",
+    "uploading": "上传中…",
+    "submit": "提交举报",
+    "submitting": "提交中…",
+    "successLane1": "我们已记录您的退货请求。我们的退货团队将指导您完成后续步骤。",
+    "successDispute": "我们已发起纠纷，并将与商家进行调查。",
+    "successSupport": "我们的客服团队将尽快与您联系。",
+    "successGuidance": "48 小时退货窗口已过。请联系客服寻求帮助。",
+    "error": "无法提交您的举报。请重试。",
+    "requiredDescription": "请描述问题。",
+    "guidance": {
+      "lane1": "您处于 48 小时窗口内，可全额退货（含配送费）。",
+      "expired": "48 小时退货窗口已结束。请联系客服了解其他选项。"
+    }
+  },
+  "dispatch": {
+    "title": "配送更新",
+    "courier": "快递员",
+    "tracking": "跟踪备注",
+    "empty": "订单发出后，发货详情将显示在这里。",
+    "statusUpdates": "状态更新"
+  },
+  "dispute": {
+    "title": "订单纠纷",
+    "body": "在我们与商家进行调查期间，您的款项将由我们保管。",
+    "holdTrust": "由 Vergeo5 保管——在此纠纷解决前暂停放款",
+    "statusLabel": "纠纷状态",
+    "statusDisplay": "纠纷状态：{status}",
+    "evidenceLabel": "您的证据",
+    "evidenceHelp": "最多 8 张照片或 PDF，每个最大 10 MB。",
+    "addEvidence": "添加照片或 PDF",
+    "uploading": "上传中…",
+    "descriptionLabel": "发生了什么？",
+    "descriptionPlaceholder": "请说明您对此订单提出纠纷的原因。",
+    "submit": "发起纠纷",
+    "submitting": "正在发起纠纷…",
+    "success": "您的纠纷已发起。我们将与商家一起审核。",
+    "error": "无法发起纠纷。请重试。",
+    "notFound": "未找到此订单的纠纷",
+    "back": "返回订单",
+    "timelineTitle": "纠纷进度",
+    "status": {
+      "open": "已发起——调查中",
+      "vendor_responded": "商家已回复",
+      "under_review": "管理员审核中",
+      "resolved_refund": "已解决——已退款",
+      "resolved_release": "已解决——已放款",
+      "resolved_partial": "已解决——部分退款",
+      "rejected": "纠纷已驳回"
+    },
+    "evidenceCount": "{count, plural, one {已附上 # 个文件} other {已附上 # 个文件}}",
+    "timelineNote": "—— {note}"
+  },
+  "return": {
+    "title": "申请退货",
+    "body": "有故障或错误的商品可在送达后 48 小时内退货。需提供照片证据。",
+    "back": "返回订单",
+    "lane1": {
+      "title": "故障或错误商品",
+      "body": "全额退款（含配送费）。退货运费由商家承担。"
+    },
+    "lane2": {
+      "title": "改变主意",
+      "unavailable": "此商品不支持因改变主意而退货。"
+    },
+    "evidence": {
+      "label": "照片证据（必填）",
+      "help": "请至少添加一张显示故障或错误商品的照片。最多 8 张照片，每张最大 10 MB。",
+      "add": "添加照片",
+      "uploading": "上传中…",
+      "required": "提交前请至少添加一张照片。"
+    },
+    "breakdown": {
+      "title": "退款预览",
+      "item": "商品退款",
+      "delivery": "配送费退款",
+      "total": "退款总计"
+    },
+    "windowExpired": "48 小时退货窗口已结束。",
+    "loading": "正在加载退货表单…",
+    "submit": "提交退货申请",
+    "submitting": "提交中…",
+    "success": "您的退货申请已提交。商家将接受或提出异议。",
+    "error": "无法提交您的退货申请。请重试。",
+    "errors": {
+      "rateLimited": "请求过于频繁。请稍候再试。"
+    }
+  },
+  "reviewPrompt": {
+    "title": "您的订单体验如何？",
+    "body": "分享一条经过验证的评价，帮助其他购物者。您可在 7 天内修改。",
+    "itemLabel": "商品",
+    "ratingLabel": "您的评分",
+    "starsAria": "5 星中的 {rating} 星",
+    "bodyLabel": "您的评价（可选）",
+    "bodyPlaceholder": "您喜欢或不喜欢什么？",
+    "submit": "提交评价",
+    "submitting": "提交中…",
+    "success": "谢谢——您的评价已发布。",
+    "error": "无法提交您的评价。请重试。",
+    "editNotice": "您最多可在 7 天内修改此评价。",
+    "loading": "正在加载评价表单…",
+    "starFilled": "★",
+    "starEmpty": "☆"
+  }
+}

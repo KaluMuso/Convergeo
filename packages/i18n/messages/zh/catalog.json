@@ -1,0 +1,248 @@
+{
+  "catalog.title": "浏览商品",
+  "catalog.results": "{count, plural, one {# 个结果} other {# 个结果}}",
+  "catalog.compare": "对比 {count} 件商品",
+  "plp": {
+    "title": "浏览 {category}",
+    "defaultCategory": "全部商品",
+    "breadcrumbAria": "面包屑导航",
+    "results": "{count, plural, one {# 个商品} other {# 个商品}}",
+    "emptyTitle": "未找到商品",
+    "emptyBody": "请尝试清除筛选条件或浏览其他类别。",
+    "sort": {
+      "label": "排序方式",
+      "relevance": "相关度",
+      "cheapest": "价格最低",
+      "nearest": "距离最近",
+      "newest": "最新"
+    },
+    "facets": {
+      "heading": "筛选",
+      "price": "价格 (K)",
+      "minPrice": "最低",
+      "maxPrice": "最高",
+      "condition": "成色",
+      "conditionNew": "全新",
+      "conditionRefurbished": "翻新",
+      "availability": "库存状态",
+      "inStock": "有货",
+      "outOfStock": "缺货",
+      "rating": "评分",
+      "rating4Plus": "4★ 及以上",
+      "rating3Plus": "3★ 及以上",
+      "location": "附近",
+      "radiusKm": "{km} 公里内",
+      "apply": "应用筛选",
+      "clear": "清除筛选"
+    },
+    "card": {
+      "vendor": "由 {vendor} 销售",
+      "noReviews": "暂无评价",
+      "reviewCount": "({count})",
+      "quickAdd": "快速添加",
+      "wishlist": "加入心愿单",
+      "outOfStock": "缺货",
+      "distance": "相距 {distance}"
+    },
+    "loadMore": "加载更多",
+    "loading": "加载中…"
+  },
+  "home": {
+    "meta": {
+      "title": "发现赞比亚",
+      "description": "在 Vergeo5 上选购商品、预订服务并发现赞比亚各地的活动。"
+    },
+    "nav": {
+      "ariaLabel": "商城导航",
+      "bottomAriaLabel": "商城主导航",
+      "home": "首页",
+      "browse": "浏览",
+      "ask": "提问",
+      "orders": "订单",
+      "account": "账户",
+      "cart": "购物车",
+      "searchPlaceholder": "搜索商品、服务、活动…",
+      "searchSubmit": "搜索",
+      "allCategories": "全部类别",
+      "categoriesPanelAria": "全部类别",
+      "categoriesLoading": "正在加载类别…",
+      "services": "服务",
+      "events": "活动",
+      "askVergeo": "问 Vergeo",
+      "supplies": "批发",
+      "desktopAriaLabel": "主导航"
+    },
+    "hero": {
+      "eyebrow": "赞比亚的购物平台",
+      "fallbackTitle": "发现赞比亚各地的商品、服务与活动",
+      "fallbackSubtitle": "比较认证商家的价格，使用移动支付，并在卢萨卡享受快速配送。",
+      "primaryCta": "开始浏览",
+      "secondaryCta": "在 Vergeo5 上销售",
+      "placeholder": {
+        "title": "欢迎来到 Vergeo5",
+        "subtitle": "随着营销板块上线，您的可配置店面将显示在此处。"
+      },
+      "escrowLine": "使用移动支付，Vergeo5 会安全保管您的款项，直到您的订单送达。",
+      "escrowStep1": "您付款",
+      "escrowStep2": "由 Vergeo5 保管",
+      "escrowStep3": "送达后放款"
+    },
+    "bannerRow": {
+      "title": "优惠与精选"
+    },
+    "events": {
+      "title": "即将举行的活动",
+      "viewAll": "查看全部",
+      "free": "免费",
+      "capacity": "已报名 {filled}/{total} 个名额",
+      "cta": "获取门票"
+    },
+    "featured": {
+      "title": "为您精选",
+      "noReviews": "暂无评价",
+      "quickAdd": "快速添加",
+      "wishlist": "收藏"
+    },
+    "categories": {
+      "title": "按类别选购"
+    },
+    "rails": {
+      "newTitle": "Vergeo5 新品",
+      "departmentTitle": "{category} 新品",
+      "viewAll": "查看全部",
+      "servicesTitle": "附近的服务",
+      "vendorsTitle": "热门商家",
+      "services": {
+        "provider": "由 {provider} 提供",
+        "fromPrice": "起价",
+        "noReviews": "新服务商",
+        "view": "查看服务"
+      },
+      "vendors": {
+        "listings": "商品",
+        "reviews": "评价",
+        "rating": "{rating} ({count})",
+        "noReviews": "新商家",
+        "preferred": "优选",
+        "verified": "已认证",
+        "location": "赞比亚",
+        "view": "访问店铺"
+      }
+    },
+    "sellCta": {
+      "title": "借助 Vergeo5 拓展您的业务",
+      "body": "通过您自己的店面触达赞比亚各地的客户。免费开店，移动支付结算——只有成交才收费。",
+      "cta": "开始销售"
+    },
+    "flash": {
+      "defaultTag": "⚡ 限时抢购",
+      "defaultHeadline": "限时优惠",
+      "defaultCta": "抢购优惠",
+      "days": "天",
+      "hours": "时",
+      "minutes": "分",
+      "seconds": "秒",
+      "expired": "活动已结束",
+      "ariaLabel": "{time} 后结束"
+    }
+  },
+  "pdp": {
+    "meta": {
+      "notFoundTitle": "未找到该商品",
+      "descriptionFallback": "在 Vergeo5 上选购 {name}"
+    },
+    "tabs": {
+      "ariaLabel": "商品详情",
+      "overview": "概览",
+      "specs": "规格",
+      "reviews": "评价"
+    },
+    "overview": {
+      "heading": "描述"
+    },
+    "related": {
+      "heading": "此类别更多商品",
+      "fromPrice": "{price} 起"
+    },
+    "gallery": {
+      "empty": "暂无图片",
+      "indicator": "第 {current}/{total} 张图片",
+      "previous": "上一张图片",
+      "next": "下一张图片"
+    },
+    "specs": {
+      "heading": "规格",
+      "empty": "暂无规格信息"
+    },
+    "buyBox": {
+      "priceLabel": "价格",
+      "quantityLabel": "数量",
+      "decrease": "减少数量",
+      "increase": "增加数量",
+      "decreaseSymbol": "-",
+      "increaseSymbol": "+",
+      "addToCart": "加入购物车",
+      "addToCartSoon": "加入购物车（即将推出）",
+      "inStock": "有货",
+      "outOfStock": "缺货",
+      "lowStock": "仅剩 {count} 件",
+      "alwaysAvailable": "有货",
+      "singleVendor": "仅由该商家销售",
+      "moq": "最低起订量：{count}"
+    },
+    "vendor": {
+      "heading": "卖家",
+      "preferredBadge": "优选卖家",
+      "noReviews": "暂无评价",
+      "rating": "{rating} ({count, plural, one {# 条评价} other {# 条评价}})",
+      "viewStore": "查看店铺"
+    },
+    "condition": {
+      "new": "全新",
+      "refurbished": "翻新"
+    }
+  },
+  "returnableBadge": {
+    "label": "{days} 天内可退货"
+  },
+  "comparison": {
+    "heading": "比较卖家",
+    "vendorCount": "{count} 家卖家出售此商品",
+    "sortLabel": "排序方式",
+    "sortPrice": "价格最低",
+    "sortDistance": "距离最近",
+    "price": "价格",
+    "condition": "成色",
+    "distance": "相距 {distance}",
+    "vendor": "卖家",
+    "fulfillment": "选项",
+    "delivery": "配送",
+    "pickup": "自提",
+    "selectListing": "选择",
+    "selectedListing": "已选择",
+    "preferredBadge": "优选卖家",
+    "noReviews": "暂无评价",
+    "rating": "{rating} ({count} 条评价)",
+    "conditionNew": "全新",
+    "conditionRefurbished": "翻新",
+    "usingFallbackLocation": "在您共享位置之前，距离以卢萨卡市中心为基准显示。"
+  },
+  "reviews": {
+    "heading": "顾客评价",
+    "empty": "暂无评价——购买后抢先评价。",
+    "writeCta": "撰写评价",
+    "starsAria": "5 星中的 {rating} 星",
+    "photoAlt": "评价照片",
+    "vendorReply": "卖家回复",
+    "galleryPrevious": "上一张照片",
+    "galleryNext": "下一张照片",
+    "galleryIndicator": "第 {current}/{total} 张照片",
+    "loadError": "无法加载评价。",
+    "loading": "正在加载评价…",
+    "starFilled": "★",
+    "starEmpty": "☆",
+    "errors": {
+      "rateLimited": "评价请求过多。请稍候再试。"
+    }
+  }
+}

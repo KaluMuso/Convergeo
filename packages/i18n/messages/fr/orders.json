@@ -1,0 +1,206 @@
+{
+  "title": "Vos commandes",
+  "empty": {
+    "title": "Aucune commande pour le moment",
+    "body": "Lorsque vous achetez chez des vendeurs Vergeo5, vos commandes et leur suivi apparaîtront ici.",
+    "cta": "Commencer mes achats"
+  },
+  "list": {
+    "checkoutGroup": "Achat du {date}",
+    "vendorOrder": "De {vendor}",
+    "itemCount": "{count, plural, one {# article} other {# articles}}",
+    "total": "Total {amount}",
+    "viewOrder": "Voir la commande",
+    "status": "Statut : {status}",
+    "paymentCod": "Paiement à la livraison",
+    "paymentPrepaid": "Payé d'avance"
+  },
+  "detail": {
+    "title": "Détails de la commande",
+    "orderId": "Commande n° {id}",
+    "vendor": "Vendu par {vendor}",
+    "fulfilmentPickup": "Retrait",
+    "fulfilmentDelivery": "Livraison",
+    "subtotal": "Sous-total des articles",
+    "lineQty": "{title} × {qty}",
+    "deliveryFee": "Frais de livraison",
+    "total": "Total de la commande",
+    "relatedTitle": "Autres vendeurs de cet achat",
+    "back": "Retour aux commandes"
+  },
+  "status": {
+    "placed": "Passée",
+    "confirmed": "Confirmée",
+    "processing": "En cours de traitement",
+    "ready": "Prête pour le retrait",
+    "shipped": "Expédiée",
+    "delivered": "Livrée",
+    "completed": "Terminée",
+    "cancelled": "Annulée",
+    "refunded": "Remboursement en cours"
+  },
+  "timeline": {
+    "title": "Progression de la commande",
+    "placed": "Commande passée",
+    "paymentHeld": "Vous avez payé — conservé par Vergeo5",
+    "paymentCod": "Payez le vendeur à la livraison",
+    "confirmed": "Le vendeur a confirmé votre commande",
+    "processing": "Le vendeur prépare votre commande",
+    "ready": "Prête pour le retrait",
+    "shipped": "En route vers vous",
+    "delivered": "Livrée",
+    "completed": "Paiement versé au vendeur",
+    "cancelled": "Commande annulée",
+    "refunded": "Remboursement sur votre mobile money"
+  },
+  "escrow": {
+    "held": "Votre paiement est conservé en toute sécurité par Vergeo5 jusqu'à ce que vous receviez votre commande.",
+    "released": "Les fonds ont été versés au vendeur une fois votre commande honorée.",
+    "refunded": "Un remboursement est en cours vers votre portefeuille mobile money.",
+    "cod": "Payez le vendeur en espèces ou par mobile money à la réception de la commande."
+  },
+  "pickup": {
+    "title": "Détails du retrait",
+    "qrLabel": "Présentez ce QR code chez le vendeur",
+    "pinLabel": "Ou communiquez ce PIN",
+    "stubBody": "Le QR code et le PIN de retrait apparaîtront ici lorsque le vendeur indiquera que votre commande est prête.",
+    "pinAria": "PIN de retrait : {pin}"
+  },
+  "invoice": {
+    "title": "Reçu et facture",
+    "download": "Télécharger le reçu",
+    "stubHelp": "Le téléchargement du PDF sera bientôt disponible.",
+    "unavailable": "Reçu pas encore disponible"
+  },
+  "errors": {
+    "loadFailed": "Impossible de charger vos commandes. Veuillez réessayer.",
+    "notFound": "Commande introuvable"
+  },
+  "confirm": {
+    "title": "Commande reçue ?",
+    "body": "La confirmation libère le paiement conservé par Vergeo5 vers le vendeur. Ne confirmez que lorsque vous avez tout reçu.",
+    "trust": "Conservé par Vergeo5 → Versé au vendeur",
+    "button": "Confirmer la réception",
+    "confirming": "Confirmation…",
+    "done": "Vous avez confirmé la réception",
+    "doneBody": "Le paiement a été versé au vendeur.",
+    "error": "Impossible de confirmer la réception. Veuillez réessayer."
+  },
+  "report": {
+    "title": "Signaler un problème",
+    "body": "Dites-nous ce qui s'est mal passé. Vous pouvez joindre des photos ou un PDF comme preuve.",
+    "categoryLabel": "Quel est le problème ?",
+    "categoryFaulty": "Article défectueux ou endommagé",
+    "categoryWrong": "Mauvais article reçu",
+    "categoryNotDelivered": "Commande non livrée",
+    "categoryOther": "Autre chose",
+    "descriptionLabel": "Décrivez le problème",
+    "descriptionPlaceholder": "Que s'est-il passé ? Ajoutez tout détail qui nous aide à enquêter.",
+    "evidenceLabel": "Ajouter une preuve (facultatif)",
+    "evidenceHelp": "Jusqu'à 8 photos ou PDF, 10 Mo maximum chacun.",
+    "addEvidence": "Ajouter une photo ou un PDF",
+    "uploading": "Téléversement…",
+    "submit": "Envoyer le signalement",
+    "submitting": "Envoi…",
+    "successLane1": "Nous avons enregistré votre demande de retour. Notre équipe des retours vous guidera pour la suite.",
+    "successDispute": "Nous avons ouvert un litige et enquêterons avec le vendeur.",
+    "successSupport": "Notre équipe d'assistance vous contactera sous peu.",
+    "successGuidance": "Le délai de retour de 48 heures est dépassé. Veuillez contacter l'assistance pour obtenir de l'aide.",
+    "error": "Impossible d'envoyer votre signalement. Veuillez réessayer.",
+    "requiredDescription": "Veuillez décrire le problème.",
+    "guidance": {
+      "lane1": "Vous êtes dans le délai de 48 heures pour un retour complet, livraison incluse.",
+      "expired": "Le délai de retour de 48 heures est écoulé. Contactez l'assistance pour d'autres options."
+    }
+  },
+  "dispatch": {
+    "title": "Suivi de livraison",
+    "courier": "Coursier",
+    "tracking": "Note de suivi",
+    "empty": "Les détails d'expédition apparaîtront ici dès que votre commande sera en route.",
+    "statusUpdates": "Mises à jour du statut"
+  },
+  "dispute": {
+    "title": "Litige sur la commande",
+    "body": "Nous conservons votre paiement pendant que nous enquêtons avec le vendeur.",
+    "holdTrust": "Conservé par Vergeo5 — le versement est suspendu jusqu'à la résolution de ce litige",
+    "statusLabel": "Statut du litige",
+    "statusDisplay": "Statut du litige : {status}",
+    "evidenceLabel": "Vos preuves",
+    "evidenceHelp": "Jusqu'à 8 photos ou PDF, 10 Mo maximum chacun.",
+    "addEvidence": "Ajouter une photo ou un PDF",
+    "uploading": "Téléversement…",
+    "descriptionLabel": "Que s'est-il passé ?",
+    "descriptionPlaceholder": "Décrivez pourquoi vous contestez cette commande.",
+    "submit": "Ouvrir un litige",
+    "submitting": "Ouverture du litige…",
+    "success": "Votre litige est ouvert. Nous l'examinerons avec le vendeur.",
+    "error": "Impossible d'ouvrir le litige. Veuillez réessayer.",
+    "notFound": "Aucun litige trouvé pour cette commande",
+    "back": "Retour à la commande",
+    "timelineTitle": "Progression du litige",
+    "status": {
+      "open": "Ouvert — enquête en cours",
+      "vendor_responded": "Le vendeur a répondu",
+      "under_review": "En cours d'examen par l'administration",
+      "resolved_refund": "Résolu — remboursement effectué",
+      "resolved_release": "Résolu — paiement versé",
+      "resolved_partial": "Résolu — remboursement partiel",
+      "rejected": "Litige rejeté"
+    },
+    "evidenceCount": "{count, plural, one {# fichier joint} other {# fichiers joints}}",
+    "timelineNote": "— {note}"
+  },
+  "return": {
+    "title": "Demander un retour",
+    "body": "Les articles défectueux ou erronés peuvent être retournés dans les 48 heures suivant la livraison. Une preuve photo est requise.",
+    "back": "Retour à la commande",
+    "lane1": {
+      "title": "Article défectueux ou erroné",
+      "body": "Remboursement complet, livraison incluse. Les frais de retour sont à la charge du vendeur."
+    },
+    "lane2": {
+      "title": "Changement d'avis",
+      "unavailable": "Les retours pour changement d'avis ne sont pas disponibles pour cet article."
+    },
+    "evidence": {
+      "label": "Preuve photo (requise)",
+      "help": "Ajoutez au moins une photo montrant le défaut ou l'erreur d'article. 8 photos maximum, 10 Mo chacune.",
+      "add": "Ajouter une photo",
+      "uploading": "Téléversement…",
+      "required": "Ajoutez au moins une photo avant d'envoyer."
+    },
+    "breakdown": {
+      "title": "Aperçu du remboursement",
+      "item": "Remboursement de l'article",
+      "delivery": "Remboursement de la livraison",
+      "total": "Remboursement total"
+    },
+    "windowExpired": "Le délai de retour de 48 heures est écoulé.",
+    "loading": "Chargement du formulaire de retour…",
+    "submit": "Envoyer la demande de retour",
+    "submitting": "Envoi…",
+    "success": "Votre demande de retour a été envoyée. Le vendeur l'acceptera ou la contestera.",
+    "error": "Impossible d'envoyer votre demande de retour. Veuillez réessayer.",
+    "errors": {
+      "rateLimited": "Trop de demandes. Veuillez patienter et réessayer."
+    }
+  },
+  "reviewPrompt": {
+    "title": "Comment s'est passée votre commande ?",
+    "body": "Partagez un avis vérifié pour aider les autres acheteurs. Vous pouvez le modifier pendant 7 jours.",
+    "itemLabel": "Article",
+    "ratingLabel": "Votre note",
+    "starsAria": "{rating} étoiles sur 5",
+    "bodyLabel": "Votre avis (facultatif)",
+    "bodyPlaceholder": "Qu'avez-vous aimé ou non ?",
+    "submit": "Publier l'avis",
+    "submitting": "Envoi…",
+    "success": "Merci — votre avis est publié.",
+    "error": "Impossible de publier votre avis. Veuillez réessayer.",
+    "editNotice": "Vous pouvez modifier cet avis pendant 7 jours.",
+    "loading": "Chargement du formulaire d'avis…",
+    "starFilled": "★",
+    "starEmpty": "☆"
+  }
+}

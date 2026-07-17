@@ -1,0 +1,56 @@
+{
+  "title": "Recherche",
+  "placeholder": "Rechercher sur Vergeo5",
+  "submit": "Rechercher",
+  "recent": {
+    "title": "Recherches récentes",
+    "clear": "Tout effacer",
+    "remove": "Supprimer {term}"
+  },
+  "tabs": {
+    "ariaLabel": "Filtrer les résultats par type",
+    "all": "Tous",
+    "products": "Produits",
+    "services": "Services",
+    "events": "Événements",
+    "supplies": "Fournitures",
+    "vendors": "Vendeurs",
+    "count": "{label} ({count})"
+  },
+  "noResults": {
+    "title": "Aucun résultat pour « {query} »",
+    "suggestionsTitle": "Essayez de rechercher",
+    "categoriesTitle": "Parcourir les catégories"
+  },
+  "suggestions": {
+    "term": "Essayez de rechercher {term}"
+  },
+  "categories": {
+    "electronics": "Électronique",
+    "fashion": "Mode et beauté",
+    "home": "Maison et décoration",
+    "groceries": "Épicerie"
+  },
+  "askVergeo": {
+    "title": "Ask Vergeo",
+    "teaser": "Vous ne savez pas quoi rechercher ? Ask Vergeo vous aide à trouver ce qu'il vous faut.",
+    "slotLabel": "Emplacement de l'assistant Ask Vergeo"
+  },
+  "results": {
+    "count": "{count, plural, one {# résultat} other {# résultats}}",
+    "degraded": "Affichage des correspondances par mot-clé (recherche sémantique indisponible)"
+  },
+  "input": {
+    "ariaLabel": "Rechercher",
+    "suggestionsLabel": "Suggestions de recherche",
+    "noSuggestions": "Aucune suggestion"
+  },
+  "pagination": {
+    "loadMore": "Afficher plus",
+    "loading": "Chargement…"
+  },
+  "result": {
+    "priceFrom": "À partir de {price}",
+    "category": "Dans {category}"
+  }
+}
