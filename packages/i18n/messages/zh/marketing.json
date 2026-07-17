@@ -1,0 +1,211 @@
+{
+  "about": {
+    "meta": {
+      "title": "关于 Vergeo5",
+      "description": "Vergeo5 是赞比亚以移动端为先的商品、服务与活动交易平台——货款由第三方安全托管，直到您收到所购之物。"
+    },
+    "hero": {
+      "eyebrow": "关于我们",
+      "headline": "赞比亚的交易平台，为信任而建",
+      "subhead": "Vergeo5 将商品、服务与活动汇聚于一处——通过第三方托管保管您的货款，直到确认收货。"
+    },
+    "mission": {
+      "heading": "我们的使命",
+      "body": "让赞比亚的线上买卖安全、简单又快捷——即使网络很慢也不例外。每笔订单都有第三方托管保护，每笔款项都能通过移动支付在几分钟内到达商家，每次沟通都可以在 WhatsApp 上进行。"
+    },
+    "values": {
+      "heading": "我们的坚持",
+      "trust": {
+        "title": "信任优先",
+        "body": "您付款，我们托管，商家发货，您确认——然后放款。不必再指望陌生人如约交付。"
+      },
+      "local": {
+        "title": "为赞比亚打造",
+        "body": "移动支付优先（MTN、Airtel），以地标定位地址，卢萨卡送货、全国自提，以克瓦查计价。"
+      },
+      "fast": {
+        "title": "任何网络都快",
+        "body": "专为 360px 屏幕和 3G 网络设计。页面轻巧、图片精简、不浪费流量。"
+      },
+      "fair": {
+        "title": "对商家公平",
+        "body": "发布前即透明展示佣金，并在 48 小时内放款——通过移动支付通常只需几分钟。"
+      }
+    },
+    "howItWorks": {
+      "heading": "Vergeo5 如何运作",
+      "step1": "发现来自赞比亚各地认证商家的商品、服务与活动。",
+      "step2": "K500 以内的订单可通过移动支付、银行卡或货到付款结算。",
+      "step3": "您的货款由第三方安全托管，直到您确认收货。",
+      "step4": "我们向商家放款——若出现问题，我们会及时介入。"
+    },
+    "cta": {
+      "heading": "准备好探索了吗？",
+      "browse": "浏览交易平台",
+      "sell": "开始销售",
+      "help": "访问帮助中心"
+    }
+  },
+  "contact": {
+    "meta": {
+      "title": "联系 Vergeo5",
+      "description": "通过 WhatsApp 联系 Vergeo5 团队可最快获得回复，或给我们留言，我们将通过电子邮件回复您。"
+    },
+    "hero": {
+      "eyebrow": "联系我们",
+      "headline": "与真人对话",
+      "subhead": "WhatsApp 是联系我们最快的方式。更想写下来？在下方留言，我们将通过电子邮件回复。"
+    },
+    "whatsapp": {
+      "heading": "在 WhatsApp 上聊天",
+      "body": "直接联系我们的支持团队——工作日内我们通常会在几小时内回复。",
+      "cta": "打开 WhatsApp 对话",
+      "hint": "打开 WhatsApp，消息已备好，随时发送。"
+    },
+    "hours": {
+      "heading": "我们的服务时间",
+      "body": "周一至周六，08:00–18:00（CAT）。在此时间之外发送的消息将于下一个工作日回复。"
+    },
+    "form": {
+      "heading": "发送消息",
+      "nameLabel": "您的姓名",
+      "namePlaceholder": "例如 Chanda Mwansa",
+      "phoneLabel": "电话或电子邮件（可选）",
+      "phonePlaceholder": "以便我们回复您",
+      "messageLabel": "消息",
+      "messagePlaceholder": "我们能帮您什么？",
+      "requiredMarker": "*",
+      "submit": "发送消息",
+      "submitting": "发送中…",
+      "success": "谢谢——您的消息已发出。我们很快会与您联系。",
+      "errorGeneric": "出了点问题。请重试，或通过 WhatsApp 联系我们。",
+      "errorRateLimited": "您已经发送了几条消息。请稍候片刻再发送下一条。",
+      "validation": {
+        "nameRequired": "请告诉我们您的姓名。",
+        "nameTooLong": "该姓名过长。",
+        "messageRequired": "请写下消息内容。",
+        "messageTooShort": "请再补充一些细节。",
+        "messageTooLong": "该消息过长——请缩短后再试。",
+        "contactTooLong": "该联系方式过长。"
+      }
+    }
+  },
+  "help": {
+    "meta": {
+      "title": "帮助中心",
+      "description": "关于第三方托管、支付、配送、退货、门票以及在 Vergeo5 上销售的解答。"
+    },
+    "hero": {
+      "eyebrow": "帮助中心",
+      "headline": "我们能帮您什么？",
+      "subhead": "搜索我们的指南，或按主题浏览。仍未解决？通过 WhatsApp 联系我们。"
+    },
+    "search": {
+      "label": "搜索帮助文章",
+      "placeholder": "搜索——例如托管、配送、退款",
+      "clear": "清除搜索",
+      "resultsCount": "{count, plural, =0 {未找到文章} one {# 篇文章} other {# 篇文章}}",
+      "noResults": "没有文章与您的搜索匹配。",
+      "noResultsHint": "换个词试试，或通过 WhatsApp 联系我们。"
+    },
+    "categories": {
+      "buying": "购买与支付",
+      "escrow": "托管与安全",
+      "delivery": "配送与自提",
+      "returns": "退货与退款",
+      "events": "活动与门票",
+      "selling": "在 Vergeo5 上销售",
+      "account": "账户与隐私"
+    },
+    "article": {
+      "backToHelp": "返回帮助中心",
+      "inCategory": "在{category}中",
+      "relatedHeading": "相关文章",
+      "notHelpful": "仍需帮助？",
+      "contactCta": "联系客服"
+    },
+    "cta": {
+      "heading": "没有找到答案？",
+      "body": "给我们发条消息，团队随时为您服务。",
+      "whatsapp": "在 WhatsApp 上聊天",
+      "contact": "给我们留言"
+    }
+  },
+  "notFound": {
+    "meta": {
+      "title": "页面未找到"
+    },
+    "code": "404",
+    "heading": "我们找不到该页面",
+    "body": "您要找的页面可能已移动或不再存在。",
+    "home": "前往首页",
+    "search": "搜索交易平台",
+    "help": "访问帮助中心"
+  },
+  "error": {
+    "meta": {
+      "title": "出错了"
+    },
+    "code": "500",
+    "heading": "出错了",
+    "body": "我们遇到了意外问题。请重试——如果问题持续出现，请告知我们。",
+    "retry": "重试",
+    "home": "前往首页",
+    "help": "访问帮助中心"
+  },
+  "beta": {
+    "meta": {
+      "title": "Vergeo5 测试版访问权限",
+      "description": "Vergeo5 处于仅限邀请的测试阶段。输入您的邀请码，即可抢先体验赞比亚的交易平台。"
+    },
+    "hero": {
+      "eyebrow": "私密测试版",
+      "headline": "您来得很早",
+      "subhead": "Vergeo5 处于仅限邀请的测试阶段。在下方输入您的邀请码即可进入。"
+    },
+    "form": {
+      "codeLabel": "邀请码",
+      "codePlaceholder": "例如 LUSAKA-2026",
+      "requiredMarker": "*",
+      "submit": "解锁访问权限",
+      "submitting": "验证中…"
+    },
+    "success": {
+      "heading": "您已进入！",
+      "body": "您的邀请码有效。欢迎加入 Vergeo5 测试版。",
+      "cta": "开始探索"
+    },
+    "errors": {
+      "empty": "请输入您的邀请码。",
+      "invalid": "该邀请码无效。请检查后重试。",
+      "expired": "该邀请码已过期。请索取一个新的。",
+      "exhausted": "该邀请码已被全部用完。",
+      "inactive": "该邀请码尚未激活。",
+      "generic": "出了点问题。请稍后重试。",
+      "rateLimited": "尝试次数过多。请稍候片刻再重试。"
+    },
+    "feedback": {
+      "trigger": "反馈",
+      "heading": "发送测试版反馈",
+      "close": "关闭反馈",
+      "categoryLabel": "类型",
+      "categoryBug": "有功能出错了",
+      "categoryIdea": "一个想法",
+      "categoryConfusing": "这里让人困惑",
+      "categoryPraise": "我喜欢这个",
+      "categoryOther": "其他",
+      "messageLabel": "您的反馈",
+      "messagePlaceholder": "告诉我们您的想法…",
+      "screenshotLabel": "附上本页面的截图",
+      "requiredMarker": "*",
+      "submit": "发送反馈",
+      "submitting": "发送中…",
+      "success": "谢谢！您的反馈正在发送给团队。",
+      "errorGeneric": "无法发送。请重试。",
+      "errorRateLimited": "您已发送了大量反馈——请稍候片刻。",
+      "validation": {
+        "messageRequired": "发送前请补充一些细节。"
+      }
+    }
+  }
+}

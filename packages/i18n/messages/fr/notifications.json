@@ -1,0 +1,113 @@
+{
+  "title": "Notifications",
+  "unread": "{count, plural, one {# non lu} other {# non lus}}",
+  "order": {
+    "shipped": "Commande {id} expédiée"
+  },
+  "compliance": {
+    "stopReply": "Répondez STOP pour vous désabonner.",
+    "stopKeyword": "STOP",
+    "startKeyword": "START",
+    "stopConfirmation": "Vous êtes désabonné des messages marketing Vergeo5. Les mises à jour de commande vous seront toujours envoyées.",
+    "startConfirmation": "Vous êtes abonné aux mises à jour Vergeo5. Répondez STOP pour vous désabonner."
+  },
+  "whatsapp": {
+    "order_confirmed": {
+      "body": "Votre commande Vergeo5 {order_reference} est confirmée. Total {total}. Suivi : {track_url} Répondez STOP pour vous désabonner."
+    },
+    "payment_received": {
+      "body": "{trust_narrative} Commande {order_reference}. Répondez STOP pour vous désabonner.",
+      "trust_narrative": "Votre montant de {amount} est conservé en sécurité par Vergeo5 jusqu'à la livraison."
+    },
+    "order_shipped": {
+      "body": "Votre commande Vergeo5 {order_reference} a été expédiée. {tracking_info} Répondez STOP pour vous désabonner."
+    },
+    "order_ready_pickup": {
+      "body": "Votre commande Vergeo5 {order_reference} est prête pour le retrait. {pickup_details} Répondez STOP pour vous désabonner."
+    },
+    "order_delivered": {
+      "body": "Votre commande Vergeo5 {order_reference} a été livrée. Partagez votre expérience : {review_url} Répondez STOP pour vous désabonner."
+    },
+    "vendor_new_order": {
+      "body": "Nouvelle commande {order_reference} sur Vergeo5 : {product_title} × {quantity}. Confirmez dans l'application vendeur."
+    },
+    "otp_login": {
+      "body": "Votre code de connexion Vergeo5 est {otp_code}. Il expire dans 10 minutes. Ne partagez pas ce code."
+    }
+  },
+  "sms": {
+    "order_confirmed": {
+      "body": "Vergeo5 : commande {order_reference} confirmée. Total {total}. {track_url}"
+    },
+    "payment_received": {
+      "body": "Vergeo5 : paiement reçu pour {order_reference}. {trust_narrative}"
+    },
+    "order_shipped": {
+      "body": "Vergeo5 : commande {order_reference} expédiée. {tracking_info}"
+    },
+    "order_ready_pickup": {
+      "body": "Vergeo5 : commande {order_reference} prête pour le retrait. {pickup_details}"
+    },
+    "order_delivered": {
+      "body": "Vergeo5 : commande {order_reference} livrée. Avis : {review_url}"
+    },
+    "vendor_new_order": {
+      "body": "Vendeur Vergeo5 : nouvelle commande {order_reference} — {product_title} × {quantity}"
+    },
+    "otp_login": {
+      "body": "Code Vergeo5 : {otp_code}. Expire dans 10 min. Ne le partagez pas."
+    },
+    "review_request": {
+      "body": "Comment s'est passée votre commande Vergeo5 {order_reference} ? Laissez un avis : {review_url} Répondez STOP pour vous désabonner."
+    },
+    "abandoned_cart_recovery": {
+      "body": "Vous avez laissé des articles dans votre panier Vergeo5. Finalisez votre commande : {checkout_url} Répondez STOP pour vous désabonner."
+    },
+    "kyc_nudge": {
+      "body": "Votre vérification vendeur Vergeo5 est en attente. Terminez-la dans l'application vendeur pour commencer à vendre."
+    },
+    "low_stock_alert": {
+      "body": "Vergeo5 : stock faible pour {title} ({stock_qty} en stock). Réapprovisionnez dans l'application vendeur."
+    },
+    "payout_failure_alert": {
+      "body": "Échec du versement Vergeo5 : {vendor_name} {amount} réf {lenco_reference}. Vérifiez dans l'admin."
+    }
+  },
+  "email": {
+    "receipt": {
+      "subject": "Votre reçu Vergeo5 — commande {order_id}",
+      "body": "<p>Merci pour votre paiement.</p><p><strong>Commande :</strong> {order_id}</p><p><strong>Montant :</strong> K{amount}</p><p>Les fonds sont conservés en sécurité par Vergeo5 jusqu'à la livraison.</p>"
+    },
+    "order_receipt": {
+      "subject": "Votre reçu Vergeo5 — commande {order_id}",
+      "body": "<p>Merci pour votre commande.</p><p><strong>Commande :</strong> {order_id}</p><p><strong>Total :</strong> K{amount}</p>"
+    },
+    "kyc": {
+      "approved": {
+        "subject": "Votre vérification vendeur Vergeo5 est approuvée",
+        "body": "<p>Bonne nouvelle — votre vérification d'identité vendeur est approuvée.</p><p>Vous pouvez désormais publier des annonces et recevoir des versements sur Vergeo5.</p>"
+      },
+      "rejected": {
+        "subject": "Votre vérification vendeur Vergeo5 nécessite votre attention",
+        "body": "<p>Nous n'avons pas pu approuver votre vérification vendeur.</p><p><strong>Motif :</strong> {reason}</p><p>Veuillez soumettre à nouveau vos documents depuis l'application vendeur.</p>"
+      }
+    }
+  },
+  "marketing": {
+    "review_request": {
+      "body": "Comment s'est passée votre commande Vergeo5 {order_reference} chez {vendor_name} ? Partagez votre avis : {review_url} Répondez STOP pour vous désabonner."
+    },
+    "abandoned_cart_recovery": {
+      "body": "Des articles vous attendent toujours dans votre panier Vergeo5. Reprenez où vous vous êtes arrêté : {checkout_url} Répondez STOP pour vous désabonner."
+    },
+    "kyc_nudge": {
+      "body": "Votre demande de vendeur Vergeo5 est en attente depuis 48 heures. Terminez la vérification pour commencer à vendre."
+    },
+    "low_stock_alert": {
+      "body": "Stock faible sur Vergeo5 : {title} n'a plus que {stock_qty} unités (seuil {threshold}). Mettez à jour le stock dans l'application vendeur."
+    },
+    "payout_failure_alert": {
+      "body": "Alerte d'échec de versement : {vendor_name} — {amount} (réf {lenco_reference}). Vérifiez dans l'admin."
+    }
+  }
+}

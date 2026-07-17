@@ -1,0 +1,113 @@
+{
+  "title": "通知",
+  "unread": "{count, plural, one {# 条未读} other {# 条未读}}",
+  "order": {
+    "shipped": "订单 {id} 已发货"
+  },
+  "compliance": {
+    "stopReply": "回复 STOP 退订。",
+    "stopKeyword": "STOP",
+    "startKeyword": "START",
+    "stopConfirmation": "您已退订 Vergeo5 营销消息。订单更新仍会照常发送。",
+    "startConfirmation": "您已订阅 Vergeo5 更新。回复 STOP 退订。"
+  },
+  "whatsapp": {
+    "order_confirmed": {
+      "body": "您的 Vergeo5 订单 {order_reference} 已确认。总计 {total}。追踪：{track_url} 回复 STOP 退订。"
+    },
+    "payment_received": {
+      "body": "{trust_narrative} 订单 {order_reference}。回复 STOP 退订。",
+      "trust_narrative": "您的 {amount} 由 Vergeo5 安全保管，直至送达。"
+    },
+    "order_shipped": {
+      "body": "您的 Vergeo5 订单 {order_reference} 已发货。{tracking_info} 回复 STOP 退订。"
+    },
+    "order_ready_pickup": {
+      "body": "您的 Vergeo5 订单 {order_reference} 已可自取。{pickup_details} 回复 STOP 退订。"
+    },
+    "order_delivered": {
+      "body": "您的 Vergeo5 订单 {order_reference} 已送达。分享您的体验：{review_url} 回复 STOP 退订。"
+    },
+    "vendor_new_order": {
+      "body": "Vergeo5 上有新订单 {order_reference}：{product_title} × {quantity}。请在卖家应用中确认。"
+    },
+    "otp_login": {
+      "body": "您的 Vergeo5 登录验证码是 {otp_code}，10 分钟后失效。请勿分享此验证码。"
+    }
+  },
+  "sms": {
+    "order_confirmed": {
+      "body": "Vergeo5：订单 {order_reference} 已确认。总计 {total}。{track_url}"
+    },
+    "payment_received": {
+      "body": "Vergeo5：已收到 {order_reference} 的付款。{trust_narrative}"
+    },
+    "order_shipped": {
+      "body": "Vergeo5：订单 {order_reference} 已发货。{tracking_info}"
+    },
+    "order_ready_pickup": {
+      "body": "Vergeo5：订单 {order_reference} 已可自取。{pickup_details}"
+    },
+    "order_delivered": {
+      "body": "Vergeo5：订单 {order_reference} 已送达。评价：{review_url}"
+    },
+    "vendor_new_order": {
+      "body": "Vergeo5 卖家：新订单 {order_reference} — {product_title} × {quantity}"
+    },
+    "otp_login": {
+      "body": "Vergeo5 验证码：{otp_code}。10 分钟后失效。请勿分享。"
+    },
+    "review_request": {
+      "body": "您的 Vergeo5 订单 {order_reference} 体验如何？请留下评价：{review_url} 回复 STOP 退订。"
+    },
+    "abandoned_cart_recovery": {
+      "body": "您的 Vergeo5 购物车中还有商品。完成结账：{checkout_url} 回复 STOP 退订。"
+    },
+    "kyc_nudge": {
+      "body": "您的 Vergeo5 卖家验证正在等待。请在卖家应用中完成，即可开始销售。"
+    },
+    "low_stock_alert": {
+      "body": "Vergeo5：{title} 库存不足（仅剩 {stock_qty}）。请在卖家应用中补货。"
+    },
+    "payout_failure_alert": {
+      "body": "Vergeo5 放款失败：{vendor_name} {amount} 参考号 {lenco_reference}。请检查管理后台。"
+    }
+  },
+  "email": {
+    "receipt": {
+      "subject": "您的 Vergeo5 收据 — 订单 {order_id}",
+      "body": "<p>感谢您的付款。</p><p><strong>订单：</strong> {order_id}</p><p><strong>金额：</strong> K{amount}</p><p>款项由 Vergeo5 安全保管，直至送达。</p>"
+    },
+    "order_receipt": {
+      "subject": "您的 Vergeo5 收据 — 订单 {order_id}",
+      "body": "<p>感谢您的订购。</p><p><strong>订单：</strong> {order_id}</p><p><strong>总计：</strong> K{amount}</p>"
+    },
+    "kyc": {
+      "approved": {
+        "subject": "您的 Vergeo5 卖家验证已通过",
+        "body": "<p>好消息 — 您的卖家身份验证已通过。</p><p>您现在可以在 Vergeo5 上发布商品并接收放款。</p>"
+      },
+      "rejected": {
+        "subject": "您的 Vergeo5 卖家验证需要处理",
+        "body": "<p>我们无法通过您的卖家验证。</p><p><strong>原因：</strong> {reason}</p><p>请在卖家应用中重新提交您的文件。</p>"
+      }
+    }
+  },
+  "marketing": {
+    "review_request": {
+      "body": "您在 {vendor_name} 的 Vergeo5 订单 {order_reference} 体验如何？分享您的评价：{review_url} 回复 STOP 退订。"
+    },
+    "abandoned_cart_recovery": {
+      "body": "您的 Vergeo5 购物车中仍有商品在等待。从上次的地方继续：{checkout_url} 回复 STOP 退订。"
+    },
+    "kyc_nudge": {
+      "body": "您的 Vergeo5 卖家申请已等待 48 小时。完成验证即可开始销售。"
+    },
+    "low_stock_alert": {
+      "body": "Vergeo5 库存不足：{title} 仅剩 {stock_qty} 件（阈值 {threshold}）。请在卖家应用中更新库存。"
+    },
+    "payout_failure_alert": {
+      "body": "放款失败警报：{vendor_name} — {amount}（参考号 {lenco_reference}）。请在管理后台查看。"
+    }
+  }
+}

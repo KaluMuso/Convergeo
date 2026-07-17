@@ -1,0 +1,52 @@
+{
+  "title": "供应",
+  "description": "批发商品，采用阶梯价格并设有起订量。",
+  "results": "{count, plural, one {#个批发商品} other {#个批发商品}}",
+  "t2Notice": {
+    "title": "仅限 T2 认证卖家",
+    "body": "Vergeo5 上的批发供应由 T2 认证商家发布。仅经营零售的商家无法发布阶梯价格商品。"
+  },
+  "sort": {
+    "label": "排序方式",
+    "moq": "最低起订量",
+    "unitPrice": "最优单价"
+  },
+  "empty": {
+    "title": "暂无批发商品",
+    "body": "请稍后再来——认证供应商正在上架采用阶梯价格的批量库存。"
+  },
+  "card": {
+    "vendor": "由 {vendor} 销售",
+    "quantityLabel": "预览数量",
+    "decrease": "减少数量",
+    "increase": "增加数量",
+    "decreaseSymbol": "−",
+    "increaseSymbol": "+",
+    "noImage": "无图片",
+    "viewListing": "查看商品"
+  },
+  "tier": {
+    "quantityHeader": "数量",
+    "priceHeader": "单价",
+    "priceFrom": "购买 {qty}+ 件，单价 {amount} 起"
+  },
+  "moq": {
+    "badge": "起订量 {qty}",
+    "label": "起订量：",
+    "tableLabel": "起订量："
+  },
+  "preview": {
+    "line": "{qty} × {unitPrice} = {total}"
+  },
+  "gate": {
+    "title": "需要企业模式",
+    "body": "采用阶梯价格的批发供应仅面向已认证的企业。启用企业模式即可浏览并批量购买。",
+    "signInBody": "请使用已认证的企业账户登录以查看批发供应。",
+    "pendingTitle": "认证审核中",
+    "pendingBody": "我们正在审核您的企业信息。一经认证，您即可获得批发权限。",
+    "rejectedTitle": "企业未通过认证",
+    "rejectedBody": "我们无法验证您的企业。请更新您的信息并重新提交以解锁批发功能。",
+    "apply": "启用企业模式",
+    "signIn": "登录"
+  }
+}

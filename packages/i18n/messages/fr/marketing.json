@@ -1,0 +1,211 @@
+{
+  "about": {
+    "meta": {
+      "title": "À propos de Vergeo5",
+      "description": "Vergeo5 est la place de marché mobile de la Zambie pour les produits, services et événements — avec votre argent gardé en sécurité sous séquestre jusqu'à ce que vous receviez ce que vous avez payé."
+    },
+    "hero": {
+      "eyebrow": "À propos",
+      "headline": "La place de marché de la Zambie, conçue pour la confiance",
+      "subhead": "Vergeo5 réunit produits, services et événements au même endroit — avec un séquestre qui conserve votre argent jusqu'à la confirmation de la livraison."
+    },
+    "mission": {
+      "heading": "Notre mission",
+      "body": "Rendre l'achat et la vente en ligne en Zambie sûrs, simples et rapides — même avec une connexion lente. Chaque commande est protégée par le séquestre, chaque versement parvient aux vendeurs en quelques minutes via mobile money, et chaque conversation peut se faire sur WhatsApp."
+    },
+    "values": {
+      "heading": "Nos engagements",
+      "trust": {
+        "title": "La confiance avant tout",
+        "body": "Vous payez, nous conservons, le vendeur expédie, vous confirmez — puis les fonds sont libérés. Fini d'espérer qu'un inconnu vous livre."
+      },
+      "local": {
+        "title": "Conçu pour la Zambie",
+        "body": "Le mobile money d'abord (MTN, Airtel), l'adressage par points de repère, la livraison à Lusaka et le retrait dans tout le pays, avec des prix en Kwacha."
+      },
+      "fast": {
+        "title": "Rapide sur tous les réseaux",
+        "body": "Conçu pour les écrans de 360px et la 3G. Des pages légères, de petites images, aucune donnée gaspillée."
+      },
+      "fair": {
+        "title": "Équitable pour les vendeurs",
+        "body": "Des commissions transparentes affichées avant publication, et des versements sous 48 heures — souvent en quelques minutes via mobile money."
+      }
+    },
+    "howItWorks": {
+      "heading": "Comment fonctionne Vergeo5",
+      "step1": "Découvrez des produits, services et événements proposés par des vendeurs vérifiés partout en Zambie.",
+      "step2": "Payez par mobile money, carte ou à la livraison pour les commandes jusqu'à K500.",
+      "step3": "Votre argent est gardé en sécurité sous séquestre jusqu'à ce que vous confirmiez la livraison.",
+      "step4": "Nous versons les fonds au vendeur — et intervenons en cas de problème."
+    },
+    "cta": {
+      "heading": "Prêt à explorer ?",
+      "browse": "Parcourir la place de marché",
+      "sell": "Commencer à vendre",
+      "help": "Consulter le centre d'aide"
+    }
+  },
+  "contact": {
+    "meta": {
+      "title": "Contacter Vergeo5",
+      "description": "Contactez l'équipe Vergeo5 sur WhatsApp pour une réponse rapide, ou envoyez-nous un message et nous vous répondrons par e-mail."
+    },
+    "hero": {
+      "eyebrow": "Contact",
+      "headline": "Parlez à une vraie personne",
+      "subhead": "WhatsApp est le moyen le plus rapide de nous joindre. Vous préférez écrire ? Envoyez un message ci-dessous et nous répondrons par e-mail."
+    },
+    "whatsapp": {
+      "heading": "Discuter sur WhatsApp",
+      "body": "Écrivez directement à notre équipe d'assistance — nous répondons généralement en quelques heures les jours ouvrés.",
+      "cta": "Ouvrir la discussion WhatsApp",
+      "hint": "Ouvre WhatsApp avec un message prêt à envoyer."
+    },
+    "hours": {
+      "heading": "Nos horaires",
+      "body": "Du lundi au samedi, de 08h00 à 18h00 (CAT). Les messages envoyés en dehors de ces horaires reçoivent une réponse le jour ouvré suivant."
+    },
+    "form": {
+      "heading": "Envoyer un message",
+      "nameLabel": "Votre nom",
+      "namePlaceholder": "ex. Chanda Mwansa",
+      "phoneLabel": "Téléphone ou e-mail (facultatif)",
+      "phonePlaceholder": "Pour que nous puissions vous répondre",
+      "messageLabel": "Message",
+      "messagePlaceholder": "Comment pouvons-nous vous aider ?",
+      "requiredMarker": "*",
+      "submit": "Envoyer le message",
+      "submitting": "Envoi en cours…",
+      "success": "Merci — votre message est en route. Nous vous recontacterons bientôt.",
+      "errorGeneric": "Une erreur s'est produite. Veuillez réessayer, ou contactez-nous sur WhatsApp.",
+      "errorRateLimited": "Vous avez déjà envoyé plusieurs messages. Veuillez patienter un instant avant d'en envoyer un autre.",
+      "validation": {
+        "nameRequired": "Veuillez indiquer votre nom.",
+        "nameTooLong": "Ce nom est trop long.",
+        "messageRequired": "Veuillez écrire un message.",
+        "messageTooShort": "Veuillez ajouter un peu plus de détails.",
+        "messageTooLong": "Ce message est trop long — veuillez le raccourcir.",
+        "contactTooLong": "Cette coordonnée est trop longue."
+      }
+    }
+  },
+  "help": {
+    "meta": {
+      "title": "Centre d'aide",
+      "description": "Des réponses sur le séquestre, les paiements, la livraison, les retours, les billets et la vente sur Vergeo5."
+    },
+    "hero": {
+      "eyebrow": "Centre d'aide",
+      "headline": "Comment pouvons-nous vous aider ?",
+      "subhead": "Recherchez dans nos guides ou parcourez par thème. Toujours bloqué ? Écrivez-nous sur WhatsApp."
+    },
+    "search": {
+      "label": "Rechercher des articles d'aide",
+      "placeholder": "Rechercher — ex. séquestre, livraison, remboursement",
+      "clear": "Effacer la recherche",
+      "resultsCount": "{count, plural, =0 {Aucun article trouvé} one {# article} other {# articles}}",
+      "noResults": "Aucun article ne correspond à votre recherche.",
+      "noResultsHint": "Essayez un autre mot, ou écrivez-nous sur WhatsApp."
+    },
+    "categories": {
+      "buying": "Achats et paiements",
+      "escrow": "Séquestre et sécurité",
+      "delivery": "Livraison et retrait",
+      "returns": "Retours et remboursements",
+      "events": "Événements et billets",
+      "selling": "Vendre sur Vergeo5",
+      "account": "Compte et confidentialité"
+    },
+    "article": {
+      "backToHelp": "Retour au centre d'aide",
+      "inCategory": "Dans {category}",
+      "relatedHeading": "Articles connexes",
+      "notHelpful": "Besoin d'aide supplémentaire ?",
+      "contactCta": "Contacter l'assistance"
+    },
+    "cta": {
+      "heading": "Vous n'avez pas trouvé de réponse ?",
+      "body": "Notre équipe est à un message de vous.",
+      "whatsapp": "Discuter sur WhatsApp",
+      "contact": "Envoyez-nous un message"
+    }
+  },
+  "notFound": {
+    "meta": {
+      "title": "Page introuvable"
+    },
+    "code": "404",
+    "heading": "Nous ne trouvons pas cette page",
+    "body": "La page que vous recherchez a peut-être été déplacée ou n'existe plus.",
+    "home": "Aller à l'accueil",
+    "search": "Rechercher dans la place de marché",
+    "help": "Consulter le centre d'aide"
+  },
+  "error": {
+    "meta": {
+      "title": "Une erreur s'est produite"
+    },
+    "code": "500",
+    "heading": "Une erreur s'est produite",
+    "body": "Un problème inattendu est survenu. Veuillez réessayer — si cela persiste, faites-le nous savoir.",
+    "retry": "Réessayer",
+    "home": "Aller à l'accueil",
+    "help": "Consulter le centre d'aide"
+  },
+  "beta": {
+    "meta": {
+      "title": "Accès à la bêta de Vergeo5",
+      "description": "Vergeo5 est en bêta sur invitation uniquement. Saisissez votre code d'invitation pour accéder en avant-première à la place de marché de la Zambie."
+    },
+    "hero": {
+      "eyebrow": "Bêta privée",
+      "headline": "Vous êtes parmi les premiers",
+      "subhead": "Vergeo5 est en bêta sur invitation uniquement. Saisissez votre code d'invitation ci-dessous pour entrer."
+    },
+    "form": {
+      "codeLabel": "Code d'invitation",
+      "codePlaceholder": "ex. LUSAKA-2026",
+      "requiredMarker": "*",
+      "submit": "Débloquer l'accès",
+      "submitting": "Vérification…"
+    },
+    "success": {
+      "heading": "Vous êtes entré !",
+      "body": "Votre invitation a fonctionné. Bienvenue dans la bêta de Vergeo5.",
+      "cta": "Commencer à explorer"
+    },
+    "errors": {
+      "empty": "Veuillez saisir votre code d'invitation.",
+      "invalid": "Ce code d'invitation n'est pas valide. Vérifiez-le et réessayez.",
+      "expired": "Ce code d'invitation a expiré. Demandez-en un nouveau.",
+      "exhausted": "Ce code d'invitation a été entièrement utilisé.",
+      "inactive": "Ce code d'invitation n'est pas encore actif.",
+      "generic": "Une erreur s'est produite. Veuillez réessayer dans un instant.",
+      "rateLimited": "Trop de tentatives. Veuillez patienter un instant et réessayer."
+    },
+    "feedback": {
+      "trigger": "Commentaires",
+      "heading": "Envoyer un avis sur la bêta",
+      "close": "Fermer les commentaires",
+      "categoryLabel": "Type",
+      "categoryBug": "Quelque chose ne marche pas",
+      "categoryIdea": "Une idée",
+      "categoryConfusing": "C'est déroutant",
+      "categoryPraise": "J'aime ça",
+      "categoryOther": "Autre",
+      "messageLabel": "Votre avis",
+      "messagePlaceholder": "Dites-nous ce que vous en pensez…",
+      "screenshotLabel": "Joindre une capture d'écran de cette page",
+      "requiredMarker": "*",
+      "submit": "Envoyer l'avis",
+      "submitting": "Envoi en cours…",
+      "success": "Merci ! Votre avis est en route vers l'équipe.",
+      "errorGeneric": "Impossible d'envoyer. Veuillez réessayer.",
+      "errorRateLimited": "Vous avez envoyé beaucoup d'avis — veuillez patienter un instant.",
+      "validation": {
+        "messageRequired": "Veuillez ajouter un peu de détail avant d'envoyer."
+      }
+    }
+  }
+}

@@ -1,0 +1,271 @@
+{
+  "services.title": "Services",
+  "services.rfq.sent": "Demande de devis envoyée à {count, plural, one {# vendeur} other {# vendeurs}}",
+  "services.quote.received": "Devis de {vendor} : {amount}",
+  "browse": {
+    "title": "Services",
+    "subtitle": "Trouvez des prestataires de confiance partout en Zambie — de la beauté aux réparations à domicile.",
+    "emptyTitle": "Aucun service ne correspond à vos filtres",
+    "emptyBody": "Essayez une autre catégorie ou zone, ou revenez bientôt pour de nouvelles annonces.",
+    "viewService": "Voir le service",
+    "askForQuote": "Demander un devis",
+    "fromPrice": "À partir de {price}",
+    "areaLabel": "Zone",
+    "areaPlaceholder": "ex. Lusaka",
+    "filterSubmit": "Filtrer",
+    "preferredBadge": "Recommandé",
+    "verticalLabel": "Catégorie",
+    "providerCta": "Proposez votre service",
+    "providerPitch": "Touchez les clients qui recherchent ce que vous proposez."
+  },
+  "categories": {
+    "all": "Toutes",
+    "beauty": "Beauté",
+    "food-catering": "Restauration & traiteur",
+    "auto": "Auto & mécanique",
+    "printing-creative": "Impression & création",
+    "home-services": "Services à domicile",
+    "tech-services": "Services techniques",
+    "cleaning": "Nettoyage",
+    "tailoring": "Couture"
+  },
+  "badges": {
+    "fast": "Réponse rapide",
+    "same_day": "Réponse le jour même",
+    "slow": "Répond généralement sous un jour"
+  },
+  "detail": {
+    "metaTitle": "{title} — Services",
+    "metaDescription": "{title} à {area}. Consultez le portfolio et demandez un devis sur Vergeo5.",
+    "about": "À propos de ce service",
+    "whatsIncluded": "Ce qui est inclus",
+    "includeMarker": "✓",
+    "serviceArea": "Zone de service",
+    "portfolio": "Portfolio",
+    "fromPrice": "À partir de {price}",
+    "askForQuote": "Demander un devis",
+    "requestQuote": "Demander un devis",
+    "requestQuoteHint": "Décrivez votre travail et recevez des devis de prestataires correspondants.",
+    "provider": "Prestataire",
+    "providerCta": "Voir le profil du prestataire",
+    "imageAlt": "Photo du portfolio {position}"
+  },
+  "vendor": {
+    "eyebrow": "Services",
+    "list": {
+      "title": "Vos services",
+      "intro": "Gérez les annonces de services que les clients peuvent parcourir et pour lesquelles ils peuvent demander des devis.",
+      "createCta": "Ajouter un service",
+      "editCta": "Modifier",
+      "empty": "Vous n'avez pas encore d'annonces de services.",
+      "loading": "Chargement des services…",
+      "noArea": "Zone non définie"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "active": "Actif",
+      "paused": "En pause"
+    },
+    "form": {
+      "createTitle": "Nouveau service",
+      "editTitle": "Modifier le service",
+      "titleLabel": "Titre",
+      "categoryLabel": "Catégorie",
+      "descriptionLabel": "Description",
+      "includesLabel": "Ce qui est inclus",
+      "includesHint": "Un élément par ligne — affiché sous forme de liste sur votre page de service.",
+      "areaLabel": "Zone de service",
+      "fromPriceLabel": "Prix de départ (facultatif)",
+      "fromPriceHint": "Laissez vide pour afficher « demander un devis »",
+      "statusLabel": "Statut",
+      "save": "Enregistrer",
+      "publish": "Publier",
+      "pause": "Mettre en pause",
+      "saving": "Enregistrement…"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les services.",
+      "saveFailed": "Impossible d'enregistrer le service.",
+      "authRequired": "Connectez-vous pour gérer vos services."
+    }
+  },
+  "postJob": {
+    "title": "Publier une mission",
+    "subtitle": "Décrivez ce dont vous avez besoin — les prestataires correspondants vous enverront des devis.",
+    "category": {
+      "label": "Catégorie de service",
+      "beauty": "Beauté",
+      "food_catering": "Restauration & traiteur",
+      "auto": "Auto",
+      "printing_creative": "Impression & création",
+      "home_services": "Services à domicile",
+      "tech_services": "Services techniques",
+      "cleaning": "Nettoyage",
+      "tailoring": "Couture"
+    },
+    "description": {
+      "label": "De quoi avez-vous besoin ?",
+      "placeholder": "Ex. Réparer un robinet de cuisine qui fuit avant samedi"
+    },
+    "serviceArea": {
+      "label": "Zone",
+      "placeholder": "Ex. Lusaka, Woodlands"
+    },
+    "preferredDate": {
+      "label": "Date souhaitée (facultatif)"
+    },
+    "budgetBand": {
+      "label": "Fourchette de budget",
+      "under_500": "Moins de K500",
+      "500_2000": "K500 – K2,000",
+      "2000_5000": "K2,000 – K5,000",
+      "over_5000": "Plus de K5,000",
+      "flexible": "Flexible / pas sûr"
+    },
+    "photos": {
+      "label": "Photos (facultatif)",
+      "help": "Jusqu'à 8 photos pour aider les prestataires à comprendre la mission.",
+      "add": "Ajouter une photo"
+    },
+    "submit": "Publier la mission",
+    "submitting": "Publication…",
+    "authRequired": "Connectez-vous pour publier votre mission",
+    "authCta": "Continuer avec le téléphone",
+    "draftSaved": "Votre brouillon est enregistré sur cet appareil jusqu'à votre connexion.",
+    "ack": {
+      "sent": "Nous avons prévenu les prestataires correspondants. Les devis arrivent généralement sous un jour.",
+      "noMatch": "Nous n'avons pas trouvé de prestataires correspondants pour le moment, mais nous continuons à chercher et vous préviendrons."
+    },
+    "errors": {
+      "required": "Veuillez remplir tous les champs obligatoires.",
+      "generic": "Une erreur s'est produite. Veuillez réessayer.",
+      "rateLimited": "Trop de demandes. Veuillez patienter un instant."
+    }
+  },
+  "quotes": {
+    "list": {
+      "title": "Vos missions",
+      "intro": "Comparez les devis des prestataires et choisissez celui qui vous convient le mieux.",
+      "emptyTitle": "Aucune mission pour l'instant",
+      "emptyBody": "Publiez une mission pour recevoir des devis de prestataires correspondants.",
+      "postJobCta": "Publier une mission",
+      "posted": "Publié le {date}",
+      "status": "Statut : {status}",
+      "budget": "Budget {min} – {max}",
+      "budgetFlexible": "Budget flexible",
+      "compareCta": "Comparer les devis"
+    },
+    "compareTitle": "Comparer les devis",
+    "compareIntro": "Triés par prix, puis par note du prestataire. Les devis retirés et expirés sont masqués.",
+    "loading": "Chargement des devis…",
+    "authRequired": "Connectez-vous pour comparer les devis.",
+    "back": "← Retour aux missions",
+    "empty": "Aucun devis actif pour l'instant — les prestataires répondent généralement sous un jour.",
+    "unknownProvider": "Prestataire",
+    "preferredBadge": "Vergeo5 Recommandé",
+    "rating": "{rating}★ ({count, plural, one {# avis} other {# avis}})",
+    "validUntil": "Valable jusqu'au {date}",
+    "status": {
+      "open": "Ouverte",
+      "quoted": "Devis reçus",
+      "accepted": "Acceptée",
+      "completed": "Terminée",
+      "cancelled": "Annulée"
+    },
+    "decline": {
+      "open": "Refuser le devis",
+      "reasonLabel": "Motif (facultatif)",
+      "reasonPlaceholder": "ex. Prix trop élevé, besoin d'une date plus proche…",
+      "submit": "Refuser",
+      "submitting": "Refus…",
+      "cancel": "Annuler"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les devis. Réessayez.",
+      "forbidden": "Vous ne pouvez comparer les devis que sur vos propres missions.",
+      "declineFailed": "Impossible de refuser le devis. Réessayez.",
+      "rateLimited": "Trop de demandes. Veuillez patienter un instant.",
+      "notMatched": "Ce prestataire n'a pas été associé à la mission."
+    }
+  },
+  "accept": {
+    "title": "Accepter ce devis",
+    "intro": "Payez maintenant un acompte de {pct} % pour réserver {vendor}. Le solde est dû à la fin du travail.",
+    "quoteFrom": "Devis de {vendor}",
+    "totalLabel": "Valeur totale de la mission",
+    "depositLabel": "Acompte à payer maintenant",
+    "balanceLabel": "Solde à la fin",
+    "escrowNote": "Votre acompte est conservé en toute sécurité par Vergeo5 et n'est versé au prestataire qu'une fois le travail confirmé.",
+    "confirmCta": "Payer l'acompte de {amount}",
+    "submitting": "Préparation de votre acompte…",
+    "cancel": "Pas maintenant",
+    "errors": {
+      "notOwner": "Vous ne pouvez accepter les devis que sur vos propres missions.",
+      "mismatch": "Ce devis n'appartient pas à cette mission.",
+      "invalidStatus": "Cette mission ou ce devis ne peut plus être accepté.",
+      "generic": "Impossible de démarrer l'acompte. Veuillez réessayer.",
+      "rateLimited": "Trop de demandes. Veuillez patienter un instant."
+    }
+  },
+  "completion": {
+    "provider": {
+      "title": "Marquer cette mission comme terminée",
+      "intro": "Informez le client que le travail est terminé. Il dispose de 48 heures pour confirmer avant la confirmation automatique et le versement de votre paiement.",
+      "markCta": "Marquer la mission comme terminée",
+      "marking": "Marquage en cours…",
+      "marked": "Marquée comme terminée. En attente de confirmation du client.",
+      "alreadyMarked": "Vous avez déjà marqué cette mission comme terminée.",
+      "backToJobs": "Retour aux missions",
+      "errors": {
+        "notProvider": "Seul le prestataire assigné peut marquer cette mission comme terminée.",
+        "notFound": "Cette mission est introuvable.",
+        "generic": "Impossible de marquer la mission comme terminée. Veuillez réessayer.",
+        "rateLimited": "Trop de demandes. Veuillez patienter un instant."
+      }
+    },
+    "customer": {
+      "title": "Confirmez que le travail est terminé",
+      "intro": "Confirmez pour verser le solde à votre prestataire. Si vous ne faites rien, nous confirmons automatiquement après 48 heures.",
+      "balanceLabel": "Solde dû à la fin",
+      "confirmCta": "Confirmer et payer {amount}",
+      "confirming": "Confirmation…",
+      "confirmed": "Confirmé. Votre prestataire a été payé.",
+      "awaitingProvider": "En attente que votre prestataire marque la mission comme terminée.",
+      "escrowNote": "Vous avez payé → Conservé par Vergeo5 → Versé à votre prestataire dès votre confirmation.",
+      "reviewUnlocked": "Merci ! Vous pouvez maintenant laisser un avis sur ce prestataire.",
+      "errors": {
+        "notOwner": "Vous ne pouvez confirmer que vos propres missions.",
+        "notMarked": "Votre prestataire n'a pas encore marqué cette mission comme terminée.",
+        "generic": "Impossible de confirmer la mission. Veuillez réessayer.",
+        "rateLimited": "Trop de demandes. Veuillez patienter un instant."
+      }
+    }
+  },
+  "reviews": {
+    "heading": "Avis sur ce prestataire",
+    "subheading": "De la part de clients dont ce prestataire a réalisé les missions.",
+    "empty": "Pas encore d'avis.",
+    "reviewCount": "{count, plural, one {# avis} other {# avis}}",
+    "starsAria": "{rating} sur 5 étoiles",
+    "vendorReply": "Réponse du prestataire",
+    "form": {
+      "title": "Évaluez votre prestataire",
+      "intro": "Votre mission est terminée — dites-nous comment ça s'est passé.",
+      "ratingLabel": "Votre note",
+      "ratingAria": "Sélectionnez une note de 1 à 5 étoiles",
+      "bodyLabel": "Votre avis (facultatif)",
+      "bodyPlaceholder": "Racontez comment la mission s'est déroulée…",
+      "submit": "Envoyer l'avis",
+      "submitting": "Envoi…",
+      "submitted": "Merci ! Votre avis est publié.",
+      "edit": "Modifier votre avis",
+      "yourReview": "Votre avis",
+      "loading": "Chargement…"
+    },
+    "errors": {
+      "generic": "Impossible d'envoyer votre avis. Veuillez réessayer.",
+      "rateLimited": "Trop de demandes d'avis. Veuillez patienter un instant.",
+      "loadFailed": "Impossible de charger le statut de l'avis."
+    }
+  }
+}

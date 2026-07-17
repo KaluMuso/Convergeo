@@ -70,6 +70,7 @@
     "perCustomerCap": "每人最多 {count} 张",
     "earlyBird": "早鸟票：{price}，截止 {until}",
     "groupTier": "购买 {minQty} 张及以上，每张 {price}",
+    "groupUpsell": "再加 {count, plural, one {# 张} other {# 张}}，每张仅需 {price}",
     "discountApplied": "已应用折扣 — 每张 {price}",
     "attendeeNamesLabel": "参与者姓名",
     "attendeeNameLabel": "参与者 {index} 姓名",

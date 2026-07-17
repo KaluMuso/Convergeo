@@ -1,0 +1,271 @@
+{
+  "services.title": "服务",
+  "services.rfq.sent": "报价请求已发送给 {count, plural, one {# 个商家} other {# 个商家}}",
+  "services.quote.received": "来自 {vendor} 的报价：{amount}",
+  "browse": {
+    "title": "服务",
+    "subtitle": "在赞比亚各地找到值得信赖的服务商——从美容到家庭维修。",
+    "emptyTitle": "没有服务符合您的筛选条件",
+    "emptyBody": "尝试其他类别或区域，或稍后再来查看新的服务。",
+    "viewService": "查看服务",
+    "askForQuote": "请求报价",
+    "fromPrice": "起价 {price}",
+    "areaLabel": "区域",
+    "areaPlaceholder": "例如 卢萨卡",
+    "filterSubmit": "筛选",
+    "preferredBadge": "优选",
+    "verticalLabel": "类别",
+    "providerCta": "发布您的服务",
+    "providerPitch": "触达正在寻找您所提供服务的客户。"
+  },
+  "categories": {
+    "all": "全部",
+    "beauty": "美容",
+    "food-catering": "餐饮",
+    "auto": "汽车与维修",
+    "printing-creative": "印刷与创意",
+    "home-services": "家庭服务",
+    "tech-services": "技术服务",
+    "cleaning": "清洁",
+    "tailoring": "裁缝"
+  },
+  "badges": {
+    "fast": "快速响应",
+    "same_day": "当天响应",
+    "slow": "通常一天内响应"
+  },
+  "detail": {
+    "metaTitle": "{title} — 服务",
+    "metaDescription": "{area} 的 {title}。在 Vergeo5 上查看作品集并请求报价。",
+    "about": "关于此服务",
+    "whatsIncluded": "包含内容",
+    "includeMarker": "✓",
+    "serviceArea": "服务区域",
+    "portfolio": "作品集",
+    "fromPrice": "起价 {price}",
+    "askForQuote": "请求报价",
+    "requestQuote": "请求报价",
+    "requestQuoteHint": "描述您的需求，获取匹配服务商的报价。",
+    "provider": "服务商",
+    "providerCta": "查看服务商资料",
+    "imageAlt": "作品集照片 {position}"
+  },
+  "vendor": {
+    "eyebrow": "服务",
+    "list": {
+      "title": "您的服务",
+      "intro": "管理客户可浏览并请求报价的服务列表。",
+      "createCta": "添加服务",
+      "editCta": "编辑",
+      "empty": "您还没有任何服务列表。",
+      "loading": "加载服务中…",
+      "noArea": "未设置区域"
+    },
+    "status": {
+      "draft": "草稿",
+      "active": "已上架",
+      "paused": "已暂停"
+    },
+    "form": {
+      "createTitle": "新建服务",
+      "editTitle": "编辑服务",
+      "titleLabel": "标题",
+      "categoryLabel": "类别",
+      "descriptionLabel": "描述",
+      "includesLabel": "包含内容",
+      "includesHint": "每行一项——在您的服务页面上以清单形式显示。",
+      "areaLabel": "服务区域",
+      "fromPriceLabel": "起价（可选）",
+      "fromPriceHint": "留空以显示“请求报价”",
+      "statusLabel": "状态",
+      "save": "保存",
+      "publish": "发布",
+      "pause": "暂停",
+      "saving": "保存中…"
+    },
+    "errors": {
+      "loadFailed": "无法加载服务。",
+      "saveFailed": "无法保存服务。",
+      "authRequired": "登录以管理您的服务。"
+    }
+  },
+  "postJob": {
+    "title": "发布需求",
+    "subtitle": "描述您的需求——匹配的服务商将发送报价。",
+    "category": {
+      "label": "服务类别",
+      "beauty": "美容",
+      "food_catering": "餐饮",
+      "auto": "汽车",
+      "printing_creative": "印刷与创意",
+      "home_services": "家庭服务",
+      "tech_services": "技术服务",
+      "cleaning": "清洁",
+      "tailoring": "裁缝"
+    },
+    "description": {
+      "label": "您需要完成什么？",
+      "placeholder": "例如 周六前修好漏水的厨房水龙头"
+    },
+    "serviceArea": {
+      "label": "区域",
+      "placeholder": "例如 卢萨卡、Woodlands"
+    },
+    "preferredDate": {
+      "label": "期望日期（可选）"
+    },
+    "budgetBand": {
+      "label": "预算范围",
+      "under_500": "K500 以下",
+      "500_2000": "K500 – K2,000",
+      "2000_5000": "K2,000 – K5,000",
+      "over_5000": "K5,000 以上",
+      "flexible": "灵活 / 不确定"
+    },
+    "photos": {
+      "label": "照片（可选）",
+      "help": "最多 8 张照片，帮助服务商了解需求。",
+      "add": "添加照片"
+    },
+    "submit": "发布需求",
+    "submitting": "发布中…",
+    "authRequired": "登录以发布您的需求",
+    "authCta": "使用手机号继续",
+    "draftSaved": "在您登录之前，草稿将保存在此设备上。",
+    "ack": {
+      "sent": "我们已通知匹配的服务商。报价通常在一天内送达。",
+      "noMatch": "我们目前未能找到匹配的服务商，但我们会继续寻找并通知您。"
+    },
+    "errors": {
+      "required": "请填写所有必填字段。",
+      "generic": "出了点问题。请重试。",
+      "rateLimited": "请求过于频繁。请稍候。"
+    }
+  },
+  "quotes": {
+    "list": {
+      "title": "您的需求",
+      "intro": "比较服务商的报价，选择最合适的。",
+      "emptyTitle": "暂无需求",
+      "emptyBody": "发布需求，接收匹配服务商的报价。",
+      "postJobCta": "发布需求",
+      "posted": "发布于 {date}",
+      "status": "状态：{status}",
+      "budget": "预算 {min} – {max}",
+      "budgetFlexible": "灵活预算",
+      "compareCta": "比较报价"
+    },
+    "compareTitle": "比较报价",
+    "compareIntro": "按价格排序，然后按服务商评分排序。已撤回和已过期的报价将被隐藏。",
+    "loading": "加载报价中…",
+    "authRequired": "登录以比较报价。",
+    "back": "← 返回需求",
+    "empty": "暂无有效报价——服务商通常在一天内响应。",
+    "unknownProvider": "服务商",
+    "preferredBadge": "Vergeo5 优选",
+    "rating": "{rating}★ ({count, plural, one {# 条评价} other {# 条评价}})",
+    "validUntil": "有效期至 {date}",
+    "status": {
+      "open": "开放中",
+      "quoted": "已收到报价",
+      "accepted": "已接受",
+      "completed": "已完成",
+      "cancelled": "已取消"
+    },
+    "decline": {
+      "open": "拒绝报价",
+      "reasonLabel": "原因（可选）",
+      "reasonPlaceholder": "例如 价格过高、需要更早的日期…",
+      "submit": "拒绝",
+      "submitting": "拒绝中…",
+      "cancel": "取消"
+    },
+    "errors": {
+      "loadFailed": "无法加载报价。请重试。",
+      "forbidden": "您只能比较自己需求的报价。",
+      "declineFailed": "无法拒绝报价。请重试。",
+      "rateLimited": "请求过于频繁。请稍候。",
+      "notMatched": "此服务商未与该需求匹配。"
+    }
+  },
+  "accept": {
+    "title": "接受此报价",
+    "intro": "立即支付 {pct}% 的定金以锁定 {vendor}。余款在工作完成后支付。",
+    "quoteFrom": "来自 {vendor} 的报价",
+    "totalLabel": "需求总价值",
+    "depositLabel": "现在应付定金",
+    "balanceLabel": "完成后余款",
+    "escrowNote": "您的定金由 Vergeo5 安全保管，只有在工作确认后才会放款给服务商。",
+    "confirmCta": "支付 {amount} 定金",
+    "submitting": "正在设置您的定金…",
+    "cancel": "暂不",
+    "errors": {
+      "notOwner": "您只能接受自己需求的报价。",
+      "mismatch": "该报价不属于此需求。",
+      "invalidStatus": "此需求或报价已无法接受。",
+      "generic": "无法启动定金支付。请重试。",
+      "rateLimited": "请求过于频繁。请稍候。"
+    }
+  },
+  "completion": {
+    "provider": {
+      "title": "标记此需求为已完成",
+      "intro": "告知客户工作已完成。客户有 48 小时进行确认，逾期将自动确认并向您放款。",
+      "markCta": "标记需求为已完成",
+      "marking": "标记中…",
+      "marked": "已标记为完成。等待客户确认。",
+      "alreadyMarked": "您已将此需求标记为完成。",
+      "backToJobs": "返回需求",
+      "errors": {
+        "notProvider": "只有指定的服务商才能标记此需求为已完成。",
+        "notFound": "找不到此需求。",
+        "generic": "无法标记需求为已完成。请重试。",
+        "rateLimited": "请求过于频繁。请稍候。"
+      }
+    },
+    "customer": {
+      "title": "确认工作已完成",
+      "intro": "确认后将余款放款给您的服务商。如果您不操作，我们将在 48 小时后自动确认。",
+      "balanceLabel": "完成后应付余款",
+      "confirmCta": "确认并支付 {amount}",
+      "confirming": "确认中…",
+      "confirmed": "已确认。已向您的服务商付款。",
+      "awaitingProvider": "等待您的服务商标记需求为已完成。",
+      "escrowNote": "您已付款 → 由 Vergeo5 保管 → 确认后放款给您的服务商。",
+      "reviewUnlocked": "谢谢！您现在可以为此服务商留下评价。",
+      "errors": {
+        "notOwner": "您只能确认自己的需求。",
+        "notMarked": "您的服务商尚未将此需求标记为已完成。",
+        "generic": "无法确认需求。请重试。",
+        "rateLimited": "请求过于频繁。请稍候。"
+      }
+    }
+  },
+  "reviews": {
+    "heading": "对该服务商的评价",
+    "subheading": "来自该服务商已完成服务需求的客户。",
+    "empty": "暂无评价。",
+    "reviewCount": "{count, plural, one {# 条评价} other {# 条评价}}",
+    "starsAria": "5 星中的 {rating} 星",
+    "vendorReply": "服务商回复",
+    "form": {
+      "title": "评价您的服务商",
+      "intro": "您的服务需求已完成——欢迎分享您的体验。",
+      "ratingLabel": "您的评分",
+      "ratingAria": "选择 1 到 5 星的评分",
+      "bodyLabel": "您的评价（可选）",
+      "bodyPlaceholder": "分享这次服务的情况…",
+      "submit": "提交评价",
+      "submitting": "提交中…",
+      "submitted": "谢谢！您的评价已发布。",
+      "edit": "编辑您的评价",
+      "yourReview": "您的评价",
+      "loading": "加载中…"
+    },
+    "errors": {
+      "generic": "无法提交您的评价。请重试。",
+      "rateLimited": "评价请求过多。请稍候。",
+      "loadFailed": "无法加载评价状态。"
+    }
+  }
+}
