@@ -168,6 +168,7 @@ class FakeSupabaseStore:
         self.reviews: list[dict[str, Any]] = []
         self.services: list[dict[str, Any]] = []
         self.events: list[dict[str, Any]] = []
+        self.orders: list[dict[str, Any]] = []
 
     def table(self, name: str) -> FakeQuery:
         return FakeQuery(self, name)

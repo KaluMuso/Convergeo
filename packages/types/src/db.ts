@@ -2864,6 +2864,7 @@ export type Database = {
         }[]
       }
       cleanup_expired_rate_counters: { Args: never; Returns: number }
+      custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       embedding_enqueue_document: {
         Args: {
           p_entity_id: string
