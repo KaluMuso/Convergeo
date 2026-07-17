@@ -48,6 +48,7 @@ class FakeQuery:
         self._pending_op: str | None = None
         self._payload: dict[str, Any] | list[dict[str, Any]] | None = None
         self._selected_columns = "*"
+        self._or_filter: str | None = None
 
     def select(self, columns: str, *, count: str | None = None) -> FakeQuery:
         self._selected_columns = columns
@@ -63,6 +64,14 @@ class FakeQuery:
 
     def in_(self, column: str, values: list[Any]) -> FakeQuery:
         self._filters.append(("in", column, values))
+        return self
+
+    def ilike(self, column: str, pattern: str) -> FakeQuery:
+        self._filters.append(("ilike", column, pattern))
+        return self
+
+    def or_(self, expression: str) -> FakeQuery:
+        self._or_filter = expression
         return self
 
     def order(self, column: str, *, desc: bool = False) -> FakeQuery:
@@ -133,6 +142,8 @@ class FakeQuery:
         return MagicMock(data=rows)
 
     def _matches(self, row: dict[str, Any]) -> bool:
+        if self._or_filter and not self._matches_or(row, self._or_filter):
+            return False
         for op, column, value in self._filters:
             if op == "eq" and row.get(column) != value:
                 return False
@@ -140,7 +151,19 @@ class FakeQuery:
                 return False
             if op == "in" and row.get(column) not in value:
                 return False
+            if op == "ilike" and value.strip("%").lower() not in str(row.get(column, "")).lower():
+                return False
         return True
+
+    @staticmethod
+    def _matches_or(row: dict[str, Any], expression: str) -> bool:
+        for clause in expression.split(","):
+            if ".ilike." not in clause:
+                continue
+            column, pattern = clause.split(".ilike.", 1)
+            if pattern.strip("%").lower() in str(row.get(column, "")).lower():
+                return True
+        return False
 
     def _apply_filters(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return [row for row in rows if self._matches(row)]
@@ -681,3 +704,47 @@ def test_relations_endpoints_require_admin(
         json={"related_product_ids": [REL_ONE_ID]},
     )
     assert put_response.status_code == 403
+
+
+def test_search_products_matches_name_and_slug_excludes_merged(
+    merge_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _seed_relation_products(fake_client)
+    fake_client.tables["products"].rows.append(
+        _product_row(
+            product_id=OTHER_ID,
+            name="Related Merged",
+            slug="related-merged",
+            status="merged",
+        )
+    )
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"admin"})})
+
+    response = merge_client.get(
+        "/admin/products/search?q=related",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+    )
+    assert response.status_code == 200
+    slugs = {item["slug"] for item in response.json()}
+    assert {"related-one", "related-two", "related-inactive"} <= slugs
+    assert "anchor-phone" not in slugs  # "related" is in neither its name nor slug
+    assert "related-merged" not in slugs  # merged products are never searchable
+
+
+def test_search_products_requires_admin(
+    merge_client: TestClient,
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _ = fake_client
+    _mock_verify(monkeypatch)
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"customer"})})
+
+    response = merge_client.get(
+        "/admin/products/search?q=phone",
+        headers={"Authorization": f"Bearer {VALID_TOKEN}"},
+    )
+    assert response.status_code == 403

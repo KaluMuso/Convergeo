@@ -35,3 +35,34 @@ export type MergeProductsResponse = {
   slug_redirect_to: string;
   idempotent: boolean;
 };
+
+export type ProductRelationItem = {
+  related_product_id: string;
+  name: string;
+  slug: string;
+  position: number;
+};
+
+export type ProductRelationsResponse = {
+  product_id: string;
+  related: ProductRelationItem[];
+};
+
+export function searchProducts(query: string, limit = 20): Promise<ProductSummary[]> {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  return moderationApi.request<ProductSummary[]>(`/admin/products/search?${params.toString()}`);
+}
+
+export function getProductRelations(productId: string): Promise<ProductRelationsResponse> {
+  return moderationApi.request<ProductRelationsResponse>(`/admin/products/${productId}/relations`);
+}
+
+export function setProductRelations(
+  productId: string,
+  relatedProductIds: string[],
+): Promise<ProductRelationsResponse> {
+  return moderationApi.request<ProductRelationsResponse>(`/admin/products/${productId}/relations`, {
+    method: "PUT",
+    body: JSON.stringify({ related_product_ids: relatedProductIds }),
+  });
+}
