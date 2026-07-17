@@ -1,0 +1,165 @@
+{
+  "title": "Événements",
+  "browse": {
+    "title": "Événements",
+    "subtitle": "Découvrez des ateliers, des spectacles et des rencontres communautaires à travers la Zambie.",
+    "emptyTitle": "Aucun événement dans cette période",
+    "emptyBody": "Essayez un autre filtre de date ou revenez bientôt pour de nouvelles annonces.",
+    "soldOut": "Complet",
+    "free": "Gratuit",
+    "viewEvent": "Voir l'événement",
+    "verified": "Vérifié",
+    "calendarLabel": "Jours avec des événements ce mois-ci",
+    "hostCta": "Organiser un événement",
+    "hostPitch": "Vendez des billets avec enregistrement par QR dynamique et soyez payé en toute sécurité."
+  },
+  "filters": {
+    "tonight": "Ce soir",
+    "thisWeekend": "Ce week-end",
+    "allDates": "Tous à venir",
+    "categoryLabel": "Catégorie"
+  },
+  "categories": {
+    "all": "Tous",
+    "workshops": "Ateliers et formation",
+    "comedy-theatre": "Comédie et théâtre",
+    "pop-up-dinners": "Dîners éphémères",
+    "cultural-arts": "Culture et arts",
+    "lifestyle-community": "Style de vie et communauté",
+    "free-rsvp": "RSVP gratuit"
+  },
+  "detail": {
+    "metaTitle": "{title} — Événements",
+    "metaDescription": "{title} à {venue}. Consultez les dates, les billets et les détails du lieu sur Vergeo5.",
+    "about": "À propos de cet événement",
+    "dates": "Dates et horaires",
+    "tickets": "Billets",
+    "venue": "Lieu",
+    "landmark": "Près de {landmark}",
+    "mapHint": "Ouvrir dans les cartes",
+    "organiser": "Organisé par",
+    "organiserCta": "Voir l'organisateur",
+    "soldOut": "Complet",
+    "free": "RSVP gratuit",
+    "fromPrice": "À partir de {price}",
+    "ticketRemaining": "{count, plural, one {# restant} other {# restants}}",
+    "getTickets": "Obtenir des billets",
+    "getTicketsSoon": "Vente de billets bientôt disponible",
+    "pastInstance": "Passé",
+    "spots": "{sold} / {total} places"
+  },
+  "organiser": {
+    "imageAlt": "Photo de l'événement {position}"
+  },
+  "ticketPurchase": {
+    "selectInstance": "Choisir la date",
+    "selectType": "Type de billet",
+    "quantity": "Quantité",
+    "decrease": "Diminuer la quantité",
+    "decreaseSymbol": "−",
+    "increase": "Augmenter la quantité",
+    "increaseSymbol": "+",
+    "total": "Total",
+    "freeRsvpCta": "Réserver une place gratuite",
+    "payCta": "Obtenir des billets",
+    "processing": "Traitement…",
+    "successRsvp": "Place réservée",
+    "successCheckout": "Ajouté — continuer vers le paiement",
+    "soldOut": "Complet",
+    "remaining": "{count, plural, one {# restant} other {# restants}}",
+    "perCustomerCap": "Maximum {count} par personne",
+    "earlyBird": "Prévente : {price} jusqu'au {until}",
+    "groupTier": "Achetez {minQty}+ pour {price} chacun",
+    "discountApplied": "Réduction appliquée — {price} chacun",
+    "attendeeNamesLabel": "Noms des participants",
+    "attendeeNameLabel": "Nom du participant {index}",
+    "attendeeNamePlaceholder": "Nom complet",
+    "loginRequired": "Connectez-vous pour obtenir des billets",
+    "errors": {
+      "generic": "Impossible de traiter la demande. Réessayez.",
+      "freeUseRsvp": "C'est un événement gratuit — utilisez Réserver.",
+      "paidUseCheckout": "Ce billet nécessite un paiement.",
+      "oversell": "Plus disponible",
+      "attendeeNamesRequired": "Saisissez un nom pour chaque billet.",
+      "attendeeNamesMismatch": "Saisissez exactement un nom par billet."
+    }
+  },
+  "wallet": {
+    "title": "Mes billets",
+    "emptyTitle": "Aucun billet pour le moment",
+    "emptyBody": "Les billets que vous achetez ou réservez apparaîtront ici avec un code QR rotatif pour l'entrée.",
+    "emptyCta": "Parcourir les événements",
+    "list": {
+      "viewTicket": "Voir le billet",
+      "status": {
+        "issued": "Prêt à scanner",
+        "checked_in": "Enregistré",
+        "transferred": "Transféré",
+        "void": "Annulé"
+      },
+      "startsAt": "Commence {datetime}"
+    },
+    "detail": {
+      "metaTitle": "Billet — {event}",
+      "back": "Retour aux billets",
+      "eventLabel": "Événement",
+      "venueLabel": "Lieu",
+      "startsLabel": "Commence",
+      "typeLabel": "Type de billet",
+      "holderLabel": "Nom du participant",
+      "qrLabel": "Présentez ce QR à l'entrée",
+      "qrAria": "Code QR d'entrée rotatif",
+      "pinLabel": "PIN de secours",
+      "pinAria": "PIN d'entrée à six chiffres {pin}",
+      "pinUnavailable": "Le PIN a été envoyé lors de l'achat de ce billet. Consultez vos messages si vous en avez besoin.",
+      "refreshIn": "Actualisation dans {seconds}s",
+      "offlineTitle": "Vous êtes hors ligne",
+      "offlineBody": "Utilisation des codes d'entrée en cache. Synchronisez une fois reconnecté pour des codes récents.",
+      "offlineExpired": "Codes en cache expirés — utilisez votre PIN à l'entrée.",
+      "syncHorizon": "Synchronisation des codes hors ligne…",
+      "status": {
+        "issued": "Prêt à scanner",
+        "checked_in": "Enregistré",
+        "transferred": "Ce billet a été transféré et ne peut plus être utilisé.",
+        "void": "Ce billet n'est plus valide."
+      },
+      "transferBanner": "Les billets transférés ne peuvent pas être scannés. Le destinataire a un nouveau QR et PIN.",
+      "voidBanner": "Ce billet a été annulé et ne peut pas être utilisé pour l'entrée."
+    }
+  },
+  "transfer": {
+    "back": "Retour au billet",
+    "title": "Transférer le billet",
+    "subtitle": "Envoyez ce billet à un ami gratuitement. Il se connectera avec le numéro de téléphone ci-dessous pour le récupérer.",
+    "phoneLabel": "Numéro de téléphone du destinataire",
+    "phonePlaceholder": "ex. 0977 123 456",
+    "cutoffNotice": "Les transferts ferment 6 heures avant le début de l'événement.",
+    "submitCta": "Envoyer le transfert",
+    "submitting": "Envoi…",
+    "successBody": "Nous avons prévenu {phone}. Il peut récupérer ce billet en se connectant avec ce numéro.",
+    "cancelCta": "Annuler le transfert",
+    "cancelling": "Annulation…",
+    "cancelledNotice": "Transfert annulé.",
+    "pendingNotice": "Transfert en attente vers {phone}",
+    "claimBanner": {
+      "title": "Un ami vous a envoyé un billet",
+      "body": "{event} commence {datetime}. Récupérez-le avant son expiration.",
+      "claimCta": "Récupérer le billet",
+      "claiming": "Récupération…",
+      "claimedNotice": "Billet récupéré — retrouvez-le dans Mes billets.",
+      "dismiss": "Ignorer"
+    },
+    "errors": {
+      "generic": "Impossible de traiter la demande. Réessayez.",
+      "notFound": "Billet introuvable.",
+      "notHolder": "Seul le titulaire du billet peut le transférer.",
+      "notTransferable": "Ce billet ne peut plus être transféré.",
+      "cutoffPassed": "Les transferts ferment 6 heures avant le début de l'événement.",
+      "pendingExists": "Ce billet a déjà un transfert en attente.",
+      "notPending": "Ce transfert n'est plus en attente.",
+      "expired": "Cette offre de transfert a expiré.",
+      "phoneMismatch": "Connectez-vous avec le numéro de téléphone auquel le billet a été envoyé.",
+      "rateLimited": "Trop de demandes. Réessayez bientôt."
+    }
+  }
+}
