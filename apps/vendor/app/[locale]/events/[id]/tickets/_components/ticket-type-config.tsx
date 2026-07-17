@@ -20,6 +20,7 @@ import {
 } from "../_lib/tickets-client";
 
 import { AllocationEditor } from "./allocation-editor";
+import { PricingEditor } from "./pricing-editor";
 
 type TicketTypeConfigProps = {
   locale: string;
@@ -76,6 +77,7 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
   const [showForm, setShowForm] = useState(false);
   const [draft, setDraft] = useState<TypeDraft>(EMPTY_DRAFT);
   const [allocationTypeId, setAllocationTypeId] = useState<string | null>(null);
+  const [pricingTypeId, setPricingTypeId] = useState<string | null>(null);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const ticketsClient = useMemo(() => createTicketsClient(getToken), [getToken]);
@@ -280,7 +282,7 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
                   </Button>
                 </div>
               </div>
-              <div className="mt-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 <Button
                   type="button"
                   variant="ghost"
@@ -292,6 +294,19 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
                 >
                   {t("tickets.allocation.toggle")}
                 </Button>
+                {type.kind !== "free_rsvp" ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setPricingTypeId((current) => (current === type.id ? null : type.id))
+                    }
+                    loadingLabel=""
+                  >
+                    {t("tickets.pricing.toggle")}
+                  </Button>
+                ) : null}
               </div>
               {allocationTypeId === type.id ? (
                 <AllocationEditor
@@ -299,6 +314,9 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
                   ticketTypeId={type.id}
                   ticketsClient={ticketsClient}
                 />
+              ) : null}
+              {pricingTypeId === type.id && type.kind !== "free_rsvp" ? (
+                <PricingEditor ticketTypeId={type.id} ticketsClient={ticketsClient} />
               ) : null}
             </li>
           ))}

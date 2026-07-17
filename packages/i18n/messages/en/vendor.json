@@ -1124,6 +1124,48 @@
         "invalid": "Enter a whole number of tickets (0 or more), or leave a date blank."
       }
     },
+    "pricing": {
+      "toggle": "Discounts",
+      "heading": "Discounts",
+      "baseLabel": "Base price {price}. Discounts must be lower than this.",
+      "loading": "Loading pricing…",
+      "saving": "Saving…",
+      "earlyBird": {
+        "heading": "Early-bird price",
+        "help": "A lower price until a cutoff date. Buyers before the cutoff pay this instead of the base price.",
+        "priceLabel": "Early-bird price (ZMW)",
+        "pricePlaceholder": "60.00",
+        "untilLabel": "Until",
+        "save": "Save early-bird",
+        "clear": "Clear",
+        "saved": "Early-bird price saved"
+      },
+      "tiers": {
+        "heading": "Group pricing",
+        "help": "A lower per-ticket price when buying at least this many at once.",
+        "minQtyLabel": "Min quantity",
+        "minQtyPlaceholder": "5",
+        "priceLabel": "Price each (ZMW)",
+        "pricePlaceholder": "65.00",
+        "add": "Add tier",
+        "remove": "Remove",
+        "save": "Save group pricing",
+        "saved": "Group pricing saved"
+      },
+      "errors": {
+        "loadFailed": "Could not load pricing.",
+        "saveFailed": "Could not save pricing.",
+        "priceInvalid": "Enter a valid price in kwacha.",
+        "notDiscount": "The early-bird price must be lower than the base price.",
+        "dateInvalid": "Enter a valid cutoff date and time.",
+        "pastCutoff": "The cutoff must be in the future.",
+        "earlyBirdIncomplete": "Set both an early-bird price and a cutoff, or clear both.",
+        "minQtyInvalid": "Minimum quantity must be a whole number of 2 or more.",
+        "duplicateMinQty": "Each group tier needs a different minimum quantity.",
+        "tierNotDiscount": "Each group price must be lower than the base price.",
+        "onFree": "Discounts are only available on paid ticket types."
+      }
+    },
     "fields": {
       "kindLabel": "Type",
       "kindFixed": "Fixed price",
