@@ -1399,12 +1399,15 @@
     "summary": "{checkedIn, number} of {total, number} checked in",
     "truncated": "Showing the first {count, number} attendees.",
     "dateCount": "{count, plural, one {# attendee} other {# attendees}}",
+    "downloadCsv": "Download roster (CSV)",
+    "downloading": "Preparing…",
     "status": {
       "checkedIn": "Checked in",
       "issued": "Not checked in"
     },
     "errors": {
       "loadFailed": "Could not load the roster. Pull to refresh.",
+      "downloadFailed": "Could not download the roster. Try again.",
       "unauthorized": "Sign in as an organiser to view this roster."
     }
   }

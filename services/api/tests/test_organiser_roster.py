@@ -172,3 +172,44 @@ def test_roster_bad_instance_id_422(api_client: TestClient) -> None:
 def test_roster_requires_auth(api_client: TestClient) -> None:
     response = api_client.get(f"/organiser/events/{EVENT_ID}/roster")
     assert response.status_code == 401
+
+
+def test_roster_csv_download(api_client: TestClient) -> None:
+    rows = [
+        _attendee(status="checked_in", checked_in_at="2026-08-01T18:05:00+00:00"),
+        # A comma in a name must be quoted by csv.writer so the row keeps 4 fields.
+        _attendee(ticket_id="11111111-1111-1111-1111-111111111ccc", holder_name="Mumba, Jr"),
+        _attendee(ticket_id="11111111-1111-1111-1111-111111111ddd", holder_name=None),
+    ]
+    with patch(
+        "app.routers.organiser_stats.run_sql_script",
+        side_effect=_dispatch(event_owner=VENDOR_A_ID, attendee_rows=rows),
+    ):
+        response = api_client.get(
+            f"/organiser/events/{EVENT_ID}/roster.csv",
+            headers={"Authorization": f"Bearer {TOKEN_A}"},
+        )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert "attachment" in response.headers["content-disposition"]
+    body = response.text
+    lines = body.strip().splitlines()
+    assert lines[0] == "date,name,ticket_type,status"
+    assert '"Mumba, Jr"' in body  # comma-bearing name stayed one field
+    assert "Checked in" in body
+    assert "Not checked in" in body
+    # 18:00 UTC renders as 20:00 Africa/Lusaka (+02:00).
+    assert "2026-08-01 20:00" in body
+
+
+def test_roster_csv_cross_vendor_forbidden(api_client: TestClient) -> None:
+    with patch(
+        "app.routers.organiser_stats.run_sql_script",
+        side_effect=_dispatch(event_owner=VENDOR_A_ID),
+    ):
+        response = api_client.get(
+            f"/organiser/events/{EVENT_ID}/roster.csv",
+            headers={"Authorization": f"Bearer {TOKEN_B}"},
+        )
+    assert response.status_code == 403

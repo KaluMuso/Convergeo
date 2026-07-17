@@ -32,5 +32,19 @@ export function createRosterClient(getToken: () => string | null | Promise<strin
     getEventRoster(eventId: string): Promise<OrganiserEventRoster> {
       return client.request<OrganiserEventRoster>(`/organiser/events/${eventId}/roster`);
     },
+
+    async downloadRosterCsv(eventId: string): Promise<Blob> {
+      // Raw fetch: the CSV is a file download, not JSON, so it bypasses the shared
+      // JSON client but reuses the same bearer token.
+      const baseUrl = getApiBaseUrl().replace(/\/$/, "");
+      const token = await getToken();
+      const response = await fetch(`${baseUrl}/organiser/events/${eventId}/roster.csv`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!response.ok) {
+        throw new Error("roster_csv_download_failed");
+      }
+      return response.blob();
+    },
   };
 }

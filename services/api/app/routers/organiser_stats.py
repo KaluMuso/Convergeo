@@ -7,20 +7,26 @@ mirroring how vendor_payouts.py derives pending/released balances from the ledge
 
 from __future__ import annotations
 
+import csv
+import io
 import json
+from datetime import datetime
 from typing import Annotated, Protocol
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.orders.audit import run_sql_script, sql_literal
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 
 router = APIRouter(prefix="/organiser", tags=["organiser-stats"])
 
 MASS_REFUND_FLAG_ACTION = "event_release.mass_refund_flagged"
+
+LUSAKA_TZ = ZoneInfo("Africa/Lusaka")
 
 # Upper bound on roster rows returned in one response — realistic Zambia events are
 # far smaller; this caps a pathological payload. `truncated` flags when the true
@@ -414,15 +420,13 @@ LIMIT {ROSTER_CAP};
     return attendees
 
 
-@router.get("/events/{event_id}/roster", response_model=OrganiserEventRosterResponse)
-async def get_organiser_event_roster(
-    event_id: str,
-    current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
-    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
-    instance_id: str | None = None,
-) -> OrganiserEventRosterResponse:
-    del service_client  # data access is raw-SQL (run_sql_script), like get_..._stats
+def _resolve_owned_event(owner_user_id: str, event_id: str) -> str:
+    """Vendor → event → owner check for organiser-scoped event reads.
 
+    Returns the event status; raises AppError (404 / 403) when the event id is
+    malformed, the event is missing, or it is not owned by the authenticated
+    organiser.
+    """
     if not _is_uuid(event_id):
         raise AppError(
             code="not_found",
@@ -430,15 +434,7 @@ async def get_organiser_event_roster(
             http_status=404,
             details={"message_key": "vendor.eventDashboard.errors.notFound"},
         )
-    if instance_id is not None and not _is_uuid(instance_id):
-        raise AppError(
-            code="validation_error",
-            message="instance_id must be a valid UUID",
-            http_status=422,
-            details={"field": "instance_id"},
-        )
-
-    vendor_id = _load_vendor_id_for_owner(current_user.id)
+    vendor_id = _load_vendor_id_for_owner(owner_user_id)
     if vendor_id is None:
         raise AppError(
             code="forbidden",
@@ -446,7 +442,6 @@ async def get_organiser_event_roster(
             http_status=403,
             details={"message_key": "vendor.errors.not_found"},
         )
-
     event = _load_event(event_id)
     if event is None:
         raise AppError(
@@ -459,10 +454,34 @@ async def get_organiser_event_roster(
     if organiser_vendor_id != vendor_id:
         raise AppError(
             code="forbidden",
-            message="Organiser may only view the roster for their own events",
+            message="Organiser may only view their own events",
             http_status=403,
             details={"message_key": "vendor.eventDashboard.errors.forbidden"},
         )
+    return event_status
+
+
+def _validate_instance_filter(instance_id: str | None) -> None:
+    if instance_id is not None and not _is_uuid(instance_id):
+        raise AppError(
+            code="validation_error",
+            message="instance_id must be a valid UUID",
+            http_status=422,
+            details={"field": "instance_id"},
+        )
+
+
+@router.get("/events/{event_id}/roster", response_model=OrganiserEventRosterResponse)
+async def get_organiser_event_roster(
+    event_id: str,
+    current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    instance_id: str | None = None,
+) -> OrganiserEventRosterResponse:
+    del service_client  # data access is raw-SQL (run_sql_script), like get_..._stats
+
+    _validate_instance_filter(instance_id)
+    event_status = _resolve_owned_event(current_user.id, event_id)
 
     total, checked_in = _load_roster_counts(event_id, instance_id)
     attendees = _load_roster_attendees(event_id, instance_id)
@@ -477,7 +496,55 @@ async def get_organiser_event_roster(
     )
 
 
+def _format_lusaka(iso: str) -> str:
+    """Render an ISO timestamp as local Lusaka wall-clock for a printable list."""
+    try:
+        return datetime.fromisoformat(iso).astimezone(LUSAKA_TZ).strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        return iso
+
+
+def _roster_csv(attendees: list[RosterAttendee]) -> str:
+    """Roster as CSV for offline / printed door check-in. csv.writer quotes any
+    name containing a comma or quote, so free-text names stay intact."""
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["date", "name", "ticket_type", "status"])
+    for attendee in attendees:
+        writer.writerow(
+            [
+                _format_lusaka(attendee.starts_at),
+                attendee.holder_name or "",
+                attendee.ticket_type_name,
+                "Checked in" if attendee.status == "checked_in" else "Not checked in",
+            ]
+        )
+    return buffer.getvalue()
+
+
+@router.get("/events/{event_id}/roster.csv")
+async def download_organiser_event_roster_csv(
+    event_id: str,
+    current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    instance_id: str | None = None,
+) -> Response:
+    del service_client
+
+    _validate_instance_filter(instance_id)
+    _resolve_owned_event(current_user.id, event_id)
+
+    attendees = _load_roster_attendees(event_id, instance_id)
+    filename = f"roster-{event_id}.csv"
+    return Response(
+        content=_roster_csv(attendees),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 __all__ = [
+    "download_organiser_event_roster_csv",
     "get_organiser_event_roster",
     "get_organiser_event_stats",
 ]
