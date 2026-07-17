@@ -9,6 +9,8 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { SentryInit } from "../sentry-init";
 
+import { SignOutButton } from "./_components/sign-out-button";
+
 import type { Metadata, Viewport } from "next";
 
 import "../globals.css";
@@ -105,12 +107,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
                       systemLabel={tCommon("theme.system")}
                       className="border-panel-muted/40 bg-transparent text-panel-text hover:border-panel-text hover:text-panel-text"
                     />
-                    <Link
-                      className="inline-flex min-h-11 items-center justify-center rounded-md border border-panel-muted/40 px-4 text-sm font-medium text-panel-text"
-                      href={`/${locale}/login`}
-                    >
-                      {t("shell.signOut")}
-                    </Link>
+                    <SignOutButton
+                      locale={locale}
+                      label={t("shell.signOut")}
+                      className="inline-flex min-h-11 items-center justify-center rounded-md border border-panel-muted/40 px-4 text-sm font-medium text-panel-text disabled:opacity-60"
+                    />
                   </div>
                 </div>
               </header>
