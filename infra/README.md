@@ -86,12 +86,18 @@ docker run --rm \
 
 ## 5. Start the stack
 
+The `api` image is prebuilt in CI and pushed to GHCR (`api-image.yml`), so the VM
+pulls it rather than building in place (avoids OOM on the micro instance):
+
 ```bash
-docker compose up -d --build
+docker compose pull            # fetch the prebuilt api image + caddy/n8n
+docker compose up -d           # no --build: run the pulled images
 docker compose ps
 docker compose logs -f api
 curl -fsS http://localhost/healthz || curl -fsS http://127.0.0.1:8000/healthz
 ```
+
+> Local dev (not the VM) can build from source instead: `docker compose up -d --build`.
 
 Caddy obtains TLS certificates automatically once Cloudflare points to this host and ports 80/443 are open in the OCI security list.
 
@@ -126,12 +132,25 @@ Caddy routes `vendor.vergeo5.com` and `admin.vergeo5.com` accordingly. Admin req
 
 ## Operations
 
+Redeploy the API after a `services/api` change merges to master (CI has already
+built and pushed the new `ghcr.io/kalumuso/convergeo-api:latest`):
+
 ```bash
 cd ~/vergeo5/infra
-docker compose pull
-docker compose up -d --build
-docker compose logs -f caddy
+docker compose pull api            # pull the freshly-built image
+docker compose up -d api           # recreate the api container (no --build)
+docker compose logs -f api
 ```
+
+Verify the new build is live (endpoint only present in the current API):
+
+```bash
+curl -fsS https://api.vergeo5.com/healthz
+curl -fsS -o /dev/null -w '%{http_code}\n' https://api.vergeo5.com/products/rice-grains-standard/related
+```
+
+To pin/rollback to a specific build, set `API_IMAGE_TAG=<git-sha>` in `infra/.env`
+(the image is also tagged `:<sha>`) and re-run `docker compose up -d api`.
 
 ## Related docs
 

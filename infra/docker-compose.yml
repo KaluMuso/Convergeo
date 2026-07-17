@@ -2,6 +2,13 @@ name: vergeo5
 
 services:
   api:
+    # Prebuilt image from GHCR (built + pushed by .github/workflows/api-image.yml on
+    # every master push touching services/api). `docker compose pull` fetches it so the
+    # micro VM never builds in place (OOM risk to co-tenant services). `build:` is kept
+    # for local dev / CI — `docker compose up --build` rebuilds from source and tags it
+    # under the same name. Pin a specific build for reproducible deploy/rollback with
+    # API_IMAGE_TAG=<git-sha>; defaults to :latest.
+    image: ghcr.io/kalumuso/convergeo-api:${API_IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: infra/api.Dockerfile
