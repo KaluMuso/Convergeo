@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@vergeo/auth/browser-client";
+import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { createApiClient } from "@vergeo/config";
 import { Button } from "@vergeo/ui/src/button";
 import { OtpField } from "@vergeo/ui/src/otp-field";
@@ -75,7 +75,7 @@ function ExportSection({ locale }: { locale: string }) {
       createApiClient({
         baseUrl: API_BASE_URL,
         getToken: async () => {
-          const supabase = createBrowserClient();
+          const supabase = await getBrowserClient();
           const { data } = await supabase.auth.getSession();
           return data.session?.access_token ?? null;
         },
@@ -154,7 +154,7 @@ function DeleteSection({ locale }: { locale: string }) {
       createApiClient({
         baseUrl: API_BASE_URL,
         getToken: async () => {
-          const supabase = createBrowserClient();
+          const supabase = await getBrowserClient();
           const { data } = await supabase.auth.getSession();
           return data.session?.access_token ?? null;
         },
@@ -164,7 +164,7 @@ function DeleteSection({ locale }: { locale: string }) {
 
   useEffect(() => {
     const loadPhone = async () => {
-      const supabase = createBrowserClient();
+      const supabase = await getBrowserClient();
       const { data } = await supabase.auth.getUser();
       const userPhone = data.user?.phone;
       setPhone(typeof userPhone === "string" ? userPhone : null);
@@ -180,7 +180,7 @@ function DeleteSection({ locale }: { locale: string }) {
     setOtpLoading(true);
     setError(null);
     try {
-      const supabase = createBrowserClient();
+      const supabase = await getBrowserClient();
       const { error: otpError } = await supabase.auth.signInWithOtp({ phone });
       if (otpError) {
         setError(t("otpSendFailed"));
@@ -206,7 +206,7 @@ function DeleteSection({ locale }: { locale: string }) {
         body: JSON.stringify({ confirmation_phrase: phrase.trim(), otp }),
       });
       setDone(true);
-      const supabase = createBrowserClient();
+      const supabase = await getBrowserClient();
       await supabase.auth.signOut();
     } catch {
       setError(t("error"));

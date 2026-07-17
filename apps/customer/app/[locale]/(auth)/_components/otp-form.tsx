@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@vergeo/auth/browser-client";
+import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { Button } from "@vergeo/ui/src/button";
 import { OtpField } from "@vergeo/ui/src/otp-field";
 import Link from "next/link";
@@ -61,7 +61,7 @@ export function OtpForm({
     setLoading(true);
 
     try {
-      const supabase = createBrowserClient();
+      const supabase = await getBrowserClient();
       const { error } = await supabase.auth.verifyOtp({
         phone,
         token: otpCode,
@@ -105,7 +105,7 @@ export function OtpForm({
 
   const handleResend = async () => {
     setErrorMessage(null);
-    const supabase = createBrowserClient();
+    const supabase = await getBrowserClient();
     const { error } = await supabase.auth.signInWithOtp({ phone });
 
     if (error) {

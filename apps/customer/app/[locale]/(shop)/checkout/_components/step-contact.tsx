@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@vergeo/auth/browser-client";
+import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { useSession } from "@vergeo/auth/use-session";
 import { createApiClient } from "@vergeo/config";
 import { Button } from "@vergeo/ui/src/button";
@@ -121,7 +121,7 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
     const e164 = formatE164(countryCode, nationalNumber);
     setLoading(true);
     try {
-      const supabase = createBrowserClient();
+      const supabase = await getBrowserClient();
       const { error } = await supabase.auth.signInWithOtp({
         phone: e164,
         options: { shouldCreateUser: true },
@@ -151,7 +151,7 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
     setErrorMessage(null);
     setLoading(true);
     try {
-      const supabase = createBrowserClient();
+      const supabase = await getBrowserClient();
       const { data, error } = await supabase.auth.verifyOtp({
         phone,
         token: otpCode,
@@ -184,7 +184,7 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   };
 
   const handleResend = async () => {
-    const supabase = createBrowserClient();
+    const supabase = await getBrowserClient();
     const { error } = await supabase.auth.signInWithOtp({ phone });
     if (error) {
       throw error;

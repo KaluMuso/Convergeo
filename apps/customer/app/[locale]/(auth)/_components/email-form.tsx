@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@vergeo/auth/browser-client";
+import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
@@ -60,7 +60,7 @@ export function EmailForm({ locale, labels, mode, defaultNextPath, nextParam }: 
     setLoading(true);
 
     try {
-      const supabase = createBrowserClient();
+      const supabase = await getBrowserClient();
 
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({ email, password });

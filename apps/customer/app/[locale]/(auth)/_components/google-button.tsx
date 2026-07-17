@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@vergeo/auth/browser-client";
+import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { Button } from "@vergeo/ui/src/button";
 import { useState } from "react";
 
@@ -24,7 +24,7 @@ export function GoogleButton({
   const handleClick = async () => {
     setLoading(true);
     try {
-      const supabase = createBrowserClient();
+      const supabase = await getBrowserClient();
       const redirectTo = `${window.location.origin}/${locale}/login?next=${encodeURIComponent(nextPath)}`;
 
       const { error } = await supabase.auth.signInWithOAuth({

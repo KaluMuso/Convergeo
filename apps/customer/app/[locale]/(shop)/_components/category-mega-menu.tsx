@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@vergeo/auth/browser-client";
+import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
@@ -58,7 +58,9 @@ async function defaultLoadCategories(): Promise<NavCategory[]> {
   // Category tree is publicly readable (RLS: categories_public_select "using (true)"),
   // so the anon browser client can fetch it lazily without a server round-trip in the
   // shop layout — which would otherwise force every shop route to render dynamically.
-  const supabase = createBrowserClient();
+  // getBrowserClient loads @supabase/ssr dynamically (only when the menu first
+  // opens) so it does not sit in the shared shop-shell first-load bundle.
+  const supabase = await getBrowserClient();
   const { data, error } = await supabase
     .from("categories")
     .select("id, name, slug, position, parent_id, prohibited")

@@ -9,6 +9,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./browser-client": "./src/browser-client.ts",
+    "./browser-client-lazy": "./src/browser-client-lazy.ts",
     "./server-client": "./src/server-client.ts",
     "./middleware": "./src/middleware.ts",
     "./use-session": "./src/use-session.ts",
