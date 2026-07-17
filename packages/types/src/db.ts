@@ -2271,6 +2271,8 @@ export type Database = {
       }
       services: {
         Row: {
+          bookable: boolean
+          booking_price_ngwee: number | null
           category: string
           created_at: string
           description: string | null
@@ -2285,6 +2287,8 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          bookable?: boolean
+          booking_price_ngwee?: number | null
           category: string
           created_at?: string
           description?: string | null
@@ -2299,6 +2303,8 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          bookable?: boolean
+          booking_price_ngwee?: number | null
           category?: string
           created_at?: string
           description?: string | null

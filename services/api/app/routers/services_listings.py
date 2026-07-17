@@ -13,7 +13,7 @@ from app.schemas.base import NgweeInt, StrictModel
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.moderation.prohibited import screen_listing
 from fastapi import APIRouter, Depends, Query
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 router = APIRouter(tags=["services-listings"])
 
@@ -98,6 +98,8 @@ class ServiceDetailResponse(StrictModel):
     description: str | None = None
     service_area: str | None = None
     from_price_ngwee: int | None = None
+    bookable: bool = False
+    booking_price_ngwee: int | None = None
     portfolio_images: list[str] = Field(default_factory=list)
     includes: list[str] = Field(default_factory=list)
     provider: ProviderSummary
@@ -111,6 +113,8 @@ class ServiceSummary(StrictModel):
     description: str | None = None
     service_area: str | None = None
     from_price_ngwee: int | None = None
+    bookable: bool = False
+    booking_price_ngwee: int | None = None
     status: ServiceStatus
     portfolio_images: list[str] = Field(default_factory=list)
     includes: list[str] = Field(default_factory=list)
@@ -126,17 +130,26 @@ class ServiceCreateRequest(StrictModel):
     description: str | None = None
     service_area: str | None = None
     from_price_ngwee: NgweeInt | None = None
+    bookable: bool = False
+    booking_price_ngwee: NgweeInt | None = None
     portfolio_images: list[str] = Field(default_factory=list, max_length=MAX_PORTFOLIO_IMAGES)
     includes: list[str] = Field(default_factory=list, max_length=MAX_INCLUDES)
     status: ServiceStatus = "draft"
 
-    @field_validator("from_price_ngwee")
+    @field_validator("from_price_ngwee", "booking_price_ngwee")
     @classmethod
-    def validate_from_price(cls, value: int | None) -> int | None:
+    def validate_positive_price(cls, value: int | None) -> int | None:
         if value is not None and value <= 0:
-            msg = "from_price_ngwee must be greater than zero when provided"
+            msg = "price must be greater than zero when provided"
             raise ValueError(msg)
         return value
+
+    @model_validator(mode="after")
+    def validate_bookable_price(self) -> ServiceCreateRequest:
+        if self.bookable and not self.booking_price_ngwee:
+            msg = "booking_price_ngwee is required (and must be > 0) when bookable is true"
+            raise ValueError(msg)
+        return self
 
     @field_validator("portfolio_images")
     @classmethod
@@ -159,15 +172,17 @@ class ServiceUpdateRequest(StrictModel):
     description: str | None = None
     service_area: str | None = None
     from_price_ngwee: NgweeInt | None = None
+    bookable: bool | None = None
+    booking_price_ngwee: NgweeInt | None = None
     portfolio_images: list[str] | None = Field(default=None, max_length=MAX_PORTFOLIO_IMAGES)
     includes: list[str] | None = Field(default=None, max_length=MAX_INCLUDES)
     status: ServiceStatus | None = None
 
-    @field_validator("from_price_ngwee")
+    @field_validator("from_price_ngwee", "booking_price_ngwee")
     @classmethod
-    def validate_from_price(cls, value: int | None) -> int | None:
+    def validate_positive_price(cls, value: int | None) -> int | None:
         if value is not None and value <= 0:
-            msg = "from_price_ngwee must be greater than zero when provided"
+            msg = "price must be greater than zero when provided"
             raise ValueError(msg)
         return value
 
@@ -462,6 +477,8 @@ def _to_detail(
         description=row.get("description"),
         service_area=row.get("service_area"),
         from_price_ngwee=row.get("from_price_ngwee"),
+        bookable=bool(row.get("bookable")),
+        booking_price_ngwee=row.get("booking_price_ngwee"),
         portfolio_images=_parse_images(row.get("portfolio_images")),
         includes=_parse_includes(row.get("includes")),
         provider=_provider_from_vendor(
@@ -481,6 +498,8 @@ def _to_summary(row: dict[str, Any]) -> ServiceSummary:
         description=row.get("description"),
         service_area=row.get("service_area"),
         from_price_ngwee=row.get("from_price_ngwee"),
+        bookable=bool(row.get("bookable")),
+        booking_price_ngwee=row.get("booking_price_ngwee"),
         status=row["status"],
         portfolio_images=_parse_images(row.get("portfolio_images")),
         includes=_parse_includes(row.get("includes")),
@@ -561,7 +580,7 @@ def get_service_detail(
         service_client.client.table("services")
         .select(
             "id, vendor_id, category, title, description, service_area, "
-            "from_price_ngwee, portfolio_images, includes, status, "
+            "from_price_ngwee, bookable, booking_price_ngwee, portfolio_images, includes, status, "
             "vendors!inner(id, slug, display_name, preferred_badge, status)"
         )
         .eq("id", service_id)
@@ -594,7 +613,7 @@ def list_vendor_services(
         service_client.client.table("services")
         .select(
             "id, category, title, description, service_area, from_price_ngwee, "
-            "portfolio_images, includes, status"
+            "bookable, booking_price_ngwee, portfolio_images, includes, status"
         )
         .eq("vendor_id", vendor["id"])
         .order("updated_at", desc=True)
@@ -633,6 +652,8 @@ def create_vendor_service(
         "description": payload.description,
         "service_area": payload.service_area,
         "from_price_ngwee": payload.from_price_ngwee,
+        "bookable": payload.bookable,
+        "booking_price_ngwee": payload.booking_price_ngwee,
         "portfolio_images": payload.portfolio_images,
         "includes": payload.includes,
         "status": payload.status,
@@ -659,6 +680,19 @@ def update_vendor_service(
     updates = payload.model_dump(exclude_unset=True)
     if "title" in updates and updates["title"] is not None:
         updates["title"] = updates["title"].strip()
+
+    # Mirror the DB CHECK with a clean 422: the resulting service must have a
+    # positive booking price if it is (or stays) bookable.
+    effective_bookable = updates.get("bookable", existing.get("bookable"))
+    effective_price = updates.get("booking_price_ngwee", existing.get("booking_price_ngwee"))
+    if effective_bookable and not effective_price:
+        raise AppError(
+            code="validation_error",
+            message="A bookable service must have a positive booking price",
+            http_status=422,
+            details={"message_key": "vendor.services.errors.bookablePrice"},
+        )
+
     if not updates:
         return ServiceMutationResponse(service=_to_summary(existing))
 
