@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { Spinner } from "../../../../listings/new/_lib/ui";
+import { Button, Spinner } from "../../../../listings/new/_lib/ui";
 import { groupByInstance } from "../_lib/group-roster";
 import { createRosterClient, type OrganiserEventRoster } from "../_lib/roster-client";
 
@@ -30,6 +30,7 @@ export function RosterView({ locale, eventId }: RosterViewProps) {
   const { session, loading: sessionLoading } = useSession();
   const [roster, setRoster] = useState<OrganiserEventRoster | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
@@ -44,6 +45,24 @@ export function RosterView({ locale, eventId }: RosterViewProps) {
       setError(t("eventRoster.errors.loadFailed"));
     } finally {
       setLoading(false);
+    }
+  }, [eventId, rosterClient, t]);
+
+  const handleDownload = useCallback(async () => {
+    setDownloading(true);
+    setError(null);
+    try {
+      const blob = await rosterClient.downloadRosterCsv(eventId);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `roster-${eventId}.csv`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError(t("eventRoster.errors.downloadFailed"));
+    } finally {
+      setDownloading(false);
     }
   }, [eventId, rosterClient, t]);
 
@@ -95,13 +114,26 @@ export function RosterView({ locale, eventId }: RosterViewProps) {
 
       {roster ? (
         <>
-          <section className="rounded-lg border border-border bg-card p-3 shadow-sm">
+          <section className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 shadow-sm">
             <p className="text-sm text-muted-foreground">
               {t("eventRoster.summary", {
                 checkedIn: roster.checked_in,
                 total: roster.total,
               })}
             </p>
+            {roster.total > 0 ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => void handleDownload()}
+                disabled={downloading}
+                loading={downloading}
+                loadingLabel={t("eventRoster.downloading")}
+              >
+                {t("eventRoster.downloadCsv")}
+              </Button>
+            ) : null}
           </section>
 
           {roster.truncated ? (
