@@ -70,6 +70,7 @@
     "perCustomerCap": "Max {count} per person",
     "earlyBird": "Early-bird: {price} until {until}",
     "groupTier": "Buy {minQty}+ for {price} each",
+    "groupUpsell": "Add {count, plural, one {# more} other {# more}} to pay {price} each",
     "discountApplied": "Discount applied — {price} each",
     "loginRequired": "Sign in to get tickets",
     "errors": {
