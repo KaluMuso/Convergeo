@@ -14,6 +14,11 @@ from app.services.payments.base import (
     InitiateCollectionRequest,
     PaymentStrategy,
 )
+from app.services.payments.gate import (
+    PaymentsDisabledError,
+    log_payment_blocked,
+    payments_gate_status,
+)
 from app.services.payments.initiate import InitiatePaymentRequest
 from app.services.payments.references import make_order_reference
 from app.services.payments.registry import get as get_payment_strategy
@@ -257,6 +262,17 @@ async def _create_retry_payment_attempt(
     strategy: PaymentStrategy | None = None,
 ) -> tuple[str, PaymentStatus]:
     """Start a new payment row for an existing checkout group (retry path)."""
+    # Safe-by-default payment gate: same guard as the first-attempt path so the
+    # retry/resume route can never reach Lenco while payments are disabled.
+    enabled, reason_code = payments_gate_status()
+    if not enabled:
+        log_payment_blocked(
+            reason_code,
+            method=request.rail,
+            reference=request.checkout_group_id,
+        )
+        raise PaymentsDisabledError()
+
     group = _load_checkout_group(service, request.checkout_group_id)
     if group is None:
         raise AppError(code="not_found", message="Checkout group not found", http_status=404)
