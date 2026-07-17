@@ -1365,6 +1365,7 @@
     "empty": "No ticket types yet.",
     "massRefundFlagged": "This event was cancelled. Ticket holders are flagged for a refund; our team will process it shortly.",
     "checkInProgress": "{checkedIn, number} of {issued, number} tickets checked in",
+    "viewRoster": "View attendee roster",
     "sections": {
       "revenue": "Revenue",
       "checkIn": "Check-in progress",
@@ -1382,6 +1383,29 @@
       "unauthorized": "Sign in as an organiser to view this dashboard.",
       "notFound": "Event not found.",
       "forbidden": "You may only view the dashboard for your own events."
+    }
+  },
+  "eventRoster": {
+    "meta": {
+      "title": "Attendee roster",
+      "description": "The list of attendees for your event, with names captured at checkout."
+    },
+    "heading": "Attendee roster",
+    "subheading": "Who's coming, grouped by date. Names appear for ticket types that collect them.",
+    "backToDashboard": "Back to dashboard",
+    "loading": "Loading roster…",
+    "empty": "No tickets sold yet.",
+    "noName": "No name collected",
+    "summary": "{checkedIn, number} of {total, number} checked in",
+    "truncated": "Showing the first {count, number} attendees.",
+    "dateCount": "{count, plural, one {# attendee} other {# attendees}}",
+    "status": {
+      "checkedIn": "Checked in",
+      "issued": "Not checked in"
+    },
+    "errors": {
+      "loadFailed": "Could not load the roster. Pull to refresh.",
+      "unauthorized": "Sign in as an organiser to view this roster."
     }
   }
 }

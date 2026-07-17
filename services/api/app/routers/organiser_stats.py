@@ -7,7 +7,9 @@ mirroring how vendor_payouts.py derives pending/released balances from the ledge
 
 from __future__ import annotations
 
+import json
 from typing import Annotated, Protocol
+from uuid import UUID
 
 from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
@@ -19,6 +21,11 @@ from fastapi import APIRouter, Depends
 router = APIRouter(prefix="/organiser", tags=["organiser-stats"])
 
 MASS_REFUND_FLAG_ACTION = "event_release.mass_refund_flagged"
+
+# Upper bound on roster rows returned in one response — realistic Zambia events are
+# far smaller; this caps a pathological payload. `truncated` flags when the true
+# count exceeds it so the UI can say so.
+ROSTER_CAP = 2000
 
 
 class ServiceRoleClient(Protocol):
@@ -56,8 +63,37 @@ class OrganiserEventStatsResponse(StrictModel):
     mass_refund_flagged: bool
 
 
+class RosterAttendee(StrictModel):
+    ticket_id: str
+    holder_name: str | None
+    ticket_type_id: str
+    ticket_type_name: str
+    kind: str
+    instance_id: str
+    starts_at: str
+    status: str
+    checked_in_at: str | None
+
+
+class OrganiserEventRosterResponse(StrictModel):
+    event_id: str
+    event_status: str
+    total: int
+    checked_in: int
+    truncated: bool
+    attendees: list[RosterAttendee]
+
+
 def _sql_uuid(value: str) -> str:
     return f"'{value}'::uuid"
+
+
+def _is_uuid(value: str) -> bool:
+    try:
+        UUID(value)
+    except ValueError:
+        return False
+    return True
 
 
 def _load_vendor_id_for_owner(owner_user_id: str) -> str | None:
@@ -280,6 +316,168 @@ async def get_organiser_event_stats(
     )
 
 
+def _roster_instance_clause(instance_id: str | None) -> str:
+    # instance_id is UUID-validated before this is called, so it cannot inject.
+    return f"  AND t.instance_id = {_sql_uuid(instance_id)}\n" if instance_id else ""
+
+
+def _load_roster_counts(event_id: str, instance_id: str | None) -> tuple[int, int]:
+    """(total live tickets, checked-in) for the event, optionally one instance."""
+    event_sql = _sql_uuid(event_id)
+    instance_clause = _roster_instance_clause(instance_id)
+    # order_item_id IS NOT NULL excludes transient, unpaid checkout claims (which
+    # carry a null link and are voided by release_stale_ticket_claims) — mirrors
+    # the "sold" definition in the organiser stats endpoint.
+    script = f"""
+SELECT
+  count(*) FILTER (WHERE t.status IN ('issued', 'checked_in'))::text,
+  count(*) FILTER (WHERE t.status = 'checked_in')::text
+FROM public.tickets t
+JOIN public.event_instances ei ON ei.id = t.instance_id
+WHERE ei.event_id = {event_sql}
+  AND t.order_item_id IS NOT NULL
+{instance_clause};
+"""
+    result = run_sql_script(script)
+    if not result.ok or not result.rows:
+        raise AppError(
+            code="roster_query_failed",
+            message="Failed to load roster counts",
+            http_status=500,
+            details={"error": result.error},
+        )
+    parts = result.rows[0].split("|", 1)
+    if len(parts) != 2:
+        return 0, 0
+    return int(parts[0]), int(parts[1])
+
+
+def _load_roster_attendees(event_id: str, instance_id: str | None) -> list[RosterAttendee]:
+    """Live (issued/checked-in) tickets with their captured attendee name, if any.
+
+    Each row is emitted as a single ``json_build_object`` so an attendee name (free
+    text) can never break field parsing the way a ``|``-delimited row would.
+    """
+    event_sql = _sql_uuid(event_id)
+    instance_clause = _roster_instance_clause(instance_id)
+    script = f"""
+SELECT json_build_object(
+  'ticket_id', t.id,
+  'holder_name', t.holder_name,
+  'ticket_type_id', tt.id,
+  'ticket_type_name', tt.name,
+  'kind', tt.kind,
+  'instance_id', ei.id,
+  'starts_at', ei.starts_at,
+  'status', t.status,
+  'checked_in_at', t.checked_in_at
+)::text
+FROM public.tickets t
+JOIN public.ticket_types tt ON tt.id = t.ticket_type_id
+JOIN public.event_instances ei ON ei.id = t.instance_id
+WHERE ei.event_id = {event_sql}
+  AND t.status IN ('issued', 'checked_in')
+  AND t.order_item_id IS NOT NULL
+{instance_clause}
+ORDER BY ei.starts_at ASC, tt.created_at ASC, lower(coalesce(t.holder_name, '~')) ASC, t.id ASC
+LIMIT {ROSTER_CAP};
+"""
+    result = run_sql_script(script)
+    if not result.ok:
+        raise AppError(
+            code="roster_query_failed",
+            message="Failed to load roster",
+            http_status=500,
+            details={"error": result.error},
+        )
+    attendees: list[RosterAttendee] = []
+    for raw in result.rows:
+        try:
+            obj = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        holder = obj.get("holder_name")
+        checked_in_at = obj.get("checked_in_at")
+        attendees.append(
+            RosterAttendee(
+                ticket_id=str(obj["ticket_id"]),
+                holder_name=str(holder) if holder is not None else None,
+                ticket_type_id=str(obj["ticket_type_id"]),
+                ticket_type_name=str(obj.get("ticket_type_name") or ""),
+                kind=str(obj.get("kind") or ""),
+                instance_id=str(obj["instance_id"]),
+                starts_at=str(obj["starts_at"]),
+                status=str(obj["status"]),
+                checked_in_at=str(checked_in_at) if checked_in_at is not None else None,
+            )
+        )
+    return attendees
+
+
+@router.get("/events/{event_id}/roster", response_model=OrganiserEventRosterResponse)
+async def get_organiser_event_roster(
+    event_id: str,
+    current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    instance_id: str | None = None,
+) -> OrganiserEventRosterResponse:
+    del service_client  # data access is raw-SQL (run_sql_script), like get_..._stats
+
+    if not _is_uuid(event_id):
+        raise AppError(
+            code="not_found",
+            message="Event not found",
+            http_status=404,
+            details={"message_key": "vendor.eventDashboard.errors.notFound"},
+        )
+    if instance_id is not None and not _is_uuid(instance_id):
+        raise AppError(
+            code="validation_error",
+            message="instance_id must be a valid UUID",
+            http_status=422,
+            details={"field": "instance_id"},
+        )
+
+    vendor_id = _load_vendor_id_for_owner(current_user.id)
+    if vendor_id is None:
+        raise AppError(
+            code="forbidden",
+            message="Authenticated user does not own a vendor profile",
+            http_status=403,
+            details={"message_key": "vendor.errors.not_found"},
+        )
+
+    event = _load_event(event_id)
+    if event is None:
+        raise AppError(
+            code="not_found",
+            message="Event not found",
+            http_status=404,
+            details={"message_key": "vendor.eventDashboard.errors.notFound"},
+        )
+    organiser_vendor_id, event_status = event
+    if organiser_vendor_id != vendor_id:
+        raise AppError(
+            code="forbidden",
+            message="Organiser may only view the roster for their own events",
+            http_status=403,
+            details={"message_key": "vendor.eventDashboard.errors.forbidden"},
+        )
+
+    total, checked_in = _load_roster_counts(event_id, instance_id)
+    attendees = _load_roster_attendees(event_id, instance_id)
+
+    return OrganiserEventRosterResponse(
+        event_id=event_id,
+        event_status=event_status,
+        total=total,
+        checked_in=checked_in,
+        truncated=total > ROSTER_CAP,
+        attendees=attendees,
+    )
+
+
 __all__ = [
+    "get_organiser_event_roster",
     "get_organiser_event_stats",
 ]
