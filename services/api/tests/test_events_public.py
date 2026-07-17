@@ -134,6 +134,7 @@ class FakeSupabaseStore:
         self.events: list[dict[str, Any]] = []
         self.event_instances: list[dict[str, Any]] = []
         self.ticket_types: list[dict[str, Any]] = []
+        self.ticket_type_price_tiers: list[dict[str, Any]] = []
         self.tickets: list[dict[str, Any]] = []
 
     def table(self, name: str) -> FakeQuery:
@@ -443,6 +444,36 @@ def test_detail_surfaces_category_and_event_landmark(store: FakeSupabaseStore) -
     assert detail.category == "cultural-arts"
     # Event-specific landmark wins over the organiser's vendor-location landmark.
     assert detail.landmark == "Next to the National Museum"
+
+
+def test_detail_surfaces_early_bird_and_tiers(store: FakeSupabaseStore) -> None:
+    # Configure the M10-P12 discounts on the GA ticket and confirm the detail
+    # response exposes them so the buyer sees the price the server will resolve.
+    ga = next(row for row in store.ticket_types if row["id"] == TICKET_GA)
+    ga["early_bird_price_ngwee"] = 40000
+    ga["early_bird_until"] = "2026-08-01T00:00:00+00:00"
+    store.ticket_type_price_tiers = [
+        {"ticket_type_id": TICKET_GA, "min_qty": 10, "price_ngwee": 40000},
+        {"ticket_type_id": TICKET_GA, "min_qty": 5, "price_ngwee": 45000},
+    ]
+    detail = build_detail_response(store, "tonight-gig")
+    ga_resp = next(ticket for ticket in detail.ticket_types if ticket.id == TICKET_GA)
+    assert ga_resp.early_bird_price_ngwee == 40000
+    assert ga_resp.early_bird_until is not None
+    assert ga_resp.early_bird_until.isoformat().startswith("2026-08-01")
+    # Tiers surface ascending by min_qty (the query orders them).
+    assert [(tier.min_qty, tier.price_ngwee) for tier in ga_resp.tiers] == [
+        (5, 45000),
+        (10, 40000),
+    ]
+
+
+def test_detail_ticket_types_without_pricing_config_are_clean(store: FakeSupabaseStore) -> None:
+    detail = build_detail_response(store, "weekend-market")
+    vip = next(ticket for ticket in detail.ticket_types if ticket.id == TICKET_VIP)
+    assert vip.early_bird_price_ngwee is None
+    assert vip.early_bird_until is None
+    assert vip.tiers == []
 
 
 def test_browse_tonight_filter(store: FakeSupabaseStore) -> None:

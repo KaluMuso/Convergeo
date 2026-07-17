@@ -65,6 +65,11 @@ class EventInstanceResponse(BaseModel):
     is_sold_out: bool
 
 
+class PriceTier(BaseModel):
+    min_qty: int
+    price_ngwee: int
+
+
 class TicketTypeResponse(BaseModel):
     id: str
     kind: Literal["fixed", "tier", "free_rsvp"]
@@ -74,6 +79,12 @@ class TicketTypeResponse(BaseModel):
     tickets_sold: int = 0
     is_sold_out: bool = False
     is_free: bool = False
+    # M10-P17: surface the M10-P12 discounts so the buyer sees the price the server
+    # will actually resolve. Both early-bird fields are null unless configured; the
+    # client shows early-bird while now < early_bird_until.
+    early_bird_price_ngwee: int | None = None
+    early_bird_until: datetime | None = None
+    tiers: list[PriceTier] = Field(default_factory=list)
 
 
 class EventBrowseItem(BaseModel):
@@ -259,6 +270,7 @@ def _build_ticket_type_response(
     row: dict[str, Any],
     *,
     tickets_sold: int,
+    tiers: list[PriceTier] | None = None,
 ) -> TicketTypeResponse:
     kind = str(row.get("kind") or "fixed")
     if kind not in {"fixed", "tier", "free_rsvp"}:
@@ -268,6 +280,8 @@ def _build_ticket_type_response(
     qty_cap_int = int(qty_cap) if qty_cap is not None else None
     is_free = kind == "free_rsvp" or price_ngwee == 0
     is_sold_out = qty_cap_int is not None and tickets_sold >= qty_cap_int
+    eb_price = row.get("early_bird_price_ngwee")
+    eb_until = row.get("early_bird_until")
     return TicketTypeResponse(
         id=str(row["id"]),
         kind=kind,  # type: ignore[arg-type]
@@ -277,6 +291,9 @@ def _build_ticket_type_response(
         tickets_sold=tickets_sold,
         is_sold_out=is_sold_out,
         is_free=is_free,
+        early_bird_price_ngwee=int(eb_price) if eb_price is not None else None,
+        early_bird_until=eb_until if eb_until else None,
+        tiers=tiers or [],
     )
 
 
@@ -449,11 +466,40 @@ def _fetch_ticket_types(client: Any, event_ids: list[str]) -> list[dict[str, Any
         return []
     response = (
         client.table("ticket_types")
-        .select("id, event_id, kind, name, price_ngwee, qty_cap")
+        .select(
+            "id, event_id, kind, name, price_ngwee, qty_cap, "
+            "early_bird_price_ngwee, early_bird_until"
+        )
         .in_("event_id", event_ids)
         .execute()
     )
     return [row for row in (response.data or []) if isinstance(row, dict)]
+
+
+def _fetch_price_tiers(client: Any, ticket_type_ids: list[str]) -> dict[str, list[PriceTier]]:
+    """Group-pricing tiers (M10-P12) keyed by ticket_type_id, ascending min_qty."""
+    if not ticket_type_ids:
+        return {}
+    response = (
+        client.table("ticket_type_price_tiers")
+        .select("ticket_type_id, min_qty, price_ngwee")
+        .in_("ticket_type_id", ticket_type_ids)
+        .order("min_qty")
+        .execute()
+    )
+    result: dict[str, list[PriceTier]] = {}
+    for row in response.data or []:
+        if not isinstance(row, dict):
+            continue
+        type_id = str(row.get("ticket_type_id") or "")
+        min_qty = row.get("min_qty")
+        price = row.get("price_ngwee")
+        if not type_id or min_qty is None or price is None:
+            continue
+        result.setdefault(type_id, []).append(
+            PriceTier(min_qty=int(min_qty), price_ngwee=int(price))
+        )
+    return result
 
 
 def _fetch_tickets(client: Any, instance_ids: list[str]) -> list[dict[str, Any]]:
@@ -614,8 +660,15 @@ def build_detail_response(
         _build_instance_response(row, spots_sold=tickets_by_instance.get(str(row["id"]), 0))
         for row in instances
     ]
+    tiers_by_type = _fetch_price_tiers(
+        client, [str(row["id"]) for row in ticket_types if row.get("id")]
+    )
     ticket_type_responses = [
-        _build_ticket_type_response(row, tickets_sold=tickets_by_type.get(str(row["id"]), 0))
+        _build_ticket_type_response(
+            row,
+            tickets_sold=tickets_by_type.get(str(row["id"]), 0),
+            tiers=tiers_by_type.get(str(row["id"]), []),
+        )
         for row in ticket_types
     ]
 

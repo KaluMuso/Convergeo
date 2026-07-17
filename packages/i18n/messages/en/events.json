@@ -69,6 +69,11 @@
     "remaining": "{count, plural, one {# left} other {# left}}",
     "perCustomerCap": "Max {count} per person",
     "loginRequired": "Sign in to get tickets",
+    "pricing": {
+      "eachLabel": "Each",
+      "earlyBird": "Early bird {price} until {date}",
+      "groupHint": "Buy {minQty}+ for {price} each"
+    },
     "errors": {
       "generic": "Could not complete request. Try again.",
       "freeUseRsvp": "This is a free event — use Reserve.",

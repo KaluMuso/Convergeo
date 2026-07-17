@@ -8,6 +8,8 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { isEarlyBirdActive, nextTier, resolveUnitPriceNgwee } from "../_lib/pricing";
+
 export type TicketPickerInstance = {
   id: string;
   starts_at: string;
@@ -26,6 +28,9 @@ export type TicketPickerType = {
   tickets_sold: number;
   is_sold_out: boolean;
   is_free: boolean;
+  early_bird_price_ngwee: number | null;
+  early_bird_until: string | null;
+  tiers: { min_qty: number; price_ngwee: number }[];
 };
 
 export type TicketPickerProps = {
@@ -59,6 +64,14 @@ function formatInstanceDate(iso: string, locale: string): string {
 
 function isPastInstance(iso: string): boolean {
   return new Date(iso).getTime() < Date.now();
+}
+
+function formatShortDate(iso: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    timeZone: "Africa/Lusaka",
+  }).format(new Date(iso));
 }
 
 function maxQtyForType(ticket: TicketPickerType, instance: TicketPickerInstance | null): number {
@@ -109,12 +122,27 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
     return maxQtyForType(selectedType, selectedInstance);
   }, [selectedType, selectedInstance]);
 
-  const lineTotalNgwee = useMemo(() => {
+  // Mirror the server's resolved price (M10-P12) so the buyer sees what they will
+  // actually pay — base, active early-bird, and qualifying group tiers, lowest wins.
+  const unitPriceNgwee = useMemo(() => {
     if (!selectedType || selectedType.is_free) {
       return 0;
     }
-    return selectedType.price_ngwee * qty;
+    return resolveUnitPriceNgwee(selectedType, qty, new Date());
   }, [selectedType, qty]);
+
+  const lineTotalNgwee = unitPriceNgwee * qty;
+
+  const hasDiscount =
+    selectedType !== null && !selectedType.is_free && unitPriceNgwee < selectedType.price_ngwee;
+
+  const earlyBirdActive =
+    selectedType !== null && !selectedType.is_free && isEarlyBirdActive(selectedType, new Date());
+
+  const upsellTier = useMemo(
+    () => (selectedType && !selectedType.is_free ? nextTier(selectedType, qty) : null),
+    [selectedType, qty],
+  );
 
   const canSubmit =
     !isSoldOut &&
@@ -268,6 +296,23 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
         </p>
       ) : null}
 
+      {earlyBirdActive && selectedType?.early_bird_until ? (
+        <p className="text-xs font-medium text-success">
+          {t("pricing.earlyBird", {
+            price: formatK(selectedType.early_bird_price_ngwee ?? 0),
+            date: formatShortDate(selectedType.early_bird_until, locale),
+          })}
+        </p>
+      ) : null}
+      {upsellTier ? (
+        <p className="text-xs text-text-3">
+          {t("pricing.groupHint", {
+            minQty: upsellTier.min_qty,
+            price: formatK(upsellTier.price_ngwee),
+          })}
+        </p>
+      ) : null}
+
       <div className="flex items-center justify-between gap-3">
         <span className="text-sm font-medium text-text-2">{t("quantity")}</span>
         <div className="flex items-center gap-2">
@@ -294,9 +339,22 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
       </div>
 
       {selectedType && !selectedType.is_free ? (
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-text-2">{t("total")}</span>
-          <PriceBlock ngwee={lineTotalNgwee} />
+        <div className="flex flex-col gap-1">
+          {hasDiscount ? (
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-text-3">{t("pricing.eachLabel")}</span>
+              <span>
+                <span className="text-text-3 line-through">
+                  {formatK(selectedType.price_ngwee)}
+                </span>{" "}
+                <span className="font-semibold text-success">{formatK(unitPriceNgwee)}</span>
+              </span>
+            </div>
+          ) : null}
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-text-2">{t("total")}</span>
+            <PriceBlock ngwee={lineTotalNgwee} />
+          </div>
         </div>
       ) : null}
 
