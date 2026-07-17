@@ -26,6 +26,7 @@ from app.services.payments.base import (
     VerifyWebhookRequest,
     VerifyWebhookResult,
 )
+from app.services.payments.gate import PaymentsDisabledError, payments_enabled
 from app.services.payments.lenco.config import (
     DEFAULT_TIMEOUT_SECONDS,
     MAX_IDEMPOTENT_RETRIES,
@@ -376,6 +377,11 @@ class LencoStrategy:
         self,
         request: InitiateCollectionRequest,
     ) -> InitiateCollectionResult:
+        # Defence-in-depth backstop: the API-boundary guards (initiate.py /
+        # payment_status.py) normally block first, but no code path may reach the
+        # Lenco network while payments are disabled.
+        if not payments_enabled():
+            raise PaymentsDisabledError()
         operator = _validate_collection_operator(request.operator)
         amount_major = ngwee_to_major_str(request.amount_ngwee, currency=request.currency)
         lenco_request = LencoCollectionRequest(

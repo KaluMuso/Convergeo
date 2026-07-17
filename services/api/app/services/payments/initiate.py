@@ -12,6 +12,11 @@ from app.services.payments.base import (
     InitiateCollectionRequest,
     PaymentStrategy,
 )
+from app.services.payments.gate import (
+    PaymentsDisabledError,
+    log_payment_blocked,
+    payments_gate_status,
+)
 from app.services.payments.references import make_order_reference
 from app.services.payments.registry import LENCO_PROVIDER, get
 from app.services.payments.state import (
@@ -76,6 +81,18 @@ async def initiate_checkout_payment(
     actor_id: str,
 ) -> InitiatePaymentResult:
     """Start MoMo collection for a checkout group: initiated → ussd_pushed (+ pay_offline)."""
+    # Safe-by-default payment gate: block prepaid initiation (mobile money + card)
+    # unless payments are explicitly enabled for this environment. Runs before any
+    # DB write or provider call, so a disabled gate creates no payment row.
+    enabled, reason_code = payments_gate_status()
+    if not enabled:
+        log_payment_blocked(
+            reason_code,
+            method=request.rail,
+            reference=request.checkout_group_id,
+        )
+        raise PaymentsDisabledError()
+
     group = _load_checkout_group(service_client, request.checkout_group_id)
     if str(group.get("status")) == "completed":
         raise AppError(

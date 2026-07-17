@@ -12,6 +12,13 @@ os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "service-role-key")
 os.environ.setdefault("SUPABASE_ANON_KEY", "anon-key")
 os.environ.setdefault("ENV", "development")
 os.environ.setdefault("LOG_LEVEL", "WARNING")
+# The payment kill switch defaults to OFF in production (safe by default). The
+# test suite exercises the payment flows, so enable it here via the explicit
+# production-ack path — this leaves LENCO_ENV untouched (base-url tests unaffected).
+# The gate's own tests use monkeypatch to drive the disabled/sandbox/production
+# states directly, overriding these defaults.
+os.environ.setdefault("PAYMENTS_ENABLED", "true")
+os.environ.setdefault("PAYMENTS_ALLOW_PRODUCTION", "true")
 
 
 @pytest.fixture(autouse=True)

@@ -7,6 +7,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.checkout import _ensure_session_active, _extract_data, _fetch_checkout_group
+from app.services.payments.gate import PaymentsDisabledError, payments_enabled
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from supabase import Client
@@ -33,6 +34,20 @@ class PaymentOptionsResponse(BaseModel):
     total_ngwee: int
     cod_cap_ngwee: int
     cod_eligible: bool
+    # Methods actually offered right now. Prepaid rails (momo/card) appear only
+    # when the payment kill switch is enabled; COD appears when COD-eligible.
+    available_methods: list[PaymentMethod] = Field(default_factory=list)
+
+
+def available_payment_methods(*, cod_eligible: bool) -> list[PaymentMethod]:
+    """Compute the offered payment methods for the current gate + COD state."""
+    methods: list[PaymentMethod] = []
+    if payments_enabled():
+        methods.append("momo")
+        methods.append("card")
+    if cod_eligible:
+        methods.append("cod")
+    return methods
 
 
 class PaymentMethodRequest(BaseModel):
@@ -120,6 +135,11 @@ def _validate_payment_method(
             )
         return None, None
 
+    # Prepaid rails (momo/card) are only selectable while the payment gate is on;
+    # a stale/cached client that posts a hidden method fails cleanly here.
+    if method in ("momo", "card") and not payments_enabled():
+        raise PaymentsDisabledError()
+
     if method == "card":
         return None, None
 
@@ -181,6 +201,7 @@ async def get_payment_options(
     group = _fetch_checkout_group(service, session_id, current_user.id)
     subtotal, delivery_fee, total = _session_totals(group)
     cod_cap = _load_cod_cap_ngwee(service)
+    cod_eligible = total <= cod_cap
 
     return PaymentOptionsResponse(
         session_id=session_id,
@@ -188,7 +209,8 @@ async def get_payment_options(
         delivery_fee_ngwee=delivery_fee,
         total_ngwee=total,
         cod_cap_ngwee=cod_cap,
-        cod_eligible=total <= cod_cap,
+        cod_eligible=cod_eligible,
+        available_methods=available_payment_methods(cod_eligible=cod_eligible),
     )
 
 
