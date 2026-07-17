@@ -1,0 +1,1414 @@
+{
+  "analytics": {
+    "meta": {
+      "title": "Statistiques — Vendeur Vergeo5",
+      "description": "Suivez vos ventes, commandes et activité du panier sur les 7 ou 30 derniers jours, consultez vos meilleures annonces et évaluez la conversion panier-commande."
+    },
+    "eyebrow": "Votre boutique",
+    "title": "Statistiques",
+    "intro": "Un aperçu rapide de la performance de votre boutique.",
+    "loading": "Chargement des statistiques…",
+    "window": {
+      "label": "Période",
+      "7d": "7 jours",
+      "30d": "30 jours"
+    },
+    "cards": {
+      "sales": "Ventes",
+      "orders": "Commandes",
+      "views": "Activité du panier"
+    },
+    "sparkline": {
+      "sales": "Tendance quotidienne des ventes",
+      "orders": "Tendance quotidienne des commandes",
+      "views": "Tendance quotidienne de l'activité du panier"
+    },
+    "top": {
+      "heading": "Meilleures annonces",
+      "empty": "Aucune vente pour cette période.",
+      "untitled": "Annonce sans titre",
+      "units": "{count, plural, one {# vendu} other {# vendus}}"
+    },
+    "conversion": {
+      "heading": "Conversion",
+      "summary": "{orders, plural, one {# commande} other {# commandes}} sur {views, plural, one {# action panier} other {# actions panier}}",
+      "pct": "{pct}% panier-commande",
+      "empty": "Pas encore assez d'activité pour estimer la conversion."
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger vos statistiques. Veuillez réessayer.",
+      "invalidWindow": "Choisissez une période de 7 ou 30 jours."
+    }
+  },
+  "vendor.dashboard.title": "Tableau de bord vendeur",
+  "vendor.listings.count": "{count, plural, one {# annonce} other {# annonces}}",
+  "vendor.payout.pending": "Versement en attente : {amount}",
+  "pitch": {
+    "meta": {
+      "title": "Vendez sur Vergeo5 — publication gratuite, payez seulement quand vous vendez",
+      "description": "Rejoignez la place de marché zambienne pour les produits, services, événements, fournitures et annonces d'annuaire. Offre gratuite : 30 annonces. Commissions transparentes. Versements mobile money en quelques minutes."
+    },
+    "hero": {
+      "eyebrow": "Vendez sur Vergeo5",
+      "headline": "Publication gratuite.",
+      "headlineEmphasis": "Payez seulement quand vous vendez.",
+      "subheadline": "Touchez des acheteurs dans toute la Zambie avec des produits, services, événements, fournitures et votre profil professionnel — le tout depuis une seule application vendeur.",
+      "primaryCta": "Commencer à vendre",
+      "secondaryCta": "Voir les commissions",
+      "freeTierNote": "L'offre gratuite comprend jusqu'à 30 annonces avec toutes les fonctionnalités de vente."
+    },
+    "valueProps": {
+      "heading": "Cinq façons de vous développer",
+      "products": {
+        "title": "Produits",
+        "description": "Publiez dans notre catalogue de référence — les acheteurs comparent les prix entre vendeurs."
+      },
+      "services": {
+        "title": "Services",
+        "description": "Proposez beauté, traiteur, réparations, impression et bien plus, avec la prise en charge des demandes de devis."
+      },
+      "events": {
+        "title": "Événements",
+        "description": "Vendez des billets avec pointage QR dynamique. Événements gratuits sur inscription à 0 % de commission."
+      },
+      "supplies": {
+        "title": "Fournitures",
+        "description": "Tarification de gros par paliers pour les entreprises vérifiées (T2+)."
+      },
+      "directory": {
+        "title": "Annuaire",
+        "description": "Faites-vous connaître avec votre vitrine, vos horaires et votre emplacement sur la carte."
+      }
+    },
+    "commission": {
+      "heading": "Commissions transparentes",
+      "intro": "Les taux sont affichés avant la publication de chaque annonce. Vous ne payez que lorsque vous réalisez une vente.",
+      "categoryColumn": "Catégorie",
+      "rateColumn": "Commission",
+      "footnote": "Les taux peuvent être révisés chaque trimestre. Les événements gratuits restent à 0 % pour toujours.",
+      "categories": {
+        "electronics": "Électronique",
+        "home": "Maison et décoration",
+        "fashion_beauty": "Mode et beauté",
+        "services": "Services",
+        "event_tickets": "Billets d'événement",
+        "supplies": "Fournitures et gros",
+        "groceries": "Épicerie et produits de base",
+        "default": "Toutes les autres catégories",
+        "free_events": "Événements gratuits sur inscription"
+      },
+      "rate": "{rate} %"
+    },
+    "howItWorks": {
+      "heading": "Comment ça marche",
+      "steps": {
+        "signup": {
+          "title": "Inscrivez-vous en quelques minutes",
+          "description": "Créez votre compte vendeur sur mobile ou ordinateur — sans frais initiaux."
+        },
+        "kyc": {
+          "title": "Vérifiez avec le KYC T1",
+          "description": "Téléversez votre NRC et un selfie. Nous vérifions la correspondance avec le nom de votre compte mobile money. Approbation le jour même."
+        },
+        "list": {
+          "title": "Publiez vos premiers produits",
+          "description": "Rattachez-vous à notre catalogue ou publiez en mode rapide. Consultez votre commission avant de publier."
+        },
+        "sell": {
+          "title": "Vendez et soyez payé",
+          "description": "Les commandes arrivent dans votre tableau de bord. Le séquestre protège les acheteurs ; les versements arrivent vite sur votre MoMo."
+        }
+      }
+    },
+    "kyc": {
+      "heading": "Niveaux de vérification",
+      "intro": "Aucune annonce non vérifiée n'est publiée. Commencez au niveau T1 et évoluez à mesure que vous grandissez.",
+      "tiers": {
+        "t1": {
+          "badge": "T1 · Vendeur",
+          "title": "Vendez le jour même",
+          "description": "Photo du NRC + selfie + correspondance du nom mobile money. Jusqu'à 30 annonces ; les 5 premières commandes plafonnées à K500 chacune."
+        },
+        "t2": {
+          "badge": "T2 · Entreprise vérifiée",
+          "title": "Augmentez vos plafonds",
+          "description": "Certificat PACRA + TPIN de l'entreprise. Badge vérifié, onglet fournitures et limites plus élevées."
+        },
+        "t3": {
+          "badge": "T3 · Premium",
+          "title": "Partenaires sur invitation",
+          "description": "Accès API et éligibilité à l'affichage de bannières pour les vendeurs à fort volume."
+        },
+        "preferred": {
+          "badge": "Vergeo5 Preferred",
+          "title": "Badge de confiance mérité",
+          "description": "≥20 commandes, note ≥4,5★, <2 % de litiges, <5 % d'annulations — révisé chaque mois."
+        }
+      }
+    },
+    "payout": {
+      "heading": "Versements mobile money rapides",
+      "promise": "Versé en quelques minutes sur mobile money — toujours sous 48 heures.",
+      "body": "Les paiements des acheteurs sont conservés sous séquestre jusqu'à la confirmation de la livraison (ou la confirmation automatique après 48 heures). Une fois débloqués, les versements MTN et Airtel arrivent généralement en moins de cinq minutes. Les virements bancaires prennent 24 à 36 heures."
+    },
+    "faq": {
+      "heading": "Questions fréquentes",
+      "items": {
+        "fees": {
+          "question": "Y a-t-il des frais mensuels ?",
+          "answer": "Non. La publication sur Vergeo5 est gratuite au lancement. Vous ne payez une commission que lorsque vous vendez. L'offre gratuite comprend jusqu'à 30 annonces."
+        },
+        "payout": {
+          "question": "Quand suis-je payé ?",
+          "answer": "Après le déblocage du séquestre à la confirmation de la livraison. Les versements mobile money arrivent généralement en quelques minutes ; nous garantissons le versement sous 48 heures."
+        },
+        "whatCanISell": {
+          "question": "Que puis-je vendre ?",
+          "answer": "Des produits, services, billets d'événement, fournitures en gros et annonces d'annuaire dans nos catégories de lancement — épicerie, beauté, mode, électronique, articles pour la maison et plus encore. Les articles interdits (téléphones d'occasion, alcool, produits pharmaceutiques, etc.) sont bloqués."
+        },
+        "kyc": {
+          "question": "Combien de temps prend la vérification ?",
+          "answer": "Les vendeurs T1 disposant d'un NRC valide, d'un selfie et d'un nom MoMo correspondant sont généralement approuvés le jour même. Rien n'est publié tant que vous n'avez pas passé le KYC."
+        }
+      }
+    },
+    "cta": {
+      "heading": "Prêt à toucher des acheteurs dans toute la Zambie ?",
+      "body": "Rejoignez des centaines de vendeurs qui se développent sur Vergeo5. Créez votre boutique en moins de dix minutes.",
+      "button": "Créer votre compte vendeur",
+      "loadingLabel": "Ouverture de l'inscription"
+    }
+  },
+  "onboarding": {
+    "meta": {
+      "title": "Intégration vendeur — Vergeo5",
+      "description": "Complétez votre profil d'entreprise et votre KYC T1 pour commencer à vendre sur Vergeo5."
+    },
+    "steps": {
+      "business": "Entreprise",
+      "kyc": "Vérifier l'identité",
+      "review": "Récapitulatif"
+    },
+    "stepAnnouncement": "Étape {current} sur {total}",
+    "doneIndicator": "✓",
+    "business": {
+      "heading": "Informations de l'entreprise",
+      "intro": "Dites aux acheteurs qui vous êtes. Vous pourrez modifier ces informations plus tard dans votre profil.",
+      "nameLabel": "Nom de l'entreprise ou de la boutique",
+      "namePlaceholder": "ex. Lusaka Electronics",
+      "categoryLabel": "Catégorie principale",
+      "categoryPlaceholder": "Sélectionnez une catégorie",
+      "categories": {
+        "electronics": "Électronique",
+        "home": "Maison et art de vivre",
+        "fashion_beauty": "Mode et beauté",
+        "services": "Services",
+        "groceries": "Épicerie",
+        "other": "Autre"
+      },
+      "continue": "Continuer",
+      "saving": "Enregistrement…"
+    },
+    "kyc": {
+      "heading": "Vérification T1",
+      "intro": "Importez votre NRC et un selfie. Nous vérifions la correspondance avec le nom de votre compte mobile-money. Rien n'est publié avant approbation.",
+      "nrcLabel": "Photo du NRC",
+      "nrcHelp": "Photographiez le recto de votre carte nationale d'identité (NRC) sous un bon éclairage.",
+      "selfieLabel": "Selfie",
+      "selfieHelp": "Tenez votre téléphone à hauteur des yeux. Regardez directement l'appareil photo.",
+      "legalNameLabel": "Nom complet (tel qu'indiqué sur votre NRC)",
+      "legalNamePlaceholder": "ex. Chanda Mwansa",
+      "legalNameHelp": "Doit correspondre au nom enregistré sur votre numéro mobile-money.",
+      "momoLabel": "Numéro mobile-money",
+      "momoPlaceholder": "ex. 0977123456",
+      "momoHelp": "Numéro MTN ou Airtel enregistré à votre nom pour les versements.",
+      "continue": "Continuer",
+      "uploading": "Importation…",
+      "capture": "Prendre une photo",
+      "retake": "Reprendre",
+      "usePhoto": "Utiliser cette photo",
+      "uploadFailed": "Échec de l'importation. Vérifiez votre connexion et réessayez.",
+      "uploaded": "Enregistré",
+      "nrcDone": "Photo du NRC enregistrée",
+      "selfieDone": "Selfie enregistré"
+    },
+    "quality": {
+      "heading": "Conseils photo",
+      "light": "Utilisez la lumière du jour ou une pièce bien éclairée — évitez les reflets sur le NRC.",
+      "steady": "Ne bougez pas ; les photos floues sont rejetées.",
+      "frame": "Remplissez le cadre — les quatre coins du NRC visibles.",
+      "face": "Retirez chapeaux et lunettes de soleil pour le selfie."
+    },
+    "review": {
+      "heading": "Vérifier et soumettre",
+      "intro": "Vérifiez vos informations. Après la soumission, notre équipe examine votre dossier sous un jour ouvrable.",
+      "businessSection": "Entreprise",
+      "docsSection": "Documents",
+      "momoSection": "Mobile money",
+      "nrcUploaded": "Photo du NRC importée",
+      "selfieUploaded": "Selfie importé",
+      "notUploaded": "Non importé",
+      "submit": "Soumettre pour examen",
+      "submitting": "Soumission…",
+      "editBusiness": "Modifier l'entreprise",
+      "editDocs": "Modifier les documents",
+      "gateNotice": "Vos annonces restent masquées jusqu'à l'approbation du KYC."
+    },
+    "status": {
+      "heading": "Statut de vérification",
+      "pending": {
+        "title": "En cours d'examen",
+        "body": "Nous vérifions vos documents. Vous recevrez une notification WhatsApp une fois terminé.",
+        "cta": "Retour au tableau de bord"
+      },
+      "approved": {
+        "title": "Vous êtes vérifié",
+        "body": "KYC T1 approuvé. Vous pouvez créer des annonces — les acheteurs les verront une fois publiées.",
+        "cta": "Créer votre première annonce",
+        "t2Link": "Passer au T2 (PACRA + TPIN)"
+      },
+      "rejected": {
+        "title": "La vérification nécessite des modifications",
+        "body": "Nous n'avons pas pu approuver votre demande.",
+        "reasonLabel": "Motif",
+        "resubmitCta": "Mettre à jour les documents",
+        "gateNotice": "Les annonces restent masquées jusqu'à ce que vous passiez la vérification."
+      },
+      "resubmit": {
+        "title": "Soumettre à nouveau les documents",
+        "body": "Mettez à jour les éléments ci-dessous et soumettez à nouveau — vous n'avez pas besoin de tout recommencer.",
+        "nrcRequired": "Photo du NRC requise",
+        "selfieRequired": "Selfie requis",
+        "submit": "Soumettre à nouveau pour examen"
+      }
+    },
+    "t2": {
+      "stubLabel": "Passer à l'entreprise vérifiée (T2)",
+      "stubBody": "Certificat PACRA et TPIN de l'entreprise — bientôt disponible."
+    },
+    "errors": {
+      "required": "Ce champ est obligatoire",
+      "invalidPhone": "Saisissez un numéro de mobile zambien valide",
+      "loadFailed": "Impossible de charger votre demande. Tirez pour actualiser.",
+      "submitFailed": "Échec de la soumission. Réessayez."
+    },
+    "loading": "Chargement…"
+  },
+  "listings": {
+    "images": {
+      "heading": "Photos",
+      "intro": "{count} sur {max} photos. La première est votre couverture.",
+      "alt": "Photo {position} de l'annonce",
+      "cover_badge": "Couverture",
+      "position_label": "Photo {position}",
+      "move_up": "Monter",
+      "move_down": "Descendre",
+      "set_cover": "Définir comme couverture",
+      "remove": "Supprimer",
+      "drop_label": "Glissez les photos ici",
+      "browse_label": "Parcourir",
+      "compress_hint": "Les photos sont redimensionnées avant l'envoi pour économiser des données.",
+      "limit_reached": "Vous avez atteint la limite de photos.",
+      "upload": "Ajouter des photos",
+      "uploading": "Envoi en cours…",
+      "upload_failed": "Échec de l'envoi",
+      "retry": "Réessayer"
+    },
+    "meta": {
+      "title": "Créer une annonce — Vendeur Vergeo5",
+      "description": "Rattachez au catalogue, soumettez un nouveau produit ou créez une annonce rapide."
+    },
+    "title": "Créer une annonce",
+    "intro": "Choisissez votre mode de mise en vente. La commission est affichée avant publication.",
+    "loading": "Chargement…",
+    "tabs": {
+      "ariaLabel": "Mode de création d'annonce",
+      "attach": "Catalogue",
+      "newCanonical": "Nouveau produit",
+      "quickList": "Annonce rapide"
+    },
+    "commission": {
+      "heading": "Commission sur cette annonce",
+      "body": "Vous ne payez que lorsque vous vendez. Le taux est fixe pour cette catégorie.",
+      "rate": "{rate}%"
+    },
+    "attach": {
+      "searchPlaceholder": "Rechercher des produits du catalogue",
+      "searching": "Recherche…",
+      "empty": "Aucun produit correspondant. Essayez un autre nom ou soumettez un nouveau produit.",
+      "hint": "Recherchez dans le catalogue Vergeo5 pour rattacher votre offre.",
+      "changeProduct": "← Changer de produit",
+      "specHeading": "Caractéristiques du produit",
+      "publish": "Publier l'annonce",
+      "publishing": "Publication…"
+    },
+    "newCanonical": {
+      "heading": "Soumettre un nouveau produit",
+      "intro": "Nous examinerons votre produit avant qu'il apparaisse dans le catalogue.",
+      "nameLabel": "Nom du produit",
+      "namePlaceholder": "ex. Écouteurs sans fil",
+      "brandLabel": "Marque (facultatif)",
+      "brandPlaceholder": "ex. Samsung",
+      "categoryLabel": "Catégorie",
+      "categoryPlaceholder": "Sélectionner une catégorie",
+      "submit": "Soumettre pour examen",
+      "submitting": "Soumission…",
+      "moderationNotice": "Votre annonce reste en brouillon jusqu'à ce que notre équipe approuve le produit."
+    },
+    "quickList": {
+      "heading": "Annonce rapide",
+      "intro": "Pour les produits sans correspondance au catalogue — produits frais, marchandises en vrac, etc.",
+      "titleLabel": "Titre de l'annonce",
+      "titlePlaceholder": "ex. Tomates au kg",
+      "publish": "Publier l'annonce",
+      "publishing": "Publication…"
+    },
+    "fields": {
+      "priceLabel": "Votre prix (ZMW)",
+      "pricePlaceholder": "0.00",
+      "priceHelp": "Saisissez les kwacha et ngwee, ex. 1,234.56",
+      "priceInvalid": "Saisissez un prix valide comme 1234.56",
+      "conditionLabel": "État",
+      "conditionNew": "Neuf",
+      "conditionRefurbished": "Reconditionné",
+      "stockModeLabel": "Stock",
+      "stockTracked": "Quantité suivie",
+      "stockAlways": "Toujours disponible",
+      "stockQtyLabel": "Quantité en stock",
+      "wholesaleLabel": "Paliers de gros",
+      "wholesaleHelp": "Entreprises vérifiées T2+ uniquement",
+      "moqLabel": "Quantité minimale de commande"
+    },
+    "success": {
+      "live": "L'annonce est en ligne !",
+      "moderation": "Soumise pour examen — nous vous préviendrons sur WhatsApp."
+    },
+    "errors": {
+      "required": "Ce champ est obligatoire",
+      "submitFailed": "Impossible de créer l'annonce. Réessayez.",
+      "wholesale_requires_t2": "La vente en gros nécessite une vérification T2",
+      "product_not_found": "Produit introuvable",
+      "product_not_active": "Ce produit ne peut pas encore être rattaché",
+      "category_not_found": "Catégorie introuvable",
+      "invalid_tiers": "Les paliers de prix doivent augmenter en quantité et diminuer en prix unitaire"
+    },
+    "import": {
+      "meta": {
+        "title": "Importer des annonces — Vendeur Vergeo5",
+        "description": "Importez en masse des annonces vendeur depuis un fichier CSV avec validation ligne par ligne."
+      },
+      "title": "Importer des annonces",
+      "intro": "Importez un CSV pour ajouter ou mettre à jour plusieurs annonces à la fois. Réimporter le même SKU met à jour l'annonce existante.",
+      "loading": "Chargement…",
+      "signInRequired": "Connectez-vous pour importer des annonces.",
+      "template": {
+        "heading": "Télécharger le modèle",
+        "body": "Utilisez notre modèle CSV avec des exemples de lignes. Les prix sont en ngwee (nombre entier). Le SKU est votre code unique par annonce. Laissez product_id vide pour obtenir des suggestions de correspondance au catalogue dans l'aperçu.",
+        "download": "Télécharger le modèle CSV"
+      },
+      "upload": {
+        "heading": "Importer un CSV",
+        "fileLabel": "Choisir un fichier CSV",
+        "selected": "Sélectionné : {name}",
+        "submit": "Importer les annonces",
+        "uploading": "Importation…"
+      },
+      "results": {
+        "accepted": "{count, plural, one {# ligne acceptée} other {# lignes acceptées}}",
+        "rejected": "{count, plural, one {# ligne rejetée} other {# lignes rejetées}}",
+        "row": "Ligne",
+        "status": "Statut",
+        "details": "Détails",
+        "ok": "OK",
+        "failed": "Échec",
+        "imported": "Importée"
+      },
+      "preview": {
+        "previewButton": "Aperçu des lignes",
+        "previewing": "Vérification…",
+        "summary": "{valid} sur {total} lignes prêtes à importer",
+        "itemColumn": "Article",
+        "matchColumn": "Correspondance au catalogue",
+        "suggestionsLabel": "Correspondances suggérées",
+        "attachAction": "Rattacher : {name}",
+        "attached": "Rattaché : {name}",
+        "matched": "Correspond : {name}",
+        "detach": "Modifier",
+        "standalone": "Aucune correspondance — annoncé séparément"
+      },
+      "apply": {
+        "button": "Appliquer l'importation",
+        "applying": "Application…"
+      },
+      "errors": {
+        "uploadFailed": "Échec de l'importation. Vérifiez votre fichier et réessayez.",
+        "previewFailed": "Impossible de vérifier votre fichier. Veuillez réessayer.",
+        "no_file": "Un fichier CSV est requis",
+        "no_payload": "Fournissez un fichier CSV ou des lignes JSON"
+      }
+    },
+    "manage": {
+      "meta": {
+        "title": "Vos annonces — Vendeur Vergeo5",
+        "description": "Consultez le stock, mettez en pause des annonces et modifiez les prix."
+      },
+      "title": "Vos annonces",
+      "intro": "Touchez une annonce pour modifier le prix, le stock et les retours.",
+      "loading": "Chargement…",
+      "empty": "Aucune annonce pour le moment.",
+      "createCta": "Créer une annonce",
+      "editCta": "Modifier",
+      "stockLabel": "Stock",
+      "stockValue": "{qty}",
+      "stockAlways": "Toujours disponible",
+      "decreaseSymbol": "−",
+      "increaseSymbol": "+",
+      "decreaseStock": "Diminuer le stock",
+      "increaseStock": "Augmenter le stock",
+      "status": {
+        "draft": "Brouillon",
+        "active": "En ligne",
+        "paused": "En pause"
+      },
+      "edit": {
+        "meta": {
+          "title": "Modifier l'annonce — Vendeur Vergeo5",
+          "description": "Mettez à jour le prix, le stock, l'état et la politique de retour."
+        },
+        "title": "Modifier l'annonce",
+        "save": "Enregistrer les modifications",
+        "saving": "Enregistrement…",
+        "pause": "Mettre l'annonce en pause",
+        "pausing": "Mise en pause…",
+        "unpause": "Reprendre l'annonce",
+        "unpausing": "Reprise…",
+        "delete": "Supprimer l'annonce",
+        "deleting": "Suppression…",
+        "returnableLabel": "Accepter les retours",
+        "returnableHelp": "Politique de retour Lane-2 pour cette annonce.",
+        "returnWindowLabel": "Délai de retour (heures)",
+        "tierHeading": "Paliers de gros",
+        "tierQtyLabel": "Quantité min",
+        "tierPriceLabel": "Prix unitaire (ZMW)",
+        "addTier": "Ajouter un palier",
+        "removeTier": "Supprimer le palier",
+        "saved": "Modifications enregistrées.",
+        "pausedNotice": "Annonce mise en pause car elle a des commandes en cours.",
+        "deleted": "Annonce supprimée.",
+        "priceChangedNotice": "Prix mis à jour — les paniers seront revalidés à la prochaine consultation."
+      },
+      "delete": {
+        "paused_instead": "Cette annonce a des commandes en cours et a été mise en pause au lieu d'être supprimée.",
+        "removed": "Annonce supprimée."
+      },
+      "errors": {
+        "loadFailed": "Impossible de charger les annonces. Tirez pour actualiser.",
+        "saveFailed": "Impossible d'enregistrer les modifications. Réessayez.",
+        "stockNotTracked": "Les ajustements de stock ne s'appliquent qu'aux annonces suivies.",
+        "stockQtyRequired": "Saisissez une quantité en stock pour les annonces suivies.",
+        "returnWindowRequired": "Saisissez un délai de retour lorsque les retours sont activés."
+      }
+    }
+  },
+  "profile": {
+    "meta": {
+      "title": "Profil de la vitrine — Vergeo5 Vendeur",
+      "description": "Modifiez votre vitrine publique : logo, description, horaires, emplacement et URL de la boutique."
+    },
+    "title": "Profil de la vitrine",
+    "intro": "Voici ce que les acheteurs voient sur votre page d'annuaire. Complétez votre profil pour améliorer votre classement.",
+    "loading": "Chargement du profil…",
+    "sections": {
+      "basics": "Détails de l'entreprise",
+      "contact": "Contact",
+      "cover": "Image de couverture",
+      "logo": "Logo",
+      "location": "Emplacement"
+    },
+    "fields": {
+      "displayNameLabel": "Nom affiché",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Dites aux acheteurs ce que vous vendez et pourquoi vous choisir…",
+      "descriptionHelp": "Visez au moins 50 caractères — cela aide les acheteurs à faire confiance à votre boutique.",
+      "whatsappLabel": "Numéro WhatsApp",
+      "whatsappPlaceholder": "ex. 0977 123456",
+      "whatsappHelp": "Facultatif. Les acheteurs peuvent vous contacter directement — affiché sous forme de bouton « Discuter sur WhatsApp » sur votre vitrine.",
+      "slugLabel": "URL de la boutique",
+      "slugPlaceholder": "lusaka-electronics",
+      "landmarkLabel": "Point de repère",
+      "landmarkPlaceholder": "ex. Près de Manda Hill Mall",
+      "latLabel": "Latitude",
+      "latPlaceholder": "-15.3875",
+      "lngLabel": "Longitude",
+      "lngPlaceholder": "28.3228",
+      "locationHelp": "Localisez votre boutique sur la carte avec le GPS et un point de repère connu des acheteurs.",
+      "hoursLabel": "Horaires d'ouverture",
+      "hoursHelp": "Les horaires de nuit sont pris en charge (ex. fermeture après minuit)."
+    },
+    "slug": {
+      "onceWarning": "Vous ne pouvez modifier l'URL de votre boutique qu'une seule fois. L'ancien lien redirigera automatiquement.",
+      "locked": "L'URL de votre boutique est verrouillée après la modification unique.",
+      "previous": "L'ancienne URL {slug} redirige vers votre page boutique actuelle."
+    },
+    "hours": {
+      "days": {
+        "mon": "Lundi",
+        "tue": "Mardi",
+        "wed": "Mercredi",
+        "thu": "Jeudi",
+        "fri": "Vendredi",
+        "sat": "Samedi",
+        "sun": "Dimanche"
+      },
+      "open": "Ouverture",
+      "close": "Fermeture",
+      "closed": "Fermé"
+    },
+    "logo": {
+      "alt": "Logo de la boutique",
+      "empty": "Aucun logo",
+      "upload": "Importer le logo",
+      "uploading": "Importation…",
+      "uploadFailed": "Échec de l'importation du logo. Réessayez.",
+      "help": "Les images carrées sont idéales. Redimensionnées avant l'importation pour économiser les données."
+    },
+    "cover": {
+      "alt": "Image de couverture de la boutique",
+      "empty": "Aucune image de couverture",
+      "upload": "Importer la couverture",
+      "uploading": "Importation…",
+      "remove": "Supprimer",
+      "uploadFailed": "Échec de l'importation de la couverture. Réessayez.",
+      "help": "Une large bannière (environ 3:1) en tête de votre vitrine. Redimensionnée avant l'importation pour économiser les données."
+    },
+    "badge": {
+      "preferred": "Badge Vergeo5 Preferred obtenu",
+      "hint": "Obtenez le badge Preferred grâce à un excellent service — ≥20 commandes, ≥4,5★, peu de litiges."
+    },
+    "completeness": {
+      "heading": "Complétude du profil",
+      "score": "{score}% complété",
+      "fields": {
+        "logo": "Logo importé",
+        "description": "Description (50+ caractères)",
+        "hours": "Horaires d'ouverture définis",
+        "location": "Emplacement + point de repère",
+        "badge": "Badge Preferred obtenu"
+      }
+    },
+    "actions": {
+      "save": "Enregistrer le profil",
+      "saving": "Enregistrement…"
+    },
+    "success": {
+      "saved": "Profil enregistré. Les modifications apparaissent sur votre page publique en une minute."
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger votre profil. Tirez pour actualiser.",
+      "saveFailed": "Impossible d'enregistrer votre profil. Réessayez.",
+      "authRequired": "Connectez-vous pour modifier le profil de votre vitrine.",
+      "slug_locked": "L'URL de votre boutique est déjà verrouillée.",
+      "slug_taken": "Cette URL de boutique est déjà prise.",
+      "slug_charset": "Utilisez uniquement des lettres minuscules, des chiffres et des traits d'union.",
+      "hours_empty": "Ajoutez au moins un jour d'horaires d'ouverture.",
+      "hours_invalid": "Vérifiez vos heures d'ouverture et de fermeture.",
+      "hours_invalid_day": "L'un des noms de jour est invalide.",
+      "hours_all_closed": "Marquez au moins un jour comme ouvert.",
+      "location_required": "Ajoutez votre emplacement avant de définir les horaires.",
+      "whatsapp_invalid": "Saisissez un numéro de mobile zambien valide (ex. 0977 123456)."
+    }
+  },
+  "orders": {
+    "meta": {
+      "title": "Détail de la commande — Vergeo5 Vendeur",
+      "description": "Consultez les articles de la commande, le contexte de paiement, la chronologie et les actions de traitement."
+    },
+    "title": "Commande",
+    "loading": "Chargement de la commande…",
+    "back": "Retour aux commandes",
+    "status": {
+      "placed": "Passée",
+      "confirmed": "Confirmée",
+      "processing": "En traitement",
+      "ready": "Prête pour le retrait",
+      "shipped": "Expédiée",
+      "delivered": "Livrée",
+      "completed": "Terminée",
+      "cancelled": "Annulée"
+    },
+    "fulfilment": {
+      "delivery": "Livraison",
+      "pickup": "Retrait"
+    },
+    "payment": {
+      "heading": "Paiement",
+      "cod": "Paiement à la livraison",
+      "paid": "Payé — sous séquestre",
+      "unpaid": "En attente de paiement"
+    },
+    "items": {
+      "heading": "Articles",
+      "qty": "Qté {qty}",
+      "empty": "Aucun article"
+    },
+    "timeline": {
+      "heading": "Chronologie",
+      "empty": "Aucun événement pour le moment",
+      "note": "Note : {note}"
+    },
+    "actions": {
+      "heading": "Actions",
+      "confirm": "Confirmer la commande",
+      "reject": "Rejeter la commande",
+      "pack": "Commencer l'emballage",
+      "ship": "Marquer comme expédiée",
+      "ready_for_pickup": "Prête pour le retrait",
+      "confirming": "Confirmation…",
+      "rejecting": "Rejet…",
+      "packing": "Emballage…",
+      "shipping": "Expédition…",
+      "markingReady": "Mise à jour…",
+      "rejectPrompt": "Indiquez au client pourquoi vous ne pouvez pas traiter cette commande.",
+      "rejectLabel": "Motif (visible par le client)",
+      "rejectPlaceholder": "ex. Rupture de stock — désolé pour la gêne occasionnée",
+      "shipPrompt": "Ajoutez les détails de suivi ou de livraison pour l'acheteur.",
+      "shipLabel": "Note de suivi",
+      "shipPlaceholder": "ex. Coursier Yango — chauffeur John 0977…",
+      "submitReject": "Rejeter avec motif",
+      "submitShip": "Marquer comme expédiée",
+      "cancel": "Annuler"
+    },
+    "success": {
+      "confirmed": "Commande confirmée.",
+      "rejected": "Commande rejetée.",
+      "packed": "La commande est maintenant en traitement.",
+      "shipped": "Commande marquée comme expédiée.",
+      "ready": "Commande prête pour le retrait."
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger cette commande. Tirez pour actualiser.",
+      "actionFailed": "Échec de l'action. Réessayez.",
+      "forbidden": "Vous ne pouvez gérer que vos propres commandes.",
+      "invalidTransition": "Cette action n'est pas disponible pour cette commande.",
+      "reasonRequired": "Un motif est requis pour le rejet.",
+      "trackingRequired": "Une note de suivi est requise pour l'expédition."
+    }
+  },
+  "home": {
+    "title": "Aujourd'hui",
+    "eyebrow": "Accueil vendeur",
+    "loading": "Chargement du tableau de bord…",
+    "offlineNotice": "Affichage des données enregistrées — connectez-vous pour actualiser.",
+    "takings": {
+      "label": "Recettes du jour",
+      "caption": "Revenus confirmés pour le {date} (heure de Lusaka)"
+    },
+    "needsAction": {
+      "heading": "À traiter",
+      "empty": "Vous êtes à jour — aucune commande en attente de votre part."
+    },
+    "actions": {
+      "openQueue": "Ouvrir la file d'attente des commandes",
+      "confirmOrders": "Confirmer les nouvelles commandes"
+    },
+    "quickStart": {
+      "eyebrow": "Pour votre entreprise {businessType}",
+      "products": {
+        "heading": "Développez votre catalogue",
+        "body": "Ajoutez des produits et gardez votre stock et vos prix à jour.",
+        "cta": "Gérer vos annonces"
+      },
+      "services": {
+        "heading": "Développez vos services",
+        "body": "Publiez vos services et répondez aux demandes de devis des clients.",
+        "cta": "Gérer vos services"
+      }
+    },
+    "businessTypes": {
+      "electronics": "électronique",
+      "home": "maison et décoration",
+      "fashion_beauty": "mode et beauté",
+      "services": "services",
+      "groceries": "alimentation",
+      "other": "commerce de détail"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger votre tableau de bord. Tirez pour actualiser."
+    }
+  },
+  "queue": {
+    "meta": {
+      "title": "File d'attente des commandes — Vendeur Vergeo5",
+      "description": "Filtrez et traitez les commandes en un seul geste."
+    },
+    "title": "Commandes",
+    "intro": "Touchez une action pour faire avancer les commandes. Tirez vers le bas pour actualiser.",
+    "loading": "Chargement des commandes…",
+    "refreshing": "Actualisation…",
+    "pullToRefresh": "Relâchez pour actualiser",
+    "offlineNotice": "Hors ligne — affichage de votre dernière file d'attente enregistrée.",
+    "empty": "Aucune commande dans cette vue.",
+    "emptyCta": "Retour à l'accueil",
+    "filters": {
+      "needsAction": "À traiter",
+      "placed": "Nouvelles",
+      "confirmed": "Confirmées",
+      "processing": "Préparation",
+      "all": "Toutes"
+    },
+    "card": {
+      "items": "{count, plural, one {# article} other {# articles}}"
+    },
+    "sheet": {
+      "title": "{action} ?",
+      "body": "{title} · {amount}",
+      "confirm": "Oui, continuer",
+      "cancel": "Pas maintenant"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les commandes. Tirez pour actualiser."
+    }
+  },
+  "payouts": {
+    "meta": {
+      "title": "Versements — Vergeo5 Vendeur",
+      "description": "Consultez les soldes sous séquestre et débloqués, l'historique des versements et téléchargez les relevés mensuels."
+    },
+    "eyebrow": "Argent",
+    "title": "Versements",
+    "intro": "Les soldes proviennent directement du grand livre — aucune comptabilité séparée.",
+    "loading": "Chargement des versements…",
+    "balances": {
+      "heading": "Vos soldes",
+      "escrowHeld": "Sous séquestre",
+      "released": "Débloqué et disponible",
+      "paidOut": "Versé",
+      "ledgerNote": "Ces montants correspondent exactement à vos comptes du grand livre."
+    },
+    "hold": {
+      "noticeTitle": "Versements suspendus pendant 24 heures",
+      "noticeBody": "Après le changement de votre numéro mobile money, les versements sont suspendus pendant 24 heures, le temps de vérifier le changement. Vous serez notifié lorsque les versements reprendront."
+    },
+    "history": {
+      "heading": "Historique des versements",
+      "empty": "Aucun versement pour le moment.",
+      "status": {
+        "pending": "En attente",
+        "processing": "En cours de traitement",
+        "paid": "Payé",
+        "failed": "Échoué"
+      }
+    },
+    "statement": {
+      "heading": "Relevé mensuel",
+      "monthLabel": "Mois",
+      "downloadCsv": "Télécharger le CSV",
+      "downloading": "Préparation du CSV…",
+      "pdfStub": "Les relevés PDF arrivent bientôt — le CSV est disponible dès maintenant."
+    },
+    "method": {
+      "meta": {
+        "title": "Méthode de versement — Vergeo5 Vendeur",
+        "description": "Modifiez le numéro mobile money vers lequel vos versements sont envoyés."
+      },
+      "link": "Changer de méthode de versement",
+      "back": "← Retour aux versements",
+      "title": "Méthode de versement",
+      "intro": "Saisissez le numéro MTN, Airtel ou Zamtel enregistré à votre nom. Nous le revérifions via Lenco avant l'enregistrement.",
+      "msisdnLabel": "Numéro mobile money",
+      "msisdnPlaceholder": "ex. 0977123456",
+      "railLabel": "Réseau",
+      "rails": {
+        "mtn": "MTN",
+        "airtel": "Airtel",
+        "zamtel": "Zamtel"
+      },
+      "otpLabel": "Code de vérification",
+      "otpPlaceholder": "Code à 6 chiffres",
+      "otpHelp": "Nous avons envoyé un code à votre téléphone enregistré. Saisissez-le pour confirmer ce changement.",
+      "submit": "Enregistrer la méthode de versement",
+      "saving": "Enregistrement…",
+      "success": "Méthode de versement mise à jour. Les versements sont suspendus pendant 24 heures."
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les versements. Tirez pour actualiser.",
+      "statementFailed": "Impossible de télécharger le relevé. Réessayez.",
+      "methodFailed": "Impossible de mettre à jour la méthode de versement. Réessayez.",
+      "otpFailed": "Code de vérification invalide ou expiré.",
+      "nameMismatch": "Ce nom MoMo ne correspond pas à votre nom légal vérifié.",
+      "kycRequired": "Complétez le KYC avant de changer de méthode de versement.",
+      "payoutsPaused": "Les versements sont suspendus après un changement de méthode de versement.",
+      "rateLimited": "Trop de requêtes. Réessayez sous peu.",
+      "methodChangeLimit": "Trop de changements de méthode de versement aujourd'hui. Réessayez demain."
+    }
+  },
+  "scan": {
+    "meta": {
+      "title": "Scanner de retrait — Vendeur Vergeo5",
+      "description": "Scannez les QR de retrait des clients ou saisissez les PIN pour marquer les commandes comme récupérées."
+    },
+    "eyebrow": "Retrait",
+    "title": "Scanner le retrait",
+    "intro": "Scannez le QR du client ou saisissez son ID de commande et son PIN. La vérification nécessite une connexion internet.",
+    "verifying": "Vérification du retrait…",
+    "offline": {
+      "title": "Vous êtes hors ligne",
+      "body": "La vérification du retrait nécessite une connexion. Reconnectez-vous pour vérifier les QR ou les PIN."
+    },
+    "camera": {
+      "hint": "Centrez le QR de retrait dans le cadre",
+      "loading": "Démarrage de la caméra…",
+      "denied": "Accès à la caméra bloqué",
+      "deniedBody": "Autorisez l'accès à la caméra dans les paramètres de votre navigateur, ou saisissez plutôt le PIN du client.",
+      "usePin": "Saisir le PIN à la place"
+    },
+    "pin": {
+      "heading": "Saisir le PIN de retrait",
+      "intro": "Le client a reçu un PIN à 6 chiffres sur WhatsApp. Saisissez son ID de commande et son PIN.",
+      "orderIdLabel": "ID de commande",
+      "orderIdPlaceholder": "Collez ou saisissez l'ID de commande",
+      "pinLabel": "PIN à 6 chiffres",
+      "pinPlaceholder": "000000",
+      "submit": "Vérifier le retrait",
+      "submitting": "Vérification…",
+      "useCamera": "Utiliser la caméra à la place"
+    },
+    "success": {
+      "title": "Retrait vérifié",
+      "body": "Commande {orderId} marquée comme récupérée.",
+      "scanAnother": "Scanner un autre"
+    },
+    "errors": {
+      "retry": "Réessayer",
+      "wrongQr": {
+        "title": "Pas un code de retrait",
+        "body": "Cela ressemble à un billet d'événement ou à un autre QR — pas à un code de retrait de commande. Demandez au client d'ouvrir le QR de retrait de sa commande depuis WhatsApp ou l'application Vergeo5."
+      },
+      "offline": {
+        "title": "Vérification impossible hors ligne",
+        "body": "Connectez-vous à internet pour vérifier les codes de retrait."
+      },
+      "verifyFailed": {
+        "title": "Échec de la vérification",
+        "body": "Impossible de vérifier ce retrait. Vérifiez le code et réessayez."
+      },
+      "invalidPin": {
+        "title": "PIN invalide",
+        "body": "Le PIN ne correspond pas à cette commande. Demandez au client de vérifier son message WhatsApp."
+      },
+      "alreadyClaimed": {
+        "title": "Déjà récupérée",
+        "body": "Ce retrait a déjà été vérifié. Si vous pensez qu'il y a une erreur, contactez le support."
+      },
+      "staleToken": {
+        "title": "Code expiré",
+        "body": "Le client a peut-être un code de retrait plus récent. Demandez-lui d'actualiser sa page de commande ou son message WhatsApp."
+      },
+      "forbidden": {
+        "title": "Pas votre commande",
+        "body": "Ce retrait appartient à un autre vendeur. Ne scannez que les commandes de votre boutique."
+      }
+    },
+    "recent": {
+      "heading": "Récents cette session",
+      "empty": "Aucune vérification pour le moment",
+      "order": "Commande {orderId}"
+    },
+    "eventCheckIn": {
+      "meta": {
+        "title": "Scanner d'événement — Vendeur Vergeo5",
+        "description": "Scannez les QR des billets des participants pour les enregistrer, en ligne ou hors ligne."
+      },
+      "eyebrow": "Enregistrement à l'événement",
+      "title": "Scanner les billets",
+      "intro": "Synchronisez avant l'ouverture des portes pour que les scans fonctionnent sans connexion.",
+      "instanceLabel": "Séance",
+      "sync": {
+        "button": "Synchroniser les billets",
+        "syncing": "Synchronisation…",
+        "success": "{count} billets synchronisés",
+        "error": "Échec de la synchronisation — vérifiez votre connexion",
+        "lastSynced": "Dernière synchronisation {time}",
+        "neverSynced": "Pas encore synchronisé — connectez-vous et synchronisez avant l'ouverture des portes"
+      },
+      "offline": {
+        "title": "Vous êtes hors ligne",
+        "body": "Les scans sont validés à partir de votre dernière synchronisation et mis en file d'attente. Ils se confirmeront automatiquement dès votre retour en ligne."
+      },
+      "camera": {
+        "hint": "Centrez le QR du billet dans le cadre",
+        "loading": "Démarrage de la caméra…",
+        "denied": "Accès à la caméra bloqué",
+        "deniedBody": "Autorisez l'accès à la caméra dans les paramètres de votre navigateur pour scanner les billets."
+      },
+      "count": {
+        "checkedIn": "{count, plural, one {# enregistré} other {# enregistrés}}",
+        "pending": "{count, plural, one {# synchronisation en attente} other {# synchronisations en attente}}"
+      },
+      "result": {
+        "valid": {
+          "title": "Enregistré",
+          "body": "Billet {ticketId} admis."
+        },
+        "queued": {
+          "title": "Enregistré (hors ligne)",
+          "body": "Billet {ticketId} en file d'attente — sera confirmé dès votre retour en ligne."
+        },
+        "conflict": {
+          "title": "Déjà enregistré",
+          "body": "Billet {ticketId} déjà admis."
+        },
+        "rejected": {
+          "title": "Rejeté",
+          "body": "Le billet {ticketId} n'a pas pu être enregistré."
+        },
+        "unknownTicket": {
+          "title": "Non reconnu",
+          "body": "Ce billet ne figure pas dans votre liste synchronisée. Reconnectez-vous, synchronisez, puis réessayez."
+        },
+        "staleWindow": {
+          "title": "Code expiré",
+          "body": "Ce QR a expiré. Demandez à l'invité d'actualiser son billet."
+        },
+        "notSynced": {
+          "title": "Hors de la fenêtre synchronisée",
+          "body": "Ce code est en dehors de votre fenêtre d'enregistrement synchronisée. Resynchronisez plus près de l'événement."
+        },
+        "invalidSig": {
+          "title": "Code invalide",
+          "body": "Ce QR ne correspond à aucun billet valide."
+        },
+        "invalidFormat": {
+          "title": "Pas un code de billet",
+          "body": "Cela ne ressemble pas à un QR de billet d'événement."
+        },
+        "scanAnother": "Scanner un autre"
+      },
+      "recent": {
+        "heading": "Scans récents",
+        "empty": "Aucun scan pour le moment",
+        "ticket": "Billet {ticketId}"
+      },
+      "errors": {
+        "loadEventFailed": "Impossible de charger les détails de l'événement",
+        "noInstances": "Cet événement n'a aucune séance à enregistrer",
+        "unauthorized": "Connectez-vous en tant qu'organisateur de l'événement pour scanner les billets"
+      }
+    }
+  },
+  "events": {
+    "eyebrow": "Événements",
+    "list": {
+      "meta": {
+        "title": "Vos événements — Vergeo5 Vendeur",
+        "description": "Créez et gérez des événements avec billetterie et des inscriptions gratuites."
+      },
+      "title": "Vos événements",
+      "intro": "Créez des ateliers, des spectacles et des rassemblements communautaires. Publiez quand vous êtes prêt à vendre des billets.",
+      "loading": "Chargement des événements…",
+      "empty": "Aucun événement pour le moment.",
+      "createCta": "Créer un événement",
+      "editCta": "Modifier l'événement",
+      "noVenue": "Lieu à confirmer",
+      "ticketsSold": "{count, plural, one {# billet vendu} other {# billets vendus}}"
+    },
+    "form": {
+      "createMeta": {
+        "title": "Créer un événement — Vergeo5 Vendeur",
+        "description": "Configurez un nouvel événement avec dates, lieu et photos."
+      },
+      "editMeta": {
+        "title": "Modifier l'événement — Vergeo5 Vendeur",
+        "description": "Mettez à jour les détails, les séances et le statut de publication de l'événement."
+      },
+      "createTitle": "Créer un événement",
+      "editTitle": "Modifier l'événement",
+      "title": "Titre de l'événement",
+      "titlePlaceholder": "ex. Soirée comédie à Lusaka",
+      "description": "Description",
+      "descriptionPlaceholder": "Dites aux participants à quoi s'attendre…",
+      "venue": "Lieu",
+      "venuePlaceholder": "ex. Parking d'East Park Mall",
+      "landmark": "Point de repère",
+      "landmarkPlaceholder": "ex. Près de l'entrée Shoprite",
+      "lat": "Latitude",
+      "latPlaceholder": "-15.3875",
+      "lng": "Longitude",
+      "lngPlaceholder": "28.3228",
+      "save": "Enregistrer le brouillon",
+      "saving": "Enregistrement…",
+      "saved": "Modifications enregistrées.",
+      "backToList": "Retour aux événements",
+      "ticketsSold": "{count, plural, one {# billet vendu} other {# billets vendus}}"
+    },
+    "instances": {
+      "heading": "Dates et capacité",
+      "label": "Séance {index}",
+      "add": "Ajouter une date",
+      "remove": "Supprimer",
+      "startsAt": "Début",
+      "endsAt": "Fin (facultatif)",
+      "capacity": "Capacité",
+      "sold": "{count, plural, one {# billet vendu — la capacité ne peut pas être réduite} other {# billets vendus — la capacité ne peut pas être réduite}}"
+    },
+    "images": {
+      "heading": "Photos",
+      "intro": "{count} sur {max} photos.",
+      "upload": "Ajouter des photos",
+      "uploading": "Téléversement…",
+      "upload_failed": "Échec du téléversement. Réessayez.",
+      "remove": "Supprimer",
+      "limit_reached": "Vous pouvez ajouter jusqu'à 8 photos."
+    },
+    "status": {
+      "draft": "Brouillon",
+      "published": "Publié",
+      "cancelled": "Annulé",
+      "completed": "Terminé"
+    },
+    "actions": {
+      "publish": "Publier l'événement",
+      "publishing": "Publication…",
+      "publishSuccess": "L'événement est en ligne.",
+      "cancel": "Annuler l'événement",
+      "cancelling": "Annulation…",
+      "cancelSuccess": "Événement annulé.",
+      "end": "Marquer comme terminé",
+      "ending": "Clôture…",
+      "endSuccess": "Événement marqué comme terminé."
+    },
+    "errors": {
+      "authRequired": "Connectez-vous pour gérer les événements.",
+      "loadFailed": "Impossible de charger les événements. Tirez pour actualiser.",
+      "saveFailed": "Impossible d'enregistrer l'événement. Réessayez.",
+      "actionFailed": "Échec de l'action. Réessayez.",
+      "notFound": "Événement introuvable.",
+      "required": "Ce champ est obligatoire",
+      "kyc_required": "Complétez la vérification KYC avant de créer des événements.",
+      "capacity_below_sold": "La capacité ne peut pas être inférieure aux billets déjà vendus.",
+      "past_instance": "Reportez les dates passées avant de publier.",
+      "ends_before_starts": "L'heure de fin doit être postérieure à l'heure de début.",
+      "not_editable": "Cet événement ne peut plus être modifié.",
+      "invalid_transition": "Cette action n'est pas disponible pour cet événement."
+    }
+  },
+  "tickets": {
+    "meta": {
+      "title": "Types de billets",
+      "description": "Configurez les types de billets, les tarifs et les limites d'achat pour votre événement."
+    },
+    "heading": "Types de billets",
+    "subheading": "Définissez les paliers tarifaires et les limites avant de publier.",
+    "addType": "Ajouter un type de billet",
+    "empty": "Aucun type de billet pour le moment. Ajoutez un type à prix fixe, à palier ou RSVP gratuit.",
+    "loading": "Chargement des types de billets…",
+    "saving": "Enregistrement…",
+    "saved": "Type de billet enregistré",
+    "deleted": "Type de billet supprimé",
+    "backToEvent": "Retour à l'événement",
+    "allocation": {
+      "toggle": "Limites par date",
+      "heading": "Limites par date",
+      "help": "Limitez le nombre de billets de ce type vendus à chaque date. Laissez une date vide pour aucune limite.",
+      "loading": "Chargement des limites…",
+      "noInstances": "Ajoutez d'abord des dates d'événement pour définir des limites par date.",
+      "placeholder": "Aucune limite",
+      "soldLabel": "{count, plural, =0 {aucun vendu} one {# vendu} other {# vendus}}",
+      "save": "Enregistrer les limites",
+      "saving": "Enregistrement…",
+      "saved": "Limites par date enregistrées",
+      "errors": {
+        "loadFailed": "Impossible de charger les limites par date.",
+        "saveFailed": "Impossible d'enregistrer les limites par date.",
+        "belowSold": "Une limite est inférieure au nombre de billets déjà vendus pour cette date.",
+        "invalid": "Saisissez un nombre entier de billets (0 ou plus), ou laissez une date vide."
+      }
+    },
+    "pricing": {
+      "toggle": "Réductions",
+      "heading": "Réductions",
+      "baseLabel": "Prix de base {price}. Les réductions doivent être inférieures à ce montant.",
+      "loading": "Chargement des tarifs…",
+      "saving": "Enregistrement…",
+      "earlyBird": {
+        "heading": "Prix anticipé",
+        "help": "Un prix réduit jusqu'à une date limite. Les acheteurs avant cette date paient ce prix au lieu du prix de base.",
+        "priceLabel": "Prix anticipé (ZMW)",
+        "pricePlaceholder": "60.00",
+        "untilLabel": "Jusqu'au",
+        "save": "Enregistrer le prix anticipé",
+        "clear": "Effacer",
+        "saved": "Prix anticipé enregistré"
+      },
+      "tiers": {
+        "heading": "Tarifs de groupe",
+        "help": "Un prix par billet réduit à l'achat d'au moins cette quantité en une fois.",
+        "minQtyLabel": "Quantité min.",
+        "minQtyPlaceholder": "5",
+        "priceLabel": "Prix unitaire (ZMW)",
+        "pricePlaceholder": "65.00",
+        "add": "Ajouter un palier",
+        "remove": "Supprimer",
+        "save": "Enregistrer les tarifs de groupe",
+        "saved": "Tarifs de groupe enregistrés"
+      },
+      "errors": {
+        "loadFailed": "Impossible de charger les tarifs.",
+        "saveFailed": "Impossible d'enregistrer les tarifs.",
+        "priceInvalid": "Saisissez un prix valide en kwacha.",
+        "notDiscount": "Le prix anticipé doit être inférieur au prix de base.",
+        "dateInvalid": "Saisissez une date et une heure limites valides.",
+        "pastCutoff": "La date limite doit être dans le futur.",
+        "earlyBirdIncomplete": "Définissez à la fois un prix anticipé et une date limite, ou effacez les deux.",
+        "minQtyInvalid": "La quantité minimale doit être un nombre entier de 2 ou plus.",
+        "duplicateMinQty": "Chaque palier de groupe doit avoir une quantité minimale différente.",
+        "tierNotDiscount": "Chaque prix de groupe doit être inférieur au prix de base.",
+        "onFree": "Les réductions ne sont disponibles que sur les types de billets payants."
+      }
+    },
+    "fields": {
+      "kindLabel": "Type",
+      "kindFixed": "Prix fixe",
+      "kindTier": "Palier (ex. Standard / VIP)",
+      "kindFreeRsvp": "RSVP gratuit",
+      "nameLabel": "Nom",
+      "namePlaceholder": "Entrée générale",
+      "priceLabel": "Prix (ZMW)",
+      "pricePlaceholder": "75.00",
+      "priceHelp": "Saisissez le montant en kwacha ; stocké en ngwee (sans décimales en base de données).",
+      "priceFreeHelp": "Le RSVP gratuit est toujours à K0.00.",
+      "qtyCapLabel": "Limite de quantité (facultatif)",
+      "qtyCapPlaceholder": "Illimité",
+      "qtyCapHelp": "Nombre maximal de billets de ce type sur l'ensemble des ventes.",
+      "perCustomerCapLabel": "Limite par client (facultatif)",
+      "perCustomerCapPlaceholder": "Illimité",
+      "perCustomerCapHelp": "Nombre maximal de billets qu'un acheteur peut détenir pour ce type.",
+      "soldLabel": "{count, plural, one {# vendu} other {# vendus}}",
+      "attendeeNamedLabel": "Recueillir les noms des participants",
+      "attendeeNamedHelp": "Exiger un nom pour chaque billet au paiement — utile pour les ateliers, dîners et événements avec places assises.",
+      "attendeeNamedBadge": "Noms requis"
+    },
+    "actions": {
+      "save": "Enregistrer le type",
+      "cancel": "Annuler",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "confirmDelete": "Supprimer ce type de billet ?"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les types de billets. Réessayez.",
+      "saveFailed": "Impossible d'enregistrer le type de billet.",
+      "deleteFailed": "Impossible de supprimer le type de billet.",
+      "required": "Ce champ est obligatoire",
+      "priceInvalid": "Saisissez un prix valide (ex. 75.00)",
+      "freeMustBeZero": "Le RSVP gratuit doit être à K0.00",
+      "paidMustBePositive": "Les types payants doivent être supérieurs à K0.00",
+      "duplicateTier": "Un palier portant ce nom existe déjà",
+      "duplicateFixed": "Cet événement a déjà un type à prix fixe",
+      "oversell": "Épuisé — plus de billets disponibles à cette limite",
+      "unauthorized": "Connectez-vous pour gérer les types de billets"
+    }
+  },
+  "disputes": {
+    "meta": {
+      "title": "Litiges",
+      "description": "Consultez et répondez aux litiges des clients sur vos commandes."
+    },
+    "list": {
+      "title": "Litiges",
+      "empty": "Aucun litige sur vos commandes",
+      "order": "Commande {orderId}",
+      "status": "Statut : {status}",
+      "view": "Voir le litige"
+    },
+    "detail": {
+      "title": "Détails du litige",
+      "order": "Commande {orderId}",
+      "statusLabel": "Statut",
+      "statusDisplay": "Statut : {status}",
+      "customerEvidence": "Preuves du client",
+      "evidenceCount": "{count, plural, one {# fichier} other {# fichiers}}",
+      "yourResponse": "Votre réponse",
+      "responseLabel": "Expliquez votre version",
+      "responsePlaceholder": "Que s'est-il passé de votre point de vue ?",
+      "evidenceLabel": "Ajouter des preuves",
+      "evidenceHelp": "Photos ou PDF, 10 Mo maximum chacun.",
+      "addEvidence": "Ajouter une photo ou un PDF",
+      "uploading": "Téléversement…",
+      "submit": "Envoyer la réponse",
+      "submitting": "Envoi…",
+      "success": "Votre réponse a été envoyée.",
+      "error": "Impossible d'envoyer la réponse. Veuillez réessayer.",
+      "back": "Retour aux litiges",
+      "alreadyResponded": "Vous avez déjà répondu à ce litige.",
+      "status": {
+        "open": "En attente de votre réponse",
+        "vendor_responded": "Réponse envoyée",
+        "under_review": "En cours d'examen par l'administration",
+        "resolved_refund": "Résolu — remboursement au client",
+        "resolved_release": "Résolu — paiement débloqué",
+        "resolved_partial": "Résolu — remboursement partiel",
+        "rejected": "Litige rejeté"
+      }
+    }
+  },
+  "returns": {
+    "meta": {
+      "title": "Demandes de retour — Vergeo5 Vendeur",
+      "description": "Acceptez ou contestez les demandes de retour des clients pour des articles défectueux ou incorrects."
+    },
+    "title": "Demandes de retour",
+    "intro": "Des clients ont signalé des articles défectueux ou incorrects. Acceptez pour émettre un remboursement complet, ou contestez pour un examen par l'administration.",
+    "loading": "Chargement des retours…",
+    "empty": "Aucune demande de retour en attente de votre part.",
+    "card": {
+      "item": "{title} × {qty}",
+      "order": "Commande {id}",
+      "refund": "Remboursement si accepté : {amount}",
+      "evidence": "{count, plural, one {# photo jointe} other {# photos jointes}}",
+      "viewOrder": "Voir la commande"
+    },
+    "actions": {
+      "accept": "Accepter le retour",
+      "accepting": "Acceptation…",
+      "contest": "Contester — envoyer à l'administration",
+      "contesting": "Envoi…"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les demandes de retour. Tirez pour actualiser.",
+      "actionFailed": "Échec de l'action. Réessayez."
+    }
+  },
+  "jobs": {
+    "eyebrow": "Demandes de devis",
+    "title": "Missions correspondantes",
+    "intro": "Missions qui vous sont diffusées — envoyez un devis avant leur expiration.",
+    "loading": "Chargement des missions…",
+    "authRequired": "Connectez-vous pour voir les missions correspondantes.",
+    "empty": "Aucune mission ouverte ne correspond à vos services pour le moment.",
+    "posted": "Publié le {date}",
+    "yourQuote": "Votre devis : {amount}",
+    "status": {
+      "new": "En attente de devis",
+      "quoted": "Devis envoyé"
+    },
+    "categories": {
+      "beauty": "Beauté",
+      "food_catering": "Alimentation et traiteur",
+      "auto": "Auto",
+      "printing_creative": "Impression et création",
+      "home_services": "Services à domicile",
+      "tech_services": "Services techniques",
+      "cleaning": "Nettoyage",
+      "tailoring": "Couture"
+    },
+    "quoteForm": {
+      "open": "Envoyer un devis",
+      "amountLabel": "Votre prix (ZMW)",
+      "amountPlaceholder": "ex. 1 500,00",
+      "amountInvalid": "Saisissez un prix valide supérieur à zéro.",
+      "messageLabel": "Message (facultatif)",
+      "messagePlaceholder": "Quand vous pouvez commencer, ce qui est inclus…",
+      "validityLabel": "Devis valable (jours)",
+      "validityInvalid": "La validité doit être comprise entre 1 et 30 jours.",
+      "submit": "Envoyer le devis",
+      "submitting": "Envoi…",
+      "cancel": "Annuler",
+      "withdraw": "Retirer le devis",
+      "withdrawing": "Retrait…"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les missions correspondantes. Tirez pour actualiser.",
+      "submitFailed": "Impossible d'envoyer le devis. Réessayez.",
+      "withdrawFailed": "Impossible de retirer le devis. Réessayez.",
+      "notMatched": "Vous n'avez pas été associé à cette mission.",
+      "alreadyQuoted": "Vous avez déjà un devis actif sur cette mission."
+    }
+  },
+  "reviews": {
+    "meta": {
+      "title": "Avis clients — Vergeo5 Vendeur",
+      "description": "Répondez aux avis d'achats vérifiés sur vos annonces."
+    },
+    "title": "Avis clients",
+    "intro": "Répondez une fois par avis. Vous pouvez modifier votre réponse pendant 24 heures.",
+    "loading": "Chargement des avis…",
+    "empty": "Aucun avis client pour le moment.",
+    "starFilled": "★",
+    "starEmpty": "☆",
+    "card": {
+      "unknownItem": "Article de la commande",
+      "photoAlt": "Photo d'avis client",
+      "replyLabel": "Votre réponse",
+      "editReply": "Modifier votre réponse",
+      "yourReply": "Votre réponse"
+    },
+    "actions": {
+      "submit": "Publier la réponse",
+      "update": "Mettre à jour la réponse",
+      "submitting": "Enregistrement…"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les avis. Tirez pour actualiser.",
+      "replyFailed": "Impossible d'enregistrer votre réponse. Réessayez."
+    }
+  },
+  "eventDashboard": {
+    "meta": {
+      "title": "Tableau de bord de l'événement",
+      "description": "Ventes par type de billet, progression du pointage et statut du séquestre pour votre événement."
+    },
+    "heading": "Tableau de bord de l'événement",
+    "subheading": "Ventes, progression du pointage et statut du séquestre en un coup d'œil.",
+    "backToEvent": "Retour à l'événement",
+    "loading": "Chargement du tableau de bord…",
+    "empty": "Aucun type de billet pour le moment.",
+    "massRefundFlagged": "Cet événement a été annulé. Les détenteurs de billets sont signalés pour un remboursement ; notre équipe le traitera sous peu.",
+    "checkInProgress": "{checkedIn, number} billets pointés sur {issued, number}",
+    "viewRoster": "Voir la liste des participants",
+    "sections": {
+      "revenue": "Revenus",
+      "checkIn": "Progression du pointage",
+      "escrow": "Séquestre",
+      "salesByType": "Ventes par type de billet"
+    },
+    "labels": {
+      "pending": "En attente de déblocage",
+      "released": "Débloqué pour vous",
+      "eventStatus": "Statut de l'événement",
+      "soldCheckedIn": "{sold, plural, one {# vendu} other {# vendus}} · {checkedIn, plural, one {# pointé} other {# pointés}}"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger le tableau de bord. Tirez pour actualiser.",
+      "unauthorized": "Connectez-vous en tant qu'organisateur pour voir ce tableau de bord.",
+      "notFound": "Événement introuvable.",
+      "forbidden": "Vous ne pouvez consulter le tableau de bord que de vos propres événements."
+    }
+  },
+  "eventRoster": {
+    "meta": {
+      "title": "Liste des participants",
+      "description": "La liste des participants à votre événement, avec les noms recueillis au moment du paiement."
+    },
+    "heading": "Liste des participants",
+    "subheading": "Qui vient, regroupé par date. Les noms apparaissent pour les types de billets qui les recueillent.",
+    "backToDashboard": "Retour au tableau de bord",
+    "loading": "Chargement de la liste…",
+    "empty": "Aucun billet vendu pour le moment.",
+    "noName": "Aucun nom recueilli",
+    "summary": "{checkedIn, number} pointés sur {total, number}",
+    "truncated": "Affichage des {count, number} premiers participants.",
+    "dateCount": "{count, plural, one {# participant} other {# participants}}",
+    "downloadCsv": "Télécharger la liste (CSV)",
+    "downloading": "Préparation…",
+    "status": {
+      "checkedIn": "Pointé",
+      "issued": "Non pointé"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger la liste. Tirez pour actualiser.",
+      "downloadFailed": "Impossible de télécharger la liste. Réessayez.",
+      "unauthorized": "Connectez-vous en tant qu'organisateur pour voir cette liste."
+    }
+  }
+}
