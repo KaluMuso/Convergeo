@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { bestActiveTier, isEarlyBirdActive, resolveUnitPriceNgwee } from "./resolve-price";
+import {
+  bestActiveTier,
+  isEarlyBirdActive,
+  nextTierUpsell,
+  resolveUnitPriceNgwee,
+} from "./resolve-price";
 
 import type { ResolvablePrice } from "./resolve-price";
 
@@ -73,5 +78,35 @@ describe("bestActiveTier", () => {
     expect(bestActiveTier(t, 1)).toBeNull();
     expect(bestActiveTier(t, 2)?.price_ngwee).toBe(46_000);
     expect(bestActiveTier(t, 5)?.price_ngwee).toBe(42_000);
+  });
+});
+
+describe("nextTierUpsell", () => {
+  it("returns null when there are no tiers", () => {
+    expect(nextTierUpsell(ticket(), 1, NOW)).toBeNull();
+  });
+
+  it("points to the nearest higher tier that lowers the price", () => {
+    const t = ticket({
+      tiers: [
+        { min_qty: 5, price_ngwee: 45_000 },
+        { min_qty: 10, price_ngwee: 40_000 },
+      ],
+    });
+    expect(nextTierUpsell(t, 1, NOW)).toEqual({ min_qty: 5, price_ngwee: 45_000 });
+    // Once at 5, the next reachable saving is the 10+ tier.
+    expect(nextTierUpsell(t, 5, NOW)).toEqual({ min_qty: 10, price_ngwee: 40_000 });
+    // At/above the top tier there is nothing left to upsell.
+    expect(nextTierUpsell(t, 10, NOW)).toBeNull();
+  });
+
+  it("ignores a higher tier that would not beat the current price", () => {
+    // An active early-bird (39k) already beats the 5+ tier (45k) → no upsell.
+    const t = ticket({
+      early_bird_price_ngwee: 39_000,
+      early_bird_until: "2026-08-01T00:00:00Z",
+      tiers: [{ min_qty: 5, price_ngwee: 45_000 }],
+    });
+    expect(nextTierUpsell(t, 1, NOW)).toBeNull();
   });
 });
