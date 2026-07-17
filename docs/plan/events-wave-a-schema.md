@@ -76,7 +76,7 @@ Five pebbles (recurrence dropped per D-A4). The event_type→escrow coupling is 
 
 Because D-A1 makes `event_type` a **behavioral driver over escrow**, all per-type behavior lives in one module `services/events/type_policy.py` — a pure `event_type → {discovery_visibility_rule, escrow_anchor_rule, ux_flags}` map with an explicit **default = today's timing-based escrow** for any type not overriding it. `event_release.py` (P14) and `events_public.py` (P10) both read this map; nothing branches on `event_type` inline. This keeps the money seam auditable (one place to review), keeps escrow legs idempotent/guarded exactly as the order engine requires, and means P10 can land the column with zero money-behavior change (default policy) before P14 activates per-type timing.
 
-## 6. Status — ✅ Wave A shipped (management/display follow-ups = Wave B)
+## 6. Status — ✅ Wave A + Wave B shipped (Events pricing epic complete end-to-end)
 
 D29 is locked; specs above are final. Build order (I implement — Cursor limit reached): **P10 foundation** → **{P11, P13, P14}** → **P12**, one PR per pebble, open-and-merge flow. ⚠ P12 (pricing) and P14 (escrow) are money seams carrying heightened-scrutiny review + failure-path tests.
 
@@ -88,8 +88,16 @@ D29 is locked; specs above are final. Build order (I implement — Cursor limit 
 - ✅ **P14** (#224, **no migration**): `event_type`-driven escrow settlement. `event_release.py` reads `type_policy.py`; `recurring` → `full_only` (funds held to end+24h, buyer-protective), all other types keep today's timing. Zero existing orders affected (`event_type` defaults `standard`).
 - ✅ **P12** (#226, migration `0049_ticket_pricing_modes`, ⚠money seam): early-bird (`early_bird_price_ngwee` + `early_bird_until`, both-or-neither) + group tiers (`ticket_type_price_tiers`). `resolve_unit_price()` = server-side min of {base, active early-bird, qualifying tiers}; client never supplies a price. Purely additive — no config ⇒ today's flat base price. As-built differs from the §3 provisional sketch (single `early_bird_until` cutoff + a discounted-price column, not `sale_starts_at/ends_at`; migration `0049` not `0043`, post-collision renumber).
 
-**Deferred follow-ups (Wave B candidates — foundation-first left these to a management wave):**
+**Progress — ✅ WAVE B COMPLETE (management + display; the pricing epic is now end-to-end):**
 
-- **Organiser pricing-write surface (P12 follow-up):** create/update/delete `ticket_type_price_tiers` + set/clear early-bird on a ticket type. The schema + RLS (organiser-owned writes) are in place; the API endpoint + vendor form UI are not yet built. Reads flow today; writes are service-role only.
-- **Customer-facing price-mode display:** show "early-bird until …" / "buy N+ for K…" on the event detail + checkout so buyers see _why_ the resolved price is lower. Server already resolves it; this is presentation.
-- **Attendee-name capture UI polish (P11 follow-up)** and **per-instance allocation editor UX (P13 follow-up)** if the shipped organiser surfaces need iteration.
+- ✅ **P15** (#232, **no migration** — reuses `0049`): organiser ticket-pricing **write API**. `GET /organiser/ticket-types/{id}/pricing`, `PUT …/early-bird` (set/clear), `PUT …/price-tiers` (full-set upsert+delete). Server-authoritative money guards (discount strictly below base, future cutoff, `min_qty ≥ 2` unique, rejected on free types); vendor-gated + rate-limited. Also fixed a latent app-wide bug where `value_error` validation responses returned 500 instead of 422 (`jsonable_encoder` in `errors.py`).
+- ✅ **P16** (#235, no migration): organiser pricing **UI**. Inline "Discounts" editor on the ticket-type config (paid types only) — early-bird price + `datetime-local` cutoff, group-tier rows. Pure `pricing.ts` mirrors the server guards; 14 vitest cases.
+- ✅ **Customer price-mode display** (#236, **parallel session**, no migration): `events_public.py` exposes `early_bird_price_ngwee` / `early_bird_until` / `tiers` on the customer `TicketTypeResponse`; `_lib/resolve-price.ts` mirrors `resolve_unit_price` so the ticket picker shows the resolved price + early-bird badge (fixes the picker previously showing base×qty while checkout charged less). _An equivalent build in this session (#237) was closed as a duplicate — the two collided; #236 merged first._
+
+**⚠ Coordination note (parallel sessions):** the customer-display pebble (and earlier P13) were each **built twice** by concurrent sessions racing the same backlog. Keep this §6 current as the single source of "what's done" so sessions don't re-attempt shipped work.
+
+**Remaining optional follow-ups (nice-to-have, not blocking):**
+
+- **Group-tier upsell hint** on the customer picker — a forward-looking "Buy N+ for K… each" toward the _next_ unreached tier (#236 shows the _currently-applied_ tier via `bestActiveTier`, not an upsell). Small, self-contained.
+- **Attendee-name capture UI polish (P11)** and **per-instance allocation editor UX (P13)** if the shipped organiser surfaces need iteration.
+- **PWYW pricing** stays deferred per D29 (§4).
