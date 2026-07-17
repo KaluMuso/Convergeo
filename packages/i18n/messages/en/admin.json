@@ -19,7 +19,7 @@
   },
   "translations": {
     "heading": "Translations",
-    "subheading": "Every user-facing string, grouped by where it lives, with per-language coverage. English is the source of truth; untranslated strings fall back to English.",
+    "subheading": "Every user-facing string, grouped by where it lives, with per-language coverage. Edit a translation and Save to store it; Download JSON to publish it into the message files. English is the source of truth; untranslated strings fall back to English.",
     "lensLabel": "View",
     "lens": {
       "l10n": "Localization (coverage)",
@@ -36,9 +36,18 @@
     },
     "tag": {
       "translated": "Translated",
-      "missing": "English"
+      "missing": "English",
+      "override": "Edited"
     },
     "emptyFiltered": "No strings match this filter.",
+    "save": "Save",
+    "clear": "Clear",
+    "valuePlaceholder": "Translation…",
+    "exportNamespace": "Download JSON",
+    "errors": {
+      "loadOverrides": "Could not load saved edits. Reload the page.",
+      "save": "Could not save. Try again."
+    },
     "pages": {
       "common": "All apps — shared UI, navigation, theme",
       "auth": "All apps — sign in and sign up",

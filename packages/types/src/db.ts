@@ -2562,6 +2562,36 @@ export type Database = {
           },
         ]
       }
+      translation_overrides: {
+        Row: {
+          id: string
+          locale: string
+          message_key: string
+          namespace: string
+          updated_at: string
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          id?: string
+          locale: string
+          message_key: string
+          namespace: string
+          updated_at?: string
+          updated_by?: string | null
+          value: string
+        }
+        Update: {
+          id?: string
+          locale?: string
+          message_key?: string
+          namespace?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
