@@ -84,6 +84,6 @@ describe("admin middleware CF Access helpers", () => {
 describe("admin middleware matrix", () => {
   it("documents locale matcher coverage for all supported locales", async () => {
     const { config } = await import("./middleware");
-    expect(config.matcher).toEqual(["/", "/(en|bem|nya|fr)/:path*"]);
+    expect(config.matcher).toEqual(["/", "/(en|bem|nya|fr|zh)/:path*"]);
   });
 });

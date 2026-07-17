@@ -1,0 +1,165 @@
+{
+  "title": "活动",
+  "browse": {
+    "title": "活动",
+    "subtitle": "发现赞比亚各地的工作坊、演出和社区聚会。",
+    "emptyTitle": "此时间段内暂无活动",
+    "emptyBody": "尝试其他日期筛选，或稍后再来查看新活动。",
+    "soldOut": "已售罄",
+    "free": "免费",
+    "viewEvent": "查看活动",
+    "verified": "已认证",
+    "calendarLabel": "本月有活动的日期",
+    "hostCta": "举办活动",
+    "hostPitch": "通过动态二维码检票销售门票，并安全收款。"
+  },
+  "filters": {
+    "tonight": "今晚",
+    "thisWeekend": "本周末",
+    "allDates": "全部即将开始",
+    "categoryLabel": "类别"
+  },
+  "categories": {
+    "all": "全部",
+    "workshops": "工作坊与教育",
+    "comedy-theatre": "喜剧与戏剧",
+    "pop-up-dinners": "快闪晚宴",
+    "cultural-arts": "文化与艺术",
+    "lifestyle-community": "生活与社区",
+    "free-rsvp": "免费预约"
+  },
+  "detail": {
+    "metaTitle": "{title} — 活动",
+    "metaDescription": "{venue}的{title}。在 Vergeo5 上查看日期、门票和场地详情。",
+    "about": "关于此活动",
+    "dates": "日期与时间",
+    "tickets": "门票",
+    "venue": "场地",
+    "landmark": "靠近{landmark}",
+    "mapHint": "在地图中打开",
+    "organiser": "主办方",
+    "organiserCta": "查看主办方",
+    "soldOut": "已售罄",
+    "free": "免费预约",
+    "fromPrice": "{price}起",
+    "ticketRemaining": "{count, plural, one {剩余 #} other {剩余 #}}",
+    "getTickets": "购买门票",
+    "getTicketsSoon": "门票即将开售",
+    "pastInstance": "已结束",
+    "spots": "{sold} / {total} 个名额"
+  },
+  "organiser": {
+    "imageAlt": "活动照片 {position}"
+  },
+  "ticketPurchase": {
+    "selectInstance": "选择日期",
+    "selectType": "门票类型",
+    "quantity": "数量",
+    "decrease": "减少数量",
+    "decreaseSymbol": "−",
+    "increase": "增加数量",
+    "increaseSymbol": "+",
+    "total": "总计",
+    "freeRsvpCta": "预约免费名额",
+    "payCta": "购买门票",
+    "processing": "处理中…",
+    "successRsvp": "名额已预约",
+    "successCheckout": "已添加 — 继续付款",
+    "soldOut": "已售罄",
+    "remaining": "{count, plural, one {剩余 #} other {剩余 #}}",
+    "perCustomerCap": "每人最多 {count} 张",
+    "earlyBird": "早鸟票：{price}，截止 {until}",
+    "groupTier": "购买 {minQty} 张及以上，每张 {price}",
+    "discountApplied": "已应用折扣 — 每张 {price}",
+    "attendeeNamesLabel": "参与者姓名",
+    "attendeeNameLabel": "参与者 {index} 姓名",
+    "attendeeNamePlaceholder": "全名",
+    "loginRequired": "登录以购买门票",
+    "errors": {
+      "generic": "无法完成请求，请重试。",
+      "freeUseRsvp": "这是免费活动 — 请使用预约。",
+      "paidUseCheckout": "此门票需要付款。",
+      "oversell": "已无法购买",
+      "attendeeNamesRequired": "请为每张门票输入姓名。",
+      "attendeeNamesMismatch": "请为每张门票输入且仅输入一个姓名。"
+    }
+  },
+  "wallet": {
+    "title": "我的门票",
+    "emptyTitle": "暂无门票",
+    "emptyBody": "您购买或预约的门票将显示在这里，并带有用于入场的动态二维码。",
+    "emptyCta": "浏览活动",
+    "list": {
+      "viewTicket": "查看门票",
+      "status": {
+        "issued": "可扫码",
+        "checked_in": "已检票",
+        "transferred": "已转让",
+        "void": "已作废"
+      },
+      "startsAt": "开始时间 {datetime}"
+    },
+    "detail": {
+      "metaTitle": "门票 — {event}",
+      "back": "返回门票",
+      "eventLabel": "活动",
+      "venueLabel": "场地",
+      "startsLabel": "开始时间",
+      "typeLabel": "门票类型",
+      "holderLabel": "参与者姓名",
+      "qrLabel": "在入口处出示此二维码",
+      "qrAria": "动态入场二维码",
+      "pinLabel": "PIN 备用码",
+      "pinAria": "六位数入场 PIN {pin}",
+      "pinUnavailable": "购买此门票时已发送 PIN。如需要请查看您的消息。",
+      "refreshIn": "{seconds} 秒后刷新",
+      "offlineTitle": "您已离线",
+      "offlineBody": "正在使用缓存的入场码。重新联网后同步以获取最新的码。",
+      "offlineExpired": "缓存的码已过期 — 请在入口处使用您的 PIN。",
+      "syncHorizon": "正在同步离线码…",
+      "status": {
+        "issued": "可扫码",
+        "checked_in": "已检票",
+        "transferred": "此门票已转让，无法再使用。",
+        "void": "此门票已失效。"
+      },
+      "transferBanner": "转让的门票无法扫描。接收者拥有新的二维码和 PIN。",
+      "voidBanner": "此门票已作废，无法用于入场。"
+    }
+  },
+  "transfer": {
+    "back": "返回门票",
+    "title": "转让门票",
+    "subtitle": "免费将此门票发送给朋友。他们将使用下方的电话号码登录以领取。",
+    "phoneLabel": "接收者的电话号码",
+    "phonePlaceholder": "例如 0977 123 456",
+    "cutoffNotice": "转让在活动开始前 6 小时截止。",
+    "submitCta": "发送转让",
+    "submitting": "发送中…",
+    "successBody": "我们已通知 {phone}。他们可以使用该号码登录以领取此门票。",
+    "cancelCta": "取消转让",
+    "cancelling": "取消中…",
+    "cancelledNotice": "转让已取消。",
+    "pendingNotice": "正在转让给 {phone}",
+    "claimBanner": {
+      "title": "朋友给您发送了一张门票",
+      "body": "{event} 于 {datetime} 开始。请在过期前领取。",
+      "claimCta": "领取门票",
+      "claiming": "领取中…",
+      "claimedNotice": "门票已领取 — 请在“我的门票”中查看。",
+      "dismiss": "忽略"
+    },
+    "errors": {
+      "generic": "无法完成请求，请重试。",
+      "notFound": "未找到门票。",
+      "notHolder": "只有门票持有者才能转让此门票。",
+      "notTransferable": "此门票无法再转让。",
+      "cutoffPassed": "转让在活动开始前 6 小时截止。",
+      "pendingExists": "此门票已有一个待处理的转让。",
+      "notPending": "此转让不再处于待处理状态。",
+      "expired": "此转让邀请已过期。",
+      "phoneMismatch": "请使用门票发送到的电话号码登录。",
+      "rateLimited": "请求过多，请稍后重试。"
+    }
+  }
+}

@@ -50,6 +50,10 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'supabase_admin') THEN
     CREATE ROLE supabase_admin LOGIN SUPERUSER;
   END IF;
+  -- GoTrue's role used by the custom_access_token auth hook (migration 0051).
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
+    CREATE ROLE supabase_auth_admin NOLOGIN NOINHERIT;
+  END IF;
 END $$;
 
 CREATE SCHEMA IF NOT EXISTS extensions;
