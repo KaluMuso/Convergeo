@@ -2205,6 +2205,70 @@ export type Database = {
         }
         Relationships: []
       }
+      service_reviews: {
+        Row: {
+          body: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          job_id: string
+          provider_vendor_id: string
+          rating: number
+          status: string
+          updated_at: string
+          vendor_reply: string | null
+          vendor_reply_at: string | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          job_id: string
+          provider_vendor_id: string
+          rating: number
+          status?: string
+          updated_at?: string
+          vendor_reply?: string | null
+          vendor_reply_at?: string | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          job_id?: string
+          provider_vendor_id?: string
+          rating?: number
+          status?: string
+          updated_at?: string
+          vendor_reply?: string | null
+          vendor_reply_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_reviews_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_reviews_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_reviews_provider_vendor_id_fkey"
+            columns: ["provider_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           category: string
