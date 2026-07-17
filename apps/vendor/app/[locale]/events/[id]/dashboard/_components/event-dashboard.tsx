@@ -124,6 +124,12 @@ export function EventDashboard({ locale, eventId }: EventDashboardProps) {
                 issued: stats.check_in.issued,
               })}
             </p>
+            <Link
+              href={`/${locale}/events/${eventId}/roster`}
+              className="mt-2 inline-flex text-sm font-medium text-primary underline-offset-2 hover:underline"
+            >
+              {t("eventDashboard.viewRoster")}
+            </Link>
           </section>
 
           <section className="rounded-lg border border-border bg-card p-3 shadow-sm">
