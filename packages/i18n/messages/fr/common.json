@@ -1,0 +1,35 @@
+{
+  "app": {
+    "name": "Vergeo5"
+  },
+  "common": {
+    "loading": "Chargement…",
+    "retry": "Réessayer"
+  },
+  "nav": {
+    "home": "Accueil",
+    "skipToContent": "Aller au contenu"
+  },
+  "theme": {
+    "label": "Thème",
+    "light": "Clair",
+    "dark": "Sombre",
+    "system": "Système"
+  },
+  "greeting": "Bonjour, {name} !",
+  "offline": {
+    "code": "Hors ligne",
+    "heading": "Vous êtes hors ligne",
+    "body": "Pas de connexion pour le moment. Les pages déjà consultées fonctionnent encore — reconnectez-vous pour parcourir tout le reste.",
+    "retry": "Réessayer",
+    "home": "Accueil"
+  },
+  "install": {
+    "title": "Installer Vergeo5",
+    "body": "Ajoutez Vergeo5 à votre écran d'accueil pour un accès plus rapide et une application en plein écran.",
+    "action": "Installer l'application",
+    "dismiss": "Plus tard",
+    "updateBody": "Une nouvelle version de Vergeo5 est prête.",
+    "updateAction": "Recharger pour mettre à jour"
+  }
+}

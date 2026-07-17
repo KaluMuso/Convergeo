@@ -1,0 +1,35 @@
+{
+  "app": {
+    "name": "Vergeo5"
+  },
+  "common": {
+    "loading": "加载中…",
+    "retry": "重试"
+  },
+  "nav": {
+    "home": "首页",
+    "skipToContent": "跳到内容"
+  },
+  "theme": {
+    "label": "主题",
+    "light": "浅色",
+    "dark": "深色",
+    "system": "系统"
+  },
+  "greeting": "您好，{name}！",
+  "offline": {
+    "code": "离线",
+    "heading": "您已离线",
+    "body": "目前无网络连接。您已浏览过的页面仍可使用——重新连接即可浏览其他内容。",
+    "retry": "重试",
+    "home": "返回首页"
+  },
+  "install": {
+    "title": "安装 Vergeo5",
+    "body": "将 Vergeo5 添加到主屏幕，以便更快访问并获得全屏应用体验。",
+    "action": "安装应用",
+    "dismiss": "暂不",
+    "updateBody": "Vergeo5 的新版本已就绪。",
+    "updateAction": "重新加载以更新"
+  }
+}
