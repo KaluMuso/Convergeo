@@ -13,6 +13,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.testclient import TestClient
 
 ACTIVE_VENDOR_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+OTHER_VENDOR_UUID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 PENDING_VENDOR_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 SUSPENDED_VENDOR_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 LISTING_A = "11111111-1111-1111-1111-111111111111"
@@ -429,6 +430,8 @@ class TestVendorProfile:
         assert payload["vendor"]["location"]["hours"]["mon"] == "09:00-17:00"
         # No contact number set on this vendor → field is null.
         assert payload["vendor"]["whatsapp_msisdn"] is None
+        # No orders seeded → count is zero (not an error).
+        assert payload["vendor"]["order_count"] == 0
         assert len(payload["listings"]) == 1
         assert payload["listings"][0]["product_slug"] == "itel-a70"
         assert payload["reviews_summary"]["rating_count"] == 1
@@ -448,6 +451,23 @@ class TestVendorProfile:
         assert response.status_code == 200
         # Returned as E.164 digits so the storefront can build wa.me/<msisdn>.
         assert response.json()["vendor"]["whatsapp_msisdn"] == "260977123456"
+
+    def test_profile_counts_completed_orders(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        # Only delivered/completed orders for THIS vendor count.
+        store.orders = [
+            {"id": "o1", "vendor_id": ACTIVE_VENDOR_ID, "status": "delivered"},
+            {"id": "o2", "vendor_id": ACTIVE_VENDOR_ID, "status": "completed"},
+            {"id": "o3", "vendor_id": ACTIVE_VENDOR_ID, "status": "placed"},
+            {"id": "o4", "vendor_id": ACTIVE_VENDOR_ID, "status": "cancelled"},
+            {"id": "o5", "vendor_id": OTHER_VENDOR_UUID, "status": "completed"},
+        ]
+
+        response = client.get("/directory/tech-hub-lusaka")
+        assert response.status_code == 200
+        assert response.json()["vendor"]["order_count"] == 2
 
     def test_profile_exposes_cover_image(
         self, client: TestClient, store: FakeSupabaseStore

@@ -38,6 +38,7 @@ type VendorProfileApiResponse = {
     preferred_badge: boolean;
     kyc_tier: number | null;
     verified: boolean;
+    order_count: number;
     location: VendorLocation | null;
     locations: VendorLocation[];
     created_at: string | null;
@@ -367,6 +368,11 @@ export default async function VendorProfilePage({ params }: PageProps) {
               {vendor.verified ? (
                 <CornerRibbon trust="id_verified" trustLabel={t("profile.verifiedBadge")} />
               ) : null}
+              {vendor.kyc_tier && vendor.kyc_tier >= 2 ? (
+                <span className="inline-flex items-center rounded-full bg-panel px-2.5 py-0.5 text-xs font-medium text-panel-text">
+                  {vendor.kyc_tier >= 3 ? t("profile.tierPremium") : t("profile.tierBusiness")}
+                </span>
+              ) : null}
               {vendor.location ? (
                 <span className="text-sm text-text-3">{vendor.location.landmark}</span>
               ) : null}
@@ -383,7 +389,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
             ) : null}
           </div>
         </div>
-        <dl className="mt-3 grid grid-cols-3 gap-2 border-t border-border px-4 py-3">
+        <dl className="mt-3 grid grid-cols-2 gap-2 border-t border-border px-4 py-3 sm:grid-cols-4">
           <div className="text-center">
             <dd className="font-display text-h3 font-bold text-display-ink">
               {reviews.rating_avg !== null && reviews.rating_count > 0
@@ -401,6 +407,12 @@ export default async function VendorProfilePage({ params }: PageProps) {
           <div className="text-center">
             <dd className="font-display text-h3 font-bold text-display-ink">{listings.length}</dd>
             <dt className="text-micro text-text-3">{t("profile.statListings")}</dt>
+          </div>
+          <div className="text-center">
+            <dd className="font-display text-h3 font-bold text-display-ink">
+              {vendor.order_count}
+            </dd>
+            <dt className="text-micro text-text-3">{t("profile.statOrders")}</dt>
           </div>
         </dl>
       </header>
