@@ -198,6 +198,8 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /returns/{return_id}/respond": STANDARD_WRITE,
     "POST /reviews": STANDARD_WRITE,
     "POST /reviews/{review_id}/reply": STANDARD_WRITE,
+    "POST /service-reviews": STANDARD_WRITE,
+    "POST /service-reviews/{review_id}/reply": STANDARD_WRITE,
     "POST /support/send": ADMIN_WRITE,
     "POST /tickets/checkout": PAYMENT_WRITE,
     "POST /tickets/rsvp": PAYMENT_WRITE,
