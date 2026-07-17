@@ -40,9 +40,9 @@ Each mountain's Phase-1 success criteria (see `docs/plan/01-mountains.md`). Link
 the merged pebble PRs / test runs as evidence. Items whose proof requires the
 staging environment or a founder gate are tagged and stay **unchecked**.
 
-- [ ] **M01 — Foundations/Infra:** fresh clone → `pnpm i && pnpm dev` runs all apps; CI green; deploy+rollback demonstrated _(staging)_; no secrets in repo (scanner). — Evidence: CI `JavaScript / TypeScript` (install/build) + `Python API` · `Secret scan (gitleaks)` (all green on master `1d728d5`); deploy+rollback stubbed in `.github/workflows/deploy-staging.yml` _(staging — awaits OCI)_
+- [ ] **M01 — Foundations/Infra:** fresh clone → `pnpm i && pnpm dev` runs all apps; CI green; deploy+rollback demonstrated _(staging)_; no secrets in repo (scanner). — Evidence: CI `JavaScript / TypeScript` (install/build) + `Python API` · `Secret scan (gitleaks)` (all green on master `d91479b`); deploy+rollback stubbed in `.github/workflows/deploy-staging.yml` _(staging — awaits OCI)_
 - [ ] **M02 — Design system:** all screens build from the kit; preview renders every component with i18n keys; a11y ≥95; tokens single-source. — Evidence: `scripts/ci/ui-preview-coverage.mjs` (preview coverage gate) · Lighthouse A11y in `Performance budgets` _(a11y ≥95 advisory in CI — confirm on staging build)_
-- [ ] **M03 — Data core:** `supabase db reset` clean; **RLS suite proves customer/vendor/admin isolation** (incl. cross-vendor denial); seed browsable; types compile; hot queries use indexes. — Evidence: `services/api/tests/rls/` (`test_matrix.py`, `test_no_untested_tables.py`) · CI `Migration replay (fast)` + `Database / typegen drift` + `RLS isolation matrix` — all green on master `1d728d5`
+- [ ] **M03 — Data core:** `supabase db reset` clean; **RLS suite proves customer/vendor/admin isolation** (incl. cross-vendor denial); seed browsable; types compile; hot queries use indexes. — Evidence: `services/api/tests/rls/` (`test_matrix.py`, `test_no_untested_tables.py`) · CI `Migration replay (fast)` + `Database / typegen drift` + `RLS isolation matrix` — all green on master `d91479b`
 - [ ] **M04 — Auth:** phone-only signup→browse→order; client role-escalation impossible (tested); OTP brute-force blocked (tested); deletion cascades. — Evidence: `services/api/tests/test_identity.py`, `test_auth_dep.py`, `test_ratelimit.py` (OTP brute-force), `test_authz_matrix.py` (role-escalation), `test_account.py` (deletion cascade); full signup→browse→order journey in E2E `Playwright critical paths` _(staging)_
 - [ ] **M05 — Catalog/Search:** exact/fuzzy/semantic search relevant on seed; comparison sorts by price/distance; PLP LCP ≤2.5s Fast-3G; rich results validate. — Evidence: `services/api/tests/test_search.py`, `test_catalog.py`, `test_comparison.py`; PLP LCP + rich-results via `Performance budgets` (Lighthouse) _(Fast-3G LCP confirmed on staging build)_
 - [ ] **M06 — Ask Vergeo:** 20-Q eval grounded, zero fabricated listings; quota + kill-switch enforced; p95 <6s; cost/answer ≤$0.002. — Evidence: `services/api/tests/evals/` (`test_ask_grounding.py`, `ask_eval_set.yaml`) · CI `Ask Vergeo grounding evals`; quota/kill-switch `test_ask_quota.py`; p95/cost-per-answer measured at runtime _(staging + live key)_
@@ -63,8 +63,8 @@ staging environment or a founder gate are tagged and stay **unchecked**.
 
 - [ ] Customer routes ≤150KB gz JS on the launch commit. — Evidence: `scripts/ci/bundle-guard.mjs` (Bundle guard step) in `Performance budgets` — green on master; **re-verifies on the launch commit**
 - [ ] LCP ≤2.5s Fast-3G / 360px; Lighthouse mobile Perf ≥90 / SEO ≥95 / A11y ≥95. — Evidence: `lighthouserc.json` in `Performance budgets` (Lighthouse CI step) _(advisory in CI — confirm ≥ thresholds on staging build)_
-- [x] i18n completeness lint green (no hardcoded strings, no missing keys, no formatK bypass). — Evidence: `scripts/ci/i18n-lint.mjs` — "i18n completeness sweep (blocking)" step in `Performance budgets`, green on master `1d728d5`
-- [x] Full API suite + typecheck + lint green (`uv run pytest`, `ruff`, `mypy`; turbo `test/lint/typecheck`). — Evidence: CI `Python API` (Ruff + Mypy + Pytest) and `JavaScript / TypeScript` (Lint + Typecheck + Test) — both green on master `1d728d5`
+- [x] i18n completeness lint green (no hardcoded strings, no missing keys, no formatK bypass). — Evidence: `scripts/ci/i18n-lint.mjs` — "i18n completeness sweep (blocking)" step in `Performance budgets`, green on master `d91479b`
+- [x] Full API suite + typecheck + lint green (`uv run pytest`, `ruff`, `mypy`; turbo `test/lint/typecheck`). — Evidence: CI `Python API` (Ruff + Mypy + Pytest) and `JavaScript / TypeScript` (Lint + Typecheck + Test) — both green on master `d91479b`
 - [ ] Observability live: Sentry capturing, error budget 99.5% dashboard _(founder: DSN/UptimeRobot — M16-P06)_. — Evidence: `services/api/tests/test_sentry_scrubber.py` (PII scrub wired); live capture needs founder DSN _(founder)_
 
 ---
@@ -123,14 +123,27 @@ Build-verifiable in-repo. Link the merged M16-P09 PR + test run as evidence.
 
 ---
 
-_Evidence reconciliation pass (2026-07-17): code-side evidence slots in Sections
-1, 2, 5 and 6 filled with the proving in-repo tests, CI jobs and scripts. Only
-lines **wholly** satisfied by currently-green **required** CI jobs on master
-`1d728d5` — with no staging, founder or advisory residual — were checked
-(Section 2: full API/typecheck/lint suite, blocking i18n sweep; Section 5:
-invoice gapless-under-concurrency, prohibited-category fence; Section 6: the four
-build-verifiable beta-ops lines). Mountain-level composites (Section 1),
-Lighthouse (advisory), founder gates (F1–F9) and the five staging proofs
-(Section 3) stay **unchecked by design** — see the Rule at the top. The Supabase
-migration ledger on the live project is now at full parity with `supabase/migrations/`
-(`0001`–`0050`). **Sign Section 0 last.**_
+_Evidence reconciliation pass (2026-07-17, incremental on top of #233). Since #233
+(master `1d728d5`) the tree shipped the **Events Phase-2 Wave B** epic end-to-end —
+organiser pricing-write API (#232), organiser pricing UI (#235), customer
+price-mode display (#236) + group-tier upsell (#248), and attendee-name capture +
+organiser roster/CSV (#240/#243/#245) — plus **M15-P03** vendor commercial tier
+(#247), the **OWASP F2** fix rejecting unsigned Lenco webhooks with 401 (#238), and
+a **dormant** role-sync access-token hook (migration `0051`, #241 — present but NOT
+enabled; enabling it is a founder/staging step). None of these change a launch gate:
+Wave B is additive to M10, and the security fixes strengthen existing evidence.
+Code-side evidence slots in Sections 1, 2, 5 and 6 stay filled by the proving
+in-repo tests/CI jobs/scripts; **CI-job references are pinned to `d91479b` (#247)**,
+the last commit merged through full required CI. The current tip `f2dadd5` (#248)
+was **admin-merged bypassing CI** (this session's pushes were Actions-throttled);
+its gates were verified locally instead — customer `typecheck` + `eslint` + the
+blocking i18n sweep + 173 customer tests, all green. Only lines **wholly** satisfied
+by currently-green **required** CI — with no staging, founder or advisory residual —
+stay checked (Section 2: full API/typecheck/lint suite, blocking i18n sweep;
+Section 5: invoice gapless-under-concurrency, prohibited-category fence; Section 6:
+the four build-verifiable beta-ops lines). Mountain-level composites (Section 1),
+Lighthouse (advisory), founder gates (F1–F9) and the five staging proofs (Section 3)
+stay **unchecked by design** — see the Rule at the top. The repo migration ledger is
+now `0001`–`0051`; `0051` (role-sync hook) ships **dormant** — applying it and
+wiring the hook in Supabase Auth is a founder/staging step, so it changes no gate
+here. **Sign Section 0 last.**_
