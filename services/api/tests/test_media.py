@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from types import SimpleNamespace
 
 import pytest
+from app.core.auth import CurrentUser
+from app.errors import AppError
 from app.main import create_app
-from app.media.authz import VendorScope, require_vendor_scope
+from app.media.authz import VendorScope, _resolve_owned_vendor_id, require_vendor_scope
 from app.media.cloudinary_signing import (
     build_signed_params,
     parse_cloudinary_url,
@@ -17,6 +20,45 @@ from fastapi.testclient import TestClient
 CLOUDINARY_URL = "cloudinary://test-api-key:test-api-secret@test-cloud"
 VENDOR_A = "vendor-a"
 VENDOR_B = "vendor-b"
+
+# Vendor-scope resolution (require_vendor_scope) fixtures.
+OWNER_USER = "11111111-1111-1111-1111-111111111111"
+OTHER_USER = "22222222-2222-2222-2222-222222222222"
+OWNED_VENDOR_ID = "99999999-9999-9999-9999-999999999999"
+OTHER_VENDOR_ID = "88888888-8888-8888-8888-888888888888"
+
+
+class _FakeVendorsClient:
+    """Minimal fake of the service-role client's ``vendors`` postgrest chain."""
+
+    def __init__(self, rows: list[dict[str, str]]) -> None:
+        self._rows = rows
+        self._filter: tuple[str, str] | None = None
+
+    @property
+    def client(self) -> _FakeVendorsClient:
+        return self
+
+    def table(self, name: str) -> _FakeVendorsClient:
+        assert name == "vendors"
+        self._filter = None
+        return self
+
+    def select(self, *_columns: str) -> _FakeVendorsClient:
+        return self
+
+    def eq(self, column: str, value: str) -> _FakeVendorsClient:
+        self._filter = (column, value)
+        return self
+
+    def maybe_single(self) -> _FakeVendorsClient:
+        return self
+
+    def execute(self) -> SimpleNamespace:
+        assert self._filter is not None
+        column, value = self._filter
+        matches = [row for row in self._rows if row.get(column) == value]
+        return SimpleNamespace(data=matches[0] if matches else None)
 
 
 @pytest.fixture
@@ -156,3 +198,48 @@ def test_media_sign_invalid_public_id_returns_envelope(media_client: TestClient)
     assert response.status_code == 400
     body = response.json()
     assert body["error"]["code"] == "validation_error"
+
+
+# --- require_vendor_scope: DB-ownership resolution (M04-P02) ------------------
+
+
+def test_resolve_owned_vendor_id_returns_db_vendor() -> None:
+    client = _FakeVendorsClient([{"id": OWNED_VENDOR_ID, "owner_user_id": OWNER_USER}])
+    assert _resolve_owned_vendor_id(client, OWNER_USER) == OWNED_VENDOR_ID
+
+
+def test_resolve_owned_vendor_id_none_when_user_owns_no_vendor() -> None:
+    client = _FakeVendorsClient([{"id": OTHER_VENDOR_ID, "owner_user_id": OTHER_USER}])
+    assert _resolve_owned_vendor_id(client, OWNER_USER) is None
+
+
+async def test_require_vendor_scope_resolves_owned_vendor_from_db() -> None:
+    client = _FakeVendorsClient([{"id": OWNED_VENDOR_ID, "owner_user_id": OWNER_USER}])
+    user = CurrentUser(id=OWNER_USER, roles=frozenset(), token="jwt")
+    scope = await require_vendor_scope(current_user=user, service_client=client)
+    assert scope == VendorScope(vendor_id=OWNED_VENDOR_ID)
+
+
+async def test_require_vendor_scope_only_returns_callers_own_vendor() -> None:
+    # Two vendors exist; the caller owns only one. Resolution keys off
+    # current_user.id (DB-sourced), so it returns the caller's own vendor and
+    # never the other — there is no JWT-claim path to spoof another vendor.
+    client = _FakeVendorsClient(
+        [
+            {"id": OWNED_VENDOR_ID, "owner_user_id": OWNER_USER},
+            {"id": OTHER_VENDOR_ID, "owner_user_id": OTHER_USER},
+        ]
+    )
+    user = CurrentUser(id=OWNER_USER, roles=frozenset(), token="jwt")
+    scope = await require_vendor_scope(current_user=user, service_client=client)
+    assert scope.vendor_id == OWNED_VENDOR_ID
+    assert scope.vendor_id != OTHER_VENDOR_ID
+
+
+async def test_require_vendor_scope_403_when_caller_owns_no_vendor() -> None:
+    client = _FakeVendorsClient([{"id": OTHER_VENDOR_ID, "owner_user_id": OTHER_USER}])
+    user = CurrentUser(id=OWNER_USER, roles=frozenset(), token="jwt")
+    with pytest.raises(AppError) as exc_info:
+        await require_vendor_scope(current_user=user, service_client=client)
+    assert exc_info.value.http_status == 403
+    assert exc_info.value.code == "forbidden"
