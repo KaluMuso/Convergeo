@@ -13,6 +13,7 @@ type DesktopHeaderLabels = {
   allCategories: string;
   categoriesPanelAria: string;
   categoriesLoading: string;
+  viewAllCategories: string;
   browse: string;
   services: string;
   events: string;
@@ -97,6 +98,7 @@ export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
                 trigger: labels.allCategories,
                 panelAria: labels.categoriesPanelAria,
                 loading: labels.categoriesLoading,
+                viewAll: labels.viewAllCategories,
               }}
             />
           </li>

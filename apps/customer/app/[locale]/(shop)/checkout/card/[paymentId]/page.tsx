@@ -7,6 +7,9 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { resolveApiBaseUrl } from "../../../../../../lib/api-base-url";
+import { resolveCardVerifyViewState } from "../../_lib/payment-outcome";
+
 type WidgetCustomer = {
   email: string;
   first_name: string;
@@ -69,8 +72,8 @@ declare global {
 type ViewState =
   "loading" | "opening" | "verifying" | "success" | "failed" | "held" | "pending" | "error";
 
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+function getApiBaseUrl(): string | null {
+  return resolveApiBaseUrl();
 }
 
 function getLencoPublicKey(): string | null {
@@ -115,9 +118,14 @@ export default function CardCheckoutPage() {
         setViewState("error");
         return null;
       }
+      const apiBase = getApiBaseUrl();
+      if (!apiBase) {
+        setViewState("error");
+        return null;
+      }
       setViewState("verifying");
       const client = createApiClient({
-        baseUrl: getApiBaseUrl(),
+        baseUrl: apiBase,
         getToken: () => session.access_token,
       });
       try {
@@ -137,23 +145,7 @@ export default function CardCheckoutPage() {
     if (!result) {
       return;
     }
-    if (result.order_confirmed) {
-      setViewState("success");
-      return;
-    }
-    if (result.held) {
-      setViewState("held");
-      return;
-    }
-    if (result.retry_checkout) {
-      setViewState("failed");
-      return;
-    }
-    if (result.status === "success") {
-      setViewState("success");
-      return;
-    }
-    setViewState("pending");
+    setViewState(resolveCardVerifyViewState(result));
   }, []);
 
   const openWidget = useCallback(
@@ -217,8 +209,13 @@ export default function CardCheckoutPage() {
     }
 
     void (async () => {
+      const apiBase = getApiBaseUrl();
+      if (!apiBase) {
+        setViewState("error");
+        return;
+      }
       const client = createApiClient({
-        baseUrl: getApiBaseUrl(),
+        baseUrl: apiBase,
         getToken: () => session.access_token,
       });
       try {

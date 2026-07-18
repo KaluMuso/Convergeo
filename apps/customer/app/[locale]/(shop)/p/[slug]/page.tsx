@@ -576,6 +576,15 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           <p className="text-sm font-medium uppercase tracking-wide text-text-2">{product.brand}</p>
         ) : null}
         <h1 className="font-display text-2xl font-semibold text-text">{product.name}</h1>
+        {product.listing_count > 1 ? (
+          <Link
+            href={`/${locale}/compare?product=${encodeURIComponent(product.slug)}`}
+            className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+            data-testid="pdp-compare-entry"
+          >
+            {t("comparePage.entryCta")}
+          </Link>
+        ) : null}
       </header>
 
       <PdpInteractiveBody

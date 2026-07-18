@@ -66,6 +66,7 @@
       "allCategories": "全部类别",
       "categoriesPanelAria": "全部类别",
       "categoriesLoading": "正在加载类别…",
+      "viewAllCategories": "查看全部分类",
       "services": "服务",
       "events": "活动",
       "askVergeo": "问 Vergeo",
@@ -75,7 +76,7 @@
     "hero": {
       "eyebrow": "赞比亚的购物平台",
       "fallbackTitle": "发现赞比亚各地的商品、服务与活动",
-      "fallbackSubtitle": "比较认证商家的价格，使用移动支付，并在卢萨卡享受快速配送。",
+      "fallbackSubtitle": "比较认证商家的价格，使用移动支付，并安排卢萨卡配送或全国自提。",
       "primaryCta": "开始浏览",
       "secondaryCta": "在 Vergeo5 上销售",
       "placeholder": {
@@ -204,6 +205,26 @@
   },
   "returnableBadge": {
     "label": "{days} 天内可退货"
+  },
+  "browseCategories": {
+    "title": "浏览分类",
+    "subtitle": "从认证商家浏览第一阶段品类及其子分类。",
+    "emptyTitle": "分类暂不可用",
+    "emptyBody": "目前无法加载分类树。请稍后再试，或使用搜索。"
+  },
+  "comparePage": {
+    "title": "比较卖家",
+    "subtitle": "查看同一商品的多商家价格、成色与履约选项。",
+    "noProductTitle": "请选择要比较的商品",
+    "noProductBody": "打开有多家卖家的商品页，然后使用“比较卖家”。本页不会虚构比较数据。",
+    "unavailableTitle": "比较暂不可用",
+    "unavailableBody": "无法加载此商品的卖家比较。商品页可能仍可使用。",
+    "singleSellerTitle": "目前只有一位卖家",
+    "singleSellerBody": "比较至少需要同一商品的两个在售列表。当有更多商家上架时再来查看。",
+    "browseCta": "搜索商品",
+    "backToProduct": "返回商品",
+    "chooseOnProduct": "在商品页选择卖家",
+    "entryCta": "比较卖家"
   },
   "comparison": {
     "heading": "比较卖家",

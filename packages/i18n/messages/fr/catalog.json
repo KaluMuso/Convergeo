@@ -66,6 +66,7 @@
       "allCategories": "Toutes les catégories",
       "categoriesPanelAria": "Toutes les catégories",
       "categoriesLoading": "Chargement des catégories…",
+      "viewAllCategories": "Voir toutes les catégories",
       "services": "Services",
       "events": "Événements",
       "askVergeo": "Demander à Vergeo",
@@ -75,7 +76,7 @@
     "hero": {
       "eyebrow": "La marketplace de la Zambie",
       "fallbackTitle": "Découvrez produits, services et événements partout en Zambie",
-      "fallbackSubtitle": "Comparez les prix de vendeurs vérifiés, payez par mobile money et profitez d'une livraison rapide à Lusaka.",
+      "fallbackSubtitle": "Comparez les prix de vendeurs vérifiés, payez par mobile money, et organisez une livraison à Lusaka ou un retrait partout en Zambie.",
       "primaryCta": "Commencer à parcourir",
       "secondaryCta": "Vendre sur Vergeo5",
       "placeholder": {
@@ -204,6 +205,26 @@
   },
   "returnableBadge": {
     "label": "Retournable sous {days} jours"
+  },
+  "browseCategories": {
+    "title": "Parcourir les catégories",
+    "subtitle": "Explorez les rayons de la phase 1 et leurs sous-catégories auprès de vendeurs vérifiés.",
+    "emptyTitle": "Catégories indisponibles",
+    "emptyBody": "Nous n'avons pas pu charger l'arbre des catégories. Réessayez bientôt, ou utilisez la recherche."
+  },
+  "comparePage": {
+    "title": "Comparer les vendeurs",
+    "subtitle": "Voyez les prix multi-vendeurs, l'état et les options de livraison pour le même produit.",
+    "noProductTitle": "Choisissez un produit à comparer",
+    "noProductBody": "Ouvrez une fiche produit avec plus d'un vendeur, puis utilisez Comparer les vendeurs. Cette page n'invente jamais de données de comparaison.",
+    "unavailableTitle": "Comparaison indisponible",
+    "unavailableBody": "Nous n'avons pas pu charger la comparaison des vendeurs pour ce produit. La fiche produit peut encore fonctionner.",
+    "singleSellerTitle": "Un seul vendeur pour l'instant",
+    "singleSellerBody": "La comparaison nécessite au moins deux annonces actives pour le même produit. Revenez quand d'autres vendeurs l'auront listé.",
+    "browseCta": "Rechercher des produits",
+    "backToProduct": "Retour au produit",
+    "chooseOnProduct": "Choisir un vendeur sur la fiche produit",
+    "entryCta": "Comparer les vendeurs"
   },
   "comparison": {
     "heading": "Comparer les vendeurs",

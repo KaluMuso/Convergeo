@@ -40,7 +40,8 @@ const IMAGE_EXTENSION = /\.(?:png|jpg|jpeg|webp|avif|gif|svg|ico)$/i;
 // Locale-prefixed route families. Locale is always the first path segment.
 const NEVER_CACHE_PATTERN =
   /^\/[^/]+\/(?:checkout|cart|payment|pay|login|signup|otp|logout|auth)(?:\/|$)/;
-const CATALOG_PATTERN = /^\/[^/]+\/(?:p|c|v|e|events|services|directory|supplies)(?:\/|$)/;
+const CATALOG_PATTERN =
+  /^\/[^/]+\/(?:p|c|v|e|events|services|directory|supplies|categories|compare|calendar)(?:\/|$)/;
 const WALLET_PAGE_PATTERN = /^\/[^/]+\/account\/tickets(?:\/|$)/;
 const WALLET_API_PATH_PREFIX = "/account/tickets";
 
