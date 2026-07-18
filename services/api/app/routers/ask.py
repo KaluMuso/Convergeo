@@ -10,11 +10,13 @@ from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limi
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.analytics.search_log import log_ask_query
 from app.services.ask.cache import cache_lookup, cache_write, normalize_query
 from app.services.ask.citations import CitationRef, ValidatedAnswer, validate_citations
 from app.services.ask.filters import extract_filters
 from app.services.ask.prompt import build_prompt, call_answer_model
 from app.services.ask.retrieve import top_k
+from app.services.ask.spend import tokens_to_usd_micros
 from app.settings import get_settings
 from fastapi import APIRouter, Depends, Request
 from pydantic import Field
@@ -75,6 +77,35 @@ def _optional_quota_record_answer(
             tokens=tokens,
             model=model,
         )
+
+
+def _log_ask_analytics(
+    *,
+    client: Any,
+    query: str,
+    user_id: str | None,
+    tokens: int,
+    model: str,
+    zero_result: bool,
+) -> None:
+    """Fire-and-forget Ask analytics: server operational log, anonymized, consent-independent.
+
+    Records the Ask query (normalized term only, via ``log_ask_query``) plus its model
+    spend in micro-USD so ``ask_cost_by_day`` and the $15/mo cap have a per-day data
+    source. Spend is derived with the same ``tokens_to_usd_micros`` the kill-switch uses,
+    so this log agrees with ``ask_spend_monthly``. Never raises into the Ask request.
+    """
+    try:
+        usd_micros = tokens_to_usd_micros(tokens=tokens, model=model, client=client)
+    except Exception:  # noqa: BLE001 — analytics must never break Ask
+        logger.debug("ask usd_micros derivation failed (swallowed)", exc_info=True)
+        usd_micros = 0
+    log_ask_query(
+        term=query,
+        usd_micros=usd_micros,
+        zero_result=zero_result,
+        user_id=user_id,
+    )
 
 
 async def _optional_current_user(request: Request) -> CurrentUser | None:
@@ -185,7 +216,16 @@ async def run_ask(
 
     cached = cache_lookup(client, normalized_query=normalized)
     if cached is not None:
-        return _response_from_cache(trimmed, cached)
+        response = _response_from_cache(trimmed, cached)
+        _log_ask_analytics(
+            client=client,
+            query=trimmed,
+            user_id=user_id,
+            tokens=0,
+            model="none",
+            zero_result=response.refused,
+        )
+        return response
 
     _optional_quota_check_and_reserve(
         client=client, user_id=user_id, guest_key=guest_key, question=normalized
@@ -210,6 +250,14 @@ async def run_ask(
         )
         _optional_quota_record_answer(
             client=client, user_id=user_id, guest_key=guest_key, tokens=0, model="none"
+        )
+        _log_ask_analytics(
+            client=client,
+            query=trimmed,
+            user_id=user_id,
+            tokens=0,
+            model="none",
+            zero_result=True,
         )
         return refusal
 
@@ -242,6 +290,14 @@ async def run_ask(
         guest_key=guest_key,
         tokens=model_result.total_tokens,
         model=model_result.model,
+    )
+    _log_ask_analytics(
+        client=client,
+        query=trimmed,
+        user_id=user_id,
+        tokens=model_result.total_tokens,
+        model=model_result.model,
+        zero_result=validated.answer_text.strip() == REFUSAL_TEXT,
     )
 
     return _response_from_validated(query=trimmed, validated=validated, cached=False)

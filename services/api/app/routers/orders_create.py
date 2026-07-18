@@ -14,6 +14,7 @@ from app.services.orders.create import (
     VendorFulfilmentInput,
     create_orders_atomic,
 )
+from app.services.orders.events import emit_order_placed_funnel
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -256,4 +257,13 @@ async def create_orders(
         vendor_groups=vendor_groups,
         address_id=body.address_id,
     )
+
+    # Fire-and-forget funnel event (order_placed); server operational, consent-independent.
+    # Idempotent per (checkout_group_id, stage); marks the session as converted.
+    emit_order_placed_funnel(
+        checkout_group_id=body.session_id,
+        customer_id=current_user.id,
+        snapshot={"order_count": len(result.orders), "total_ngwee": total},
+    )
+
     return _to_response(result)

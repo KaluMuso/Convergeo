@@ -7,6 +7,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.checkout import _ensure_session_active, _extract_data, _fetch_checkout_group
+from app.services.orders.events import emit_payment_start_funnel
 from app.services.payments.gate import PaymentsDisabledError, payments_enabled
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -232,6 +233,14 @@ async def validate_payment_method(
         payer_number=body.payer_number,
         total_ngwee=total,
         cod_cap_ngwee=cod_cap,
+    )
+
+    # Fire-and-forget funnel event (payment_start); server operational, consent-independent.
+    # This step is the common payment-method entry for every rail (momo/card/cod).
+    emit_payment_start_funnel(
+        checkout_group_id=body.session_id,
+        customer_id=current_user.id,
+        snapshot={"method": body.method, "total_ngwee": total},
     )
 
     return PaymentMethodResponse(

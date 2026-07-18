@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.services.analytics.funnel import record_event
+from app.services.analytics.funnel import record_event_best_effort
 from app.services.notifications.events import (
     EVENT_REGISTRY,
     Audience,
@@ -110,7 +110,7 @@ def emit_payment_start_funnel(
     snapshot: dict[str, Any],
 ) -> dict[str, Any] | None:
     """Record payment_start when the customer initiates payment."""
-    return record_event(
+    return record_event_best_effort(
         stage="payment_start",
         checkout_group_id=checkout_group_id,
         customer_id=customer_id,
@@ -125,7 +125,7 @@ def emit_order_placed_funnel(
     snapshot: dict[str, Any],
 ) -> dict[str, Any] | None:
     """Record order_placed when checkout completes into orders."""
-    return record_event(
+    return record_event_best_effort(
         stage="order_placed",
         checkout_group_id=checkout_group_id,
         customer_id=customer_id,

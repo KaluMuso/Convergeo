@@ -142,6 +142,8 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 
 **Out of scope / seam.** No client work, no ingest endpoint, no `analytics_events`/`product_view` (that's Task 2). If a single session proves too large, split at the clean seam **{funnel wiring} | {search+ask logging}** — but they share no files, so one session is realistic.
 
+**Status — ✅ SHIPPED (backend-only, no migration).** Wired the dormant writers into their live paths: search (`run_search` → `log_search_query` with per-entity counts + `zero_result` + best-effort `user_id`), Ask (`run_ask` → `log_ask_query` at all three resolution points — cached/refusal/answered — with `usd_micros` derived via the kill-switch's own `tokens_to_usd_micros`, so the log agrees with `ask_spend_monthly`), and funnel `cart_add` (`cart.py`), `checkout_start` (`checkout.py`), `payment_start` (`checkout_payment.py::validate_payment_method` — the common method-selection step every rail passes through), `order_placed` (`orders_create.py`). A new `record_event_best_effort` primitive next to `record_event` makes every funnel emit fire-and-forget, so an analytics write can never break a cart/checkout/payment/order request. Tests: `tests/test_analytics_wiring.py` (12 DB-free unit tests — call wiring + fire-and-forget); DB round-trips stay covered by `test_search_analytics.py` / `test_funnel.py`. **Deferred (no live consumer):** `step_complete` (intermediate contact/fulfilment steps) — its only reader `query_funnel` is unmounted and the checkout funnel step is already populated by `checkout_start` + `payment_start`; `payment_start` intentionally lives only at method-selection, not the card/retry execution paths.
+
 ---
 
 ### TASK 2 — Close the client loop: beacon ingest + identity + consent

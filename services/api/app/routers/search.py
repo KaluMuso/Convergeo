@@ -38,6 +38,7 @@ async def search(
         page=page,
         page_size=page_size,
         include_wholesale=access.eligible,
+        user_id=access.user_id,
     )
 
 

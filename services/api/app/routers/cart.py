@@ -10,6 +10,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
 from app.errors import AppError
 from app.services.business.access import fetch_business_buyer
+from app.services.cart.events import emit_cart_add
 from app.services.cart.grouping import CartLineView, group_by_vendor
 from app.services.cart.merge import MergeConflict, merge_cart_items, validate_item_qty_for_listing
 from app.services.cart.store import (
@@ -412,6 +413,14 @@ async def add_cart_item(
                 "wholesale": wholesale,
             }
         ).execute()
+
+    # Fire-and-forget funnel event (cart_add); server operational, consent-independent.
+    # snapshot.lines carries the listing so vendor analytics can attribute the view.
+    emit_cart_add(
+        checkout_group_id=None,
+        customer_id=owner.user_id,
+        snapshot={"lines": [{"listing_id": body.listing_id, "qty": body.qty}]},
+    )
 
     items = _fetch_cart_items(client, cart_id)
     listings = fetch_listings_for_items(items)
