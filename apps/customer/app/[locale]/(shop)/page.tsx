@@ -20,6 +20,7 @@ import {
 } from "./_components/home-default";
 import {
   getRenderableSectionKeys,
+  hasEffectiveMerchConfig,
   loadHomeMerchData,
   pickSlot,
   type HomeSectionKey,
@@ -122,11 +123,8 @@ export default async function ShopHomePage({ params }: PageProps) {
   const [tRaw, data] = await Promise.all([getCatalogTranslator(locale), loadHomeMerchData()]);
   const t = tRaw as unknown as CatalogTranslator;
 
-  // Admin merch config always wins: when any active slot exists, render the
-  // config-driven sections exactly as before.
-  const hasMerchConfig = data.slots.length > 0;
-
-  if (hasMerchConfig) {
+  // Real admin campaigns take precedence; placeholder-only seed config does not.
+  if (hasEffectiveMerchConfig(data.slots)) {
     const sectionKeys = getRenderableSectionKeys(data.slots, data.categories);
 
     return (
@@ -142,8 +140,6 @@ export default async function ShopHomePage({ params }: PageProps) {
     );
   }
 
-  // No merch config: data-driven default homepage (UI-P4). Every rail is
-  // empty-safe; with a fully empty catalog we keep the welcome hero fallback.
   const defaultData = await loadHomeDefaultData(data.categories);
 
   if (!hasDefaultHomeContent(data.categories, defaultData)) {
@@ -153,6 +149,8 @@ export default async function ShopHomePage({ params }: PageProps) {
       </div>
     );
   }
+
+  // Data-driven default homepage (UI-P4). Every rail is empty-safe.
 
   const railLabels = {
     vendor: t("plp.card.vendor"),

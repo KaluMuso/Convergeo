@@ -11,7 +11,9 @@ import { HomeHero } from "./hero";
 import {
   filterActiveSlots,
   getRenderableSectionKeys,
+  hasEffectiveMerchConfig,
   HOME_SECTION_ORDER,
+  isPlaceholderHeroSlot,
   isSlotInSchedule,
   type MerchSlotRow,
 } from "./merch-data";
@@ -116,7 +118,7 @@ describe("HomeHero fallback", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders editorial hero for known variant", () => {
+  it("renders buyer fallback copy instead of operational placeholder strings", () => {
     render(
       <HomeHero
         locale="en"
@@ -132,10 +134,18 @@ describe("HomeHero fallback", () => {
     );
 
     expect(screen.getByTestId("hero-editorial-light")).toBeInTheDocument();
-    expect(screen.getByText("Welcome to Vergeo5")).toBeInTheDocument();
+    expect(
+      screen.getByText("Discover products, services, and events across Zambia"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Welcome to Vergeo5")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "Your config-driven storefront will appear here as merchandising slots go live.",
+      ),
+    ).not.toBeInTheDocument();
   });
 
-  it("maps seeded merch.* payload keys to catalog.home.* strings", () => {
+  it("maps seeded merch.* placeholder keys to buyer-facing fallback strings", () => {
     render(
       <HomeHero
         locale="en"
@@ -149,7 +159,24 @@ describe("HomeHero fallback", () => {
       />,
     );
 
-    expect(screen.getByText("Welcome to Vergeo5")).toBeInTheDocument();
+    expect(
+      screen.getByText("Discover products, services, and events across Zambia"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Welcome to Vergeo5")).not.toBeInTheDocument();
+  });
+});
+
+describe("placeholder-only seed merchandising", () => {
+  it("does not block the catalogue-backed default homepage", () => {
+    const seedHero = makeSlot({
+      payload: {
+        title_key: "merch.hero.placeholder.title",
+        subtitle_key: "merch.hero.placeholder.subtitle",
+      },
+    });
+
+    expect(isPlaceholderHeroSlot(seedHero)).toBe(true);
+    expect(hasEffectiveMerchConfig([seedHero])).toBe(false);
   });
 });
 
