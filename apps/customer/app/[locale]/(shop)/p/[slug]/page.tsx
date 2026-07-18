@@ -20,6 +20,7 @@ import {
   type ComparisonListing,
   type ProductListing,
 } from "../../_components/pdp/comparison";
+import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
 
 import {
@@ -568,6 +569,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   return (
     <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6 motion-rise lg:max-w-6xl">
       <JsonLdScript data={jsonLd} />
+      <ProductViewTracker productId={product.id} listingId={selectedListing?.id} />
 
       <header className="flex flex-col gap-2">
         {product.brand ? (

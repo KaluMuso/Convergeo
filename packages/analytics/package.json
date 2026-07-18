@@ -11,6 +11,7 @@
     "./consent": "./src/consent.ts",
     "./events": "./src/events.ts",
     "./track": "./src/track.ts",
+    "./session": "./src/session.ts",
     "./provider": "./src/analytics-provider.ts"
   },
   "scripts": {

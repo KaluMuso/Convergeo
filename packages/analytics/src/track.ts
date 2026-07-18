@@ -16,6 +16,7 @@
 import { hasAnalyticsConsent } from "./consent";
 import type { AnalyticsEventMap, AnalyticsEventName } from "./events";
 import type { GtagWindow } from "./gtag";
+import { getSessionId } from "./session";
 
 interface QueuedEvent {
   event: string;
@@ -84,7 +85,12 @@ export function flush(): boolean {
   }
   const batch = queue;
   queue = [];
-  const body = JSON.stringify({ events: batch });
+  // Attach the opaque anonymous session id (never PII) so the server can stitch a
+  // visitor's events — and link them to a user id once they authenticate.
+  const sessionId = getSessionId();
+  const body = JSON.stringify(
+    sessionId ? { session_id: sessionId, events: batch } : { events: batch },
+  );
   try {
     const blob = new Blob([body], { type: "application/json" });
     return navigator.sendBeacon(beaconEndpoint(), blob);

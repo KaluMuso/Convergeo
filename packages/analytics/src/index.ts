@@ -16,4 +16,5 @@ export {
   type ConsentState,
 } from "./consent";
 export { type AnalyticsEventMap, type AnalyticsEventName, type MoneyNgwee } from "./events";
+export { getSessionId } from "./session";
 export { flush, MAX_BATCH, track } from "./track";
