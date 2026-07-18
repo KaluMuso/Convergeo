@@ -16,6 +16,17 @@ async def healthz() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@router.get("/health")
+async def health() -> dict[str, str]:
+    """Public liveness alias for external uptime monitors (keyword ``ok``).
+
+    UptimeRobot and the observability docs probe ``/health``; the API otherwise
+    exposes only ``/healthz``/``/readyz`` and Caddy does not rewrite, so an
+    unaliased ``/health`` 404s and reads as perpetual downtime.
+    """
+    return {"status": "ok"}
+
+
 async def _supabase_reachable() -> bool:
     settings = get_settings()
     try:

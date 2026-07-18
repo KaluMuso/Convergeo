@@ -2,14 +2,22 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
 from datetime import UTC, date, datetime
 from typing import Annotated, Any, Protocol, cast
 
+from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
+from app.services.ask.spend import (
+    MICROS_PER_USD,
+    current_month_total_usd_micros,
+    is_killed,
+    reset_kill_switch,
+)
 from app.services.ledger.engine import account_balance_ngwee, resolve_account_id
 from app.services.ledger.templates import AccountRef
 from app.services.orders.audit import run_sql_script
@@ -17,8 +25,9 @@ from app.services.payments.reconcile import _has_discrepancies
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+logger = logging.getLogger(__name__)
+
 DASHBOARD_CACHE_TTL_SECONDS = 300.0
-AI_USAGE_DATA_AVAILABLE = False
 DEFAULT_AI_MONTHLY_CAP_USD = 15
 
 _cache_lock = threading.Lock()
@@ -66,8 +75,14 @@ class CatalogCountsOut(BaseModel):
 class AiUsageTileOut(BaseModel):
     data_available: bool
     flagged: bool
+    killed: bool = False
     spend_usd: float | None = None
     cap_usd: int
+
+
+class KillSwitchResetOut(BaseModel):
+    reset: bool
+    killed: bool
 
 
 class FunnelSnapshotOut(BaseModel):
@@ -280,6 +295,30 @@ def _funnel_snapshot(service_client: ServiceRoleClient) -> FunnelSnapshotOut:
     )
 
 
+def _build_ai_usage_tile(service_client: ServiceRoleClient) -> AiUsageTileOut:
+    """Real Ask-spend tile from ``ask_spend_monthly`` + the kill-switch state.
+
+    Aggregate money only — never per-user question content. Falls back to a
+    'no data' placeholder if the spend row can't be read, so one flaky tile never
+    breaks the whole dashboard.
+    """
+    cap_usd = _ai_monthly_cap_usd(service_client)
+    client = service_client.client
+    try:
+        spent_micros = current_month_total_usd_micros(client=client)
+        killed = is_killed(client=client)
+    except Exception:  # noqa: BLE001 — a spend-read hiccup must not break the dashboard.
+        logger.warning("AI-spend tile read failed; showing no-data placeholder", exc_info=True)
+        return AiUsageTileOut(data_available=False, flagged=False, killed=False, cap_usd=cap_usd)
+    return AiUsageTileOut(
+        data_available=True,
+        flagged=killed,
+        killed=killed,
+        spend_usd=round(spent_micros / MICROS_PER_USD, 2),
+        cap_usd=cap_usd,
+    )
+
+
 def build_dashboard(service_client: ServiceRoleClient) -> DashboardOut:
     liabilities = compute_payout_liabilities()
     return DashboardOut(
@@ -292,12 +331,7 @@ def build_dashboard(service_client: ServiceRoleClient) -> DashboardOut:
             listings=_count_table(service_client, "vendor_listings"),
             products=_count_table(service_client, "products"),
         ),
-        ai_usage=AiUsageTileOut(
-            data_available=AI_USAGE_DATA_AVAILABLE,
-            flagged=not AI_USAGE_DATA_AVAILABLE,
-            spend_usd=None,
-            cap_usd=_ai_monthly_cap_usd(service_client),
-        ),
+        ai_usage=_build_ai_usage_tile(service_client),
         funnel=_funnel_snapshot(service_client),
         cached_at=datetime.now(UTC),
     )
@@ -325,3 +359,38 @@ async def get_admin_dashboard(
 
 
 admin_router.include_router(dashboard_router)
+
+
+def _invalidate_dashboard_cache() -> None:
+    """Drop the cached dashboard so the next read reflects a just-changed state."""
+    global _cache_payload, _cache_expires_at
+    with _cache_lock:
+        _cache_payload = None
+        _cache_expires_at = 0.0
+
+
+# Defined directly on the admin router (prefix /admin, route_class=AdminAuditedRoute,
+# require_role("admin")) so it audits + gates like /admin/echo and enumerates cleanly.
+@admin_router.post("/ai-spend/reset-kill-switch", response_model=KillSwitchResetOut)
+async def reset_ai_kill_switch(
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+) -> KillSwitchResetOut:
+    """Admin-only: clear the Ask $/mo kill-switch latch (audited).
+
+    Aggregate control only — touches no per-user data. The clear is recorded to
+    `audit_log` (who + when) and the dashboard cache is invalidated so the AI tile
+    reflects the change immediately.
+    """
+    client = service_client.client
+    reset = reset_kill_switch(client=client)
+    killed = is_killed(client=client)
+    recorder.record(
+        action="ai.kill_switch.reset",
+        entity_type="ask_spend_monthly",
+        entity_id=None,
+        before={"killed": True},
+        after={"reset": reset, "killed": killed},
+    )
+    _invalidate_dashboard_cache()
+    return KillSwitchResetOut(reset=reset, killed=killed)

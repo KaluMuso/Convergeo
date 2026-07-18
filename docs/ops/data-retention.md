@@ -65,8 +65,24 @@ Deletion is **idempotent**: repeat requests after `profiles.deleted_at` is set a
 - **Child accounts**: not supported at launch; deletion path assumes adult account holder.
 - **Vendor accounts**: this pebble covers **customer** DPA flows only; vendor KYC artefacts follow separate retention in the private KYC bucket (admin-reviewed, not customer-exported here).
 
+## Analytics & event-table retention (automated sweep)
+
+The flows above cover **customer-initiated** export/deletion. Separately, the analytics/event tables carry a **person-link** (who did what) that must not outlive its usefulness. A daily sweep NULLs those links past a **30-day** window while keeping the anonymized aggregates (terms, funnel stages, event counts, money):
+
+| Table              | Person-link cleared past 30 days                      | Kept                                                            |
+| ------------------ | ----------------------------------------------------- | --------------------------------------------------------------- |
+| `search_query_log` | `user_id` → NULL                                      | `normalized_term`, `entity_counts`, `zero_result`, `usd_micros` |
+| `funnel_events`    | `customer_id` → NULL; `snapshot.customer_id` stripped | `stage`, `checkout_group_id`, money in `snapshot`               |
+| `analytics_events` | `user_id` + `session_id` → NULL                       | `event_type`, `entity_*`, `props`                               |
+
+- **Sweeper:** `app/services/analytics/retention.py::sweep_analytics_retention` — idempotent (a second run touches nothing) and service-role. Reuses `search_log.trim_search_pii` for the search table.
+- **Schedule:** `POST /internal/analytics/retention-tick` (shared `X-Internal-Token`), driven daily by n8n `infra/n8n/analytics-retention.json` (03:00 UTC).
+- **Window:** 30 days — matches the documented `search_query_log` window. Nothing tax-bound lives in these tables (orders/payments/invoices keep their own 7-year retention above).
+- **Separate concerns (not this sweeper):** `ask_usage`/`ask_spend_monthly` are quota/spend accounting keyed to the billing month (not swept here); `notification_outbox` delivery payloads (which can hold a phone) are pruned by the outbox lifecycle, tracked separately — a documented follow-up, not part of the analytics sweep.
+
 ## Related code
 
+- Analytics retention sweeper: `services/api/app/services/analytics/retention.py` (tick: `services/api/app/routers/internal_analytics.py`)
 - API router: `services/api/app/routers/privacy.py`
 - Customer UI: `apps/customer/app/[locale]/account/privacy/page.tsx`
 - Privacy policy: `apps/customer/app/[locale]/(marketing)/legal/privacy/page.tsx`
