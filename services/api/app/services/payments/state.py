@@ -394,6 +394,15 @@ def apply_payment_status(
     event = payment_status_to_event(incoming_status)
     if event is None:
         return None
+    if incoming_status == PaymentStatus.SUCCESS:
+        from app.services.payments.settlement import settle_prepaid_collection
+
+        settle_prepaid_collection(
+            service_client,
+            payment_id=payment_id,
+            checkout_group_id=snapshot.checkout_group_id,
+            amount_ngwee=snapshot.amount_ngwee,
+        )
     return transition_payment(
         service_client,
         payment_id=payment_id,

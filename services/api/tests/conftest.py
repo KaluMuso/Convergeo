@@ -20,6 +20,8 @@ os.environ.setdefault("LOG_LEVEL", "WARNING")
 os.environ.setdefault("PAYMENTS_ENABLED", "true")
 os.environ.setdefault("PAYMENTS_ALLOW_PRODUCTION", "true")
 
+pytest_plugins = ["tests.support.prepaid_settlement", "tests.test_ledger"]
+
 
 @pytest.fixture(autouse=True)
 def reset_caches() -> Generator[None, None, None]:

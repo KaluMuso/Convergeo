@@ -156,7 +156,7 @@ def test_duplicate_webhook_is_idempotent_noop(
 
     rows = fake.tables["webhook_events"].rows
     assert len(rows) == 1
-    assert rows[0]["event_id"] == "evt-dup-1"
+    assert rows[0]["event_id"] == "collection.successful:evt-dup-1"
     assert rows[0]["provider"] == LENCO_PROVIDER
 
 
@@ -312,6 +312,36 @@ def test_verify_lenco_webhook_rejects_before_json_parse() -> None:
     assert result.raw is None
 
 
+def test_successful_and_settled_events_have_distinct_storage_ids(
+    webhook_client: tuple[TestClient, FakeSupabaseClient],
+) -> None:
+    """collection.successful and collection.settled with the same data.id do not collide."""
+    client, fake = webhook_client
+    shared_data_id = "evt-shared-collection-1"
+    successful = _collection_payload(
+        event="collection.successful",
+        event_id=shared_data_id,
+        reference="ord-order-1-attempt-1",
+    )
+    settled = _collection_payload(
+        event="collection.settled",
+        event_id=shared_data_id,
+        reference="ord-order-1-attempt-1",
+        status="settled",
+    )
+
+    assert _post_webhook(client, successful).status_code == 200
+    assert _post_webhook(client, settled).status_code == 200
+
+    rows = fake.tables["webhook_events"].rows
+    assert len(rows) == 2
+    stored_ids = {row["event_id"] for row in rows}
+    assert stored_ids == {
+        f"collection.successful:{shared_data_id}",
+        f"collection.settled:{shared_data_id}",
+    }
+
+
 def test_verify_lenco_webhook_extracts_event_id() -> None:
     payload = _collection_payload(event_id="evt-unit-1")
     raw_body = json.dumps(payload).encode("utf-8")
@@ -321,5 +351,5 @@ def test_verify_lenco_webhook_extracts_event_id() -> None:
         api_token=TOKEN,
     )
     assert result.valid is True
-    assert result.event_id == "evt-unit-1"
+    assert result.event_id == "collection.successful:evt-unit-1"
     assert result.flags == []

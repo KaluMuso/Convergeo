@@ -54,6 +54,14 @@ def _extract_event_id(payload: dict[str, Any]) -> str | None:
     return None
 
 
+def _compose_webhook_event_id(payload: dict[str, Any], data_id: str) -> str:
+    """Disambiguate Lenco events that share the same ``data.id`` (e.g. successful vs settled)."""
+    event_name = payload.get("event")
+    if isinstance(event_name, str) and event_name.strip():
+        return f"{event_name.strip()}:{data_id}"
+    return data_id
+
+
 def _build_raw_document(
     *,
     raw_body: bytes,
@@ -116,7 +124,7 @@ def verify_lenco_webhook(
         flags.append(WebhookIngestionFlag.MISSING_EVENT_ID.value)
         event_id = _fallback_event_id(raw_body)
     else:
-        event_id = resolved_event_id
+        event_id = _compose_webhook_event_id(payload, resolved_event_id)
 
     raw = _build_raw_document(raw_body=raw_body, payload=payload, flags=flags)
     return LencoWebhookVerifyResult(valid=True, event_id=event_id, raw=raw, flags=flags)
