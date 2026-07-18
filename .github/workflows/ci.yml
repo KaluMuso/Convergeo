@@ -450,3 +450,103 @@ jobs:
         # Wired for M03-P09 (same wave). Goes green once services/api/tests/rls lands.
         continue-on-error: true
         run: uv run pytest tests/rls -q
+
+  cod-container-smoke:
+    name: COD production-container smoke
+    # Blocking (WP-1B): builds the real infra/api.Dockerfile image and drives ONE
+    # Cash-on-Delivery order through the running container against an isolated Postgres,
+    # asserting order created + audit entry (transaction-local actor/note context) +
+    # ledger/commission postings + consistent order/escrow state. Proves the runtime
+    # image's native psycopg write path (WP-1A) works with NO psql binary and NO
+    # external network — Lenco, WhatsApp and Supabase are never contacted (auth is a
+    # localhost JWKS/user_roles stub with a self-minted token). The job is always
+    # present so it stays a stable required check; the heavy steps run only when the API,
+    # its Dockerfile, the migration shim, or this workflow change — and always on master.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Postgres 16 with pgvector — the same image the `migrations` job replays onto.
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # Full history so the path filter can diff against the PR base sha.
+          fetch-depth: 0
+
+      - name: Detect API / Dockerfile changes
+        id: changes
+        run: |
+          # master pushes (and the nightly schedule) always run the container gate.
+          if [ "${{ github.event_name }}" = "push" ] || \
+             [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base="${{ github.event.pull_request.base.sha }}"
+          if [ -z "$base" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git diff --name-only "$base" HEAD | grep -Eq \
+             '^(services/api/|infra/api\.Dockerfile|scripts/ci/migration-replay\.sh|\.github/workflows/ci\.yml)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install PostgreSQL client
+        # Host-side psql for the schema replay + fixture seed + assertions. The CONTAINER
+        # must never need it — that is precisely what this test guards.
+        if: steps.changes.outputs.run == 'true'
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Setup uv
+        if: steps.changes.outputs.run == 'true'
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python
+        if: steps.changes.outputs.run == 'true'
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: services/api/.python-version
+
+      - name: Install API dependencies
+        if: steps.changes.outputs.run == 'true'
+        working-directory: services/api
+        run: uv sync --dev
+
+      - name: Set up Buildx
+        if: steps.changes.outputs.run == 'true'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build the real API runtime image
+        if: steps.changes.outputs.run == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: infra/api.Dockerfile
+          load: true
+          tags: vergeo5-api:cod-smoke
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Drive one COD order through the running image
+        if: steps.changes.outputs.run == 'true'
+        working-directory: services/api
+        run: uv run python tests/container/cod_container_smoke.py
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+          VERGEO5_API_IMAGE: vergeo5-api:cod-smoke
