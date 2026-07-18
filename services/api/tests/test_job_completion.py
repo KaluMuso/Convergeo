@@ -24,6 +24,7 @@ from app.routers.job_completion import (
 )
 from app.routers.reviews import REVIEWABLE_ORDER_STATUSES
 from app.services.escrow.release import release_idempotency_key
+from app.services.ledger.engine import account_balance_ngwee
 from app.services.rfq.engagement import accept_quote
 from tests.rls.conftest import (
     PgConn,
@@ -165,6 +166,16 @@ def _release_count(conn: PgConn, order_id: str) -> int:
     result = conn.run(
         f"SELECT count(*)::text FROM public.ledger_transactions "
         f"WHERE idempotency_key = '{key}';"
+    )
+    assert result.ok and result.rows
+    return int(result.rows[0])
+
+
+def _commission_capture_count(conn: PgConn, order_id: str) -> int:
+    key_prefix = f"{release_idempotency_key(order_id)}-commission-"
+    result = conn.run(
+        f"SELECT count(*)::text FROM public.ledger_transactions "
+        f"WHERE kind = 'commission_capture' AND idempotency_key LIKE '{key_prefix}%';"
     )
     assert result.ok and result.rows
     return int(result.rows[0])
@@ -447,6 +458,42 @@ class TestConfirmFailureNoStrand:
 # ---------------------------------------------------------------------------
 # Audit actor — the completion order_events row records the real confirmer (#8)
 # ---------------------------------------------------------------------------
+
+
+class TestCompletionCapturesCommission:
+    """M08-P08b: confirm captures commission (once) before the vendor release."""
+
+    def test_confirm_captures_commission_before_release(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        accepted = _accept(db, total=250_000)
+        provider = _vendor_owner(db, accepted.vendor_id)
+        job_id = _job_id_for(db, accepted.order_id)
+        mark_job_complete(job_id, provider)
+
+        commission_before = account_balance_ngwee(COMMISSION_ID)
+
+        result = confirm_job_completion(job_id, actor_id=CUSTOMER_A)
+        assert result.released is True
+
+        captured = _commission_capture_count(db, accepted.order_id)
+        assert captured >= 1
+        # Commission recognized as revenue (credit-negative), exactly the snapshot value.
+        assert (
+            account_balance_ngwee(COMMISSION_ID)
+            == commission_before - accepted.commission_ngwee
+        )
+        # Vendor net unchanged: total − commission (single snapshot).
+        assert result.net_ngwee == accepted.total_job_ngwee - accepted.commission_ngwee
+
+        # Double-confirm never captures a second time (idempotent per order).
+        second = confirm_job_completion(job_id, actor_id=CUSTOMER_A)
+        assert second.already_confirmed is True
+        assert _commission_capture_count(db, accepted.order_id) == captured
+        assert (
+            account_balance_ngwee(COMMISSION_ID)
+            == commission_before - accepted.commission_ngwee
+        )
 
 
 class TestCompletionAuditActor:

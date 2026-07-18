@@ -35,6 +35,7 @@ from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limi
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.commissions.engine import capture_order_commission
 from app.services.escrow.release import compute_net_ngwee, release_idempotency_key
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
@@ -317,6 +318,23 @@ def _settle_balance(order_id: str, balance_ngwee: int) -> None:
     )
 
 
+def _capture_service_commission(order_id: str) -> None:
+    """Capture platform commission from escrow before the vendor release.
+
+    Mirrors the COD / product capture-then-release pattern: with the deposit and
+    balance charges (M08 ``CHARGE_RECEIVED``) in escrow, this drains commission to
+    ``commission_revenue`` so escrow nets to the vendor ``net``. Idempotent per order
+    via the release-scoped key (``release-{order_id}-commission-…``), and it reuses
+    the single purchase-time snapshot — commission is captured EXACTLY ONCE for the
+    whole order, never re-captured across the deposit/balance legs.
+    """
+    capture_order_commission(
+        order_id=order_id,
+        commission_snapshot=_load_commission_snapshot(order_id),
+        idempotency_key_prefix=release_idempotency_key(order_id),
+    )
+
+
 def _release_service_order(
     order_id: str, vendor_id: str, delivery_fee_ngwee: int
 ) -> tuple[bool, int]:
@@ -437,6 +455,10 @@ def confirm_job_completion(
     balance = create_balance_item(order.order_id)
     # 2. Settle the balance collection into escrow (M08 charge; idempotent).
     _settle_balance(order.order_id, balance.balance_ngwee)
+    # 2b. Capture platform commission from escrow BEFORE the release (idempotent;
+    #     mirrors COD/product capture-then-release) so commission_revenue is recognized
+    #     and escrow drains to net. Single snapshot — never re-captured across legs.
+    _capture_service_commission(order.order_id)
     # 3. Release the whole order to the vendor EXACTLY ONCE — BEFORE completing, so
     #    completion implies the vendor has been paid (no stranded escrow).
     release_created, net_ngwee = _release_service_order(
