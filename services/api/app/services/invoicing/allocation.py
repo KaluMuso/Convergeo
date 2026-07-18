@@ -48,11 +48,11 @@ def allocate_and_persist_invoice(
     """Allocate the next gapless number AND insert the invoice row in ONE transaction.
 
     ``SELECT public.next_invoice_no(series)`` and ``INSERT INTO public.invoices``
-    run inside a single psql ``BEGIN … COMMIT`` block. ``next_invoice_no`` holds
-    the counter row lock (``SELECT … FOR UPDATE``) for the whole transaction, so
-    the number is consumed **iff** the row persists: if the INSERT fails,
-    ``ON_ERROR_STOP`` aborts the transaction before COMMIT and the counter
-    increment rolls back — no gap in the series (ZRA gapless requirement).
+    run inside a single ``BEGIN … COMMIT`` block on one connection. ``next_invoice_no``
+    holds the counter row lock (``SELECT … FOR UPDATE``) for the whole transaction, so
+    the number is consumed **iff** the row persists: if the INSERT fails, the statement
+    error aborts the transaction before COMMIT and the counter increment rolls back —
+    no gap in the series (ZRA gapless requirement).
 
     The allocated number is stamped into the persisted snapshot's ``invoice_no``
     via ``jsonb_set`` and returned so the caller can rebuild its payload.
@@ -69,22 +69,29 @@ def allocate_and_persist_invoice(
     snapshot_sql = sql_literal(json.dumps(snapshot, separators=(",", ":")))
     vat_flag_sql = "true" if vat_flag else "false"
     # One transaction: consume the number, persist the row, echo the number.
-    # ``\gset`` captures the allocation into :alloc_no without printing it; the
-    # trailing SELECT emits it as the single clean numeric line for parsing.
+    # ``next_invoice_no`` is evaluated exactly once in a MATERIALIZED CTE (holding
+    # its counter-row lock for the whole transaction); the INSERT reuses that number
+    # and the trailing SELECT echoes it as a single clean numeric line for parsing.
+    # If the INSERT fails, the transaction rolls back and the number is released — no
+    # gap in the series (ZRA gapless requirement).
     script = f"""BEGIN;
-SELECT public.next_invoice_no({series_sql})::bigint AS alloc_no
-\\gset
-INSERT INTO public.invoices (id, series, no, order_id, snapshot, vat_flag, vat_ngwee)
-VALUES (
-  {id_sql}::uuid,
-  {series_sql},
-  :alloc_no,
-  {order_sql}::uuid,
-  jsonb_set({snapshot_sql}::jsonb, '{{invoice_no}}', to_jsonb(:alloc_no::bigint)),
-  {vat_flag_sql},
-  {vat_ngwee}
-);
-SELECT :alloc_no AS invoice_no;
+WITH allocated AS MATERIALIZED (
+  SELECT public.next_invoice_no({series_sql})::bigint AS alloc_no
+),
+inserted AS (
+  INSERT INTO public.invoices (id, series, no, order_id, snapshot, vat_flag, vat_ngwee)
+  SELECT
+    {id_sql}::uuid,
+    {series_sql},
+    allocated.alloc_no,
+    {order_sql}::uuid,
+    jsonb_set({snapshot_sql}::jsonb, '{{invoice_no}}', to_jsonb(allocated.alloc_no)),
+    {vat_flag_sql},
+    {vat_ngwee}
+  FROM allocated
+  RETURNING no
+)
+SELECT no::text FROM inserted;
 COMMIT;
 """
     result = run_sql_script(script)
