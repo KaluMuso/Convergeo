@@ -10,6 +10,8 @@ import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
 import { type NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 
+import { verifyCfAccessAssertion } from "./lib/cf-access";
+
 const CF_ACCESS_HEADER = "cf-access-jwt-assertion";
 
 const intlMiddleware = createMiddleware({
@@ -27,19 +29,6 @@ export function hasCfAccessJwtAssertion(request: NextRequest): boolean {
   return typeof assertion === "string" && assertion.trim().length > 0;
 }
 
-/**
- * Validates the Cloudflare Access JWT assertion header.
- * TODO(M13+): verify signature against the Cloudflare Access JWKS for the team domain.
- */
-export function isCfAccessJwtAssertionPresent(assertion: string | null): boolean {
-  if (!assertion || !assertion.trim()) {
-    return false;
-  }
-
-  const parts = assertion.trim().split(".");
-  return parts.length === 3 && parts.every((part) => part.length > 0);
-}
-
 export function createCfAccessForbiddenResponse(): NextResponse {
   return new NextResponse("Forbidden — Cloudflare Access required", { status: 403 });
 }
@@ -51,8 +40,14 @@ export default async function middleware(request: NextRequest) {
   const adminBypass = isAdminBypassActive();
 
   if (isProductionCfAccessRequired()) {
+    // Cryptographically verify the Cloudflare Access assertion: signature against the
+    // team JWKS (RS256) + expected audience + issuer + expiry. Fails closed — absent,
+    // malformed, unsigned, wrong-key, wrong-audience, expired, or an unconfigured
+    // verifier all return 403 before any handler runs. Authoritative admin RBAC still
+    // happens in the API against `user_roles`, never from these claims alone.
     const assertion = request.headers.get(CF_ACCESS_HEADER);
-    if (!isCfAccessJwtAssertionPresent(assertion)) {
+    const cfAccess = await verifyCfAccessAssertion(assertion);
+    if (!cfAccess.ok) {
       return createCfAccessForbiddenResponse();
     }
   }
