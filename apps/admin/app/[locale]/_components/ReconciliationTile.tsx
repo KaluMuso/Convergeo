@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { type ReconciliationTile as ReconciliationData } from "./api";
+import { reconciliationDisplayStatus } from "./dashboard-truth";
 import { TileShell } from "./TileShell";
 
 type ReconciliationTileProps = {
@@ -14,19 +15,28 @@ type ReconciliationTileProps = {
 export function ReconciliationTile({ reconciliation, locale }: ReconciliationTileProps) {
   const t = useTranslations("admin.dashboard.reconciliation");
   const [expanded, setExpanded] = useState(false);
-  const isRed = reconciliation.status === "red" || reconciliation.has_mismatch;
+  const display = reconciliationDisplayStatus(reconciliation);
+  const shellStatus = display === "red" ? "danger" : display === "green" ? "success" : "warning";
 
   return (
-    <TileShell title={t("title")} subtitle={t("subtitle")} status={isRed ? "danger" : "success"}>
+    <TileShell title={t("title")} subtitle={t("subtitle")} status={shellStatus}>
       <div className="space-y-3">
         <p
           className={
-            isRed
+            display === "red"
               ? "inline-flex min-h-8 items-center rounded-full bg-danger/10 px-3 text-sm font-medium text-danger"
-              : "inline-flex min-h-8 items-center rounded-full bg-success/10 px-3 text-sm font-medium text-success"
+              : display === "green"
+                ? "inline-flex min-h-8 items-center rounded-full bg-success/10 px-3 text-sm font-medium text-success"
+                : "inline-flex min-h-8 items-center rounded-full bg-warning/10 px-3 text-sm font-medium text-warning"
           }
+          data-testid="reconciliation-status"
+          data-status={display}
         >
-          {isRed ? t("statusRed") : t("statusGreen")}
+          {display === "red"
+            ? t("statusRed")
+            : display === "green"
+              ? t("statusGreen")
+              : t("statusUnknown")}
         </p>
         {reconciliation.report_date ? (
           <p className="text-sm text-muted">
@@ -37,6 +47,9 @@ export function ReconciliationTile({ reconciliation, locale }: ReconciliationTil
         ) : (
           <p className="text-sm text-muted">{t("noReport")}</p>
         )}
+        {display === "unknown" ? (
+          <p className="text-xs text-muted">{t("noReportDependency")}</p>
+        ) : null}
         {reconciliation.report_id ? (
           <button
             type="button"
@@ -49,7 +62,7 @@ export function ReconciliationTile({ reconciliation, locale }: ReconciliationTil
         {expanded && reconciliation.report_id ? (
           <div className="rounded-md border border-border bg-bg p-3 text-sm">
             <p className="font-mono text-xs text-muted">{reconciliation.report_id}</p>
-            {isRed ? (
+            {display === "red" ? (
               <p className="mt-2 text-danger">{t("mismatchAlert")}</p>
             ) : (
               <p className="mt-2 text-success">{t("cleanDay")}</p>

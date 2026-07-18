@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 
 import { type OrdersByStatus } from "./api";
+import { isOrdersPipelineEmpty } from "./dashboard-truth";
 import { TileShell } from "./TileShell";
 
 const STATUS_KEYS = [
@@ -22,9 +23,15 @@ type OrdersStatusTileProps = {
 
 export function OrdersStatusTile({ ordersByStatus }: OrdersStatusTileProps) {
   const t = useTranslations("admin.dashboard.orders");
+  const empty = isOrdersPipelineEmpty(ordersByStatus);
 
   return (
     <TileShell title={t("title")} subtitle={t("subtitle")}>
+      {empty ? (
+        <p className="mb-2 text-xs text-muted" data-testid="orders-empty">
+          {t("empty")}
+        </p>
+      ) : null}
       <ul className="grid grid-cols-2 gap-2 text-sm">
         {STATUS_KEYS.map((status) => (
           <li

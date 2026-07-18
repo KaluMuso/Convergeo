@@ -276,8 +276,12 @@
     "subtitle": "Review likely duplicate canonical products and merge into one survivor.",
     "queue": {
       "empty": "No duplicate product pairs detected.",
+      "emptyHint": "The queue lists similarity pairs from GET /admin/products/duplicates (threshold ≥ 0.3). An empty queue means none matched — not a fabricated clear state.",
+      "emptyApiScope": "Live API supports merge into a survivor; there is no product reject/approve-canonical endpoint yet. Staging proof: create a new_canonical → pending_moderation pair, then merge.",
       "loading": "Loading duplicate pairs…",
       "error": "Could not load duplicate product pairs.",
+      "permissionDenied": "Permission denied — admin role required for moderation.",
+      "permissionDeniedHint": "Sign in with an account that has the admin role.",
       "retry": "Retry",
       "similarity": "Similarity",
       "similarityPercent": "Similarity: {value}%",
@@ -538,25 +542,29 @@
     },
     "dispatch": {
       "title": "Manual dispatch",
-      "subtitle": "Book a courier and advance fulfilment — recorded on the customer timeline.",
-      "courier": "Courier",
+      "subtitle": "Record a courier you already booked outside Vergeo5, then paste tracking for the customer timeline.",
+      "manualModelHint": "D16: Lusaka delivery is manual ops dispatch — no Yango/inDrive API integration in v1.",
+      "courier": "Courier used (booked manually)",
       "couriers": {
-        "yango": "Yango",
-        "indrive": "inDrive",
-        "other": "Other"
+        "other": "Local / other courier",
+        "yango": "Booked via Yango (manual)",
+        "indrive": "Booked via inDrive (manual)"
       },
-      "courierOther": "Courier name",
+      "courierOther": "Courier / freight name",
+      "courierOtherPlaceholder": "e.g. Platinum Couriers, local rider…",
       "trackingNote": "Tracking note",
-      "trackingPlaceholder": "Driver name, plate, ETA…",
+      "trackingPlaceholder": "Driver name, plate, ETA, tracking code…",
       "statusEvent": "Status update",
       "events": {
         "ship": "Mark shipped",
         "mark_delivered": "Mark delivered"
       },
+      "confirmManual": "I confirm this courier was booked manually outside Vergeo5 and tracking is accurate.",
       "submit": "Record dispatch",
       "submitting": "Saving…",
       "success": "Dispatch recorded on the order timeline.",
-      "failure": "Could not record dispatch."
+      "failure": "Could not record dispatch.",
+      "permissionDenied": "Permission denied — admin role required to record dispatch."
     },
     "intervention": {
       "title": "Status intervention",
@@ -584,20 +592,30 @@
     "escrow": {
       "title": "Manual escrow hold / release",
       "subtitle": "Posts a balanced ledger transaction with the manual flag. Both notes are required.",
+      "readOnlyHint": "Balances shown above come only from ledger rows on this order — nothing is invented.",
+      "dependency": "Automated escrow release / payout visibility depends on prepaid→ledger (MR-B01) and the release workflow (MR-W01).",
+      "ledgerSummaryTitle": "Ledger on this order",
+      "ledgerEmpty": "No ledger transactions yet — escrow amounts cannot be inferred.",
+      "ledgerTxnCount": "{count} ledger transaction(s)",
+      "ledgerPostingCount": "{count} posting(s)",
+      "ledgerKinds": "Kinds: {kinds}",
       "confirmationHint": "Type exactly “{phrase}” to confirm.",
+      "confirmationMismatch": "Confirmation phrase must match exactly.",
       "operation": "Operation",
       "operations": {
         "hold": "Hold in escrow",
         "release": "Release from escrow"
       },
       "amountNgwee": "Amount (ngwee)",
+      "amountPlaceholder": "Enter ngwee amount (no default)",
       "reason": "Reason",
       "confirmationPhrase": "Confirmation phrase",
       "submit": "Post manual escrow",
       "submitting": "Posting…",
       "success": "Manual escrow transaction posted.",
       "failure": "Could not post manual escrow — check both notes.",
-      "invalidAmount": "Enter a positive ngwee amount."
+      "invalidAmount": "Enter a positive ngwee amount.",
+      "permissionDenied": "Permission denied — admin role required for manual escrow."
     },
     "timeline": {
       "empty": "No timeline events yet.",
@@ -610,27 +628,38 @@
     "subtitle": "Platform aggregates — ledger liabilities, reconciliation, and funnel snapshot.",
     "loading": "Loading dashboard…",
     "error": "Could not load dashboard aggregates.",
+    "errorHint": "Requires GET /admin/dashboard and an authenticated admin session.",
+    "permissionDenied": "Permission denied — admin role required to view dashboard aggregates.",
+    "permissionDeniedHint": "Sign in with an account that has the admin role in user_roles.",
     "retry": "Retry",
     "cachedAt": "Aggregates cached at {at}",
     "liabilitiesTotal": "Total payout liabilities: {amount}",
+    "emptyTrafficTitle": "No order / funnel traffic yet",
+    "emptyTrafficBody": "GMV, order pipeline, funnel, and ledger liabilities are all zero from the live API — these are not placeholder analytics.",
+    "emptyTrafficDependency": "Missing backend dependency for non-zero tiles: real checkout/order volume plus ledger postings (MR-B01) and reconciliation reports.",
     "gmv": {
       "title": "GMV",
-      "subtitle": "Gross merchandise value (non-cancelled orders)"
+      "subtitle": "Gross merchandise value (non-cancelled orders)",
+      "empty": "K0.00 — no non-cancelled orders in the ledger-backed aggregate yet."
     },
     "payoutLiabilities": {
       "title": "Payout liabilities",
       "subtitle": "Escrow-held plus released-unpaid (ledger-derived)",
       "escrowHeld": "Escrow held",
       "releasedUnpaid": "Released, unpaid",
-      "total": "Total liability"
+      "total": "Total liability",
+      "empty": "No escrow or unpaid-release liability posted yet.",
+      "dependency": "Values come only from ledger account balances — never invented in the UI."
     },
     "reconciliation": {
       "title": "Reconciliation",
       "subtitle": "Latest daily Lenco-vs-ledger report",
       "statusGreen": "Balanced",
       "statusRed": "Mismatch flagged",
+      "statusUnknown": "No report",
       "reportDate": "Report date: {date}",
       "noReport": "No reconciliation report yet.",
+      "noReportDependency": "Depends on the daily reconciliation job writing reconciliation_reports — absence is not a balanced day.",
       "drillIn": "View report details",
       "hideDrillIn": "Hide details",
       "mismatchAlert": "Ledger mismatch detected — investigate discrepancies.",
@@ -639,6 +668,7 @@
     "orders": {
       "title": "Orders by status",
       "subtitle": "Live order pipeline counts",
+      "empty": "No orders in any status — pipeline is empty.",
       "statuses": {
         "placed": "Placed",
         "confirmed": "Confirmed",
@@ -660,13 +690,15 @@
     "aiUsage": {
       "title": "Ask Vergeo AI",
       "subtitle": "Monthly spend vs platform cap",
-      "noData": "No usage data yet",
-      "noDataHint": "AI usage metering ships in a later wave. Cap remains ${cap}/mo.",
-      "spendVsCap": "${spend} of ${cap} monthly cap"
+      "noData": "Usage meter unavailable",
+      "noDataHint": "ask_spend_monthly could not be read. Cap remains ${cap}/mo — not a fabricated spend figure.",
+      "spendVsCap": "${spend} of ${cap} monthly cap",
+      "killed": "Kill-switch active — Ask Vergeo is blocked until reset."
     },
     "funnel": {
       "title": "Funnel snapshot",
       "subtitle": "Checkout and order conversion (server-side events)",
+      "empty": "No checkout/order funnel events yet — zeros are live API counts, not demo charts.",
       "steps": {
         "checkout_started": "Checkouts started",
         "checkout_completed": "Checkouts completed",

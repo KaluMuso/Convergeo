@@ -11,13 +11,15 @@ type AiUsageTileProps = {
 
 export function AiUsageTile({ aiUsage }: AiUsageTileProps) {
   const t = useTranslations("admin.dashboard.aiUsage");
+  const status = aiUsage.killed ? "danger" : aiUsage.flagged ? "warning" : undefined;
 
   return (
-    <TileShell
-      title={t("title")}
-      subtitle={t("subtitle")}
-      status={aiUsage.flagged ? "warning" : undefined}
-    >
+    <TileShell title={t("title")} subtitle={t("subtitle")} status={status}>
+      {aiUsage.killed ? (
+        <p className="text-sm font-medium text-danger" data-testid="ai-killed">
+          {t("killed")}
+        </p>
+      ) : null}
       {aiUsage.data_available ? (
         <p className="text-sm text-text">
           {t("spendVsCap", {
