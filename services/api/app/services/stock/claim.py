@@ -1,31 +1,21 @@
 from __future__ import annotations
 
 import importlib
-import os
 import re
-import subprocess
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
+from app.services.db import SqlResult as SqlResult
+from app.services.db import resolve_db_url as resolve_db_url
+from app.services.db import run_sql_script as run_sql_script
+
 _DEFAULT_TTL_MIN = 15
-_DEFAULT_DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     re.IGNORECASE,
 )
-
-
-@dataclass(frozen=True, slots=True)
-class SqlResult:
-    ok: bool
-    rows: list[str]
-    error: str | None = None
-
-
-def resolve_db_url() -> str:
-    return os.environ.get("SUPABASE_DB_URL", _DEFAULT_DB_URL)
 
 
 def sql_uuid(value: str, field: str) -> str:
@@ -39,26 +29,6 @@ def sql_int(value: int, field: str) -> str:
     if value <= 0:
         raise ValueError(f"{field} must be positive")
     return str(value)
-
-
-def run_sql_script(script: str) -> SqlResult:
-    proc = subprocess.run(
-        ["psql", resolve_db_url(), "-v", "ON_ERROR_STOP=1", "-At"],
-        input=script,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if proc.returncode != 0:
-        return SqlResult(ok=False, rows=[], error=proc.stderr.strip())
-    rows = [line for line in proc.stdout.splitlines() if line]
-    noise = {"BEGIN", "COMMIT", "ROLLBACK", "DO"}
-    data = [
-        row
-        for row in rows
-        if row not in noise and not re.match(r"^(?:INSERT|UPDATE|DELETE) \d+$", row)
-    ]
-    return SqlResult(ok=True, rows=data)
 
 
 def _service_client() -> Any:

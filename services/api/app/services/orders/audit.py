@@ -1,52 +1,24 @@
-"""Transaction-local audit context for order status changes."""
+"""Transaction-local audit context for order status changes.
+
+The SQL write path (``run_sql_script`` / ``SqlResult`` / ``resolve_db_url``) lives in
+``app.services.db`` — the one authoritative native-psycopg adapter. It is re-exported
+here so the long-standing ``from app.services.orders.audit import run_sql_script``
+call sites (and their test monkeypatch seams) keep working unchanged.
+"""
 
 from __future__ import annotations
 
-import os
-import re
-import subprocess
-from dataclasses import dataclass
-
-_DEFAULT_DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+from app.services.db import SqlResult as SqlResult
+from app.services.db import resolve_db_url as resolve_db_url
+from app.services.db import run_sql_script as run_sql_script
 
 ORDER_ACTOR_GUC = "app.order_actor"
 ORDER_NOTE_GUC = "app.order_note"
 
 
-@dataclass(frozen=True, slots=True)
-class SqlResult:
-    ok: bool
-    rows: list[str]
-    error: str | None = None
-
-
-def resolve_db_url() -> str:
-    return os.environ.get("SUPABASE_DB_URL", _DEFAULT_DB_URL)
-
-
 def sql_literal(value: str) -> str:
     escaped = value.replace("'", "''")
     return f"'{escaped}'"
-
-
-def run_sql_script(script: str) -> SqlResult:
-    proc = subprocess.run(
-        ["psql", resolve_db_url(), "-v", "ON_ERROR_STOP=1", "-At"],
-        input=script,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if proc.returncode != 0:
-        return SqlResult(ok=False, rows=[], error=proc.stderr.strip())
-    rows = [line for line in proc.stdout.splitlines() if line]
-    noise = {"BEGIN", "COMMIT", "ROLLBACK", "DO", "SET"}
-    data = [
-        row
-        for row in rows
-        if row not in noise and not re.match(r"^(?:INSERT|UPDATE|DELETE|SELECT) \d+$", row)
-    ]
-    return SqlResult(ok=True, rows=data)
 
 
 def set_order_audit_context(*, actor_id: str, note: str) -> None:
