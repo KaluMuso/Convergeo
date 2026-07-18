@@ -4,7 +4,15 @@ export type OnboardingStepKey = (typeof ONBOARDING_STEPS)[number];
 
 export type KycDocType = "nrc" | "selfie";
 
-export type KycStatus = "draft" | "submitted" | "approved" | "rejected" | "resubmit";
+export type KycStatus =
+  | "draft"
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "rejected"
+  | "resubmit"
+  | "suspended"
+  | "revoked";
 
 export type VendorStatus = "draft" | "pending_kyc" | "active" | "suspended";
 

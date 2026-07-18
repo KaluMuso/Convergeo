@@ -107,7 +107,13 @@ export function createKycClient(getToken: () => string | null | Promise<string |
 }
 
 export function isTerminalStatus(status: KycApplication["kyc_status"]): boolean {
-  return status === "submitted" || status === "approved";
+  return (
+    status === "submitted" ||
+    status === "under_review" ||
+    status === "approved" ||
+    status === "suspended" ||
+    status === "revoked"
+  );
 }
 
 export function isResubmitStatus(status: KycApplication["kyc_status"]): boolean {

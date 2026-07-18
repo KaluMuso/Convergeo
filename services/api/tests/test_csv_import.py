@@ -27,6 +27,8 @@ class FakeQuery:
         self._pending_op: str | None = None
         self._payload: dict[str, Any] | list[dict[str, Any]] | None = None
         self._count_exact = False
+        self._order: tuple[str, bool] | None = None
+        self._limit: int | None = None
 
     def select(self, columns: str, *, count: str | None = None) -> FakeQuery:
         if count == "exact":
@@ -39,6 +41,14 @@ class FakeQuery:
 
     def in_(self, column: str, values: list[Any]) -> FakeQuery:
         self._filters.append(("in", column, values))
+        return self
+
+    def order(self, column: str, *, desc: bool = False) -> FakeQuery:
+        self._order = (column, desc)
+        return self
+
+    def limit(self, count: int) -> FakeQuery:
+        self._limit = count
         return self
 
     def maybe_single(self) -> FakeQuery:
@@ -76,6 +86,11 @@ class FakeQuery:
             return _mock_response([target])
 
         rows = self._apply_filters(self._parent.rows)
+        if self._order is not None:
+            column, desc = self._order
+            rows = sorted(rows, key=lambda row: row.get(column, ""), reverse=desc)
+        if self._limit is not None:
+            rows = rows[: self._limit]
         if self._maybe_single:
             return _mock_response(rows[0] if rows else None)
         count = len(rows) if self._count_exact else None
@@ -115,6 +130,7 @@ class FakeSupabaseClient:
             "platform_config": FakeTable(),
             "orders": FakeTable(),
             "products": FakeTable(),
+            "kyc_records": FakeTable(),
         }
 
     def table(self, name: str) -> FakeTable:
@@ -134,6 +150,17 @@ def _seed_base(fake: FakeSupabaseClient, *, listing_count: int = 0, kyc_tier: in
             "owner_user_id": USER_ID,
             "status": "active",
             "kyc_tier": kyc_tier,
+            "preferred_badge": False,
+        }
+    )
+    fake.tables["kyc_records"].rows.append(
+        {
+            "id": f"kyc-{VENDOR_ID}",
+            "vendor_id": VENDOR_ID,
+            "tier": kyc_tier,
+            "status": "approved",
+            "doc_storage_paths": ["kyc/seed.jpg"],
+            "momo_name_match": {"matched": True},
         }
     )
     fake.tables["vendor_quotas"].rows.append(
@@ -266,6 +293,7 @@ def test_mixed_hundred_row_import(
     fake_client: FakeSupabaseClient,
 ) -> None:
     fake_client.tables["vendors"].rows[0]["kyc_tier"] = 2
+    fake_client.tables["kyc_records"].rows[0]["tier"] = 2
     fake_client.tables["vendor_quotas"].rows.append(
         {
             "tier": 2,

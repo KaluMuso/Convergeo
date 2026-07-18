@@ -35,6 +35,7 @@ class FakeQuery:
         self._count_exact = False
         self._selected_columns = "*"
         self._order: tuple[str, bool] | None = None
+        self._limit: int | None = None
 
     def select(self, columns: str, *, count: str | None = None) -> FakeQuery:
         self._selected_columns = columns
@@ -52,6 +53,10 @@ class FakeQuery:
 
     def order(self, column: str, *, desc: bool = False) -> FakeQuery:
         self._order = (column, desc)
+        return self
+
+    def limit(self, count: int) -> FakeQuery:
+        self._limit = count
         return self
 
     def maybe_single(self) -> FakeQuery:
@@ -76,6 +81,8 @@ class FakeQuery:
         if self._order is not None:
             column, desc = self._order
             rows = sorted(rows, key=lambda row: row.get(column, ""), reverse=desc)
+        if self._limit is not None:
+            rows = rows[: self._limit]
         if self._maybe_single:
             return MagicMock(data=rows[0] if rows else None, count=len(rows))
         count = len(rows) if self._count_exact else None
@@ -114,6 +121,7 @@ class FakeSupabaseClient:
             "vendor_quotas": FakeTable(),
             "platform_config": FakeTable(),
             "orders": FakeTable(),
+            "kyc_records": FakeTable(),
         }
 
     def table(self, name: str) -> FakeTable:
@@ -127,6 +135,20 @@ def _seed_base(fake: FakeSupabaseClient, *, kyc_tier: int = 1, listing_count: in
             "owner_user_id": USER_ID,
             "status": "active",
             "kyc_tier": kyc_tier,
+            "preferred_badge": False,
+        }
+    )
+    fake.tables["kyc_records"].rows.append(
+        {
+            "id": f"kyc-{VENDOR_ID}",
+            "vendor_id": VENDOR_ID,
+            "tier": kyc_tier,
+            "status": "approved",
+            "doc_storage_paths": ["kyc/doc.jpg"],
+            "momo_name_match": {"matched": True},
+            "reviewed_by": USER_ID,
+            "reviewed_at": "2026-07-01T00:00:00Z",
+            "decision_reason": "seed",
         }
     )
     fake.tables["categories"].rows.append(

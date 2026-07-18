@@ -187,6 +187,20 @@ def _seed_t1_vendor(fake: FakeSupabaseClient, *, kyc_tier: int = 1, status: str 
             "preferred_badge": False,
         }
     )
+    if kyc_tier is not None and status == "active":
+        fake.tables["kyc_records"].rows.append(
+            {
+                "id": f"kyc-{VENDOR_ID}-{kyc_tier}",
+                "vendor_id": VENDOR_ID,
+                "tier": kyc_tier,
+                "status": "approved",
+                "doc_storage_paths": ["kyc/seed.jpg"],
+                "momo_name_match": {"matched": True},
+                "reviewed_by": USER_ID,
+                "reviewed_at": "2026-07-01T00:00:00Z",
+                "decision_reason": "seed",
+            }
+        )
     fake.tables["vendor_quotas"].rows.extend(
         [
             {
@@ -367,7 +381,7 @@ def test_state_machine_illegal_submit_from_submitted(
             "id": KYC_RECORD_ID,
             "vendor_id": VENDOR_ID,
             "tier": 1,
-            "status": "pending",
+            "status": "submitted",
             "doc_storage_paths": ["private/kyc/nrc.jpg"],
             "created_at": "2026-01-01T00:00:00+00:00",
         }
@@ -397,7 +411,7 @@ def test_state_machine_submit_and_audit(
         service_client=service_client,
     )
     assert fake_client.tables["vendors"].rows[0]["status"] == "pending_kyc"
-    assert fake_client.tables["kyc_records"].rows[-1]["status"] == "pending"
+    assert fake_client.tables["kyc_records"].rows[-1]["status"] == "submitted"
     assert len(fake_client.tables["audit_log"].rows) == 1
     assert fake_client.tables["audit_log"].rows[0]["action"] == "kyc.submit"
 
@@ -412,7 +426,7 @@ def test_state_machine_approve_rejects_name_match_mismatch(
             "id": KYC_RECORD_ID,
             "vendor_id": VENDOR_ID,
             "tier": 1,
-            "status": "pending",
+            "status": "submitted",
             "doc_storage_paths": ["private/kyc/nrc.jpg"],
             "momo_name_match": {"matched": False, "match_score": 0.2},
             "created_at": "2026-01-01T00:00:00+00:00",
@@ -439,7 +453,7 @@ def test_state_machine_approve_audited(
             "id": KYC_RECORD_ID,
             "vendor_id": VENDOR_ID,
             "tier": 1,
-            "status": "pending",
+            "status": "submitted",
             "doc_storage_paths": ["private/kyc/nrc.jpg"],
             "momo_name_match": {"matched": True, "match_score": 0.95},
             "created_at": "2026-01-01T00:00:00+00:00",
@@ -467,7 +481,7 @@ def test_state_machine_reject_audited(
             "id": KYC_RECORD_ID,
             "vendor_id": VENDOR_ID,
             "tier": 1,
-            "status": "pending",
+            "status": "submitted",
             "doc_storage_paths": ["private/kyc/nrc.jpg"],
             "created_at": "2026-01-01T00:00:00+00:00",
         }
@@ -533,7 +547,7 @@ async def test_name_match_recorded_not_auto_approved(
     body = response.json()
     assert body["momo_name_match"]["matched"] is False
     assert fake_client.tables["kyc_records"].rows[-1]["momo_name_match"]["matched"] is False
-    assert fake_client.tables["kyc_records"].rows[-1]["status"] == "pending"
+    assert fake_client.tables["kyc_records"].rows[-1]["status"] == "submitted"
 
 
 def test_badge_grant_idempotent(
@@ -648,7 +662,7 @@ def test_kyc_resubmit_only_after_rejection(
             "id": KYC_RECORD_ID,
             "vendor_id": VENDOR_ID,
             "tier": 1,
-            "status": "pending",
+            "status": "submitted",
             "doc_storage_paths": ["private/kyc/nrc.jpg"],
             "created_at": "2026-01-01T00:00:00+00:00",
         }

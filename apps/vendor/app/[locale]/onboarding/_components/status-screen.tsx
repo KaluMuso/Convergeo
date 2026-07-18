@@ -7,6 +7,7 @@ export type StatusVariant = "pending" | "approved" | "rejected" | "resubmit";
 export function resolveStatusVariant(kycStatus: KycStatus): StatusVariant {
   switch (kycStatus) {
     case "submitted":
+    case "under_review":
       return "pending";
     case "approved":
       return "approved";
@@ -14,6 +15,9 @@ export function resolveStatusVariant(kycStatus: KycStatus): StatusVariant {
       return "rejected";
     case "resubmit":
       return "resubmit";
+    case "suspended":
+    case "revoked":
+      return "rejected";
     default:
       return "pending";
   }

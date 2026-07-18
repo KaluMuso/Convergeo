@@ -185,16 +185,25 @@ def _validate_price_tiers_ordered(tiers: list[PriceTierInput]) -> None:
         prev_price = tier.price_ngwee
 
 
-def _enforce_wholesale_tier(vendor: dict[str, Any], body: ListingCreateRequest) -> None:
-    kyc_tier = int(vendor.get("kyc_tier") or 1)
-    if body.wholesale and kyc_tier < 2:
-        raise AppError(
-            code="wholesale_requires_t2",
-            message="Wholesale listings require T2 verification or higher",
-            http_status=403,
-            details={"message_key": "vendor.listings.errors.wholesale_requires_t2"},
-        )
-    if body.wholesale and not body.price_tiers:
+def _enforce_wholesale_tier(
+    service_client: ServiceRoleClient,
+    vendor: dict[str, Any],
+    body: ListingCreateRequest,
+) -> None:
+    if not body.wholesale:
+        return
+    from app.services.kyc.eligibility import (
+        require_wholesale_eligible,
+        resolve_vendor_eligibility,
+    )
+
+    eligibility = resolve_vendor_eligibility(
+        service_client,
+        str(vendor["id"]),
+        vendor_row=vendor,
+    )
+    require_wholesale_eligible(eligibility)
+    if not body.price_tiers:
         raise AppError(
             code="validation_error",
             message="Wholesale listings require price_tiers",
@@ -403,7 +412,7 @@ async def create_listing(
             },
         )
 
-    _enforce_wholesale_tier(vendor, body)
+    _enforce_wholesale_tier(service_client, vendor, body)
     if body.price_tiers:
         _validate_price_tiers_ordered(body.price_tiers)
 

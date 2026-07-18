@@ -51,12 +51,27 @@ export type KycDetail = {
   tier: number;
   status: string;
   reviewer_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  decision_reason: string | null;
+  lifecycle_reason: string | null;
   momo_name_match: MomoNameMatch | null;
   documents: SignedDocUrl[];
   updated_at: string;
   sla_badge: SlaBadge;
   age_hours: number;
   docs_available: boolean;
+};
+
+export type OrphanedTierItem = {
+  vendor_id: string;
+  slug: string;
+  display_name: string;
+  vendor_status: string;
+  stored_kyc_tier: number;
+  vendor_updated_at: string | null;
+  kyc_record_count: number;
+  approved_kyc_record_count: number;
 };
 
 export type RejectReasonTemplate =

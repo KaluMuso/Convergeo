@@ -1043,9 +1043,13 @@ export type Database = {
       kyc_records: {
         Row: {
           created_at: string
+          decision_reason: string | null
           doc_storage_paths: string[]
           id: string
+          lifecycle_reason: string | null
           momo_name_match: Json | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           reviewer_notes: string | null
           status: string
           tier: number
@@ -1054,9 +1058,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          decision_reason?: string | null
           doc_storage_paths?: string[]
           id?: string
+          lifecycle_reason?: string | null
           momo_name_match?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           reviewer_notes?: string | null
           status?: string
           tier: number
@@ -1065,9 +1073,13 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          decision_reason?: string | null
           doc_storage_paths?: string[]
           id?: string
+          lifecycle_reason?: string | null
           momo_name_match?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           reviewer_notes?: string | null
           status?: string
           tier?: number
@@ -1080,6 +1092,13 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kyc_records_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

@@ -107,9 +107,14 @@ def load_vendor_cap_limits(
     service_client: ServiceRoleClient,
     vendor_id: str,
 ) -> VendorCapLimits:
+    from app.services.kyc.eligibility import (
+        cap_tier_for_quotas,
+        resolve_vendor_eligibility,
+    )
+
     response = (
         service_client.client.table("vendors")
-        .select("id, kyc_tier")
+        .select("id, status, kyc_tier, preferred_badge")
         .eq("id", vendor_id)
         .maybe_single()
         .execute()
@@ -121,7 +126,12 @@ def load_vendor_cap_limits(
             message=f"Vendor {vendor_id} not found",
             http_status=404,
         )
-    tier = int(row.get("kyc_tier") or 1)
+    eligibility = resolve_vendor_eligibility(
+        service_client,
+        vendor_id,
+        vendor_row=row,
+    )
+    tier = cap_tier_for_quotas(eligibility)
     quota = load_vendor_quota(service_client, tier)
     return VendorCapLimits(
         vendor_id=vendor_id,

@@ -43,6 +43,10 @@ class FakeQuery:
         self._filters.append(("eq", column, value))
         return self
 
+    def in_(self, column: str, values: list[Any]) -> FakeQuery:
+        self._filters.append(("in", column, values))
+        return self
+
     def order(self, column: str, *, desc: bool = False) -> FakeQuery:
         self._order = (column, desc)
         return self
@@ -102,6 +106,9 @@ class FakeQuery:
         for op, column, value in self._filters:
             if op == "eq":
                 filtered = [row for row in filtered if row.get(column) == value]
+            elif op == "in":
+                allowed = set(value)
+                filtered = [row for row in filtered if row.get(column) in allowed]
         return filtered
 
 
@@ -248,7 +255,7 @@ def _seed_pending_queue(fake: FakeSupabaseClient) -> None:
                 "id": KYC_OLD_ID,
                 "vendor_id": VENDOR_ID,
                 "tier": 1,
-                "status": "pending",
+                "status": "submitted",
                 "doc_storage_paths": [
                     "kyc/vendor-a/nrc.jpg",
                     "kyc/vendor-a/selfie.jpg",
@@ -262,6 +269,10 @@ def _seed_pending_queue(fake: FakeSupabaseClient) -> None:
                     "matched": True,
                 },
                 "reviewer_notes": None,
+                "reviewed_by": None,
+                "reviewed_at": None,
+                "decision_reason": None,
+                "lifecycle_reason": None,
                 "created_at": (now - timedelta(hours=90)).isoformat(),
                 "updated_at": (now - timedelta(hours=80)).isoformat(),
             },
@@ -269,7 +280,7 @@ def _seed_pending_queue(fake: FakeSupabaseClient) -> None:
                 "id": KYC_NEW_ID,
                 "vendor_id": VENDOR_B_ID,
                 "tier": 1,
-                "status": "pending",
+                "status": "submitted",
                 "doc_storage_paths": ["kyc/vendor-b/nrc.jpg", "kyc/vendor-b/selfie.jpg"],
                 "momo_name_match": {
                     "phone": "+260971234568",
@@ -280,6 +291,10 @@ def _seed_pending_queue(fake: FakeSupabaseClient) -> None:
                     "matched": True,
                 },
                 "reviewer_notes": None,
+                "reviewed_by": None,
+                "reviewed_at": None,
+                "decision_reason": None,
+                "lifecycle_reason": None,
                 "created_at": (now - timedelta(hours=3)).isoformat(),
                 "updated_at": (now - timedelta(hours=2)).isoformat(),
             },
@@ -304,7 +319,7 @@ def _seed_single_pending(fake: FakeSupabaseClient, *, kyc_id: str = KYC_NEW_ID) 
             "id": kyc_id,
             "vendor_id": VENDOR_B_ID,
             "tier": 1,
-            "status": "pending",
+            "status": "submitted",
             "doc_storage_paths": ["kyc/vendor-b/nrc.jpg", "kyc/vendor-b/selfie.jpg"],
             "momo_name_match": {
                 "phone": "+260971234568",
@@ -315,6 +330,10 @@ def _seed_single_pending(fake: FakeSupabaseClient, *, kyc_id: str = KYC_NEW_ID) 
                 "matched": True,
             },
             "reviewer_notes": None,
+            "reviewed_by": None,
+            "reviewed_at": None,
+            "decision_reason": None,
+            "lifecycle_reason": None,
             "created_at": now.isoformat(),
             "updated_at": now.isoformat(),
         }
@@ -413,10 +432,15 @@ def test_approve_transitions_vendor_active_and_enqueues_notification(
     assert vendor["kyc_tier"] == 1
     kyc_row = next(row for row in fake_client.tables["kyc_records"].rows if row["id"] == KYC_NEW_ID)
     assert kyc_row["status"] == "approved"
+    assert kyc_row["reviewed_by"] == USER_ID
+    assert kyc_row["reviewed_at"] is not None
+    assert kyc_row["decision_reason"] == "Looks good"
     outbox = fake_client.tables["notification_outbox"].rows
     assert len(outbox) == 1
     assert outbox[0]["template"] == "kyc_approved"
     assert outbox[0]["dedupe_key"] == f"kyc_approved:{KYC_NEW_ID}:whatsapp"
+    audit_actions = [row["action"] for row in fake_client.tables["audit_log"].rows]
+    assert "kyc.approve" in audit_actions
 
 
 def test_reject_enqueues_notification(
