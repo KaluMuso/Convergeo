@@ -176,7 +176,9 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 - Consent governs GA4 **only**; the server beacon is operational and always anonymized. Rate-limit + size-cap protect the public endpoint.
 - RLS unchanged: `analytics_events` stays service-role-write / admin-read; stitched `user_id` never exposes one user's events to another.
 
-**Out of scope.** GA4 SSR capture; vendor/admin client tracking; historical identity backfill; promo/affiliate attribution. If oversized, split at the seam **{API ingest + stitch} | {client session-id + consent banner + product_view}**.
+**Contingency (the set stays at three).** Task 2 ships as **one** session by default. Split into **2a {API ingest + server-side stitch}** and **2b {client session-id + consent banner + `product_view`}** — a clean, file-disjoint seam (2a is the critical path; 2b follows) — **only if** the single session overruns on file count or review size. This is a fallback, not the plan: the default remains three tasks.
+
+**Out of scope.** GA4 SSR capture; vendor/admin client tracking; historical identity backfill; promo/affiliate attribution.
 
 ---
 
@@ -216,7 +218,7 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 
 ## Part D — Sequencing, deferrals, and founder gates
 
-**Order:** #267/WP-1A → **Task 1** → { **Task 2** ∥ **Task 3** }. One pebble = one branch = one PR.
+**Order:** #267/WP-1A → **Task 1** → { **Task 2** ∥ **Task 3** }. One pebble = one branch = one PR. The set is **three tasks by decision**; Task 2 splits into 2a/2b only if a session overruns (see Task 2 → *Contingency*).
 
 **Which dashboards come alive, and when:**
 - After **Task 1**: vendor Views/Conversion; admin Search-Insights (top-terms, zero-results, ask-cost breakdown); funnel forward stages.
