@@ -21,10 +21,20 @@ vi.mock("@vergeo/auth/middleware", async (importOriginal) => {
   };
 });
 
-import {
+// Cryptographic CF Access verification is unit-tested in ./lib/cf-access.test.ts.
+// Here we mock it to assert the middleware's wiring: prod fails closed on a non-ok
+// result, passes on ok, and skips verification entirely outside production.
+const { verifyCfAccessAssertionMock } = vi.hoisted(() => ({
+  verifyCfAccessAssertionMock: vi.fn(),
+}));
+
+vi.mock("./lib/cf-access", () => ({
+  verifyCfAccessAssertion: verifyCfAccessAssertionMock,
+}));
+
+import middleware, {
   createCfAccessForbiddenResponse,
   hasCfAccessJwtAssertion,
-  isCfAccessJwtAssertionPresent,
   isProductionCfAccessRequired,
 } from "./middleware";
 
@@ -68,16 +78,68 @@ describe("admin middleware CF Access helpers", () => {
     expect(hasCfAccessJwtAssertion(withoutHeader)).toBe(false);
   });
 
-  it("validates JWT-shaped assertion values", () => {
-    expect(isCfAccessJwtAssertionPresent("eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig")).toBe(true);
-    expect(isCfAccessJwtAssertionPresent("")).toBe(false);
-    expect(isCfAccessJwtAssertionPresent("not-a-jwt")).toBe(false);
-    expect(isCfAccessJwtAssertionPresent(null)).toBe(false);
-  });
-
   it("returns a 403 forbidden response for missing CF Access", () => {
     const response = createCfAccessForbiddenResponse();
     expect(response.status).toBe(403);
+  });
+});
+
+describe("admin middleware — CF Access enforcement", () => {
+  beforeEach(() => {
+    verifyCfAccessAssertionMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("returns 403 in production when assertion verification fails", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "verification_failed" });
+
+    const request = new NextRequest("https://admin.vergeo5.com/en", {
+      headers: { "cf-access-jwt-assertion": "tampered.jwt.value" },
+    });
+    const response = await middleware(request);
+
+    expect(response.status).toBe(403);
+    expect(verifyCfAccessAssertionMock).toHaveBeenCalledWith("tampered.jwt.value");
+  });
+
+  it("returns 403 in production when the assertion header is absent", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
+
+    const request = new NextRequest("https://admin.vergeo5.com/en");
+    const response = await middleware(request);
+
+    expect(response.status).toBe(403);
+    expect(verifyCfAccessAssertionMock).toHaveBeenCalledWith(null);
+  });
+
+  it("proceeds past the CF Access gate in production when verification succeeds", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    verifyCfAccessAssertionMock.mockResolvedValue({ ok: true, payload: { sub: "cf-user" } });
+
+    const request = new NextRequest("https://admin.vergeo5.com/en", {
+      headers: { "cf-access-jwt-assertion": "valid.jwt.value" },
+    });
+    const response = await middleware(request);
+
+    expect(response.status).toBe(200);
+    expect(verifyCfAccessAssertionMock).toHaveBeenCalledWith("valid.jwt.value");
+  });
+
+  it("does not verify (or block) outside production", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+
+    const request = new NextRequest("https://admin.vergeo5.com/en", {
+      headers: { "cf-access-jwt-assertion": "anything" },
+    });
+    const response = await middleware(request);
+
+    expect(response.status).toBe(200);
+    expect(verifyCfAccessAssertionMock).not.toHaveBeenCalled();
   });
 });
 
