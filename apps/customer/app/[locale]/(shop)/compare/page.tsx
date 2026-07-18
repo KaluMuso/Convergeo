@@ -11,10 +11,10 @@ import {
   type ComparisonLabels,
   type ComparisonListing,
 } from "../_components/pdp/comparison";
-import type { ListingCondition } from "../_components/pdp/condition-badge";
 
 import { CompareResults } from "./_components/compare-results";
 
+import type { ListingCondition } from "../_components/pdp/condition-badge";
 import type { Metadata } from "next";
 
 export const revalidate = 60;
