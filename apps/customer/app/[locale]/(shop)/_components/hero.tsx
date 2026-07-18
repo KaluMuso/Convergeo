@@ -3,7 +3,11 @@ import { resolveHeroVariant } from "@vergeo/ui/src/merch/hero-registry";
 import Link from "next/link";
 import { preload } from "react-dom";
 
-import type { MerchSlotRow } from "./merch-data";
+import {
+  isPlaceholderHeroMessageKey,
+  normalizeMerchMessageKey,
+  type MerchSlotRow,
+} from "./merch-data";
 
 type CatalogTranslator = (key: string, values?: Record<string, string | number>) => string;
 
@@ -13,10 +17,7 @@ function readPayloadString(payload: Record<string, unknown>, key: string): strin
 }
 
 function normalizeMessageKey(key: string): string {
-  if (key.startsWith("merch.")) {
-    return key.replace(/^merch\./, "home.");
-  }
-  return key;
+  return normalizeMerchMessageKey(key);
 }
 
 function resolvePayloadText(
@@ -31,6 +32,10 @@ function resolvePayloadText(
   }
 
   const normalized = normalizeMessageKey(messageKey);
+  if (isPlaceholderHeroMessageKey(messageKey) || isPlaceholderHeroMessageKey(normalized)) {
+    return t(fallbackKey);
+  }
+
   const resolved = t(normalized);
   if (resolved === normalized && normalized !== fallbackKey) {
     return t(fallbackKey);
