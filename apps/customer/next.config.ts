@@ -134,6 +134,18 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    // Same-origin proxy for the analytics beacon: navigator.sendBeacon posts to
+    // /api/analytics/collect (same origin -> no CORS/preflight), which Next forwards
+    // to the FastAPI ingest. Keeps the beacon cheap and CORS-free on 3G.
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+    return [
+      {
+        source: "/api/analytics/collect",
+        destination: `${apiBase}/analytics/collect`,
+      },
+    ];
+  },
 };
 
 // Compose: next-intl(serwist(config)). withSerwist preserves `headers()`/CSP.

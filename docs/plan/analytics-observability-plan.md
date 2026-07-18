@@ -15,26 +15,26 @@ Every analytics component — tables, writers, the client wrapper, admin/vendor 
 
 ### A1. Server event tables (all RLS: service-role write, admin read; anonymized by design)
 
-| Table / view | Migration | PII columns | Written in prod today? |
-| --- | --- | --- | --- |
-| `funnel_events` | `0025_funnel_events.sql:7` | `customer_id`, `snapshot.customer_id` | **Partial** — only `stage='abandoned'` (abandon sweeper). Forward stages never written. |
-| `search_query_log` | `0027_search_analytics.sql:10` | `term` (raw), `user_id` (30-day trim) | **No** — no live writer. |
-| `analytics_events` + view `analytics_event_stream` | `0029_analytics_unify.sql:18,82` | `user_id`, `session_id` | **No** — no writer, no ingest, no consumer. |
-| `ask_usage` / `ask_spend_monthly` | `0024_ask_usage.sql` | `user_id`, `guest_key`, `client_ip`, `question_hash` | **Yes** — Ask quota/spend system (`ask/quota.py:164`, `ask/spend.py`). |
-| `ask_cache` | `0023_ask_cache.sql` | — | Yes. |
+| Table / view                                       | Migration                        | PII columns                                          | Written in prod today?                                                                  |
+| -------------------------------------------------- | -------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `funnel_events`                                    | `0025_funnel_events.sql:7`       | `customer_id`, `snapshot.customer_id`                | **Partial** — only `stage='abandoned'` (abandon sweeper). Forward stages never written. |
+| `search_query_log`                                 | `0027_search_analytics.sql:10`   | `term` (raw), `user_id` (30-day trim)                | **No** — no live writer.                                                                |
+| `analytics_events` + view `analytics_event_stream` | `0029_analytics_unify.sql:18,82` | `user_id`, `session_id`                              | **No** — no writer, no ingest, no consumer.                                             |
+| `ask_usage` / `ask_spend_monthly`                  | `0024_ask_usage.sql`             | `user_id`, `guest_key`, `client_ip`, `question_hash` | **Yes** — Ask quota/spend system (`ask/quota.py:164`, `ask/spend.py`).                  |
+| `ask_cache`                                        | `0023_ask_cache.sql`             | —                                                    | Yes.                                                                                    |
 
 ### A2. Writers (built, tested, mostly uncalled)
 
-| Writer | Definition | Live caller? |
-| --- | --- | --- |
-| `funnel.record_event` | `analytics/funnel.py:122` | Only via `sweep_abandoned` (`funnel.py:277→286`). |
-| `funnel.sweep_abandoned` | `analytics/funnel.py:277` | **Wired** — `routers/internal_funnel.py:36` (`POST /internal/funnel/abandon-tick`), n8n `infra/n8n/funnel-abandon.json` (5-min tick). |
-| `emit_cart_add` / `emit_checkout_start` / `emit_step_complete` | `cart/events.py:10/25/40` | **None** — called only from `tests/test_funnel.py`. Docstring: "call from cart/checkout hooks *when wired*". |
-| `emit_payment_start_funnel` / `emit_order_placed_funnel` | `orders/events.py:106/121` | **None** — tests only. |
-| `search_log.log_search_query` / `log_ask_query` | `search_log.py:104/128` | **None** — never imported outside its module. |
-| `events.record_event` (purpose-built for `product_view`/PDP) | `events.py:123` | **None**. |
-| `events.query_funnel` (reads the union view) | `events.py:168` | **None**. |
-| `search_log.trim_search_pii` (retention) | `search_log.py:153` | **None** — unscheduled (no endpoint, no n8n, no pg_cron, no GH-cron). |
+| Writer                                                         | Definition                 | Live caller?                                                                                                                          |
+| -------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `funnel.record_event`                                          | `analytics/funnel.py:122`  | Only via `sweep_abandoned` (`funnel.py:277→286`).                                                                                     |
+| `funnel.sweep_abandoned`                                       | `analytics/funnel.py:277`  | **Wired** — `routers/internal_funnel.py:36` (`POST /internal/funnel/abandon-tick`), n8n `infra/n8n/funnel-abandon.json` (5-min tick). |
+| `emit_cart_add` / `emit_checkout_start` / `emit_step_complete` | `cart/events.py:10/25/40`  | **None** — called only from `tests/test_funnel.py`. Docstring: "call from cart/checkout hooks _when wired_".                          |
+| `emit_payment_start_funnel` / `emit_order_placed_funnel`       | `orders/events.py:106/121` | **None** — tests only.                                                                                                                |
+| `search_log.log_search_query` / `log_ask_query`                | `search_log.py:104/128`    | **None** — never imported outside its module.                                                                                         |
+| `events.record_event` (purpose-built for `product_view`/PDP)   | `events.py:123`            | **None**.                                                                                                                             |
+| `events.query_funnel` (reads the union view)                   | `events.py:168`            | **None**.                                                                                                                             |
+| `search_log.trim_search_pii` (retention)                       | `search_log.py:153`        | **None** — unscheduled (no endpoint, no n8n, no pg_cron, no GH-cron).                                                                 |
 
 All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via `stock.claim`), `search_log.py:17` + `events.py:24` (via `orders.audit`).
 
@@ -50,12 +50,12 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 
 ### A4. Dashboards reading unwritten tables
 
-| Surface | Endpoint | Reads | Status |
-| --- | --- | --- | --- |
-| **Vendor "Views / Cart activity" + Conversion** | `vendor_analytics.py:153` (`_views_by_day`, filter `:173` on `cart_add`/`checkout_start`); `:236` conversion | `funnel_events` forward stages | 🔴 **Always zero** — sits beside real Sales/Orders/Top-listings. |
-| **Admin Search Insights** (top-terms, zero-results, ask-cost) | `admin_search_insights.py:41/56/71` | `search_query_log` | 🔴 **Always `[]`** — no live writer. (No admin UI consumes these yet — latent.) |
-| **Admin AI-usage tile** | `admin_dashboards.py:21,295` | hardcoded `AI_USAGE_DATA_AVAILABLE=False`; never reads `ask_spend_monthly` | 🟡 **Inverse gap** — honest "no data" placeholder while spend *is* tracked. |
-| **Unified `analytics_events` stream** | `events.query_funnel` / `analytics_event_stream` | `analytics_events` | 🔴 **Fully inert** — no writer, no reader. |
+| Surface                                                       | Endpoint                                                                                                     | Reads                                                                      | Status                                                                          |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **Vendor "Views / Cart activity" + Conversion**               | `vendor_analytics.py:153` (`_views_by_day`, filter `:173` on `cart_add`/`checkout_start`); `:236` conversion | `funnel_events` forward stages                                             | 🔴 **Always zero** — sits beside real Sales/Orders/Top-listings.                |
+| **Admin Search Insights** (top-terms, zero-results, ask-cost) | `admin_search_insights.py:41/56/71`                                                                          | `search_query_log`                                                         | 🔴 **Always `[]`** — no live writer. (No admin UI consumes these yet — latent.) |
+| **Admin AI-usage tile**                                       | `admin_dashboards.py:21,295`                                                                                 | hardcoded `AI_USAGE_DATA_AVAILABLE=False`; never reads `ask_spend_monthly` | 🟡 **Inverse gap** — honest "no data" placeholder while spend _is_ tracked.     |
+| **Unified `analytics_events` stream**                         | `events.query_funnel` / `analytics_event_stream`                                                             | `analytics_events`                                                         | 🔴 **Fully inert** — no writer, no reader.                                      |
 
 **Explicitly NOT gaps (real data):** admin GMV, orders-by-status, payout liabilities, reconciliation, catalog counts, and the admin **Funnel tile** (derived from `checkout_groups`+`orders`, not `funnel_events`, at `admin_dashboards.py:252`); vendor Sales/Orders/Top-listings (from `orders`/`order_items`); event-organiser stats (from `tickets`).
 
@@ -113,6 +113,7 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 **Dependencies.** #267/WP-1A. This is the foundation for Tasks 2 & 3.
 
 **Files (modify only):**
+
 - Funnel wiring (call the existing `emit_*` wrappers):
   - `services/api/app/routers/cart.py` (`add_cart_item`, ~`:365`) → `emit_cart_add`
   - `services/api/app/routers/checkout.py` (`create_checkout_session` ~`:429`; step validators ~`:587`, `:624`) → `emit_checkout_start`, `emit_step_complete`
@@ -124,18 +125,21 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 - Tests: extend `tests/test_funnel.py`, `tests/test_search_analytics.py`; add router-level assertions.
 
 **Required changes.**
+
 1. At each handler, add a single fire-and-forget emit/log call **after** the state change succeeds (so an event never precedes its fact). Reuse the `emit_*` wrappers verbatim — they already carry the correct snapshot/anonymization shape.
 2. `log_ask_query` must pass the real `usd_micros` (derive from `model` + `total_tokens` already computed in `run_ask`) — this is the **only** data source for the per-day Ask-cost breakdown and it is currently discarded.
 3. Search zero-result: pass `zero_result = (result total == 0)` from the `SearchResponse` — this feeds admin zero-result mining.
 4. No behavioural change to any request on writer failure (swallow, log at debug — matching existing writers).
 
 **Acceptance tests.**
+
 - Real-Postgres (skip-if-unreachable): a `/search` request writes one `search_query_log` row with `normalized_term` (never raw PII beyond the existing `term` column) and correct `zero_result`; an Ask request writes a `kind='ask'` row with non-zero `usd_micros`; add-to-cart / checkout-create / step / payment-start / order-create each write the matching `funnel_events` stage (idempotent per `(checkout_group_id, stage)`).
 - Downstream proof: after seeding via the handlers, `vendor_analytics._views_by_day` returns non-zero; `admin_search_insights.top_terms`/`zero_result_terms`/`ask_cost_by_day` return rows.
 - **Failure-path:** patch `run_sql_script` to raise → the search/checkout/order request still returns 2xx (analytics failure is invisible to the user).
 - `uv run pytest` + `ruff` + `mypy` green.
 
 **Privacy constraints.**
+
 - These are **server operational events → written regardless of consent** (no GA/consent gate here). State this in the PR.
 - Anonymized: only `normalized_term` reaches insight surfaces; funnel snapshots already exclude PII; money integer ngwee; service-role writes.
 - No new PII columns; no raw query text into `analytics_events`.
@@ -153,6 +157,7 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 **Dependencies.** #267 + **Task 1** (shared analytics conventions and a non-empty stream; reuses `events.record_event`). Disjoint from Task 3 → may run in parallel with it.
 
 **Files:**
+
 - API (new, auto-discovered): `services/api/app/routers/analytics_collect.py` — `POST /analytics/collect`.
 - Client: `packages/analytics/src/session.ts` (new — opaque session id) + edits to `track.ts` (attach id) / `analytics-provider.ts`; `apps/customer/app/[locale]/product/[slug]/…` PDP → `track('product_view', …)`.
 - Consent UI (new): `apps/customer/app/[locale]/_components/ConsentBanner.tsx` (calls `setAnalyticsConsent`), mounted in the customer layout.
@@ -161,6 +166,7 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 - **Migration:** none (`analytics_events.session_id` already exists).
 
 **Required changes.**
+
 1. **Ingest endpoint** — parse `{events:[{event, props, ts}]}`; enforce a **batch cap** (≤20 events, bounded body size → 413) and **rate-limit** (public, unauthenticated); map each event → `events.record_event`, attaching `session_id` (client) and `user_id` (from the bearer token **iff** present); re-run `_assert_anonymized` server-side (the client is untrusted) — reject/scrub PII keys and non-integer money; **fire-and-forget semantics** (a bad event never 500s the batch — skip and continue). Never trust client `ts` for ordering security; store as a prop.
 2. **Client session id** — generate a random UUID stored in a first-party, `SameSite=Lax`, expiring cookie/localStorage (e.g. 180-day rolling); attach it to the beacon wrapper (`{session_id, events:[…]}`); **not** a fingerprint, **not** derived from any PII.
 3. **`product_view`** — fire `track('product_view', { product_id, listing_id? })` on PDP mount.
@@ -168,11 +174,13 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 5. **Server-side stitch (best-effort, forward-only)** — populate `analytics_events.session_id` + `user_id`; once a session authenticates, subsequent events carry `user_id`. **No historical backfill, no new table** (a full anon→auth backfill is explicitly deferred).
 
 **Acceptance tests.**
+
 - Ingest: valid batch → N `analytics_events` rows with `session_id`; a PII prop (`phone`/`email`) → rejected/scrubbed, not stored; a `*_ngwee` float → rejected; oversized batch → 413; over-rate → 429; malformed event → skipped, rest of batch still written; authed request stamps `user_id`, anonymous stamps only `session_id`.
 - Client (vitest): `session.ts` returns a stable id across calls and attaches it to the beacon; consent banner writes the cookie and flips `hasAnalyticsConsent()`; GA4 mirror fires only after `granted`; server beacon enqueues regardless of consent.
 - E2E: a PDP visit produces a `product_view` row reachable via `analytics_event_stream`.
 
 **Privacy constraints.**
+
 - **Defense-in-depth anonymization** at the ingest boundary (client cannot be trusted to pre-sanitise).
 - Session id is opaque/random/expiring/first-party; it is a **person-linked identifier** → covered by the retention sweeper in Task 3.
 - Consent governs GA4 **only**; the server beacon is operational and always anonymized. Rate-limit + size-cap protect the public endpoint.
@@ -185,7 +193,8 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 **Status — 🟡 SPLIT INVOKED (2a shipped, 2b next).** The session overran (Task 1 + this backend in one run) and the client transport carries real cross-origin subtlety — the customer app calls the API on an absolute `NEXT_PUBLIC_API_BASE_URL` (no `/api` proxy), so a `sendBeacon` needs either a Next rewrite or a `text/plain`+CORS beacon — so the documented 2a|2b split is used.
 
 - **✅ 2a — server ingest (SHIPPED):** `services/api/app/routers/analytics_collect.py` → `POST /analytics/collect` (auto-discovered). Lenient batch parse (`extra="ignore"` so version skew never drops a batch), ≤20-event cap → 413, per-IP **fail-open** rate-limit (registered as `PUBLIC_BEACON` in `ratelimit_policies.py`), per-event props size bound, and a **persist allowlist** (`{product_view}`) so funnel/search events already recorded server-side (Task 1) are accepted-but-not-double-counted. Reuses `events.record_event` for server-side anonymization (rejects raw-PII / non-int money). **Forward identity stitch lives here:** a beacon carrying `session_id` + a bearer token writes both columns, linking `session_id` ↔ `user_id` (no historical backfill, no new table). Tests: `tests/test_analytics_collect.py` (10).
-- **⏳ 2b — client loop (NEXT):** opaque client `session_id` (`packages/analytics/src/session.ts`) attached to the beacon; consent-capture banner (`setAnalyticsConsent`, mounted in the customer layout); `product_view`/PDP `track()`; transport (Next rewrite or `text/plain`+CORS); client vitest.
+- **✅ 2b — client loop (SHIPPED, minus the consent banner):** opaque client `session_id` (`packages/analytics/src/session.ts`, localStorage-backed v4 id, data-frugal — carried in the beacon body, not a cookie) attached to the beacon in `track.ts`; `product_view`/PDP `track()` via a `ProductViewTracker` client component mounted in `p/[slug]/page.tsx`; **transport** = a same-origin Next `rewrites()` in `apps/customer/next.config.ts` proxying `/api/analytics/collect` → `${NEXT_PUBLIC_API_BASE_URL}/analytics/collect` (no CORS/preflight; CSP `connect-src 'self'` already covers it). Tests: `session.test.ts` (4) + extended `track.test.ts` (session_id in the beacon body). Verified: analytics vitest (11) + typecheck + lint; customer typecheck + lint + full suite (192).
+- **⏳ 2b remainder — consent-capture banner (small follow-up):** a `setAnalyticsConsent` banner mounted in the customer layout. Deferred deliberately: it only gates the **GA4 mirror**, which is founder-gated OFF (`NEXT_PUBLIC_GA4_MEASUREMENT_ID` unset) — so the anonymized server beacon (the actual analytics) already flows end-to-end without it. Needs 5-locale i18n copy and carries blocking bundle/Lighthouse risk, so it belongs in its own focused pass. Until it lands, GA4 stays off (correct default) and no consent is silently assumed.
 
 ---
 
@@ -196,6 +205,7 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 **Dependencies.** #267 + **Task 1** (retention is only meaningful once writers are live; the AI-spend tile reads `ask_spend_monthly`, which is **already** live, so that half is independent). Runs in parallel with Task 2.
 
 **Files:**
+
 - Retention: `services/api/app/services/analytics/retention.py` (new — unified sweep, generalising `trim_search_pii`); `services/api/app/routers/internal_analytics.py` (new — `POST /internal/analytics/retention-tick`, token-guarded like `internal_funnel.py`); `infra/n8n/analytics-retention.json` (new — daily tick); `docs/ops/data-retention.md` (add the analytics-tables section).
 - AI-spend: `services/api/app/routers/admin_dashboards.py` (replace the `AI_USAGE_DATA_AVAILABLE=False` placeholder → read `ask_spend_monthly.total_usd_micros` + `killed_at`); `services/api/app/routers/admin_config.py` (or a small `admin_ai_spend.py`) — admin **kill-switch reset** endpoint calling `reset_kill_switch` (`spend.py:157`), admin-gated + audited; optional near-cap **warn** (n8n `ai-spend-warn.json` or in the `finalize_ask_answer` path at ≥80%).
 - Health: `services/api/app/routers/health.py` — add a public `/health` alias (or repoint monitors to `/healthz` in `infra/uptimerobot.md`); optional deep `/readyz` that runs `SELECT 1` through the `run_sql_script` spine.
@@ -203,18 +213,21 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 - **Migration:** none required (operates on existing tables). `0056` available if a retention-run audit row or a `notification_outbox` purge index is wanted.
 
 **Required changes.**
+
 1. **Unified retention sweep** — one idempotent, service-role function that, past each window: NULLs `search_query_log.user_id` (existing 30-day rule), NULLs `funnel_events.customer_id` + strips `snapshot.customer_id`, NULLs `analytics_events.user_id` + `session_id`, and ages/purges delivered `notification_outbox` rows carrying raw `phone_e164`. Keep anonymized aggregates. Expose via the token-guarded internal tick; schedule daily in n8n (mirroring `funnel-abandon.json`).
 2. **AI-spend tile** — surface real `total_usd_micros` vs `cap` and `killed_at` (aggregate only — **never** per-user question text); after Task 1, `ask_cost_by_day` gives the per-day breakdown.
 3. **Kill-switch reset** — admin-only endpoint clearing `killed_at` via `reset_kill_switch`, written to the audit log; optional ≥80% warn to the founder (n8n).
 4. **Health** — resolve the `/health` 404 so the uptime keyword monitor stops reading perpetual-down; optionally make readiness exercise the DB spine.
 
 **Acceptance tests.**
+
 - Retention: rows older than each window have their person-links NULLed/stripped; rows inside the window are untouched; aggregates survive; the sweep is idempotent (second run is a no-op); `notification_outbox` phone aged out. Internal tick rejects a missing/invalid token.
 - AI-spend: the admin tile returns real spent/cap/`killed`; reset endpoint clears `killed_at`, writes an audit row, and is rejected for non-admins.
 - Health: unauthenticated `GET /health` returns 200 with the "ok" keyword; deep `/readyz` fails when the DB spine is down (if implemented).
 - `uv run pytest` + `ruff` + `mypy` green; migration (if added) replays clean.
 
 **Privacy constraints.**
+
 - Windows DPA-aligned (30-day person-link window for `user_id`/`session_id`/`customer_id`; longer only for tax-bound records, which live outside these tables). Sweeper idempotent + service-role.
 - AI-spend surfaces **aggregate money only** — no question content, no per-user drill-down.
 - Kill-switch reset audited (who/when); admin-gated.
@@ -225,13 +238,14 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 
 ## Part D — Sequencing, deferrals, and founder gates
 
-**Order:** #267/WP-1A → **Task 1** → { **Task 2** ∥ **Task 3** }. One pebble = one branch = one PR. The set is **three tasks by decision**; Task 2 splits into 2a/2b only if a session overruns (see Task 2 → *Contingency*).
+**Order:** #267/WP-1A → **Task 1** → { **Task 2** ∥ **Task 3** }. One pebble = one branch = one PR. The set is **three tasks by decision**; Task 2 splits into 2a/2b only if a session overruns (see Task 2 → _Contingency_).
 
 **Which dashboards come alive, and when:**
+
 - After **Task 1**: vendor Views/Conversion; admin Search-Insights (top-terms, zero-results, ask-cost breakdown); funnel forward stages.
 - After **Task 2**: `product_view`/PDP + unified `analytics_events` stream; consent-gated GA4 actually fires.
 - After **Task 3**: admin AI-spend tile + kill-switch state; retention runs on a schedule; health monitors read true state.
 
 **Explicitly deferred (not in these three):** full anon→auth historical identity backfill; SSR/RSC Sentry instrumentation; promo/affiliate/near-me attribution analytics; vendor/admin client-side tracking; per-user AI drill-downs. **Founder-gated config (no code):** Sentry DSNs, UptimeRobot account + `ops_uptime_alert` template (F5), `NEXT_PUBLIC_GA4_MEASUREMENT_ID`.
 
-**One-line dependency statement for the PRs:** *every analytics reader/writer reaches Postgres only through `run_sql_script` (the #267 `db.py` psycopg3 spine), so this work must merge after #267/WP-1A lands on `master`.*
+**One-line dependency statement for the PRs:** _every analytics reader/writer reaches Postgres only through `run_sql_script` (the #267 `db.py` psycopg3 spine), so this work must merge after #267/WP-1A lands on `master`._

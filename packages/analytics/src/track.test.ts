@@ -97,4 +97,34 @@ describe("track", () => {
     expect(flush()).toBe(false);
     expect(sendBeacon).not.toHaveBeenCalled();
   });
+
+  it("attaches the anonymous session_id to the beacon body", () => {
+    const sendBeacon = navigator.sendBeacon as ReturnType<typeof vi.fn>;
+    // Capture the serialized body synchronously via a stub Blob (the sendBeacon mock
+    // ignores the blob, and jsdom's Blob.text() is unreliable across environments).
+    let capturedBody = "";
+    class CapturingBlob {
+      constructor(parts?: BlobPart[]) {
+        if (parts && typeof parts[0] === "string") {
+          capturedBody = parts[0];
+        }
+      }
+    }
+    vi.stubGlobal("Blob", CapturingBlob);
+
+    setConsent("denied");
+    track("product_view", { product_id: "11111111-1111-1111-1111-111111111111" });
+    flush();
+    vi.unstubAllGlobals();
+
+    expect(sendBeacon).toHaveBeenCalledTimes(1);
+    const payload = JSON.parse(capturedBody) as {
+      session_id?: string;
+      events: Array<{ event: string }>;
+    };
+    expect(typeof payload.session_id).toBe("string");
+    expect(payload.session_id).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(payload.events).toHaveLength(1);
+    expect(payload.events[0]!.event).toBe("product_view");
+  });
 });
