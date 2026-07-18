@@ -1,5 +1,10 @@
 # 24-Hour Workboard — Parallel Panel Execution
 
+> **Superseded for sequencing (2026-07-18 post-implementation refresh).**  
+> Use **`implementation-wave-plan.md`** as the authoritative wave plan.  
+> Panel PRs #289/#290/#291, prepaid #274, release accounting #294, and KYC #293 are **merged** — do not treat their code work as still missing. Remaining work is staging/production evidence and ops (see wave plan Waves A–E).  
+> This workboard is retained as historical session context only.
+
 **Date:** 2026-07-18  
 **Goal:** Maximize P0/P1 closure readiness for Cursor coding sessions without production writes from audit agents.  
 **Branches:** Three independent panel branches + one integration/release branch.  

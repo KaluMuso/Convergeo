@@ -1,255 +1,286 @@
 # Master Reconciliation Register — Vergeo5 / Convergeo
 
-**Consolidation date:** 2026-07-18  
+**Consolidation date:** 2026-07-18 (post-implementation refresh)  
 **Role:** Audit Consolidation Lead  
 **Mode:** Documentation only — no production changes, no application code edits  
-**Sources:** Six document audits under `../document-audits/*` + same-day foundation (`../foundation/*`)
+**Master tip reconciled:** `d5c2134` (includes PR #293)  
+**Sources:** Six document audits under `../document-audits/*` · foundation (`../foundation/*`) · panel implementation reports · panel PR integration review · KYC integrity report · payment release accounting report
 
-**Verdict:** Platform is a **live demo marketplace** with schema/API shell for commerce, events, and trust — **not** real-money production-ready while any **P0** below remains open, unverified, or not auditable.
+**Verdict:** Platform remains a **live demo marketplace** with a substantially stronger **code** money/trust shell after same-day merges — **not** real-money production-ready while any **P0** below lacks staging-verified or production-verified evidence.
 
 ---
 
 ## How to read this register
 
-| Column          | Meaning                                                                                                                                 |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| **MR-ID**       | Deduplicated master finding ID (stable for coding sessions)                                                                             |
-| **Priority**    | P0 release blocker · P1 launch quality · P2 hygiene/roadmap · DOC doc-only                                                              |
-| **Status**      | VERIFIED / PARTIAL / MISSING / CONFLICT / NOT_AUDITABLE (per contract)                                                                  |
-| **Workstream**  | One of: data · schema · backend/API · customer · vendor · admin · workflow/integration · security/RLS · test/observability · legal/docs |
-| **Source refs** | Paths into document audits + foundation risk IDs                                                                                        |
+| Column          | Meaning                                                                                                                                |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **MR-ID**       | Deduplicated master finding ID (stable for coding sessions)                                                                            |
+| **Priority**    | P0 release blocker · P1 launch quality · P2 hygiene/roadmap · DOC doc-only                                                             |
+| **Status**      | VERIFIED / PARTIAL / MISSING / CONFLICT / NOT_AUDITABLE (live / ops evidence)                                                          |
+| **Code**        | `DONE` / `PARTIAL` / `MISSING` / `N/A` on master tip                                                                                   |
+| **Staging**     | `PASS` / `FAIL` / `NOT_RUN` / `N/A`                                                                                                    |
+| **Production**  | `PASS` / `FAIL` / `NOT_RUN` / `N/A`                                                                                                    |
+| **Class**       | `COMMITTED` (launch requirement) · `ASPIRATION` (Phase 2+/doc fiction) · `DOC` (superseded SoT)                                        |
+| **Workstream**  | data · schema · backend/API · customer · vendor · admin · workflow · security/RLS · observability · legal/docs · payments · operations |
+| **Source refs** | Paths into document audits + foundation risk IDs + PR numbers                                                                          |
 
 **Rules applied**
 
 - Findings that appear in multiple audits are merged into one MR-ID; all source IDs are preserved.
-- Stack “conflicts” that are intentional supersessions (`00-decisions.md` D18–D24) are **DOC**, not engineering defects — listed explicitly so they are not built against.
-- Do **not** recommend direct database edits without a reviewed migration or controlled import plan.
+- Stack “conflicts” that are intentional supersessions (`docs/plan/00-decisions.md` D18–D24) are **DOC**, not engineering defects — see `source-conflicts-and-decisions.md`.
+- **Merged code is not listed as MISSING.** Code-complete items stay open only for staging/production evidence.
+- Empty operational tables with present schema = **PARTIAL** (unproven), not MISSING schema.
 - Do **not** seed production to “close” empty operational tables.
+- Do **not** declare production-ready while payment release accounting, migration rollout, RLS, workflows, monitoring, backup/restore, or rollback evidence is incomplete.
+
+### Evidence ladder
+
+| Layer                   | Meaning                                                           |
+| ----------------------- | ----------------------------------------------------------------- |
+| **Code-complete**       | Merged to `master`; unit/integration tests exist in repo          |
+| **Staging-verified**    | Sandbox/staging environment exercised with VERIFIED artifacts     |
+| **Production-verified** | Live production probe/SQL/n8n/deploy SHA matches intended release |
+
+Repository implementation alone never upgrades a production behaviour to **VERIFIED** (per `../foundation/document-audit-contract.md`).
 
 ### Source document slugs
 
-| Slug         | Path                                                                |
-| ------------ | ------------------------------------------------------------------- |
-| `events`     | `../document-audits/convergeo-events-strategy/`                     |
-| `product`    | `../document-audits/convergeo-product-strategy-april-2026/`         |
-| `blueprint`  | `../document-audits/blueprint-zambia-vergeo-super-app/`             |
-| `master`     | `../document-audits/strategic-master-plan-v1/`                      |
-| `sfq`        | `../document-audits/strategic-foundation-questionnaire-april-2026/` |
-| `roadmap`    | `../document-audits/convergeo-60-day-development-roadmap/`          |
-| `foundation` | `../foundation/`                                                    |
+| Slug          | Path                                                                |
+| ------------- | ------------------------------------------------------------------- |
+| `events`      | `../document-audits/convergeo-events-strategy/`                     |
+| `product`     | `../document-audits/convergeo-product-strategy-april-2026/`         |
+| `blueprint`   | `../document-audits/blueprint-zambia-vergeo-super-app/`             |
+| `master`      | `../document-audits/strategic-master-plan-v1/`                      |
+| `sfq`         | `../document-audits/strategic-foundation-questionnaire-april-2026/` |
+| `roadmap`     | `../document-audits/convergeo-60-day-development-roadmap/`          |
+| `foundation`  | `../foundation/`                                                    |
+| `impl`        | `../implementation/`                                                |
+| `integration` | `../integration/panel-pr-integration-review.md`                     |
 
 ---
 
-## 0. Conflict ledger (do not hide)
+## Post-implementation merge ledger (do not treat as missing)
 
-Every CONFLICT below lists **document claim** vs **live / locked value**. Resolution authority for stack claims: `docs/plan/00-decisions.md` (rank-4 intent) plus live evidence (rank-1).
+| PR                  | Merge SHA        | Delivered                                                                                                                  | Code | Staging | Production                                   |
+| ------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------- | ---- | ------- | -------------------------------------------- |
+| **#274**            | `17b2658`        | Prepaid `settle_prepaid_collection` → `CHARGE_RECEIVED` before payment SUCCESS; webhook idempotency                        | DONE | NOT_RUN | NOT_RUN                                      |
+| **#288** / M08-P08b | (via #294 stack) | Product/service release-side commission capture                                                                            | DONE | NOT_RUN | NOT_RUN                                      |
+| **#289**            | `5596853`        | Customer: categories, compare, calendar→events, logistics copy, false-success UI hardening, API base fail-closed           | DONE | NOT_RUN | NOT_RUN (live still older SHA at foundation) |
+| **#290**            | `3c1983f`        | Admin: analytics empty-state honesty, D16 dispatch UX, escrow amount honesty                                               | DONE | NOT_RUN | NOT_RUN                                      |
+| **#291**            | `2fc6b79`        | Vendor: KYC UI gating, analytics honesty; VEND-10 OUT                                                                      | DONE | NOT_RUN | NOT_RUN                                      |
+| **#292**            | (docs)           | Panel PR integration review — PASS merge/compile; FAIL go-live                                                             | N/A  | N/A     | N/A                                          |
+| **#294**            | `3f53e55`        | Release accounting: `COMMISSION_CAPTURE` before `RELEASE_TO_VENDOR` from `commission_snapshot` (product/service/event/COD) | DONE | NOT_RUN | NOT_RUN                                      |
+| **#293**            | `d5c2134`        | KYC integrity: migration `0056`, eligibility freeze, guarded admin lifecycle, orphan report                                | DONE | NOT_RUN | NOT_RUN (`0056` unapplied live)              |
 
-| Conflict       | Document claim(s)                                                | Live / locked value                                                           | Source refs                                             | Resolution stance                                  |
-| -------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------- |
-| C-STACK-BE     | Django + DRF                                                     | FastAPI + Supabase (D18)                                                      | blueprint F003; master Q9; sfq E1; roadmap F003         | DOC — superseded intentional                       |
-| C-STACK-SEARCH | Meilisearch (+pgvector)                                          | Postgres FTS + pg_trgm + pgvector RRF (D22); search sometimes `degraded=true` | events F025; product F018; master Q15; roadmap F006     | DOC stack; P1 search quality                       |
-| C-STACK-HOST   | Railway / Render                                                 | OCI/Hetzner + Caddy + Supabase + Cloudflare (D21)                             | master Q11; roadmap F004                                | DOC — superseded                                   |
-| C-STACK-ASYNC  | Celery + Redis / Upstash                                         | n8n + outbox (D18/D21)                                                        | blueprint F006; master Q17–18; sfq E8; roadmap F007–008 | DOC — superseded                                   |
-| C-STACK-NOTIF  | Supabase Realtime notifications                                  | WhatsApp Cloud API → SMS → email outbox (D15)                                 | blueprint F005; master Q14                              | DOC — superseded                                   |
-| C-PAY-PROVIDER | DPO Pay (roadmap) / DPO+Lenco (master/SFQ)                       | **Lenco only** (D11); 0 DPO code refs                                         | roadmap F005; master Q19; sfq E2                        | **P0-investigate → DOC** after founder confirm     |
-| C-PAY-ZAMTEL   | Zamtel collections at launch                                     | `zamtel_collections=false`; payout-only pending F9a                           | roadmap F026; blueprint F024; sfq SFQ-12                | **P0** until decision + UI gate                    |
-| C-LOGISTICS    | Yango API + own fleet / 10-province ship                         | Manual Lusaka dispatch + nationwide pickup (D16)                              | blueprint F036; master Q43/47; sfq E5                   | DOC — do not build courier API for v1              |
-| C-EVENT-TYPE   | Event type includes `multi_day`                                  | CHECK `standard\|recurring\|free_rsvp\|private`; duration via `ends_at`       | events F006                                             | Product decision → schema **or** accept `standard` |
-| C-CONDITION    | Used / open-box / for-parts tiers                                | Live CHECK `new\|refurbished` only; all 134 listings `new`                    | product F009                                            | Schema gap before Class D                          |
-| C-ESCROW-HOLD  | Used goods 72h escrow                                            | Flat `release_after_delivered_hours=48`                                       | product F010                                            | Config gap if used goods enabled                   |
-| C-ADMIN-ROLES  | superadmin + moderator                                           | `user_roles.role` CHECK `customer\|vendor\|admin` only                        | roadmap F033; master BL-03; sfq SFQ-05                  | **P0-investigate** → adopt or supersede            |
-| C-LANGUAGES    | EN+Bemba+Nyanja at launch                                        | English-only launch (D27); `0053` unapplied                                   | sfq E3; master Q27                                      | Decision holds; vernacular = P1                    |
-| C-DEMO-PUBLIC  | Real marketplace / demo excluded from public search (D25 intent) | Public catalog `total=134` all `demo/` images                                 | product F024; blueprint F017–018; sfq E6; foundation R5 | **Genuine gap (P1)**                               |
-| C-TRACTION     | 840 vendors / 12.4k products / K184k GMV (wireframes)            | 3 demo vendors, 134 listings, **0** money rows                                | blueprint F017–018, F038–039                            | Wireframe fiction — never seed                     |
-| C-MIG-DRIFT    | Live schema == git tip                                           | Applied ≤0050 + odd `0052`; missing `0051/0053–0055`                          | foundation §4; master BL-02; sfq SFQ-06; roadmap F014   | **P0** genuine                                     |
-| C-RETURNS      | “No returns MVP” (master)                                        | Two-lane returns incl. change-of-mind (D17)                                   | master Q48                                              | Production-ahead — doc stale                       |
-| C-BRAND        | Convergeo / Vergio / Virgeo                                      | Live **Vergeo5** (`vergeo5.com`)                                              | blueprint F001; roadmap F001                            | Naming hygiene                                     |
-| C-CURRENCY     | Multi-currency seam now                                          | ZMW ngwee only                                                                | sfq E4; product F008                                    | ADR required (P2)                                  |
-| C-KYC-TIER     | Tier badges imply KYC trail                                      | `kyc_tier=2` on vendors; `kyc_records=0`                                      | blueprint F014–015; events F036                         | **P0** integrity                                   |
+Foundation production frontend SHA at audit time: `8cc1fa0` (PR #271). Panel/money merges above are **on master but not production-verified**.
 
 ---
 
-## 1. Data corrections (master data / operational emptiness)
+## 0. Conflict ledger (summary)
 
-> Controlled import or seed-replacement plans only. **No ad-hoc SQL UPDATEs** on production money/trust tables.
+Full decision ownership lives in `source-conflicts-and-decisions.md`. Summary:
 
-| MR-ID  | Priority | Status   | Finding                                      | Live evidence                                                     | Source refs                                                                     | Recommended action                                                                                                                         | Acceptance criteria                                                                                             |
-| ------ | -------- | -------- | -------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| MR-D01 | P1       | VERIFIED | Demo catalogue presented as public inventory | 3 vendors; 134 listings; 134 `demo/%` images; catalog `total=134` | foundation R5; product F024; blueprint F017; sfq E6; roadmap F050; master BL-07 | Controlled merchandising plan: quarantine/label demo **or** replace via reviewed import; keep `public_launch=false` until money gates pass | Public catalog either excludes demo, labels demo unambiguously, or contains only real vendors; SEO not polluted |
-| MR-D02 | P0       | VERIFIED | KYC tier without audit trail                 | `kyc_records=0`; vendors `kyc_tier=2`                             | blueprint BL-P0-05; events F036–037; roadmap F016                               | Investigate seed path; freeze badge claims; require `kyc_records` + guarded transition for tier>0                                          | Every `kyc_tier>0` has auditable history; RLS/admin path tested                                                 |
-| MR-D03 | P1       | VERIFIED | Zero money / ticket / order operational rows | payments/ledger/orders/tickets/payouts/refunds = 0                | foundation §5; all six audits                                                   | Sandbox drills only — do not fabricate prod rows                                                                                           | Sandbox fixtures VERIFIED; prod stays empty until go-live                                                       |
-| MR-D04 | P1       | VERIFIED | Events inventory empty                       | events=0, tickets=0, public `/events` total 0                     | events F047; product F025; blueprint F032                                       | Controlled organiser onboarding after automation (MR-W01/W02)                                                                              | ≥1 published Phase-1 event under beta when launching events                                                     |
-| MR-D05 | P1       | VERIFIED | Services RFQ empty                           | 1 demo service; jobs=0; job_quotes=0                              | blueprint F030–031; sfq                                                         | Onboard real providers after notifications proven                                                                                          | RFQ creates quotes; outbox drained                                                                              |
-| MR-D06 | P2       | PARTIAL  | Tiered/wholesale pricing unused              | `price_tiers` schema OK; listings_with_tiers=0                    | product F033                                                                    | After B2B path ready, controlled listing with tiers                                                                                        | One tiered listing readable + checkout-safe                                                                     |
-
----
-
-## 2. Schema changes (additive migrations only)
-
-| MR-ID  | Priority | Status   | Finding                             | Evidence                                                                                   | Source refs                                              | Recommended action                                                                             | Acceptance criteria                                                                              |
-| ------ | -------- | -------- | ----------------------------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| MR-S01 | P0       | CONFLICT | Live DB ≠ git tip                   | Missing applied `0051`, `0053`, `0054`, `0055`; `0052` version-key skew (`20260717100303`) | foundation §4; master BL-02; sfq SFQ-06; roadmap BL-08   | DBA-reviewed migration reconcile plan; fix 0052 key; apply in order with backup proof (MR-O04) | `schema_migrations` matches agreed target; objects present; release ledger records SHA↔migration |
-| MR-S02 | P0→P1    | MISSING  | Role hook migration absent          | `custom_access_token*` fn absent live                                                      | foundation R6/R8; master BL-03; sfq SFQ-05; roadmap F014 | Apply `0051` + enable Auth custom-access-token hook **or** document manual-grant posture       | JWT carries roles from `user_roles` **or** written exception; admin isolation test green         |
-| MR-S03 | P1       | MISSING  | Translation overrides absent        | `translation_overrides` absent (0053)                                                      | sfq SFQ-09; master                                       | Apply 0053 when vernacular work starts                                                         | Table live; override path tested                                                                 |
-| MR-S04 | P1       | MISSING  | Service reviews / bookable          | 0054/0055 unapplied                                                                        | master; sfq                                              | Apply with services GTM                                                                        | Columns/tables present; RFQ/bookable behaviour matches OpenAPI                                   |
-| MR-S05 | P0*      | MISSING  | `product_class` A–E absent          | No column on `products` / `vendor_listings`                                                | product RB-PS-001                                        | **\*P0 only if launch claims five classes**; else gate Phase-1 as Class A branded              | Additive enum + backfill; OpenAPI updated; existing listings readable                            |
-| MR-S06 | P0*      | CONFLICT | Condition model too narrow          | CHECK `new\|refurbished` vs brief used/open-box/for-parts                                  | product RB-PS-002                                        | Expand CHECK **before** Class D enablement                                                     | New values insertable under RLS tests; facets updated                                            |
-| MR-S07 | P1       | MISSING  | Variants / sale_unit / pricing_mode | No `product_variants`; no `sale_unit`/`base_unit`/`pricing_mode`                           | product RB-PS-008/009                                    | Additive design after Class A path proven                                                      | Modes stored; comparison shows normalized unit price where needed                                |
-| MR-S08 | P1       | CONFLICT | Event `multi_day` type              | Brief 5 types vs live 4                                                                    | events BL-007                                            | Decision: add enum **or** accept `standard`+`ends_at`                                          | `00-decisions` updated; UI labels match                                                          |
-| MR-S09 | P1       | MISSING  | Co-organiser / door roles           | No `event_organiser_roles`                                                                 | events BL-008                                            | Additive event-scoped roles                                                                    | Door can scan only; no financials                                                                |
-| MR-S10 | P2       | MISSING  | Venue capacity / fee_mode / promo   | No venue_capacity, fee_mode, promo_codes                                                   | events BL-010/011/015                                    | Phase gates                                                                                    | Oversell rejected; fee toggle works; promo applies                                               |
-
-\*Catalogue class/condition items are **scope-gated**: they become hard P0 only when product claims include Class D/E or used-goods launch.
+| Conflict                                                     | Stance                                         | Blocks                     |
+| ------------------------------------------------------------ | ---------------------------------------------- | -------------------------- |
+| C-STACK-* (Django/Meilisearch/Celery/Railway/Realtime/Yango) | DOC superseded by D18–D24                      | Do not build               |
+| C-PAY-PROVIDER (DPO)                                         | DOC superseded by D11 Lenco-only               | Doc banner                 |
+| C-PAY-ZAMTEL                                                 | **OPEN founder (F9a)**                         | G14                        |
+| C-ADMIN-ROLES                                                | **OPEN founder**                               | G15, ADM-01                |
+| C-MIG-DRIFT                                                  | **Genuine P0** (now includes unapplied `0056`) | G0, G9                     |
+| C-KYC-TIER                                                   | Live orphans VERIFIED; code DONE (#293)        | G12 until migrate+repair   |
+| C-DEMO-PUBLIC                                                | **OPEN merch**                                 | G11                        |
+| C-CONDITION / C-ESCROW-HOLD / product_class                  | Scope-gated                                    | Only if Class D/E claimed  |
+| C-EVENT-TYPE (`multi_day`)                                   | Product decision                               | Schema or accept `ends_at` |
+| C-TRACTION (840 vendors / K184k GMV)                         | Wireframe fiction                              | Never seed                 |
 
 ---
 
-## 3. Backend / API work
+## 1. Data / operational emptiness
 
-| MR-ID  | Priority      | Status                  | Finding                                    | Evidence                                                                                                                               | Source refs                                                                                   | Recommended action                                                              | Acceptance criteria                                                                           |
-| ------ | ------------- | ----------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| MR-B01 | P0            | PARTIAL                 | Prepaid success may not post escrow ledger | Code: prepaid path updates `payments`+`audit_log` only; no `post_transaction(CHARGE_RECEIVED/ESCROW_HOLD)` on that path; live 0 ledger | foundation R2; master BL-01; sfq SFQ-01; roadmap BL-02; blueprint BL-P0-03; product RB-PS-003 | Trace sandbox MoMo+card success; add idempotent ledger hook if confirmed absent | Balanced ledger legs; webhook replay safe; failure-path test; **no false payment-success UI** |
-| MR-B02 | P0            | PARTIAL                 | Escrow hold timing vs used goods           | Flat 48h config; no 72h condition path                                                                                                 | product F010                                                                                  | If used goods in scope: config path used=72h                                    | Config + release tick honour hold window                                                      |
-| MR-B03 | P0            | NOT_AUDITABLE / PARTIAL | Refund/cancel matrix unproven              | refunds/disputes=0; events matrix unproven                                                                                             | events BL-005                                                                                 | Map matrix → guarded transitions; organiser-cancel auto-refund                  | Cancel → full refund + notify in sandbox; policy matches code                                 |
-| MR-B04 | P0            | MISSING                 | Organiser Tier-1 GMV fraud cap             | Cap ~K20k not evidenced in config                                                                                                      | events BL-004                                                                                 | Implement/verify cap; block over-cap publish/sales                              | Over-cap rejected + audit_log                                                                 |
-| MR-B05 | P1            | PARTIAL                 | Stock reservation unproven                 | TTL=15m VERIFIED; reservations=0                                                                                                       | product F014                                                                                  | Staging reserve→expire→pay                                                      | Unpaid release atomic; paid reserve consumes stock                                            |
-| MR-B06 | P1            | PARTIAL                 | Listing modes incomplete                   | OpenAPI: attach/new_canonical/quick_list; missing unique/MTO                                                                           | product RB-PS-011                                                                             | Add modes + validation                                                          | Five flows reachable with tests                                                               |
-| MR-B07 | P1            | PARTIAL                 | Search degraded                            | `/search` `degraded=true` observed                                                                                                     | blueprint BL-P1-07; product                                                                   | Diagnose embeddings/FTS                                                         | `degraded=false` for common queries                                                           |
-| MR-B08 | P1            | PARTIAL                 | Category×tier policy gates unclear         | Makeup/used skip rules                                                                                                                 | product RB-PS-015                                                                             | Enforce 422 with reason                                                         | Prohibited listing rejected                                                                   |
-| MR-B09 | P2            | PARTIAL                 | OTP rate limit runtime unverified          | Limiter code present                                                                                                                   | roadmap BL-17                                                                                 | Integration test                                                                | Rapid OTP limited in CI                                                                       |
-| MR-B10 | NOT_AUDITABLE | NOT_AUDITABLE           | API container git SHA unknown              | OpenAPI `0.1.0`; GHCR unauthorized                                                                                                     | foundation R8                                                                                 | Read `API_IMAGE_TAG` / digest                                                   | SHA recorded in release ledger                                                                |
+| MR-ID  | Pri | Status                  | Code                                 | Staging | Prod    | Class      | Finding                                      | Live evidence                                                       | Source refs                                                                     | Action                                                                                   | Acceptance                                                                    |
+| ------ | --- | ----------------------- | ------------------------------------ | ------- | ------- | ---------- | -------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| MR-D01 | P1  | VERIFIED                | N/A                                  | FAIL    | FAIL    | COMMITTED  | Demo catalogue presented as public inventory | 3 vendors; 134 listings; 134 `demo/%` images                        | foundation R5; product F024; blueprint F017; sfq E6; roadmap F050; master BL-07 | Label/quarantine demo **or** exclude from public search; keep `public_launch=false`      | Public UX cannot be mistaken for national marketplace                         |
+| MR-D02 | P0  | VERIFIED (live orphans) | **DONE** (#291 UI + #293 API/`0056`) | FAIL    | FAIL    | COMMITTED  | KYC tier without audit trail                 | Live: `kyc_records=0`, vendors `kyc_tier=2`; code freezes bare tier | blueprint BL-P0-05; events F036; roadmap F016; `impl/kyc-integrity-report.md`   | Apply `0056` staging→prod; orphan report; **controlled** repair (no raw UPDATE); E2E KYC | Zero privilege from bare `kyc_tier`; every effective tier has approved record |
+| MR-D03 | P1  | VERIFIED                | N/A                                  | N/A     | N/A     | COMMITTED  | Zero money/ticket/order rows                 | payments/ledger/orders/tickets/payouts/refunds = 0                  | foundation §5; all six audits                                                   | Sandbox drills only — do not fabricate prod rows                                         | Sandbox fixtures VERIFIED; prod empty until go-live                           |
+| MR-D04 | P1  | VERIFIED                | PARTIAL                              | FAIL    | FAIL    | COMMITTED  | Events inventory empty                       | events=0, tickets=0                                                 | events F047; product F025; blueprint F032                                       | Organiser onboarding after MR-W01/W02                                                    | ≥1 published Phase-1 event in beta                                            |
+| MR-D05 | P1  | VERIFIED                | PARTIAL                              | FAIL    | FAIL    | COMMITTED  | Services RFQ empty                           | 1 demo service; jobs=0                                              | blueprint F030–031                                                              | Onboard providers after notifications proven                                             | RFQ→quote; outbox drains                                                      |
+| MR-D06 | P2  | PARTIAL                 | DONE (schema)                        | NOT_RUN | NOT_RUN | ASPIRATION | Tiered/wholesale pricing unused              | `price_tiers` schema OK; unused                                     | product F033                                                                    | After B2B path ready                                                                     | One tiered listing checkout-safe                                              |
 
 ---
 
-## 4. Customer work
+## 2. Schema / migrations
 
-| MR-ID  | Priority | Status   | Finding                                   | Evidence                                                                                        | Source refs                                                                | Recommended action                        | Acceptance criteria                                                       |
-| ------ | -------- | -------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------- |
-| MR-C01 | P1       | PARTIAL  | Seller CTA unavailable                    | `/en/sell` disabled; no localhost leak (fail-closed); `NEXT_PUBLIC_VENDOR_APP_URL` likely unset | foundation R1; master BL-06; sfq SFQ-07; roadmap BL-06; blueprint BL-P1-05 | Set env on `convergeo-customer`; redeploy | CTA → `https://vendor.vergeo5.com`; no `localhost:3001`; no “unavailable” |
-| MR-C02 | P1       | PARTIAL  | Categories/compare entry 404              | `/en/categories`, `/en/compare` 404                                                             | product RB-PS-012                                                          | Wire browse taxonomy + compare entry      | Browse/search/compare entrypoints work                                    |
-| MR-C03 | P1       | PARTIAL  | Events discovery UX incomplete            | Missing Where lens; Tonight+Weekend home default; selling-fast badge                            | events BL-009                                                              | Phase-1 events UX slice after supply      | Browse matches agreed Phase-1                                             |
-| MR-C04 | P1       | PARTIAL  | PWA service worker 404                    | Manifest 200; `sw.js`/`serwist/sw.js` 404                                                       | blueprint BL-P1-01                                                         | Fix serwist route on customer prod        | SW 200; installability check                                              |
-| MR-C05 | P1       | CONFLICT | Launch copy may overclaim stack/logistics | Yango/own-fleet/direct-MoMo language risk                                                       | blueprint BL-P1-06                                                         | Audit copy vs D11/D16                     | No Yango-API/own-fleet/Django/direct-telco claims                         |
-| MR-C06 | P2       | PARTIAL  | Calendar route 404                        | `/en/calendar` 404                                                                              | events F027                                                                | Optional Phase-1                          | Route or remove nav claim                                                 |
-| MR-C07 | P2       | MISSING  | Wishlist / recently viewed / reorder      | Design affordances; no tables/APIs                                                              | foundation R6                                                              | Scope fence unless docs claim v1          | Explicit OUT or shipped                                                   |
+| MR-ID  | Pri   | Status         | Code                           | Staging | Prod | Class                    | Finding                             | Evidence                                                       | Source refs                                                  | Action                                                         | Acceptance                                   |
+| ------ | ----- | -------------- | ------------------------------ | ------- | ---- | ------------------------ | ----------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------- | -------------------------------------------- |
+| MR-S01 | P0    | CONFLICT       | DONE (repo tip through `0056`) | FAIL    | FAIL | COMMITTED                | Live DB ≠ git tip                   | Missing applied `0051`, `0053`–`0056`; `0052` version-key skew | foundation §4; master BL-02; sfq SFQ-06; roadmap BL-08; #293 | Backup → reconcile plan → apply in order; record SHA↔migration | `schema_migrations` matches agreed target    |
+| MR-S02 | P0→P1 | MISSING (live) | DONE (file `0051`)             | FAIL    | FAIL | COMMITTED                | Role hook unapplied                 | `custom_access_token*` absent live                             | foundation R6/R8; master BL-03; sfq SFQ-05                   | Apply `0051` + Auth hook **or** written manual-grant exception | JWT roles consistent **or** signed exception |
+| MR-S03 | P1    | MISSING (live) | DONE (`0053`)                  | FAIL    | FAIL | ASPIRATION→P1            | Translation overrides               | Unapplied                                                      | sfq SFQ-09; master                                           | Apply when vernacular work starts                              | Table live; override path tested             |
+| MR-S04 | P1    | MISSING (live) | DONE (`0054`/`0055`)           | FAIL    | FAIL | COMMITTED (services GTM) | Service reviews / bookable          | Unapplied                                                      | master; sfq                                                  | Apply with services GTM                                        | OpenAPI behaviour matches                    |
+| MR-S05 | P0*   | MISSING        | MISSING                        | N/A     | N/A  | ASPIRATION*              | `product_class` A–E                 | No column                                                      | product RB-PS-001                                            | Only if launch claims five classes                             | Additive enum + OpenAPI                      |
+| MR-S06 | P0*   | CONFLICT       | MISSING                        | N/A     | N/A  | ASPIRATION*              | Condition too narrow                | CHECK `new\|refurbished`                                       | product RB-PS-002                                            | Expand before Class D                                          | Facets + RLS tests                           |
+| MR-S07 | P1    | MISSING        | MISSING                        | N/A     | N/A  | ASPIRATION               | Variants / sale_unit / pricing_mode | Absent                                                         | product RB-PS-008/009                                        | After Class A proven                                           | Modes stored                                 |
+| MR-S08 | P1    | CONFLICT       | N/A                            | N/A     | N/A  | COMMITTED (decide)       | Event `multi_day` type              | Brief vs live 4 types + `ends_at`                              | events BL-007                                                | Decision in `00-decisions`                                     | UI labels match                              |
+| MR-S09 | P1    | MISSING        | MISSING                        | N/A     | N/A  | ASPIRATION               | Co-organiser / door roles           | No `event_organiser_roles`                                     | events BL-008                                                | Additive event-scoped roles                                    | Door scans only                              |
+| MR-S10 | P2    | MISSING        | MISSING                        | N/A     | N/A  | ASPIRATION               | Venue capacity / fee_mode / promo   | Absent                                                         | events BL-010/011/015                                        | Phase gates                                                    | Oversell/promo rules                         |
 
----
-
-## 5. Vendor work
-
-| MR-ID  | Priority | Status        | Finding                         | Evidence                  | Source refs                      | Recommended action                                   | Acceptance criteria                        |
-| ------ | -------- | ------------- | ------------------------------- | ------------------------- | -------------------------------- | ---------------------------------------------------- | ------------------------------------------ |
-| MR-V01 | P1       | NOT_AUDITABLE | Vendor listing UX / attach <30s | Login-gated; no audit JWT | product F038; blueprint F021–022 | Provide test vendor JWT; audit attach + quick_list   | Five flows timed; E2E tests                |
-| MR-V02 | P1       | PARTIAL       | Offline scanner cache missing   | Offline = cannot verify   | events BL-006                    | Cache horizon secrets; queue + `/scan-sync`          | Offline scan then sync; first-scan-wins    |
-| MR-V03 | P1       | PARTIAL       | KYC lifecycle unexercised       | kyc_records=0             | roadmap BL-13; blueprint         | Sandbox Applied→Under Review→Approved                | State machine cannot skip; owner-only edit |
-| MR-V04 | P1       | MISSING       | Evidence photos for non-new     | No IMEI/VIN/evidence_kind | product RB-PS-007                | Before Class D: evidence slots + reject stock photos | Non-new create rejects missing evidence    |
-| MR-V05 | P2       | MISSING       | Vendor staff RBAC               | Single owner model        | foundation R6                    | Post-v1                                              | Multi-user vendors supported               |
-| MR-V06 | P2       | MISSING       | Co-organiser invite UX          | Schema absent (MR-S09)    | events BL-008                    | After schema                                         | Door/Manager phone invite works            |
+\*Scope-gated: hard P0 only when product claims include Class D/E or used-goods launch.
 
 ---
 
-## 6. Admin work
+## 3. Backend / API / payments
 
-| MR-ID  | Priority      | Status        | Finding                                           | Evidence                                   | Source refs                                    | Recommended action                                                  | Acceptance criteria                                          |
-| ------ | ------------- | ------------- | ------------------------------------------------- | ------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------ |
-| MR-A01 | P0→P1         | MISSING       | Admin role management UI                          | No CRUD UI; `user_roles` service-role only | foundation R6; master BL-03; roadmap F034; sfq | Add grant/revoke UI + audit_log **or** document manual ops          | Admin can grant/revoke with audit; least privilege preserved |
-| MR-A02 | P0            | CONFLICT      | Two-tier admin (superadmin/moderator) unsupported | CHECK has single `admin`                   | roadmap BL-05                                  | Founder decision: adopt additive roles+RLS **or** supersede roadmap | Decision recorded; if adopted, authz-matrix tests green      |
-| MR-A03 | P1            | PARTIAL       | Moderation queue unproven                         | Endpoints exist; queue empty               | product RB-PS-014                              | Staging new_canonical → pending → merge/reject                      | Queue visible; merge idempotent                              |
-| MR-A04 | P1            | PARTIAL       | Analytics tiles empty                             | analytics/funnel = 0                       | foundation R4; roadmap BL-15                   | After traffic + wiring                                              | Tiles match aggregates; CSV valid                            |
-| MR-A05 | P1            | PARTIAL       | Authenticity report / cancel-rate policy          | No fake-report; auto-suspend not enforced  | product RB-PS-013                              | Report → admin queue; document ≥10% policy                          | Report creates flag; policy documented                       |
-| MR-A06 | NOT_AUDITABLE | NOT_AUDITABLE | Admin UI deep audit                               | Cloudflare Access                          | foundation; blueprint                          | Access-approved auditor session                                     | Empty-state vs wireframe documented                          |
-
----
-
-## 7. Workflow / integration work
-
-| MR-ID  | Priority | Status           | Finding                                    | Evidence                                                                                           | Source refs                                                                                                  | Recommended action                                                    | Acceptance criteria                                              |
-| ------ | -------- | ---------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| MR-W01 | P0       | VERIFIED MISSING | Escrow auto-release n8n absent             | Live n8n: only notification dispatch + payment reconciliation; repo has `release-job` / order-jobs | foundation R3; events BL-001; product RB-PS-003; blueprint BL-P0-01; master BL-04; sfq SFQ-02; roadmap BL-03 | Import/activate with `X-Internal-Token`; dry-run then sandbox release | Active workflow; successful tick; **no double-release** on retry |
-| MR-W02 | P0       | VERIFIED MISSING | Ticket issue (+ event-release) n8n absent  | `tickets-issue` / `event-release` / `tickets-release` inactive; tickets=0                          | foundation R3; events BL-001; product RB-PS-005; blueprint BL-P0-02; sfq SFQ-03                              | Activate against `/internal/tickets/issue-tick` (+ event-release)     | Paid ticket issues exactly-once; dynamic QR works                |
-| MR-W03 | P1       | MISSING          | Lifecycle automations absent               | Onboarding / abandoned-cart / review-request not live; `abandoned_cart=false`                      | roadmap BL-14; foundation R3                                                                                 | Import + prove each trigger                                           | Each fires once in test                                          |
-| MR-W04 | P1       | MISSING          | Backup workflow absent in n8n              | Only `backup-schedule.md`; OCI cron NOT_AUDITABLE                                                  | foundation R3; master BL-08; sfq SFQ-11; roadmap BL-09                                                       | Deploy backup job **or** prove host cron; restore drill               | Dated artifact + successful restore proof                        |
-| MR-W05 | P1       | PARTIAL          | Payment reconciliation only cron present   | One of two live workflows                                                                          | foundation                                                                                                   | Keep; prove failure alerting                                          | Recon report on mismatch; actionable log                         |
-| MR-W06 | P2       | MISSING          | Embeddings / reservation sweeper / digests | Repo JSON; not live                                                                                | foundation R3                                                                                                | Activate as needed                                                    | Tick success logged                                              |
+| MR-ID   | Pri | Status        | Code            | Staging | Prod    | Class              | Finding                               | Evidence                                                                        | Source refs                                                                                                        | Action                                          | Acceptance                                               |
+| ------- | --- | ------------- | --------------- | ------- | ------- | ------------------ | ------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------- | -------------------------------------------------------- |
+| MR-B01  | P0  | PARTIAL       | **DONE** (#274) | FAIL    | FAIL    | COMMITTED          | Prepaid → escrow ledger unproven live | `settlement.py` posts `CHARGE_RECEIVED`; live payments/ledger = 0               | foundation R2; master BL-01; sfq SFQ-01; roadmap BL-02; blueprint BL-P0-03; product RB-PS-003; events BL-002; #274 | Sandbox MoMo+card → SQL proof; keep fail-closed | Balanced legs; webhook replay safe; **no false success** |
+| MR-B01b | P0  | PARTIAL       | **DONE** (#294) | FAIL    | FAIL    | COMMITTED          | Release accounting unproven live      | Capture-before-release from `commission_snapshot`; tests green; 0 live releases | `impl/payment-release-accounting-report.md`; #294                                                                  | Staging release tick + recon after MR-W01       | Escrow nets to 0; idempotent retry                       |
+| MR-B02  | P0* | PARTIAL       | PARTIAL         | N/A     | N/A     | ASPIRATION*        | Used-goods 72h escrow                 | Flat 48h config                                                                 | product F010                                                                                                       | If used goods in scope                          | Hold window honoured                                     |
+| MR-B03  | P0  | NOT_AUDITABLE | PARTIAL         | FAIL    | FAIL    | COMMITTED          | Refund/cancel matrix unproven         | refunds/disputes=0                                                              | events BL-005                                                                                                      | Sandbox cancel→refund+notify                    | Policy matches code                                      |
+| MR-B04  | P0  | MISSING       | MISSING         | N/A     | N/A     | COMMITTED (events) | Organiser Tier-1 GMV cap ~K20k        | Not in live config                                                              | events BL-004                                                                                                      | Implement/verify cap                            | Over-cap rejected + audit                                |
+| MR-B05  | P1  | PARTIAL       | DONE (TTL)      | NOT_RUN | NOT_RUN | COMMITTED          | Stock reservation unproven            | TTL=15m; reservations=0                                                         | product F014                                                                                                       | Staging reserve→expire→pay                      | Atomic unpaid release                                    |
+| MR-B06  | P1  | PARTIAL       | PARTIAL         | N/A     | N/A     | ASPIRATION         | Listing modes 3/5                     | Missing unique/MTO                                                              | product RB-PS-011                                                                                                  | Add modes + validation                          | Five flows + tests                                       |
+| MR-B07  | P1  | PARTIAL       | DONE (search)   | FAIL    | FAIL    | COMMITTED          | Search degraded                       | `degraded=true` observed                                                        | blueprint BL-P1-07                                                                                                 | Diagnose embeddings/FTS                         | `degraded=false` common queries                          |
+| MR-B08  | P1  | PARTIAL       | PARTIAL         | N/A     | N/A     | COMMITTED          | Category×tier gates                   | Makeup/used skip rules                                                          | product RB-PS-015                                                                                                  | Enforce 422 with reason                         | Prohibited rejected                                      |
+| MR-B09  | P2  | PARTIAL       | DONE            | NOT_RUN | NOT_RUN | COMMITTED          | OTP rate limit runtime                | Limiter code present                                                            | roadmap BL-17                                                                                                      | Integration test                                | Rapid OTP limited                                        |
+| MR-B10  | —   | NOT_AUDITABLE | N/A             | N/A     | FAIL    | COMMITTED          | API container git SHA unknown         | OpenAPI `0.1.0`; GHCR unauthorized                                              | foundation R8                                                                                                      | Read `API_IMAGE_TAG` / digest                   | SHA in release ledger                                    |
 
 ---
 
-## 8. Security / RLS work
+## 4. Customer
 
-| MR-ID  | Priority | Status  | Finding                                          | Evidence                                                                       | Source refs                                | Recommended action                                        | Acceptance criteria                                          |
-| ------ | -------- | ------- | ------------------------------------------------ | ------------------------------------------------------------------------------ | ------------------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------ |
-| MR-R01 | P0       | PARTIAL | FORCE RLS false on ticket allocation/price tiers | `ticket_type_instances`, `ticket_type_price_tiers` `relforcerowsecurity=false` | events F051/BL-003; master BL-10           | Investigate privileges; enable FORCE or written exception | Advisor + `relforcerowsecurity=true` **or** signed exception |
-| MR-R02 | P2       | PARTIAL | FORCE RLS false on `product_relations`           | Same pattern                                                                   | master BL-10                               | Same as MR-R01                                            | Documented decision                                          |
-| MR-R03 | P2       | PARTIAL | Leaked-password protection disabled              | Advisor WARN                                                                   | master BL-10                               | Enable in Auth                                            | Advisor cleared or risk-accepted                             |
-| MR-R04 | P0       | PARTIAL | Authz/RBAC provisioning gap                      | 0051 absent; manual grants; Access on admin                                    | foundation R6; sfq SFQ-05                  | Close MR-S02 + MR-A01/A02                                 | Role isolation tests green customer/vendor/admin             |
-| MR-R05 | P1       | PARTIAL | CI secret-scan non-blocking                      | `continue-on-error: true` on secret-scan; Lighthouse/i18n advisory             | foundation R7; roadmap BL-10; master BL-09 | Make secret-scan blocking; confirm branch protection      | Merges blocked on secret hit; protection screenshot          |
-
----
-
-## 9. Test / observability work
-
-| MR-ID  | Priority | Status                  | Finding                          | Evidence                                      | Source refs                                                                | Recommended action                                      | Acceptance criteria                                    |
-| ------ | -------- | ----------------------- | -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------ |
-| MR-O01 | P1       | VERIFIED MISSING        | No Vergeo5 Sentry projects       | Org has only unrelated projects; DSNs unknown | foundation R4; master BL-05; sfq SFQ-10; blueprint BL-P1-08; roadmap BL-07 | Create projects + wire DSNs (customer/vendor/admin/API) | Test error visible per app; release tags match deploys |
-| MR-O02 | P1       | NOT_AUDITABLE           | Uptime monitors                  | UptimeRobot not probed                        | foundation R4                                                              | Configure health monitors                               | Monitors green on `/en/health`, `/healthz`             |
-| MR-O03 | P0       | PARTIAL                 | Money-path tests incomplete      | 0 live payments; ledger hook unverified       | MR-B01; roadmap BL-16                                                      | Sandbox MoMo+card + failure scenarios + invariant-check | Critical suite green; no false success state           |
-| MR-O04 | P1       | MISSING / NOT_AUDITABLE | Backup + restore proof           | No n8n backup; host cron unknown              | MR-W04                                                                     | Restore drill with evidence                             | RPO documented; restore succeeds                       |
-| MR-O05 | P2       | PARTIAL                 | Staging pipeline stub            | `deploy-staging.yml` stub                     | roadmap BL-11                                                              | Real staging parity                                     | Staging UAT journeys pass                              |
-| MR-O06 | P2       | PARTIAL                 | Perf/SEO/A11y not freshly probed | Egress-limited in some sessions               | roadmap BL-21                                                              | Lighthouse on customer                                  | Perf≥90 SEO≥95 A11y≥95 (budgets)                       |
+| MR-ID  | Pri | Status         | Code                     | Staging | Prod | Class      | Finding                             | Evidence                                    | Source refs                                                                | Action                                     | Acceptance                           |
+| ------ | --- | -------------- | ------------------------ | ------- | ---- | ---------- | ----------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------ |
+| MR-C01 | P1  | PARTIAL        | DONE (fail-closed)       | FAIL    | FAIL | COMMITTED  | Seller CTA unavailable              | Env likely unset; no localhost leak         | foundation R1; master BL-06; sfq SFQ-07; roadmap BL-06; blueprint BL-P1-05 | Set `NEXT_PUBLIC_VENDOR_APP_URL`; redeploy | CTA → vendor prod                    |
+| MR-C02 | P1  | PARTIAL (live) | **DONE** (#289)          | FAIL    | FAIL | COMMITTED  | Categories/compare were 404 on live | Code routes exist; prod undeployed          | product RB-PS-012; #289                                                    | Deploy customer tip; re-probe              | `/en/categories` + `/en/compare` 200 |
+| MR-C03 | P1  | PARTIAL        | PARTIAL                  | FAIL    | FAIL | COMMITTED  | Events discovery UX incomplete      | Where lens / Tonight+Weekend / selling-fast | events BL-009                                                              | After supply                               | Phase-1 browse matches               |
+| MR-C04 | P1  | PARTIAL        | DONE (serwist)           | FAIL    | FAIL | COMMITTED  | PWA SW 404 on live                  | Manifest 200; SW 404 at foundation          | blueprint BL-P1-01; #289 stack                                             | Deploy + probe SW                          | SW 200; installable                  |
+| MR-C05 | P1  | CONFLICT       | **DONE** (#289 copy)     | FAIL    | FAIL | COMMITTED  | Launch copy overclaim risk          | Hero logistics copy hardened in code        | blueprint BL-P1-06                                                         | Deploy + audit residual                    | No Yango/own-fleet/Django claims     |
+| MR-C06 | P2  | PARTIAL (live) | **DONE** (#289 redirect) | FAIL    | FAIL | COMMITTED  | Calendar 404                        | Code redirects to events                    | events F027                                                                | Deploy                                     | No dead nav                          |
+| MR-C07 | P2  | MISSING        | MISSING                  | N/A     | N/A  | ASPIRATION | Wishlist / reorder                  | No tables/APIs                              | foundation R6                                                              | Scope fence OUT                            | Explicit OUT or shipped              |
 
 ---
 
-## 10. Legal / docs / SoT hygiene (non-code but release-gating)
+## 5. Vendor
 
-| MR-ID  | Priority | Status        | Finding                                        | Source refs                     | Recommended action                                                                                       | Acceptance criteria                                            |
-| ------ | -------- | ------------- | ---------------------------------------------- | ------------------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| MR-L01 | P0       | NOT_AUDITABLE | Zambian counsel / DPA / NPS Act escrow posture | sfq SFQ-04 (F4)                 | Complete counsel review before real money                                                                | Written sign-off recorded — **never inferred**                 |
-| MR-L02 | DOC      | CONFLICT      | Strategy docs claim obsolete stack             | All six audits conflict ledgers | Banner “SUPERSEDED — see `00-decisions.md`” on Master Plan / Blueprint / Roadmap / Product search claims | Engineers cite locked decisions, not TurboScribe/roadmap stack |
-| MR-L03 | DOC      | CONFLICT      | Payment provider language (DPO)                | roadmap BL-01                   | Annotate DPO superseded by D11 Lenco                                                                     | Grep clean of DPO as required provider                         |
-| MR-L04 | P0       | CONFLICT      | Zamtel collections marketing vs flag           | roadmap BL-04                   | Hide Zamtel at checkout until F9a proven                                                                 | UI matches flag; decision recorded                             |
-| MR-L05 | P2       | CONFLICT      | Questionnaire blank; answers in decisions      | sfq SFQ-20                      | Q→D mapping table                                                                                        | 75-row mapping committed                                       |
+| MR-ID  | Pri | Status        | Code                 | Staging | Prod    | Class       | Finding                     | Evidence                  | Source refs                      | Action                                       | Acceptance              |
+| ------ | --- | ------------- | -------------------- | ------- | ------- | ----------- | --------------------------- | ------------------------- | -------------------------------- | -------------------------------------------- | ----------------------- |
+| MR-V01 | P1  | NOT_AUDITABLE | PARTIAL              | NOT_RUN | NOT_RUN | COMMITTED   | Listing UX / attach &lt;30s | Login-gated; no audit JWT | product F038; blueprint F021–022 | Test vendor JWT audit                        | Flows timed + E2E       |
+| MR-V02 | P1  | PARTIAL       | PARTIAL              | NOT_RUN | NOT_RUN | COMMITTED   | Offline scanner cache       | Offline cannot verify     | events BL-006                    | Cache + scan-sync                            | Offline then sync       |
+| MR-V03 | P1  | PARTIAL       | **DONE** (#291/#293) | FAIL    | FAIL    | COMMITTED   | KYC lifecycle unexercised   | kyc_records=0 live        | roadmap BL-13; blueprint         | Sandbox Applied→Review→Approved after `0056` | Cannot skip states      |
+| MR-V04 | P1  | MISSING       | MISSING              | N/A     | N/A     | ASPIRATION* | Evidence photos non-new     | No IMEI/VIN/evidence_kind | product RB-PS-007                | Before Class D                               | Reject missing evidence |
+| MR-V05 | P2  | MISSING       | MISSING              | N/A     | N/A     | ASPIRATION  | Vendor staff RBAC           | Single owner              | foundation R6                    | Post-v1 / OUT                                | Documented              |
+| MR-V06 | P2  | MISSING       | MISSING              | N/A     | N/A     | ASPIRATION  | Co-organiser invite UX      | Schema absent             | events BL-008                    | After MR-S09                                 | Door/Manager invite     |
+
+---
+
+## 6. Admin
+
+| MR-ID  | Pri   | Status        | Code                      | Staging | Prod | Class              | Finding                    | Evidence                            | Source refs                               | Action                           | Acceptance                  |
+| ------ | ----- | ------------- | ------------------------- | ------- | ---- | ------------------ | -------------------------- | ----------------------------------- | ----------------------------------------- | -------------------------------- | --------------------------- |
+| MR-A01 | P0→P1 | MISSING       | MISSING                   | N/A     | N/A  | COMMITTED          | Admin role management UI   | No CRUD UI                          | foundation R6; master BL-03; roadmap F034 | UI + audit **or** manual ops doc | Grant/revoke audited        |
+| MR-A02 | P0    | CONFLICT      | MISSING                   | N/A     | N/A  | COMMITTED (decide) | Two-tier admin unsupported | CHECK single `admin`                | roadmap BL-05                             | Founder: adopt or supersede      | Decision recorded           |
+| MR-A03 | P1    | PARTIAL       | **DONE** (#293 endpoints) | FAIL    | FAIL | COMMITTED          | KYC/moderation queues      | Endpoints exist; empty / undeployed | product RB-PS-014; #293                   | Staging lifecycle                | Queue + guarded transitions |
+| MR-A04 | P1    | PARTIAL       | **DONE** (#290 honesty)   | FAIL    | FAIL | COMMITTED          | Analytics tiles            | Empty-state honesty in code; 0 rows | foundation R4; #290                       | Deploy + traffic                 | Tiles = aggregates          |
+| MR-A05 | P1    | PARTIAL       | PARTIAL                   | N/A     | N/A  | COMMITTED          | Authenticity report policy | Not enforced                        | product RB-PS-013                         | Report → queue                   | Policy documented           |
+| MR-A06 | —     | NOT_AUDITABLE | N/A                       | N/A     | N/A  | COMMITTED          | Admin deep UI audit        | Cloudflare Access                   | foundation; blueprint                     | Access-approved session          | Empty-state pack            |
+
+---
+
+## 7. Workflows / operations
+
+| MR-ID  | Pri | Status           | Code             | Staging | Prod    | Class         | Finding                              | Evidence                               | Source refs                                                                                                  | Action                                         | Acceptance                |
+| ------ | --- | ---------------- | ---------------- | ------- | ------- | ------------- | ------------------------------------ | -------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- | ------------------------- |
+| MR-W01 | P0  | VERIFIED MISSING | DONE (repo JSON) | FAIL    | FAIL    | COMMITTED     | Escrow auto-release n8n absent       | Live: only dispatch + payment recon    | foundation R3; events BL-001; product RB-PS-003; blueprint BL-P0-01; master BL-04; sfq SFQ-02; roadmap BL-03 | Activate `release-job` + dry-run + sandbox     | Active; no double-release |
+| MR-W02 | P0  | VERIFIED MISSING | DONE (repo JSON) | FAIL    | FAIL    | COMMITTED     | Tickets-issue / event-release absent | Inactive; tickets=0                    | foundation R3; events BL-001; product RB-PS-005; blueprint BL-P0-02; sfq SFQ-03                              | Activate issue + event-release ticks           | Exactly-once issue        |
+| MR-W03 | P1  | MISSING          | DONE (repo)      | FAIL    | FAIL    | ASPIRATION→P1 | Lifecycle automations                | Onboarding/abandoned-cart not live     | roadmap BL-14                                                                                                | Import + prove                                 | Each fires once           |
+| MR-W04 | P1  | MISSING          | PARTIAL (docs)   | FAIL    | FAIL    | COMMITTED     | Backup workflow                      | No n8n backup; host cron NOT_AUDITABLE | foundation R3; master BL-08; sfq SFQ-11; roadmap BL-09                                                       | Deploy backup **or** prove cron; restore drill | Dated artifact + restore  |
+| MR-W05 | P1  | PARTIAL          | DONE             | PARTIAL | PARTIAL | COMMITTED     | Payment recon cron only              | One of two live workflows              | foundation                                                                                                   | Prove mismatch alerting                        | Actionable recon          |
+| MR-W06 | P2  | MISSING          | DONE (repo)      | FAIL    | FAIL    | ASPIRATION    | Embeddings / sweeper / digests       | Not live                               | foundation R3                                                                                                | Activate as needed                             | Tick logged               |
+
+---
+
+## 8. Security / RLS
+
+| MR-ID  | Pri | Status  | Code    | Staging | Prod | Class     | Finding                                | Evidence                                           | Source refs                      | Action                           | Acceptance            |
+| ------ | --- | ------- | ------- | ------- | ---- | --------- | -------------------------------------- | -------------------------------------------------- | -------------------------------- | -------------------------------- | --------------------- |
+| MR-R01 | P0  | PARTIAL | PARTIAL | FAIL    | FAIL | COMMITTED | FORCE RLS false on ticket tiers        | `ticket_type_instances`, `ticket_type_price_tiers` | events F051/BL-003; master BL-10 | Enable FORCE or signed exception | Advisor + decision    |
+| MR-R02 | P2  | PARTIAL | PARTIAL | FAIL    | FAIL | COMMITTED | FORCE RLS false on `product_relations` | Same pattern                                       | master BL-10                     | Same as MR-R01                   | Documented            |
+| MR-R03 | P2  | PARTIAL | N/A     | N/A     | FAIL | COMMITTED | Leaked-password protection off         | Advisor WARN                                       | master BL-10                     | Enable in Auth                   | Cleared/accepted      |
+| MR-R04 | P0  | PARTIAL | PARTIAL | FAIL    | FAIL | COMMITTED | Authz provisioning gap                 | 0051 absent; manual grants                         | foundation R6; sfq SFQ-05        | Close MR-S02 + MR-A01/A02        | Isolation tests green |
+| MR-R05 | P1  | PARTIAL | PARTIAL | N/A     | N/A  | COMMITTED | CI secret-scan non-blocking            | `continue-on-error: true`                          | foundation R7; roadmap BL-10     | Make blocking                    | Merges blocked on hit |
+
+---
+
+## 9. Observability / test
+
+| MR-ID  | Pri | Status                  | Code                       | Staging | Prod    | Class     | Finding                       | Evidence                        | Source refs                                                                | Action                            | Acceptance                    |
+| ------ | --- | ----------------------- | -------------------------- | ------- | ------- | --------- | ----------------------------- | ------------------------------- | -------------------------------------------------------------------------- | --------------------------------- | ----------------------------- |
+| MR-O01 | P1  | VERIFIED MISSING        | PARTIAL (SDK)              | FAIL    | FAIL    | COMMITTED | No Vergeo5 Sentry projects    | Org has unrelated projects only | foundation R4; master BL-05; sfq SFQ-10; blueprint BL-P1-08; roadmap BL-07 | Create projects + DSNs            | Test error per app            |
+| MR-O02 | P1  | NOT_AUDITABLE           | N/A                        | N/A     | N/A     | COMMITTED | Uptime monitors               | Not probed                      | foundation R4                                                              | Configure health monitors         | Green health                  |
+| MR-O03 | P0  | PARTIAL                 | **DONE** (#274/#294 tests) | FAIL    | FAIL    | COMMITTED | Money-path sandbox unproven   | 0 live payments                 | MR-B01/B01b; roadmap BL-16                                                 | Sandbox MoMo+card + failure paths | Suite green; no false success |
+| MR-O04 | P1  | MISSING / NOT_AUDITABLE | PARTIAL                    | FAIL    | FAIL    | COMMITTED | Backup + restore proof        | Tied to MR-W04                  | MR-W04                                                                     | Restore drill                     | RPO documented                |
+| MR-O05 | P2  | PARTIAL                 | PARTIAL                    | FAIL    | FAIL    | COMMITTED | Staging pipeline stub         | `deploy-staging.yml` stub       | roadmap BL-11                                                              | Real staging parity               | UAT journeys pass             |
+| MR-O06 | P2  | PARTIAL                 | N/A                        | NOT_RUN | NOT_RUN | COMMITTED | Lighthouse not freshly probed | Budgets exist                   | roadmap BL-21                                                              | Mobile Fast-3G/360px              | Perf≥90 SEO≥95 A11y≥95        |
+
+---
+
+## 10. Legal / docs
+
+| MR-ID  | Pri | Status        | Class     | Finding                                   | Source refs        | Action                                | Acceptance                         |
+| ------ | --- | ------------- | --------- | ----------------------------------------- | ------------------ | ------------------------------------- | ---------------------------------- |
+| MR-L01 | P0  | NOT_AUDITABLE | COMMITTED | Zambian counsel / DPA / NPS Act escrow    | sfq SFQ-04 (F4)    | Counsel review before real money      | Written sign-off — never inferred  |
+| MR-L02 | DOC | CONFLICT      | DOC       | Strategy docs claim obsolete stack        | All six audits     | Banner SUPERSEDED → `00-decisions.md` | Engineers cite locked decisions    |
+| MR-L03 | DOC | CONFLICT      | DOC       | DPO provider language                     | roadmap BL-01      | Annotate DPO superseded               | Grep clean as required provider    |
+| MR-L04 | P0  | CONFLICT      | COMMITTED | Zamtel collections vs flag                | roadmap BL-04; F9a | Hide Zamtel until F9a proven          | UI matches flag; decision recorded |
+| MR-L05 | P2  | CONFLICT      | DOC       | Questionnaire blank; answers in decisions | sfq SFQ-20         | Q→D mapping table                     | 75-row mapping committed           |
 
 ---
 
 ## 11. Deduplication map (audit ID → MR-ID)
 
-| Theme              | Canonical MR             | Also cited as                                                                                                |
-| ------------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Prepaid → ledger   | MR-B01                   | foundation R2; master BL-01; sfq SFQ-01; roadmap BL-02; blueprint BL-P0-03; product RB-PS-003; events BL-002 |
-| Escrow release n8n | MR-W01                   | foundation R3; events BL-001; product RB-PS-003; blueprint BL-P0-01; master BL-04; sfq SFQ-02; roadmap BL-03 |
-| Tickets issue n8n  | MR-W02                   | foundation R3; events BL-001; product RB-PS-005; blueprint BL-P0-02; sfq SFQ-03; roadmap BL-03               |
-| Migration drift    | MR-S01                   | foundation R8; master BL-02; sfq SFQ-06; roadmap BL-08                                                       |
-| Role hook / RBAC   | MR-S02 / MR-R04 / MR-A01 | foundation R6; master BL-03; sfq SFQ-05; roadmap BL-05/BL-08                                                 |
-| Seller CTA         | MR-C01                   | foundation R1; master BL-06; sfq SFQ-07; roadmap BL-06; blueprint BL-P1-05; product RB-PS-004                |
-| Demo catalogue     | MR-D01                   | foundation R5; product RB-PS-004; blueprint BL-P1-02; master BL-07; sfq SFQ-08; roadmap BL-12                |
-| Observability      | MR-O01                   | foundation R4; master BL-05; sfq SFQ-10; blueprint BL-P1-08; roadmap BL-07                                   |
-| Backups            | MR-W04 / MR-O04          | foundation R3; master BL-08; sfq SFQ-11; roadmap BL-09                                                       |
-| FORCE RLS tickets  | MR-R01                   | events BL-003; master BL-10                                                                                  |
-| KYC integrity      | MR-D02                   | blueprint BL-P0-05; events F036; roadmap BL-13                                                               |
-| Legal counsel      | MR-L01                   | sfq SFQ-04                                                                                                   |
-| Meilisearch claims | C-STACK-SEARCH / MR-L02  | events BL-014; product RB-PS-006; master; roadmap                                                            |
-| product_class      | MR-S05                   | product RB-PS-001                                                                                            |
-| Condition model    | MR-S06                   | product RB-PS-002                                                                                            |
+| Theme                | Canonical MR             | Also cited as                                                                                                                  |
+| -------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| Prepaid → ledger     | MR-B01                   | foundation R2; master BL-01; sfq SFQ-01; roadmap BL-02; blueprint BL-P0-03; product RB-PS-003; events BL-002; **PR #274 code** |
+| Release accounting   | MR-B01b                  | #294; `impl/payment-release-accounting-report.md`; depends on #274 + MR-W01                                                    |
+| Escrow release n8n   | MR-W01                   | foundation R3; events BL-001; product RB-PS-003; blueprint BL-P0-01; master BL-04; sfq SFQ-02; roadmap BL-03                   |
+| Tickets issue n8n    | MR-W02                   | foundation R3; events BL-001; product RB-PS-005; blueprint BL-P0-02; sfq SFQ-03; roadmap BL-03                                 |
+| Migration drift      | MR-S01                   | foundation R8; master BL-02; sfq SFQ-06; roadmap BL-08; **+0056 from #293**                                                    |
+| Role hook / RBAC     | MR-S02 / MR-R04 / MR-A01 | foundation R6; master BL-03; sfq SFQ-05; roadmap BL-05/BL-08                                                                   |
+| Seller CTA           | MR-C01                   | foundation R1; master BL-06; sfq SFQ-07; roadmap BL-06; blueprint BL-P1-05                                                     |
+| Demo catalogue       | MR-D01                   | foundation R5; product RB-PS-004; blueprint BL-P1-02; master BL-07; sfq SFQ-08; roadmap BL-12                                  |
+| Observability        | MR-O01                   | foundation R4; master BL-05; sfq SFQ-10; blueprint BL-P1-08; roadmap BL-07                                                     |
+| Backups              | MR-W04 / MR-O04          | foundation R3; master BL-08; sfq SFQ-11; roadmap BL-09                                                                         |
+| FORCE RLS tickets    | MR-R01                   | events BL-003; master BL-10                                                                                                    |
+| KYC integrity        | MR-D02                   | blueprint BL-P0-05; events F036; roadmap BL-13; **#291/#293 code**                                                             |
+| Legal counsel        | MR-L01                   | sfq SFQ-04                                                                                                                     |
+| Meilisearch claims   | C-STACK-SEARCH / MR-L02  | events BL-014; product RB-PS-006; master; roadmap                                                                              |
+| product_class        | MR-S05                   | product RB-PS-001                                                                                                              |
+| Condition model      | MR-S06                   | product RB-PS-002                                                                                                              |
+| Panel honesty routes | MR-C02/C05/C06           | product RB-PS-012; blueprint BL-P1-06; **#289 code**                                                                           |
+| Admin honesty        | MR-A04                   | foundation R4; **#290 code**                                                                                                   |
 
 ---
 
 ## 12. P0 open set (release cannot proceed)
 
-| #   | MR-ID                  | One-line blocker                                               |
-| --- | ---------------------- | -------------------------------------------------------------- |
-| 1   | MR-B01                 | Prepaid → escrow ledger posting unproven / likely missing      |
-| 2   | MR-W01                 | Escrow auto-release workflow not live                          |
-| 3   | MR-W02                 | Ticket issuance workflow not live                              |
-| 4   | MR-S01                 | DB migration drift vs git tip                                  |
-| 5   | MR-R01                 | FORCE RLS exceptions on ticket tier tables (investigate)       |
-| 6   | MR-D02                 | KYC tier without records                                       |
-| 7   | MR-B03                 | Refund/cancel matrix unproven (events/money)                   |
-| 8   | MR-B04                 | Organiser Tier-1 GMV cap not evidenced                         |
-| 9   | MR-L01                 | Legal/DPA/NPS counsel sign-off pending                         |
-| 10  | MR-L04 / C-PAY-ZAMTEL  | Zamtel collections conflict unresolved                         |
-| 11  | MR-A02 / C-ADMIN-ROLES | Admin RBAC two-tier conflict unresolved (investigate)          |
-| 12  | MR-O03                 | No VERIFIED sandbox payment proof (includes false-success ban) |
+Evidence-adjusted after #274 / #293 / #294 / #289–#291:
 
-**Scope-conditional P0s** (only if launch claims include them): MR-S05 (`product_class`), MR-S06 (used condition), MR-B02 (72h used escrow), MR-V04 (evidence photos).
+| #   | MR-ID                  | Blocker (current framing)                          | What is NOT the blocker                                            |
+| --- | ---------------------- | -------------------------------------------------- | ------------------------------------------------------------------ |
+| 1   | MR-B01                 | Prepaid → ledger **staging/production unproven**   | Missing `post_transaction` on collection path (**code DONE #274**) |
+| 2   | MR-B01b                | Release accounting **staging/production unproven** | Missing capture-before-release (**code DONE #294**)                |
+| 3   | MR-W01                 | Escrow auto-release workflow not live              | —                                                                  |
+| 4   | MR-W02                 | Ticket issuance workflow not live                  | —                                                                  |
+| 5   | MR-S01                 | DB migration drift vs tip (incl. `0056`)           | —                                                                  |
+| 6   | MR-R01                 | FORCE RLS exceptions on ticket tier tables         | —                                                                  |
+| 7   | MR-D02                 | Live KYC orphans + `0056` unapplied / unrepaired   | Missing API freeze (**code DONE #293**)                            |
+| 8   | MR-B03                 | Refund/cancel matrix unproven                      | —                                                                  |
+| 9   | MR-B04                 | Organiser Tier-1 GMV cap not evidenced             | —                                                                  |
+| 10  | MR-L01                 | Legal/DPA/NPS counsel sign-off pending             | —                                                                  |
+| 11  | MR-L04 / C-PAY-ZAMTEL  | Zamtel collections conflict unresolved             | —                                                                  |
+| 12  | MR-A02 / C-ADMIN-ROLES | Admin RBAC two-tier conflict unresolved            | —                                                                  |
+| 13  | MR-O03                 | No VERIFIED sandbox payment proof                  | Missing unit tests (**tests DONE**)                                |
+
+**Scope-conditional P0s:** MR-S05, MR-S06, MR-B02, MR-V04 — only if launch claims Class D/E / used goods.
 
 ---
 
@@ -257,9 +288,10 @@ Every CONFLICT below lists **document claim** vs **live / locked value**. Resolu
 
 1. Do **not** seed 75–100 / 840 vendors or fake GMV to match documents.
 2. Do **not** build Django, Meilisearch, Celery, Redis, DPO, or Yango API against superseded docs.
-3. Do **not** flip `public_launch=true` until P0 money/trust gates are VERIFIED.
-4. Do **not** mark any P0 resolved without VERIFIED sandbox/live evidence per `document-audit-contract.md`.
+3. Do **not** flip `public_launch=true` until P0 money/trust gates are staging- and production-verified.
+4. Do **not** mark MR-B01 / MR-B01b / MR-D02 resolved solely because PRs merged — evidence ladder required.
+5. Do **not** apply `0056` or repair KYC orphans via ad-hoc production SQL outside the controlled plan in `impl/kyc-integrity-report.md`.
 
 ---
 
-_Related outputs:_ `production-readiness-scorecard.md` · `panel-backlogs.md` · `release-gates.md` · `24-hour-workboard.md`
+_Related:_ `production-readiness-scorecard.md` · `panel-backlogs.md` · `release-gates.md` · `source-conflicts-and-decisions.md` · `implementation-wave-plan.md`
