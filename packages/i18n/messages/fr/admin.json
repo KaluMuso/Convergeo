@@ -276,8 +276,12 @@
     "subtitle": "Examinez les produits canoniques probablement en double et fusionnez-les en un seul survivant.",
     "queue": {
       "empty": "Aucune paire de produits en double détectée.",
+      "emptyHint": "La file liste les paires de similarité de GET /admin/products/duplicates (seuil ≥ 0,3). Une file vide signifie aucune correspondance — pas un état fictif.",
+      "emptyApiScope": "L'API live prend en charge la fusion vers un survivant ; il n'y a pas encore d'endpoint reject/approve-canonical. Preuve staging : créer une paire new_canonical → pending_moderation, puis fusionner.",
       "loading": "Chargement des paires en double…",
       "error": "Impossible de charger les paires de produits en double.",
+      "permissionDenied": "Permission refusée — rôle admin requis pour la modération.",
+      "permissionDeniedHint": "Connectez-vous avec un compte ayant le rôle admin.",
       "retry": "Réessayer",
       "similarity": "Similarité",
       "similarityPercent": "Similarité : {value} %",
@@ -538,25 +542,29 @@
     },
     "dispatch": {
       "title": "Expédition manuelle",
-      "subtitle": "Réservez un livreur et faites avancer le traitement — enregistré dans la chronologie client.",
-      "courier": "Livreur",
+      "subtitle": "Enregistrez un livreur déjà réservé hors Vergeo5, puis collez le suivi pour la chronologie client.",
+      "manualModelHint": "D16 : livraison Lusaka = dispatch manuel ops — pas d'intégration API Yango/inDrive en v1.",
+      "courier": "Livreur utilisé (réservé manuellement)",
       "couriers": {
-        "yango": "Yango",
-        "indrive": "inDrive",
-        "other": "Autre"
+        "other": "Local / autre livreur",
+        "yango": "Réservé via Yango (manuel)",
+        "indrive": "Réservé via inDrive (manuel)"
       },
-      "courierOther": "Nom du livreur",
+      "courierOther": "Nom du livreur / fret",
+      "courierOtherPlaceholder": "ex. Platinum Couriers, coursier local…",
       "trackingNote": "Note de suivi",
-      "trackingPlaceholder": "Nom du chauffeur, plaque, ETA…",
+      "trackingPlaceholder": "Nom du chauffeur, plaque, ETA, code de suivi…",
       "statusEvent": "Mise à jour du statut",
       "events": {
         "ship": "Marquer comme expédiée",
         "mark_delivered": "Marquer comme livrée"
       },
+      "confirmManual": "Je confirme que ce livreur a été réservé manuellement hors Vergeo5 et que le suivi est exact.",
       "submit": "Enregistrer l'expédition",
       "submitting": "Enregistrement…",
       "success": "Expédition enregistrée dans la chronologie de la commande.",
-      "failure": "Impossible d'enregistrer l'expédition."
+      "failure": "Impossible d'enregistrer l'expédition.",
+      "permissionDenied": "Permission refusée — rôle admin requis pour enregistrer l'expédition."
     },
     "intervention": {
       "title": "Intervention sur le statut",
@@ -584,20 +592,30 @@
     "escrow": {
       "title": "Blocage / déblocage manuel en séquestre",
       "subtitle": "Enregistre une transaction équilibrée dans le grand livre avec l'indicateur manuel. Les deux notes sont obligatoires.",
+      "readOnlyHint": "Les soldes affichés ci-dessus proviennent uniquement des lignes du grand livre de cette commande — rien n'est inventé.",
+      "dependency": "La visibilité automatisée du séquestre / des versements dépend du prepaid→ledger (MR-B01) et du workflow de libération (MR-W01).",
+      "ledgerSummaryTitle": "Grand livre de cette commande",
+      "ledgerEmpty": "Aucune transaction au grand livre — les montants de séquestre ne peuvent pas être déduits.",
+      "ledgerTxnCount": "{count} transaction(s) au grand livre",
+      "ledgerPostingCount": "{count} écriture(s)",
+      "ledgerKinds": "Types : {kinds}",
       "confirmationHint": "Saisissez exactement « {phrase} » pour confirmer.",
+      "confirmationMismatch": "La phrase de confirmation doit correspondre exactement.",
       "operation": "Opération",
       "operations": {
         "hold": "Bloquer en séquestre",
         "release": "Débloquer du séquestre"
       },
       "amountNgwee": "Montant (ngwee)",
+      "amountPlaceholder": "Saisir le montant en ngwee (pas de valeur par défaut)",
       "reason": "Motif",
       "confirmationPhrase": "Phrase de confirmation",
       "submit": "Enregistrer le séquestre manuel",
       "submitting": "Enregistrement…",
       "success": "Transaction de séquestre manuelle enregistrée.",
       "failure": "Impossible d'enregistrer le séquestre manuel — vérifiez les deux notes.",
-      "invalidAmount": "Saisissez un montant en ngwee positif."
+      "invalidAmount": "Saisissez un montant en ngwee positif.",
+      "permissionDenied": "Permission refusée — rôle admin requis pour le séquestre manuel."
     },
     "timeline": {
       "empty": "Aucun événement dans la chronologie pour le moment.",
@@ -610,27 +628,38 @@
     "subtitle": "Agrégats de la plateforme — passifs du grand livre, rapprochement et aperçu de l'entonnoir.",
     "loading": "Chargement du tableau de bord…",
     "error": "Impossible de charger les agrégats du tableau de bord.",
+    "errorHint": "Nécessite GET /admin/dashboard et une session admin authentifiée.",
+    "permissionDenied": "Permission refusée — rôle admin requis pour voir les agrégats.",
+    "permissionDeniedHint": "Connectez-vous avec un compte ayant le rôle admin dans user_roles.",
     "retry": "Réessayer",
     "cachedAt": "Agrégats mis en cache à {at}",
     "liabilitiesTotal": "Total des passifs de versement : {amount}",
+    "emptyTrafficTitle": "Aucun trafic commande / entonnoir pour le moment",
+    "emptyTrafficBody": "GMV, pipeline, entonnoir et passifs du grand livre sont tous à zéro via l'API live — ce ne sont pas des analytics fictives.",
+    "emptyTrafficDependency": "Dépendance backend manquante pour des tuiles non nulles : volume réel de checkout/commandes, écritures du grand livre (MR-B01) et rapports de rapprochement.",
     "gmv": {
       "title": "GMV",
-      "subtitle": "Volume brut de transactions (commandes non annulées)"
+      "subtitle": "Volume brut de transactions (commandes non annulées)",
+      "empty": "K0,00 — aucune commande non annulée dans l'agrégat adossé au grand livre."
     },
     "payoutLiabilities": {
       "title": "Passifs de versement",
       "subtitle": "Retenu en séquestre plus libéré, non versé (dérivé du grand livre)",
       "escrowHeld": "Retenu en séquestre",
       "releasedUnpaid": "Libéré, non versé",
-      "total": "Passif total"
+      "total": "Passif total",
+      "empty": "Aucun passif de séquestre ou de libération non versée pour le moment.",
+      "dependency": "Les valeurs proviennent uniquement des soldes du grand livre — jamais inventées dans l'UI."
     },
     "reconciliation": {
       "title": "Rapprochement",
       "subtitle": "Dernier rapport quotidien Lenco / grand livre",
       "statusGreen": "Équilibré",
       "statusRed": "Écart signalé",
+      "statusUnknown": "Aucun rapport",
       "reportDate": "Date du rapport : {date}",
       "noReport": "Aucun rapport de rapprochement pour le moment.",
+      "noReportDependency": "Dépend du job quotidien qui écrit reconciliation_reports — l'absence n'est pas un jour équilibré.",
       "drillIn": "Voir les détails du rapport",
       "hideDrillIn": "Masquer les détails",
       "mismatchAlert": "Écart détecté dans le grand livre — examinez les divergences.",
@@ -639,6 +668,7 @@
     "orders": {
       "title": "Commandes par statut",
       "subtitle": "Décompte en temps réel du pipeline de commandes",
+      "empty": "Aucune commande dans aucun statut — le pipeline est vide.",
       "statuses": {
         "placed": "Passée",
         "confirmed": "Confirmée",
@@ -660,13 +690,15 @@
     "aiUsage": {
       "title": "Ask Vergeo AI",
       "subtitle": "Dépenses mensuelles par rapport au plafond de la plateforme",
-      "noData": "Aucune donnée d'utilisation pour le moment",
-      "noDataHint": "Le suivi de l'utilisation de l'IA sera livré dans une vague ultérieure. Le plafond reste de ${cap}/mois.",
-      "spendVsCap": "${spend} sur un plafond mensuel de ${cap}"
+      "noData": "Compteur d'utilisation indisponible",
+      "noDataHint": "ask_spend_monthly n'a pas pu être lu. Le plafond reste ${cap}/mois — ce n'est pas une dépense inventée.",
+      "spendVsCap": "${spend} sur un plafond mensuel de ${cap}",
+      "killed": "Coupe-circuit actif — Ask Vergeo est bloqué jusqu'à réinitialisation."
     },
     "funnel": {
       "title": "Aperçu de l'entonnoir",
       "subtitle": "Conversion des paiements et des commandes (événements côté serveur)",
+      "empty": "Aucun événement d'entonnoir pour le moment — les zéros sont des compteurs API live, pas des graphiques démo.",
       "steps": {
         "checkout_started": "Paiements initiés",
         "checkout_completed": "Paiements terminés",

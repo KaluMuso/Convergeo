@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 
 import { type FunnelSnapshot } from "./api";
+import { isFunnelEmpty } from "./dashboard-truth";
 import { TileShell } from "./TileShell";
 
 type FunnelTileProps = {
@@ -12,6 +13,7 @@ type FunnelTileProps = {
 
 export function FunnelTile({ funnel, className }: FunnelTileProps) {
   const t = useTranslations("admin.dashboard.funnel");
+  const empty = isFunnelEmpty(funnel);
 
   const steps = [
     { key: "checkout_started", value: funnel.checkout_started },
@@ -22,6 +24,11 @@ export function FunnelTile({ funnel, className }: FunnelTileProps) {
 
   return (
     <TileShell title={t("title")} subtitle={t("subtitle")} className={className}>
+      {empty ? (
+        <p className="mb-3 text-xs text-muted" data-testid="funnel-empty">
+          {t("empty")}
+        </p>
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {steps.map((step) => (
           <div key={step.key} className="rounded-md border border-border bg-bg p-3">

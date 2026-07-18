@@ -43,6 +43,7 @@ export type CatalogCounts = {
 export type AiUsageTile = {
   data_available: boolean;
   flagged: boolean;
+  killed?: boolean;
   spend_usd: number | null;
   cap_usd: number;
 };

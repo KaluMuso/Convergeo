@@ -3,6 +3,8 @@
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { classifyAdminRequestError } from "../../../_components/admin-request";
+
 import { type DuplicatePair, moderationApi } from "./api";
 import { MergeConfirmDialog } from "./MergeConfirmDialog";
 import { ProductCompareCard } from "./ProductCompareCard";
@@ -12,6 +14,7 @@ export function DuplicateQueue() {
   const [pairs, setPairs] = useState<DuplicatePair[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
   const [selectedPair, setSelectedPair] = useState<DuplicatePair | null>(null);
   const [survivorId, setSurvivorId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -19,12 +22,19 @@ export function DuplicateQueue() {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setPermissionDenied(false);
     setMessage(null);
     try {
       const data = await moderationApi.request<DuplicatePair[]>("/admin/products/duplicates");
       setPairs(data);
-    } catch {
-      setError(t("error"));
+    } catch (err) {
+      const classified = classifyAdminRequestError(err);
+      if (classified.kind === "permission") {
+        setPermissionDenied(true);
+        setError(t("permissionDenied"));
+      } else {
+        setError(t("error"));
+      }
     } finally {
       setLoading(false);
     }
@@ -54,6 +64,22 @@ export function DuplicateQueue() {
     return <p className="text-sm text-muted">{t("loading")}</p>;
   }
 
+  if (permissionDenied) {
+    return (
+      <div className="space-y-2 rounded-md border border-warning/40 bg-warning/5 p-4">
+        <p className="text-sm font-medium text-warning">{error}</p>
+        <p className="text-xs text-muted">{t("permissionDeniedHint")}</p>
+        <button
+          type="button"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
+          onClick={() => void load()}
+        >
+          {t("retry")}
+        </button>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="space-y-2">
@@ -70,7 +96,16 @@ export function DuplicateQueue() {
   }
 
   if (pairs.length === 0) {
-    return <p className="text-sm text-muted">{t("empty")}</p>;
+    return (
+      <div
+        className="space-y-2 rounded-md border border-border bg-bg p-4"
+        data-testid="moderation-empty"
+      >
+        <p className="text-sm text-muted">{t("empty")}</p>
+        <p className="text-xs text-muted">{t("emptyHint")}</p>
+        <p className="text-xs text-muted">{t("emptyApiScope")}</p>
+      </div>
+    );
   }
 
   return (

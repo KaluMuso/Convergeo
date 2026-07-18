@@ -4,6 +4,7 @@ import { formatK } from "@vergeo/i18n";
 import { useTranslations } from "next-intl";
 
 import { type PayoutLiabilities } from "./api";
+import { isPayoutLiabilitiesEmpty } from "./dashboard-truth";
 import { TileShell } from "./TileShell";
 
 type PayoutLiabilitiesTileProps = {
@@ -13,6 +14,7 @@ type PayoutLiabilitiesTileProps = {
 
 export function PayoutLiabilitiesTile({ liabilities, locale }: PayoutLiabilitiesTileProps) {
   const t = useTranslations("admin.dashboard.payoutLiabilities");
+  const empty = isPayoutLiabilitiesEmpty(liabilities);
 
   return (
     <TileShell title={t("title")} subtitle={t("subtitle")}>
@@ -36,6 +38,12 @@ export function PayoutLiabilitiesTile({ liabilities, locale }: PayoutLiabilities
           </dd>
         </div>
       </dl>
+      {empty ? (
+        <p className="mt-3 text-xs text-muted" data-testid="liabilities-empty">
+          {t("empty")}
+        </p>
+      ) : null}
+      <p className="mt-2 text-xs text-muted">{t("dependency")}</p>
     </TileShell>
   );
 }

@@ -4,9 +4,11 @@ import { formatK } from "@vergeo/i18n";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { classifyAdminRequestError } from "./admin-request";
 import { AiUsageTile } from "./AiUsageTile";
 import { type DashboardData, dashboardApi } from "./api";
 import { CatalogCountsTile } from "./CatalogCountsTile";
+import { isAnalyticsTrafficEmpty } from "./dashboard-truth";
 import { FunnelTile } from "./FunnelTile";
 import { GmvTile } from "./GmvTile";
 import { OrdersStatusTile } from "./OrdersStatusTile";
@@ -22,15 +24,24 @@ export function DashboardBoard({ locale }: DashboardBoardProps) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setPermissionDenied(false);
     try {
       const payload = await dashboardApi.request<DashboardData>("/admin/dashboard");
       setData(payload);
-    } catch {
-      setError(t("error"));
+    } catch (err) {
+      const classified = classifyAdminRequestError(err);
+      if (classified.kind === "permission") {
+        setPermissionDenied(true);
+        setError(t("permissionDenied"));
+      } else {
+        setError(t("error"));
+      }
+      setData(null);
     } finally {
       setLoading(false);
     }
@@ -44,10 +55,11 @@ export function DashboardBoard({ locale }: DashboardBoardProps) {
     return <p className="text-sm text-muted">{t("loading")}</p>;
   }
 
-  if (error || !data) {
+  if (permissionDenied) {
     return (
-      <div className="space-y-2">
-        <p className="text-sm text-danger">{error ?? t("error")}</p>
+      <div className="space-y-2 rounded-md border border-warning/40 bg-warning/5 p-4">
+        <p className="text-sm font-medium text-warning">{t("permissionDenied")}</p>
+        <p className="text-xs text-muted">{t("permissionDeniedHint")}</p>
         <button
           type="button"
           className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
@@ -59,11 +71,39 @@ export function DashboardBoard({ locale }: DashboardBoardProps) {
     );
   }
 
+  if (error || !data) {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm text-danger">{error ?? t("error")}</p>
+        <p className="text-xs text-muted">{t("errorHint")}</p>
+        <button
+          type="button"
+          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
+          onClick={() => void load()}
+        >
+          {t("retry")}
+        </button>
+      </div>
+    );
+  }
+
+  const trafficEmpty = isAnalyticsTrafficEmpty(data);
+
   return (
     <div className="space-y-4">
       <p className="text-xs text-muted">
         {t("cachedAt", { at: new Date(data.cached_at).toLocaleString(locale) })}
       </p>
+      {trafficEmpty ? (
+        <div
+          className="space-y-1 rounded-md border border-border bg-bg p-3"
+          data-testid="dashboard-empty-truth"
+        >
+          <p className="text-sm font-medium text-text">{t("emptyTrafficTitle")}</p>
+          <p className="text-xs text-muted">{t("emptyTrafficBody")}</p>
+          <p className="text-xs text-muted">{t("emptyTrafficDependency")}</p>
+        </div>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <GmvTile gmvNgwee={data.gmv_ngwee} locale={locale} />
         <PayoutLiabilitiesTile liabilities={data.payout_liabilities} locale={locale} />
