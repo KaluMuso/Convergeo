@@ -154,6 +154,26 @@ def is_killed(*, client: ServiceClient | None = None, month_key: str | None = No
     return True
 
 
+def current_month_total_usd_micros(
+    *,
+    client: ServiceClient | None = None,
+    month_key: str | None = None,
+) -> int:
+    """Current month's cumulative Ask model spend in micro-USD (0 when no row yet)."""
+    service = client or _service_client()
+    row = _monthly_spend_row(service, month_key or current_month_key())
+    if row is None:
+        return 0
+    value = row.get("total_usd_micros")
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, int):
+        return max(value, 0)
+    if isinstance(value, str) and value.lstrip("-").isdigit():
+        return max(int(value), 0)
+    return 0
+
+
 def reset_kill_switch(
     *,
     client: ServiceClient | None = None,

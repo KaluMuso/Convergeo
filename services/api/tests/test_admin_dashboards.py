@@ -218,8 +218,12 @@ def test_aggregate_correctness_vs_fixtures(
     assert body["funnel"]["checkout_completed"] == 1
     assert body["funnel"]["orders_placed"] == 2
     assert body["funnel"]["orders_completed"] == 1
-    assert body["ai_usage"]["data_available"] is False
-    assert body["ai_usage"]["flagged"] is True
+    # AI tile now reads real Ask spend from ask_spend_monthly (0 here — no spend rows
+    # seeded), no kill-switch trip.
+    assert body["ai_usage"]["data_available"] is True
+    assert body["ai_usage"]["flagged"] is False
+    assert body["ai_usage"]["killed"] is False
+    assert body["ai_usage"]["spend_usd"] == 0.0
     assert body["ai_usage"]["cap_usd"] == 15
 
 

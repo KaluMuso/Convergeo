@@ -1,0 +1,83 @@
+{
+  "name": "Analytics PII Retention Sweeper",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 03:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/internal/analytics/retention-tick",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Token",
+              "value": "={{$env.INTERNAL_ANALYTICS_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "analytics-retention-tick",
+      "name": "Sweep Analytics PII",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 Internal Analytics"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 03:00 UTC": {
+      "main": [
+        [
+          {
+            "node": "Sweep Analytics PII",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "task3-analytics-retention",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "note": "Daily DPA retention sweep: NULLs person-links (user_id / customer_id / session_id) on analytics rows older than 30 days across search_query_log, funnel_events, and analytics_events (and strips snapshot.customer_id). Idempotent + service-role."
+  },
+  "tags": [
+    {
+      "name": "analytics",
+      "createdAt": "2026-07-18T00:00:00.000Z",
+      "updatedAt": "2026-07-18T00:00:00.000Z"
+    }
+  ]
+}

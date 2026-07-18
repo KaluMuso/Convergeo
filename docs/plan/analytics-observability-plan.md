@@ -234,6 +234,15 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 
 **Out of scope.** SSR/RSC Sentry capture (a separate observability pebble); UptimeRobot/GA4/Sentry-DSN activation (founder config, not code); SMS/WhatsApp deliverability analytics.
 
+**Status — ✅ SHIPPED (backend + infra, no migration).**
+
+- **Retention sweep:** `services/api/app/services/analytics/retention.py::sweep_analytics_retention` — idempotent, service-role. Past a 30-day window it NULLs `search_query_log.user_id` (reusing `trim_search_pii`), `funnel_events.customer_id` (+ strips `snapshot.customer_id`), and `analytics_events.user_id`+`session_id`, keeping the anonymized aggregates. Driven by `POST /internal/analytics/retention-tick` (`routers/internal_analytics.py`, token-guarded, registered `INTERNAL_CRON`) via n8n `infra/n8n/analytics-retention.json` (daily 03:00 UTC). Documented in `docs/ops/data-retention.md`. _`ask_usage`/`notification_outbox` pruning noted there as separate subsystem concerns._
+- **AI-spend visibility + kill-switch:** the admin dashboard AI tile now reads **real** spend from `ask_spend_monthly` (`spend.py::current_month_total_usd_micros`) + `killed` state instead of the removed `AI_USAGE_DATA_AVAILABLE=False` placeholder (aggregate money only, falls back to no-data on read error). New admin-only, **audited** `POST /admin/ai-spend/reset-kill-switch` (`reset_kill_switch`, `AdminAuditedRoute` → `audit_log`, `ADMIN_WRITE`).
+- **Health:** public `GET /health` alias (keyword `ok`) resolving the UptimeRobot/observability-doc `/health` 404 (registered in the authz matrix `PUBLIC_OPEN_ROUTES`).
+- **Tests:** `tests/test_analytics_governance.py` — retention sweep (nulls past-window / keeps fresh + aggregates / idempotent, DB-backed), retention-tick token guard, `/health`, AI-tile (real spend / kill-switch / read-error fallback); `test_admin_dashboards.py` updated for the live tile. Verified: ruff + mypy clean; governance + admin-dashboard + coverage-gate suites green (DB-integration tests run in CI).
+
+**Deferred within Task 3 (documented):** a deep `/readyz` that exercises the `run_sql_script` DB spine (current readiness pings PostgREST only) — a small follow-up; and `notification_outbox` phone pruning (a notifications-subsystem lifecycle concern, not the analytics sweep).
+
 ---
 
 ## Part D — Sequencing, deferrals, and founder gates
