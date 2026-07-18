@@ -49,12 +49,16 @@ function getApiBaseUrl(): string {
 /** Map the backend status shape onto the UI-facing KycApplication. */
 function mapStatusToApplication(status: KycStatusResponse): KycApplication {
   const [nrcPath = null, selfiePath = null] = status.doc_storage_paths ?? [];
+  // Do NOT default missing tiers to 1 — orphaned seed tiers without
+  // kyc_records must stay null so capability UI stays honest (VEND-01).
   return {
     vendor_id: status.kyc_record_id ?? "",
     vendor_status: status.vendor_status,
-    kyc_tier: status.kyc_tier ?? 1,
+    kyc_tier: status.kyc_tier ?? null,
     kyc_status: status.application_status,
-    tier: status.tier ?? 1,
+    tier: status.tier ?? null,
+    kyc_record_id: status.kyc_record_id ?? null,
+    kyc_record_status: status.kyc_record_status ?? null,
     // Persisted server-side now: business_name = vendor display name, archetype =
     // the onboarding business category (see migration 0034 + /kyc/status).
     business_name: status.business_name ?? null,
@@ -68,6 +72,14 @@ function mapStatusToApplication(status: KycStatusResponse): KycApplication {
     updated_at: "",
   };
 }
+
+export {
+  canUseWholesaleCapabilities,
+  effectiveKycTier,
+  hasAuditableKycRecord,
+  isAuditableApproved,
+  shouldShowPreferredBadge,
+} from "../../_lib/kyc-integrity";
 
 export function createKycClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });

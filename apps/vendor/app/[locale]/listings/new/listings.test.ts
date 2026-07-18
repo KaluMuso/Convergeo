@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import vendorMessages from "../../../../../../packages/i18n/messages/en/vendor.json";
+import { canUseWholesaleCapabilities } from "../../_lib/kyc-integrity";
 
 import { zmwDecimalToNgwee, isValidZmwDecimal } from "./_lib/money";
 
@@ -36,5 +37,23 @@ describe("attach live-search + commission-shown contract", () => {
     };
     expect(preview.commission.rate_percent).toBe(5);
     expect(vendorMessages.listings.commission.heading).toContain("Commission");
+  });
+});
+
+describe("listing create KYC capability gate", () => {
+  it("hides wholesale UI when tier is orphaned without a KYC record", () => {
+    expect(
+      canUseWholesaleCapabilities({
+        kyc_tier: 2,
+        kyc_status: "approved",
+        kyc_record_id: null,
+        kyc_record_status: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("exposes KYC gate copy for honest status", () => {
+    expect(vendorMessages.listings.kycGate.title).toBeTruthy();
+    expect(vendorMessages.listings.kycGate.wholesaleLocked).toContain("T2");
   });
 });

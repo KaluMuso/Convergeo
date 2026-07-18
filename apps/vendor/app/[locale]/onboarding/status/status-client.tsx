@@ -3,9 +3,11 @@
 import { useSession } from "@vergeo/auth/use-session";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { resolveStatusVariant, StatusScreen } from "../_components/status-screen";
+import { VendorErrorState } from "../../_components/async-state";
+import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
+import { resolveHonestStatusVariant, StatusScreen } from "../_components/status-screen";
 import { createKycClient } from "../_lib/kyc-client";
 import { Spinner } from "../_lib/ui";
 
@@ -17,58 +19,51 @@ type StatusPageClientProps = {
 
 export function StatusPageClient({ locale }: StatusPageClientProps) {
   const t = useTranslations("vendor");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const { session, loading: sessionLoading } = useSession();
   const [application, setApplication] = useState<KycApplication | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const kycClient = useMemo(
     () => createKycClient(() => session?.access_token ?? null),
     [session?.access_token],
   );
 
-  useEffect(() => {
-    if (sessionLoading) {
-      return;
-    }
-
+  const load = useCallback(async () => {
     if (!session) {
       setLoading(false);
       return;
     }
-
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const app = await kycClient.getApplication();
-        if (cancelled) {
-          return;
-        }
-
-        if (app.kyc_status === "draft") {
-          router.replace(`/${locale}/onboarding`);
-          return;
-        }
-
-        setApplication(app);
-      } catch {
-        if (!cancelled) {
-          setError(t("onboarding.errors.loadFailed"));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+    setLoading(true);
+    setErrorKey(null);
+    try {
+      const app = await kycClient.getApplication();
+      if (app.kyc_status === "draft") {
+        router.replace(`/${locale}/onboarding`);
+        return;
       }
+      setApplication(app);
+    } catch (caught) {
+      setApplication(null);
+      setErrorKey(vendorErrorMessageKey(caught, "onboarding"));
+    } finally {
+      setLoading(false);
     }
+  }, [kycClient, locale, router, session]);
 
+  useEffect(() => {
+    if (sessionLoading) {
+      return;
+    }
+    if (!session) {
+      setLoading(false);
+      return;
+    }
     void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [kycClient, locale, router, session, sessionLoading, t]);
+  }, [load, session, sessionLoading, reloadKey]);
 
   if (sessionLoading || loading) {
     return (
@@ -78,17 +73,34 @@ export function StatusPageClient({ locale }: StatusPageClientProps) {
     );
   }
 
-  if (error || !application) {
+  if (!session) {
     return (
-      <main className="mx-auto flex min-h-dvh w-full max-w-[360px] flex-col gap-4 p-4">
-        <p className="text-sm text-danger" role="alert">
-          {error ?? t("onboarding.errors.loadFailed")}
-        </p>
+      <main className="mx-auto flex min-h-dvh w-full max-w-[360px] flex-col p-4">
+        <VendorErrorState
+          title={t("onboarding.errors.authRequired")}
+          retryLabel={tCommon("common.retry")}
+        />
       </main>
     );
   }
 
-  const variant = resolveStatusVariant(application.kyc_status);
+  if (errorKey || !application) {
+    return (
+      <main className="mx-auto flex min-h-dvh w-full max-w-[360px] flex-col p-4">
+        <VendorErrorState
+          title={t((errorKey ?? "onboarding.errors.loadFailed") as "onboarding.errors.loadFailed")}
+          body={t("onboarding.errors.retryHint")}
+          retryLabel={tCommon("common.retry")}
+          onRetry={() => setReloadKey((value) => value + 1)}
+        />
+      </main>
+    );
+  }
+
+  const variant = resolveHonestStatusVariant({
+    kyc_status: application.kyc_status,
+    kyc_record_id: application.kyc_record_id,
+  });
 
   return (
     <StatusScreen

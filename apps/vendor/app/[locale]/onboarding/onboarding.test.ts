@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import vendorMessages from "../../../../../packages/i18n/messages/en/vendor.json";
 
-import { resolveStatusVariant } from "./_components/status-screen";
+import { resolveHonestStatusVariant, resolveStatusVariant } from "./_components/status-screen";
 import {
   docsRequiredForResubmit,
   isResubmitStatus,
@@ -190,6 +190,21 @@ describe("status renders", () => {
     expect(resolveStatusVariant("rejected")).toBe("rejected");
     expect(resolveStatusVariant("resubmit")).toBe("resubmit");
     expect(resolveStatusVariant("draft")).toBe("pending");
+  });
+
+  it("never shows approved without an auditable KYC record", () => {
+    expect(
+      resolveHonestStatusVariant({
+        kyc_status: "approved",
+        kyc_record_id: null,
+      }),
+    ).toBe("pending");
+    expect(
+      resolveHonestStatusVariant({
+        kyc_status: "approved",
+        kyc_record_id: "rec-1",
+      }),
+    ).toBe("approved");
   });
 });
 

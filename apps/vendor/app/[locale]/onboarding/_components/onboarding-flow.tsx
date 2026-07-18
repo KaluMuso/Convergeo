@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { VendorErrorState } from "../../_components/async-state";
+import { classifyVendorError, vendorErrorMessageKey } from "../../_lib/vendor-errors";
+import { createProfileClient } from "../../profile/_lib/profile-client";
 import {
   createKycClient,
   isResubmitStatus,
@@ -37,6 +40,7 @@ type OnboardingFlowProps = {
 
 export function OnboardingFlow({ locale }: OnboardingFlowProps) {
   const t = useTranslations("vendor");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const { session, loading: sessionLoading } = useSession();
 
@@ -46,12 +50,15 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fatalErrorKey, setFatalErrorKey] = useState<string | null>(null);
   const [resubmitMode, setResubmitMode] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
 
   const kycClient = useMemo(() => createKycClient(getToken), [getToken]);
   const storageClient = useMemo(() => createStorageClient(getToken), [getToken]);
+  const profileClient = useMemo(() => createProfileClient(getToken), [getToken]);
 
   const categoryLabels = useMemo(
     () => ({
@@ -87,6 +94,9 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
     let cancelled = false;
 
     async function bootstrap() {
+      setLoading(true);
+      setFatalErrorKey(null);
+      setError(null);
       try {
         const app = await kycClient.getApplication();
         if (cancelled) {
@@ -113,25 +123,34 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         setDraft(merged);
         setCurrentStep(step);
         writeLocalDraft(merged);
-      } catch {
-        if (!cancelled) {
-          const local = readLocalDraft();
-          if (local) {
-            setDraft(local);
-            setCurrentStep(local.step);
-          } else {
-            setDraft({
-              step: 0,
-              businessName: "",
-              businessCategory: "",
-              legalName: "",
-              momoPhone: "",
-              nrcPath: null,
-              selfiePath: null,
-            });
-          }
-          setError(t("onboarding.errors.loadFailed"));
+      } catch (caught) {
+        if (cancelled) {
+          return;
         }
+        const kind = classifyVendorError(caught).kind;
+        // Auth/permission failures must not fall back to a local-only draft —
+        // that would look like a working onboarding for a non-vendor session.
+        if (kind === "auth" || kind === "permission") {
+          setFatalErrorKey(vendorErrorMessageKey(caught, "onboarding"));
+          setDraft(null);
+          return;
+        }
+        const local = readLocalDraft();
+        if (local) {
+          setDraft(local);
+          setCurrentStep(local.step);
+        } else {
+          setDraft({
+            step: 0,
+            businessName: "",
+            businessCategory: "",
+            legalName: "",
+            momoPhone: "",
+            nrcPath: null,
+            selfiePath: null,
+          });
+        }
+        setError(t("onboarding.errors.loadFailed"));
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -143,7 +162,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
     return () => {
       cancelled = true;
     };
-  }, [kycClient, locale, router, session, sessionLoading, t]);
+  }, [kycClient, locale, reloadKey, router, session, sessionLoading, t]);
 
   const updateDraft = useCallback((patch: Partial<OnboardingDraft>) => {
     setDraft((prev) => {
@@ -228,6 +247,17 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         await kycClient.submit(payload);
       }
 
+      // Persist storefront display name collected in step 1 — KYC submit only
+      // stores archetype/legal_name. Best-effort: KYC already succeeded.
+      const displayName = draft.businessName.trim();
+      if (displayName.length >= 2) {
+        try {
+          await profileClient.updateProfile({ display_name: displayName });
+        } catch {
+          // Non-blocking — vendor can finish the name on /profile.
+        }
+      }
+
       clearLocalDraft();
       router.push(`/${locale}/onboarding/status`);
     } catch {
@@ -235,13 +265,44 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
     } finally {
       setSubmitting(false);
     }
-  }, [draft, kycClient, locale, resubmitMode, router, t]);
+  }, [draft, kycClient, locale, profileClient, resubmitMode, router, t]);
 
-  if (sessionLoading || loading || !draft) {
+  if (sessionLoading || loading) {
     return (
       <div className="flex min-h-[50dvh] items-center justify-center">
         <Spinner label={t("onboarding.loading")} />
       </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <VendorErrorState
+        title={t("onboarding.errors.authRequired")}
+        retryLabel={tCommon("common.retry")}
+      />
+    );
+  }
+
+  if (fatalErrorKey) {
+    return (
+      <VendorErrorState
+        title={t(fatalErrorKey as "onboarding.errors.permissionDenied")}
+        body={t("onboarding.errors.retryHint")}
+        retryLabel={tCommon("common.retry")}
+        onRetry={() => setReloadKey((value) => value + 1)}
+      />
+    );
+  }
+
+  if (!draft) {
+    return (
+      <VendorErrorState
+        title={t("onboarding.errors.loadFailed")}
+        body={t("onboarding.errors.retryHint")}
+        retryLabel={tCommon("common.retry")}
+        onRetry={() => setReloadKey((value) => value + 1)}
+      />
     );
   }
 
@@ -265,9 +326,16 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
       )}
 
       {error ? (
-        <p className="rounded bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
-          {error}
-        </p>
+        <div className="flex flex-col gap-2 rounded bg-danger/10 px-3 py-2" role="alert">
+          <p className="text-sm text-danger">{error}</p>
+          <button
+            type="button"
+            className="min-h-11 self-start text-sm font-medium text-primary underline"
+            onClick={() => setReloadKey((value) => value + 1)}
+          >
+            {tCommon("common.retry")}
+          </button>
+        </div>
       ) : null}
 
       {stepKey === "business" && !resubmitMode ? (

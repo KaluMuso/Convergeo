@@ -37,7 +37,14 @@
     },
     "errors": {
       "loadFailed": "We could not load your analytics. Please try again.",
-      "invalidWindow": "Choose a 7 or 30 day window."
+      "invalidWindow": "Choose a 7 or 30 day window.",
+      "authRequired": "Sign in to view analytics.",
+      "permissionDenied": "You do not have access to these analytics.",
+      "retryHint": "Check your connection, then try again."
+    },
+    "empty": {
+      "title": "No activity yet",
+      "body": "When you have real orders and cart activity, totals appear here. We never invent GMV."
     }
   },
   "vendor.dashboard.title": "Vendor dashboard",
@@ -290,8 +297,12 @@
     "errors": {
       "required": "This field is required",
       "invalidPhone": "Enter a valid Zambian mobile number",
-      "loadFailed": "Could not load your application. Pull to refresh.",
-      "submitFailed": "Submission failed. Try again."
+      "loadFailed": "Could not load your application. Try again.",
+      "submitFailed": "Submission failed. Try again.",
+      "authRequired": "Sign in to continue vendor onboarding.",
+      "permissionDenied": "This account is not set up as a vendor. Contact support if that seems wrong.",
+      "notFound": "We could not find your vendor application.",
+      "retryHint": "Check your connection, then try again."
     },
     "loading": "Loading…"
   },
@@ -391,7 +402,11 @@
       "product_not_found": "Product not found",
       "product_not_active": "This product cannot be attached yet",
       "category_not_found": "Category not found",
-      "invalid_tiers": "Price tiers must rise in quantity and fall in unit price"
+      "invalid_tiers": "Price tiers must rise in quantity and fall in unit price",
+      "authRequired": "Sign in to manage listings.",
+      "permissionDenied": "You do not have access to this vendor catalogue.",
+      "notFound": "That listing was not found for your shop.",
+      "retryHint": "Check your connection, then try again."
     },
     "import": {
       "meta": {
@@ -503,12 +518,20 @@
         "removed": "Listing removed."
       },
       "errors": {
-        "loadFailed": "Could not load listings. Pull to refresh.",
+        "loadFailed": "Could not load listings. Try again.",
         "saveFailed": "Could not save changes. Try again.",
         "stockNotTracked": "Stock adjustments apply only to tracked listings.",
         "stockQtyRequired": "Enter a stock quantity for tracked listings.",
         "returnWindowRequired": "Enter a return window when returns are enabled."
-      }
+      },
+      "emptyTitle": "No listings yet",
+      "statusLabel": "Status"
+    },
+    "kycGate": {
+      "title": "Verification still in progress",
+      "body": "Listings may stay gated until your KYC application is approved with an auditable record. We never show a verified badge without that trail.",
+      "cta": "Check verification status",
+      "wholesaleLocked": "Wholesale pricing unlocks after auditable T2 verification."
     }
   },
   "profile": {
@@ -605,7 +628,7 @@
       "saved": "Profile saved. Changes appear on your public page within a minute."
     },
     "errors": {
-      "loadFailed": "Could not load your profile. Pull to refresh.",
+      "loadFailed": "Could not load your profile. Try again.",
       "saveFailed": "Could not save your profile. Try again.",
       "authRequired": "Sign in to edit your storefront profile.",
       "slug_locked": "Your shop URL is already locked.",
@@ -616,7 +639,10 @@
       "hours_invalid_day": "One of the day names is invalid.",
       "hours_all_closed": "Mark at least one day as open.",
       "location_required": "Add your location before setting hours.",
-      "whatsapp_invalid": "Enter a valid Zambian mobile number (e.g. 0977 123456)."
+      "whatsapp_invalid": "Enter a valid Zambian mobile number (e.g. 0977 123456).",
+      "permissionDenied": "You do not have access to this storefront profile.",
+      "notFound": "Storefront profile not found for this account.",
+      "retryHint": "Check your connection, then try again."
     }
   },
   "orders": {
@@ -702,11 +728,13 @@
     "offlineNotice": "Showing saved data — connect to refresh.",
     "takings": {
       "label": "Today's takings",
-      "caption": "Confirmed revenue for {date} (Lusaka time)"
+      "caption": "Confirmed revenue for {date} (Lusaka time)",
+      "emptyCaption": "No confirmed revenue yet today — totals come from real orders only."
     },
     "needsAction": {
       "heading": "Needs action",
-      "empty": "You're all caught up — no orders waiting on you."
+      "empty": "You're all caught up — no orders waiting on you.",
+      "emptyTitle": "You're all caught up"
     },
     "actions": {
       "openQueue": "Open order queue",
@@ -734,7 +762,20 @@
       "other": "retail"
     },
     "errors": {
-      "loadFailed": "Could not load your dashboard. Pull to refresh."
+      "loadFailed": "Could not load your dashboard. Try again.",
+      "authRequired": "Sign in to view your vendor home.",
+      "permissionDenied": "You do not have access to this vendor dashboard.",
+      "retryHint": "Check your connection, then try again."
+    },
+    "kycBanner": {
+      "title": "Finish verification",
+      "body": "Your shop is not marked verified until KYC is approved with an auditable record.",
+      "cta": "View KYC status"
+    },
+    "shortcuts": {
+      "ariaLabel": "Quick links",
+      "listings": "Catalogue",
+      "profile": "Profile"
     }
   },
   "queue": {
@@ -1410,6 +1451,15 @@
       "loadFailed": "Could not load the roster. Pull to refresh.",
       "downloadFailed": "Could not download the roster. Try again.",
       "unauthorized": "Sign in as an organiser to view this roster."
+    }
+  },
+  "shell": {
+    "nav": {
+      "ariaLabel": "Vendor navigation",
+      "home": "Home",
+      "listings": "Listings",
+      "orders": "Orders",
+      "profile": "Profile"
     }
   }
 }

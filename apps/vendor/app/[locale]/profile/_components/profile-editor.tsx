@@ -5,6 +5,10 @@ import { ApiError } from "@vergeo/config";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { VendorErrorState } from "../../_components/async-state";
+import { VendorQuickNav } from "../../_components/vendor-quick-nav";
+import { shouldShowPreferredBadge } from "../../_lib/kyc-integrity";
+import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { Button, FormField, Input, Spinner, Switch } from "../../listings/new/_lib/ui";
 import { createProfileClient } from "../_lib/profile-client";
 
@@ -26,8 +30,13 @@ const DEFAULT_HOURS = {
   sun: { open: "09:00", close: "13:00", closed: true },
 };
 
-export function ProfileEditor() {
+type ProfileEditorProps = {
+  locale: string;
+};
+
+export function ProfileEditor({ locale }: ProfileEditorProps) {
   const t = useTranslations("vendor");
+  const tCommon = useTranslations("common");
   const { session, loading: sessionLoading } = useSession();
   const [profile, setProfile] = useState<VendorProfile | null>(null);
   const [displayName, setDisplayName] = useState("");
@@ -43,10 +52,40 @@ export function ProfileEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const profileClient = useMemo(() => createProfileClient(getToken), [getToken]);
+
+  const loadProfile = useCallback(async () => {
+    if (!session) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadErrorKey(null);
+    try {
+      const loaded = await profileClient.getProfile();
+      setProfile(loaded);
+      setDisplayName(loaded.display_name);
+      setDescription(loaded.description ?? "");
+      setWhatsapp(loaded.whatsapp_msisdn ?? "");
+      setSlug(loaded.slug);
+      setLogoUrl(loaded.logo_url);
+      setCoverUrl(loaded.cover_url);
+      setHours(Object.keys(loaded.hours).length > 0 ? loaded.hours : DEFAULT_HOURS);
+      setLat(loaded.lat?.toString() ?? "");
+      setLng(loaded.lng?.toString() ?? "");
+      setLandmark(loaded.landmark ?? "");
+    } catch (caught) {
+      setProfile(null);
+      setLoadErrorKey(vendorErrorMessageKey(caught, "profile"));
+    } finally {
+      setLoading(false);
+    }
+  }, [profileClient, session]);
 
   useEffect(() => {
     if (sessionLoading) {
@@ -56,41 +95,8 @@ export function ProfileEditor() {
       setLoading(false);
       return;
     }
-
-    let cancelled = false;
-    void profileClient
-      .getProfile()
-      .then((loaded) => {
-        if (cancelled) {
-          return;
-        }
-        setProfile(loaded);
-        setDisplayName(loaded.display_name);
-        setDescription(loaded.description ?? "");
-        setWhatsapp(loaded.whatsapp_msisdn ?? "");
-        setSlug(loaded.slug);
-        setLogoUrl(loaded.logo_url);
-        setCoverUrl(loaded.cover_url);
-        setHours(Object.keys(loaded.hours).length > 0 ? loaded.hours : DEFAULT_HOURS);
-        setLat(loaded.lat?.toString() ?? "");
-        setLng(loaded.lng?.toString() ?? "");
-        setLandmark(loaded.landmark ?? "");
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setError(t("profile.errors.loadFailed"));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [profileClient, session, sessionLoading, t]);
+    void loadProfile();
+  }, [loadProfile, reloadKey, session, sessionLoading]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -157,13 +163,25 @@ export function ProfileEditor() {
 
   if (!session) {
     return (
-      <p className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
-        {t("profile.errors.authRequired")}
-      </p>
+      <VendorErrorState
+        title={t("profile.errors.authRequired")}
+        retryLabel={tCommon("common.retry")}
+      />
     );
   }
 
-  const completeness = profile?.completeness ?? {
+  if (loadErrorKey || !profile) {
+    return (
+      <VendorErrorState
+        title={t((loadErrorKey ?? "profile.errors.loadFailed") as "profile.errors.loadFailed")}
+        body={t("profile.errors.retryHint")}
+        retryLabel={tCommon("common.retry")}
+        onRetry={() => setReloadKey((value) => value + 1)}
+      />
+    );
+  }
+
+  const completeness = profile.completeness ?? {
     logo: false,
     description: false,
     hours: false,
@@ -171,19 +189,24 @@ export function ProfileEditor() {
     badge: false,
   };
 
+  // Preferred badge only from API boolean — never invent from kyc_tier (VEND-01).
+  const showPreferred = shouldShowPreferredBadge(profile.preferred_badge);
+
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
+      <VendorQuickNav locale={locale} active="profile" />
+
+      <header className="space-y-1 px-1">
         <h1 className="text-xl font-semibold text-neutral-900">{t("profile.title")}</h1>
         <p className="text-sm text-neutral-600">{t("profile.intro")}</p>
       </header>
 
-      {profile ? (
+      <div className="px-1">
         <CompletenessMeter score={profile.completeness_score} breakdown={completeness} />
-      ) : null}
+      </div>
 
       <form
-        className="space-y-5"
+        className="space-y-5 px-1"
         onSubmit={(event) => {
           event.preventDefault();
           void handleSave();
@@ -201,8 +224,8 @@ export function ProfileEditor() {
           </FormField>
           <SlugField
             slug={slug}
-            slugLocked={profile?.slug_locked ?? false}
-            previousSlug={profile?.previous_slug ?? null}
+            slugLocked={profile.slug_locked}
+            previousSlug={profile.previous_slug ?? null}
             disabled={saving}
             onChange={setSlug}
           />
@@ -296,7 +319,7 @@ export function ProfileEditor() {
           <HoursEditor hours={hours} disabled={saving} onChange={setHours} />
         </section>
 
-        {profile?.preferred_badge ? (
+        {showPreferred ? (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
             <Switch checked disabled label={t("profile.badge.preferred")} />
           </div>
@@ -304,8 +327,16 @@ export function ProfileEditor() {
           <p className="text-sm text-neutral-600">{t("profile.badge.hint")}</p>
         )}
 
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        {success ? <p className="text-sm text-emerald-700">{success}</p> : null}
+        {error ? (
+          <p className="text-sm text-red-600" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {success ? (
+          <p className="text-sm text-emerald-700" role="status">
+            {success}
+          </p>
+        ) : null}
 
         <Button
           type="submit"

@@ -1,3 +1,5 @@
+import { hasAuditableKycRecord, type KycIntegrityInput } from "../../_lib/kyc-integrity";
+
 import type { KycStatus } from "../_lib/types";
 
 export type StatusVariant = "pending" | "approved" | "rejected" | "resubmit";
@@ -15,6 +17,25 @@ export function resolveStatusVariant(kycStatus: KycStatus): StatusVariant {
     default:
       return "pending";
   }
+}
+
+/**
+ * Never surface "approved" without an auditable KYC record (VEND-01 / MR-D02).
+ * Orphaned tier badges fall back to pending so the UI cannot claim verification.
+ */
+export function resolveHonestStatusVariant(
+  input: Pick<KycIntegrityInput, "kyc_status" | "kyc_record_id"> & {
+    kyc_status: KycStatus;
+  },
+): StatusVariant {
+  const base = resolveStatusVariant(input.kyc_status);
+  if (
+    base === "approved" &&
+    !hasAuditableKycRecord({ ...input, kyc_tier: null, kyc_record_status: null })
+  ) {
+    return "pending";
+  }
+  return base;
 }
 
 type StatusScreenProps = {

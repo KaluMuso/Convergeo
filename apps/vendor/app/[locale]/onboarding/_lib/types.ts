@@ -11,9 +11,13 @@ export type VendorStatus = "draft" | "pending_kyc" | "active" | "suspended";
 export type KycApplication = {
   vendor_id: string;
   vendor_status: VendorStatus;
-  kyc_tier: number;
+  /** Raw tier from API — may be orphaned without a record (MR-D02). Prefer helpers. */
+  kyc_tier: number | null;
   kyc_status: KycStatus;
-  tier: number;
+  tier: number | null;
+  /** Present only when an auditable kyc_records row exists. */
+  kyc_record_id: string | null;
+  kyc_record_status: string | null;
   business_name: string | null;
   business_category: string | null;
   momo_phone: string | null;

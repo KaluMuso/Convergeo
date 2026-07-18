@@ -37,7 +37,14 @@
     },
     "errors": {
       "loadFailed": "无法加载您的数据分析，请重试。",
-      "invalidWindow": "请选择 7 天或 30 天的时间范围。"
+      "invalidWindow": "请选择 7 天或 30 天的时间范围。",
+      "authRequired": "请登录以查看分析。",
+      "permissionDenied": "您无权查看这些分析。",
+      "retryHint": "请检查网络后重试。"
+    },
+    "empty": {
+      "title": "暂无数据",
+      "body": "有真实订单和购物车活动后，这里会显示总额。我们绝不会虚构 GMV。"
     }
   },
   "vendor.dashboard.title": "商家仪表板",
@@ -290,8 +297,12 @@
     "errors": {
       "required": "此字段为必填项",
       "invalidPhone": "请输入有效的赞比亚手机号码",
-      "loadFailed": "无法加载您的申请。下拉刷新。",
-      "submitFailed": "提交失败。请重试。"
+      "loadFailed": "无法加载申请，请重试。",
+      "submitFailed": "提交失败。请重试。",
+      "authRequired": "请登录以继续商家入驻。",
+      "permissionDenied": "此账户尚未设置为商家。",
+      "notFound": "未找到您的商家申请。",
+      "retryHint": "请检查网络后重试。"
     },
     "loading": "加载中…"
   },
@@ -391,7 +402,11 @@
       "product_not_found": "未找到产品",
       "product_not_active": "此产品暂时无法关联",
       "category_not_found": "未找到类别",
-      "invalid_tiers": "价格档位的数量必须递增，单价必须递减"
+      "invalid_tiers": "价格档位的数量必须递增，单价必须递减",
+      "authRequired": "请登录以管理商品。",
+      "permissionDenied": "您无权访问此商家目录。",
+      "notFound": "未找到该店铺商品。",
+      "retryHint": "请检查网络后重试。"
     },
     "import": {
       "meta": {
@@ -503,12 +518,20 @@
         "removed": "商品已删除。"
       },
       "errors": {
-        "loadFailed": "无法加载商品。下拉刷新。",
+        "loadFailed": "无法加载商品，请重试。",
         "saveFailed": "无法保存更改，请重试。",
         "stockNotTracked": "库存调整仅适用于跟踪库存的商品。",
         "stockQtyRequired": "请为跟踪库存的商品输入库存数量。",
         "returnWindowRequired": "启用退货时，请输入退货窗口期。"
-      }
+      },
+      "emptyTitle": "暂无商品",
+      "statusLabel": "状态"
+    },
+    "kycGate": {
+      "title": "认证仍在进行",
+      "body": "在 KYC 获批并有可审计记录之前，商品可能保持受限。没有审计轨迹绝不会显示已认证徽章。",
+      "cta": "查看认证状态",
+      "wholesaleLocked": "批发价需在可审计的 T2 认证后解锁。"
     }
   },
   "profile": {
@@ -605,7 +628,7 @@
       "saved": "资料已保存。更改将在一分钟内显示在您的公开页面上。"
     },
     "errors": {
-      "loadFailed": "无法加载您的资料。下拉刷新。",
+      "loadFailed": "无法加载资料，请重试。",
       "saveFailed": "无法保存您的资料。请重试。",
       "authRequired": "登录以编辑您的店铺资料。",
       "slug_locked": "您的店铺网址已被锁定。",
@@ -616,7 +639,10 @@
       "hours_invalid_day": "其中一个日期名称无效。",
       "hours_all_closed": "请至少将一天标记为营业。",
       "location_required": "设置营业时间前请先添加您的位置。",
-      "whatsapp_invalid": "请输入有效的赞比亚手机号码（例如：0977 123456）。"
+      "whatsapp_invalid": "请输入有效的赞比亚手机号码（例如：0977 123456）。",
+      "permissionDenied": "您无权访问此店面资料。",
+      "notFound": "未找到此账户的店面资料。",
+      "retryHint": "请检查网络后重试。"
     }
   },
   "orders": {
@@ -702,11 +728,13 @@
     "offlineNotice": "正在显示已保存的数据——请连接以刷新。",
     "takings": {
       "label": "今日收入",
-      "caption": "{date}（卢萨卡时间）的已确认收入"
+      "caption": "{date}（卢萨卡时间）的已确认收入",
+      "emptyCaption": "今日尚无确认收入 — 总额仅来自真实订单。"
     },
     "needsAction": {
       "heading": "需要处理",
-      "empty": "您已全部处理完毕——没有需要您处理的订单。"
+      "empty": "您已全部处理完毕——没有需要您处理的订单。",
+      "emptyTitle": "没有待办"
     },
     "actions": {
       "openQueue": "打开订单队列",
@@ -734,7 +762,20 @@
       "other": "零售"
     },
     "errors": {
-      "loadFailed": "无法加载您的仪表板。下拉刷新。"
+      "loadFailed": "无法加载看板，请重试。",
+      "authRequired": "请登录以查看商家首页。",
+      "permissionDenied": "您无权访问此商家看板。",
+      "retryHint": "请检查网络后重试。"
+    },
+    "kycBanner": {
+      "title": "完成认证",
+      "body": "在 KYC 获批并有可审计记录之前，店铺不会标记为已认证。",
+      "cta": "查看 KYC 状态"
+    },
+    "shortcuts": {
+      "ariaLabel": "快捷入口",
+      "listings": "目录",
+      "profile": "资料"
     }
   },
   "queue": {
@@ -1410,6 +1451,15 @@
       "loadFailed": "无法加载名单。下拉刷新。",
       "downloadFailed": "无法下载名单。请重试。",
       "unauthorized": "请以主办方身份登录以查看此名单。"
+    }
+  },
+  "shell": {
+    "nav": {
+      "ariaLabel": "商家导航",
+      "home": "首页",
+      "listings": "商品",
+      "orders": "订单",
+      "profile": "资料"
     }
   }
 }

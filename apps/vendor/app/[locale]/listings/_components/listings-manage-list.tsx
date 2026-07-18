@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
+import { VendorQuickNav } from "../../_components/vendor-quick-nav";
+import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { createManageClient, type ListingSummary } from "../[id]/edit/_lib/manage-client";
 import { Badge, Button, PriceBlock, Spinner } from "../new/_lib/ui";
 
@@ -16,13 +19,22 @@ function statusLabel(status: string, labels: Record<string, string>): string {
   return labels[status] ?? status;
 }
 
+function statusVariant(status: string): "free" | "sold_out" | "new" {
+  if (status === "active") return "free";
+  if (status === "paused") return "sold_out";
+  return "new";
+}
+
 export function ListingsManageList({ locale }: ListingsManageListProps) {
   const t = useTranslations("vendor");
+  const tCommon = useTranslations("common");
   const { session, loading: sessionLoading } = useSession();
   const [listings, setListings] = useState<ListingSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const manageClient = useMemo(() => createManageClient(getToken), [getToken]);
@@ -36,6 +48,24 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
     [t],
   );
 
+  const loadListings = useCallback(async () => {
+    if (!session) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setErrorKey(null);
+    try {
+      const rows = await manageClient.listListings();
+      setListings(rows);
+    } catch (caught) {
+      setListings([]);
+      setErrorKey(vendorErrorMessageKey(caught, "listingsManage"));
+    } finally {
+      setLoading(false);
+    }
+  }, [manageClient, session]);
+
   useEffect(() => {
     if (sessionLoading) {
       return;
@@ -44,42 +74,19 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
       setLoading(false);
       return;
     }
-
-    let cancelled = false;
-    setLoading(true);
-    manageClient
-      .listListings()
-      .then((rows) => {
-        if (!cancelled) {
-          setListings(rows);
-          setError(null);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setError(t("listings.manage.errors.loadFailed"));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [manageClient, session, sessionLoading, t]);
+    void loadListings();
+  }, [loadListings, reloadKey, session, sessionLoading]);
 
   const handleStockAdjust = async (listingId: string, delta: number) => {
     setAdjustingId(listingId);
+    setActionError(null);
     try {
       const response = await manageClient.adjustStock(listingId, delta);
       setListings((current) =>
         current.map((listing) => (listing.id === listingId ? response.listing : listing)),
       );
     } catch {
-      setError(t("listings.manage.errors.saveFailed"));
+      setActionError(t("listings.manage.errors.saveFailed"));
     } finally {
       setAdjustingId(null);
     }
@@ -93,36 +100,80 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
     );
   }
 
+  if (!session) {
+    return (
+      <VendorErrorState
+        title={t("listings.errors.authRequired")}
+        retryLabel={tCommon("common.retry")}
+      />
+    );
+  }
+
+  if (errorKey) {
+    return (
+      <VendorErrorState
+        title={t(errorKey as "listings.manage.errors.loadFailed")}
+        body={t("listings.errors.retryHint")}
+        retryLabel={tCommon("common.retry")}
+        onRetry={() => setReloadKey((value) => value + 1)}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      <header className="space-y-1">
+      <VendorQuickNav locale={locale} active="listings" />
+
+      <header className="space-y-1 px-1">
         <h1 className="text-xl font-semibold text-text">{t("listings.manage.title")}</h1>
         <p className="text-sm text-text-2">{t("listings.manage.intro")}</p>
       </header>
 
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {actionError ? (
+        <p className="px-1 text-sm text-danger" role="alert">
+          {actionError}
+        </p>
+      ) : null}
+
+      <div className="px-1">
+        <Link
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-surface"
+          href={`/${locale}/listings/new`}
+        >
+          {t("listings.manage.createCta")}
+        </Link>
+      </div>
 
       {listings.length === 0 ? (
-        <div className="rounded-lg border border-border p-4 text-sm text-text-2">
-          <p>{t("listings.manage.empty")}</p>
-          <Link
-            className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-primary"
-            href={`/${locale}/listings/new`}
-          >
-            {t("listings.manage.createCta")}
-          </Link>
-        </div>
+        <VendorEmptyState
+          title={t("listings.manage.emptyTitle")}
+          body={t("listings.manage.empty")}
+          action={
+            <Link
+              className="inline-flex min-h-11 items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-primary"
+              href={`/${locale}/listings/new`}
+            >
+              {t("listings.manage.createCta")}
+            </Link>
+          }
+        />
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col gap-3 px-1">
           {listings.map((listing) => (
             <li key={listing.id} className="rounded-lg border border-border p-3 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
                   <p className="truncate text-sm font-medium text-text">{listing.title}</p>
                   <PriceBlock ngwee={listing.price_ngwee} />
+                  <p className="text-xs text-text-2">
+                    <span className="sr-only">{t("listings.manage.statusLabel")}</span>
+                    <span className="font-medium text-text">
+                      {statusLabel(listing.status, statusLabels)}
+                    </span>
+                  </p>
                 </div>
                 <Badge
-                  variant={listing.status === "active" ? "free" : "sold_out"}
+                  variant={statusVariant(listing.status)}
                   label={statusLabel(listing.status, statusLabels)}
                 />
               </div>

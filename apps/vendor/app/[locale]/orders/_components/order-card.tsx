@@ -7,9 +7,15 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
+import { VendorQuickNav } from "../../_components/vendor-quick-nav";
+import { isAuditableApproved } from "../../_lib/kyc-integrity";
+import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { Badge, Button, FormField, Input, PriceBlock, Spinner } from "../../listings/new/_lib/ui";
+import { createKycClient } from "../../onboarding/_lib/kyc-client";
 
 import type { OrderActionResponse, VendorActionName } from "./action-bar";
+import type { KycApplication } from "../../onboarding/_lib/types";
 
 export type OrderQueueItem = {
   id: string;
@@ -529,23 +535,32 @@ type VendorHomeViewProps = {
 
 export function VendorHomeView({ locale }: VendorHomeViewProps) {
   const t = useTranslations("vendor");
+  const tCommon = useTranslations("common");
   const { session, loading: sessionLoading } = useSession();
   const [dashboard, setDashboard] = useState<VendorDashboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
+  const [kycApp, setKycApp] = useState<KycApplication | null>(null);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const queueClient = useMemo(() => createOrdersQueueClient(getToken), [getToken]);
+  const kycClient = useMemo(() => createKycClient(getToken), [getToken]);
 
   const load = useCallback(async () => {
     if (!session) {
       return;
     }
     setLoading(true);
+    setErrorKey(null);
     try {
-      const data = await queueClient.getDashboard();
+      const [data, kyc] = await Promise.all([
+        queueClient.getDashboard(),
+        kycClient.getApplication().catch(() => null),
+      ]);
       setDashboard(data);
+      setKycApp(kyc);
       setError(null);
       setOffline(false);
       writeQueueCache({
@@ -553,19 +568,21 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
         dashboard: data,
         queue: data.needs_action,
       });
-    } catch {
+    } catch (caught) {
       const cached = readQueueCache();
       if (cached?.dashboard) {
         setDashboard(cached.dashboard);
         setOffline(true);
         setError(null);
+        setErrorKey(null);
       } else {
-        setError(t("home.errors.loadFailed"));
+        setErrorKey(vendorErrorMessageKey(caught, "home"));
+        setError(null);
       }
     } finally {
       setLoading(false);
     }
-  }, [queueClient, session, t]);
+  }, [kycClient, queueClient, session]);
 
   useEffect(() => {
     const cached = readQueueCache();
@@ -593,7 +610,37 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
     );
   }
 
+  if (!session) {
+    return (
+      <VendorErrorState
+        title={t("home.errors.authRequired")}
+        retryLabel={tCommon("common.retry")}
+      />
+    );
+  }
+
+  if (errorKey && !dashboard) {
+    return (
+      <VendorErrorState
+        title={t(errorKey as "home.errors.loadFailed")}
+        body={t("home.errors.retryHint")}
+        retryLabel={tCommon("common.retry")}
+        onRetry={() => void load()}
+      />
+    );
+  }
+
   const needsCount = dashboard?.queue_counts.needs_action ?? 0;
+  const takings = dashboard?.takings_ngwee ?? 0;
+
+  const kycApproved = kycApp
+    ? isAuditableApproved({
+        kyc_tier: kycApp.kyc_tier,
+        kyc_status: kycApp.kyc_status,
+        kyc_record_id: kycApp.kyc_record_id,
+        kyc_record_status: kycApp.kyc_record_status,
+      })
+    : false;
 
   // Archetype-driven guidance: the persisted onboarding business type (migration
   // 0038) tailors the vendor's primary workflow — service providers manage
@@ -626,7 +673,9 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
 
   return (
     <div className="flex flex-col gap-5 pb-8">
-      <header className="space-y-1">
+      <VendorQuickNav locale={locale} active="home" />
+
+      <header className="space-y-1 px-1">
         <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
           {t("home.eyebrow")}
         </p>
@@ -634,19 +683,39 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
       </header>
 
       {offline ? (
-        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
           {t("home.offlineNotice")}
         </p>
       ) : null}
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-red-700" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      {kycApp && !kycApproved ? (
+        <section
+          className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+          role="status"
+        >
+          <p className="font-medium">{t("home.kycBanner.title")}</p>
+          <p className="mt-1">{t("home.kycBanner.body")}</p>
+          <Link
+            className="mt-2 inline-flex min-h-11 items-center font-medium text-primary underline"
+            href={`/${locale}/onboarding/status`}
+          >
+            {t("home.kycBanner.cta")}
+          </Link>
+        </section>
+      ) : null}
 
       <section className="rounded-2xl bg-neutral-900 p-4 text-white">
         <p className="text-sm text-neutral-200">{t("home.takings.label")}</p>
-        <p className="mt-1 font-mono text-3xl font-semibold tracking-tight">
-          {formatK(dashboard?.takings_ngwee ?? 0)}
-        </p>
+        <p className="mt-1 font-mono text-3xl font-semibold tracking-tight">{formatK(takings)}</p>
         <p className="mt-1 text-xs text-neutral-300">
-          {t("home.takings.caption", { date: dashboard?.takings_date ?? "—" })}
+          {takings === 0
+            ? t("home.takings.emptyCaption")
+            : t("home.takings.caption", { date: dashboard?.takings_date ?? "—" })}
         </p>
       </section>
 
@@ -685,6 +754,21 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
         </section>
       ) : null}
 
+      <section className="grid grid-cols-2 gap-2 px-1" aria-label={t("home.shortcuts.ariaLabel")}>
+        <Link
+          className="inline-flex min-h-12 items-center justify-center rounded-xl border border-neutral-300 px-3 text-sm font-medium text-neutral-900"
+          href={`/${locale}/listings`}
+        >
+          {t("home.shortcuts.listings")}
+        </Link>
+        <Link
+          className="inline-flex min-h-12 items-center justify-center rounded-xl border border-neutral-300 px-3 text-sm font-medium text-neutral-900"
+          href={`/${locale}/profile`}
+        >
+          {t("home.shortcuts.profile")}
+        </Link>
+      </section>
+
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-neutral-900">
@@ -698,9 +782,10 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
         </div>
 
         {!dashboard || dashboard.needs_action.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-neutral-300 p-4 text-sm text-neutral-600">
-            {t("home.needsAction.empty")}
-          </p>
+          <VendorEmptyState
+            title={t("home.needsAction.emptyTitle")}
+            body={t("home.needsAction.empty")}
+          />
         ) : (
           <ul className="flex flex-col gap-3">
             {dashboard.needs_action.map((order) => (
