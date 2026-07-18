@@ -67,12 +67,18 @@ jobs:
 
       - name: Reset local database (with seed)
         run: |
-          for attempt in 1 2 3; do
+          # supabase db reset occasionally 502s while restarting containers after
+          # migrations (CLI flake). Bounce the stack between attempts instead of
+          # only sleeping — a bare retry against a wedged Kong/PostgREST keeps failing.
+          for attempt in 1 2 3 4 5; do
             if supabase db reset; then
               exit 0
             fi
-            echo "supabase db reset attempt ${attempt} failed; retrying in 20s..."
-            sleep 20
+            echo "supabase db reset attempt ${attempt} failed; bouncing local stack..."
+            supabase stop --no-backup || true
+            sleep 10
+            supabase start -x edge-runtime
+            sleep 15
           done
           exit 1
 
