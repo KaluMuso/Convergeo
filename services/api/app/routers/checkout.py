@@ -10,6 +10,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.cart.events import emit_checkout_start
 from app.services.cart.grouping import CartLineView, group_by_vendor
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
@@ -520,6 +521,17 @@ async def create_checkout_session(
     profile = _extract_data(profile_response)
     profile_dict = profile if isinstance(profile, dict) else {}
     contact_skipped = bool(profile_dict.get("phone"))
+
+    # Fire-and-forget funnel event (checkout_start); server operational, consent-independent.
+    # Idempotent per (checkout_group_id, stage); snapshot.lines feeds vendor view attribution.
+    emit_checkout_start(
+        checkout_group_id=session_id,
+        customer_id=current_user.id,
+        snapshot={
+            "lines": [{"listing_id": line.listing_id, "qty": line.qty} for line in line_views],
+            "total_ngwee": subtotal,
+        },
+    )
 
     return CheckoutSessionResponse(
         session_id=session_id,

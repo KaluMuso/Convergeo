@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import logging
+from collections import Counter
 from collections.abc import Awaitable, Callable
 from typing import Any, cast
 
 from app.schemas.base import NgweeInt, StrictModel
+from app.services.analytics.search_log import log_search_query
 from app.services.search.embedding_client import fetch_query_embedding, format_vector_for_rpc
 from app.services.search.query_builder import (
     DEFAULT_PAGE,
@@ -148,6 +150,7 @@ async def run_search(
     page_size: int = DEFAULT_PAGE_SIZE,
     embedding_fetcher: EmbeddingFetcher | None = None,
     include_wholesale: bool = False,
+    user_id: str | None = None,
 ) -> SearchResponse:
     trimmed = query.strip()
     expanded_query = expand_query(client, trimmed)
@@ -179,6 +182,16 @@ async def run_search(
     if not include_wholesale:
         hits = drop_wholesale_listing_hits(client, hits)
     page_items, total = paginate(hits, page=page, page_size=page_size)
+
+    if trimmed:
+        # Fire-and-forget analytics: server operational log, written regardless of
+        # consent, anonymized (normalized term only). Never breaks the search.
+        log_search_query(
+            term=trimmed,
+            entity_counts=dict(Counter(hit.entity_kind for hit in hits)),
+            zero_result=total == 0,
+            user_id=user_id,
+        )
 
     if total == 0 and trimmed:
         log_zero_result(query=trimmed, filters=filters, kind=kind)

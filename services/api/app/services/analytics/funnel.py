@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -11,6 +12,8 @@ from uuid import UUID
 
 from app.services.notifications.dedupe import build_dedupe_key
 from app.services.stock.claim import run_sql_script, sql_uuid
+
+logger = logging.getLogger(__name__)
 
 FunnelStage = Literal[
     "cart_add",
@@ -166,6 +169,31 @@ RETURNING id::text, stage, created_at::text;
     if len(parts) < 3:
         return None
     return {"id": parts[0], "stage": parts[1], "created_at": parts[2]}
+
+
+def record_event_best_effort(
+    *,
+    stage: FunnelStage,
+    checkout_group_id: str | None,
+    snapshot: dict[str, Any],
+    customer_id: str | None = None,
+) -> dict[str, Any] | None:
+    """Fire-and-forget ``record_event``: swallow every error so a funnel emit on a
+    live request path (cart/checkout/payment/order) can never break that request.
+
+    Returns the inserted row, or ``None`` when the stage was already recorded OR the
+    write failed. Server operational analytics — written regardless of consent.
+    """
+    try:
+        return record_event(
+            stage=stage,
+            checkout_group_id=checkout_group_id,
+            snapshot=snapshot,
+            customer_id=customer_id,
+        )
+    except Exception:  # noqa: BLE001 — analytics must never break the caller.
+        logger.debug("funnel emit swallowed for stage=%s", stage, exc_info=True)
+        return None
 
 
 def _fetch_abandon_candidates() -> list[str]:
