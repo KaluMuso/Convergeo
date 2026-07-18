@@ -9,6 +9,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from typing import Any, Protocol, cast
 
 import httpx
+from app.services.escrow.release_accounting import build_release_accounting_day_totals
 from app.services.ledger.engine import account_balance_ngwee, resolve_account_id
 from app.services.ledger.templates import AccountRef
 from app.services.orders.audit import run_sql_script, sql_literal
@@ -610,6 +611,9 @@ async def run_daily_reconciliation_report(
         ledger_rows=ledger_rows,
     )
 
+    release_accounting = build_release_accounting_day_totals(
+        report_date=target_date.isoformat()
+    )
     summary: dict[str, Any] = {
         "report_date": target_date.isoformat(),
         "lenco_balance_ngwee": lenco_account.available_balance_ngwee,
@@ -618,6 +622,14 @@ async def run_daily_reconciliation_report(
         "lenco_transaction_count": len(lenco_rows),
         "ledger_transaction_count": len(ledger_rows),
         "clean": not diff.has_discrepancies,
+        # Escrow release accounting (gross / commission / net) — integer ngwee.
+        # commission + vendor_released should equal gross for fully settled orders
+        # on the day (refunds excluded from these three totals).
+        "release_gross_collected_ngwee": release_accounting["gross_collected_ngwee"],
+        "release_commission_captured_ngwee": release_accounting[
+            "commission_captured_ngwee"
+        ],
+        "release_vendor_net_ngwee": release_accounting["vendor_released_ngwee"],
     }
 
     discrepancies: dict[str, Any] = {

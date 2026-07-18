@@ -3,10 +3,10 @@
 Accounting policy (collection vs release):
 - **At collection (this module):** post ``CHARGE_RECEIVED`` — debit ``platform_cash``,
   credit ``escrow`` for the gross payment amount, exactly once per ``payment_id``.
-- **At escrow release (not implemented here):** ``capture_order_commission`` must post
-  ``COMMISSION_CAPTURE`` before ``RELEASE_TO_VENDOR`` net payout. Prepaid release
-  currently computes net in ``escrow/release.py`` but does not yet post commission
-  ledger legs; that gap is tracked as a follow-up dependency on this slice.
+- **At escrow release (product / service / event / COD paths):** capture commission
+  from the purchase-time ``commission_snapshot`` via ``COMMISSION_CAPTURE`` *before*
+  ``RELEASE_TO_VENDOR`` (net). See ``escrow/release.py``, ``escrow/event_release.py``,
+  ``routers/job_completion.py``, and ``payments/cod.py``.
 """
 
 from __future__ import annotations

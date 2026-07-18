@@ -20,14 +20,20 @@ from app.services.escrow.event_release import (
     _EventOrderContext,
     determine_branch,
     evaluate_event_release,
+    event_commission_idempotency_prefix,
     full_release_key,
     phase1_release_key,
     phase2_release_key,
     sweep_event_releases,
 )
 from app.services.escrow.release import release_idempotency_key
-from app.services.ledger.engine import post_transaction
-from app.services.ledger.templates import LedgerTemplate, commission_ngwee_from_bps
+from app.services.escrow.release_accounting import summarize_order_release_ledger
+from app.services.ledger.engine import (
+    account_balance_ngwee,
+    post_transaction,
+    resolve_account_id,
+)
+from app.services.ledger.templates import AccountRef, LedgerTemplate, commission_ngwee_from_bps
 from fastapi.testclient import TestClient
 from tests.rls.conftest import (
     PgConn,
@@ -272,18 +278,24 @@ def _insert_ticket(
     status: str = "issued",
 ) -> None:
     checked_in_sql = "timezone('utc', now())" if status == "checked_in" else "NULL"
-    conn.run(
+    # Ticket rows are guarded against client inserts; seed with service_role JWT.
+    result = conn.run_script(
         f"""
-        INSERT INTO public.tickets (
-          id, instance_id, ticket_type_id, holder_user_id, order_item_id, status, checked_in_at
-        ) VALUES (
-          '{ticket_id}', '{instance_id}', '{ticket_type_id}', '{holder_user_id}',
-          '{order_item_id}', '{status}', {checked_in_sql}
-        )
-        ON CONFLICT (id) DO UPDATE
-          SET status = EXCLUDED.status, checked_in_at = EXCLUDED.checked_in_at;
-        """
+BEGIN;
+SELECT set_config('request.jwt.claims', '{{"role":"service_role"}}', true);
+INSERT INTO public.tickets (
+  id, instance_id, ticket_type_id, holder_user_id, order_item_id, status, checked_in_at
+) VALUES (
+  '{ticket_id}', '{instance_id}', '{ticket_type_id}', '{holder_user_id}',
+  '{order_item_id}', '{status}', {checked_in_sql}
+)
+ON CONFLICT (id) DO UPDATE
+  SET status = EXCLUDED.status, checked_in_at = EXCLUDED.checked_in_at;
+COMMIT;
+"""
     )
+    if not result.ok:
+        raise RuntimeError(f"ticket seed failed: {result.error}")
 
 
 def _insert_dispute(conn: PgConn, *, order_id: str, status: str = "open") -> None:
@@ -713,7 +725,10 @@ class TestOrganiserStats:
         assert release_result.outcome == "released"
 
         escrow = _load_escrow_split(event_id)
-        expected_pending = COMMISSION_NGEWEE + 2 * UNIT_PRICE_NGWEE
+        # After commission capture + net release, the released order leaves escrow
+        # entirely (commission → commission_revenue, net → vendor_payable). The
+        # other two unpaid-to-vendor holds remain as pending gross.
+        expected_pending = 2 * UNIT_PRICE_NGWEE
         expected_released = NET_NGEWEE
         assert escrow == EscrowSplit(
             pending_ngwee=expected_pending, released_ngwee=expected_released
@@ -808,6 +823,144 @@ class TestOrganiserStatsAuthz:
             }
 
 
+class TestEventCommissionCapture:
+    """Event release must capture commission from the purchase-time snapshot first."""
+
+    def test_full_release_captures_commission_and_zeroes_escrow(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        event_id = str(uuid.uuid4())
+        instance_id = str(uuid.uuid4())
+        type_id = str(uuid.uuid4())
+        order_id = str(uuid.uuid4())
+        group_id = str(uuid.uuid4())
+        starts_at = datetime(2026, 8, 10, 18, 0, tzinfo=UTC)
+        purchased_at = starts_at - timedelta(days=5)
+
+        _insert_event(db, event_id=event_id, organiser_vendor_id=VENDOR_A)
+        _insert_instance(db, instance_id=instance_id, event_id=event_id, starts_at=starts_at)
+        _insert_ticket_type(db, type_id=type_id, event_id=event_id)
+        _insert_ticket_order(
+            db,
+            order_id=order_id,
+            group_id=group_id,
+            item_id=str(uuid.uuid4()),
+            instance_id=instance_id,
+            ticket_type_id=type_id,
+            created_at=purchased_at,
+        )
+        escrow_id = resolve_account_id(AccountRef("escrow"))
+        escrow_before_charge = account_balance_ngwee(escrow_id)
+        post_transaction(
+            idempotency_key=f"prepaid-charge-{order_id}",
+            template=LedgerTemplate.CHARGE_RECEIVED,
+            order_id=order_id,
+            checkout_group_id=group_id,
+            gross_ngwee=UNIT_PRICE_NGWEE,
+        )
+
+        due = starts_at + timedelta(hours=24)
+        result = evaluate_event_release(_SERVICE, order_id, now=due)
+        assert result.outcome == "released"
+        assert result.net_ngwee == NET_NGEWEE
+        assert _txn_count(db, full_release_key(order_id)) == 1
+
+        prefix = f"{event_commission_idempotency_prefix(order_id)}-commission-"
+        capture_count = db.run(
+            f"""
+            SELECT count(*)::text FROM public.ledger_transactions
+            WHERE kind = 'commission_capture' AND idempotency_key LIKE '{prefix}%';
+            """
+        )
+        assert capture_count.ok and capture_count.rows
+        assert int(capture_count.rows[0]) == 1
+        # charge → capture → release must return escrow to the pre-charge baseline.
+        assert account_balance_ngwee(escrow_id) == escrow_before_charge
+
+        summary = summarize_order_release_ledger(order_id)
+        assert summary.charge_received_ngwee == UNIT_PRICE_NGWEE
+        assert summary.commission_captured_ngwee == COMMISSION_NGEWEE
+        assert summary.vendor_released_ngwee == NET_NGEWEE
+        assert summary.balanced is True
+
+        # Retry is idempotent — one capture, one release.
+        again = evaluate_event_release(_SERVICE, order_id, now=due + timedelta(days=1))
+        assert again.outcome == "already_released"
+        capture_again = db.run(
+            f"""
+            SELECT count(*)::text FROM public.ledger_transactions
+            WHERE kind = 'commission_capture' AND idempotency_key LIKE '{prefix}%';
+            """
+        )
+        assert int(capture_again.rows[0]) == 1
+        assert _txn_count(db, full_release_key(order_id)) == 1
+
+    def test_phased_release_captures_commission_once_before_phase1(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        event_id = str(uuid.uuid4())
+        instance_id = str(uuid.uuid4())
+        type_id = str(uuid.uuid4())
+        order_id = str(uuid.uuid4())
+        starts_at = datetime(2026, 9, 1, 12, 0, tzinfo=UTC)
+        purchased_at = starts_at - timedelta(days=20)
+
+        _insert_event(db, event_id=event_id, organiser_vendor_id=VENDOR_A)
+        _insert_instance(db, instance_id=instance_id, event_id=event_id, starts_at=starts_at)
+        _insert_ticket_type(db, type_id=type_id, event_id=event_id)
+        _insert_ticket_order(
+            db,
+            order_id=order_id,
+            group_id=str(uuid.uuid4()),
+            item_id=str(uuid.uuid4()),
+            instance_id=instance_id,
+            ticket_type_id=type_id,
+            created_at=purchased_at,
+        )
+        post_transaction(
+            idempotency_key=f"prepaid-charge-{order_id}",
+            template=LedgerTemplate.CHARGE_RECEIVED,
+            order_id=order_id,
+            gross_ngwee=UNIT_PRICE_NGWEE,
+        )
+
+        phase1_due = starts_at - timedelta(days=PHASE1_LEAD_DAYS)
+        phase1 = evaluate_event_release(_SERVICE, order_id, now=phase1_due)
+        assert phase1.outcome == "released"
+        assert phase1.phases_posted == ("phase1",)
+
+        prefix = f"{event_commission_idempotency_prefix(order_id)}-commission-"
+        after_phase1 = int(
+            db.run(
+                f"""
+                SELECT count(*)::text FROM public.ledger_transactions
+                WHERE kind = 'commission_capture' AND idempotency_key LIKE '{prefix}%';
+                """
+            ).rows[0]
+        )
+        assert after_phase1 == 1
+
+        phase2_due = starts_at + timedelta(days=1)
+        phase2 = evaluate_event_release(_SERVICE, order_id, now=phase2_due)
+        assert phase2.outcome == "released"
+        assert phase2.phases_posted == ("phase2",)
+
+        after_phase2 = int(
+            db.run(
+                f"""
+                SELECT count(*)::text FROM public.ledger_transactions
+                WHERE kind = 'commission_capture' AND idempotency_key LIKE '{prefix}%';
+                """
+            ).rows[0]
+        )
+        assert after_phase2 == 1
+
+        summary = summarize_order_release_ledger(order_id)
+        assert summary.commission_captured_ngwee == COMMISSION_NGEWEE
+        assert summary.vendor_released_ngwee == NET_NGEWEE
+        assert summary.balanced is True
+
+
 # ---------------------------------------------------------------------------
 # End-anchored release timing (0035 ends_at) — DB-free unit tests.
 #
@@ -855,6 +1008,8 @@ def test_full_release_anchors_on_ends_at_not_starts_at() -> None:
     with (
         patch(f"{_EVR}._load_event_order_context", return_value=ctx),
         patch(f"{_EVR}._posted_release_keys", return_value=set()),
+        patch(f"{_EVR}.order_is_refund_blocked", return_value=False),
+        patch(f"{_EVR}.capture_order_commission") as capture,
         patch(f"{_EVR}._post_event_release", return_value="txn-unit") as post,
     ):
         # starts_at + 24h was the OLD due time; the event has not ended yet.
@@ -864,14 +1019,16 @@ def test_full_release_anchors_on_ends_at_not_starts_at() -> None:
         assert early.outcome == "not_eligible"
         assert early.reason == "timers_not_met"
         post.assert_not_called()
+        capture.assert_not_called()
 
-        # 24h after the real END -> release fires.
+        # 24h after the real END -> release fires (commission capture first).
         due = evaluate_event_release(
             _SERVICE, ctx.order_id, now=ends_at + timedelta(hours=FULL_RELEASE_DELAY_HOURS)
         )
         assert due.outcome == "released"
         assert due.branch == "full"
         assert due.phases_posted == ("full",)
+        capture.assert_called_once()
         post.assert_called_once()
 
 
@@ -883,6 +1040,8 @@ def test_legacy_null_ends_at_keeps_starts_at_anchor() -> None:
     with (
         patch(f"{_EVR}._load_event_order_context", return_value=ctx),
         patch(f"{_EVR}._posted_release_keys", return_value=set()),
+        patch(f"{_EVR}.order_is_refund_blocked", return_value=False),
+        patch(f"{_EVR}.capture_order_commission"),
         patch(f"{_EVR}._post_event_release", return_value="txn-unit") as post,
     ):
         due = evaluate_event_release(
@@ -904,6 +1063,8 @@ def test_phased_final_release_anchors_on_ends_at() -> None:
     with (
         patch(f"{_EVR}._load_event_order_context", return_value=ctx),
         patch(f"{_EVR}._posted_release_keys", return_value=posted),
+        patch(f"{_EVR}.order_is_refund_blocked", return_value=False),
+        patch(f"{_EVR}.capture_order_commission") as capture,
         patch(f"{_EVR}._post_event_release", return_value="txn-unit") as post,
     ):
         # starts_at + 1d was the OLD phase-2 due time; event still running.
@@ -912,12 +1073,14 @@ def test_phased_final_release_anchors_on_ends_at() -> None:
         )
         assert early.outcome == "not_eligible"
         post.assert_not_called()
+        capture.assert_not_called()
 
-        # 1 day after the real END -> phase 2 fires.
+        # 1 day after the real END -> phase 2 fires (capture still runs; idempotent).
         due = evaluate_event_release(
             _SERVICE, ctx.order_id, now=ends_at + timedelta(days=PHASE2_DELAY_DAYS)
         )
         assert due.outcome == "released"
         assert due.branch == "phased"
         assert due.phases_posted == ("phase2",)
+        capture.assert_called_once()
         post.assert_called_once()

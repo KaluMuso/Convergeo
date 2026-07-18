@@ -21,8 +21,10 @@ longer release mid-event:
 MONEY SEAM: idempotency keys here (``event-release-{order_id}-full`` /
 ``-phase1`` / ``-phase2``) are deliberately distinct from release.py's
 ``release-{order_id}`` so this path can never collide with or double-post
-against the order-delivery release engine. Reuses ``post_transaction`` +
-``LedgerTemplate.RELEASE_TO_VENDOR`` — the sole ledger write path.
+against the order-delivery release engine. Commission capture uses
+``event-release-{order_id}-commission-*`` (once per order, before the first
+phase). Reuses ``post_transaction`` + ``LedgerTemplate.RELEASE_TO_VENDOR`` /
+``COMMISSION_CAPTURE`` — the sole ledger write path.
 """
 
 from __future__ import annotations
@@ -32,7 +34,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, Protocol
 
-from app.services.escrow.release import OPEN_DISPUTE_STATUSES, compute_net_ngwee
+from app.services.commissions.engine import capture_order_commission
+from app.services.escrow.release import OPEN_DISPUTE_STATUSES
+from app.services.escrow.release_accounting import (
+    ReleaseAccountingError,
+    compute_release_amounts,
+    order_is_refund_blocked,
+)
 from app.services.events.timing import instance_settlement_end
 from app.services.events.type_policy import policy_for
 from app.services.ledger.engine import post_transaction
@@ -107,6 +115,11 @@ def phase1_release_key(order_id: str) -> str:
 
 def phase2_release_key(order_id: str) -> str:
     return f"event-release-{order_id}-phase2"
+
+
+def event_commission_idempotency_prefix(order_id: str) -> str:
+    """Exactly-once commission capture key prefix for ticket orders (≠ release keys)."""
+    return f"event-release-{order_id}"
 
 
 def _sql_uuid(value: str, field: str) -> str:
@@ -372,10 +385,26 @@ def evaluate_event_release(
     if not context.is_paid:
         return EventReleaseResult(order_id=order_id, outcome="not_eligible", reason="unpaid")
 
-    net_ngwee = compute_net_ngwee(
-        gross_ngwee=context.gross_ngwee,
-        commission_snapshot=context.commission_snapshot,
-    )
+    # Ticket cancellation is gated via event.status below; refunds still block release.
+    if order_is_refund_blocked(order_id):
+        return EventReleaseResult(
+            order_id=order_id, outcome="not_eligible", reason="order_refunded"
+        )
+
+    try:
+        amounts = compute_release_amounts(
+            order_id=order_id,
+            gross_ngwee=context.gross_ngwee,
+            commission_snapshot=context.commission_snapshot,
+        )
+    except ReleaseAccountingError:
+        return EventReleaseResult(
+            order_id=order_id,
+            outcome="not_eligible",
+            reason="invalid_commission_snapshot",
+        )
+
+    net_ngwee = amounts.net_ngwee
     if net_ngwee <= 0:
         return EventReleaseResult(
             order_id=order_id, outcome="not_eligible", reason="zero_net_amount"
@@ -417,9 +446,10 @@ def evaluate_event_release(
             order_id=order_id, outcome="held", reason="dispute_open", branch=branch
         )
 
-    phases_posted: list[str] = []
-    transaction_ids: list[str] = []
-    total_net = 0
+    # Decide which phases are due *before* capturing commission so we never
+    # capture on a timers_not_met tick. Capture runs at most once (idempotent
+    # prefix) immediately before the first RELEASE_TO_VENDOR for the order.
+    phases_due: list[tuple[str, int, str]] = []
 
     # Post-event releases anchor on the instance's end (ends_at, or starts_at for
     # legacy rows). The pre-event phase-1 partial stays anchored on starts_at.
@@ -429,15 +459,7 @@ def evaluate_event_release(
         due_at = settlement_end + timedelta(hours=FULL_RELEASE_DELAY_HOURS)
         key = full_release_key(order_id)
         if key not in posted_keys and effective_now >= due_at:
-            txn_id = _post_event_release(
-                order_id=order_id,
-                vendor_id=context.vendor_id,
-                net_ngwee=net_ngwee,
-                idempotency_key=key,
-            )
-            phases_posted.append("full")
-            transaction_ids.append(txn_id)
-            total_net += net_ngwee
+            phases_due.append(("full", net_ngwee, key))
     else:
         # Integer-exact halves: floor(net/2) + remainder == net, no ngwee lost to rounding.
         phase1_amount = net_ngwee // 2
@@ -448,31 +470,37 @@ def evaluate_event_release(
         phase2_key = phase2_release_key(order_id)
 
         if phase1_key not in posted_keys and effective_now >= phase1_due and phase1_amount > 0:
-            txn_id = _post_event_release(
-                order_id=order_id,
-                vendor_id=context.vendor_id,
-                net_ngwee=phase1_amount,
-                idempotency_key=phase1_key,
-            )
-            phases_posted.append("phase1")
-            transaction_ids.append(txn_id)
-            total_net += phase1_amount
+            phases_due.append(("phase1", phase1_amount, phase1_key))
 
         if phase2_key not in posted_keys and effective_now >= phase2_due and phase2_amount > 0:
-            txn_id = _post_event_release(
-                order_id=order_id,
-                vendor_id=context.vendor_id,
-                net_ngwee=phase2_amount,
-                idempotency_key=phase2_key,
-            )
-            phases_posted.append("phase2")
-            transaction_ids.append(txn_id)
-            total_net += phase2_amount
+            phases_due.append(("phase2", phase2_amount, phase2_key))
 
-    if not phases_posted:
+    if not phases_due:
         return EventReleaseResult(
             order_id=order_id, outcome="not_eligible", reason="timers_not_met", branch=branch
         )
+
+    # Capture commission from purchase-time snapshot BEFORE any vendor release.
+    # Phased releases still capture once (full commission) before phase1/phase2.
+    capture_order_commission(
+        order_id=order_id,
+        commission_snapshot=context.commission_snapshot,
+        idempotency_key_prefix=event_commission_idempotency_prefix(order_id),
+    )
+
+    phases_posted: list[str] = []
+    transaction_ids: list[str] = []
+    total_net = 0
+    for phase_name, amount, key in phases_due:
+        txn_id = _post_event_release(
+            order_id=order_id,
+            vendor_id=context.vendor_id,
+            net_ngwee=amount,
+            idempotency_key=key,
+        )
+        phases_posted.append(phase_name)
+        transaction_ids.append(txn_id)
+        total_net += amount
 
     return EventReleaseResult(
         order_id=order_id,
