@@ -8,6 +8,11 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, Protocol
 
 from app.services.commissions.engine import capture_order_commission, compute_order_commission
+from app.services.escrow.release_accounting import (
+    ReleaseAccountingError,
+    compute_release_amounts,
+    release_blocked_reason,
+)
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.orders.audit import run_sql_script, sql_literal
@@ -197,6 +202,8 @@ WHERE order_id = {order_sql}
 
 def compute_net_ngwee(*, gross_ngwee: int, commission_snapshot: dict[str, Any]) -> int:
     """Order gross minus purchase-time snapshot commission (integer-exact)."""
+    # Keep the historical signature for callers; validation of snapshot completeness
+    # happens at release time via ``compute_release_amounts``.
     commission = compute_order_commission(commission_snapshot)
     net = gross_ngwee - commission.commission_ngwee
     if net < 0:
@@ -288,7 +295,8 @@ LIMIT 1;
         order_id=order_id,
         status=status,
         vendor_id=vendor_id,
-        cod=cod_raw == "t",
+        # psql -At renders boolean::text as 'true'/'false' (not 't'/'f').
+        cod=cod_raw.lower() in {"t", "true", "1"},
         commission_snapshot=commission_snapshot,
         gross_ngwee=_order_gross_ngwee(order_id, delivery_fee_ngwee),
         has_open_dispute=_has_open_dispute(order_id),
@@ -339,6 +347,23 @@ def evaluate_and_release(
         DEFAULT_RELEASE_AFTER_SHIPPED_DAYS,
     )
 
+    # Already-released wins over cancel/refund blocks so retries stay idempotent
+    # after a successful release (including post-release clawback refunds).
+    if context.already_released:
+        return ReleaseResult(
+            order_id=order_id,
+            outcome="already_released",
+            reason="release_already_posted",
+        )
+
+    blocked = release_blocked_reason(status=context.status, order_id=order_id)
+    if blocked is not None:
+        return ReleaseResult(
+            order_id=order_id,
+            outcome="not_eligible",
+            reason=blocked,
+        )
+
     outcome, reason, rule = evaluate_release_rules(
         status=context.status,
         cod=context.cod,
@@ -360,26 +385,36 @@ def evaluate_and_release(
             rule=rule,
         )
 
-    # Capture platform commission from escrow BEFORE releasing the vendor's net
-    # (mirrors COD capture-then-release). With M08-P08a posting CHARGE_RECEIVED at
-    # collection, escrow holds the full gross; this drains commission to
-    # commission_revenue so the lifecycle balances exactly:
+    # Capture platform commission from the immutable purchase-time snapshot BEFORE
+    # releasing the vendor's net (mirrors COD capture-then-release). With PR #274
+    # posting CHARGE_RECEIVED at collection, escrow holds the full gross; this
+    # drains commission to commission_revenue so the lifecycle balances exactly:
     #   charge(−gross) + capture(+commission) + release(+net) = 0.
     # Idempotent per order via the release-scoped key (distinct from the release key),
     # so a sweeper re-run never double-captures; a free/0% order posts no capture leg.
+    # Fail-closed: invalid snapshot or ledger errors raise — never mark released.
+    try:
+        amounts = compute_release_amounts(
+            order_id=order_id,
+            gross_ngwee=context.gross_ngwee,
+            commission_snapshot=context.commission_snapshot,
+        )
+    except ReleaseAccountingError:
+        return ReleaseResult(
+            order_id=order_id,
+            outcome="not_eligible",
+            reason="invalid_commission_snapshot",
+        )
+
     capture_order_commission(
         order_id=order_id,
         commission_snapshot=context.commission_snapshot,
         idempotency_key_prefix=release_idempotency_key(order_id),
     )
-    net_ngwee = compute_net_ngwee(
-        gross_ngwee=context.gross_ngwee,
-        commission_snapshot=context.commission_snapshot,
-    )
     transaction_id = _post_release(
         order_id=order_id,
         vendor_id=context.vendor_id,
-        net_ngwee=net_ngwee,
+        net_ngwee=amounts.net_ngwee,
     )
     return ReleaseResult(
         order_id=order_id,
@@ -387,7 +422,7 @@ def evaluate_and_release(
         reason=reason,
         rule=rule,
         transaction_id=transaction_id,
-        net_ngwee=net_ngwee,
+        net_ngwee=amounts.net_ngwee,
     )
 
 
