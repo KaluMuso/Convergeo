@@ -93,6 +93,11 @@ class AuthClass(StrEnum):
 
 PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
     {
+        # Public browser telemetry beacon (navigator.sendBeacon). Unauthenticated by
+        # design; IP rate-limited, batch-capped, and server-side anonymized. An optional
+        # bearer token only ADDS user_id attribution (resolved inside the handler, not a
+        # dependency guard), so the route is dependency-public.
+        ("POST", "/analytics/collect"),
         ("POST", "/ask"),
         ("POST", "/auth/guard/otp-quota"),
         # M16-P09 beta gate: pre-login invite gate + feedback. redeem/gate are

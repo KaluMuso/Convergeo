@@ -53,6 +53,12 @@ ADMIN_WRITE = RateLimitPolicy(scope="write_admin", limit=120, window=timedelta(m
 # Internal cron/n8n ticks are called by trusted schedulers on a shared secret;
 # they get a generous machine-to-machine ceiling rather than a human one.
 INTERNAL_CRON = RateLimitPolicy(scope="internal_cron", limit=240, window=timedelta(minutes=1))
+# Public, unauthenticated telemetry beacon (navigator.sendBeacon). Higher ceiling than
+# human writes — a batch fires ~once per page-session — and enforcement is fail-open, so a
+# limiter outage never drops analytics. Enforced in routers/analytics_collect.py.
+PUBLIC_BEACON = RateLimitPolicy(
+    scope="analytics_collect_ip", limit=120, window=timedelta(minutes=1)
+)
 
 
 # --- Exemption allowlist (EXPLICIT + documented — no silent gaps) -----------
@@ -106,6 +112,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /admin/echo": ADMIN_WRITE,
     "POST /admin/orders/{order_id}/cod/confirm-collection": PAYMENT_WRITE,
     "POST /admin/orders/{order_id}/cod/refuse-collection": PAYMENT_WRITE,
+    "POST /analytics/collect": PUBLIC_BEACON,
     "POST /ask": STANDARD_WRITE,
     "POST /auth/guard/otp-quota": SENSITIVE_WRITE,
     "POST /beta/feedback": STANDARD_WRITE,
