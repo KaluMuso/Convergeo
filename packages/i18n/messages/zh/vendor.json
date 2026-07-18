@@ -44,6 +44,7 @@
   "vendor.listings.count": "{count, plural, one {# 件商品} other {# 件商品}}",
   "vendor.payout.pending": "待处理结算：{amount}",
   "pitch": {
+    "signupUnavailable": "商家注册暂时不可用，请稍后再试。",
     "meta": {
       "title": "在 Vergeo5 上销售——免费上架，售出才付费",
       "description": "加入赞比亚的商品、服务、活动、供货和商户目录市场平台。免费套餐：30 个商品。佣金透明。移动支付结算几分钟到账。"

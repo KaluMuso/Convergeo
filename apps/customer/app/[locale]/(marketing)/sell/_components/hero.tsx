@@ -2,7 +2,7 @@ import { Pill } from "@vergeo/ui/src/pill";
 import { tokens } from "@vergeo/ui/tokens";
 import Link from "next/link";
 
-import { getVendorSignupUrl } from "./cta";
+import { getVendorSignupUrl } from "./vendor-app";
 
 type PitchTranslator = {
   (key: string, values?: Record<string, string | number>): string;
@@ -45,12 +45,26 @@ export function Hero({ locale, t }: HeroProps) {
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Link
-            className="inline-flex h-12 min-h-12 items-center justify-center rounded bg-primary px-6 text-body font-medium text-surface transition-colors duration-fast hover:bg-primary-deep focus-visible:outline-none focus-visible:shadow-focusRing"
-            href={signupUrl}
-          >
-            {t("hero.primaryCta")}
-          </Link>
+          {signupUrl ? (
+            <Link
+              className="inline-flex h-12 min-h-12 items-center justify-center rounded bg-primary px-6 text-body font-medium text-surface transition-colors duration-fast hover:bg-primary-deep focus-visible:outline-none focus-visible:shadow-focusRing"
+              data-testid="vendor-hero-cta"
+              href={signupUrl}
+            >
+              {t("hero.primaryCta")}
+            </Link>
+          ) : (
+            <button
+              aria-describedby="hero-vendor-signup-unavailable"
+              aria-disabled="true"
+              className="inline-flex h-12 min-h-12 cursor-not-allowed items-center justify-center rounded bg-primary px-6 text-body font-medium text-surface opacity-60"
+              data-testid="vendor-hero-cta"
+              disabled
+              type="button"
+            >
+              {t("hero.primaryCta")}
+            </button>
+          )}
           <a
             className="inline-flex h-12 min-h-12 items-center justify-center rounded border border-border bg-surface px-6 text-body font-medium text-text transition-colors duration-fast hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing"
             href="#commissions"
@@ -58,6 +72,11 @@ export function Hero({ locale, t }: HeroProps) {
             {t("hero.secondaryCta")}
           </a>
         </div>
+        {signupUrl ? null : (
+          <p id="hero-vendor-signup-unavailable" className="text-sm text-text-3">
+            {t("signupUnavailable")}
+          </p>
+        )}
 
         <div className="space-y-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-text-2">

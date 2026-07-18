@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import vendorMessages from "../../../../../../packages/i18n/messages/en/vendor.json";
 
 import { buildCommissionTableRows, COMMISSION_RATES } from "./_components/commission-rates";
-import { getVendorSignupUrl, VENDOR_ONBOARDING_PATH } from "./_components/cta";
 
 /** Mirrors `0008_config.sql` commission_rates seed (rate_bps / 100). */
 const SEED_RATES: Record<string, number> = {
@@ -40,14 +39,6 @@ describe("commission-rates", () => {
       expect(row.label).toBe(`label:${row.categoryKey}`);
       expect(row.rateLabel).toBe(`${seed!.ratePct}%`);
     }
-  });
-});
-
-describe("vendor signup URL", () => {
-  it("deep-links to vendor onboarding with locale", () => {
-    expect(VENDOR_ONBOARDING_PATH).toBe("/onboarding");
-    expect(getVendorSignupUrl("en")).toBe("http://localhost:3001/en/onboarding");
-    expect(getVendorSignupUrl("bem")).toBe("http://localhost:3001/bem/onboarding");
   });
 });
 

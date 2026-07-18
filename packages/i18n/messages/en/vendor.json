@@ -44,6 +44,7 @@
   "vendor.listings.count": "{count, plural, one {# listing} other {# listings}}",
   "vendor.payout.pending": "Pending payout: {amount}",
   "pitch": {
+    "signupUnavailable": "Vendor signup is temporarily unavailable. Please check back soon.",
     "meta": {
       "title": "Sell on Vergeo5 — free to list, pay only when you sell",
       "description": "Join Zambia's marketplace for products, services, events, supplies, and directory listings. Free tier: 30 listings. Transparent commissions. Mobile-money payouts in minutes."

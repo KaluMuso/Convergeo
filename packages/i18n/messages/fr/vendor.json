@@ -44,6 +44,7 @@
   "vendor.listings.count": "{count, plural, one {# annonce} other {# annonces}}",
   "vendor.payout.pending": "Versement en attente : {amount}",
   "pitch": {
+    "signupUnavailable": "L'inscription des vendeurs est temporairement indisponible. Revenez bientôt.",
     "meta": {
       "title": "Vendez sur Vergeo5 — publication gratuite, payez seulement quand vous vendez",
       "description": "Rejoignez la place de marché zambienne pour les produits, services, événements, fournitures et annonces d'annuaire. Offre gratuite : 30 annonces. Commissions transparentes. Versements mobile money en quelques minutes."
