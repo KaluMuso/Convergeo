@@ -37,7 +37,14 @@
     },
     "errors": {
       "loadFailed": "Impossible de charger vos statistiques. Veuillez réessayer.",
-      "invalidWindow": "Choisissez une période de 7 ou 30 jours."
+      "invalidWindow": "Choisissez une période de 7 ou 30 jours.",
+      "authRequired": "Connectez-vous pour voir les analyses.",
+      "permissionDenied": "Vous n'avez pas accès à ces analyses.",
+      "retryHint": "Vérifiez votre connexion, puis réessayez."
+    },
+    "empty": {
+      "title": "Pas encore d'activité",
+      "body": "Lorsque vous aurez de vraies commandes et de l'activité panier, les totaux apparaîtront ici. Nous n'inventons jamais le GMV."
     }
   },
   "vendor.dashboard.title": "Tableau de bord vendeur",
@@ -290,8 +297,12 @@
     "errors": {
       "required": "Ce champ est obligatoire",
       "invalidPhone": "Saisissez un numéro de mobile zambien valide",
-      "loadFailed": "Impossible de charger votre demande. Tirez pour actualiser.",
-      "submitFailed": "Échec de la soumission. Réessayez."
+      "loadFailed": "Impossible de charger votre demande. Réessayez.",
+      "submitFailed": "Échec de la soumission. Réessayez.",
+      "authRequired": "Connectez-vous pour continuer l'inscription vendeur.",
+      "permissionDenied": "Ce compte n'est pas configuré comme vendeur.",
+      "notFound": "Nous n'avons pas trouvé votre demande vendeur.",
+      "retryHint": "Vérifiez votre connexion, puis réessayez."
     },
     "loading": "Chargement…"
   },
@@ -391,7 +402,11 @@
       "product_not_found": "Produit introuvable",
       "product_not_active": "Ce produit ne peut pas encore être rattaché",
       "category_not_found": "Catégorie introuvable",
-      "invalid_tiers": "Les paliers de prix doivent augmenter en quantité et diminuer en prix unitaire"
+      "invalid_tiers": "Les paliers de prix doivent augmenter en quantité et diminuer en prix unitaire",
+      "authRequired": "Connectez-vous pour gérer les annonces.",
+      "permissionDenied": "Vous n'avez pas accès à ce catalogue vendeur.",
+      "notFound": "Cette annonce est introuvable pour votre boutique.",
+      "retryHint": "Vérifiez votre connexion, puis réessayez."
     },
     "import": {
       "meta": {
@@ -503,12 +518,20 @@
         "removed": "Annonce supprimée."
       },
       "errors": {
-        "loadFailed": "Impossible de charger les annonces. Tirez pour actualiser.",
+        "loadFailed": "Impossible de charger les annonces. Réessayez.",
         "saveFailed": "Impossible d'enregistrer les modifications. Réessayez.",
         "stockNotTracked": "Les ajustements de stock ne s'appliquent qu'aux annonces suivies.",
         "stockQtyRequired": "Saisissez une quantité en stock pour les annonces suivies.",
         "returnWindowRequired": "Saisissez un délai de retour lorsque les retours sont activés."
-      }
+      },
+      "emptyTitle": "Aucune annonce",
+      "statusLabel": "Statut"
+    },
+    "kycGate": {
+      "title": "Vérification en cours",
+      "body": "Les annonces peuvent rester bloquées jusqu'à l'approbation KYC avec un dossier auditable. Aucun badge vérifié sans cette trace.",
+      "cta": "Voir le statut de vérification",
+      "wholesaleLocked": "Les prix de gros se débloquent après une vérification T2 auditable."
     }
   },
   "profile": {
@@ -605,7 +628,7 @@
       "saved": "Profil enregistré. Les modifications apparaissent sur votre page publique en une minute."
     },
     "errors": {
-      "loadFailed": "Impossible de charger votre profil. Tirez pour actualiser.",
+      "loadFailed": "Impossible de charger votre profil. Réessayez.",
       "saveFailed": "Impossible d'enregistrer votre profil. Réessayez.",
       "authRequired": "Connectez-vous pour modifier le profil de votre vitrine.",
       "slug_locked": "L'URL de votre boutique est déjà verrouillée.",
@@ -616,7 +639,10 @@
       "hours_invalid_day": "L'un des noms de jour est invalide.",
       "hours_all_closed": "Marquez au moins un jour comme ouvert.",
       "location_required": "Ajoutez votre emplacement avant de définir les horaires.",
-      "whatsapp_invalid": "Saisissez un numéro de mobile zambien valide (ex. 0977 123456)."
+      "whatsapp_invalid": "Saisissez un numéro de mobile zambien valide (ex. 0977 123456).",
+      "permissionDenied": "Vous n'avez pas accès à ce profil boutique.",
+      "notFound": "Profil boutique introuvable pour ce compte.",
+      "retryHint": "Vérifiez votre connexion, puis réessayez."
     }
   },
   "orders": {
@@ -702,11 +728,13 @@
     "offlineNotice": "Affichage des données enregistrées — connectez-vous pour actualiser.",
     "takings": {
       "label": "Recettes du jour",
-      "caption": "Revenus confirmés pour le {date} (heure de Lusaka)"
+      "caption": "Revenus confirmés pour le {date} (heure de Lusaka)",
+      "emptyCaption": "Aucun revenu confirmé aujourd'hui — les totaux viennent uniquement des commandes réelles."
     },
     "needsAction": {
       "heading": "À traiter",
-      "empty": "Vous êtes à jour — aucune commande en attente de votre part."
+      "empty": "Vous êtes à jour — aucune commande en attente de votre part.",
+      "emptyTitle": "Tout est à jour"
     },
     "actions": {
       "openQueue": "Ouvrir la file d'attente des commandes",
@@ -734,7 +762,20 @@
       "other": "commerce de détail"
     },
     "errors": {
-      "loadFailed": "Impossible de charger votre tableau de bord. Tirez pour actualiser."
+      "loadFailed": "Impossible de charger le tableau de bord. Réessayez.",
+      "authRequired": "Connectez-vous pour voir l'accueil vendeur.",
+      "permissionDenied": "Vous n'avez pas accès à ce tableau de bord vendeur.",
+      "retryHint": "Vérifiez votre connexion, puis réessayez."
+    },
+    "kycBanner": {
+      "title": "Terminer la vérification",
+      "body": "Votre boutique n'est pas marquée vérifiée tant que le KYC n'est pas approuvé avec un dossier auditable.",
+      "cta": "Voir le statut KYC"
+    },
+    "shortcuts": {
+      "ariaLabel": "Raccourcis",
+      "listings": "Catalogue",
+      "profile": "Profil"
     }
   },
   "queue": {
@@ -1410,6 +1451,15 @@
       "loadFailed": "Impossible de charger la liste. Tirez pour actualiser.",
       "downloadFailed": "Impossible de télécharger la liste. Réessayez.",
       "unauthorized": "Connectez-vous en tant qu'organisateur pour voir cette liste."
+    }
+  },
+  "shell": {
+    "nav": {
+      "ariaLabel": "Navigation vendeur",
+      "home": "Accueil",
+      "listings": "Annonces",
+      "orders": "Commandes",
+      "profile": "Profil"
     }
   }
 }

@@ -1,10 +1,14 @@
 "use client";
 
 import { useSession } from "@vergeo/auth/use-session";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { VendorErrorState } from "../../../_components/async-state";
+import { canUseWholesaleCapabilities, isAuditableApproved } from "../../../_lib/kyc-integrity";
+import { vendorErrorMessageKey } from "../../../_lib/vendor-errors";
 import { createKycClient } from "../../../onboarding/_lib/kyc-client";
 import { createListingClient } from "../_lib/listing-client";
 import { Spinner, Tabs } from "../_lib/ui";
@@ -25,20 +29,39 @@ type FlowTab = "attach" | "new_canonical" | "quick_list";
 
 export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
   const t = useTranslations("vendor");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const { session, loading: sessionLoading } = useSession();
   const [activeTab, setActiveTab] = useState<FlowTab>("attach");
   const [selectedProduct, setSelectedProduct] = useState<SuggestItem | null>(null);
-  const [kycTier, setKycTier] = useState<number | null>(null);
+  const [kycApp, setKycApp] = useState<KycApplication | null>(null);
   const [loadingTier, setLoadingTier] = useState(true);
+  const [kycErrorKey, setKycErrorKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const listingClient = useMemo(() => createListingClient(getToken), [getToken]);
   const kycClient = useMemo(() => createKycClient(getToken), [getToken]);
 
-  const wholesaleEnabled = (kycTier ?? 1) >= 2;
+  const wholesaleEnabled = kycApp
+    ? canUseWholesaleCapabilities({
+        kyc_tier: kycApp.kyc_tier,
+        kyc_status: kycApp.kyc_status,
+        kyc_record_id: kycApp.kyc_record_id,
+        kyc_record_status: kycApp.kyc_record_status,
+      })
+    : false;
+
+  const kycApproved = kycApp
+    ? isAuditableApproved({
+        kyc_tier: kycApp.kyc_tier,
+        kyc_status: kycApp.kyc_status,
+        kyc_record_id: kycApp.kyc_record_id,
+        kyc_record_status: kycApp.kyc_record_status,
+      })
+    : false;
 
   const fieldLabels = useMemo(
     () => ({
@@ -79,16 +102,19 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
       return;
     }
     let cancelled = false;
+    setLoadingTier(true);
+    setKycErrorKey(null);
     void kycClient
       .getApplication()
       .then((app: KycApplication) => {
         if (!cancelled) {
-          setKycTier(app.kyc_tier);
+          setKycApp(app);
         }
       })
-      .catch(() => {
+      .catch((caught: unknown) => {
         if (!cancelled) {
-          setKycTier(1);
+          setKycApp(null);
+          setKycErrorKey(vendorErrorMessageKey(caught, "listings"));
         }
       })
       .finally(() => {
@@ -99,7 +125,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
     return () => {
       cancelled = true;
     };
-  }, [kycClient, session, sessionLoading]);
+  }, [kycClient, reloadKey, session, sessionLoading]);
 
   const handleSuccess = (listingId: string, mode: FlowTab) => {
     if (mode === "new_canonical") {
@@ -109,7 +135,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
     }
     setError(null);
     window.setTimeout(() => {
-      router.push(`/${locale}`);
+      router.push(`/${locale}/listings`);
     }, 1200);
     void listingId;
   };
@@ -125,6 +151,17 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
   if (!session) {
     router.replace(`/${locale}/login`);
     return null;
+  }
+
+  if (kycErrorKey) {
+    return (
+      <VendorErrorState
+        title={t(kycErrorKey as "listings.errors.permissionDenied")}
+        body={t("listings.errors.retryHint")}
+        retryLabel={tCommon("common.retry")}
+        onRetry={() => setReloadKey((value) => value + 1)}
+      />
+    );
   }
 
   const tabs = [
@@ -149,7 +186,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             <>
               <button
                 type="button"
-                className="self-start text-sm text-primary"
+                className="min-h-11 self-start text-sm text-primary"
                 onClick={() => setSelectedProduct(null)}
               >
                 {t("listings.attach.changeProduct")}
@@ -234,6 +271,28 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
         <h1 className="font-display text-h3 text-display-ink">{t("listings.title")}</h1>
         <p className="text-sm text-text-2">{t("listings.intro")}</p>
       </header>
+
+      {!kycApproved ? (
+        <div
+          className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+          role="status"
+        >
+          <p className="font-medium">{t("listings.kycGate.title")}</p>
+          <p className="mt-1">{t("listings.kycGate.body")}</p>
+          <Link
+            className="mt-2 inline-flex min-h-11 items-center font-medium text-primary underline"
+            href={`/${locale}/onboarding/status`}
+          >
+            {t("listings.kycGate.cta")}
+          </Link>
+        </div>
+      ) : null}
+
+      {!wholesaleEnabled && kycApproved ? (
+        <p className="text-xs text-text-2" role="note">
+          {t("listings.kycGate.wholesaleLocked")}
+        </p>
+      ) : null}
 
       {error ? (
         <p

@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Spinner } from "../../../../../../packages/ui/src/spinner";
+import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
+import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { createAnalyticsClient, type AnalyticsWindow } from "../_lib/analytics-client";
 
 import { Sparkline } from "./sparkline";
@@ -35,11 +37,13 @@ function StatCard({ label, value, sparklineLabel, series }: StatCardProps) {
 
 export function AnalyticsView() {
   const t = useTranslations("vendor");
+  const tCommon = useTranslations("common");
   const { session, loading: sessionLoading } = useSession();
   const [window, setWindow] = useState<AnalyticsWindow>(7);
   const [data, setData] = useState<VendorAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const analyticsClient = useMemo(() => createAnalyticsClient(getToken), [getToken]);
@@ -54,7 +58,7 @@ export function AnalyticsView() {
     }
     let cancelled = false;
     setLoading(true);
-    setError(null);
+    setErrorKey(null);
     void analyticsClient
       .get(window)
       .then((result) => {
@@ -62,9 +66,10 @@ export function AnalyticsView() {
           setData(result);
         }
       })
-      .catch(() => {
+      .catch((caught: unknown) => {
         if (!cancelled) {
-          setError(t("analytics.errors.loadFailed"));
+          setData(null);
+          setErrorKey(vendorErrorMessageKey(caught, "analytics"));
         }
       })
       .finally(() => {
@@ -75,7 +80,7 @@ export function AnalyticsView() {
     return () => {
       cancelled = true;
     };
-  }, [analyticsClient, session, sessionLoading, t, window]);
+  }, [analyticsClient, reloadKey, session, sessionLoading, window]);
 
   const totals = useMemo(() => {
     if (!data) {
@@ -88,6 +93,8 @@ export function AnalyticsView() {
       views: sum(data.views_by_day),
     };
   }, [data]);
+
+  const isEmpty = totals.sales === 0 && totals.orders === 0 && totals.views === 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -120,17 +127,33 @@ export function AnalyticsView() {
         })}
       </div>
 
-      {error ? (
-        <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-          {error}
-        </p>
+      {!session && !sessionLoading ? (
+        <VendorErrorState
+          title={t("analytics.errors.authRequired")}
+          retryLabel={tCommon("common.retry")}
+        />
+      ) : null}
+
+      {errorKey ? (
+        <VendorErrorState
+          title={t(errorKey as "analytics.errors.loadFailed")}
+          body={t("analytics.errors.retryHint")}
+          retryLabel={tCommon("common.retry")}
+          onRetry={() => setReloadKey((value) => value + 1)}
+        />
       ) : null}
 
       {loading ? (
         <div className="flex min-h-[40vh] items-center justify-center">
           <Spinner label={t("analytics.loading")} />
         </div>
-      ) : data ? (
+      ) : null}
+
+      {!loading && !errorKey && data && isEmpty ? (
+        <VendorEmptyState title={t("analytics.empty.title")} body={t("analytics.empty.body")} />
+      ) : null}
+
+      {!loading && !errorKey && data && !isEmpty ? (
         <>
           <section className="grid gap-3">
             <StatCard

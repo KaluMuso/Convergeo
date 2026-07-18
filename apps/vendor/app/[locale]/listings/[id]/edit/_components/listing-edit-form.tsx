@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { VendorErrorState } from "../../../../_components/async-state";
+import { vendorErrorMessageKey } from "../../../../_lib/vendor-errors";
 import {
   parseListingFieldValues,
   validateListingFields,
   type ListingFieldValues,
 } from "../../../new/_components/listing-fields";
-import { Button, FormField, Input, Select, Spinner, Switch } from "../../../new/_lib/ui";
+import { Badge, Button, FormField, Input, Select, Spinner, Switch } from "../../../new/_lib/ui";
 import { createManageClient, type ListingSummary, type PriceTier } from "../_lib/manage-client";
 import { isValidZmwDecimal, ngweeToZmwInput, zmwDecimalToNgwee } from "../_lib/money";
 
@@ -36,6 +38,7 @@ function tiersFromListing(listing: ListingSummary): TierDraft[] {
 
 export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
   const t = useTranslations("vendor");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const { session, loading: sessionLoading } = useSession();
   const [listing, setListing] = useState<ListingSummary | null>(null);
@@ -47,7 +50,9 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
   const [saving, setSaving] = useState(false);
   const [actionLoading, setActionLoading] = useState<"pause" | "unpause" | "delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const manageClient = useMemo(() => createManageClient(getToken), [getToken]);
@@ -84,6 +89,7 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
 
     let cancelled = false;
     setLoading(true);
+    setLoadErrorKey(null);
     manageClient
       .getListing(listingId)
       .then((row) => {
@@ -106,9 +112,11 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         setTiers(tiersFromListing(row));
         setError(null);
       })
-      .catch(() => {
+      .catch((caught: unknown) => {
         if (!cancelled) {
-          setError(t("listings.manage.errors.loadFailed"));
+          setListing(null);
+          setFieldValues(null);
+          setLoadErrorKey(vendorErrorMessageKey(caught, "listingsManage"));
         }
       })
       .finally(() => {
@@ -120,7 +128,7 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     return () => {
       cancelled = true;
     };
-  }, [listingId, manageClient, session, sessionLoading, t]);
+  }, [listingId, manageClient, reloadKey, session, sessionLoading]);
 
   const buildPriceTiers = (): PriceTier[] | undefined => {
     if (!fieldValues?.wholesale) {
@@ -217,7 +225,7 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     }
   };
 
-  if (sessionLoading || loading || !fieldValues) {
+  if (sessionLoading || loading) {
     return (
       <div className="flex min-h-40 items-center justify-center">
         <Spinner label={t("listings.manage.loading")} />
@@ -225,19 +233,66 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     );
   }
 
-  if (!listing) {
-    return <p className="text-sm text-danger">{error ?? t("listings.manage.errors.loadFailed")}</p>;
+  if (!session) {
+    return (
+      <VendorErrorState
+        title={t("listings.errors.authRequired")}
+        retryLabel={tCommon("common.retry")}
+      />
+    );
   }
+
+  if (loadErrorKey || !listing || !fieldValues) {
+    return (
+      <VendorErrorState
+        title={t(
+          (loadErrorKey ??
+            "listings.manage.errors.loadFailed") as "listings.manage.errors.loadFailed",
+        )}
+        body={t("listings.errors.retryHint")}
+        retryLabel={tCommon("common.retry")}
+        onRetry={() => setReloadKey((value) => value + 1)}
+      />
+    );
+  }
+
+  const statusLabel =
+    listing.status === "active"
+      ? t("listings.manage.status.active")
+      : listing.status === "paused"
+        ? t("listings.manage.status.paused")
+        : t("listings.manage.status.draft");
 
   return (
     <div className="flex flex-col gap-4">
       <header className="space-y-1">
         <h1 className="text-xl font-semibold text-text">{t("listings.manage.edit.title")}</h1>
         <p className="text-sm text-text-2">{listing.title}</p>
+        <div className="flex items-center gap-2 pt-1">
+          <span className="text-xs text-text-2">{t("listings.manage.statusLabel")}</span>
+          <Badge
+            variant={
+              listing.status === "active"
+                ? "free"
+                : listing.status === "paused"
+                  ? "sold_out"
+                  : "new"
+            }
+            label={statusLabel}
+          />
+        </div>
       </header>
 
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
-      {notice ? <p className="text-sm text-success">{notice}</p> : null}
+      {error ? (
+        <p className="text-sm text-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
+      {notice ? (
+        <p className="text-sm text-success" role="status">
+          {notice}
+        </p>
+      ) : null}
 
       <FormField label={fieldLabels.priceLabel} helpText={fieldLabels.priceHelp}>
         <Input
