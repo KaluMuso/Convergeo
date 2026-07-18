@@ -8,6 +8,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { resolveApiBaseUrl } from "../../../../../lib/api-base-url";
+import { resolveMomoPollOutcome } from "../_lib/payment-outcome";
+
 import { PaymentFailed, type PaymentFailedLabels } from "./payment-failed";
 
 export type PaymentStatusPayload = {
@@ -26,7 +29,10 @@ export type PendingLabels = {
   loading: string;
   error: string;
   pollAria: string;
+  /** Honest confirming copy — never claims paid without order confirmation. */
   successRedirect: string;
+  confirmingTitle: string;
+  confirmingBody: string;
   codTitle: string;
   codBody: string;
   codCta: string;
@@ -54,12 +60,11 @@ type UssdWaitProps = {
   labels: UssdWaitLabels;
 };
 
-const WAITING_STATUSES = new Set(["initiated", "ussd_pushed", "pay_offline"]);
 const INITIAL_POLL_MS = 2000;
 const MAX_POLL_MS = 15000;
 
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+function getApiBaseUrl(): string | null {
+  return resolveApiBaseUrl();
 }
 
 function nextPollDelay(attempt: number): number {
@@ -135,11 +140,12 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
 
   const fetchStatus = useCallback(async (): Promise<PaymentStatusPayload | null> => {
     const token = session?.access_token;
-    if (!token) {
+    const apiBase = getApiBaseUrl();
+    if (!token || !apiBase) {
       return null;
     }
     const client = createApiClient({
-      baseUrl: getApiBaseUrl(),
+      baseUrl: apiBase,
       getToken: () => token,
     });
     return client.request<PaymentStatusPayload>(`/payments/status?group=${groupId}`);
@@ -165,6 +171,12 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
 
     const poll = async () => {
       try {
+        if (!getApiBaseUrl()) {
+          if (!cancelled) {
+            setLoadError(labels.error);
+          }
+          return;
+        }
         const payload = await fetchStatus();
         if (cancelled || !payload) {
           return;
@@ -172,16 +184,23 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
         setStatusPayload(payload);
         setLoadError(null);
 
-        if (payload.status === "success") {
-          router.replace(orderPath);
+        const outcome = resolveMomoPollOutcome(payload);
+        if (outcome === "confirming") {
+          // Redirect to the order page (real escrow/payment state) — do not
+          // claim a standalone "paid" success without ledger confirmation.
+          router.replace(
+            payload.order_id
+              ? `/${locale}/account/orders/${payload.order_id}`
+              : `/${locale}/account/orders`,
+          );
           return;
         }
 
-        if (payload.cod) {
+        if (outcome === "cod") {
           return;
         }
 
-        if (WAITING_STATUSES.has(payload.status)) {
+        if (outcome === "waiting") {
           schedulePoll(poll);
         }
       } catch (error) {
@@ -208,7 +227,7 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
   }, [
     fetchStatus,
     labels.error,
-    orderPath,
+    locale,
     router,
     schedulePoll,
     session?.access_token,
@@ -227,14 +246,15 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
 
   const handleRetry = async () => {
     const token = session?.access_token;
-    if (!token || !statusPayload) {
+    const apiBase = getApiBaseUrl();
+    if (!token || !statusPayload || !apiBase) {
       return;
     }
     setRetrying(true);
     setRetryError(null);
     try {
       const client = createApiClient({
-        baseUrl: getApiBaseUrl(),
+        baseUrl: apiBase,
         getToken: () => token,
       });
       const result = await client.request<{
@@ -311,11 +331,12 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
   }
 
   if (statusPayload.status === "success") {
+    // Brief confirming state while navigation completes — never a "paid" claim.
     return (
-      <div className="space-y-4" data-testid="payment-success">
-        <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>
-        <p className="font-body text-sm text-text-2">{labels.successRedirect}</p>
-        <Spinner label={labels.successRedirect} />
+      <div className="space-y-4" data-testid="payment-confirming">
+        <h1 className="font-display text-h1 text-display-ink">{labels.confirmingTitle}</h1>
+        <p className="font-body text-sm text-text-2">{labels.confirmingBody}</p>
+        <Spinner label={labels.confirmingBody} />
       </div>
     );
   }

@@ -13,6 +13,7 @@ const labels = {
   trigger: "All Categories",
   panelAria: "All categories",
   loading: "Loading categories…",
+  viewAll: "View all categories",
 };
 
 const tree: NavCategory[] = [
@@ -43,6 +44,10 @@ describe("CategoryMegaMenu", () => {
     expect(screen.getByRole("link", { name: "Electronics" })).toHaveAttribute(
       "href",
       "/en/c/electronics",
+    );
+    expect(screen.getByRole("link", { name: "View all categories" })).toHaveAttribute(
+      "href",
+      "/en/categories",
     );
   });
 

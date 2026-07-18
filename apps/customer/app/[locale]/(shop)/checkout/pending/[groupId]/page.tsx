@@ -33,6 +33,8 @@ function buildPendingLabels(locale: string, messages: AbstractIntlMessages): Pen
     error: t("checkout.pending.error"),
     pollAria: t("checkout.pending.pollAria"),
     successRedirect: t("checkout.pending.successRedirect"),
+    confirmingTitle: t("checkout.pending.confirmingTitle"),
+    confirmingBody: t("checkout.pending.confirmingBody"),
     codTitle: t("checkout.pending.codTitle"),
     codBody: t("checkout.pending.codBody"),
     codCta: t("checkout.pending.codCta"),

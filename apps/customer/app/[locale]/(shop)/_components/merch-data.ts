@@ -277,7 +277,7 @@ async function fetchMerchSlots(): Promise<MerchSlotRow[]> {
   }));
 }
 
-async function fetchCategories(): Promise<CategoryRow[]> {
+export async function fetchCategories(): Promise<CategoryRow[]> {
   const cookieStore = await cookies();
   const supabase = createServerClient(cookieStore);
 

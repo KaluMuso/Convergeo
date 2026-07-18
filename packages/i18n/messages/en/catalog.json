@@ -66,6 +66,7 @@
       "allCategories": "All Categories",
       "categoriesPanelAria": "All categories",
       "categoriesLoading": "Loading categories…",
+      "viewAllCategories": "View all categories",
       "services": "Services",
       "events": "Events",
       "askVergeo": "Ask Vergeo",
@@ -75,7 +76,7 @@
     "hero": {
       "eyebrow": "Zambia's marketplace",
       "fallbackTitle": "Discover products, services, and events across Zambia",
-      "fallbackSubtitle": "Compare prices from verified vendors, pay with mobile money, and get fast delivery in Lusaka.",
+      "fallbackSubtitle": "Compare prices from verified vendors, pay with mobile money, and arrange Lusaka delivery or nationwide pickup.",
       "primaryCta": "Start browsing",
       "secondaryCta": "Sell on Vergeo5",
       "placeholder": {
@@ -204,6 +205,26 @@
   },
   "returnableBadge": {
     "label": "Returnable within {days} days"
+  },
+  "browseCategories": {
+    "title": "Browse categories",
+    "subtitle": "Shop Phase-1 departments and their subcategories from verified vendors.",
+    "emptyTitle": "Categories unavailable",
+    "emptyBody": "We could not load the category tree right now. Try again shortly, or use search."
+  },
+  "comparePage": {
+    "title": "Compare sellers",
+    "subtitle": "See multi-vendor prices, condition, and fulfillment options for the same product.",
+    "noProductTitle": "Choose a product to compare",
+    "noProductBody": "Open a product page with more than one seller, then use Compare sellers. This page never invents comparison data.",
+    "unavailableTitle": "Comparison unavailable",
+    "unavailableBody": "We could not load seller comparison for this product. The product page may still work.",
+    "singleSellerTitle": "Only one seller right now",
+    "singleSellerBody": "Comparison needs at least two active listings for the same product. Check back when more vendors list this item.",
+    "browseCta": "Search products",
+    "backToProduct": "Back to product",
+    "chooseOnProduct": "Choose a seller on the product page",
+    "entryCta": "Compare sellers"
   },
   "comparison": {
     "heading": "Compare sellers",

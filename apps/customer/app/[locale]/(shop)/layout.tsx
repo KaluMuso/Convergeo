@@ -115,6 +115,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           allCategories: t("home.nav.allCategories"),
           categoriesPanelAria: t("home.nav.categoriesPanelAria"),
           categoriesLoading: t("home.nav.categoriesLoading"),
+          viewAllCategories: t("home.nav.viewAllCategories"),
           browse: t("home.nav.browse"),
           services: t("home.nav.services"),
           events: t("home.nav.events"),

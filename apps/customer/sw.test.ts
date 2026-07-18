@@ -73,7 +73,15 @@ describe("service-worker runtime-cache rules", () => {
   });
 
   it("catalog / PDP navigations use StaleWhileRevalidate", () => {
-    for (const path of ["/en/p/blue-widget", "/en/c/electronics", "/en/e/expo", "/en/v/acme"]) {
+    for (const path of [
+      "/en/p/blue-widget",
+      "/en/c/electronics",
+      "/en/e/expo",
+      "/en/v/acme",
+      "/en/categories",
+      "/en/compare",
+      "/en/calendar",
+    ]) {
       expect(firstRuleName(path, { destination: "document" })).toBe("catalog");
     }
     expect(ruleByName("catalog").handler).toBeInstanceOf(StaleWhileRevalidate);

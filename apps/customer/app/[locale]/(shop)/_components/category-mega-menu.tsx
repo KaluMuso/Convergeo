@@ -24,6 +24,7 @@ export type CategoryMegaMenuLabels = {
   trigger: string;
   panelAria: string;
   loading: string;
+  viewAll: string;
 };
 
 type CategoryMegaMenuProps = {
@@ -186,34 +187,43 @@ export function CategoryMegaMenu({
         {loading || categories === null ? (
           <p className="text-sm text-text-2">{labels.loading}</p>
         ) : (
-          <ul className="grid list-none grid-cols-2 gap-x-6 gap-y-4 p-0 sm:grid-cols-3">
-            {categories.map((category) => (
-              <li key={category.id} className="min-w-0">
-                <Link
-                  href={`/${locale}/c/${category.slug}`}
-                  onClick={() => setOpen(false)}
-                  className="block truncate font-display text-h3 text-display-ink transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-                >
-                  {category.name}
-                </Link>
-                {category.children.length > 0 ? (
-                  <ul className="mt-1.5 list-none space-y-1 p-0">
-                    {category.children.map((child) => (
-                      <li key={child.id} className="min-w-0">
-                        <Link
-                          href={`/${locale}/c/${child.slug}`}
-                          onClick={() => setOpen(false)}
-                          className="block truncate text-sm text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-                        >
-                          {child.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-4">
+            <ul className="grid list-none grid-cols-2 gap-x-6 gap-y-4 p-0 sm:grid-cols-3">
+              {categories.map((category) => (
+                <li key={category.id} className="min-w-0">
+                  <Link
+                    href={`/${locale}/c/${category.slug}`}
+                    onClick={() => setOpen(false)}
+                    className="block truncate font-display text-h3 text-display-ink transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+                  >
+                    {category.name}
+                  </Link>
+                  {category.children.length > 0 ? (
+                    <ul className="mt-1.5 list-none space-y-1 p-0">
+                      {category.children.map((child) => (
+                        <li key={child.id} className="min-w-0">
+                          <Link
+                            href={`/${locale}/c/${child.slug}`}
+                            onClick={() => setOpen(false)}
+                            className="block truncate text-sm text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+                          >
+                            {child.name}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            <Link
+              href={`/${locale}/categories`}
+              onClick={() => setOpen(false)}
+              className="inline-flex min-h-11 items-center text-sm font-medium text-primary transition-colors hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+            >
+              {labels.viewAll}
+            </Link>
+          </div>
         )}
       </div>
     </div>
