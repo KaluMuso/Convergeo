@@ -797,6 +797,13 @@ export type Database = {
             foreignKeyName: "events_organiser_vendor_id_fkey"
             columns: ["organiser_vendor_id"]
             isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "events_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
@@ -996,6 +1003,13 @@ export type Database = {
             foreignKeyName: "job_quotes_provider_vendor_id_fkey"
             columns: ["provider_vendor_id"]
             isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "job_quotes_provider_vendor_id_fkey"
+            columns: ["provider_vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
@@ -1043,9 +1057,13 @@ export type Database = {
       kyc_records: {
         Row: {
           created_at: string
+          decision_reason: string | null
           doc_storage_paths: string[]
           id: string
+          lifecycle_reason: string | null
           momo_name_match: Json | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           reviewer_notes: string | null
           status: string
           tier: number
@@ -1054,9 +1072,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          decision_reason?: string | null
           doc_storage_paths?: string[]
           id?: string
+          lifecycle_reason?: string | null
           momo_name_match?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           reviewer_notes?: string | null
           status?: string
           tier: number
@@ -1065,9 +1087,13 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          decision_reason?: string | null
           doc_storage_paths?: string[]
           id?: string
+          lifecycle_reason?: string | null
           momo_name_match?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           reviewer_notes?: string | null
           status?: string
           tier?: number
@@ -1075,6 +1101,20 @@ export type Database = {
           vendor_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "kyc_records_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kyc_records_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
           {
             foreignKeyName: "kyc_records_vendor_id_fkey"
             columns: ["vendor_id"]
@@ -1107,6 +1147,13 @@ export type Database = {
           vendor_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ledger_accounts_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
           {
             foreignKeyName: "ledger_accounts_vendor_id_fkey"
             columns: ["vendor_id"]
@@ -1619,6 +1666,13 @@ export type Database = {
             foreignKeyName: "orders_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
@@ -1706,6 +1760,13 @@ export type Database = {
           vendor_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payouts_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
           {
             foreignKeyName: "payouts_vendor_id_fkey"
             columns: ["vendor_id"]
@@ -2264,6 +2325,13 @@ export type Database = {
             foreignKeyName: "service_reviews_provider_vendor_id_fkey"
             columns: ["provider_vendor_id"]
             isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "service_reviews_provider_vendor_id_fkey"
+            columns: ["provider_vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
@@ -2319,6 +2387,13 @@ export type Database = {
           vendor_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "services_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
           {
             foreignKeyName: "services_vendor_id_fkey"
             columns: ["vendor_id"]
@@ -2764,6 +2839,13 @@ export type Database = {
             foreignKeyName: "vendor_listings_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "vendor_listings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
@@ -2801,6 +2883,13 @@ export type Database = {
           vendor_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "vendor_locations_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
           {
             foreignKeyName: "vendor_locations_vendor_id_fkey"
             columns: ["vendor_id"]
@@ -2963,6 +3052,39 @@ export type Database = {
           month_key: string | null
           total_tokens: number | null
           total_usd_micros: number | null
+        }
+        Relationships: []
+      }
+      kyc_orphaned_tier_report: {
+        Row: {
+          approved_kyc_record_count: number | null
+          display_name: string | null
+          kyc_record_count: number | null
+          slug: string | null
+          stored_kyc_tier: number | null
+          vendor_id: string | null
+          vendor_status: string | null
+          vendor_updated_at: string | null
+        }
+        Insert: {
+          approved_kyc_record_count?: never
+          display_name?: string | null
+          kyc_record_count?: never
+          slug?: string | null
+          stored_kyc_tier?: number | null
+          vendor_id?: string | null
+          vendor_status?: string | null
+          vendor_updated_at?: string | null
+        }
+        Update: {
+          approved_kyc_record_count?: never
+          display_name?: string | null
+          kyc_record_count?: never
+          slug?: string | null
+          stored_kyc_tier?: number | null
+          vendor_id?: string | null
+          vendor_status?: string | null
+          vendor_updated_at?: string | null
         }
         Relationships: []
       }

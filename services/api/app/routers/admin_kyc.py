@@ -13,10 +13,16 @@ from app.services.kyc.state_machine import (
     ServiceRoleClient,
     transition_approve,
     transition_reject,
+    transition_revoke,
+    transition_start_review,
+    transition_suspend,
 )
 from app.services.notifications.dedupe import enqueue_outbox_row
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, model_validator
+
+# Queue shows records awaiting a decision (legacy `pending` mapped in state machine).
+REVIEW_QUEUE_STATUSES = ("submitted", "under_review")
 
 # Private bucket for KYC documents (declared in M12-P02b / vendor onboarding types).
 KYC_DOCS_BUCKET = "kyc-docs"
@@ -76,6 +82,10 @@ class KycDetailOut(BaseModel):
     tier: int
     status: str
     reviewer_notes: str | None
+    reviewed_by: UUID | None = None
+    reviewed_at: datetime | None = None
+    decision_reason: str | None = None
+    lifecycle_reason: str | None = None
     momo_name_match: MomoNameMatchOut | None
     documents: list[SignedDocUrl]
     updated_at: datetime
@@ -88,6 +98,18 @@ class ApproveKycRequest(BaseModel):
     reviewer_notes: str | None = Field(default=None, max_length=2000)
 
 
+class StartReviewRequest(BaseModel):
+    lifecycle_reason: str | None = Field(default=None, max_length=2000)
+
+
+class SuspendKycRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=2000)
+
+
+class RevokeKycRequest(BaseModel):
+    reason: str = Field(min_length=3, max_length=2000)
+
+
 class RejectKycRequest(BaseModel):
     reason_template: RejectReasonTemplate
     free_text: str | None = Field(default=None, max_length=2000)
@@ -97,6 +119,17 @@ class RejectKycRequest(BaseModel):
         if self.reason_template == "other" and not (self.free_text and self.free_text.strip()):
             raise ValueError("free_text is required when reason_template is other")
         return self
+
+
+class OrphanedTierItem(BaseModel):
+    vendor_id: UUID
+    slug: str
+    display_name: str
+    vendor_status: str
+    stored_kyc_tier: int
+    vendor_updated_at: datetime | None = None
+    kyc_record_count: int
+    approved_kyc_record_count: int
 
 
 def _default_docs_requested() -> list[Literal["nrc", "selfie"]]:
@@ -284,7 +317,8 @@ def _load_kyc_record_row(
         _table(service_client, "kyc_records")
         .select(
             "id, vendor_id, tier, status, doc_storage_paths, momo_name_match, "
-            "reviewer_notes, updated_at"
+            "reviewer_notes, reviewed_by, reviewed_at, decision_reason, "
+            "lifecycle_reason, updated_at"
         )
         .eq("id", kyc_record_id)
         .maybe_single()
@@ -398,6 +432,42 @@ def _snapshot_before_decision(
     }
 
 
+@kyc_router.get("/orphaned-tiers", response_model=list[OrphanedTierItem])
+async def list_orphaned_kyc_tiers(
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> list[OrphanedTierItem]:
+    """Report vendors with bare kyc_tier and no approved kyc_records. No auto-repair."""
+    response = (
+        _table(service_client, "kyc_orphaned_tier_report")
+        .select(
+            "vendor_id, slug, display_name, vendor_status, stored_kyc_tier, "
+            "vendor_updated_at, kyc_record_count, approved_kyc_record_count"
+        )
+        .order("stored_kyc_tier", desc=True)
+        .execute()
+    )
+    rows = response.data if isinstance(response.data, list) else []
+    items: list[OrphanedTierItem] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        updated_raw = row.get("vendor_updated_at")
+        updated_at = _parse_timestamp(updated_raw) if updated_raw else None
+        items.append(
+            OrphanedTierItem(
+                vendor_id=UUID(str(row["vendor_id"])),
+                slug=str(row["slug"]),
+                display_name=str(row["display_name"]),
+                vendor_status=str(row["vendor_status"]),
+                stored_kyc_tier=int(row["stored_kyc_tier"]),
+                vendor_updated_at=updated_at,
+                kyc_record_count=int(row.get("kyc_record_count") or 0),
+                approved_kyc_record_count=int(row.get("approved_kyc_record_count") or 0),
+            )
+        )
+    return items
+
+
 @kyc_router.get("", response_model=list[KycQueueItem])
 async def list_kyc_queue(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -405,7 +475,7 @@ async def list_kyc_queue(
     response = (
         _table(service_client, "kyc_records")
         .select("id, vendor_id, tier, status, updated_at")
-        .eq("status", "pending")
+        .in_("status", list(REVIEW_QUEUE_STATUSES))
         .order("updated_at", desc=False)
         .execute()
     )
@@ -448,6 +518,10 @@ async def get_kyc_detail(
     updated_at = _parse_timestamp(row["updated_at"])
     sla_badge, age_hours = compute_sla_badge(updated_at)
     reviewer_notes = row.get("reviewer_notes")
+    reviewed_by = row.get("reviewed_by")
+    reviewed_at_raw = row.get("reviewed_at")
+    decision_reason = row.get("decision_reason")
+    lifecycle_reason = row.get("lifecycle_reason")
     return KycDetailOut(
         id=UUID(str(row["id"])),
         vendor_id=UUID(str(row["vendor_id"])),
@@ -458,12 +532,53 @@ async def get_kyc_detail(
         tier=int(row["tier"]),
         status=str(row["status"]),
         reviewer_notes=str(reviewer_notes) if isinstance(reviewer_notes, str) else None,
+        reviewed_by=UUID(str(reviewed_by)) if reviewed_by else None,
+        reviewed_at=_parse_timestamp(reviewed_at_raw) if reviewed_at_raw else None,
+        decision_reason=str(decision_reason) if isinstance(decision_reason, str) else None,
+        lifecycle_reason=str(lifecycle_reason) if isinstance(lifecycle_reason, str) else None,
         momo_name_match=_serialize_momo_match(momo),
         documents=documents,
         updated_at=updated_at,
         sla_badge=sla_badge,
         age_hours=round(age_hours, 2),
         docs_available=docs_available,
+    )
+
+
+@kyc_router.post("/{kyc_record_id}/start-review", response_model=KycDecisionResponse)
+async def start_kyc_review(
+    kyc_record_id: UUID,
+    body: StartReviewRequest,
+    current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+) -> KycDecisionResponse:
+    record_id = str(kyc_record_id)
+    row = _load_kyc_record_row(service_client, record_id)
+    vendor_id = str(row["vendor_id"])
+    before = _snapshot_before_decision(service_client, vendor_id=vendor_id, kyc_row=row)
+    result = transition_start_review(
+        actor_id=current_user.id,
+        vendor_id=vendor_id,
+        kyc_record_id=record_id,
+        lifecycle_reason=body.lifecycle_reason,
+        service_client=service_client,
+    )
+    vendor = _load_vendor_row(service_client, vendor_id)
+    return _handle_kyc_decision(
+        kyc_record_id=record_id,
+        service_client=service_client,
+        recorder=recorder,
+        action="admin.kyc.start_review",
+        before=before,
+        after=result,
+        event_type="kyc_under_review",
+        template="kyc_under_review",
+        notification_payload={
+            "vendor_id": vendor_id,
+            "owner_user_id": str(vendor["owner_user_id"]),
+            "kyc_record_id": record_id,
+        },
     )
 
 
@@ -591,6 +706,82 @@ async def request_kyc_resubmit(
             "reason_template": body.reason_template,
             "docs_requested": body.docs_requested,
             "reviewer_notes": reviewer_notes,
+        },
+    )
+
+
+@kyc_router.post("/{kyc_record_id}/suspend", response_model=KycDecisionResponse)
+async def suspend_kyc(
+    kyc_record_id: UUID,
+    body: SuspendKycRequest,
+    current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+) -> KycDecisionResponse:
+    record_id = str(kyc_record_id)
+    row = _load_kyc_record_row(service_client, record_id)
+    vendor_id = str(row["vendor_id"])
+    before = _snapshot_before_decision(service_client, vendor_id=vendor_id, kyc_row=row)
+    result = transition_suspend(
+        actor_id=current_user.id,
+        vendor_id=vendor_id,
+        kyc_record_id=record_id,
+        reason=body.reason.strip(),
+        service_client=service_client,
+    )
+    vendor = _load_vendor_row(service_client, vendor_id)
+    return _handle_kyc_decision(
+        kyc_record_id=record_id,
+        service_client=service_client,
+        recorder=recorder,
+        action="admin.kyc.suspend",
+        before=before,
+        after=result,
+        event_type="kyc_suspended",
+        template="kyc_suspended",
+        notification_payload={
+            "vendor_id": vendor_id,
+            "owner_user_id": str(vendor["owner_user_id"]),
+            "kyc_record_id": record_id,
+            "reason": body.reason.strip(),
+        },
+    )
+
+
+@kyc_router.post("/{kyc_record_id}/revoke", response_model=KycDecisionResponse)
+async def revoke_kyc(
+    kyc_record_id: UUID,
+    body: RevokeKycRequest,
+    current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+) -> KycDecisionResponse:
+    record_id = str(kyc_record_id)
+    row = _load_kyc_record_row(service_client, record_id)
+    vendor_id = str(row["vendor_id"])
+    before = _snapshot_before_decision(service_client, vendor_id=vendor_id, kyc_row=row)
+    result = transition_revoke(
+        actor_id=current_user.id,
+        vendor_id=vendor_id,
+        kyc_record_id=record_id,
+        reason=body.reason.strip(),
+        service_client=service_client,
+    )
+    vendor = _load_vendor_row(service_client, vendor_id)
+    return _handle_kyc_decision(
+        kyc_record_id=record_id,
+        service_client=service_client,
+        recorder=recorder,
+        action="admin.kyc.revoke",
+        before=before,
+        after=result,
+        event_type="kyc_revoked",
+        template="kyc_revoked",
+        notification_payload={
+            "vendor_id": vendor_id,
+            "owner_user_id": str(vendor["owner_user_id"]),
+            "kyc_record_id": record_id,
+            "reason": body.reason.strip(),
         },
     )
 

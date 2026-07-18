@@ -141,8 +141,9 @@ def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     )
 
 
-def _is_verified(kyc_tier: int | None, preferred_badge: bool) -> bool:
-    return bool(preferred_badge or (kyc_tier is not None and kyc_tier >= 2))
+def _is_verified(effective_tier: int | None, preferred_badge: bool) -> bool:
+    """Verified only via preferred badge or auditable approved T2+ KYC (not bare tier)."""
+    return bool(preferred_badge or (effective_tier is not None and effective_tier >= 2))
 
 
 # Terminal successful order states — the public "orders fulfilled" trust signal.
@@ -381,12 +382,14 @@ def _matches_location(
 def _matches_badges(
     row: dict[str, Any],
     badges: list[DirectoryBadge],
+    *,
+    approved_tiers: dict[str, int],
 ) -> bool:
     if not badges:
         return True
     preferred = bool(row.get("preferred_badge"))
-    kyc_tier = row.get("kyc_tier")
-    verified = _is_verified(int(kyc_tier) if kyc_tier is not None else None, preferred)
+    effective_tier = approved_tiers.get(str(row.get("id") or ""))
+    verified = _is_verified(effective_tier, preferred)
     for badge in badges:
         if badge == "preferred" and not preferred:
             return False
@@ -403,21 +406,23 @@ def _build_directory_item(
     rating_avg: float | None,
     rating_count: int,
     listing_count: int,
+    approved_tiers: dict[str, int],
 ) -> DirectoryVendorItem:
-    kyc_tier = row.get("kyc_tier")
     preferred_badge = bool(row.get("preferred_badge"))
-    parsed_tier = int(kyc_tier) if kyc_tier is not None else None
+    vendor_id = str(row["id"])
+    # Surface only auditable approved tier publicly; orphaned bare tiers stay hidden.
+    effective_tier = approved_tiers.get(vendor_id)
     top_categories = sorted({path.split("/")[0] for path in category_paths if path})
 
     return DirectoryVendorItem(
-        id=str(row["id"]),
+        id=vendor_id,
         slug=str(row["slug"]),
         display_name=str(row["display_name"]),
         description=row.get("description"),
         logo_url=row.get("logo_url"),
         preferred_badge=preferred_badge,
-        kyc_tier=parsed_tier,
-        verified=_is_verified(parsed_tier, preferred_badge),
+        kyc_tier=effective_tier,
+        verified=_is_verified(effective_tier, preferred_badge),
         landmark=str(location_row.get("landmark")) if location_row else None,
         lat=(
             float(location_row["lat"])
@@ -494,6 +499,9 @@ def list_directory_vendors(
     vendor_rows = vendors_response.data or []
     vendor_ids = [str(row["id"]) for row in vendor_rows if row.get("id")]
 
+    from app.services.kyc.eligibility import load_approved_tiers_for_client
+
+    approved_tiers = load_approved_tiers_for_client(client, vendor_ids)
     ratings = _aggregate_vendor_ratings(client, vendor_ids)
     category_map = _vendor_category_paths(client, vendor_ids)
     listing_counts = _vendor_listing_counts(client, vendor_ids)
@@ -516,7 +524,7 @@ def list_directory_vendors(
             radius_km=radius_km,
         ):
             continue
-        if not _matches_badges(row, badges or []):
+        if not _matches_badges(row, badges or [], approved_tiers=approved_tiers):
             continue
 
         rating_avg, rating_count = ratings.get(vendor_id, (None, 0))
@@ -528,6 +536,7 @@ def list_directory_vendors(
                 rating_avg=rating_avg,
                 rating_count=rating_count,
                 listing_count=listing_counts.get(vendor_id, 0),
+                approved_tiers=approved_tiers,
             )
         )
 
@@ -544,6 +553,7 @@ def list_directory_vendors(
             rating_avg=ratings.get(str(row.get("id") or ""), (None, 0))[0],
             rating_count=ratings.get(str(row.get("id") or ""), (None, 0))[1],
             listing_count=listing_counts.get(str(row.get("id") or ""), 0),
+            approved_tiers=approved_tiers,
         )
         for row in vendor_rows
     ]
@@ -673,9 +683,11 @@ def get_vendor_profile(
         raise AppError("vendor.not_found", "Vendor not found", 404)
 
     vendor_id = str(row["id"])
-    kyc_tier = row.get("kyc_tier")
-    parsed_tier = int(kyc_tier) if kyc_tier is not None else None
     preferred_badge = bool(row.get("preferred_badge"))
+    from app.services.kyc.eligibility import load_approved_tiers_for_client
+
+    approved_tiers = load_approved_tiers_for_client(client, [vendor_id])
+    effective_tier = approved_tiers.get(vendor_id)
 
     # `location` (singular) stays for backward compatibility; `locations` is the
     # full branch list.
@@ -758,8 +770,8 @@ def get_vendor_profile(
             cover_url=row.get("cover_url"),
             whatsapp_msisdn=row.get("whatsapp_msisdn"),
             preferred_badge=preferred_badge,
-            kyc_tier=parsed_tier,
-            verified=_is_verified(parsed_tier, preferred_badge),
+            kyc_tier=effective_tier,
+            verified=_is_verified(effective_tier, preferred_badge),
             order_count=order_count,
             location=location,
             locations=locations,

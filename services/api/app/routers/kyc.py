@@ -64,10 +64,17 @@ class MomoNameMatchResponse(BaseModel):
     matched: bool
 
 
+class KycCapabilitiesOut(BaseModel):
+    wholesale: bool
+    organise_events: bool
+    directory_verified: bool
+
+
 class KycStatusResponse(BaseModel):
     application_status: KycApplicationStatus
     vendor_status: str
     kyc_tier: int | None
+    effective_tier: int | None = None
     kyc_record_id: str | None
     kyc_record_status: str | None
     tier: int | None
@@ -76,6 +83,15 @@ class KycStatusResponse(BaseModel):
     reviewer_notes: str | None
     archetype: str | None = None
     business_name: str | None = None
+    is_auditable_approved: bool = False
+    orphaned_tier: bool = False
+    capabilities: KycCapabilitiesOut = Field(
+        default_factory=lambda: KycCapabilitiesOut(
+            wholesale=False,
+            organise_events=False,
+            directory_verified=False,
+        )
+    )
 
 
 class KycSubmitResponse(BaseModel):
@@ -90,7 +106,9 @@ def _load_vendor_for_owner(
 ) -> dict[str, Any]:
     response = (
         service_client.client.table("vendors")
-        .select("id, owner_user_id, status, kyc_tier, archetype, display_name")
+        .select(
+            "id, owner_user_id, status, kyc_tier, preferred_badge, archetype, display_name"
+        )
         .eq("owner_user_id", owner_user_id)
         .maybe_single()
         .execute()
@@ -164,14 +182,30 @@ def _build_status_response(
     vendor: dict[str, Any],
     application_status: KycApplicationStatus,
     kyc_record: KycRecordSnapshot | None,
+    *,
+    service_client: ServiceRoleClient,
 ) -> KycStatusResponse:
+    from app.services.kyc.eligibility import resolve_vendor_eligibility
+
     momo = _serialize_momo_match(kyc_record.momo_name_match if kyc_record else None)
     archetype = vendor.get("archetype")
     business_name = vendor.get("display_name")
+    eligibility = resolve_vendor_eligibility(
+        service_client,
+        str(vendor["id"]),
+        vendor_row=vendor,
+    )
+    # Never surface a bare stored tier as the capability tier when orphaned.
+    public_tier = (
+        eligibility.effective_tier
+        if eligibility.is_auditable_approved
+        else None
+    )
     return KycStatusResponse(
         application_status=application_status,
         vendor_status=str(vendor.get("status", "draft")),
-        kyc_tier=vendor.get("kyc_tier"),
+        kyc_tier=public_tier,
+        effective_tier=eligibility.effective_tier,
         kyc_record_id=kyc_record.id if kyc_record else None,
         kyc_record_status=kyc_record.status if kyc_record else None,
         tier=kyc_record.tier if kyc_record else None,
@@ -181,6 +215,13 @@ def _build_status_response(
         archetype=str(archetype) if isinstance(archetype, str) and archetype else None,
         business_name=(
             str(business_name) if isinstance(business_name, str) and business_name else None
+        ),
+        is_auditable_approved=eligibility.is_auditable_approved,
+        orphaned_tier=eligibility.orphaned_tier,
+        capabilities=KycCapabilitiesOut(
+            wholesale=eligibility.can_wholesale,
+            organise_events=eligibility.can_organise_events,
+            directory_verified=eligibility.is_directory_verified,
         ),
     )
 
@@ -192,7 +233,12 @@ async def get_kyc_status(
 ) -> KycStatusResponse:
     machine = KycStateMachine(service_client)
     application_status, kyc_record = machine.get_status(str(vendor["id"]))
-    return _build_status_response(vendor, application_status, kyc_record)
+    return _build_status_response(
+        vendor,
+        application_status,
+        kyc_record,
+        service_client=service_client,
+    )
 
 
 @router.post("/submit", response_model=KycSubmitResponse)

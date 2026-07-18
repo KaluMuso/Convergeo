@@ -328,16 +328,21 @@ def _load_vendor_for_owner(
     return row
 
 
-def _require_active_kyc_vendor(vendor: dict[str, Any]) -> None:
-    status = str(vendor.get("status") or "")
-    tier = vendor.get("kyc_tier")
-    if status != "active" or tier is None or int(tier) < 1:
-        raise AppError(
-            code="kyc_required",
-            message="Active KYC verification is required to manage events",
-            http_status=403,
-            details={"message_key": "vendor.events.errors.kyc_required"},
-        )
+def _require_active_kyc_vendor(
+    service_client: ServiceRoleClient,
+    vendor: dict[str, Any],
+) -> None:
+    from app.services.kyc.eligibility import (
+        require_events_eligible,
+        resolve_vendor_eligibility,
+    )
+
+    eligibility = resolve_vendor_eligibility(
+        service_client,
+        str(vendor["id"]),
+        vendor_row=vendor,
+    )
+    require_events_eligible(eligibility)
 
 
 def _load_event_for_vendor(
@@ -702,7 +707,7 @@ async def list_organiser_events(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> EventListResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
-    _require_active_kyc_vendor(vendor)
+    _require_active_kyc_vendor(service_client, vendor)
     vendor_id = str(vendor["id"])
     client = service_client.client
 
@@ -733,7 +738,7 @@ async def create_organiser_event(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> EventMutationResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
-    _require_active_kyc_vendor(vendor)
+    _require_active_kyc_vendor(service_client, vendor)
     _validate_instance_time_order(body.instances)
     vendor_id = str(vendor["id"])
     client = service_client.client
@@ -790,7 +795,7 @@ async def get_organiser_event(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> EventMutationResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
-    _require_active_kyc_vendor(vendor)
+    _require_active_kyc_vendor(service_client, vendor)
     vendor_id = str(vendor["id"])
     client = service_client.client
 
@@ -810,7 +815,7 @@ async def update_organiser_event(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> EventMutationResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
-    _require_active_kyc_vendor(vendor)
+    _require_active_kyc_vendor(service_client, vendor)
     vendor_id = str(vendor["id"])
     client = service_client.client
 
@@ -928,7 +933,7 @@ async def publish_organiser_event(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> EventMutationResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
-    _require_active_kyc_vendor(vendor)
+    _require_active_kyc_vendor(service_client, vendor)
     vendor_id = str(vendor["id"])
     client = service_client.client
 
@@ -956,7 +961,7 @@ async def cancel_organiser_event(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> EventMutationResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
-    _require_active_kyc_vendor(vendor)
+    _require_active_kyc_vendor(service_client, vendor)
     vendor_id = str(vendor["id"])
     client = service_client.client
 
@@ -993,7 +998,7 @@ async def end_organiser_event(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> EventMutationResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
-    _require_active_kyc_vendor(vendor)
+    _require_active_kyc_vendor(service_client, vendor)
     vendor_id = str(vendor["id"])
     client = service_client.client
 

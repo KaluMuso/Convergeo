@@ -32,6 +32,7 @@ class FakeQuery:
         self._pending_op: str | None = None
         self._payload: dict[str, Any] | None = None
         self._order: tuple[str, bool] | None = None
+        self._limit: int | None = None
 
     def select(self, columns: str, *, count: str | None = None) -> FakeQuery:
         _ = count
@@ -47,6 +48,10 @@ class FakeQuery:
 
     def order(self, column: str, *, desc: bool = False) -> FakeQuery:
         self._order = (column, desc)
+        return self
+
+    def limit(self, count: int) -> FakeQuery:
+        self._limit = count
         return self
 
     def maybe_single(self) -> FakeQuery:
@@ -102,6 +107,8 @@ class FakeQuery:
         if self._order is not None:
             column, desc = self._order
             rows = sorted(rows, key=lambda row: row.get(column, ""), reverse=desc)
+        if self._limit is not None:
+            rows = rows[: self._limit]
         if self._maybe_single:
             return MagicMock(data=rows[0] if rows else None, count=len(rows))
         return MagicMock(data=rows, count=len(rows))
@@ -143,6 +150,7 @@ class FakeSupabaseClient:
             "event_instances": FakeTable(),
             "tickets": FakeTable(),
             "notification_outbox": FakeTable(),
+            "kyc_records": FakeTable(),
         }
 
     def table(self, name: str) -> FakeTable:
@@ -165,12 +173,34 @@ def _seed_vendors(fake: FakeSupabaseClient) -> None:
                 "owner_user_id": USER_A_ID,
                 "status": "active",
                 "kyc_tier": 2,
+                "preferred_badge": False,
             },
             {
                 "id": VENDOR_B_ID,
                 "owner_user_id": USER_B_ID,
                 "status": "active",
                 "kyc_tier": 2,
+                "preferred_badge": False,
+            },
+        ]
+    )
+    fake.tables["kyc_records"].rows.extend(
+        [
+            {
+                "id": "kyc-aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+                "vendor_id": VENDOR_A_ID,
+                "tier": 2,
+                "status": "approved",
+                "doc_storage_paths": ["kyc/a.jpg"],
+                "momo_name_match": {"matched": True},
+            },
+            {
+                "id": "kyc-bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                "vendor_id": VENDOR_B_ID,
+                "tier": 2,
+                "status": "approved",
+                "doc_storage_paths": ["kyc/b.jpg"],
+                "momo_name_match": {"matched": True},
             },
         ]
     )

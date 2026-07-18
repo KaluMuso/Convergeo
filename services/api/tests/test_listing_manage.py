@@ -136,6 +136,7 @@ class FakeSupabaseClient:
             "orders": FakeTable(),
             "cart_items": FakeTable(),
             "carts": FakeTable(),
+            "kyc_records": FakeTable(),
         }
 
     def table(self, name: str) -> FakeTable:
@@ -150,12 +151,34 @@ def _seed_base(fake: FakeSupabaseClient) -> None:
                 "owner_user_id": USER_A_ID,
                 "status": "active",
                 "kyc_tier": 2,
+                "preferred_badge": False,
             },
             {
                 "id": VENDOR_B_ID,
                 "owner_user_id": USER_B_ID,
                 "status": "active",
                 "kyc_tier": 1,
+                "preferred_badge": False,
+            },
+        ]
+    )
+    fake.tables["kyc_records"].rows.extend(
+        [
+            {
+                "id": "kyc-a",
+                "vendor_id": VENDOR_A_ID,
+                "tier": 2,
+                "status": "approved",
+                "doc_storage_paths": ["kyc/a.jpg"],
+                "momo_name_match": {"matched": True},
+            },
+            {
+                "id": "kyc-b",
+                "vendor_id": VENDOR_B_ID,
+                "tier": 1,
+                "status": "approved",
+                "doc_storage_paths": ["kyc/b.jpg"],
+                "momo_name_match": {"matched": True},
             },
         ]
     )

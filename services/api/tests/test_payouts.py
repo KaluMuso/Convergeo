@@ -612,6 +612,8 @@ async def test_velocity_cap_boundary_at_cap_ok_plus_one_deferred(
         }
     ]
     fake_client.tables["vendors"].rows[0]["kyc_tier"] = 1
+    # Cap tier must come from the approved KYC record, not the bare column.
+    fake_client.tables["kyc_records"].rows[0]["tier"] = 1
 
     with (
         patch(

@@ -9,6 +9,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.kyc.badge import payout_velocity_window_start
+from app.services.kyc.eligibility import cap_tier_for_quotas, resolve_vendor_eligibility
 from app.services.kyc.state_machine import ServiceRoleClient
 from fastapi import Depends
 
@@ -225,7 +226,13 @@ async def get_vendor_cap_limits(
 ) -> VendorCapLimits:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     vendor_id = str(vendor["id"])
-    tier = int(vendor.get("kyc_tier") or 1)
+    eligibility = resolve_vendor_eligibility(
+        service_client,
+        vendor_id,
+        vendor_row=vendor,
+    )
+    # Orphaned bare kyc_tier must not unlock T2/T3 quota lifts (MR-D02).
+    tier = cap_tier_for_quotas(eligibility)
     quota = load_vendor_quota(service_client, tier)
     cod_cap = _parse_config_int(service_client.client, "cod_cap_ngwee", 50_000)
     listing_count = _count_vendor_listings(service_client, vendor_id)

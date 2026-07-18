@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any, Protocol, cast
 from uuid import UUID
@@ -8,7 +9,20 @@ from uuid import UUID
 from app.deps import get_supabase_service_client  # type: ignore[attr-defined]
 from app.errors import AppError
 
-KYC_RECORD_STATUSES = frozenset({"pending", "approved", "rejected"})
+# Canonical DB statuses after migration 0056. Legacy `pending` is still accepted
+# on read (mapped to submitted) for mixed-environment safety during rollout.
+KYC_RECORD_STATUSES = frozenset(
+    {
+        "submitted",
+        "under_review",
+        "approved",
+        "rejected",
+        "suspended",
+        "revoked",
+        "pending",  # legacy synonym for submitted
+    }
+)
+REVIEWABLE_STATUSES = frozenset({"submitted", "under_review", "pending"})
 VENDOR_STATUSES = frozenset({"draft", "pending_kyc", "active", "suspended"})
 VALID_TIERS = frozenset({1, 2, 3})
 
@@ -21,8 +35,11 @@ class ServiceRoleClient(Protocol):
 class KycApplicationStatus(StrEnum):
     DRAFT = "draft"
     SUBMITTED = "submitted"
+    UNDER_REVIEW = "under_review"
     APPROVED = "approved"
     REJECTED = "rejected"
+    SUSPENDED = "suspended"
+    REVOKED = "revoked"
 
 
 class KycTransitionError(AppError):
@@ -44,6 +61,10 @@ class KycRecordSnapshot:
     doc_storage_paths: list[str]
     momo_name_match: dict[str, Any] | None
     reviewer_notes: str | None
+    reviewed_by: str | None = None
+    reviewed_at: str | None = None
+    decision_reason: str | None = None
+    lifecycle_reason: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,6 +100,13 @@ def _normalize_entity_id(entity_id: str | UUID | None) -> str | None:
         return str(entity_id)
     value = entity_id.strip()
     return value or None
+
+
+def normalize_record_status(status: str) -> str:
+    """Map legacy pending → submitted for application/capability logic."""
+    if status == "pending":
+        return "submitted"
+    return status
 
 
 def write_kyc_audit_log(
@@ -129,13 +157,44 @@ def _load_vendor(service_client: ServiceRoleClient, vendor_id: str) -> VendorSna
     )
 
 
+def _snapshot_from_row(row: dict[str, Any]) -> KycRecordSnapshot:
+    paths = row.get("doc_storage_paths")
+    doc_paths = [str(path) for path in paths] if isinstance(paths, list) else []
+    momo = row.get("momo_name_match")
+    momo_match = cast(dict[str, Any], momo) if isinstance(momo, dict) else None
+    reviewer_notes = row.get("reviewer_notes")
+    reviewed_by = row.get("reviewed_by")
+    reviewed_at = row.get("reviewed_at")
+    decision_reason = row.get("decision_reason")
+    lifecycle_reason = row.get("lifecycle_reason")
+    return KycRecordSnapshot(
+        id=str(row["id"]),
+        vendor_id=str(row["vendor_id"]),
+        tier=int(row["tier"]),
+        status=normalize_record_status(str(row["status"])),
+        doc_storage_paths=doc_paths,
+        momo_name_match=momo_match,
+        reviewer_notes=str(reviewer_notes) if isinstance(reviewer_notes, str) else None,
+        reviewed_by=str(reviewed_by) if reviewed_by else None,
+        reviewed_at=str(reviewed_at) if reviewed_at else None,
+        decision_reason=str(decision_reason) if isinstance(decision_reason, str) else None,
+        lifecycle_reason=str(lifecycle_reason) if isinstance(lifecycle_reason, str) else None,
+    )
+
+
+_KYC_SELECT = (
+    "id, vendor_id, tier, status, doc_storage_paths, momo_name_match, "
+    "reviewer_notes, reviewed_by, reviewed_at, decision_reason, lifecycle_reason"
+)
+
+
 def _load_latest_kyc_record(
     service_client: ServiceRoleClient,
     vendor_id: str,
 ) -> KycRecordSnapshot | None:
     response = (
         service_client.client.table("kyc_records")
-        .select("id, vendor_id, tier, status, doc_storage_paths, momo_name_match, reviewer_notes")
+        .select(_KYC_SELECT)
         .eq("vendor_id", vendor_id)
         .order("created_at", desc=True)
         .limit(1)
@@ -144,35 +203,46 @@ def _load_latest_kyc_record(
     rows = _rows(response)
     if not rows:
         return None
-    row = rows[0]
-    paths = row.get("doc_storage_paths")
-    doc_paths = [str(path) for path in paths] if isinstance(paths, list) else []
-    momo = row.get("momo_name_match")
-    momo_match = cast(dict[str, Any], momo) if isinstance(momo, dict) else None
-    reviewer_notes = row.get("reviewer_notes")
-    return KycRecordSnapshot(
-        id=str(row["id"]),
-        vendor_id=str(row["vendor_id"]),
-        tier=int(row["tier"]),
-        status=str(row["status"]),
-        doc_storage_paths=doc_paths,
-        momo_name_match=momo_match,
-        reviewer_notes=str(reviewer_notes) if isinstance(reviewer_notes, str) else None,
+    return _snapshot_from_row(rows[0])
+
+
+def _load_kyc_record_by_id(
+    service_client: ServiceRoleClient,
+    kyc_record_id: str,
+) -> KycRecordSnapshot | None:
+    response = (
+        service_client.client.table("kyc_records")
+        .select(_KYC_SELECT)
+        .eq("id", kyc_record_id)
+        .maybe_single()
+        .execute()
     )
+    row = _single_row(response)
+    if row is None:
+        return None
+    return _snapshot_from_row(row)
 
 
 def derive_application_status(
     vendor: VendorSnapshot,
     kyc_record: KycRecordSnapshot | None,
 ) -> KycApplicationStatus:
+    _ = vendor
     if kyc_record is None:
         return KycApplicationStatus.DRAFT
-    if kyc_record.status == "approved":
+    status = normalize_record_status(kyc_record.status)
+    if status == "approved":
         return KycApplicationStatus.APPROVED
-    if kyc_record.status == "rejected":
+    if status == "rejected":
         return KycApplicationStatus.REJECTED
-    if kyc_record.status == "pending":
+    if status == "under_review":
+        return KycApplicationStatus.UNDER_REVIEW
+    if status == "submitted":
         return KycApplicationStatus.SUBMITTED
+    if status == "suspended":
+        return KycApplicationStatus.SUSPENDED
+    if status == "revoked":
+        return KycApplicationStatus.REVOKED
     return KycApplicationStatus.DRAFT
 
 
@@ -195,11 +265,14 @@ def _update_vendor(
     *,
     status: str | None = None,
     kyc_tier: int | None = None,
+    clear_kyc_tier: bool = False,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {}
     if status is not None:
         payload["status"] = status
-    if kyc_tier is not None:
+    if clear_kyc_tier:
+        payload["kyc_tier"] = None
+    elif kyc_tier is not None:
         payload["kyc_tier"] = kyc_tier
     if not payload:
         raise ValueError("vendor update requires at least one field")
@@ -224,7 +297,7 @@ def _insert_kyc_record(
     tier: int,
     doc_storage_paths: list[str],
     momo_name_match: dict[str, Any] | None,
-    status: str = "pending",
+    status: str = "submitted",
 ) -> dict[str, Any]:
     if tier not in VALID_TIERS:
         raise AppError(
@@ -232,7 +305,8 @@ def _insert_kyc_record(
             message="KYC tier must be 1, 2, or 3",
             http_status=422,
         )
-    if status not in KYC_RECORD_STATUSES:
+    write_status = normalize_record_status(status)
+    if write_status not in KYC_RECORD_STATUSES - {"pending"}:
         raise AppError(
             code="validation_error",
             message="Invalid KYC record status",
@@ -244,7 +318,7 @@ def _insert_kyc_record(
         "tier": tier,
         "doc_storage_paths": doc_storage_paths,
         "momo_name_match": momo_name_match,
-        "status": status,
+        "status": write_status,
     }
     response = service_client.client.table("kyc_records").insert(row).execute()
     inserted = _single_row(response)
@@ -268,14 +342,26 @@ def _update_kyc_record(
     status: str | None = None,
     momo_name_match: dict[str, Any] | None = None,
     reviewer_notes: str | None = None,
+    reviewed_by: str | None = None,
+    reviewed_at: str | None = None,
+    decision_reason: str | None = None,
+    lifecycle_reason: str | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {}
     if status is not None:
-        payload["status"] = status
+        payload["status"] = normalize_record_status(status)
     if momo_name_match is not None:
         payload["momo_name_match"] = momo_name_match
     if reviewer_notes is not None:
         payload["reviewer_notes"] = reviewer_notes
+    if reviewed_by is not None:
+        payload["reviewed_by"] = reviewed_by
+    if reviewed_at is not None:
+        payload["reviewed_at"] = reviewed_at
+    if decision_reason is not None:
+        payload["decision_reason"] = decision_reason
+    if lifecycle_reason is not None:
+        payload["lifecycle_reason"] = lifecycle_reason
     if not payload:
         raise ValueError("kyc record update requires at least one field")
 
@@ -293,6 +379,32 @@ def _update_kyc_record(
     if row is None:
         raise AppError(code="not_found", message="KYC record not found", http_status=404)
     return row
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def _record_audit_slice(record: KycRecordSnapshot | dict[str, Any]) -> dict[str, Any]:
+    if isinstance(record, KycRecordSnapshot):
+        return {
+            "id": record.id,
+            "status": record.status,
+            "tier": record.tier,
+            "reviewed_by": record.reviewed_by,
+            "reviewed_at": record.reviewed_at,
+            "decision_reason": record.decision_reason,
+            "lifecycle_reason": record.lifecycle_reason,
+        }
+    return {
+        "id": record.get("id"),
+        "status": normalize_record_status(str(record.get("status", ""))),
+        "tier": record.get("tier"),
+        "reviewed_by": record.get("reviewed_by"),
+        "reviewed_at": record.get("reviewed_at"),
+        "decision_reason": record.get("decision_reason"),
+        "lifecycle_reason": record.get("lifecycle_reason"),
+    }
 
 
 @dataclass(slots=True)
@@ -324,21 +436,19 @@ def transition_submit(
     current = derive_application_status(vendor, kyc_record)
     _guard_transition(
         current,
-        frozenset({KycApplicationStatus.DRAFT, KycApplicationStatus.REJECTED}),
+        frozenset(
+            {
+                KycApplicationStatus.DRAFT,
+                KycApplicationStatus.REJECTED,
+                KycApplicationStatus.REVOKED,
+            }
+        ),
         KycApplicationStatus.SUBMITTED,
     )
 
     before = {
         "vendor": {"id": vendor.id, "status": vendor.status, "kyc_tier": vendor.kyc_tier},
-        "kyc_record": (
-            {
-                "id": kyc_record.id,
-                "status": kyc_record.status,
-                "tier": kyc_record.tier,
-            }
-            if kyc_record
-            else None
-        ),
+        "kyc_record": _record_audit_slice(kyc_record) if kyc_record else None,
     }
 
     vendor_after = _update_vendor(client, vendor_id, status="pending_kyc")
@@ -348,7 +458,7 @@ def transition_submit(
         tier=tier,
         doc_storage_paths=doc_storage_paths,
         momo_name_match=momo_name_match,
-        status="pending",
+        status="submitted",
     )
 
     after = {
@@ -357,12 +467,7 @@ def transition_submit(
             "status": vendor_after["status"],
             "kyc_tier": vendor_after.get("kyc_tier"),
         },
-        "kyc_record": {
-            "id": created["id"],
-            "status": created["status"],
-            "tier": created["tier"],
-            "momo_name_match": created.get("momo_name_match"),
-        },
+        "kyc_record": _record_audit_slice(created),
     }
     write_kyc_audit_log(
         client,
@@ -395,6 +500,66 @@ def transition_resubmit(
     )
 
 
+def transition_start_review(
+    *,
+    actor_id: str,
+    vendor_id: str,
+    kyc_record_id: str,
+    lifecycle_reason: str | None = None,
+    service_client: ServiceRoleClient | None = None,
+) -> dict[str, Any]:
+    client = service_client or get_supabase_service_client()
+    vendor = _load_vendor(client, vendor_id)
+    kyc_record = _load_kyc_record_by_id(client, kyc_record_id)
+    if kyc_record is None or kyc_record.vendor_id != vendor_id:
+        raise AppError(code="not_found", message="KYC record not found", http_status=404)
+
+    current = derive_application_status(vendor, kyc_record)
+    _guard_transition(
+        current,
+        frozenset({KycApplicationStatus.SUBMITTED, KycApplicationStatus.UNDER_REVIEW}),
+        KycApplicationStatus.UNDER_REVIEW,
+    )
+
+    before = {
+        "vendor": {"id": vendor.id, "status": vendor.status, "kyc_tier": vendor.kyc_tier},
+        "kyc_record": _record_audit_slice(kyc_record),
+    }
+
+    if current == KycApplicationStatus.UNDER_REVIEW:
+        kyc_after = {
+            "id": kyc_record.id,
+            "status": kyc_record.status,
+            "tier": kyc_record.tier,
+            "reviewed_by": kyc_record.reviewed_by,
+            "reviewed_at": kyc_record.reviewed_at,
+            "decision_reason": kyc_record.decision_reason,
+            "lifecycle_reason": kyc_record.lifecycle_reason,
+        }
+    else:
+        kyc_after = _update_kyc_record(
+            client,
+            kyc_record_id,
+            status="under_review",
+            lifecycle_reason=lifecycle_reason,
+        )
+
+    after = {
+        "vendor": {"id": vendor.id, "status": vendor.status, "kyc_tier": vendor.kyc_tier},
+        "kyc_record": _record_audit_slice(kyc_after),
+    }
+    write_kyc_audit_log(
+        client,
+        actor_id=actor_id,
+        action="kyc.start_review",
+        entity_type="kyc_record",
+        entity_id=kyc_record_id,
+        before=before,
+        after=after,
+    )
+    return after
+
+
 def transition_approve(
     *,
     actor_id: str,
@@ -406,14 +571,14 @@ def transition_approve(
 ) -> dict[str, Any]:
     client = service_client or get_supabase_service_client()
     vendor = _load_vendor(client, vendor_id)
-    kyc_record = _load_latest_kyc_record(client, vendor_id)
-    if kyc_record is None or kyc_record.id != kyc_record_id:
+    kyc_record = _load_kyc_record_by_id(client, kyc_record_id)
+    if kyc_record is None or kyc_record.vendor_id != vendor_id:
         raise AppError(code="not_found", message="KYC record not found", http_status=404)
 
     current = derive_application_status(vendor, kyc_record)
     _guard_transition(
         current,
-        frozenset({KycApplicationStatus.SUBMITTED}),
+        frozenset({KycApplicationStatus.SUBMITTED, KycApplicationStatus.UNDER_REVIEW}),
         KycApplicationStatus.APPROVED,
     )
 
@@ -426,16 +591,29 @@ def transition_approve(
             details={"message_key": "vendor.kyc.name_match_mismatch"},
         )
 
+    if tier != kyc_record.tier:
+        raise AppError(
+            code="validation_error",
+            message="Approval tier must match the KYC record tier",
+            http_status=422,
+            details={"record_tier": kyc_record.tier, "requested_tier": tier},
+        )
+
     before = {
         "vendor": {"id": vendor.id, "status": vendor.status, "kyc_tier": vendor.kyc_tier},
-        "kyc_record": {"id": kyc_record.id, "status": kyc_record.status, "tier": kyc_record.tier},
+        "kyc_record": _record_audit_slice(kyc_record),
     }
 
+    decision_reason = reviewer_notes
+    reviewed_at = _utc_now_iso()
     kyc_after = _update_kyc_record(
         client,
         kyc_record_id,
         status="approved",
         reviewer_notes=reviewer_notes,
+        reviewed_by=actor_id,
+        reviewed_at=reviewed_at,
+        decision_reason=decision_reason,
     )
     vendor_after = _update_vendor(client, vendor_id, status="active", kyc_tier=tier)
 
@@ -445,11 +623,7 @@ def transition_approve(
             "status": vendor_after["status"],
             "kyc_tier": vendor_after.get("kyc_tier"),
         },
-        "kyc_record": {
-            "id": kyc_after["id"],
-            "status": kyc_after["status"],
-            "tier": kyc_after["tier"],
-        },
+        "kyc_record": _record_audit_slice(kyc_after),
     }
     write_kyc_audit_log(
         client,
@@ -473,42 +647,162 @@ def transition_reject(
 ) -> dict[str, Any]:
     client = service_client or get_supabase_service_client()
     vendor = _load_vendor(client, vendor_id)
-    kyc_record = _load_latest_kyc_record(client, vendor_id)
-    if kyc_record is None or kyc_record.id != kyc_record_id:
+    kyc_record = _load_kyc_record_by_id(client, kyc_record_id)
+    if kyc_record is None or kyc_record.vendor_id != vendor_id:
         raise AppError(code="not_found", message="KYC record not found", http_status=404)
 
     current = derive_application_status(vendor, kyc_record)
     _guard_transition(
         current,
-        frozenset({KycApplicationStatus.SUBMITTED}),
+        frozenset({KycApplicationStatus.SUBMITTED, KycApplicationStatus.UNDER_REVIEW}),
         KycApplicationStatus.REJECTED,
     )
 
     before = {
         "vendor": {"id": vendor.id, "status": vendor.status, "kyc_tier": vendor.kyc_tier},
-        "kyc_record": {"id": kyc_record.id, "status": kyc_record.status, "tier": kyc_record.tier},
+        "kyc_record": _record_audit_slice(kyc_record),
     }
 
+    reviewed_at = _utc_now_iso()
     kyc_after = _update_kyc_record(
         client,
         kyc_record_id,
         status="rejected",
         reviewer_notes=reviewer_notes,
+        reviewed_by=actor_id,
+        reviewed_at=reviewed_at,
+        decision_reason=reviewer_notes,
     )
 
     after = {
         "vendor": {"id": vendor.id, "status": vendor.status, "kyc_tier": vendor.kyc_tier},
-        "kyc_record": {
-            "id": kyc_after["id"],
-            "status": kyc_after["status"],
-            "tier": kyc_after["tier"],
-            "reviewer_notes": kyc_after.get("reviewer_notes"),
-        },
+        "kyc_record": _record_audit_slice(kyc_after),
     }
     write_kyc_audit_log(
         client,
         actor_id=actor_id,
         action="kyc.reject",
+        entity_type="kyc_record",
+        entity_id=kyc_record_id,
+        before=before,
+        after=after,
+    )
+    return after
+
+
+def transition_suspend(
+    *,
+    actor_id: str,
+    vendor_id: str,
+    kyc_record_id: str,
+    reason: str,
+    service_client: ServiceRoleClient | None = None,
+) -> dict[str, Any]:
+    client = service_client or get_supabase_service_client()
+    vendor = _load_vendor(client, vendor_id)
+    kyc_record = _load_kyc_record_by_id(client, kyc_record_id)
+    if kyc_record is None or kyc_record.vendor_id != vendor_id:
+        raise AppError(code="not_found", message="KYC record not found", http_status=404)
+
+    current = derive_application_status(vendor, kyc_record)
+    _guard_transition(
+        current,
+        frozenset({KycApplicationStatus.APPROVED}),
+        KycApplicationStatus.SUSPENDED,
+    )
+
+    before = {
+        "vendor": {"id": vendor.id, "status": vendor.status, "kyc_tier": vendor.kyc_tier},
+        "kyc_record": _record_audit_slice(kyc_record),
+    }
+
+    kyc_after = _update_kyc_record(
+        client,
+        kyc_record_id,
+        status="suspended",
+        lifecycle_reason=reason,
+        reviewer_notes=reason,
+    )
+    # Clear denormalized tier immediately — eligibility already ignores non-approved.
+    vendor_after = _update_vendor(
+        client,
+        vendor_id,
+        status="suspended",
+        clear_kyc_tier=True,
+    )
+
+    after = {
+        "vendor": {
+            "id": vendor_after["id"],
+            "status": vendor_after["status"],
+            "kyc_tier": vendor_after.get("kyc_tier"),
+        },
+        "kyc_record": _record_audit_slice(kyc_after),
+    }
+    write_kyc_audit_log(
+        client,
+        actor_id=actor_id,
+        action="kyc.suspend",
+        entity_type="kyc_record",
+        entity_id=kyc_record_id,
+        before=before,
+        after=after,
+    )
+    return after
+
+
+def transition_revoke(
+    *,
+    actor_id: str,
+    vendor_id: str,
+    kyc_record_id: str,
+    reason: str,
+    service_client: ServiceRoleClient | None = None,
+) -> dict[str, Any]:
+    client = service_client or get_supabase_service_client()
+    vendor = _load_vendor(client, vendor_id)
+    kyc_record = _load_kyc_record_by_id(client, kyc_record_id)
+    if kyc_record is None or kyc_record.vendor_id != vendor_id:
+        raise AppError(code="not_found", message="KYC record not found", http_status=404)
+
+    current = derive_application_status(vendor, kyc_record)
+    _guard_transition(
+        current,
+        frozenset({KycApplicationStatus.APPROVED, KycApplicationStatus.SUSPENDED}),
+        KycApplicationStatus.REVOKED,
+    )
+
+    before = {
+        "vendor": {"id": vendor.id, "status": vendor.status, "kyc_tier": vendor.kyc_tier},
+        "kyc_record": _record_audit_slice(kyc_record),
+    }
+
+    kyc_after = _update_kyc_record(
+        client,
+        kyc_record_id,
+        status="revoked",
+        lifecycle_reason=reason,
+        reviewer_notes=reason,
+    )
+    vendor_after = _update_vendor(
+        client,
+        vendor_id,
+        status="draft",
+        clear_kyc_tier=True,
+    )
+
+    after = {
+        "vendor": {
+            "id": vendor_after["id"],
+            "status": vendor_after["status"],
+            "kyc_tier": vendor_after.get("kyc_tier"),
+        },
+        "kyc_record": _record_audit_slice(kyc_after),
+    }
+    write_kyc_audit_log(
+        client,
+        actor_id=actor_id,
+        action="kyc.revoke",
         entity_type="kyc_record",
         entity_id=kyc_record_id,
         before=before,
@@ -534,7 +828,17 @@ def transition_upgrade_tier(
             message="Tier upgrade requires an active vendor",
             http_status=409,
         )
-    current_tier = vendor.kyc_tier or 1
+    # Upgrade eligibility must be backed by an approved record, not a bare tier.
+    from app.services.kyc.eligibility import resolve_vendor_eligibility
+
+    eligibility = resolve_vendor_eligibility(client, vendor_id)
+    if not eligibility.is_auditable_approved or eligibility.effective_tier is None:
+        raise AppError(
+            code="kyc_required",
+            message="Tier upgrade requires an auditable approved KYC record",
+            http_status=403,
+        )
+    current_tier = eligibility.effective_tier
     if target_tier not in VALID_TIERS or target_tier <= current_tier:
         raise AppError(
             code="validation_error",
@@ -545,6 +849,7 @@ def transition_upgrade_tier(
 
     before = {
         "vendor": {"id": vendor.id, "status": vendor.status, "kyc_tier": vendor.kyc_tier},
+        "eligibility": eligibility.to_public_dict(),
     }
     created = _insert_kyc_record(
         client,
@@ -552,7 +857,7 @@ def transition_upgrade_tier(
         tier=target_tier,
         doc_storage_paths=doc_storage_paths,
         momo_name_match=momo_name_match,
-        status="pending",
+        status="submitted",
     )
     vendor_after = _update_vendor(client, vendor_id, status="pending_kyc")
 
@@ -562,11 +867,7 @@ def transition_upgrade_tier(
             "status": vendor_after["status"],
             "kyc_tier": vendor_after.get("kyc_tier"),
         },
-        "kyc_record": {
-            "id": created["id"],
-            "status": created["status"],
-            "tier": created["tier"],
-        },
+        "kyc_record": _record_audit_slice(created),
     }
     write_kyc_audit_log(
         client,

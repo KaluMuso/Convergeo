@@ -1,4 +1,4 @@
-"""KYC status machine, name-match, caps enforcement, and preferred-badge jobs."""
+"""KYC status machine, name-match, caps enforcement, preferred-badge, eligibility."""
 
 from app.services.kyc.badge import PreferredBadgeJob, evaluate_preferred_badge
 from app.services.kyc.caps import (
@@ -10,6 +10,13 @@ from app.services.kyc.caps import (
     get_vendor_cap_limits,
     require_listing_cap,
 )
+from app.services.kyc.eligibility import (
+    VendorKycEligibility,
+    load_approved_tiers_by_vendor,
+    require_events_eligible,
+    require_wholesale_eligible,
+    resolve_vendor_eligibility,
+)
 from app.services.kyc.name_match import MomoNameMatchResult, resolve_and_score_momo_name
 from app.services.kyc.state_machine import (
     KycApplicationStatus,
@@ -19,7 +26,10 @@ from app.services.kyc.state_machine import (
     transition_approve,
     transition_reject,
     transition_resubmit,
+    transition_revoke,
+    transition_start_review,
     transition_submit,
+    transition_suspend,
     transition_upgrade_tier,
 )
 
@@ -33,15 +43,23 @@ __all__ = [
     "PayoutVelocityChecker",
     "PreferredBadgeJob",
     "VendorCapLimits",
+    "VendorKycEligibility",
     "evaluate_preferred_badge",
     "get_order_cap_checker",
     "get_payout_velocity_checker",
     "get_vendor_cap_limits",
+    "load_approved_tiers_by_vendor",
+    "require_events_eligible",
     "require_listing_cap",
+    "require_wholesale_eligible",
     "resolve_and_score_momo_name",
+    "resolve_vendor_eligibility",
     "transition_approve",
     "transition_reject",
     "transition_resubmit",
+    "transition_revoke",
+    "transition_start_review",
     "transition_submit",
+    "transition_suspend",
     "transition_upgrade_tier",
 ]

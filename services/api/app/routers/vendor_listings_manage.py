@@ -332,15 +332,19 @@ def _apply_listing_update(
     if body.price_tiers is not None:
         _validate_price_tiers_ordered(body.price_tiers)
 
-    kyc_tier = int(vendor.get("kyc_tier") or 1)
     wholesale = body.wholesale if body.wholesale is not None else bool(listing.get("wholesale"))
-    if wholesale and kyc_tier < 2:
-        raise AppError(
-            code="wholesale_requires_t2",
-            message="Wholesale listings require T2 verification or higher",
-            http_status=403,
-            details={"message_key": "vendor.listings.errors.wholesale_requires_t2"},
+    if wholesale:
+        from app.services.kyc.eligibility import (
+            require_wholesale_eligible,
+            resolve_vendor_eligibility,
         )
+
+        eligibility = resolve_vendor_eligibility(
+            service_client,
+            str(vendor["id"]),
+            vendor_row=vendor,
+        )
+        require_wholesale_eligible(eligibility)
 
     stock_mode = body.stock_mode or str(listing.get("stock_mode"))
     stock_qty = body.stock_qty if body.stock_qty is not None else listing.get("stock_qty")
