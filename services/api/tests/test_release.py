@@ -105,17 +105,31 @@ COMMIT;
 
 
 def seed_escrow_for_order(conn: PgConn, *, suffix: str) -> None:
+    """Fund escrow with the collection charge ONLY.
+
+    Since M08-P08b, ``evaluate_and_release`` captures commission itself, so the test
+    must NOT pre-post ``COMMISSION_CAPTURE`` — doing so would double-capture and leave
+    escrow unbalanced. The single charge leg mirrors the M08 prepaid collection.
+    """
     post_transaction(
         idempotency_key=f"charge-{suffix}",
         template=LedgerTemplate.CHARGE_RECEIVED,
         gross_ngwee=GROSS_NGEWEE,
     )
-    post_transaction(
-        idempotency_key=f"commission-{suffix}",
-        template=LedgerTemplate.COMMISSION_CAPTURE,
-        gross_ngwee=GROSS_NGEWEE,
-        commission_bps=COMMISSION_BPS,
+
+
+def _commission_capture_count(conn: PgConn, order_id: str) -> int:
+    prefix = f"{release_idempotency_key(order_id)}-commission-"
+    result = conn.run(
+        f"""
+        SELECT count(*)::text
+        FROM public.ledger_transactions
+        WHERE kind = 'commission_capture'
+          AND idempotency_key LIKE '{prefix}%';
+        """
     )
+    assert result.ok and result.rows
+    return int(result.rows[0])
 
 
 @pytest.fixture(scope="module")
@@ -449,6 +463,118 @@ class TestConfigWindows:
         assert _release_txn_count(db, order_id) == 1
 
         _set_platform_config(db, "release_after_delivered_hours", 48)
+
+
+class TestReleaseCapturesCommission:
+    """M08-P08b: release captures commission before paying the vendor net."""
+
+    def _seed_completed_order(
+        self,
+        db: PgConn,
+        *,
+        order_id: str,
+        group_id: str,
+        now: datetime,
+        commission_snapshot: dict[str, Any] | None = None,
+    ) -> None:
+        _insert_order(
+            db,
+            order_id=order_id,
+            group_id=group_id,
+            status="completed",
+            commission_snapshot=commission_snapshot,
+        )
+        _insert_order_event(
+            db,
+            order_id=order_id,
+            from_status="delivered",
+            to_status="completed",
+            actor=CUSTOMER_ID,
+            created_at=now - timedelta(hours=1),
+        )
+
+    def test_release_captures_commission_and_zeroes_escrow(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        order_id = str(uuid.uuid4())
+        group_id = str(uuid.uuid4())
+        now = datetime(2026, 7, 10, 12, 0, tzinfo=UTC)
+        self._seed_completed_order(db, order_id=order_id, group_id=group_id, now=now)
+
+        escrow_before = account_balance_ngwee(ESCROW_ID)
+        commission_before = account_balance_ngwee(COMMISSION_ID)
+        payable_before = account_balance_ngwee(VENDOR_PAYABLE_ID)
+
+        seed_escrow_for_order(db, suffix=order_id)  # CHARGE_RECEIVED only (escrow −gross)
+        assert account_balance_ngwee(ESCROW_ID) == escrow_before - GROSS_NGEWEE
+
+        result = evaluate_and_release(_SERVICE, order_id, now=now)
+        assert result.outcome == "released"
+        assert result.net_ngwee == NET_NGEWEE
+
+        assert _commission_capture_count(db, order_id) == 1
+        assert _release_txn_count(db, order_id) == 1
+
+        # Lifecycle balances: charge(−gross) + capture(+commission) + release(+net) == 0.
+        assert account_balance_ngwee(ESCROW_ID) == escrow_before
+        # Commission recognized as revenue (credit-negative); vendor owed net.
+        assert account_balance_ngwee(COMMISSION_ID) == commission_before - COMMISSION_NGEWEE
+        assert account_balance_ngwee(VENDOR_PAYABLE_ID) == payable_before - NET_NGEWEE
+
+    def test_double_run_captures_commission_once(self, db: PgConn, db_url_env: None) -> None:
+        order_id = str(uuid.uuid4())
+        group_id = str(uuid.uuid4())
+        now = datetime(2026, 7, 10, 12, 0, tzinfo=UTC)
+        self._seed_completed_order(db, order_id=order_id, group_id=group_id, now=now)
+
+        escrow_before = account_balance_ngwee(ESCROW_ID)
+        seed_escrow_for_order(db, suffix=order_id)
+
+        first = evaluate_and_release(_SERVICE, order_id, now=now)
+        second = evaluate_and_release(_SERVICE, order_id, now=now)
+
+        assert first.outcome == "released"
+        assert second.outcome == "already_released"
+        assert _commission_capture_count(db, order_id) == 1
+        assert _release_txn_count(db, order_id) == 1
+        assert account_balance_ngwee(ESCROW_ID) == escrow_before
+
+    def test_zero_commission_releases_full_gross_no_capture(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        order_id = str(uuid.uuid4())
+        group_id = str(uuid.uuid4())
+        now = datetime(2026, 7, 10, 12, 0, tzinfo=UTC)
+        zero_snapshot = {
+            "lines": [
+                {
+                    "listing_id": str(uuid.uuid4()),
+                    "category_key": "free_events",
+                    "rate_bps": 0,
+                    "qty": 1,
+                    "unit_price_ngwee": GROSS_NGEWEE,
+                    "line_total_ngwee": GROSS_NGEWEE,
+                    "wholesale": False,
+                }
+            ]
+        }
+        self._seed_completed_order(
+            db,
+            order_id=order_id,
+            group_id=group_id,
+            now=now,
+            commission_snapshot=zero_snapshot,
+        )
+        escrow_before = account_balance_ngwee(ESCROW_ID)
+        payable_before = account_balance_ngwee(VENDOR_PAYABLE_ID)
+        seed_escrow_for_order(db, suffix=order_id)
+
+        result = evaluate_and_release(_SERVICE, order_id, now=now)
+        assert result.outcome == "released"
+        assert result.net_ngwee == GROSS_NGEWEE
+        assert _commission_capture_count(db, order_id) == 0
+        assert account_balance_ngwee(ESCROW_ID) == escrow_before
+        assert account_balance_ngwee(VENDOR_PAYABLE_ID) == payable_before - GROSS_NGEWEE
 
 
 class TestPureRuleEvaluation:
