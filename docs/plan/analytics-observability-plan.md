@@ -182,6 +182,11 @@ All three writer modules reach the #267 spine via re-export: `funnel.py:13` (via
 
 **Out of scope.** GA4 SSR capture; vendor/admin client tracking; historical identity backfill; promo/affiliate attribution.
 
+**Status — 🟡 SPLIT INVOKED (2a shipped, 2b next).** The session overran (Task 1 + this backend in one run) and the client transport carries real cross-origin subtlety — the customer app calls the API on an absolute `NEXT_PUBLIC_API_BASE_URL` (no `/api` proxy), so a `sendBeacon` needs either a Next rewrite or a `text/plain`+CORS beacon — so the documented 2a|2b split is used.
+
+- **✅ 2a — server ingest (SHIPPED):** `services/api/app/routers/analytics_collect.py` → `POST /analytics/collect` (auto-discovered). Lenient batch parse (`extra="ignore"` so version skew never drops a batch), ≤20-event cap → 413, per-IP **fail-open** rate-limit (registered as `PUBLIC_BEACON` in `ratelimit_policies.py`), per-event props size bound, and a **persist allowlist** (`{product_view}`) so funnel/search events already recorded server-side (Task 1) are accepted-but-not-double-counted. Reuses `events.record_event` for server-side anonymization (rejects raw-PII / non-int money). **Forward identity stitch lives here:** a beacon carrying `session_id` + a bearer token writes both columns, linking `session_id` ↔ `user_id` (no historical backfill, no new table). Tests: `tests/test_analytics_collect.py` (10).
+- **⏳ 2b — client loop (NEXT):** opaque client `session_id` (`packages/analytics/src/session.ts`) attached to the beacon; consent-capture banner (`setAnalyticsConsent`, mounted in the customer layout); `product_view`/PDP `track()`; transport (Next rewrite or `text/plain`+CORS); client vitest.
+
 ---
 
 ### TASK 3 — Governance: retention sweeper + AI-spend visibility + health-path fix
