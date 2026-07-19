@@ -19,10 +19,8 @@ from app.services.payments.lenco.models import (
     PayoutOperator,
 )
 from app.services.payments.references import make_payment_reference
-from app.services.payouts.eligibility import (
-    _vendor_lock,
-    check_payout_eligible_unlocked,
-)
+from app.services.payouts.eligibility import load_vendor_cap_limits
+from app.services.payouts.reservation import reserve_payout_row
 from app.services.payouts.resolve_check import (
     ResolveBankAccountFn,
     VendorPayoutProfile,
@@ -386,17 +384,15 @@ async def execute_vendor_payout(
 
     if resolve_result.held:
         assert_payout_method_not_held(service_client, vendor_id)
-        with _vendor_lock(vendor_id):
-            _insert_payout_row(
-                service_client,
-                payout_id=payout_id,
-                vendor_id=vendor_id,
-                amount_ngwee=payout_amount,
-                rail=profile.rail,
-                lenco_reference=lenco_reference,
-                resolve_snapshot=resolve_result.snapshot,
-                status="pending",
-            )
+        reserve_payout_row(
+            payout_id=payout_id,
+            vendor_id=vendor_id,
+            amount_ngwee=payout_amount,
+            rail=profile.rail,
+            lenco_reference=lenco_reference,
+            resolve_snapshot=resolve_result.snapshot,
+            status="pending",
+        )
         notify_payout_held(
             service_client,
             payout_id=payout_id,
@@ -412,23 +408,21 @@ async def execute_vendor_payout(
             amount_ngwee=payout_amount,
         )
 
-    with _vendor_lock(vendor_id):
-        assert_payout_method_not_held(service_client, vendor_id)
-        check_payout_eligible_unlocked(
-            service_client,
-            vendor_id=vendor_id,
-            amount_ngwee=payout_amount,
-        )
-        _insert_payout_row(
-            service_client,
-            payout_id=payout_id,
-            vendor_id=vendor_id,
-            amount_ngwee=payout_amount,
-            rail=profile.rail,
-            lenco_reference=lenco_reference,
-            resolve_snapshot=resolve_result.snapshot,
-            status="processing",
-        )
+    assert_payout_method_not_held(service_client, vendor_id)
+    if not skip_velocity:
+        from app.services.kyc.caps import enforce_payout_velocity
+
+        limits = load_vendor_cap_limits(service_client, vendor_id)
+        enforce_payout_velocity(limits, payout_amount, service_client)
+    reserve_payout_row(
+        payout_id=payout_id,
+        vendor_id=vendor_id,
+        amount_ngwee=payout_amount,
+        rail=profile.rail,
+        lenco_reference=lenco_reference,
+        resolve_snapshot=resolve_result.snapshot,
+        status="processing",
+    )
 
     try:
         transfer = await _send_lenco_payout(
