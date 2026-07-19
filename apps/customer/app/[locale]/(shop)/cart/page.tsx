@@ -33,6 +33,7 @@ export default async function CartPage({ params }: CartPageProps) {
       deliveryEligible: t("cart.deliveryEligible"),
       deliveryHint: t("cart.deliveryHint"),
       deliveryThreshold: t("cart.deliveryThreshold"),
+      deliveryScopeNote: t("cart.deliveryScopeNote"),
       freeDeliveryProgress: t("cart.freeDeliveryProgress"),
       freeDeliveryUnlocked: t("cart.freeDeliveryUnlocked"),
     },
