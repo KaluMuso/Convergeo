@@ -74,16 +74,37 @@ def released_balance_ngwee(vendor_id: str) -> int:
     return max(0, -balance)
 
 
+def _payout_reserves_vendor_balance(row: dict[str, Any]) -> bool:
+    """True when a pending/processing payout should reduce vendor available ngwee.
+
+    Customer-refund rows are parked under the order's vendor_id for sweeper routing
+    but are not vendor liabilities. Velocity-deferred markers must never reserve
+    (and are no longer inserted — defence in depth for legacy rows).
+    """
+    snapshot = row.get("resolve_snapshot")
+    if not isinstance(snapshot, dict):
+        return True
+    if snapshot.get("deferred") is True:
+        return False
+    if snapshot.get("kind") == "customer_refund":
+        return False
+    return True
+
+
 def _reserved_payout_ngwee(service_client: ServiceRoleClient, vendor_id: str) -> int:
     response = (
         service_client.client.table("payouts")
-        .select("amount_ngwee")
+        .select("amount_ngwee, resolve_snapshot")
         .eq("vendor_id", vendor_id)
         .in_("status", list(PENDING_RESERVE_STATUSES))
         .execute()
     )
     rows = _rows(response)
-    return sum(int(row.get("amount_ngwee", 0)) for row in rows)
+    return sum(
+        int(row.get("amount_ngwee", 0))
+        for row in rows
+        if _payout_reserves_vendor_balance(row)
+    )
 
 
 def compute_eligibility(

@@ -80,10 +80,14 @@ BEGIN
 
   released_ngwee := greatest(0, -ledger_balance);
 
+  -- Exclude customer_refund (not a vendor liability) and legacy velocity-deferred
+  -- rows (retry never sends them; counting them freezes available forever).
   SELECT coalesce(sum(p.amount_ngwee), 0) INTO reserved_ngwee
   FROM public.payouts p
   WHERE p.vendor_id = {vendor_sql}
-    AND p.status IN ({statuses_sql});
+    AND p.status IN ({statuses_sql})
+    AND coalesce(p.resolve_snapshot->>'deferred', 'false') <> 'true'
+    AND coalesce(p.resolve_snapshot->>'kind', '') <> 'customer_refund';
 
   available_ngwee := released_ngwee - reserved_ngwee;
 
