@@ -93,11 +93,20 @@ No localhost fallback. No mock/hard-coded category catalogue in the route.
 
 ---
 
-## 6. Verification plan (this PR)
+## 6. Verification (this PR)
 
-- Customer `lint`, `typecheck`, `test`, production `build`.
-- Local or preview: `GET /en/categories` and at least one other locale (`/fr/categories`) return **200** (empty or populated, never the client-boundary 500).
-- Do **not** deploy from this agent run.
+| Check                                       | Result                                                                                                        |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `pnpm lint` (customer)                      | pass                                                                                                          |
+| `pnpm typecheck` (customer)                 | pass                                                                                                          |
+| `pnpm test` (customer)                      | pass — 228 tests                                                                                              |
+| `pnpm build` (customer, dummy Supabase env) | pass                                                                                                          |
+| Local prod server `GET /en/categories`      | **200**, `data-testid=categories-unavailable-upstream` (example Supabase host; not empty; not 500)            |
+| Local prod server `GET /fr/categories`      | **200**, unavailable (FR copy)                                                                                |
+| Local prod server `GET /zh/categories`      | **200**, unavailable (ZH copy)                                                                                |
+| Structured log                              | `{"level":"error","event":"customer.categories.load_failed","reason":"upstream","status":0}` — no secrets/PII |
+
+Do **not** deploy from this agent run.
 
 ---
 
