@@ -352,25 +352,30 @@ def confirm_cod_collection(
     actor_id: str,
     note: str,
 ) -> CodCollectionResult:
-    """Confirm COD cash collected at delivery — ledger + commission + vendor net."""
+    """Confirm COD cash collected at delivery — ledger + commission + vendor net.
+
+    Retries heal a partial prior run: if ``cod-collect-*`` already exists but
+    commission/release were skipped, idempotent posts finish the drain. D17
+    ``claim_release_gate`` blocks release when a refund owns the escrow drain.
+    """
+    from app.services.escrow.order_money_gate import (
+        OrderMoneyGateError,
+        claim_release_gate,
+    )
+    from app.services.escrow.release_accounting import (
+        ReleaseAccountingError,
+        compute_release_amounts,
+        release_blocked_reason,
+    )
+
+    _ = actor_id
     ctx = _load_cod_order(order_id)
     _assert_cod_order(ctx)
 
     collect_key = collection_idempotency_key(order_id)
     existing_collect = _fetch_transaction_by_idempotency_key(collect_key)
-    if existing_collect is not None:
-        commission = compute_order_commission(ctx.commission_snapshot)
-        net = ctx.collectable_ngwee - commission.commission_ngwee
-        return CodCollectionResult(
-            order_id=order_id,
-            collectable_ngwee=ctx.collectable_ngwee,
-            commission_ngwee=commission.commission_ngwee,
-            net_vendor_ngwee=net,
-            transaction_ids=(existing_collect,),
-            created=False,
-        )
 
-    if ctx.status not in _COLLECTABLE_STATUSES:
+    if existing_collect is None and ctx.status not in _COLLECTABLE_STATUSES:
         raise CodError(
             code="cod_invalid_status",
             message="COD collection requires a delivered order",
@@ -378,18 +383,42 @@ def confirm_cod_collection(
             details={"status": ctx.status, "required": sorted(_COLLECTABLE_STATUSES)},
         )
 
+    blocked = release_blocked_reason(status=ctx.status, order_id=order_id)
+    if blocked is not None:
+        raise CodError(
+            code="release_blocked",
+            message="COD collection/release is blocked for this order",
+            http_status=409,
+            details={"reason": blocked},
+        )
+
+    try:
+        amounts = compute_release_amounts(
+            order_id=order_id,
+            gross_ngwee=ctx.collectable_ngwee,
+            commission_snapshot=ctx.commission_snapshot,
+        )
+    except ReleaseAccountingError as exc:
+        raise CodError(
+            code="invalid_commission_snapshot",
+            message="COD release requires a usable commission snapshot",
+            http_status=409,
+            details={"reason": str(exc) if str(exc) else "invalid_commission_snapshot"},
+        ) from exc
+
+    try:
+        claim_release_gate(order_id)
+    except OrderMoneyGateError as exc:
+        raise CodError(
+            code="release_blocked",
+            message="COD release is blocked for this order",
+            http_status=409 if exc.code == "order_refunded" else 503,
+            details={"reason": exc.code},
+        ) from exc
+
     receivable_key = receivable_idempotency_key(order_id)
     if _fetch_transaction_by_idempotency_key(receivable_key) is None:
         record_cod_receivable(order_id=order_id)
-
-    commission = compute_order_commission(ctx.commission_snapshot)
-    net_vendor = ctx.collectable_ngwee - commission.commission_ngwee
-    if net_vendor < 0:
-        raise CodError(
-            code="validation_error",
-            message="Commission exceeds collectable amount",
-            http_status=422,
-        )
 
     txn_ids: list[str] = []
 
@@ -409,29 +438,36 @@ def confirm_cod_collection(
     )
     txn_ids.extend(captured.posted_transaction_ids)
 
-    if net_vendor > 0:
+    if amounts.net_ngwee > 0:
         released = post_transaction(
             idempotency_key=f"cod-release-{order_id}",
             template=LedgerTemplate.RELEASE_TO_VENDOR,
             order_id=order_id,
-            net_ngwee=net_vendor,
+            net_ngwee=amounts.net_ngwee,
             vendor_id=ctx.vendor_id,
         )
         txn_ids.append(released.id)
 
-    transition_order(
-        order_id=order_id,
-        event=OrderEvent.AUTO_CONFIRM,
-        actor_role=ActorRole.SYSTEM,
-        actor_id=SYSTEM_ACTOR_ID,
-        note=note,
-    )
+    # Flip delivered→completed when collect books (or heal after a prior crash).
+    # Idempotent retries may already be completed — ignore illegal transitions.
+    from app.services.orders.state import OrderTransitionError
+
+    try:
+        transition_order(
+            order_id=order_id,
+            event=OrderEvent.AUTO_CONFIRM,
+            actor_role=ActorRole.SYSTEM,
+            actor_id=SYSTEM_ACTOR_ID,
+            note=note,
+        )
+    except OrderTransitionError:
+        pass
 
     return CodCollectionResult(
         order_id=order_id,
         collectable_ngwee=ctx.collectable_ngwee,
-        commission_ngwee=commission.commission_ngwee,
-        net_vendor_ngwee=net_vendor,
+        commission_ngwee=amounts.commission_ngwee,
+        net_vendor_ngwee=amounts.net_ngwee,
         transaction_ids=tuple(txn_ids),
         created=collected.created,
     )
