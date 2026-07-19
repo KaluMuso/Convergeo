@@ -400,16 +400,48 @@ class TestRelatedProducts:
         assert response.json()["items"] == []
 
 
+class TestSearchPdpContract:
+    """API contract: search slug → product resolve; missing → 404; UUID → 200."""
+
+    def test_search_result_slug_resolves_to_product_json(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        store.products = [_product_row()]
+        store.vendor_listings = [_listing_row(listing_id=LISTING_IN_STOCK)]
+
+        search_hit = {
+            "entity_kind": "product",
+            "entity_id": PRODUCT_ID,
+            "slug": "itel-a70",
+        }
+        response = client.get(f"/products/{search_hit['slug']}")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["slug"] == search_hit["slug"]
+        assert body["id"] == PRODUCT_ID
+        assert isinstance(body.get("listings"), list)
+
+    def test_true_missing_product_is_json_404_never_500(
+        self, client: TestClient
+    ) -> None:
+        response = client.get("/products/does-not-exist")
+        assert response.status_code == 404
+        assert response.status_code != 500
+        error = response.json()["error"]
+        assert error["code"] == "product.not_found"
+        assert "message" in error
+
+
 class TestProductErrors:
     def test_unknown_slug_returns_404(self, client: TestClient) -> None:
         response = client.get("/products/does-not-exist")
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "product.not_found"
 
-    def test_product_uuid_redirects_to_canonical_slug(
+    def test_product_uuid_returns_200_product_json(
         self, client: TestClient, store: FakeSupabaseStore
     ) -> None:
-        # Hex UUID (matches live seed ids); path segment is not a slug.
+        # Must be 200 JSON (not 301) so non-redirecting API clients still work.
         product_uuid = "a0000133-0000-4000-8000-000000000001"
         store.products = [_product_row(product_id=product_uuid)]
         store.vendor_listings = [
@@ -417,18 +449,20 @@ class TestProductErrors:
         ]
 
         response = client.get(f"/products/{product_uuid}", follow_redirects=False)
-        assert response.status_code == 301
-        assert response.headers["location"] == "/products/itel-a70"
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["slug"] == "itel-a70"
+        assert payload["id"] == product_uuid
 
-    def test_listing_uuid_redirects_to_product_slug(
+    def test_listing_uuid_returns_200_product_json(
         self, client: TestClient, store: FakeSupabaseStore
     ) -> None:
         store.products = [_product_row()]
         store.vendor_listings = [_listing_row(listing_id=LISTING_IN_STOCK)]
 
         response = client.get(f"/products/{LISTING_IN_STOCK}", follow_redirects=False)
-        assert response.status_code == 301
-        assert response.headers["location"] == "/products/itel-a70"
+        assert response.status_code == 200
+        assert response.json()["slug"] == "itel-a70"
 
     def test_unknown_uuid_returns_404(self, client: TestClient) -> None:
         response = client.get(
