@@ -1,10 +1,6 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { getApiBaseUrl, resolveApiBaseUrl } from "./api-base-url";
-
-afterEach(() => {
-  // no shared stubs — each test passes an explicit env bag
-});
+import { absoluteApiUrl, getApiBaseUrl, resolveApiBaseUrl } from "./api-base-url";
 
 describe("resolveApiBaseUrl", () => {
   it("returns the configured origin without a trailing slash", () => {
@@ -33,5 +29,25 @@ describe("resolveApiBaseUrl", () => {
         NODE_ENV: "development",
       }),
     ).toBe("http://localhost:8000");
+  });
+});
+
+describe("absoluteApiUrl", () => {
+  it("joins base + path and never returns a relative URL", () => {
+    expect(
+      absoluteApiUrl("/events/zed-summer-festival", {
+        NEXT_PUBLIC_API_BASE_URL: "https://api.vergeo5.com/",
+        NODE_ENV: "production",
+      }),
+    ).toBe("https://api.vergeo5.com/events/zed-summer-festival");
+  });
+
+  it("returns null when production base is unset (SSG-safe fail-closed)", () => {
+    expect(
+      absoluteApiUrl("/events/zed-summer-festival", {
+        NEXT_PUBLIC_API_BASE_URL: "",
+        NODE_ENV: "production",
+      }),
+    ).toBeNull();
   });
 });

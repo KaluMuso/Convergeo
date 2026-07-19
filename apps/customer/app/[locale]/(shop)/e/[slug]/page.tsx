@@ -12,7 +12,7 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 
 import { EventJsonLd, isEventIndexable, type EventJsonLdInput } from "./_components/event-jsonld";
 
@@ -107,8 +107,12 @@ async function getEventsTranslator(locale: string): Promise<EventsTranslator> {
 }
 
 async function fetchEvent(slug: string): Promise<EventDetail | null> {
+  const url = absoluteApiUrl(`/events/${encodeURIComponent(slug)}`);
+  if (!url) {
+    return null;
+  }
   try {
-    const response = await fetch(`${getApiBaseUrl()}/events/${encodeURIComponent(slug)}`, {
+    const response = await fetch(url, {
       next: { revalidate, tags: [`event:${slug}`, "events"] },
     });
     if (response.status === 404) {

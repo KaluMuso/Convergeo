@@ -3,7 +3,7 @@ import { ServiceCard } from "@vergeo/ui/src/service-card";
 import { VendorCard } from "@vergeo/ui/src/vendor-card";
 import Link from "next/link";
 
-import { getApiBaseUrl } from "../../../../lib/api-base-url";
+import { absoluteApiUrl } from "../../../../lib/api-base-url";
 
 import { ListingGrid, type CatalogListing } from "./plp/listing-grid";
 
@@ -100,7 +100,11 @@ function mapListing(item: CatalogApiItem): CatalogListing {
 /** Empty-safe catalog fetch: any error or non-OK response yields an empty rail. */
 async function fetchRailListings(query: string): Promise<CatalogListing[]> {
   try {
-    const response = await fetch(`${getApiBaseUrl()}/catalog/listings?${query}`, {
+    const url = absoluteApiUrl(`/catalog/listings?${query}`);
+    if (!url) {
+      return [];
+    }
+    const response = await fetch(url, {
       next: { revalidate: 60 },
     });
     if (!response.ok) {
@@ -125,7 +129,11 @@ type ServiceApiItem = {
 /** Empty-safe services fetch for the home services rail. */
 async function fetchServicesRail(limit: number): Promise<ServiceRailItem[]> {
   try {
-    const response = await fetch(`${getApiBaseUrl()}/services`, { next: { revalidate: 60 } });
+    const url = absoluteApiUrl("/services");
+    if (!url) {
+      return [];
+    }
+    const response = await fetch(url, { next: { revalidate: 60 } });
     if (!response.ok) {
       return [];
     }
@@ -160,7 +168,11 @@ type VendorApiItem = {
 /** Empty-safe directory fetch, ranked by rating, for the top-vendors rail. */
 async function fetchTopVendorsRail(limit: number): Promise<VendorRailItem[]> {
   try {
-    const response = await fetch(`${getApiBaseUrl()}/directory`, { next: { revalidate: 60 } });
+    const url = absoluteApiUrl("/directory");
+    if (!url) {
+      return [];
+    }
+    const response = await fetch(url, { next: { revalidate: 60 } });
     if (!response.ok) {
       return [];
     }

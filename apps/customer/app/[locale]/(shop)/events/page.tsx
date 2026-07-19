@@ -6,7 +6,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
-import { getApiBaseUrl } from "../../../../lib/api-base-url";
+import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import {
   DateFilterChips,
   EVENT_CATEGORIES,
@@ -82,7 +82,11 @@ async function fetchEvents(params: {
   const suffix = search.toString() ? `?${search.toString()}` : "";
 
   try {
-    const response = await fetch(`${getApiBaseUrl()}/events${suffix}`, {
+    const url = absoluteApiUrl(`/events${suffix}`);
+    if (!url) {
+      return null;
+    }
+    const response = await fetch(url, {
       next: { revalidate, tags: ["events"] },
     });
     if (!response.ok) {

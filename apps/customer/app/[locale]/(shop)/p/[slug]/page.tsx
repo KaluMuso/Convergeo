@@ -15,7 +15,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
-import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import { absoluteApiUrl, getApiBaseUrl } from "../../../../../lib/api-base-url";
 import {
   PdpInteractiveBody,
   type ComparisonListing,
@@ -136,7 +136,11 @@ async function fetchProduct(
   slug: string,
 ): Promise<{ kind: "product"; data: ProductDetail } | { kind: "redirect"; slug: string } | null> {
   try {
-    const response = await fetch(`${getApiBaseUrl()}/products/${encodeURIComponent(slug)}`, {
+    const url = absoluteApiUrl(`/products/${encodeURIComponent(slug)}`);
+    if (!url) {
+      return null;
+    }
+    const response = await fetch(url, {
       next: {
         revalidate,
         tags: [productCacheTag(slug), "products"],
@@ -176,15 +180,16 @@ async function fetchProduct(
 
 async function fetchComparison(slug: string): Promise<ComparisonApiResponse | null> {
   try {
-    const response = await fetch(
-      `${getApiBaseUrl()}/products/${encodeURIComponent(slug)}/comparison`,
-      {
-        next: {
-          revalidate,
-          tags: [productCacheTag(slug), "products", "comparison"],
-        },
+    const url = absoluteApiUrl(`/products/${encodeURIComponent(slug)}/comparison`);
+    if (!url) {
+      return null;
+    }
+    const response = await fetch(url, {
+      next: {
+        revalidate,
+        tags: [productCacheTag(slug), "products", "comparison"],
       },
-    );
+    });
 
     if (!response.ok) {
       return null;
@@ -217,15 +222,16 @@ type RelatedApiResponse = {
 
 async function fetchRelated(slug: string): Promise<RelatedProduct[]> {
   try {
-    const response = await fetch(
-      `${getApiBaseUrl()}/products/${encodeURIComponent(slug)}/related`,
-      {
-        next: {
-          revalidate,
-          tags: [productCacheTag(slug), "products", "related"],
-        },
+    const url = absoluteApiUrl(`/products/${encodeURIComponent(slug)}/related`);
+    if (!url) {
+      return [];
+    }
+    const response = await fetch(url, {
+      next: {
+        revalidate,
+        tags: [productCacheTag(slug), "products", "related"],
       },
-    );
+    });
     if (!response.ok) {
       return [];
     }
@@ -238,15 +244,16 @@ async function fetchRelated(slug: string): Promise<RelatedProduct[]> {
 
 async function fetchReviews(productId: string): Promise<ReviewRow[] | null> {
   try {
-    const response = await fetch(
-      `${getApiBaseUrl()}/reviews?product_id=${encodeURIComponent(productId)}`,
-      {
-        next: {
-          revalidate,
-          tags: ["reviews", `reviews:${productId}`],
-        },
+    const url = absoluteApiUrl(`/reviews?product_id=${encodeURIComponent(productId)}`);
+    if (!url) {
+      return null;
+    }
+    const response = await fetch(url, {
+      next: {
+        revalidate,
+        tags: ["reviews", `reviews:${productId}`],
       },
-    );
+    });
 
     if (!response.ok) {
       return null;

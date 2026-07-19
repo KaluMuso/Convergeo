@@ -25,3 +25,18 @@ export function resolveApiBaseUrl(env: EnvBag = process.env): string | null {
 export function getApiBaseUrl(env: EnvBag = process.env): string {
   return resolveApiBaseUrl(env) ?? "";
 }
+
+/**
+ * Absolute API URL for server/client fetches.
+ *
+ * Returns null when the base is unset so callers never `fetch("/relative…")`
+ * during production builds without env (relative URLs hang Next.js SSG).
+ */
+export function absoluteApiUrl(path: string, env: EnvBag = process.env): string | null {
+  const base = resolveApiBaseUrl(env);
+  if (!base) {
+    return null;
+  }
+  const suffix = path.startsWith("/") ? path : `/${path}`;
+  return `${base}${suffix}`;
+}

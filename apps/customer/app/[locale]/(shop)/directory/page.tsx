@@ -6,7 +6,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
-import { getApiBaseUrl } from "../../../../lib/api-base-url";
+import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { FilterBar } from "../_components/directory/filter-bar";
 import { VendorCardGrid } from "../_components/directory/vendor-card-grid";
 
@@ -76,7 +76,11 @@ async function fetchDirectory(query: Record<string, string>): Promise<DirectoryA
   }
 
   try {
-    const response = await fetch(`${getApiBaseUrl()}/directory?${searchParams.toString()}`, {
+    const url = absoluteApiUrl(`/directory?${searchParams.toString()}`);
+    if (!url) {
+      return null;
+    }
+    const response = await fetch(url, {
       next: { revalidate, tags: ["directory"] },
     });
     if (!response.ok) {

@@ -7,7 +7,7 @@ import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { getApiBaseUrl } from "../../../../lib/api-base-url";
+import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { type ApiPriceTier } from "../_components/supplies/qty-price-preview";
 import {
   sortSupplyListings,
@@ -86,7 +86,11 @@ async function getOptionalAccessToken(): Promise<string | null> {
 
 async function fetchBusinessStatus(token: string): Promise<BusinessStatusResponse | null> {
   try {
-    const response = await fetch(`${getApiBaseUrl()}/business/status`, {
+    const url = absoluteApiUrl("/business/status");
+    if (!url) {
+      return null;
+    }
+    const response = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
@@ -106,7 +110,11 @@ async function fetchWholesaleCatalog(token: string): Promise<CatalogApiResponse 
   });
 
   try {
-    const response = await fetch(`${getApiBaseUrl()}/catalog/listings?${params.toString()}`, {
+    const url = absoluteApiUrl(`/catalog/listings?${params.toString()}`);
+    if (!url) {
+      return null;
+    }
+    const response = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });

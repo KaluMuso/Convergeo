@@ -7,7 +7,7 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 
 import { BookService } from "./_components/book-service";
 import { ServiceReviewsSection } from "./_components/service-reviews-section";
@@ -59,7 +59,11 @@ async function getServicesTranslator(locale: string): Promise<ServicesTranslator
 
 async function fetchService(slug: string): Promise<ServiceDetail | null> {
   try {
-    const response = await fetch(`${getApiBaseUrl()}/services/${encodeURIComponent(slug)}`, {
+    const url = absoluteApiUrl(`/services/${encodeURIComponent(slug)}`);
+    if (!url) {
+      return null;
+    }
+    const response = await fetch(url, {
       next: { revalidate, tags: [`service:${slug}`, "services"] },
     });
     if (response.status === 404) {
@@ -89,10 +93,13 @@ type ServiceReviewsPayload = {
 async function fetchServiceReviews(serviceId: string): Promise<ServiceReviewsPayload> {
   const empty: ServiceReviewsPayload = { items: [], rating_avg: null, rating_count: 0 };
   try {
-    const response = await fetch(
-      `${getApiBaseUrl()}/service-reviews?service_id=${encodeURIComponent(serviceId)}`,
-      { next: { revalidate, tags: [`service:${serviceId}`, "service-reviews"] } },
-    );
+    const url = absoluteApiUrl(`/service-reviews?service_id=${encodeURIComponent(serviceId)}`);
+    if (!url) {
+      return empty;
+    }
+    const response = await fetch(url, {
+      next: { revalidate, tags: [`service:${serviceId}`, "service-reviews"] },
+    });
     if (!response.ok) {
       return empty;
     }
