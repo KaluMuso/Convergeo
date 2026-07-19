@@ -198,6 +198,14 @@
       "rating": "{rating} ({count, plural, one {# review} other {# reviews}})",
       "viewStore": "View store"
     },
+    "trust": {
+      "preferredSeller": "Preferred seller — {name}",
+      "seller": "Sold by {name}",
+      "delivery": "Delivery available for this seller",
+      "pickup": "Pickup available for this seller",
+      "returns": "Returns & refunds",
+      "escrow": "When online payment is available, Vergeo5 holds your money until delivery. Cash on delivery may be offered for eligible orders."
+    },
     "condition": {
       "new": "New",
       "refurbished": "Refurbished"

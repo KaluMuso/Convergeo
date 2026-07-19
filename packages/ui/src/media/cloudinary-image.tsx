@@ -15,6 +15,9 @@ export type CloudinaryImageProps = {
   priority?: boolean;
   cloudName?: string;
   className?: string;
+  /** Shown instead of an empty/beige stage when the image fails to load. */
+  fallbackLabel?: string;
+  onError?: () => void;
 };
 
 function resolveAspectRatio(ratio: CloudinaryImageProps["ratio"]): string | undefined {
@@ -45,14 +48,38 @@ export function CloudinaryImage({
   priority = false,
   cloudName,
   className,
+  fallbackLabel,
+  onError,
 }: CloudinaryImageProps) {
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
   const aspectRatio = resolveAspectRatio(ratio);
-  const lqip = cldLqipUrl(publicId, { cloudName });
+  const lqip = failed ? undefined : cldLqipUrl(publicId, { cloudName });
 
-  const handleLoad = useCallback(() => {
+  const markLoaded = useCallback(() => {
     setLoaded(true);
+    setFailed(false);
   }, []);
+
+  const handleError = useCallback(() => {
+    setFailed(true);
+    setLoaded(false);
+    onError?.();
+  }, [onError]);
+
+  // Cached images often finish before React attaches onLoad — sync from the
+  // element so we never leave a permanent opacity-0 / beige stage.
+  const imgRef = useCallback(
+    (node: HTMLImageElement | null) => {
+      if (!node || failed) {
+        return;
+      }
+      if (node.complete && node.naturalWidth > 0) {
+        markLoaded();
+      }
+    },
+    [failed, markLoaded],
+  );
 
   const containerStyle: CSSProperties = {
     position: "relative",
@@ -60,12 +87,37 @@ export function CloudinaryImage({
     borderRadius: "var(--r)",
     width: "100%",
     ...(aspectRatio ? { aspectRatio } : {}),
-    backgroundImage: loaded ? undefined : `url(${lqip})`,
+    backgroundImage: !loaded && lqip ? `url(${lqip})` : undefined,
+    backgroundColor: failed ? "var(--bg-2)" : undefined,
     backgroundSize: "cover",
     backgroundPosition: "center",
-    filter: loaded ? undefined : "blur(8px)",
+    filter: loaded || failed ? undefined : "blur(8px)",
     transition: "filter var(--dur) var(--ease-std)",
   };
+
+  if (failed) {
+    return (
+      <div
+        className={className}
+        style={{
+          ...containerStyle,
+          filter: undefined,
+          backgroundImage: undefined,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "var(--text-3)",
+          textAlign: "center",
+          padding: "var(--sp-4)",
+        }}
+        data-testid="cloudinary-image-fallback"
+        role="img"
+        aria-label={fallbackLabel ?? alt}
+      >
+        <span style={{ fontSize: "0.875rem", lineHeight: 1.4 }}>{fallbackLabel ?? alt}</span>
+      </div>
+    );
+  }
 
   return (
     <div className={className} style={containerStyle} data-testid="cloudinary-image-box">
@@ -73,13 +125,15 @@ export function CloudinaryImage({
         <div aria-hidden="true" style={shimmerStyle} data-testid="cloudinary-shimmer" />
       ) : null}
       <img
+        ref={imgRef}
         src={cldUrl(publicId, { width, cloudName })}
         srcSet={cldSrcSet(publicId, { cloudName })}
         sizes={sizes}
         alt={alt}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
-        onLoad={handleLoad}
+        onLoad={markLoaded}
+        onError={handleError}
         style={{
           display: "block",
           width: "100%",

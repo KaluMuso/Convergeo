@@ -17,6 +17,10 @@ const withSerwist = withSerwistInit({
   swDest: "public/sw.js",
   cacheOnNavigation: true,
   reloadOnOnline: true,
+  // Compile the real worker, but do not auto-register. Registration is gated
+  // by `ServiceWorkerRegister` after a same-origin probe of `/sw.js` so a
+  // missing deploy artifact never produces a failing SW registration.
+  register: false,
   disable: process.env.NODE_ENV === "development",
 });
 

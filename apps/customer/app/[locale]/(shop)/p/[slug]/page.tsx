@@ -599,6 +599,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           empty: t("pdp.gallery.empty"),
           previous: t("pdp.gallery.previous"),
           next: t("pdp.gallery.next"),
+          indicator: (current, total) => t("pdp.gallery.indicator", { current, total }),
         }}
         buyBoxLabels={{
           priceLabel: t("pdp.buyBox.priceLabel"),
@@ -643,6 +644,14 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           preferredBadge: t("pdp.vendor.preferredBadge"),
           noReviews: t("pdp.vendor.noReviews"),
           viewStore: t("pdp.vendor.viewStore"),
+        }}
+        trustLabels={{
+          preferredSeller: t("pdp.trust.preferredSeller"),
+          seller: t("pdp.trust.seller"),
+          delivery: t("pdp.trust.delivery"),
+          pickup: t("pdp.trust.pickup"),
+          returns: t("pdp.trust.returns"),
+          escrow: t("pdp.trust.escrow"),
         }}
       />
 
