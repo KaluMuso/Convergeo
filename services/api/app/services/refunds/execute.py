@@ -12,6 +12,7 @@ from app.services.escrow.order_money_gate import (
     OrderMoneyGateError,
     decide_refund_phase_under_gate,
 )
+from app.services.escrow.release_accounting import summarize_order_release_ledger
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.refunds.clawback import clawback_outstanding_from_payable_balance
@@ -344,6 +345,31 @@ def execute_refund(
         if gate_decision.phase == "post_release"
         else RefundPhase.PRE_RELEASE
     )
+
+    # Event phased releases post release_to_vendor for ~50% net while the rest
+    # remains in escrow. The gate treats ANY release_to_vendor as post_release,
+    # so a naive full clawback would MoMo-refund the customer from platform cash
+    # while stranding phase-2 escrow and over-clawing the vendor. Fail closed
+    # until a hybrid drain (escrow remainder + clawback released) ships.
+    if phase == RefundPhase.POST_RELEASE:
+        summary = summarize_order_release_ledger(order_id)
+        remaining_escrow_ngwee = (
+            summary.charge_received_ngwee
+            - summary.commission_captured_ngwee
+            - summary.vendor_released_ngwee
+            - summary.refund_drained_ngwee
+        )
+        if remaining_escrow_ngwee > 0:
+            raise AppError(
+                "partial_release_refund_blocked",
+                "Refund blocked: order has a partial vendor release with escrow remaining",
+                409,
+                {
+                    "order_id": order_id,
+                    "remaining_escrow_ngwee": remaining_escrow_ngwee,
+                    "vendor_released_ngwee": summary.vendor_released_ngwee,
+                },
+            )
 
     refund_id = str(uuid.uuid4())
     breakdown: dict[str, Any]

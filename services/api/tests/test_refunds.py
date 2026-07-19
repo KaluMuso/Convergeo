@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from app.errors import AppError
 from app.services.escrow.order_money_gate import RefundGateDecision
+from app.services.escrow.release_accounting import OrderReleaseLedgerSummary
 from app.services.ledger.engine import PostedTransaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.refunds.clawback import net_clawback_across_payouts, net_clawback_from_payout
@@ -319,10 +320,23 @@ class TestExecuteRefundPaths:
         fake = FakeSupabaseClient()
         _seed_order(fake, released=True)
         service = FakeServiceClient(fake)
+        full_release = OrderReleaseLedgerSummary(
+            order_id=ORDER_ID,
+            charge_received_ngwee=105_000,
+            commission_captured_ngwee=0,
+            vendor_released_ngwee=105_000,
+            refund_drained_ngwee=0,
+        )
 
-        with patch(
-            "app.services.refunds.execute.decide_refund_phase_under_gate",
-            side_effect=_gate_decision_for_fake(fake),
+        with (
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                side_effect=_gate_decision_for_fake(fake),
+            ),
+            patch(
+                "app.services.refunds.execute.summarize_order_release_ledger",
+                return_value=full_release,
+            ),
         ):
             result = execute_refund(
                 service_client=service,
@@ -336,6 +350,46 @@ class TestExecuteRefundPaths:
         call = mock_post.call_args.kwargs
         assert call["template"] == LedgerTemplate.CLAWBACK
         assert call["clawback_ngwee"] == 105_000
+
+    @patch("app.services.refunds.execute.post_transaction")
+    def test_partial_event_release_blocks_full_clawback(
+        self,
+        mock_post: MagicMock,
+    ) -> None:
+        """Phase-1 event release must not MoMo-refund while phase-2 escrow remains."""
+        fake = FakeSupabaseClient()
+        _seed_order(fake, released=True)
+        service = FakeServiceClient(fake)
+        partial = OrderReleaseLedgerSummary(
+            order_id=ORDER_ID,
+            charge_received_ngwee=100_000,
+            commission_captured_ngwee=12_000,
+            vendor_released_ngwee=44_000,  # phase-1 half of net
+            refund_drained_ngwee=0,
+        )
+
+        with (
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                side_effect=_gate_decision_for_fake(fake),
+            ),
+            patch(
+                "app.services.refunds.execute.summarize_order_release_ledger",
+                return_value=partial,
+            ),
+        ):
+            with pytest.raises(AppError) as exc:
+                execute_refund(
+                    service_client=service,
+                    order_id=ORDER_ID,
+                    lane=1,
+                    customer_momo=CUSTOMER_MOMO,
+                )
+
+        assert exc.value.code == "partial_release_refund_blocked"
+        assert exc.value.details["remaining_escrow_ngwee"] == 44_000
+        mock_post.assert_not_called()
+        assert fake.tables["refunds"].rows == []
 
     @patch("app.services.refunds.execute.post_transaction")
     def test_pre_release_lane2_posts_lane2_template(
