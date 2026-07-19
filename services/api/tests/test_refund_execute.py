@@ -16,6 +16,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from app.services.escrow.order_money_gate import RefundGateDecision
 from app.services.ledger.engine import PostedTransaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.payments.references import make_refund_reference
@@ -223,6 +224,21 @@ def _seed_order(fake: FakeSupabaseClient, *, item_total: int = 100_000, delivery
         )
 
 
+def _gate_decision_for_fake(fake: FakeSupabaseClient):
+    """DB-less stand-in for decide_refund_phase_under_gate (avoids real SQL)."""
+
+    def _decide(order_id: str) -> RefundGateDecision:
+        released = any(
+            row.get("order_id") == order_id and row.get("kind") == "release_to_vendor"
+            for row in fake.tables["ledger_transactions"].rows
+        )
+        if released:
+            return RefundGateDecision(phase="post_release", claimed=False)
+        return RefundGateDecision(phase="pre_release", claimed=True)
+
+    return _decide
+
+
 class TestConcurrentAndRetry:
     def test_two_concurrent_execute_refund_one_payout_one_drain(self) -> None:
         fake = FakeSupabaseClient()
@@ -250,7 +266,13 @@ class TestConcurrentAndRetry:
                 with result_lock:
                     errors.append(exc)
 
-        with patch("app.services.refunds.execute.post_transaction", ledger):
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                side_effect=_gate_decision_for_fake(fake),
+            ),
+        ):
             threads = [threading.Thread(target=worker) for _ in range(2)]
             for t in threads:
                 t.start()
@@ -281,7 +303,13 @@ class TestConcurrentAndRetry:
         service = FakeServiceClient(fake)
         ledger = IdempotentPostTransaction()
 
-        with patch("app.services.refunds.execute.post_transaction", ledger):
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                side_effect=_gate_decision_for_fake(fake),
+            ),
+        ):
             first = execute_refund(service_client=service, order_id=ORDER_ID, lane=1,
                                    customer_momo=CUSTOMER_MOMO, idempotency_key=CALLER_KEY)
             second = execute_refund(service_client=service, order_id=ORDER_ID, lane=1,
@@ -325,7 +353,13 @@ class TestKeyDerivation:
         service = FakeServiceClient(fake)
         ledger = IdempotentPostTransaction()
 
-        with patch("app.services.refunds.execute.post_transaction", ledger):
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                side_effect=_gate_decision_for_fake(fake),
+            ),
+        ):
             result = execute_refund(service_client=service, order_id=ORDER_ID, lane=1,
                                     customer_momo=CUSTOMER_MOMO, idempotency_key=CALLER_KEY)
 
@@ -340,7 +374,13 @@ class TestKeyDerivation:
         service = FakeServiceClient(fake)
         ledger = IdempotentPostTransaction()
 
-        with patch("app.services.refunds.execute.post_transaction", ledger):
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                side_effect=_gate_decision_for_fake(fake),
+            ),
+        ):
             result = execute_refund(service_client=service, order_id=ORDER_ID, lane=1,
                                     customer_momo=CUSTOMER_MOMO, idempotency_key=CALLER_KEY)
 
@@ -354,7 +394,13 @@ class TestKeyDerivation:
         ledger = IdempotentPostTransaction()
         base = f"refund-order-{ORDER_ID}"
 
-        with patch("app.services.refunds.execute.post_transaction", ledger):
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                side_effect=_gate_decision_for_fake(fake),
+            ),
+        ):
             execute_refund(service_client=service, order_id=ORDER_ID, lane=1,
                            customer_momo=CUSTOMER_MOMO)
 
