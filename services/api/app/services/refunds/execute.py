@@ -102,7 +102,7 @@ def _order_item_total_ngwee(service_client: ServiceRoleClient, order_id: str) ->
 def _fetch_order(service_client: ServiceRoleClient, order_id: str) -> dict[str, Any]:
     response = (
         service_client.client.table("orders")
-        .select("id, vendor_id, delivery_fee_ngwee, status")
+        .select("id, vendor_id, delivery_fee_ngwee, status, cod")
         .eq("id", order_id)
         .maybe_single()
         .execute()
@@ -111,6 +111,32 @@ def _fetch_order(service_client: ServiceRoleClient, order_id: str) -> dict[str, 
     if row is None:
         raise AppError("order_not_found", "Order not found", 404)
     return row
+
+
+def _order_is_cod(order: dict[str, Any]) -> bool:
+    raw = order.get("cod")
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str):
+        return raw.lower() in {"t", "true", "1"}
+    return bool(raw)
+
+
+def _cod_cash_collected(order_id: str) -> bool:
+    """True when platform has booked COD_COLLECTED for this order."""
+    from app.services.orders.audit import run_sql_script, sql_literal
+    from app.services.payments.cod import collection_idempotency_key
+
+    key_sql = sql_literal(collection_idempotency_key(order_id))
+    result = run_sql_script(
+        f"""
+SELECT id::text
+FROM public.ledger_transactions
+WHERE idempotency_key = {key_sql}
+LIMIT 1;
+"""
+    )
+    return bool(result.ok and result.rows)
 
 
 def _find_existing_refund(
@@ -262,6 +288,15 @@ def execute_refund(
     vendor_id = str(order["vendor_id"])
     delivery_fee = int(order.get("delivery_fee_ngwee", 0))
     item_total = _order_item_total_ngwee(service_client, order_id)
+
+    # Uncollected COD has only a receivable open — never MoMo-refund cash we never held.
+    if _order_is_cod(order) and not _cod_cash_collected(order_id):
+        raise AppError(
+            "cod_not_collected",
+            "COD refunds require confirmed cash collection first",
+            409,
+            {"order_id": order_id},
+        )
 
     lane1: Lane1RefundAmount | None = None
     lane2: Lane2RefundBreakdown | None = None
