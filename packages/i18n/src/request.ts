@@ -1,5 +1,6 @@
 import { getRequestConfig } from "next-intl/server";
 
+import { deepMergeMessages } from "./deep-merge";
 import { DEFAULT_LOCALE, LOCALES, type Locale } from "./locales";
 
 export const NAMESPACES = [
@@ -70,8 +71,15 @@ export async function loadNamespace(locale: Locale, namespace: Namespace): Promi
 
   try {
     const messages = await namespaceLoaders[namespace](locale);
-    namespaceCache.set(key, messages);
-    return messages;
+    if (locale === DEFAULT_LOCALE) {
+      namespaceCache.set(key, messages);
+      return messages;
+    }
+    // Partial locale files overlay English so missing keys never surface as raw key paths.
+    const english = await loadNamespace(DEFAULT_LOCALE, namespace);
+    const merged = deepMergeMessages(english, messages);
+    namespaceCache.set(key, merged);
+    return merged;
   } catch {
     if (locale !== DEFAULT_LOCALE) {
       return loadNamespace(DEFAULT_LOCALE, namespace);

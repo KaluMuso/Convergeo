@@ -1,0 +1,71 @@
+{
+  "askVergeo": {
+    "slotLabel": "Slot ya Ask Vergeo assistant",
+    "teaser": "Tamwishibe ico mufwaya? Ipusheni Vergeo pakuti mwafwena ico mufwaya.",
+    "title": "Ipusheni Vergeo"
+  },
+  "categories": {
+    "electronics": "Ifya elektrik",
+    "fashion": "Ifya kwisala",
+    "groceries": "Groceries no staples",
+    "home": "Kwenu no living"
+  },
+  "input": {
+    "ariaLabel": "Fweni",
+    "noSuggestions": "Takwaba amasuggestions",
+    "suggestionsLabel": "Amasuggestions ya search"
+  },
+  "invalid": {
+    "body": "Cesheni query no wesheni limbi. Filters no sorting mu URL tashaluka.",
+    "title": "Search iyi ndai"
+  },
+  "noResults": {
+    "categoriesTitle": "Twaleni categories",
+    "suggestionsTitle": "Wesheni ukufwenya",
+    "title": "Takwaba results ku \"{query}\""
+  },
+  "pagination": {
+    "loadMore": "Leteni fimbi",
+    "loading": "Ilekete fimbi…"
+  },
+  "placeholder": "Fweni pa Vergeo5",
+  "recent": {
+    "clear": "Futeni fyonse",
+    "remove": "Futeni {term}",
+    "title": "Ifyo mwafwene kale"
+  },
+  "result": {
+    "category": "Mu {category}",
+    "priceFrom": "Ukufuma {price}"
+  },
+  "results": {
+    "count": "{count, plural, one {# result} other {# amaresults}}",
+    "degraded": "Twalanga keyword matches (semantic search teyaisa)"
+  },
+  "submit": "Fweni",
+  "suggestionTerms": {
+    "chitenge": "icitenge",
+    "kitchenware": "ifya kitchen",
+    "lusakaVendors": "basellers ba Lusaka",
+    "phones": "amafoni"
+  },
+  "suggestions": {
+    "term": "Wesheni ukufwenya {term}"
+  },
+  "tabs": {
+    "all": "Fyonse",
+    "ariaLabel": "Filter results na type",
+    "count": "{label} ({count})",
+    "events": "Ificitike",
+    "products": "Ifintu",
+    "services": "Imilimo",
+    "supplies": "Ifya business",
+    "vendors": "Basellers"
+  },
+  "title": "Fweni",
+  "unavailable": {
+    "body": "Tatwaishibe ukuleta search results nomba. Wesheni limbi, nangu twaleni categories.",
+    "retry": "Wesheni limbi",
+    "title": "Search teyaisa"
+  }
+}

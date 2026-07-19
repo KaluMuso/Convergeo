@@ -1,0 +1,35 @@
+{
+  "app": {
+    "name": "Vergeo5"
+  },
+  "common": {
+    "loading": "Ikuyenda…",
+    "retry": "Yesaninso"
+  },
+  "greeting": "Moni, {name}!",
+  "install": {
+    "action": "Ika app",
+    "body": "Onjezani Vergeo5 pa home screen kuti mufike mwachangu ndi app ya full-screen.",
+    "dismiss": "Osati pano",
+    "title": "Ikani Vergeo5",
+    "updateAction": "Reload kuti mu-update",
+    "updateBody": "Version yatsopano ya Vergeo5 yalipo."
+  },
+  "nav": {
+    "home": "Kwathu",
+    "skipToContent": "Pitani ku content"
+  },
+  "offline": {
+    "body": "Palibe connection pano. Mapeji omwe mwaonako kale amagwirabe ntchito — connectaninso kuti muone zonse.",
+    "code": "Offline",
+    "heading": "Mulibe pa network",
+    "home": "Bwererani kwathu",
+    "retry": "Yesaninso"
+  },
+  "theme": {
+    "dark": "Mdima",
+    "label": "Maonekedwe",
+    "light": "Kuwala",
+    "system": "System ya device"
+  }
+}

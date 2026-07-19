@@ -1,0 +1,184 @@
+{
+  "browseCategories": {
+    "emptyBody": "Catalogue ilibe ma-categories a public pano. Bweraninso, kapena sakani.",
+    "emptyTitle": "Palibe ma-categories",
+    "subtitle": "Gulani ma-departments a Phase-1 ndi ma-subcategories awo.",
+    "title": "Yang'anani ma-categories",
+    "unavailableBody": "Sitinathe kutenga category tree pano. Yesaninso, kapena sakani.",
+    "unavailableTitle": "Ma-categories salipo"
+  },
+  "home": {
+    "categories": {
+      "browseLabel": "Yang'anani {category}",
+      "title": "Gulani ndi category",
+      "viewAll": "Ma-categories onse"
+    },
+    "demo": {
+      "sampleListing": "Listing ya sample"
+    },
+    "hero": {
+      "escrowLine": "Chitetezo cha ogula ndi escrow pamene payment ya online ilipo — ikusungidwa ndi Vergeo5 mpaka kutumiza, kenako yatsimikizidwa.",
+      "escrowStep1": "Mwalipira",
+      "escrowStep2": "Ikusungidwa ndi Vergeo5",
+      "escrowStep3": "Yatsimikizidwa pa kutumiza",
+      "eyebrow": "Marketplace ya Zambia",
+      "fallbackSubtitle": "Fananizani mitengo kuchokera kwa ogulitsa mu Zambia, ndi konzeni delivery ya Lusaka kapena pickup nationwide pamene listing imalola.",
+      "fallbackTitle": "Pezani zinthu, services, ndi events mu Zambia",
+      "placeholder": {
+        "subtitle": "Storefront yanu ya config idzaonekera apa pamene merchandising slots ziyamba.",
+        "title": "Takulandirani ku Vergeo5"
+      },
+      "primaryCta": "Yambani kuyang'ana",
+      "secondaryCta": "Phunzirani za kugulitsa"
+    },
+    "meta": {
+      "description": "Gulani zinthu, bookani services, ndi pezani events mu Zambia pa Vergeo5.",
+      "title": "Pezani Zambia"
+    },
+    "nav": {
+      "account": "Akaunti",
+      "allCategories": "Ma-categories onse",
+      "ariaLabel": "Navigation ya shop",
+      "ask": "Funsa",
+      "askVergeo": "Funsa Vergeo",
+      "bottomAriaLabel": "Navigation yayikulu ya shop",
+      "browse": "Yang'anani",
+      "cart": "Ngolo ya zinthu",
+      "categoriesLoading": "Ikuyenda ma-categories…",
+      "categoriesPanelAria": "Ma-categories onse",
+      "desktopAriaLabel": "Navigation yayikulu",
+      "events": "Zochitika",
+      "home": "Kwathu",
+      "orders": "Ma-order",
+      "searchPlaceholder": "Sakani zinthu, services, events…",
+      "searchSubmit": "Sakani",
+      "services": "Ntchito",
+      "supplies": "Za business",
+      "viewAllCategories": "Onani ma-categories onse"
+    },
+    "rails": {
+      "departmentTitle": "Zatsopano mu {category}",
+      "newTitle": "Zatsopano pa Vergeo5",
+      "services": {
+        "fromPrice": "Kuyambira",
+        "noReviews": "Provider watsopano",
+        "provider": "Ndi {provider}",
+        "view": "Onani service"
+      },
+      "servicesTitle": "Ntchito",
+      "vendors": {
+        "listings": "Zinthu",
+        "location": "Zambia",
+        "noReviews": "Watsopano",
+        "preferred": "Wosankhidwa",
+        "rating": "{rating} ({count})",
+        "reviews": "Ma-reviews",
+        "verified": "Yatsimikizidwa",
+        "view": "Pitani ku store"
+      },
+      "vendorsTitle": "Ogulitsa apamwamba",
+      "viewAll": "Onani zonse"
+    },
+    "sellCta": {
+      "body": "Signup ya public sinayatsebe. Ogulitsa oitanidwa atha kupitiriza onboarding; ena atha kuphunzira momwe seller beta imagwirira ntchito.",
+      "cta": "Phunzirani za kugulitsa",
+      "title": "Kugulitsa pa Vergeo5 ndi kwa invite pano"
+    },
+    "trust": {
+      "ariaLabel": "Chifukwa chiyeni mugule pa Vergeo5",
+      "escrow": "Pamene payment ya online ilipo, Vergeo5 imasunga ndalama yanu mpaka kutumiza",
+      "fulfillment": "Delivery ya Lusaka kapena pickup nationwide pamene listing imalola",
+      "returns": "Malangizo a returns ndi refunds pa ma-order oyenera",
+      "sellers": "Ma-profiles a ogulitsa ndi status yomwe mungaone"
+    }
+  },
+  "pdp": {
+    "buyBox": {
+      "addToCart": "Onjezani ku cart",
+      "addToCartError": "Sitinathe kuonjezera ku cart. Onani connection ndi yesaninso.",
+      "addingToCart": "Ikuonjezera…",
+      "alwaysAvailable": "Ikupezeka",
+      "decrease": "Chepetsani chiwerengero",
+      "decreaseSymbol": "-",
+      "inStock": "Ili mu stock",
+      "increase": "Onjezani chiwerengero",
+      "increaseSymbol": "+",
+      "lowStock": "Zatsala {count} zokha",
+      "moq": "Order yocheperako: {count}",
+      "outOfStock": "Palibe mu stock",
+      "priceLabel": "Mtengo",
+      "quantityLabel": "Chiwerengero",
+      "singleVendor": "Agulitsa vendor uyu yekha"
+    },
+    "condition": {
+      "new": "Yatsopano",
+      "refurbished": "Yokonzedwanso"
+    },
+    "gallery": {
+      "empty": "Palibe zithunzi",
+      "indicator": "Chithunzi {current} cha {total}",
+      "next": "Chithunzi chotsatira",
+      "previous": "Chithunzi chapitacho"
+    },
+    "meta": {
+      "descriptionFallback": "Gulani {name} pa Vergeo5",
+      "notFoundTitle": "Chinthu sichipezeka"
+    },
+    "overview": {
+      "heading": "Kufotokoza"
+    },
+    "related": {
+      "fromPrice": "Kuyambira {price}",
+      "heading": "Zina mu category iyi"
+    },
+    "specs": {
+      "empty": "Palibe specifications",
+      "heading": "Za specs"
+    },
+    "tabs": {
+      "ariaLabel": "Zinthu za product",
+      "overview": "Chidule",
+      "reviews": "Ma-reviews",
+      "specs": "Za specs"
+    },
+    "trust": {
+      "delivery": "Delivery ilipo kwa wogulitsa uyu",
+      "escrow": "Pamene payment ya online ilipo, Vergeo5 imasunga ndalama yanu mpaka kutumiza. COD ingaperekedwe pa ma-order oyenera.",
+      "pickup": "Pickup ilipo kwa wogulitsa uyu",
+      "preferredSeller": "Wogulitsa preferred — {name}",
+      "returns": "Returns ndi refunds",
+      "seller": "Agulitsa {name}"
+    },
+    "vendor": {
+      "heading": "Wogulitsa",
+      "noReviews": "Palibe ma-reviews",
+      "preferredBadge": "Wogulitsa preferred",
+      "rating": "{rating} ({count, plural, one {# review} other {# ma-reviews}})",
+      "viewStore": "Onani store"
+    }
+  },
+  "plp": {
+    "breadcrumbAria": "Njira ya peji",
+    "card": {
+      "distance": "{distance} kutali",
+      "noReviews": "Palibe ma-reviews",
+      "outOfStock": "Palibe mu stock",
+      "quickAdd": "Onjezani mwachangu",
+      "reviewCount": "({count})",
+      "vendor": "Agulitsa {vendor}",
+      "wishlist": "Sungani ku wishlist"
+    },
+    "defaultCategory": "Zinthu zonse",
+    "emptyBody": "Yesani kuchotsa ma-filters kapena yang'anani category ina.",
+    "emptyTitle": "Palibe ma-listings",
+    "loadMore": "Tengani zina",
+    "loading": "Ikuyenda…",
+    "results": "{count, plural, one {# listing} other {# ma-listings}}",
+    "title": "Yang'anani {category}",
+    "unavailableBody": "Sitinathe kutenga zinthu za category iyi pano. Yesaninso, kapena sakani.",
+    "unavailableTitle": "Ma-listings salipo"
+  },
+  "returnableBadge": {
+    "label": "Itha kubwezeredwa mkati mwa masiku {days}"
+  }
+}

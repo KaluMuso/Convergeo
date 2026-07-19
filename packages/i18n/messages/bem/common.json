@@ -1,0 +1,35 @@
+{
+  "app": {
+    "name": "Vergeo5"
+  },
+  "common": {
+    "loading": "Ilekete…",
+    "retry": "Wesheni limbi"
+  },
+  "greeting": "Muli shani, {name}!",
+  "install": {
+    "action": "Instala app",
+    "body": "Longeni Vergeo5 pa home screen pakuti mwafikemo bwangu no app full-screen.",
+    "dismiss": "Nomba te",
+    "title": "Instaleni Vergeo5",
+    "updateAction": "Reload uku update",
+    "updateBody": "Version yambi ya Vergeo5 yaisa."
+  },
+  "nav": {
+    "home": "Kwenu",
+    "skipToContent": "Pita ku content"
+  },
+  "offline": {
+    "body": "Takwaba connection nomba. Amapeji mwalola kale yakonka — connecteni limbi ukutwala ifyonse.",
+    "code": "Offline",
+    "heading": "Tamuli pa network",
+    "home": "Bweleleni kwenu",
+    "retry": "Wesheni limbi"
+  },
+  "theme": {
+    "dark": "Cishilikisha",
+    "label": "Cilangululo",
+    "light": "Cilanguka",
+    "system": "System ya device"
+  }
+}

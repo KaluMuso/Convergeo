@@ -486,6 +486,7 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       codRejected: messages.payment.codRejected,
       railRejected: messages.payment.railRejected,
       error: messages.payment.error,
+      paymentsDisabled: messages.payment.paymentsDisabled,
     },
     review: {
       title: messages.review.title,

@@ -131,7 +131,8 @@
       "railRequired": "请选择移动支付网络",
       "codRejected": "此订单总额不支持货到付款",
       "railRejected": "不支持该移动支付网络",
-      "error": "无法保存您的付款方式。请重试。"
+      "error": "无法保存您的付款方式。请重试。",
+      "paymentsDisabled": "在线支付暂时不可用。请在可用时使用货到付款，或稍后再试。"
     },
     "review": {
       "title": "确认您的订单",

@@ -131,7 +131,8 @@
       "railRequired": "Sélectionnez un réseau mobile money",
       "codRejected": "Le paiement à la livraison n'est pas disponible pour ce total de commande",
       "railRejected": "Ce réseau mobile money n'est pas pris en charge",
-      "error": "Impossible d'enregistrer votre mode de paiement. Réessayez."
+      "error": "Impossible d'enregistrer votre mode de paiement. Réessayez.",
+      "paymentsDisabled": "Le paiement en ligne est temporairement indisponible. Utilisez le paiement à la livraison si disponible, ou réessayez sous peu."
     },
     "review": {
       "title": "Vérifiez votre commande",

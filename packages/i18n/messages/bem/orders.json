@@ -1,0 +1,60 @@
+{
+  "detail": {
+    "back": "Bweleleni ku ama-order",
+    "orderId": "Order nambala {id}",
+    "title": "Ifya order",
+    "total": "Total ya order",
+    "vendor": "Ashitisha {vendor}"
+  },
+  "empty": {
+    "body": "Ilyo mwashita ukufuma ku basellers ba Vergeo5, ama-order no tracking fyaisa apa.",
+    "cta": "Tampeniko ukushita",
+    "title": "Takwaba ama-order"
+  },
+  "errors": {
+    "loadFailed": "Tatwaishibe ukuleta ama-order yenu. Wesheni limbi.",
+    "notFound": "Order tacasangwa"
+  },
+  "escrow": {
+    "cod": "Lipileni vendor mu cash nangu mobile money ilyo mupoka order.",
+    "held": "Payment yenu yikwata bwino na Vergeo5 mpaka mupoke order yenu.",
+    "refunded": "Refund ilebwelela ku mobile money wallet yenu.",
+    "released": "Indalama shyasuminishwa ku vendor pantu fulfilment."
+  },
+  "list": {
+    "checkoutGroup": "Ukushita {date}",
+    "itemCount": "{count, plural, one {# item} other {# ama-items}}",
+    "paymentCod": "Lipileni pa delivery",
+    "paymentPrepaid": "Yalipilwa kale",
+    "status": "Status yali: {status}",
+    "total": "Yonse {amount}",
+    "vendorOrder": "Ukufuma ku {vendor}",
+    "viewOrder": "Loleni order"
+  },
+  "status": {
+    "cancelled": "Yafutwa",
+    "completed": "Yapwa",
+    "confirmed": "Yasuminishwa",
+    "delivered": "Yafika",
+    "placed": "Yaiswa",
+    "processing": "Ilepangwa",
+    "ready": "Yikwete kale ku pickup",
+    "refunded": "Refund ilekonka",
+    "shipped": "Yatumizwa"
+  },
+  "timeline": {
+    "cancelled": "Order yafutwa",
+    "completed": "Payment yasuminishwa ku vendor",
+    "confirmed": "Vendor yasuminisha order yenu",
+    "delivered": "Yafika",
+    "paymentCod": "Lipileni vendor pa delivery",
+    "paymentHeld": "Mwalipila — yikwata bwino na Vergeo5",
+    "placed": "Order yaiswa",
+    "processing": "Vendor ilepanga order yenu",
+    "ready": "Yikwete kale ku pickup",
+    "refunded": "Refund ku mobile money yenu",
+    "shipped": "Ileisa kuli imwe",
+    "title": "Progress ya order"
+  },
+  "title": "Ama-order yenu"
+}
