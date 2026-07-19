@@ -35,6 +35,10 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, Protocol
 
 from app.services.commissions.engine import capture_order_commission
+from app.services.escrow.order_money_gate import (
+    OrderMoneyGateError,
+    claim_release_gate,
+)
 from app.services.escrow.release_accounting import (
     ReleaseAccountingError,
     compute_release_amounts,
@@ -487,6 +491,24 @@ def evaluate_event_release(
     if not phases_due:
         return EventReleaseResult(
             order_id=order_id, outcome="not_eligible", reason="timers_not_met", branch=branch
+        )
+
+    # D17 single-drain vs concurrent refund (idempotent when gate already=release).
+    try:
+        claim_release_gate(order_id)
+    except OrderMoneyGateError as exc:
+        if exc.code == "order_refunded":
+            return EventReleaseResult(
+                order_id=order_id,
+                outcome="not_eligible",
+                reason="order_refunded",
+                branch=branch,
+            )
+        return EventReleaseResult(
+            order_id=order_id,
+            outcome="not_eligible",
+            reason=exc.code,
+            branch=branch,
         )
 
     # Capture commission from purchase-time snapshot BEFORE any vendor release.

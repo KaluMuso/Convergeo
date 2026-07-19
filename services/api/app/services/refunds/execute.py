@@ -8,6 +8,10 @@ from enum import StrEnum
 from typing import Any, Literal, Protocol, cast
 
 from app.errors import AppError
+from app.services.escrow.order_money_gate import (
+    OrderMoneyGateError,
+    decide_refund_phase_under_gate,
+)
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.refunds.clawback import clawback_outstanding_from_payable_balance
@@ -19,7 +23,6 @@ from app.services.refunds.math import (
     compute_lane2_refund,
 )
 from app.services.refunds.payout_port import CustomerRail, initiate_customer_refund_payout
-from app.services.refunds.release import order_funds_released
 from postgrest.exceptions import APIError
 
 Lane = Literal[1, 2]
@@ -283,8 +286,29 @@ def execute_refund(
             {"order_id": order_id, "lane": lane},
         )
 
-    released = order_funds_released(service_client, order_id)
-    phase = RefundPhase.POST_RELEASE if released else RefundPhase.PRE_RELEASE
+    # D17 single-drain: decide phase under the shared order escrow gate so a
+    # concurrent release cannot also drain escrow after we chose PRE_RELEASE.
+    try:
+        gate_decision = decide_refund_phase_under_gate(order_id)
+    except OrderMoneyGateError as exc:
+        if exc.code == "release_in_progress":
+            raise AppError(
+                "release_in_progress",
+                "Vendor release is in progress; retry refund shortly",
+                409,
+                {"order_id": order_id},
+            ) from exc
+        raise AppError(
+            "refund_gate_failed",
+            "Could not claim escrow for refund",
+            503,
+            {"order_id": order_id, "reason": exc.code},
+        ) from exc
+    phase = (
+        RefundPhase.POST_RELEASE
+        if gate_decision.phase == "post_release"
+        else RefundPhase.PRE_RELEASE
+    )
 
     refund_id = str(uuid.uuid4())
     breakdown: dict[str, Any]

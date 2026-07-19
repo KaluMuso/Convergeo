@@ -37,6 +37,10 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.commissions.engine import capture_order_commission
+from app.services.escrow.order_money_gate import (
+    OrderMoneyGateError,
+    claim_release_gate,
+)
 from app.services.escrow.release import release_idempotency_key
 from app.services.escrow.release_accounting import (
     ReleaseAccountingError,
@@ -492,6 +496,16 @@ def confirm_job_completion(
     snapshot, net_ngwee = _require_service_release_amounts(
         order_id=order.order_id, delivery_fee_ngwee=order.delivery_fee_ngwee
     )
+    # 0b. D17 single-drain claim before capture/release (blocks concurrent refund).
+    try:
+        claim_release_gate(order.order_id)
+    except OrderMoneyGateError as exc:
+        raise AppError(
+            code="release_blocked",
+            message="Service escrow release is blocked for this order",
+            http_status=409 if exc.code == "order_refunded" else 503,
+            details={"reason": exc.code},
+        ) from exc
     # 1. Balance leg on the SAME order (idempotent; commission snapshot untouched).
     balance = create_balance_item(order.order_id)
     # 2. Settle the balance collection into escrow (M08 charge; idempotent).
