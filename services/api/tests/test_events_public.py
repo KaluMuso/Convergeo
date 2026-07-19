@@ -39,7 +39,7 @@ TICKET_FREE = "t1000000-0000-0000-0000-000000000003"
 TICKET_SOLD = "t1000000-0000-0000-0000-000000000004"
 
 
-def _vendor_row() -> dict[str, Any]:
+def _vendor_row(*, status: str = "active") -> dict[str, Any]:
     return {
         "id": VENDOR_A,
         "slug": "event-house",
@@ -47,6 +47,7 @@ def _vendor_row() -> dict[str, Any]:
         "preferred_badge": True,
         "logo_url": "vendors/event-house-logo",
         "description": "Lusaka's premier events organiser.",
+        "status": status,
         "vendor_locations": [{"landmark": "East Park Mall"}],
     }
 
@@ -144,10 +145,22 @@ class FakeSupabaseStore:
         rows = getattr(self, table, []).copy()
         for op, column, value in filters:
             if op == "eq":
-                rows = [row for row in rows if row.get(column) == value]
+                rows = [row for row in rows if _row_value(row, column) == value]
             elif op == "in":
-                rows = [row for row in rows if row.get(column) in value]
+                rows = [row for row in rows if _row_value(row, column) in value]
         return rows
+
+
+def _row_value(row: dict[str, Any], column: str) -> Any:
+    """Resolve flat or dotted columns (e.g. vendors.status for !inner filters)."""
+    if "." not in column:
+        return row.get(column)
+    current: Any = row
+    for part in column.split("."):
+        if not isinstance(current, dict):
+            return None
+        current = current.get(part)
+    return current
 
 
 def seed_store(store: FakeSupabaseStore) -> None:
