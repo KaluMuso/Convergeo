@@ -63,4 +63,5 @@ Best-effort vernacular overlays for CUST-I18N-01. CI completeness requires every
 - `checkout.checkout.payment.cardExplainer` / `checkout.checkout.card.secureNote` (PCI / Lenco)
 - `account.nav.business` / `preferences` / `privacy`
 - `search.results.degraded` (semantic search)
+- `search.pagination.moreLoaded` / `endOfResults` / `loadError` / `retry` (progressive load)
 - `common.theme.*` / `common.install.*`

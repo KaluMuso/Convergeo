@@ -8,6 +8,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo } from "react";
 
 import {
+  ProgressiveLoadControls,
+  type ProgressiveLoadControlsLabels,
+} from "../progressive-load/progressive-load-controls";
+import { useProgressiveLoad } from "../progressive-load/use-progressive-load";
+
+import {
   SEARCH_KINDS,
   searchTabKinds,
   type SearchKind,
@@ -45,7 +51,7 @@ export type SearchResponse = {
 
 export type TabCounts = Record<SearchKindFilter, number>;
 
-export type ResultsTabsLabels = {
+export type ResultsTabsLabels = ProgressiveLoadControlsLabels & {
   ariaLabel: string;
   all: string;
   products: string;
@@ -57,7 +63,6 @@ export type ResultsTabsLabels = {
   degraded: string;
   priceFrom: string;
   category: string;
-  loadMore: string;
 };
 
 export type ResultsTabsProps = {
@@ -68,6 +73,8 @@ export type ResultsTabsProps = {
   response: SearchResponse;
   tabCounts: TabCounts;
   labels: ResultsTabsLabels;
+  /** API origin for client page appends (same base as SSR). */
+  apiBaseUrl: string;
 };
 
 function tabLabel(labels: ResultsTabsLabels, kind: SearchKindFilter, count: number): string {
@@ -198,6 +205,13 @@ function ResultsList({
   );
 }
 
+function nextPageCursor(response: SearchResponse): string | null {
+  if (response.page * response.page_size < response.total) {
+    return String(response.page + 1);
+  }
+  return null;
+}
+
 export function ResultsTabs({
   locale,
   query,
@@ -206,14 +220,49 @@ export function ResultsTabs({
   response,
   tabCounts,
   labels,
+  apiBaseUrl,
 }: ResultsTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const resetKey = `${locale}|${query}|${activeKind}|${page}|${response.page_size}|${response.total}`;
+
+  const fetchPage = useCallback(
+    async (cursor: string, signal: AbortSignal) => {
+      const params = new URLSearchParams({
+        q: query,
+        page: cursor,
+        page_size: String(response.page_size),
+      });
+      if (activeKind !== "all") {
+        params.set("kind", activeKind);
+      }
+      const res = await fetch(`${apiBaseUrl}/search?${params.toString()}`, { signal });
+      if (!res.ok) {
+        throw new Error(`Search load failed (${res.status})`);
+      }
+      const body = (await res.json()) as SearchResponse;
+      return {
+        items: body.results,
+        nextCursor: nextPageCursor(body),
+      };
+    },
+    [activeKind, apiBaseUrl, query, response.page_size],
+  );
+
+  const { items, status, hasMore, lastAppendedCount, loadMore, sentinelRef } =
+    useProgressiveLoad<SearchHit>({
+      initialItems: response.results,
+      initialCursor: nextPageCursor(response),
+      resetKey,
+      fetchPage,
+    });
 
   const navigateWithKind = useCallback(
     (kind: SearchKindFilter) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set("q", query);
+      // Tab change resets pagination / progressive cursor via full navigation.
       params.delete("page");
       if (kind === "all") {
         params.delete("kind");
@@ -225,15 +274,17 @@ export function ResultsTabs({
     [locale, query, router, searchParams],
   );
 
-  const loadMore = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("q", query);
-    params.set("page", String(page + 1));
-    if (activeKind !== "all") {
-      params.set("kind", activeKind);
-    }
-    router.push(`/${locale}/search?${params.toString()}`);
-  }, [activeKind, locale, page, query, router, searchParams]);
+  const controlLabels: ProgressiveLoadControlsLabels = useMemo(
+    () => ({
+      loadMore: labels.loadMore,
+      loading: labels.loading,
+      moreLoaded: labels.moreLoaded,
+      endOfResults: labels.endOfResults,
+      loadError: labels.loadError,
+      retry: labels.retry,
+    }),
+    [labels],
+  );
 
   const tabItems = useMemo(() => {
     const kinds = searchTabKinds();
@@ -248,20 +299,32 @@ export function ResultsTabs({
         <div className="space-y-4">
           <p className="text-sm text-text-2">{labels.resultsCount}</p>
           {response.degraded ? <p className="text-xs text-text-3">{labels.degraded}</p> : null}
-          <ResultsList hits={response.results} locale={locale} labels={labels} />
-          {response.page * response.page_size < response.total ? (
-            <button
-              type="button"
-              onClick={loadMore}
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-surface px-4 text-sm font-medium text-primary hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-            >
-              {labels.loadMore}
-            </button>
-          ) : null}
+          <ResultsList hits={items} locale={locale} labels={labels} />
+          <ProgressiveLoadControls
+            status={status}
+            hasMore={hasMore}
+            lastAppendedCount={lastAppendedCount}
+            labels={controlLabels}
+            onLoadMore={loadMore}
+            sentinelRef={sentinelRef}
+            testIdPrefix="search"
+          />
         </div>
       ),
     }));
-  }, [labels, locale, loadMore, response, tabCounts]);
+  }, [
+    controlLabels,
+    hasMore,
+    items,
+    labels,
+    lastAppendedCount,
+    loadMore,
+    locale,
+    response.degraded,
+    sentinelRef,
+    status,
+    tabCounts,
+  ]);
 
   return (
     <Tabs

@@ -26,7 +26,11 @@
   },
   "pagination": {
     "loadMore": "Leteni fimbi",
-    "loading": "Ilekete fimbi…"
+    "loading": "Ilekete fimbi…",
+    "moreLoaded": "{count} amaresults yambi yaleetwa.",
+    "endOfResults": "Mwafika ku nshila ya amaresults.",
+    "loadError": "Tatwaishibe ukuleta amaresults yambi.",
+    "retry": "Wesheni limbi"
   },
   "placeholder": "Fweni pa Vergeo5",
   "recent": {
