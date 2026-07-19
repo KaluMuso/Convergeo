@@ -13,6 +13,7 @@ from uuid import UUID
 from app.errors import AppError
 from app.services.cart.totals import line_total_ngwee
 from app.services.commissions.engine import FREE_EVENTS_CATEGORY
+from app.services.events.gmv_cap import enforce_organiser_t1_gmv_cap
 from app.services.stock.claim import (
     get_reservation_ttl_minutes,
     run_sql_script,
@@ -454,6 +455,15 @@ def add_ticket_to_checkout(
         tiers=_load_price_tiers(ticket_type_id),
         qty=qty,
         now=now or datetime.now(UTC),
+    )
+    # VF-P06 / BG-3: Tier-1 organisers cannot push per-event paid GMV over the
+    # configured fraud cap. Enforce after price resolve, before claim/spine so
+    # no capacity or escrow-bound rows are created for over-cap attempts.
+    enforce_organiser_t1_gmv_cap(
+        service_client,
+        organiser_vendor_id=str(ctx["organiser_vendor_id"]),
+        event_id=str(ctx["event"]["id"]),
+        additional_ngwee=line_total_ngwee(qty, unit_price),
     )
     title = str(ticket_type.get("name") or "Ticket")
     provisional_snapshot = _build_ticket_commission_snapshot(
