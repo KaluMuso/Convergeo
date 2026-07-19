@@ -209,8 +209,10 @@
   "browseCategories": {
     "title": "Parcourir les catégories",
     "subtitle": "Explorez les rayons de la phase 1 et leurs sous-catégories auprès de vendeurs vérifiés.",
-    "emptyTitle": "Catégories indisponibles",
-    "emptyBody": "Nous n'avons pas pu charger l'arbre des catégories. Réessayez bientôt, ou utilisez la recherche."
+    "emptyTitle": "Aucune catégorie pour le moment",
+    "emptyBody": "Le catalogue n'a pas encore de catégories publiques. Revenez bientôt, ou utilisez la recherche.",
+    "unavailableTitle": "Catégories indisponibles",
+    "unavailableBody": "Nous n'avons pas pu charger l'arbre des catégories. Réessayez bientôt, ou utilisez la recherche."
   },
   "comparePage": {
     "title": "Comparer les vendeurs",

@@ -209,8 +209,10 @@
   "browseCategories": {
     "title": "Browse categories",
     "subtitle": "Shop Phase-1 departments and their subcategories from verified vendors.",
-    "emptyTitle": "Categories unavailable",
-    "emptyBody": "We could not load the category tree right now. Try again shortly, or use search."
+    "emptyTitle": "No categories yet",
+    "emptyBody": "The catalogue has no public categories right now. Check back soon, or use search.",
+    "unavailableTitle": "Categories unavailable",
+    "unavailableBody": "We could not load the category tree right now. Try again shortly, or use search."
   },
   "comparePage": {
     "title": "Compare sellers",

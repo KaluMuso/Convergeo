@@ -4,21 +4,10 @@ import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
-export type NavCategory = {
-  id: string;
-  name: string;
-  slug: string;
-  children: Array<{ id: string; name: string; slug: string }>;
-};
+import { buildCategoryTree, type CategoryRecord, type NavCategory } from "./category-tree";
 
-type CategoryRecord = {
-  id: string;
-  name: string;
-  slug: string;
-  position: number;
-  parent_id: string | null;
-  prohibited: boolean;
-};
+export type { NavCategory } from "./category-tree";
+export { buildCategoryTree } from "./category-tree";
 
 export type CategoryMegaMenuLabels = {
   trigger: string;
@@ -33,27 +22,6 @@ type CategoryMegaMenuProps = {
   /** Injectable for tests; defaults to a public (anon) browser-client query. */
   loadCategories?: () => Promise<NavCategory[]>;
 };
-
-function byPosition(left: { position: number }, right: { position: number }): number {
-  return left.position - right.position;
-}
-
-/** Group a flat category list into top-level entries with their children. */
-export function buildCategoryTree(rows: CategoryRecord[]): NavCategory[] {
-  const usable = rows.filter((row) => !row.prohibited);
-  return usable
-    .filter((row) => row.parent_id === null)
-    .sort(byPosition)
-    .map((top) => ({
-      id: top.id,
-      name: top.name,
-      slug: top.slug,
-      children: usable
-        .filter((row) => row.parent_id === top.id)
-        .sort(byPosition)
-        .map((child) => ({ id: child.id, name: child.name, slug: child.slug })),
-    }));
-}
 
 async function defaultLoadCategories(): Promise<NavCategory[]> {
   // Category tree is publicly readable (RLS: categories_public_select "using (true)"),

@@ -277,21 +277,146 @@ async function fetchMerchSlots(): Promise<MerchSlotRow[]> {
   }));
 }
 
-export async function fetchCategories(): Promise<CategoryRow[]> {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(cookieStore);
+export type CategoriesLoadFailureReason = "config" | "unauthorized" | "upstream" | "malformed";
 
-  const { data, error } = await supabase
+export type CategoriesLoadResult =
+  | { ok: true; categories: CategoryRow[] }
+  | {
+      ok: false;
+      reason: CategoriesLoadFailureReason;
+      code?: string;
+      status?: number;
+    };
+
+function isCategoryRow(value: unknown): value is CategoryRow {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const row = value as Record<string, unknown>;
+  return (
+    typeof row.id === "string" &&
+    typeof row.name === "string" &&
+    typeof row.slug === "string" &&
+    typeof row.path === "string" &&
+    typeof row.position === "number" &&
+    Number.isFinite(row.position) &&
+    (row.parent_id === null || typeof row.parent_id === "string") &&
+    typeof row.prohibited === "boolean"
+  );
+}
+
+export function classifyCategoriesQueryError(error: {
+  code?: string | null;
+  message?: string | null;
+  status?: number;
+}): CategoriesLoadFailureReason {
+  const code = (error.code ?? "").toUpperCase();
+  const message = (error.message ?? "").toLowerCase();
+  const status = error.status;
+
+  if (
+    status === 401 ||
+    status === 403 ||
+    code === "PGRST301" ||
+    code === "42501" ||
+    message.includes("jwt") ||
+    message.includes("not authorized") ||
+    message.includes("permission denied")
+  ) {
+    return "unauthorized";
+  }
+
+  if (
+    message.includes("missing required environment variable") ||
+    message.includes("next_public_supabase")
+  ) {
+    return "config";
+  }
+
+  return "upstream";
+}
+
+/** Structured failure log — no secrets, tokens, cookies, or row payloads. */
+export function logCategoriesLoadFailure(details: {
+  reason: CategoriesLoadFailureReason;
+  code?: string;
+  status?: number;
+}): void {
+  console.error(
+    JSON.stringify({
+      level: "error",
+      event: "customer.categories.load_failed",
+      reason: details.reason,
+      ...(details.code ? { code: details.code } : {}),
+      ...(typeof details.status === "number" ? { status: details.status } : {}),
+    }),
+  );
+}
+
+/**
+ * Load the public category catalogue with an explicit success/failure result.
+ * Empty success (`ok: true, categories: []`) is distinct from operational failures.
+ */
+export async function fetchCategoriesResult(): Promise<CategoriesLoadResult> {
+  let supabase;
+  try {
+    const cookieStore = await cookies();
+    supabase = createServerClient(cookieStore);
+  } catch (error) {
+    const reason = classifyCategoriesQueryError({
+      message: error instanceof Error ? error.message : "config",
+    });
+    const failure = { ok: false as const, reason: reason === "unauthorized" ? "config" : reason };
+    logCategoriesLoadFailure(failure);
+    return failure;
+  }
+
+  const { data, error, status } = await supabase
     .from("categories")
     .select("id, name, slug, path, position, parent_id, prohibited")
     .eq("prohibited", false)
     .order("position", { ascending: true });
 
-  if (error || !data) {
-    return [];
+  if (error) {
+    const reason = classifyCategoriesQueryError({
+      code: error.code,
+      message: error.message,
+      status: typeof status === "number" ? status : undefined,
+    });
+    const failure = {
+      ok: false as const,
+      reason,
+      code: error.code || undefined,
+      status: typeof status === "number" ? status : undefined,
+    };
+    logCategoriesLoadFailure(failure);
+    return failure;
   }
 
-  return data;
+  if (!Array.isArray(data)) {
+    const failure = { ok: false as const, reason: "malformed" as const };
+    logCategoriesLoadFailure(failure);
+    return failure;
+  }
+
+  if (data.length === 0) {
+    return { ok: true, categories: [] };
+  }
+
+  const categories = data.filter(isCategoryRow);
+  if (categories.length === 0) {
+    const failure = { ok: false as const, reason: "malformed" as const };
+    logCategoriesLoadFailure(failure);
+    return failure;
+  }
+
+  return { ok: true, categories };
+}
+
+/** Home/merch convenience wrapper — failures degrade to an empty list. */
+export async function fetchCategories(): Promise<CategoryRow[]> {
+  const result = await fetchCategoriesResult();
+  return result.ok ? result.categories : [];
 }
 
 export async function loadHomeMerchData(): Promise<HomeMerchData> {
