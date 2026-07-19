@@ -220,16 +220,37 @@ def _load_vendor_for_owner(
     return row
 
 
-async def get_vendor_cap_limits(
-    current_user: Annotated[CurrentUser, Depends(get_current_user)],
-    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+def load_vendor_cap_limits_by_id(
+    service_client: ServiceRoleClient,
+    vendor_id: str,
+    *,
+    vendor_row: dict[str, Any] | None = None,
 ) -> VendorCapLimits:
-    vendor = _load_vendor_for_owner(service_client, current_user.id)
-    vendor_id = str(vendor["id"])
+    """Load full vendor KYC quota limits (listings, first-order, COD, order_count).
+
+    Used at order creation (customer path) and vendor-owned dependency paths.
+    Tier is auditable-approval derived — orphaned ``vendors.kyc_tier`` stays T1.
+    """
+    row = vendor_row
+    if row is None:
+        response = (
+            service_client.client.table("vendors")
+            .select("id, owner_user_id, status, kyc_tier")
+            .eq("id", vendor_id)
+            .maybe_single()
+            .execute()
+        )
+        row = _single_row(response)
+    if row is None:
+        raise AppError(
+            code="vendor_not_found",
+            message=f"Vendor {vendor_id} not found",
+            http_status=404,
+        )
     eligibility = resolve_vendor_eligibility(
         service_client,
         vendor_id,
-        vendor_row=vendor,
+        vendor_row=row,
     )
     # Orphaned bare kyc_tier must not unlock T2/T3 quota lifts (MR-D02).
     tier = cap_tier_for_quotas(eligibility)
@@ -244,6 +265,28 @@ async def get_vendor_cap_limits(
         cod_cap_ngwee=cod_cap,
         listing_count=listing_count,
         order_count=order_count,
+    )
+
+
+def enforce_first_order_caps_for_vendors(
+    service_client: ServiceRoleClient,
+    vendor_totals_ngwee: dict[str, int],
+) -> None:
+    """D9 T1: first N orders each ≤ cap — enforced per vendor for all payment methods."""
+    for vendor_id, order_total_ngwee in vendor_totals_ngwee.items():
+        limits = load_vendor_cap_limits_by_id(service_client, vendor_id)
+        OrderCapChecker(limits=limits).ensure_can_accept(order_total_ngwee)
+
+
+async def get_vendor_cap_limits(
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> VendorCapLimits:
+    vendor = _load_vendor_for_owner(service_client, current_user.id)
+    return load_vendor_cap_limits_by_id(
+        service_client,
+        str(vendor["id"]),
+        vendor_row=vendor,
     )
 
 
