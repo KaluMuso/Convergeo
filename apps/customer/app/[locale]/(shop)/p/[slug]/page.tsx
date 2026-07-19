@@ -26,7 +26,6 @@ import {
 } from "../../_components/pdp/comparison";
 import {
   fetchProduct,
-  PRODUCT_REVALIDATE_SECONDS,
   productCacheTag,
   type Listing,
   type ProductDetail,
@@ -43,7 +42,8 @@ import {
 import type { ListingCondition } from "../../_components/pdp/condition-badge";
 import type { Metadata } from "next";
 
-export const revalidate = PRODUCT_REVALIDATE_SECONDS;
+// Must be a literal for Next.js segment config (imported constants are rejected).
+export const revalidate = 3600;
 
 type CatalogTranslator = {
   (key: string, values?: Record<string, string | number>): string;
