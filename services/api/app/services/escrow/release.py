@@ -9,8 +9,12 @@ from typing import Any, Literal, Protocol
 
 from app.services.commissions.engine import capture_order_commission, compute_order_commission
 from app.services.escrow.release_accounting import (
+    OPEN_DISPUTE_STATUSES as OPEN_DISPUTE_STATUSES,
+)
+from app.services.escrow.release_accounting import (
     ReleaseAccountingError,
     compute_release_amounts,
+    order_has_open_dispute,
     release_blocked_reason,
 )
 from app.services.ledger.engine import post_transaction
@@ -20,8 +24,6 @@ from app.services.orders.state import SYSTEM_ACTOR_ID
 
 DEFAULT_RELEASE_AFTER_DELIVERED_HOURS = 48
 DEFAULT_RELEASE_AFTER_SHIPPED_DAYS = 7
-
-OPEN_DISPUTE_STATUSES = frozenset({"open", "vendor_responded", "under_review"})
 
 RELEASE_ELIGIBLE_STATUSES = frozenset({"shipped", "delivered", "completed"})
 
@@ -61,7 +63,7 @@ class _OrderContext:
     cod: bool
     commission_snapshot: dict[str, Any]
     gross_ngwee: int
-    has_open_dispute: bool
+    has_open_dispute: bool | None
     already_released: bool
     buyer_confirmed: bool
     delivered_at: datetime | None
@@ -185,19 +187,15 @@ def _event_timestamps(
     return delivered_at, shipped_at, buyer_confirmed
 
 
-def _has_open_dispute(order_id: str) -> bool:
-    order_sql = _sql_uuid(order_id, "order_id")
-    statuses_sql = ", ".join(sql_literal(status) for status in sorted(OPEN_DISPUTE_STATUSES))
-    script = f"""
-SELECT count(*)::text
-FROM public.disputes
-WHERE order_id = {order_sql}
-  AND status IN ({statuses_sql});
-"""
-    result = run_sql_script(script)
-    if not result.ok or not result.rows:
-        return False
-    return int(result.rows[0]) > 0
+def _has_open_dispute(order_id: str) -> bool | None:
+    """Return dispute state, or None when the dispute table cannot be queried.
+
+    ``None`` must be treated as a hold (fail-closed) by callers.
+    """
+    try:
+        return order_has_open_dispute(order_id)
+    except ReleaseAccountingError:
+        return None
 
 
 def compute_net_ngwee(*, gross_ngwee: int, commission_snapshot: dict[str, Any]) -> int:
@@ -362,6 +360,15 @@ def evaluate_and_release(
             order_id=order_id,
             outcome="not_eligible",
             reason=blocked,
+        )
+
+    # Fail closed when dispute status is unknown — never release while we cannot
+    # prove the order is undisputed.
+    if context.has_open_dispute is None:
+        return ReleaseResult(
+            order_id=order_id,
+            outcome="held",
+            reason="dispute_lookup_failed",
         )
 
     outcome, reason, rule = evaluate_release_rules(

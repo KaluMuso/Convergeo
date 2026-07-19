@@ -13,8 +13,9 @@ Single-release / single-capture invariants
 -------------------------------------------
 There is exactly ONE order per accepted job (M11-P04). This router NEVER
 re-snapshots or re-captures commission: it reuses ``create_balance_item`` (which
-leaves the commission snapshot untouched) and posts the vendor release with
-``compute_net_ngwee`` from that single snapshot. The release ledger post is keyed
+leaves the commission snapshot untouched) and posts the vendor release via
+``compute_release_amounts`` from that single snapshot (fail-closed on invalid
+snapshots, active refunds, and open disputes). The release ledger post is keyed
 by ``release_idempotency_key(order_id)`` — the SAME key the product escrow engine
 uses — so a double-confirm, a retry, or the background release sweeper can never
 post a second release. The service order sits at ``placed`` until confirm flips it
@@ -36,7 +37,13 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.commissions.engine import capture_order_commission
-from app.services.escrow.release import compute_net_ngwee, release_idempotency_key
+from app.services.escrow.release import release_idempotency_key
+from app.services.escrow.release_accounting import (
+    ReleaseAccountingError,
+    compute_release_amounts,
+    order_has_open_dispute,
+    release_blocked_reason,
+)
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.orders.audit import (
@@ -318,34 +325,63 @@ def _settle_balance(order_id: str, balance_ngwee: int) -> None:
     )
 
 
-def _capture_service_commission(order_id: str) -> None:
-    """Capture platform commission from escrow before the vendor release.
+def _assert_service_release_allowed(*, order_id: str, status: str) -> None:
+    """Fail closed when refund/dispute/cancel state blocks vendor release."""
+    blocked = release_blocked_reason(status=status, order_id=order_id)
+    if blocked is not None:
+        raise AppError(
+            code="release_blocked",
+            message="Service escrow release is blocked for this order",
+            http_status=409,
+            details={"reason": blocked},
+        )
+    try:
+        if order_has_open_dispute(order_id):
+            raise AppError(
+                code="release_blocked",
+                message="Service escrow release is held while a dispute is open",
+                http_status=409,
+                details={"reason": "dispute_open"},
+            )
+    except ReleaseAccountingError as exc:
+        raise AppError(
+            code="release_blocked",
+            message="Service escrow release cannot verify dispute status",
+            http_status=503,
+            details={"reason": str(exc) if str(exc) else "dispute_lookup_failed"},
+        ) from exc
 
-    Mirrors the COD / product capture-then-release pattern: with the deposit and
-    balance charges (M08 ``CHARGE_RECEIVED``) in escrow, this drains commission to
-    ``commission_revenue`` so escrow nets to the vendor ``net``. Idempotent per order
-    via the release-scoped key (``release-{order_id}-commission-…``), and it reuses
-    the single purchase-time snapshot — commission is captured EXACTLY ONCE for the
-    whole order, never re-captured across the deposit/balance legs.
-    """
-    capture_order_commission(
-        order_id=order_id,
-        commission_snapshot=_load_commission_snapshot(order_id),
-        idempotency_key_prefix=release_idempotency_key(order_id),
-    )
+
+def _require_service_release_amounts(
+    *, order_id: str, delivery_fee_ngwee: int
+) -> tuple[dict[str, Any], int]:
+    """Load snapshot + net; fail closed before any confirm-side money movement."""
+    gross = _order_gross_ngwee(order_id, delivery_fee_ngwee)
+    snapshot = _load_commission_snapshot(order_id)
+    try:
+        amounts = compute_release_amounts(
+            order_id=order_id,
+            gross_ngwee=gross,
+            commission_snapshot=snapshot,
+        )
+    except ReleaseAccountingError as exc:
+        raise AppError(
+            code="invalid_commission_snapshot",
+            message="Service escrow release requires a usable commission snapshot",
+            http_status=409,
+            details={"reason": str(exc) if str(exc) else "invalid_commission_snapshot"},
+        ) from exc
+    return snapshot, amounts.net_ngwee
 
 
 def _release_service_order(
-    order_id: str, vendor_id: str, delivery_fee_ngwee: int
+    order_id: str, vendor_id: str, net_ngwee: int
 ) -> tuple[bool, int]:
     """Post the single vendor release for the whole order. Returns (created, net_ngwee).
 
     Reuses the order engine's ``release-{order_id}`` idempotency key — the release is
     posted at most once for the order no matter how many times confirm runs.
     """
-    gross = _order_gross_ngwee(order_id, delivery_fee_ngwee)
-    snapshot = _load_commission_snapshot(order_id)
-    net_ngwee = compute_net_ngwee(gross_ngwee=gross, commission_snapshot=snapshot)
     posted = post_transaction(
         idempotency_key=release_idempotency_key(order_id),
         template=LedgerTemplate.RELEASE_TO_VENDOR,
@@ -451,6 +487,11 @@ def confirm_job_completion(
     # with the release posted exactly once. The release therefore precedes the
     # placed→completed flip; nothing between them can strand escrow.
     #
+    # 0. Fail closed on cancel/refund/dispute/invalid snapshot before any money movement.
+    _assert_service_release_allowed(order_id=order.order_id, status=order.status)
+    snapshot, net_ngwee = _require_service_release_amounts(
+        order_id=order.order_id, delivery_fee_ngwee=order.delivery_fee_ngwee
+    )
     # 1. Balance leg on the SAME order (idempotent; commission snapshot untouched).
     balance = create_balance_item(order.order_id)
     # 2. Settle the balance collection into escrow (M08 charge; idempotent).
@@ -458,11 +499,15 @@ def confirm_job_completion(
     # 2b. Capture platform commission from escrow BEFORE the release (idempotent;
     #     mirrors COD/product capture-then-release) so commission_revenue is recognized
     #     and escrow drains to net. Single snapshot — never re-captured across legs.
-    _capture_service_commission(order.order_id)
+    capture_order_commission(
+        order_id=order.order_id,
+        commission_snapshot=snapshot,
+        idempotency_key_prefix=release_idempotency_key(order.order_id),
+    )
     # 3. Release the whole order to the vendor EXACTLY ONCE — BEFORE completing, so
     #    completion implies the vendor has been paid (no stranded escrow).
     release_created, net_ngwee = _release_service_order(
-        order.order_id, order.vendor_id, order.delivery_fee_ngwee
+        order.order_id, order.vendor_id, net_ngwee
     )
     # 4. Complete the order (unlocks the verified-engagement review); audited with the
     #    real confirming actor via the app.order_actor/app.order_note GUCs.

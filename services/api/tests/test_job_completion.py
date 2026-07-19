@@ -460,6 +460,60 @@ class TestConfirmFailureNoStrand:
 # ---------------------------------------------------------------------------
 
 
+class TestServiceReleaseFailClosedUnit:
+    """Service confirm shares product release accounting fail-closed gates."""
+
+    def test_require_amounts_rejects_empty_snapshot(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.escrow.release_accounting import ReleaseAccountingError
+
+        monkeypatch.setattr(jc, "_order_gross_ngwee", lambda *_a, **_k: 250_000)
+        monkeypatch.setattr(jc, "_load_commission_snapshot", lambda *_a, **_k: {})
+
+        def _boom(**_kwargs: Any) -> Any:
+            raise ReleaseAccountingError("invalid_commission_snapshot")
+
+        monkeypatch.setattr(jc, "compute_release_amounts", _boom)
+        with pytest.raises(AppError) as exc_info:
+            jc._require_service_release_amounts(
+                order_id=str(uuid.uuid4()), delivery_fee_ngwee=0
+            )
+        assert exc_info.value.code == "invalid_commission_snapshot"
+
+    def test_assert_release_allowed_blocks_on_refund(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            jc, "release_blocked_reason", lambda **_k: "order_refunded"
+        )
+        with pytest.raises(AppError) as exc_info:
+            jc._assert_service_release_allowed(
+                order_id=str(uuid.uuid4()), status="placed"
+            )
+        assert exc_info.value.code == "release_blocked"
+        assert exc_info.value.details == {"reason": "order_refunded"}
+
+    def test_assert_release_allowed_fail_closed_on_dispute_lookup(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.escrow.release_accounting import ReleaseAccountingError
+
+        monkeypatch.setattr(jc, "release_blocked_reason", lambda **_k: None)
+
+        def _boom(_order_id: str) -> bool:
+            raise ReleaseAccountingError("dispute_lookup_failed")
+
+        monkeypatch.setattr(jc, "order_has_open_dispute", _boom)
+        with pytest.raises(AppError) as exc_info:
+            jc._assert_service_release_allowed(
+                order_id=str(uuid.uuid4()), status="placed"
+            )
+        assert exc_info.value.code == "release_blocked"
+        assert exc_info.value.details == {"reason": "dispute_lookup_failed"}
+        assert exc_info.value.http_status == 503
+
+
 class TestCompletionCapturesCommission:
     """M08-P08b: confirm captures commission (once) before the vendor release."""
 
