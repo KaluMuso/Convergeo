@@ -26,7 +26,11 @@
   },
   "pagination": {
     "loadMore": "Tengani zina",
-    "loading": "Ikutenga zina…"
+    "loading": "Ikutenga zina…",
+    "moreLoaded": "{count} results zina zatengedwa.",
+    "endOfResults": "Mwafika kumapeto a results.",
+    "loadError": "Sitinathe kutenga results zina.",
+    "retry": "Yesaninso"
   },
   "placeholder": "Sakani pa Vergeo5",
   "recent": {
