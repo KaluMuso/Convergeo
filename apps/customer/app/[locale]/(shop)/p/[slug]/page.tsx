@@ -2,9 +2,11 @@ import { createApiClient } from "@vergeo/config";
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import {
+  buildBreadcrumbListJsonLd,
   buildCanonicalAlternates,
   buildLocaleCanonical,
   buildProductJsonLd,
+  canBuildProductJsonLd,
   JsonLdScript,
   resolveCloudinaryImageUrls,
 } from "@vergeo/ui/src/seo/json-ld";
@@ -440,6 +442,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
   const ogImagePath = `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}`;
 
+  const indexable = product.listings.length > 0;
+
   return {
     title: product.name,
     description,
@@ -453,8 +457,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       images: [{ url: ogImagePath }],
     },
     robots: {
-      index: true,
-      follow: true,
+      index: indexable,
+      follow: indexable,
     },
   };
 }
@@ -488,20 +492,26 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const singleVendor = product.listing_count === 1;
   const specRows = specRowsFromJson(product.spec);
   const images = galleryImages(product, selectedListing, product.name);
-  const jsonLd = buildProductJsonLd({
+  const productJsonLdInput = {
     name: product.name,
     slug: product.slug,
     locale,
     brand: product.brand,
-    description: t("pdp.meta.descriptionFallback", { name: product.name }),
+    description: product.description?.trim() || undefined,
     imageUrls: productImageUrls(product),
-    sku: selectedListing?.id,
     offers: product.listings.map((listing) => ({
       priceNgwee: listing.price_ngwee,
       inStock: listing.in_stock,
       sellerName: listing.vendor.display_name,
     })),
-  });
+  };
+  const productJsonLd = canBuildProductJsonLd(productJsonLdInput)
+    ? buildProductJsonLd(productJsonLdInput)
+    : null;
+  const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [
+    { name: t("home.nav.home"), path: "" },
+    { name: product.name, path: `p/${product.slug}` },
+  ]);
   const productListings = toProductListings(product, product.name);
   const comparisonListings = toComparisonListings(comparison, product);
   const overviewParagraphs = descriptionParagraphs(product.description);
@@ -572,7 +582,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
   return (
     <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6 motion-rise lg:max-w-6xl">
-      <JsonLdScript data={jsonLd} />
+      {productJsonLd ? <JsonLdScript data={productJsonLd} /> : null}
+      <JsonLdScript data={breadcrumbJsonLd} />
       <ProductViewTracker productId={product.id} listingId={selectedListing?.id} />
 
       <header className="flex flex-col gap-2">

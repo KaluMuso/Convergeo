@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
+
 import type { Metadata } from "next";
 
 /** Default production origin; override with NEXT_PUBLIC_SITE_URL in deploy env. */
@@ -48,7 +50,7 @@ export function stripCanonicalParams(pathOrUrl: string): string {
 
 /**
  * Build a locale-prefixed shop canonical path (no query/filter params).
- * Strategy: each locale self-canonicals; no cross-locale hreflang alternates.
+ * Each locale self-canonicals; cross-locale discovery uses hreflang alternates.
  */
 export function buildLocaleCanonical(locale: string, ...segments: string[]): string {
   const cleaned = segments
@@ -59,12 +61,47 @@ export function buildLocaleCanonical(locale: string, ...segments: string[]): str
   return stripCanonicalParams(`/${locale}${suffix}`);
 }
 
+export type CanonicalAlternatesOptions = {
+  /**
+   * Locales that actually serve this page. Omit unavailable locales.
+   * Defaults to every supported app locale.
+   */
+  availableLocales?: readonly string[];
+  /** Locale used for `x-default` (defaults to DEFAULT_LOCALE when available). */
+  defaultLocale?: string;
+};
+
+/**
+ * Canonical + hreflang alternates (including `x-default`).
+ * Absolute URLs in `languages` so crawlers resolve hreflang correctly.
+ */
 export function buildCanonicalAlternates(
   locale: string,
-  ...segments: string[]
+  ...args: [...segments: string[], options: CanonicalAlternatesOptions] | string[]
 ): NonNullable<Metadata["alternates"]> {
+  const last = args[args.length - 1];
+  const hasOptions = typeof last === "object" && last !== null && !Array.isArray(last);
+  const options = hasOptions ? (last as CanonicalAlternatesOptions) : undefined;
+  const segments = (hasOptions ? args.slice(0, -1) : args) as string[];
+
+  const available = (options?.availableLocales ?? LOCALES).filter(
+    (entry, index, all) => entry.length > 0 && all.indexOf(entry) === index,
+  );
+  const locales = available.length > 0 ? available : [locale];
+  const preferredDefault = options?.defaultLocale ?? DEFAULT_LOCALE;
+  const xDefaultLocale = locales.includes(preferredDefault)
+    ? preferredDefault
+    : (locales[0] ?? locale);
+
+  const languages: Record<string, string> = {};
+  for (const loc of locales) {
+    languages[loc] = buildAbsoluteUrl(buildLocaleCanonical(loc, ...segments));
+  }
+  languages["x-default"] = buildAbsoluteUrl(buildLocaleCanonical(xDefaultLocale, ...segments));
+
   return {
     canonical: buildLocaleCanonical(locale, ...segments),
+    languages,
   };
 }
 
@@ -166,6 +203,29 @@ export function buildAggregateRating(input: JsonLdAggregateRatingInput): Record<
   };
 }
 
+/**
+ * True when Product JSON-LD has the real fields Google needs — name, image,
+ * and at least one Offer with price / currency / availability / seller.
+ * Callers must not invent ratings, review counts, or delivery promises.
+ */
+export function canBuildProductJsonLd(input: JsonLdProductInput): boolean {
+  if (!input.name.trim() || !input.slug.trim()) {
+    return false;
+  }
+  if (!input.imageUrls || input.imageUrls.length === 0) {
+    return false;
+  }
+  if (!input.offers || input.offers.length === 0) {
+    return false;
+  }
+  return input.offers.every(
+    (offer) =>
+      Number.isInteger(offer.priceNgwee) &&
+      typeof offer.sellerName === "string" &&
+      offer.sellerName.trim().length > 0,
+  );
+}
+
 export function buildProductJsonLd(input: JsonLdProductInput): Record<string, unknown> {
   const productUrl = buildAbsoluteUrl(buildLocaleCanonical(input.locale, "p", input.slug));
   const offers = input.offers.map((offer) =>
@@ -189,6 +249,66 @@ export function buildProductJsonLd(input: JsonLdProductInput): Record<string, un
       : {}),
     offers: offers.length === 1 ? offers[0] : offers,
   };
+}
+
+export type JsonLdOrganizationInput = {
+  name: string;
+  url?: string;
+  logoUrl?: string | null;
+  description?: string | null;
+};
+
+export type JsonLdWebSiteInput = {
+  name: string;
+  /** Absolute site origin or locale home; defaults to getSiteUrl(). */
+  url?: string;
+  /**
+   * Absolute SearchAction urlTemplate including `{search_term_string}`.
+   * Omit when the site has no public search URL.
+   */
+  searchUrlTemplate?: string;
+};
+
+/** Organization JSON-LD from real brand fields only (no fabricated socials/logos). */
+export function buildOrganizationJsonLd(input: JsonLdOrganizationInput): Record<string, unknown> {
+  const url = input.url ?? getSiteUrl();
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: input.name,
+    url,
+    ...(input.logoUrl ? { logo: input.logoUrl } : {}),
+    ...(input.description ? { description: input.description } : {}),
+  };
+}
+
+/** WebSite JSON-LD with optional SearchAction (real search URL only). */
+export function buildWebSiteJsonLd(input: JsonLdWebSiteInput): Record<string, unknown> {
+  const url = input.url ?? getSiteUrl();
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: input.name,
+    url,
+    ...(input.searchUrlTemplate
+      ? {
+          potentialAction: {
+            "@type": "SearchAction",
+            target: {
+              "@type": "EntryPoint",
+              urlTemplate: input.searchUrlTemplate,
+            },
+            "query-input": "required name=search_term_string",
+          },
+        }
+      : {}),
+  };
+}
+
+/** Default-locale search urlTemplate for WebSite/SearchAction. */
+export function buildSearchActionUrlTemplate(locale: string = DEFAULT_LOCALE): string {
+  const path = buildLocaleCanonical(locale, "search");
+  return `${buildAbsoluteUrl(path)}?q={search_term_string}`;
 }
 
 export function buildLocalBusinessJsonLd(input: JsonLdLocalBusinessInput): Record<string, unknown> {

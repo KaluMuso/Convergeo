@@ -1,6 +1,14 @@
 import { LOCALES } from "@vergeo/i18n";
 import { buildAbsoluteUrl, buildLocaleCanonical, getSiteUrl } from "@vergeo/ui/src/seo/json-ld";
 
+import { coerceSitemapId, SITEMAP_STATIC_SEGMENTS } from "../lib/seo/sitemap-eligibility";
+import {
+  fetchCategorySitemapSlugs,
+  fetchProductSitemapSlugs,
+  fetchServiceSitemapSlugs,
+  fetchVendorSitemapSlugs,
+} from "../lib/seo/sitemap-sources";
+
 import { fetchEventSitemapSlugs } from "./sitemap-events";
 
 import type { MetadataRoute } from "next";
@@ -9,32 +17,7 @@ const CHUNK_SIZE = 5000;
 
 // "supplies" is intentionally omitted: the wholesale Supplies page is a B2B-gated
 // route served with robots noindex,nofollow, so it must not be advertised in the
-// sitemap.
-const STATIC_SHOP_SEGMENTS = ["", "search", "directory", "events"] as const;
-
-const CATEGORY_SLUGS = [
-  "all",
-  "electronics",
-  "fashion-beauty",
-  "home-living",
-  "groceries",
-] as const;
-
-type CatalogListResponse = {
-  items: Array<{ product_slug: string | null }>;
-  next_cursor: string | null;
-};
-
-type DirectoryListResponse = {
-  items: Array<{ slug: string }>;
-  total: number;
-  page: number;
-  page_size: number;
-};
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
+// sitemap. Search/compare/cart/checkout/account are also excluded (see eligibility).
 
 function sitemapEntry(locale: string, ...segments: string[]): MetadataRoute.Sitemap[number] {
   const path = buildLocaleCanonical(locale, ...segments);
@@ -46,93 +29,29 @@ function sitemapEntry(locale: string, ...segments: string[]): MetadataRoute.Site
   };
 }
 
-async function fetchProductSlugs(): Promise<string[]> {
-  const slugs = new Set<string>();
-  let cursor: string | null = null;
-
-  try {
-    for (let page = 0; page < 200; page += 1) {
-      const params = new URLSearchParams({ limit: "48" });
-      if (cursor) {
-        params.set("cursor", cursor);
-      }
-
-      const response = await fetch(`${getApiBaseUrl()}/catalog/listings?${params.toString()}`, {
-        next: { revalidate: 3600 },
-      });
-      if (!response.ok) {
-        break;
-      }
-
-      const payload = (await response.json()) as CatalogListResponse;
-      for (const item of payload.items) {
-        if (item.product_slug) {
-          slugs.add(item.product_slug);
-        }
-      }
-
-      cursor = payload.next_cursor;
-      if (!cursor) {
-        break;
-      }
-    }
-  } catch {
-    return [];
-  }
-
-  return [...slugs].sort();
-}
-
-async function fetchVendorSlugs(): Promise<string[]> {
-  const slugs: string[] = [];
-  let page = 1;
-
-  try {
-    while (page <= 200) {
-      const response = await fetch(`${getApiBaseUrl()}/directory?page=${page}&page_size=48`, {
-        next: { revalidate: 3600 },
-      });
-      if (!response.ok) {
-        break;
-      }
-
-      const payload = (await response.json()) as DirectoryListResponse;
-      for (const item of payload.items) {
-        slugs.push(item.slug);
-      }
-
-      const fetched = page * payload.page_size;
-      if (fetched >= payload.total || payload.items.length === 0) {
-        break;
-      }
-      page += 1;
-    }
-  } catch {
-    return [];
-  }
-
-  return slugs;
-}
-
 type SitemapManifest = {
   productChunks: number;
 };
 
 let manifestPromise: Promise<SitemapManifest> | null = null;
+let productSlugsPromise: Promise<string[]> | null = null;
+
+async function getProductSlugs(): Promise<string[]> {
+  if (!productSlugsPromise) {
+    productSlugsPromise = fetchProductSitemapSlugs();
+  }
+  return productSlugsPromise;
+}
 
 async function getSitemapManifest(): Promise<SitemapManifest> {
   if (!manifestPromise) {
     manifestPromise = (async () => {
-      const productSlugs = await fetchProductSlugs();
+      const productSlugs = await getProductSlugs();
       const productChunks = Math.max(1, Math.ceil(productSlugs.length / CHUNK_SIZE));
       return { productChunks };
     })();
   }
   return manifestPromise;
-}
-
-async function getProductSlugs(): Promise<string[]> {
-  return fetchProductSlugs();
 }
 
 export async function generateSitemaps() {
@@ -141,25 +60,37 @@ export async function generateSitemaps() {
   for (let chunk = 0; chunk < productChunks; chunk += 1) {
     ids.push({ id: chunk + 1 });
   }
+  // After products: vendors, events, categories, services
   ids.push({ id: productChunks + 1 });
   ids.push({ id: productChunks + 2 });
   ids.push({ id: productChunks + 3 });
+  ids.push({ id: productChunks + 4 });
   return ids;
 }
 
 export default async function sitemap(props: {
-  id: Promise<number>;
+  id: Promise<number | string>;
 }): Promise<MetadataRoute.Sitemap> {
-  const id = await props.id;
+  const id = coerceSitemapId(await props.id);
+  if (id === null) {
+    return [];
+  }
   const { productChunks } = await getSitemapManifest();
   const vendorChunkId = productChunks + 1;
   const eventChunkId = productChunks + 2;
   const categoryChunkId = productChunks + 3;
+  const serviceChunkId = productChunks + 4;
 
   if (id === 0) {
+    const categorySlugs = await fetchCategorySitemapSlugs();
+    const hasPublicCategories = categorySlugs.some((slug) => slug !== "all");
     const entries: MetadataRoute.Sitemap = [];
     for (const locale of LOCALES) {
-      for (const segment of STATIC_SHOP_SEGMENTS) {
+      for (const segment of SITEMAP_STATIC_SEGMENTS) {
+        // Omit the empty categories hub from the sitemap (page is also noindex).
+        if (segment === "categories" && !hasPublicCategories) {
+          continue;
+        }
         entries.push(segment ? sitemapEntry(locale, segment) : sitemapEntry(locale));
       }
     }
@@ -181,7 +112,7 @@ export default async function sitemap(props: {
   }
 
   if (id === vendorChunkId) {
-    const vendorSlugs = await fetchVendorSlugs();
+    const vendorSlugs = await fetchVendorSitemapSlugs();
     const entries: MetadataRoute.Sitemap = [];
     for (const locale of LOCALES) {
       for (const slug of vendorSlugs) {
@@ -203,10 +134,22 @@ export default async function sitemap(props: {
   }
 
   if (id === categoryChunkId) {
+    const categorySlugs = await fetchCategorySitemapSlugs();
     const entries: MetadataRoute.Sitemap = [];
     for (const locale of LOCALES) {
-      for (const category of CATEGORY_SLUGS) {
+      for (const category of categorySlugs) {
         entries.push(sitemapEntry(locale, "c", category));
+      }
+    }
+    return entries;
+  }
+
+  if (id === serviceChunkId) {
+    const serviceSlugs = await fetchServiceSitemapSlugs();
+    const entries: MetadataRoute.Sitemap = [];
+    for (const locale of LOCALES) {
+      for (const slug of serviceSlugs) {
+        entries.push(sitemapEntry(locale, "s", slug));
       }
     }
     return entries;

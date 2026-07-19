@@ -40,6 +40,9 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale } = await params;
   const t = await getCatalogTranslator(locale);
+  const result = await fetchCategoriesResult();
+  const view = resolveCategoriesBrowseView(result);
+  const indexable = view.kind === "populated";
 
   return {
     title: t("browseCategories.title"),
@@ -52,6 +55,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       locale,
       url: buildLocaleCanonical(locale, "categories"),
     },
+    robots: { index: indexable, follow: indexable },
   };
 }
 
