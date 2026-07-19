@@ -644,7 +644,15 @@ class TestReconciliationGrossCommissionNet:
             == order_summary.charge_received_ngwee
         )
 
-        day_totals = build_release_accounting_day_totals(report_date="2026-07-18")
+        # Release/charge legs post at the DB clock (ledger_transactions.created_at
+        # defaults to now()), not the seeded business `now`, so bucket the day-totals
+        # on the day the legs actually landed — keeps this deterministic on any date.
+        charge_day = db.run(
+            f"SELECT created_at::date::text FROM public.ledger_transactions "
+            f"WHERE idempotency_key = 'prepaid-charge-{order_id}';"
+        )
+        assert charge_day.ok and charge_day.rows
+        day_totals = build_release_accounting_day_totals(report_date=charge_day.rows[0])
         assert day_totals["gross_collected_ngwee"] >= GROSS_NGEWEE
         assert day_totals["commission_captured_ngwee"] >= COMMISSION_NGEWEE
         assert day_totals["vendor_released_ngwee"] >= NET_NGEWEE
