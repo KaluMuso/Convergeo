@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 import httpx
+from app.core.env_guards import extract_supabase_project_ref
 from app.settings import get_settings
 from fastapi import APIRouter
 
@@ -25,6 +26,26 @@ async def health() -> dict[str, str]:
     unaliased ``/health`` 404s and reads as perpetual downtime.
     """
     return {"status": "ok"}
+
+
+@router.get("/fingerprint")
+async def fingerprint() -> dict[str, str]:
+    """Non-secret environment fingerprint for staging/production auditability.
+
+    Contains no credentials. Supabase project ref is a public identifier used
+    only to prove staging ≠ production.
+    """
+    settings = get_settings()
+    git_sha = settings.git_sha or settings.sentry_release or "unknown"
+    image_tag = settings.api_image_tag or git_sha
+    project_ref = extract_supabase_project_ref(settings.supabase_url) or "unknown"
+    return {
+        "status": "ok",
+        "env": settings.env,
+        "git_sha": git_sha,
+        "image_tag": image_tag,
+        "supabase_project_ref": project_ref,
+    }
 
 
 async def _supabase_reachable() -> bool:

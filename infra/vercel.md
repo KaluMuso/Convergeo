@@ -1,8 +1,26 @@
-# Vercel — Customer app (`apps/customer`)
+# Vercel — Frontend apps
 
-Customer discovery app (SSR/ISR, SEO, PWA-ready) runs on **Vercel** per D21. Vendor and admin are **not** deployed to Vercel.
+Live topology (2026-07): **customer, vendor, and admin** each have a Vercel
+project (`convergeo-customer`, `convergeo-vendor`, `convergeo-admin`). API and
+n8n remain on OCI.
 
-## Project settings
+## Staging Preview (branch `staging`)
+
+STG-01 uses **branch-scoped Preview** configuration on the existing three
+projects (no separate staging Vercel projects required):
+
+1. Project → Settings → Environment Variables → Preview → Git Branch: `staging`
+2. Apply names from `infra/staging/vercel-preview.env.example`
+3. All three apps must point `NEXT_PUBLIC_API_BASE_URL` /
+   `NEXT_PUBLIC_VERGEO_API_URL` at `https://api.staging.vergeo5.com`
+4. Cross-links (e.g. `NEXT_PUBLIC_VENDOR_APP_URL`) must use staging/preview URLs
+5. No localhost fallbacks; never put secrets in `NEXT_PUBLIC_*`
+6. Fingerprint: `GET /en/health` → `{ status, app, env, buildId }`
+
+Deploy workflow: `.github/workflows/deploy-staging.yml` (GitHub Environment
+`staging`). Never auto-promotes to Production.
+
+## Customer project settings
 
 | Setting         | Value                                                                                                             |
 | --------------- | ----------------------------------------------------------------------------------------------------------------- |

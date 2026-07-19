@@ -14,6 +14,20 @@ Orange-cloud (proxied) records unless noted. TLS mode: **Full (strict)** on OCI 
 | `admin`  | A     | `<OCI_VM_PUBLIC_IP>`   | Yes     | Admin origin — separate host + IP allowlist (D20).                       |
 | `n8n`    | A     | `<OCI_VM_PUBLIC_IP>`   | Yes     | n8n UI (auth required). Restrict further via Cloudflare Access optional. |
 
+### Staging plane (STG-01)
+
+Use the `{service}.staging.vergeo5.com` convention (not `staging-api.vergeo5.com`).
+
+| Name             | Type | Target                       | Proxied | Notes                                              |
+| ---------------- | ---- | ---------------------------- | ------- | -------------------------------------------------- |
+| `api.staging`    | A    | `<OCI_STAGING_VM_PUBLIC_IP>` | Yes     | Staging API (`vergeo5-api-staging` → host `:8001`) |
+| `n8n.staging`    | A    | `<OCI_STAGING_VM_PUBLIC_IP>` | Yes     | Staging n8n UI (basic auth)                        |
+| `vendor.staging` | A    | optional / Preview           | Yes     | Optional if not using Vercel Preview URLs          |
+| `admin.staging`  | A    | optional / Preview           | Yes     | Optional; keep allowlist if exposed                |
+
+Staging frontends may use Vercel Preview URLs on branch `staging` instead of
+custom domains. Never alias staging records to production OCI IPs by mistake.
+
 ## WAF / caching posture (free tier)
 
 - **Customer (`vergeo5.com`)**: Vercel edge cache + ISR; Cloudflare only on apex if using CNAME flattening.

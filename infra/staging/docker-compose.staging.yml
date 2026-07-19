@@ -1,0 +1,97 @@
+# Isolated staging plane for API + n8n (+ optional Caddy).
+# Does NOT share container names, ports, volumes, or env files with production.
+#
+# Usage on the OCI staging host (or a dedicated staging VM):
+#   cp infra/staging/.env.staging.example infra/staging/.env
+#   # fill staging-only values; chmod 600 .env
+#   export API_IMAGE_TAG=<git-sha>   # required — never "latest"
+#   docker compose -f infra/staging/docker-compose.staging.yml --env-file infra/staging/.env up -d
+#
+# Rollback:
+#   export API_IMAGE_TAG=<previous-known-good-sha>
+#   docker compose -f infra/staging/docker-compose.staging.yml --env-file infra/staging/.env up -d
+
+name: vergeo5-staging
+
+services:
+  api-staging:
+    image: ghcr.io/kalumuso/convergeo-api:${API_IMAGE_TAG:?API_IMAGE_TAG must be a git SHA — never latest}
+    container_name: vergeo5-api-staging
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      ENV: staging
+      GIT_SHA: ${API_IMAGE_TAG}
+      API_IMAGE_TAG: ${API_IMAGE_TAG}
+      PUBLIC_API_HOST: ${PUBLIC_API_HOST:-api.staging.vergeo5.com}
+      SENTRY_RELEASE: ${API_IMAGE_TAG}
+    # Distinct from production bind 127.0.0.1:8000
+    ports:
+      - "127.0.0.1:8001:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - vergeo5-staging
+
+  n8n-staging:
+    image: docker.io/n8nio/n8n:1.82.1
+    container_name: vergeo5-n8n-staging
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Force staging API base for workflow expressions using $env.API_URL
+      API_URL: ${API_URL:-https://api.staging.vergeo5.com}
+      WEBHOOK_URL: ${WEBHOOK_URL:-https://n8n.staging.vergeo5.com/}
+      N8N_HOST: ${N8N_HOST:-n8n.staging.vergeo5.com}
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-https}
+    volumes:
+      - n8n_staging_data:/home/node/.n8n
+    expose:
+      - "5678"
+    networks:
+      - vergeo5-staging
+
+  caddy-staging:
+    image: caddy:2.9.1-alpine
+    container_name: vergeo5-caddy-staging
+    restart: unless-stopped
+    depends_on:
+      api-staging:
+        condition: service_healthy
+      n8n-staging:
+        condition: service_started
+    # When co-located with production Caddy on :80/:443, omit this service and
+    # terminate TLS on the host Caddy with staging server blocks instead.
+    # For a dedicated staging VM, expose 80/443 here.
+    ports:
+      - "8080:80"
+      - "8443:443"
+    env_file:
+      - .env
+    volumes:
+      - ../Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_staging_data:/data
+      - caddy_staging_config:/config
+    networks:
+      - vergeo5-staging
+
+networks:
+  vergeo5-staging:
+    name: vergeo5-staging
+
+volumes:
+  n8n_staging_data:
+  caddy_staging_data:
+  caddy_staging_config:

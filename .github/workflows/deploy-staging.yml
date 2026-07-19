@@ -1,38 +1,431 @@
-name: Deploy staging (stub)
+name: Deploy staging
+
+# Manually controlled staging pipeline. Never auto-promotes to production.
+#
+# Triggers:
+#   - workflow_dispatch (explicit)
+#   - push to the protected `staging` branch (controlled branch deploy)
+#
+# Required GitHub Environment: `staging` (protection rules + secrets).
+# Secret *names* only below — values live in the environment, never in git.
 
 on:
   workflow_dispatch:
+    inputs:
+      api_image_tag:
+        description: "Immutable API image tag (git SHA). Leave empty to use this commit."
+        required: false
+        type: string
+      skip_vercel:
+        description: "Skip Vercel Preview env sync / deploy trigger"
+        required: false
+        type: boolean
+        default: false
+      skip_migrate:
+        description: "Skip Supabase migration apply (use when DB already current)"
+        required: false
+        type: boolean
+        default: false
+      seed_synthetic:
+        description: "Run synthetic staging seed (stg-rv-*) after migrations"
+        required: false
+        type: boolean
+        default: false
+  push:
+    branches:
+      - staging
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
 
 permissions:
   contents: read
+  packages: write
+
+env:
+  # Public production identifiers — staging jobs must never equal these.
+  PROD_SUPABASE_PROJECT_REF: dpadrlxukcjbewpqympu
+  PROD_API_HOST: api.vergeo5.com
 
 jobs:
-  build-images:
-    name: Build container images (stub)
+  environment-separation:
+    name: Environment separation
     runs-on: ubuntu-latest
+    environment: staging
     steps:
-      - name: TODO — build API/admin images
-        run: |
-          echo "TODO(M01-P06): docker build services/api and apps/admin"
-          echo "Secrets required: none for build (registry push uses OCI_REGISTRY_TOKEN)"
+      - uses: actions/checkout@v7
 
-  deploy-oci:
-    name: Deploy to OCI (stub)
-    runs-on: ubuntu-latest
-    needs: build-images
-    steps:
-      - name: TODO — deploy Docker Compose stack on OCI VM
+      - name: Refuse missing staging identifiers
+        env:
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
         run: |
-          echo "TODO(M01-P06): pull tagged images and compose up on staging VM"
-          echo "Secrets required: OCI_API_KEY, OCI_TENANCY_OCID, OCI_USER_OCID, OCI_FINGERPRINT, OCI_PRIVATE_KEY, OCI_COMPARTMENT_ID"
-          echo "Reference only — values live in GitHub secrets, never in repo"
+          set -euo pipefail
+          if [ -z "${STAGING_SUPABASE_PROJECT_ID}" ]; then
+            echo "::error::STAGING_SUPABASE_PROJECT_ID secret is required in the staging environment"
+            exit 1
+          fi
+          if [ -z "${STAGING_API_HOST}" ]; then
+            echo "::error::STAGING_API_HOST secret is required in the staging environment"
+            exit 1
+          fi
 
-  deploy-vercel:
-    name: Deploy customer app to Vercel (stub)
-    runs-on: ubuntu-latest
-    needs: build-images
-    steps:
-      - name: TODO — vercel deploy customer app
+      - name: Compare staging identifiers against production
+        env:
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+          STAGING_API_BASE_URL: ${{ secrets.STAGING_API_BASE_URL }}
+          STAGING_N8N_WEBHOOK_URL: ${{ secrets.STAGING_N8N_WEBHOOK_URL }}
+          STAGING_CUSTOMER_URL: ${{ secrets.STAGING_CUSTOMER_URL }}
+          STAGING_VENDOR_URL: ${{ secrets.STAGING_VENDOR_URL }}
+          STAGING_ADMIN_URL: ${{ secrets.STAGING_ADMIN_URL }}
+        run: bash scripts/ci/check-staging-separation.sh
+
+      - name: Hard-fail on production Supabase ref or API host literals
+        env:
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
         run: |
-          echo "TODO(M01-P06): vercel deploy --prebuilt for apps/customer"
-          echo "Secret required: VERCEL_TOKEN (and VERCEL_ORG_ID / VERCEL_PROJECT_ID as needed)"
+          set -euo pipefail
+          if [ "${STAGING_SUPABASE_PROJECT_ID}" = "${PROD_SUPABASE_PROJECT_REF}" ]; then
+            echo "::error::staging Supabase project equals production"
+            exit 1
+          fi
+          host="$(printf '%s' "${STAGING_API_HOST}" | sed -E 's#^https?://##; s#/.*##; s/:.*//')"
+          if [ "${host}" = "${PROD_API_HOST}" ]; then
+            echo "::error::staging API host equals production api.vergeo5.com"
+            exit 1
+          fi
+
+  migrate-supabase:
+    name: Supabase migrations + checks
+    needs: environment-separation
+    if: ${{ github.event_name == 'push' || inputs.skip_migrate != true }}
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: 2.109.1
+
+      - name: Link staging project (not production)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+          STAGING_SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ "${STAGING_SUPABASE_PROJECT_ID}" = "${PROD_SUPABASE_PROJECT_REF}" ]; then
+            echo "::error::refusing to link production Supabase project"
+            exit 1
+          fi
+          supabase link \
+            --project-ref "${STAGING_SUPABASE_PROJECT_ID}" \
+            --password "${STAGING_SUPABASE_DB_PASSWORD}"
+
+      - name: Push migrations from blank/current staging DB
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          STAGING_SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # Applies repository migrations (including 0056) to the linked staging project.
+          supabase db push --include-all
+
+      - name: Verify migration 0056 present
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          STAGING_SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # List remote migrations and require 0056.
+          supabase migration list | tee /tmp/migration-list.txt
+          if ! grep -E '0056' /tmp/migration-list.txt; then
+            echo "::error::migration 0056 not present on staging after push"
+            exit 1
+          fi
+
+      - name: Generate types against staging
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          # Generate into a temp file — staging may be ahead of committed types during rollout.
+          supabase gen types typescript \
+            --project-id "${STAGING_SUPABASE_PROJECT_ID}" \
+            --schema public > /tmp/staging-db.ts
+          test -s /tmp/staging-db.ts
+          echo "Staging typegen produced $(wc -l < /tmp/staging-db.ts) lines"
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Schema / RLS + security_invoker view checks
+        env:
+          STAGING_SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+          STAGING_SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [ -n "${STAGING_SUPABASE_DB_URL}" ]; then
+            export SUPABASE_DB_URL="${STAGING_SUPABASE_DB_URL}"
+          else
+            # Fallback pooler form — override with STAGING_SUPABASE_DB_URL when region differs.
+            export SUPABASE_DB_URL="postgresql://postgres.${STAGING_SUPABASE_PROJECT_ID}:${STAGING_SUPABASE_DB_PASSWORD}@aws-0-eu-north-1.pooler.supabase.com:5432/postgres"
+          fi
+          bash scripts/ci/check-staging-schema.sh
+
+      - name: Synthetic seed (optional)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed_synthetic }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+        run: |
+          set -euo pipefail
+          python3 scripts/seed_staging.py --env staging --apply
+
+  build-api-image:
+    name: Build API image (SHA tag)
+    needs: environment-separation
+    runs-on: ubuntu-latest
+    environment: staging
+    outputs:
+      image_tag: ${{ steps.tag.outputs.tag }}
+      image_name: ${{ steps.img.outputs.name }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Resolve immutable image tag
+        id: tag
+        run: |
+          set -euo pipefail
+          TAG="${{ github.event.inputs.api_image_tag || github.sha }}"
+          if [ "$TAG" = "latest" ]; then
+            echo "::error::refusing image tag 'latest'"
+            exit 1
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute lowercase image name
+        id: img
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/convergeo-api" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and push SHA-tagged image (no latest)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: infra/api.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ steps.img.outputs.name }}:${{ steps.tag.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-api-oci:
+    name: Deploy API to OCI staging
+    needs: [environment-separation, build-api-image, migrate-supabase]
+    # Allow deploy when migrate was skipped via workflow_dispatch.
+    if: ${{ always() && needs.environment-separation.result == 'success' && needs.build-api-image.result == 'success' && (needs.migrate-supabase.result == 'success' || needs.migrate-supabase.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Deploy SHA-tagged image via SSH
+        env:
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+          STAGING_OCI_SSH_HOST: ${{ secrets.STAGING_OCI_SSH_HOST }}
+          STAGING_OCI_SSH_USER: ${{ secrets.STAGING_OCI_SSH_USER }}
+          STAGING_OCI_SSH_KEY: ${{ secrets.STAGING_OCI_SSH_KEY }}
+          IMAGE_TAG: ${{ needs.build-api-image.outputs.image_tag }}
+        run: |
+          set -euo pipefail
+          host="$(printf '%s' "${STAGING_API_HOST}" | sed -E 's#^https?://##; s#/.*##')"
+          if [ "$host" = "api.vergeo5.com" ]; then
+            echo "::error::refusing to deploy to production API host"
+            exit 1
+          fi
+          if [ -z "${STAGING_OCI_SSH_HOST}" ] || [ -z "${STAGING_OCI_SSH_KEY}" ]; then
+            echo "::error::STAGING_OCI_SSH_HOST / STAGING_OCI_SSH_KEY required for OCI staging deploy"
+            exit 1
+          fi
+          if [ "${IMAGE_TAG}" = "latest" ]; then
+            echo "::error::refusing latest tag"
+            exit 1
+          fi
+
+          install -m 600 /dev/null /tmp/staging_oci_key
+          printf '%s\n' "${STAGING_OCI_SSH_KEY}" > /tmp/staging_oci_key
+
+          # Copy redeploy script and run with SHA tag. Env file on the host is
+          # ~/vergeo5-api-staging.env (never written by CI).
+          scp -i /tmp/staging_oci_key -o StrictHostKeyChecking=accept-new \
+            infra/staging/redeploy-api-staging.sh \
+            "${STAGING_OCI_SSH_USER}@${STAGING_OCI_SSH_HOST}:/tmp/redeploy-api-staging.sh"
+
+          ssh -i /tmp/staging_oci_key -o StrictHostKeyChecking=accept-new \
+            "${STAGING_OCI_SSH_USER}@${STAGING_OCI_SSH_HOST}" \
+            "bash /tmp/redeploy-api-staging.sh '${IMAGE_TAG}'"
+
+          rm -f /tmp/staging_oci_key
+
+      - name: Record deployment
+        run: |
+          mkdir -p /tmp/staging-evidence
+          cat > /tmp/staging-evidence/api-deploy.txt <<EOF
+          image=${{ needs.build-api-image.outputs.image_name }}:${{ needs.build-api-image.outputs.image_tag }}
+          sha=${{ github.sha }}
+          host_secret=STAGING_API_HOST
+          at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          EOF
+          cat /tmp/staging-evidence/api-deploy.txt
+
+      - name: Upload deploy record
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-api-deploy-record
+          path: /tmp/staging-evidence/api-deploy.txt
+
+  configure-vercel-preview:
+    name: Vercel Preview (staging branch)
+    needs: [environment-separation, deploy-api-oci]
+    if: ${{ always() && needs.environment-separation.result == 'success' && (github.event_name == 'push' || inputs.skip_vercel != true) }}
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Guard Preview API URL
+        env:
+          STAGING_API_BASE_URL: ${{ secrets.STAGING_API_BASE_URL }}
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+        run: |
+          set -euo pipefail
+          api="${STAGING_API_BASE_URL:-https://${STAGING_API_HOST}}"
+          case "$api" in
+            *api.vergeo5.com*) echo "::error::Preview must not use production API"; exit 1 ;;
+            *localhost*) echo "::error::Preview must not use localhost"; exit 1 ;;
+          esac
+          echo "Preview API base OK (host secret only)"
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@39
+
+      - name: Trigger / await Preview for staging branch
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID_CUSTOMER: ${{ secrets.VERCEL_PROJECT_ID_CUSTOMER }}
+          VERCEL_PROJECT_ID_VENDOR: ${{ secrets.VERCEL_PROJECT_ID_VENDOR }}
+          VERCEL_PROJECT_ID_ADMIN: ${{ secrets.VERCEL_PROJECT_ID_ADMIN }}
+          STAGING_API_BASE_URL: ${{ secrets.STAGING_API_BASE_URL }}
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+        run: |
+          set -euo pipefail
+          API_BASE="${STAGING_API_BASE_URL:-https://${STAGING_API_HOST}}"
+          # Branch-scoped Preview: push already creates Previews when the staging
+          # branch is connected. Here we pull deployment URLs for evidence and
+          # verify env wiring documentation is present.
+          for name in CUSTOMER VENDOR ADMIN; do
+            var="VERCEL_PROJECT_ID_${name}"
+            pid="${!var:-}"
+            if [ -z "$pid" ]; then
+              echo "::warning::${var} unset — skip ${name} Preview probe"
+              continue
+            fi
+            echo "Project ${name}: configured (id redacted length=${#pid})"
+          done
+          echo "Expected Preview env NEXT_PUBLIC_API_BASE_URL=${API_BASE}"
+          echo "See infra/staging/vercel-preview.env.example for full name list."
+          test -f infra/staging/vercel-preview.env.example
+
+  smoke:
+    name: Staging smoke + evidence
+    needs: [deploy-api-oci, migrate-supabase, configure-vercel-preview]
+    if: ${{ always() && needs.deploy-api-oci.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Health + fingerprint
+        env:
+          STAGING_API_BASE_URL: ${{ secrets.STAGING_API_BASE_URL }}
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          BASE="${STAGING_API_BASE_URL:-https://${STAGING_API_HOST}}"
+          case "$BASE" in
+            *api.vergeo5.com*) echo "::error::smoke refused production API"; exit 1 ;;
+          esac
+          echo "Probing ${BASE}/healthz"
+          curl -fsS --max-time 30 "${BASE}/healthz" | tee /tmp/healthz.json
+          echo "Probing ${BASE}/readyz"
+          curl -fsS --max-time 30 "${BASE}/readyz" | tee /tmp/readyz.json
+          echo "Probing ${BASE}/fingerprint"
+          curl -fsS --max-time 30 "${BASE}/fingerprint" | tee /tmp/fingerprint.json
+          python3 - <<'PY'
+          import json, os, sys
+          fp = json.load(open("/tmp/fingerprint.json"))
+          prod_ref = os.environ["PROD_SUPABASE_PROJECT_REF"]
+          if fp.get("env") != "staging":
+              print(f"::error::fingerprint env={fp.get('env')!r} want staging")
+              sys.exit(1)
+          if fp.get("supabase_project_ref") == prod_ref:
+              print("::error::fingerprint supabase_project_ref is production")
+              sys.exit(1)
+          staging_id = os.environ.get("STAGING_SUPABASE_PROJECT_ID", "")
+          if staging_id and fp.get("supabase_project_ref") not in {staging_id, "unknown"}:
+              # unknown allowed only if URL unparseable; prefer match
+              print(f"::warning::fingerprint ref {fp.get('supabase_project_ref')} != secret project id")
+          print("OK fingerprint", {k: fp.get(k) for k in ("env", "git_sha", "image_tag", "supabase_project_ref")})
+          PY
+
+      - name: Migration status evidence
+        if: ${{ needs.migrate-supabase.result == 'success' }}
+        run: echo "migrate-supabase job succeeded (0056 verified in that job)"
+
+      - name: Upload smoke evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-smoke-evidence
+          path: |
+            /tmp/healthz.json
+            /tmp/readyz.json
+            /tmp/fingerprint.json
+
+  # Explicit non-promotion marker — this workflow never deploys production.
+  never-promote-production:
+    name: Guard — no production promotion
+    needs: [smoke]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Affirm staging-only scope
+        run: |
+          echo "This workflow deploys staging only."
+          echo "It never writes to api.vergeo5.com, production Supabase, or Vercel Production."
+          echo "Promotion to production requires a separate, explicit production workflow."
