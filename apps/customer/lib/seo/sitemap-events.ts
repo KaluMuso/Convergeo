@@ -1,9 +1,10 @@
 /**
  * Events sitemap chunk (M10-P09).
  *
- * Not a Next.js route on its own — imported by `sitemap.ts` for the events
- * chunk. Lists published events for indexing and drops stale ones (last
- * instance ended more than 30 days ago). Past-but-recent events stay listed.
+ * Not a Next.js route on its own — imported by `sitemap-build.ts` for the
+ * events chunk. Lists published events for indexing and drops stale ones
+ * (last instance ended more than 30 days ago). Past-but-recent events stay
+ * listed.
  *
  * The public `/events` list returns only currently-listable (upcoming)
  * published events, so stale events are already excluded at the source; the
