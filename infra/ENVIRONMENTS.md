@@ -4,15 +4,18 @@ Secret **names only** — never commit values. See `infra/.env.example` for OCI 
 
 ## Matrix
 
-| Concern        | Local                                         | Staging                                        | Production                           |
-| -------------- | --------------------------------------------- | ---------------------------------------------- | ------------------------------------ |
-| Customer app   | `pnpm dev --filter customer` (localhost:3000) | Vercel Preview or staging project              | Vercel Production (`vergeo5.com`)    |
-| Vendor app     | localhost:3001                                | `vendor.staging.vergeo5.com` (OCI)             | `vendor.vergeo5.com` (OCI)           |
-| Admin app      | localhost:3002                                | `admin.staging.vergeo5.com` (OCI, allowlist)   | `admin.vergeo5.com` (OCI, allowlist) |
-| API            | localhost:8000 / compose                      | `api.staging.vergeo5.com`                      | `api.vergeo5.com`                    |
-| Postgres/Auth  | Supabase local or dev project                 | Supabase staging project                       | Supabase production project          |
-| n8n            | optional compose profile                      | `n8n.staging.vergeo5.com`                      | `n8n.vergeo5.com`                    |
-| Budget posture | $0                                            | OCI Always Free + Supabase free + Vercel hobby | ≤ $50/mo all-in (D6)                 |
+| Concern        | Local                                         | Staging                                                                                        | Production                                         |
+| -------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Customer app   | `pnpm dev --filter customer` (localhost:3000) | Vercel Preview on branch `staging` (`convergeo-customer`)                                      | Vercel Production (`vergeo5.com`)                  |
+| Vendor app     | localhost:3001                                | Vercel Preview on branch `staging` (`convergeo-vendor`); optional `vendor.staging.vergeo5.com` | Vercel Production (`vendor.vergeo5.com`)           |
+| Admin app      | localhost:3002                                | Vercel Preview on branch `staging` (`convergeo-admin`); optional `admin.staging.vergeo5.com`   | Vercel Production (`admin.vergeo5.com`, allowlist) |
+| API            | localhost:8000 / compose                      | `api.staging.vergeo5.com` (OCI container `vergeo5-api-staging`)                                | `api.vergeo5.com`                                  |
+| Postgres/Auth  | Supabase local or dev project                 | Separate Supabase staging project (ref ≠ `dpadrlxukcjbewpqympu`)                               | Supabase production project                        |
+| n8n            | optional compose profile                      | `n8n.staging.vergeo5.com` (inactive workflows until verified)                                  | `n8n.vergeo5.com`                                  |
+| Budget posture | $0                                            | OCI Always Free + Supabase free + Vercel hobby                                                 | ≤ $50/mo all-in (D6)                               |
+
+Staging plane templates: `infra/staging/`. Runbook:
+`docs/production-readiness/2026-07-18/staging/staging-plane-runbook.md`.
 
 ## Where secrets live
 
@@ -26,8 +29,9 @@ Secret **names only** — never commit values. See `infra/.env.example` for OCI 
 | `WHATSAPP_TOKEN` / `AT_API_KEY` / `RESEND_API_KEY` | ✓ (api)          | ✗                               | —              | Outbox workers                       |
 | `CLOUDINARY_URL`                                   | ✓ (api)          | optional public cloud name only | —              | Prefer unsigned upload presets       |
 | `N8N_*`                                            | ✓                | ✗                               | —              | n8n container only                   |
-| `VERCEL_TOKEN`                                     | ✗                | —                               | ✓              | Deploy customer app (stub workflow)  |
-| `OCI_*`                                            | ✗                | —                               | ✓              | VM provision/deploy (M01-P07+)       |
+| `VERCEL_TOKEN` / `VERCEL_ORG_ID` / project ids     | ✗                | —                               | ✓ (`staging`)  | Preview deploy / inspect (STG-01)    |
+| `STAGING_*` / `SUPABASE_ACCESS_TOKEN`              | ✗                | —                               | ✓ (`staging`)  | See staging-secret-register.md       |
+| `OCI_*` / `STAGING_OCI_SSH_*`                      | ✗                | —                               | ✓ (`staging`)  | Staging VM deploy                    |
 
 ## Conventions
 

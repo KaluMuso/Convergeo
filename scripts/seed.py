@@ -62,6 +62,36 @@ def main() -> int:
         print("SUPABASE_DB_URL is required for --env staging", file=sys.stderr)
         return 1
 
+    if args.env == "staging":
+        # Prefer the synthetic staging seeder (hard separation + stg-rv-* fixtures).
+        # Keep this path for backwards compatibility but refuse production identifiers.
+        from app.core.env_guards import (  # local import — API root already on sys.path
+            PROD_SUPABASE_PROJECT_REF,
+            StagingIsolationError,
+            extract_supabase_project_ref,
+        )
+
+        staging_url = os.environ.get("STAGING_SUPABASE_URL") or os.environ.get("SUPABASE_URL", "")
+        staging_id = os.environ.get("STAGING_SUPABASE_PROJECT_ID", "")
+        ref = extract_supabase_project_ref(staging_url) or staging_id.lower()
+        if ref == PROD_SUPABASE_PROJECT_REF or PROD_SUPABASE_PROJECT_REF in (
+            ENV_URLS["staging"] or ""
+        ):
+            print(
+                "Refusing --env staging against production Supabase "
+                f"({PROD_SUPABASE_PROJECT_REF}). Use scripts/seed_staging.py.",
+                file=sys.stderr,
+            )
+            return 1
+        try:
+            if staging_url:
+                from app.core.env_guards import assert_staging_supabase_isolated
+
+                assert_staging_supabase_isolated(staging_url, env="staging")
+        except StagingIsolationError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+
     os.environ["SUPABASE_DB_URL"] = ENV_URLS[args.env] if args.env == "staging" else ENV_URLS["local"]
     url = resolve_db_url()
     ensure_local_test_database(url)

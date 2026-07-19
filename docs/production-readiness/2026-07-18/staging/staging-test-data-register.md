@@ -1,7 +1,8 @@
 # Staging test-data register — 2026-07-19
 
 **Purpose:** Track uniquely prefixed staging-only records for repeatability and controlled cleanup.  
-**Session status:** **NO ROWS CREATED** — Phase 2 blocked by missing staging separation (`staging-blockers.md` SB-01/SB-02).
+**Session status:** **NO ROWS CREATED** — Phase 2 blocked until a separable staging project is provisioned (`staging-blockers.md` SB-01/SB-02).  
+**Seeder (STG-01):** `scripts/seed_staging.py --env staging` (dry-run by default; `--apply` only after separation guards pass). Synthetic handles only — never production PII.
 
 ---
 

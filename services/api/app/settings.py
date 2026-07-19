@@ -6,6 +6,12 @@ from typing import Literal, Self
 from pydantic import Field, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.core.env_guards import (
+    StagingIsolationError,
+    assert_staging_api_host_isolated,
+    assert_staging_supabase_isolated,
+    require_sandbox_payments,
+)
 from app.media.cloudinary_signing import parse_cloudinary_url
 
 SECRET_FIELDS = frozenset(
@@ -39,6 +45,11 @@ class Settings(BaseSettings):
     sentry_environment: str = Field(alias="SENTRY_ENVIRONMENT", default="")
     sentry_release: str = Field(alias="SENTRY_RELEASE", default="")
     sentry_traces_sample_rate: float = Field(alias="SENTRY_TRACES_SAMPLE_RATE", default=0.0)
+    # Non-secret build fingerprint (git SHA / image tag). Exposed on /fingerprint.
+    git_sha: str = Field(alias="GIT_SHA", default="")
+    api_image_tag: str = Field(alias="API_IMAGE_TAG", default="")
+    # Public API hostname this process believes it serves (staging isolation check).
+    public_api_host: str = Field(alias="PUBLIC_API_HOST", default="")
 
     @model_validator(mode="after")
     def validate_cors_origins(self) -> Self:
@@ -46,6 +57,18 @@ class Settings(BaseSettings):
             raise ValueError("CORS_ORIGINS must include at least one origin")
         if self.env != "development" and "*" in self.cors_origin_list:
             raise ValueError("CORS_ORIGINS cannot include '*' outside development")
+        return self
+
+    @model_validator(mode="after")
+    def validate_staging_isolation(self) -> Self:
+        """Refuse production Supabase/API identifiers when ENV=staging."""
+        try:
+            assert_staging_supabase_isolated(self.supabase_url, env=self.env)
+            if self.public_api_host:
+                assert_staging_api_host_isolated(self.public_api_host, env=self.env)
+            require_sandbox_payments(env=self.env)
+        except StagingIsolationError as exc:
+            raise ValueError(str(exc)) from exc
         return self
 
     @property
@@ -74,7 +97,16 @@ class Settings(BaseSettings):
 def format_settings_error(error: ValidationError) -> str:
     messages: list[str] = []
     for issue in error.errors():
-        field_name = str(issue.get("loc", ("settings",))[0])
+        loc = issue.get("loc") or ()
+        # Model-level validators (e.g. staging isolation) may have an empty loc.
+        if not loc:
+            msg = str(issue.get("msg") or "invalid settings")
+            # Pydantic prefixes with "Value error, " — strip for a cleaner raise.
+            if msg.startswith("Value error, "):
+                msg = msg[len("Value error, ") :]
+            messages.append(msg)
+            continue
+        field_name = str(loc[0])
         if field_name in SECRET_FIELDS:
             messages.append(
                 f"Missing or invalid required environment variable: {field_name} (value redacted)"
