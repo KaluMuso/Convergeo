@@ -111,3 +111,15 @@ Founder answered all 28 discovery questions; where a recommendation was delegate
 - **F6.** Open MOU conversations with Platinum couriers / bus freight partners (post-beta is fine).
 - **F7.** Upload remaining 7 design HTML files (see `docs/designs/SOURCES.md`) — most wanted: Events Desktop, Catalogue. Optionally allowlist `vergeo-21ffc.web.app` in the Claude Code environment network settings for the live-prototype audit.
 - **F8.** Confirm or invert D12's COD cap (≤K500 recommended).
+
+## H. Release & launch sequencing
+
+**D30 — Release strategy: HYBRID controlled live-beta (founder decision 2026-07-19; resolves audit question B-1; supersedes the staging-first sequencing in `docs/production-readiness/2026-07-18/consolidated/implementation-wave-plan.md`).**
+
+Adopt a **hybrid** path, not staging-first and not money-live:
+
+- **Live-beta the no-money discovery surface to production, behind `public_launch=false`.** Harden and promote the customer/vendor/admin frontends to the current master tip (incl. the categories-500 fix), apply the outstanding migrations (`0051`/`0053`–`0056`), pin the API image, and set `NEXT_PUBLIC_VENDOR_APP_URL` — so real customers can browse/search/RFQ against an honest, deployed surface under an invite gate. (Vision-audit Wave 1 / VM-A.)
+- **In parallel, prove money on an isolated target — not a full staging plane.** The Lenco sandbox money/escrow/KYC drills (S1–S6) run against sandbox credentials + a throwaway DB branch, so verification is **not blocked on standing up a separable staging stack** (VE-P08 environment isolation stays tracked as a Wave-4 item, not a prerequisite). (Vision-audit Wave 2 / VM-B.)
+- **Real money stays OFF** — `public_launch=false`, prepaid collection disabled, `zamtel_collections=false` — until the money/escrow/KYC paths pass **S1–S6 somewhere isolated** AND every P0 gate (including legal counsel F4 / FD-08) passes per `release-gates.md` Go/No-Go. No calendar flip (NB-13/FD-11).
+
+**Sequencing consequence:** vision-audit Wave 1 (deploy/schema truth) and Wave 2 (sandbox money + n8n activation) may run **in parallel**; neither waits on a full staging environment. B-2 (role hook), B-3 (FORCE RLS), B-4 (admin RBAC), B-5 (catalogue scope) remain the open decisions gating Wave 3. Recorded in `docs/production-readiness/2026-07-19/vision-audit/02-open-questions.md` §B-1.

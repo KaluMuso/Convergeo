@@ -13,6 +13,12 @@ promotion, sandbox money proof, automations, trust/security rollout, and observa
 admin user-mgmt, search health, offline scanner, GMV cap) come **after** the money/trust path is proven. Video feed (M17)
 stays deferred by design.
 
+> **✅ B-1 LOCKED (2026-07-19) — HYBRID controlled live-beta (`docs/plan/00-decisions.md` D30).** Wave 1 (deploy the
+> no-money discovery surface to prod behind `public_launch=false`) and Wave 2 (Lenco **sandbox** money proof on an
+> isolated target — sandbox creds + throwaway DB branch, **no full staging plane required**) run **in parallel**. Real
+> money stays OFF until S1–S6 + all P0 gates PASS. `VE-P08` (environment isolation) is tracked as Wave 4, not a
+> prerequisite. B-2/B-3/B-4/B-5 remain open and gate Wave 3.
+
 **Pebble types:** `[CODE]` = Cursor coding agent · `[OPS]` = founder/ops with dashboard/secret access (Cursor writes the
 runbook + evidence template, a human executes) · `[DOC]` = docs only. Many launch blockers are `[OPS]` because they need
 Lenco sandbox / Vercel / Supabase-dashboard / GHCR / Sentry access a coding agent does not have — this is faithful to the
