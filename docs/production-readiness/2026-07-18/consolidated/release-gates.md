@@ -1,38 +1,67 @@
 # Release Gates — Vergeo5 / Convergeo
 
-**Date:** 2026-07-18  
+**Date:** 2026-07-18 (refresh after PRs #274, #289–#294)  
 **Purpose:** Exact automated and manual evidence required before real-money / public release.  
-**Rule:** A gate is **PASS** only with VERIFIED evidence. PARTIAL / NOT_AUDITABLE = **FAIL**.  
+**Rule:** A gate is **PASS** only with VERIFIED evidence at the required maturity layer. PARTIAL / NOT_AUDITABLE / CODE_COMPLETE-only = **FAIL** for launch.  
 **While any P0 gate fails, the system is not production-ready** (no readiness %).
 
-Related: `master-reconciliation-register.md` · `production-readiness-scorecard.md`
+Related: `master-reconciliation-register.md` · `production-readiness-scorecard.md` · `panel-backlogs.md`
+
+---
+
+## Maturity required per gate class
+
+| Gate class                           | Minimum maturity to PASS                                               |
+| ------------------------------------ | ---------------------------------------------------------------------- |
+| Code/unit invariants (CI)            | CODE_COMPLETE on release commit + green CI                             |
+| Money, escrow, KYC privileges, RLS   | **STAGING_VERIFIED** (then PRODUCTION_VERIFIED before open real-money) |
+| Public positioning / `public_launch` | **PRODUCTION_VERIFIED** probes on live URLs + flags                    |
+| Legal                                | Written artifact (not code)                                            |
+
+**Explicit:** PR **#274** collection accounting and PR **#294** release accounting are **CODE_COMPLETE** and **staging-unverified** → G3/G4 remain **FAIL**.  
+**Explicit:** PR **#293** KYC integrity is **CODE_COMPLETE** while migration **`0056`** remains staging/production rollout-dependent → G12 remains **FAIL**.
 
 ---
 
 ## Gate statuses
 
-| Status | Meaning                                                                                      |
-| ------ | -------------------------------------------------------------------------------------------- |
-| PASS   | VERIFIED evidence attached (link, SHA, query result, screenshot path, test log)              |
-| FAIL   | Missing, broken, or contradicted                                                             |
-| WAIVED | Founder-signed waiver with expiry + residual risk (rare; never for ledger/RLS/false-success) |
+| Status | Meaning                                                                                |
+| ------ | -------------------------------------------------------------------------------------- |
+| PASS   | VERIFIED evidence attached at required maturity                                        |
+| FAIL   | Missing, broken, contradicted, or only CODE_COMPLETE                                   |
+| WAIVED | Founder-signed waiver with expiry + residual risk (never for ledger/RLS/false-success) |
 
 ---
 
-## P0 gates (must all PASS)
+## Staging gates (must PASS before production money enablement)
 
-### G0 — Authentication and authorization / RLS
+| ID  | Gate                                    | Automated evidence             | Manual evidence                    | Pass criteria                                                                | Current                             |
+| --- | --------------------------------------- | ------------------------------ | ---------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------- |
+| S0  | Staging schema target                   | `schema_migrations` on staging | Migration plan review              | Agreed set includes needed `0051`/`0053`–`0056` as decided                   | FAIL                                |
+| S1  | Sandbox MoMo prepaid → ledger           | SQL aggregates + pytest        | Lenco sandbox dashboard (redacted) | `CHARGE_RECEIVED` (+ hold posture) balanced; idempotent replay               | FAIL (CODE_COMPLETE #274 only)      |
+| S2  | Sandbox card prepaid → ledger           | Same                           | Same                               | Same                                                                         | FAIL                                |
+| S3  | Release accounting drill                | Release tick + SQL             | Recon summary fields               | `COMMISSION_CAPTURE` before `RELEASE_TO_VENDOR`; escrow→0; double-tick safe  | FAIL (CODE_COMPLETE #288/#294 only) |
+| S4  | n8n release + tickets active on staging | Workflow active=true           | Execution IDs                      | Authenticated ticks succeed; no double release/issue                         | FAIL                                |
+| S5  | KYC lifecycle drill                     | API tests + SQL                | Admin Access session               | submit→under_review→approve; orphan report; privileges freeze without record | FAIL (`0056` unapplied live)        |
+| S6  | False-success E2E                       | Playwright/E2E                 | —                                  | Pending/failed ≠ paid; COD isolated                                          | FAIL                                |
+| S7  | Staging UAT notes                       | —                              | 3–5 tester journeys                | Written pack attached                                                        | FAIL                                |
 
-| Check                                                 | Automated evidence                                     | Manual evidence                  | Pass criteria                                         |
-| ----------------------------------------------------- | ------------------------------------------------------ | -------------------------------- | ----------------------------------------------------- |
-| RLS enabled on public business tables                 | SQL: `relrowsecurity` inventory                        | —                                | No unexpected `rls_enabled=false` on money/PII tables |
-| FORCE RLS decision on ticket tier + product_relations | SQL: `relforcerowsecurity`                             | Security note                    | `true` **or** signed exception (MR-R01/R02)           |
-| Role isolation                                        | API/RLS test suite (customer/vendor/admin)             | Attempt cross-tenant read → deny | Isolation tests green                                 |
-| Role provisioning path                                | Migration `0051` applied **or** documented manual path | Auth hook enabled if using 0051  | JWT/`user_roles` consistent (MR-S02)                  |
-| Admin Access                                          | HTTP: Access challenge without token                   | Access policy review             | Unauthenticated admin blocked                         |
+---
+
+## P0 production gates (must all PASS for real-money)
+
+### G0 — Authentication / authorization / RLS
+
+| Check                                                    | Automated                             | Manual                  | Pass criteria                  |
+| -------------------------------------------------------- | ------------------------------------- | ----------------------- | ------------------------------ |
+| RLS enabled on money/PII tables                          | SQL `relrowsecurity` inventory        | —                       | No unexpected disabled RLS     |
+| FORCE RLS on ticket tiers (+ product_relations decision) | `relforcerowsecurity`                 | FD-07 note              | `true` **or** signed exception |
+| Role isolation                                           | customer/vendor/admin suites          | Cross-tenant deny       | Tests green                    |
+| Role provisioning                                        | `0051` applied **or** FD-03 exception | Auth hook if using 0051 | JWT/`user_roles` consistent    |
+| Admin Access                                             | HTTP challenge without token          | Policy review           | Anonymous blocked              |
+| KYC migration                                            | `0056` in `schema_migrations`         | Orphan report           | Trigger/view present           |
 
 ```sql
--- Automated probe (READ ONLY)
 BEGIN READ ONLY;
 SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity
 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -43,111 +72,86 @@ WHERE n.nspname='public' AND c.relkind='r'
     'user_roles','vendors','vendor_listings','kyc_records','product_relations'
   )
 ORDER BY 1;
+SELECT version, name FROM supabase_migrations.schema_migrations
+WHERE version LIKE '%0051%' OR version LIKE '%0056%' OR name ILIKE '%kyc_integrity%'
+ORDER BY version;
 COMMIT;
 ```
 
-```bash
-# Admin must not be anonymously open
-curl -sS -m 15 -o /dev/null -w "%{http_code}\n" https://admin.vergeo5.com/en/health
-# Expect 302/401/403 (Access), not 200 app shell for anonymous.
-```
-
-**Current:** FAIL (migration drift, FORCE RLS false on ticket tiers, role hook absent).
+**Current:** FAIL (migration drift; FORCE RLS false on ticket tiers; role hook absent; `0056` not applied).
 
 ---
 
 ### G1 — Customer / vendor / admin route integrity
 
-| Check                         | Automated                                                    | Manual                          | Pass criteria                                                |
-| ----------------------------- | ------------------------------------------------------------ | ------------------------------- | ------------------------------------------------------------ |
-| Customer health               | `GET /en/health` → 200                                       | Spot-check home + catalog       | `{"status":"ok","app":"customer"}`                           |
-| Vendor health                 | `GET /en/health` → auth redirect OK                          | Login empty-state               | App reachable; no 5xx                                        |
-| Admin health                  | Access challenge                                             | Access login → health/dashboard | No anonymous data leak                                       |
-| Critical customer routes      | Script HTTP codes for `/en`, `/en/sell`, catalog-linked PDPs | —                               | No unexpected 5xx; sell CTA policy met (G2)                  |
-| Deploy SHA parity (frontends) | Vercel production SHAs                                       | —                               | customer/vendor/admin SHAs recorded + match intended release |
-| API health                    | `/healthz` + `/readyz` 200                                   | —                               | OK behind Caddy                                              |
+| Check                        | Automated                                          | Manual     | Pass criteria                                                    |
+| ---------------------------- | -------------------------------------------------- | ---------- | ---------------------------------------------------------------- |
+| Customer/vendor/admin health | HTTP probes                                        | Spot-check | Health OK; admin Access-gated                                    |
+| Critical customer routes     | `/en`, `/en/sell`, `/en/categories`, `/en/compare` | —          | Expected codes; honesty empty OK                                 |
+| Deploy SHA parity            | Vercel production SHAs                             | —          | Intended release SHAs recorded (include #289–#291 when deployed) |
+| API health                   | `/healthz` `/readyz`                               | —          | 200 behind Caddy                                                 |
 
 ```bash
 curl -sS -m 15 https://www.vergeo5.com/en/health
+curl -sS -m 15 -o /dev/null -w "%{http_code}\n" https://www.vergeo5.com/en/categories
+curl -sS -m 15 -o /dev/null -w "%{http_code}\n" https://www.vergeo5.com/en/compare
 curl -sS -m 15 -o /dev/null -w "%{http_code}\n" https://vendor.vergeo5.com/en/health
 curl -sS -m 15 -o /dev/null -w "%{http_code}\n" https://admin.vergeo5.com/en/health
 curl -sS -m 15 https://api.vergeo5.com/healthz
 curl -sS -m 15 https://api.vergeo5.com/readyz
 ```
 
-**Current:** Conditional PASS on health shells; FAIL overall until sell CTA + API SHA recorded.
+**Current:** Conditional PASS on health shells; FAIL overall until panel deploy PRODUCTION_VERIFIED + sell CTA policy (G2/G10).
 
 ---
 
 ### G2 — No localhost production links
 
-| Check                                 | Automated                                              | Manual        | Pass criteria                     |
-| ------------------------------------- | ------------------------------------------------------ | ------------- | --------------------------------- |
-| Customer HTML has no `localhost:3001` | Grep sell + home HTML                                  | —             | Zero matches                      |
-| Seller CTA points to vendor prod      | Parse CTA href                                         | Click-through | `https://vendor.vergeo5.com…`     |
-| Source maps / public env              | Build grep for localhost in prod bundles if applicable | —             | No prod localhost vendor/API URLs |
+| Check                                                 | Automated            | Manual        | Pass criteria                 |
+| ----------------------------------------------------- | -------------------- | ------------- | ----------------------------- |
+| No `localhost:3001` in customer HTML                  | Grep sell/home       | —             | Zero matches                  |
+| Seller CTA → vendor prod                              | Parse href           | Click-through | `https://vendor.vergeo5.com…` |
+| No prod `localhost:8000` API fallbacks on money paths | Bundle/source review | —             | Fail-closed                   |
 
-```bash
-curl -sS -m 15 -o /tmp/sell.html https://www.vergeo5.com/en/sell
-python3 -c 'from pathlib import Path;h=Path("/tmp/sell.html").read_text();
-import sys; bad="localhost:3001" in h or "127.0.0.1" in h; print("FAIL" if bad else "PASS", "localhost");
-print("unavailable_present", "unavailable" in h.lower())'
-```
-
-**Current:** PASS on localhost leak (fail-closed); FAIL on CTA availability (MR-C01).
+**Current:** PASS on vendor localhost leak (fail-closed); FAIL on CTA availability; PARTIAL on residual API localhost fallbacks (integration review).
 
 ---
 
 ### G3 — Payment ledger / reconciliation correctness
 
-| Check                         | Automated                         | Manual                           | Pass criteria                                       |
-| ----------------------------- | --------------------------------- | -------------------------------- | --------------------------------------------------- |
-| Sandbox MoMo prepaid → ledger | Integration test + SQL aggregates | Lenco dashboard match (redacted) | `CHARGE_RECEIVED` + `ESCROW_HOLD` balanced (MR-B01) |
-| Sandbox card prepaid → ledger | Same                              | Same                             | Same                                                |
-| Webhook idempotency           | Replay same webhook               | —                                | Single ledger txn; payment status stable            |
-| Reconciliation cron           | n8n execution success             | Recon report on forced mismatch  | Mismatch alerted; no silent drift                   |
-| Money = integer ngwee         | Unit/contract tests               | Code review                      | No float money math                                 |
+| Check                        | Automated   | Manual          | Pass criteria                            |
+| ---------------------------- | ----------- | --------------- | ---------------------------------------- |
+| Sandbox MoMo → ledger        | S1          | Lenco match     | Collection posts (#274) STAGING_VERIFIED |
+| Sandbox card → ledger        | S2          | Same            | Same                                     |
+| Release capture → vendor net | S3          | Recon fields    | #294 invariants STAGING_VERIFIED         |
+| Webhook idempotency          | Replay      | —               | Single ledger txn                        |
+| Recon cron                   | n8n success | Forced mismatch | Alerted; no silent drift                 |
+| Integer ngwee only           | Unit tests  | Review          | No float money math                      |
 
-```bash
-# Repo invariant (local CI)
-cd services/api && uv run pytest -q -k 'ledger or payment or escrow' --maxfail=1
-# After sandbox order (IDs redacted):
-# SELECT count(*) FROM payments WHERE status='succeeded';
-# SELECT count(*) FROM ledger_transactions;
-# Expect both >0 in sandbox project only.
-```
-
-**Current:** FAIL (0 payments/ledger; prepaid hook PARTIAL).
+**Current:** FAIL — CODE_COMPLETE only (#274/#294); live `payments=0`, `ledger_transactions=0`.
 
 ---
 
 ### G4 — No false payment-success state
 
-| Check              | Automated                                   | Manual | Pass criteria                                                                            |
-| ------------------ | ------------------------------------------- | ------ | ---------------------------------------------------------------------------------------- |
-| Pending payment UI | E2E: initiate then abandon                  | —      | UI shows pending/failed, **not** success                                                 |
-| Webhook delay      | E2E: success UI only after confirmed status | —      | Success screen requires API success **and** ledger post (or explicit “confirming” state) |
-| COD path           | E2E COD ≤K500                               | —      | COD never claims MoMo success                                                            |
+| Check         | Automated   | Manual | Pass criteria                                                                                |
+| ------------- | ----------- | ------ | -------------------------------------------------------------------------------------------- |
+| Pending UI    | E2E abandon | —      | Not success                                                                                  |
+| Webhook delay | E2E         | —      | Success only after confirmed policy (order_confirmed / confirming≠paid; ledger per contract) |
+| COD path      | E2E ≤K500   | —      | Never claims MoMo success                                                                    |
 
-**Current:** FAIL (unproven; CUST-08).
+**Current:** FAIL — UI CODE_COMPLETE (#289); staging E2E + residual checkout localhost fallbacks open.
 
 ---
 
 ### G5 — Workflow reliability / retries
 
-| Check                      | Automated                                       | Manual                           | Pass criteria                       |
-| -------------------------- | ----------------------------------------------- | -------------------------------- | ----------------------------------- |
-| Escrow auto-release active | n8n `search_workflows` shows active release-job | One sandbox release tick         | Active + success execution (MR-W01) |
-| Tickets-issue active       | Same for tickets-issue                          | Paid ticket → exactly one ticket | No double-issue on retry (MR-W02)   |
-| Internal ticks auth        | Unauthorized tick → 401/403                     | —                                | Tokens required                     |
-| Notification dispatch      | Live workflow (already present)                 | Sandbox send                     | Outbox drains; retry safe           |
-
-```text
-Evidence pack:
-- n8n workflow IDs + active=true screenshots/export
-- Execution IDs for dry-run + sandbox money drill
-- API logs for /internal/*/tick (redacted)
-```
+| Check                                  | Automated              | Manual                   | Pass criteria   |
+| -------------------------------------- | ---------------------- | ------------------------ | --------------- |
+| Escrow auto-release active             | n8n active release-job | Sandbox release tick     | MR-W01          |
+| Tickets-issue (+ event-release) active | n8n                    | Paid ticket exactly-once | MR-W02          |
+| Internal ticks auth                    | Unauthorized → 401/403 | —                        | Tokens required |
+| Notification dispatch                  | Live workflow          | Sandbox send             | Outbox drains   |
 
 **Current:** FAIL (only dispatch + payment recon live).
 
@@ -155,24 +159,24 @@ Evidence pack:
 
 ### G6 — Error monitoring and actionable logs
 
-| Check                                               | Automated                      | Manual            | Pass criteria                                      |
-| --------------------------------------------------- | ------------------------------ | ----------------- | -------------------------------------------------- |
-| Sentry projects exist for customer/vendor/admin/API | Sentry API/MCP list            | —                 | Vergeo5 projects present (MR-O01)                  |
-| Test error ingested                                 | Trigger test exception per app | Sentry event link | Event visible with release tag                     |
-| Uptime on health endpoints                          | Monitor API                    | —                 | Monitors green (MR-O02)                            |
-| Payment/webhook errors actionable                   | Log query / Sentry issue       | —                 | Alert on webhook signature fail / ledger post fail |
+| Check                             | Automated       | Manual     | Pass criteria                  |
+| --------------------------------- | --------------- | ---------- | ------------------------------ |
+| Sentry projects exist             | Sentry list     | —          | Vergeo5 projects present       |
+| Test error ingested               | Trigger per app | Event link | Release tags match             |
+| Uptime on health                  | Monitor API     | —          | Monitors green                 |
+| Payment/webhook errors actionable | Sentry/log      | —          | Alert on signature/ledger fail |
 
-**Current:** FAIL (no Vergeo5 Sentry projects).
+**Current:** FAIL (no Vergeo5 Sentry projects; uptime NOT_AUDITABLE).
 
 ---
 
 ### G7 — Backups and restore proof
 
-| Check                   | Automated                                    | Manual                                | Pass criteria                         |
-| ----------------------- | -------------------------------------------- | ------------------------------------- | ------------------------------------- |
-| Scheduled backup exists | n8n backup workflow **or** host cron listing | OCI object listing (names/dates only) | Dated artifact within RPO (MR-W04)    |
-| Restore drill           | —                                            | Restore to scratch DB                 | Documented success + RPO/RTO (MR-O04) |
-| Pre-migration backup    | Checklist before MR-S01 apply                | —                                     | Backup timestamp before migrate       |
+| Check                | Automated                 | Manual               | Pass criteria             |
+| -------------------- | ------------------------- | -------------------- | ------------------------- |
+| Scheduled backup     | n8n or host cron listing  | OCI names/dates only | Dated artifact within RPO |
+| Restore drill        | —                         | Scratch restore      | Documented success        |
+| Pre-migration backup | Checklist before DB-01/02 | —                    | Timestamp before migrate  |
 
 **Current:** FAIL / NOT_AUDITABLE.
 
@@ -180,98 +184,114 @@ Evidence pack:
 
 ### G8 — Critical test suite and CI gates
 
-| Check                          | Automated                                                               | Manual               | Pass criteria                      |
-| ------------------------------ | ----------------------------------------------------------------------- | -------------------- | ---------------------------------- |
-| JS lint/typecheck/test         | `pnpm lint && pnpm typecheck && pnpm test`                              | —                    | Green on release commit            |
-| API lint/type/tests            | `uv run ruff check . && uv run mypy app tests scripts && uv run pytest` | —                    | Green                              |
-| Money/authz failure-path tests | pytest markers                                                          | —                    | Present + green for ledger/RBAC    |
-| secret-scan blocking           | CI job without `continue-on-error`                                      | Branch protection UI | Required check; no bypass (MR-R05) |
-| Contract/OpenAPI checks        | CI workflow                                                             | —                    | Required on `master`               |
+| Check                              | Automated                                  | Manual               | Pass criteria           |
+| ---------------------------------- | ------------------------------------------ | -------------------- | ----------------------- |
+| JS lint/typecheck/test             | `pnpm lint && pnpm typecheck && pnpm test` | —                    | Green on release commit |
+| API lint/type/tests                | `uv run ruff` / `mypy` / `pytest`          | —                    | Green                   |
+| Money/KYC/authz failure-path tests | pytest incl. prepaid/release/kyc suites    | —                    | Present + green         |
+| secret-scan blocking               | CI without `continue-on-error`             | Branch protection UI | Required; no bypass     |
+| Contract/OpenAPI checks            | CI                                         | —                    | Required on `master`    |
 
-```bash
-export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; export PATH="$HOME/.local/bin:$PATH"
-pnpm lint && pnpm typecheck && pnpm test
-cd services/api && uv run ruff check . && uv run mypy app tests scripts && uv run pytest
-rg -n "continue-on-error" .github/workflows/*.yml
-```
-
-**Current:** FAIL (secret-scan/Lighthouse non-blocking; branch protection NOT_AUDITABLE).
+**Current:** FAIL (secret-scan/Lighthouse non-blocking; branch protection NOT_AUDITABLE). Note: panel integration recorded green lint/type/test/build on combined master for apps — does not clear G8 security gates.
 
 ---
 
 ### G9 — Deployment / rollback evidence
 
-| Check                             | Automated                                      | Manual                                   | Pass criteria                                   |
-| --------------------------------- | ---------------------------------------------- | ---------------------------------------- | ----------------------------------------------- |
-| Frontend SHAs recorded            | Vercel `list_deployments`                      | —                                        | SHA per app in release ledger                   |
-| API image digest recorded         | Host `API_IMAGE_TAG` / `docker inspect` / GHCR | —                                        | Digest ≠ unknown (MR-B10)                       |
-| DB migrations match agreed target | `schema_migrations` query                      | —                                        | No silent drift (MR-S01)                        |
-| Rollback drill                    | —                                              | Redeploy previous Vercel + prior API tag | Rollback procedure executed once; time recorded |
-| Feature flags                     | SQL flags                                      | —                                        | `public_launch` intentional; Zamtel matches UI  |
+| Check                      | Automated           | Manual                 | Pass criteria                                  |
+| -------------------------- | ------------------- | ---------------------- | ---------------------------------------------- |
+| Frontend SHAs recorded     | Vercel deployments  | —                      | SHA per app                                    |
+| API image digest recorded  | Host/GHCR           | —                      | Digest ≠ unknown                               |
+| DB migrations match target | `schema_migrations` | —                      | Incl. agreed `0056`                            |
+| Rollback drill             | —                   | Prior Vercel + API tag | Time recorded                                  |
+| Feature flags              | SQL flags           | —                      | `public_launch` intentional; Zamtel matches UI |
 
-**Current:** FAIL (API SHA NOT_AUDITABLE; DB drift CONFLICT).
+**Current:** FAIL (API SHA NOT_AUDITABLE; DB drift; panel SHAs not PRODUCTION_VERIFIED vs foundation `8cc1fa0`).
 
 ---
 
 ## P1 gates (required before open public positioning)
 
-| ID  | Gate                                    | Evidence                        | Current |
-| --- | --------------------------------------- | ------------------------------- | ------- |
-| G10 | Seller CTA live                         | CUST-01 HTML probe              | FAIL    |
-| G11 | Demo catalogue remediated/labelled      | Catalog aggregate + SEO check   | FAIL    |
-| G12 | KYC integrity                           | No tier>0 without `kyc_records` | FAIL    |
-| G13 | Legal counsel sign-off (DPA/NPS escrow) | Written artifact (MR-L01)       | FAIL    |
-| G14 | Zamtel collections decision + UI gate   | Flag + checkout methods         | FAIL    |
-| G15 | Admin RBAC decision closed              | ADR / decisions update          | FAIL    |
-| G16 | Staging UAT (core journeys)             | UAT notes 3–5 testers           | FAIL    |
+| ID  | Gate                                  | Evidence                                                          | Current                        |
+| --- | ------------------------------------- | ----------------------------------------------------------------- | ------------------------------ |
+| G10 | Seller CTA live                       | CUST-01 HTML probe                                                | FAIL                           |
+| G11 | Demo catalogue remediated/labelled    | Catalog + SEO; FD-04                                              | FAIL                           |
+| G12 | KYC integrity live                    | No privileged bare tier; `0056` applied; orphan ops               | FAIL (CODE_COMPLETE #293 only) |
+| G13 | Legal counsel sign-off                | Written artifact FD-08                                            | FAIL                           |
+| G14 | Zamtel collections decision + UI gate | FD-01 + checkout methods                                          | FAIL                           |
+| G15 | Admin RBAC decision closed            | FD-02 ADR/decisions                                               | FAIL                           |
+| G16 | Staging UAT (core journeys)           | S7 pack                                                           | FAIL                           |
+| G17 | Panel honesty PRODUCTION_VERIFIED     | Deploy #289–#291; probe categories/compare/SW/admin empty honesty | FAIL                           |
 
 ---
 
 ## P2 gates (hardening; track but do not block invite-beta)
 
-| ID  | Gate                                 | Notes                  |
-| --- | ------------------------------------ | ---------------------- |
-| G17 | Vernacular Bemba/Nyanja core flows   | After 0053; D27 timing |
-| G18 | Lighthouse budgets                   | Perf/SEO/A11y          |
-| G19 | Leaked-password protection on        | Auth advisor           |
-| G20 | Lifecycle n8n (abandoned cart, etc.) | After money path       |
-| G21 | Doc SoT banners on superseded plans  | MR-L02                 |
+| ID  | Gate                                | Notes                  |
+| --- | ----------------------------------- | ---------------------- |
+| G18 | Vernacular Bemba/Nyanja core flows  | After 0053; D27 timing |
+| G19 | Lighthouse budgets                  | Perf/SEO/A11y          |
+| G20 | Leaked-password protection on       | Auth advisor           |
+| G21 | Lifecycle n8n                       | After money path       |
+| G22 | Doc SoT banners on superseded plans | MR-L02                 |
 
 ---
 
 ## Release evidence pack (template)
-
-Attach to the release PR / ops ledger:
 
 ```text
 release_id:
 git_sha_frontends: {customer, vendor, admin}
 api_image_digest:
 db_migration_head:
+migrations_applied_includes_0056: yes|no
 n8n_workflows_active: [list]
 sentry_projects: [list]
 uptime_monitors: [list]
 backup_artifact: {date, location}
 restore_drill: {date, result}
-sandbox_payments: {momo_payment_id_redacted, card_payment_id_redacted, ledger_txn_ids}
-rls_probe: {path to SQL output}
+sandbox_payments:
+  momo: {payment_id_redacted, ledger_txn_ids}
+  card: {payment_id_redacted, ledger_txn_ids}
+  release: {capture_id_redacted, release_id_redacted, escrow_net}
+rls_probe: {path}
+kyc:
+  migration_0056: applied|not
+  orphan_report_count:
 ci_run_url:
 rollback_drill: {date, result}
 legal_signoff: {doc ref}
 flags: {public_launch, zamtel_collections, ...}
-gate_results: {G0..G9: PASS|FAIL}
+code_complete_prs: {274, 288, 289, 290, 291, 293, 294}
+maturity:
+  collection_accounting: CODE_COMPLETE|STAGING_VERIFIED|PRODUCTION_VERIFIED
+  release_accounting: CODE_COMPLETE|STAGING_VERIFIED|PRODUCTION_VERIFIED
+  kyc_integrity: CODE_COMPLETE|STAGING_VERIFIED|PRODUCTION_VERIFIED
+gate_results: {S0..S7, G0..G9: PASS|FAIL}
 ```
 
 ---
 
 ## Go / No-Go
 
-| Decision                           | Condition                                                                                                |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| **NO-GO real money**               | Any of G0–G9 = FAIL or NOT_AUDITABLE                                                                     |
-| **NO-GO public_launch=true**       | Any P0 gate FAIL **or** G10–G13 FAIL                                                                     |
-| **GO invite-beta (no real money)** | Health G1 partial + localhost G2 localhost check PASS + explicit demo disclosure + `public_launch=false` |
-| **GO real-money beta**             | All P0 gates PASS + G13 legal PASS + sandbox pack attached                                               |
-| **GO open launch**                 | Real-money beta GO + G10–G16 PASS                                                                        |
+| Decision                           | Condition                                                                            |
+| ---------------------------------- | ------------------------------------------------------------------------------------ |
+| **NO-GO real money**               | Any of G0–G9 = FAIL/NOT_AUDITABLE **or** S1–S6 = FAIL                                |
+| **NO-GO public_launch=true**       | Any P0 gate FAIL **or** G10–G13 FAIL                                                 |
+| **GO invite-beta (no real money)** | Health shells OK + G2 localhost check PASS + demo disclosure + `public_launch=false` |
+| **GO real-money beta**             | All P0 gates PASS + G13 legal PASS + staging pack STAGING_VERIFIED attached          |
+| **GO open launch**                 | Real-money beta GO + G10–G17 PASS                                                    |
 
-**Today (2026-07-18): NO-GO** for real money and open launch.
+### Today (2026-07-18)
+
+| Claim                             | Result                                           |
+| --------------------------------- | ------------------------------------------------ |
+| Real money                        | **NO-GO**                                        |
+| Open launch                       | **NO-GO**                                        |
+| Invite/demo browse                | Conditional OK with disclosure                   |
+| Treat #274/#294 as launch-cleared | **NO** — CODE_COMPLETE, staging-unverified       |
+| Treat #293 as launch-cleared      | **NO** — CODE_COMPLETE, `0056` rollout-dependent |
+
+---
+
+_Do not declare production readiness while payment reconciliation, migration rollout, RLS, workflows, monitoring, backup/restore, rollback, or live configuration evidence remains incomplete._
