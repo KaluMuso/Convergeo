@@ -11,6 +11,14 @@ export {
   PHASE1_CRITICAL_PREFIXES,
 } from "./phase1-critical";
 export {
+  isSeoIndexableLocale,
+  listSeoIndexableLocales,
+  resolveSeoAlternateLocales,
+  robotsForLocalePublication,
+  SEO_INDEXABLE_LOCALES,
+  type SeoIndexableLocale,
+} from "./seo-publication";
+export {
   default as requestConfig,
   clearMessageCache,
   getLoadedNamespaceKeys,

@@ -1,5 +1,11 @@
 import { AnalyticsProvider } from "@vergeo/analytics/provider";
-import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import {
+  isSeoIndexableLocale,
+  loadNamespace,
+  LOCALES,
+  robotsForLocalePublication,
+  type Locale,
+} from "@vergeo/i18n";
 import { Footer } from "@vergeo/ui/src/footer";
 import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import { ThemeScript } from "@vergeo/ui/src/theme-script";
@@ -18,14 +24,6 @@ import type { Metadata, Viewport } from "next";
 
 import "../globals.css";
 
-export const metadata: Metadata = {
-  title: {
-    template: "%s | Vergeo5",
-    default: "Vergeo5",
-  },
-  description: "Discover products, services, and events across Zambia.",
-};
-
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -38,6 +36,35 @@ type LayoutProps = {
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
+}
+
+/**
+ * Locale-wide SEO publication gate (CUST-SEO-02).
+ * Unapproved locales (bem/nya until native review) stay routable but noindex,follow.
+ * Child routes may still set stricter robots (e.g. search noindex,nofollow).
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const base: Metadata = {
+    title: {
+      template: "%s | Vergeo5",
+      default: "Vergeo5",
+    },
+    description: "Discover products, services, and events across Zambia.",
+  };
+
+  if (!isSeoIndexableLocale(locale)) {
+    return {
+      ...base,
+      robots: robotsForLocalePublication(locale),
+    };
+  }
+
+  return base;
 }
 
 export default async function LocaleLayout({ children, params }: LayoutProps) {

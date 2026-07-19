@@ -1,3 +1,4 @@
+import { LOCALES, SEO_INDEXABLE_LOCALES } from "@vergeo/i18n";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -7,6 +8,7 @@ import {
   isSitemapEligibleStaticSegment,
   ROBOTS_DISALLOW_SUFFIXES,
   robotsForRouteKind,
+  sitemapLocales,
   SITEMAP_EXCLUDED_SEGMENTS,
   SITEMAP_STATIC_SEGMENTS,
 } from "./sitemap-eligibility";
@@ -16,6 +18,17 @@ describe("coerceSitemapId", () => {
     expect(coerceSitemapId("0")).toBe(0);
     expect(coerceSitemapId("4")).toBe(4);
     expect(coerceSitemapId("nope")).toBeNull();
+  });
+});
+
+describe("sitemap locale publication", () => {
+  it("lists only SEO-indexable locales (omits unreviewed bem/nya)", () => {
+    expect(sitemapLocales()).toEqual([...SEO_INDEXABLE_LOCALES]);
+    expect(sitemapLocales()).toEqual(["en", "fr", "zh"]);
+    expect(sitemapLocales()).not.toContain("bem");
+    expect(sitemapLocales()).not.toContain("nya");
+    // Routes remain available — publication is a subset of LOCALES.
+    expect(LOCALES).toEqual(expect.arrayContaining(["bem", "nya", ...SEO_INDEXABLE_LOCALES]));
   });
 });
 

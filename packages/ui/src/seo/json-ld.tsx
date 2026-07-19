@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
+import { DEFAULT_LOCALE, resolveSeoAlternateLocales } from "@vergeo/i18n";
 
 import type { Metadata } from "next";
 
@@ -63,17 +63,22 @@ export function buildLocaleCanonical(locale: string, ...segments: string[]): str
 
 export type CanonicalAlternatesOptions = {
   /**
-   * Locales that actually serve this page. Omit unavailable locales.
-   * Defaults to every supported app locale.
+   * Locales that actually serve this page (route availability).
+   * Always intersected with `SEO_INDEXABLE_LOCALES` — unapproved locales
+   * (currently bem/nya pending native review) are never advertised.
+   * Defaults to the SEO-published set.
    */
   availableLocales?: readonly string[];
-  /** Locale used for `x-default` (defaults to DEFAULT_LOCALE when available). */
+  /** Locale used for `x-default` (defaults to DEFAULT_LOCALE when SEO-published). */
   defaultLocale?: string;
 };
 
 /**
  * Canonical + hreflang alternates (including `x-default`).
  * Absolute URLs in `languages` so crawlers resolve hreflang correctly.
+ *
+ * Self-canonical always uses the request locale (routes stay reachable).
+ * Hreflang / x-default only include SEO-published locales (CUST-SEO-02).
  */
 export function buildCanonicalAlternates(
   locale: string,
@@ -84,20 +89,19 @@ export function buildCanonicalAlternates(
   const options = hasOptions ? (last as CanonicalAlternatesOptions) : undefined;
   const segments = (hasOptions ? args.slice(0, -1) : args) as string[];
 
-  const available = (options?.availableLocales ?? LOCALES).filter(
-    (entry, index, all) => entry.length > 0 && all.indexOf(entry) === index,
-  );
-  const locales = available.length > 0 ? available : [locale];
+  const locales = resolveSeoAlternateLocales(options?.availableLocales);
   const preferredDefault = options?.defaultLocale ?? DEFAULT_LOCALE;
   const xDefaultLocale = locales.includes(preferredDefault)
     ? preferredDefault
-    : (locales[0] ?? locale);
+    : (locales[0] ?? preferredDefault);
 
   const languages: Record<string, string> = {};
   for (const loc of locales) {
     languages[loc] = buildAbsoluteUrl(buildLocaleCanonical(loc, ...segments));
   }
-  languages["x-default"] = buildAbsoluteUrl(buildLocaleCanonical(xDefaultLocale, ...segments));
+  if (locales.length > 0) {
+    languages["x-default"] = buildAbsoluteUrl(buildLocaleCanonical(xDefaultLocale, ...segments));
+  }
 
   return {
     canonical: buildLocaleCanonical(locale, ...segments),
