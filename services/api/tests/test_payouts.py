@@ -15,10 +15,16 @@ from app.main import create_app
 from app.services.payments.base import InitiatePayoutResult, ResolveAccountResult, TransferStatus
 from app.services.payments.lenco.models import LencoTransferData, LencoTransferStatusResponse
 from app.services.payouts.eligibility import (
+    _vendor_lock,
     assert_payout_eligible,
+    check_payout_eligible_unlocked,
     compute_eligibility,
 )
-from app.services.payouts.execution import PayoutOutcome, execute_vendor_payout
+from app.services.payouts.execution import (
+    PayoutOutcome,
+    _insert_payout_row,
+    execute_vendor_payout,
+)
 from app.services.payouts.resolve_check import VendorPayoutProfile, run_resolve_name_check
 from app.services.payouts.retry import retry_payout_row
 from fastapi.testclient import TestClient
@@ -162,6 +168,21 @@ class FakeServiceClient:
         self.client = fake
 
 
+def _reserve_payout_for_test(
+    fake_client: FakeSupabaseClient,
+    service_client: FakeServiceClient,
+    **kwargs: Any,
+) -> None:
+    """In-process shim while unit tests mock balances (reservation uses SQL in prod)."""
+    with _vendor_lock(kwargs["vendor_id"]):
+        check_payout_eligible_unlocked(
+            service_client,
+            vendor_id=kwargs["vendor_id"],
+            amount_ngwee=kwargs["amount_ngwee"],
+        )
+        _insert_payout_row(service_client, **kwargs)
+
+
 def _seed_vendor(fake: FakeSupabaseClient, *, kyc_tier: int = 2) -> None:
     fake.tables["vendors"].rows.append(
         {
@@ -266,6 +287,12 @@ async def test_balance_race_two_concurrent_payouts_never_exceed_released(
         patch(
             "app.services.payouts.execution._post_payout_ledger",
             side_effect=_mock_ledger_post,
+        ),
+        patch(
+            "app.services.payouts.execution.reserve_payout_row",
+            side_effect=lambda **kwargs: _reserve_payout_for_test(
+                fake_client, service_client, **kwargs
+            ),
         ),
     ):
 
