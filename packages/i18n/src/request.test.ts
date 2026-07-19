@@ -54,4 +54,12 @@ describe("loadNamespace", () => {
     expect(auth.login.title).toBe("Sign in");
     expect(getLoadedNamespaceKeys()).toContain("en:auth");
   });
+
+  it("deep-merges Phase-1 bem catalog over English for non-critical keys", async () => {
+    const catalog = await loadNamespace("bem", "catalog");
+    const home = catalog.home as { hero: { escrowStep1: string }; flash?: { defaultTag: string } };
+    expect(home.hero.escrowStep1).not.toBe("You pay");
+    // Non-critical flash copy still available via English merge.
+    expect(home.flash?.defaultTag).toBeTruthy();
+  });
 });

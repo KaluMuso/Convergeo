@@ -24,8 +24,14 @@ describe("loadRawNamespace", () => {
   });
 
   it("returns null when the locale has no file for the namespace (no fallback)", async () => {
-    // bem only ships notifications, not catalog — raw access must NOT fall back to English.
-    expect(await loadRawNamespace("bem", "catalog")).toBeNull();
+    // Raw access must NOT fall back to English — events is still absent for bem.
+    expect(await loadRawNamespace("bem", "events")).toBeNull();
+  });
+
+  it("returns bem catalog overlay without English merge (Phase-1 file exists)", async () => {
+    const raw = await loadRawNamespace("bem", "catalog");
+    expect(raw).not.toBeNull();
+    expect(raw).toHaveProperty("home");
   });
 });
 
@@ -33,6 +39,8 @@ describe("localeNamespaceKeys", () => {
   it("lists the flat keys a locale defines, or [] when absent", async () => {
     const enKeys = await localeNamespaceKeys("en", "events");
     expect(enKeys).toContain("ticketPurchase.earlyBird");
-    expect(await localeNamespaceKeys("bem", "catalog")).toEqual([]);
+    expect(await localeNamespaceKeys("bem", "events")).toEqual([]);
+    const bemCatalog = await localeNamespaceKeys("bem", "catalog");
+    expect(bemCatalog).toContain("home.hero.escrowStep1");
   });
 });

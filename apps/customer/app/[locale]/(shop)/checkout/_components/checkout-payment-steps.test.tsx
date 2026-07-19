@@ -36,6 +36,7 @@ const paymentLabels = {
   codRejected: checkoutMessages.checkout.payment.codRejected,
   railRejected: checkoutMessages.checkout.payment.railRejected,
   error: checkoutMessages.checkout.payment.error,
+  paymentsDisabled: checkoutMessages.checkout.payment.paymentsDisabled,
 };
 
 const reviewLabels = {
