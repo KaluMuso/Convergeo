@@ -10,7 +10,7 @@ New questions (B-5, NB-1, NB-6…NB-10) come from this audit's fresh live/Drive 
 
 ## BLOCKING — answer before dispatching the affected wave (the answer changes plan scope/sequence)
 
-### B-1 · Release strategy: staging-first vs controlled live-beta? *(NEW — from PR #302)*
+### B-1 · Release strategy: staging-first vs controlled live-beta? *(NEW — from PR #302)* — ✅ **LOCKED 2026-07-19: HYBRID live-beta (`docs/plan/00-decisions.md` D30)**
 - **Why:** `implementation-wave-plan.md` sequences everything through a **staging plane** (S0–S7). But open PR **#302
   (2026-07-19)** pivots to a **controlled customer live-beta with "staging provisioning PAUSED."** These are different
   spines: staging-first proves money in a sandbox stack before touching prod; live-beta hardens prod discovery honesty
@@ -78,7 +78,19 @@ New questions (B-5, NB-1, NB-6…NB-10) come from this audit's fresh live/Drive 
 ## Decision log (fill as answers land — mirror into `docs/plan/00-decisions.md` + `source-conflicts-and-decisions.md` §5)
 
 ```text
-Q-ID:            # B-1..B-5 or NB-1..NB-14 (and the FD-ID it maps to)
+Q-ID: B-1 (release strategy)
+decision: HYBRID controlled live-beta — promote the no-money discovery surface to prod behind public_launch=false (Wave 1 / VM-A) IN PARALLEL with a Lenco sandbox money proof on an isolated target (Wave 2 / VM-B); real money stays OFF until S1–S6 + all P0 gates PASS. A full separable staging plane is NOT a prerequisite.
+date: 2026-07-19
+decided_by: Kaluba
+supersedes: staging-first sequencing in ../2026-07-18/consolidated/implementation-wave-plan.md
+engineering impact: Wave 1 and Wave 2 may run in parallel; neither waits on a staging stack. VE-P08 env-isolation tracked as Wave 4, not a prerequisite. public_launch/prepaid/zamtel stay off.
+related MR-/G-IDs: G1/G3/G4/G17; S1–S6; release-gates Go/No-Go. Recorded as D30 in docs/plan/00-decisions.md.
+```
+
+Template for the remaining decisions (B-2…B-5, NB-*):
+
+```text
+Q-ID:            # B-2..B-5 or NB-1..NB-14 (and the FD-ID it maps to)
 decision:
 date:
 decided_by: Kaluba
