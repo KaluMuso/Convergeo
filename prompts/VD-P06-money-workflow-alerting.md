@@ -3,7 +3,7 @@
 # VD-P06 — Money-workflow error alerting `[CODE]`
 
 ## 1. Context
-**Wave 2 — SEQUENCE AFTER VD-P01** (shares `release-job.json` / `reconciliation.json`; not parallel-safe with VD-P01 on those files). Source: `01-audit-findings.md` §6 (workflow risks). **Risk:** the money workflows have **no error handling or failure alerting** — a failed/timed-out `httpRequest` (timeouts 30–120s) just errors the execution **silently**. A stalled Lenco reconciliation or escrow-release sweep would produce **no page**. Only `uptime-alert`/`admin-digest` have any alert path. Idempotency lives in the API, not the workflow, so a silent stall is invisible to ops.
+**Wave 2 — SEQUENCE AFTER VD-P01 AND VD-P03** (shares `release-job.json` with VD-P01 and `payout-failure-alert.json` with VD-P03 — both swap `REPLACE_WITH_CREDENTIAL_ID` in those files, so this is not parallel-safe with either; `reconciliation.json` + `payment-sweeper.json` are VD-P06-exclusive). Source: `01-audit-findings.md` §6 (workflow risks). **Risk:** the money workflows have **no error handling or failure alerting** — a failed/timed-out `httpRequest` (timeouts 30–120s) just errors the execution **silently**. A stalled Lenco reconciliation or escrow-release sweep would produce **no page**. Only `uptime-alert`/`admin-digest` have any alert path. Idempotency lives in the API, not the workflow, so a silent stall is invisible to ops.
 **Type:** `[CODE]` — a coding agent adds error/retry/alert wiring to the money JSONs.
 
 ## 2. Objective & scope
@@ -12,7 +12,7 @@ Add retry + a founder-alert-on-failure path to the four money/ops-critical workf
 
 ## 3. Files (edit ONLY these)
 - `infra/n8n/release-job.json`, `infra/n8n/reconciliation.json`, `infra/n8n/payment-sweeper.json`, `infra/n8n/payout-failure-alert.json`
-**Guardrail: modify ONLY these files, and ONLY after VD-P01 has set release-job's credential (rebase on its change to avoid clobbering).**
+**Guardrail: modify ONLY these files, and ONLY after VD-P01 (release-job.json) and VD-P03 (payout-failure-alert.json) have swapped their credential ids — rebase on both to avoid clobbering.**
 
 ## 4. Implementation spec
 - For each: add retry/backoff on the `httpRequest` node, and an **error path** (n8n `Error Trigger` / error-workflow, or an IF on non-2xx) that pages the founder (WhatsApp Cloud API, reusing the `admin-digest`/`uptime-alert` pattern) with the workflow name + status.
