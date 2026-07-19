@@ -1,4 +1,4 @@
--- 0060_review_reply_column_guard.sql
+-- 0061_review_reply_column_guard.sql
 -- Column guard for vendor review replies — the "column guard in M15" deferred at
 -- 0007_trust_ops.sql (reviews_vendor_reply_update comment).
 --
