@@ -34,6 +34,7 @@ const vendorLabels = {
   deliveryEligible: checkoutMessages.cart.deliveryEligible,
   deliveryHint: checkoutMessages.cart.deliveryHint,
   deliveryThreshold: checkoutMessages.cart.deliveryThreshold,
+  deliveryScopeNote: checkoutMessages.cart.deliveryScopeNote,
   freeDeliveryProgress: checkoutMessages.cart.freeDeliveryProgress,
   freeDeliveryUnlocked: checkoutMessages.cart.freeDeliveryUnlocked,
 };
@@ -80,6 +81,15 @@ describe("checkout.cart i18n", () => {
     expect(checkoutMessages.cart.title).toBeTruthy();
     expect(checkoutMessages.cart.noticePriceChanged).toContain("{oldPrice}");
     expect(checkoutMessages.cart.freeDeliveryProgress).toContain("{threshold}");
+  });
+
+  it("keeps free-delivery copy Lusaka/zone honest (LB-P2-04)", () => {
+    expect(checkoutMessages.cart.deliveryThreshold).toContain("{threshold}");
+    expect(checkoutMessages.cart.deliveryThreshold.toLowerCase()).toContain("lusaka");
+    expect(checkoutMessages.cart.deliveryScopeNote.toLowerCase()).toContain("lusaka");
+    expect(checkoutMessages.cart.deliveryScopeNote.toLowerCase()).toMatch(/zone|pickup/);
+    expect(checkoutMessages.cart.freeDeliveryUnlocked.toLowerCase()).toContain("qualifies");
+    expect(checkoutMessages.cart.deliveryEligible.toLowerCase()).toContain("checkout");
   });
 });
 
@@ -150,6 +160,28 @@ describe("VendorGroups", () => {
     );
 
     expect(screen.getByTestId("cart-free-delivery-unlocked")).toBeInTheDocument();
+    expect(screen.getByTestId("cart-free-delivery-eligible")).toHaveTextContent(
+      checkoutMessages.cart.deliveryEligible,
+    );
+    expect(screen.getByTestId("cart-delivery-scope-note")).toHaveTextContent(
+      checkoutMessages.cart.deliveryScopeNote,
+    );
+  });
+
+  it("always shows Lusaka/zone scope note on the delivery nudge (LB-P2-04)", () => {
+    render(
+      <VendorGroups
+        groups={[belowThresholdGroup]}
+        noticesByListingId={{}}
+        labels={vendorLabels}
+        lineLabels={lineLabels}
+        onQtyChange={vi.fn().mockResolvedValue(undefined)}
+        onRemove={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(screen.getByTestId("cart-delivery-scope-note")).toBeInTheDocument();
+    expect(screen.getByText(/Free Lusaka delivery from/i)).toBeInTheDocument();
   });
 
   it("marks out-of-stock lines from notices", () => {

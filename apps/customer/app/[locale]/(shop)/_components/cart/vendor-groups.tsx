@@ -27,6 +27,7 @@ export type VendorGroupLabels = {
   deliveryEligible: string;
   deliveryHint: string;
   deliveryThreshold: string;
+  deliveryScopeNote: string;
   freeDeliveryProgress: string;
   freeDeliveryUnlocked: string;
 };
@@ -82,7 +83,12 @@ export function VendorGroups({
               className="flex flex-col gap-2 rounded bg-bg-2 p-3"
               data-testid={`cart-delivery-nudge-${group.vendor_id}`}
             >
-              <p className="text-xs text-text-2">{labels.deliveryThreshold}</p>
+              <p className="text-xs text-text-2">
+                {labels.deliveryThreshold.replace(
+                  "{threshold}",
+                  formatK(FREE_DELIVERY_THRESHOLD_NGEWEE),
+                )}
+              </p>
               {group.delivery_eligible ? (
                 <p
                   className="text-sm font-medium text-success"
@@ -119,8 +125,13 @@ export function VendorGroups({
                 </>
               )}
               {group.delivery_eligible ? (
-                <p className="text-xs text-text-3">{labels.deliveryEligible}</p>
+                <p className="text-xs text-text-3" data-testid="cart-free-delivery-eligible">
+                  {labels.deliveryEligible}
+                </p>
               ) : null}
+              <p className="text-xs text-text-3" data-testid="cart-delivery-scope-note">
+                {labels.deliveryScopeNote}
+              </p>
             </div>
 
             <div className="flex flex-col gap-3">
