@@ -17,15 +17,21 @@ from unittest.mock import patch
 
 import pytest
 from app.services.commissions.engine import capture_order_commission
+from app.services.db import SqlResult
 from app.services.escrow.release import (
     evaluate_and_release,
     release_idempotency_key,
 )
 from app.services.escrow.release_accounting import (
     ReleaseAccountingAmounts,
+    ReleaseAccountingError,
     build_release_accounting_day_totals,
     commission_snapshot_is_usable,
     compute_release_amounts,
+    order_has_active_refund,
+    order_has_open_dispute,
+    order_has_refund_ledger,
+    release_blocked_reason,
     summarize_order_release_ledger,
 )
 from app.services.ledger.engine import (
@@ -555,6 +561,122 @@ class TestBlockedReleaseStates:
         assert result.reason == "dispute_open"
         assert _commission_capture_count(db, order_id) == 0
         assert _release_txn_count(db, order_id) == 0
+
+class TestLookupFailClosedUnit:
+    """Pure unit coverage for fail-closed refund/dispute SQL helpers."""
+
+    def test_active_refund_raises_when_sql_fails(self) -> None:
+        failed = SqlResult(ok=False, rows=[], error="connection reset")
+        with patch(
+            "app.services.escrow.release_accounting.run_sql_script",
+            return_value=failed,
+        ):
+            with pytest.raises(ReleaseAccountingError, match="refund_lookup_failed"):
+                order_has_active_refund(str(uuid.uuid4()))
+
+    def test_refund_ledger_raises_when_rows_missing(self) -> None:
+        empty = SqlResult(ok=True, rows=[], error=None)
+        with patch(
+            "app.services.escrow.release_accounting.run_sql_script",
+            return_value=empty,
+        ):
+            with pytest.raises(ReleaseAccountingError, match="refund_lookup_failed"):
+                order_has_refund_ledger(str(uuid.uuid4()))
+
+    def test_open_dispute_raises_when_sql_fails(self) -> None:
+        failed = SqlResult(ok=False, rows=[], error="timeout")
+        with patch(
+            "app.services.escrow.release_accounting.run_sql_script",
+            return_value=failed,
+        ):
+            with pytest.raises(ReleaseAccountingError, match="dispute_lookup_failed"):
+                order_has_open_dispute(str(uuid.uuid4()))
+
+    def test_release_blocked_reason_maps_refund_lookup_failure(self) -> None:
+        with patch(
+            "app.services.escrow.release_accounting.order_is_refund_blocked",
+            side_effect=ReleaseAccountingError("refund_lookup_failed"),
+        ):
+            assert (
+                release_blocked_reason(status="delivered", order_id=str(uuid.uuid4()))
+                == "refund_lookup_failed"
+            )
+
+    def test_evaluate_and_release_blocks_on_refund_lookup_failure(self) -> None:
+        """Sweeper must not release when refund status cannot be read."""
+        from app.services.escrow.release import _OrderContext
+
+        order_id = str(uuid.uuid4())
+        now = datetime(2026, 7, 18, 12, 0, tzinfo=UTC)
+        context = _OrderContext(
+            order_id=order_id,
+            status="delivered",
+            vendor_id=VENDOR_A,
+            cod=False,
+            commission_snapshot=_snapshot(),
+            gross_ngwee=GROSS_NGEWEE,
+            has_open_dispute=False,
+            already_released=False,
+            buyer_confirmed=True,
+            delivered_at=now - timedelta(hours=1),
+            shipped_at=now - timedelta(hours=2),
+        )
+        with (
+            patch(
+                "app.services.escrow.release._load_order_context",
+                return_value=context,
+            ),
+            patch(
+                "app.services.escrow.release.release_blocked_reason",
+                return_value="refund_lookup_failed",
+            ),
+            patch("app.services.escrow.release.capture_order_commission") as capture,
+            patch("app.services.escrow.release._post_release") as post_release,
+        ):
+            result = evaluate_and_release(_SERVICE, order_id, now=now)
+
+        assert result.outcome == "not_eligible"
+        assert result.reason == "refund_lookup_failed"
+        capture.assert_not_called()
+        post_release.assert_not_called()
+
+    def test_evaluate_and_release_holds_on_dispute_lookup_failure(self) -> None:
+        """Sweeper must hold funds when dispute status cannot be read."""
+        from app.services.escrow.release import _OrderContext
+
+        order_id = str(uuid.uuid4())
+        now = datetime(2026, 7, 18, 12, 0, tzinfo=UTC)
+        context = _OrderContext(
+            order_id=order_id,
+            status="delivered",
+            vendor_id=VENDOR_A,
+            cod=False,
+            commission_snapshot=_snapshot(),
+            gross_ngwee=GROSS_NGEWEE,
+            has_open_dispute=None,
+            already_released=False,
+            buyer_confirmed=True,
+            delivered_at=now - timedelta(hours=1),
+            shipped_at=now - timedelta(hours=2),
+        )
+        with (
+            patch(
+                "app.services.escrow.release._load_order_context",
+                return_value=context,
+            ),
+            patch(
+                "app.services.escrow.release.release_blocked_reason",
+                return_value=None,
+            ),
+            patch("app.services.escrow.release.capture_order_commission") as capture,
+            patch("app.services.escrow.release._post_release") as post_release,
+        ):
+            result = evaluate_and_release(_SERVICE, order_id, now=now)
+
+        assert result.outcome == "held"
+        assert result.reason == "dispute_lookup_failed"
+        capture.assert_not_called()
+        post_release.assert_not_called()
 
 
 class TestCodPathPreserved:

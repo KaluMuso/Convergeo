@@ -27,11 +27,14 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.services.commissions.engine import compute_order_commission, parse_snapshot_lines
+from app.services.db import SqlResult
 from app.services.orders.audit import run_sql_script, sql_literal
 
 ACTIVE_REFUND_STATUSES = frozenset({"pending", "processing", "completed"})
 
 REFUND_LEDGER_KINDS = frozenset({"refund_lane1", "refund_lane2"})
+
+OPEN_DISPUTE_STATUSES = frozenset({"open", "vendor_responded", "under_review"})
 
 
 class ReleaseAccountingError(ValueError):
@@ -154,8 +157,22 @@ def _sql_uuid(value: str) -> str:
     return f"'{value}'::uuid"
 
 
+def _require_count_row(result: SqlResult, *, error_code: str) -> int:
+    """Parse a ``count(*)::text`` row; raise on lookup failure (fail-closed)."""
+    if not result.ok or not result.rows:
+        raise ReleaseAccountingError(error_code)
+    try:
+        return int(result.rows[0])
+    except (TypeError, ValueError) as exc:
+        raise ReleaseAccountingError(error_code) from exc
+
+
 def order_has_active_refund(order_id: str) -> bool:
-    """True when a pending/processing/completed refund row exists for the order."""
+    """True when a pending/processing/completed refund row exists for the order.
+
+    Raises ``ReleaseAccountingError`` when the refund table cannot be queried so
+    callers fail closed instead of treating the order as clear of refunds.
+    """
     order_sql = _sql_uuid(order_id)
     statuses_sql = ", ".join(sql_literal(status) for status in sorted(ACTIVE_REFUND_STATUSES))
     script = f"""
@@ -165,13 +182,14 @@ WHERE order_id = {order_sql}
   AND status IN ({statuses_sql});
 """
     result = run_sql_script(script)
-    if not result.ok or not result.rows:
-        return False
-    return int(result.rows[0]) > 0
+    return _require_count_row(result, error_code="refund_lookup_failed") > 0
 
 
 def order_has_refund_ledger(order_id: str) -> bool:
-    """True when a pre-release refund ledger drain was posted for the order."""
+    """True when a pre-release refund ledger drain was posted for the order.
+
+    Raises ``ReleaseAccountingError`` when the ledger cannot be queried.
+    """
     order_sql = _sql_uuid(order_id)
     kinds_sql = ", ".join(sql_literal(kind) for kind in sorted(REFUND_LEDGER_KINDS))
     script = f"""
@@ -181,22 +199,49 @@ WHERE order_id = {order_sql}
   AND kind IN ({kinds_sql});
 """
     result = run_sql_script(script)
-    if not result.ok or not result.rows:
-        return False
-    return int(result.rows[0]) > 0
+    return _require_count_row(result, error_code="refund_lookup_failed") > 0
 
 
 def order_is_refund_blocked(order_id: str) -> bool:
-    """True when an active refund row or refund ledger drain blocks vendor release."""
+    """True when an active refund row or refund ledger drain blocks vendor release.
+
+    Propagates ``ReleaseAccountingError`` on lookup failure (fail-closed).
+    """
     return order_has_active_refund(order_id) or order_has_refund_ledger(order_id)
 
 
+def order_has_open_dispute(order_id: str) -> bool:
+    """True when an open / in-review dispute exists for the order.
+
+    Raises ``ReleaseAccountingError`` when disputes cannot be queried so release
+    cannot proceed as if the order were undisputed.
+    """
+    order_sql = _sql_uuid(order_id)
+    statuses_sql = ", ".join(sql_literal(status) for status in sorted(OPEN_DISPUTE_STATUSES))
+    script = f"""
+SELECT count(*)::text
+FROM public.disputes
+WHERE order_id = {order_sql}
+  AND status IN ({statuses_sql});
+"""
+    result = run_sql_script(script)
+    return _require_count_row(result, error_code="dispute_lookup_failed") > 0
+
+
 def release_blocked_reason(*, status: str, order_id: str) -> str | None:
-    """Return a blocking reason code, or None when release accounting may proceed."""
+    """Return a blocking reason code, or None when release accounting may proceed.
+
+    Cancel / refund blocks only. Open disputes are evaluated separately so they
+    keep the ``held`` outcome (not ``not_eligible``). Refund-table / ledger lookup
+    failures surface as ``refund_lookup_failed`` rather than silent clearance.
+    """
     if status == "cancelled":
         return "order_cancelled"
-    if order_is_refund_blocked(order_id):
-        return "order_refunded"
+    try:
+        if order_is_refund_blocked(order_id):
+            return "order_refunded"
+    except ReleaseAccountingError as exc:
+        return str(exc) if str(exc) else "refund_lookup_failed"
     return None
 
 

@@ -35,10 +35,10 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, Protocol
 
 from app.services.commissions.engine import capture_order_commission
-from app.services.escrow.release import OPEN_DISPUTE_STATUSES
 from app.services.escrow.release_accounting import (
     ReleaseAccountingError,
     compute_release_amounts,
+    order_has_open_dispute,
     order_is_refund_blocked,
 )
 from app.services.events.timing import instance_settlement_end
@@ -102,7 +102,7 @@ class _EventOrderContext:
     event_status: str
     event_type: str
     is_paid: bool
-    has_open_dispute: bool
+    has_open_dispute: bool | None
 
 
 def full_release_key(order_id: str) -> str:
@@ -201,19 +201,12 @@ WHERE checkout_group_id = {group_sql}
     return int(result.rows[0]) > 0
 
 
-def _has_open_dispute(order_id: str) -> bool:
-    order_sql = _sql_uuid(order_id, "order_id")
-    statuses_sql = ", ".join(sql_literal(status) for status in sorted(OPEN_DISPUTE_STATUSES))
-    script = f"""
-SELECT count(*)::text
-FROM public.disputes
-WHERE order_id = {order_sql}
-  AND status IN ({statuses_sql});
-"""
-    result = run_sql_script(script)
-    if not result.ok or not result.rows:
-        return False
-    return int(result.rows[0]) > 0
+def _has_open_dispute(order_id: str) -> bool | None:
+    """Return dispute state, or None when disputes cannot be queried (fail-closed)."""
+    try:
+        return order_has_open_dispute(order_id)
+    except ReleaseAccountingError:
+        return None
 
 
 def _posted_release_keys(keys: tuple[str, ...]) -> set[str]:
@@ -386,7 +379,16 @@ def evaluate_event_release(
         return EventReleaseResult(order_id=order_id, outcome="not_eligible", reason="unpaid")
 
     # Ticket cancellation is gated via event.status below; refunds still block release.
-    if order_is_refund_blocked(order_id):
+    # Lookup failures fail closed — never treat an unreadable refund state as clear.
+    try:
+        refund_blocked = order_is_refund_blocked(order_id)
+    except ReleaseAccountingError as exc:
+        return EventReleaseResult(
+            order_id=order_id,
+            outcome="not_eligible",
+            reason=str(exc) if str(exc) else "refund_lookup_failed",
+        )
+    if refund_blocked:
         return EventReleaseResult(
             order_id=order_id, outcome="not_eligible", reason="order_refunded"
         )
@@ -441,6 +443,13 @@ def evaluate_event_release(
             branch=branch,
         )
 
+    if context.has_open_dispute is None:
+        return EventReleaseResult(
+            order_id=order_id,
+            outcome="held",
+            reason="dispute_lookup_failed",
+            branch=branch,
+        )
     if context.has_open_dispute:
         return EventReleaseResult(
             order_id=order_id, outcome="held", reason="dispute_open", branch=branch
