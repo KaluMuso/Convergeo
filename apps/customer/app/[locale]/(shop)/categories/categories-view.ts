@@ -1,4 +1,5 @@
 import { buildCategoryTree, type NavCategory } from "../_components/category-tree";
+
 import type { CategoriesLoadResult } from "../_components/merch-data";
 
 export type CategoriesBrowseView =
