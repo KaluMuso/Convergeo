@@ -1,9 +1,9 @@
 "use client";
 
 import { Button } from "@vergeo/ui/src/button";
-import type { RefObject } from "react";
 
 import type { ProgressiveLoadStatus } from "./use-progressive-load";
+import type { RefObject } from "react";
 
 export type ProgressiveLoadControlsLabels = {
   loadMore: string;
