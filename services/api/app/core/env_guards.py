@@ -28,16 +28,25 @@ _SUPABASE_HOST_RE = re.compile(
     re.IGNORECASE,
 )
 
-_REPO_IDENTIFIERS = (
-    Path(__file__).resolve().parents[4]
-    / "infra"
-    / "staging"
-    / "forbidden-production-identifiers.env"
-)
-
 
 class StagingIsolationError(ValueError):
     """Raised when staging configuration collides with production identifiers."""
+
+
+def _forbidden_identifiers_path() -> Path | None:
+    """Locate the repo-side forbidden-identifiers file when present.
+
+    In the Docker runtime image the layout is ``/app/app/core/...`` (no monorepo
+    root), so this returns ``None`` and callers fall back to the in-module
+    constants. Never raise at import time.
+    """
+    here = Path(__file__).resolve()
+    # Walk up looking for infra/staging/forbidden-production-identifiers.env
+    for parent in here.parents:
+        candidate = parent / "infra" / "staging" / "forbidden-production-identifiers.env"
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 def extract_supabase_project_ref(supabase_url: str) -> str | None:
@@ -124,8 +133,8 @@ def require_sandbox_payments(*, env: str) -> None:
 @lru_cache
 def load_forbidden_identifiers_file() -> dict[str, str]:
     """Parse infra/staging/forbidden-production-identifiers.env (for sync tests)."""
-    path = _REPO_IDENTIFIERS
-    if not path.is_file():
+    path = _forbidden_identifiers_path()
+    if path is None:
         return {}
     out: dict[str, str] = {}
     for line in path.read_text(encoding="utf-8").splitlines():

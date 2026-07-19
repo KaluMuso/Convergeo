@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from fastapi.testclient import TestClient
-
 from app.core.env_guards import (
     PROD_API_HOST,
     PROD_SUPABASE_PROJECT_REF,
@@ -18,6 +16,7 @@ from app.core.env_guards import (
     require_sandbox_payments,
 )
 from app.settings import get_settings
+from fastapi.testclient import TestClient
 
 
 def test_forbidden_file_sync() -> None:
