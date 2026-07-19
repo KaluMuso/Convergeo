@@ -49,46 +49,65 @@ export function ListingGrid({ locale, listings, labels, priorityCount = 2 }: Lis
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
       {listings.map((listing, index) => {
-        const href = listing.productSlug
-          ? `/${locale}/p/${listing.productSlug}`
-          : `/${locale}/c/all`;
         const distance = formatDistance(listing.distanceM);
         const distanceLabel =
           distance !== null ? labels.distance.replace("{distance}", distance) : undefined;
 
+        const card = (
+          <ProductCard
+            title={listing.title}
+            vendorLabel={labels.vendor.replace("{vendor}", listing.vendorName)}
+            ngwee={listing.priceNgwee}
+            rating={listing.rating}
+            reviewCount={listing.reviewCount}
+            noReviewsLabel={labels.noReviews}
+            reviewCountLabel={labels.reviewCount}
+            quickAddLabel={labels.quickAdd}
+            wishlistLabel={labels.wishlist}
+            badge={
+              !listing.inStock ? (
+                <Badge variant="sold_out" label={labels.outOfStock} />
+              ) : distanceLabel ? (
+                <Badge variant="public" label={distanceLabel} />
+              ) : undefined
+            }
+            media={
+              listing.imagePublicId ? (
+                <CloudinaryImage
+                  publicId={listing.imagePublicId}
+                  alt={listing.title}
+                  width={360}
+                  ratio="4/3"
+                  priority={index < priorityCount}
+                  sizes="(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw"
+                  className="h-full w-full object-cover"
+                />
+              ) : undefined
+            }
+          />
+        );
+
+        // Never invent a product URL — a missing slug is not "all products".
+        if (!listing.productSlug) {
+          return (
+            <div
+              key={listing.id}
+              className="min-w-0"
+              data-testid="listing-card-no-slug"
+              aria-label={listing.title}
+            >
+              {card}
+            </div>
+          );
+        }
+
         return (
-          <Link key={listing.id} href={href} className="min-w-0 no-underline">
-            <ProductCard
-              title={listing.title}
-              vendorLabel={labels.vendor.replace("{vendor}", listing.vendorName)}
-              ngwee={listing.priceNgwee}
-              rating={listing.rating}
-              reviewCount={listing.reviewCount}
-              noReviewsLabel={labels.noReviews}
-              reviewCountLabel={labels.reviewCount}
-              quickAddLabel={labels.quickAdd}
-              wishlistLabel={labels.wishlist}
-              badge={
-                !listing.inStock ? (
-                  <Badge variant="sold_out" label={labels.outOfStock} />
-                ) : distanceLabel ? (
-                  <Badge variant="public" label={distanceLabel} />
-                ) : undefined
-              }
-              media={
-                listing.imagePublicId ? (
-                  <CloudinaryImage
-                    publicId={listing.imagePublicId}
-                    alt={listing.title}
-                    width={360}
-                    ratio="4/3"
-                    priority={index < priorityCount}
-                    sizes="(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw"
-                    className="h-full w-full object-cover"
-                  />
-                ) : undefined
-              }
-            />
+          <Link
+            key={listing.id}
+            href={`/${locale}/p/${listing.productSlug}`}
+            className="min-w-0 no-underline"
+          >
+            {card}
           </Link>
         );
       })}

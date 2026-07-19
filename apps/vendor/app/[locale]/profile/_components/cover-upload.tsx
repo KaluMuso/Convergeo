@@ -4,6 +4,7 @@ import { createApiClient } from "@vergeo/config";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import {
   downscaleImageFile,
   uploadToCloudinaryWithProgress,
@@ -41,7 +42,7 @@ export function CoverUpload({
   const apiClient = useMemo(
     () =>
       createApiClient({
-        baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000",
+        baseUrl: getApiBaseUrl(),
         getToken,
       }),
     [getToken],

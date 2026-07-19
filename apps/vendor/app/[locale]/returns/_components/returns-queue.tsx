@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { Button } from "../../listings/new/_lib/ui";
 
 type VendorReturnItem = {
@@ -25,10 +26,6 @@ type VendorReturnItem = {
   item_qty: number;
   created_at: string | null;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function VendorReturnsQueue({ locale }: { locale: string }) {
   const t = useTranslations("vendor.returns");

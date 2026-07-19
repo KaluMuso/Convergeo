@@ -1,5 +1,7 @@
 import { ApiError } from "@vergeo/config";
 
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+
 export type RowImportResult = {
   row: number;
   ok: boolean;
@@ -38,10 +40,6 @@ export type ImportPreview = {
   invalid: number;
   rows: RowPreview[];
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 async function authHeaders(
   getToken: () => string | null | Promise<string | null>,

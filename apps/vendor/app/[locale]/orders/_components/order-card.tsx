@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { VendorQuickNav } from "../../_components/vendor-quick-nav";
 import { isAuditableApproved } from "../../_lib/kyc-integrity";
@@ -45,10 +46,6 @@ type QueueCache = {
   dashboard: VendorDashboard | null;
   queue: OrderQueueItem[] | null;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function createOrdersQueueClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { Button, FormField, Spinner } from "../../listings/new/_lib/ui";
 
 type DisputeDetail = {
@@ -24,10 +25,6 @@ const ACCEPTED_EVIDENCE_TYPES = new Set([
   "image/webp",
   "application/pdf",
 ]);
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 type VendorDisputeDetailViewProps = {
   disputeId: string;

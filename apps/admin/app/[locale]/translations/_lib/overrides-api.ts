@@ -3,7 +3,9 @@
 import { getBrowserAccessToken } from "@vergeo/auth";
 import { createApiClient } from "@vergeo/config";
 
-const API_BASE = process.env.NEXT_PUBLIC_VERGEO_API_URL ?? "http://localhost:8000";
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
+
+const API_BASE = getApiBaseUrl();
 
 const api = createApiClient({ baseUrl: API_BASE, getToken: getBrowserAccessToken });
 

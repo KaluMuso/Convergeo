@@ -28,7 +28,10 @@ export type BuyBoxLabels = {
   decreaseSymbol: string;
   increaseSymbol: string;
   addToCartLabel: string;
-  addToCartSoonLabel: string;
+  /** Shown while the add-to-cart request is in flight. */
+  addingToCartLabel: string;
+  /** Shown when add-to-cart fails (network / API) — never “coming soon”. */
+  addToCartErrorLabel: string;
   inStockLabel: string;
   outOfStockLabel: string;
   alwaysAvailableLabel: string;
@@ -127,14 +130,14 @@ export function BuyBox({ listing, labels, singleVendor, onAddedToCart }: BuyBoxP
       openMiniCart();
       onAddedToCart?.();
     } catch {
-      setAddError(labels.addToCartSoonLabel);
+      setAddError(labels.addToCartErrorLabel);
     } finally {
       setAdding(false);
     }
   }, [
     adding,
+    labels.addToCartErrorLabel,
     labels.addToCartLabel,
-    labels.addToCartSoonLabel,
     listing.id,
     listing.inStock,
     onAddedToCart,
@@ -220,9 +223,9 @@ export function BuyBox({ listing, labels, singleVendor, onAddedToCart }: BuyBoxP
         className="w-full"
         disabled={!listing.inStock || adding}
         loading={adding}
-        loadingLabel={labels.addToCartSoonLabel}
+        loadingLabel={labels.addingToCartLabel}
         data-testid="pdp-add-to-cart"
-        aria-label={listing.inStock ? labels.addToCartLabel : labels.addToCartSoonLabel}
+        aria-label={listing.inStock ? labels.addToCartLabel : labels.outOfStockLabel}
         onClick={() => void handleAddToCart()}
       >
         {labels.addToCartLabel}

@@ -1,7 +1,7 @@
 {
   "index": {
     "title": "商家目录",
-    "subtitle": "发现赞比亚各地的已验证卖家",
+    "subtitle": "发现赞比亚各地的卖家与商家",
     "results": "{count, plural, one {# 家商家} other {# 家商家}}",
     "searchPlaceholder": "搜索商家",
     "searchLabel": "搜索目录",

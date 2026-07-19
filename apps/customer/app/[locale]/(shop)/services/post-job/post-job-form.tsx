@@ -10,6 +10,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+
 const SERVICE_CATEGORIES = [
   "beauty",
   "food_catering",
@@ -57,10 +59,6 @@ type PostJobFormProps = {
 };
 
 const DRAFT_STORAGE_KEY = "vergeo5:post-job-draft";
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function readDraft(): Partial<DraftJob> | null {
   if (typeof window === "undefined") {

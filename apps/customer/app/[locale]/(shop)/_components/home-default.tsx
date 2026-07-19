@@ -3,6 +3,8 @@ import { ServiceCard } from "@vergeo/ui/src/service-card";
 import { VendorCard } from "@vergeo/ui/src/vendor-card";
 import Link from "next/link";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
+
 import { ListingGrid, type CatalogListing } from "./plp/listing-grid";
 
 import type { CategoryRow } from "./merch-data";
@@ -78,10 +80,6 @@ export type HomeDefaultData = {
   services: ServiceRailItem[];
   topVendors: VendorRailItem[];
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function mapListing(item: CatalogApiItem): CatalogListing {
   return {

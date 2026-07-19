@@ -1,5 +1,7 @@
 import { createApiClient } from "@vergeo/config";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
+
 export type ServiceVertical =
   | "beauty"
   | "food-catering"
@@ -41,10 +43,6 @@ export type ServiceCreatePayload = {
 };
 
 export type ServiceUpdatePayload = Partial<ServiceCreatePayload>;
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function createServicesClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });

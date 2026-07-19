@@ -1,5 +1,7 @@
 import { createApiClient } from "@vergeo/config";
 
+import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
+
 export type RosterAttendee = {
   ticket_id: string;
   holder_name: string | null;
@@ -20,10 +22,6 @@ export type OrganiserEventRoster = {
   truncated: boolean;
   attendees: RosterAttendee[];
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function createRosterClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });

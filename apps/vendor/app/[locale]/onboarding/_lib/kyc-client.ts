@@ -12,6 +12,8 @@
  */
 import { createApiClient } from "@vergeo/config";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
+
 import type { KycApplication, KycDocType, KycStatus, VendorStatus } from "./types";
 
 export type MomoOperator = "mtn" | "airtel" | "zamtel";
@@ -41,10 +43,6 @@ type KycStatusResponse = {
   archetype: string | null;
   business_name: string | null;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 /** Map the backend status shape onto the UI-facing KycApplication. */
 function mapStatusToApplication(status: KycStatusResponse): KycApplication {

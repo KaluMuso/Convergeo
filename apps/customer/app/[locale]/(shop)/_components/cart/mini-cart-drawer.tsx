@@ -15,6 +15,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+
 export const FREE_DELIVERY_THRESHOLD_NGEWEE = 20_000;
 
 export type ChangeNoticeKind = "price_changed" | "out_of_stock" | "qty_reduced";
@@ -74,10 +76,6 @@ type CartStoreState = {
 };
 
 type CartStoreListener = () => void;
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 async function getAccessToken(): Promise<string | null> {
   const supabase = await getBrowserClient();

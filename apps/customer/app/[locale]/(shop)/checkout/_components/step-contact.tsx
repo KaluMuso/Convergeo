@@ -18,6 +18,7 @@ import {
   RESEND_COOLDOWN_SECONDS,
 } from "../../../(auth)/_components/auth-utils";
 import { ResendCountdown } from "../../../(auth)/_components/resend-countdown";
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 
 export type ContactStepLabels = {
   title: string;
@@ -49,10 +50,6 @@ type StepContactProps = {
   labels: ContactStepLabels;
   onComplete: () => void;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function StepContact({ labels, onComplete }: StepContactProps) {
   const { session, loading: sessionLoading } = useSession();

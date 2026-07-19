@@ -12,6 +12,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+
 import { ReservationCountdown } from "./reservation-countdown";
 import { StepContact, type ContactStepLabels } from "./step-contact";
 import {
@@ -105,10 +107,6 @@ type StepFulfilmentProps = {
   cartPath: string;
   onComplete?: (totals: FulfilmentTotals) => void;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function formatHours(hours: Record<string, unknown>): string {
   const entries = Object.entries(hours);

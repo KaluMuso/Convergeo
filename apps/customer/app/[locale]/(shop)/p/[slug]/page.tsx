@@ -15,6 +15,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 import {
   PdpInteractiveBody,
   type ComparisonListing,
@@ -114,10 +115,6 @@ type ComparisonApiResponse = {
   listing_count: number;
   listings: ComparisonApiListing[];
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function productCacheTag(slug: string): string {
   return `${PRODUCT_CACHE_TAG_PREFIX}${slug}`;
@@ -608,7 +605,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           decreaseSymbol: t("pdp.buyBox.decreaseSymbol"),
           increaseSymbol: t("pdp.buyBox.increaseSymbol"),
           addToCartLabel: t("pdp.buyBox.addToCart"),
-          addToCartSoonLabel: t("pdp.buyBox.addToCartSoon"),
+          addingToCartLabel: t("pdp.buyBox.addingToCart"),
+          addToCartErrorLabel: t("pdp.buyBox.addToCartError"),
           inStockLabel: t("pdp.buyBox.inStock"),
           outOfStockLabel: t("pdp.buyBox.outOfStock"),
           alwaysAvailableLabel: t("pdp.buyBox.alwaysAvailable"),

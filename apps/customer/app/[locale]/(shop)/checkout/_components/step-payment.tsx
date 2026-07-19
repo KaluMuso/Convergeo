@@ -14,6 +14,7 @@ import {
   isValidZambianMobile,
   normalizeNationalNumber,
 } from "../../../(auth)/_components/auth-utils";
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 
 export type PaymentMethod = "momo" | "card" | "cod";
 export type MomoRail = "mtn" | "airtel";
@@ -65,10 +66,6 @@ type StepPaymentProps = {
   labels: PaymentStepLabels;
   onComplete: (payment: ValidatedPayment, options: PaymentOptions) => void;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function StepPayment({
   locale,

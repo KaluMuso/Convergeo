@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 
 import { CloudinaryImage } from "../../../../../../packages/ui/src/media/cloudinary-image";
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import {
   downscaleImageFile,
   uploadWithRetry,
@@ -44,7 +45,7 @@ export function EventImagePicker({
   const apiClient = useMemo(
     () =>
       createApiClient({
-        baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000",
+        baseUrl: getApiBaseUrl(),
         getToken,
       }),
     [getToken],

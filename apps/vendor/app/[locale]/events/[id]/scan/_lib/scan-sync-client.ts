@@ -1,10 +1,8 @@
 import { createApiClient } from "@vergeo/config";
 
-import type { BatchScanResult, BatchSubmitScan, ScanSyncResponse } from "./offline-store";
+import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
+import type { BatchScanResult, BatchSubmitScan, ScanSyncResponse } from "./offline-store";
 
 type BatchVerifyResponse = {
   results: BatchScanResult[];

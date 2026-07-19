@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 import { attendeeNamesComplete, cleanedAttendeeNames, resizeNames } from "../_lib/attendee-names";
 import { isEarlyBirdActive, nextTierUpsell, resolveUnitPriceNgwee } from "../_lib/resolve-price";
 
@@ -41,10 +42,6 @@ export type TicketPickerProps = {
   ticketTypes: TicketPickerType[];
   isSoldOut: boolean;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 async function getAccessToken(): Promise<string | null> {
   const { createBrowserClient } = await import("@vergeo/auth");

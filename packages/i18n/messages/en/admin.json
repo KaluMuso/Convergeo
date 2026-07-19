@@ -17,6 +17,30 @@
     "translations": "Translations",
     "support": "Support"
   },
+  "hubs": {
+    "moderation": {
+      "title": "Moderation",
+      "subtitle": "Choose a moderation queue. This hub does not invent tools that are not wired to the API.",
+      "productsTitle": "Duplicate products",
+      "productsBody": "Review merge candidates from the live duplicates API.",
+      "flagsTitle": "Listing flags",
+      "flagsBody": "Review customer authenticity and policy flags."
+    },
+    "config": {
+      "title": "Configuration",
+      "subtitle": "Open a live config editor. Values come from the admin API — nothing is simulated here.",
+      "flagsTitle": "Feature flags",
+      "flagsBody": "Invite gate, collections rails, and related toggles.",
+      "commissionsTitle": "Commissions",
+      "commissionsBody": "Category commission rates used at purchase time.",
+      "deliveryTitle": "Delivery zones",
+      "deliveryBody": "Lusaka delivery zone fees and coverage.",
+      "categoriesTitle": "Category tree",
+      "categoriesBody": "Public catalogue category structure.",
+      "platformTitle": "Platform knobs",
+      "platformBody": "Operational limits and platform settings."
+    }
+  },
   "translations": {
     "heading": "Translations",
     "subheading": "Every user-facing string, grouped by where it lives, with per-language coverage. Edit a translation and Save to store it; Download JSON to publish it into the message files. English is the source of truth; untranslated strings fall back to English.",

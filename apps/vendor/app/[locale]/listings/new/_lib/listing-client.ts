@@ -1,5 +1,7 @@
 import { createApiClient } from "@vergeo/config";
 
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+
 import type {
   CanonicalPreview,
   CategoryOption,
@@ -7,10 +9,6 @@ import type {
   ListingCreateResponse,
   SuggestItem,
 } from "./types";
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 type SuggestResponse = {
   query: string;

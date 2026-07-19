@@ -13,6 +13,7 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 import { ListingGrid, type CatalogListing } from "../../_components/plp/listing-grid";
 
 import type { Metadata } from "next";
@@ -78,10 +79,6 @@ type PageProps = {
 type DirectoryTranslator = {
   (key: string, values?: Record<string, string | number>): string;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslator> {
   const baseMessages = await getMessages();

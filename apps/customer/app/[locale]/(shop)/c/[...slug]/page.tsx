@@ -11,6 +11,7 @@ import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../../lib/api-base-url";
 import { FacetPanel, type FacetCounts } from "../../_components/plp/facet-panel";
 import { type CatalogListing } from "../../_components/plp/listing-grid";
 import { PlpBrowseClient } from "../../_components/plp/load-more";
@@ -48,10 +49,6 @@ type PageProps = {
 type CatalogTranslator = {
   (key: string, values?: Record<string, string | number>): string;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> {
   const baseMessages = await getMessages();
@@ -110,9 +107,13 @@ function buildCatalogQuery(
 }
 
 async function fetchCatalog(queryString: string): Promise<CatalogApiResponse | null> {
+  const baseUrl = resolveApiBaseUrl();
+  if (!baseUrl) {
+    return null;
+  }
   const suffix = queryString ? `?${queryString}` : "";
   try {
-    const response = await fetch(`${getApiBaseUrl()}/catalog/listings${suffix}`, {
+    const response = await fetch(`${baseUrl}/catalog/listings${suffix}`, {
       next: { revalidate: 60 },
     });
     if (!response.ok) {
@@ -186,6 +187,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
   const categoryName = categoryTitleFromPath(categoryPath) || t("plp.defaultCategory");
   const queryString = buildCatalogQuery(categoryPath, resolvedSearch);
   const catalog = await fetchCatalog(queryString);
+  const catalogUnavailable = catalog === null;
 
   const filterState = decodePlpFilters(new URLSearchParams(queryString));
   const sort = (resolvedSearch.sort as CatalogSort | undefined) ?? "relevance";
@@ -198,6 +200,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
     rating: [],
   };
   const total = catalog?.total ?? 0;
+  const apiBaseUrl = getApiBaseUrl();
 
   const gridLabels = {
     vendor: t("plp.card.vendor"),
@@ -271,14 +274,24 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
             hasLocation={hasLocation}
           />
 
-          {listings.length === 0 ? (
-            <EmptyState title={t("plp.emptyTitle")} body={t("plp.emptyBody")} />
+          {catalogUnavailable ? (
+            <EmptyState
+              title={t("plp.unavailableTitle")}
+              body={t("plp.unavailableBody")}
+              data-testid="plp-unavailable"
+            />
+          ) : listings.length === 0 ? (
+            <EmptyState
+              title={t("plp.emptyTitle")}
+              body={t("plp.emptyBody")}
+              data-testid="plp-empty"
+            />
           ) : (
             <PlpBrowseClient
               locale={locale}
               initialListings={listings}
               gridLabels={gridLabels}
-              apiBaseUrl={getApiBaseUrl()}
+              apiBaseUrl={apiBaseUrl}
               queryString={queryString}
               nextCursor={catalog?.next_cursor ?? null}
               loadMoreLabel={t("plp.loadMore")}

@@ -22,14 +22,24 @@
     "suggestionsTitle": "试试搜索",
     "categoriesTitle": "浏览类别"
   },
+  "unavailable": {
+    "title": "搜索暂不可用",
+    "body": "我们目前无法加载搜索结果。请稍后重试，或浏览分类。"
+  },
+  "suggestionTerms": {
+    "phones": "手机",
+    "chitenge": "奇滕盖布",
+    "kitchenware": "厨具",
+    "lusakaVendors": "卢萨卡卖家"
+  },
   "suggestions": {
     "term": "试试搜索 {term}"
   },
   "categories": {
     "electronics": "电子产品",
-    "fashion": "时尚与美妆",
+    "fashion": "时尚",
     "home": "家居生活",
-    "groceries": "食品杂货"
+    "groceries": "食品与主食"
   },
   "askVergeo": {
     "title": "Ask Vergeo",
