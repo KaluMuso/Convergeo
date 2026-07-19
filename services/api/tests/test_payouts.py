@@ -340,9 +340,17 @@ async def test_resolve_mismatch_held_and_not_sent(
     )
     momo_payout = AsyncMock()
 
-    with patch(
-        "app.services.payouts.eligibility.vendor_payable_balance_ngwee",
-        return_value=-RELEASED_NGWEE,
+    with (
+        patch(
+            "app.services.payouts.eligibility.vendor_payable_balance_ngwee",
+            return_value=-RELEASED_NGWEE,
+        ),
+        patch(
+            "app.services.payouts.execution.reserve_payout_row",
+            side_effect=lambda **kwargs: _reserve_payout_for_test(
+                fake_client, service_client, **kwargs
+            ),
+        ),
     ):
         result = await execute_vendor_payout(
             service_client,
@@ -650,6 +658,12 @@ async def test_velocity_cap_boundary_at_cap_ok_plus_one_deferred(
         patch(
             "app.services.payouts.execution._post_payout_ledger",
             return_value="ledger-1",
+        ),
+        patch(
+            "app.services.payouts.execution.reserve_payout_row",
+            side_effect=lambda **kwargs: _reserve_payout_for_test(
+                fake_client, service_client, **kwargs
+            ),
         ),
     ):
         first = await execute_vendor_payout(

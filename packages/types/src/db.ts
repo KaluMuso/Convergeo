@@ -1589,6 +1589,32 @@ export type Database = {
           },
         ]
       }
+      order_money_gates: {
+        Row: {
+          created_at: string
+          gate: string
+          order_id: string
+        }
+        Insert: {
+          created_at?: string
+          gate: string
+          order_id: string
+        }
+        Update: {
+          created_at?: string
+          gate?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_money_gates_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           address_id: string | null
