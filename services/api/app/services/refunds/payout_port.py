@@ -56,8 +56,26 @@ def initiate_customer_refund_payout(
         msg = "refund payout amount must be positive"
         raise ValueError(msg)
 
-    payout_id = str(uuid.uuid4())
     lenco_reference = make_refund_reference(reference_key)
+
+    # Resume-safe: same reference_key → same rfd-* reference. Prefer the existing
+    # row so a mid-flight crash cannot mint a second pending customer payout.
+    existing_response = (
+        service_client.client.table("payouts")
+        .select("id, amount_ngwee, lenco_reference")
+        .eq("lenco_reference", lenco_reference)
+        .maybe_single()
+        .execute()
+    )
+    existing_data = getattr(existing_response, "data", None)
+    if isinstance(existing_data, dict) and existing_data.get("id"):
+        return CustomerRefundPayoutResult(
+            payout_id=str(existing_data["id"]),
+            lenco_reference=str(existing_data.get("lenco_reference") or lenco_reference),
+            amount_ngwee=int(existing_data.get("amount_ngwee") or amount_ngwee),
+        )
+
+    payout_id = str(uuid.uuid4())
     row = {
         "id": payout_id,
         "vendor_id": vendor_id,

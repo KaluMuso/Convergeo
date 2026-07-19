@@ -269,6 +269,167 @@ def _post_post_release_clawback(
     return posted.id
 
 
+def _compute_lane_amounts(
+    *,
+    service_client: ServiceRoleClient,
+    order: dict[str, Any],
+    order_id: str,
+    lane: Lane,
+    return_transport_ngwee: int,
+) -> tuple[int, Lane1RefundAmount | None, Lane2RefundBreakdown | None]:
+    delivery_fee = int(order.get("delivery_fee_ngwee", 0))
+    item_total = _order_item_total_ngwee(service_client, order_id)
+    if lane == 1:
+        lane1 = compute_lane1_refund(item_ngwee=item_total, delivery_fee_ngwee=delivery_fee)
+        return lane1.refund_ngwee, lane1, None
+    restocking_bps = load_restocking_fee_bps(service_client)
+    lane2 = compute_lane2_refund(
+        item_ngwee=item_total,
+        outbound_delivery_ngwee=delivery_fee,
+        return_transport_ngwee=return_transport_ngwee,
+        restocking_fee_bps=restocking_bps,
+    )
+    return lane2.refund_ngwee, None, lane2
+
+
+def _complete_refund_money_path(
+    *,
+    service_client: ServiceRoleClient,
+    refund_id: str,
+    order_id: str,
+    vendor_id: str,
+    lane: Lane,
+    phase: RefundPhase,
+    refund_amount: int,
+    breakdown: dict[str, Any],
+    ledger_key_base: str,
+    lane1: Lane1RefundAmount | None,
+    lane2: Lane2RefundBreakdown | None,
+    customer_rail: CustomerRail,
+    customer_momo: str,
+    created: bool,
+) -> RefundExecutionResult:
+    """Post ledger + customer payout and mark the refund completed (idempotent keys)."""
+    ledger_ids: list[str] = []
+    if phase == RefundPhase.PRE_RELEASE:
+        ledger_ids.extend(
+            _post_pre_release_ledger(
+                lane=lane,
+                refund_id=refund_id,
+                ledger_key_base=ledger_key_base,
+                order_id=order_id,
+                vendor_id=vendor_id,
+                lane1=lane1,
+                lane2=lane2,
+            )
+        )
+    else:
+        ledger_ids.append(
+            _post_post_release_clawback(
+                refund_id=refund_id,
+                ledger_key_base=ledger_key_base,
+                order_id=order_id,
+                vendor_id=vendor_id,
+                clawback_ngwee=refund_amount,
+            )
+        )
+
+    payout = initiate_customer_refund_payout(
+        service_client=service_client,
+        refund_id=refund_id,
+        reference_key=ledger_key_base,
+        vendor_id=vendor_id,
+        amount_ngwee=refund_amount,
+        rail=customer_rail,
+        customer_momo=customer_momo,
+    )
+
+    breakdown["ledger_transaction_ids"] = ledger_ids
+    breakdown["lenco_reference"] = payout.lenco_reference
+    breakdown["phase"] = phase.value
+
+    service_client.client.table("refunds").update(
+        {
+            "status": "completed",
+            "payout_ref": payout.payout_id,
+            "breakdown": breakdown,
+        }
+    ).eq("id", refund_id).execute()
+
+    return RefundExecutionResult(
+        refund_id=refund_id,
+        order_id=order_id,
+        lane=lane,
+        phase=phase,
+        amount_ngwee=refund_amount,
+        payout_id=payout.payout_id,
+        lenco_reference=payout.lenco_reference,
+        ledger_transaction_ids=tuple(ledger_ids),
+        breakdown=breakdown,
+        created=created,
+    )
+
+
+def _resume_processing_refund(
+    *,
+    service_client: ServiceRoleClient,
+    existing: dict[str, Any],
+    return_transport_ngwee: int,
+    customer_rail: CustomerRail,
+    customer_momo: str,
+) -> RefundExecutionResult:
+    """Finish a refund stuck in processing after a mid-flight crash.
+
+    Ledger posts use stable idempotency keys; customer payout looks up the existing
+    ``rfd-*`` row by reference before insert — safe to re-enter.
+    """
+    order_id = str(existing["order_id"])
+    refund_id = str(existing["id"])
+    lane = cast(Lane, int(existing["lane"]))
+    order = _fetch_order(service_client, order_id)
+    vendor_id = str(order["vendor_id"])
+
+    raw_breakdown = existing.get("breakdown")
+    breakdown: dict[str, Any] = dict(raw_breakdown) if isinstance(raw_breakdown, dict) else {}
+    phase_raw = breakdown.get("phase", RefundPhase.PRE_RELEASE.value)
+    try:
+        phase = RefundPhase(str(phase_raw))
+    except ValueError:
+        phase = RefundPhase.PRE_RELEASE
+
+    idempotency_key = breakdown.get("idempotency_key")
+    key = str(idempotency_key) if isinstance(idempotency_key, str) else None
+    ledger_key_base = _stable_ledger_key_base(key, order_id)
+
+    refund_amount, lane1, lane2 = _compute_lane_amounts(
+        service_client=service_client,
+        order=order,
+        order_id=order_id,
+        lane=lane,
+        return_transport_ngwee=return_transport_ngwee,
+    )
+    stored_amount = int(existing.get("amount_ngwee") or 0)
+    if stored_amount > 0:
+        refund_amount = stored_amount
+
+    return _complete_refund_money_path(
+        service_client=service_client,
+        refund_id=refund_id,
+        order_id=order_id,
+        vendor_id=vendor_id,
+        lane=lane,
+        phase=phase,
+        refund_amount=refund_amount,
+        breakdown=breakdown,
+        ledger_key_base=ledger_key_base,
+        lane1=lane1,
+        lane2=lane2,
+        customer_rail=customer_rail,
+        customer_momo=customer_momo,
+        created=False,
+    )
+
+
 def execute_refund(
     *,
     service_client: ServiceRoleClient,
@@ -283,12 +444,21 @@ def execute_refund(
     """Execute or return an existing refund for an order (double-execution guarded)."""
     existing = _find_existing_refund(service_client, order_id)
     if existing is not None:
+        status = str(existing.get("status") or "")
+        if status == "completed":
+            return _result_from_existing(existing)
+        if status in {"processing", "pending"}:
+            return _resume_processing_refund(
+                service_client=service_client,
+                existing=existing,
+                return_transport_ngwee=return_transport_ngwee,
+                customer_rail=customer_rail,
+                customer_momo=customer_momo,
+            )
         return _result_from_existing(existing)
 
     order = _fetch_order(service_client, order_id)
     vendor_id = str(order["vendor_id"])
-    delivery_fee = int(order.get("delivery_fee_ngwee", 0))
-    item_total = _order_item_total_ngwee(service_client, order_id)
 
     # Uncollected COD has only a receivable open — never MoMo-refund cash we never held.
     if _order_is_cod(order) and not _cod_cash_collected(order_id):
@@ -299,20 +469,13 @@ def execute_refund(
             {"order_id": order_id},
         )
 
-    lane1: Lane1RefundAmount | None = None
-    lane2: Lane2RefundBreakdown | None = None
-    if lane == 1:
-        lane1 = compute_lane1_refund(item_ngwee=item_total, delivery_fee_ngwee=delivery_fee)
-        refund_amount = lane1.refund_ngwee
-    else:
-        restocking_bps = load_restocking_fee_bps(service_client)
-        lane2 = compute_lane2_refund(
-            item_ngwee=item_total,
-            outbound_delivery_ngwee=delivery_fee,
-            return_transport_ngwee=return_transport_ngwee,
-            restocking_fee_bps=restocking_bps,
-        )
-        refund_amount = lane2.refund_ngwee
+    refund_amount, lane1, lane2 = _compute_lane_amounts(
+        service_client=service_client,
+        order=order,
+        order_id=order_id,
+        lane=lane,
+        return_transport_ngwee=return_transport_ngwee,
+    )
 
     if refund_amount <= 0:
         raise AppError(
@@ -398,75 +561,42 @@ def execute_refund(
         insert_response = service_client.client.table("refunds").insert(insert_row).execute()
     except APIError as exc:
         # The 0032 partial unique index rejected a concurrent/retried second refund for
-        # this order. Return the already-created refund WITHOUT posting a second ledger
-        # transaction or payout. If it is not yet visible (race with the winner's insert),
-        # re-raise so the caller retries rather than silently minting a duplicate.
+        # this order. Resume the winner if it is still mid-flight; return completed as-is.
         if getattr(exc, "code", None) != _UNIQUE_VIOLATION:
             raise
-        existing = _find_existing_refund(service_client, order_id)
-        if existing is None:
+        raced = _find_existing_refund(service_client, order_id)
+        if raced is None:
             raise
-        return _result_from_existing(existing)
+        raced_status = str(raced.get("status") or "")
+        if raced_status == "completed":
+            return _result_from_existing(raced)
+        if raced_status in {"processing", "pending"}:
+            return _resume_processing_refund(
+                service_client=service_client,
+                existing=raced,
+                return_transport_ngwee=return_transport_ngwee,
+                customer_rail=customer_rail,
+                customer_momo=customer_momo,
+            )
+        return _result_from_existing(raced)
     inserted = _single_row(insert_response)
     if inserted is not None:
         refund_id = str(inserted.get("id", refund_id))
 
-    ledger_ids: list[str] = []
-    if phase == RefundPhase.PRE_RELEASE:
-        ledger_ids.extend(
-            _post_pre_release_ledger(
-                lane=lane,
-                refund_id=refund_id,
-                ledger_key_base=ledger_key_base,
-                order_id=order_id,
-                vendor_id=vendor_id,
-                lane1=lane1,
-                lane2=lane2,
-            )
-        )
-    else:
-        ledger_ids.append(
-            _post_post_release_clawback(
-                refund_id=refund_id,
-                ledger_key_base=ledger_key_base,
-                order_id=order_id,
-                vendor_id=vendor_id,
-                clawback_ngwee=refund_amount,
-            )
-        )
-
-    payout = initiate_customer_refund_payout(
+    return _complete_refund_money_path(
         service_client=service_client,
         refund_id=refund_id,
-        reference_key=ledger_key_base,
-        vendor_id=vendor_id,
-        amount_ngwee=refund_amount,
-        rail=customer_rail,
-        customer_momo=customer_momo,
-    )
-
-    breakdown["ledger_transaction_ids"] = ledger_ids
-    breakdown["lenco_reference"] = payout.lenco_reference
-    breakdown["phase"] = phase.value
-
-    service_client.client.table("refunds").update(
-        {
-            "status": "completed",
-            "payout_ref": payout.payout_id,
-            "breakdown": breakdown,
-        }
-    ).eq("id", refund_id).execute()
-
-    return RefundExecutionResult(
-        refund_id=refund_id,
         order_id=order_id,
+        vendor_id=vendor_id,
         lane=lane,
         phase=phase,
-        amount_ngwee=refund_amount,
-        payout_id=payout.payout_id,
-        lenco_reference=payout.lenco_reference,
-        ledger_transaction_ids=tuple(ledger_ids),
+        refund_amount=refund_amount,
         breakdown=breakdown,
+        ledger_key_base=ledger_key_base,
+        lane1=lane1,
+        lane2=lane2,
+        customer_rail=customer_rail,
+        customer_momo=customer_momo,
         created=True,
     )
 
