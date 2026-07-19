@@ -256,12 +256,14 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       {view.status === "results" ? (
         <Suspense fallback={null}>
           <ResultsTabs
+            key={`${locale}|${view.query}|${view.kind}|${page}`}
             locale={locale}
             query={view.query}
             activeKind={view.kind}
             page={page}
             response={view.response}
             tabCounts={view.tabCounts}
+            apiBaseUrl={resolveApiBaseUrl() ?? ""}
             labels={{
               ariaLabel: t("tabs.ariaLabel"),
               all: t("tabs.all"),
@@ -275,6 +277,11 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
               priceFrom: t("result.priceFrom"),
               category: t("result.category"),
               loadMore: t("pagination.loadMore"),
+              loading: t("pagination.loading"),
+              moreLoaded: t("pagination.moreLoaded"),
+              endOfResults: t("pagination.endOfResults"),
+              loadError: t("pagination.loadError"),
+              retry: t("pagination.retry"),
             }}
           />
         </Suspense>

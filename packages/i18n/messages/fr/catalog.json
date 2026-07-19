@@ -47,7 +47,11 @@
       "distance": "À {distance}"
     },
     "loadMore": "Voir plus",
-    "loading": "Chargement…"
+    "loading": "Chargement…",
+    "moreLoaded": "{count} résultats supplémentaires chargés.",
+    "endOfResults": "Vous avez atteint la fin des résultats.",
+    "loadError": "Impossible de charger plus de résultats.",
+    "retry": "Réessayer"
   },
   "home": {
     "meta": {

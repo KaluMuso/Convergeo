@@ -50,6 +50,11 @@ const resultsTabsLabels = {
   priceFrom: "From {price}",
   category: "In {category}",
   loadMore: "Load more",
+  loading: "Loading more…",
+  moreLoaded: "{count} more results loaded.",
+  endOfResults: "End of results",
+  loadError: "Couldn’t load more results.",
+  retry: "Retry",
 };
 
 const sampleResponse = {
@@ -150,6 +155,7 @@ describe("ResultsTabs tab counts", () => {
           vendors: 1,
         }}
         labels={resultsTabsLabels}
+        apiBaseUrl="https://api.example.test"
       />,
     );
 
@@ -160,6 +166,75 @@ describe("ResultsTabs tab counts", () => {
     // Wholesale supplies are a B2B-gated surface (own /supplies page), not a
     // global-search tab — it must not render here.
     expect(screen.queryByTestId("search-tab-supplies")).not.toBeInTheDocument();
+  });
+
+  it("appends the next search page without router navigation", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        query: "phone",
+        expanded_query: "phone",
+        page: 2,
+        page_size: 2,
+        total: 3,
+        degraded: false,
+        results: [
+          {
+            id: "3",
+            entity_kind: "product",
+            entity_id: "prod-3",
+            title: "Extra Phone",
+            body: null,
+            category_path: null,
+            price_min_ngwee: 1000,
+            price_max_ngwee: 1000,
+            lat: null,
+            lng: null,
+            locale_terms: null,
+            boost_signals: {},
+            rrf_score: 0.5,
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <ResultsTabs
+        locale="en"
+        query="phone"
+        activeKind="all"
+        page={1}
+        response={{
+          ...sampleResponse,
+          page_size: 2,
+          total: 3,
+        }}
+        tabCounts={{
+          all: 3,
+          products: 2,
+          services: 0,
+          events: 0,
+          vendors: 1,
+        }}
+        labels={resultsTabsLabels}
+        apiBaseUrl="https://api.example.test"
+      />,
+    );
+
+    expect(screen.getByTestId("search-load-more")).toBeInTheDocument();
+    await user.click(screen.getByTestId("search-load-more"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Extra Phone")).toBeInTheDocument();
+    });
+    expect(push).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.test/search?q=phone&page=2&page_size=2",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(screen.getByTestId("search-end-of-results")).toBeInTheDocument();
   });
 });
 

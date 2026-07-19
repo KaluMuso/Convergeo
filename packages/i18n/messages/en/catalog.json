@@ -47,7 +47,11 @@
       "distance": "{distance} away"
     },
     "loadMore": "Load more",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "moreLoaded": "{count} more results loaded.",
+    "endOfResults": "You’ve reached the end of the results.",
+    "loadError": "Couldn’t load more results.",
+    "retry": "Retry"
   },
   "home": {
     "meta": {

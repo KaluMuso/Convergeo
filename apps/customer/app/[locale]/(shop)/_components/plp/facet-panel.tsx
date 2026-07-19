@@ -55,10 +55,10 @@ export function FacetPanel({ labels, facets, initialState }: FacetPanelProps) {
   const [state, setState] = useState<PlpFilterState>(initialState);
 
   const sortParam = searchParams.get("sort");
-  const cursorParam = searchParams.get("cursor");
 
   const pushFilters = useCallback(
     (next: PlpFilterState) => {
+      // Drop cursor so filter changes always restart progressive loading from page 1.
       const params = encodePlpFilters(next);
       if (sortParam) {
         params.set("sort", sortParam);
@@ -232,12 +232,10 @@ export function FacetPanel({ labels, facets, initialState }: FacetPanelProps) {
               availability: [],
             };
             setState(cleared);
+            // Never re-apply URL cursor after clear — progressive load must reset.
             const params = new URLSearchParams();
             if (sortParam) {
               params.set("sort", sortParam);
-            }
-            if (cursorParam) {
-              params.set("cursor", cursorParam);
             }
             const query = params.toString();
             startTransition(() => {

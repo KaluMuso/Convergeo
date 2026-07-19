@@ -1,7 +1,12 @@
 "use client";
 
-import { Button } from "@vergeo/ui/src/button";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo } from "react";
+
+import {
+  ProgressiveLoadControls,
+  type ProgressiveLoadControlsLabels,
+} from "../progressive-load/progressive-load-controls";
+import { useProgressiveLoad } from "../progressive-load/use-progressive-load";
 
 import { ListingGrid, type CatalogListing } from "./listing-grid";
 
@@ -22,15 +27,6 @@ type CatalogApiResponse = {
   next_cursor: string | null;
 };
 
-type LoadMoreProps = {
-  apiBaseUrl: string;
-  queryString: string;
-  nextCursor: string | null;
-  label: string;
-  loadingLabel: string;
-  onAppend: (items: CatalogListing[]) => void;
-};
-
 function mapListing(item: CatalogApiResponse["items"][number]): CatalogListing {
   return {
     id: item.id,
@@ -47,6 +43,17 @@ function mapListing(item: CatalogApiResponse["items"][number]): CatalogListing {
   };
 }
 
+export type PlpBrowseClientProps = {
+  locale: string;
+  initialListings: CatalogListing[];
+  gridLabels: Parameters<typeof ListingGrid>[0]["labels"];
+  apiBaseUrl: string;
+  /** Catalog query string without requiring a cursor (filters/sort/category). */
+  queryString: string;
+  nextCursor: string | null;
+  labels: ProgressiveLoadControlsLabels;
+};
+
 export function PlpBrowseClient({
   locale,
   initialListings,
@@ -54,81 +61,54 @@ export function PlpBrowseClient({
   apiBaseUrl,
   queryString,
   nextCursor,
-  loadMoreLabel,
-  loadingLabel,
-}: {
-  locale: string;
-  initialListings: CatalogListing[];
-  gridLabels: Parameters<typeof ListingGrid>[0]["labels"];
-  apiBaseUrl: string;
-  queryString: string;
-  nextCursor: string | null;
-  loadMoreLabel: string;
-  loadingLabel: string;
-}) {
-  const [listings, setListings] = useState(initialListings);
+  labels,
+}: PlpBrowseClientProps) {
+  const resetKey = `${locale}|${queryString}|${nextCursor ?? ""}|${initialListings
+    .map((item) => item.id)
+    .join(",")}`;
+
+  const fetchPage = useCallback(
+    async (cursor: string, signal: AbortSignal) => {
+      const params = new URLSearchParams(queryString);
+      params.delete("cursor");
+      params.set("cursor", cursor);
+      const response = await fetch(`${apiBaseUrl}/catalog/listings?${params.toString()}`, {
+        signal,
+      });
+      if (!response.ok) {
+        throw new Error(`Catalog load failed (${response.status})`);
+      }
+      const body = (await response.json()) as CatalogApiResponse;
+      return {
+        items: body.items.map(mapListing),
+        nextCursor: body.next_cursor,
+      };
+    },
+    [apiBaseUrl, queryString],
+  );
+
+  const { items, status, hasMore, lastAppendedCount, loadMore, sentinelRef } =
+    useProgressiveLoad<CatalogListing>({
+      initialItems: initialListings,
+      initialCursor: nextCursor,
+      resetKey,
+      fetchPage,
+    });
+
+  const controlLabels = useMemo(() => labels, [labels]);
 
   return (
     <>
-      <ListingGrid locale={locale} listings={listings} labels={gridLabels} />
-      <LoadMore
-        apiBaseUrl={apiBaseUrl}
-        queryString={queryString}
-        nextCursor={nextCursor}
-        label={loadMoreLabel}
-        loadingLabel={loadingLabel}
-        onAppend={(items) => setListings((current) => [...current, ...items])}
+      <ListingGrid locale={locale} listings={items} labels={gridLabels} />
+      <ProgressiveLoadControls
+        status={status}
+        hasMore={hasMore}
+        lastAppendedCount={lastAppendedCount}
+        labels={controlLabels}
+        onLoadMore={loadMore}
+        sentinelRef={sentinelRef}
+        testIdPrefix="plp"
       />
     </>
-  );
-}
-
-export function LoadMore({
-  apiBaseUrl,
-  queryString,
-  nextCursor,
-  label,
-  loadingLabel,
-  onAppend,
-}: LoadMoreProps) {
-  const [cursor, setCursor] = useState(nextCursor);
-  const [loading, setLoading] = useState(false);
-
-  const loadMore = useCallback(async () => {
-    if (!cursor || loading) {
-      return;
-    }
-    setLoading(true);
-    try {
-      const params = new URLSearchParams(queryString);
-      params.set("cursor", cursor);
-      const response = await fetch(`${apiBaseUrl}/catalog/listings?${params.toString()}`);
-      if (!response.ok) {
-        return;
-      }
-      const body = (await response.json()) as CatalogApiResponse;
-      onAppend(body.items.map(mapListing));
-      setCursor(body.next_cursor);
-    } finally {
-      setLoading(false);
-    }
-  }, [apiBaseUrl, cursor, loading, onAppend, queryString]);
-
-  if (!cursor) {
-    return null;
-  }
-
-  return (
-    <div className="flex justify-center pt-4">
-      <Button
-        type="button"
-        onClick={loadMore}
-        disabled={loading}
-        loading={loading}
-        loadingLabel={loadingLabel}
-      >
-        {loading ? loadingLabel : label}
-      </Button>
-    </div>
   );
 }

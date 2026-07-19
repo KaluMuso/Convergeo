@@ -288,14 +288,21 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
             />
           ) : (
             <PlpBrowseClient
+              key={`${locale}|${queryString}`}
               locale={locale}
               initialListings={listings}
               gridLabels={gridLabels}
               apiBaseUrl={apiBaseUrl}
               queryString={queryString}
               nextCursor={catalog?.next_cursor ?? null}
-              loadMoreLabel={t("plp.loadMore")}
-              loadingLabel={t("plp.loading")}
+              labels={{
+                loadMore: t("plp.loadMore"),
+                loading: t("plp.loading"),
+                moreLoaded: t("plp.moreLoaded"),
+                endOfResults: t("plp.endOfResults"),
+                loadError: t("plp.loadError"),
+                retry: t("plp.retry"),
+              }}
             />
           )}
         </section>

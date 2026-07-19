@@ -62,7 +62,11 @@
   },
   "pagination": {
     "loadMore": "Load more",
-    "loading": "Loading more…"
+    "loading": "Loading more…",
+    "moreLoaded": "{count} more results loaded.",
+    "endOfResults": "You’ve reached the end of the results.",
+    "loadError": "Couldn’t load more results.",
+    "retry": "Retry"
   },
   "result": {
     "priceFrom": "From {price}",

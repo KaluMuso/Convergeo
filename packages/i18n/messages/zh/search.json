@@ -62,7 +62,11 @@
   },
   "pagination": {
     "loadMore": "加载更多",
-    "loading": "加载中…"
+    "loading": "加载中…",
+    "moreLoaded": "已加载另外 {count} 条结果。",
+    "endOfResults": "已到结果末尾。",
+    "loadError": "无法加载更多结果。",
+    "retry": "重试"
   },
   "result": {
     "priceFrom": "{price} 起",
