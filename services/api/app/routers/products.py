@@ -355,12 +355,14 @@ def build_product_detail(
 ) -> ProductDetailResponse | RedirectResponse:
     product = _fetch_product_by_slug(client, slug)
     if product is None and _UUID_RE.match(slug):
-        # Search historically deep-linked with entity UUIDs; redirect to the
-        # canonical slug so existing links and caches resolve cleanly.
+        # Compatibility for callers that still pass a product/listing UUID.
+        # Return the product JSON (200) — do NOT 301. Programmatic clients
+        # (createApiClient, scripts) treat non-2xx redirects as failure and
+        # would lose the payload. Merged-slug 301 below is unchanged.
         canonical = _resolve_uuid_to_product_slug(client, slug)
-        if canonical:
-            return RedirectResponse(url=f"/products/{canonical}", status_code=301)
-        raise AppError("product.not_found", "Product not found", 404)
+        if not canonical:
+            raise AppError("product.not_found", "Product not found", 404)
+        product = _fetch_product_by_slug(client, canonical)
     if product is None:
         raise AppError("product.not_found", "Product not found", 404)
 
