@@ -345,28 +345,15 @@ async def execute_vendor_payout(
         skip_velocity=skip_velocity,
     )
     if snapshot_pre.deferred:
+        # Do NOT insert a pending payouts row. Retry permanently skips
+        # resolve_snapshot.deferred=true, so a reserving row would freeze the
+        # vendor's available balance forever after one velocity hit. Deferral is
+        # a soft signal: the next batch tick retries once the day window resets.
         assert_payout_method_not_held(service_client, vendor_id)
-        payout_id = str(uuid.uuid4())
-        lenco_reference = make_payment_reference(payout_id)
-        held_snapshot = {
-            "hold_reason": "velocity_cap",
-            "deferred": True,
-            "recorded_at": datetime.now(UTC).isoformat(),
-        }
-        _insert_payout_row(
-            service_client,
-            payout_id=payout_id,
-            vendor_id=vendor_id,
-            amount_ngwee=snapshot_pre.amount_ngwee,
-            rail=profile.rail,
-            lenco_reference=lenco_reference,
-            resolve_snapshot=held_snapshot,
-            status="pending",
-        )
         return PayoutExecutionResult(
-            payout_id=payout_id,
-            lenco_reference=lenco_reference,
-            status="pending",
+            payout_id="",
+            lenco_reference="",
+            status="deferred",
             outcome=PayoutOutcome.DEFERRED,
             amount_ngwee=snapshot_pre.amount_ngwee,
         )
