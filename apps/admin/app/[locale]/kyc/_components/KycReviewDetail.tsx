@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { AdminLoadFailure } from "../../_components/AdminLoadFailure";
+import { resolveQueueLoadFailure } from "../../_components/queue-load-failure";
+
 import { type KycDetail, kycApi } from "./api";
 import { DecisionPanel } from "./DecisionPanel";
 import { DocViewer } from "./DocViewer";
@@ -19,15 +22,20 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
   const [detail, setDetail] = useState<KycDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setPermissionDenied(false);
     try {
       const data = await kycApi.request<KycDetail>(`/admin/kyc/${kycId}`);
       setDetail(data);
-    } catch {
-      setError(t("error"));
+    } catch (err) {
+      const failure = resolveQueueLoadFailure(err);
+      setPermissionDenied(failure.permissionDenied);
+      setError(t(failure.messageKey));
+      setDetail(null);
     } finally {
       setLoading(false);
     }
@@ -43,16 +51,13 @@ export function KycReviewDetail({ locale, kycId }: KycReviewDetailProps) {
 
   if (error || !detail) {
     return (
-      <div className="space-y-2">
-        <p className="text-sm text-danger">{error ?? t("error")}</p>
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
-          onClick={() => void load()}
-        >
-          {t("retry")}
-        </button>
-      </div>
+      <AdminLoadFailure
+        permissionDenied={permissionDenied}
+        message={error ?? t("error")}
+        hint={permissionDenied ? t("permissionDeniedHint") : undefined}
+        retryLabel={t("retry")}
+        onRetry={() => void load()}
+      />
     );
   }
 

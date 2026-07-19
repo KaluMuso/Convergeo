@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { AdminLoadFailure } from "../../_components/AdminLoadFailure";
+import { resolveQueueLoadFailure } from "../../_components/queue-load-failure";
+
 import { type DisputeDetail, disputesApi } from "./api";
 import { ContextPanel } from "./ContextPanel";
 import { DecisionPanel } from "./DecisionPanel";
@@ -20,15 +23,20 @@ export function DisputeReviewDetail({ locale, disputeId }: DisputeReviewDetailPr
   const [detail, setDetail] = useState<DisputeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setPermissionDenied(false);
     try {
       const data = await disputesApi.request<DisputeDetail>(`/admin/disputes/${disputeId}`);
       setDetail(data);
-    } catch {
-      setError(t("error"));
+    } catch (err) {
+      const failure = resolveQueueLoadFailure(err);
+      setPermissionDenied(failure.permissionDenied);
+      setError(t(failure.messageKey));
+      setDetail(null);
     } finally {
       setLoading(false);
     }
@@ -44,16 +52,13 @@ export function DisputeReviewDetail({ locale, disputeId }: DisputeReviewDetailPr
 
   if (error || !detail) {
     return (
-      <div className="space-y-2">
-        <p className="text-sm text-danger">{error ?? t("error")}</p>
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
-          onClick={() => void load()}
-        >
-          {t("retry")}
-        </button>
-      </div>
+      <AdminLoadFailure
+        permissionDenied={permissionDenied}
+        message={error ?? t("error")}
+        hint={permissionDenied ? t("permissionDeniedHint") : undefined}
+        retryLabel={t("retry")}
+        onRetry={() => void load()}
+      />
     );
   }
 

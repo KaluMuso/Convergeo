@@ -3,6 +3,9 @@
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { AdminLoadFailure } from "../../_components/AdminLoadFailure";
+import { resolveQueueLoadFailure } from "../../_components/queue-load-failure";
+
 import { type KycQueueItem, kycApi } from "./api";
 import { SlaBadge } from "./SlaBadge";
 
@@ -15,15 +18,19 @@ export function KycQueue({ locale }: KycQueueProps) {
   const [items, setItems] = useState<KycQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setPermissionDenied(false);
     try {
       const data = await kycApi.request<KycQueueItem[]>("/admin/kyc");
       setItems(data);
-    } catch {
-      setError(t("error"));
+    } catch (err) {
+      const failure = resolveQueueLoadFailure(err);
+      setPermissionDenied(failure.permissionDenied);
+      setError(t(failure.messageKey));
     } finally {
       setLoading(false);
     }
@@ -39,16 +46,13 @@ export function KycQueue({ locale }: KycQueueProps) {
 
   if (error) {
     return (
-      <div className="space-y-2">
-        <p className="text-sm text-danger">{error}</p>
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
-          onClick={() => void load()}
-        >
-          {t("retry")}
-        </button>
-      </div>
+      <AdminLoadFailure
+        permissionDenied={permissionDenied}
+        message={error}
+        hint={permissionDenied ? t("permissionDeniedHint") : undefined}
+        retryLabel={t("retry")}
+        onRetry={() => void load()}
+      />
     );
   }
 
