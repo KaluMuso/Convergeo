@@ -1,7 +1,7 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
 import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
 import Link from "next/link";
-import { createTranslator, type AbstractIntlMessages } from "next-intl";
+import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { BottomNavClient } from "./_components/bottom-nav-client";
@@ -143,6 +143,6 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           href: `/${locale}/supplies`,
         }}
       />
-    </>
+    </NextIntlClientProvider>
   );
 }

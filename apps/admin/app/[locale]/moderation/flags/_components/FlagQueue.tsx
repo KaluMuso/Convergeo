@@ -3,6 +3,9 @@
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { AdminLoadFailure } from "../../../_components/AdminLoadFailure";
+import { resolveQueueLoadFailure } from "../../../_components/queue-load-failure";
+
 import { type EntityType, type FlagAction, type FlagQueueItem, flagsApi } from "./api";
 import { FlagActionDialog } from "./FlagActionDialog";
 import { RepeatOffenderBadge } from "./RepeatOffenderBadge";
@@ -24,6 +27,7 @@ export function FlagQueue({ locale }: FlagQueueProps) {
   const [items, setItems] = useState<FlagQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
   const [entityFilter, setEntityFilter] = useState<EntityType | "all">("all");
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingAction | null>(null);
@@ -31,6 +35,7 @@ export function FlagQueue({ locale }: FlagQueueProps) {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setPermissionDenied(false);
     try {
       const params = new URLSearchParams({ status: "open" });
       if (entityFilter !== "all") {
@@ -38,8 +43,10 @@ export function FlagQueue({ locale }: FlagQueueProps) {
       }
       const data = await flagsApi.request<FlagQueueItem[]>(`/admin/flags?${params.toString()}`);
       setItems(data);
-    } catch {
-      setError(t("error"));
+    } catch (err) {
+      const failure = resolveQueueLoadFailure(err);
+      setPermissionDenied(failure.permissionDenied);
+      setError(t(failure.messageKey));
     } finally {
       setLoading(false);
     }
@@ -91,16 +98,13 @@ export function FlagQueue({ locale }: FlagQueueProps) {
 
   if (error) {
     return (
-      <div className="space-y-2">
-        <p className="text-sm text-danger">{error}</p>
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
-          onClick={() => void load()}
-        >
-          {t("retry")}
-        </button>
-      </div>
+      <AdminLoadFailure
+        permissionDenied={permissionDenied}
+        message={error}
+        hint={permissionDenied ? t("permissionDeniedHint") : undefined}
+        retryLabel={t("retry")}
+        onRetry={() => void load()}
+      />
     );
   }
 

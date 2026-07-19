@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
+import { BuyerTrustPanel } from "./buyer-trust-panel";
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
 import { PdpGallery } from "./gallery";
 import { VendorBlock } from "./vendor-block";
@@ -95,6 +96,7 @@ export type PdpInteractiveBodyProps = {
     empty: string;
     previous: string;
     next: string;
+    indicator: (current: number, total: number) => string;
   };
   buyBoxLabels: BuyBoxLabels;
   comparisonLabels: ComparisonLabels;
@@ -103,6 +105,14 @@ export type PdpInteractiveBodyProps = {
     preferredBadge: string;
     noReviews: string;
     viewStore: string;
+  };
+  trustLabels: {
+    preferredSeller: string;
+    seller: string;
+    delivery: string;
+    pickup: string;
+    returns: string;
+    escrow: string;
   };
 };
 
@@ -383,6 +393,7 @@ export function PdpInteractiveBody({
   buyBoxLabels,
   comparisonLabels,
   vendorLabels,
+  trustLabels,
 }: PdpInteractiveBodyProps) {
   const t = useTranslations("catalog");
   const [selectedListingId, setSelectedListingId] = useState<string | null>(
@@ -392,6 +403,11 @@ export function PdpInteractiveBody({
   const selectedListing = useMemo(
     () => selectListingById(listings, selectedListingId ?? undefined),
     [listings, selectedListingId],
+  );
+
+  const selectedComparison = useMemo(
+    () => comparisonListings.find((listing) => listing.id === selectedListing?.id) ?? null,
+    [comparisonListings, selectedListing?.id],
   );
 
   const galleryImages = useMemo(() => {
@@ -430,12 +446,26 @@ export function PdpInteractiveBody({
           emptyLabel={galleryLabels.empty}
           previousLabel={galleryLabels.previous}
           nextLabel={galleryLabels.next}
+          indicatorLabel={galleryLabels.indicator}
         />
       </div>
 
-      {buyBoxListing ? (
-        <div className="lg:sticky lg:top-20 lg:col-start-2 lg:row-start-1">
+      {buyBoxListing && selectedListing ? (
+        <div className="flex flex-col gap-3 lg:sticky lg:top-20 lg:col-start-2 lg:row-start-1">
           <BuyBox listing={buyBoxListing} singleVendor={singleVendor} labels={buyBoxLabels} />
+          <BuyerTrustPanel
+            sellerStatusLabel={(selectedListing.vendor.preferredBadge
+              ? trustLabels.preferredSeller
+              : trustLabels.seller
+            ).replace("{name}", selectedListing.vendor.displayName)}
+            deliveryLabel={
+              selectedComparison?.deliveryAvailable ? trustLabels.delivery : null
+            }
+            pickupLabel={selectedComparison?.pickupAvailable ? trustLabels.pickup : null}
+            returnsLabel={trustLabels.returns}
+            returnsHref={`/${locale}/legal/returns`}
+            escrowLabel={trustLabels.escrow}
+          />
         </div>
       ) : null}
 

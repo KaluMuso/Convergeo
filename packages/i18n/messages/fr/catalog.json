@@ -201,6 +201,14 @@
       "rating": "{rating} ({count, plural, one {# avis} other {# avis}})",
       "viewStore": "Voir la boutique"
     },
+    "trust": {
+      "preferredSeller": "Vendeur privilégié — {name}",
+      "seller": "Vendu par {name}",
+      "delivery": "Livraison disponible pour ce vendeur",
+      "pickup": "Retrait disponible pour ce vendeur",
+      "returns": "Retours et remboursements",
+      "escrow": "Lorsque le paiement en ligne est disponible, Vergeo5 conserve votre argent jusqu'à la livraison. Le paiement à la livraison peut être proposé pour les commandes éligibles."
+    },
     "condition": {
       "new": "Neuf",
       "refurbished": "Reconditionné"
