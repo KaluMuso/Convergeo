@@ -2,7 +2,7 @@ import { loadNamespace, type Locale } from "@vergeo/i18n";
 import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
 import { TopNav } from "@vergeo/ui/src/top-nav";
 import Link from "next/link";
-import { createTranslator, type AbstractIntlMessages } from "next-intl";
+import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { BottomNavClient } from "./_components/bottom-nav-client";
@@ -68,7 +68,9 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
   ];
 
   return (
-    <>
+    // Shop client components (`useTranslations("catalog")`) need the catalog
+    // namespace. Root layout only ships `common` (+ `legal` for the footer).
+    <NextIntlClientProvider locale={locale} messages={messages}>
       {/* Mobile/tablet chrome (<1024px) — unchanged. Hidden on lg+ where the
           desktop header below takes over. */}
       <TopNav
@@ -147,6 +149,6 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           href: `/${locale}/supplies`,
         }}
       />
-    </>
+    </NextIntlClientProvider>
   );
 }

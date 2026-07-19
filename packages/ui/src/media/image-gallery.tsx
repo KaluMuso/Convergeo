@@ -18,6 +18,8 @@ export type ImageGalleryProps = {
   indicatorLabel: (current: number, total: number) => string;
   previousLabel: string;
   nextLabel: string;
+  /** Label shown inside a slide when its Cloudinary asset fails to load. */
+  imageFallbackLabel?: string;
   className?: string;
 };
 
@@ -28,6 +30,7 @@ export function ImageGallery({
   indicatorLabel,
   previousLabel,
   nextLabel,
+  imageFallbackLabel,
   className,
 }: ImageGalleryProps) {
   const galleryId = useId();
@@ -149,6 +152,7 @@ export function ImageGallery({
                 ratio={ratio}
                 cloudName={cloudName}
                 priority={index === 0}
+                fallbackLabel={imageFallbackLabel}
               />
             </div>
           ))}
@@ -226,6 +230,7 @@ export function ImageGallery({
               ratio={1}
               cloudName={cloudName}
               sizes="44px"
+              fallbackLabel={imageFallbackLabel}
             />
           </button>
         ))}

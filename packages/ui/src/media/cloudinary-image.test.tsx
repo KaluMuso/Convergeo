@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { CloudinaryImage } from "./cloudinary-image";
@@ -49,6 +49,25 @@ describe("CloudinaryImage", () => {
 
     const box = screen.getByTestId("cloudinary-image-box");
     expect(box).toHaveStyle({ aspectRatio: "4/3" });
+  });
+
+  it("reveals the image after load and shows a labelled fallback on error", () => {
+    render(
+      <CloudinaryImage
+        publicId="catalog/phone.jpg"
+        alt="Smartphone on display"
+        cloudName="test-cloud"
+        fallbackLabel="No images yet"
+      />,
+    );
+
+    const img = screen.getByRole("img", { name: "Smartphone on display" });
+    expect(img).toHaveStyle({ opacity: "0" });
+    fireEvent.load(img);
+    expect(img).toHaveStyle({ opacity: "1" });
+
+    fireEvent.error(img);
+    expect(screen.getByTestId("cloudinary-image-fallback")).toHaveTextContent("No images yet");
   });
 
   it("requires alt at the type level", () => {

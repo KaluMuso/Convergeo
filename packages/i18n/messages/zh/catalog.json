@@ -198,6 +198,14 @@
       "rating": "{rating} ({count, plural, one {# 条评价} other {# 条评价}})",
       "viewStore": "查看店铺"
     },
+    "trust": {
+      "preferredSeller": "优选卖家 — {name}",
+      "seller": "由 {name} 销售",
+      "delivery": "该卖家支持配送",
+      "pickup": "该卖家支持自提",
+      "returns": "退货与退款",
+      "escrow": "在线支付可用时，Vergeo5 会托管您的款项直至送达。符合条件的订单可能支持货到付款。"
+    },
     "condition": {
       "new": "全新",
       "refurbished": "翻新"
