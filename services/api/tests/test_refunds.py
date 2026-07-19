@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 from app.errors import AppError
+from app.services.escrow.order_money_gate import RefundGateDecision
 from app.services.ledger.engine import PostedTransaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.refunds.clawback import net_clawback_across_payouts, net_clawback_from_payout
@@ -130,6 +132,23 @@ class FakeSupabaseClient:
 class FakeServiceClient:
     def __init__(self, client: FakeSupabaseClient) -> None:
         self.client = client
+
+
+def _gate_decision_for_fake(
+    fake: FakeSupabaseClient,
+) -> Callable[[str], RefundGateDecision]:
+    """DB-less stand-in for decide_refund_phase_under_gate (avoids real SQL)."""
+
+    def _decide(order_id: str) -> RefundGateDecision:
+        released = any(
+            row.get("order_id") == order_id and row.get("kind") == "release_to_vendor"
+            for row in fake.tables["ledger_transactions"].rows
+        )
+        if released:
+            return RefundGateDecision(phase="post_release", claimed=False)
+        return RefundGateDecision(phase="pre_release", claimed=True)
+
+    return _decide
 
 
 def _seed_order(
@@ -270,12 +289,16 @@ class TestExecuteRefundPaths:
         _seed_order(fake, released=False)
         service = FakeServiceClient(fake)
 
-        result = execute_refund(
-            service_client=service,
-            order_id=ORDER_ID,
-            lane=1,
-            customer_momo=CUSTOMER_MOMO,
-        )
+        with patch(
+            "app.services.refunds.execute.decide_refund_phase_under_gate",
+            side_effect=_gate_decision_for_fake(fake),
+        ):
+            result = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+            )
 
         assert result.created is True
         assert result.phase == RefundPhase.PRE_RELEASE
@@ -297,12 +320,16 @@ class TestExecuteRefundPaths:
         _seed_order(fake, released=True)
         service = FakeServiceClient(fake)
 
-        result = execute_refund(
-            service_client=service,
-            order_id=ORDER_ID,
-            lane=1,
-            customer_momo=CUSTOMER_MOMO,
-        )
+        with patch(
+            "app.services.refunds.execute.decide_refund_phase_under_gate",
+            side_effect=_gate_decision_for_fake(fake),
+        ):
+            result = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+            )
 
         assert result.phase == RefundPhase.POST_RELEASE
         mock_post.assert_called_once()
@@ -323,13 +350,17 @@ class TestExecuteRefundPaths:
         )
         service = FakeServiceClient(fake)
 
-        result = execute_refund(
-            service_client=service,
-            order_id=ORDER_ID,
-            lane=2,
-            return_transport_ngwee=5_000,
-            customer_momo=CUSTOMER_MOMO,
-        )
+        with patch(
+            "app.services.refunds.execute.decide_refund_phase_under_gate",
+            side_effect=_gate_decision_for_fake(fake),
+        ):
+            result = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=2,
+                return_transport_ngwee=5_000,
+                customer_momo=CUSTOMER_MOMO,
+            )
 
         assert result.phase == RefundPhase.PRE_RELEASE
         assert result.amount_ngwee == 165_000

@@ -67,6 +67,18 @@ class FakeQuery:
         return FakeResponse(rows)
 
 
+def _row_value(row: dict[str, Any], column: str) -> Any:
+    """Resolve dotted PostgREST filter paths (e.g. vendors.status) on nested embeds."""
+    if "." not in column:
+        return row.get(column)
+    current: Any = row
+    for part in column.split("."):
+        if not isinstance(current, dict):
+            return None
+        current = current.get(part)
+    return current
+
+
 class FakeSupabaseStore:
     def __init__(self) -> None:
         self.events: list[dict[str, Any]] = []
@@ -81,9 +93,9 @@ class FakeSupabaseStore:
         rows = getattr(self, table, []).copy()
         for op, column, value in filters:
             if op == "eq":
-                rows = [row for row in rows if row.get(column) == value]
+                rows = [row for row in rows if _row_value(row, column) == value]
             elif op == "in":
-                rows = [row for row in rows if row.get(column) in value]
+                rows = [row for row in rows if _row_value(row, column) in value]
         return rows
 
 
@@ -93,6 +105,8 @@ def _vendor_row() -> dict[str, Any]:
         "slug": "event-house",
         "display_name": "Event House Lusaka",
         "preferred_badge": True,
+        # D9 / 0058: public event detail requires organiser vendors.status=active.
+        "status": "active",
         "vendor_locations": [{"landmark": "Opposite East Park Mall"}],
     }
 
@@ -109,6 +123,7 @@ def seed_store(store: FakeSupabaseStore) -> None:
             "lng": 28.2833,
             "images": ["events/jazz"],
             "status": "published",
+            "visibility": "public",
             "organiser_vendor_id": VENDOR,
             "vendors": _vendor_row(),
         },
@@ -122,6 +137,7 @@ def seed_store(store: FakeSupabaseStore) -> None:
             "lng": None,
             "images": [],
             "status": "published",
+            "visibility": "public",
             "organiser_vendor_id": VENDOR,
             "vendors": _vendor_row(),
         },
@@ -135,6 +151,7 @@ def seed_store(store: FakeSupabaseStore) -> None:
             "lng": None,
             "images": [],
             "status": "published",
+            "visibility": "public",
             "organiser_vendor_id": VENDOR,
             "vendors": _vendor_row(),
         },
