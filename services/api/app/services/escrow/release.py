@@ -8,6 +8,10 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, Protocol
 
 from app.services.commissions.engine import capture_order_commission, compute_order_commission
+from app.services.escrow.order_money_gate import (
+    OrderMoneyGateError,
+    claim_release_gate,
+)
 from app.services.escrow.release_accounting import (
     OPEN_DISPUTE_STATUSES as OPEN_DISPUTE_STATUSES,
 )
@@ -411,6 +415,23 @@ def evaluate_and_release(
             order_id=order_id,
             outcome="not_eligible",
             reason="invalid_commission_snapshot",
+        )
+
+    # D17 single-drain: claim escrow exclusively before capture/release so a
+    # concurrent refund cannot also PRE_RELEASE-drain the same gross.
+    try:
+        claim_release_gate(order_id)
+    except OrderMoneyGateError as exc:
+        if exc.code == "order_refunded":
+            return ReleaseResult(
+                order_id=order_id,
+                outcome="not_eligible",
+                reason="order_refunded",
+            )
+        return ReleaseResult(
+            order_id=order_id,
+            outcome="not_eligible",
+            reason=exc.code,
         )
 
     capture_order_commission(
