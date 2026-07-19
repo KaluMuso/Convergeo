@@ -4,6 +4,9 @@ import { formatK } from "@vergeo/i18n";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { AdminLoadFailure } from "../../_components/AdminLoadFailure";
+import { resolveQueueLoadFailure } from "../../_components/queue-load-failure";
+
 import { type DisputeQueueItem, type QueueSort, disputesApi } from "./api";
 import { DisputeSlaBadge } from "./DisputeSlaBadge";
 
@@ -17,15 +20,19 @@ export function DisputeQueue({ locale }: DisputeQueueProps) {
   const [sort, setSort] = useState<QueueSort>("age");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [permissionDenied, setPermissionDenied] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setPermissionDenied(false);
     try {
       const data = await disputesApi.request<DisputeQueueItem[]>(`/admin/disputes?sort=${sort}`);
       setItems(data);
-    } catch {
-      setError(t("error"));
+    } catch (err) {
+      const failure = resolveQueueLoadFailure(err);
+      setPermissionDenied(failure.permissionDenied);
+      setError(t(failure.messageKey));
     } finally {
       setLoading(false);
     }
@@ -41,16 +48,13 @@ export function DisputeQueue({ locale }: DisputeQueueProps) {
 
   if (error) {
     return (
-      <div className="space-y-2">
-        <p className="text-sm text-danger">{error}</p>
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center rounded-md border border-border px-4 text-sm"
-          onClick={() => void load()}
-        >
-          {t("retry")}
-        </button>
-      </div>
+      <AdminLoadFailure
+        permissionDenied={permissionDenied}
+        message={error}
+        hint={permissionDenied ? t("permissionDeniedHint") : undefined}
+        retryLabel={t("retry")}
+        onRetry={() => void load()}
+      />
     );
   }
 
