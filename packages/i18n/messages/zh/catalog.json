@@ -209,8 +209,10 @@
   "browseCategories": {
     "title": "浏览分类",
     "subtitle": "从认证商家浏览第一阶段品类及其子分类。",
-    "emptyTitle": "分类暂不可用",
-    "emptyBody": "目前无法加载分类树。请稍后再试，或使用搜索。"
+    "emptyTitle": "暂无分类",
+    "emptyBody": "目录目前没有公开分类。请稍后再来，或使用搜索。",
+    "unavailableTitle": "分类暂不可用",
+    "unavailableBody": "目前无法加载分类树。请稍后再试，或使用搜索。"
   },
   "comparePage": {
     "title": "比较卖家",

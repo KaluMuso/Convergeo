@@ -5,8 +5,9 @@ import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { buildCategoryTree } from "../_components/category-mega-menu";
-import { fetchCategories } from "../_components/merch-data";
+import { fetchCategoriesResult } from "../_components/merch-data";
+
+import { resolveCategoriesBrowseView } from "./categories-view";
 
 import type { Metadata } from "next";
 
@@ -59,17 +60,8 @@ export default async function CategoriesPage({ params }: PageProps) {
   setRequestLocale(locale);
 
   const t = await getCatalogTranslator(locale);
-  const rows = await fetchCategories();
-  const tree = buildCategoryTree(
-    rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      slug: row.slug,
-      position: row.position,
-      parent_id: row.parent_id,
-      prohibited: row.prohibited,
-    })),
-  );
+  const result = await fetchCategoriesResult();
+  const view = resolveCategoriesBrowseView(result);
 
   return (
     <div className="flex flex-col gap-6 lg:mx-auto lg:w-full lg:max-w-5xl">
@@ -78,14 +70,9 @@ export default async function CategoriesPage({ params }: PageProps) {
         <p className="text-body text-text-2">{t("browseCategories.subtitle")}</p>
       </header>
 
-      {tree.length === 0 ? (
-        <EmptyState
-          title={t("browseCategories.emptyTitle")}
-          body={t("browseCategories.emptyBody")}
-        />
-      ) : (
+      {view.kind === "populated" ? (
         <ul className="grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 lg:grid-cols-3">
-          {tree.map((category) => (
+          {view.tree.map((category) => (
             <li key={category.id} className="min-w-0 space-y-2">
               <Link
                 href={`/${locale}/c/${category.slug}`}
@@ -110,6 +97,18 @@ export default async function CategoriesPage({ params }: PageProps) {
             </li>
           ))}
         </ul>
+      ) : view.kind === "empty" ? (
+        <EmptyState
+          title={t("browseCategories.emptyTitle")}
+          body={t("browseCategories.emptyBody")}
+          data-testid="categories-empty"
+        />
+      ) : (
+        <EmptyState
+          title={t("browseCategories.unavailableTitle")}
+          body={t("browseCategories.unavailableBody")}
+          data-testid={`categories-unavailable-${view.reason}`}
+        />
       )}
     </div>
   );
