@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from app.routers.kyc import KycSubmitRequest, _persist_vendor_archetype
+from app.routers.kyc import KycSubmitRequest, _persist_vendor_basics
 from pydantic import ValidationError
 
 VENDOR = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
@@ -36,6 +36,13 @@ class TestArchetypeValidation:
     def test_rejects_unknown_archetype(self) -> None:
         with pytest.raises(ValidationError):
             KycSubmitRequest.model_validate(_base_payload(archetype="weapons"))
+
+    def test_accepts_optional_business_name(self) -> None:
+        req = KycSubmitRequest.model_validate(
+            _base_payload(business_name="Lusaka Spares", archetype="electronics")
+        )
+        assert req.business_name == "Lusaka Spares"
+        assert req.archetype == "electronics"
 
 
 class _RecordingTable:
@@ -70,16 +77,30 @@ class _RecordingService:
         self.client = _RecordingClient(self.sink)
 
 
-class TestPersistArchetype:
-    def test_persists_when_set(self) -> None:
+class TestPersistVendorBasics:
+    def test_persists_archetype_when_set(self) -> None:
         service = _RecordingService()
-        _persist_vendor_archetype(service, VENDOR, "groceries")
+        _persist_vendor_basics(service, VENDOR, archetype="groceries")
         assert service.sink["table"] == "vendors"
         assert service.sink["update"] == {"archetype": "groceries"}
         assert ("id", VENDOR) in service.sink["eq"]
         assert service.sink["executed"] is True
 
+    def test_persists_business_name_and_archetype(self) -> None:
+        service = _RecordingService()
+        _persist_vendor_basics(
+            service,
+            VENDOR,
+            business_name="Chipata Market",
+            archetype="groceries",
+        )
+        assert service.sink["update"] == {
+            "display_name": "Chipata Market",
+            "archetype": "groceries",
+        }
+        assert service.sink["executed"] is True
+
     def test_noop_when_none(self) -> None:
         service = _RecordingService()
-        _persist_vendor_archetype(service, VENDOR, None)
+        _persist_vendor_basics(service, VENDOR, business_name=None, archetype=None)
         assert service.sink == {}
