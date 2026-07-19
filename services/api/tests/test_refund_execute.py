@@ -12,6 +12,7 @@ import os
 import subprocess
 import threading
 import uuid
+from collections.abc import Callable
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -224,7 +225,9 @@ def _seed_order(fake: FakeSupabaseClient, *, item_total: int = 100_000, delivery
         )
 
 
-def _gate_decision_for_fake(fake: FakeSupabaseClient):
+def _gate_decision_for_fake(
+    fake: FakeSupabaseClient,
+) -> Callable[[str], RefundGateDecision]:
     """DB-less stand-in for decide_refund_phase_under_gate (avoids real SQL)."""
 
     def _decide(order_id: str) -> RefundGateDecision:

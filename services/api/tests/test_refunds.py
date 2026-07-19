@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -133,7 +134,9 @@ class FakeServiceClient:
         self.client = client
 
 
-def _gate_decision_for_fake(fake: FakeSupabaseClient):
+def _gate_decision_for_fake(
+    fake: FakeSupabaseClient,
+) -> Callable[[str], RefundGateDecision]:
     """DB-less stand-in for decide_refund_phase_under_gate (avoids real SQL)."""
 
     def _decide(order_id: str) -> RefundGateDecision:
