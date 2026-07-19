@@ -312,7 +312,7 @@ RETAIL_LISTING_ID = UUID("00000000-0000-4000-8000-0000000004a1")
 WHOLESALE_LISTING_ID = UUID("00000000-0000-4000-8000-0000000004a2")
 
 
-class _ListingTableQuery:
+class _ListingTableQuery(_EmptyTableQuery):
     """Minimal PostgREST-ish stub for vendor_listings id/wholesale lookups."""
 
     def __init__(self, rows: list[dict[str, Any]]) -> None:
@@ -413,7 +413,7 @@ def test_search_attaches_public_slugs_for_product_and_listing_hits(
             ),
         ]
 
-    class _SlugTableQuery:
+    class _SlugTableQuery(_EmptyTableQuery):
         def __init__(self, table: str) -> None:
             self._table = table
             self._ids: set[str] | None = None
@@ -437,7 +437,7 @@ def test_search_attaches_public_slugs_for_product_and_listing_hits(
                 return FakeRpcResponse([])
             ids = self._ids or set()
             if self._table == "products":
-                rows = [
+                rows: list[dict[str, Any]] = [
                     {"id": str(product_id), "slug": "itel-a70"}
                     for entity_id in ids
                     if entity_id == str(product_id)
