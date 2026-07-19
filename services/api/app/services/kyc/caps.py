@@ -117,7 +117,12 @@ def _parse_config_int(client: ServiceClient, key: str, default: int) -> int:
         client.table("platform_config").select("value").eq("key", key).maybe_single().execute()
     )
     row = _single_row(response)
-    parsed = _parse_int(row.get("value") if row else None, default) or default
+    # `_parse_int` already substitutes `default` for a missing/invalid value, so a
+    # returned 0 is an intentional config (e.g. cod_cap_ngwee = 0 disables COD).
+    # A trailing `or default` here would silently re-enable it — do not add one.
+    parsed = _parse_int(row.get("value") if row else None, default)
+    if parsed is None:
+        parsed = default
 
     if key == "cod_cap_ngwee":
         with _cache_lock:
