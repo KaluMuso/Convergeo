@@ -6,6 +6,7 @@ import {
   getLocaleFromPath,
   isAdminBypassActive,
   isAuthExemptPath,
+  isVendorOnboardingPath,
   mergeSessionCookies,
   shouldRedirectToLogin,
   updateSession,
@@ -108,6 +109,33 @@ describe("middleware matrix", () => {
   it("login routes stay exempt for gated apps", () => {
     expect(shouldRedirectToLogin("vendor", "/en/login", locales, null, [])).toBe(false);
     expect(shouldRedirectToLogin("admin", "/fr/login", locales, null, [])).toBe(false);
+  });
+
+  it("authenticated customers can reach vendor onboarding without vendor role", () => {
+    expect(isVendorOnboardingPath("/en/onboarding", locales)).toBe(true);
+    expect(isVendorOnboardingPath("/fr/onboarding/status", locales)).toBe(true);
+    expect(isVendorOnboardingPath("/en/listings", locales)).toBe(false);
+
+    expect(
+      shouldRedirectToLogin("vendor", "/en/onboarding", locales, { id: "user-1" } as never, [
+        "customer",
+      ]),
+    ).toBe(false);
+    expect(
+      shouldRedirectToLogin(
+        "vendor",
+        "/en/onboarding/status",
+        locales,
+        { id: "user-1" } as never,
+        [],
+      ),
+    ).toBe(false);
+    expect(
+      shouldRedirectToLogin("vendor", "/en/listings", locales, { id: "user-1" } as never, [
+        "customer",
+      ]),
+    ).toBe(true);
+    expect(shouldRedirectToLogin("vendor", "/en/onboarding", locales, null, [])).toBe(true);
   });
 
   it("locale routing helpers preserve locale on redirects", () => {

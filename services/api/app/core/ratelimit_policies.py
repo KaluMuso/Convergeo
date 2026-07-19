@@ -171,6 +171,8 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /jobs/{job_id}/confirm": STANDARD_WRITE,
     "POST /jobs/{job_id}/quotes": STANDARD_WRITE,
     "POST /jobs/{job_id}/quotes/{quote_id}/accept": STANDARD_WRITE,
+    "POST /kyc/bootstrap": SENSITIVE_WRITE,
+    "PATCH /kyc/draft": STANDARD_WRITE,
     "POST /kyc/resubmit": SENSITIVE_WRITE,
     "POST /kyc/submit": SENSITIVE_WRITE,
     "POST /kyc/{kyc_record_id}/approve": ADMIN_WRITE,

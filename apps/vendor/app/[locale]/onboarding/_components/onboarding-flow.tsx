@@ -7,7 +7,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorErrorState } from "../../_components/async-state";
 import { classifyVendorError, vendorErrorMessageKey } from "../../_lib/vendor-errors";
-import { createProfileClient } from "../../profile/_lib/profile-client";
 import {
   createKycClient,
   isResubmitStatus,
@@ -49,6 +48,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [savingBasics, setSavingBasics] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fatalErrorKey, setFatalErrorKey] = useState<string | null>(null);
   const [resubmitMode, setResubmitMode] = useState(false);
@@ -58,7 +58,6 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
 
   const kycClient = useMemo(() => createKycClient(getToken), [getToken]);
   const storageClient = useMemo(() => createStorageClient(getToken), [getToken]);
-  const profileClient = useMemo(() => createProfileClient(getToken), [getToken]);
 
   const categoryLabels = useMemo(
     () => ({
@@ -98,7 +97,8 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
       setFatalErrorKey(null);
       setError(null);
       try {
-        const app = await kycClient.getApplication();
+        // Idempotent server bootstrap — creates/resumes draft without vendor role.
+        const app = await kycClient.bootstrapApplication();
         if (cancelled) {
           return;
         }
@@ -129,7 +129,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         }
         const kind = classifyVendorError(caught).kind;
         // Auth/permission failures must not fall back to a local-only draft —
-        // that would look like a working onboarding for a non-vendor session.
+        // that would look like a working onboarding without a server application.
         if (kind === "auth" || kind === "permission") {
           setFatalErrorKey(vendorErrorMessageKey(caught, "onboarding"));
           setDraft(null);
@@ -183,13 +183,30 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
     [updateDraft],
   );
 
-  const handleBusinessContinue = useCallback(() => {
+  const handleBusinessContinue = useCallback(async () => {
     if (!draft) {
       return;
     }
     setError(null);
-    goToStep(stepIndexFromKey("kyc"));
-  }, [draft, goToStep]);
+    setSavingBasics(true);
+    try {
+      const app = await kycClient.saveDraft({
+        business_name: draft.businessName.trim(),
+        archetype: draft.businessCategory.trim() || null,
+      });
+      setApplication(app);
+      goToStep(stepIndexFromKey("kyc"));
+    } catch (caught) {
+      const kind = classifyVendorError(caught).kind;
+      if (kind === "auth" || kind === "permission") {
+        setFatalErrorKey(vendorErrorMessageKey(caught, "onboarding"));
+        return;
+      }
+      setError(t("onboarding.errors.saveFailed"));
+    } finally {
+      setSavingBasics(false);
+    }
+  }, [draft, goToStep, kycClient, t]);
 
   const handleKycContinue = useCallback(() => {
     if (!draft) {
@@ -239,23 +256,13 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         momo_operator: null,
         legal_name: draft.legalName.trim(),
         archetype: draft.businessCategory.trim() || null,
+        business_name: draft.businessName.trim() || null,
       };
 
       if (resubmitMode) {
         await kycClient.resubmit(payload);
       } else {
         await kycClient.submit(payload);
-      }
-
-      // Persist storefront display name collected in step 1 — KYC submit only
-      // stores archetype/legal_name. Best-effort: KYC already succeeded.
-      const displayName = draft.businessName.trim();
-      if (displayName.length >= 2) {
-        try {
-          await profileClient.updateProfile({ display_name: displayName });
-        } catch {
-          // Non-blocking — vendor can finish the name on /profile.
-        }
       }
 
       clearLocalDraft();
@@ -265,7 +272,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
     } finally {
       setSubmitting(false);
     }
-  }, [draft, kycClient, locale, profileClient, resubmitMode, router, t]);
+  }, [draft, kycClient, locale, resubmitMode, router, t]);
 
   if (sessionLoading || loading) {
     return (
@@ -312,6 +319,14 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      <div
+        className="rounded border border-border bg-bg-2 px-3 py-2"
+        data-testid="onboarding-invite-banner"
+      >
+        <p className="text-sm font-medium text-display-ink">{t("onboarding.invite.eyebrow")}</p>
+        <p className="text-sm text-text-2">{t("onboarding.invite.body")}</p>
+      </div>
+
       {!resubmitMode ? (
         <StepProgress
           currentStep={currentStep}
@@ -344,8 +359,10 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
           businessCategory={draft.businessCategory}
           onBusinessNameChange={(value) => updateDraft({ businessName: value })}
           onBusinessCategoryChange={(value) => updateDraft({ businessCategory: value })}
-          onContinue={() => handleBusinessContinue()}
-          saving={false}
+          onContinue={() => {
+            void handleBusinessContinue();
+          }}
+          saving={savingBasics}
           labels={{
             heading: t("onboarding.business.heading"),
             intro: t("onboarding.business.intro"),

@@ -41,6 +41,25 @@ export function isAuthExemptPath(pathname: string, locales: readonly string[]): 
   return segments[1] === "login";
 }
 
+/**
+ * Invite/concierge seller onboarding (VENDOR-BETA-01): authenticated customers
+ * may reach `/onboarding` and `/onboarding/status` without already holding the
+ * `vendor` role. Privileged vendor routes stay role-gated.
+ */
+export function isVendorOnboardingPath(pathname: string, locales: readonly string[]): boolean {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length < 2) {
+    return false;
+  }
+
+  const locale = segments[0];
+  if (!locale || !locales.includes(locale)) {
+    return false;
+  }
+
+  return segments[1] === "onboarding";
+}
+
 export function shouldRedirectToLogin(
   gate: AuthGate,
   pathname: string,
@@ -62,6 +81,10 @@ export function shouldRedirectToLogin(
   }
 
   if (gate === "vendor") {
+    // Authenticated invitees can complete onboarding before admin grants vendor.
+    if (isVendorOnboardingPath(pathname, locales)) {
+      return false;
+    }
     return !hasRole(roles, "vendor");
   }
 

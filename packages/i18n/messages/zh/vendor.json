@@ -51,19 +51,20 @@
   "vendor.listings.count": "{count, plural, one {# 件商品} other {# 件商品}}",
   "vendor.payout.pending": "待处理结算：{amount}",
   "pitch": {
-    "signupUnavailable": "商家注册暂时不可用，请稍后再试。",
+    "signupUnavailable": "尚未开放公开商家注册。卖家入驻目前为邀请制（礼宾试用）；若您已获邀请，请联系 Vergeo5。",
+    "inviteOnlyNotice": "邀请制卖家试用。公开自助开店尚未开放。受邀卖家可使用收到的链接继续入驻。",
     "meta": {
-      "title": "在 Vergeo5 上销售——免费上架，售出才付费",
-      "description": "加入赞比亚的商品、服务、活动、供货和商户目录市场平台。免费套餐：30 个商品。佣金透明。移动支付结算几分钟到账。"
+      "title": "在 Vergeo5 上销售——邀请制卖家试用",
+      "description": "Vergeo5 卖家入驻在试用期为邀请/礼宾制。了解佣金、KYC 与移动支付结算——公开自助注册尚未开放。"
     },
     "hero": {
-      "eyebrow": "在 Vergeo5 上销售",
+      "eyebrow": "邀请制卖家试用",
       "headline": "免费上架。",
       "headlineEmphasis": "售出才付费。",
       "subheadline": "通过商品、服务、活动、供货和您的商户主页触达赞比亚各地的买家——尽在一个商家应用。",
-      "primaryCta": "开始销售",
+      "primaryCta": "继续卖家邀请",
       "secondaryCta": "查看佣金",
-      "freeTierNote": "免费套餐最多可发布 30 个商品，销售功能全部开放。"
+      "freeTierNote": "受邀卖家在管理员批准后可使用免费套餐（最多 30 个商品）。公开注册尚未开放。"
     },
     "valueProps": {
       "heading": "五种增长方式",
@@ -181,16 +182,20 @@
       }
     },
     "cta": {
-      "heading": "准备好触达赞比亚各地的买家了吗？",
-      "body": "加入数百家在 Vergeo5 上创业的商家。十分钟内即可建好您的店铺。",
-      "button": "创建您的商家账户",
-      "loadingLabel": "正在打开注册"
+      "heading": "已获邀在 Vergeo5 开店？",
+      "body": "试用期内卖家入驻为邀请/礼宾制。若您有邀请，请继续下方流程——目录与结算功能仅在管理员批准后解锁。",
+      "button": "继续卖家邀请",
+      "loadingLabel": "正在打开邀请入驻"
     }
   },
   "onboarding": {
     "meta": {
-      "title": "商家入驻 — Vergeo5",
-      "description": "完善您的商户资料并完成 T1 KYC，即可在 Vergeo5 上开始销售。"
+      "title": "卖家邀请入驻 — Vergeo5",
+      "description": "完成邀请制卖家申请与 T1 KYC。商品上架在管理员批准前保持锁定。"
+    },
+    "invite": {
+      "eyebrow": "邀请 / 礼宾试用",
+      "body": "您正在完成卖家邀请申请。目录、结算与商家控制台在 Vergeo5 批准 KYC 并授予卖家权限前保持锁定。"
     },
     "steps": {
       "business": "商户",
@@ -298,9 +303,11 @@
       "required": "此字段为必填项",
       "invalidPhone": "请输入有效的赞比亚手机号码",
       "loadFailed": "无法加载申请，请重试。",
+      "saveFailed": "无法保存商户信息，请重试。",
       "submitFailed": "提交失败。请重试。",
-      "authRequired": "请登录以继续商家入驻。",
-      "permissionDenied": "此账户尚未设置为商家。",
+      "authRequired": "请登录以继续卖家邀请申请。",
+      "permissionDenied": "您无权访问此卖家申请。请使用收到邀请的账户，或联系 Vergeo5。",
+      "draftLocked": "批准后无法再编辑商户信息。",
       "notFound": "未找到您的商家申请。",
       "retryHint": "请检查网络后重试。"
     },
