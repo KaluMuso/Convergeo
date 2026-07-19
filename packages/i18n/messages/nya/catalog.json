@@ -120,6 +120,9 @@
       "next": "Chithunzi chotsatira",
       "previous": "Chithunzi chapitacho"
     },
+    "unavailableTitle": "Chinthu sichipezeka tsopano",
+    "unavailableBody": "Sitinathe kutenga chinthu ichi pano. Onani connection yanu ndiye yesaninso.",
+    "unavailableRetry": "Yesaninso",
     "meta": {
       "descriptionFallback": "Gulani {name} pa Vergeo5",
       "notFoundTitle": "Chinthu sichipezeka"

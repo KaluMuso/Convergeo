@@ -79,6 +79,7 @@ const sampleResponse = {
       locale_terms: null,
       boost_signals: {},
       rrf_score: 1,
+      slug: "itel-a70",
     },
     {
       id: "2",
@@ -94,6 +95,7 @@ const sampleResponse = {
       locale_terms: null,
       boost_signals: {},
       rrf_score: 0.8,
+      slug: "phone-hub-lusaka",
     },
   ],
 };
@@ -163,6 +165,11 @@ describe("ResultsTabs tab counts", () => {
     expect(screen.getByTestId("search-tab-products")).toHaveTextContent("Products (2)");
     expect(screen.getByTestId("search-tab-events")).toHaveTextContent("Events (0)");
     expect(screen.getByTestId("search-results-list")).toBeInTheDocument();
+    // Search → PDP must use the public slug, never the entity UUID.
+    expect(screen.getByRole("link", { name: "Itel A70 Smartphone" })).toHaveAttribute(
+      "href",
+      "/en/p/itel-a70",
+    );
     // Wholesale supplies are a B2B-gated surface (own /supplies page), not a
     // global-search tab — it must not render here.
     expect(screen.queryByTestId("search-tab-supplies")).not.toBeInTheDocument();

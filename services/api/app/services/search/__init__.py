@@ -37,6 +37,9 @@ class SearchHit(StrictModel):
     locale_terms: list[str] | None = None
     boost_signals: dict[str, Any] = Field(default_factory=dict)
     rrf_score: float
+    # Public route slug for customer deep-links (product/listing → PDP slug,
+    # vendor/event slug, service UUID). Absent when unresolved.
+    slug: str | None = None
 
 
 class SearchResponse(StrictModel):
@@ -126,6 +129,99 @@ def drop_wholesale_listing_hits(client: Any, hits: list[SearchHit]) -> list[Sear
     ]
 
 
+def _nested_slug(value: Any) -> str | None:
+    if isinstance(value, list):
+        value = value[0] if value else None
+    if isinstance(value, dict):
+        slug = value.get("slug")
+        if isinstance(slug, str) and slug.strip():
+            return slug.strip()
+    return None
+
+
+def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
+    """Enrich hits with the public slug customers need for deep-links.
+
+    ``search_documents`` stores UUID ``entity_id`` only. PDP/vendor/event routes
+    resolve by slug, so without this enrichment the customer app historically
+    linked ``/p/{uuid}`` and soft-404'd every search result.
+    """
+    if not hits:
+        return hits
+
+    product_ids = [hit.entity_id for hit in hits if hit.entity_kind == "product"]
+    listing_ids = [hit.entity_id for hit in hits if hit.entity_kind == "listing"]
+    vendor_ids = [hit.entity_id for hit in hits if hit.entity_kind == "vendor"]
+    event_ids = [hit.entity_id for hit in hits if hit.entity_kind == "event"]
+
+    product_slugs: dict[str, str] = {}
+    listing_slugs: dict[str, str] = {}
+    vendor_slugs: dict[str, str] = {}
+    event_slugs: dict[str, str] = {}
+
+    if product_ids:
+        response = (
+            client.table("products").select("id, slug").in_("id", product_ids).execute()
+        )
+        for row in _rows(response):
+            entity_id = row.get("id")
+            slug = row.get("slug")
+            if entity_id and isinstance(slug, str) and slug.strip():
+                product_slugs[str(entity_id)] = slug.strip()
+
+    if listing_ids:
+        response = (
+            client.table("vendor_listings")
+            .select("id, products!inner(slug)")
+            .in_("id", listing_ids)
+            .execute()
+        )
+        for row in _rows(response):
+            entity_id = row.get("id")
+            slug = _nested_slug(row.get("products"))
+            if entity_id and slug:
+                listing_slugs[str(entity_id)] = slug
+
+    if vendor_ids:
+        response = (
+            client.table("vendors").select("id, slug").in_("id", vendor_ids).execute()
+        )
+        for row in _rows(response):
+            entity_id = row.get("id")
+            slug = row.get("slug")
+            if entity_id and isinstance(slug, str) and slug.strip():
+                vendor_slugs[str(entity_id)] = slug.strip()
+
+    if event_ids:
+        response = (
+            client.table("events").select("id, slug").in_("id", event_ids).execute()
+        )
+        for row in _rows(response):
+            entity_id = row.get("id")
+            slug = row.get("slug")
+            if entity_id and isinstance(slug, str) and slug.strip():
+                event_slugs[str(entity_id)] = slug.strip()
+
+    enriched: list[SearchHit] = []
+    for hit in hits:
+        slug: str | None
+        if hit.entity_kind == "product":
+            slug = product_slugs.get(hit.entity_id)
+        elif hit.entity_kind == "listing":
+            slug = listing_slugs.get(hit.entity_id)
+        elif hit.entity_kind == "vendor":
+            slug = vendor_slugs.get(hit.entity_id)
+        elif hit.entity_kind == "event":
+            slug = event_slugs.get(hit.entity_id)
+        elif hit.entity_kind == "service":
+            # Services have no separate slug column — UUID is the public slug.
+            slug = hit.entity_id
+        else:
+            slug = None
+        enriched.append(hit.model_copy(update={"slug": slug}))
+    return enriched
+
+
 def log_zero_result(*, query: str, filters: dict[str, Any], kind: SearchKind | None) -> None:
     logger.info(
         "search_zero_result",
@@ -182,6 +278,7 @@ async def run_search(
     if not include_wholesale:
         hits = drop_wholesale_listing_hits(client, hits)
     page_items, total = paginate(hits, page=page, page_size=page_size)
+    page_items = attach_route_slugs(client, page_items)
 
     if trimmed:
         # Fire-and-forget analytics: server operational log, written regardless of

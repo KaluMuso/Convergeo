@@ -119,7 +119,7 @@ class FakeQuery:
         self._maybe_single = True
         return self
 
-    def execute(self) -> FakeResponse:
+    def execute(self) -> FakeResponse | None:
         rows = self.store.query(self.table, self._filters)
         if self._order:
             column, desc = self._order
@@ -131,8 +131,30 @@ class FakeQuery:
                 return ""
 
             rows = sorted(rows, key=sort_key, reverse=desc)
+        # Nested products!inner(...) used by listing-UUID → product-slug resolve.
+        if self.table == "vendor_listings" and "products" in self._select:
+            nested: list[dict[str, Any]] = []
+            for row in rows:
+                product_id = row.get("product_id")
+                product = next(
+                    (
+                        item
+                        for item in self.store.products
+                        if item.get("id") == product_id
+                    ),
+                    None,
+                )
+                nested_row = dict(row)
+                if product is not None:
+                    nested_row["products"] = {
+                        "slug": product.get("slug"),
+                        "status": product.get("status"),
+                    }
+                nested.append(nested_row)
+            rows = nested
         if self._maybe_single:
-            return FakeResponse(rows[0] if rows else None)
+            # Match postgrest-py 2.x: zero rows → None (not FakeResponse(None)).
+            return FakeResponse(rows[0]) if rows else None
         return FakeResponse(rows)
 
 
@@ -381,6 +403,38 @@ class TestRelatedProducts:
 class TestProductErrors:
     def test_unknown_slug_returns_404(self, client: TestClient) -> None:
         response = client.get("/products/does-not-exist")
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "product.not_found"
+
+    def test_product_uuid_redirects_to_canonical_slug(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        # Hex UUID (matches live seed ids); path segment is not a slug.
+        product_uuid = "a0000133-0000-4000-8000-000000000001"
+        store.products = [_product_row(product_id=product_uuid)]
+        store.vendor_listings = [
+            _listing_row(listing_id=LISTING_IN_STOCK, product_id=product_uuid)
+        ]
+
+        response = client.get(f"/products/{product_uuid}", follow_redirects=False)
+        assert response.status_code == 301
+        assert response.headers["location"] == "/products/itel-a70"
+
+    def test_listing_uuid_redirects_to_product_slug(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        store.products = [_product_row()]
+        store.vendor_listings = [_listing_row(listing_id=LISTING_IN_STOCK)]
+
+        response = client.get(f"/products/{LISTING_IN_STOCK}", follow_redirects=False)
+        assert response.status_code == 301
+        assert response.headers["location"] == "/products/itel-a70"
+
+    def test_unknown_uuid_returns_404(self, client: TestClient) -> None:
+        response = client.get(
+            "/products/00000000-0000-4000-8000-000000000099",
+            follow_redirects=False,
+        )
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "product.not_found"
 

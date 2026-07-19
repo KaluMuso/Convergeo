@@ -166,6 +166,9 @@
     }
   },
   "pdp": {
+    "unavailableTitle": "商品暂时无法加载",
+    "unavailableBody": "我们目前无法加载此商品。请检查网络后重试。",
+    "unavailableRetry": "重试",
     "meta": {
       "notFoundTitle": "未找到该商品",
       "descriptionFallback": "在 Vergeo5 上选购 {name}"
