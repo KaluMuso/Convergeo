@@ -776,6 +776,24 @@ class TestCreateOrdersEndpoint:
         price = 450_000
         expires = (datetime.now(UTC) + timedelta(minutes=15)).isoformat()
 
+        # Seed auditable T2 approval so D9 first-order cap does not apply (orphan
+        # vendors.kyc_tier alone stays at T1 baseline — MR-D02 / cap_tier_for_quotas).
+        db.run(
+            f"""
+            INSERT INTO public.kyc_records (
+              id, vendor_id, tier, status, doc_storage_paths,
+              momo_name_match, reviewed_by, reviewed_at, decision_reason
+            ) VALUES (
+              '{uuid.uuid4()}', '{VENDOR_A}', 2, 'approved',
+              ARRAY['kyc/seed.jpg'],
+              '{{"matched": true}}'::jsonb,
+              '{ids["users"]["admin"]}',
+              timezone('utc', now()),
+              'test seed'
+            ) ON CONFLICT DO NOTHING;
+            """
+        )
+
         _insert_cart_with_items(db, cart_id=cart_id, items=[(listing_id, 1, price)])
         _insert_checkout_group(
             db,

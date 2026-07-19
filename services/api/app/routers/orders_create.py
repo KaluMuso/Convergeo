@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from typing import Annotated, Literal, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
@@ -8,6 +9,8 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.checkout import _ensure_session_active, _extract_data
 from app.routers.checkout_payment import _load_cod_cap_ngwee, _validate_payment_method
+from app.services.cart.totals import line_total_ngwee
+from app.services.kyc.caps import enforce_first_order_caps_for_vendors
 from app.services.orders.create import (
     CartLineInput,
     CreateOrdersResult,
@@ -246,6 +249,20 @@ async def create_orders(
         )
         for group_req in body.groups
     ]
+
+    # D9 T1 first-order ≤K500: server-side, every payment method (not just COD).
+    # Totals from cart lines (authoritative) + per-vendor delivery fee.
+    per_vendor_subtotal: dict[str, int] = defaultdict(int)
+    for line in cart_lines:
+        per_vendor_subtotal[line.vendor_id] += line_total_ngwee(
+            line.qty, line.unit_price_ngwee
+        )
+    delivery_by_vendor = {group.vendor_id: group.delivery_fee_ngwee for group in vendor_groups}
+    vendor_order_totals = {
+        vendor_id: subtotal + delivery_by_vendor.get(vendor_id, 0)
+        for vendor_id, subtotal in per_vendor_subtotal.items()
+    }
+    enforce_first_order_caps_for_vendors(service, vendor_order_totals)
 
     result = create_orders_atomic(
         client=service.client,
