@@ -1,7 +1,18 @@
 /**
  * Pure sitemap / robots eligibility rules for public customer discovery routes.
  * Kept free of Next.js runtime so unit tests can exercise policy without I/O.
+ *
+ * Locale publication (which locales may appear in the sitemap / hreflang) lives in
+ * `@vergeo/i18n` → `SEO_INDEXABLE_LOCALES` (CUST-SEO-02). This module only covers
+ * path/entity eligibility.
  */
+
+import { SEO_INDEXABLE_LOCALES } from "@vergeo/i18n";
+
+/** Locales that may be listed in the sitemap (alias of the central SEO policy). */
+export function sitemapLocales(): readonly string[] {
+  return SEO_INDEXABLE_LOCALES;
+}
 
 /** Indexable static shop hubs (locale-prefixed). Supplies deliberately omitted. */
 export const SITEMAP_STATIC_SEGMENTS = [

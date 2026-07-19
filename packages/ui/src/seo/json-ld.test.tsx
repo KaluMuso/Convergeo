@@ -1,4 +1,4 @@
-import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
+import { DEFAULT_LOCALE, SEO_INDEXABLE_LOCALES } from "@vergeo/i18n";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -56,20 +56,30 @@ describe("buildLocaleCanonical", () => {
 });
 
 describe("buildCanonicalAlternates", () => {
-  it("emits self-canonical plus hreflang for each available locale and x-default", () => {
+  it("self-canonicalises unapproved locales but omits them from hreflang / x-default", () => {
     const alternates = buildCanonicalAlternates("bem", "p", "itel-a70");
     expect(alternates.canonical).toBe("/bem/p/itel-a70");
     expect(alternates.languages).toBeDefined();
     const languages = alternates.languages as Record<string, string>;
-    for (const locale of LOCALES) {
+    for (const locale of SEO_INDEXABLE_LOCALES) {
       expect(languages[locale]).toBe(`https://vergeo5.com/${locale}/p/itel-a70`);
     }
+    expect(languages.bem).toBeUndefined();
+    expect(languages.nya).toBeUndefined();
     expect(languages["x-default"]).toBe(`https://vergeo5.com/${DEFAULT_LOCALE}/p/itel-a70`);
   });
 
-  it("omits locales that do not serve the page", () => {
+  it("emits hreflang only for SEO-published locales by default", () => {
+    const alternates = buildCanonicalAlternates("en", "p", "itel-a70");
+    const languages = alternates.languages as Record<string, string>;
+    expect(Object.keys(languages).sort()).toEqual([...SEO_INDEXABLE_LOCALES, "x-default"].sort());
+    expect(languages.bem).toBeUndefined();
+    expect(languages.nya).toBeUndefined();
+  });
+
+  it("omits locales that do not serve the page and still strips unapproved SEO locales", () => {
     const alternates = buildCanonicalAlternates("en", "p", "itel-a70", {
-      availableLocales: ["en", "fr"],
+      availableLocales: ["en", "fr", "bem"],
     });
     const languages = alternates.languages as Record<string, string>;
     expect(Object.keys(languages).sort()).toEqual(["en", "fr", "x-default"].sort());

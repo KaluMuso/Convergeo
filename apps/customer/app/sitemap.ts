@@ -1,7 +1,10 @@
-import { LOCALES } from "@vergeo/i18n";
 import { buildAbsoluteUrl, buildLocaleCanonical, getSiteUrl } from "@vergeo/ui/src/seo/json-ld";
 
-import { coerceSitemapId, SITEMAP_STATIC_SEGMENTS } from "../lib/seo/sitemap-eligibility";
+import {
+  coerceSitemapId,
+  sitemapLocales,
+  SITEMAP_STATIC_SEGMENTS,
+} from "../lib/seo/sitemap-eligibility";
 import {
   fetchCategorySitemapSlugs,
   fetchProductSitemapSlugs,
@@ -85,7 +88,8 @@ export default async function sitemap(props: {
     const categorySlugs = await fetchCategorySitemapSlugs();
     const hasPublicCategories = categorySlugs.some((slug) => slug !== "all");
     const entries: MetadataRoute.Sitemap = [];
-    for (const locale of LOCALES) {
+    // Only SEO-published locales (not routable-but-unreviewed bem/nya).
+    for (const locale of sitemapLocales()) {
       for (const segment of SITEMAP_STATIC_SEGMENTS) {
         // Omit the empty categories hub from the sitemap (page is also noindex).
         if (segment === "categories" && !hasPublicCategories) {
@@ -103,7 +107,7 @@ export default async function sitemap(props: {
     const start = chunkIndex * CHUNK_SIZE;
     const chunk = productSlugs.slice(start, start + CHUNK_SIZE);
     const entries: MetadataRoute.Sitemap = [];
-    for (const locale of LOCALES) {
+    for (const locale of sitemapLocales()) {
       for (const slug of chunk) {
         entries.push(sitemapEntry(locale, "p", slug));
       }
@@ -114,7 +118,7 @@ export default async function sitemap(props: {
   if (id === vendorChunkId) {
     const vendorSlugs = await fetchVendorSitemapSlugs();
     const entries: MetadataRoute.Sitemap = [];
-    for (const locale of LOCALES) {
+    for (const locale of sitemapLocales()) {
       for (const slug of vendorSlugs) {
         entries.push(sitemapEntry(locale, "v", slug));
       }
@@ -125,7 +129,7 @@ export default async function sitemap(props: {
   if (id === eventChunkId) {
     const eventSlugs = await fetchEventSitemapSlugs();
     const entries: MetadataRoute.Sitemap = [];
-    for (const locale of LOCALES) {
+    for (const locale of sitemapLocales()) {
       for (const slug of eventSlugs) {
         entries.push(sitemapEntry(locale, "e", slug));
       }
@@ -136,7 +140,7 @@ export default async function sitemap(props: {
   if (id === categoryChunkId) {
     const categorySlugs = await fetchCategorySitemapSlugs();
     const entries: MetadataRoute.Sitemap = [];
-    for (const locale of LOCALES) {
+    for (const locale of sitemapLocales()) {
       for (const category of categorySlugs) {
         entries.push(sitemapEntry(locale, "c", category));
       }
@@ -147,7 +151,7 @@ export default async function sitemap(props: {
   if (id === serviceChunkId) {
     const serviceSlugs = await fetchServiceSitemapSlugs();
     const entries: MetadataRoute.Sitemap = [];
-    for (const locale of LOCALES) {
+    for (const locale of sitemapLocales()) {
       for (const slug of serviceSlugs) {
         entries.push(sitemapEntry(locale, "s", slug));
       }

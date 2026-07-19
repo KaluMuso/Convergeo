@@ -2,6 +2,12 @@
 
 Best-effort vernacular overlays for CUST-I18N-01. CI completeness requires every critical key; the strings below need a native Bemba / Nyanja review before production.
 
+## SEO publication (after native sign-off)
+
+Until the trust/payment terms below are signed off, **bem** and **nya** stay routable but are **not** SEO-published (`noindex,follow`; omitted from hreflang + sitemap).
+
+**Single flip after approval:** add `"bem"` and/or `"nya"` to `SEO_INDEXABLE_LOCALES` in `packages/i18n/src/seo-publication.ts`.
+
 ## Escrow triad (pay → hold → release)
 
 - `catalog.home.hero.escrowLine`
