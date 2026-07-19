@@ -1,5 +1,6 @@
 import { createApiClient } from "@vergeo/config";
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import {
   buildBreadcrumbListJsonLd,
@@ -23,6 +24,12 @@ import {
   type ComparisonListing,
   type ProductListing,
 } from "../../_components/pdp/comparison";
+import {
+  fetchProduct,
+  productCacheTag,
+  type Listing,
+  type ProductDetail,
+} from "../../_components/pdp/fetch-product";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
 
@@ -35,61 +42,11 @@ import {
 import type { ListingCondition } from "../../_components/pdp/condition-badge";
 import type { Metadata } from "next";
 
+// Must be a literal for Next.js segment config (imported constants are rejected).
 export const revalidate = 3600;
-
-const PRODUCT_CACHE_TAG_PREFIX = "product:";
 
 type CatalogTranslator = {
   (key: string, values?: Record<string, string | number>): string;
-};
-
-type ProductImage = {
-  public_id: string;
-  position: number;
-  listing_id: string;
-};
-
-type VendorLocation = {
-  landmark: string;
-  lat: number;
-  lng: number;
-};
-
-type VendorSummary = {
-  id: string;
-  slug: string;
-  display_name: string;
-  preferred_badge: boolean;
-  rating_avg: number | null;
-  rating_count: number;
-  location: VendorLocation | null;
-};
-
-type Listing = {
-  id: string;
-  title: string;
-  price_ngwee: number;
-  condition: ListingCondition;
-  stock_mode: "tracked" | "always_available";
-  stock_qty: number | null;
-  moq: number;
-  wholesale: boolean;
-  in_stock: boolean;
-  vendor: VendorSummary;
-  images: ProductImage[];
-};
-
-type ProductDetail = {
-  id: string;
-  name: string;
-  slug: string;
-  brand: string | null;
-  description: string | null;
-  spec: Record<string, unknown>;
-  category_id: string;
-  images: ProductImage[];
-  listings: Listing[];
-  listing_count: number;
 };
 
 type ComparisonApiListing = {
@@ -118,10 +75,6 @@ type ComparisonApiResponse = {
   listings: ComparisonApiListing[];
 };
 
-function productCacheTag(slug: string): string {
-  return `${PRODUCT_CACHE_TAG_PREFIX}${slug}`;
-}
-
 async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> {
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
@@ -132,52 +85,6 @@ async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> 
     messages,
     namespace: "catalog",
   }) as unknown as CatalogTranslator;
-}
-
-async function fetchProduct(
-  slug: string,
-): Promise<{ kind: "product"; data: ProductDetail } | { kind: "redirect"; slug: string } | null> {
-  try {
-    const url = absoluteApiUrl(`/products/${encodeURIComponent(slug)}`);
-    if (!url) {
-      return null;
-    }
-    const response = await fetch(url, {
-      next: {
-        revalidate,
-        tags: [productCacheTag(slug), "products"],
-      },
-      redirect: "manual",
-    });
-
-    if (response.status === 301) {
-      const location = response.headers.get("location");
-      if (location) {
-        const redirectedSlug = location.replace(/^\/products\//, "").replace(/\/$/, "");
-        if (redirectedSlug && redirectedSlug !== slug) {
-          return { kind: "redirect", slug: redirectedSlug };
-        }
-      }
-    }
-
-    if (response.status === 404) {
-      return null;
-    }
-
-    if (!response.ok) {
-      return null;
-    }
-
-    return { kind: "product", data: (await response.json()) as ProductDetail };
-  } catch {
-    const client = createApiClient({ baseUrl: getApiBaseUrl() });
-    try {
-      const data = await client.request<ProductDetail>(`/products/${encodeURIComponent(slug)}`);
-      return { kind: "product", data };
-    } catch {
-      return null;
-    }
-  }
 }
 
 async function fetchComparison(slug: string): Promise<ComparisonApiResponse | null> {
@@ -425,9 +332,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const t = await getCatalogTranslator(locale);
   const result = await fetchProduct(slug);
 
-  if (!result || result.kind === "redirect") {
+  if (result.kind !== "product") {
     return {
-      title: t("pdp.meta.notFoundTitle"),
+      title:
+        result.kind === "unavailable" ? t("pdp.unavailableTitle") : t("pdp.meta.notFoundTitle"),
       robots: { index: false, follow: false },
     };
   }
@@ -473,19 +381,38 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
   setRequestLocale(locale);
   const t = await getCatalogTranslator(locale);
-  const [result, comparison, related] = await Promise.all([
-    fetchProduct(slug),
-    fetchComparison(slug),
-    fetchRelated(slug),
-  ]);
-
-  if (!result) {
-    notFound();
-  }
+  const result = await fetchProduct(slug);
 
   if (result.kind === "redirect") {
     redirect(`/${locale}/p/${result.slug}`);
   }
+
+  if (result.kind === "not_found") {
+    notFound();
+  }
+
+  if (result.kind === "unavailable") {
+    const retryHref = `/${locale}/p/${encodeURIComponent(slug)}`;
+    return (
+      <main className="mx-auto w-full max-w-3xl px-4 py-10">
+        <EmptyState
+          title={t("pdp.unavailableTitle")}
+          body={t("pdp.unavailableBody")}
+          data-testid="pdp-unavailable"
+          action={
+            <Link
+              href={retryHref}
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-[var(--primary-btn-fg)]"
+            >
+              {t("pdp.unavailableRetry")}
+            </Link>
+          }
+        />
+      </main>
+    );
+  }
+
+  const [comparison, related] = await Promise.all([fetchComparison(slug), fetchRelated(slug)]);
 
   const product = result.data;
   const selectedListing = selectListing(product.listings, listingId);

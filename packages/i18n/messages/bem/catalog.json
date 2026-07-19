@@ -120,6 +120,9 @@
       "next": "Picture iyakonka",
       "previous": "Picture iyapita"
     },
+    "unavailableTitle": "Icintu tashifikapo",
+    "unavailableBody": "Tatwaishibe ukuleta icintu ici nomba. Checkeni connection no wesheni limbi.",
+    "unavailableRetry": "Wesheni limbi",
     "meta": {
       "descriptionFallback": "Shiteni {name} pa Vergeo5",
       "notFoundTitle": "Icintu tacisangwa"

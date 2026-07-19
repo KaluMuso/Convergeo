@@ -19,6 +19,7 @@ import {
   type SearchKind,
   type SearchKindFilter,
 } from "./search-kinds";
+import { searchResultHref } from "./search-result-href";
 
 export type { SearchKind, SearchKindFilter };
 export { SEARCH_KINDS, searchTabKinds };
@@ -37,6 +38,8 @@ export type SearchHit = {
   locale_terms: string[] | null;
   boost_signals: Record<string, unknown>;
   rrf_score: number;
+  /** Public route slug (product/vendor/event) when resolved by the search API. */
+  slug?: string | null;
 };
 
 export type SearchResponse = {
@@ -100,24 +103,6 @@ function readImagePublicId(hit: SearchHit): string | null {
   return null;
 }
 
-function resultHref(locale: string, hit: SearchHit): string {
-  const id = encodeURIComponent(hit.entity_id);
-  switch (hit.entity_kind) {
-    case "product":
-      return `/${locale}/p/${id}`;
-    case "service":
-      return `/${locale}/services/${id}`;
-    case "event":
-      return `/${locale}/e/${id}`;
-    case "listing":
-      return `/${locale}/p/${id}`;
-    case "vendor":
-      return `/${locale}/v/${id}`;
-    default:
-      return `/${locale}/search?q=${encodeURIComponent(hit.title)}`;
-  }
-}
-
 function formatCategoryLabel(categoryPath: string | null): string | null {
   if (!categoryPath) {
     return null;
@@ -139,7 +124,7 @@ function SearchResultCard({
   labels: ResultsTabsLabels;
 }) {
   const imagePublicId = readImagePublicId(hit);
-  const href = resultHref(locale, hit);
+  const href = searchResultHref(locale, hit);
   const category = formatCategoryLabel(hit.category_path);
   const priceNgwee = hit.price_min_ngwee ?? hit.price_max_ngwee;
 

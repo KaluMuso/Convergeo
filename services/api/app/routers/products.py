@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Annotated, Any, Protocol
 
 from app.deps import get_supabase_client
@@ -10,6 +11,11 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/products", tags=["products"])
+
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
 
 
 class _ServiceClient(Protocol):
@@ -254,6 +260,19 @@ def _collect_images(
     return images
 
 
+def _maybe_single_row(response: Any) -> dict[str, Any] | None:
+    """Normalize postgrest ``maybe_single().execute()`` empty results.
+
+    In postgrest-py 2.x, zero rows return ``None`` (not a response with
+    ``data=None``). Accessing ``.data`` on that ``None`` raised and became an
+    unhandled 500 for every missing product — including search UUID deep-links.
+    """
+    if response is None:
+        return None
+    data = getattr(response, "data", None)
+    return data if isinstance(data, dict) else None
+
+
 def _fetch_product_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
     response = (
         client.table("products")
@@ -262,8 +281,18 @@ def _fetch_product_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
         .maybe_single()
         .execute()
     )
-    row = response.data
-    return row if isinstance(row, dict) else None
+    return _maybe_single_row(response)
+
+
+def _fetch_product_by_id(client: Any, product_id: str) -> dict[str, Any] | None:
+    response = (
+        client.table("products")
+        .select("id, name, slug, brand, description, spec, category_id, status, merged_into_id")
+        .eq("id", product_id)
+        .maybe_single()
+        .execute()
+    )
+    return _maybe_single_row(response)
 
 
 def _fetch_canonical_slug(client: Any, product_id: str) -> str | None:
@@ -275,10 +304,47 @@ def _fetch_canonical_slug(client: Any, product_id: str) -> str | None:
         .maybe_single()
         .execute()
     )
-    row = response.data
-    if isinstance(row, dict) and row.get("slug"):
+    row = _maybe_single_row(response)
+    if row is not None and row.get("slug"):
         return str(row["slug"])
     return None
+
+
+def _fetch_product_slug_for_listing(client: Any, listing_id: str) -> str | None:
+    response = (
+        client.table("vendor_listings")
+        .select("id, status, products!inner(slug, status)")
+        .eq("id", listing_id)
+        .maybe_single()
+        .execute()
+    )
+    row = _maybe_single_row(response)
+    if row is None or str(row.get("status") or "") != "active":
+        return None
+    product = row.get("products")
+    if isinstance(product, list):
+        product = product[0] if product else None
+    if not isinstance(product, dict):
+        return None
+    if str(product.get("status") or "") != "active":
+        return None
+    slug = product.get("slug")
+    return str(slug) if slug else None
+
+
+def _resolve_uuid_to_product_slug(client: Any, value: str) -> str | None:
+    """Map a product or listing UUID to the canonical public product slug."""
+    product = _fetch_product_by_id(client, value)
+    if product is not None:
+        status = str(product.get("status") or "")
+        if status == "active" and product.get("slug"):
+            return str(product["slug"])
+        if status == "merged":
+            merged_into_id = product.get("merged_into_id")
+            if merged_into_id:
+                return _fetch_canonical_slug(client, str(merged_into_id))
+        return None
+    return _fetch_product_slug_for_listing(client, value)
 
 
 def build_product_detail(
@@ -288,6 +354,13 @@ def build_product_detail(
     include_wholesale: bool = False,
 ) -> ProductDetailResponse | RedirectResponse:
     product = _fetch_product_by_slug(client, slug)
+    if product is None and _UUID_RE.match(slug):
+        # Search historically deep-linked with entity UUIDs; redirect to the
+        # canonical slug so existing links and caches resolve cleanly.
+        canonical = _resolve_uuid_to_product_slug(client, slug)
+        if canonical:
+            return RedirectResponse(url=f"/products/{canonical}", status_code=301)
+        raise AppError("product.not_found", "Product not found", 404)
     if product is None:
         raise AppError("product.not_found", "Product not found", 404)
 

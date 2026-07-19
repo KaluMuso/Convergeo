@@ -90,6 +90,22 @@ class FakeRpc:
         return FakeRpcResponse(self._handler(self.name, self.params))
 
 
+class _EmptyTableQuery:
+    """No-op table stub so ``attach_route_slugs`` can run against RPC-only fakes."""
+
+    def select(self, *_a: Any, **_k: Any) -> _EmptyTableQuery:
+        return self
+
+    def in_(self, *_a: Any, **_k: Any) -> _EmptyTableQuery:
+        return self
+
+    def eq(self, *_a: Any, **_k: Any) -> _EmptyTableQuery:
+        return self
+
+    def execute(self) -> FakeRpcResponse:
+        return FakeRpcResponse([])
+
+
 class FakeSupabaseClient:
     def __init__(self, handler: Any) -> None:
         self._handler = handler
@@ -98,6 +114,9 @@ class FakeSupabaseClient:
     def rpc(self, name: str, params: dict[str, Any]) -> FakeRpc:
         self.calls.append((name, params))
         return FakeRpc(name, params, self._handler)
+
+    def table(self, _name: str) -> _EmptyTableQuery:
+        return _EmptyTableQuery()
 
 
 def _default_rpc_handler(name: str, params: dict[str, Any]) -> list[Any]:
@@ -361,6 +380,92 @@ def _charger_client() -> FakeClientWithListings:
             {"id": str(WHOLESALE_LISTING_ID), "wholesale": True},
         ],
     )
+
+
+def test_search_attaches_public_slugs_for_product_and_listing_hits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Search must emit route slugs — customer PDP looks up by slug, not UUID."""
+    import asyncio
+
+    from app.services.search import run_search
+
+    product_id = UUID("a0000133-0000-4000-8000-000000000001")
+    listing_id = UUID("1036bd7b-f861-9ea2-b97c-0ddbf22eb2ed")
+
+    def handler(name: str, params: dict[str, Any]) -> list[Any]:
+        if name == "expand_search_terms":
+            return [str(params.get("p_query", ""))]
+        if name != "search_rrf":
+            return []
+        return [
+            _hit(
+                entity_id=listing_id,
+                title="Itel A70 Smartphone",
+                entity_kind="listing",
+                score=1.1,
+            ),
+            _hit(
+                entity_id=product_id,
+                title="Itel A70 Smartphone",
+                entity_kind="product",
+                score=1.0,
+            ),
+        ]
+
+    class _SlugTableQuery:
+        def __init__(self, table: str) -> None:
+            self._table = table
+            self._ids: set[str] | None = None
+            self._wholesale_only = False
+
+        def select(self, *_a: Any, **_k: Any) -> _SlugTableQuery:
+            return self
+
+        def in_(self, _column: str, values: list[str]) -> _SlugTableQuery:
+            self._ids = {str(value) for value in values}
+            return self
+
+        def eq(self, column: str, value: Any) -> _SlugTableQuery:
+            if column == "wholesale":
+                self._wholesale_only = bool(value)
+            return self
+
+        def execute(self) -> FakeRpcResponse:
+            # Wholesale filter probe must not invent wholesale rows.
+            if self._wholesale_only:
+                return FakeRpcResponse([])
+            ids = self._ids or set()
+            if self._table == "products":
+                rows = [
+                    {"id": str(product_id), "slug": "itel-a70"}
+                    for entity_id in ids
+                    if entity_id == str(product_id)
+                ]
+                return FakeRpcResponse(rows)
+            if self._table == "vendor_listings":
+                rows = [
+                    {
+                        "id": str(listing_id),
+                        "products": {"slug": "itel-a70"},
+                    }
+                    for entity_id in ids
+                    if entity_id == str(listing_id)
+                ]
+                return FakeRpcResponse(rows)
+            return FakeRpcResponse([])
+
+    class _Client(FakeSupabaseClient):
+        def table(self, name: str) -> _SlugTableQuery:
+            return _SlugTableQuery(name)
+
+    monkeypatch.setattr("app.services.search.fetch_query_embedding", _no_embedding)
+    result = asyncio.run(run_search(_Client(handler), query="itel"))
+    by_kind = {hit.entity_kind: hit for hit in result.results}
+    assert by_kind["product"].slug == "itel-a70"
+    assert by_kind["listing"].slug == "itel-a70"
+    assert by_kind["product"].entity_id == str(product_id)
+    assert by_kind["listing"].entity_id == str(listing_id)
 
 
 def test_search_hides_wholesale_listings_from_consumers(

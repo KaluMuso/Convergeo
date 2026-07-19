@@ -166,6 +166,9 @@
     }
   },
   "pdp": {
+    "unavailableTitle": "Product unavailable",
+    "unavailableBody": "We could not load this product right now. Check your connection and try again.",
+    "unavailableRetry": "Try again",
     "meta": {
       "notFoundTitle": "Product not found",
       "descriptionFallback": "Shop {name} on Vergeo5"

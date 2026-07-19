@@ -166,6 +166,9 @@
     }
   },
   "pdp": {
+    "unavailableTitle": "Produit indisponible",
+    "unavailableBody": "Nous n'avons pas pu charger ce produit pour le moment. Vérifiez votre connexion et réessayez.",
+    "unavailableRetry": "Réessayer",
     "meta": {
       "notFoundTitle": "Produit introuvable",
       "descriptionFallback": "Achetez {name} sur Vergeo5"
