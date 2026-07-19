@@ -6,6 +6,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
+import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import {
   DateFilterChips,
   EVENT_CATEGORIES,
@@ -36,10 +37,6 @@ type PageProps = {
 type EventsTranslator = {
   (key: string, values?: Record<string, string | number>): string;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function parseDateWindow(value: string | undefined): EventDateWindow {
   if (value === "this_weekend" || value === "all") {
@@ -85,7 +82,11 @@ async function fetchEvents(params: {
   const suffix = search.toString() ? `?${search.toString()}` : "";
 
   try {
-    const response = await fetch(`${getApiBaseUrl()}/events${suffix}`, {
+    const url = absoluteApiUrl(`/events${suffix}`);
+    if (!url) {
+      return null;
+    }
+    const response = await fetch(url, {
       next: { revalidate, tags: ["events"] },
     });
     if (!response.ok) {

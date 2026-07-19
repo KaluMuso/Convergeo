@@ -1,9 +1,11 @@
 import { createApiClient } from "@vergeo/config";
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { resolveApiBaseUrl } from "../../../../lib/api-base-url";
 import { RecentSearches } from "../_components/search/recent-searches";
 import {
   ResultsTabs,
@@ -30,10 +32,6 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
-
 function parseKind(value: string | undefined): SearchKindFilter {
   if (!value) {
     return "all";
@@ -55,7 +53,11 @@ async function fetchSearch(params: {
   page?: number;
   pageSize?: number;
 }): Promise<SearchResponse | null> {
-  const client = createApiClient({ baseUrl: getApiBaseUrl() });
+  const baseUrl = resolveApiBaseUrl();
+  if (!baseUrl) {
+    return null;
+  }
+  const client = createApiClient({ baseUrl });
   const searchParams = new URLSearchParams({
     q: params.q,
     page: String(params.page ?? 1),
@@ -152,12 +154,19 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
 
   const categorySuggestions = [
     { key: "electronics", href: `/${locale}/c/electronics`, label: t("categories.electronics") },
-    { key: "fashion", href: `/${locale}/c/fashion-beauty`, label: t("categories.fashion") },
+    { key: "fashion", href: `/${locale}/c/fashion`, label: t("categories.fashion") },
     { key: "home", href: `/${locale}/c/home-living`, label: t("categories.home") },
-    { key: "groceries", href: `/${locale}/c/groceries`, label: t("categories.groceries") },
+    { key: "groceries", href: `/${locale}/c/groceries-staples`, label: t("categories.groceries") },
   ];
 
-  const suggestionTerms = ["itel A70", "chitenge", "kitchenware", "Lusaka vendors"];
+  const suggestionTerms = [
+    t("suggestionTerms.phones"),
+    t("suggestionTerms.chitenge"),
+    t("suggestionTerms.kitchenware"),
+    t("suggestionTerms.lusakaVendors"),
+  ];
+
+  const searchUnavailable = Boolean(query) && searchResponse === null;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-4 motion-rise sm:py-6">
@@ -188,7 +197,13 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         }}
       />
 
-      {query && searchResponse ? (
+      {searchUnavailable ? (
+        <EmptyState
+          title={t("unavailable.title")}
+          body={t("unavailable.body")}
+          data-testid="search-unavailable"
+        />
+      ) : query && searchResponse ? (
         searchResponse.total === 0 ? (
           <ZeroResults
             query={query}

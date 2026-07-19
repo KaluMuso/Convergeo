@@ -9,6 +9,8 @@
     "results": "{count, plural, one {# 个商品} other {# 个商品}}",
     "emptyTitle": "未找到商品",
     "emptyBody": "请尝试清除筛选条件或浏览其他类别。",
+    "unavailableTitle": "暂时无法加载商品",
+    "unavailableBody": "我们目前无法加载此类别的商品。请稍后重试，或使用搜索。",
     "sort": {
       "label": "排序方式",
       "relevance": "相关度",
@@ -76,7 +78,7 @@
     "hero": {
       "eyebrow": "赞比亚的购物平台",
       "fallbackTitle": "发现赞比亚各地的商品、服务与活动",
-      "fallbackSubtitle": "比较认证商家的价格，使用移动支付，并安排卢萨卡配送或全国自提。",
+      "fallbackSubtitle": "比较赞比亚卖家的价格，使用移动支付，并安排卢萨卡配送或全国自提。",
       "primaryCta": "开始浏览",
       "secondaryCta": "在 Vergeo5 上销售",
       "placeholder": {
@@ -111,7 +113,7 @@
       "newTitle": "Vergeo5 新品",
       "departmentTitle": "{category} 新品",
       "viewAll": "查看全部",
-      "servicesTitle": "附近的服务",
+      "servicesTitle": "服务",
       "vendorsTitle": "热门商家",
       "services": {
         "provider": "由 {provider} 提供",
@@ -183,7 +185,8 @@
       "decreaseSymbol": "-",
       "increaseSymbol": "+",
       "addToCart": "加入购物车",
-      "addToCartSoon": "加入购物车（即将推出）",
+      "addingToCart": "正在添加…",
+      "addToCartError": "无法加入购物车。请检查网络后重试。",
       "inStock": "有货",
       "outOfStock": "缺货",
       "lowStock": "仅剩 {count} 件",
@@ -216,7 +219,7 @@
   },
   "browseCategories": {
     "title": "浏览分类",
-    "subtitle": "从认证商家浏览第一阶段品类及其子分类。",
+    "subtitle": "浏览第一阶段品类及其子分类。",
     "emptyTitle": "暂无分类",
     "emptyBody": "目录目前没有公开分类。请稍后再来，或使用搜索。",
     "unavailableTitle": "分类暂不可用",

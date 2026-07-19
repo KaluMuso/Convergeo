@@ -13,6 +13,7 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 import { ListingGrid, type CatalogListing } from "../../_components/plp/listing-grid";
 
 import type { Metadata } from "next";
@@ -79,10 +80,6 @@ type DirectoryTranslator = {
   (key: string, values?: Record<string, string | number>): string;
 };
 
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
-
 async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslator> {
   const baseMessages = await getMessages();
   const directoryMessages = await loadNamespace(locale as Locale, "directory");
@@ -97,7 +94,11 @@ async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslat
 
 async function fetchVendorProfile(slug: string): Promise<VendorProfileApiResponse | null> {
   try {
-    const response = await fetch(`${getApiBaseUrl()}/directory/${encodeURIComponent(slug)}`, {
+    const url = absoluteApiUrl(`/directory/${encodeURIComponent(slug)}`);
+    if (!url) {
+      return null;
+    }
+    const response = await fetch(url, {
       next: {
         revalidate,
         tags: [`vendor:${slug}`, "directory"],

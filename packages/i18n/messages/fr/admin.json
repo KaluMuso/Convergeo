@@ -17,6 +17,30 @@
     "translations": "Traductions",
     "support": "Support"
   },
+  "hubs": {
+    "moderation": {
+      "title": "Modération",
+      "subtitle": "Choisissez une file de modération. Ce hub n'invente pas d'outils non branchés à l'API.",
+      "productsTitle": "Produits en double",
+      "productsBody": "Examiner les candidats de fusion via l'API des doublons.",
+      "flagsTitle": "Signalements",
+      "flagsBody": "Examiner les signalements d'authenticité et de politique."
+    },
+    "config": {
+      "title": "Configuration",
+      "subtitle": "Ouvrez un éditeur de configuration live. Les valeurs viennent de l'API admin — rien n'est simulé.",
+      "flagsTitle": "Fonctionnalités (drapeaux)",
+      "flagsBody": "Portail d'invitation, rails de collecte et bascules associées.",
+      "commissionsTitle": "Commissions",
+      "commissionsBody": "Taux de commission par catégorie utilisés à l'achat.",
+      "deliveryTitle": "Zones de livraison",
+      "deliveryBody": "Frais et couverture des zones de livraison à Lusaka.",
+      "categoriesTitle": "Arborescence des catégories",
+      "categoriesBody": "Structure publique du catalogue.",
+      "platformTitle": "Réglages de la plateforme",
+      "platformBody": "Limites opérationnelles et paramètres plateforme."
+    }
+  },
   "translations": {
     "heading": "Traductions",
     "subheading": "Chaque chaîne destinée à l'utilisateur, regroupée par emplacement, avec la couverture par langue. Modifiez une traduction puis cliquez sur Enregistrer pour la stocker ; cliquez sur Télécharger JSON pour la publier dans les fichiers de messages. L'anglais fait foi ; les chaînes non traduites basculent vers l'anglais.",

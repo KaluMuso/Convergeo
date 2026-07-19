@@ -1,5 +1,7 @@
 import { createApiClient } from "@vergeo/config";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
+
 export type PayoutBalances = {
   escrow_held_ngwee: number;
   released_available_ngwee: number;
@@ -33,10 +35,6 @@ export type PayoutMethodChangeResult = {
   match_score: number;
   matched: boolean;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function createPayoutsClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });

@@ -1,5 +1,7 @@
 import { createApiClient } from "@vergeo/config";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
+
 export type CompletenessBreakdown = {
   logo: boolean;
   description: boolean;
@@ -43,10 +45,6 @@ export type ProfilePatchPayload = {
     landmark: string;
   };
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function createProfileClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });

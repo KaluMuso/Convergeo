@@ -12,6 +12,8 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { absoluteApiUrl } from "../../../../../lib/api-base-url";
+
 import { EventJsonLd, isEventIndexable, type EventJsonLdInput } from "./_components/event-jsonld";
 
 import type { Metadata } from "next";
@@ -89,10 +91,6 @@ type EventsTranslator = {
   (key: string, values?: Record<string, string | number>): string;
 };
 
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
-
 async function getEventsTranslator(locale: string): Promise<EventsTranslator> {
   const baseMessages = await getMessages();
   const eventsMessages = await loadNamespace(locale as Locale, "events");
@@ -109,8 +107,12 @@ async function getEventsTranslator(locale: string): Promise<EventsTranslator> {
 }
 
 async function fetchEvent(slug: string): Promise<EventDetail | null> {
+  const url = absoluteApiUrl(`/events/${encodeURIComponent(slug)}`);
+  if (!url) {
+    return null;
+  }
   try {
-    const response = await fetch(`${getApiBaseUrl()}/events/${encodeURIComponent(slug)}`, {
+    const response = await fetch(url, {
       next: { revalidate, tags: [`event:${slug}`, "events"] },
     });
     if (response.status === 404) {

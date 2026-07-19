@@ -6,6 +6,8 @@ import { Button } from "@vergeo/ui/src/button";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+
 import { CitationCard } from "./citation-card";
 import { QuotaBanner } from "./quota-banner";
 import { extractErrorState, relativeAiKey, type AskErrorState, type AskResponse } from "./types";
@@ -16,10 +18,6 @@ type AskThreadProps = {
   locale: string;
   initialQuery: string;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function AskThread({ locale, initialQuery }: AskThreadProps) {
   const t = useTranslations("ai");

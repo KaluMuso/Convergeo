@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { Spinner } from "../../listings/new/_lib/ui";
 
 type DisputeSummary = {
@@ -14,10 +15,6 @@ type DisputeSummary = {
   status: string;
   created_at: string;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function statusLabel(status: string, t: (key: string) => string): string {
   const key = `disputes.detail.status.${status}`;

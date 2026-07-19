@@ -6,6 +6,8 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
+import { absoluteApiUrl } from "../../../../lib/api-base-url";
+
 import { ServiceGrid, type ServiceBrowseItem } from "./_components/service-grid";
 import { SERVICE_VERTICALS, VerticalFilterChips } from "./_components/vertical-filter-chips";
 
@@ -30,10 +32,6 @@ type PageProps = {
 type ServicesTranslator = {
   (key: string, values?: Record<string, string | number>): string;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function parseCategory(value: string | undefined): string | null {
   if (!value) {
@@ -71,7 +69,11 @@ async function fetchServices(params: {
   const suffix = search.toString() ? `?${search.toString()}` : "";
 
   try {
-    const response = await fetch(`${getApiBaseUrl()}/services${suffix}`, {
+    const url = absoluteApiUrl(`/services${suffix}`);
+    if (!url) {
+      return null;
+    }
+    const response = await fetch(url, {
       next: { revalidate, tags: ["services"] },
     });
     if (!response.ok) {

@@ -9,6 +9,8 @@
     "results": "{count, plural, one {# listing} other {# listings}}",
     "emptyTitle": "No listings found",
     "emptyBody": "Try clearing filters or browsing another category.",
+    "unavailableTitle": "Listings unavailable",
+    "unavailableBody": "We could not load products for this category right now. Try again shortly, or use search.",
     "sort": {
       "label": "Sort by",
       "relevance": "Relevance",
@@ -76,7 +78,7 @@
     "hero": {
       "eyebrow": "Zambia's marketplace",
       "fallbackTitle": "Discover products, services, and events across Zambia",
-      "fallbackSubtitle": "Compare prices from verified vendors, pay with mobile money, and arrange Lusaka delivery or nationwide pickup.",
+      "fallbackSubtitle": "Compare prices from sellers across Zambia, pay with mobile money, and arrange Lusaka delivery or nationwide pickup.",
       "primaryCta": "Start browsing",
       "secondaryCta": "Sell on Vergeo5",
       "placeholder": {
@@ -111,7 +113,7 @@
       "newTitle": "New on Vergeo5",
       "departmentTitle": "New in {category}",
       "viewAll": "View all",
-      "servicesTitle": "Services near you",
+      "servicesTitle": "Services",
       "vendorsTitle": "Top vendors",
       "services": {
         "provider": "By {provider}",
@@ -183,7 +185,8 @@
       "decreaseSymbol": "-",
       "increaseSymbol": "+",
       "addToCart": "Add to cart",
-      "addToCartSoon": "Add to cart (coming soon)",
+      "addingToCart": "Adding…",
+      "addToCartError": "Could not add to cart. Check your connection and try again.",
       "inStock": "In stock",
       "outOfStock": "Out of stock",
       "lowStock": "Only {count} left",
@@ -216,7 +219,7 @@
   },
   "browseCategories": {
     "title": "Browse categories",
-    "subtitle": "Shop Phase-1 departments and their subcategories from verified vendors.",
+    "subtitle": "Shop Phase-1 departments and their subcategories.",
     "emptyTitle": "No categories yet",
     "emptyBody": "The catalogue has no public categories right now. Check back soon, or use search.",
     "unavailableTitle": "Categories unavailable",

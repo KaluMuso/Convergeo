@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from "react";
 
 import { CloudinaryImage } from "../../../../../../packages/ui/src/media/cloudinary-image";
 import { UploadDropzone } from "../../../../../../packages/ui/src/media/upload-dropzone";
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
 export const MAX_LISTING_IMAGES = 8;
 export const DOWNSCALE_MAX_EDGE = 1600;
@@ -181,7 +182,7 @@ export function ImageManager({ listingId, images, getToken, onImagesChange }: Im
   const apiClient = useMemo(
     () =>
       createApiClient({
-        baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000",
+        baseUrl: getApiBaseUrl(),
         getToken,
       }),
     [getToken],

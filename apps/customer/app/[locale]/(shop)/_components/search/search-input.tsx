@@ -13,6 +13,8 @@ import {
   type KeyboardEvent,
 } from "react";
 
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+
 import { addRecentSearch } from "./recent-searches";
 
 export type SearchKind = "products" | "services" | "events" | "vendors";
@@ -45,10 +47,6 @@ export type SearchInputProps = {
 };
 
 const DEBOUNCE_MS = 200;
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function buildSearchHref(locale: string, query: string): string {
   return `/${locale}/search?q=${encodeURIComponent(query.trim())}`;

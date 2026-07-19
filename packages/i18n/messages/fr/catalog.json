@@ -9,6 +9,8 @@
     "results": "{count, plural, one {# annonce} other {# annonces}}",
     "emptyTitle": "Aucune annonce trouvée",
     "emptyBody": "Essayez d'effacer les filtres ou de parcourir une autre catégorie.",
+    "unavailableTitle": "Annonces indisponibles",
+    "unavailableBody": "Nous n'avons pas pu charger les produits de cette catégorie. Réessayez sous peu, ou utilisez la recherche.",
     "sort": {
       "label": "Trier par",
       "relevance": "Pertinence",
@@ -76,7 +78,7 @@
     "hero": {
       "eyebrow": "La marketplace de la Zambie",
       "fallbackTitle": "Découvrez produits, services et événements partout en Zambie",
-      "fallbackSubtitle": "Comparez les prix de vendeurs vérifiés, payez par mobile money, et organisez une livraison à Lusaka ou un retrait partout en Zambie.",
+      "fallbackSubtitle": "Comparez les prix des vendeurs en Zambie, payez par mobile money, et organisez une livraison à Lusaka ou un retrait partout en Zambie.",
       "primaryCta": "Commencer à parcourir",
       "secondaryCta": "Vendre sur Vergeo5",
       "placeholder": {
@@ -111,7 +113,7 @@
       "newTitle": "Nouveau sur Vergeo5",
       "departmentTitle": "Nouveautés dans {category}",
       "viewAll": "Voir tout",
-      "servicesTitle": "Services près de chez vous",
+      "servicesTitle": "Services",
       "vendorsTitle": "Meilleurs vendeurs",
       "services": {
         "provider": "Par {provider}",
@@ -183,7 +185,8 @@
       "decreaseSymbol": "-",
       "increaseSymbol": "+",
       "addToCart": "Ajouter au panier",
-      "addToCartSoon": "Ajouter au panier (bientôt disponible)",
+      "addingToCart": "Ajout…",
+      "addToCartError": "Impossible d'ajouter au panier. Vérifiez votre connexion et réessayez.",
       "inStock": "En stock",
       "outOfStock": "En rupture de stock",
       "lowStock": "Plus que {count} en stock",
@@ -216,7 +219,7 @@
   },
   "browseCategories": {
     "title": "Parcourir les catégories",
-    "subtitle": "Explorez les rayons de la phase 1 et leurs sous-catégories auprès de vendeurs vérifiés.",
+    "subtitle": "Explorez les rayons de la phase 1 et leurs sous-catégories.",
     "emptyTitle": "Aucune catégorie pour le moment",
     "emptyBody": "Le catalogue n'a pas encore de catégories publiques. Revenez bientôt, ou utilisez la recherche.",
     "unavailableTitle": "Catégories indisponibles",

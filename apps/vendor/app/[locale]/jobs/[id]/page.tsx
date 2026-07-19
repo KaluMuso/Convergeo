@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { Button, Spinner } from "../../listings/new/_lib/ui";
 
 type MarkCompleteResponse = {
@@ -17,10 +18,6 @@ type MarkCompleteResponse = {
 type PageProps = {
   params: Promise<{ locale: string; id: string }>;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export default function VendorJobCompletePage({ params }: PageProps) {
   const t = useTranslations("services.completion.provider");

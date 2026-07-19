@@ -17,6 +17,30 @@
     "translations": "翻译",
     "support": "客服"
   },
+  "hubs": {
+    "moderation": {
+      "title": "内容审核",
+      "subtitle": "选择一个审核队列。此入口不会虚构未接入 API 的工具。",
+      "productsTitle": "重复商品",
+      "productsBody": "通过实时重复项 API 审查合并候选。",
+      "flagsTitle": "商品标记",
+      "flagsBody": "审查真实性与政策相关的用户举报。"
+    },
+    "config": {
+      "title": "配置",
+      "subtitle": "打开实时配置编辑器。数值来自管理 API — 此处不做模拟。",
+      "flagsTitle": "功能开关",
+      "flagsBody": "邀请门槛、收款通道及相关开关。",
+      "commissionsTitle": "佣金",
+      "commissionsBody": "下单时使用的品类佣金率。",
+      "deliveryTitle": "配送区域",
+      "deliveryBody": "卢萨卡配送区域费用与覆盖范围。",
+      "categoriesTitle": "分类树",
+      "categoriesBody": "公开目录分类结构。",
+      "platformTitle": "平台参数",
+      "platformBody": "运营限额与平台设置。"
+    }
+  },
   "translations": {
     "heading": "翻译",
     "subheading": "所有面向用户的字符串按所在位置分组，并显示各语言的翻译覆盖率。编辑翻译后点击“保存”进行存储；点击“下载 JSON”将其发布到消息文件中。英语为基准语言；未翻译的字符串将回退为英语。",

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
 import { CloudinaryImage } from "../../../../../../packages/ui/src/media/cloudinary-image";
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { Button } from "../../listings/new/_lib/ui";
 
 type VendorReviewRow = {
@@ -20,10 +21,6 @@ type VendorReviewRow = {
   item_title: string | null;
   created_at: string;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function StarRow({
   rating,

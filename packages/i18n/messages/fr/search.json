@@ -22,14 +22,24 @@
     "suggestionsTitle": "Essayez de rechercher",
     "categoriesTitle": "Parcourir les catégories"
   },
+  "unavailable": {
+    "title": "Recherche indisponible",
+    "body": "Nous n'avons pas pu charger les résultats. Réessayez sous peu, ou parcourez les catégories."
+  },
+  "suggestionTerms": {
+    "phones": "téléphones",
+    "chitenge": "chitenge",
+    "kitchenware": "ustensiles de cuisine",
+    "lusakaVendors": "vendeurs à Lusaka"
+  },
   "suggestions": {
     "term": "Essayez de rechercher {term}"
   },
   "categories": {
     "electronics": "Électronique",
-    "fashion": "Mode et beauté",
+    "fashion": "Mode",
     "home": "Maison et décoration",
-    "groceries": "Épicerie"
+    "groceries": "Épicerie et produits de base"
   },
   "askVergeo": {
     "title": "Ask Vergeo",

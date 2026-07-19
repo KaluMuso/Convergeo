@@ -1,7 +1,7 @@
 {
   "index": {
     "title": "Business directory",
-    "subtitle": "Discover verified vendors across Zambia",
+    "subtitle": "Discover sellers and businesses across Zambia",
     "results": "{count, plural, one {# business} other {# businesses}}",
     "searchPlaceholder": "Search businesses",
     "searchLabel": "Search directory",

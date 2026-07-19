@@ -1,12 +1,12 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
 import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
-import { TopNav } from "@vergeo/ui/src/top-nav";
 import Link from "next/link";
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { BottomNavClient } from "./_components/bottom-nav-client";
 import { DesktopHeader } from "./_components/desktop-header";
+import { MobileTopNav } from "./_components/mobile-top-nav";
 
 type ShopLayoutProps = {
   children: React.ReactNode;
@@ -42,6 +42,12 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       href: `/${locale}`,
     },
     {
+      key: "categories",
+      icon: navIcon("▦"),
+      label: t("home.nav.allCategories"),
+      href: `/${locale}/categories`,
+    },
+    {
       key: "browse",
       icon: navIcon("🔍"),
       label: t("home.nav.browse"),
@@ -52,12 +58,6 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       icon: navIcon("✦"),
       label: t("home.nav.ask"),
       href: `/${locale}/ask`,
-    },
-    {
-      key: "orders",
-      icon: navIcon("📋"),
-      label: t("home.nav.orders"),
-      href: `/${locale}/account`,
     },
     {
       key: "account",
@@ -71,10 +71,9 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
     // Shop client components (`useTranslations("catalog")`) need the catalog
     // namespace. Root layout only ships `common` (+ `legal` for the footer).
     <NextIntlClientProvider locale={locale} messages={messages}>
-      {/* Mobile/tablet chrome (<1024px) — unchanged. Hidden on lg+ where the
-          desktop header below takes over. */}
-      <TopNav
-        className="lg:hidden"
+      {/* Mobile/tablet chrome (<1024px). Hidden on lg+ where the desktop header takes over. */}
+      <MobileTopNav
+        locale={locale}
         logo={
           <Link href={`/${locale}`} className="font-display text-lg text-primary">
             {tCommon("app.name")}
@@ -97,13 +96,10 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           />
         }
         cartIcon={navIcon("🛒")}
-        cartCount={0}
-        cartHref={`/${locale}/cart`}
         cartLabel={t("home.nav.cart")}
         skipLinkTargetId="shop-main"
         skipLinkLabel={tCommon("nav.skipToContent")}
         navAriaLabel={t("home.nav.ariaLabel")}
-        LinkComponent={Link}
         condensed
       />
       <DesktopHeader

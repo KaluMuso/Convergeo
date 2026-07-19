@@ -1,5 +1,7 @@
 import { createApiClient } from "@vergeo/config";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
+
 import { PRIVATE_KYC_BUCKET, type KycDocType } from "./types";
 
 export type KycSignUploadRequest = {
@@ -29,7 +31,7 @@ export function assertPrivateKycPath(path: string): void {
 }
 
 export function createStorageClient(getToken: () => string | null | Promise<string | null>) {
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+  const apiBase = getApiBaseUrl();
   const client = createApiClient({ baseUrl: apiBase, getToken });
 
   return {

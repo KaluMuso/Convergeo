@@ -1,5 +1,7 @@
 import { createApiClient } from "@vergeo/config";
 
+import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
+
 export type TicketKind = "fixed" | "tier" | "free_rsvp";
 
 export type TicketTypeSummary = {
@@ -54,10 +56,6 @@ export type EarlyBirdInput = {
   early_bird_price_ngwee: number | null;
   early_bird_until: string | null;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function createTicketsClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
