@@ -18,6 +18,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from app.services.escrow.order_money_gate import RefundGateDecision
+from app.services.escrow.release_accounting import OrderReleaseLedgerSummary
 from app.services.ledger.engine import PostedTransaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.payments.references import make_refund_reference
@@ -376,12 +377,23 @@ class TestKeyDerivation:
         _seed_order(fake, released=True)
         service = FakeServiceClient(fake)
         ledger = IdempotentPostTransaction()
+        full_release = OrderReleaseLedgerSummary(
+            order_id=ORDER_ID,
+            charge_received_ngwee=105_000,
+            commission_captured_ngwee=0,
+            vendor_released_ngwee=105_000,
+            refund_drained_ngwee=0,
+        )
 
         with (
             patch("app.services.refunds.execute.post_transaction", ledger),
             patch(
                 "app.services.refunds.execute.decide_refund_phase_under_gate",
                 side_effect=_gate_decision_for_fake(fake),
+            ),
+            patch(
+                "app.services.refunds.execute.summarize_order_release_ledger",
+                return_value=full_release,
             ),
         ):
             result = execute_refund(service_client=service, order_id=ORDER_ID, lane=1,
