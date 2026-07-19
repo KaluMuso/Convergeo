@@ -165,9 +165,9 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
         )
         for row in _rows(response):
             entity_id = row.get("id")
-            slug = row.get("slug")
-            if entity_id and isinstance(slug, str) and slug.strip():
-                product_slugs[str(entity_id)] = slug.strip()
+            row_slug = row.get("slug")
+            if entity_id and isinstance(row_slug, str) and row_slug.strip():
+                product_slugs[str(entity_id)] = row_slug.strip()
 
     if listing_ids:
         response = (
@@ -178,9 +178,9 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
         )
         for row in _rows(response):
             entity_id = row.get("id")
-            slug = _nested_slug(row.get("products"))
-            if entity_id and slug:
-                listing_slugs[str(entity_id)] = slug
+            row_slug = _nested_slug(row.get("products"))
+            if entity_id and row_slug:
+                listing_slugs[str(entity_id)] = row_slug
 
     if vendor_ids:
         response = (
@@ -188,9 +188,9 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
         )
         for row in _rows(response):
             entity_id = row.get("id")
-            slug = row.get("slug")
-            if entity_id and isinstance(slug, str) and slug.strip():
-                vendor_slugs[str(entity_id)] = slug.strip()
+            row_slug = row.get("slug")
+            if entity_id and isinstance(row_slug, str) and row_slug.strip():
+                vendor_slugs[str(entity_id)] = row_slug.strip()
 
     if event_ids:
         response = (
@@ -198,27 +198,27 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
         )
         for row in _rows(response):
             entity_id = row.get("id")
-            slug = row.get("slug")
-            if entity_id and isinstance(slug, str) and slug.strip():
-                event_slugs[str(entity_id)] = slug.strip()
+            row_slug = row.get("slug")
+            if entity_id and isinstance(row_slug, str) and row_slug.strip():
+                event_slugs[str(entity_id)] = row_slug.strip()
 
     enriched: list[SearchHit] = []
     for hit in hits:
-        slug: str | None
+        route_slug: str | None
         if hit.entity_kind == "product":
-            slug = product_slugs.get(hit.entity_id)
+            route_slug = product_slugs.get(hit.entity_id)
         elif hit.entity_kind == "listing":
-            slug = listing_slugs.get(hit.entity_id)
+            route_slug = listing_slugs.get(hit.entity_id)
         elif hit.entity_kind == "vendor":
-            slug = vendor_slugs.get(hit.entity_id)
+            route_slug = vendor_slugs.get(hit.entity_id)
         elif hit.entity_kind == "event":
-            slug = event_slugs.get(hit.entity_id)
+            route_slug = event_slugs.get(hit.entity_id)
         elif hit.entity_kind == "service":
             # Services have no separate slug column — UUID is the public slug.
-            slug = hit.entity_id
+            route_slug = hit.entity_id
         else:
-            slug = None
-        enriched.append(hit.model_copy(update={"slug": slug}))
+            route_slug = None
+        enriched.append(hit.model_copy(update={"slug": route_slug}))
     return enriched
 
 
