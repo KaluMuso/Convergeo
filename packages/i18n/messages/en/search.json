@@ -24,7 +24,12 @@
   },
   "unavailable": {
     "title": "Search unavailable",
-    "body": "We could not load search results right now. Try again shortly, or browse categories."
+    "body": "We could not load search results right now. Try again shortly, or browse categories.",
+    "retry": "Try again"
+  },
+  "invalid": {
+    "title": "That search is too long",
+    "body": "Shorten your query and try again. Filters and sorting in the URL are unchanged."
   },
   "suggestionTerms": {
     "phones": "phones",

@@ -7,7 +7,15 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo } from "react";
 
-import type { SearchKind } from "./search-input";
+import {
+  SEARCH_KINDS,
+  searchTabKinds,
+  type SearchKind,
+  type SearchKindFilter,
+} from "./search-kinds";
+
+export type { SearchKind, SearchKindFilter };
+export { SEARCH_KINDS, searchTabKinds };
 
 export type SearchHit = {
   id: string;
@@ -34,15 +42,6 @@ export type SearchResponse = {
   results: SearchHit[];
   degraded: boolean;
 };
-
-export type SearchKindFilter = SearchKind | "all";
-
-// Wholesale "supplies" are intentionally excluded from global search: they are a
-// B2B-gated surface with their own /supplies page. Consumer search fetches the API
-// anonymously (public/cacheable), so a supplies tab here would always be empty for
-// everyone; surfacing them would require per-user authenticated search (see D2 —
-// wholesale discovery lives on the Supplies page).
-export const SEARCH_KINDS: SearchKind[] = ["products", "services", "events", "vendors"];
 
 export type TabCounts = Record<SearchKindFilter, number>;
 
@@ -237,7 +236,7 @@ export function ResultsTabs({
   }, [activeKind, locale, page, query, router, searchParams]);
 
   const tabItems = useMemo(() => {
-    const kinds: SearchKindFilter[] = ["all", ...SEARCH_KINDS];
+    const kinds = searchTabKinds();
     return kinds.map((kind) => ({
       key: kind,
       label: (
