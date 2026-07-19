@@ -12,6 +12,8 @@ import { ConditionBadge, type ListingCondition } from "./condition-badge";
 import { PdpGallery } from "./gallery";
 import { VendorBlock } from "./vendor-block";
 
+import type { PdpGalleryLabelStrings } from "./gallery-labels";
+
 export const LUSAKA_CBD_LAT = -15.4167;
 export const LUSAKA_CBD_LNG = 28.2833;
 
@@ -92,12 +94,8 @@ export type PdpInteractiveBodyProps = {
   initialListingId?: string;
   singleVendor: boolean;
   cloudName?: string;
-  galleryLabels: {
-    empty: string;
-    previous: string;
-    next: string;
-    indicator: (current: number, total: number) => string;
-  };
+  /** Serializable strings only — never pass functions across the RSC boundary. */
+  galleryLabels: PdpGalleryLabelStrings;
   buyBoxLabels: BuyBoxLabels;
   comparisonLabels: ComparisonLabels;
   vendorLabels: {
@@ -446,7 +444,7 @@ export function PdpInteractiveBody({
           emptyLabel={galleryLabels.empty}
           previousLabel={galleryLabels.previous}
           nextLabel={galleryLabels.next}
-          indicatorLabel={galleryLabels.indicator}
+          indicatorLabel={(current, total) => t("pdp.gallery.indicator", { current, total })}
         />
       </div>
 
@@ -458,9 +456,7 @@ export function PdpInteractiveBody({
               ? trustLabels.preferredSeller
               : trustLabels.seller
             ).replace("{name}", selectedListing.vendor.displayName)}
-            deliveryLabel={
-              selectedComparison?.deliveryAvailable ? trustLabels.delivery : null
-            }
+            deliveryLabel={selectedComparison?.deliveryAvailable ? trustLabels.delivery : null}
             pickupLabel={selectedComparison?.pickupAvailable ? trustLabels.pickup : null}
             returnsLabel={trustLabels.returns}
             returnsHref={`/${locale}/legal/returns`}
