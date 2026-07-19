@@ -61,6 +61,8 @@ const REQUIRED_PITCH_KEYS = [
   "hero.headline",
   "hero.headlineEmphasis",
   "hero.primaryCta",
+  "inviteOnlyNotice",
+  "signupUnavailable",
   "commission.heading",
   "commission.categories.electronics",
   "howItWorks.heading",

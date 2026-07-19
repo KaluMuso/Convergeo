@@ -38,6 +38,9 @@ describe("Cta uses the shared vendor accessor", () => {
     const cta = screen.getByTestId("vendor-signup-cta");
     expect(cta.tagName).toBe("A");
     expect(cta).toHaveAttribute("href", SIGNUP_URL);
+    expect(screen.getAllByTestId("sell-invite-only-notice")[0]).toHaveTextContent(
+      "inviteOnlyNotice",
+    );
   });
 
   it("renders a disabled, explained CTA (no localhost) when the accessor fails closed", () => {
@@ -68,6 +71,7 @@ describe("Hero uses the shared vendor accessor", () => {
     const cta = screen.getByTestId("vendor-hero-cta");
     expect(cta.tagName).toBe("A");
     expect(cta).toHaveAttribute("href", SIGNUP_URL);
+    expect(screen.getByTestId("sell-invite-only-notice")).toHaveTextContent("inviteOnlyNotice");
   });
 
   it("renders a disabled, explained CTA (no localhost) when the accessor fails closed", () => {

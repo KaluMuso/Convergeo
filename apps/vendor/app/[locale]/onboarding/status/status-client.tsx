@@ -40,7 +40,8 @@ export function StatusPageClient({ locale }: StatusPageClientProps) {
     setLoading(true);
     setErrorKey(null);
     try {
-      const app = await kycClient.getApplication();
+      // Resume (do not require vendor role) so invitees can check progress.
+      const app = await kycClient.bootstrapApplication();
       if (app.kyc_status === "draft") {
         router.replace(`/${locale}/onboarding`);
         return;

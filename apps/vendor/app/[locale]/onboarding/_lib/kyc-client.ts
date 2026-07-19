@@ -1,14 +1,13 @@
 /**
- * M12-P02 KYC endpoint contract (as-built backend — reconciled in M12-P02b).
+ * KYC / invite-onboarding endpoint contract (VENDOR-BETA-01).
  *
+ * POST  /kyc/bootstrap → create or resume one draft vendor application
  * GET   /kyc/status    → KycStatusResponse (application_status + flat doc_storage_paths[])
+ * PATCH /kyc/draft     → persist business basics on owned draft/pending vendor
  * POST  /kyc/submit    → draft → submitted (body: KycSubmitPayload)
  * POST  /kyc/resubmit  → resubmit; 409 unless current status is `rejected`
  *
- * There is NO server draft endpoint — the onboarding draft persists in
- * localStorage only. Doc uploads use the private-bucket signing endpoint added
- * by M12-P02b (see _lib/storage.ts). The backend stores no business_name /
- * per-doc paths — only a flat `doc_storage_paths[]`.
+ * Doc uploads use the private-bucket signing endpoint (see _lib/storage.ts).
  */
 import { createApiClient } from "@vergeo/config";
 
@@ -25,9 +24,15 @@ export type KycSubmitPayload = {
   legal_name: string;
   // Vendor business archetype selected at onboarding — persisted onto the vendor.
   archetype?: string | null;
+  business_name?: string | null;
 };
 
-/** Raw GET /kyc/status response (backend `KycStatusResponse`). */
+export type KycDraftPayload = {
+  business_name?: string | null;
+  archetype?: string | null;
+};
+
+/** Raw GET /kyc/status (and bootstrap/draft) response (backend `KycStatusResponse`). */
 type KycStatusResponse = {
   application_status: KycStatus;
   vendor_status: VendorStatus;
@@ -40,6 +45,8 @@ type KycStatusResponse = {
   reviewer_notes: string | null;
   archetype: string | null;
   business_name: string | null;
+  created?: boolean;
+  vendor_id?: string;
 };
 
 function getApiBaseUrl(): string {
@@ -52,14 +59,14 @@ function mapStatusToApplication(status: KycStatusResponse): KycApplication {
   // Do NOT default missing tiers to 1 — orphaned seed tiers without
   // kyc_records must stay null so capability UI stays honest (VEND-01).
   return {
-    vendor_id: status.kyc_record_id ?? "",
+    vendor_id: status.vendor_id ?? status.kyc_record_id ?? "",
     vendor_status: status.vendor_status,
     kyc_tier: status.kyc_tier ?? null,
     kyc_status: status.application_status,
     tier: status.tier ?? null,
     kyc_record_id: status.kyc_record_id ?? null,
     kyc_record_status: status.kyc_record_status ?? null,
-    // Persisted server-side now: business_name = vendor display name, archetype =
+    // Persisted server-side: business_name = vendor display name, archetype =
     // the onboarding business category (see migration 0034 + /kyc/status).
     business_name: status.business_name ?? null,
     business_category: status.archetype ?? null,
@@ -85,8 +92,24 @@ export function createKycClient(getToken: () => string | null | Promise<string |
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
 
   return {
+    async bootstrapApplication(payload: KycDraftPayload = {}): Promise<KycApplication> {
+      const status = await client.request<KycStatusResponse>("/kyc/bootstrap", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      return mapStatusToApplication(status);
+    },
+
     async getApplication(): Promise<KycApplication> {
       const status = await client.request<KycStatusResponse>("/kyc/status");
+      return mapStatusToApplication(status);
+    },
+
+    async saveDraft(payload: KycDraftPayload): Promise<KycApplication> {
+      const status = await client.request<KycStatusResponse>("/kyc/draft", {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
       return mapStatusToApplication(status);
     },
 

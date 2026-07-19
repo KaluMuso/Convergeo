@@ -51,19 +51,20 @@
   "vendor.listings.count": "{count, plural, one {# listing} other {# listings}}",
   "vendor.payout.pending": "Pending payout: {amount}",
   "pitch": {
-    "signupUnavailable": "Vendor signup is temporarily unavailable. Please check back soon.",
+    "signupUnavailable": "Public seller signup is not open. Seller onboarding is invite-only during the concierge beta — contact Vergeo5 if you were invited.",
+    "inviteOnlyNotice": "Invite-only seller beta. Public self-service selling is not open yet. Invited sellers can continue onboarding with the link they received.",
     "meta": {
-      "title": "Sell on Vergeo5 — free to list, pay only when you sell",
-      "description": "Join Zambia's marketplace for products, services, events, supplies, and directory listings. Free tier: 30 listings. Transparent commissions. Mobile-money payouts in minutes."
+      "title": "Sell on Vergeo5 — invite-only seller beta",
+      "description": "Vergeo5 seller onboarding is invite/concierge-only during beta. Learn about commissions, KYC, and mobile-money payouts — public self-service signup is not open yet."
     },
     "hero": {
-      "eyebrow": "Sell on Vergeo5",
+      "eyebrow": "Invite-only seller beta",
       "headline": "Free to list.",
       "headlineEmphasis": "Pay only when you sell.",
       "subheadline": "Reach buyers across Zambia with products, services, events, supplies, and your business profile — all from one vendor app.",
-      "primaryCta": "Start selling",
+      "primaryCta": "Continue seller invite",
       "secondaryCta": "See commissions",
-      "freeTierNote": "Free tier includes up to 30 listings with full selling features."
+      "freeTierNote": "Invited sellers get the free tier (up to 30 listings) after admin approval. Public signup is not open."
     },
     "valueProps": {
       "heading": "Five ways to grow",
@@ -181,16 +182,20 @@
       }
     },
     "cta": {
-      "heading": "Ready to reach buyers across Zambia?",
-      "body": "Join hundreds of vendors building on Vergeo5. Set up your store in under ten minutes.",
-      "button": "Create your vendor account",
-      "loadingLabel": "Opening signup"
+      "heading": "Invited to sell on Vergeo5?",
+      "body": "Seller onboarding is concierge/invite-only during beta. If you have an invite, continue below — listing and payout tools unlock only after admin approval.",
+      "button": "Continue seller invite",
+      "loadingLabel": "Opening invite onboarding"
     }
   },
   "onboarding": {
     "meta": {
-      "title": "Vendor onboarding — Vergeo5",
-      "description": "Complete your business profile and T1 KYC to start selling on Vergeo5."
+      "title": "Seller invite onboarding — Vergeo5",
+      "description": "Complete your invite-only seller application and T1 KYC. Listings stay locked until admin approval."
+    },
+    "invite": {
+      "eyebrow": "Invite / concierge beta",
+      "body": "You are finishing a seller invite application. Catalogue, payouts, and the vendor dashboard stay locked until Vergeo5 approves your KYC and grants seller access."
     },
     "steps": {
       "business": "Business",
@@ -298,9 +303,11 @@
       "required": "This field is required",
       "invalidPhone": "Enter a valid Zambian mobile number",
       "loadFailed": "Could not load your application. Try again.",
+      "saveFailed": "Could not save your business details. Try again.",
       "submitFailed": "Submission failed. Try again.",
-      "authRequired": "Sign in to continue vendor onboarding.",
-      "permissionDenied": "This account is not set up as a vendor. Contact support if that seems wrong.",
+      "authRequired": "Sign in to continue your seller invite application.",
+      "permissionDenied": "You do not have access to this seller application. Use the account that received the invite, or contact Vergeo5.",
+      "draftLocked": "Business details can no longer be edited after approval.",
       "notFound": "We could not find your vendor application.",
       "retryHint": "Check your connection, then try again."
     },

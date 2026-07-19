@@ -245,6 +245,9 @@ const REQUIRED_ONBOARDING_KEYS = [
   "status.resubmit.submit",
   "t2.stubLabel",
   "errors.required",
+  "errors.saveFailed",
+  "invite.eyebrow",
+  "invite.body",
 ] as const;
 
 describe("vendor.onboarding i18n", () => {
@@ -260,9 +263,11 @@ describe("vendor.onboarding i18n", () => {
     }
   });
 
-  it("preserves pitch section from M12-P11", () => {
+  it("preserves pitch section from M12-P11 with invite-only beta honesty", () => {
     const pitch = vendorMessages.pitch as Record<string, unknown>;
     expect(pitch.hero).toBeDefined();
+    expect(pitch.inviteOnlyNotice).toBeTruthy();
+    expect(String(pitch.signupUnavailable)).toMatch(/invite/i);
     expect(vendorMessages["vendor.dashboard.title"]).toBeDefined();
   });
 });

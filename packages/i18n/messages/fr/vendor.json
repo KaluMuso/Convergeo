@@ -51,19 +51,20 @@
   "vendor.listings.count": "{count, plural, one {# annonce} other {# annonces}}",
   "vendor.payout.pending": "Versement en attente : {amount}",
   "pitch": {
-    "signupUnavailable": "L'inscription des vendeurs est temporairement indisponible. Revenez bientôt.",
+    "signupUnavailable": "L'inscription publique des vendeurs n'est pas ouverte. L'onboarding vendeur est sur invitation pendant la bêta concierge — contactez Vergeo5 si vous avez été invité.",
+    "inviteOnlyNotice": "Bêta vendeur sur invitation. La vente en libre-service publique n'est pas encore ouverte. Les vendeurs invités peuvent poursuivre l'onboarding avec le lien reçu.",
     "meta": {
-      "title": "Vendez sur Vergeo5 — publication gratuite, payez seulement quand vous vendez",
-      "description": "Rejoignez la place de marché zambienne pour les produits, services, événements, fournitures et annonces d'annuaire. Offre gratuite : 30 annonces. Commissions transparentes. Versements mobile money en quelques minutes."
+      "title": "Vendez sur Vergeo5 — bêta vendeur sur invitation",
+      "description": "L'onboarding vendeur Vergeo5 est sur invitation/concierge pendant la bêta. Découvrez commissions, KYC et versements mobile money — l'inscription publique n'est pas encore ouverte."
     },
     "hero": {
-      "eyebrow": "Vendez sur Vergeo5",
+      "eyebrow": "Bêta vendeur sur invitation",
       "headline": "Publication gratuite.",
       "headlineEmphasis": "Payez seulement quand vous vendez.",
       "subheadline": "Touchez des acheteurs dans toute la Zambie avec des produits, services, événements, fournitures et votre profil professionnel — le tout depuis une seule application vendeur.",
-      "primaryCta": "Commencer à vendre",
+      "primaryCta": "Continuer l'invitation vendeur",
       "secondaryCta": "Voir les commissions",
-      "freeTierNote": "L'offre gratuite comprend jusqu'à 30 annonces avec toutes les fonctionnalités de vente."
+      "freeTierNote": "Les vendeurs invités obtiennent l'offre gratuite (jusqu'à 30 annonces) après approbation. L'inscription publique n'est pas ouverte."
     },
     "valueProps": {
       "heading": "Cinq façons de vous développer",
@@ -181,16 +182,20 @@
       }
     },
     "cta": {
-      "heading": "Prêt à toucher des acheteurs dans toute la Zambie ?",
-      "body": "Rejoignez des centaines de vendeurs qui se développent sur Vergeo5. Créez votre boutique en moins de dix minutes.",
-      "button": "Créer votre compte vendeur",
-      "loadingLabel": "Ouverture de l'inscription"
+      "heading": "Invité à vendre sur Vergeo5 ?",
+      "body": "L'onboarding vendeur est sur invitation/concierge pendant la bêta. Si vous avez une invitation, continuez ci-dessous — catalogue et versements restent verrouillés jusqu'à l'approbation admin.",
+      "button": "Continuer l'invitation vendeur",
+      "loadingLabel": "Ouverture de l'onboarding invitation"
     }
   },
   "onboarding": {
     "meta": {
-      "title": "Intégration vendeur — Vergeo5",
-      "description": "Complétez votre profil d'entreprise et votre KYC T1 pour commencer à vendre sur Vergeo5."
+      "title": "Onboarding invitation vendeur — Vergeo5",
+      "description": "Complétez votre candidature vendeur sur invitation et le KYC T1. Les annonces restent verrouillées jusqu'à l'approbation admin."
+    },
+    "invite": {
+      "eyebrow": "Bêta invitation / concierge",
+      "body": "Vous terminez une candidature vendeur sur invitation. Catalogue, versements et tableau de bord restent verrouillés jusqu'à l'approbation KYC et l'accès vendeur."
     },
     "steps": {
       "business": "Entreprise",
@@ -298,9 +303,11 @@
       "required": "Ce champ est obligatoire",
       "invalidPhone": "Saisissez un numéro de mobile zambien valide",
       "loadFailed": "Impossible de charger votre demande. Réessayez.",
+      "saveFailed": "Impossible d'enregistrer les informations de l'entreprise. Réessayez.",
       "submitFailed": "Échec de la soumission. Réessayez.",
-      "authRequired": "Connectez-vous pour continuer l'inscription vendeur.",
-      "permissionDenied": "Ce compte n'est pas configuré comme vendeur.",
+      "authRequired": "Connectez-vous pour continuer votre candidature vendeur sur invitation.",
+      "permissionDenied": "Vous n'avez pas accès à cette candidature vendeur. Utilisez le compte invité, ou contactez Vergeo5.",
+      "draftLocked": "Les informations de l'entreprise ne peuvent plus être modifiées après approbation.",
       "notFound": "Nous n'avons pas trouvé votre demande vendeur.",
       "retryHint": "Vérifiez votre connexion, puis réessayez."
     },

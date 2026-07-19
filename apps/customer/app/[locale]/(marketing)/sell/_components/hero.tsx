@@ -42,6 +42,9 @@ export function Hero({ locale, t }: HeroProps) {
           </h1>
           <p className="text-body leading-relaxed text-text-2">{t("hero.subheadline")}</p>
           <p className="text-sm text-text-3">{t("hero.freeTierNote")}</p>
+          <p className="text-sm font-medium text-text-2" data-testid="sell-invite-only-notice">
+            {t("inviteOnlyNotice")}
+          </p>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

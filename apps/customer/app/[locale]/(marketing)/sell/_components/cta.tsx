@@ -29,6 +29,9 @@ export function Cta({ locale, t }: CtaProps) {
           {t("cta.heading")}
         </h2>
         <p className="text-body text-text-2">{t("cta.body")}</p>
+        <p className="text-sm font-medium text-text-2" data-testid="sell-invite-only-notice">
+          {t("inviteOnlyNotice")}
+        </p>
         {signupUrl ? (
           <Link className={BUTTON_CLASS} data-testid="vendor-signup-cta" href={signupUrl}>
             {t("cta.button")}
