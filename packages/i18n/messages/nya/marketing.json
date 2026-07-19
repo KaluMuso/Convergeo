@@ -1,0 +1,24 @@
+{
+  "error": {
+    "body": "Tinakumana ndi vuto. Yesaninso — ngati zikupitirira, tidziwitseni.",
+    "code": "500",
+    "heading": "China chake chalakwika",
+    "help": "Pitani ku Help Centre",
+    "home": "Pitani ku homepage",
+    "meta": {
+      "title": "China chake chalakwika"
+    },
+    "retry": "Yesaninso"
+  },
+  "notFound": {
+    "body": "Peji yomwe mukufuna yatha kusamuka kapena kulibe.",
+    "code": "404",
+    "heading": "Sitinapeze peji iyo",
+    "help": "Pitani ku Help Centre",
+    "home": "Pitani ku homepage",
+    "meta": {
+      "title": "Peji sichipezeka"
+    },
+    "search": "Sakani mu marketplace"
+  }
+}

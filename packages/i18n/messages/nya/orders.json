@@ -1,0 +1,60 @@
+{
+  "detail": {
+    "back": "Bwererani ku ma-order",
+    "orderId": "Order nambala {id}",
+    "title": "Zinthu za order",
+    "total": "Total ya order",
+    "vendor": "Agulitsa {vendor}"
+  },
+  "empty": {
+    "body": "Mukagula kuchokera kwa ogulitsa a Vergeo5, ma-order ndi tracking zidzaonekera apa.",
+    "cta": "Yambani kugula",
+    "title": "Palibe ma-order"
+  },
+  "errors": {
+    "loadFailed": "Sitinathe kutenga ma-order anu. Yesaninso.",
+    "notFound": "Order sichipezeka"
+  },
+  "escrow": {
+    "cod": "Lipirani vendor mu cash kapena mobile money mukalandira order.",
+    "held": "Payment yanu ikusungidwa ndi Vergeo5 mpaka mulandire order yanu.",
+    "refunded": "Refund ikubwerera ku mobile money wallet yanu.",
+    "released": "Ndalama zatsimikizidwa kwa vendor pambuyo pa fulfilment."
+  },
+  "list": {
+    "checkoutGroup": "Kugula {date}",
+    "itemCount": "{count, plural, one {# item} other {# ma-items}}",
+    "paymentCod": "Lipirani pa delivery",
+    "paymentPrepaid": "Yalipidwa kale",
+    "status": "Status ndi: {status}",
+    "total": "Zonse {amount}",
+    "vendorOrder": "Kuchokera kwa {vendor}",
+    "viewOrder": "Onani order"
+  },
+  "status": {
+    "cancelled": "Yacotsedwa",
+    "completed": "Yamalizidwa",
+    "confirmed": "Yatsimikizidwa",
+    "delivered": "Yafika",
+    "placed": "Yaiyikidwa",
+    "processing": "Ikukonzedwa",
+    "ready": "Yakonzeka ku pickup",
+    "refunded": "Refund ikuyenda",
+    "shipped": "Yatumizidwa"
+  },
+  "timeline": {
+    "cancelled": "Order yacotsedwa",
+    "completed": "Payment yatsimikizidwa kwa vendor",
+    "confirmed": "Vendor yatsimikiza order yanu",
+    "delivered": "Yafika",
+    "paymentCod": "Lipirani vendor pa delivery",
+    "paymentHeld": "Mwalipira — ikusungidwa ndi Vergeo5",
+    "placed": "Order yaiyikidwa",
+    "processing": "Vendor ikukonza order yanu",
+    "ready": "Yakonzeka ku pickup",
+    "refunded": "Refund ku mobile money yanu",
+    "shipped": "Ikubwera kwa inu",
+    "title": "Progress ya order"
+  },
+  "title": "Ma-order anu"
+}

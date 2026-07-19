@@ -1,0 +1,22 @@
+{
+  "common": {
+    "backToAccount": "Bwererani ku account",
+    "loading": "Ikuyenda…",
+    "required": "Zofunika"
+  },
+  "locales": {
+    "bem": "IciBemba",
+    "en": "English",
+    "fr": "Français",
+    "nya": "IciNyanja",
+    "zh": "中文"
+  },
+  "nav": {
+    "addresses": "Ma-addresses",
+    "business": "Mode ya business",
+    "preferences": "Ma-notifications",
+    "privacy": "Data ndi privacy",
+    "profile": "Profile yanu"
+  },
+  "title": "Account yanga"
+}

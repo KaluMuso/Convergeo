@@ -131,7 +131,8 @@
       "railRequired": "Select a mobile money network",
       "codRejected": "Cash on delivery is not available for this order total",
       "railRejected": "That mobile money network is not supported",
-      "error": "Could not save your payment method. Try again."
+      "error": "Could not save your payment method. Try again.",
+      "paymentsDisabled": "Online payment is temporarily unavailable. Please use Cash on Delivery where available, or try again shortly."
     },
     "review": {
       "title": "Review your order",

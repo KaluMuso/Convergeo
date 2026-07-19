@@ -104,7 +104,8 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       railRequired: t("checkout.payment.railRequired"),
       codRejected: t("checkout.payment.codRejected"),
       railRejected: t("checkout.payment.railRejected"),
-      error: t("checkout.error"),
+      error: t("checkout.payment.error"),
+      paymentsDisabled: t("checkout.payment.paymentsDisabled"),
     },
     review: {
       title: t("checkout.review.title"),

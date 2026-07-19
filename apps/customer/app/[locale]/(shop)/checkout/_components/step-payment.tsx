@@ -42,6 +42,8 @@ export type PaymentStepLabels = {
   codRejected: string;
   railRejected: string;
   error: string;
+  /** Shown when the API payment kill-switch blocks momo/card initiation. */
+  paymentsDisabled: string;
 };
 
 export type PaymentOptions = {
@@ -183,6 +185,10 @@ export function StepPayment({
           setErrorMessage(labels.railRequired);
           return;
         }
+        if (error.code === "payments_disabled") {
+          setErrorMessage(labels.paymentsDisabled);
+          return;
+        }
       }
       setErrorMessage(labels.error);
     } finally {
@@ -304,7 +310,11 @@ export function StepPayment({
       ) : null}
 
       {errorMessage && method !== "momo" ? (
-        <p role="alert" className="font-body text-sm text-danger">
+        <p
+          role="alert"
+          className="font-body text-sm text-danger"
+          data-testid="checkout-payment-error"
+        >
           {errorMessage}
         </p>
       ) : null}

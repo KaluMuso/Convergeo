@@ -1,0 +1,24 @@
+{
+  "error": {
+    "body": "Twapoka icilubo. Wesheni limbi — ilyo cikonka, twishibikeni.",
+    "code": "500",
+    "heading": "Icintu caciluka",
+    "help": "Piteni ku Help Centre",
+    "home": "Piteni ku homepage",
+    "meta": {
+      "title": "Icintu caciluka"
+    },
+    "retry": "Wesheni limbi"
+  },
+  "notFound": {
+    "body": "Peji mufwaya yaluta nangu tayakwete.",
+    "code": "404",
+    "heading": "Tatwasanga peji iyi",
+    "help": "Piteni ku Help Centre",
+    "home": "Piteni ku homepage",
+    "meta": {
+      "title": "Peji tacasangwa"
+    },
+    "search": "Fweni mu marketplace"
+  }
+}

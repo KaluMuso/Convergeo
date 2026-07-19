@@ -1,0 +1,71 @@
+{
+  "askVergeo": {
+    "slotLabel": "Slot ya Ask Vergeo assistant",
+    "teaser": "Simukudziwa chomwe mufuna? Funsa Vergeo kuti akuthandizeni kupeza chomwe mufuna.",
+    "title": "Funsa Vergeo"
+  },
+  "categories": {
+    "electronics": "Za elektrik",
+    "fashion": "Za kavalidwe",
+    "groceries": "Groceries ndi staples",
+    "home": "Kwathu ndi living"
+  },
+  "input": {
+    "ariaLabel": "Sakani",
+    "noSuggestions": "Palibe ma-suggestions",
+    "suggestionsLabel": "Ma-suggestions a search"
+  },
+  "invalid": {
+    "body": "Fupikitsani query ndi yesaninso. Ma-filters ndi sorting mu URL sizinasintha.",
+    "title": "Search iyi ndi yayitali kwambiri"
+  },
+  "noResults": {
+    "categoriesTitle": "Yang'anani ma-categories",
+    "suggestionsTitle": "Yesani kusaka",
+    "title": "Palibe results za \"{query}\""
+  },
+  "pagination": {
+    "loadMore": "Tengani zina",
+    "loading": "Ikutenga zina…"
+  },
+  "placeholder": "Sakani pa Vergeo5",
+  "recent": {
+    "clear": "Chotsani zonse",
+    "remove": "Chotsani {term}",
+    "title": "Zomwe mwasaka posachedwa"
+  },
+  "result": {
+    "category": "Mu {category}",
+    "priceFrom": "Kuyambira {price}"
+  },
+  "results": {
+    "count": "{count, plural, one {# result} other {# ma-results}}",
+    "degraded": "Tikuwonetsa keyword matches (semantic search silipo)"
+  },
+  "submit": "Sakani",
+  "suggestionTerms": {
+    "chitenge": "chitenje",
+    "kitchenware": "za khitchini",
+    "lusakaVendors": "ogulitsa a Lusaka",
+    "phones": "mafoni"
+  },
+  "suggestions": {
+    "term": "Yesani kusaka {term}"
+  },
+  "tabs": {
+    "all": "Zonse",
+    "ariaLabel": "Filter results ndi type",
+    "count": "{label} ({count})",
+    "events": "Zochitika",
+    "products": "Zinthu",
+    "services": "Ntchito",
+    "supplies": "Za business",
+    "vendors": "Ogulitsa"
+  },
+  "title": "Sakani",
+  "unavailable": {
+    "body": "Sitinathe kutenga search results pano. Yesaninso, kapena yang'anani ma-categories.",
+    "retry": "Yesaninso",
+    "title": "Search silipo"
+  }
+}
