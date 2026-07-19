@@ -172,7 +172,7 @@ describe("HomeHeroBand", () => {
       "href",
       "/en/search",
     );
-    expect(screen.getByRole("link", { name: "Sell on Vergeo5" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Learn about selling" })).toHaveAttribute(
       "href",
       "/en/sell",
     );
@@ -180,9 +180,16 @@ describe("HomeHeroBand", () => {
 });
 
 describe("HomeSellCta", () => {
-  it("links to the sell page", () => {
+  it("links to the sell page with invite-only messaging", () => {
     render(<HomeSellCta locale="en" t={t} />);
-    expect(screen.getByRole("link", { name: "Start selling" })).toHaveAttribute("href", "/en/sell");
+    expect(
+      screen.getByRole("heading", { name: "Selling on Vergeo5 is invite-only for now" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Public self-service signup is not open yet/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Learn about selling" })).toHaveAttribute(
+      "href",
+      "/en/sell",
+    );
   });
 });
 

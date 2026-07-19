@@ -78,17 +78,27 @@
     "hero": {
       "eyebrow": "Zambia's marketplace",
       "fallbackTitle": "Discover products, services, and events across Zambia",
-      "fallbackSubtitle": "Compare prices from sellers across Zambia, pay with mobile money, and arrange Lusaka delivery or nationwide pickup.",
+      "fallbackSubtitle": "Compare prices from sellers across Zambia, and arrange Lusaka delivery or nationwide pickup when the listing supports it.",
       "primaryCta": "Start browsing",
-      "secondaryCta": "Sell on Vergeo5",
+      "secondaryCta": "Learn about selling",
       "placeholder": {
         "title": "Welcome to Vergeo5",
         "subtitle": "Your config-driven storefront will appear here as merchandising slots go live."
       },
-      "escrowLine": "Pay with mobile money — Vergeo5 holds your payment safely until your order arrives.",
+      "escrowLine": "Buyer protection with escrow when online payment is available — held by Vergeo5 until delivery, then released.",
       "escrowStep1": "You pay",
       "escrowStep2": "Held by Vergeo5",
       "escrowStep3": "Released on delivery"
+    },
+    "trust": {
+      "ariaLabel": "Why shop on Vergeo5",
+      "sellers": "Seller profiles with status you can review",
+      "fulfillment": "Lusaka delivery or nationwide pickup when the listing supports it",
+      "returns": "Clear returns and refund guidance for eligible orders",
+      "escrow": "When online payment is available, Vergeo5 holds your money until delivery"
+    },
+    "demo": {
+      "sampleListing": "Sample listing"
     },
     "bannerRow": {
       "title": "Deals & highlights"
@@ -107,7 +117,9 @@
       "wishlist": "Save"
     },
     "categories": {
-      "title": "Shop by category"
+      "title": "Shop by category",
+      "viewAll": "All categories",
+      "browseLabel": "Browse {category}"
     },
     "rails": {
       "newTitle": "New on Vergeo5",
@@ -133,9 +145,9 @@
       }
     },
     "sellCta": {
-      "title": "Grow your business with Vergeo5",
-      "body": "Reach customers across Zambia with your own storefront. Free setup, mobile-money payouts — you only pay when you sell.",
-      "cta": "Start selling"
+      "title": "Selling on Vergeo5 is invite-only for now",
+      "body": "Public self-service signup is not open yet. Invited sellers can continue onboarding; everyone else can learn how the seller beta works.",
+      "cta": "Learn about selling"
     },
     "flash": {
       "defaultTag": "⚡ Flash deal",
