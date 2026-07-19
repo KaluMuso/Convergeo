@@ -1,7 +1,7 @@
 import { LOCALES } from "@vergeo/i18n";
 import { buildAbsoluteUrl, buildLocaleCanonical, getSiteUrl } from "@vergeo/ui/src/seo/json-ld";
 
-import { SITEMAP_STATIC_SEGMENTS } from "../lib/seo/sitemap-eligibility";
+import { coerceSitemapId, SITEMAP_STATIC_SEGMENTS } from "../lib/seo/sitemap-eligibility";
 import {
   fetchCategorySitemapSlugs,
   fetchProductSitemapSlugs,
@@ -69,9 +69,12 @@ export async function generateSitemaps() {
 }
 
 export default async function sitemap(props: {
-  id: Promise<number>;
+  id: Promise<number | string>;
 }): Promise<MetadataRoute.Sitemap> {
-  const id = await props.id;
+  const id = coerceSitemapId(await props.id);
+  if (id === null) {
+    return [];
+  }
   const { productChunks } = await getSitemapManifest();
   const vendorChunkId = productChunks + 1;
   const eventChunkId = productChunks + 2;

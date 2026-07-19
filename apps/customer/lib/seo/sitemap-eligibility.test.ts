@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  coerceSitemapId,
   isSitemapEligibleCategorySlug,
   isSitemapEligibleEntitySlug,
   isSitemapEligibleStaticSegment,
@@ -9,6 +10,14 @@ import {
   SITEMAP_EXCLUDED_SEGMENTS,
   SITEMAP_STATIC_SEGMENTS,
 } from "./sitemap-eligibility";
+
+describe("coerceSitemapId", () => {
+  it("coerces string metadata ids used by Next sitemap chunks", () => {
+    expect(coerceSitemapId("0")).toBe(0);
+    expect(coerceSitemapId("4")).toBe(4);
+    expect(coerceSitemapId("nope")).toBeNull();
+  });
+});
 
 describe("sitemap static eligibility", () => {
   it("includes public discovery hubs only", () => {

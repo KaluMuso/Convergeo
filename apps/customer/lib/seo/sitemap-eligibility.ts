@@ -68,6 +68,12 @@ export const ROBOTS_DISALLOW_SUFFIXES = [
   "/ui/",
 ] as const;
 
+/** Next metadata route ids may arrive as strings ("0"); coerce before chunk compares. */
+export function coerceSitemapId(raw: number | string): number | null {
+  const id = Number(raw);
+  return Number.isFinite(id) ? id : null;
+}
+
 export function isSitemapEligibleStaticSegment(segment: string): boolean {
   if ((SITEMAP_EXCLUDED_SEGMENTS as readonly string[]).includes(segment)) {
     return false;
