@@ -428,8 +428,8 @@ def _fetch_published_events(client: Any) -> list[dict[str, Any]]:
         .select(
             "id, slug, title, description, venue, lat, lng, images, status, "
             "category_slug, landmark, event_type, "
-            "organiser_vendor_id, vendors!events_organiser_vendor_id_fkey("
-            "id, slug, display_name, preferred_badge, logo_url, description, "
+            "organiser_vendor_id, vendors!inner("
+            "id, slug, display_name, preferred_badge, logo_url, description, status, "
             "vendor_locations(landmark)"
             ")"
         )
@@ -437,6 +437,8 @@ def _fetch_published_events(client: Any) -> list[dict[str, Any]]:
         # Browse shows only public events; unlisted/private are excluded here and
         # reachable only by direct slug (detail endpoint, access-gated).
         .eq("visibility", "public")
+        # D9: no unverified public listings — organiser storefront must be active.
+        .eq("vendors.status", "active")
         .execute()
     )
     rows = response.data or []
@@ -450,13 +452,14 @@ def _fetch_event_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
             "id, slug, title, description, venue, lat, lng, images, status, "
             "category_slug, landmark, event_type, visibility, access_code_hash, "
             "age_restriction, "
-            "organiser_vendor_id, vendors!events_organiser_vendor_id_fkey("
-            "id, slug, display_name, preferred_badge, logo_url, description, "
+            "organiser_vendor_id, vendors!inner("
+            "id, slug, display_name, preferred_badge, logo_url, description, status, "
             "vendor_locations(landmark)"
             ")"
         )
         .eq("slug", slug)
         .eq("status", "published")
+        .eq("vendors.status", "active")
         # No visibility filter: unlisted (direct-link) and private (access-gated)
         # events are found here; access enforcement happens in build_detail_response.
         .maybe_single()

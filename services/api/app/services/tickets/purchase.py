@@ -228,9 +228,11 @@ SELECT
   e.status,
   tt.attendee_named::text,
   coalesce(tt.early_bird_price_ngwee::text, ''),
-  coalesce(tt.early_bird_until::text, '')
+  coalesce(tt.early_bird_until::text, ''),
+  v.status
 FROM public.ticket_types tt
 INNER JOIN public.events e ON e.id = tt.event_id
+INNER JOIN public.vendors v ON v.id = e.organiser_vendor_id
 INNER JOIN public.event_instances ei ON ei.id = {instance_sql}
 WHERE tt.id = {type_sql};
 """
@@ -246,7 +248,7 @@ WHERE tt.id = {type_sql};
         )
 
     parts = result.rows[0].split("|")
-    if len(parts) != 14:
+    if len(parts) != 15:
         raise RuntimeError("unexpected ticket context row shape")
 
     if parts[6] != parts[1]:
@@ -262,6 +264,13 @@ WHERE tt.id = {type_sql};
             message="Event is not available for purchase",
             http_status=409,
             details={"event_id": parts[1]},
+        )
+    if parts[14] != "active":
+        raise AppError(
+            code="tickets.organiser_not_active",
+            message="Event organiser is not available for purchase",
+            http_status=409,
+            details={"event_id": parts[1], "organiser_vendor_id": parts[8]},
         )
 
     return {
