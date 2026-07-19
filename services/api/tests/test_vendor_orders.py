@@ -316,7 +316,9 @@ def test_confirm_emits_outbox(
 
     outbox = fake_client.tables["notification_outbox"].rows
     assert len(outbox) == 1
-    assert outbox[0]["dedupe_key"] == f"order-status-changed:{ORDER_A_ID}:whatsapp"
+    # Dedupe key is qualified by the destination status so every transition of an
+    # order enqueues its own notification (not just the first).
+    assert outbox[0]["dedupe_key"] == f"order-status-changed:{ORDER_A_ID}:confirmed:whatsapp"
     assert outbox[0]["template"] == "order_status_changed"
 
 
@@ -398,7 +400,7 @@ def test_reject_on_paid_order_enqueues_refund_event(
     outbox = fake_client.tables["notification_outbox"].rows
     assert len(outbox) == 2
     dedupe_keys = {row["dedupe_key"] for row in outbox}
-    assert f"order-status-changed:{ORDER_A_ID}:whatsapp" in dedupe_keys
+    assert f"order-status-changed:{ORDER_A_ID}:cancelled:whatsapp" in dedupe_keys
     assert f"order-refund-required:{ORDER_A_ID}:whatsapp" in dedupe_keys
     refund_rows = [row for row in outbox if row["template"] == "order_refund_required"]
     assert refund_rows[0]["payload"]["reason"] == "Out of stock"

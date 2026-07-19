@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from postgrest.exceptions import APIError
+
 DEFAULT_CHANNEL_ORDER: tuple[str, ...] = ("whatsapp", "sms", "email")
+
+# Postgres unique_violation SQLSTATE — raised when the UNIQUE(dedupe_key) index
+# rejects a re-enqueue of an already-queued (event, entity, channel) notification.
+_UNIQUE_VIOLATION = "23505"
 
 
 def build_dedupe_key(event_type: str, entity_id: str, channel: str) -> str:
@@ -56,7 +62,16 @@ def enqueue_outbox_row(
         "payload": payload,
         "status": "pending",
     }
-    response = client.table("notification_outbox").insert(row).execute()
+    try:
+        response = client.table("notification_outbox").insert(row).execute()
+    except APIError as exc:
+        # A concurrent/retried enqueue of the same (event, entity, channel) hit the
+        # UNIQUE(dedupe_key) index. That is the idempotent no-op this function
+        # promises ("Returns inserted row or None on collision") — never a crash of
+        # the surrounding request (e.g. an order status transition).
+        if getattr(exc, "code", None) == _UNIQUE_VIOLATION:
+            return None
+        raise
     data = response.data
     if isinstance(data, list) and data:
         inserted = data[0]
