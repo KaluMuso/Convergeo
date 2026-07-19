@@ -11,6 +11,7 @@ import os
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.notifications.dedupe import enqueue_outbox_row
@@ -33,7 +34,17 @@ PAYOUT_FAILURE_LOOKBACK_HOURS = 24
 
 
 def _expected_internal_token() -> str:
-    return os.environ.get(_INTERNAL_TOKEN_ENV, _DEFAULT_INTERNAL_TOKEN)
+    try:
+        return resolve_internal_token(
+            _INTERNAL_TOKEN_ENV,
+            dev_default=_DEFAULT_INTERNAL_TOKEN,
+        )
+    except InternalTokenMisconfigured as exc:
+        raise AppError(
+            code="configuration_error",
+            message=str(exc),
+            http_status=503,
+        ) from exc
 
 
 async def require_internal_n8n_token(request: Request) -> None:
@@ -123,9 +134,7 @@ def _existing_dedupe_keys(
         .execute()
     )
     return {
-        str(row["dedupe_key"])
-        for row in _rows(response)
-        if isinstance(row.get("dedupe_key"), str)
+        str(row["dedupe_key"]) for row in _rows(response) if isinstance(row.get("dedupe_key"), str)
     }
 
 
@@ -348,10 +357,7 @@ def fetch_review_requests(client: Any) -> list[dict[str, Any]]:
 
     vendor_ids = {str(row["vendor_id"]) for row in order_rows if row.get("vendor_id")}
     vendor_response = (
-        _table(client, "vendors")
-        .select("id, display_name")
-        .in_("id", sorted(vendor_ids))
-        .execute()
+        _table(client, "vendors").select("id, display_name").in_("id", sorted(vendor_ids)).execute()
     )
     vendors_by_id = {str(row["id"]): row for row in _rows(vendor_response)}
 

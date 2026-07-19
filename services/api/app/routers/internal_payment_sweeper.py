@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-import os
-
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
 from app.errors import AppError
 from app.services.payments.registry import get
 from app.services.payments.state import SweepResult, sweep_stale_payments
@@ -14,7 +13,17 @@ _DEFAULT_INTERNAL_TOKEN = "dev-internal-payment-sweeper"
 
 
 def _expected_internal_token() -> str:
-    return os.environ.get(_INTERNAL_TOKEN_ENV, _DEFAULT_INTERNAL_TOKEN)
+    try:
+        return resolve_internal_token(
+            _INTERNAL_TOKEN_ENV,
+            dev_default=_DEFAULT_INTERNAL_TOKEN,
+        )
+    except InternalTokenMisconfigured as exc:
+        raise AppError(
+            code="configuration_error",
+            message=str(exc),
+            http_status=503,
+        ) from exc
 
 
 async def require_internal_payment_sweeper_token(request: Request) -> None:

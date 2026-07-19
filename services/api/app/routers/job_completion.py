@@ -26,12 +26,12 @@ releases un-confirmed service work.
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Protocol
 
 from app.core.auth import CurrentUser, get_current_user
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -254,9 +254,7 @@ def _complete_order(order_id: str, *, actor_id: str, is_system: bool) -> None:
     placed`` guard makes a re-run a safe no-op.
     """
     order_sql = sql_uuid(order_id, "order_id")
-    note = (
-        "service job auto-confirmed" if is_system else "service job confirmed by customer"
-    )
+    note = "service job auto-confirmed" if is_system else "service job confirmed by customer"
     run_sql_script(
         f"""
 BEGIN;
@@ -374,9 +372,7 @@ def _require_service_release_amounts(
     return snapshot, amounts.net_ngwee
 
 
-def _release_service_order(
-    order_id: str, vendor_id: str, net_ngwee: int
-) -> tuple[bool, int]:
+def _release_service_order(order_id: str, vendor_id: str, net_ngwee: int) -> tuple[bool, int]:
     """Post the single vendor release for the whole order. Returns (created, net_ngwee).
 
     Reuses the order engine's ``release-{order_id}`` idempotency key — the release is
@@ -506,9 +502,7 @@ def confirm_job_completion(
     )
     # 3. Release the whole order to the vendor EXACTLY ONCE — BEFORE completing, so
     #    completion implies the vendor has been paid (no stranded escrow).
-    release_created, net_ngwee = _release_service_order(
-        order.order_id, order.vendor_id, net_ngwee
-    )
+    release_created, net_ngwee = _release_service_order(order.order_id, order.vendor_id, net_ngwee)
     # 4. Complete the order (unlocks the verified-engagement review); audited with the
     #    real confirming actor via the app.order_actor/app.order_note GUCs.
     _complete_order(order.order_id, actor_id=actor_id, is_system=is_system)
@@ -668,7 +662,17 @@ class AutoConfirmResponse(StrictModel):
 
 
 def _expected_autoconfirm_token() -> str:
-    return os.environ.get(_AUTOCONFIRM_TOKEN_ENV, _DEFAULT_AUTOCONFIRM_TOKEN)
+    try:
+        return resolve_internal_token(
+            _AUTOCONFIRM_TOKEN_ENV,
+            dev_default=_DEFAULT_AUTOCONFIRM_TOKEN,
+        )
+    except InternalTokenMisconfigured as exc:
+        raise AppError(
+            code="configuration_error",
+            message=str(exc),
+            http_status=503,
+        ) from exc
 
 
 async def require_autoconfirm_token(request: Request) -> None:

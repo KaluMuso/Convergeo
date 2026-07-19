@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import os
 from typing import Annotated, Any
 
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.notifications.adapter_registry import build_adapters
@@ -16,7 +16,17 @@ _DEFAULT_INTERNAL_TOKEN = "dev-internal-dispatch"
 
 
 def _expected_internal_token() -> str:
-    return os.environ.get(_INTERNAL_TOKEN_ENV, _DEFAULT_INTERNAL_TOKEN)
+    try:
+        return resolve_internal_token(
+            _INTERNAL_TOKEN_ENV,
+            dev_default=_DEFAULT_INTERNAL_TOKEN,
+        )
+    except InternalTokenMisconfigured as exc:
+        raise AppError(
+            code="configuration_error",
+            message=str(exc),
+            http_status=503,
+        ) from exc
 
 
 async def require_internal_dispatch_token(request: Request) -> None:
