@@ -17,7 +17,13 @@ stays deferred by design.
 > no-money discovery surface to prod behind `public_launch=false`) and Wave 2 (Lenco **sandbox** money proof on an
 > isolated target — sandbox creds + throwaway DB branch, **no full staging plane required**) run **in parallel**. Real
 > money stays OFF until S1–S6 + all P0 gates PASS. `VE-P08` (environment isolation) is tracked as Wave 4, not a
-> prerequisite. B-2/B-3/B-4/B-5 remain open and gate Wave 3.
+> prerequisite.
+>
+> **✅ B-2…B-5 LOCKED (2026-07-19) on their defaults (D31–D34) — Wave 3 is now unblocked.** B-2 → apply `0051` + Auth
+> hook (VC-P03 = enable-hook path). B-3 → enable FORCE RLS (VC-P02 ships the migration). B-4 → single `admin` + Access,
+> so **VC-P07 and VF-P03 are docs/manual-ops, not a CRUD build** (no invented roles). B-5 → Class A branded/new only, so
+> **MR-S05/S06 stay OUT — no `product_class`/used-goods schema pebble enters the plan** (catalogue-facing work = VC-P06
+> demo exclusion). All Wave-0 blocking decisions (B-1…B-5) are resolved.
 
 **Pebble types:** `[CODE]` = Cursor coding agent · `[OPS]` = founder/ops with dashboard/secret access (Cursor writes the
 runbook + evidence template, a human executes) · `[DOC]` = docs only. Many launch blockers are `[OPS]` because they need

@@ -23,21 +23,21 @@ New questions (B-5, NB-1, NB-6…NB-10) come from this audit's fresh live/Drive 
   until S1–S6 pass somewhere isolated. This lets Wave 1 (deploy) and Wave 2 (money verify) run without waiting on a
   full staging plane. **Blocks:** sequencing of Waves 1–2.
 
-### B-2 · Role provisioning path — apply `0051` + Auth hook, or written manual-grant exception? *(FD-03)*
+### B-2 · Role provisioning path — apply `0051` + Auth hook, or written manual-grant exception? *(FD-03)* — ✅ **LOCKED 2026-07-19: apply `0051` + Auth hook (D31)**
 - **Why:** `0051` (custom access token role hook) is **unapplied live**; JWT roles lag `user_roles`. G0 role-isolation
   can't be trustworthy until a path is chosen. Determines the content of the auth/security pebble.
 - **DEFAULT (FD-03 rec):** **Apply `0051` + enable the Supabase Auth custom-access-token hook**, sequenced after a
   backup and staging-first apply. Fall back to a written, time-boxed manual-grant exception only if Auth-dashboard
   access blocks the hook. **Blocks:** VM-C security pebbles; G0. **Decide by 2026-07-22.**
 
-### B-3 · FORCE RLS on ticket-tier tables — enable, or signed exception? *(FD-07)*
+### B-3 · FORCE RLS on ticket-tier tables — enable, or signed exception? *(FD-07)* — ✅ **LOCKED 2026-07-19: enable FORCE RLS (D32)**
 - **Why:** `ticket_type_instances`, `ticket_type_price_tiers` (and `product_relations`) run **FORCE RLS = false** — a
   real-money isolation boundary for paid events. Determines whether the security pebble ships a migration or a waiver.
 - **DEFAULT (FD-07 rec):** **Enable `relforcerowsecurity`** and fix any table-owner/service-role assumptions; re-run
   advisor + isolation tests. Signed exception only if a hard platform constraint is proven on staging. **Blocks:** VM-C;
   G0. **Decide by 2026-07-22.**
 
-### B-4 · Admin RBAC model — single `admin`, or additive roles + UI? *(FD-02)*
+### B-4 · Admin RBAC model — single `admin`, or additive roles + UI? *(FD-02)* — ✅ **LOCKED 2026-07-19: single `admin` + Access; user-mgmt is a doc path (D33)**
 - **Why:** Live CHECK is single `admin`; roadmap mentions superadmin/moderator (unbuilt). This decides whether **BG-2
   (admin user/role-management UI)** is a *build* pebble (new schema + RLS + CRUD UI + authz-matrix tests) or a *docs*
   pebble (manual-ops runbook). Agents are forbidden from inventing roles without this.
@@ -45,7 +45,7 @@ New questions (B-5, NB-1, NB-6…NB-10) come from this audit's fresh live/Drive 
   a CRUD build. Revisit additive roles only if human least-privilege is needed before open launch. **Blocks:** BG-2
   scope; G15. **Decide by 2026-07-31.**
 
-### B-5 · Phase-1 catalogue scope — Class A branded/new only, or claim A–E / used goods? *(FD-06)*
+### B-5 · Phase-1 catalogue scope — Class A branded/new only, or claim A–E / used goods? *(FD-06)* — ✅ **LOCKED 2026-07-19: Class A branded/new only (D34)**
 - **Why:** Live schema is narrow (`condition ∈ new|refurbished`, no `product_class`). Claiming A–E/used-goods pulls
   **MR-S05/S06/V05 + C-ESCROW-HOLD** (schema, evidence uploads, facets, 72h escrow) **into scope**. This decides whether
   a whole product-model expansion enters the plan.
@@ -87,10 +87,50 @@ engineering impact: Wave 1 and Wave 2 may run in parallel; neither waits on a st
 related MR-/G-IDs: G1/G3/G4/G17; S1–S6; release-gates Go/No-Go. Recorded as D30 in docs/plan/00-decisions.md.
 ```
 
-Template for the remaining decisions (B-2…B-5, NB-*):
+```text
+Q-ID: B-2 (role provisioning / FD-03)
+decision: Apply migration 0051 + enable the Supabase Auth custom-access-token hook (JWT roles == user_roles), sequenced after backup + staging-first apply. Manual-grant exception only if Auth-dashboard access blocks the hook.
+date: 2026-07-19
+decided_by: Kaluba
+supersedes: —
+engineering impact: Pebble VC-P03 = enable-hook path (not the exception doc). Admin still never trusts JWT alone.
+related MR-/G-IDs: MR-S02, G0. Recorded as D31 in docs/plan/00-decisions.md.
+```
 
 ```text
-Q-ID:            # B-2..B-5 or NB-1..NB-14 (and the FD-ID it maps to)
+Q-ID: B-3 (FORCE RLS / FD-07)
+decision: Enable relforcerowsecurity=true on ticket_type_instances, ticket_type_price_tiers, product_relations via additive migration; fix any table-owner/service-role assumption; advisor + RLS matrix stay green. Signed exception only if a hard platform constraint is proven on staging.
+date: 2026-07-19
+decided_by: Kaluba
+supersedes: —
+engineering impact: Pebble VC-P02 ships the migration (VC-P04 owns the matching RLS-test assertions).
+related MR-/G-IDs: MR-R01, G0. Recorded as D32 in docs/plan/00-decisions.md.
+```
+
+```text
+Q-ID: B-4 (admin RBAC / FD-02)
+decision: v1 = single `admin` role behind Cloudflare Access; supersedes roadmap superadmin/moderator. Admin user/role mgmt is a documented manual-ops path, not a CRUD build. No invented roles; additive roles only via dated ADR.
+date: 2026-07-19
+decided_by: Kaluba
+supersedes: roadmap superadmin/moderator multi-tier (for v1)
+engineering impact: VC-P07 + VF-P03 become docs, not a build. BG-2 = manual-ops runbook.
+related MR-/G-IDs: MR-A02, G15. Recorded as D33 in docs/plan/00-decisions.md.
+```
+
+```text
+Q-ID: B-5 (catalogue scope / FD-06)
+decision: Phase-1 = Class A branded/new (+ refurbished) only. No product_class A–E, no used-goods/evidence model, no expanded condition enum, no 72h used-goods escrow. Used-goods stays OUT unless elevated by dated ADR.
+date: 2026-07-19
+decided_by: Kaluba
+supersedes: —
+engineering impact: Keeps MR-S05/S06/V05 + C-ESCROW-HOLD OUT of scope (no schema pebble). Catalogue-facing work = VC-P06 demo exclusion only.
+related MR-/G-IDs: MR-S05/S06, G11. Recorded as D34 in docs/plan/00-decisions.md.
+```
+
+Template for the remaining (NB-*) decisions:
+
+```text
+Q-ID:            # NB-1..NB-14 (and the FD-ID it maps to)
 decision:
 date:
 decided_by: Kaluba
