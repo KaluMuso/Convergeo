@@ -538,10 +538,11 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         singleVendor={singleVendor}
         cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
         galleryLabels={{
+          // Strings only — indicator text is formatted inside the client body
+          // (passing a function here caused live digest 1378788464).
           empty: t("pdp.gallery.empty"),
           previous: t("pdp.gallery.previous"),
           next: t("pdp.gallery.next"),
-          indicator: (current, total) => t("pdp.gallery.indicator", { current, total }),
         }}
         buyBoxLabels={{
           priceLabel: t("pdp.buyBox.priceLabel"),
