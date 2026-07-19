@@ -14,7 +14,7 @@ This pack does **not** claim real-money readiness or open-launch readiness.
 | Item                                          | Value                                                                                                              |
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | Candidate (`origin/master`)                   | `619c994037f58f3e20d81f91ad72f5953bb5261b` — merge #330 PDP digest hotfix                                          |
-| Evidence recorded (UTC)                       | `2026-07-19T17:22:49Z`                                                                                             |
+| Evidence recorded (UTC)                       | `2026-07-19T17:22:49Z` · re-attempt `2026-07-19T17:24:32Z`                                                         |
 | Currently aliased production                  | `dpl_CA2qcVXsCGnaorKCyr1onybCqszs` @ `28f565cbf55b78cbd7fd1074de9e50615b8a18d1` (#319 docs)                        |
 | Production health `buildId`                   | `28f565cbf55b78cbd7fd1074de9e50615b8a18d1` (`GET /en/health`)                                                      |
 | Deployed by this session?                     | **No**                                                                                                             |
@@ -66,14 +66,16 @@ Quality gates **PASS**. Deploy path **BLOCKED_EXTERNAL**.
 
 ## 4. Deploy attempt
 
-| Action                                            | Result                                                                                                                                                                                 |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Git-integrated Production deploy of tip `619c994` | **BLOCKED_EXTERNAL** — GitHub status `Vercel – convergeo-customer`: _“Deployment rate limited — retry in 24 hours.”_ (`updated_at` `2026-07-19T15:24:53Z`, coincident with #330 merge) |
-| CLI `vercel --prod`                               | **BLOCKED_EXTERNAL** — no `VERCEL_TOKEN`                                                                                                                                               |
-| Promote Preview                                   | **Not done** (forbidden)                                                                                                                                                               |
-| Vendor / admin / API / DB / n8n / flags           | **Not touched**                                                                                                                                                                        |
+| Action                                            | Result                                                                                                                                                                                              |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Git-integrated Production deploy of tip `619c994` | **BLOCKED_EXTERNAL** — GitHub status `Vercel – convergeo-customer`: _“Deployment rate limited — retry in 24 hours.”_ (`updated_at` `2026-07-19T15:24:53Z`, still present at re-attempt `17:23:29Z`) |
+| CLI `vercel --prod`                               | **BLOCKED_EXTERNAL** — no `VERCEL_TOKEN`                                                                                                                                                            |
+| Promote Preview                                   | **Not done** (forbidden). Note: Preview `dpl_HffzYD72…` (docs PR #331 branch) was BUILDING during re-attempt — **not** Production env; **not** promoted                                             |
+| Vendor / admin / API / DB / n8n / flags           | **Not touched**                                                                                                                                                                                     |
 
-**No new deployment ID/time.** Production aliases remain on `dpl_CA2qcVXs…` @ `28f565c`.
+**No new Production deployment ID/time.** Production aliases remain on `dpl_CA2qcVXs…` @ `28f565c`.
+
+Re-attempt `17:24:32Z` reconfirmed preflight PASS (lint/typecheck/340 tests/build) and live PDP digest `1378788464` still on `/en/p/tecno-spark-20` and `/en/p/itel-a70`.
 
 ---
 
