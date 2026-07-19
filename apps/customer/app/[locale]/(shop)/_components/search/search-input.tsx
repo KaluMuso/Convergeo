@@ -17,7 +17,9 @@ import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 
 import { addRecentSearch } from "./recent-searches";
 
-export type SearchKind = "products" | "services" | "events" | "vendors";
+import type { SearchKind } from "./search-kinds";
+
+export type { SearchKind };
 
 export type SuggestItem = {
   title: string;

@@ -2,19 +2,26 @@ import { createApiClient } from "@vergeo/config";
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
+import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
 
 import { resolveApiBaseUrl } from "../../../../lib/api-base-url";
 import { RecentSearches } from "../_components/search/recent-searches";
 import {
   ResultsTabs,
-  SEARCH_KINDS,
-  type SearchKindFilter,
   type SearchResponse,
   type TabCounts,
 } from "../_components/search/results-tabs";
-import { SearchInput, type SearchKind } from "../_components/search/search-input";
+import { SearchInput } from "../_components/search/search-input";
+import { searchTabKinds, type SearchKind } from "../_components/search/search-kinds";
+import {
+  normalizeSearchQuery,
+  parseSearchKind,
+  parseSearchPage,
+  resolveSearchPageView,
+} from "../_components/search/search-view";
 import { ZeroResults } from "../_components/search/zero-results";
 
 import type { Metadata } from "next";
@@ -30,21 +37,6 @@ type PageProps = {
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
-}
-
-function parseKind(value: string | undefined): SearchKindFilter {
-  if (!value) {
-    return "all";
-  }
-  if ((SEARCH_KINDS as readonly string[]).includes(value)) {
-    return value as SearchKind;
-  }
-  return "all";
-}
-
-function parsePage(value: string | undefined): number {
-  const parsed = Number.parseInt(value ?? "1", 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
 async function fetchSearch(params: {
@@ -74,8 +66,9 @@ async function fetchSearch(params: {
   }
 }
 
-async function fetchTabCounts(query: string): Promise<TabCounts> {
-  const kinds: SearchKindFilter[] = ["all", ...SEARCH_KINDS];
+async function fetchTabCounts(query: string): Promise<TabCounts | null> {
+  // Must use the shared (non-client) SEARCH_KINDS — see CUST-SEARCH-01 / digest 3273208722.
+  const kinds = searchTabKinds();
   const responses = await Promise.all(
     kinds.map(async (kind) => {
       const response = await fetchSearch({
@@ -84,11 +77,18 @@ async function fetchTabCounts(query: string): Promise<TabCounts> {
         page: 1,
         pageSize: 1,
       });
-      return [kind, response?.total ?? 0] as const;
+      if (response === null) {
+        return null;
+      }
+      return [kind, response.total] as const;
     }),
   );
 
-  return Object.fromEntries(responses) as TabCounts;
+  if (responses.some((entry) => entry === null)) {
+    return null;
+  }
+
+  return Object.fromEntries(responses as Array<readonly [keyof TabCounts, number]>) as TabCounts;
 }
 
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
@@ -137,20 +137,29 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     values?: Record<string, string | number>,
   ) => string;
 
-  const query = q?.trim() ?? "";
-  const activeKind = parseKind(kindParam);
-  const page = parsePage(pageParam);
+  const normalized = normalizeSearchQuery(q);
+  const activeKind = parseSearchKind(kindParam);
+  const page = parseSearchPage(pageParam);
+  const query = normalized.status === "ok" ? normalized.query : "";
 
-  const [searchResponse, tabCounts] = query
-    ? await Promise.all([
-        fetchSearch({
-          q: query,
-          kind: activeKind === "all" ? undefined : activeKind,
-          page,
-        }),
-        fetchTabCounts(query),
-      ])
-    : [null, null];
+  const [searchResponse, tabCounts] =
+    normalized.status === "ok"
+      ? await Promise.all([
+          fetchSearch({
+            q: query,
+            kind: activeKind === "all" ? undefined : activeKind,
+            page,
+          }),
+          fetchTabCounts(query),
+        ])
+      : [null, null];
+
+  const view = resolveSearchPageView({
+    normalized,
+    kind: activeKind,
+    searchResponse,
+    tabCounts,
+  });
 
   const categorySuggestions = [
     { key: "electronics", href: `/${locale}/c/electronics`, label: t("categories.electronics") },
@@ -166,7 +175,12 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     t("suggestionTerms.lusakaVendors"),
   ];
 
-  const searchUnavailable = Boolean(query) && searchResponse === null;
+  const retryHref =
+    query.length > 0
+      ? `/${locale}/search?q=${encodeURIComponent(query)}${
+          activeKind !== "all" ? `&kind=${activeKind}` : ""
+        }${page > 1 ? `&page=${page}` : ""}`
+      : `/${locale}/search`;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-4 motion-rise sm:py-6">
@@ -174,8 +188,8 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         <h1 className="font-display text-h1 text-display-ink">{t("title")}</h1>
         <SearchInput
           locale={locale}
-          initialQuery={query}
-          autoFocus={!query}
+          initialQuery={query || (normalized.status === "invalid" ? (q?.trim() ?? "") : "")}
+          autoFocus={!query && normalized.status !== "invalid"}
           labels={{
             placeholder: t("placeholder"),
             submit: t("submit"),
@@ -197,36 +211,56 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         }}
       />
 
-      {searchUnavailable ? (
+      {view.status === "unavailable" ? (
         <EmptyState
           title={t("unavailable.title")}
           body={t("unavailable.body")}
           data-testid="search-unavailable"
+          action={
+            <Link
+              href={retryHref}
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-[var(--primary-btn-fg)]"
+            >
+              {t("unavailable.retry")}
+            </Link>
+          }
         />
-      ) : query && searchResponse ? (
-        searchResponse.total === 0 ? (
-          <ZeroResults
-            query={query}
-            locale={locale}
-            labels={{
-              title: t("noResults.title", { query }),
-              suggestionsTitle: t("noResults.suggestionsTitle"),
-              categoriesTitle: t("noResults.categoriesTitle"),
-              suggestionTerms,
-              categories: categorySuggestions,
-              askVergeoTitle: t("askVergeo.title"),
-              askVergeoTeaser: t("askVergeo.teaser"),
-              askVergeoSlotLabel: t("askVergeo.slotLabel"),
-            }}
-          />
-        ) : tabCounts ? (
+      ) : null}
+
+      {view.status === "invalid" ? (
+        <EmptyState
+          title={t("invalid.title")}
+          body={t("invalid.body")}
+          data-testid="search-invalid-query"
+        />
+      ) : null}
+
+      {view.status === "zero" ? (
+        <ZeroResults
+          query={view.query}
+          locale={locale}
+          labels={{
+            title: t("noResults.title", { query: view.query }),
+            suggestionsTitle: t("noResults.suggestionsTitle"),
+            categoriesTitle: t("noResults.categoriesTitle"),
+            suggestionTerms,
+            categories: categorySuggestions,
+            askVergeoTitle: t("askVergeo.title"),
+            askVergeoTeaser: t("askVergeo.teaser"),
+            askVergeoSlotLabel: t("askVergeo.slotLabel"),
+          }}
+        />
+      ) : null}
+
+      {view.status === "results" ? (
+        <Suspense fallback={null}>
           <ResultsTabs
             locale={locale}
-            query={query}
-            activeKind={activeKind}
+            query={view.query}
+            activeKind={view.kind}
             page={page}
-            response={searchResponse}
-            tabCounts={tabCounts}
+            response={view.response}
+            tabCounts={view.tabCounts}
             labels={{
               ariaLabel: t("tabs.ariaLabel"),
               all: t("tabs.all"),
@@ -235,14 +269,14 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
               events: t("tabs.events"),
               vendors: t("tabs.vendors"),
               count: t("tabs.count"),
-              resultsCount: t("results.count", { count: searchResponse.total }),
+              resultsCount: t("results.count", { count: view.response.total }),
               degraded: t("results.degraded"),
               priceFrom: t("result.priceFrom"),
               category: t("result.category"),
               loadMore: t("pagination.loadMore"),
             }}
           />
-        ) : null
+        </Suspense>
       ) : null}
     </main>
   );

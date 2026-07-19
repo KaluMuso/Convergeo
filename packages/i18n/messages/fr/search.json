@@ -24,7 +24,12 @@
   },
   "unavailable": {
     "title": "Recherche indisponible",
-    "body": "Nous n'avons pas pu charger les résultats. Réessayez sous peu, ou parcourez les catégories."
+    "body": "Nous n'avons pas pu charger les résultats. Réessayez sous peu, ou parcourez les catégories.",
+    "retry": "Réessayer"
+  },
+  "invalid": {
+    "title": "Cette recherche est trop longue",
+    "body": "Raccourcissez votre requête et réessayez. Les filtres et le tri dans l'URL restent inchangés."
   },
   "suggestionTerms": {
     "phones": "téléphones",
