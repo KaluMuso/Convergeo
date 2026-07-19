@@ -146,11 +146,9 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
-export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale } = await params;
-  const query = await searchParams;
   const t = await getCatalogTranslator(locale);
-  const slug = resolveProductSlug(query);
 
   return {
     title: t("comparePage.title"),
@@ -163,7 +161,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       locale,
       url: buildLocaleCanonical(locale, "compare"),
     },
-    robots: { index: Boolean(slug), follow: true },
+    // Compare is driven by query params — keep it out of the organic index.
+    robots: { index: false, follow: false },
   };
 }
 

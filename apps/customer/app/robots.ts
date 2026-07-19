@@ -1,5 +1,7 @@
 import { getSiteUrl } from "@vergeo/ui/src/seo/json-ld";
 
+import { ROBOTS_DISALLOW_SUFFIXES } from "../lib/seo/sitemap-eligibility";
+
 import type { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
@@ -10,15 +12,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: [
-          "/*/checkout",
-          "/*/checkout/",
-          "/*/cart",
-          "/*/account",
-          "/*/account/",
-          "/*/admin",
-          "/*/admin/",
-        ],
+        disallow: ROBOTS_DISALLOW_SUFFIXES.map((suffix) => `/*${suffix}`),
       },
     ],
     sitemap: `${siteUrl}/sitemap.xml`,

@@ -5,6 +5,14 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { CheckoutShell } from "./_components/step-fulfilment";
 
 import type { CheckoutShellLabels } from "./_components/step-fulfilment";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 type PageProps = {
   params: Promise<{ locale: string }>;

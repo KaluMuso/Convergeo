@@ -38,6 +38,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title,
     description,
     alternates: buildCanonicalAlternates(locale, "services", "post-job"),
+    robots: { index: false, follow: false },
   };
 }
 

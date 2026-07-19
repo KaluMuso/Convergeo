@@ -1,11 +1,17 @@
+import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
 import { describe, expect, it } from "vitest";
 
 import {
   buildBreadcrumbListJsonLd,
+  buildCanonicalAlternates,
   buildEventJsonLd,
   buildLocalBusinessJsonLd,
+  buildOrganizationJsonLd,
   buildProductJsonLd,
   buildLocaleCanonical,
+  buildSearchActionUrlTemplate,
+  buildWebSiteJsonLd,
+  canBuildProductJsonLd,
   ngweeToZmwDecimal,
   stripCanonicalParams,
 } from "./json-ld";
@@ -49,13 +55,37 @@ describe("buildLocaleCanonical", () => {
   });
 });
 
+describe("buildCanonicalAlternates", () => {
+  it("emits self-canonical plus hreflang for each available locale and x-default", () => {
+    const alternates = buildCanonicalAlternates("bem", "p", "itel-a70");
+    expect(alternates.canonical).toBe("/bem/p/itel-a70");
+    expect(alternates.languages).toBeDefined();
+    const languages = alternates.languages as Record<string, string>;
+    for (const locale of LOCALES) {
+      expect(languages[locale]).toBe(`https://vergeo5.com/${locale}/p/itel-a70`);
+    }
+    expect(languages["x-default"]).toBe(`https://vergeo5.com/${DEFAULT_LOCALE}/p/itel-a70`);
+  });
+
+  it("omits locales that do not serve the page", () => {
+    const alternates = buildCanonicalAlternates("en", "p", "itel-a70", {
+      availableLocales: ["en", "fr"],
+    });
+    const languages = alternates.languages as Record<string, string>;
+    expect(Object.keys(languages).sort()).toEqual(["en", "fr", "x-default"].sort());
+    expect(languages.bem).toBeUndefined();
+    expect(languages["x-default"]).toBe("https://vergeo5.com/en/p/itel-a70");
+  });
+});
+
 describe("buildProductJsonLd", () => {
   it("maps offers with exact ZMW decimal prices", () => {
-    const jsonLd = buildProductJsonLd({
+    const input = {
       name: "Itel A70",
       slug: "itel-a70",
       locale: "en",
       brand: "Itel",
+      imageUrls: ["https://res.cloudinary.com/demo/image/upload/itel.jpg"],
       offers: [
         {
           priceNgwee: 123456,
@@ -68,15 +98,64 @@ describe("buildProductJsonLd", () => {
           sellerName: "Mobile World",
         },
       ],
-    });
+    };
+    expect(canBuildProductJsonLd(input)).toBe(true);
+    const jsonLd = buildProductJsonLd(input);
 
     expect(jsonLd["@type"]).toBe("Product");
     expect(jsonLd.name).toBe("Itel A70");
+    expect(jsonLd.aggregateRating).toBeUndefined();
     const offers = jsonLd.offers as Array<Record<string, unknown>>;
     expect(offers).toHaveLength(2);
     expect(offers[0]?.price).toBe("1234.56");
     expect(offers[0]?.priceCurrency).toBe("ZMW");
     expect(offers[1]?.price).toBe("1250.00");
+  });
+
+  it("refuses Product JSON-LD without real image or seller offers", () => {
+    expect(
+      canBuildProductJsonLd({
+        name: "Itel A70",
+        slug: "itel-a70",
+        locale: "en",
+        offers: [],
+      }),
+    ).toBe(false);
+    expect(
+      canBuildProductJsonLd({
+        name: "Itel A70",
+        slug: "itel-a70",
+        locale: "en",
+        imageUrls: ["https://example.com/a.jpg"],
+        offers: [{ priceNgwee: 100, inStock: true, sellerName: "" }],
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("buildOrganizationJsonLd / buildWebSiteJsonLd", () => {
+  it("builds Organization without fabricating logo or socials", () => {
+    const jsonLd = buildOrganizationJsonLd({ name: "Vergeo5" });
+    expect(jsonLd).toEqual({
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: "Vergeo5",
+      url: "https://vergeo5.com",
+    });
+    expect(jsonLd.logo).toBeUndefined();
+  });
+
+  it("builds WebSite SearchAction from a real search urlTemplate", () => {
+    const template = buildSearchActionUrlTemplate("en");
+    expect(template).toBe("https://vergeo5.com/en/search?q={search_term_string}");
+    const jsonLd = buildWebSiteJsonLd({
+      name: "Vergeo5",
+      searchUrlTemplate: template,
+    });
+    expect(jsonLd["@type"]).toBe("WebSite");
+    const action = jsonLd.potentialAction as Record<string, unknown>;
+    expect(action["@type"]).toBe("SearchAction");
+    expect((action.target as Record<string, unknown>).urlTemplate).toBe(template);
   });
 });
 

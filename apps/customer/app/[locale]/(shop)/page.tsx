@@ -1,5 +1,13 @@
-import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
-import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
+import { DEFAULT_LOCALE, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import {
+  buildAbsoluteUrl,
+  buildCanonicalAlternates,
+  buildLocaleCanonical,
+  buildOrganizationJsonLd,
+  buildSearchActionUrlTemplate,
+  buildWebSiteJsonLd,
+  JsonLdScript,
+} from "@vergeo/ui/src/seo/json-ld";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
@@ -146,8 +154,16 @@ export default async function ShopHomePage({ params }: PageProps) {
     (key) => key !== "category_grid",
   );
 
+  const organizationJsonLd = buildOrganizationJsonLd({ name: "Vergeo5" });
+  const websiteJsonLd = buildWebSiteJsonLd({
+    name: "Vergeo5",
+    url: buildAbsoluteUrl(buildLocaleCanonical(DEFAULT_LOCALE)),
+    searchUrlTemplate: buildSearchActionUrlTemplate(DEFAULT_LOCALE),
+  });
+
   return (
     <div className="flex flex-col gap-6 lg:gap-10">
+      <JsonLdScript data={[organizationJsonLd, websiteJsonLd]} />
       {plan.useCampaignHero ? (
         renderCampaignSection("hero", locale, t, merch.slots, merch.categories)
       ) : plan.useDefaultHero && hasDefaultHomeContent(merch.categories, defaultData) ? (

@@ -113,9 +113,10 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       locale,
       url: buildLocaleCanonical(locale, "search"),
     },
+    // Parameterised search results must not enter the organic index.
     robots: {
-      index: Boolean(trimmed),
-      follow: true,
+      index: false,
+      follow: false,
     },
   };
 }
