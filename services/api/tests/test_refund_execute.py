@@ -324,29 +324,106 @@ class TestConcurrentAndRetry:
         assert len(fake.tables["payouts"].rows) == 1  # no second payout
         assert ledger.created_count == 1  # no second ledger drain
 
-    def test_duplicate_insert_returns_existing_without_ledger_or_payout(self) -> None:
-        # Winner already inserted (fast-path pre-check will still miss it in this thread's
-        # snapshot only if seeded after; here we seed it so the insert hits the unique index).
+    def test_duplicate_insert_resumes_processing_winner(self) -> None:
+        # Winner already inserted processing — loser must resume (not no-op leave stranded).
         fake = FakeSupabaseClient()
         _seed_order(fake, released=False)
         winner_id = "c0ffee00-0000-0000-0000-000000000001"
         fake.tables["refunds"].rows.append(
-            {"id": winner_id, "order_id": ORDER_ID, "lane": 1, "amount_ngwee": 105_000,
-             "status": "processing",
-             "breakdown": {"phase": "pre_release", "lenco_reference": "rfd-winner",
-                           "ledger_transaction_ids": ["txn-w"]}}
+            {
+                "id": winner_id,
+                "order_id": ORDER_ID,
+                "lane": 1,
+                "amount_ngwee": 105_000,
+                "status": "processing",
+                "breakdown": {
+                    "phase": "pre_release",
+                    "idempotency_key": CALLER_KEY,
+                },
+            }
         )
         service = FakeServiceClient(fake)
         ledger = IdempotentPostTransaction()
 
-        with patch("app.services.refunds.execute.post_transaction", ledger):
-            result = execute_refund(service_client=service, order_id=ORDER_ID, lane=1,
-                                    customer_momo=CUSTOMER_MOMO, idempotency_key=CALLER_KEY)
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                side_effect=_gate_decision_for_fake(fake),
+            ),
+        ):
+            result = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+                idempotency_key=CALLER_KEY,
+            )
 
         assert result.created is False
         assert result.refund_id == winner_id
-        assert ledger.created_count == 0
-        assert len(fake.tables["payouts"].rows) == 0
+        assert ledger.created_count == 1
+        assert len(fake.tables["payouts"].rows) == 1
+        assert fake.tables["refunds"].rows[0]["status"] == "completed"
+
+
+class TestProcessingResume:
+    def test_resume_processing_refund_completes_ledger_and_payout(self) -> None:
+        """Crash after insert(status=processing) must finish on the next execute_refund."""
+        fake = FakeSupabaseClient()
+        _seed_order(fake, released=False)
+        refund_id = "c0ffee00-0000-0000-0000-000000000099"
+        fake.tables["refunds"].rows.append(
+            {
+                "id": refund_id,
+                "order_id": ORDER_ID,
+                "lane": 1,
+                "amount_ngwee": 105_000,
+                "status": "processing",
+                "breakdown": {
+                    "phase": "pre_release",
+                    "idempotency_key": CALLER_KEY,
+                },
+            }
+        )
+        service = FakeServiceClient(fake)
+        ledger = IdempotentPostTransaction()
+
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                side_effect=_gate_decision_for_fake(fake),
+            ),
+        ):
+            first = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+                idempotency_key=CALLER_KEY,
+            )
+            second = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+                idempotency_key=CALLER_KEY,
+            )
+
+        assert first.created is False
+        assert first.refund_id == refund_id
+        assert first.phase == RefundPhase.PRE_RELEASE
+        assert ledger.created_count == 1
+        assert ledger.keys == [f"{CALLER_KEY}-ledger"]
+        assert len(fake.tables["payouts"].rows) == 1
+        assert fake.tables["refunds"].rows[0]["status"] == "completed"
+        assert fake.tables["refunds"].rows[0]["payout_ref"] == first.payout_id
+        # Completed refund is returned as-is — no second ledger/payout.
+        assert second.created is False
+        assert second.refund_id == refund_id
+        assert ledger.created_count == 1
+        assert len(fake.tables["payouts"].rows) == 1
 
 
 class TestKeyDerivation:
