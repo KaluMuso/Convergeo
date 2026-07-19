@@ -25,6 +25,8 @@ from app.services.payments.references import make_refund_reference
 from app.services.refunds.execute import RefundPhase, execute_refund
 from postgrest.exceptions import APIError
 
+_PRE_RELEASE_GATE = RefundGateDecision(phase="pre_release", claimed=True)
+
 ORDER_ID = "70707070-7070-7070-7070-707070707070"
 VENDOR_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 CUSTOMER_MOMO = "+260971234567"
@@ -574,7 +576,13 @@ class TestItemScopedRefund:
         service = FakeServiceClient(fake)
         ledger = IdempotentPostTransaction()
 
-        with patch("app.services.refunds.execute.post_transaction", ledger):
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                return_value=_PRE_RELEASE_GATE,
+            ),
+        ):
             result = execute_refund(
                 service_client=service,
                 order_id=ORDER_ID,
@@ -609,7 +617,13 @@ class TestItemScopedRefund:
         service = FakeServiceClient(fake)
         ledger = IdempotentPostTransaction()
 
-        with patch("app.services.refunds.execute.post_transaction", ledger):
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                return_value=_PRE_RELEASE_GATE,
+            ),
+        ):
             result = execute_refund(
                 service_client=service,
                 order_id=ORDER_ID,
