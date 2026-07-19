@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import pytest
+from fastapi.testclient import TestClient
+
 from app.core.env_guards import (
     PROD_API_HOST,
     PROD_SUPABASE_PROJECT_REF,
@@ -137,10 +139,9 @@ def test_require_sandbox_payments(monkeypatch: pytest.MonkeyPatch) -> None:
     require_sandbox_payments(env="staging")
 
 
-def test_fingerprint_endpoint(client, monkeypatch: pytest.MonkeyPatch) -> None:
-    from fastapi.testclient import TestClient
-
-    assert isinstance(client, TestClient)
+def test_fingerprint_endpoint(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("GIT_SHA", "deadbeef")
     monkeypatch.setenv("API_IMAGE_TAG", "deadbeef")
     get_settings.cache_clear()
