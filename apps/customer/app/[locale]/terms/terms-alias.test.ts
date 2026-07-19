@@ -8,6 +8,7 @@ describe("terms alias route (LB-L08)", () => {
   it.each(["en", "fr", "zh", "bem", "nya"] as const)("targets /%s/legal/terms", (locale) => {
     const target = `/${locale}/legal/terms`;
     expect(target).toBe(`/${locale}/legal/terms`);
-    expect(target).not.toMatch(/\/terms$/);
+    expect(target).toContain("/legal/");
+    expect(target).not.toBe(`/${locale}/terms`);
   });
 });

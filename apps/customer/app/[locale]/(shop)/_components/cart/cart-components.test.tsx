@@ -88,7 +88,7 @@ describe("checkout.cart i18n", () => {
     expect(checkoutMessages.cart.deliveryThreshold.toLowerCase()).toContain("lusaka");
     expect(checkoutMessages.cart.deliveryScopeNote.toLowerCase()).toContain("lusaka");
     expect(checkoutMessages.cart.deliveryScopeNote.toLowerCase()).toMatch(/zone|pickup/);
-    expect(checkoutMessages.cart.freeDeliveryUnlocked.toLowerCase()).toContain("qualify");
+    expect(checkoutMessages.cart.freeDeliveryUnlocked.toLowerCase()).toContain("qualifies");
     expect(checkoutMessages.cart.deliveryEligible.toLowerCase()).toContain("checkout");
   });
 });
