@@ -81,8 +81,9 @@ reviewers + restrict who can push).
    in GitHub `staging` + OCI env file.
 3. Workflow runs `supabase db push` from repo migrations (blank → current,
    including `0056_kyc_integrity.sql`).
-4. Verify RLS on all public base tables (workflow step).
-5. Prefer `security_invoker` on new views; do not expose service-role to frontends.
+4. Verify RLS on all public base tables **and** exposed-view `security_invoker`
+   posture via `scripts/ci/check-staging-schema.sh` (workflow step).
+5. Do not expose service-role credentials to frontends.
 6. Seed **only** via `scripts/seed_staging.py` (synthetic). Never dump/restore
    production PII, auth users, orders, or payments into staging.
 

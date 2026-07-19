@@ -166,7 +166,7 @@ jobs:
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
-      - name: Schema / RLS smoke (exposed tables have RLS)
+      - name: Schema / RLS + security_invoker view checks
         env:
           STAGING_SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
           STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
@@ -174,25 +174,12 @@ jobs:
         run: |
           set -euo pipefail
           if [ -n "${STAGING_SUPABASE_DB_URL}" ]; then
-            DB_URL="${STAGING_SUPABASE_DB_URL}"
+            export SUPABASE_DB_URL="${STAGING_SUPABASE_DB_URL}"
           else
             # Fallback pooler form — override with STAGING_SUPABASE_DB_URL when region differs.
-            DB_URL="postgresql://postgres.${STAGING_SUPABASE_PROJECT_ID}:${STAGING_SUPABASE_DB_PASSWORD}@aws-0-eu-north-1.pooler.supabase.com:5432/postgres"
+            export SUPABASE_DB_URL="postgresql://postgres.${STAGING_SUPABASE_PROJECT_ID}:${STAGING_SUPABASE_DB_PASSWORD}@aws-0-eu-north-1.pooler.supabase.com:5432/postgres"
           fi
-          bad="$(psql "$DB_URL" -v ON_ERROR_STOP=1 -At -c "
-            SELECT c.relname
-            FROM pg_class c
-            JOIN pg_namespace n ON n.oid = c.relnamespace
-            WHERE n.nspname = 'public'
-              AND c.relkind = 'r'
-              AND c.relrowsecurity = false;
-          ")"
-          if [ -n "$bad" ]; then
-            echo "::error::tables without RLS:"
-            echo "$bad"
-            exit 1
-          fi
-          echo "OK: all public base tables have RLS enabled"
+          bash scripts/ci/check-staging-schema.sh
 
       - name: Synthetic seed (optional)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed_synthetic }}

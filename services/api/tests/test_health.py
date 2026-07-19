@@ -15,6 +15,21 @@ def test_readyz_degrades_without_supabase(client: TestClient) -> None:
     assert response.json()["status"] in {"ok", "degraded"}
 
 
+def test_fingerprint_has_no_secrets(client: TestClient) -> None:
+    response = client.get("/fingerprint")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["env"] in {"development", "staging", "production"}
+    assert "git_sha" in body
+    assert "image_tag" in body
+    assert "supabase_project_ref" in body
+    blob = str(body).lower()
+    assert "service_role" not in blob
+    assert "anon-key" not in blob
+    assert "password" not in blob
+
+
 def test_request_id_header_generated(client: TestClient) -> None:
     response = client.get("/healthz")
     assert response.status_code == 200

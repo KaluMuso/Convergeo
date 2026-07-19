@@ -364,6 +364,17 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: postgres
 
+      - name: Schema RLS + security_invoker (post-replay)
+        # STG-01: same isolation checks the staging deploy job runs against the
+        # remote staging DB — exercised here on a blank local replay including 0056.
+        run: bash scripts/ci/check-staging-schema.sh
+        env:
+          PGHOST: localhost
+          PGPORT: 5432
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: postgres
+
   db:
     name: Database / typegen drift
     needs: migrations

@@ -183,6 +183,22 @@ else
   bad "redeploy-api-staging missing latest guard or container name"
 fi
 
+# 10) Schema check scripts exist and mention RLS + security_invoker
+if grep -q 'security_invoker' scripts/ci/check-staging-schema.sql \
+  && grep -q 'relrowsecurity' scripts/ci/check-staging-schema.sql \
+  && grep -q 'check-staging-schema.sh' .github/workflows/deploy-staging.yml; then
+  ok "schema RLS + security_invoker check wired into deploy-staging"
+else
+  bad "schema security_invoker / RLS check missing from staging pipeline"
+fi
+
+# 11) Migration 0056 content includes security_invoker (KYC view posture)
+if grep -q 'security_invoker' supabase/migrations/0056_kyc_integrity.sql; then
+  ok "migration 0056 declares security_invoker on its view(s)"
+else
+  bad "migration 0056 missing security_invoker"
+fi
+
 echo
 echo "Results: ${pass} passed, ${fail} failed"
 if [[ "$fail" -gt 0 ]]; then

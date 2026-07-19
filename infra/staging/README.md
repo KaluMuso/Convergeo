@@ -18,4 +18,9 @@ Docs:
 - `docs/production-readiness/2026-07-18/staging/staging-secret-register.md`
 - `docs/production-readiness/2026-07-18/staging/staging-provisioning-checklist.md`
 
-CI: `.github/workflows/deploy-staging.yml` + `scripts/ci/check-staging-separation.sh`.
+CI:
+
+- `.github/workflows/deploy-staging.yml`
+- `scripts/ci/check-staging-separation.sh`
+- `scripts/ci/check-staging-schema.sh` (RLS + `security_invoker` on exposed views)
+- `scripts/ci/test-staging-guards.sh` (local/CI self-test, no secrets)
