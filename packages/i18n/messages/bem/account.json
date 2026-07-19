@@ -1,0 +1,22 @@
+{
+  "common": {
+    "backToAccount": "Bweleleni ku account",
+    "loading": "Ilekete…",
+    "required": "Cafwaikwa"
+  },
+  "locales": {
+    "bem": "IciBemba",
+    "en": "English",
+    "fr": "Français",
+    "nya": "IciNyanja",
+    "zh": "中文"
+  },
+  "nav": {
+    "addresses": "Ama-addresses",
+    "business": "Mode ya business",
+    "preferences": "Amanotifications",
+    "privacy": "Data no privacy",
+    "profile": "Profile yenu"
+  },
+  "title": "Account yandi"
+}

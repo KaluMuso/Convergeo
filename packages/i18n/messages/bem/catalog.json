@@ -1,0 +1,184 @@
+{
+  "browseCategories": {
+    "emptyBody": "Catalogue takwete categories sha public nomba. Bweleleni limbi, nangu fweni.",
+    "emptyTitle": "Takwaba categories",
+    "subtitle": "Shiteni departments sha Phase-1 no subcategories shabo.",
+    "title": "Twaleni categories",
+    "unavailableBody": "Tatwaishibe ukuleta category tree nomba. Wesheni limbi, nangu fweni.",
+    "unavailableTitle": "Categories tashifikapo"
+  },
+  "home": {
+    "categories": {
+      "browseLabel": "Twaleni {category}",
+      "title": "Shiteni na category",
+      "viewAll": "Categories shyonse"
+    },
+    "demo": {
+      "sampleListing": "Listing ya sample"
+    },
+    "hero": {
+      "escrowLine": "Ukulindilila kwa buyer na escrow ilyo payment ya online yaisa — yikwata bwino na Vergeo5 mpaka kufika, elyo yasuminishwa.",
+      "escrowStep1": "Mwalipila",
+      "escrowStep2": "Yikwata bwino na Vergeo5",
+      "escrowStep3": "Yasuminishwa pa kufika",
+      "eyebrow": "Marketplace ya Zambia",
+      "fallbackSubtitle": "Compare prices ukufuma ku basellers mu Zambia, no arrange delivery ya Lusaka nangu pickup nationwide ilyo listing yaisa.",
+      "fallbackTitle": "Sanga ifintu, services, no events mu Zambia",
+      "placeholder": {
+        "subtitle": "Storefront yenu ya config ileisa apa ilyo merchandising slots fyaya live.",
+        "title": "Mwaiseni pa Vergeo5"
+      },
+      "primaryCta": "Tampeniko kutwala",
+      "secondaryCta": "Sambeni ukushitisha"
+    },
+    "meta": {
+      "description": "Shita ifintu, booka services, no sanga events mu Zambia pa Vergeo5.",
+      "title": "Sanga Zambia"
+    },
+    "nav": {
+      "account": "Akaunti",
+      "allCategories": "Categories shyonse",
+      "ariaLabel": "Navigation ya shop",
+      "ask": "Ipusheni",
+      "askVergeo": "Ipusheni Vergeo",
+      "bottomAriaLabel": "Navigation ikalamba ya shop",
+      "browse": "Twaleni",
+      "cart": "Ing'anda ya ifintu",
+      "categoriesLoading": "Ilekete categories…",
+      "categoriesPanelAria": "Categories shyonse",
+      "desktopAriaLabel": "Navigation ikalamba",
+      "events": "Ificitike",
+      "home": "Kwenu",
+      "orders": "Ama-order",
+      "searchPlaceholder": "Fweni ifintu, services, events…",
+      "searchSubmit": "Fweni",
+      "services": "Imilimo",
+      "supplies": "Ifya business",
+      "viewAllCategories": "Loleni categories shyonse"
+    },
+    "rails": {
+      "departmentTitle": "Ifyapya mu {category}",
+      "newTitle": "Ifyapya pa Vergeo5",
+      "services": {
+        "fromPrice": "Ukufuma",
+        "noReviews": "Provider umupya",
+        "provider": "Na {provider}",
+        "view": "Loleni service"
+      },
+      "servicesTitle": "Imilimo",
+      "vendors": {
+        "listings": "Ifintu",
+        "location": "Zambia",
+        "noReviews": "Uupya",
+        "preferred": "Asalwa",
+        "rating": "{rating} ({count})",
+        "reviews": "Ama-reviews",
+        "verified": "Yasuminishwa",
+        "view": "Piteni ku store"
+      },
+      "vendorsTitle": "Basellers abakalamba",
+      "viewAll": "Loleni fyonse"
+    },
+    "sellCta": {
+      "body": "Signup ya public teyaisa kale. Basellers abaitwa bengakonka onboarding; bambi bengasamba ifyo seller beta ikonka.",
+      "cta": "Sambeni ukushitisha",
+      "title": "Ukushitisha pa Vergeo5 kulifye kwa invite nomba"
+    },
+    "trust": {
+      "ariaLabel": "Cinshi muleshita pa Vergeo5",
+      "escrow": "Ilyo payment ya online yaisa, Vergeo5 yikwata bwino indalama yenu mpaka kufika",
+      "fulfillment": "Delivery ya Lusaka nangu pickup nationwide ilyo listing yaisa",
+      "returns": "Amabuloshi ya returns no refunds ku ama-order ayasuminishwa",
+      "sellers": "Amaprofiles ya basellers no status mwingalola"
+    }
+  },
+  "pdp": {
+    "buyBox": {
+      "addToCart": "Longeni mu cart",
+      "addToCartError": "Tatwaishibe ukulenga mu cart. Checkeni connection no wesheni limbi.",
+      "addingToCart": "Ilelenga…",
+      "alwaysAvailable": "Yaisa",
+      "decrease": "Kucesha ubunji",
+      "decreaseSymbol": "-",
+      "inStock": "Ili mu stock",
+      "increase": "Kukusha ubunji",
+      "increaseSymbol": "+",
+      "lowStock": "Hashala {count} fye",
+      "moq": "Order iyacalamba: {count}",
+      "outOfStock": "Takwaba mu stock",
+      "priceLabel": "Mutengo",
+      "quantityLabel": "Ubunji",
+      "singleVendor": "Ashitisha vendor uyu fye"
+    },
+    "condition": {
+      "new": "Cipya",
+      "refurbished": "Cilukilwe"
+    },
+    "gallery": {
+      "empty": "Takwaba amapictures",
+      "indicator": "Picture {current} ya {total}",
+      "next": "Picture iyakonka",
+      "previous": "Picture iyapita"
+    },
+    "meta": {
+      "descriptionFallback": "Shiteni {name} pa Vergeo5",
+      "notFoundTitle": "Icintu tacisangwa"
+    },
+    "overview": {
+      "heading": "Ifilondolola"
+    },
+    "related": {
+      "fromPrice": "Ukufuma {price}",
+      "heading": "Fimbi mu category iyi"
+    },
+    "specs": {
+      "empty": "Takwaba specifications",
+      "heading": "Ifya specs"
+    },
+    "tabs": {
+      "ariaLabel": "Ifya product",
+      "overview": "Icifupi",
+      "reviews": "Ama-reviews",
+      "specs": "Ifya nshita"
+    },
+    "trust": {
+      "delivery": "Delivery yaisa ku seller uyu",
+      "escrow": "Ilyo payment ya online yaisa, Vergeo5 yikwata bwino indalama yenu mpaka kufika. COD yengasuminishwa ku ama-order ayasuminishwa.",
+      "pickup": "Pickup yaisa ku seller uyu",
+      "preferredSeller": "Seller preferred — {name}",
+      "returns": "Returns no refunds",
+      "seller": "Ashitisha {name}"
+    },
+    "vendor": {
+      "heading": "Ushitisha",
+      "noReviews": "Takwaba ama-reviews",
+      "preferredBadge": "Seller preferred",
+      "rating": "{rating} ({count, plural, one {# review} other {# ama-reviews}})",
+      "viewStore": "Loleni store"
+    }
+  },
+  "plp": {
+    "breadcrumbAria": "Inshila ya peji",
+    "card": {
+      "distance": "{distance} ukutali",
+      "noReviews": "Takwaba ama-reviews",
+      "outOfStock": "Takwaba mu stock",
+      "quickAdd": "Longeni bwangu",
+      "reviewCount": "({count})",
+      "vendor": "Ashitisha {vendor}",
+      "wishlist": "Sungileni ku wishlist"
+    },
+    "defaultCategory": "Ifintu fyonse",
+    "emptyBody": "Wesheni ukufuta filters nangu twaleni category yambi.",
+    "emptyTitle": "Takwaba listings",
+    "loadMore": "Leteni fimbi",
+    "loading": "Ilekete…",
+    "results": "{count, plural, one {# listing} other {# amalistings}}",
+    "title": "Twaleni {category}",
+    "unavailableBody": "Tatwaishibe ukuleta ifintu fyamu category iyi nomba. Wesheni limbi, nangu fweni.",
+    "unavailableTitle": "Listings tashifikapo"
+  },
+  "returnableBadge": {
+    "label": "Cingabwelela mu nsiku {days}"
+  }
+}
