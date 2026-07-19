@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from fastapi.testclient import TestClient
-
 from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
+from fastapi.testclient import TestClient
 
 ENV_VAR = "INTERNAL_PAYOUTS_TOKEN"
 DEV_DEFAULT = "dev-internal-payouts"

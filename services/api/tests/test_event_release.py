@@ -1009,6 +1009,8 @@ def test_full_release_anchors_on_ends_at_not_starts_at() -> None:
         patch(f"{_EVR}._load_event_order_context", return_value=ctx),
         patch(f"{_EVR}._posted_release_keys", return_value=set()),
         patch(f"{_EVR}.order_is_refund_blocked", return_value=False),
+        # DB-less unit path: do not hit order_money_gates via claim_release_gate.
+        patch(f"{_EVR}.claim_release_gate", return_value=None),
         patch(f"{_EVR}.capture_order_commission") as capture,
         patch(f"{_EVR}._post_event_release", return_value="txn-unit") as post,
     ):
@@ -1041,6 +1043,7 @@ def test_legacy_null_ends_at_keeps_starts_at_anchor() -> None:
         patch(f"{_EVR}._load_event_order_context", return_value=ctx),
         patch(f"{_EVR}._posted_release_keys", return_value=set()),
         patch(f"{_EVR}.order_is_refund_blocked", return_value=False),
+        patch(f"{_EVR}.claim_release_gate", return_value=None),
         patch(f"{_EVR}.capture_order_commission"),
         patch(f"{_EVR}._post_event_release", return_value="txn-unit") as post,
     ):
@@ -1064,6 +1067,7 @@ def test_phased_final_release_anchors_on_ends_at() -> None:
         patch(f"{_EVR}._load_event_order_context", return_value=ctx),
         patch(f"{_EVR}._posted_release_keys", return_value=posted),
         patch(f"{_EVR}.order_is_refund_blocked", return_value=False),
+        patch(f"{_EVR}.claim_release_gate", return_value=None),
         patch(f"{_EVR}.capture_order_commission") as capture,
         patch(f"{_EVR}._post_event_release", return_value="txn-unit") as post,
     ):
