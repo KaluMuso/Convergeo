@@ -18,13 +18,9 @@ import {
   HomeVendorsRail,
   loadHomeDefaultData,
 } from "./_components/home-default";
-import {
-  getRenderableSectionKeys,
-  hasEffectiveMerchConfig,
-  loadHomeMerchData,
-  pickSlot,
-  type HomeSectionKey,
-} from "./_components/merch-data";
+import { planHomeLayout } from "./_components/home-layout";
+import { HomeTrustStrip } from "./_components/home-trust-strip";
+import { loadHomeMerchData, pickSlot, type HomeSectionKey } from "./_components/merch-data";
 
 import type { Metadata } from "next";
 
@@ -70,7 +66,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-function renderSection(
+function renderCampaignSection(
   sectionKey: HomeSectionKey,
   locale: string,
   t: CatalogTranslator,
@@ -120,37 +116,20 @@ export default async function ShopHomePage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [tRaw, data] = await Promise.all([getCatalogTranslator(locale), loadHomeMerchData()]);
+  const [tRaw, merch] = await Promise.all([getCatalogTranslator(locale), loadHomeMerchData()]);
   const t = tRaw as unknown as CatalogTranslator;
 
-  // Real admin campaigns take precedence; placeholder-only seed config does not.
-  if (hasEffectiveMerchConfig(data.slots)) {
-    const sectionKeys = getRenderableSectionKeys(data.slots, data.categories);
+  // Always load catalogue rails so partial/placeholder merch cannot suppress discovery.
+  const defaultData = await loadHomeDefaultData(merch.categories);
+  const plan = planHomeLayout(merch.slots, merch.categories, defaultData);
 
-    return (
-      <div className="flex flex-col gap-6 lg:gap-10">
-        {sectionKeys.length > 0 ? (
-          sectionKeys.map((sectionKey) =>
-            renderSection(sectionKey, locale, t, data.slots, data.categories),
-          )
-        ) : (
-          <HomeHero locale={locale} t={t} />
-        )}
-      </div>
-    );
-  }
-
-  const defaultData = await loadHomeDefaultData(data.categories);
-
-  if (!hasDefaultHomeContent(data.categories, defaultData)) {
-    return (
-      <div className="flex flex-col gap-6 lg:gap-10">
-        <HomeHero locale={locale} t={t} />
-      </div>
-    );
-  }
-
-  // Data-driven default homepage (UI-P4). Every rail is empty-safe.
+  const trustLabels = {
+    ariaLabel: t("home.trust.ariaLabel"),
+    sellers: t("home.trust.sellers"),
+    fulfillment: t("home.trust.fulfillment"),
+    returns: t("home.trust.returns"),
+    escrow: t("home.trust.escrow"),
+  };
 
   const railLabels = {
     vendor: t("plp.card.vendor"),
@@ -160,67 +139,100 @@ export default async function ShopHomePage({ params }: PageProps) {
     wishlist: t("plp.card.wishlist"),
     outOfStock: t("plp.card.outOfStock"),
     distance: t("plp.card.distance"),
+    sampleListing: t("home.demo.sampleListing"),
   };
+
+  const campaignKeysExcludingDiscovery = plan.campaignSectionKeys.filter(
+    (key) => key !== "category_grid",
+  );
 
   return (
     <div className="flex flex-col gap-6 lg:gap-10">
-      <HomeHeroBand locale={locale} t={t} />
-      <CategoryGrid categories={data.categories} locale={locale} t={t} />
-      <HomeProductRail
-        id="home-rail-new"
-        title={t("home.rails.newTitle")}
-        viewAllHref={`/${locale}/c/all`}
-        viewAllLabel={t("home.rails.viewAll")}
-        listings={defaultData.newest}
-        locale={locale}
-        labels={railLabels}
-        priorityCount={2}
-      />
-      {defaultData.departmentRails.map((rail) => (
-        <HomeProductRail
-          key={rail.category.id}
-          id={`home-rail-${rail.category.slug}`}
-          title={t("home.rails.departmentTitle", { category: rail.category.name })}
-          viewAllHref={`/${locale}/c/${rail.category.slug}`}
-          viewAllLabel={t("home.rails.viewAll")}
-          listings={rail.listings}
+      {plan.useCampaignHero ? (
+        renderCampaignSection("hero", locale, t, merch.slots, merch.categories)
+      ) : plan.useDefaultHero && hasDefaultHomeContent(merch.categories, defaultData) ? (
+        <HomeHeroBand locale={locale} t={t} />
+      ) : (
+        <HomeHero locale={locale} t={t} />
+      )}
+
+      <HomeTrustStrip labels={trustLabels} />
+
+      {campaignKeysExcludingDiscovery
+        .filter((key) => key !== "hero")
+        .map((sectionKey) =>
+          renderCampaignSection(sectionKey, locale, t, merch.slots, merch.categories),
+        )}
+
+      {plan.showCategoryGrid ? (
+        <CategoryGrid
+          slot={pickSlot(merch.slots, "category_grid")}
+          categories={merch.categories}
           locale={locale}
-          labels={railLabels}
+          t={t}
         />
-      ))}
-      <HomeServicesRail
-        id="home-rail-services"
-        title={t("home.rails.servicesTitle")}
-        viewAllHref={`/${locale}/services`}
-        viewAllLabel={t("home.rails.viewAll")}
-        services={defaultData.services}
-        locale={locale}
-        labels={{
-          provider: t("home.rails.services.provider"),
-          fromPrice: t("home.rails.services.fromPrice"),
-          noReviews: t("home.rails.services.noReviews"),
-          view: t("home.rails.services.view"),
-        }}
-      />
-      <HomeVendorsRail
-        id="home-rail-vendors"
-        title={t("home.rails.vendorsTitle")}
-        viewAllHref={`/${locale}/directory`}
-        viewAllLabel={t("home.rails.viewAll")}
-        vendors={defaultData.topVendors}
-        locale={locale}
-        labels={{
-          listings: t("home.rails.vendors.listings"),
-          reviews: t("home.rails.vendors.reviews"),
-          rating: t("home.rails.vendors.rating"),
-          noReviews: t("home.rails.vendors.noReviews"),
-          preferred: t("home.rails.vendors.preferred"),
-          verified: t("home.rails.vendors.verified"),
-          location: t("home.rails.vendors.location"),
-          view: t("home.rails.vendors.view"),
-        }}
-      />
-      <HomeSellCta locale={locale} t={t} />
+      ) : null}
+
+      {plan.showDefaultRails ? (
+        <>
+          <HomeProductRail
+            id="home-rail-new"
+            title={t("home.rails.newTitle")}
+            viewAllHref={`/${locale}/c/all`}
+            viewAllLabel={t("home.rails.viewAll")}
+            listings={defaultData.newest}
+            locale={locale}
+            labels={railLabels}
+            priorityCount={2}
+          />
+          {defaultData.departmentRails.map((rail) => (
+            <HomeProductRail
+              key={rail.category.id}
+              id={`home-rail-${rail.category.slug}`}
+              title={t("home.rails.departmentTitle", { category: rail.category.name })}
+              viewAllHref={`/${locale}/c/${rail.category.slug}`}
+              viewAllLabel={t("home.rails.viewAll")}
+              listings={rail.listings}
+              locale={locale}
+              labels={railLabels}
+            />
+          ))}
+          <HomeServicesRail
+            id="home-rail-services"
+            title={t("home.rails.servicesTitle")}
+            viewAllHref={`/${locale}/services`}
+            viewAllLabel={t("home.rails.viewAll")}
+            services={defaultData.services}
+            locale={locale}
+            labels={{
+              provider: t("home.rails.services.provider"),
+              fromPrice: t("home.rails.services.fromPrice"),
+              noReviews: t("home.rails.services.noReviews"),
+              view: t("home.rails.services.view"),
+            }}
+          />
+          <HomeVendorsRail
+            id="home-rail-vendors"
+            title={t("home.rails.vendorsTitle")}
+            viewAllHref={`/${locale}/directory`}
+            viewAllLabel={t("home.rails.viewAll")}
+            vendors={defaultData.topVendors}
+            locale={locale}
+            labels={{
+              listings: t("home.rails.vendors.listings"),
+              reviews: t("home.rails.vendors.reviews"),
+              rating: t("home.rails.vendors.rating"),
+              noReviews: t("home.rails.vendors.noReviews"),
+              preferred: t("home.rails.vendors.preferred"),
+              verified: t("home.rails.vendors.verified"),
+              location: t("home.rails.vendors.location"),
+              view: t("home.rails.vendors.view"),
+            }}
+          />
+        </>
+      ) : null}
+
+      {plan.showSellCta ? <HomeSellCta locale={locale} t={t} /> : null}
     </div>
   );
 }

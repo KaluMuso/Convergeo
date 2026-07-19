@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import catalogMessages from "../../../../../../packages/i18n/messages/en/catalog.json";
 
 import { HomeHeroBand, HomeProductRail, type HomeDefaultData } from "./home-default";
-import { resolveHomeLayoutMode } from "./home-layout";
+import { planHomeLayout, resolveHomeLayoutMode } from "./home-layout";
 import {
   hasEffectiveMerchConfig,
   isPlaceholderHeroSlot,
@@ -116,7 +116,7 @@ describe("placeholder-only merchandising detection", () => {
     expect(hasEffectiveMerchConfig([campaignHero])).toBe(true);
   });
 
-  it("keeps merch precedence when a non-placeholder module exists", () => {
+  it("uses hybrid when a campaign module exists alongside catalogue rails", () => {
     const slots = [
       makeSeedPlaceholderHero(),
       {
@@ -130,14 +130,20 @@ describe("placeholder-only merchandising detection", () => {
         active: true,
       },
     ];
+    const now = new Date("2026-07-09T12:00:00.000Z");
 
-    expect(hasEffectiveMerchConfig(slots, new Date("2026-07-09T12:00:00.000Z"))).toBe(true);
-    expect(
-      resolveHomeLayoutMode(slots, [makeCategory()], {
-        ...emptyDefaultData,
-        newest: [makeListing()],
-      }),
-    ).toBe("merch");
+    expect(hasEffectiveMerchConfig(slots, now)).toBe(true);
+    const plan = planHomeLayout(
+      slots,
+      [makeCategory()],
+      { ...emptyDefaultData, newest: [makeListing()] },
+      now,
+    );
+    expect(plan.mode).toBe("hybrid");
+    expect(plan.showDefaultRails).toBe(true);
+    expect(plan.campaignSectionKeys).toContain("flash_deal");
+    expect(plan.campaignSectionKeys).not.toContain("hero");
+    expect(plan.useDefaultHero).toBe(true);
   });
 });
 
@@ -198,5 +204,30 @@ describe("default homepage storefront rendering", () => {
     expect(screen.getByTestId("product-card")).toBeInTheDocument();
     expect(screen.queryByText(OPERATIONAL_PLACEHOLDER_TITLE)).not.toBeInTheDocument();
     expect(screen.queryByText(OPERATIONAL_PLACEHOLDER_SUBTITLE)).not.toBeInTheDocument();
+  });
+
+  it("keeps catalogue rails when only a partial campaign module is configured", () => {
+    const plan = planHomeLayout(
+      [
+        {
+          id: "flash-1",
+          slot_key: "flash_deal",
+          variant_key: "default",
+          payload: { ends_at: "2030-12-31T23:59:59.000Z", headline: "Flash sale" },
+          schedule_from: null,
+          schedule_to: null,
+          position: 1,
+          active: true,
+        },
+      ],
+      [makeCategory()],
+      { ...emptyDefaultData, newest: [makeListing()] },
+      new Date("2026-07-09T12:00:00.000Z"),
+    );
+
+    expect(plan.mode).toBe("hybrid");
+    expect(plan.showDefaultRails).toBe(true);
+    expect(plan.showSellCta).toBe(true);
+    expect(plan.campaignSectionKeys).toEqual(["flash_deal", "category_grid"]);
   });
 });

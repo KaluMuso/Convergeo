@@ -14,12 +14,11 @@ type CatalogTranslator = {
 };
 
 /**
- * Data-driven default homepage (UI-P4).
+ * Data-driven homepage rails (UI-P4 / CUST-HOME-01).
  *
- * Rendered only when NO active merch slots are configured — admin merch config
- * always takes precedence (see page.tsx). Every rail is empty-safe: an empty or
- * failed catalog query renders nothing rather than a broken section, and the
- * page falls back to the existing welcome hero when there is no data at all.
+ * Catalogue rails stay available under hybrid layout: configured merch campaigns
+ * fill only their own slots and must not suppress discovery (see page.tsx +
+ * home-layout.ts). Every rail is empty-safe.
  */
 
 const RAIL_DEPARTMENT_COUNT = 3;

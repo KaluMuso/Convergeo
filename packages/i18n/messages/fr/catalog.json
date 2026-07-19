@@ -78,17 +78,27 @@
     "hero": {
       "eyebrow": "La marketplace de la Zambie",
       "fallbackTitle": "Découvrez produits, services et événements partout en Zambie",
-      "fallbackSubtitle": "Comparez les prix des vendeurs en Zambie, payez par mobile money, et organisez une livraison à Lusaka ou un retrait partout en Zambie.",
+      "fallbackSubtitle": "Comparez les prix des vendeurs en Zambie, et organisez une livraison à Lusaka ou un retrait partout en Zambie lorsque l'annonce le permet.",
       "primaryCta": "Commencer à parcourir",
-      "secondaryCta": "Vendre sur Vergeo5",
+      "secondaryCta": "En savoir plus sur la vente",
       "placeholder": {
         "title": "Bienvenue sur Vergeo5",
         "subtitle": "Votre vitrine configurable apparaîtra ici au fur et à mesure de l'activation des espaces de vente."
       },
-      "escrowLine": "Payez par mobile money — Vergeo5 conserve votre paiement en toute sécurité jusqu'à l'arrivée de votre commande.",
+      "escrowLine": "Protection acheteur avec séquestre lorsque le paiement en ligne est disponible — conservé par Vergeo5 jusqu'à la livraison, puis versé.",
       "escrowStep1": "Vous payez",
       "escrowStep2": "Conservé par Vergeo5",
       "escrowStep3": "Versé à la livraison"
+    },
+    "trust": {
+      "ariaLabel": "Pourquoi acheter sur Vergeo5",
+      "sellers": "Profils vendeurs avec un statut que vous pouvez consulter",
+      "fulfillment": "Livraison à Lusaka ou retrait partout en Zambie lorsque l'annonce le permet",
+      "returns": "Retours et remboursements expliqués pour les commandes éligibles",
+      "escrow": "Lorsque le paiement en ligne est disponible, Vergeo5 conserve votre argent jusqu'à la livraison"
+    },
+    "demo": {
+      "sampleListing": "Annonce exemple"
     },
     "bannerRow": {
       "title": "Offres et coups de cœur"
@@ -107,7 +117,9 @@
       "wishlist": "Enregistrer"
     },
     "categories": {
-      "title": "Acheter par catégorie"
+      "title": "Acheter par catégorie",
+      "viewAll": "Toutes les catégories",
+      "browseLabel": "Parcourir {category}"
     },
     "rails": {
       "newTitle": "Nouveau sur Vergeo5",
@@ -133,9 +145,9 @@
       }
     },
     "sellCta": {
-      "title": "Développez votre activité avec Vergeo5",
-      "body": "Touchez des clients partout en Zambie avec votre propre vitrine. Création gratuite, paiements par mobile money — vous ne payez que lorsque vous vendez.",
-      "cta": "Commencer à vendre"
+      "title": "La vente sur Vergeo5 est sur invitation pour le moment",
+      "body": "L'inscription libre des vendeurs n'est pas encore ouverte. Les vendeurs invités peuvent poursuivre l'onboarding ; les autres peuvent découvrir le fonctionnement de la bêta vendeur.",
+      "cta": "En savoir plus sur la vente"
     },
     "flash": {
       "defaultTag": "⚡ Offre flash",

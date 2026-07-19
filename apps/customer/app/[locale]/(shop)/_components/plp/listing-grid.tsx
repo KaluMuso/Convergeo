@@ -3,6 +3,8 @@ import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import Link from "next/link";
 
+import { isDemoListingPublicId } from "../demo-listing";
+
 export type CatalogListing = {
   id: string;
   title: string;
@@ -25,6 +27,8 @@ type ListingGridLabels = {
   wishlist: string;
   outOfStock: string;
   distance: string;
+  /** Subtle beta/demo disclosure — only shown when media proves demo seed. */
+  sampleListing?: string;
 };
 
 type ListingGridProps = {
@@ -52,6 +56,16 @@ export function ListingGrid({ locale, listings, labels, priorityCount = 2 }: Lis
         const distance = formatDistance(listing.distanceM);
         const distanceLabel =
           distance !== null ? labels.distance.replace("{distance}", distance) : undefined;
+        const isDemo = isDemoListingPublicId(listing.imagePublicId);
+        const sampleLabel = labels.sampleListing;
+
+        const badge = !listing.inStock ? (
+          <Badge variant="sold_out" label={labels.outOfStock} />
+        ) : isDemo && sampleLabel ? (
+          <Badge variant="public" label={sampleLabel} />
+        ) : distanceLabel ? (
+          <Badge variant="public" label={distanceLabel} />
+        ) : undefined;
 
         const card = (
           <ProductCard
@@ -64,13 +78,7 @@ export function ListingGrid({ locale, listings, labels, priorityCount = 2 }: Lis
             reviewCountLabel={labels.reviewCount}
             quickAddLabel={labels.quickAdd}
             wishlistLabel={labels.wishlist}
-            badge={
-              !listing.inStock ? (
-                <Badge variant="sold_out" label={labels.outOfStock} />
-              ) : distanceLabel ? (
-                <Badge variant="public" label={distanceLabel} />
-              ) : undefined
-            }
+            badge={badge}
             media={
               listing.imagePublicId ? (
                 <CloudinaryImage
