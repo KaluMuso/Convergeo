@@ -68,7 +68,9 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
   ];
 
   return (
-    <>
+    // Shop client components (`useTranslations("catalog")`) need the catalog
+    // namespace. Root layout only ships `common` (+ `legal` for the footer).
+    <NextIntlClientProvider locale={locale} messages={messages}>
       {/* Mobile/tablet chrome (<1024px). Hidden on lg+ where the desktop header takes over. */}
       <MobileTopNav
         locale={locale}
