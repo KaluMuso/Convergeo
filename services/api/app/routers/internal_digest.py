@@ -8,10 +8,10 @@ view. No money mutations; no new ledger logic.
 
 from __future__ import annotations
 
-import os
 from datetime import UTC, datetime
 from typing import Any, cast
 
+from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_dashboards import (
@@ -56,7 +56,17 @@ class DigestOut(BaseModel):
 
 
 def _expected_internal_token() -> str:
-    return os.environ.get(_INTERNAL_TOKEN_ENV, _DEFAULT_INTERNAL_TOKEN)
+    try:
+        return resolve_internal_token(
+            _INTERNAL_TOKEN_ENV,
+            dev_default=_DEFAULT_INTERNAL_TOKEN,
+        )
+    except InternalTokenMisconfigured as exc:
+        raise AppError(
+            code="configuration_error",
+            message=str(exc),
+            http_status=503,
+        ) from exc
 
 
 async def require_internal_digest_token(request: Request) -> None:
