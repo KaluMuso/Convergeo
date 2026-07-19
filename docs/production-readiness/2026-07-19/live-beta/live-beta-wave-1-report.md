@@ -66,13 +66,27 @@ Wave 1 implements the highest-value P0/P1 frontend work that does not require mi
 
 ---
 
-## Preview URLs
+## Preview URLs (Wave 1 SHA `7ebc458`)
 
-Filled after push / Vercel Preview READY (see PR description). Expected pattern:
+| App                  | Deployment                                                                                    | Stable branch alias                                                                | State |
+| -------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ----- |
+| Customer             | `dpl_9QxZuoanMAVQ3E6YesHLCh51mhQM`                                                            | https://convergeo-customer-git-cursor-live-beta-1ac8b4-vergeo-projects.vercel.app  | READY |
+| Customer (ephemeral) | same                                                                                          | https://convergeo-customer-j2sd7loba-vergeo-projects.vercel.app                    | READY |
+| Vendor               | `dpl_FomCsq4nvxHqrxVkwbRWjxzWiUZC`                                                            | https://convergeo-vendor-git-cursor-live-beta-wa-427426-vergeo-projects.vercel.app | READY |
+| Vendor (ephemeral)   | same                                                                                          | https://convergeo-vendor-60tk7q140-vergeo-projects.vercel.app                      | READY |
+| Admin                | _no Preview deploy yet for this branch_ (deployment protection / Ignored Build Step may skip) | use local build evidence + hubs pages                                              | —     |
 
-- Customer: `https://convergeo-customer-*-vergeo-projects.vercel.app`
-- Vendor: `https://convergeo-vendor-*-vergeo-projects.vercel.app`
-- Admin: `https://convergeo-admin-*-vergeo-projects.vercel.app` (Access may still challenge)
+### Preview verification (customer, headed browser + shareable SSO)
+
+| Check               | Result                                                                |
+| ------------------- | --------------------------------------------------------------------- |
+| `/en/categories`    | **200** populated category tree (not digest `3012388270`)             |
+| `/fr/categories`    | **200** FR copy (“Parcourir les catégories”)                          |
+| `/zh/categories`    | **200**                                                               |
+| Mobile bottom nav   | Home · All Categories · Browse · Ask · Account (no duplicate Account) |
+| `localhost` in body | none                                                                  |
+
+Screenshots: `/opt/cursor/artifacts/live-beta-audit/preview-*-categories.webp`, `preview-mobile-bottom-nav.webp`.
 
 ---
 
