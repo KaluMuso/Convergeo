@@ -2039,6 +2039,7 @@ export type Database = {
           lane: number
           order_id: string
           payout_ref: string | null
+          source_key: string
           status: string
           updated_at: string
         }
@@ -2050,6 +2051,7 @@ export type Database = {
           lane: number
           order_id: string
           payout_ref?: string | null
+          source_key: string
           status?: string
           updated_at?: string
         }
@@ -2061,6 +2063,7 @@ export type Database = {
           lane?: number
           order_id?: string
           payout_ref?: string | null
+          source_key?: string
           status?: string
           updated_at?: string
         }

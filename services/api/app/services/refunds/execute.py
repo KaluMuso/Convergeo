@@ -28,19 +28,25 @@ from postgrest.exceptions import APIError
 
 Lane = Literal[1, 2]
 ACTIVE_REFUND_STATUSES = frozenset({"pending", "processing", "completed"})
-# Postgres unique_violation SQLSTATE — raised when the 0032 partial unique index
-# (one active/settled refund per order) rejects a concurrent/retried second insert.
+# Postgres unique_violation SQLSTATE — raised when the source_key partial unique
+# index rejects a concurrent/retried second insert for the same caller key.
 _UNIQUE_VIOLATION = "23505"
 
 
 def _stable_ledger_key_base(idempotency_key: str | None, order_id: str) -> str:
-    """Stable idempotency base shared by ledger keys + payout reference.
+    """Stable idempotency base shared by ledger keys + payout reference + source_key.
 
     Derived from the caller's idempotency_key so a retry collapses to one ledger
-    posting and one payout. Falls back to the order id (at most one active refund per
-    order under the 0032 index), never to the per-call refund_id.
+    posting and one payout. Falls back to the order id for whole-order
+    dispute/admin refunds (one active refund per that fallback key), never to the
+    per-call refund_id.
     """
     return idempotency_key if idempotency_key else f"refund-order-{order_id}"
+
+
+def _refund_source_key(idempotency_key: str | None, order_id: str) -> str:
+    """Durable refund identity column — one active refund per source_key (0063)."""
+    return _stable_ledger_key_base(idempotency_key, order_id)
 
 
 class RefundPhase(StrEnum):
@@ -142,12 +148,18 @@ LIMIT 1;
 
 def _find_existing_refund(
     service_client: ServiceRoleClient,
-    order_id: str,
+    *,
+    source_key: str,
 ) -> dict[str, Any] | None:
+    """Return the active/settled refund for this caller key, if any.
+
+    Lookup is by ``source_key`` (not order_id) so a second item return on the
+    same order can create its own refund. Retries with the same key collapse.
+    """
     response = (
         service_client.client.table("refunds")
         .select("*")
-        .eq("order_id", order_id)
+        .eq("source_key", source_key)
         .order("created_at", desc=True)
         .limit(1)
         .execute()
@@ -459,7 +471,7 @@ def execute_refund(
     item_ngwee_override: int | None = None,
     delivery_fee_ngwee_override: int | None = None,
 ) -> RefundExecutionResult:
-    """Execute or return an existing refund for an order (double-execution guarded).
+    """Execute or return an existing refund for a caller source_key (double-execution guarded).
 
     By default the refund is order-scoped (all order items + full delivery), which is
     correct for a whole-order dispute/admin refund. Per-item return callers (returns
@@ -467,8 +479,12 @@ def execute_refund(
     refund covers only the returned item — matching the amount previewed to the
     customer. Without these overrides a single-item return on a multi-order-item order
     would over-refund every item the customer keeps.
+
+    Dedup is by ``source_key`` (from ``idempotency_key``, else ``refund-order-{order_id}``)
+    so distinct item returns on the same order each get their own refund row/payout.
     """
-    existing = _find_existing_refund(service_client, order_id)
+    source_key = _refund_source_key(idempotency_key, order_id)
+    existing = _find_existing_refund(service_client, source_key=source_key)
     if existing is not None:
         status = str(existing.get("status") or "")
         if status == "completed":
@@ -561,6 +577,29 @@ def execute_refund(
                     "vendor_released_ngwee": summary.vendor_released_ngwee,
                 },
             )
+    else:
+        # Multi-item returns may stack PRE_RELEASE drains. Cap against remaining
+        # escrow when charge legs are order-linked (skip when charge is only on
+        # checkout_group — remaining would under-read as 0 and false-block).
+        summary = summarize_order_release_ledger(order_id)
+        if summary.charge_received_ngwee > 0:
+            remaining_escrow_ngwee = (
+                summary.charge_received_ngwee
+                - summary.commission_captured_ngwee
+                - summary.vendor_released_ngwee
+                - summary.refund_drained_ngwee
+            )
+            if refund_amount > remaining_escrow_ngwee:
+                raise AppError(
+                    "refund_exceeds_escrow",
+                    "Refund amount exceeds remaining escrow for this order",
+                    409,
+                    {
+                        "order_id": order_id,
+                        "refund_ngwee": refund_amount,
+                        "remaining_escrow_ngwee": remaining_escrow_ngwee,
+                    },
+                )
 
     refund_id = str(uuid.uuid4())
     breakdown: dict[str, Any]
@@ -572,18 +611,18 @@ def execute_refund(
         breakdown = _lane2_breakdown(lane2, phase)
     if dispute_id:
         breakdown["dispute_id"] = dispute_id
-    if idempotency_key:
-        breakdown["idempotency_key"] = idempotency_key
+    breakdown["idempotency_key"] = source_key
     if item_ngwee_override is not None:
         breakdown["item_ngwee_override"] = item_ngwee_override
     if delivery_fee_ngwee_override is not None:
         breakdown["delivery_fee_ngwee_override"] = delivery_fee_ngwee_override
 
-    ledger_key_base = _stable_ledger_key_base(idempotency_key, order_id)
+    ledger_key_base = source_key
 
     insert_row = {
         "id": refund_id,
         "order_id": order_id,
+        "source_key": source_key,
         "lane": lane,
         "breakdown": breakdown,
         "amount_ngwee": refund_amount,
@@ -592,11 +631,11 @@ def execute_refund(
     try:
         insert_response = service_client.client.table("refunds").insert(insert_row).execute()
     except APIError as exc:
-        # The 0032 partial unique index rejected a concurrent/retried second refund for
-        # this order. Resume the winner if it is still mid-flight; return completed as-is.
+        # Source-key unique index rejected a concurrent/retried second insert for
+        # this caller. Resume the winner if mid-flight; return completed as-is.
         if getattr(exc, "code", None) != _UNIQUE_VIOLATION:
             raise
-        raced = _find_existing_refund(service_client, order_id)
+        raced = _find_existing_refund(service_client, source_key=source_key)
         if raced is None:
             raise
         raced_status = str(raced.get("status") or "")

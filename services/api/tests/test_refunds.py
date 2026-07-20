@@ -432,16 +432,19 @@ class TestExecuteRefundPaths:
         mock_post.return_value = _posted_txn()
         fake = FakeSupabaseClient()
         _seed_order(fake, released=False)
+        source_key = f"refund-order-{ORDER_ID}"
         fake.tables["refunds"].rows.append(
             {
                 "id": REFUND_ID,
                 "order_id": ORDER_ID,
+                "source_key": source_key,
                 "lane": 1,
                 "amount_ngwee": 105_000,
                 "status": "completed",
                 "payout_ref": "payout-1",
                 "breakdown": {
                     "phase": "pre_release",
+                    "idempotency_key": source_key,
                     "lenco_reference": "rfd-existing",
                     "ledger_transaction_ids": ["txn-1"],
                 },
