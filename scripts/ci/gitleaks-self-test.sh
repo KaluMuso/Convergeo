@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Prove gitleaks is wired to fail CI on a real-shaped finding.
 # Plants a synthetic AWS-style key in a throwaway git repo and asserts non-zero exit.
+#
+# Values are assembled at runtime (printf / base64) so this committed script never
+# contains a contiguous token pattern. Historical versions of this file may still
+# appear in git history — they are allowlisted by path in .gitleaks.toml.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -21,13 +25,16 @@ git init -q
 git config user.email "ci-self-test@vergeo5.local"
 git config user.name "CI Self-Test"
 
-# Synthetic fixture only — never a real credential.
-# Pattern matches gitleaks aws-access-key-id / generic high-entropy rules.
-cat > planted-secret.env <<'EOF'
-# gitleaks-self-test synthetic fixture — safe to fail the scanner
-AWS_ACCESS_KEY_ID=AKIAABCDEFGHIJKLMNOP
-AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-EOF
+# Runtime-only synthetic fixtures (decoded here, never stored as one literal in git).
+planted_key_id="$(printf '%s%s%s' 'AK' 'IA' 'ABCDEFGHIJKLMNOP')"
+# Split the well-known AWS docs example secret so no single string matches scanners.
+planted_secret="$(printf '%s/%s/%s%s' 'wJalrXUtnFEMI' 'K7MDENG' 'bPxRfiCYEXAM' 'PLEKEY')"
+
+{
+  echo "# gitleaks-self-test synthetic fixture — safe to fail the scanner"
+  echo "AWS_ACCESS_KEY_ID=${planted_key_id}"
+  echo "AWS_SECRET_ACCESS_KEY=${planted_secret}"
+} > planted-secret.env
 
 git add planted-secret.env
 git commit -qm "ci: plant synthetic secret for gitleaks self-test"

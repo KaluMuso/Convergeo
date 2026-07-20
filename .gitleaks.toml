@@ -38,6 +38,9 @@ paths = [
   '''(?i)services/api/tests/test_sentry_scrubber\.py$''',
   '''(?i)supabase/functions/send-sms-otp/index\.test\.ts$''',
   '''(?i)services/api/tests/test_ticket_wallet\.py$''',
+  # Self-test plants a synthetic key at runtime; older commits of this file also
+  # contained contiguous fixture strings that must not block the repo-wide scan.
+  '''(?i)scripts/ci/gitleaks-self-test\.sh$''',
 ]
 
 [[allowlists]]
