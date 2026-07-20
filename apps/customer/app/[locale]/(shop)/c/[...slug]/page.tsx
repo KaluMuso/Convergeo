@@ -287,10 +287,11 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
             labels={{
               ariaLabel: t("plp.filters.appliedAria"),
               clearAll: t("plp.filters.clearAll"),
-              removeChip: t("plp.filters.removeChip"),
-              priceRange: t("plp.filters.priceRange"),
-              minPriceOnly: t("plp.filters.minPriceOnly"),
-              maxPriceOnly: t("plp.filters.maxPriceOnly"),
+              // Preserve `{token}` placeholders for client-side chip templating.
+              removeChip: t("plp.filters.removeChip", { filter: "{filter}" }),
+              priceRange: t("plp.filters.priceRange", { min: "{min}", max: "{max}" }),
+              minPriceOnly: t("plp.filters.minPriceOnly", { min: "{min}" }),
+              maxPriceOnly: t("plp.filters.maxPriceOnly", { max: "{max}" }),
               conditionNew: t("plp.facets.conditionNew"),
               conditionRefurbished: t("plp.facets.conditionRefurbished"),
               inStock: t("plp.facets.inStock"),
@@ -298,7 +299,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
               rating4Plus: t("plp.facets.rating4Plus"),
               rating3Plus: t("plp.facets.rating3Plus"),
               nearMe: t("plp.facets.location"),
-              radiusKm: t("plp.facets.radiusKm"),
+              radiusKm: t("plp.facets.radiusKm", { km: "{km}" }),
             }}
           />
 
