@@ -166,7 +166,7 @@ curl -sS -m 15 https://api.vergeo5.com/readyz
 | Uptime on health                  | Monitor API     | —          | Monitors green                 |
 | Payment/webhook errors actionable | Sentry/log      | —          | Alert on signature/ledger fail |
 
-**Current:** FAIL (no Vergeo5 Sentry projects; uptime NOT_AUDITABLE).
+**Current:** FAIL (2026-07-20 Prompt 9: repo scrub/tags/test-paths/uptime-auth CODE_COMPLETE; Sentry `create_project` 403; no test-event ingestion; uptime alert NOT_AUDITABLE — see `…/2026-07-20/observability-live-evidence.md`).
 
 ---
 
