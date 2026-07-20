@@ -28,6 +28,7 @@
   --color-bg: var(--bg);
   --color-bg-2: var(--bg-2);
   --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
   --color-border: var(--border);
 
   --color-panel: var(--panel);
@@ -50,6 +51,9 @@
   --color-danger: var(--danger);
   --color-warning: var(--warning);
   --color-info: var(--info);
+  --color-on-danger: var(--on-danger);
+  --color-price: var(--price);
+  --color-discount: var(--discount);
 
   --color-cat-beauty: var(--cat-beauty);
   --color-cat-health: var(--cat-health);
@@ -90,13 +94,15 @@
   --text-price--font-weight: 700;
 
   --radius-sm: 8px;
-  --radius-lg: 18px;
+  --radius-lg: 16px;
   --radius-pill: 999px;
 
   --shadow-1: 0 1px 4px rgba(28, 19, 8, 0.05);
   --shadow-2: 0 4px 24px rgba(28, 19, 8, 0.07);
   --shadow-3: 0 12px 48px rgba(28, 19, 8, 0.13);
   --shadow-focusRing: 0 0 0 3px rgba(45, 74, 122, 0.18);
+
+  --max-width-container: 80rem;
 
   --duration-fast: 150ms;
   --duration-slow: 400ms;
@@ -162,27 +168,28 @@
   transform: scale(0.97);
 }
 
-/* Interactive card elevation — hover/focus-within lift per SELECTION.md
-   ("card lift → transform + box-shadow .25s hover"). Applied to product/
-   service/event/vendor cards. Motion auto-disables under the global
-   prefers-reduced-motion neutraliser in base.css (the lift still shows,
-   just without the transition). `hover: hover` guards touch devices so a
-   tap doesn't leave a stuck lifted state; `focus-within` keeps a keyboard-
-   visible equivalent for any interactive child. */
+/* Interactive card elevation — hover/focus-within lift. Reduced-motion
+   disables displacement in base.css. `hover: hover` guards touch devices;
+   `focus-within` keeps a keyboard-visible elevation for interactive children. */
 .card-lift {
   transition:
     transform var(--dur) var(--ease-out),
     box-shadow var(--dur) var(--ease-out);
 }
-/* The cards set their base box-shadow as an inline style, which beats a plain
-   selector rule — so the hover/focus elevation must be !important to win. The
-   transform has no inline counterpart and needs no override. */
 @media (hover: hover) {
   .card-lift:hover {
-    transform: translateY(-4px);
+    transform: translateY(-2px);
     box-shadow: var(--shadow-2) !important;
   }
 }
 .card-lift:focus-within {
   box-shadow: var(--shadow-2) !important;
+}
+
+/* Content container — max width + gutters from tokens. */
+.ds-container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--container-gutter);
 }

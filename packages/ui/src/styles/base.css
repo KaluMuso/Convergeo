@@ -8,19 +8,20 @@
   --bg: #faf7f2;
   --bg-2: #f3ede3;
   --surface: #ffffff;
+  --surface-elevated: #ffffff;
   --border: #e8dfd0;
 
-  /* ── Dark panels (aubergine) ── */
-  --panel: #241b30;
-  --panel-2: #2e2440;
-  --panel-text: #eeeae3;
-  --panel-muted: #9f94b0;
+  /* ── Dark panels (warm charcoal — marketing chrome only) ── */
+  --panel: #1a1816;
+  --panel-2: #242220;
+  --panel-text: #f2ede6;
+  --panel-muted: #a39e96;
   --panel-border: rgba(255, 255, 255, 0.08);
 
   /* ── Ink & display ── */
   --text: #2a2118;
   --text-2: #6b5a3e;
-  --text-3: #9c8a72;
+  --text-3: #7a6a52;
   --display-ink: #23324e;
 
   /* ── Brand & semantic ── */
@@ -32,6 +33,9 @@
   --danger: #c0392b;
   --warning: #d4a020;
   --info: #2a6a9a;
+  --on-danger: #ffffff;
+  --price: #2a2118;
+  --discount: #c0392b;
 
   /* Primary-button on-color pairing (kept AA in BOTH themes — see the dark block).
      Light: deep-blue bg + white text; hover deepens to --primary-deep. */
@@ -71,10 +75,15 @@
   --sp-12: 48px;
   --sp-16: 64px;
 
+  /* ── Container ── */
+  --container-max: 80rem;
+  --container-gutter: 16px;
+  --container-gutter-lg: 24px;
+
   /* ── Radii ── */
   --r-sm: 8px;
   --r: 12px;
-  --r-lg: 18px;
+  --r-lg: 16px;
   --r-pill: 999px;
 
   /* ── Shadows ── */
@@ -95,28 +104,27 @@
   color-scheme: light;
 }
 
-/* Dark palette — driven by [data-theme="dark"] on <html> (set pre-paint by the
-   no-FOUC script and at runtime by ThemeProvider). Single source of truth: the
-   token vars below are re-pointed to the warm aubergine panel scale so every
-   `var(--*)` consumer (utilities, body, components) flips together. */
+/* Dark palette — warm charcoal (audit §6.1). Page ground is independent of
+   --panel so marketing panels stay distinct chrome rather than tinting the app. */
 [data-theme="dark"] {
-  --bg: var(--panel);
-  --bg-2: var(--panel-2);
-  --surface: var(--panel-2);
-  --border: var(--panel-border);
-  --text: var(--panel-text);
-  --text-2: var(--panel-muted);
-  --text-3: #7a7088;
-  --display-ink: var(--panel-text);
-  /* Lighten the brand blue so text-primary / icons stay AA-legible on the
-     aubergine ground (the deep light-mode blue would vanish here). */
-  --primary: #6f9bd1;
-  --primary-deep: #4d7bb0;
-  --primary-tint: #2e2440;
-  /* Primary button in dark: the lightened blue bg needs DARK text for AA, and the
-     hover must stay light (deepening would drop contrast below AA). ~5.7:1 rest,
-     ~7:1 hover against --panel ink. */
-  --primary-btn-fg: var(--panel);
+  --bg: #141312;
+  --bg-2: #1c1a18;
+  --surface: #22201e;
+  --surface-elevated: #2a2826;
+  --border: rgba(255, 255, 255, 0.1);
+  --text: #f2ede6;
+  --text-2: #b0a99f;
+  --text-3: #8a837a;
+  --display-ink: #f2ede6;
+  --primary: #7aa0d4;
+  --primary-deep: #5a82b8;
+  --primary-tint: #2a323c;
+  --accent: #d4a04a;
+  --price: #f2ede6;
+  --discount: #e57368;
+  --on-danger: #ffffff;
+  /* Primary button in dark: lightened blue bg needs dark text for AA. */
+  --primary-btn-fg: #141312;
   --primary-btn-hover: #8bb0dc;
   --shadow-1: 0 1px 4px rgba(0, 0, 0, 0.3);
   --shadow-2: 0 4px 24px rgba(0, 0, 0, 0.4);
@@ -124,6 +132,12 @@
   --focus-ring: 0 0 0 3px rgba(122, 154, 181, 0.35);
 
   color-scheme: dark;
+}
+
+@media (min-width: 64rem) {
+  :root {
+    --container-gutter: var(--container-gutter-lg);
+  }
 }
 
 /* ── Global keyframes ── */
@@ -259,15 +273,42 @@
     }
   }
 
-  @keyframes shimmer,
-  @keyframes float-a,
-  @keyframes float-b,
+  @keyframes shimmer {
+    from,
+    to {
+      background-position: 0 0;
+    }
+  }
+
+  @keyframes float-a {
+    from,
+    to {
+      transform: none;
+    }
+  }
+
+  @keyframes float-b {
+    from,
+    to {
+      transform: none;
+    }
+  }
+
   @keyframes pulse-dots {
     from,
     to {
       opacity: 1;
       transform: none;
-      background-position: 0 0;
     }
+  }
+
+  /* No displacement under reduced motion (audit §8). */
+  .card-lift:hover,
+  .card-lift:focus-within {
+    transform: none !important;
+  }
+
+  .tap:active {
+    transform: none !important;
   }
 }
