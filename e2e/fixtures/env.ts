@@ -8,14 +8,14 @@
  * are skipped with a clear annotation rather than failing.
  */
 
-function flag(name: string): boolean {
+export function flag(name: string): boolean {
   const raw = process.env[name];
   if (raw === undefined) return false;
   const v = raw.trim().toLowerCase();
   return v === "1" || v === "true" || v === "yes" || v === "on";
 }
 
-function str(name: string, fallback = ""): string {
+export function str(name: string, fallback = ""): string {
   return process.env[name]?.trim() ?? fallback;
 }
 

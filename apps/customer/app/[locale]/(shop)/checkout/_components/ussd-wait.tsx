@@ -295,7 +295,7 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
 
   if (loadError) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4" data-testid="payment-status-error">
         <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>
         <p role="alert" className="font-body text-sm text-danger">
           {loadError}
