@@ -119,29 +119,30 @@ Downstream M14 nudge workflows (`kyc-nudge`, `payout-failure-alert`, `low-stock-
 
 Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` (enforced by `services/api/tests/test_n8n_registry.py`).
 
-| Workflow file                | Concern bucket              | Live present?           | Classification                               |
-| ---------------------------- | --------------------------- | ----------------------- | -------------------------------------------- |
-| `notification-dispatch.json` | Notification dispatch       | yes (diverged)          | VERIFIED LIVE*                               |
-| `reconciliation.json`        | Reconciliation              | yes (bundled + drifted) | PARTIAL / daily BROKEN                       |
-| `payment-sweeper.json`       | Payment sweeper             | yes (bundled, 10m≠5m)   | PARTIAL                                      |
-| `order-jobs.json`            | Escrow auto-confirm/release | no                      | DORMANT                                      |
-| `release-job.json`           | Escrow release              | no                      | DORMANT                                      |
-| `event-release.json`         | Event escrow release        | no                      | DORMANT                                      |
-| `tickets-issue.json`         | Ticket issuance             | no                      | DORMANT                                      |
-| `tickets-release.json`       | Ticket hold release         | no                      | DORMANT                                      |
-| `reservation-sweeper.json`   | Reservation sweeper         | no                      | DORMANT                                      |
-| `admin-digest.json`          | Notifications (founder)     | no                      | DORMANT                                      |
-| `kyc-nudge.json`             | Notifications               | no                      | DORMANT                                      |
-| `payout-failure-alert.json`  | Notifications               | no                      | DORMANT                                      |
-| `low-stock-alert.json`       | Notifications               | no                      | DORMANT                                      |
-| `review-request.json`        | Notifications               | no                      | DORMANT                                      |
-| `abandoned-cart.json`        | Notifications               | no                      | DORMANT                                      |
-| `funnel-abandon.json`        | Analytics                   | no                      | DORMANT                                      |
-| `analytics-retention.json`   | Analytics / DPA             | no                      | DORMANT                                      |
-| `embeddings-cron.json`       | Search/AI                   | no                      | DORMANT                                      |
-| `uptime-alert.json`          | Observability               | no                      | DORMANT                                      |
-| `backup.json`                | DB/OCI backup               | no                      | DORMANT (CODE_COMPLETE in repo; G7 NOT PASS) |
-| `backup-schedule.md`         | DB/OCI backup contract      | n/a                     | Contract for `backup.json`                   |
+| Workflow file                     | Concern bucket              | Live present?           | Classification                                 |
+| --------------------------------- | --------------------------- | ----------------------- | ---------------------------------------------- |
+| `notification-dispatch.json`      | Notification dispatch       | yes (diverged)          | VERIFIED LIVE*                                 |
+| `reconciliation.json`             | Reconciliation              | yes (bundled + drifted) | PARTIAL / daily BROKEN                         |
+| `payment-sweeper.json`            | Payment sweeper             | yes (bundled, 10m≠5m)   | PARTIAL                                        |
+| `order-jobs.json`                 | Escrow auto-confirm/release | no                      | DORMANT                                        |
+| `release-job.json`                | Escrow release              | no                      | DORMANT                                        |
+| `event-release.json`              | Event escrow release        | no                      | DORMANT                                        |
+| `tickets-issue.json`              | Ticket issuance             | no                      | DORMANT                                        |
+| `tickets-release.json`            | Ticket hold release         | no                      | DORMANT                                        |
+| `reservation-sweeper.json`        | Reservation sweeper         | no                      | DORMANT                                        |
+| `admin-digest.json`               | Notifications (founder)     | no                      | DORMANT                                        |
+| `kyc-nudge.json`                  | Notifications               | no                      | DORMANT                                        |
+| `payout-failure-alert.json`       | Notifications               | no                      | DORMANT                                        |
+| `low-stock-alert.json`            | Notifications               | no                      | DORMANT                                        |
+| `review-request.json`             | Notifications               | no                      | DORMANT                                        |
+| `abandoned-cart.json`             | Notifications               | no                      | DORMANT                                        |
+| `funnel-abandon.json`             | Analytics                   | no                      | DORMANT                                        |
+| `analytics-retention.json`        | Analytics / DPA             | no                      | DORMANT                                        |
+| `embeddings-cron.json`            | Search/AI                   | no                      | DORMANT                                        |
+| `uptime-alert.json`               | Observability               | no                      | DORMANT                                        |
+| `money-workflow-error-alert.json` | Money / ops error paging    | no                      | DORMANT (VD-P06 shared Error Trigger template) |
+| `backup.json`                     | DB/OCI backup               | no                      | DORMANT (CODE_COMPLETE in repo; G7 NOT PASS)   |
+| `backup-schedule.md`              | DB/OCI backup contract      | n/a                     | Contract for `backup.json`                     |
 
 \*Live workflow is a manual/MCP-built sibling of the committed export, not a clean import of `notification-dispatch.json`.
 
@@ -149,16 +150,16 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 
 ## 5. Cross-cutting readiness gaps (must fix before activation)
 
-| Gap                                                 | Evidence                                                | Risk if ignored                                                       |
-| --------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------- |
-| Live URLs hardcoded to `api.vergeo5.com`            | Live node params                                        | Staging import of live export would hit production                    |
-| Committed JSON uses `$env.API_URL`                  | All `infra/n8n/*.json` HTTP nodes                       | Correct pattern — prefer for any new import                           |
-| No shared Error Workflow                            | Live + committed                                        | Failures silent except n8n history                                    |
-| No `retryOnFail` / `maxTries` on HTTP nodes         | Committed parse                                         | Transient 5xx → missed ticks until next schedule                      |
-| Credential coverage only 3 of N                     | `list_credentials`                                      | Cannot bind release/tickets/order-jobs without new Header Auth        |
-| Registry drift (webhook-drain, schedules, timeouts) | §3.3–3.4                                                | Ops runbooks disagree with live                                       |
-| Daily reconciliation report failing                 | error executions @ ~00:00 UTC                           | Blind spot on Lenco vs ledger daily totals                            |
-| Backup workflow not live                            | `backup.json` in repo (`active:false`) but not imported | UNKNOWN whether nightly dump runs until activation + OCI object proof |
+| Gap                                                 | Evidence                                                                 | Risk if ignored                                                              |
+| --------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| Live URLs hardcoded to `api.vergeo5.com`            | Live node params                                                         | Staging import of live export would hit production                           |
+| Committed JSON uses `$env.API_URL`                  | All `infra/n8n/*.json` HTTP nodes                                        | Correct pattern — prefer for any new import                                  |
+| No live shared Error Workflow                       | Live n8n search; committed `money-workflow-error-alert.json` is inactive | Failures stay silent live until an Error Trigger workflow is imported/linked |
+| No `retryOnFail` / `maxTries` on HTTP nodes         | Committed parse                                                          | Transient 5xx → missed ticks until next schedule                             |
+| Credential coverage only 3 of N                     | `list_credentials`                                                       | Cannot bind release/tickets/order-jobs without new Header Auth               |
+| Registry drift (webhook-drain, schedules, timeouts) | §3.3–3.4                                                                 | Ops runbooks disagree with live                                              |
+| Daily reconciliation report failing                 | error executions @ ~00:00 UTC                                            | Blind spot on Lenco vs ledger daily totals                                   |
+| Backup workflow not live                            | `backup.json` in repo (`active:false`) but not imported                  | UNKNOWN whether nightly dump runs until activation + OCI object proof        |
 
 ---
 
@@ -286,6 +287,7 @@ Trigger freeze when: daily recon red, release tick posts unexpected captures, du
 | MCP search release/ticket/error/backup                               | 0 workflows                                                          |
 | Parse all `infra/n8n/*.json`                                         | all `active=false`; no `errorWorkflow`; `$env.API_URL` pattern       |
 | Registry doc + API routers + ratelimit policies                      | endpoints exist for dormant ticks                                    |
+| `money-workflow-error-alert.json`                                    | metadata-only Error Trigger template exists; live import still gated |
 | `backup.json` + `backup-schedule.md` + dump/watchdog/restore scripts | CODE_COMPLETE in repo; live import + G7 evidence still founder-gated |
 | Activation / enable / execute                                        | **not performed**                                                    |
 

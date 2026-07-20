@@ -1,0 +1,94 @@
+{
+  "name": "Money Workflow Error Founder Alert",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Money Workflow Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Metadata-only alert — never forward payment refs, tokens, or PII.\nconst src = items[0].json || {};\nconst exec = src.execution || {};\nconst wf = src.workflow || {};\nconst name = String(wf.name || src.workflowName || 'unknown-money-workflow').slice(0, 80);\nconst status = String(exec.status || src.status || 'error').slice(0, 40);\nconst ts = String(exec.lastNodeExecuted || src.lastNodeExecuted || 'n/a').slice(0, 60);\nconst when = new Date().toISOString();\nconst message = [\n  'Vergeo5 money workflow failure',\n  `workflow: ${name}`,\n  `status: ${status}`,\n  `lastNode: ${ts}`,\n  `at: ${when}`,\n].join('\\n');\nreturn [{ json: { message, workflowName: name, status, at: when } }];"
+      },
+      "id": "sanitize-error-payload",
+      "name": "Sanitize Error Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.WHATSAPP_CLOUD_API_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{$env.FOUNDER_WHATSAPP_TO}}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": {{ JSON.stringify($json.message) }} }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "page-founder-money-error",
+      "name": "Page Founder Money Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [780, 300]
+    }
+  ],
+  "connections": {
+    "Money Workflow Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Sanitize Error Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize Error Payload": {
+      "main": [
+        [
+          {
+            "node": "Page Founder Money Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "vd-p06-money-workflow-error-alert",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "VD-P06",
+      "createdAt": "2026-07-20T00:00:00.000Z",
+      "updatedAt": "2026-07-20T00:00:00.000Z"
+    }
+  ]
+}

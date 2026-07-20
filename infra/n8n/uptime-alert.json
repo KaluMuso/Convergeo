@@ -5,32 +5,58 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "uptime-alert",
-        "responseMode": "onReceived",
+        "responseMode": "responseNode",
         "options": {}
       },
       "id": "uptimerobot-webhook",
       "name": "UptimeRobot Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [200, 300],
+      "position": [200, 320],
       "webhookId": "uptime-alert"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const crypto = require('crypto');\nconst item = items[0].json;\nconst headers = item.headers || {};\nconst providedRaw = headers['x-uptime-secret'] ?? headers['X-Uptime-Secret'] ?? '';\nconst provided = String(providedRaw);\nconst expected = String($env.UPTIME_WEBHOOK_SECRET || '');\nlet authOk = false;\nif (expected.length > 0 && provided.length === expected.length) {\n  authOk = crypto.timingSafeEqual(Buffer.from(provided, 'utf8'), Buffer.from(expected, 'utf8'));\n} else if (expected.length > 0) {\n  // Length mismatch: still exercise timingSafeEqual on equal-length buffers\n  // so the failure path does not short-circuit purely on length.\n  crypto.timingSafeEqual(Buffer.from(expected, 'utf8'), Buffer.from(expected, 'utf8'));\n  authOk = false;\n}\nreturn [{ json: { ...item, authOk } }];"
+      },
+      "id": "verify-uptime-secret",
+      "name": "Verify Uptime Secret",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 320]
     },
     {
       "parameters": {
         "conditions": {
           "boolean": [
             {
-              "value1": "={{!!$env.UPTIME_WEBHOOK_SECRET && (($json.headers['x-uptime-secret'] || $json.headers['X-Uptime-Secret'] || '') === $env.UPTIME_WEBHOOK_SECRET)}}",
+              "value1": "={{$json.authOk}}",
               "value2": true
             }
           ]
         }
       },
-      "id": "auth-gate",
-      "name": "Require Uptime Secret",
+      "id": "auth-ok",
+      "name": "Auth OK",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [440, 300]
+      "position": [680, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": false, \"error\": \"unauthorized\" } }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "respond-unauthorized",
+      "name": "Respond 401 Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [920, 480]
     },
     {
       "parameters": {
@@ -48,7 +74,7 @@
       "name": "Only When Down",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [680, 220]
+      "position": [920, 220]
     },
     {
       "parameters": {
@@ -78,7 +104,35 @@
       "name": "Page Founder On WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [940, 140]
+      "position": [1160, 140]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"paged\": true } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-paged",
+      "name": "Respond 200 Paged",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1400, 140]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"ok\": true, \"paged\": false } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-ignored",
+      "name": "Respond 200 Ignored",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1160, 300]
     }
   ],
   "connections": {
@@ -86,14 +140,25 @@
       "main": [
         [
           {
-            "node": "Require Uptime Secret",
+            "node": "Verify Uptime Secret",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Require Uptime Secret": {
+    "Verify Uptime Secret": {
+      "main": [
+        [
+          {
+            "node": "Auth OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auth OK": {
       "main": [
         [
           {
@@ -102,7 +167,13 @@
             "index": 0
           }
         ],
-        []
+        [
+          {
+            "node": "Respond 401 Unauthorized",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Only When Down": {
@@ -114,7 +185,24 @@
             "index": 0
           }
         ],
-        []
+        [
+          {
+            "node": "Respond 200 Ignored",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Page Founder On WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Respond 200 Paged",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -122,7 +210,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "prompt9-uptime-alert-auth",
+  "versionId": "vd-p05-uptime-alert-auth",
   "meta": {
     "templateCredsSetupCompleted": false
   },
@@ -131,6 +219,11 @@
       "name": "M16",
       "createdAt": "2026-07-12T00:00:00.000Z",
       "updatedAt": "2026-07-12T00:00:00.000Z"
+    },
+    {
+      "name": "VD-P05",
+      "createdAt": "2026-07-20T00:00:00.000Z",
+      "updatedAt": "2026-07-20T00:00:00.000Z"
     }
   ]
 }

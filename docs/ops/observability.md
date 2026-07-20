@@ -137,20 +137,35 @@ Monitors and the exact setup transcript live in
 [`infra/n8n/uptime-alert.json`](../../infra/n8n/uptime-alert.json):
 
 ```
-UptimeRobot (monitor trips) → webhook + X-Uptime-Secret
-  → n8n "Require Uptime Secret" (fail-closed if missing/wrong/empty env)
+UptimeRobot (monitor trips)
+  → POST /webhook/uptime-alert + header X-Uptime-Secret
+  → n8n constant-time verify against $env.UPTIME_WEBHOOK_SECRET
+  → (auth fail → 401, no WhatsApp)
   → (alertType == down) → WhatsApp Cloud API (template: ops_uptime_alert) → founder
 ```
 
-**Webhook authentication (VD-P05 / Prompt 9).** The n8n workflow requires header
-`X-Uptime-Secret` (or `x-uptime-secret`) to equal `$env.UPTIME_WEBHOOK_SECRET`. The secret
-is env-only — never committed. Unauthenticated / wrong-secret POSTs short-circuit **before**
-any WhatsApp call. UptimeRobot alert contacts must send that custom header.
+**Webhook authentication (VD-P05 / Prompt 9 / RC-08).** The n8n workflow requires header
+`X-Uptime-Secret` (or `x-uptime-secret`) to equal `$env.UPTIME_WEBHOOK_SECRET`. Verification
+uses `crypto.timingSafeEqual` in the workflow Code node and fails closed when the env secret
+is missing, the header is absent, or the value is wrong. The secret is env-only — never
+committed — and unauthenticated POSTs short-circuit with HTTP 401 before any WhatsApp call
+(CI: `scripts/ci/validate-n8n-no-plaintext-secrets.sh`). Rotation and test-event steps are
+in [`infra/uptimerobot.md`](../../infra/uptimerobot.md).
 
 The n8n workflow calls the **WhatsApp Cloud API directly** (not the notification outbox /
 our own API), on purpose: an outage of the API or its database must not swallow its own
 downtime alert. The recovery ("up" again) event is `alertType == 2` and is ignored by the
 paging branch — recovery is confirmed from the UptimeRobot dashboard.
+
+### Money-workflow failure paging (VD-P06)
+
+The money/ops ticks (`release-job`, `reconciliation`, `payment-sweeper`,
+`payout-failure-alert`) retry transient HTTP failures (3× / 5s) and, on workflow error,
+page the founder with a **metadata-only** WhatsApp body (workflow name, status, last
+node, timestamp — no payment refs, tokens, or PII). Shared template:
+[`infra/n8n/money-workflow-error-alert.json`](../../infra/n8n/money-workflow-error-alert.json).
+Each money workflow also embeds the same Error Trigger path so paging works without a
+cross-workflow `errorWorkflow` id at import time.
 
 ---
 
@@ -184,11 +199,12 @@ expose `SENTRY_AUTH_TOKEN` to the browser).
    (`SENTRY_RELEASE` / `NEXT_PUBLIC_SENTRY_RELEASE` / `GIT_SHA`). Optional:
    `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT` for gated source-map upload.
 2. **UptimeRobot** — create the monitors in `infra/uptimerobot.md`; point their webhook
-   alert contact at the n8n `uptime-alert` URL **with** header `X-Uptime-Secret`.
-3. **n8n** — set `UPTIME_WEBHOOK_SECRET`, WhatsApp Cloud vars, import/activate
+   alert contact at the n8n `uptime-alert` webhook URL **with** header `X-Uptime-Secret`
+   matching n8n `UPTIME_WEBHOOK_SECRET`.
+3. **n8n** — set `UPTIME_WEBHOOK_SECRET`, `WHATSAPP_PHONE_NUMBER_ID`,
+   `WHATSAPP_CLOUD_API_TOKEN`, and `FOUNDER_WHATSAPP_TO`; import/activate
    `uptime-alert.json` only after the secret is set.
-4. **WhatsApp** — register the `ops_uptime_alert` utility template (founder action F5) and
-   set `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_CLOUD_API_TOKEN`, `FOUNDER_WHATSAPP_TO` in the
-   n8n environment.
-5. **Verify** — fire one test event per surface; force one controlled uptime alert; record
-   evidence (never commit DSNs). G6 stays FAIL until both are demonstrated.
+4. **WhatsApp** — register the `ops_uptime_alert` utility template (founder action F5).
+5. **Verify** — fire one test event per surface; force one controlled uptime alert; confirm
+   wrong/missing uptime secrets return 401 with no WhatsApp; record evidence (never commit
+   DSNs or secrets). G6 stays FAIL until both are demonstrated.
