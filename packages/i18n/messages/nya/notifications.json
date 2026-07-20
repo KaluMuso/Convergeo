@@ -1,22 +1,15 @@
 {
-  "__fallback": "en",
-  "title": "Notifications",
-  "unread": "{count, plural, one {# unread} other {# unread}}",
+  "title": "Ma-notification",
+  "unread": "{count, plural, one {# osalembeka} other {# osalembeka}}",
   "order": {
-    "shipped": {
-      "__fallback": "en"
-    }
+    "shipped": "Order {id} yatumizidwa"
   },
   "compliance": {
     "stopReply": "Lembani STOP kuleka.",
     "stopKeyword": "STOP",
     "startKeyword": "START",
-    "stopConfirmation": {
-      "__fallback": "en"
-    },
-    "startConfirmation": {
-      "__fallback": "en"
-    }
+    "stopConfirmation": "Mwaleka kulandiridwa mauthenga a marketing a Vergeo5. Zosintha za order zidzapitirira kutumizidwa.",
+    "startConfirmation": "Mwalandiridwa zosintha za Vergeo5. Lembani STOP kuleka."
   },
   "whatsapp": {
     "order_confirmed": {
@@ -44,93 +37,77 @@
   },
   "sms": {
     "order_confirmed": {
-      "__fallback": "en"
+      "body": "Vergeo5: order {order_reference} yatsimikizidwa. Total {total}. {track_url}"
     },
     "payment_received": {
-      "__fallback": "en"
+      "body": "Vergeo5: malipiro alandidwa pa {order_reference}. {trust_narrative}"
     },
     "order_shipped": {
-      "__fallback": "en"
+      "body": "Vergeo5: order {order_reference} yatumizidwa. {tracking_info}"
     },
     "order_ready_pickup": {
-      "__fallback": "en"
+      "body": "Vergeo5: order {order_reference} akuyenera kutengedwa. {pickup_details}"
     },
     "order_delivered": {
-      "__fallback": "en"
+      "body": "Vergeo5: order {order_reference} adafika. Ndemanga: {review_url}"
     },
     "vendor_new_order": {
-      "__fallback": "en"
+      "body": "Vergeo5 vendor: order yatsopano {order_reference} — {product_title} × {quantity}"
     },
     "otp_login": {
-      "__fallback": "en"
+      "body": "Vergeo5 code: {otp_code}. Imatha mu mphindi 10. Musagawane."
     },
     "review_request": {
-      "__fallback": "en"
+      "body": "Order yanu {order_reference} pa Vergeo5 inali bwanji? Lembani ndemanga: {review_url} Lembani STOP kuleka."
     },
     "abandoned_cart_recovery": {
-      "__fallback": "en"
+      "body": "Mwasiya zinthu mu cart yanu ya Vergeo5. Malizitsani checkout: {checkout_url} Lembani STOP kuleka."
     },
     "kyc_nudge": {
-      "__fallback": "en"
+      "body": "Kutsimikizira kwa vendor wa Vergeo5 kukudikira. Malizitsani mu vendor app kuti muyambe kugulitsa."
     },
     "low_stock_alert": {
-      "__fallback": "en"
+      "body": "Vergeo5: {title} ili ndi stock yochepa ({stock_qty} zatsala). Onjezerani stock mu vendor app."
     },
     "payout_failure_alert": {
-      "__fallback": "en"
+      "body": "Vergeo5 payout yalephera: {vendor_name} {amount} ref {lenco_reference}. Onani mu admin."
     }
   },
   "email": {
     "receipt": {
-      "subject": {
-        "__fallback": "en"
-      },
-      "body": {
-        "__fallback": "en"
-      }
+      "subject": "Receipt yanu ya Vergeo5 — order {order_id}",
+      "body": "<p>Zikomo chifukwa cha malipiro anu.</p><p><strong>Order:</strong> {order_id}</p><p><strong>Ndalama:</strong> K{amount}</p><p>Ndalama zikusungidwa ndi Vergeo5 mpaka kutumiza.</p>"
     },
     "order_receipt": {
-      "subject": {
-        "__fallback": "en"
-      },
-      "body": {
-        "__fallback": "en"
-      }
+      "subject": "Receipt yanu ya Vergeo5 — order {order_id}",
+      "body": "<p>Zikomo chifukwa cha order yanu.</p><p><strong>Order:</strong> {order_id}</p><p><strong>Total:</strong> K{amount}</p>"
     },
     "kyc": {
       "approved": {
-        "subject": {
-          "__fallback": "en"
-        },
-        "body": {
-          "__fallback": "en"
-        }
+        "subject": "Kutsimikizira kwa vendor wa Vergeo5 kwavomerezedwa",
+        "body": "<p>Uthenga wabwino — kutsimikizira kwa vendor kwapititsidwa.</p><p>Tsopano mungathe kufotokoza zinthu ndi kulandira payout pa Vergeo5.</p>"
       },
       "rejected": {
-        "subject": {
-          "__fallback": "en"
-        },
-        "body": {
-          "__fallback": "en"
-        }
+        "subject": "Kutsimikizira kwa vendor wa Vergeo5 kufuna chidwi",
+        "body": "<p>Sitinathe kuvomereza kutsimikizira kwa vendor.</p><p><strong>Chifukwa:</strong> {reason}</p><p>Chonde tumizanso ma documents kuchokera mu vendor app.</p>"
       }
     }
   },
   "marketing": {
     "review_request": {
-      "__fallback": "en"
+      "body": "Order yanu {order_reference} ya Vergeo5 kuchokera kwa {vendor_name} inali bwanji? Lembani ndemanga: {review_url} Lembani STOP kuleka."
     },
     "abandoned_cart_recovery": {
-      "__fallback": "en"
+      "body": "Mukadali ndi zinthu mu cart yanu ya Vergeo5. Pitilitsani kumene munalekera: {checkout_url} Lembani STOP kuleka."
     },
     "kyc_nudge": {
-      "__fallback": "en"
+      "body": "Pempho lanu la vendor la Vergeo5 lakudikira maola 48. Malizitsani kutsimikizira kuti muyambe kugulitsa."
     },
     "low_stock_alert": {
-      "__fallback": "en"
+      "body": "Stock yochepa pa Vergeo5: {title} ili ndi {stock_qty} zotsala (threshold {threshold}). Sinthani stock mu vendor app."
     },
     "payout_failure_alert": {
-      "__fallback": "en"
+      "body": "Chenjezo la payout failure: {vendor_name} — {amount} (ref {lenco_reference}). Onani mu admin."
     }
   }
 }
