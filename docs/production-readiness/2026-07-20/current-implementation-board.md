@@ -497,26 +497,29 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate:** G7
 - **Priority:** P0
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
+- **Status:** `FAIL` (CONDITIONAL local drill only — approved backup still missing)
 - **Deps:** RC-03 + DEP-02 backup workflow
 - **Acceptance:** dated artifact + documented restore success
 - **Verify:** `restore-staging.sh` / DR runbook
+- **Evidence:** `docs/production-readiness/2026-07-20/ops-drills/` — checksum-verified restore of `backup_mode=drill` local-ci dump into isolated Postgres; key tables absent; API readiness NOT_RUN; production not overwritten
 - **Blocks:** no / yes / yes
 
 #### LIVE-10 — G9 rollback drill
 
 - **Gate:** G9 / launch-checklist §3
 - **Priority:** P0
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
+- **Status:** `FAIL` (NOT_RUN — API digest unknown / API 502)
 - **Acceptance:** timed Vercel + API rollback recorded
+- **Evidence:** `ops-drills/rollback-verification/` — candidates recorded; promote/rollback aborted
 - **Blocks:** no / yes / yes
 
 #### LIVE-11 — Load test p95 @100cc + invariants
 
 - **Gate:** M16-P08 / checklist §3
 - **Priority:** P1
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
+- **Status:** `FAIL` (NOT_RUN — no k6 / no approved staging; prod load refused)
 - **Acceptance:** p95<500ms; zero oversell/ledger/invoice-gap
+- **Evidence:** `ops-drills/load-results/NOT_RUN.md`, `metrics/load-summary.json` — harness offline OK; thresholds unchanged
 - **Blocks:** no / soft / yes
 
 #### LIVE-12 — Search `degraded` re-probe

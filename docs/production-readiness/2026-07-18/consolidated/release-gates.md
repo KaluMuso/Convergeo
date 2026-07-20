@@ -178,7 +178,9 @@ curl -sS -m 15 https://api.vergeo5.com/readyz
 | Restore drill        | —                         | Scratch restore      | Documented success        |
 | Pre-migration backup | Checklist before DB-01/02 | —                    | Timestamp before migrate  |
 
-**Current:** FAIL / NOT_AUDITABLE.
+**Current:** FAIL.
+
+Evidence 2026-07-20 (`docs/production-readiness/2026-07-20/ops-drills/`): approved n8n/OCI backup workflow+artifact **absent**; CONDITIONAL isolated restore of a `backup_mode=drill` local-ci dump only (checksum OK, RTO numeric ≤30min, production not overwritten). Does **not** clear G7.
 
 ---
 
@@ -206,7 +208,9 @@ curl -sS -m 15 https://api.vergeo5.com/readyz
 | Rollback drill             | —                   | Prior Vercel + API tag | Time recorded                                  |
 | Feature flags              | SQL flags           | —                      | `public_launch` intentional; Zamtel matches UI |
 
-**Current:** FAIL (API SHA NOT_AUDITABLE; DB drift; panel SHAs not PRODUCTION_VERIFIED vs foundation `8cc1fa0`).
+**Current:** FAIL.
+
+Evidence 2026-07-20 (`docs/production-readiness/2026-07-20/ops-drills/`): frontend prod SHAs + Vercel rollback candidates recorded; API digest **UNKNOWN**; API health **502**; controlled promote/rollback drill **NOT_RUN** (aborted to avoid undefended production mutate). DB tip drift remains. Does **not** clear G9.
 
 ---
 
