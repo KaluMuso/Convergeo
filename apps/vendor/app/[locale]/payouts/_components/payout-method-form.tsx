@@ -70,11 +70,11 @@ export function PayoutMethodForm({ locale }: PayoutMethodFormProps) {
           {t("payouts.method.back")}
         </Link>
         <h1 className="font-display text-2xl font-semibold">{t("payouts.method.title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("payouts.method.intro")}</p>
+        <p className="text-sm text-text-2">{t("payouts.method.intro")}</p>
       </header>
 
       <div
-        className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+        className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-text"
         role="status"
       >
         <p className="font-medium">{t("payouts.hold.noticeTitle")}</p>
@@ -82,12 +82,12 @@ export function PayoutMethodForm({ locale }: PayoutMethodFormProps) {
       </div>
 
       {error ? (
-        <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+        <p className="rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger">
           {error}
         </p>
       ) : null}
       {success ? (
-        <p className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
+        <p className="rounded-lg border border-success/30 bg-success/5 p-3 text-sm text-success">
           {success}
         </p>
       ) : null}
@@ -125,7 +125,7 @@ export function PayoutMethodForm({ locale }: PayoutMethodFormProps) {
             required
           />
         </FormField>
-        <p className="text-xs text-muted-foreground">{t("payouts.method.otpHelp")}</p>
+        <p className="text-xs text-text-3">{t("payouts.method.otpHelp")}</p>
 
         <Button
           disabled={submitting || !session}

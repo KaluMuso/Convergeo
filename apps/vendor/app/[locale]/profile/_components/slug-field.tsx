@@ -29,14 +29,12 @@ export function SlugField({ slug, slugLocked, previousSlug, disabled, onChange }
         />
       </FormField>
       {slugLocked ? (
-        <p className="text-sm text-neutral-600">{t("profile.slug.locked")}</p>
+        <p className="text-sm text-text-2">{t("profile.slug.locked")}</p>
       ) : (
-        <p className="text-sm text-amber-700">{t("profile.slug.onceWarning")}</p>
+        <p className="text-sm text-warning">{t("profile.slug.onceWarning")}</p>
       )}
       {previousSlug ? (
-        <p className="text-xs text-neutral-500">
-          {t("profile.slug.previous", { slug: previousSlug })}
-        </p>
+        <p className="text-xs text-text-3">{t("profile.slug.previous", { slug: previousSlug })}</p>
       ) : null}
     </div>
   );
