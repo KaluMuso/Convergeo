@@ -139,10 +139,26 @@ jobs:
 
       - name: Build customer app (base) for delta comparison
         if: github.event_name == 'pull_request'
+        continue-on-error: true
+        id: base_bundle
         run: |
+          set -euo pipefail
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_REF="$(git rev-parse --abbrev-ref HEAD)"
+          # Detached PR checkouts report HEAD; restore via the merge tip we started on.
+          HEAD_SHA="$(git rev-parse HEAD)"
           cp scripts/ci/bundle-guard.mjs /tmp/bundle-guard.mjs
           cp -r apps/customer/.next /tmp/head-next
+          cleanup() {
+            rm -rf apps/customer/.next || true
+            if [ "$HEAD_REF" = "HEAD" ]; then
+              git checkout --force "$HEAD_SHA" || true
+            else
+              git checkout --force "$HEAD_REF" || git checkout --force "$HEAD_SHA" || true
+            fi
+            mv /tmp/head-next apps/customer/.next || true
+          }
+          trap cleanup EXIT
           git checkout "$BASE_SHA"
           pnpm --filter customer build
           node /tmp/bundle-guard.mjs \
@@ -150,15 +166,13 @@ jobs:
             --next-dir "$GITHUB_WORKSPACE/apps/customer/.next" \
             --write-baseline /tmp/base-bundle.json \
             --write-baseline-only
-          rm -rf apps/customer/.next
-          git checkout -
-          mv /tmp/head-next apps/customer/.next
 
       - name: Bundle guard
         run: |
           if [ -f /tmp/base-bundle.json ]; then
             node scripts/ci/bundle-guard.mjs --baseline /tmp/base-bundle.json
           else
+            echo "Base bundle baseline unavailable (base may not build); using absolute budgets only."
             node scripts/ci/bundle-guard.mjs
           fi
 
