@@ -131,7 +131,7 @@ export function PayoutsView({ locale }: PayoutsViewProps) {
 
       {balances?.payouts_blocked ? (
         <div
-          className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+          className="rounded-lg border border-warning/50 bg-warning/10 p-4 text-sm text-text"
           role="status"
         >
           <p className="font-medium">{t("payouts.hold.noticeTitle")}</p>

@@ -39,21 +39,19 @@ export function HoursEditor({ hours, disabled, onChange }: HoursEditorProps) {
 
   return (
     <fieldset className="space-y-3" disabled={disabled}>
-      <legend className="text-sm font-medium text-neutral-900">
-        {t("profile.fields.hoursLabel")}
-      </legend>
-      <p className="text-sm text-neutral-600">{t("profile.fields.hoursHelp")}</p>
+      <legend className="text-sm font-medium text-text">{t("profile.fields.hoursLabel")}</legend>
+      <p className="text-sm text-text-2">{t("profile.fields.hoursHelp")}</p>
       <div className="space-y-3">
         {DAY_KEYS.map((day) => {
           const dayHours = hours[day] ?? defaultDay();
           const isClosed = dayHours.closed === true;
           return (
-            <div key={day} className="rounded-lg border border-neutral-200 p-3">
+            <div key={day} className="rounded-lg border border-border p-3">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="text-sm font-medium text-neutral-800">
+                <span className="text-sm font-medium text-text">
                   {t(`profile.hours.days.${day}`)}
                 </span>
-                <label className="flex items-center gap-2 text-sm text-neutral-600">
+                <label className="flex items-center gap-2 text-sm text-text-2">
                   <input
                     type="checkbox"
                     checked={isClosed}

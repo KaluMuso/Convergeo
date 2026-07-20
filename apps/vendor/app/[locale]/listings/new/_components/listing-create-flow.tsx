@@ -274,7 +274,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
 
       {!kycApproved ? (
         <div
-          className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"
+          className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-text"
           role="status"
         >
           <p className="font-medium">{t("listings.kycGate.title")}</p>

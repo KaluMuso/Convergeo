@@ -217,17 +217,17 @@ export function OrderCard({ locale, order, onUpdated, onError }: OrderCardProps)
   };
 
   return (
-    <li className="rounded-xl border border-neutral-200 bg-white p-3 shadow-sm">
+    <li className="rounded-xl border border-border bg-surface p-3 shadow-sm">
       <div className="flex items-start gap-3">
         <Link className="min-w-0 flex-1" href={`/${locale}/orders/${order.id}`}>
           <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-semibold text-neutral-900">{order.preview_title}</p>
+            <p className="truncate text-sm font-semibold text-text">{order.preview_title}</p>
             <Badge variant="public" label={statusLabel} />
           </div>
-          <p className="mt-1 text-xs text-neutral-500">
+          <p className="mt-1 text-xs text-text-2">
             {t("queue.card.items", { count: order.item_count })}
           </p>
-          <p className="mt-1 text-sm font-medium text-neutral-900">
+          <p className="mt-1 text-sm font-medium text-text">
             <PriceBlock ngwee={order.total_ngwee} />
           </p>
         </Link>
@@ -256,16 +256,16 @@ export function OrderCard({ locale, order, onUpdated, onError }: OrderCardProps)
           }}
         >
           <div
-            className="w-full max-w-[360px] rounded-t-2xl bg-white p-4 shadow-xl"
+            className="w-full max-w-[360px] rounded-t-2xl bg-surface p-4 shadow-xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby={`order-sheet-${order.id}`}
             onClick={(event) => event.stopPropagation()}
           >
-            <h3 id={`order-sheet-${order.id}`} className="text-base font-semibold text-neutral-900">
+            <h3 id={`order-sheet-${order.id}`} className="text-base font-semibold text-text">
               {t("queue.sheet.title", { action: t(ACTION_LABEL_KEYS[sheetAction]) })}
             </h3>
-            <p className="mt-2 text-sm text-neutral-600">
+            <p className="mt-2 text-sm text-text-2">
               {t("queue.sheet.body", {
                 title: order.preview_title,
                 amount: formatK(order.total_ngwee),
@@ -347,7 +347,7 @@ export function PullToRefreshList({ children, onRefresh, label }: PullToRefreshL
         setPulling(false);
       }}
     >
-      {pulling ? <p className="py-2 text-center text-xs text-neutral-500">{label}</p> : null}
+      {pulling ? <p className="py-2 text-center text-xs text-text-2">{label}</p> : null}
       {children}
     </div>
   );
@@ -464,17 +464,17 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
     >
       <div className="flex flex-col gap-4 pb-8">
         <header className="space-y-1">
-          <h1 className="text-xl font-semibold text-neutral-900">{t("queue.title")}</h1>
-          <p className="text-sm text-neutral-600">{t("queue.intro")}</p>
+          <h1 className="text-xl font-semibold text-text">{t("queue.title")}</h1>
+          <p className="text-sm text-text-2">{t("queue.intro")}</p>
         </header>
 
         {offline ? (
-          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <p className="rounded-md bg-warning/10 px-3 py-2 text-sm text-warning">
             {t("queue.offlineNotice")}
           </p>
         ) : null}
-        {error ? <p className="text-sm text-red-700">{error}</p> : null}
-        {refreshing ? <p className="text-xs text-neutral-500">{t("queue.refreshing")}</p> : null}
+        {error ? <p className="text-sm text-danger">{error}</p> : null}
+        {refreshing ? <p className="text-xs text-text-2">{t("queue.refreshing")}</p> : null}
 
         <div className="flex gap-2 overflow-x-auto pb-1">
           {filters.map((filter) => {
@@ -486,8 +486,8 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
                 type="button"
                 className={`min-h-11 shrink-0 rounded-full border px-3 text-sm font-medium ${
                   active
-                    ? "border-neutral-900 bg-neutral-900 text-white"
-                    : "border-neutral-300 bg-white text-neutral-800"
+                    ? "border-primary bg-primary text-white"
+                    : "border-border bg-surface text-text"
                 }`}
                 onClick={() => setStatusFilter(filter.key)}
               >
@@ -499,10 +499,10 @@ export function OrdersQueueView({ locale, initialStatus = "needs_action" }: Orde
         </div>
 
         {orders.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-neutral-300 p-6 text-center text-sm text-neutral-600">
+          <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-text-2">
             <p>{t("queue.empty")}</p>
             <Link
-              className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-neutral-900"
+              className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-text"
               href={`/${locale}`}
             >
               {t("queue.emptyCta")}
@@ -673,26 +673,26 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
       <VendorQuickNav locale={locale} active="home" />
 
       <header className="space-y-1 px-1">
-        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+        <p className="text-xs font-medium uppercase tracking-wide text-text-2">
           {t("home.eyebrow")}
         </p>
-        <h1 className="text-xl font-semibold text-neutral-900">{t("home.title")}</h1>
+        <h1 className="text-xl font-semibold text-text">{t("home.title")}</h1>
       </header>
 
       {offline ? (
-        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
+        <p className="rounded-md bg-warning/10 px-3 py-2 text-sm text-warning" role="status">
           {t("home.offlineNotice")}
         </p>
       ) : null}
       {error ? (
-        <p className="text-sm text-red-700" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {error}
         </p>
       ) : null}
 
       {kycApp && !kycApproved ? (
         <section
-          className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"
+          className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm text-text"
           role="status"
         >
           <p className="font-medium">{t("home.kycBanner.title")}</p>
@@ -706,10 +706,10 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
         </section>
       ) : null}
 
-      <section className="rounded-2xl bg-neutral-900 p-4 text-white">
-        <p className="text-sm text-neutral-200">{t("home.takings.label")}</p>
+      <section className="rounded-2xl bg-panel p-4 text-panel-text">
+        <p className="text-sm text-panel-muted">{t("home.takings.label")}</p>
         <p className="mt-1 font-mono text-3xl font-semibold tracking-tight">{formatK(takings)}</p>
-        <p className="mt-1 text-xs text-neutral-300">
+        <p className="mt-1 text-xs text-panel-muted">
           {takings === 0
             ? t("home.takings.emptyCaption")
             : t("home.takings.caption", { date: dashboard?.takings_date ?? "—" })}
@@ -717,18 +717,18 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
       </section>
 
       {businessType ? (
-        <section className="rounded-2xl border border-neutral-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+        <section className="rounded-2xl border border-border bg-surface p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-text-2">
             {t("home.quickStart.eyebrow", { businessType })}
           </p>
           {isServicesVendor ? (
             <>
-              <h2 className="mt-1 text-sm font-semibold text-neutral-900">
+              <h2 className="mt-1 text-sm font-semibold text-text">
                 {t("home.quickStart.services.heading")}
               </h2>
-              <p className="mt-1 text-sm text-neutral-600">{t("home.quickStart.services.body")}</p>
+              <p className="mt-1 text-sm text-text-2">{t("home.quickStart.services.body")}</p>
               <Link
-                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-neutral-900 px-4 text-sm font-semibold text-white"
+                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-white"
                 href={`/${locale}/services`}
               >
                 {t("home.quickStart.services.cta")}
@@ -736,12 +736,12 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
             </>
           ) : (
             <>
-              <h2 className="mt-1 text-sm font-semibold text-neutral-900">
+              <h2 className="mt-1 text-sm font-semibold text-text">
                 {t("home.quickStart.products.heading")}
               </h2>
-              <p className="mt-1 text-sm text-neutral-600">{t("home.quickStart.products.body")}</p>
+              <p className="mt-1 text-sm text-text-2">{t("home.quickStart.products.body")}</p>
               <Link
-                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-neutral-900 px-4 text-sm font-semibold text-white"
+                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-white"
                 href={`/${locale}/listings`}
               >
                 {t("home.quickStart.products.cta")}
@@ -753,13 +753,13 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
 
       <section className="grid grid-cols-2 gap-2 px-1" aria-label={t("home.shortcuts.ariaLabel")}>
         <Link
-          className="inline-flex min-h-12 items-center justify-center rounded-xl border border-neutral-300 px-3 text-sm font-medium text-neutral-900"
+          className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border px-3 text-sm font-medium text-text"
           href={`/${locale}/listings`}
         >
           {t("home.shortcuts.listings")}
         </Link>
         <Link
-          className="inline-flex min-h-12 items-center justify-center rounded-xl border border-neutral-300 px-3 text-sm font-medium text-neutral-900"
+          className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border px-3 text-sm font-medium text-text"
           href={`/${locale}/profile`}
         >
           {t("home.shortcuts.profile")}
@@ -768,11 +768,9 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-neutral-900">
-            {t("home.needsAction.heading")}
-          </h2>
+          <h2 className="text-sm font-semibold text-text">{t("home.needsAction.heading")}</h2>
           {needsCount > 0 ? (
-            <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+            <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
               {needsCount}
             </span>
           ) : null}
@@ -800,13 +798,13 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
 
       <section className="grid grid-cols-1 gap-3">
         <Link
-          className="inline-flex min-h-14 items-center justify-center rounded-xl bg-neutral-900 px-4 text-base font-semibold text-white"
+          className="inline-flex min-h-14 items-center justify-center rounded-xl bg-primary px-4 text-base font-semibold text-white"
           href={`/${locale}/orders`}
         >
           {t("home.actions.openQueue")}
         </Link>
         <Link
-          className="inline-flex min-h-12 items-center justify-center rounded-xl border border-neutral-300 px-4 text-sm font-medium text-neutral-900"
+          className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border px-4 text-sm font-medium text-text"
           href={`/${locale}/orders?status=placed`}
         >
           {t("home.actions.confirmOrders")}

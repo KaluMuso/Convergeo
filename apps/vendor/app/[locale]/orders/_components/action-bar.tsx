@@ -194,12 +194,12 @@ export function OrderActionBar({
   };
 
   return (
-    <section className="flex flex-col gap-3 border-t border-neutral-200 pt-4">
-      <h2 className="text-sm font-semibold text-neutral-900">{t("orders.actions.heading")}</h2>
+    <section className="flex flex-col gap-3 border-t border-border pt-4">
+      <h2 className="text-sm font-semibold text-text">{t("orders.actions.heading")}</h2>
 
       {expandedAction === "reject" ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
-          <p className="text-sm text-neutral-700">{t("orders.actions.rejectPrompt")}</p>
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-bg-2 p-3">
+          <p className="text-sm text-text-2">{t("orders.actions.rejectPrompt")}</p>
           <FormField label={t("orders.actions.rejectLabel")} id="reject-reason">
             <Input
               value={rejectReason}
@@ -232,8 +232,8 @@ export function OrderActionBar({
       ) : null}
 
       {expandedAction === "ship" ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
-          <p className="text-sm text-neutral-700">{t("orders.actions.shipPrompt")}</p>
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-bg-2 p-3">
+          <p className="text-sm text-text-2">{t("orders.actions.shipPrompt")}</p>
           <FormField label={t("orders.actions.shipLabel")} id="tracking-note">
             <Input
               value={trackingNote}
@@ -384,7 +384,7 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
   }
 
   if (error && !order) {
-    return <p className="py-8 text-center text-sm text-red-700">{error}</p>;
+    return <p className="py-8 text-center text-sm text-danger">{error}</p>;
   }
 
   if (!order) {
@@ -403,49 +403,47 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
   return (
     <div className="flex flex-col gap-5 pb-8">
       <header className="flex flex-col gap-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+        <p className="text-xs font-medium uppercase tracking-wide text-text-2">
           {t("orders.title")}
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-lg font-semibold text-neutral-900">{statusLabel(order.status)}</h1>
+          <h1 className="text-lg font-semibold text-text">{statusLabel(order.status)}</h1>
           <Badge variant="public" label={fulfilmentLabel} />
         </div>
-        <p className="text-xs text-neutral-500">{order.id}</p>
+        <p className="text-xs text-text-2">{order.id}</p>
       </header>
 
       {success ? (
-        <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">{success}</p>
+        <p className="rounded-md bg-success/10 px-3 py-2 text-sm text-success">{success}</p>
       ) : null}
       {error ? (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>
       ) : null}
 
-      <section className="flex flex-col gap-2 rounded-lg border border-neutral-200 p-3">
-        <h2 className="text-sm font-semibold text-neutral-900">{t("orders.payment.heading")}</h2>
-        <p className="text-sm text-neutral-700">{paymentLabel}</p>
+      <section className="flex flex-col gap-2 rounded-lg border border-border p-3">
+        <h2 className="text-sm font-semibold text-text">{t("orders.payment.heading")}</h2>
+        <p className="text-sm text-text-2">{paymentLabel}</p>
         {order.delivery_fee_ngwee > 0 ? (
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-text-2">
             <PriceBlock ngwee={order.delivery_fee_ngwee} />
           </p>
         ) : null}
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-neutral-900">{t("orders.items.heading")}</h2>
+        <h2 className="text-sm font-semibold text-text">{t("orders.items.heading")}</h2>
         {order.items.length === 0 ? (
-          <p className="text-sm text-neutral-600">{t("orders.items.empty")}</p>
+          <p className="text-sm text-text-2">{t("orders.items.empty")}</p>
         ) : (
           <ul className="flex flex-col gap-3">
             {order.items.map((item) => (
               <li
                 key={item.id}
-                className="flex items-start justify-between gap-3 rounded-lg border border-neutral-200 p-3"
+                className="flex items-start justify-between gap-3 rounded-lg border border-border p-3"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-neutral-900">{item.title}</p>
-                  <p className="text-sm text-neutral-600">
-                    {t("orders.items.qty", { qty: item.qty })}
-                  </p>
+                  <p className="font-medium text-text">{item.title}</p>
+                  <p className="text-sm text-text-2">{t("orders.items.qty", { qty: item.qty })}</p>
                 </div>
                 <PriceBlock ngwee={item.unit_price_ngwee * item.qty} />
               </li>
@@ -455,18 +453,16 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-neutral-900">{t("orders.timeline.heading")}</h2>
+        <h2 className="text-sm font-semibold text-text">{t("orders.timeline.heading")}</h2>
         {order.timeline.length === 0 ? (
-          <p className="text-sm text-neutral-600">{t("orders.timeline.empty")}</p>
+          <p className="text-sm text-text-2">{t("orders.timeline.empty")}</p>
         ) : (
           <ol className="flex flex-col gap-3">
             {order.timeline.map((event) => (
-              <li key={event.id} className="rounded-lg border border-neutral-200 p-3">
-                <p className="text-sm font-medium text-neutral-900">
-                  {statusLabel(event.to_status)}
-                </p>
+              <li key={event.id} className="rounded-lg border border-border p-3">
+                <p className="text-sm font-medium text-text">{statusLabel(event.to_status)}</p>
                 {event.note ? (
-                  <p className="mt-1 text-sm text-neutral-600">
+                  <p className="mt-1 text-sm text-text-2">
                     {t("orders.timeline.note", { note: event.note })}
                   </p>
                 ) : null}

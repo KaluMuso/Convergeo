@@ -276,7 +276,7 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
       <InstanceEditor instances={instances} onChange={setInstances} disabled={readOnly || saving} />
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {notice ? <p className="text-sm text-emerald-700">{notice}</p> : null}
+      {notice ? <p className="text-sm text-success">{notice}</p> : null}
 
       <div className="flex flex-col gap-2">
         {!readOnly ? (

@@ -74,7 +74,7 @@ export function PayoutMethodForm({ locale }: PayoutMethodFormProps) {
       </header>
 
       <div
-        className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+        className="rounded-lg border border-warning/50 bg-warning/10 p-4 text-sm text-text"
         role="status"
       >
         <p className="font-medium">{t("payouts.hold.noticeTitle")}</p>
@@ -87,7 +87,7 @@ export function PayoutMethodForm({ locale }: PayoutMethodFormProps) {
         </p>
       ) : null}
       {success ? (
-        <p className="rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900">
+        <p className="rounded-lg border border-success/40 bg-success/10 p-3 text-sm text-success">
           {success}
         </p>
       ) : null}

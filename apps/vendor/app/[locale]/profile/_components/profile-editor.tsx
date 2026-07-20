@@ -197,8 +197,8 @@ export function ProfileEditor({ locale }: ProfileEditorProps) {
       <VendorQuickNav locale={locale} active="profile" />
 
       <header className="space-y-1 px-1">
-        <h1 className="text-xl font-semibold text-neutral-900">{t("profile.title")}</h1>
-        <p className="text-sm text-neutral-600">{t("profile.intro")}</p>
+        <h1 className="text-xl font-semibold text-text">{t("profile.title")}</h1>
+        <p className="text-sm text-text-2">{t("profile.intro")}</p>
       </header>
 
       <div className="px-1">
@@ -213,7 +213,7 @@ export function ProfileEditor({ locale }: ProfileEditorProps) {
         }}
       >
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-neutral-900">{t("profile.sections.basics")}</h2>
+          <h2 className="text-sm font-semibold text-text">{t("profile.sections.basics")}</h2>
           <FormField label={t("profile.fields.displayNameLabel")}>
             <Input
               value={displayName}
@@ -235,17 +235,15 @@ export function ProfileEditor({ locale }: ProfileEditorProps) {
               onChange={(event) => setDescription(event.target.value)}
               disabled={saving}
               rows={4}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm"
               placeholder={t("profile.fields.descriptionPlaceholder")}
             />
           </FormField>
-          <p className="text-xs text-neutral-500">{t("profile.fields.descriptionHelp")}</p>
+          <p className="text-xs text-text-2">{t("profile.fields.descriptionHelp")}</p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-neutral-900">
-            {t("profile.sections.contact")}
-          </h2>
+          <h2 className="text-sm font-semibold text-text">{t("profile.sections.contact")}</h2>
           <FormField label={t("profile.fields.whatsappLabel")}>
             <Input
               type="tel"
@@ -256,11 +254,11 @@ export function ProfileEditor({ locale }: ProfileEditorProps) {
               placeholder={t("profile.fields.whatsappPlaceholder")}
             />
           </FormField>
-          <p className="text-xs text-neutral-500">{t("profile.fields.whatsappHelp")}</p>
+          <p className="text-xs text-text-2">{t("profile.fields.whatsappHelp")}</p>
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-neutral-900">{t("profile.sections.cover")}</h2>
+          <h2 className="text-sm font-semibold text-text">{t("profile.sections.cover")}</h2>
           <CoverUpload
             coverUrl={coverUrl}
             disabled={saving}
@@ -271,7 +269,7 @@ export function ProfileEditor({ locale }: ProfileEditorProps) {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-neutral-900">{t("profile.sections.logo")}</h2>
+          <h2 className="text-sm font-semibold text-text">{t("profile.sections.logo")}</h2>
           <LogoUpload
             logoUrl={logoUrl}
             disabled={saving}
@@ -281,9 +279,7 @@ export function ProfileEditor({ locale }: ProfileEditorProps) {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-neutral-900">
-            {t("profile.sections.location")}
-          </h2>
+          <h2 className="text-sm font-semibold text-text">{t("profile.sections.location")}</h2>
           <FormField label={t("profile.fields.landmarkLabel")}>
             <Input
               value={landmark}
@@ -312,7 +308,7 @@ export function ProfileEditor({ locale }: ProfileEditorProps) {
               />
             </FormField>
           </div>
-          <p className="text-xs text-neutral-500">{t("profile.fields.locationHelp")}</p>
+          <p className="text-xs text-text-2">{t("profile.fields.locationHelp")}</p>
         </section>
 
         <section>
@@ -320,20 +316,20 @@ export function ProfileEditor({ locale }: ProfileEditorProps) {
         </section>
 
         {showPreferred ? (
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+          <div className="rounded-lg border border-success/40 bg-success/10 p-3 text-sm text-success">
             <Switch checked disabled label={t("profile.badge.preferred")} />
           </div>
         ) : (
-          <p className="text-sm text-neutral-600">{t("profile.badge.hint")}</p>
+          <p className="text-sm text-text-2">{t("profile.badge.hint")}</p>
         )}
 
         {error ? (
-          <p className="text-sm text-red-600" role="alert">
+          <p className="text-sm text-danger" role="alert">
             {error}
           </p>
         ) : null}
         {success ? (
-          <p className="text-sm text-emerald-700" role="status">
+          <p className="text-sm text-success" role="status">
             {success}
           </p>
         ) : null}
