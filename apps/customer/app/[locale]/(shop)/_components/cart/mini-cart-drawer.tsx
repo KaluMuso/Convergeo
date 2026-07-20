@@ -294,9 +294,109 @@ export type MiniCartLabels = {
   viewCart: string;
   checkoutCta: string;
   emptyTitle: string;
+  emptyBody: string;
+  emptyTrust: CartEmptyTrustLabels;
   browseCta: string;
   openCart: string;
 };
+
+export type CartEmptyTrustLabels = {
+  escrow: string;
+  delivery: string;
+  pickup: string;
+};
+
+function EmptyCartIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M5.5 6.5h13l-1.1 7.15a2 2 0 0 1-1.98 1.7H8.17a2 2 0 0 1-1.96-1.6L4.8 3.95H3"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M9.2 19.25h.01M16 19.25h.01"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="2.5"
+      />
+      <path d="m9 10.8 1.9 1.9 4.2-4.4" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+export function CartEmptyTrustList({
+  labels,
+  compact = false,
+}: {
+  labels: CartEmptyTrustLabels;
+  compact?: boolean;
+}) {
+  const items = [labels.escrow, labels.delivery, labels.pickup];
+
+  return (
+    <ul
+      className={
+        compact
+          ? "grid gap-2 text-left text-xs text-text-2"
+          : "grid gap-2 text-left text-sm text-text-2 sm:grid-cols-3"
+      }
+      data-testid="cart-empty-trust-list"
+    >
+      {items.map((item) => (
+        <li key={item} className="flex gap-2 rounded border border-border bg-surface p-3">
+          <span
+            className="mt-0.5 inline-flex size-4 shrink-0 items-center justify-center rounded-pill bg-primary-tint text-primary"
+            aria-hidden="true"
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path
+                d="m3 6.2 1.8 1.8L9 3.8"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.5"
+              />
+            </svg>
+          </span>
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function MiniCartEmptyState({
+  locale,
+  labels,
+  onBrowse,
+}: {
+  locale: string;
+  labels: Pick<MiniCartLabels, "emptyTitle" | "emptyBody" | "browseCta" | "emptyTrust">;
+  onBrowse?: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-4 p-6 text-center" data-testid="mini-cart-empty">
+      <div className="text-text-3">
+        <EmptyCartIcon />
+      </div>
+      <div className="flex max-w-sm flex-col gap-2">
+        <p className="font-display text-xl text-display-ink">{labels.emptyTitle}</p>
+        <p className="text-sm text-text-2">{labels.emptyBody}</p>
+      </div>
+      <Link
+        href={`/${locale}`}
+        onClick={onBrowse}
+        className="inline-flex h-11 min-h-11 items-center justify-center rounded border border-border bg-surface px-4 text-body font-medium text-text hover:bg-bg-2"
+      >
+        {labels.browseCta}
+      </Link>
+      <CartEmptyTrustList labels={labels.emptyTrust} compact />
+    </div>
+  );
+}
 
 export type CartNavTriggerProps = {
   labels: Pick<MiniCartLabels, "openCart">;
@@ -391,16 +491,7 @@ export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
           </div>
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-3 p-6 text-center">
-          <p className="text-text-2">{labels.emptyTitle}</p>
-          <Link
-            href={`/${locale}`}
-            onClick={closeDrawer}
-            className="inline-flex h-11 min-h-11 items-center justify-center rounded border border-border bg-surface px-4 text-body font-medium text-text hover:bg-bg-2"
-          >
-            {labels.browseCta}
-          </Link>
-        </div>
+        <MiniCartEmptyState locale={locale} labels={labels} onBrowse={closeDrawer} />
       )}
     </BottomSheet>
   );
