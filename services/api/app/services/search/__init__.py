@@ -7,6 +7,7 @@ from typing import Any, cast
 
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.analytics.search_log import log_search_query
+from app.services.flags import is_public_launch
 from app.services.search.embedding_client import fetch_query_embedding, format_vector_for_rpc
 from app.services.search.query_builder import (
     DEFAULT_PAGE,
@@ -99,6 +100,34 @@ def call_search_rrf(
         if hit is not None:
             hits.append(hit)
     return hits
+
+
+def drop_demo_listing_hits(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
+    """Remove demo-seeded listing hits from a public result set (FD-04 / G11).
+
+    Demo listings (`vendor_listings.demo`) stay browsable during the invite-only
+    beta, so callers gate this on the ``public_launch`` flag: once the platform
+    is public, seeded demo inventory must never surface in search/browse.
+    Mirrors `drop_wholesale_listing_hits` below.
+    """
+    listing_ids = [hit.entity_id for hit in hits if hit.entity_kind == "listing"]
+    if not listing_ids:
+        return hits
+    response = (
+        client.table("vendor_listings")
+        .select("id")
+        .in_("id", listing_ids)
+        .eq("demo", True)
+        .execute()
+    )
+    demo_ids = {str(row["id"]) for row in _rows(response) if row.get("id")}
+    if not demo_ids:
+        return hits
+    return [
+        hit
+        for hit in hits
+        if not (hit.entity_kind == "listing" and hit.entity_id in demo_ids)
+    ]
 
 
 def drop_wholesale_listing_hits(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
@@ -277,6 +306,8 @@ async def run_search(
     )
     if not include_wholesale:
         hits = drop_wholesale_listing_hits(client, hits)
+    if is_public_launch(client):
+        hits = drop_demo_listing_hits(client, hits)
     page_items, total = paginate(hits, page=page, page_size=page_size)
     page_items = attach_route_slugs(client, page_items)
 
@@ -326,6 +357,8 @@ def run_suggest(
     )
     if not include_wholesale:
         hits = drop_wholesale_listing_hits(client, hits)
+    if is_public_launch(client):
+        hits = drop_demo_listing_hits(client, hits)
 
     suggestions: list[SuggestItem] = []
     seen_titles: set[str] = set()

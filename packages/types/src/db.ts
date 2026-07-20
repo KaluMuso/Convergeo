@@ -2802,6 +2802,7 @@ export type Database = {
         Row: {
           condition: string
           created_at: string
+          demo: boolean
           id: string
           moq: number
           price_ngwee: number
@@ -2821,6 +2822,7 @@ export type Database = {
         Insert: {
           condition: string
           created_at?: string
+          demo?: boolean
           id?: string
           moq?: number
           price_ngwee: number
@@ -2840,6 +2842,7 @@ export type Database = {
         Update: {
           condition?: string
           created_at?: string
+          demo?: boolean
           id?: string
           moq?: number
           price_ngwee?: number

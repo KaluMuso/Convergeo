@@ -567,6 +567,49 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "event_categories": {
+        # 0036 event taxonomy: public read (`using (true)` + select grant to
+        # anon/authenticated); writes are service-role-only at the GRANT level
+        # (0036 grants insert/update/delete to service_role alone), so every
+        # client persona — admin included — is grant-denied on writes; the
+        # admin_all policy is exercised via the service-role API path.
+        Persona.ANON: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+    },
     "event_instances": {
         Persona.ANON: {
             "select": "permit",
@@ -1539,6 +1582,49 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "product_relations": {
+        # 0052 admin-curated related products: public-read policy; 0064 repaired
+        # the missing grants (0052 shipped none) to the event_categories shape —
+        # select for anon/authenticated, writes service-role-only. So every
+        # client persona reads; every client persona — admin included — is
+        # grant-denied on writes (admin curation goes through the API).
+        Persona.ANON: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+    },
     "products": {
         Persona.ANON: {
             "select": "permit",
@@ -1881,6 +1967,51 @@ EXPECTATIONS: TableExpectations = {
         Persona.VENDOR: select_only(),
         Persona.OTHER_VENDOR: select_only(),
         Persona.ADMIN: select_only(),
+    },
+    "service_reviews": {
+        # 0054 service reviews mirror `reviews` (0007) exactly: grants to
+        # authenticated only (anon grant-denied even though the select policy
+        # names anon — same recorded shape as reviews); the DEFAULT VALUES
+        # insert probe cannot satisfy the author WITH CHECK (needs an owned
+        # job), so non-admin inserts are policy-denied; update/delete probe
+        # WHERE false → RLS-filtered no-ops (permit); admin passes admin_all
+        # then trips NOT NULL on insert (permit).
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "permit",
+            "update": "permit",
+            "delete": "permit",
+        },
     },
     "services": {
         Persona.ANON: {

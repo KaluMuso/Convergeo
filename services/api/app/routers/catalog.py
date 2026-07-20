@@ -11,6 +11,7 @@ from app.services.business.access import (
     get_business_access,
     require_wholesale_access,
 )
+from app.services.flags import is_public_launch
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
@@ -154,6 +155,7 @@ class _ListingRow(BaseModel):
     stock_qty: int | None = None
     created_at: str | None = None
     wholesale: bool = False
+    demo: bool = False
 
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -314,7 +316,7 @@ def _fetch_listings(client: Any, listing_ids: list[str]) -> dict[str, _ListingRo
     response = (
         client.table("vendor_listings")
         .select(
-            "id,vendor_id,product_id,condition,stock_mode,stock_qty,created_at,status,wholesale"
+            "id,vendor_id,product_id,condition,stock_mode,stock_qty,created_at,status,wholesale,demo"
         )
         .in_("id", listing_ids)
         .eq("status", "active")
@@ -725,12 +727,18 @@ def list_catalog(
     filters: PlpFilterState,
     *,
     include_wholesale: bool = False,
+    exclude_demo: bool = False,
 ) -> CatalogListResponse:
     candidates = _build_candidates(client, filters.category_path)
     if not include_wholesale:
         # Wholesale-only listings are B2B supplies: hidden from the consumer PLP
         # (and its facet counts) unless the caller is a verified business buyer.
         candidates = [row for row in candidates if not row.listing.wholesale]
+    if exclude_demo:
+        # FD-04 / G11: once `public_launch` is ON the demo-seeded catalogue must
+        # not surface on public browse; during invite-only beta it stays visible
+        # with the honest demo label.
+        candidates = [row for row in candidates if not row.listing.demo]
     facets = compute_facet_counts(candidates, filters)
 
     filtered = [row for row in candidates if _matches_filters(row, filters=filters)]
@@ -809,4 +817,9 @@ async def catalog_listings(
         "limit": str(limit),
     }
     filters = decode_plp_filters(raw_params)
-    return list_catalog(supabase.client, filters, include_wholesale=access.eligible)
+    return list_catalog(
+        supabase.client,
+        filters,
+        include_wholesale=access.eligible,
+        exclude_demo=is_public_launch(supabase.client),
+    )

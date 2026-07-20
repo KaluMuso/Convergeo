@@ -4,7 +4,13 @@ from typing import Any
 
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.ask.filters import AskFilters
-from app.services.search import SearchHit, call_search_rrf, drop_wholesale_listing_hits
+from app.services.flags import is_public_launch
+from app.services.search import (
+    SearchHit,
+    call_search_rrf,
+    drop_demo_listing_hits,
+    drop_wholesale_listing_hits,
+)
 from app.services.search.embedding_client import fetch_query_embedding
 from app.services.search.query_builder import build_filters
 
@@ -65,4 +71,10 @@ async def top_k(
     # The answer cache is keyed by query alone, so gating by caller eligibility would
     # leak across users; wholesale discovery lives in the gated supplies feed instead.
     hits = drop_wholesale_listing_hits(client, hits)
+    if is_public_launch(client):
+        # FD-04: once public, demo-seeded listings must not ground AI answers.
+        # Gated on the flag (not unconditional) so beta-phase answers still see
+        # the demo catalogue; the ask cache is query-keyed and the flag is
+        # global, so results stay consistent across users.
+        hits = drop_demo_listing_hits(client, hits)
     return [_hit_to_doc(hit) for hit in hits[:limit]]
