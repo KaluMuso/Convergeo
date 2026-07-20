@@ -22,6 +22,7 @@ from app.services.cart.store import (
     service_db_client,
 )
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
+from app.services.stock.revalidate import CartLineSnapshot, revalidate_lines
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends, Request, Response
 from jwt.exceptions import InvalidTokenError
@@ -76,12 +77,35 @@ class MergeConflictResponse(BaseModel):
     details: dict[str, Any]
 
 
+class ChangeNoticeResponse(BaseModel):
+    listing_id: str
+    kind: str
+    requested_qty: int
+    available_qty: int | None = None
+    snapshot_price_ngwee: int
+    current_price_ngwee: int | None = None
+
+
 class CartResponse(BaseModel):
     cart_id: str
     items: list[CartLineResponse]
     vendor_groups: list[VendorGroupResponse]
     subtotal_ngwee: int
     conflicts: list[MergeConflictResponse] = Field(default_factory=list)
+    notices: list[ChangeNoticeResponse] = Field(default_factory=list)
+
+
+class RevalidateResponse(BaseModel):
+    notices: list[ChangeNoticeResponse]
+    has_changes: bool
+
+
+class SaveForLaterResponse(BaseModel):
+    listing_id: str
+    product_id: str | None = None
+    product_slug: str | None = None
+    removed: bool
+    cart: CartResponse
 
 
 def _sign_guest_cart_cookie(guest_token: str, settings: Settings) -> str:
@@ -508,6 +532,125 @@ async def remove_cart_item(
     items = _fetch_cart_items(client, cart_id)
     listings = fetch_listings_for_items(items)
     return _build_cart_response(cart_id=cart_id, items=items, listings_by_id=listings)
+
+
+def _notice_responses_for_items(items: list[dict[str, Any]]) -> list[ChangeNoticeResponse]:
+    snapshots = [
+        CartLineSnapshot(
+            listing_id=str(item["listing_id"]),
+            qty=int(item["qty"]),
+            unit_price_ngwee=int(item["unit_price_ngwee"]),
+        )
+        for item in items
+    ]
+    result = revalidate_lines(snapshots)
+    return [
+        ChangeNoticeResponse(
+            listing_id=notice.listing_id,
+            kind=notice.kind,
+            requested_qty=notice.requested_qty,
+            available_qty=notice.available_qty,
+            snapshot_price_ngwee=notice.snapshot_price_ngwee,
+            current_price_ngwee=notice.current_price_ngwee,
+        )
+        for notice in result.notices
+    ]
+
+
+@router.post("/revalidate", response_model=RevalidateResponse)
+async def revalidate_cart(
+    owner: Annotated[CartOwner, Depends(_resolve_cart_owner)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    request: Request,
+) -> RevalidateResponse:
+    """Compare cart line snapshots to live listing price/stock (honest change notices)."""
+    client = _db_client_for_owner(
+        owner,
+        settings=settings,
+        user_token=_extract_bearer_token(request),
+    )
+    cart_id = owner.cart_id or ""
+    items = _fetch_cart_items(client, cart_id)
+    notices = _notice_responses_for_items(items)
+    return RevalidateResponse(notices=notices, has_changes=len(notices) > 0)
+
+
+@router.post("/items/{listing_id}/save-for-later", response_model=SaveForLaterResponse)
+async def save_cart_item_for_later(
+    listing_id: str,
+    owner: Annotated[CartOwner, Depends(_resolve_cart_owner)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    request: Request,
+) -> SaveForLaterResponse:
+    """Remove a cart line and return product identity so the client can persist wishlist."""
+    client = _db_client_for_owner(
+        owner,
+        settings=settings,
+        user_token=_extract_bearer_token(request),
+    )
+    cart_id = owner.cart_id or ""
+    existing = (
+        client.table("cart_items")
+        .select("id")
+        .eq("cart_id", cart_id)
+        .eq("listing_id", listing_id)
+        .limit(1)
+        .execute()
+    )
+    rows = existing.data if isinstance(existing.data, list) else []
+    if not rows:
+        raise AppError(
+            code="cart.item_not_found",
+            message="Cart item not found",
+            http_status=404,
+            details={"listing_id": listing_id},
+        )
+
+    client.table("cart_items").delete().eq("cart_id", cart_id).eq(
+        "listing_id", listing_id
+    ).execute()
+
+    product_id: str | None = None
+    product_slug: str | None = None
+    service = service_db_client()
+    listing_response = (
+        service.table("vendor_listings")
+        .select("product_id, products(id, slug)")
+        .eq("id", listing_id)
+        .limit(1)
+        .execute()
+    )
+    listing_rows = listing_response.data if isinstance(listing_response.data, list) else []
+    if listing_rows and isinstance(listing_rows[0], dict):
+        row = listing_rows[0]
+        raw_product = row.get("products")
+        if isinstance(raw_product, dict):
+            product_id = str(raw_product.get("id") or "") or None
+            product_slug = (
+                str(raw_product.get("slug")).strip() if raw_product.get("slug") else None
+            )
+        elif row.get("product_id"):
+            product_id = str(row["product_id"])
+
+    if owner.user_id and product_id:
+        service.table("user_wishlist").upsert(
+            {
+                "user_id": owner.user_id,
+                "product_id": product_id,
+            },
+            on_conflict="user_id,product_id",
+        ).execute()
+
+    items = _fetch_cart_items(client, cart_id)
+    listings = fetch_listings_for_items(items)
+    cart = _build_cart_response(cart_id=cart_id, items=items, listings_by_id=listings)
+    return SaveForLaterResponse(
+        listing_id=listing_id,
+        product_id=product_id,
+        product_slug=product_slug,
+        removed=True,
+        cart=cart,
+    )
 
 
 @router.post("/merge", response_model=CartResponse)

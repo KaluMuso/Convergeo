@@ -11,6 +11,8 @@ export type CartLineItemLabels = QtyStepperLabels & {
   lineTotal: string;
   remove: string;
   removeLabel: string;
+  saveForLater: string;
+  saveForLaterLabel: string;
   outOfStockLine: string;
 };
 
@@ -20,13 +22,21 @@ type CartLineItemProps = {
   labels: CartLineItemLabels;
   onQtyChange: (listingId: string, qty: number) => Promise<void>;
   onRemove: (listingId: string) => Promise<void>;
+  onSaveForLater?: (listingId: string) => Promise<void>;
 };
 
 function isOutOfStock(notice?: ChangeNotice): boolean {
   return notice?.kind === "out_of_stock";
 }
 
-export function CartLineItem({ item, notice, labels, onQtyChange, onRemove }: CartLineItemProps) {
+export function CartLineItem({
+  item,
+  notice,
+  labels,
+  onQtyChange,
+  onRemove,
+  onSaveForLater,
+}: CartLineItemProps) {
   const title = item.title_override ?? item.listing_id;
   const outOfStock = isOutOfStock(notice);
   const maxQty = notice?.kind === "qty_reduced" ? (notice.available_qty ?? item.qty) : 99;
@@ -53,7 +63,7 @@ export function CartLineItem({ item, notice, labels, onQtyChange, onRemove }: Ca
         </p>
       </div>
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <QtyStepper
           value={item.qty}
           min={1}
@@ -63,15 +73,28 @@ export function CartLineItem({ item, notice, labels, onQtyChange, onRemove }: Ca
           data-testid={`cart-qty-${item.listing_id}`}
           onChange={(qty) => onQtyChange(item.listing_id, qty)}
         />
-        <button
-          type="button"
-          className="min-h-11 px-2 text-sm text-danger"
-          aria-label={labels.removeLabel.replace("{title}", title)}
-          data-testid={`cart-remove-${item.listing_id}`}
-          onClick={() => void onRemove(item.listing_id)}
-        >
-          {labels.remove}
-        </button>
+        <div className="flex flex-wrap items-center gap-1">
+          {onSaveForLater ? (
+            <button
+              type="button"
+              className="min-h-11 px-2 text-sm text-text-2 underline-offset-2 hover:underline"
+              aria-label={labels.saveForLaterLabel.replace("{title}", title)}
+              data-testid={`cart-save-for-later-${item.listing_id}`}
+              onClick={() => void onSaveForLater(item.listing_id)}
+            >
+              {labels.saveForLater}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="min-h-11 px-2 text-sm text-danger"
+            aria-label={labels.removeLabel.replace("{title}", title)}
+            data-testid={`cart-remove-${item.listing_id}`}
+            onClick={() => void onRemove(item.listing_id)}
+          >
+            {labels.remove}
+          </button>
+        </div>
       </div>
     </article>
   );

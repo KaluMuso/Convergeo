@@ -3,6 +3,7 @@
 import { track } from "@vergeo/analytics";
 import { useEffect } from "react";
 
+import { recordRecentlyViewedOnServer } from "../../../../../lib/engagement-api";
 import { recordRecentlyViewed } from "../recently-viewed/use-recently-viewed";
 
 type Props = {
@@ -17,7 +18,8 @@ type Props = {
 
 /**
  * Fires the anonymized `product_view` beacon once per PDP mount and records a
- * local recently-viewed entry when `recent` is provided.
+ * local recently-viewed entry when `recent` is provided. Signed-in users also
+ * sync to `/account/recently-viewed`.
  */
 export function ProductViewTracker({ productId, listingId, recent }: Props): null {
   const recentSlug = recent?.slug;
@@ -31,6 +33,7 @@ export function ProductViewTracker({ productId, listingId, recent }: Props): nul
     if (recentSlug && recentName) {
       recordRecentlyViewed(recentSlug, recentName);
     }
+    void recordRecentlyViewedOnServer(productId);
   }, [productId, listingId, recentSlug, recentName]);
 
   return null;

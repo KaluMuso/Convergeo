@@ -73,6 +73,8 @@ class PaymentStatusResponse(StrictModel):
 class PaymentRetryRequest(StrictModel):
     checkout_group_id: str
     payer_number: str | None = Field(default=None, max_length=20)
+    # Preferred MoMo rail for first initiate when no prior payment row exists.
+    rail: Literal["mtn", "airtel"] | None = None
 
 
 class PaymentRetryResponse(StrictModel):
@@ -458,7 +460,12 @@ async def retry_payment(
             details={"field": "payer_number"},
         )
 
-    rail = str(latest["rail"]) if latest and latest.get("rail") else "mtn"
+    if latest and latest.get("rail"):
+        rail = str(latest["rail"])
+    elif body.rail in {"mtn", "airtel"}:
+        rail = body.rail
+    else:
+        rail = "mtn"
     total_raw = group.get("total_ngwee", 0)
     amount_ngwee = int(total_raw) if isinstance(total_raw, int) else 0
     first_order_id = str(orders[0]["id"])

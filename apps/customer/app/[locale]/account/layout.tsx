@@ -1,7 +1,10 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { IconAccount, IconAsk, IconHome, IconOrders, IconSearch } from "@vergeo/ui/src/icons";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
+
+import { BottomNavClient } from "../(shop)/_components/bottom-nav-client";
 
 import { AccountNav } from "./_components/account-nav";
 import { requireAuthenticatedAccount } from "./_components/account-server";
@@ -32,15 +35,51 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
 
   const baseMessages = await getMessages();
   const accountMessages = await loadNamespace(locale as Locale, "account");
+  const catalogMessages = await loadNamespace(locale as Locale, "catalog");
   const messages = {
     ...baseMessages,
     account: accountMessages,
+    catalog: catalogMessages,
   } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "account" });
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
+  const tCatalog = createTranslator({ locale, messages, namespace: "catalog" });
+
+  const bottomItems = [
+    {
+      key: "home",
+      icon: <IconHome />,
+      label: tCatalog("home.nav.home"),
+      href: `/${locale}`,
+    },
+    {
+      key: "browse",
+      icon: <IconSearch />,
+      label: tCatalog("home.nav.browse"),
+      href: `/${locale}/search`,
+    },
+    {
+      key: "ask",
+      icon: <IconAsk />,
+      label: tCatalog("home.nav.ask"),
+      href: `/${locale}/ask`,
+    },
+    {
+      key: "orders",
+      icon: <IconOrders />,
+      label: tCatalog("home.nav.orders"),
+      href: `/${locale}/account/orders`,
+    },
+    {
+      key: "account",
+      icon: <IconAccount />,
+      label: tCatalog("home.nav.account"),
+      href: `/${locale}/account`,
+    },
+  ];
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-8">
+    <div className="mx-auto w-full max-w-3xl px-4 pb-20 pt-8 lg:pb-12">
       <a
         href="#account-main"
         className="sr-only rounded bg-primary text-sm font-medium text-surface focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:inline-flex focus:min-h-11 focus:items-center focus:px-4 focus:shadow-focusRing"
@@ -77,6 +116,11 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
         />
         {children}
       </main>
+      <BottomNavClient
+        items={bottomItems}
+        ariaLabel={tCatalog("home.nav.bottomAriaLabel")}
+        locale={locale}
+      />
     </div>
   );
 }

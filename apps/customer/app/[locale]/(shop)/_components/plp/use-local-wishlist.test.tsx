@@ -2,13 +2,17 @@
 import "@testing-library/jest-dom/vitest";
 
 import { act, cleanup, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   resetLocalWishlistStoreForTests,
   useLocalWishlist,
   useLocalWishlistSlugs,
 } from "./use-local-wishlist";
+
+vi.mock("../../../../../lib/engagement-api", () => ({
+  syncWishlistWithServer: vi.fn(async () => undefined),
+}));
 
 afterEach(() => {
   cleanup();
@@ -32,9 +36,10 @@ describe("useLocalWishlist", () => {
     });
 
     expect(result.current.isWishlisted).toBe(true);
-    expect(JSON.parse(window.localStorage.getItem("vergeo5:wishlist:v1") ?? "[]")).toContain(
-      "tecno-spark",
-    );
+    const stored = JSON.parse(window.localStorage.getItem("vergeo5:wishlist:v2") ?? "[]") as Array<{
+      slug: string;
+    }>;
+    expect(stored.some((entry) => entry.slug === "tecno-spark")).toBe(true);
 
     act(() => {
       result.current.toggleWishlist();
@@ -49,7 +54,7 @@ describe("useLocalWishlist", () => {
     act(() => {
       result.current.toggleWishlist();
     });
-    expect(window.localStorage.getItem("vergeo5:wishlist:v1")).toBeNull();
+    expect(window.localStorage.getItem("vergeo5:wishlist:v2")).toBeNull();
   });
 
   it("lists and removes saved slugs for the wishlist page", () => {
@@ -65,5 +70,11 @@ describe("useLocalWishlist", () => {
       list.result.current.remove("itel-a70");
     });
     expect(list.result.current.slugs).not.toContain("itel-a70");
+  });
+
+  it("migrates legacy v1 slug arrays", () => {
+    window.localStorage.setItem("vergeo5:wishlist:v1", JSON.stringify(["legacy-phone"]));
+    const { result } = renderHook(() => useLocalWishlist("legacy-phone"));
+    expect(result.current.isWishlisted).toBe(true);
   });
 });

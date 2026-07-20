@@ -231,6 +231,38 @@ export async function removeCartItem(listingId: string): Promise<CartResponse> {
   return cart;
 }
 
+export type SaveForLaterResult = {
+  cart: CartResponse;
+  product_id: string | null;
+  product_slug: string | null;
+};
+
+export async function saveCartItemForLater(listingId: string): Promise<SaveForLaterResult> {
+  const result = await cartRequest<{
+    cart: CartResponse;
+    product_id: string | null;
+    product_slug: string | null;
+  }>(`/cart/items/${listingId}/save-for-later`, { method: "POST" });
+  const notices = result.cart.notices ?? (await fetchRevalidateNotices());
+  setStoreState({ cart: result.cart, notices });
+
+  if (result.product_slug) {
+    const { upsertWishlistLocal } = await import("../../../../../lib/wishlist-local");
+    upsertWishlistLocal({
+      productId: result.product_id,
+      slug: result.product_slug,
+    });
+    const { syncWishlistWithServer } = await import("../../../../../lib/engagement-api");
+    void syncWishlistWithServer();
+  }
+
+  return {
+    cart: result.cart,
+    product_id: result.product_id,
+    product_slug: result.product_slug,
+  };
+}
+
 export function openMiniCart() {
   setStoreState({ drawerOpen: true });
 }
@@ -253,6 +285,7 @@ type CartContextValue = {
   addItem: (listingId: string, qty: number) => Promise<CartResponse>;
   updateQty: (listingId: string, qty: number) => Promise<CartResponse>;
   removeItem: (listingId: string) => Promise<CartResponse>;
+  saveForLater: (listingId: string) => Promise<SaveForLaterResult>;
   openDrawer: () => void;
   closeDrawer: () => void;
 };
@@ -266,6 +299,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       addItem: addCartItem,
       updateQty: updateCartItemQty,
       removeItem: removeCartItem,
+      saveForLater: saveCartItemForLater,
       openDrawer: openMiniCart,
       closeDrawer: closeMiniCart,
     }),
@@ -283,6 +317,7 @@ export function useCartActions(): CartContextValue {
       addItem: addCartItem,
       updateQty: updateCartItemQty,
       removeItem: removeCartItem,
+      saveForLater: saveCartItemForLater,
       openDrawer: openMiniCart,
       closeDrawer: closeMiniCart,
     };

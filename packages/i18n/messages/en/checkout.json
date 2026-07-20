@@ -19,6 +19,8 @@
     "unitPrice": "{amount} each",
     "remove": "Remove",
     "removeLabel": "Remove {title} from cart",
+    "saveForLater": "Save for later",
+    "saveForLaterLabel": "Save {title} for later",
     "qtyDecrease": "Decrease quantity",
     "qtyIncrease": "Increase quantity",
     "qtyDecreaseSymbol": "-",

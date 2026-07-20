@@ -15,6 +15,10 @@ TOKEN_A = "token.user-a"
 TOKEN_B = "token.user-b"
 
 
+PRODUCT_1 = "33333333-3333-3333-3333-333333333333"
+PRODUCT_2 = "44444444-4444-4444-4444-444444444444"
+
+
 class FakeSupabaseStore:
     def __init__(self) -> None:
         self.profiles: dict[str, dict[str, Any]] = {
@@ -34,6 +38,20 @@ class FakeSupabaseStore:
             },
         }
         self.addresses: dict[str, dict[str, Any]] = {}
+        self.products: dict[str, dict[str, Any]] = {
+            PRODUCT_1: {
+                "id": PRODUCT_1,
+                "slug": "tecno-spark",
+                "name": "Tecno Spark",
+            },
+            PRODUCT_2: {
+                "id": PRODUCT_2,
+                "slug": "itel-a70",
+                "name": "Itel A70",
+            },
+        }
+        self.user_wishlist: list[dict[str, Any]] = []
+        self.user_recently_viewed: list[dict[str, Any]] = []
 
     def seed_address(self, *, user_id: str, landmark: str) -> str:
         address_id = str(uuid4())
@@ -70,7 +88,7 @@ class FakeQuery:
         self._mode = "select"
         return self
 
-    def insert(self, payload: dict[str, Any]) -> FakeQuery:
+    def insert(self, payload: dict[str, Any] | list[dict[str, Any]]) -> FakeQuery:
         self._mode = "insert"
         self._payload = payload
         return self
@@ -88,7 +106,21 @@ class FakeQuery:
         self._filters.append((column, value))
         return self
 
-    def order(self, _column: str) -> FakeQuery:
+    def order(self, _column: str, desc: bool = False) -> FakeQuery:
+        _ = desc
+        return self
+
+    def limit(self, _count: int) -> FakeQuery:
+        return self
+
+    def in_(self, column: str, values: list[Any]) -> FakeQuery:
+        self._filters.append((f"in:{column}", list(values)))
+        return self
+
+    def upsert(self, payload: dict[str, Any], on_conflict: str | None = None) -> FakeQuery:
+        _ = on_conflict
+        self._mode = "upsert"
+        self._payload = payload
         return self
 
     def maybe_single(self) -> FakeQuery:
@@ -100,6 +132,12 @@ class FakeQuery:
             return self._execute_profiles()
         if self.table == "addresses":
             return self._execute_addresses()
+        if self.table == "products":
+            return self._execute_products()
+        if self.table == "user_wishlist":
+            return self._execute_wishlist()
+        if self.table == "user_recently_viewed":
+            return self._execute_recent()
         return FakeResult([] if not self._maybe_single else None)
 
     def _filter_value(self, column: str) -> Any:
@@ -181,6 +219,85 @@ class FakeQuery:
             return FakeResult([])
 
         return FakeResult(None if self._maybe_single else [])
+
+    def _execute_products(self) -> FakeResult:
+        in_ids = self._filter_value("in:id")
+        if self._mode == "select" and isinstance(in_ids, list):
+            rows = [
+                deepcopy(self.store.products[str(pid)])
+                for pid in in_ids
+                if str(pid) in self.store.products
+            ]
+            return FakeResult(rows)
+        return FakeResult([])
+
+    def _execute_wishlist(self) -> FakeResult:
+        user_filter = self._filter_value("user_id") or self.user_id
+        if self._mode == "delete":
+            self.store.user_wishlist = [
+                row for row in self.store.user_wishlist if row["user_id"] != user_filter
+            ]
+            return FakeResult([])
+        if self._mode == "insert":
+            payload = self._payload
+            rows = payload if isinstance(payload, list) else [payload]
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                self.store.user_wishlist.append(deepcopy(row))
+            return FakeResult(deepcopy(rows) if isinstance(rows, list) else [])
+        if self._mode == "select":
+            out: list[dict[str, Any]] = []
+            for row in self.store.user_wishlist:
+                if row["user_id"] != user_filter:
+                    continue
+                product = self.store.products.get(str(row["product_id"]), {})
+                out.append(
+                    {
+                        "product_id": row["product_id"],
+                        "created_at": row.get("created_at", "2026-07-20T00:00:00+00:00"),
+                        "products": product,
+                    }
+                )
+            return FakeResult(out)
+        return FakeResult([])
+
+    def _execute_recent(self) -> FakeResult:
+        user_filter = self._filter_value("user_id") or self.user_id
+        if self._mode == "upsert" and isinstance(self._payload, dict):
+            pid = str(self._payload["product_id"])
+            self.store.user_recently_viewed = [
+                row
+                for row in self.store.user_recently_viewed
+                if not (row["user_id"] == user_filter and row["product_id"] == pid)
+            ]
+            self.store.user_recently_viewed.append(deepcopy(self._payload))
+            return FakeResult([deepcopy(self._payload)])
+        if self._mode == "delete":
+            in_ids = self._filter_value("in:product_id")
+            if isinstance(in_ids, list):
+                drop = {str(x) for x in in_ids}
+                self.store.user_recently_viewed = [
+                    row
+                    for row in self.store.user_recently_viewed
+                    if not (row["user_id"] == user_filter and row["product_id"] in drop)
+                ]
+            return FakeResult([])
+        if self._mode == "select":
+            out: list[dict[str, Any]] = []
+            for row in self.store.user_recently_viewed:
+                if row["user_id"] != user_filter:
+                    continue
+                product = self.store.products.get(str(row["product_id"]), {})
+                out.append(
+                    {
+                        "product_id": row["product_id"],
+                        "viewed_at": row.get("viewed_at", "2026-07-20T00:00:00+00:00"),
+                        "products": product,
+                    }
+                )
+            return FakeResult(out)
+        return FakeResult([])
 
 
 class FakeSupabaseClient:
@@ -376,3 +493,35 @@ def test_account_requires_auth(account_client: TestClient) -> None:
     assert response.status_code == 401
     body = response.json()
     assert body["error"]["code"] == "unauthorized"
+
+
+def test_wishlist_put_and_get(account_client: TestClient) -> None:
+    put = account_client.put(
+        "/account/wishlist",
+        headers=auth_header(TOKEN_A),
+        json={"product_ids": [PRODUCT_1, PRODUCT_2, PRODUCT_1]},
+    )
+    assert put.status_code == 200
+    items = put.json()["items"]
+    assert len(items) == 2
+    assert {item["slug"] for item in items} == {"tecno-spark", "itel-a70"}
+
+    get = account_client.get("/account/wishlist", headers=auth_header(TOKEN_A))
+    assert get.status_code == 200
+    assert len(get.json()["items"]) == 2
+
+
+def test_recently_viewed_post_and_get(account_client: TestClient) -> None:
+    post = account_client.post(
+        "/account/recently-viewed",
+        headers=auth_header(TOKEN_A),
+        json={"product_id": PRODUCT_1},
+    )
+    assert post.status_code == 200
+    items = post.json()["items"]
+    assert len(items) == 1
+    assert items[0]["slug"] == "tecno-spark"
+
+    get = account_client.get("/account/recently-viewed", headers=auth_header(TOKEN_A))
+    assert get.status_code == 200
+    assert get.json()["items"][0]["product_id"] == PRODUCT_1

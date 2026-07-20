@@ -47,7 +47,7 @@ export function DisputeReviewDetail({ locale, disputeId }: DisputeReviewDetailPr
   }, [load]);
 
   if (loading) {
-    return <p className="text-sm text-muted">{t("loading")}</p>;
+    return <p className="text-sm text-text-2">{t("loading")}</p>;
   }
 
   if (error || !detail) {
@@ -75,8 +75,8 @@ export function DisputeReviewDetail({ locale, disputeId }: DisputeReviewDetailPr
       </div>
 
       <header className="space-y-1">
-        <h1 className="font-serif text-xl text-text">{t("title")}</h1>
-        <p className="text-sm text-muted">
+        <h1 className="font-display text-xl text-text">{t("title")}</h1>
+        <p className="text-sm text-text-2">
           {t("summary", {
             orderId: detail.order_id,
             status: detail.status,

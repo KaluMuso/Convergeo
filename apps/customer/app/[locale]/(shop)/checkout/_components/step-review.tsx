@@ -120,8 +120,12 @@ export function StepReview({
     setLoading(true);
     try {
       await Promise.resolve(placeOrder());
-    } catch {
-      setErrorMessage(labels.placeOrderUnavailable);
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : labels.placeOrderUnavailable;
+      setErrorMessage(message);
     } finally {
       setLoading(false);
     }

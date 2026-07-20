@@ -17,7 +17,7 @@ function BaseIcon({ title, children, className, ...rest }: IconProps & { childre
       strokeLinejoin="round"
       aria-hidden={title ? undefined : true}
       role={title ? "img" : undefined}
-      className={["h-[1.15em] w-[1.15em] shrink-0", className].filter(Boolean).join(" ")}
+      className={["h-5 w-5 shrink-0", className].filter(Boolean).join(" ")}
       {...rest}
     >
       {title ? <title>{title}</title> : null}

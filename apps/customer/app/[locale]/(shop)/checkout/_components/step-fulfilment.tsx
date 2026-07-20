@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import { placeOrder, placeOrderErrorMessage } from "../_lib/place-order";
 
 import { ReservationCountdown } from "./reservation-countdown";
 import { StepContact, type ContactStepLabels } from "./step-contact";
@@ -91,10 +92,21 @@ type GroupChoice = {
   fulfilment: "delivery" | "pickup";
 };
 
-type FulfilmentTotals = {
+export type FulfilmentGroupResult = {
+  vendor_id: string;
+  fulfilment: "delivery" | "pickup";
+  delivery_zone: string | null;
+  delivery_fee_ngwee: number;
+  subtotal_ngwee: number;
+};
+
+export type FulfilmentTotals = {
   subtotal_ngwee: number;
   delivery_fee_ngwee: number;
   total_ngwee: number;
+  groups: FulfilmentGroupResult[];
+  /** Required by POST /orders when any group uses delivery. */
+  addressId: string | null;
 };
 
 type StepFulfilmentProps = {
@@ -167,10 +179,25 @@ export function StepFulfilment({
         baseUrl: getApiBaseUrl(),
         getToken: () => accessToken,
       });
+
+      // Delivery orders require a persisted address_id on POST /orders.
+      let addressId: string | null = null;
+      if (deliveryNeeded) {
+        const address = await client.request<{ id: string }>("/account/addresses", {
+          method: "POST",
+          body: JSON.stringify({
+            landmark: landmark.trim(),
+            label: "Checkout",
+          }),
+        });
+        addressId = address.id;
+      }
+
       const response = await client.request<{
         subtotal_ngwee: number;
         delivery_fee_ngwee: number;
         total_ngwee: number;
+        groups: FulfilmentGroupResult[];
       }>("/checkout/steps/fulfilment", {
         method: "POST",
         body: JSON.stringify({
@@ -179,8 +206,15 @@ export function StepFulfilment({
           groups: choices,
         }),
       });
-      setTotals(response);
-      onComplete?.(response);
+      const nextTotals: FulfilmentTotals = {
+        subtotal_ngwee: response.subtotal_ngwee,
+        delivery_fee_ngwee: response.delivery_fee_ngwee,
+        total_ngwee: response.total_ngwee,
+        groups: response.groups ?? [],
+        addressId,
+      };
+      setTotals(nextTotals);
+      onComplete?.(nextTotals);
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.code === "checkout.reservation_expired") {
@@ -558,6 +592,11 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
   const [paymentOptions, setPaymentOptions] = useState<PaymentOptions | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(false);
+  const [idempotencyKey] = useState(() =>
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `ord-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+  );
 
   const cartPath = `/${locale}/cart`;
 
@@ -688,13 +727,44 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
         />
       ) : null}
 
-      {step === 3 && checkoutSession && fulfilmentTotals && paymentSelection && paymentOptions ? (
+      {step === 3 &&
+      checkoutSession &&
+      fulfilmentTotals &&
+      paymentSelection &&
+      paymentOptions &&
+      session?.access_token ? (
         <StepReview
           locale={locale}
           session={checkoutSession}
           totals={paymentOptions}
           payment={paymentSelection as ReviewPayment}
           labels={labels.review}
+          onPlaceOrder={async () => {
+            if (!fulfilmentTotals.groups.length) {
+              throw new Error(labels.review.placeOrderUnavailable);
+            }
+            try {
+              await placeOrder({
+                locale,
+                accessToken: session.access_token,
+                apiBaseUrl: getApiBaseUrl(),
+                sessionId: checkoutSession.session_id,
+                payment: paymentSelection as ReviewPayment,
+                groups: fulfilmentTotals.groups.map((group) => ({
+                  vendor_id: group.vendor_id,
+                  fulfilment: group.fulfilment,
+                  delivery_zone: group.delivery_zone,
+                  delivery_fee_ngwee: group.delivery_fee_ngwee,
+                  subtotal_ngwee: group.subtotal_ngwee,
+                })),
+                addressId: fulfilmentTotals.addressId,
+                idempotencyKey,
+                navigate: (href) => router.push(href),
+              });
+            } catch (error) {
+              throw new Error(placeOrderErrorMessage(error, labels.review.placeOrderUnavailable));
+            }
+          }}
         />
       ) : null}
     </div>

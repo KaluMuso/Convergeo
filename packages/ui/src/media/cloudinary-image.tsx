@@ -73,11 +73,13 @@ export function CloudinaryImage({
   fallbackLabel,
   onError,
 }: CloudinaryImageProps) {
+  const src = cldUrl(publicId, { width, cloudName });
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+  const showFallback = failed || !src;
   const aspectRatio = resolveAspectRatio(ratio);
   const intrinsicHeight = resolveIntrinsicHeight(width, ratio);
-  const lqip = failed ? undefined : cldLqipUrl(publicId, { cloudName });
+  const lqip = showFallback ? undefined : cldLqipUrl(publicId, { cloudName });
 
   const markLoaded = useCallback(() => {
     setLoaded(true);
@@ -111,14 +113,14 @@ export function CloudinaryImage({
     width: "100%",
     ...(aspectRatio ? { aspectRatio } : {}),
     backgroundImage: !loaded && lqip ? `url(${lqip})` : undefined,
-    backgroundColor: failed ? "var(--bg-2)" : undefined,
+    backgroundColor: showFallback ? "var(--bg-2)" : undefined,
     backgroundSize: "cover",
     backgroundPosition: "center",
-    filter: loaded || failed ? undefined : "blur(8px)",
+    filter: loaded || showFallback ? undefined : "blur(8px)",
     transition: "filter var(--dur) var(--ease-std)",
   };
 
-  if (failed) {
+  if (showFallback) {
     return (
       <div
         className={className}
@@ -149,8 +151,8 @@ export function CloudinaryImage({
       ) : null}
       <img
         ref={imgRef}
-        src={cldUrl(publicId, { width, cloudName })}
-        srcSet={cldSrcSet(publicId, { cloudName })}
+        src={src}
+        srcSet={src ? cldSrcSet(publicId, { cloudName }) : undefined}
         sizes={sizes}
         width={width}
         height={intrinsicHeight}

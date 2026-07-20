@@ -12,6 +12,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../../lib/api-base-url";
+import { fetchJson } from "../../../../../lib/fetch-json";
 import { buildCategoryTree } from "../../_components/category-tree";
 import { fetchCategoriesResult } from "../../_components/merch-data";
 import { AppliedFilterBar } from "../../_components/plp/applied-filter-bar";
@@ -118,13 +119,9 @@ async function fetchCatalog(queryString: string): Promise<CatalogApiResponse | n
   }
   const suffix = queryString ? `?${queryString}` : "";
   try {
-    const response = await fetch(`${baseUrl}/catalog/listings${suffix}`, {
+    return await fetchJson<CatalogApiResponse>(`${baseUrl}/catalog/listings${suffix}`, {
       next: { revalidate: 60 },
     });
-    if (!response.ok) {
-      return null;
-    }
-    return (await response.json()) as CatalogApiResponse;
   } catch {
     return null;
   }

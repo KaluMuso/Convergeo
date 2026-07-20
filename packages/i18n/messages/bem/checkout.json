@@ -42,6 +42,8 @@
     "qtyValue": "Ubunji: {count}",
     "remove": "Futeni",
     "removeLabel": "Futeni {title} ukufuma mu cart",
+    "saveForLater": "Sungileni pa nshita iisuma",
+    "saveForLaterLabel": "Sungileni {title} pa nshita iisuma",
     "subtotal": "Subtotal yafye",
     "title": "Cart yenu",
     "total": "Yonse",

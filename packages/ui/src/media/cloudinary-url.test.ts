@@ -55,4 +55,16 @@ describe("cloudinary-url", () => {
     const url = cldUrl("safe.jpg", { width: 360, cloudName: CLOUD });
     expect(url).toMatch(/^https:\/\/res\.cloudinary\.com\//);
   });
+
+  it("soft-fails to empty string when cloud name is missing", () => {
+    const previous = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    expect(cldUrl("safe.jpg", { width: 360 })).toBe("");
+    expect(cldLqipUrl("safe.jpg")).toBe("");
+    if (previous === undefined) {
+      delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    } else {
+      process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = previous;
+    }
+  });
 });

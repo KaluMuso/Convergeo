@@ -1,6 +1,7 @@
 "use client";
 
 import { formatK } from "@vergeo/i18n";
+import { Skeleton } from "@vergeo/ui/src/skeleton";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
@@ -43,7 +44,14 @@ export function DisputeQueue({ locale }: DisputeQueueProps) {
   }, [load]);
 
   if (loading) {
-    return <p className="text-sm text-muted">{t("loading")}</p>;
+    return (
+      <div className="space-y-3" data-testid="disputes-queue-loading" aria-busy="true">
+        <p className="sr-only">{t("loading")}</p>
+        <Skeleton height="2.5rem" />
+        <Skeleton height="4rem" />
+        <Skeleton height="4rem" />
+      </div>
+    );
   }
 
   if (error) {
@@ -61,7 +69,7 @@ export function DisputeQueue({ locale }: DisputeQueueProps) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <label className="text-sm text-muted" htmlFor="dispute-sort">
+        <label className="text-sm text-text-2" htmlFor="dispute-sort">
           {t("sortLabel")}
         </label>
         <select
@@ -76,52 +84,81 @@ export function DisputeQueue({ locale }: DisputeQueueProps) {
       </div>
 
       {items.length === 0 ? (
-        <p className="text-sm text-muted">{t("empty")}</p>
+        <p className="text-sm text-text-2">{t("empty")}</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs uppercase tracking-wide text-muted">
-                <th className="px-2 py-3 font-medium">{t("order")}</th>
-                <th className="px-2 py-3 font-medium">{t("vendor")}</th>
-                <th className="px-2 py-3 font-medium">{t("value")}</th>
-                <th className="px-2 py-3 font-medium">{t("opened")}</th>
-                <th className="px-2 py-3 font-medium">{t("slaColumn")}</th>
-                <th className="px-2 py-3 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item.id} className="border-b border-border">
-                  <td className="px-2 py-3 font-mono text-xs text-text">
-                    {t("orderIdShort", { id: item.order_id.slice(0, 8) })}
-                  </td>
-                  <td className="px-2 py-3">
-                    <div className="font-medium text-text">{item.vendor_display_name}</div>
-                    <div className="text-xs text-muted">{item.customer_phone ?? "—"}</div>
-                  </td>
-                  <td className="px-2 py-3 font-mono text-text">
-                    {formatK(item.order_total_ngwee)}
-                  </td>
-                  <td className="px-2 py-3 text-muted">
-                    {new Date(item.created_at).toLocaleString(locale)}
-                  </td>
-                  <td className="px-2 py-3">
-                    <DisputeSlaBadge badge={item.sla_badge} />
-                  </td>
-                  <td className="px-2 py-3 text-right">
-                    <a
-                      className="inline-flex min-h-11 items-center rounded-md border border-primary px-4 text-sm font-medium text-primary"
-                      href={`/${locale}/disputes/${item.id}`}
-                    >
-                      {t("review")}
-                    </a>
-                  </td>
+        <>
+          <ul className="space-y-3 md:hidden" data-testid="disputes-queue-cards">
+            {items.map((item) => (
+              <li key={item.id} className="rounded-lg border border-border bg-surface p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <p className="font-medium text-text">{item.vendor_display_name}</p>
+                    <p className="font-mono text-xs text-text-2">
+                      {t("orderIdShort", { id: item.order_id.slice(0, 8) })}
+                    </p>
+                    <p className="text-xs text-text-3">{item.customer_phone ?? "—"}</p>
+                    <p className="font-mono text-sm text-text">{formatK(item.order_total_ngwee)}</p>
+                    <p className="text-xs text-text-3">
+                      {new Date(item.created_at).toLocaleString(locale)}
+                    </p>
+                  </div>
+                  <DisputeSlaBadge badge={item.sla_badge} />
+                </div>
+                <a
+                  className="mt-3 inline-flex min-h-11 items-center rounded-md border border-primary px-4 text-sm font-medium text-primary"
+                  href={`/${locale}/disputes/${item.id}`}
+                >
+                  {t("review")}
+                </a>
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden overflow-x-auto md:block" data-testid="disputes-queue-table">
+            <table className="min-w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs uppercase tracking-wide text-text-3">
+                  <th className="px-2 py-3 font-medium">{t("order")}</th>
+                  <th className="px-2 py-3 font-medium">{t("vendor")}</th>
+                  <th className="px-2 py-3 font-medium">{t("value")}</th>
+                  <th className="px-2 py-3 font-medium">{t("opened")}</th>
+                  <th className="px-2 py-3 font-medium">{t("slaColumn")}</th>
+                  <th className="px-2 py-3 font-medium" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item.id} className="border-b border-border">
+                    <td className="px-2 py-3 font-mono text-xs text-text">
+                      {t("orderIdShort", { id: item.order_id.slice(0, 8) })}
+                    </td>
+                    <td className="px-2 py-3">
+                      <div className="font-medium text-text">{item.vendor_display_name}</div>
+                      <div className="text-xs text-text-3">{item.customer_phone ?? "—"}</div>
+                    </td>
+                    <td className="px-2 py-3 font-mono text-text">
+                      {formatK(item.order_total_ngwee)}
+                    </td>
+                    <td className="px-2 py-3 text-text-2">
+                      {new Date(item.created_at).toLocaleString(locale)}
+                    </td>
+                    <td className="px-2 py-3">
+                      <DisputeSlaBadge badge={item.sla_badge} />
+                    </td>
+                    <td className="px-2 py-3 text-right">
+                      <a
+                        className="inline-flex min-h-11 items-center rounded-md border border-primary px-4 text-sm font-medium text-primary"
+                        href={`/${locale}/disputes/${item.id}`}
+                      >
+                        {t("review")}
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

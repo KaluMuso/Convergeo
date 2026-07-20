@@ -71,6 +71,8 @@ export default async function CartPage({ params }: CartPageProps) {
       lineTotal: t("cart.lineTotal"),
       remove: t("cart.remove"),
       removeLabel: t("cart.removeLabel"),
+      saveForLater: t("cart.saveForLater"),
+      saveForLaterLabel: t("cart.saveForLaterLabel"),
       outOfStockLine: t("cart.outOfStockLine"),
     },
     notices: {
