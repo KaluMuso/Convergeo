@@ -1,0 +1,13 @@
+{
+  "timestamp_utc": "20260720T150434Z",
+  "env_id": "local-ci",
+  "backup_mode": "drill",
+  "dump_name": "vergeo5-20260720T150434Z.sql.gz",
+  "object_key": "local:///tmp/vergeo5-backups-ci/vergeo5-20260720T150434Z.sql.gz",
+  "migration_tip": "0099_test",
+  "size_bytes": 15017,
+  "sha256": "26f5a8fd62f5858b35b2b6be1b2881f562e932a23b893929ce262c4459283b5c",
+  "retention_days": 14,
+  "status": "success",
+  "error": ""
+}

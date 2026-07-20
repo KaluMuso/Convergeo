@@ -26,11 +26,16 @@ _(staging)_ = needs the staging environment · _(founder)_ = founder action.
 These lines are the actual go/no-go. They may only be signed when Sections 1–5
 are all green. **Leave unchecked until then.**
 
-- [ ] **GO / NO-GO — Founder** has reviewed Sections 1–5; every BLOCKING gate is green. — **Owner: Founder** — Evidence: _(link decision record)_
+> **Prompt 12 audit (2026-07-20):** agent recommendation **NO_GO**.  
+> Evidence: `docs/production-readiness/2026-07-20/go-no-go-report.md` · gates: `docs/production-readiness/2026-07-18/consolidated/release-gates.md`.  
+> Live: API **502**; `public_launch=false`; money tables empty; n8n all inactive; F4/F9b open.  
+> **Do not** treat this note as founder sign-off — founder lines below stay unchecked.
+
+- [ ] **GO / NO-GO — Founder** has reviewed Sections 1–5; every BLOCKING gate is green. — **Owner: Founder** — Evidence: _(link decision record; supersede agent NO_GO only with written founder decision)_
 - [ ] **Escrow real-money launch approved** — counsel gate **F4** cleared (Section 4). — **Owner: Founder + Counsel** — Evidence: _____
 - [ ] **Payments live** — Lenco production credentials in place, sandbox E2E green (**F9**). — **Owner: Founder** — Evidence: _____
-- [ ] **`public_launch` flip authorised** — flag flipped ON only after the three lines above are signed. — **Owner: Founder** — Evidence: _(admin audit_log entry)_
-- [ ] **Rollback plan acknowledged** — flip `public_launch` OFF + DR runbook (M15-P09) on hand. — **Owner: Founder** — Evidence: `docs/ops/` DR runbook
+- [ ] **`public_launch` flip authorised** — flag flipped ON only after the three lines above are signed. — **Owner: Founder** — Evidence: _(admin audit_log entry)_ — **live flag still false as of 2026-07-20 audit**
+- [ ] **Rollback plan acknowledged** — flip `public_launch` OFF + DR runbook (M15-P09) on hand. — **Owner: Founder** — Evidence: `docs/ops/` DR runbook · rollback drill still NOT_RUN (`ops-drills/`)
 
 ---
 
@@ -94,7 +99,7 @@ real-money public launch until cleared.** They are founder-side, not code — do
 - [ ] **F4 — Counsel (escrow / NPS Act 2026):** Zambian counsel review of the Lenco-held escrow flow — **pre-real-money launch gate.** — **Owner: Founder + Counsel** — Evidence: _____
 - [ ] **F5 — Meta/WhatsApp Cloud API:** Meta Business + WhatsApp Cloud API activation (real number needs F1). — **Owner: Founder** — Evidence: `docs/ops/whatsapp-cloud-api-setup.md`
 - [ ] **F6 — Courier MOUs:** Platinum couriers / bus-freight conversations (post-beta acceptable). — **Owner: Founder** — Evidence: _____
-- [ ] **F7 — Design files:** upload remaining 7 design HTML files (`docs/designs/SOURCES.md`). — **Owner: Founder** — Evidence: _____
+- [ ] **F7 — Design files:** upload remaining **6** design HTML files (`docs/designs/SOURCES.md`). — **Owner: Founder** — Evidence: _____
 - [ ] **F8 — COD cap:** confirm or invert D12's COD cap (≤K500 recommended). — **Owner: Founder** — Evidence: `platform_config.cod_cap_ngwee`
 - [ ] **F9 — Lenco credentials (payments go-live):**
   - [ ] **F9a — Zamtel collections:** enable when Lenco confirms (currently payout-only; rail hidden at checkout). — **Owner: Founder** — Evidence: _____

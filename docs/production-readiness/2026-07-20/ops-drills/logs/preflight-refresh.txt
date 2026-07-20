@@ -1,0 +1,18 @@
+=== Preflight refresh 2026-07-20T15:24:01Z ===
+--- API ---
+GET /healthz → HTTP 502
+
+GET /readyz → HTTP 502
+
+GET /fingerprint → HTTP 502
+
+--- k6 ---
+k6=ABSENT
+--- backup artifact ---
+total 32
+drwxr-xr-x 2 ubuntu ubuntu  4096 Jul 20 15:04 .
+drwxrwxrwt 1 root   root    4096 Jul 20 15:24 ..
+-rw-r--r-- 1 ubuntu ubuntu   422 Jul 20 15:04 vergeo5-20260720T150434Z.manifest.json
+-rw-r--r-- 1 ubuntu ubuntu 15017 Jul 20 15:04 vergeo5-20260720T150434Z.sql.gz
+--- public_launch / tip via prior evidence ---
+(see versions.txt; SQL not re-run if Supabase MCP unavailable in this shell)

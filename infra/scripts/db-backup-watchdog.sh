@@ -26,7 +26,17 @@ require_cmd() {
 
 newest_local_epoch() {
   local newest=""
-  newest="$(ls -1t "${BACKUP_LOCAL_DIR}"/vergeo5-*.sql.gz 2>/dev/null | head -1 || true)"
+  # Newest by mtime; avoid `ls` (SC2012). Portable via epoch prefix + sort.
+  newest="$(
+    find "${BACKUP_LOCAL_DIR}" -maxdepth 1 -type f -name 'vergeo5-*.sql.gz' 2>/dev/null \
+      | while IFS= read -r f; do
+          ts="$(stat -c %Y "${f}" 2>/dev/null || stat -f %m "${f}" 2>/dev/null || printf '0')"
+          printf '%s\t%s\n' "${ts}" "${f}"
+        done \
+      | sort -nr \
+      | head -n 1 \
+      | cut -f2-
+  )"
   if [[ -z "${newest}" ]]; then
     printf '0'
     return 0
@@ -41,6 +51,8 @@ newest_oci_epoch() {
   : "${OCI_BUCKET_NAME:?OCI_BUCKET_NAME must be set}"
 
   local raw name modified
+  # JMESPath uses backticks; must stay single-quoted (not shell expansion).
+  # shellcheck disable=SC2016
   raw="$(
     oci os object list \
       --namespace "${OCI_NAMESPACE}" \
