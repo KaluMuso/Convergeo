@@ -194,7 +194,8 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       : `/${locale}/search`;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-4 motion-rise sm:py-6 lg:max-w-5xl">
+    // Shop layout already provides the page <main> landmark — avoid nesting.
+    <div className="mx-auto w-full max-w-3xl py-4 motion-rise sm:py-6 lg:max-w-5xl">
       {view.status === "results" ? (
         <SearchAnalytics
           normalizedTerm={view.query}
@@ -345,6 +346,6 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
           />
         </Suspense>
       ) : null}
-    </main>
+    </div>
   );
 }

@@ -4,6 +4,7 @@ import { Badge } from "@vergeo/ui/src/badge";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
 import { isDemoListingPublicId, shouldShowSampleListingBadge } from "../demo-listing";
 
@@ -52,6 +53,8 @@ export function ListingCard({
   density = "default",
 }: ListingCardProps) {
   const { isWishlisted, toggleWishlist, enabled } = useLocalWishlist(listing.productSlug);
+  const [wishlistStatusAnnouncement, setWishlistStatusAnnouncement] = useState("");
+  const wishlistMountedRef = useRef(false);
   const distance = formatDistance(listing.distanceM);
   const distanceLabel =
     distance !== null ? labels.distance.replace("{distance}", distance) : undefined;
@@ -69,6 +72,14 @@ export function ListingCard({
   const wishlistLabel =
     isWishlisted && labels.wishlistRemove ? labels.wishlistRemove : labels.wishlist;
 
+  useEffect(() => {
+    if (!wishlistMountedRef.current) {
+      wishlistMountedRef.current = true;
+      return;
+    }
+    setWishlistStatusAnnouncement(wishlistLabel);
+  }, [isWishlisted, wishlistLabel]);
+
   const card = (
     <ProductCard
       title={listing.title}
@@ -80,6 +91,7 @@ export function ListingCard({
       reviewCountLabel={labels.reviewCount}
       quickAddLabel={labels.quickAdd}
       wishlistLabel={wishlistLabel}
+      wishlistStatusAnnouncement={wishlistStatusAnnouncement}
       badge={badge}
       density={density}
       unavailable={!listing.inStock}

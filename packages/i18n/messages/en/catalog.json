@@ -81,6 +81,7 @@
       "orders": "Orders",
       "account": "Account",
       "cart": "Cart",
+      "cartWithCount": "Cart, {count} items",
       "searchPlaceholder": "Search products, services, events…",
       "searchSubmit": "Search",
       "allCategories": "All Categories",

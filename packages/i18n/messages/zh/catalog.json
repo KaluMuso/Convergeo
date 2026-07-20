@@ -81,6 +81,7 @@
       "orders": "订单",
       "account": "账户",
       "cart": "购物车",
+      "cartWithCount": "购物车，{count} 件商品",
       "searchPlaceholder": "搜索商品、服务、活动…",
       "searchSubmit": "搜索",
       "allCategories": "全部类别",

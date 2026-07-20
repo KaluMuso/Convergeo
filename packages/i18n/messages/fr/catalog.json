@@ -81,6 +81,7 @@
       "orders": "Commandes",
       "account": "Compte",
       "cart": "Panier",
+      "cartWithCount": "Panier, {count} articles",
       "searchPlaceholder": "Rechercher produits, services, événements…",
       "searchSubmit": "Rechercher",
       "allCategories": "Toutes les catégories",

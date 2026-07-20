@@ -394,7 +394,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   if (result.kind === "unavailable") {
     const retryHref = `/${locale}/p/${encodeURIComponent(slug)}`;
     return (
-      <main className="mx-auto w-full max-w-3xl px-4 py-10">
+      <div className="mx-auto w-full max-w-3xl py-10">
         <EmptyState
           title={t("pdp.unavailableTitle")}
           body={t("pdp.unavailableBody")}
@@ -408,7 +408,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             </Link>
           }
         />
-      </main>
+      </div>
     );
   }
 
@@ -508,7 +508,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   ];
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6 motion-rise lg:max-w-6xl">
+    // Shop layout already provides the page <main> landmark — avoid nesting.
+    <div className="mx-auto flex w-full max-w-lg flex-col gap-6 py-6 motion-rise lg:max-w-6xl">
       {productJsonLd ? <JsonLdScript data={productJsonLd} /> : null}
       <JsonLdScript data={breadcrumbJsonLd} />
       <ProductViewTracker productId={product.id} listingId={selectedListing?.id} />
@@ -638,6 +639,6 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           </ul>
         </section>
       ) : null}
-    </main>
+    </div>
   );
 }

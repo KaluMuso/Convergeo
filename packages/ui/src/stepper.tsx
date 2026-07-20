@@ -67,7 +67,7 @@ export function Stepper({
           const isClickable = completedStepsClickable && state === "done" && step.href;
 
           const circleClasses = mergeClasses(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-pill text-sm font-semibold transition-colors",
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-pill text-sm font-semibold transition-colors",
             state === "done" && "bg-primary text-surface",
             state === "current" && "bg-primary-tint text-primary ring-2 ring-primary",
             state === "upcoming" && "bg-bg-2 text-text-3",

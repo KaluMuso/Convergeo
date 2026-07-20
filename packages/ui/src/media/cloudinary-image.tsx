@@ -30,6 +30,26 @@ function resolveAspectRatio(ratio: CloudinaryImageProps["ratio"]): string | unde
   return ratio;
 }
 
+/** Intrinsic pixel height for CLS reservation when `ratio` is known. */
+function resolveIntrinsicHeight(
+  width: number,
+  ratio: CloudinaryImageProps["ratio"],
+): number | undefined {
+  if (ratio === undefined) {
+    return undefined;
+  }
+  if (typeof ratio === "number" && ratio > 0) {
+    return Math.round(width / ratio);
+  }
+  if (typeof ratio === "string") {
+    const [w, h] = ratio.split("/").map(Number);
+    if (w > 0 && h > 0) {
+      return Math.round((width * h) / w);
+    }
+  }
+  return undefined;
+}
+
 const shimmerStyle: CSSProperties = {
   position: "absolute",
   inset: 0,
@@ -54,6 +74,7 @@ export function CloudinaryImage({
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const aspectRatio = resolveAspectRatio(ratio);
+  const intrinsicHeight = resolveIntrinsicHeight(width, ratio);
   const lqip = failed ? undefined : cldLqipUrl(publicId, { cloudName });
 
   const markLoaded = useCallback(() => {
@@ -129,6 +150,8 @@ export function CloudinaryImage({
         src={cldUrl(publicId, { width, cloudName })}
         srcSet={cldSrcSet(publicId, { cloudName })}
         sizes={sizes}
+        width={width}
+        height={intrinsicHeight}
         alt={alt}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
