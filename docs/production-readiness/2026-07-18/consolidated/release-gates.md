@@ -206,7 +206,7 @@ curl -sS -m 15 https://api.vergeo5.com/readyz
 | Rollback drill             | —                   | Prior Vercel + API tag | Time recorded                                  |
 | Feature flags              | SQL flags           | —                      | `public_launch` intentional; Zamtel matches UI |
 
-**Current:** FAIL (API SHA NOT_AUDITABLE; DB drift; panel SHAs not PRODUCTION_VERIFIED vs foundation `8cc1fa0`).
+**Current (2026-07-20 Prompt 6):** FAIL / NO-GO. Frontend prod SHAs **recorded** (customer `cde40bf`, vendor `5a4668a`, admin `2f99711`) but **behind** master tip `d9839db`. Live migration tip = `0063_revoke_execute_review_reply_guards` (not repo tip: source_key + FORCE RLS unapplied; RC-02 collision). API host digest **NOT_AUDITABLE** (`api.vergeo5.com` **502**); GHCR `latest` digest known but not proof of running container. Rollback drill still open. Evidence: `docs/production-readiness/2026-07-20/deploy-migration-truth.md`.
 
 ---
 
