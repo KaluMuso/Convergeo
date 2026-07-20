@@ -537,10 +537,10 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate:** VF-P04 / MR-B07
 - **Priority:** P1
-- **Status:** `LIVE_VERIFICATION_REQUIRED` → programme **CCP-05**
-- **Evidence:** 07-19 observed `degraded=true`; no proven fix; honest UI banner already ships
-- **Deps:** embeddings cron (DEP-02) + OpenRouter key; API health for live probe
-- **Acceptance:** root cause documented; `/search` healthy with embeddings or honest degraded mode (never fake green)
+- **Status:** `FAIL` (live probe **NOT_RUN** — API **502**) → programme **CCP-05** evidence filed
+- **Evidence:** `search-degraded-probe.md` (2026-07-20) — `/search`, `/healthz`, `/readyz` all **502**; `degraded` **NOT_AUDITABLE**; code path traced (`degraded = embedding is None and bool(trimmed)`); no code bug; hypotheses H1 API down (confirmed), H2 OpenRouter key (probable), H3 embeddings cron inactive (repo `active: false`, live not imported)
+- **Deps:** DEP-03 API recovery; DEP-02 embeddings cron; `OPENROUTER_API_KEY` (FOUNDER)
+- **Acceptance:** root cause documented ✓; live `/search` 200 + honest `degraded` boolean — **open** until post-DEP-03 re-probe
 - **Blocks browse-beta:** soft · **real-money:** no · **public_launch:** soft
 
 #### LIVE-13 — Paid-ticket exactly-once + event escrow
