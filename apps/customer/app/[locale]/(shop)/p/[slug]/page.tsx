@@ -461,6 +461,23 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           galleryIndicator: t("reviews.galleryIndicator"),
           starFilled: t("reviews.starFilled"),
           starEmpty: t("reviews.starEmpty"),
+          report: {
+            cta: t("reviews.report.cta"),
+            heading: t("reviews.report.heading"),
+            reasonLegend: t("reviews.report.reasonLegend"),
+            submit: t("reviews.report.submit"),
+            cancel: t("reviews.report.cancel"),
+            success: t("reviews.report.success"),
+            signedOut: t("reviews.report.signedOut"),
+            error: t("reviews.report.error"),
+            // Values are the raw `flags.reason` strings the admin queue displays.
+            reasons: [
+              { value: "spam", label: t("reviews.report.reasons.spam") },
+              { value: "offensive", label: t("reviews.report.reasons.offensive") },
+              { value: "misleading", label: t("reviews.report.reasons.misleading") },
+              { value: "other", label: t("reviews.report.reasons.other") },
+            ],
+          },
         }}
       />
     </Suspense>

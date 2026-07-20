@@ -32,6 +32,8 @@ export type ReportReviewLabels = {
 type ReportReviewProps = {
   reviewId: string;
   labels: ReportReviewLabels;
+  /** Start expanded — for callers that render their own trigger before lazy-mounting this. */
+  defaultOpen?: boolean;
 };
 
 type Status = "idle" | "submitting" | "done" | "error";
@@ -41,8 +43,8 @@ type Status = "idle" | "submitting" | "done" | "error";
  * queue (entity_type = "review") via the RLS-guarded reporter-insert policy — the same queue the
  * admin moderation surface reads. No bespoke reports table or endpoint.
  */
-export function ReportReview({ reviewId, labels }: ReportReviewProps) {
-  const [open, setOpen] = useState(false);
+export function ReportReview({ reviewId, labels, defaultOpen = false }: ReportReviewProps) {
+  const [open, setOpen] = useState(defaultOpen);
   const [status, setStatus] = useState<Status>("idle");
   const [reason, setReason] = useState<string>(labels.reasons[0]?.value ?? "");
   const [message, setMessage] = useState<string | undefined>();

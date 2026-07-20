@@ -311,6 +311,22 @@
     "starEmpty": "☆",
     "errors": {
       "rateLimited": "Trop de demandes d'avis. Veuillez patienter et réessayer."
+    },
+    "report": {
+      "cta": "Signaler l'avis",
+      "heading": "Signaler cet avis",
+      "reasonLegend": "Dites-nous pourquoi vous le signalez.",
+      "submit": "Envoyer le signalement",
+      "cancel": "Annuler",
+      "success": "Merci — notre équipe de modération va l'examiner.",
+      "signedOut": "Connectez-vous pour signaler un avis.",
+      "error": "Impossible d'envoyer le signalement. Veuillez réessayer.",
+      "reasons": {
+        "spam": "Spam ou publicité",
+        "offensive": "Offensant ou abusif",
+        "misleading": "Faux ou trompeur",
+        "other": "Autre raison"
+      }
     }
   }
 }

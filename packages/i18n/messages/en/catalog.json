@@ -311,6 +311,22 @@
     "starEmpty": "☆",
     "errors": {
       "rateLimited": "Too many review requests. Please wait and try again."
+    },
+    "report": {
+      "cta": "Report review",
+      "heading": "Report this review",
+      "reasonLegend": "Tell us why you are reporting it.",
+      "submit": "Submit report",
+      "cancel": "Cancel",
+      "success": "Thanks — our moderation team will take a look.",
+      "signedOut": "Sign in to report a review.",
+      "error": "Could not submit the report. Please try again.",
+      "reasons": {
+        "spam": "Spam or advertising",
+        "offensive": "Offensive or abusive",
+        "misleading": "Fake or misleading",
+        "other": "Something else"
+      }
     }
   }
 }

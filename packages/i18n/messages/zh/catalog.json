@@ -311,6 +311,22 @@
     "starEmpty": "☆",
     "errors": {
       "rateLimited": "评价请求过多。请稍候再试。"
+    },
+    "report": {
+      "cta": "举报评价",
+      "heading": "举报此评价",
+      "reasonLegend": "请告诉我们举报原因。",
+      "submit": "提交举报",
+      "cancel": "取消",
+      "success": "感谢反馈——我们的审核团队会尽快处理。",
+      "signedOut": "请登录后再举报评价。",
+      "error": "无法提交举报。请重试。",
+      "reasons": {
+        "spam": "垃圾信息或广告",
+        "offensive": "冒犯或辱骂内容",
+        "misleading": "虚假或误导",
+        "other": "其他原因"
+      }
     }
   }
 }

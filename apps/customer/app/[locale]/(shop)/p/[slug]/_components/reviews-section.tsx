@@ -2,8 +2,17 @@
 
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { ImageGallery, type GalleryImage } from "@vergeo/ui/src/media/image-gallery";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+
+import type { ReportReviewLabels } from "./report-review";
+
+// Loaded on demand (first tap on a report trigger) so the report form — and the
+// lazy Supabase browser client it pulls in — never join the PDP first-load JS.
+const ReportReview = dynamic(() => import("./report-review").then((mod) => mod.ReportReview), {
+  ssr: false,
+});
 
 export type ReviewRow = {
   id: string;
@@ -28,6 +37,7 @@ export type ReviewsSectionLabels = {
   galleryIndicator: string;
   starFilled: string;
   starEmpty: string;
+  report: ReportReviewLabels;
 };
 
 type ReviewsSectionProps = {
@@ -78,6 +88,8 @@ export function ReviewsSection({
   eligibleOrderId,
 }: ReviewsSectionProps) {
   const [lightbox, setLightbox] = useState<GalleryImage[] | null>(null);
+  // Review id whose ReportReview is mounted; the lazy chunk loads on first tap.
+  const [reportingId, setReportingId] = useState<string | null>(null);
 
   const writeHref = useMemo(() => {
     if (!eligibleOrderId) {
@@ -149,6 +161,17 @@ export function ReviewsSection({
                   <p className="text-text-2">{review.vendor_reply}</p>
                 </div>
               ) : null}
+              {reportingId === review.id ? (
+                <ReportReview reviewId={review.id} labels={labels.report} defaultOpen />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setReportingId(review.id)}
+                  className="inline-flex min-h-11 items-center text-xs font-medium text-text-2 underline"
+                >
+                  {labels.report.cta}
+                </button>
+              )}
             </li>
           ))}
         </ul>

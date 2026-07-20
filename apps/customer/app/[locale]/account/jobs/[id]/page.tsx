@@ -8,11 +8,23 @@ import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
 import { Spinner } from "@vergeo/ui/src/spinner";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { ServiceReviewForm } from "./_components/service-review-form";
+
+// Lifecycle panels load on demand (accept tap / accepted job) so they stay out
+// of the route's first-load JS.
+const AcceptFlow = dynamic(
+  () => import("./_components/accept-flow").then((mod) => mod.AcceptFlow),
+  { ssr: false },
+);
+const CompleteConfirm = dynamic(
+  () => import("./_components/complete-confirm").then((mod) => mod.CompleteConfirm),
+  { ssr: false },
+);
 
 type QuoteProvider = {
   vendor_id: string;
@@ -34,13 +46,30 @@ type QuoteItem = {
   provider: QuoteProvider | null;
 };
 
+type JobDetail = {
+  id: string;
+  status: string;
+};
+
 function getApiBaseUrl(): string {
   return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+}
+
+// Mirrors the server's default deposit math (service_deposit_pct config, default
+// 50%; half-up integer ngwee) for a display-only balance preview — the API
+// computes the authoritative amount on confirm.
+const DEFAULT_DEPOSIT_PCT = 50;
+
+function previewBalanceNgwee(totalNgwee: number): number {
+  return totalNgwee - Math.floor((totalNgwee * DEFAULT_DEPOSIT_PCT + 50) / 100);
 }
 
 function createQuotesClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
   return {
+    getJob(jobId: string): Promise<JobDetail> {
+      return client.request<JobDetail>(`/jobs/${jobId}`);
+    },
     listQuotes(jobId: string): Promise<{ items: QuoteItem[]; view: string }> {
       return client.request<{ items: QuoteItem[]; view: string }>(`/jobs/${jobId}/quotes`);
     },
@@ -62,10 +91,14 @@ export default function JobComparePage({ params }: PageProps) {
   const [jobId, setJobId] = useState("");
   const t = useTranslations("services.quotes");
   const tb = useTranslations("services.badges");
+  const ta = useTranslations("services.accept");
   const { session, loading: sessionLoading } = useSession();
+  const [job, setJob] = useState<JobDetail | null>(null);
   const [quotes, setQuotes] = useState<QuoteItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [acceptQuoteId, setAcceptQuoteId] = useState<string | null>(null);
+  const [completionConfirmed, setCompletionConfirmed] = useState(false);
   const [declineQuoteId, setDeclineQuoteId] = useState<string | null>(null);
   const [declineReason, setDeclineReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -86,7 +119,11 @@ export default function JobComparePage({ params }: PageProps) {
     }
     setLoading(true);
     try {
-      const response = await quotesClient.listQuotes(jobId);
+      const [jobDetail, response] = await Promise.all([
+        quotesClient.getJob(jobId),
+        quotesClient.listQuotes(jobId),
+      ]);
+      setJob(jobDetail);
       setQuotes(response.items);
       setError(null);
     } catch (err) {
@@ -137,6 +174,9 @@ export default function JobComparePage({ params }: PageProps) {
     return <p className="text-sm text-text-2">{t("authRequired")}</p>;
   }
 
+  const jobAcceptable = job?.status === "open" || job?.status === "quoted";
+  const acceptedQuote = quotes.find((quote) => quote.status === "accepted") ?? null;
+
   return (
     <section className="space-y-6">
       <header className="space-y-2">
@@ -145,6 +185,11 @@ export default function JobComparePage({ params }: PageProps) {
         </Link>
         <h2 className="font-display text-h2 text-display-ink">{t("compareTitle")}</h2>
         <p className="text-sm text-text-2">{t("compareIntro")}</p>
+        {job ? (
+          <p className="text-sm text-text-2">
+            {t("list.status", { status: t(`status.${job.status}`) })}
+          </p>
+        ) : null}
       </header>
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
@@ -193,6 +238,29 @@ export default function JobComparePage({ params }: PageProps) {
                     date: new Date(quote.expires_at).toLocaleDateString(locale),
                   })}
                 </p>
+              ) : null}
+
+              {jobAcceptable && quote.status === "submitted" ? (
+                acceptQuoteId === quote.id ? (
+                  <AcceptFlow
+                    locale={locale}
+                    jobId={jobId}
+                    quoteId={quote.id}
+                    vendorName={quote.provider?.display_name ?? t("unknownProvider")}
+                    totalNgwee={quote.amount_ngwee}
+                    onCancel={() => setAcceptQuoteId(null)}
+                  />
+                ) : (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    loadingLabel={ta("title")}
+                    disabled={submitting}
+                    onClick={() => setAcceptQuoteId(quote.id)}
+                  >
+                    {ta("title")}
+                  </Button>
+                )
               ) : null}
 
               {declineQuoteId === quote.id ? (
@@ -245,7 +313,23 @@ export default function JobComparePage({ params }: PageProps) {
         </div>
       )}
 
-      {jobId ? <ServiceReviewForm jobId={jobId} /> : null}
+      {job?.status === "accepted" && acceptedQuote ? (
+        <CompleteConfirm
+          jobId={jobId}
+          balanceNgwee={previewBalanceNgwee(acceptedQuote.amount_ngwee)}
+          providerMarked
+          onConfirmed={() => setCompletionConfirmed(true)}
+        />
+      ) : null}
+
+      {/* Keyed on the completion state so a just-confirmed job remounts the form,
+          whose eligibility refetch unlocks the review without a manual reload. */}
+      {jobId ? (
+        <ServiceReviewForm
+          key={`${job?.status ?? "loading"}-${completionConfirmed}`}
+          jobId={jobId}
+        />
+      ) : null}
     </section>
   );
 }
