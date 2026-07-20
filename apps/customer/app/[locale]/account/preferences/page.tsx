@@ -36,6 +36,12 @@ export default async function AccountPreferencesPage({ params }: PageProps) {
         accessToken={accessToken}
         initialPrefs={preferences.notif_prefs}
         labels={{
+          themeTitle: t("preferences.themeTitle"),
+          themeDescription: t("preferences.themeDescription"),
+          themeLight: t("preferences.themeLight"),
+          themeDark: t("preferences.themeDark"),
+          themeSystem: t("preferences.themeSystem"),
+          notificationsTitle: t("preferences.notificationsTitle"),
           whatsapp: t("preferences.whatsapp"),
           whatsappHelp: t("preferences.whatsappHelp"),
           sms: t("preferences.sms"),

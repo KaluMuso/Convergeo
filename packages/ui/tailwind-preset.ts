@@ -26,6 +26,7 @@ export function buildTailwindTheme(): NonNullable<Config["theme"]> {
       bg: colors.bg,
       "bg-2": colors.bg2,
       surface: colors.surface,
+      "surface-elevated": colors.surfaceElevated,
       border: colors.border,
       panel: colors.panel,
       "panel-2": colors.panel2,
@@ -46,6 +47,9 @@ export function buildTailwindTheme(): NonNullable<Config["theme"]> {
       danger: colors.danger,
       warning: colors.warning,
       info: colors.info,
+      "on-danger": colors.onDanger,
+      price: colors.price,
+      discount: colors.discount,
       cat: {
         beauty: colors.catBeauty,
         health: colors.catHealth,

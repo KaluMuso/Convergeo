@@ -1,8 +1,6 @@
-"use client";
-
 import type { TextareaHTMLAttributes } from "react";
 
-import type { FieldSize } from "./input";
+import { cx, fieldBaseClasses, fieldRadiusClass, type FieldSize } from "./field-styles";
 
 export interface TextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "size"> {
   size?: FieldSize;
@@ -15,10 +13,9 @@ const sizeClasses: Record<FieldSize, string> = {
   lg: "min-h-[6.5rem] px-4 py-3 text-body",
 };
 
-function cx(...parts: Array<string | false | undefined>): string {
-  return parts.filter(Boolean).join(" ");
-}
-
+/**
+ * Standard textarea. RSC-safe (no hooks).
+ */
 export function Textarea({
   size = "md",
   error = false,
@@ -31,17 +28,7 @@ export function Textarea({
     <textarea
       disabled={disabled}
       aria-invalid={error ? true : ariaInvalid}
-      className={cx(
-        "w-full resize-y rounded bg-surface font-body text-text",
-        "border border-border placeholder:text-text-3",
-        "transition-[border-color,box-shadow] duration-fast ease-std",
-        "motion-reduce:transition-none",
-        "focus-visible:outline-none focus-visible:shadow-focusRing",
-        "disabled:cursor-not-allowed disabled:bg-bg-2 disabled:text-text-3",
-        error && "border-danger",
-        sizeClasses[size],
-        className,
-      )}
+      className={cx(fieldBaseClasses, fieldRadiusClass, "resize-y", sizeClasses[size], className)}
       {...rest}
     />
   );

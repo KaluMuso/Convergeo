@@ -3,7 +3,7 @@
   "nav": {
     "profile": "Profil",
     "addresses": "Adresses",
-    "preferences": "Notifications",
+    "preferences": "Préférences",
     "privacy": "Données et confidentialité",
     "business": "Mode entreprise"
   },
@@ -91,8 +91,14 @@
     "error": "Impossible d'enregistrer l'adresse. Veuillez réessayer."
   },
   "preferences": {
-    "title": "Préférences de notification",
-    "description": "Choisissez comment Vergeo5 vous contacte au sujet des commandes, des billets et des mises à jour du compte.",
+    "title": "Préférences",
+    "description": "Gérez l'affichage et la façon dont Vergeo5 vous contacte au sujet des commandes, des billets et des mises à jour du compte.",
+    "themeTitle": "Affichage",
+    "themeDescription": "Choisissez clair, sombre, ou suivre l'appareil. Par défaut : système.",
+    "themeLight": "Clair",
+    "themeDark": "Sombre",
+    "themeSystem": "Système",
+    "notificationsTitle": "Notifications",
     "whatsapp": "WhatsApp",
     "whatsappHelp": "Mises à jour des commandes et alertes de livraison sur WhatsApp.",
     "sms": "SMS",

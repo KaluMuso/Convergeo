@@ -14,7 +14,8 @@
     "label": "Thème",
     "light": "Clair",
     "dark": "Sombre",
-    "system": "Système"
+    "system": "Système",
+    "displayPreferences": "Préférences d'affichage"
   },
   "greeting": "Bonjour, {name} !",
   "offline": {

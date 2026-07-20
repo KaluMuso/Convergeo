@@ -22,7 +22,7 @@ describe("PriceBlock", () => {
   it("renders struck old price and savings chip", () => {
     render(<PriceBlock ngwee={100000} oldNgwee={150000} savingsLabel="Save K500.00" />);
     expect(screen.getByText("K1,000.00")).toBeInTheDocument();
-    expect(screen.getByText("K1,500.00")).toHaveStyle({ textDecoration: "line-through" });
+    expect(screen.getByText("K1,500.00").className).toMatch(/line-through/);
     expect(screen.getByTestId("price-savings")).toHaveTextContent("Save K500.00");
   });
 });

@@ -13,6 +13,11 @@ const variants: BadgeVariant[] = [
   "free",
   "new",
   "featured",
+  "sale",
+  "in_stock",
+  "out_of_stock",
+  "sponsored",
+  "sample",
 ];
 
 describe("Badge", () => {
@@ -20,17 +25,16 @@ describe("Badge", () => {
     cleanup();
   });
 
-  it.each(variants)("maps %s variant to token colors", (variant) => {
+  it.each(variants)("renders %s variant with token classes", (variant) => {
     render(<Badge variant={variant} label={`Label ${variant}`} />);
     const badge = screen.getByTestId(`badge-${variant}`);
     expect(badge).toHaveTextContent(`Label ${variant}`);
-    expect(badge).toHaveStyle({ backgroundColor: expect.any(String) });
+    expect(badge).toHaveAttribute("data-variant", variant);
   });
 
-  it("uses danger token for sold_out", () => {
+  it("uses danger token classes for sold_out", () => {
     render(<Badge variant="sold_out" label="Sold out" />);
-    expect(screen.getByTestId("badge-sold_out")).toHaveStyle({
-      backgroundColor: "rgb(192, 57, 43)",
-    });
+    expect(screen.getByTestId("badge-sold_out").className).toMatch(/bg-danger/);
+    expect(screen.getByTestId("badge-sold_out").className).toMatch(/text-on-danger/);
   });
 });

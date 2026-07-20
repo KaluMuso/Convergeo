@@ -6,6 +6,7 @@ import {
   robotsForLocalePublication,
   type Locale,
 } from "@vergeo/i18n";
+import { fontVariables } from "@vergeo/ui/fonts";
 import { Footer } from "@vergeo/ui/src/footer";
 import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import { ThemeScript } from "@vergeo/ui/src/theme-script";
@@ -152,13 +153,14 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   ];
 
   return (
-    <html lang={locale}>
+    <html lang={locale} className={fontVariables()}>
       <head>
         {/* Pre-paint theme bootstrap — sets <html data-theme> before first paint
-            so the token palette (and body bg/text) never flash. */}
+            so the token palette (and body bg/text) never flash. Default choice
+            is system (ThemeScript collapses missing/invalid storage to OS). */}
         <ThemeScript />
       </head>
-      <body className="flex min-h-dvh flex-col antialiased">
+      <body className="flex min-h-dvh flex-col font-body antialiased">
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
             {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
@@ -175,6 +177,17 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
               columns={footerColumns}
               paymentNote={tLegal("footer.paymentNote")}
               LinkComponent={Link}
+              trailing={
+                <p className="m-0 text-micro" style={{ color: "var(--panel-muted)" }}>
+                  <Link
+                    href={`/${locale}/account/preferences`}
+                    className="inline-flex min-h-11 items-center underline-offset-2 hover:underline"
+                    style={{ color: "var(--panel-muted)" }}
+                  >
+                    {tCommon("theme.displayPreferences")}
+                  </Link>
+                </p>
+              }
             />
           </NextIntlClientProvider>
         </ThemeProvider>

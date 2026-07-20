@@ -1,7 +1,16 @@
-import { tokens } from "@vergeo/ui/tokens";
-
 export type BadgeVariant =
-  "sold_out" | "promotion" | "public" | "selling_fast" | "free" | "new" | "featured";
+  | "sold_out"
+  | "promotion"
+  | "public"
+  | "selling_fast"
+  | "free"
+  | "new"
+  | "featured"
+  | "sale"
+  | "in_stock"
+  | "out_of_stock"
+  | "sponsored"
+  | "sample";
 
 export type BadgeProps = {
   variant: BadgeVariant;
@@ -9,35 +18,39 @@ export type BadgeProps = {
   className?: string;
 };
 
-const variantColors: Record<BadgeVariant, { bg: string; text: string }> = {
-  sold_out: { bg: tokens.colors.danger, text: tokens.colors.surface },
-  promotion: { bg: tokens.colors.accent, text: tokens.colors.surface },
-  public: { bg: tokens.colors.info, text: tokens.colors.surface },
-  selling_fast: { bg: tokens.colors.warning, text: tokens.colors.text },
-  free: { bg: tokens.colors.success, text: tokens.colors.surface },
-  new: { bg: tokens.colors.primary, text: tokens.colors.surface },
-  featured: { bg: tokens.colors.primaryDeep, text: tokens.colors.surface },
+/**
+ * Token-driven badge colours via CSS variables so dark mode remaps correctly.
+ * Avoids baking light-mode hex from tokens.ts into inline styles.
+ */
+const variantTokenClasses: Record<BadgeVariant, string> = {
+  sold_out: "bg-danger text-on-danger",
+  promotion: "bg-accent text-surface",
+  public: "bg-info text-surface",
+  selling_fast: "bg-warning text-text",
+  free: "bg-success text-surface",
+  new: "bg-primary text-[var(--primary-btn-fg)]",
+  featured: "bg-primary-deep text-surface",
+  sale: "bg-discount text-on-danger",
+  in_stock: "bg-success text-surface",
+  out_of_stock: "bg-danger text-on-danger",
+  sponsored: "bg-primary-tint text-primary",
+  sample: "bg-warning text-text",
 };
 
-export function Badge({ variant, label, className }: BadgeProps) {
-  const colors = variantColors[variant];
+function cx(...parts: Array<string | false | undefined>): string {
+  return parts.filter(Boolean).join(" ");
+}
 
+export function Badge({ variant, label, className }: BadgeProps) {
   return (
     <span
-      className={className}
+      className={cx(
+        "inline-block rounded-pill px-2.5 py-0.5 text-micro font-semibold uppercase tracking-wide leading-snug",
+        variantTokenClasses[variant],
+        className,
+      )}
       data-testid={`badge-${variant}`}
-      style={{
-        display: "inline-block",
-        padding: "2px 10px",
-        borderRadius: "var(--r-pill)",
-        fontSize: "var(--fs-micro)",
-        fontWeight: 600,
-        letterSpacing: "0.04em",
-        textTransform: "uppercase",
-        backgroundColor: colors.bg,
-        color: colors.text,
-        lineHeight: 1.4,
-      }}
+      data-variant={variant}
     >
       {label}
     </span>
