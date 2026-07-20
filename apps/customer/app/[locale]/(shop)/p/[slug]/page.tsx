@@ -461,6 +461,22 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           galleryIndicator: t("reviews.galleryIndicator"),
           starFilled: t("reviews.starFilled"),
           starEmpty: t("reviews.starEmpty"),
+          report: {
+            cta: t("reviews.report.cta"),
+            heading: t("reviews.report.heading"),
+            reasonLegend: t("reviews.report.reasonLegend"),
+            submit: t("reviews.report.submit"),
+            cancel: t("reviews.report.cancel"),
+            success: t("reviews.report.success"),
+            signedOut: t("reviews.report.signedOut"),
+            error: t("reviews.report.error"),
+            reasons: [
+              { value: "spam", label: t("reviews.report.reasons.spam") },
+              { value: "abuse", label: t("reviews.report.reasons.abuse") },
+              { value: "private_info", label: t("reviews.report.reasons.privateInfo") },
+              { value: "not_relevant", label: t("reviews.report.reasons.notRelevant") },
+            ],
+          },
         }}
       />
     </Suspense>

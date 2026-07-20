@@ -336,6 +336,22 @@
     "loading": "Chargement des avis…",
     "starFilled": "★",
     "starEmpty": "☆",
+    "report": {
+      "cta": "Signaler",
+      "heading": "Signaler cet avis",
+      "reasonLegend": "Dites-nous ce qu'il faut vérifier.",
+      "submit": "Envoyer le signalement",
+      "cancel": "Annuler",
+      "success": "Merci — notre équipe de modération va l'examiner.",
+      "signedOut": "Connectez-vous pour signaler un avis.",
+      "error": "Impossible d'envoyer ce signalement. Veuillez réessayer.",
+      "reasons": {
+        "spam": "Spam ou publicité",
+        "abuse": "Contenu abusif ou haineux",
+        "privateInfo": "Partage d'informations privées",
+        "notRelevant": "Sans rapport avec ce produit"
+      }
+    },
     "errors": {
       "rateLimited": "Trop de demandes d'avis. Veuillez patienter et réessayer."
     }

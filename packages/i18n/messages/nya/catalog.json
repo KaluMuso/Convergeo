@@ -224,6 +224,24 @@
       "filtersActive": "Ma-filters (yogwira)"
     }
   },
+  "reviews": {
+    "report": {
+      "cta": "Nenani",
+      "heading": "Nenani za review iyi",
+      "reasonLegend": "Tiuzeni zomwe ziyenera kuonedwa.",
+      "submit": "Tumizani report",
+      "cancel": "Lekani",
+      "success": "Zikomo — team ya moderation idzaiona.",
+      "signedOut": "Lowani kuti munene za review.",
+      "error": "Sitinathe kutumiza report iyi. Yesaninso.",
+      "reasons": {
+        "spam": "Spam kapena ma-adverts",
+        "abuse": "Mawu onyoza kapena a chidani",
+        "privateInfo": "Ikugawana zinthu za private",
+        "notRelevant": "Sikugwirizana ndi product iyi"
+      }
+    }
+  },
   "returnableBadge": {
     "label": "Itha kubwezeredwa mkati mwa masiku {days}"
   }

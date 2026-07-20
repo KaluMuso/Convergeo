@@ -336,6 +336,22 @@
     "loading": "正在加载评价…",
     "starFilled": "★",
     "starEmpty": "☆",
+    "report": {
+      "cta": "举报",
+      "heading": "举报此评价",
+      "reasonLegend": "告诉我们需要核查的内容。",
+      "submit": "提交举报",
+      "cancel": "取消",
+      "success": "谢谢——我们的审核团队会查看。",
+      "signedOut": "请登录后举报评价。",
+      "error": "无法提交此举报。请重试。",
+      "reasons": {
+        "spam": "垃圾信息或广告",
+        "abuse": "辱骂或仇恨内容",
+        "privateInfo": "泄露私人信息",
+        "notRelevant": "与此商品无关"
+      }
+    },
     "errors": {
       "rateLimited": "评价请求过多。请稍候再试。"
     }
