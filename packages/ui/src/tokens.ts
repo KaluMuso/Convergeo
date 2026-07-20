@@ -49,7 +49,8 @@ export const tokens = {
     border: "rgba(255,255,255,0.10)",
     text: "#F2EDE6",
     text2: "#B0A99F",
-    text3: "#8A837A",
+    /** Raised for AA on dark surface (~4.76:1); was #8A837A (~4.34:1). */
+    text3: "#918A80",
     displayInk: "#F2EDE6",
     primary: "#7AA0D4",
     primaryDeep: "#5A82B8",
@@ -120,7 +121,11 @@ export const tokens = {
 export type Tokens = typeof tokens;
 
 /** Alpha-tint recipe for tag pills: bg @10%, border @20%, text = base color. */
-export function tagTint(hex: string): { bg: string; border: string; text: string } {
+export function tagTint(hex: string): {
+  bg: string;
+  border: string;
+  text: string;
+} {
   return {
     bg: `${hex}1A`,
     border: `${hex}33`,
@@ -130,10 +135,26 @@ export function tagTint(hex: string): { bg: string; border: string; text: string
 
 /** Documented WCAG AA contrast pairs (normal text ≥4.5:1). */
 export const contrastPairs = [
-  { name: "text-on-ground", foreground: tokens.colors.text, background: tokens.colors.bg },
-  { name: "text-on-surface", foreground: tokens.colors.text, background: tokens.colors.surface },
-  { name: "text-2-on-ground", foreground: tokens.colors.text2, background: tokens.colors.bg },
-  { name: "text-3-on-ground", foreground: tokens.colors.text3, background: tokens.colors.bg },
+  {
+    name: "text-on-ground",
+    foreground: tokens.colors.text,
+    background: tokens.colors.bg,
+  },
+  {
+    name: "text-on-surface",
+    foreground: tokens.colors.text,
+    background: tokens.colors.surface,
+  },
+  {
+    name: "text-2-on-ground",
+    foreground: tokens.colors.text2,
+    background: tokens.colors.bg,
+  },
+  {
+    name: "text-3-on-ground",
+    foreground: tokens.colors.text3,
+    background: tokens.colors.bg,
+  },
   {
     name: "display-ink-on-ground",
     foreground: tokens.colors.displayInk,
@@ -159,8 +180,16 @@ export const contrastPairs = [
     foreground: tokens.colors.panelMuted,
     background: tokens.colors.panel,
   },
-  { name: "success-on-ground", foreground: tokens.colors.success, background: tokens.colors.bg },
-  { name: "danger-on-ground", foreground: tokens.colors.danger, background: tokens.colors.bg },
+  {
+    name: "success-on-ground",
+    foreground: tokens.colors.success,
+    background: tokens.colors.bg,
+  },
+  {
+    name: "danger-on-ground",
+    foreground: tokens.colors.danger,
+    background: tokens.colors.bg,
+  },
   {
     name: "on-danger-on-danger",
     foreground: tokens.colors.onDanger,
@@ -174,6 +203,16 @@ export const contrastPairs = [
   {
     name: "dark-text-2-on-bg",
     foreground: tokens.darkColors.text2,
+    background: tokens.darkColors.bg,
+  },
+  {
+    name: "dark-text-3-on-surface",
+    foreground: tokens.darkColors.text3,
+    background: tokens.darkColors.surface,
+  },
+  {
+    name: "dark-text-3-on-bg",
+    foreground: tokens.darkColors.text3,
     background: tokens.darkColors.bg,
   },
   {

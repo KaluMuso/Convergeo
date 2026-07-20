@@ -10,7 +10,9 @@ n8n runs as a container in `infra/docker-compose.yml` and is exposed **only** be
 
 ## Workflows
 
-Workflow JSON exports will live under `infra/n8n/workflows/` in later pebbles (M14+). At M01-P06 we only commit the container + routing.
+Importable workflow JSON lives in `infra/n8n/*.json` (registry: `docs/ops/n8n-workflows.md`).
+Database backup: `backup.json` + schedule notes in `backup-schedule.md` — see
+`docs/ops/backup-runbook.md` (CODE_COMPLETE; G7 still needs live dump + restore proof).
 
 ## Security notes
 

@@ -68,11 +68,18 @@ function subscribe(listener: () => void): () => void {
 
 function getSnapshot(): string {
   ensureHydrated();
-  return [...store.slugs].sort().join("\0");
+  return [...store.slugs].join("\0");
 }
 
 function getServerSnapshot(): string {
   return "";
+}
+
+function parseSlugs(snapshot: string): string[] {
+  if (!snapshot) {
+    return [];
+  }
+  return snapshot.split("\0").filter(Boolean);
 }
 
 /** Test helper — clears in-memory store between vitest cases. */
@@ -82,8 +89,21 @@ export function resetLocalWishlistStoreForTests(): void {
   emit();
 }
 
+export function removeWishlistSlug(productSlug: string): void {
+  ensureHydrated();
+  if (!store.slugs.has(productSlug)) {
+    return;
+  }
+  const next = new Set(store.slugs);
+  next.delete(productSlug);
+  store.slugs = next;
+  writeSlugs(next);
+  emit();
+}
+
 /**
  * Browser-local wishlist by product slug. No server API yet — honest client persistence only.
+ * Saving an item does not reserve stock or price.
  */
 export function useLocalWishlist(productSlug: string | null): {
   isWishlisted: boolean;
@@ -97,9 +117,7 @@ export function useLocalWishlist(productSlug: string | null): {
     setMounted(true);
   }, []);
 
-  const isWishlisted = Boolean(
-    productSlug && (snapshot === productSlug || snapshot.split("\0").includes(productSlug)),
-  );
+  const isWishlisted = Boolean(productSlug && parseSlugs(snapshot).includes(productSlug));
 
   const toggleWishlist = useCallback(() => {
     if (!productSlug) {
@@ -121,5 +139,34 @@ export function useLocalWishlist(productSlug: string | null): {
     isWishlisted,
     toggleWishlist,
     enabled: mounted && Boolean(productSlug),
+  };
+}
+
+/** Ordered wishlist slugs for the Saved items page (insertion order preserved). */
+export function useLocalWishlistSlugs(): {
+  slugs: string[];
+  hydrated: boolean;
+  remove: (slug: string) => void;
+  clear: () => void;
+} {
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const clear = useCallback(() => {
+    ensureHydrated();
+    store.slugs = new Set();
+    writeSlugs(store.slugs);
+    emit();
+  }, []);
+
+  return {
+    slugs: parseSlugs(snapshot),
+    hydrated: mounted,
+    remove: removeWishlistSlug,
+    clear,
   };
 }

@@ -29,7 +29,9 @@
     "status": "Status yali: {status}",
     "total": "Yonse {amount}",
     "vendorOrder": "Ukufuma ku {vendor}",
-    "viewOrder": "Loleni order"
+    "viewOrder": "Loleni order",
+    "paymentPending": "Payment iletekele",
+    "paymentPendingHint": "Payment tasuminishwa — tefi order iyapayilwa."
   },
   "status": {
     "cancelled": "Yafutwa",

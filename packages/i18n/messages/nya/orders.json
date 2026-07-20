@@ -29,7 +29,9 @@
     "status": "Status ndi: {status}",
     "total": "Zonse {amount}",
     "vendorOrder": "Kuchokera kwa {vendor}",
-    "viewOrder": "Onani order"
+    "viewOrder": "Onani order",
+    "paymentPending": "Payment ikudikira",
+    "paymentPendingHint": "Payment sinatsimikizidwe — si order yolipidwa."
   },
   "status": {
     "cancelled": "Yacotsedwa",

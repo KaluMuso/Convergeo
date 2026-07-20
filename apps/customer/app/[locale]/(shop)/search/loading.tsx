@@ -7,7 +7,7 @@ import { Skeleton } from "@vergeo/ui/src/skeleton";
  */
 export default function SearchLoading() {
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-4 motion-fade sm:py-6" aria-hidden="true">
+    <div className="mx-auto w-full max-w-3xl py-4 motion-fade sm:py-6" aria-hidden="true">
       <header className="mb-4 space-y-3">
         <Skeleton shape="line" width="9rem" height="1.6rem" />
         <Skeleton height="2.75rem" />
@@ -31,6 +31,6 @@ export default function SearchLoading() {
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

@@ -378,6 +378,12 @@ export type CheckoutShellLabels = {
     consentRequired: string;
     placeOrder: string;
     loading: string;
+    placingOrder: string;
+    placeOrderUnavailable: string;
+    whatHappensNext: string;
+    nextMomo: string;
+    nextCard: string;
+    nextCod: string;
   };
   countdown: Omit<CountdownLabels, "ariaLive"> & { ariaLiveTemplate: string };
   reservationExpired: string;
@@ -469,6 +475,9 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       momo: messages.payment.momo,
       card: messages.payment.card,
       cod: messages.payment.cod,
+      momoHelp: messages.payment.momoHelp,
+      cardHelp: messages.payment.cardHelp,
+      codHelp: messages.payment.codHelp,
       railMtn: messages.payment.railMtn,
       railAirtel: messages.payment.railAirtel,
       payerLabel: messages.payment.payerLabel,
@@ -478,6 +487,9 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       nationalNumber: messages.payment.nationalNumber,
       cardExplainer: messages.payment.cardExplainer,
       codIneligible: (cap) => fillTemplate(messages.payment.codIneligibleTemplate, { cap }),
+      codUnavailableTitle: messages.payment.codUnavailableTitle,
+      selected: messages.payment.selected,
+      unavailable: messages.payment.unavailable,
       continue: messages.payment.continue,
       loading: messages.payment.loading,
       required: messages.payment.required,
@@ -511,6 +523,12 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       consentRequired: messages.review.consentRequired,
       placeOrder: messages.review.placeOrder,
       loading: messages.review.loading,
+      placingOrder: messages.review.placingOrder,
+      placeOrderUnavailable: messages.review.placeOrderUnavailable,
+      whatHappensNext: messages.review.whatHappensNext,
+      nextMomo: messages.review.nextMomo,
+      nextCard: messages.review.nextCard,
+      nextCod: messages.review.nextCod,
     },
     countdown: {
       label: messages.countdown.label,

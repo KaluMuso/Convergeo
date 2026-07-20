@@ -33,25 +33,33 @@ tiny `"use client"` loader (`app/sentry-init.tsx`) that, after hydration and onl
 DSN is present, does `import('@sentry/nextjs')` — landing the SDK in an **async chunk**,
 never in a route's first-load manifest. `sentry.client.config.ts` uses `import type` only
 (zero runtime SDK), so importing it into the loader costs ~nothing. Net first-load delta:
-~flat (within the bundle-guard regression tolerance). SSR/server-side Next errors are not
-captured (acceptable for launch — the FastAPI backend has full Sentry coverage).
+~flat (within the bundle-guard regression tolerance). Server-side Next errors are captured
+via `instrumentation.ts` (Node runtime only) using `SENTRY_DSN` or
+`NEXT_PUBLIC_SENTRY_DSN` — still without `withSentryConfig`.
 
 **PII scrubbing (the core invariant).** Both the API and every client run the same
 scrubber on `before_send` (event body) AND `before_breadcrumb` (every breadcrumb):
 
 - **Key-based redaction** — any key whose name contains `phone`, `msisdn`, `mobile`,
   `tel`, `email`, `address`, `street`, `landmark`, `gps`, `latitude`, `longitude`,
-  `coordinate`, `token`, `authorization`, `password`, `secret`, `api_key`, `otp`, or
-  `pin` has its whole value replaced with `[redacted]`.
+  `coordinate`, `token`, `authorization`, `password`, `secret`, `api_key`, `otp`,
+  `pin`, `cookie`, `refresh`, `access_token`, `service_role`, `signature`,
+  `payment_payload`, `card_number`, `pan`, `cvv`, or `lenco` has its whole value
+  replaced with `[redacted]`.
 - **Pattern-based masking** inside free text — emails → `[redacted-email]`, Zambian /
   E.164 phone numbers → `[redacted-phone]`, bearer tokens & JWTs → `[redacted-token]`.
 - `send_default_pii` / `sendDefaultPii` is left **off** so the SDK never attaches request
   bodies, headers, cookies, or user PII on its own.
 
-The API scrubber is unit-proven in `services/api/tests/test_sentry_scrubber.py`
-(phone / address / email / token masked in both event and breadcrumb).
+The API scrubber is unit-proven in `services/api/tests/test_sentry_scrubber.py`; the
+shared TS scrubber in `@vergeo/observability` has matching vitest coverage.
 
-**Release & source maps.** `release` = git SHA (`SENTRY_RELEASE` / `NEXT_PUBLIC_SENTRY_RELEASE`).
+**Tags.** API middleware attaches `application=api`, `request_id`, `route`, and
+`release_sha`. Browser/server inits set `application` + `release_sha`. Opaque
+`ord-*` / `pay-*` IDs may be tagged when policy-compliant — never phones/emails.
+
+**Release & source maps.** `release` = immutable git SHA (`SENTRY_RELEASE` /
+`NEXT_PUBLIC_SENTRY_RELEASE` / `GIT_SHA` / `VERCEL_GIT_COMMIT_SHA`).
 Because `withSentryConfig` is intentionally NOT used (it forces the SDK into first-load),
 client source-map upload runs as a **separate, gated deploy step** rather than at build
 time. On the deploy host, when `SENTRY_AUTH_TOKEN` (+ `SENTRY_ORG`, `SENTRY_PROJECT`) are
@@ -129,9 +137,15 @@ Monitors and the exact setup transcript live in
 [`infra/n8n/uptime-alert.json`](../../infra/n8n/uptime-alert.json):
 
 ```
-UptimeRobot (monitor trips) → webhook → n8n "Uptime Downtime Founder Alert"
+UptimeRobot (monitor trips) → webhook + X-Uptime-Secret
+  → n8n "Require Uptime Secret" (fail-closed if missing/wrong/empty env)
   → (alertType == down) → WhatsApp Cloud API (template: ops_uptime_alert) → founder
 ```
+
+**Webhook authentication (VD-P05 / Prompt 9).** The n8n workflow requires header
+`X-Uptime-Secret` (or `x-uptime-secret`) to equal `$env.UPTIME_WEBHOOK_SECRET`. The secret
+is env-only — never committed. Unauthenticated / wrong-secret POSTs short-circuit **before**
+any WhatsApp call. UptimeRobot alert contacts must send that custom header.
 
 The n8n workflow calls the **WhatsApp Cloud API directly** (not the notification outbox /
 our own API), on purpose: an outage of the API or its database must not swallow its own
@@ -140,13 +154,41 @@ paging branch — recovery is confirmed from the UptimeRobot dashboard.
 
 ---
 
+## 5. Protected test-event paths
+
+Use these only after DSNs are set. Never leave them open on production without both a
+secret **and** an explicit enable flag.
+
+| Surface  | Path                                  | Auth                                            | Production gate                               |
+| -------- | ------------------------------------- | ----------------------------------------------- | --------------------------------------------- |
+| API      | `POST /internal/sentry-test`          | `X-Internal-Token: $INTERNAL_SENTRY_TEST_TOKEN` | 404 unless `ENABLE_SENTRY_TEST_ENDPOINT=true` |
+| customer | `POST /api/observability/sentry-test` | `X-Sentry-Test-Secret: $SENTRY_TEST_SECRET`     | same (`ENABLE_SENTRY_TEST_ENDPOINT=true`)     |
+| vendor   | `POST /api/observability/sentry-test` | same                                            | same                                          |
+| admin    | `POST /api/observability/sentry-test` | same                                            | same                                          |
+
+Each response returns `{ok, application, event_id, environment, release}` (no DSN). Events
+are tagged `test_event=true`, `application=<surface>`, `release_sha=<git sha>`.
+
+Shared browser/server scrubbing lives in `@vergeo/observability` (mirrors the API scrubber).
+Server Next.js init uses `instrumentation.ts` + optional server-only `SENTRY_DSN` (never
+expose `SENTRY_AUTH_TOKEN` to the browser).
+
+---
+
 ## Founder actions (gate live capture / alerts)
 
-1. **Sentry** — create org + 4 projects (api, customer, vendor, admin); set `SENTRY_DSN`
-   (API) and `NEXT_PUBLIC_SENTRY_DSN` (per web app) in env; set `SENTRY_AUTH_TOKEN` +
-   `SENTRY_ORG` + `SENTRY_PROJECT` on the deploy env to enable source-map upload.
+1. **Sentry** — under org `convergeo-w2`, create projects `vergeo5-customer`,
+   `vergeo5-vendor`, `vergeo5-admin`, `vergeo5-api` (agent create may be org-permission
+   blocked). Set `SENTRY_DSN` (API host) and per-app `NEXT_PUBLIC_SENTRY_DSN` on Vercel;
+   set `SENTRY_ENVIRONMENT` / `NEXT_PUBLIC_SENTRY_ENVIRONMENT` and release SHAs
+   (`SENTRY_RELEASE` / `NEXT_PUBLIC_SENTRY_RELEASE` / `GIT_SHA`). Optional:
+   `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT` for gated source-map upload.
 2. **UptimeRobot** — create the monitors in `infra/uptimerobot.md`; point their webhook
-   alert contact at the n8n `uptime-alert` webhook URL.
-3. **WhatsApp** — register the `ops_uptime_alert` utility template (founder action F5) and
+   alert contact at the n8n `uptime-alert` URL **with** header `X-Uptime-Secret`.
+3. **n8n** — set `UPTIME_WEBHOOK_SECRET`, WhatsApp Cloud vars, import/activate
+   `uptime-alert.json` only after the secret is set.
+4. **WhatsApp** — register the `ops_uptime_alert` utility template (founder action F5) and
    set `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_CLOUD_API_TOKEN`, `FOUNDER_WHATSAPP_TO` in the
    n8n environment.
+5. **Verify** — fire one test event per surface; force one controlled uptime alert; record
+   evidence (never commit DSNs). G6 stays FAIL until both are demonstrated.

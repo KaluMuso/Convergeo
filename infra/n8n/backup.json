@@ -1,0 +1,647 @@
+{
+  "name": "Vergeo5 \u2014 Database Backup",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-nightly",
+      "name": "Cron Nightly Dump",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 240]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 4 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-watchdog",
+      "name": "Cron Missed-Schedule Watchdog",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 520]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "backup-manual",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-manual",
+      "name": "Webhook Manual Backup",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 800],
+      "webhookId": "vergeo5-backup-manual"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "auth-ok",
+              "leftValue": "={{ (() => { const a = String($json.headers?.['x-backup-secret'] ?? $json.headers?.['X-Backup-Secret'] ?? ''); const b = String($env.BACKUP_WEBHOOK_SECRET ?? ''); if (!a || !b) return false; const ba = Buffer.from(a, 'utf8'); const bb = Buffer.from(b, 'utf8'); if (ba.length !== bb.length) return false; const crypto = require('crypto'); return crypto.timingSafeEqual(ba, bb); })() }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-manual-auth",
+      "name": "IF Manual Auth OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [480, 800]
+    },
+    {
+      "parameters": {
+        "authentication": "privateKey",
+        "command": "set -euo pipefail; REPO=\"${VERGEO5_REPO_ROOT:-/home/opc/vergeo5}\"; cd \"$REPO\"; set -a; [ -f infra/.env ] && . ./infra/.env; [ -f .env ] && . ./.env; set +a; export BACKUP_MODE=\"${BACKUP_MODE:-scheduled}\"; bash \"infra/scripts/db-dump.sh\"",
+        "options": {}
+      },
+      "id": "ssh-nightly",
+      "name": "SSH Nightly Dump",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [720, 240],
+      "credentials": {
+        "sshPrivateKey": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 OCI Host SSH"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "authentication": "privateKey",
+        "command": "set -euo pipefail; REPO=\"${VERGEO5_REPO_ROOT:-/home/opc/vergeo5}\"; cd \"$REPO\"; set -a; [ -f infra/.env ] && . ./infra/.env; [ -f .env ] && . ./.env; set +a; bash \"infra/scripts/db-backup-watchdog.sh\"",
+        "options": {}
+      },
+      "id": "ssh-watchdog",
+      "name": "SSH Watchdog",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [720, 520],
+      "credentials": {
+        "sshPrivateKey": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 OCI Host SSH"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "authentication": "privateKey",
+        "command": "set -euo pipefail; REPO=\"${VERGEO5_REPO_ROOT:-/home/opc/vergeo5}\"; cd \"$REPO\"; set -a; [ -f infra/.env ] && . ./infra/.env; [ -f .env ] && . ./.env; set +a; export BACKUP_MODE=\"${BACKUP_MODE:-manual}\"; bash \"infra/scripts/db-dump.sh\"",
+        "options": {}
+      },
+      "id": "ssh-manual",
+      "name": "SSH Manual Dump",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [720, 800],
+      "credentials": {
+        "sshPrivateKey": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 OCI Host SSH"
+        }
+      },
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ssh-ok",
+              "leftValue": "={{ $json.code !== undefined ? Number($json.code) : ($json.error ? 1 : 0) }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-nightly-ok",
+      "name": "IF Nightly OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [960, 240]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ssh-ok",
+              "leftValue": "={{ $json.code !== undefined ? Number($json.code) : ($json.error ? 1 : 0) }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-watchdog-ok",
+      "name": "IF Watchdog OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [960, 520]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ssh-ok",
+              "leftValue": "={{ $json.code !== undefined ? Number($json.code) : ($json.error ? 1 : 0) }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-manual-ok",
+      "name": "IF Manual OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [960, 800]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst out = [];\nfor (const item of items) {\n  const j = item.json || {};\n  const stdout = String(j.stdout || '');\n  const stderr = String(j.stderr || j.error?.message || j.message || '');\n  const code = j.code !== undefined ? Number(j.code) : 1;\n  let manifest = null;\n  const m = stdout.match(/BACKUP_MANIFEST_JSON=(\\{.*\\})\\s*$/m)\n    || stdout.match(/BACKUP_MANIFEST_JSON=(\\{.*\\})/);\n  if (m) {\n    try { manifest = JSON.parse(m[1]); } catch (_) { manifest = null; }\n  }\n  const redact = (s) => String(s || '')\n    .replace(/postgres(?:ql)?:\\/\\/[^\\s'\"]+/gi, 'postgres://***')\n    .replace(/(password|passwd|pwd)\\s*[:=]\\s*\\S+/gi, '$1=***')\n    .replace(/service[_-]?role[_-]?key\\s*[:=]\\s*\\S+/gi, 'service_role_key=***')\n    .replace(/Bearer\\s+[A-Za-z0-9._\\-]+/gi, 'Bearer ***');\n  const redactedOut = redact(stdout).slice(-2000);\n  const redactedErr = redact(stderr).slice(-1500);\n  const status = manifest?.status || (code === 0 ? 'ok' : 'failed');\n  const size = manifest?.size_bytes;\n  const minBytes = Number($env.BACKUP_MIN_BYTES || 10240);\n  const reasons = [];\n  if (code !== 0 || status === 'failure' || status === 'failed') reasons.push('backup_or_watchdog_failed');\n  if (size !== undefined && size !== null && Number(size) < minBytes) reasons.push('backup_too_small');\n  if (String(manifest?.error || '').includes('checksum') || String(manifest?.error || '').includes('gzip_integrity')) {\n    reasons.push('checksum_failure');\n  }\n  if (/oci os object|oci_upload_failed|destination/i.test(redactedErr + redactedOut + String(manifest?.error || ''))) {\n    reasons.push('destination_failure');\n  }\n  if (/BACKUP_WATCHDOG_STATUS=(missing|stale)/.test(stdout)) reasons.push('missed_schedule');\n  const ts = manifest?.timestamp_utc || manifest?.timestamp || new Date().toISOString();\n  const message = [\n    'Vergeo5 DB backup ALERT',\n    `status=${status}`,\n    `exit_code=${code}`,\n    `reasons=${reasons.join(',') || 'unspecified'}`,\n    `env=${manifest?.env_id || 'n/a'}`,\n    `dump=${manifest?.dump_name || 'n/a'}`,\n    `size_bytes=${size ?? 'n/a'}`,\n    `sha256=${manifest?.sha256 ? String(manifest.sha256).slice(0, 12) + '\u2026' : 'n/a'}`,\n    `migration_tip=${manifest?.migration_tip || 'n/a'}`,\n    `ts=${ts}`,\n    'stderr_tail:',\n    redactedErr || '(empty)',\n  ].join('\\n');\n  out.push({ json: { message, status, code, reasons, manifest, stdout_tail: redactedOut } });\n}\nreturn out;"
+      },
+      "id": "code-alert",
+      "name": "Build Alert Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst out = [];\nfor (const item of items) {\n  const j = item.json || {};\n  const stdout = String(j.stdout || '');\n  const stderr = String(j.stderr || j.error?.message || j.message || '');\n  const code = j.code !== undefined ? Number(j.code) : 1;\n  let manifest = null;\n  const m = stdout.match(/BACKUP_MANIFEST_JSON=(\\{.*\\})\\s*$/m)\n    || stdout.match(/BACKUP_MANIFEST_JSON=(\\{.*\\})/);\n  if (m) {\n    try { manifest = JSON.parse(m[1]); } catch (_) { manifest = null; }\n  }\n  const redact = (s) => String(s || '')\n    .replace(/postgres(?:ql)?:\\/\\/[^\\s'\"]+/gi, 'postgres://***')\n    .replace(/(password|passwd|pwd)\\s*[:=]\\s*\\S+/gi, '$1=***')\n    .replace(/service[_-]?role[_-]?key\\s*[:=]\\s*\\S+/gi, 'service_role_key=***')\n    .replace(/Bearer\\s+[A-Za-z0-9._\\-]+/gi, 'Bearer ***');\n  const redactedOut = redact(stdout).slice(-2000);\n  const redactedErr = redact(stderr).slice(-1500);\n  const status = manifest?.status || (code === 0 ? 'ok' : 'failed');\n  const size = manifest?.size_bytes;\n  const minBytes = Number($env.BACKUP_MIN_BYTES || 10240);\n  const reasons = [];\n  if (code !== 0 || status === 'failure' || status === 'failed') reasons.push('backup_or_watchdog_failed');\n  if (size !== undefined && size !== null && Number(size) < minBytes) reasons.push('backup_too_small');\n  if (String(manifest?.error || '').includes('checksum') || String(manifest?.error || '').includes('gzip_integrity')) {\n    reasons.push('checksum_failure');\n  }\n  if (/oci os object|oci_upload_failed|destination/i.test(redactedErr + redactedOut + String(manifest?.error || ''))) {\n    reasons.push('destination_failure');\n  }\n  if (/BACKUP_WATCHDOG_STATUS=(missing|stale)/.test(stdout)) reasons.push('missed_schedule');\n  const ts = manifest?.timestamp_utc || manifest?.timestamp || new Date().toISOString();\n  const message = [\n    'Vergeo5 DB backup ALERT',\n    `status=${status}`,\n    `exit_code=${code}`,\n    `reasons=${reasons.join(',') || 'unspecified'}`,\n    `env=${manifest?.env_id || 'n/a'}`,\n    `dump=${manifest?.dump_name || 'n/a'}`,\n    `size_bytes=${size ?? 'n/a'}`,\n    `sha256=${manifest?.sha256 ? String(manifest.sha256).slice(0, 12) + '\u2026' : 'n/a'}`,\n    `migration_tip=${manifest?.migration_tip || 'n/a'}`,\n    `ts=${ts}`,\n    'stderr_tail:',\n    redactedErr || '(empty)',\n  ].join('\\n');\n  out.push({ json: { message, status, code, reasons, manifest, stdout_tail: redactedOut } });\n}\nreturn out;"
+      },
+      "id": "code-alert-manual",
+      "name": "Build Alert Payload Manual",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 880]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.WHATSAPP_CLOUD_API_URL}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.WHATSAPP_CLOUD_API_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{$env.FOUNDER_WHATSAPP_TO}}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": {{ JSON.stringify($json.message) }} }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "wa-alert",
+      "name": "WhatsApp Ops Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 WhatsApp Cloud API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.WHATSAPP_CLOUD_API_URL}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.WHATSAPP_CLOUD_API_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{$env.FOUNDER_WHATSAPP_TO}}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": {{ JSON.stringify($json.message) }} }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "wa-alert-manual",
+      "name": "WhatsApp Ops Alert Manual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 880],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 WhatsApp Cloud API"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: \"unauthorized\" }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "respond-401",
+      "name": "Respond 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 1000]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, mode: \"manual\", stdout_tail: String($json.stdout || \"\").slice(-500).replace(/postgres(?:ql)?:\\/\\/[^\\s'\"]+/gi, \"postgres://***\") }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-200",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1200, 720]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: \"backup_failed\", code: $('SSH Manual Dump').item.json.code ?? 1, reasons: $('Build Alert Payload Manual').item.json.reasons ?? [] }) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "respond-500",
+      "name": "Respond 500",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1680, 880]
+    },
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [240, 1120]
+    },
+    {
+      "parameters": {
+        "jsCode": "const e = $input.first().json || {};\nconst msg = String(e.execution?.error?.message || e.message || 'workflow_error');\nconst safe = msg\n  .replace(/postgres(?:ql)?:\\/\\/[^\\s'\"]+/gi, 'postgres://***')\n  .replace(/(password|passwd|pwd)\\s*[:=]\\s*\\S+/gi, '$1=***')\n  .replace(/Bearer\\s+[A-Za-z0-9._\\-]+/gi, 'Bearer ***')\n  .slice(0, 800);\nreturn [{ json: { message: `Vergeo5 DB backup WORKFLOW ERROR\\n${safe}` } }];"
+      },
+      "id": "code-error",
+      "name": "Build Workflow Error Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 1120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.WHATSAPP_CLOUD_API_URL}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.WHATSAPP_CLOUD_API_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{$env.FOUNDER_WHATSAPP_TO}}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": {{ JSON.stringify($json.message) }} }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "wa-error",
+      "name": "WhatsApp Workflow Error",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 1120],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 WhatsApp Cloud API"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Cron Nightly Dump": {
+      "main": [
+        [
+          {
+            "node": "SSH Nightly Dump",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cron Missed-Schedule Watchdog": {
+      "main": [
+        [
+          {
+            "node": "SSH Watchdog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Manual Backup": {
+      "main": [
+        [
+          {
+            "node": "IF Manual Auth OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Manual Auth OK": {
+      "main": [
+        [
+          {
+            "node": "SSH Manual Dump",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SSH Nightly Dump": {
+      "main": [
+        [
+          {
+            "node": "IF Nightly OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SSH Watchdog": {
+      "main": [
+        [
+          {
+            "node": "IF Watchdog OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SSH Manual Dump": {
+      "main": [
+        [
+          {
+            "node": "IF Manual OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Nightly OK": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Build Alert Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Watchdog OK": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Build Alert Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Manual OK": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Alert Payload Manual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Alert Payload": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Ops Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Alert Payload Manual": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Ops Alert Manual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Ops Alert Manual": {
+      "main": [
+        [
+          {
+            "node": "Respond 500",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Workflow Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Workflow Error Alert": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Workflow Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Lusaka"
+  },
+  "versionId": "vd-p04-backup-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Nightly pg_dump\u2192gzip\u2192OCI Object Storage (independent of Supabase PITR) via SSH to OCI host. Missed-schedule watchdog 04:00 Africa/Lusaka. Manual drill: POST /webhook/backup-manual with X-Backup-Secret. Alerts via WhatsApp (metadata only). STATUS: CODE_COMPLETE \u2014 G7 PASS still requires a real dated dump + timed restore evidence."
+  },
+  "pinData": {},
+  "tags": [
+    {
+      "name": "ops",
+      "createdAt": "2026-07-20T00:00:00.000Z",
+      "updatedAt": "2026-07-20T00:00:00.000Z"
+    },
+    {
+      "name": "backup",
+      "createdAt": "2026-07-20T00:00:00.000Z",
+      "updatedAt": "2026-07-20T00:00:00.000Z"
+    },
+    {
+      "name": "VD-P04",
+      "createdAt": "2026-07-20T00:00:00.000Z",
+      "updatedAt": "2026-07-20T00:00:00.000Z"
+    }
+  ]
+}

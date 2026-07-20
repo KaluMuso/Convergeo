@@ -105,7 +105,13 @@ const STATIC_SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@vergeo/config", "@vergeo/i18n", "@vergeo/types", "@vergeo/ui"],
+  transpilePackages: [
+    "@vergeo/config",
+    "@vergeo/i18n",
+    "@vergeo/observability",
+    "@vergeo/types",
+    "@vergeo/ui",
+  ],
   eslint: {
     dirs: ["app"],
   },

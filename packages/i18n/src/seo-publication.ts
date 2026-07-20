@@ -3,7 +3,7 @@ import { LOCALES, type Locale } from "./locales";
 /**
  * CUST-SEO-02 — SEO locale publication policy (separate from route availability).
  *
- * `LOCALES` remains the routable set (users may still open /bem and /nya).
+ * `LOCALES` remains the routable set (users may still open /bem, /nya, and /zh).
  * Only locales listed here are treated as SEO-complete and may appear in:
  *   - hreflang alternate tags
  *   - sitemap URL entries
@@ -19,7 +19,7 @@ import { LOCALES, type Locale } from "./locales";
  *
  * Related process note: `messages/PHASE1_NATIVE_REVIEW.md`.
  */
-export const SEO_INDEXABLE_LOCALES = ["en", "fr", "zh"] as const satisfies readonly Locale[];
+export const SEO_INDEXABLE_LOCALES = ["en", "fr"] as const satisfies readonly Locale[];
 
 export type SeoIndexableLocale = (typeof SEO_INDEXABLE_LOCALES)[number];
 
@@ -66,7 +66,7 @@ export function resolveSeoAlternateLocales(
 /**
  * Robots for a locale page under the publication policy.
  * - SEO-approved: allow index (page may still tighten further).
- * - Unapproved (e.g. bem/nya pending native review): `noindex,follow`.
+ * - Unapproved (e.g. bem/nya pending native review, zh QA-only): `noindex,follow`.
  */
 export function robotsForLocalePublication(locale: string): {
   index: boolean;
