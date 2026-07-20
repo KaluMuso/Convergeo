@@ -49,10 +49,16 @@ describe("loadNamespace", () => {
     expect(getLoadedNamespaceKeys()).not.toContain("en:catalog");
   });
 
-  it("falls back to English when locale namespace file is missing", async () => {
+  it("loads bem auth overlay with translated login title", async () => {
     const auth = (await loadNamespace("bem", "auth")) as AuthMessages;
-    expect(auth.login.title).toBe("Sign in");
-    expect(getLoadedNamespaceKeys()).toContain("en:auth");
+    expect(auth.login.title).toBe("Ingilani");
+    expect(getLoadedNamespaceKeys()).toContain("bem:auth");
+  });
+
+  it("falls back to English when locale namespace file is missing", async () => {
+    const admin = (await loadNamespace("bem", "admin")) as { title?: string };
+    expect(admin).toBeTruthy();
+    expect(getLoadedNamespaceKeys()).toContain("en:admin");
   });
 
   it("deep-merges Phase-1 bem catalog over English for non-critical keys", async () => {
