@@ -259,12 +259,15 @@ def _insert_dispute(conn: PgConn, *, order_id: str, status: str = "open") -> Non
 
 
 def _insert_refund(conn: PgConn, *, order_id: str, amount: int = GROSS_NGEWEE) -> None:
+    refund_id = uuid.uuid4()
+    source_key = f"refund-order-{order_id}"
     conn.run(
         f"""
         INSERT INTO public.refunds (
-          id, order_id, lane, breakdown, amount_ngwee, status
+          id, order_id, source_key, lane, breakdown, amount_ngwee, status
         ) VALUES (
-          '{uuid.uuid4()}', '{order_id}', 1, '{{}}'::jsonb, {amount}, 'completed'
+          '{refund_id}', '{order_id}', '{source_key}', 1,
+          '{{"idempotency_key": "{source_key}"}}'::jsonb, {amount}, 'completed'
         );
         """
     )

@@ -278,6 +278,16 @@ class TestConcurrentAndRetry:
                 "app.services.refunds.execute.decide_refund_phase_under_gate",
                 side_effect=_gate_decision_for_fake(fake),
             ),
+            patch(
+                "app.services.refunds.execute.summarize_order_release_ledger",
+                return_value=OrderReleaseLedgerSummary(
+                    order_id=ORDER_ID,
+                    charge_received_ngwee=0,
+                    commission_captured_ngwee=0,
+                    vendor_released_ngwee=0,
+                    refund_drained_ngwee=0,
+                ),
+            ),
         ):
             threads = [threading.Thread(target=worker) for _ in range(2)]
             for t in threads:
@@ -315,6 +325,16 @@ class TestConcurrentAndRetry:
             patch(
                 "app.services.refunds.execute.decide_refund_phase_under_gate",
                 side_effect=_gate_decision_for_fake(fake),
+            ),
+            patch(
+                "app.services.refunds.execute.summarize_order_release_ledger",
+                return_value=OrderReleaseLedgerSummary(
+                    order_id=ORDER_ID,
+                    charge_received_ngwee=0,
+                    commission_captured_ngwee=0,
+                    vendor_released_ngwee=0,
+                    refund_drained_ngwee=0,
+                ),
             ),
         ):
             first = execute_refund(service_client=service, order_id=ORDER_ID, lane=1,
