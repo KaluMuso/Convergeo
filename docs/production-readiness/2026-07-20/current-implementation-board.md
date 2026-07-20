@@ -239,14 +239,14 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate / gap:** G8 / G19 / VE-P04
 - **Priority:** P1
-- **Status:** `REPO_CLOSABLE`
-- **Evidence:** `.github/workflows/ci.yml` `secret-scan` `continue-on-error: true` (~L179); `perf.yml` Lighthouse `continue-on-error: true`
-- **Files likely:** `ci.yml`, `perf.yml`, `docs/ops/ci.md`
+- **Status:** `CODE_COMPLETE` for YAML blocking; `FOUNDER_REQUIRED` for branch-protection proof
+- **Evidence:** `.github/workflows/ci.yml` `secret-scan` has no `continue-on-error`; `.github/workflows/perf.yml` Lighthouse is blocking. `i18n-lint`, the demo seed helper, and the broad `tests/rls` sweep remain intentionally advisory.
+- **Files likely:** GitHub branch protection settings; `docs/ops/ci.md` for required-check list
 - **Deps:** FOUNDER branch-protection no-bypass
-- **Acceptance:** secret-scan fails the job; LH policy decided (blocking or explicit waiver)
-- **Verify:** CI on PR that would fail scan
+- **Acceptance:** secret-scan and LHCI fail their jobs; required checks configured with no bypass
+- **Verify:** CI on PR that would fail scan + branch-protection screenshot/export
 - **Blocks browse-beta:** no · **real-money:** preferred yes · **public_launch:** yes
-- **PR boundary:** CI-only PR
+- **PR boundary:** GitHub settings evidence only
 
 #### RC-07 — RLS matrix rows for newer tables
 
@@ -563,22 +563,22 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 ### 3.E FOUNDER_REQUIRED
 
-| ID     | Gate                          | Pri         | Status             | Evidence / action                            | Blocks browse / money / public_launch  | PR boundary     |
-| ------ | ----------------------------- | ----------- | ------------------ | -------------------------------------------- | -------------------------------------- | --------------- |
-| F-02   | F2 PACRA+TPIN                 | P0          | `FOUNDER_REQUIRED` | checklist unchecked                          | no / yes / yes                         | none            |
-| F-03   | F3 Lenco docs confirm         | P1          | `FOUNDER_REQUIRED` | distilled exists — confirm complete          | no / soft / soft                       | none            |
-| F-05   | F5 WhatsApp Cloud + templates | P0          | `FOUNDER_REQUIRED` | adapter ready; no proven WA send             | no / soft (notify) / yes               | none            |
-| F-06   | F6 courier MOUs               | post-launch | `FOUNDER_REQUIRED` | post-beta OK                                 | no / no / no                           | none            |
-| F-07   | F7 design HTMLs               | P2          | `FOUNDER_REQUIRED` | SOURCES: **6** missing (checklist “7” stale) | no / no / soft                         | upload only     |
-| F-08   | F8 COD cap confirm            | P1          | `FOUNDER_REQUIRED` | `platform_config.cod_cap_ngwee`              | no / soft / yes                        | config          |
-| F-09a  | F9a Zamtel collections        | P1          | `FOUNDER_REQUIRED` | default keep off                             | no / no if off / yes if enabling       | decision        |
-| F-09b  | F9b Lenco sandbox+prod creds  | P0          | `FOUNDER_REQUIRED` | blocks LIVE-01..03                           | no / **yes** / yes                     | secrets env     |
-| F-INV  | Invite cohort                 | P1          | `FOUNDER_REQUIRED` | checklist §6                                 | **yes for real beta users** / no / yes | admin UI        |
-| F-SEN  | Sentry projects + DSNs        | P0          | `FOUNDER_REQUIRED` | none exist                                   | no / yes / yes                         | env             |
-| F-UP   | UptimeRobot monitors          | P0          | `FOUNDER_REQUIRED` | NOT_AUDITABLE                                | no / yes / yes                         | ops             |
-| F-BP   | Branch protection no-bypass   | P1          | `FOUNDER_REQUIRED` | `ci.md` process                              | no / soft / yes                        | GitHub settings |
-| F-ORPH | Repair orphan KYC vendors     | P1          | `FOUNDER_REQUIRED` | FD-12                                        | no / yes / yes                         | ops SQL         |
-| F-CTA  | Seller CTA env if still unset | P1          | `FOUNDER_REQUIRED` | G10 / DL-6 historically                      | soft / no / yes                        | Vercel env      |
+| ID     | Gate                          | Pri         | Status             | Evidence / action                             | Blocks browse / money / public_launch  | PR boundary     |
+| ------ | ----------------------------- | ----------- | ------------------ | --------------------------------------------- | -------------------------------------- | --------------- |
+| F-02   | F2 PACRA+TPIN                 | P0          | `FOUNDER_REQUIRED` | checklist unchecked                           | no / yes / yes                         | none            |
+| F-03   | F3 Lenco docs confirm         | P1          | `FOUNDER_REQUIRED` | distilled exists — confirm complete           | no / soft / soft                       | none            |
+| F-05   | F5 WhatsApp Cloud + templates | P0          | `FOUNDER_REQUIRED` | adapter ready; no proven WA send              | no / soft (notify) / yes               | none            |
+| F-06   | F6 courier MOUs               | post-launch | `FOUNDER_REQUIRED` | post-beta OK                                  | no / no / no                           | none            |
+| F-07   | F7 design HTMLs               | P2          | `FOUNDER_REQUIRED` | SOURCES: **6** missing (older “7” docs stale) | no / no / soft                         | upload only     |
+| F-08   | F8 COD cap confirm            | P1          | `FOUNDER_REQUIRED` | `platform_config.cod_cap_ngwee`               | no / soft / yes                        | config          |
+| F-09a  | F9a Zamtel collections        | P1          | `FOUNDER_REQUIRED` | default keep off                              | no / no if off / yes if enabling       | decision        |
+| F-09b  | F9b Lenco sandbox+prod creds  | P0          | `FOUNDER_REQUIRED` | blocks LIVE-01..03                            | no / **yes** / yes                     | secrets env     |
+| F-INV  | Invite cohort                 | P1          | `FOUNDER_REQUIRED` | checklist §6                                  | **yes for real beta users** / no / yes | admin UI        |
+| F-SEN  | Sentry projects + DSNs        | P0          | `FOUNDER_REQUIRED` | none exist                                    | no / yes / yes                         | env             |
+| F-UP   | UptimeRobot monitors          | P0          | `FOUNDER_REQUIRED` | NOT_AUDITABLE                                 | no / yes / yes                         | ops             |
+| F-BP   | Branch protection no-bypass   | P1          | `FOUNDER_REQUIRED` | `ci.md` process                               | no / soft / yes                        | GitHub settings |
+| F-ORPH | Repair orphan KYC vendors     | P1          | `FOUNDER_REQUIRED` | FD-12                                         | no / yes / yes                         | ops SQL         |
+| F-CTA  | Seller CTA env if still unset | P1          | `FOUNDER_REQUIRED` | G10 / DL-6 historically                       | soft / no / yes                        | Vercel env      |
 
 ---
 
@@ -622,20 +622,20 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 ### 3.H STALE_DOCUMENTATION
 
-| ID    | Doc claim                                                                       | Why stale                                                | Fix boundary                                      |
-| ----- | ------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------- |
-| SD-01 | Gap analysis: “#352 pending”; tip pre-source_key                                | #352 merged at `496819b`                                 | note in this board; optional later doc refresh    |
-| SD-02 | Representation report: tip `1d137ae`; #352/#353 unmerged; Supabase unverifiable | tip `b1ea6a3`; Supabase re-probed; #352/#353/#355 merged | this board supersedes                             |
-| SD-03 | Gap analysis: “`0057–0062` may lag”                                             | applied live 2026-07-20                                  | this board                                        |
-| SD-04 | Vision audit DL-1 categories 500 / customer `cc4a824`                           | customer prod `b1ea6a3`                                  | vision-audit age                                  |
-| SD-05 | Vision audit DL-3 unapplied `0051`/`0053`–`0056`                                | applied; new residual is source_key collision + FORCE    | vision-audit age                                  |
-| SD-06 | `00-status.md` “remaining = founder gates only”                                 | deploy/verify/ops/money drills remain                    | programme **CCP-08**                              |
-| SD-07 | `launch-checklist` F7 “7 design files”                                          | SOURCES.md: **6** missing                                | programme **CCP-08**                              |
-| SD-08 | `docs/ops/ci.md` secret-scan as required while `continue-on-error`              | CI still advisory                                        | programme **CCP-08** (+ RC-06 if making blocking) |
-| SD-09 | Release-gates “`0056` unapplied” / G12 note                                     | `0056` applied; G12 still needs LIVE-05                  | programme **CCP-08**                              |
-| SD-10 | Representation “0 gates PASS” still directionally true                          | keep; do not claim PASS without evidence packs           | n/a                                               |
+| ID    | Doc claim                                                                       | Why stale                                                       | Fix boundary                                   |
+| ----- | ------------------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------- |
+| SD-01 | Gap analysis: “#352 pending”; tip pre-source_key                                | #352 merged at `496819b`                                        | note in this board; optional later doc refresh |
+| SD-02 | Representation report: tip `1d137ae`; #352/#353 unmerged; Supabase unverifiable | tip `b1ea6a3`; Supabase re-probed; #352/#353/#355 merged        | this board supersedes                          |
+| SD-03 | Gap analysis: “`0057–0062` may lag”                                             | applied live 2026-07-20                                         | this board                                     |
+| SD-04 | Vision audit DL-1 categories 500 / customer `cc4a824`                           | customer prod `b1ea6a3`                                         | vision-audit age                               |
+| SD-05 | Vision audit DL-3 unapplied `0051`/`0053`–`0056`                                | applied; new residual is source_key collision + FORCE           | vision-audit age                               |
+| SD-06 | `00-status.md` launch-work shorthand                                            | deploy/verify/ops/money drills remain                           | programme **CCP-08** updates header pointers   |
+| SD-07 | `launch-checklist` / decisions F7 count drift                                   | SOURCES.md: **6** missing                                       | programme **CCP-08** aligns F7=6               |
+| SD-08 | CI docs stale around `continue-on-error`                                        | secret-scan/LHCI now blocking; i18n + seed + broad RLS advisory | programme **CCP-08** documents current YAML    |
+| SD-09 | Release-gates “`0056` unapplied” / G12 note                                     | `0056` applied; G12 still needs LIVE-05                         | programme **CCP-08** notes only; no PASS flip  |
+| SD-10 | Representation “0 gates PASS” still directionally true                          | keep; do not claim PASS without evidence packs                  | n/a                                            |
 
-_Per task scope: only this board file is added unless a link would break — no mass doc rewrites in this PR._
+_CCP-08 makes targeted SoT updates for SD-06…09. Historical audit packs can keep point-in-time wording unless a live pointer would mislead current go/no-go readers._
 
 ---
 
@@ -712,7 +712,7 @@ _Per task scope: only this board file is added unless a link would break — no 
 2. “Migrations `0057–0062` unapplied / may lag” — **applied**; residual is **source_key** + collision.
 3. “Live stuck at ≤0056” (07-19 vision audit DL-3).
 4. “Customer prod `cc4a824` / categories 500” (DL-1) — prod @ `b1ea6a3`.
-5. “Remaining to launch = founder gates only” (`00-status.md`).
+5. Old status shortcuts that reduced remaining launch work to founder gates; deploy/verify/ops/money drills still matter.
 6. “F7 = 7 missing HTML files” — **6** per SOURCES.md.
 7. Representation report “Supabase not verifiable this session” — re-probed 2026-07-20.
 8. Gap-analysis program step “Merge remaining money PRs — #352” — done.

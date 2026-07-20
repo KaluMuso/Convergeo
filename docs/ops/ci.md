@@ -7,17 +7,25 @@ so required checks cannot be admin-overridden (the process fix for the 0009 migr
 
 ## Jobs (`ci.yml`)
 
-| Job name                      | Workflow job id  | What it gates                                                                                                                                                                                                      | Blocking? |
-| ----------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
-| JavaScript / TypeScript       | `js`             | Turbo-affected lint, typecheck, test, build across Next.js apps and packages                                                                                                                                       | yes       |
-| Python API                    | `python`         | `ruff`, `mypy`, unit pytest (no live database)                                                                                                                                                                     | yes       |
-| Migration replay (fast)       | `migrations`     | Dockerless Postgres 16 replay of `supabase/migrations/00*.sql` via [`scripts/ci/migration-replay.sh`](../../scripts/ci/migration-replay.sh) — catches immutability, ordering, and column-reference bugs in seconds | yes       |
-| Database / typegen drift      | `db`             | Full Supabase stack `db reset --no-seed`, typegen, and `git diff` on `packages/types/src/db.ts`                                                                                                                    | yes       |
-| RLS isolation matrix          | `rls`            | Live stack + `uv run pytest services/api/tests/rls` (M03-P09 suite)                                                                                                                                                | yes       |
-| Secret scan (gitleaks)        | `secret-scan`    | Pinned gitleaks CLI (≥8.28) + [`.gitleaks.toml`](../../.gitleaks.toml); self-test plants a synthetic AWS key and asserts non-zero exit; n8n plaintext-secret static guard                                          | **yes**   |
-| Dependency audit              | `deps-audit`     | `pnpm audit --audit-level=high` (with documented allowlist) + `pip-audit`                                                                                                                                          | yes       |
-| Security gates                | `security-gates` | Authz matrix / OWASP-lite probes                                                                                                                                                                                   | yes       |
-| i18n hardcoded strings (warn) | `i18n-lint`      | ESLint no-hardcoded-strings                                                                                                                                                                                        | no (warn) |
+As of CCP-08, `ci.yml` defines **13 jobs**. The workflow is blocking unless noted
+below; `continue-on-error` appears only on the intentionally advisory hardcoded-string
+lint job plus the demo seed helper and broad RLS-matrix smoke step inside `rls`.
+
+| Job name                       | Workflow job id       | What it gates                                                                                                                                                                                                      | Blocking? |
+| ------------------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- |
+| JavaScript / TypeScript        | `js`                  | Turbo-affected lint, typecheck, test, build across Next.js apps and packages                                                                                                                                       | yes       |
+| Python API                     | `python`              | `ruff`, `mypy`, unit pytest (no live database)                                                                                                                                                                     | yes       |
+| Ask Vergeo grounding evals     | `ask-evals`           | Deterministic Ask/RAG evals; skips on unrelated PRs, runs on master pushes and schedule                                                                                                                            | yes       |
+| Staging plane guards (STG-01)  | `staging-guards`      | Staging separation, seed, and config syntax self-tests                                                                                                                                                             | yes       |
+| Secret scan (gitleaks)         | `secret-scan`         | Pinned gitleaks CLI (≥8.28) + [`.gitleaks.toml`](../../.gitleaks.toml); self-test plants a synthetic AWS key and asserts non-zero exit; n8n plaintext-secret static guard                                          | **yes**   |
+| Dependency audit               | `deps-audit`          | `pnpm audit --audit-level=high` with the documented accepted advisory allowlist + `pip-audit`                                                                                                                      | yes       |
+| Security gates                 | `security-gates`      | Headers manifest check + route x role authz matrix                                                                                                                                                                 | yes       |
+| i18n hardcoded strings (warn)  | `i18n-lint`           | ESLint no-hardcoded-strings sweep                                                                                                                                                                                  | no (warn) |
+| Migration replay (fast)        | `migrations`          | Dockerless Postgres 16 replay of `supabase/migrations/00*.sql` via [`scripts/ci/migration-replay.sh`](../../scripts/ci/migration-replay.sh) — catches immutability, ordering, and column-reference bugs in seconds | yes       |
+| Database / typegen drift       | `db`                  | Full Supabase stack `db reset --no-seed`, typegen, and `git diff` on `packages/types/src/db.ts`                                                                                                                    | yes       |
+| RLS isolation matrix           | `rls`                 | Blocking curated DB-backed integration set; demo seed and the broad `tests/rls` step remain advisory with `continue-on-error` until full DB isolation exists                                                       | partial   |
+| Money DB-trigger integration   | `money-db-triggers`   | Release, accounting, and reconciliation trigger tests against isolated Postgres resets                                                                                                                             | yes       |
+| COD production-container smoke | `cod-container-smoke` | Builds the real API runtime image and drives one COD order when API/Dockerfile/workflow paths change; skips heavy steps on unrelated PRs                                                                           | yes       |
 
 ### Perf workflow (`perf.yml`)
 
@@ -42,15 +50,19 @@ Mark these jobs as **required** on `master` in GitHub → Settings → Branches 
 
 - `js`
 - `python`
-- `migrations`
-- `db`
-- `rls`
+- `ask-evals`
+- `staging-guards`
 - `secret-scan`
 - `deps-audit`
 - `security-gates`
+- `migrations`
+- `db`
+- `rls`
+- `money-db-triggers`
+- `cod-container-smoke`
 - Performance workflow: `Bundle, image lint & Lighthouse` (`perf`)
 
-`i18n-lint` remains informational (warn / continue-on-error) until the hardcoded-string debt is cleared.
+`i18n-lint` remains informational (warn / continue-on-error) until the hardcoded-string debt is cleared. Inside `rls`, the curated DB-backed integration step is blocking; the demo seed helper and broad `tests/rls` sweep are still `continue-on-error` and must not be represented as hard gates.
 
 ### Do not allow bypassing
 

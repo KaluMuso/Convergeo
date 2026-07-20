@@ -1,12 +1,12 @@
 # Vergeo5 — Project Status
 
-**Updated:** 2026-07-20 (Prompt 12 go/no-go) · **Mode:** GATED · **Master tip:** `d9839db` · **Recommendation:** **NO_GO** — see `docs/production-readiness/2026-07-20/go-no-go-report.md`.
+**Updated:** 2026-07-20 (Prompt 12 go/no-go + CCP-08 drift hygiene) · **Mode:** GATED · **Master tip:** `3dbf137` · **Recommendation:** **NO_GO** — see `docs/production-readiness/2026-07-20/go-no-go-report.md` and `docs/production-readiness/2026-07-20/current-implementation-board.md`.
 
 **Build-out:** ✅ M01–M16 code-complete on master (M17 Clips deliberately deferred). **Launch gap is DEPLOY + VERIFY + OPS + FOUNDER/LEGAL**, not missing mountains.
 
-**Live (2026-07-20):** API `api.vergeo5.com` **502**; customer/vendor health OK (prod SHAs behind tip); admin Access-gated; DB tip `0063_revoke_execute_review_reply_guards` (RC-02 reconciles repo numbering; `0064` FORCE RLS and `0065` source_key unapplied); `public_launch=false`; money tables **0**; n8n **0 active**; S1–S6 / G0–G9 **not PASS**. ✅ **F1 (vergeo5.com) done.** F4/F9b open.
+**Live (2026-07-20):** API `api.vergeo5.com` **502**; customer/vendor health OK (prod SHAs behind tip); admin Access-gated; DB migration/apply truth is tracked in the 2026-07-20 board and go/no-go pack; `public_launch=false`; money tables **0**; n8n **0 active**; S1–S6 / G0–G9 **not PASS**. ✅ **F1 (vergeo5.com) done.** F4/F9b open.
 
-**Historical note:** earlier “remaining = founder gates + staging only” understated deploy/ops/money-drill debt — superseded by Prompt 12 percentages (build ~92% · real-money ~8%). Callouts below are chronological history and may be stale vs the go/no-go report.
+**Historical note:** earlier “remaining = founder gates + staging only” understated deploy/ops/money-drill debt — superseded by the Prompt 12 go/no-go report and board. Callouts below are chronological history and may be stale vs those 2026-07-20 sources.
 
 > **📋 VISION-TO-CODEBASE AUDIT & WAVE PLAN (2026-07-19) — `docs/production-readiness/2026-07-19/vision-audit/`.** Extends the 2026-07-18 production-readiness corpus. Fresh live verification (Supabase/n8n/Vercel/GitHub, 2026-07-19) confirms no drift: customer prod still `cc4a824` (categories 500 **still live** — #298 fix unpromoted); DB still ≤`0050`+`0052` (**`0051`/`0053`–`0056` unapplied**); n8n still **2/19 workflows active**; money tables **all 0**; flags all false. **Reframing:** build is ~90% code-complete (only M17 video feed unbuilt) — the launch-critical gap is **DEPLOY + VERIFY + OPS + DECISIONS**, not build. Deliverables: `01-audit-findings.md` (gap table by surface), `02-open-questions.md` (B-1…B-5 blocking + NB-1…NB-14, mapped to FD-01…FD-12), `03-waves-and-phases.md` (6 Mountains VM-A…VM-F → ~40 pebbles → Waves 0–5 with Cursor prompts). Drive scan: nothing post-dates 2026-07-19 (repo = SoT); flagged shared-VM contention + WAHA-on-brand (NB-7/NB-8).
 

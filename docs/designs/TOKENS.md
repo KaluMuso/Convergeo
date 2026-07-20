@@ -10,34 +10,36 @@ Changing a value in `tokens.ts` propagates to the Tailwind preset (`buildTailwin
 
 ## Color tokens
 
-| Token                | Light value             | Dark value              | Tailwind key                 |
-| -------------------- | ----------------------- | ----------------------- | ---------------------------- |
-| `--bg`               | `#FAF7F2`               | `#141312`               | `bg-bg`                      |
-| `--bg-2`             | `#F3EDE3`               | `#1C1A18`               | `bg-bg-2`                    |
-| `--surface`          | `#FFFFFF`               | `#22201E`               | `bg-surface`                 |
-| `--surface-elevated` | `#FFFFFF`               | `#2A2826`               | `bg-surface-elevated`        |
-| `--border`           | `#E8DFD0`               | `rgba(255,255,255,.10)` | `border-border`              |
-| `--panel`            | `#1A1816` (charcoal)    | same (chrome only)      | `bg-panel`                   |
-| `--panel-2`          | `#242220`               | same                    | `bg-panel-2`                 |
-| `--panel-text`       | `#F2EDE6`               | same                    | `text-panel-text`            |
-| `--panel-muted`      | `#A39E96`               | same                    | `text-panel-muted`           |
-| `--panel-border`     | `rgba(255,255,255,.08)` | same                    | `border-panel-border`        |
-| `--text`             | `#2A2118`               | `#F2EDE6`               | `text-text`                  |
-| `--text-2`           | `#6B5A3E`               | `#B0A99F`               | `text-text-2`                |
-| `--text-3`           | `#7A6A52`               | `#8A837A`               | `text-text-3`                |
-| `--display-ink`      | `#23324E`               | `#F2EDE6`               | `text-display-ink`           |
-| `--primary`          | `#2D4A7A`               | `#7AA0D4`               | `text-primary`, `bg-primary` |
-| `--primary-deep`     | `#1F3557`               | `#5A82B8`               | `bg-primary-deep`            |
-| `--primary-tint`     | `#E8F0FA`               | `#2A323C`               | `bg-primary-tint`            |
-| `--accent`           | `#C8861A`               | `#D4A04A`               | `text-accent`                |
-| `--success`          | `#3A7A4A`               | (unchanged)             | `text-success`               |
-| `--danger`           | `#C0392B`               | (unchanged)             | `text-danger`                |
-| `--on-danger`        | `#FFFFFF`               | `#FFFFFF`               | `text-on-danger`             |
-| `--warning`          | `#D4A020`               | (unchanged)             | `text-warning`               |
-| `--info`             | `#2A6A9A`               | (unchanged)             | `text-info`                  |
-| `--price`            | `#2A2118`               | `#F2EDE6`               | use `text-[var(--price)]`    |
-| `--discount`         | `#C0392B`               | `#E57368`               | `text-discount`              |
-| `--cat-*`            | pastel fills            | (unchanged)             | `bg-cat-*`                   |
+| Token                 | Light value             | Dark value              | Tailwind key                              |
+| --------------------- | ----------------------- | ----------------------- | ----------------------------------------- |
+| `--bg`                | `#FAF7F2`               | `#141312`               | `bg-bg`                                   |
+| `--bg-2`              | `#F3EDE3`               | `#1C1A18`               | `bg-bg-2`                                 |
+| `--surface`           | `#FFFFFF`               | `#22201E`               | `bg-surface`                              |
+| `--surface-elevated`  | `#FFFFFF`               | `#2A2826`               | `bg-surface-elevated`                     |
+| `--border`            | `#E8DFD0`               | `rgba(255,255,255,.10)` | `border-border`                           |
+| `--panel`             | `#1A1816` (charcoal)    | same (chrome only)      | `bg-panel`                                |
+| `--panel-2`           | `#242220`               | same                    | `bg-panel-2`                              |
+| `--panel-text`        | `#F2EDE6`               | same                    | `text-panel-text`                         |
+| `--panel-muted`       | `#A39E96`               | same                    | `text-panel-muted`                        |
+| `--panel-border`      | `rgba(255,255,255,.08)` | same                    | `border-panel-border`                     |
+| `--text`              | `#2A2118`               | `#F2EDE6`               | `text-text`                               |
+| `--text-2`            | `#6B5A3E`               | `#B0A99F`               | `text-text-2`                             |
+| `--text-3`            | `#7A6A52`               | `#8A837A`               | `text-text-3`                             |
+| `--display-ink`       | `#23324E`               | `#F2EDE6`               | `text-display-ink`                        |
+| `--primary`           | `#2D4A7A`               | `#7AA0D4`               | `text-primary`, `bg-primary`              |
+| `--primary-deep`      | `#1F3557`               | `#5A82B8`               | `bg-primary-deep`                         |
+| `--primary-tint`      | `#E8F0FA`               | `#2A323C`               | `bg-primary-tint`                         |
+| `--primary-btn-fg`    | `#FFFFFF`               | `#141312`               | use `text-[var(--primary-btn-fg)]`        |
+| `--primary-btn-hover` | `#1F3557`               | `#8BB0DC`               | use `hover:bg-[var(--primary-btn-hover)]` |
+| `--accent`            | `#C8861A`               | `#D4A04A`               | `text-accent`                             |
+| `--success`           | `#3A7A4A`               | (unchanged)             | `text-success`                            |
+| `--danger`            | `#C0392B`               | (unchanged)             | `text-danger`                             |
+| `--on-danger`         | `#FFFFFF`               | `#FFFFFF`               | `text-on-danger`                          |
+| `--warning`           | `#D4A020`               | (unchanged)             | `text-warning`                            |
+| `--info`              | `#2A6A9A`               | (unchanged)             | `text-info`                               |
+| `--price`             | `#2A2118`               | `#F2EDE6`               | use `text-[var(--price)]`                 |
+| `--discount`          | `#C0392B`               | `#E57368`               | `text-discount`                           |
+| `--cat-*`             | pastel fills            | (unchanged)             | `bg-cat-*`                                |
 
 Default Tailwind palette colors (`red`, `blue`, `slate`, etc.) are **not** included in the preset. Arbitrary color utilities are discouraged.
 

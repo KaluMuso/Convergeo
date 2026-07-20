@@ -109,7 +109,7 @@ Founder answered all 28 discovery questions; where a recommendation was delegate
 - **F4.** Zambian counsel review of Lenco-held escrow flow under NPS Act 2026 — **gate before real-money public launch**, not before build.
 - **F5.** Meta Business + WhatsApp Cloud API activation — follow `docs/ops/whatsapp-cloud-api-setup.md` (test number available same-day; real number needs F1 domain for smooth verification).
 - **F6.** Open MOU conversations with Platinum couriers / bus freight partners (post-beta is fine).
-- **F7.** Upload remaining 7 design HTML files (see `docs/designs/SOURCES.md`) — most wanted: Events Desktop, Catalogue. Optionally allowlist `vergeo-21ffc.web.app` in the Claude Code environment network settings for the live-prototype audit.
+- **F7.** Upload remaining 6 design HTML files (see `docs/designs/SOURCES.md`) — most wanted: Events Desktop, Catalogue. Optionally allowlist `vergeo-21ffc.web.app` in the Claude Code environment network settings for the live-prototype audit.
 - **F8.** Confirm or invert D12's COD cap (≤K500 recommended).
 
 ## H. Release & launch sequencing
