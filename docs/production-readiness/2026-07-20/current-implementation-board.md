@@ -1,37 +1,41 @@
 # Current Implementation Board — 2026-07-20
 
 **Purpose:** Evidence-based production-readiness board for execution **before** further runtime/product changes.  
-**Master tip assessed:** `b1ea6a3` (Merge PR #355)  
-**Live probes (same day):** Supabase project `dpadrlxukcjbewpqympu`, n8n MCP, Vercel deployments.  
-**Companions:** `gap-analysis-vs-docs.md`, `master-vs-docs-representation-report.md`, `docs/plan/00-status.md`, `docs/plan/launch-checklist.md`, `docs/production-readiness/2026-07-18/consolidated/release-gates.md`, `docs/production-readiness/2026-07-19/vision-audit/`.
+**Master tip assessed (Prompt 12):** `d9839db` (Merge PR #369)  
+**Go/No-Go:** `go-no-go-report.md` → recommendation **NO_GO** (2026-07-20T15:30Z)  
+**Live probes (Prompt 12):** Supabase `dpadrlxukcjbewpqympu`, n8n MCP, Vercel, `api.vergeo5.com`, customer routes.  
+**Companions:** `go-no-go-report.md`, `gap-analysis-vs-docs.md`, `master-vs-docs-representation-report.md`, `docs/plan/00-status.md`, `docs/plan/launch-checklist.md`, `docs/production-readiness/2026-07-18/consolidated/release-gates.md`, programme PRs #375–#380 merged; #381 go/no-go (this PR); ops-drills on master via #379.
 
-**Do not reimplement:** `refunds.source_key` / repo file `supabase/migrations/0063_refunds_source_key_uniq.sql` (merged via PR #352). Ops must **apply** that SQL to live after resolving the version collision below — not rewrite the feature.
+**Do not reimplement:** `refunds.source_key` / repo file `supabase/migrations/0065_refunds_source_key_uniq.sql` (originally merged via PR #352, renumbered by RC-02). Ops must **apply** that SQL to live after `0064` FORCE RLS — not rewrite the feature.
 
 ---
 
-## 0. Fingerprint (verified)
+## 0. Fingerprint (verified Prompt 12 — supersedes earlier same-day rows)
 
 | Surface                    | Evidence @ board time                                                                                                                  |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `origin/master`            | `b1ea6a3` — includes #350, #351, #352, #353, #355                                                                                      |
-| Customer Vercel production | READY @ `b1ea6a3` (DL-1 closed at tip)                                                                                                 |
-| Vendor Vercel production   | READY @ `1d137ae` (#351); docs-only tip lag (#353/#355) — non-runtime                                                                  |
-| Live DB migrations         | Through timestamped `0062_payments_checkout_success_uniq` **plus** live-only name `0063_revoke_execute_review_reply_guards`            |
+| `origin/master`            | **Prompt 6:** `d9839db` (#369). Board draft tip `b1ea6a3` is stale.                                                                    |
+| Customer Vercel production | **Prompt 6:** READY @ `cde40bf` — **behind** tip (missing #367–#369)                                                                   |
+| Vendor Vercel production   | **Prompt 6:** READY @ `5a4668a` — **behind** tip                                                                                       |
+| Admin Vercel production    | **Prompt 6:** READY @ `2f99711` — missing #369 only                                                                                    |
+| API                        | **Prompt 6:** `api.vergeo5.com` **502**; host digest NOT_AUDITABLE                                                                     |
+| Live DB migrations         | Through live tip `0063_revoke_execute_review_reply_guards`; repo `0064` FORCE RLS + `0065` source_key **unapplied**                    |
 | Live `refunds.source_key`  | **Absent** — column missing; index still `refunds_order_id_active_uniq`                                                                |
 | Live money/KYC rows        | `payments=0`, `ledger_transactions=0`, `orders=0`, `kyc_records=0`                                                                     |
 | Live FORCE RLS             | `order_money_gates`/`payments`/`refunds` = true; **`ticket_type_instances` / `ticket_type_price_tiers` / `product_relations` = false** |
 | n8n live                   | **2 workflows**, both active: notification dispatch; payment reconciliation crons                                                      |
-| Repo n8n JSON              | 19 files under `infra/n8n/*.json`; backup is `backup-schedule.md` only (no `backup.json`)                                              |
+| Repo n8n JSON              | 20 files under `infra/n8n/*.json` including `backup.json` (inactive; CODE_COMPLETE — G7 still needs live dump + restore)               |
 
 ### Critical migration collision (blocks naive “apply 0063”)
 
-| Plane               | Version / name                                  | Content                                         |
-| ------------------- | ----------------------------------------------- | ----------------------------------------------- |
-| **Repo master**     | `0063_refunds_source_key_uniq.sql` (#352)       | Adds `refunds.source_key` + partial unique      |
-| **Live DB**         | `0063_revoke_execute_review_reply_guards`       | Revokes EXECUTE on review-reply guards          |
-| **Unmerged branch** | `claude/convergeo-bug-audit-nu1g4b` @ `9d146cc` | Same revoke SQL applied live; **not** on master |
+| Plane                | Version / name                                  | Content                                                            |
+| -------------------- | ----------------------------------------------- | ------------------------------------------------------------------ |
+| **Repo pre-RC-02**   | `0063` source_key migration (#352)              | Added `refunds.source_key` + partial unique but collided with live |
+| **Repo after RC-02** | `0063_revoke…`, `0064_force…`, `0065_refunds…`  | Matches live revoke tip; keeps FORCE RLS before source_key         |
+| **Live DB**          | `0063_revoke_execute_review_reply_guards`       | Revokes EXECUTE on review-reply guards                             |
+| **Source branch**    | `claude/convergeo-bug-audit-nu1g4b` @ `9d146cc` | Same revoke SQL applied live                                       |
 
-**Implication:** Live already consumed the `0063` ledger slot for revoke hygiene. Repo `0063` (source_key) has **not** been applied. Closing this needs a **numbering reconcile PR** (land revoke file to match live + renumber source_key → `0064` **without changing SQL semantics**), then apply source_key to live. Do **not** invent a second source_key design.
+**Implication:** Live already consumed the `0063` ledger slot for revoke hygiene. RC-02 lands that revoke file to match live and renumbers source_key → `0065` **without changing SQL semantics** because `0064` remains FORCE RLS. Apply order after merge: `0064` FORCE RLS, then `0065` source_key. Do **not** invent a second source_key design.
 
 ---
 
@@ -45,10 +49,10 @@
 | Live migrations | “`0057–0062` may lag”                    | Unverified (Supabase unauth); assumed lag past `0056`             | **Updated:** `0057–0062` **are applied**; residual is **source_key** + numbering collision + FORCE RLS            |
 | Frontend deploy | Historical SHA lag / categories 500      | DL-1/DL-2 closed at `1d137ae`                                     | **Updated:** customer prod @ **`b1ea6a3`**; vendor prod @ `1d137ae`                                               |
 | #352 / returns  | “Merge #352” still in next program       | Listed unmerged                                                   | **ALREADY_CLOSED** in repo; **DEPLOYMENT_REQUIRED** for live schema                                               |
-| n8n             | 2/19 active                              | 2/19 active                                                       | **Confirmed** still 2                                                                                             |
+| n8n             | 2/19 active                              | 2/19 active                                                       | **Updated 2026-07-20:** both unpublished (fail-closed); +1 dormant Error Trigger; 0/19 registry active            |
 | Money rows      | Empty                                    | Empty (07-19)                                                     | **Confirmed** still empty                                                                                         |
 
-**Blended headline for execution:** code ~90–93% of v1; production-ready per gates **~30–40%**; browse-safe invite beta **conditional**; real money / `public_launch` **NO-GO**.
+**Prompt 12 headline (do not blend):** build ~92% · deployed ~45% · ops ~22% · real-money ~8% · browse-only ~35% · public ~5%. **Recommendation: NO_GO.** See `go-no-go-report.md`.
 
 ---
 
@@ -104,7 +108,7 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 - **Gate / gap:** returns / MR-B03
 - **Priority:** P0
 - **Status:** `ALREADY_CLOSED` (repo); live apply tracked separately as DEP-02
-- **Evidence:** merge `496819b`; file `supabase/migrations/0063_refunds_source_key_uniq.sql` on master; CI seed fix `7e886d2`
+- **Evidence:** merge `496819b`; file `supabase/migrations/0065_refunds_source_key_uniq.sql` after RC-02 renumber; CI seed fix `7e886d2`
 - **Files:** do **not** rewrite feature
 - **Deps:** DEP-01 numbering reconcile before live apply
 - **Acceptance:** source_key column + `refunds_source_key_active_uniq` on master schema replay
@@ -183,8 +187,8 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 - **Gate / gap:** G9 / migration drift
 - **Priority:** P0
 - **Status:** `REPO_CLOSABLE`
-- **Evidence:** live name `0063_revoke_execute_review_reply_guards` not on master; master `0063_refunds_source_key_uniq.sql`; branch `claude/convergeo-bug-audit-nu1g4b` holds revoke file
-- **Files likely:** add `0063_revoke_execute_review_reply_guards.sql` (match live), renumber source_key → `0064_refunds_source_key_uniq.sql`, update any path refs/tests; **preserve SQL body of #352**
+- **Evidence:** live name `0063_revoke_execute_review_reply_guards` needed to be represented on master; branch `claude/convergeo-bug-audit-nu1g4b` holds revoke file; source_key becomes `0065_refunds_source_key_uniq.sql`
+- **Files likely:** add `0063_revoke_execute_review_reply_guards.sql` (match live), renumber source_key → `0065_refunds_source_key_uniq.sql`, update any path refs/tests; **preserve SQL body of #352**
 - **Deps:** none
 - **Acceptance:** fresh `db reset` applies revoke then source_key; live can apply source_key as next version without double-`0063`
 - **Verify:** `scripts/ci/migration-replay.sh` / CI db job
@@ -195,12 +199,13 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate / gap:** G7 / VD-P04 / BG-5
 - **Priority:** P0
-- **Status:** `REPO_CLOSABLE`
-- **Evidence:** `infra/n8n/backup-schedule.md` only; no `backup.json` among 19 JSONs
-- **Files likely:** `infra/n8n/backup.json`, `docs/ops/n8n-workflows.md`
-- **Deps:** DEP-03 import
-- **Acceptance:** importable workflow producing dated backup artifact per contract
-- **Verify:** n8n validate + dry execution
+- **Status:** `CODE_COMPLETE` (repo) / `DEPLOYMENT_REQUIRED` (live) — **not G7 PASS**
+- **Evidence:** `infra/n8n/backup.json` + enhanced `db-dump.sh` + watchdog; registry/runbook/restore-drill docs; validators green. Live OCI dated dump + timed restore still required for G7.
+- **Files:** `infra/n8n/backup.json`, `infra/scripts/db-dump.sh`, `infra/scripts/db-backup-watchdog.sh`, `docs/ops/n8n-workflows.md`, `docs/ops/backup-runbook.md`, `docs/ops/backup-restore-drill.md`
+- **Deps:** DEP-03 import + host SSH/OCI env
+- **Acceptance (repo):** importable workflow JSON + scripts + docs — **met as CODE_COMPLETE**
+- **Acceptance (G7):** dated OCI artifact + documented timed restore — **still open**
+- **Verify:** `bash scripts/ci/validate-backup-workflow.sh`; founder import + one dump object list
 - **Blocks browse-beta:** no · **real-money:** yes · **public_launch:** yes
 - **PR boundary:** `VD-P04` alone
 
@@ -260,50 +265,52 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate / gap:** G6 / VD-P05
 - **Priority:** P1
-- **Status:** `REPO_CLOSABLE`
-- **Evidence:** `infra/n8n/uptime-alert.json` webhook `options: {}`
-- **Files likely:** that JSON + UptimeRobot shared-secret docs
-- **Deps:** DEP-03 import; FOUNDER UptimeRobot
-- **Acceptance:** unauthenticated POST rejected
-- **Verify:** curl without secret → 401/403
+- **Status:** `CODE_COMPLETE` → FOUNDER activate (`UPTIME_WEBHOOK_SECRET` + import)
+- **Evidence:** Prompt 9 — `Require Uptime Secret` IF vs `$env.UPTIME_WEBHOOK_SECRET`; docs in `observability.md` / `uptimerobot.md`; pytest `test_uptime_alert_workflow.py`
+- **Files:** `infra/n8n/uptime-alert.json`, ops docs
+- **Deps:** FOUNDER UptimeRobot + n8n env secret
+- **Acceptance:** unauthenticated POST never reaches WhatsApp
+- **Verify:** live POST without secret → no page; with secret + alertType=1 → page
 - **Blocks browse-beta:** no · **real-money:** soft · **public_launch:** yes
-- **PR boundary:** n8n JSON + ops note
+- **PR boundary:** included in observability PR
+
+> **Sequenced programme:** `docs/production-readiness/2026-07-20/code-completion-programme.md` (Prompt 11 — CCP-01…08). Implement each approved CCP on its own branch; do not batch.
 
 #### RC-09 — Wire orphan UI: `report-review`, `accept-flow`
 
 - **Gate / gap:** 00-status carried debt
 - **Priority:** P2
-- **Status:** `REPO_CLOSABLE`
+- **Status:** `REPO_CLOSABLE` → programme **CCP-04** (also `complete-confirm.tsx`; mount-or-remove after SM check)
 - **Evidence:** components exist; no page importers (grep)
 - **Files likely:** PDP review section; `account/jobs/[id]/page.tsx`
 - **Deps:** none
-- **Acceptance:** mounted + i18n keys
+- **Acceptance:** mounted + i18n keys **or** deliberately removed
 - **Verify:** typecheck + smoke
 - **Blocks browse-beta / real-money / public_launch:** no / no / soft
-- **PR boundary:** customer UI PR
+- **PR boundary:** customer UI PR (`cursor/ccp-04-orphan-ui-da3e`)
 
 #### RC-10 — De-route `zh` from public LOCALES
 
 - **Gate / gap:** VF-P02 / NB-1
 - **Priority:** P2
-- **Status:** `REPO_CLOSABLE`
+- **Status:** `REPO_CLOSABLE` → programme **CCP-01**
 - **Evidence:** `packages/i18n/src/locales.ts` includes `zh`
-- **Files likely:** locales + middleware + tests
+- **Files likely:** locales + profile switcher + tests (keep `messages/zh/**`)
 - **Deps:** none
 - **Acceptance:** public switcher EN/bem/nya/fr only
 - **Verify:** i18n lint + route tests
 - **Blocks:** no / no / soft for public_launch
-- **PR boundary:** i18n-only
+- **PR boundary:** i18n-only (`cursor/ccp-01-deroute-zh-da3e`)
 
 #### RC-11 — bem/nya namespace completion
 
 - **Gate / gap:** G18 / VF-P01
 - **Priority:** P2 / post-launch OK for invite-beta
-- **Status:** `REPO_CLOSABLE` (+ human review)
+- **Status:** `REPO_CLOSABLE` (+ human review) → programme **CCP-02** + **CCP-03a–f**
 - **Evidence:** ~8/17 namespaces; `PHASE1_NATIVE_REVIEW.md`
 - **Files likely:** `packages/i18n/messages/{bem,nya}/*`
 - **Deps:** FOUNDER native review
-- **Acceptance:** purchase/legal/checkout keys complete
+- **Acceptance:** purchase/legal/checkout keys complete **or** marked pending human review
 - **Verify:** i18n-lint
 - **Blocks browse-beta:** no · **real-money:** no · **public_launch:** soft (D27)
 - **PR boundary:** per-namespace PRs
@@ -312,21 +319,21 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate / gap:** UI follow-up
 - **Priority:** P2
-- **Status:** `REPO_CLOSABLE`
+- **Status:** `REPO_CLOSABLE` → programme **CCP-06**
 - **Evidence:** ~12–14 vendor components using `neutral-*`/`emerald-*`/etc.
 - **Files likely:** `apps/vendor/**`
 - **Blocks:** no / no / no
-- **PR boundary:** vendor polish PR
+- **PR boundary:** vendor polish PR (`cursor/ccp-06-vendor-dark-tokens-da3e`)
 
 #### RC-13 — CSP nonce enforce mode
 
 - **Gate / gap:** M15-P03 residual
 - **Priority:** P2
-- **Status:** `REPO_CLOSABLE`
+- **Status:** `REPO_CLOSABLE` → programme **CCP-07a/b** (RO evidence before enforce)
 - **Evidence:** `docs/ops/security-headers.md` report-only deferral
 - **Files likely:** next configs + middleware
 - **Blocks:** no / no / soft
-- **PR boundary:** security headers PR
+- **PR boundary:** security headers PRs (nonce+RO, then enforce)
 
 ---
 
@@ -349,14 +356,14 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate / gap:** S4 / G5 / G21 / DL-4
 - **Priority:** P0
-- **Status:** `DEPLOYMENT_REQUIRED`
-- **Evidence:** n8n MCP count=2; repo has release-job, order-jobs, tickets-*, event-release, lifecycle JSONs inactive live
-- **Files:** `infra/n8n/*.json` (import)
-- **Deps:** API internal routes + tokens; RC-03 for backup
+- **Status:** `BLOCKED_EXTERNAL` (API `502`) → then `DEPLOYMENT_REQUIRED`
+- **Evidence:** Prompt 7 report `n8n-fleet-import-verify.md` — live count=3 all inactive; dispatch fail-closed fixtures `12345`–`12347` (502); money ticks not activated; S4/G5/G21 **FAIL**
+- **Files:** `infra/n8n/*.json` (UI import after API green); shared error alert live id `LVuHqWgT1tqjYOtc`
+- **Deps:** API `healthz`/`readyz` 200; missing Header Auth creds; RC-02/ledger before money; RC-03 for backup
 - **Acceptance:** release + tickets-issue/release + event-release active; idempotent single-tick proof
-- **Verify:** n8n execution IDs; unauthorized tick → 401/403
+- **Verify:** n8n execution IDs; unauthorized tick → 401/403; double-run no duplicate side effects
 - **Blocks browse-beta:** no · **real-money:** yes · **public_launch:** yes
-- **PR boundary:** ops runbook + optional evidence doc only
+- **PR boundary:** ops evidence doc (this session); full import remains ops after API recovery
 
 #### DEP-03 — Pin + record API GHCR digest; confirm tip routes
 
@@ -421,9 +428,9 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate:** S1 / G3
 - **Priority:** P0
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
-- **Evidence:** code complete; `payments=0` live
-- **Deps:** F9b sandbox creds; DEP-03
+- **Status:** `BLOCKED_EXTERNAL` (F9b + API tip)
+- **Evidence:** Prompt 8 `lenco-sandbox-money-drill.md` — no agent `LENCO_*`; API 502; live money rows still 0; drill A NOT RUN
+- **Deps:** F9b sandbox creds; DEP-03; isolated stack
 - **Acceptance:** `CHARGE_RECEIVED` + hold legs; idempotent replay
 - **Verify:** VB-P01 drill + redacted Lenco dashboard
 - **Blocks browse-beta:** no · **real-money:** yes · **public_launch:** yes
@@ -433,8 +440,9 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate:** S2 / G3
 - **Priority:** P0
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
-- **Deps:** F9b; hosted widget
+- **Status:** `BLOCKED_EXTERNAL` (same preflight)
+- **Evidence:** Prompt 8 section B NOT RUN
+- **Deps:** F9b; hosted widget; healthy sandbox API
 - **Acceptance:** same as S1 for card
 - **Blocks:** no / yes / yes
 
@@ -442,7 +450,8 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate:** S3 / G3
 - **Priority:** P0
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
+- **Status:** `BLOCKED_EXTERNAL` (same + release inactive)
+- **Evidence:** Prompt 8 section E NOT RUN; n8n release-job not active
 - **Deps:** DEP-02 release-job; LIVE-01
 - **Acceptance:** `COMMISSION_CAPTURE` before `RELEASE_TO_VENDOR`; escrow→0; double-tick safe
 - **Verify:** release tick + SQL
@@ -471,7 +480,8 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate:** S6 / G4
 - **Priority:** P0
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
+- **Status:** `BLOCKED_EXTERNAL` (Prompt 8 D NOT RUN)
+- **Evidence:** `lenco-sandbox-money-drill.md` — provider pending/failed/cancelled/malformed/timeout matrix not executed
 - **Deps:** RC-05; deployed target + F9b
 - **Acceptance:** pending/failed ≠ paid
 - **Blocks:** no / yes / yes
@@ -488,45 +498,49 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate:** G6
 - **Priority:** P0
-- **Status:** `LIVE_VERIFICATION_REQUIRED` (+ FOUNDER project create)
-- **Deps:** FOUNDER DSNs / UptimeRobot; RC-08
-- **Acceptance:** test event ingested; uptime alert fires
+- **Status:** `BLOCKED_EXTERNAL` (Sentry create 403; UptimeRobot NOT_AUDITABLE)
+- **Evidence:** `observability-live-evidence.md` — repo CODE_COMPLETE; no ingested test events; no alert latency
+- **Deps:** FOUNDER project create + DSNs / UptimeRobot; RC-08 activate
+- **Acceptance:** test event ingested per surface; uptime alert fires with recorded latency
 - **Blocks:** no / yes / yes
 
 #### LIVE-09 — G7 backup + ≤30-min restore
 
 - **Gate:** G7
 - **Priority:** P0
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
+- **Status:** `FAIL` (CONDITIONAL local drill only — approved backup still missing)
 - **Deps:** RC-03 + DEP-02 backup workflow
 - **Acceptance:** dated artifact + documented restore success
 - **Verify:** `restore-staging.sh` / DR runbook
+- **Evidence:** `docs/production-readiness/2026-07-20/ops-drills/` — checksum-verified restore of `backup_mode=drill` local-ci dump into isolated Postgres; key tables absent; API readiness NOT_RUN; production not overwritten
 - **Blocks:** no / yes / yes
 
 #### LIVE-10 — G9 rollback drill
 
 - **Gate:** G9 / launch-checklist §3
 - **Priority:** P0
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
+- **Status:** `FAIL` (NOT_RUN — API digest unknown / API 502)
 - **Acceptance:** timed Vercel + API rollback recorded
+- **Evidence:** `ops-drills/rollback-verification/` — candidates recorded; promote/rollback aborted
 - **Blocks:** no / yes / yes
 
 #### LIVE-11 — Load test p95 @100cc + invariants
 
 - **Gate:** M16-P08 / checklist §3
 - **Priority:** P1
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
+- **Status:** `FAIL` (NOT_RUN — no k6 / no approved staging; prod load refused)
 - **Acceptance:** p95<500ms; zero oversell/ledger/invoice-gap
+- **Evidence:** `ops-drills/load-results/NOT_RUN.md`, `metrics/load-summary.json` — harness offline OK; thresholds unchanged
 - **Blocks:** no / soft / yes
 
 #### LIVE-12 — Search `degraded` re-probe
 
 - **Gate:** VF-P04 / MR-B07
 - **Priority:** P1
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
-- **Evidence:** 07-19 observed `degraded=true`; no proven fix
-- **Deps:** embeddings cron (DEP-02)
-- **Acceptance:** `/search` healthy with embeddings or documented degraded mode
+- **Status:** `LIVE_VERIFICATION_REQUIRED` → programme **CCP-05**
+- **Evidence:** 07-19 observed `degraded=true`; no proven fix; honest UI banner already ships
+- **Deps:** embeddings cron (DEP-02) + OpenRouter key; API health for live probe
+- **Acceptance:** root cause documented; `/search` healthy with embeddings or honest degraded mode (never fake green)
 - **Blocks browse-beta:** soft · **real-money:** no · **public_launch:** soft
 
 #### LIVE-13 — Paid-ticket exactly-once + event escrow
@@ -608,18 +622,18 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 ### 3.H STALE_DOCUMENTATION
 
-| ID    | Doc claim                                                                       | Why stale                                                | Fix boundary                                   |
-| ----- | ------------------------------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------- |
-| SD-01 | Gap analysis: “#352 pending”; tip pre-source_key                                | #352 merged at `496819b`                                 | note in this board; optional later doc refresh |
-| SD-02 | Representation report: tip `1d137ae`; #352/#353 unmerged; Supabase unverifiable | tip `b1ea6a3`; Supabase re-probed; #352/#353/#355 merged | this board supersedes                          |
-| SD-03 | Gap analysis: “`0057–0062` may lag”                                             | applied live 2026-07-20                                  | this board                                     |
-| SD-04 | Vision audit DL-1 categories 500 / customer `cc4a824`                           | customer prod `b1ea6a3`                                  | vision-audit age                               |
-| SD-05 | Vision audit DL-3 unapplied `0051`/`0053`–`0056`                                | applied; new residual is source_key collision + FORCE    | vision-audit age                               |
-| SD-06 | `00-status.md` “remaining = founder gates only”                                 | deploy/verify/ops/money drills remain                    | status refresh (separate PR)                   |
-| SD-07 | `launch-checklist` F7 “7 design files”                                          | SOURCES.md: **6** missing                                | checklist wording                              |
-| SD-08 | `docs/ops/ci.md` secret-scan as required while `continue-on-error`              | CI still advisory                                        | ci.md + RC-06                                  |
-| SD-09 | Release-gates “`0056` unapplied” / G12 note                                     | `0056` applied; G12 still needs LIVE-05                  | release-gates refresh                          |
-| SD-10 | Representation “0 gates PASS” still directionally true                          | keep; do not claim PASS without evidence packs           | n/a                                            |
+| ID    | Doc claim                                                                       | Why stale                                                | Fix boundary                                      |
+| ----- | ------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------- |
+| SD-01 | Gap analysis: “#352 pending”; tip pre-source_key                                | #352 merged at `496819b`                                 | note in this board; optional later doc refresh    |
+| SD-02 | Representation report: tip `1d137ae`; #352/#353 unmerged; Supabase unverifiable | tip `b1ea6a3`; Supabase re-probed; #352/#353/#355 merged | this board supersedes                             |
+| SD-03 | Gap analysis: “`0057–0062` may lag”                                             | applied live 2026-07-20                                  | this board                                        |
+| SD-04 | Vision audit DL-1 categories 500 / customer `cc4a824`                           | customer prod `b1ea6a3`                                  | vision-audit age                                  |
+| SD-05 | Vision audit DL-3 unapplied `0051`/`0053`–`0056`                                | applied; new residual is source_key collision + FORCE    | vision-audit age                                  |
+| SD-06 | `00-status.md` “remaining = founder gates only”                                 | deploy/verify/ops/money drills remain                    | programme **CCP-08**                              |
+| SD-07 | `launch-checklist` F7 “7 design files”                                          | SOURCES.md: **6** missing                                | programme **CCP-08**                              |
+| SD-08 | `docs/ops/ci.md` secret-scan as required while `continue-on-error`              | CI still advisory                                        | programme **CCP-08** (+ RC-06 if making blocking) |
+| SD-09 | Release-gates “`0056` unapplied” / G12 note                                     | `0056` applied; G12 still needs LIVE-05                  | programme **CCP-08**                              |
+| SD-10 | Representation “0 gates PASS” still directionally true                          | keep; do not claim PASS without evidence packs           | n/a                                               |
 
 _Per task scope: only this board file is added unless a link would break — no mass doc rewrites in this PR._
 
@@ -644,7 +658,7 @@ _Per task scope: only this board file is added unless a link would break — no 
 
 ### P0 repo tasks (`REPO_CLOSABLE`)
 
-1. **RC-02** migration ledger reconcile (revoke on master + renumber source_key → 0064) — **do not reimplement source_key**
+1. **RC-02** migration ledger reconcile (revoke on master + renumber source_key → 0065) — **do not reimplement source_key**
 2. **RC-01** FORCE RLS migration
 3. **RC-03** `backup.json`
 4. **RC-05** false-success + critical-path E2E specs

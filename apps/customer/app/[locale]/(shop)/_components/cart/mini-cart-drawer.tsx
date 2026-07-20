@@ -71,6 +71,8 @@ type CartStoreState = {
   cart: CartResponse | null;
   notices: ChangeNotice[];
   loading: boolean;
+  /** True when the last cart refresh failed (distinct from an empty cart). */
+  loadError: boolean;
   drawerOpen: boolean;
   lastAddedMessage: string | null;
 };
@@ -153,7 +155,10 @@ async function loadCartWithNotices(): Promise<{ cart: CartResponse; notices: Cha
 let storeState: CartStoreState = {
   cart: null,
   notices: [],
-  loading: false,
+  // Start loading so the cart page does not flash an empty state before the
+  // first refresh completes (empty vs load-error must stay distinct).
+  loading: true,
+  loadError: false,
   drawerOpen: false,
   lastAddedMessage: null,
 };
@@ -186,13 +191,13 @@ export function getCartItemCount(cart: CartResponse | null): number {
 }
 
 export async function refreshCart(): Promise<CartResponse | null> {
-  setStoreState({ loading: true });
+  setStoreState({ loading: true, loadError: false });
   try {
     const { cart, notices } = await loadCartWithNotices();
-    setStoreState({ cart, notices, loading: false });
+    setStoreState({ cart, notices, loading: false, loadError: false });
     return cart;
   } catch {
-    setStoreState({ loading: false });
+    setStoreState({ loading: false, loadError: true });
     return null;
   }
 }

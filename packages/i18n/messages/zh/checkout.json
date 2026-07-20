@@ -45,7 +45,15 @@
     "noticePriceChanged": "价格已从 {oldPrice} 更新为 {newPrice}",
     "noticeOutOfStock": "此商品现已缺货",
     "noticeQtyReduced": "仅剩 {available} 件——数量已从 {requested} 调整",
-    "outOfStockLine": "缺货"
+    "outOfStockLine": "缺货",
+    "loadErrorTitle": "无法加载购物车",
+    "loadErrorBody": "请检查网络后重试。您的商品不会丢失。",
+    "loadErrorRetry": "重试",
+    "multiSellerNote": "来自不同卖家的商品可能有不同的配送或自提条件。每位卖家在结账时单独选择履约方式。",
+    "escrowTeaser": "在线支付时，Vergeo5 会托管您的款项直至送达，再释放给卖家。",
+    "stockUnavailableNotice": "有商品已不可用。请在继续结账前检查购物车。",
+    "summaryHeading": "订单摘要",
+    "sellerIndex": "卖家 {index}/{total}"
   },
   "checkout": {
     "pageTitle": "结账",
@@ -135,7 +143,13 @@
       "codRejected": "此订单总额不支持货到付款",
       "railRejected": "不支持该移动支付网络",
       "error": "无法保存您的付款方式。请重试。",
-      "paymentsDisabled": "在线支付暂时不可用。请在可用时使用货到付款，或稍后再试。"
+      "paymentsDisabled": "在线支付暂时不可用。请在可用时使用货到付款，或稍后再试。",
+      "momoHelp": "在手机上批准 USSD 提示。款项由 Vergeo5 托管直至送达。",
+      "cardHelp": "在 Lenco 安全页面付款。Vergeo5 不会看到您的卡信息。",
+      "codHelp": "符合条件的订单可在送达时向快递员支付现金。",
+      "codUnavailableTitle": "货到付款不可用",
+      "selected": "已选择",
+      "unavailable": "不可用"
     },
     "review": {
       "title": "确认您的订单",
@@ -159,7 +173,13 @@
       "consentLabel": "我同意条款与条件以及隐私政策",
       "consentRequired": "接受条款与条件以继续",
       "placeOrder": "提交订单",
-      "loading": "请稍候…"
+      "loading": "请稍候…",
+      "placingOrder": "正在提交订单…",
+      "placeOrderUnavailable": "暂时无法提交订单。您的付款方式已保存 — 请稍后重试。",
+      "whatHappensNext": "接下来会发生什么",
+      "nextMomo": "您将收到手机 USSD 提示。批准后才开始付款 — 订单仅在我们验证批准后确认。",
+      "nextCard": "您将在 Lenco 安全页面继续。付款完成前请勿关闭该页面。",
+      "nextCod": "订单将以货到付款方式下单。送达时向快递员付款 — 现在不会收取在线付款。"
     },
     "pending": {
       "pageTitle": "批准付款",

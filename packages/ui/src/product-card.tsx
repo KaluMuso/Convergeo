@@ -27,6 +27,11 @@ export type ProductCardProps = {
   onQuickAdd?: () => void;
   onWishlistToggle?: () => void;
   isWishlisted?: boolean;
+  /**
+   * Polite status text announced after wishlist toggles (e.g. “Saved to wishlist”).
+   * Parent owns the string so ProductCard stays RSC-safe.
+   */
+  wishlistStatusAnnouncement?: string;
   skeleton?: boolean;
   className?: string;
   /** Accessible label for the empty media stage when no image is provided. */
@@ -87,6 +92,7 @@ export function ProductCard({
   onQuickAdd,
   onWishlistToggle,
   isWishlisted = false,
+  wishlistStatusAnnouncement,
   skeleton = false,
   className,
   mediaEmptyLabel,
@@ -151,6 +157,16 @@ export function ProductCard({
               className={isWishlisted ? "text-discount" : undefined}
             />
           </button>
+        ) : null}
+        {wishlistStatusAnnouncement ? (
+          <span
+            className="sr-only"
+            aria-live="polite"
+            aria-atomic="true"
+            data-testid="product-card-wishlist-status"
+          >
+            {wishlistStatusAnnouncement}
+          </span>
         ) : null}
         {onQuickAdd ? (
           <button

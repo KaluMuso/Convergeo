@@ -45,6 +45,7 @@
       "browse": "Twaleni",
       "browseChipsAria": "Twaleni ukulingana na ifyo mulefwaya",
       "cart": "Ing'anda ya ifintu",
+      "cartWithCount": "Ing'anda ya ifintu, ifintu {count}",
       "categoriesEmpty": "Categories tashifikapo nomba. Wesheni limbi.",
       "categoriesLoading": "Ilekete categories…",
       "categoriesPanelAria": "Categories shyonse",

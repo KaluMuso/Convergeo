@@ -173,7 +173,7 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
   }
 
   if (!session) {
-    return <p className="text-sm text-muted-foreground">{t("events.errors.authRequired")}</p>;
+    return <p className="text-sm text-text-2">{t("events.errors.authRequired")}</p>;
   }
 
   const readOnly = status === "cancelled" || status === "completed";
@@ -181,14 +181,12 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
   return (
     <div className="flex flex-col gap-6">
       <header className="space-y-1">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">
-          {t("events.eyebrow")}
-        </p>
-        <h1 className="text-xl font-semibold text-foreground">
+        <p className="text-xs uppercase tracking-wide text-text-3">{t("events.eyebrow")}</p>
+        <h1 className="text-xl font-semibold text-text">
           {mode === "create" ? t("events.form.createTitle") : t("events.form.editTitle")}
         </h1>
         {mode === "edit" ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-text-2">
             {t(`events.status.${status}`)}
             {ticketsSold > 0 ? ` · ${t("events.form.ticketsSold", { count: ticketsSold })}` : ""}
           </p>
@@ -221,7 +219,7 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
 
       <FormField label={t("events.form.description")}>
         <textarea
-          className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          className="min-h-24 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
           placeholder={t("events.form.descriptionPlaceholder")}
@@ -275,8 +273,8 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
 
       <InstanceEditor instances={instances} onChange={setInstances} disabled={readOnly || saving} />
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {notice ? <p className="text-sm text-emerald-700">{notice}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
+      {notice ? <p className="text-sm text-success">{notice}</p> : null}
 
       <div className="flex flex-col gap-2">
         {!readOnly ? (
@@ -342,10 +340,7 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
           </Button>
         ) : null}
 
-        <Link
-          href={`/${locale}/events`}
-          className="text-center text-sm text-muted-foreground underline"
-        >
+        <Link href={`/${locale}/events`} className="text-center text-sm text-text-2 underline">
           {t("events.form.backToList")}
         </Link>
       </div>

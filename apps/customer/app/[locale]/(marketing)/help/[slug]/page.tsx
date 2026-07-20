@@ -65,7 +65,7 @@ export default async function HelpArticlePage({ params }: PageProps) {
   };
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <main id="marketing-main" className="mx-auto w-full max-w-2xl px-4 py-8">
       <script
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
         type="application/ld+json"

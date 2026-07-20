@@ -63,7 +63,7 @@
         "conditions": {
           "string": [
             {
-              "value1": "={{$json.body.alertType}}",
+              "value1": "={{$json.body.alertType || $json.alertType}}",
               "operation": "equal",
               "value2": "1"
             }
@@ -95,7 +95,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{$env.FOUNDER_WHATSAPP_TO}}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"ops_uptime_alert\",\n    \"language\": { \"code\": \"en\" },\n    \"components\": [\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          { \"type\": \"text\", \"text\": \"{{$json.body.monitorFriendlyName}}\" },\n          { \"type\": \"text\", \"text\": \"{{$json.body.alertDetails}}\" },\n          { \"type\": \"text\", \"text\": \"{{$json.body.alertDateTime}}\" }\n        ]\n      }\n    ]\n  }\n}",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{$env.FOUNDER_WHATSAPP_TO}}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"ops_uptime_alert\",\n    \"language\": { \"code\": \"en\" },\n    \"components\": [\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          { \"type\": \"text\", \"text\": \"{{$json.body.monitorFriendlyName || $json.monitorFriendlyName}}\" },\n          { \"type\": \"text\", \"text\": \"{{$json.body.alertDetails || $json.alertDetails}}\" },\n          { \"type\": \"text\", \"text\": \"{{$json.body.alertDateTime || $json.alertDateTime}}\" }\n        ]\n      }\n    ]\n  }\n}",
         "options": {
           "timeout": 30000
         }

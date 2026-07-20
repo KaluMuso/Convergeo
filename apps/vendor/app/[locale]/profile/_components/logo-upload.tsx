@@ -76,11 +76,11 @@ export function LogoUpload({ logoUrl, disabled, getToken, onUploaded }: LogoUplo
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-4">
-        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-white">
+        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-border bg-surface">
           {logoUrl ? (
             <img src={logoUrl} alt={t("profile.logo.alt")} className="h-full w-full object-cover" />
           ) : (
-            <span className="text-xs text-neutral-400">{t("profile.logo.empty")}</span>
+            <span className="text-xs text-text-3">{t("profile.logo.empty")}</span>
           )}
         </div>
         <div className="flex flex-col gap-2">
@@ -102,11 +102,11 @@ export function LogoUpload({ logoUrl, disabled, getToken, onUploaded }: LogoUplo
               {t("profile.logo.upload")}
             </Button>
           </label>
-          <p className="text-xs text-neutral-500">{t("profile.logo.help")}</p>
+          <p className="text-xs text-text-3">{t("profile.logo.help")}</p>
         </div>
       </div>
       {uploading ? <Spinner label={t("profile.logo.uploading")} /> : null}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
     </div>
   );
 }

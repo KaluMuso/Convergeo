@@ -135,6 +135,30 @@ describe("account i18n", () => {
   });
 });
 describe("ProfileForm locale switch", () => {
+  it("shows only public locales in the language selector", () => {
+    render(
+      <ProfileForm
+        locale="en"
+        accessToken="token"
+        initialProfile={{
+          id: "user-1",
+          phone: "+260971234567",
+          display_name: "Chisomo",
+          locale: "en",
+        }}
+        labels={profileLabels}
+      />,
+    );
+
+    expect(screen.getAllByRole("option").map((option) => option.getAttribute("value"))).toEqual([
+      "en",
+      "bem",
+      "nya",
+      "fr",
+    ]);
+    expect(screen.queryByRole("option", { name: "zh" })).not.toBeInTheDocument();
+  });
+
   it("navigates to the new locale prefix after saving", async () => {
     const assign = vi.fn();
     Object.defineProperty(window, "location", {
@@ -168,7 +192,7 @@ describe("ProfileForm locale switch", () => {
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => {
-      expect(assign).toHaveBeenCalledWith("/bem/account");
+      expect(assign).toHaveBeenCalledWith("/bem/account/profile");
     });
   });
 });

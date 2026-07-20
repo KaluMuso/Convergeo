@@ -23,7 +23,8 @@ export const buttonVariantClasses: Record<ButtonVariant, string> = {
 };
 
 export const buttonSizeClasses: Record<ButtonSize, string> = {
-  sm: "h-9 min-h-9 px-3 text-sm gap-2",
+  /** 44px minimum touch target (WCAG 2.2 AA target size). */
+  sm: "h-11 min-h-11 px-3 text-sm gap-2",
   md: "h-11 min-h-11 px-4 text-body gap-2",
   lg: "h-12 min-h-12 px-6 text-body gap-3",
 };

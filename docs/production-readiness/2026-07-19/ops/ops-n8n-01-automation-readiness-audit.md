@@ -91,16 +91,18 @@ Paid ticket issuance and stale-hold release are code-complete on the API side; a
 
 Overall reconciliation concern = **PARTIAL** until daily-report failures are diagnosed (API auth, payload, or timeout) **without** activating new money-moving workflows.
 
-### 3.5 Database / OCI backup and restore — **UNKNOWN** / contract **DORMANT**
+### 3.5 Database / OCI backup and restore — **CODE_COMPLETE** (live still **DORMANT** / G7 **NOT PASS**)
 
-| Artifact                       | Status                                                                                     |
-| ------------------------------ | ------------------------------------------------------------------------------------------ |
-| `infra/n8n/backup-schedule.md` | Contract only (cron 02:00 Africa/Lusaka → `infra/scripts/db-dump.sh`)                      |
-| n8n backup workflow JSON       | **Missing** (not in `infra/n8n/*.json`, not in live search) → DORMANT                      |
-| `infra/scripts/db-dump.sh`     | Present in repo                                                                            |
-| `infra/scripts/db-restore.sh`  | Present in repo                                                                            |
-| Live dump → OCI object proof   | **UNKNOWN** / NOT_AUDITABLE from this session (no OCI list access)                         |
-| Restore drill                  | Local PASS in `docs/ops/drill-log.md` (2026-07-12); live staging drill still founder-gated |
+| Artifact                              | Status                                                                                     |
+| ------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `infra/n8n/backup-schedule.md`        | Contract (cron 02:00 + watchdog 04:00 Africa/Lusaka → dump/watchdog)                       |
+| `infra/n8n/backup.json`               | **Present** in repo (`active: false`); not imported/live → DORMANT                         |
+| `infra/scripts/db-dump.sh`            | Present (manifest + sha256 + retention prune + OCI put)                                    |
+| `infra/scripts/db-backup-watchdog.sh` | Present (missed-schedule / destination age check)                                          |
+| `infra/scripts/db-restore.sh`         | Present in repo                                                                            |
+| Live dump → OCI object proof          | **UNKNOWN** / NOT_AUDITABLE until founder activates + lists object                         |
+| Restore drill                         | Local PASS in `docs/ops/drill-log.md` (2026-07-12); live staging drill still founder-gated |
+| G7                                    | **NOT PASS** — CODE_COMPLETE ≠ dated dump + timed restore evidence                         |
 
 ### 3.6 Notification dispatch — **VERIFIED LIVE**
 
@@ -139,7 +141,8 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `embeddings-cron.json`            | Search/AI                   | no                      | DORMANT                                        |
 | `uptime-alert.json`               | Observability               | no                      | DORMANT                                        |
 | `money-workflow-error-alert.json` | Money / ops error paging    | no                      | DORMANT (VD-P06 shared Error Trigger template) |
-| `backup-schedule.md` (no JSON)    | DB/OCI backup               | no                      | DORMANT contract / UNKNOWN live                |
+| `backup.json`                     | DB/OCI backup               | no                      | DORMANT (CODE_COMPLETE in repo; G7 NOT PASS)   |
+| `backup-schedule.md`              | DB/OCI backup contract      | n/a                     | Contract for `backup.json`                     |
 
 \*Live workflow is a manual/MCP-built sibling of the committed export, not a clean import of `notification-dispatch.json`.
 
@@ -147,16 +150,16 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 
 ## 5. Cross-cutting readiness gaps (must fix before activation)
 
-| Gap                                                 | Evidence                          | Risk if ignored                                                |
-| --------------------------------------------------- | --------------------------------- | -------------------------------------------------------------- |
-| Live URLs hardcoded to `api.vergeo5.com`            | Live node params                  | Staging import of live export would hit production             |
-| Committed JSON uses `$env.API_URL`                  | All `infra/n8n/*.json` HTTP nodes | Correct pattern — prefer for any new import                    |
-| No shared Error Workflow                            | Live + committed                  | Failures silent except n8n history                             |
-| No `retryOnFail` / `maxTries` on HTTP nodes         | Committed parse                   | Transient 5xx → missed ticks until next schedule               |
-| Credential coverage only 3 of N                     | `list_credentials`                | Cannot bind release/tickets/order-jobs without new Header Auth |
-| Registry drift (webhook-drain, schedules, timeouts) | §3.3–3.4                          | Ops runbooks disagree with live                                |
-| Daily reconciliation report failing                 | error executions @ ~00:00 UTC     | Blind spot on Lenco vs ledger daily totals                     |
-| Backup not an n8n workflow                          | `backup-schedule.md` only         | UNKNOWN whether nightly dump runs                              |
+| Gap                                                 | Evidence                                                                 | Risk if ignored                                                              |
+| --------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| Live URLs hardcoded to `api.vergeo5.com`            | Live node params                                                         | Staging import of live export would hit production                           |
+| Committed JSON uses `$env.API_URL`                  | All `infra/n8n/*.json` HTTP nodes                                        | Correct pattern — prefer for any new import                                  |
+| No live shared Error Workflow                       | Live n8n search; committed `money-workflow-error-alert.json` is inactive | Failures stay silent live until an Error Trigger workflow is imported/linked |
+| No `retryOnFail` / `maxTries` on HTTP nodes         | Committed parse                                                          | Transient 5xx → missed ticks until next schedule                             |
+| Credential coverage only 3 of N                     | `list_credentials`                                                       | Cannot bind release/tickets/order-jobs without new Header Auth               |
+| Registry drift (webhook-drain, schedules, timeouts) | §3.3–3.4                                                                 | Ops runbooks disagree with live                                              |
+| Daily reconciliation report failing                 | error executions @ ~00:00 UTC                                            | Blind spot on Lenco vs ledger daily totals                                   |
+| Backup workflow not live                            | `backup.json` in repo (`active:false`) but not imported                  | UNKNOWN whether nightly dump runs until activation + OCI object proof        |
 
 ---
 
@@ -222,11 +225,11 @@ Activate **one workflow at a time**. Prefer **staging n8n** (`n8n.staging.vergeo
 
 ### Phase F — Backup / restore proof
 
-| Step | Action                                                                                                                                           | Timeout              | Retry         | Idempotency                   | Error-workflow | Freeze / rollback                        |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- | ------------- | ----------------------------- | -------------- | ---------------------------------------- |
-| F1   | Either wire n8n Execute Command per `backup-schedule.md` **or** document host cron as system of record. Leave inactive until dump object listed. | dump SLA per runbook | 1× alert only | object key includes timestamp | A0 on failure  | Manual `db-dump.sh` break-glass          |
-| F2   | List latest `oci://…/db/vergeo5-*.sql.gz`; record name+size in drill-log (no secrets).                                                           | —                    | —             | —                             | —              | —                                        |
-| F3   | Staging restore drill PASS in `docs/ops/drill-log.md` (RTO ≤30m).                                                                                | —                    | —             | —                             | —              | App pin rollback per `infra/ROLLBACK.md` |
+| Step | Action                                                                                                                         | Timeout              | Retry         | Idempotency                   | Error-workflow | Freeze / rollback                         |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------- | ------------- | ----------------------------- | -------------- | ----------------------------------------- |
+| F1   | Import `backup.json` (SSH → `db-dump.sh`); leave inactive until dump object listed; activate per `docs/ops/backup-runbook.md`. | dump SLA per runbook | 1× alert only | object key includes timestamp | A0 on failure  | Manual webhook / `db-dump.sh` break-glass |
+| F2   | List latest `oci://…/db/vergeo5-*.sql.gz`; record name+size in drill-log (no secrets).                                         | —                    | —             | —                             | —              | —                                         |
+| F3   | Staging restore drill PASS in `docs/ops/drill-log.md` (RTO ≤30m).                                                              | —                    | —             | —                             | —              | App pin rollback per `infra/ROLLBACK.md`  |
 
 ### Phase G — Secondary notifications (after dispatch proven)
 
@@ -274,18 +277,19 @@ Trigger freeze when: daily recon red, release tick posts unexpected captures, du
 
 ## 11. Verification performed this audit
 
-| Check                                           | Result                                                         |
-| ----------------------------------------------- | -------------------------------------------------------------- |
-| `gh pr list` for duplicate OPS-N8N audit        | none open                                                      |
-| MCP `search_workflows` (200)                    | 2 workflows                                                    |
-| MCP `get_workflow_details` ×2                   | schedules, URLs, timeouts recorded (no secrets)                |
-| MCP `search_executions` success + error         | dispatch healthy; daily report errors recurring                |
-| MCP `list_credentials`                          | 3 names; no secret values                                      |
-| MCP search release/ticket/error/backup          | 0 workflows                                                    |
-| Parse all `infra/n8n/*.json`                    | all `active=false`; no `errorWorkflow`; `$env.API_URL` pattern |
-| Registry doc + API routers + ratelimit policies | endpoints exist for dormant ticks                              |
-| `backup-schedule.md` + dump/restore scripts     | contract + scripts exist; no n8n JSON                          |
-| Activation / enable / execute                   | **not performed**                                              |
+| Check                                                                | Result                                                               |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `gh pr list` for duplicate OPS-N8N audit                             | none open                                                            |
+| MCP `search_workflows` (200)                                         | 2 workflows                                                          |
+| MCP `get_workflow_details` ×2                                        | schedules, URLs, timeouts recorded (no secrets)                      |
+| MCP `search_executions` success + error                              | dispatch healthy; daily report errors recurring                      |
+| MCP `list_credentials`                                               | 3 names; no secret values                                            |
+| MCP search release/ticket/error/backup                               | 0 workflows                                                          |
+| Parse all `infra/n8n/*.json`                                         | all `active=false`; no `errorWorkflow`; `$env.API_URL` pattern       |
+| Registry doc + API routers + ratelimit policies                      | endpoints exist for dormant ticks                                    |
+| `money-workflow-error-alert.json`                                    | metadata-only Error Trigger template exists; live import still gated |
+| `backup.json` + `backup-schedule.md` + dump/watchdog/restore scripts | CODE_COMPLETE in repo; live import + G7 evidence still founder-gated |
+| Activation / enable / execute                                        | **not performed**                                                    |
 
 ---
 
