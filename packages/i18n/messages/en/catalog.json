@@ -72,17 +72,24 @@
       "allCategories": "All Categories",
       "categoriesPanelAria": "All categories",
       "categoriesLoading": "Loading categories…",
+      "categoriesEmpty": "Categories are unavailable right now. Try again shortly.",
       "viewAllCategories": "View all categories",
+      "directory": "Directory",
       "services": "Services",
       "events": "Events",
       "askVergeo": "Ask Vergeo",
       "supplies": "Supplies",
-      "desktopAriaLabel": "Primary navigation"
+      "desktopAriaLabel": "Primary navigation",
+      "browseChipsAria": "Browse by area"
+    },
+    "serviceBar": {
+      "ariaLabel": "Delivery and pickup information",
+      "message": "Lusaka delivery · Nationwide pickup · Escrow when you pay online"
     },
     "hero": {
       "eyebrow": "Zambia's marketplace",
-      "fallbackTitle": "Discover products, services, and events across Zambia",
-      "fallbackSubtitle": "Compare prices from sellers across Zambia, and arrange Lusaka delivery or nationwide pickup when the listing supports it.",
+      "fallbackTitle": "Shop products, services, and events across Zambia",
+      "fallbackSubtitle": "Compare sellers, arrange Lusaka delivery or nationwide pickup, and discover what is nearby.",
       "primaryCta": "Start browsing",
       "secondaryCta": "Learn about selling",
       "placeholder": {

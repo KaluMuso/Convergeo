@@ -33,6 +33,9 @@ function trustLabels(messages: typeof bemCatalog, locale: string) {
     fulfillment: t("home.trust.fulfillment"),
     returns: t("home.trust.returns"),
     escrow: t("home.trust.escrow"),
+    escrowStep1: t("home.hero.escrowStep1"),
+    escrowStep2: t("home.hero.escrowStep2"),
+    escrowStep3: t("home.hero.escrowStep3"),
   };
 }
 

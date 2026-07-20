@@ -24,6 +24,7 @@ export const PHASE1_CRITICAL_PREFIXES: Record<Phase1Namespace, readonly string[]
   catalog: [
     "home.meta",
     "home.nav",
+    "home.serviceBar",
     "home.hero",
     "home.trust",
     "home.demo",

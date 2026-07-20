@@ -8,6 +8,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { resolveApiBaseUrl } from "../../../../lib/api-base-url";
+import { BrowseDiscoveryChips } from "../_components/browse-discovery-chips";
 import { RecentSearches } from "../_components/search/recent-searches";
 import {
   ResultsTabs,
@@ -131,12 +132,20 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
 
   setRequestLocale(locale);
   const baseMessages = await getMessages();
-  const searchMessages = await loadNamespace(locale as Locale, "search");
-  const messages = { ...baseMessages, search: searchMessages } as AbstractIntlMessages;
+  const [searchMessages, catalogMessages] = await Promise.all([
+    loadNamespace(locale as Locale, "search"),
+    loadNamespace(locale as Locale, "catalog"),
+  ]);
+  const messages = {
+    ...baseMessages,
+    search: searchMessages,
+    catalog: catalogMessages,
+  } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "search" }) as (
     key: string,
     values?: Record<string, string | number>,
   ) => string;
+  const tCatalog = createTranslator({ locale, messages, namespace: "catalog" });
 
   const normalized = normalizeSearchQuery(q);
   const activeKind = parseSearchKind(kindParam);
@@ -199,6 +208,33 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
             noSuggestions: t("input.noSuggestions"),
           }}
         />
+        {!query ? (
+          <BrowseDiscoveryChips
+            ariaLabel={tCatalog("home.nav.browseChipsAria")}
+            chips={[
+              {
+                key: "categories",
+                href: `/${locale}/categories`,
+                label: tCatalog("home.nav.allCategories"),
+              },
+              {
+                key: "directory",
+                href: `/${locale}/directory`,
+                label: tCatalog("home.nav.directory"),
+              },
+              {
+                key: "services",
+                href: `/${locale}/services`,
+                label: tCatalog("home.nav.services"),
+              },
+              {
+                key: "events",
+                href: `/${locale}/events`,
+                label: tCatalog("home.nav.events"),
+              },
+            ]}
+          />
+        ) : null}
       </header>
 
       <RecentSearches

@@ -72,17 +72,24 @@
       "allCategories": "全部类别",
       "categoriesPanelAria": "全部类别",
       "categoriesLoading": "正在加载类别…",
+      "categoriesEmpty": "类别暂时不可用，请稍后重试。",
       "viewAllCategories": "查看全部分类",
+      "directory": "商家目录",
       "services": "服务",
       "events": "活动",
       "askVergeo": "问 Vergeo",
       "supplies": "批发",
-      "desktopAriaLabel": "主导航"
+      "desktopAriaLabel": "主导航",
+      "browseChipsAria": "按板块浏览"
+    },
+    "serviceBar": {
+      "ariaLabel": "配送与自提说明",
+      "message": "卢萨卡配送 · 全国自提 · 在线支付时由平台托管货款"
     },
     "hero": {
       "eyebrow": "赞比亚的购物平台",
-      "fallbackTitle": "发现赞比亚各地的商品、服务与活动",
-      "fallbackSubtitle": "比较赞比亚卖家的价格，并在商品支持时安排卢萨卡配送或全国自提。",
+      "fallbackTitle": "在赞比亚选购商品、服务与活动",
+      "fallbackSubtitle": "比较卖家，安排卢萨卡配送或全国自提，发现身边好物。",
       "primaryCta": "开始浏览",
       "secondaryCta": "了解如何开店",
       "placeholder": {

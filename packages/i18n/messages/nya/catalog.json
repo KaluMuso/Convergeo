@@ -22,8 +22,8 @@
       "escrowStep2": "Ikusungidwa ndi Vergeo5",
       "escrowStep3": "Yatsimikizidwa pa kutumiza",
       "eyebrow": "Marketplace ya Zambia",
-      "fallbackSubtitle": "Fananizani mitengo kuchokera kwa ogulitsa mu Zambia, ndi konzeni delivery ya Lusaka kapena pickup nationwide pamene listing imalola.",
-      "fallbackTitle": "Pezani zinthu, services, ndi events mu Zambia",
+      "fallbackSubtitle": "Fananizani ogulitsa, konzeni delivery ya Lusaka kapena pickup nationwide, ndi pezani zomwe zili pafupi.",
+      "fallbackTitle": "Gulani zinthu, services, ndi events mu Zambia",
       "placeholder": {
         "subtitle": "Storefront yanu ya config idzaonekera apa pamene merchandising slots ziyamba.",
         "title": "Takulandirani ku Vergeo5"
@@ -43,10 +43,13 @@
       "askVergeo": "Funsa Vergeo",
       "bottomAriaLabel": "Navigation yayikulu ya shop",
       "browse": "Yang'anani",
+      "browseChipsAria": "Yang'anani ndi gawo",
       "cart": "Ngolo ya zinthu",
+      "categoriesEmpty": "Ma-categories salipo pano. Yesaninso posachedwa.",
       "categoriesLoading": "Ikuyenda ma-categories…",
       "categoriesPanelAria": "Ma-categories onse",
       "desktopAriaLabel": "Navigation yayikulu",
+      "directory": "Malo a ogulitsa",
       "events": "Zochitika",
       "home": "Kwathu",
       "orders": "Ma-order",
@@ -55,6 +58,10 @@
       "services": "Ntchito",
       "supplies": "Za business",
       "viewAllCategories": "Onani ma-categories onse"
+    },
+    "serviceBar": {
+      "ariaLabel": "Zambiri za delivery ndi pickup",
+      "message": "Delivery ku Lusaka · Pickup nationwide · Escrow mukalipira online"
     },
     "rails": {
       "departmentTitle": "Zatsopano mu {category}",

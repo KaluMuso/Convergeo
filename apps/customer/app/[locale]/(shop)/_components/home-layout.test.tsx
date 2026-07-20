@@ -31,7 +31,7 @@ const t = createTranslator({
 const OPERATIONAL_PLACEHOLDER_TITLE = "Welcome to Vergeo5";
 const OPERATIONAL_PLACEHOLDER_SUBTITLE =
   "Your config-driven storefront will appear here as merchandising slots go live.";
-const BUYER_FALLBACK_TITLE = "Discover products, services, and events across Zambia";
+const BUYER_FALLBACK_TITLE = "Shop products, services, and events across Zambia";
 
 function makeSeedPlaceholderHero(overrides: Partial<MerchSlotRow> = {}): MerchSlotRow {
   return {
@@ -175,7 +175,7 @@ describe("resolveHomeLayoutMode", () => {
 });
 
 describe("default homepage storefront rendering", () => {
-  it("renders buyer escrow hero and a product rail for placeholder-only seed config", () => {
+  it("renders buyer merch hero and a product rail for placeholder-only seed config", () => {
     const mode = resolveHomeLayoutMode([makeSeedPlaceholderHero()], [makeCategory()], {
       ...emptyDefaultData,
       newest: [makeListing()],
@@ -184,7 +184,7 @@ describe("default homepage storefront rendering", () => {
 
     render(
       <>
-        <HomeHeroBand locale="en" t={t} />
+        <HomeHeroBand locale="en" t={t} brandName="Vergeo5" />
         <HomeProductRail
           id="home-rail-new"
           title={t("home.rails.newTitle")}
@@ -197,9 +197,11 @@ describe("default homepage storefront rendering", () => {
       </>,
     );
 
+    expect(screen.getByTestId("home-hero-brand")).toHaveTextContent("Vergeo5");
     expect(
       screen.getByRole("heading", { level: 1, name: BUYER_FALLBACK_TITLE }),
     ).toBeInTheDocument();
+    expect(screen.queryByText("You pay")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "New on Vergeo5" })).toBeInTheDocument();
     expect(screen.getByTestId("product-card")).toBeInTheDocument();
     expect(screen.queryByText(OPERATIONAL_PLACEHOLDER_TITLE)).not.toBeInTheDocument();

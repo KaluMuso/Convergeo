@@ -22,8 +22,8 @@
       "escrowStep2": "Yikwata bwino na Vergeo5",
       "escrowStep3": "Yasuminishwa pa kufika",
       "eyebrow": "Marketplace ya Zambia",
-      "fallbackSubtitle": "Compare prices ukufuma ku basellers mu Zambia, no arrange delivery ya Lusaka nangu pickup nationwide ilyo listing yaisa.",
-      "fallbackTitle": "Sanga ifintu, services, no events mu Zambia",
+      "fallbackSubtitle": "Compare basellers, arrange delivery ya Lusaka nangu pickup nationwide, no sanga ifyo fli pepi.",
+      "fallbackTitle": "Shiteni ifintu, services, no events mu Zambia",
       "placeholder": {
         "subtitle": "Storefront yenu ya config ileisa apa ilyo merchandising slots fyaya live.",
         "title": "Mwaiseni pa Vergeo5"
@@ -43,10 +43,13 @@
       "askVergeo": "Ipusheni Vergeo",
       "bottomAriaLabel": "Navigation ikalamba ya shop",
       "browse": "Twaleni",
+      "browseChipsAria": "Twaleni ukulingana na ifyo mulefwaya",
       "cart": "Ing'anda ya ifintu",
+      "categoriesEmpty": "Categories tashifikapo nomba. Wesheni limbi.",
       "categoriesLoading": "Ilekete categories…",
       "categoriesPanelAria": "Categories shyonse",
       "desktopAriaLabel": "Navigation ikalamba",
+      "directory": "Malo a basellers",
       "events": "Ificitike",
       "home": "Kwenu",
       "orders": "Ama-order",
@@ -55,6 +58,10 @@
       "services": "Imilimo",
       "supplies": "Ifya business",
       "viewAllCategories": "Loleni categories shyonse"
+    },
+    "serviceBar": {
+      "ariaLabel": "Amashiwi ya delivery no pickup",
+      "message": "Delivery ya Lusaka · Pickup nationwide · Escrow ilyo mwalipila online"
     },
     "rails": {
       "departmentTitle": "Ifyapya mu {category}",

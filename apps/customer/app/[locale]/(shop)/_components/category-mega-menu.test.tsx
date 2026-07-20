@@ -60,10 +60,25 @@ describe("CategoryMegaMenu", () => {
     const trigger = screen.getByRole("button", { name: /all categories/i });
     await user.click(trigger);
     await screen.findByRole("link", { name: "Phones" });
+    expect(screen.getByRole("dialog", { name: labels.panelAria })).toBeInTheDocument();
 
     await user.keyboard("{Escape}");
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(trigger).toHaveFocus();
+  });
+
+  it("exposes an empty state when the category tree is empty", async () => {
+    const user = userEvent.setup();
+    render(
+      <CategoryMegaMenu
+        locale="en"
+        labels={{ ...labels, empty: "No categories" }}
+        loadCategories={() => Promise.resolve([])}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /all categories/i }));
+    expect(await screen.findByText("No categories")).toBeInTheDocument();
   });
 
   it("buildCategoryTree nests children under parents and drops prohibited nodes", () => {

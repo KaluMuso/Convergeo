@@ -1,4 +1,12 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
+import {
+  IconAccount,
+  IconAsk,
+  IconCart,
+  IconHome,
+  IconOrders,
+  IconSearch,
+} from "@vergeo/ui/src/icons";
 import Link from "next/link";
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -6,19 +14,12 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { BottomNavClient } from "./_components/bottom-nav-client";
 import { DesktopHeader } from "./_components/desktop-header";
 import { MobileTopNav } from "./_components/mobile-top-nav";
+import { ServiceInfoBar } from "./_components/service-info-bar";
 
 type ShopLayoutProps = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 };
-
-function navIcon(glyph: string) {
-  return (
-    <span aria-hidden className="text-base leading-none">
-      {glyph}
-    </span>
-  );
-}
 
 export default async function ShopLayout({ children, params }: ShopLayoutProps) {
   const { locale } = await params;
@@ -36,31 +37,31 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
   const bottomItems = [
     {
       key: "home",
-      icon: navIcon("🏠"),
+      icon: <IconHome />,
       label: t("home.nav.home"),
       href: `/${locale}`,
     },
     {
-      key: "categories",
-      icon: navIcon("▦"),
-      label: t("home.nav.allCategories"),
-      href: `/${locale}/categories`,
-    },
-    {
       key: "browse",
-      icon: navIcon("🔍"),
+      icon: <IconSearch />,
       label: t("home.nav.browse"),
       href: `/${locale}/search`,
     },
     {
       key: "ask",
-      icon: navIcon("✦"),
+      icon: <IconAsk />,
       label: t("home.nav.ask"),
       href: `/${locale}/ask`,
     },
     {
+      key: "orders",
+      icon: <IconOrders />,
+      label: t("home.nav.orders"),
+      href: `/${locale}/account/orders`,
+    },
+    {
       key: "account",
-      icon: navIcon("👤"),
+      icon: <IconAccount />,
       label: t("home.nav.account"),
       href: `/${locale}/account`,
     },
@@ -70,6 +71,12 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
     // Shop client components (`useTranslations("catalog")`) need the catalog
     // namespace. Root layout only ships `common` (+ `legal` for the footer).
     <NextIntlClientProvider locale={locale} messages={messages}>
+      <ServiceInfoBar
+        labels={{
+          ariaLabel: t("home.serviceBar.ariaLabel"),
+          message: t("home.serviceBar.message"),
+        }}
+      />
       {/* Mobile/tablet chrome (<1024px). Hidden on lg+ where the desktop header takes over. */}
       <MobileTopNav
         locale={locale}
@@ -81,12 +88,13 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         searchSlot={
           <Link
             href={`/${locale}/search`}
-            className="flex h-11 w-full max-w-md items-center rounded-pill border border-border bg-surface px-4 text-sm text-text-3"
+            className="flex h-11 w-full max-w-md items-center gap-2 rounded-pill border border-border bg-surface px-4 text-sm text-text-3 transition-colors hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
           >
-            {t("home.nav.searchPlaceholder")}
+            <IconSearch className="text-text-2" />
+            <span className="truncate">{t("home.nav.searchPlaceholder")}</span>
           </Link>
         }
-        cartIcon={navIcon("🛒")}
+        cartIcon={<IconCart />}
         cartLabel={t("home.nav.cart")}
         skipLinkTargetId="shop-main"
         skipLinkLabel={tCommon("nav.skipToContent")}
@@ -104,12 +112,12 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           allCategories: t("home.nav.allCategories"),
           categoriesPanelAria: t("home.nav.categoriesPanelAria"),
           categoriesLoading: t("home.nav.categoriesLoading"),
+          categoriesEmpty: t("home.nav.categoriesEmpty"),
           viewAllCategories: t("home.nav.viewAllCategories"),
-          browse: t("home.nav.browse"),
+          directory: t("home.nav.directory"),
           services: t("home.nav.services"),
           events: t("home.nav.events"),
           askVergeo: t("home.nav.askVergeo"),
-          supplies: t("home.nav.supplies"),
           account: t("home.nav.account"),
           cart: t("home.nav.cart"),
         }}
@@ -125,12 +133,6 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         items={bottomItems}
         ariaLabel={t("home.nav.bottomAriaLabel")}
         locale={locale}
-        suppliesItem={{
-          key: "supplies",
-          icon: navIcon("📦"),
-          label: t("home.nav.supplies"),
-          href: `/${locale}/supplies`,
-        }}
       />
     </NextIntlClientProvider>
   );

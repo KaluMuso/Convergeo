@@ -1,3 +1,4 @@
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { ServiceCard } from "@vergeo/ui/src/service-card";
 import { VendorCard } from "@vergeo/ui/src/vendor-card";
@@ -246,58 +247,82 @@ export async function loadHomeDefaultData(categories: CategoryRow[]): Promise<Ho
 type HomeHeroBandProps = {
   locale: string;
   t: CatalogTranslator;
+  /** Brand wordmark — must remain the strongest first-viewport signal. */
+  brandName: string;
 };
 
 /**
- * Default hero band — escrow/trust messaging on the token gradient
- * (from-primary-deep to-primary). Text uses --primary-btn-fg, the on-primary
- * foreground token that stays AA in both light and dark themes.
+ * Merch-first default hero (audit §4.1): brand + one headline + one sentence +
+ * CTAs on an edge-to-edge visual plane. Escrow ladder lives in HomeTrustStrip.
  */
-export function HomeHeroBand({ locale, t }: HomeHeroBandProps) {
-  const escrowSteps = [
-    t("home.hero.escrowStep1"),
-    t("home.hero.escrowStep2"),
-    t("home.hero.escrowStep3"),
-  ];
-
+export function HomeHeroBand({ locale, t, brandName }: HomeHeroBandProps) {
   return (
     <section
+      data-testid="home-hero-band"
       aria-labelledby="home-hero-heading"
-      className="motion-rise overflow-hidden rounded-lg bg-gradient-to-br from-primary-deep to-primary p-6 text-[var(--primary-btn-fg)] shadow-2 lg:p-12"
+      className="motion-rise relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden bg-panel text-panel-text"
     >
-      <div className="flex flex-col gap-4 lg:max-w-3xl">
-        <p className="text-micro font-semibold uppercase opacity-80">{t("home.hero.eyebrow")}</p>
-        <h1 id="home-hero-heading" className="font-display text-hero">
-          {t("home.hero.fallbackTitle")}
-        </h1>
-        <p className="text-body opacity-90">{t("home.hero.escrowLine")}</p>
-        <ol className="flex list-none flex-wrap items-center gap-2 p-0">
-          {escrowSteps.map((step, index) => (
-            <li key={step} className="flex items-center gap-2">
-              {index > 0 ? (
-                <span aria-hidden className="opacity-70">
-                  {"→"}
-                </span>
-              ) : null}
-              <span className="rounded-pill border border-current px-3 py-1 text-micro font-semibold uppercase opacity-90">
-                {step}
-              </span>
-            </li>
-          ))}
-        </ol>
-        <div className="flex flex-wrap gap-2 pt-2">
-          <Link
-            href={`/${locale}/search`}
-            className="inline-flex min-h-11 items-center justify-center rounded-pill bg-surface px-5 text-sm font-semibold text-primary"
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-90"
+        style={{
+          background:
+            "radial-gradient(120% 80% at 85% 20%, color-mix(in srgb, var(--primary) 35%, transparent) 0%, transparent 55%), linear-gradient(135deg, var(--panel) 0%, color-mix(in srgb, var(--primary-deep) 55%, var(--panel)) 100%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-8 top-6 h-48 w-48 rounded-full bg-primary/20 blur-2xl motion-reduce:blur-none sm:h-64 sm:w-64 lg:right-[12%] lg:top-10"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-0 left-[8%] h-40 w-40 rounded-full bg-accent/15 blur-xl motion-reduce:blur-none"
+      />
+
+      <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-10 sm:px-6 lg:flex-row lg:items-end lg:justify-between lg:gap-10 lg:px-6 lg:py-14">
+        <div className="flex max-w-2xl flex-col gap-3 lg:gap-4">
+          <p
+            data-testid="home-hero-brand"
+            className="font-display text-hero leading-none tracking-tight text-panel-text"
           >
-            {t("home.hero.primaryCta")}
-          </Link>
-          <Link
-            href={`/${locale}/sell`}
-            className="inline-flex min-h-11 items-center justify-center rounded-pill border border-current px-5 text-sm font-semibold"
-          >
-            {t("home.hero.secondaryCta")}
-          </Link>
+            {brandName}
+          </p>
+          <h1 id="home-hero-heading" className="font-display text-h1 text-panel-text lg:text-h2">
+            {t("home.hero.fallbackTitle")}
+          </h1>
+          <p className="max-w-xl text-body text-panel-muted">{t("home.hero.fallbackSubtitle")}</p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <LinkButton href={`/${locale}/search`} variant="primary" LinkComponent={Link}>
+              {t("home.hero.primaryCta")}
+            </LinkButton>
+            <LinkButton
+              href={`/${locale}/sell`}
+              variant="secondary"
+              LinkComponent={Link}
+              className="border-panel-muted/40 bg-transparent text-panel-text hover:bg-panel-text/10"
+            >
+              {t("home.hero.secondaryCta")}
+            </LinkButton>
+          </div>
+        </div>
+        <div
+          aria-hidden
+          data-testid="home-hero-visual"
+          className="relative mt-2 aspect-[16/10] w-full max-w-md overflow-hidden rounded-lg border border-panel-muted/20 bg-surface/10 shadow-2 lg:mt-0 lg:max-w-sm"
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(160deg, color-mix(in srgb, var(--surface) 18%, transparent) 0%, transparent 45%), radial-gradient(circle at 30% 70%, color-mix(in srgb, var(--accent) 40%, transparent), transparent 50%)",
+            }}
+          />
+          <div className="absolute inset-x-6 bottom-6 top-8 grid grid-cols-3 gap-2 opacity-80">
+            <span className="rounded bg-surface/25" />
+            <span className="col-span-2 rounded bg-surface/15" />
+            <span className="col-span-2 rounded bg-surface/20" />
+            <span className="rounded bg-surface/30" />
+          </div>
         </div>
       </div>
     </section>
@@ -340,7 +365,13 @@ export function HomeProductRail({
   }
 
   return (
-    <section aria-labelledby={id} className="motion-rise flex flex-col gap-3 lg:gap-4">
+    <section
+      aria-labelledby={id}
+      className={[
+        "flex flex-col gap-3 lg:gap-4",
+        id === "home-rail-new" ? "motion-rise" : "motion-fade",
+      ].join(" ")}
+    >
       <div className="flex items-baseline justify-between gap-3">
         <h2 id={id} className="font-display text-h2 text-display-ink">
           {title}
@@ -368,7 +399,7 @@ export function HomeSellCta({ locale, t }: HomeSellCtaProps) {
   return (
     <section
       aria-labelledby="home-sell-cta-heading"
-      className="motion-rise flex flex-col gap-4 rounded-lg bg-panel p-6 text-panel-text shadow-2 lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:p-10"
+      className="flex flex-col gap-4 rounded-lg bg-panel p-6 text-panel-text shadow-2 lg:flex-row lg:items-center lg:justify-between lg:gap-8 lg:p-10"
     >
       <div className="flex flex-col gap-2 lg:max-w-2xl">
         <h2 id="home-sell-cta-heading" className="font-display text-h2 text-panel-text">
@@ -417,7 +448,7 @@ export function HomeServicesRail({
   }
 
   return (
-    <section aria-labelledby={id} className="motion-rise flex flex-col gap-3 lg:gap-4">
+    <section aria-labelledby={id} className="flex flex-col gap-3 lg:gap-4">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id={id} className="font-display text-h2 text-display-ink">
           {title}
@@ -518,7 +549,7 @@ export function HomeVendorsRail({
   }
 
   return (
-    <section aria-labelledby={id} className="motion-rise flex flex-col gap-3 lg:gap-4">
+    <section aria-labelledby={id} className="flex flex-col gap-3 lg:gap-4">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id={id} className="font-display text-h2 text-display-ink">
           {title}

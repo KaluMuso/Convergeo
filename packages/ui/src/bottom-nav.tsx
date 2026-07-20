@@ -63,10 +63,9 @@ export function BottomNav({
               href={item.href}
               aria-current={item.active ? "page" : undefined}
               className={mergeClasses(
-                "relative flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1 text-micro font-medium transition-colors",
+                "relative flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1 text-micro font-medium transition-[color,transform] duration-fast ease-std motion-reduce:transition-none",
                 item.active ? "text-primary" : "text-text-3",
               )}
-              style={{ transitionTimingFunction: "var(--ease-std)" }}
             >
               <span className="relative flex h-6 w-6 items-center justify-center" aria-hidden>
                 {item.icon}
