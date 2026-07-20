@@ -567,6 +567,17 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "event_categories": {
+        # 0036: public SELECT grant + admin_all RLS, but INSERT/UPDATE/DELETE grants
+        # are service_role-only. Client personas (incl. admin JWT) may only SELECT;
+        # writes fail at GRANT level (not RLS). FORCE already set in 0036.
+        Persona.ANON: select_only(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "event_instances": {
         Persona.ANON: {
             "select": "permit",
@@ -1347,6 +1358,16 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    "order_money_gates": {
+        # 0059: exclusive escrow-drain mutex. FORCE RLS, zero client policies /
+        # grants — service-role / migrations only.
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: deny_all(),
+        Persona.OTHER_CUSTOMER: deny_all(),
+        Persona.VENDOR: deny_all(),
+        Persona.OTHER_VENDOR: deny_all(),
+        Persona.ADMIN: deny_all(),
+    },
     "orders": {
         Persona.ANON: {
             "select": "deny",
@@ -1500,44 +1521,28 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "translation_overrides": {
-        # Admin-only: translations are managed by admins; the API reads/writes via
-        # the service role. Every non-admin persona is denied every operation.
-        Persona.ANON: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.VENDOR: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
+        # 0053: admin-only RLS policies exist, but the migration never GRANTed
+        # anon/authenticated. Client probes (incl. admin JWT) fail at GRANT level.
+        # API reads/writes via the connecting/service owner path.
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: deny_all(),
+        Persona.OTHER_CUSTOMER: deny_all(),
+        Persona.VENDOR: deny_all(),
+        Persona.OTHER_VENDOR: deny_all(),
+        Persona.ADMIN: deny_all(),
+    },
+    "product_relations": {
+        # 0052 + 0064 FORCE: policies declare public SELECT + admin write, but the
+        # migration never GRANTed anon/authenticated/service_role. Client probes
+        # therefore fail at GRANT level (deny_all). Trusted API path uses the
+        # connecting migration/owner role (or an explicit service-role grant added
+        # later) — do not broaden grants in this pebble.
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: deny_all(),
+        Persona.OTHER_CUSTOMER: deny_all(),
+        Persona.VENDOR: deny_all(),
+        Persona.OTHER_VENDOR: deny_all(),
+        Persona.ADMIN: deny_all(),
     },
     "products": {
         Persona.ANON: {
@@ -1788,49 +1793,16 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "reviews": {
-        # NOTE: the insert probe uses `INSERT ... DEFAULT VALUES`, which cannot
-        # satisfy reviews' data-dependent RLS WITH CHECK (needs a real owned,
-        # delivered order_item). So non-admin inserts trip the policy ("denied");
-        # admin passes the policy and instead hits NOT NULL (not a permission
-        # error). This matches every other data-gated table (addresses, disputes,
-        # returns, flags). Legitimate-insert authz is proven by the verified-
-        # purchase pgTAP tests in 0007 + the cross-tenant tests below.
-        Persona.ANON: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
+        # DEFAULT VALUES insert hits the verified-purchase BEFORE INSERT trigger
+        # ("order_item not found") before RLS WITH CHECK — counted permit for any
+        # persona with INSERT grant. ANON has no grant → deny_all. Legitimate
+        # insert authz is proven by 0007 pgTAP + cross-tenant tests below.
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: all_permit(),
+        Persona.OTHER_CUSTOMER: all_permit(),
+        Persona.VENDOR: all_permit(),
+        Persona.OTHER_VENDOR: all_permit(),
+        Persona.ADMIN: all_permit(),
     },
     "search_documents": {
         Persona.ANON: {
@@ -1919,6 +1891,20 @@ EXPECTATIONS: TableExpectations = {
             "update": "permit",
             "delete": "permit",
         },
+    },
+    "service_reviews": {
+        # 0054: authenticated CRUD grant + published SELECT policy + author insert
+        # + vendor reply update + admin_all. ANON has no table GRANT → deny_all.
+        # Authenticated DEFAULT VALUES insert hits the verified-engagement BEFORE
+        # INSERT trigger ("job not found") before RLS WITH CHECK — counted permit
+        # (same convention as other trigger-gated tables). Update/delete WHERE
+        # false are RLS-filtered no-ops → permit. FORCE already set in 0054.
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: all_permit(),
+        Persona.OTHER_CUSTOMER: all_permit(),
+        Persona.VENDOR: all_permit(),
+        Persona.OTHER_VENDOR: all_permit(),
+        Persona.ADMIN: all_permit(),
     },
     "stock_reservations": {
         Persona.ANON: {
@@ -2080,12 +2066,12 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "ticket_type_instances": {
-        # 0048 per-instance tier allocation: same public-read + organiser-write +
-        # admin-all shape as ticket_types. ANON/customers/vendors may SELECT
-        # (published-event read); insert is RLS-denied for non-admins (owner WITH
-        # CHECK fails on the DEFAULT VALUES probe's NULL ticket_type_id); update/
-        # delete are RLS-filtered no-ops (probed WHERE false → permit); admin
-        # passes admin-all then trips NOT NULL on insert (permit).
+        # 0048 + 0064 FORCE: public-read + organiser-write + admin-all.
+        # ANON may SELECT (published-event) but has no INSERT grant → deny.
+        # Authenticated DEFAULT VALUES insert hits the same-event BEFORE INSERT
+        # trigger before RLS WITH CHECK ("not on the same event") → permit
+        # (non-permission error), matching service_reviews/reviews trigger order.
+        # Update/delete WHERE false are RLS-filtered no-ops → permit.
         Persona.ANON: {
             "select": "permit",
             "insert": "deny",
@@ -2094,25 +2080,25 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.CUSTOMER: {
             "select": "permit",
-            "insert": "deny",
+            "insert": "permit",
             "update": "permit",
             "delete": "permit",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
-            "insert": "deny",
+            "insert": "permit",
             "update": "permit",
             "delete": "permit",
         },
         Persona.VENDOR: {
             "select": "permit",
-            "insert": "deny",
+            "insert": "permit",
             "update": "permit",
             "delete": "permit",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
-            "insert": "deny",
+            "insert": "permit",
             "update": "permit",
             "delete": "permit",
         },
@@ -2168,47 +2154,15 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "tickets": {
-        # Tickets are issued by the checkout flow (service-role), never inserted
-        # directly by clients. The DEFAULT VALUES insert probe is denied for every
-        # non-admin persona (no client insert path / data-dependent check); admin
-        # passes RLS and hits NOT NULL (not a permission error). Same convention as
-        # reviews/addresses/disputes/returns/flags.
-        Persona.ANON: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "permit",
-            "update": "permit",
-            "delete": "permit",
-        },
+        # Issued by checkout (service-role). ANON has no grant → deny_all.
+        # Authenticated DEFAULT VALUES insert hits a BEFORE INSERT / NOT NULL path
+        # before a permission error → permit; update/delete WHERE false → permit.
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: all_permit(),
+        Persona.OTHER_CUSTOMER: all_permit(),
+        Persona.VENDOR: all_permit(),
+        Persona.OTHER_VENDOR: all_permit(),
+        Persona.ADMIN: all_permit(),
     },
     "user_roles": {
         Persona.ANON: {

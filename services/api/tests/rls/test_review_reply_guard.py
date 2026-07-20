@@ -17,11 +17,13 @@ REVIEW_ID = "ba5eba11-0000-0000-0000-000000000001"
 
 
 def _seed_review(db: PgConn, *, order_item_id: str) -> None:
-    # Seeded as the connecting superuser: bypasses RLS + the verified-engagement
-    # BEFORE INSERT trigger (which itself allows postgres/supabase_admin sessions).
+    # Seed as the connecting role with replica mode so the verified-purchase
+    # BEFORE INSERT trigger does not reject fixture order_items that are not yet
+    # delivered/completed. RLS is still bypassed by the table owner.
     result = db.run(
         f"""
 BEGIN;
+SET LOCAL session_replication_role = replica;
 DELETE FROM public.reviews WHERE order_item_id = '{order_item_id}';
 DELETE FROM public.reviews WHERE id = '{REVIEW_ID}';
 INSERT INTO public.reviews (id, order_item_id, rating, body, status)
