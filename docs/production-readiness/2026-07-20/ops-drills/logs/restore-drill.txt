@@ -1,0 +1,53 @@
+=== Restore drill start 2026-07-20T15:23:11Z ===
+method=local_system_postgres_isolated_database
+database=vergeo5_restore_drill_20260720152311
+NOTE: uses local Ubuntu postgres 16 — NOT Supabase production; never overwrites production
+source_artifact=local-ci drill dump (backup_mode=drill migration_tip=0099_test)
+checksum_expected=26f5a8fd62f5858b35b2b6be1b2881f562e932a23b893929ce262c4459283b5c
+checksum_actual=26f5a8fd62f5858b35b2b6be1b2881f562e932a23b893929ce262c4459283b5c
+checksum_ok=true
+restore_start_utc=2026-07-20T15:23:11Z
+createdb_ok=true
+restore_finish_utc=2026-07-20T15:23:11Z
+restore_elapsed_seconds=0
+restore_psql_exit=0
+rto_target_seconds=1800
+rto_within_30min=true
+--- public table count ---
+public_base_tables=2
+--- tables ---
+              List of relations
+ Schema |      Name       | Type  |  Owner   
+--------+-----------------+-------+----------
+ public | pad             | table | postgres
+ public | platform_config | table | postgres
+(2 rows)
+
+--- schema_migrations tip ---
+  version  |     name      
+-----------+---------------
+ 0099_test | 0099_test.sql
+(1 row)
+
+--- key counts ---
+products_count=MISSING
+vendor_listings_count=MISSING
+orders_count=MISSING
+payments_count=MISSING
+ledger_transactions_count=MISSING
+refunds_count=MISSING
+--- RLS sample ---
+ relname | relrowsecurity | relforcerowsecurity 
+---------+----------------+---------------------
+(0 rows)
+
+--- indexes sample ---
+public_indexes=1
+--- constraints sample ---
+public_constraints=1
+--- psql errors (sanitised) ---
+no_error_lines
+API readiness vs restored target: NOT_RUN (API points at Supabase cloud; restored DB is local-only)
+production_overwrite=false
+isolated_db_dropped=true
+=== Restore drill end 2026-07-20T15:23:11Z ===

@@ -1,9 +1,10 @@
+import { timingSafeEqual } from "node:crypto";
+
 import {
   isSentryTestEndpointEnabled,
   resolveEnvironment,
   resolveReleaseSha,
 } from "@vergeo/observability";
-import { timingSafeEqual } from "node:crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
