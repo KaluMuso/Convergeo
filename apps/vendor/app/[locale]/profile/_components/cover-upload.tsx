@@ -82,11 +82,11 @@ export function CoverUpload({
 
   return (
     <div className="space-y-3">
-      <div className="flex h-28 w-full items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 sm:h-36">
+      <div className="flex h-28 w-full items-center justify-center overflow-hidden rounded-xl border border-border bg-bg-2 sm:h-36">
         {coverUrl ? (
           <img src={coverUrl} alt={t("profile.cover.alt")} className="h-full w-full object-cover" />
         ) : (
-          <span className="text-xs text-neutral-400">{t("profile.cover.empty")}</span>
+          <span className="text-xs text-text-3">{t("profile.cover.empty")}</span>
         )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -120,9 +120,9 @@ export function CoverUpload({
           </Button>
         ) : null}
       </div>
-      <p className="text-xs text-neutral-500">{t("profile.cover.help")}</p>
+      <p className="text-xs text-text-3">{t("profile.cover.help")}</p>
       {uploading ? <Spinner label={t("profile.cover.uploading")} /> : null}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
     </div>
   );
 }
