@@ -10,7 +10,8 @@ type MobileTopNavProps = {
   locale: string;
   logo: ReactNode;
   searchSlot: ReactNode;
-  actions: ReactNode;
+  /** Optional utility slot (theme control relocated to Account → Preferences). */
+  actions?: ReactNode;
   cartIcon: ReactNode;
   cartLabel: string;
   skipLinkTargetId: string;

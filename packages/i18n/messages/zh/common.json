@@ -14,7 +14,8 @@
     "label": "主题",
     "light": "浅色",
     "dark": "深色",
-    "system": "系统"
+    "system": "系统",
+    "displayPreferences": "显示偏好"
   },
   "greeting": "您好，{name}！",
   "offline": {

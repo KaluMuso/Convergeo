@@ -1,4 +1,3 @@
-import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
 import Link from "next/link";
 
 import { CategoryMegaMenu } from "./category-mega-menu";
@@ -21,10 +20,6 @@ type DesktopHeaderLabels = {
   supplies: string;
   account: string;
   cart: string;
-  themeLabel: string;
-  themeLight: string;
-  themeDark: string;
-  themeSystem: string;
 };
 
 type DesktopHeaderProps = {
@@ -117,12 +112,6 @@ export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
         </ul>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          <ThemeToggle
-            label={labels.themeLabel}
-            lightLabel={labels.themeLight}
-            darkLabel={labels.themeDark}
-            systemLabel={labels.themeSystem}
-          />
           <Link
             href={`/${locale}/account`}
             className="inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text"

@@ -1,5 +1,4 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
-import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
 import Link from "next/link";
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -87,14 +86,6 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
             {t("home.nav.searchPlaceholder")}
           </Link>
         }
-        actions={
-          <ThemeToggle
-            label={tCommon("theme.label")}
-            lightLabel={tCommon("theme.light")}
-            darkLabel={tCommon("theme.dark")}
-            systemLabel={tCommon("theme.system")}
-          />
-        }
         cartIcon={navIcon("🛒")}
         cartLabel={t("home.nav.cart")}
         skipLinkTargetId="shop-main"
@@ -121,10 +112,6 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           supplies: t("home.nav.supplies"),
           account: t("home.nav.account"),
           cart: t("home.nav.cart"),
-          themeLabel: tCommon("theme.label"),
-          themeLight: tCommon("theme.light"),
-          themeDark: tCommon("theme.dark"),
-          themeSystem: tCommon("theme.system"),
         }}
       />
       <main

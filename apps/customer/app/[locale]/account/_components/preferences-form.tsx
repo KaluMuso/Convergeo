@@ -2,12 +2,19 @@
 
 import { Button } from "@vergeo/ui/src/button";
 import { Switch } from "@vergeo/ui/src/switch";
+import { ThemePreference } from "@vergeo/ui/src/theme-preference";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { createAccountApiClient, type NotificationPrefs } from "./account-api";
 
 export type PreferencesFormLabels = {
+  themeTitle: string;
+  themeDescription: string;
+  themeLight: string;
+  themeDark: string;
+  themeSystem: string;
+  notificationsTitle: string;
   whatsapp: string;
   whatsappHelp: string;
   sms: string;
@@ -54,57 +61,68 @@ export function PreferencesForm({ accessToken, initialPrefs, labels }: Preferenc
   };
 
   return (
-    <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
-      <Switch
-        id="pref-whatsapp"
-        label={
-          <span>
-            <span className="block font-medium">{labels.whatsapp}</span>
-            <span className="block text-sm text-text-2">{labels.whatsappHelp}</span>
-          </span>
-        }
-        checked={prefs.whatsapp}
-        onChange={(event) =>
-          setPrefs((current) => ({ ...current, whatsapp: event.target.checked }))
-        }
-      />
-      <Switch
-        id="pref-sms"
-        label={
-          <span>
-            <span className="block font-medium">{labels.sms}</span>
-            <span className="block text-sm text-text-2">{labels.smsHelp}</span>
-          </span>
-        }
-        checked={prefs.sms}
-        onChange={(event) => setPrefs((current) => ({ ...current, sms: event.target.checked }))}
-      />
-      <Switch
-        id="pref-email"
-        label={
-          <span>
-            <span className="block font-medium">{labels.email}</span>
-            <span className="block text-sm text-text-2">{labels.emailHelp}</span>
-          </span>
-        }
-        checked={prefs.email}
-        onChange={(event) => setPrefs((current) => ({ ...current, email: event.target.checked }))}
+    <div className="space-y-8">
+      <ThemePreference
+        label={labels.themeTitle}
+        description={labels.themeDescription}
+        lightLabel={labels.themeLight}
+        darkLabel={labels.themeDark}
+        systemLabel={labels.themeSystem}
       />
 
-      {status ? (
-        <p className="text-sm text-success" role="status">
-          {status}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="text-sm text-danger" role="alert">
-          {error}
-        </p>
-      ) : null}
+      <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
+        <h3 className="font-medium text-text">{labels.notificationsTitle}</h3>
+        <Switch
+          id="pref-whatsapp"
+          label={
+            <span>
+              <span className="block font-medium">{labels.whatsapp}</span>
+              <span className="block text-sm text-text-2">{labels.whatsappHelp}</span>
+            </span>
+          }
+          checked={prefs.whatsapp}
+          onChange={(event) =>
+            setPrefs((current) => ({ ...current, whatsapp: event.target.checked }))
+          }
+        />
+        <Switch
+          id="pref-sms"
+          label={
+            <span>
+              <span className="block font-medium">{labels.sms}</span>
+              <span className="block text-sm text-text-2">{labels.smsHelp}</span>
+            </span>
+          }
+          checked={prefs.sms}
+          onChange={(event) => setPrefs((current) => ({ ...current, sms: event.target.checked }))}
+        />
+        <Switch
+          id="pref-email"
+          label={
+            <span>
+              <span className="block font-medium">{labels.email}</span>
+              <span className="block text-sm text-text-2">{labels.emailHelp}</span>
+            </span>
+          }
+          checked={prefs.email}
+          onChange={(event) => setPrefs((current) => ({ ...current, email: event.target.checked }))}
+        />
 
-      <Button type="submit" loading={saving} loadingLabel={labels.saving}>
-        {labels.save}
-      </Button>
-    </form>
+        {status ? (
+          <p className="text-sm text-success" role="status">
+            {status}
+          </p>
+        ) : null}
+        {error ? (
+          <p className="text-sm text-danger" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <Button type="submit" loading={saving} loadingLabel={labels.saving}>
+          {labels.save}
+        </Button>
+      </form>
+    </div>
   );
 }

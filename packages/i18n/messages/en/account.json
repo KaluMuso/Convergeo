@@ -3,7 +3,7 @@
   "nav": {
     "profile": "Profile",
     "addresses": "Addresses",
-    "preferences": "Notifications",
+    "preferences": "Preferences",
     "privacy": "Data & privacy",
     "business": "Business mode"
   },
@@ -91,8 +91,14 @@
     "error": "Could not save address. Please try again."
   },
   "preferences": {
-    "title": "Notification preferences",
-    "description": "Choose how Vergeo5 reaches you about orders, tickets, and account updates.",
+    "title": "Preferences",
+    "description": "Manage display and how Vergeo5 reaches you about orders, tickets, and account updates.",
+    "themeTitle": "Display",
+    "themeDescription": "Choose light, dark, or match your device. Default is system.",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "notificationsTitle": "Notifications",
     "whatsapp": "WhatsApp",
     "whatsappHelp": "Order updates and delivery alerts on WhatsApp.",
     "sms": "SMS",
