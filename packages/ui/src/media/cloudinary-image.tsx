@@ -42,8 +42,10 @@ function resolveIntrinsicHeight(
     return Math.round(width / ratio);
   }
   if (typeof ratio === "string") {
-    const [w, h] = ratio.split("/").map(Number);
-    if (w > 0 && h > 0) {
+    const parts = ratio.split("/");
+    const w = Number(parts[0]);
+    const h = Number(parts[1]);
+    if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) {
       return Math.round((width * h) / w);
     }
   }
