@@ -12,7 +12,14 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { AcceptFlow, DEFAULT_DEPOSIT_PCT, previewDepositNgwee } from "./_components/accept-flow";
+import { CompleteConfirm } from "./_components/complete-confirm";
 import { ServiceReviewForm } from "./_components/service-review-form";
+
+type JobDetail = {
+  id: string;
+  status: string;
+};
 
 type QuoteProvider = {
   vendor_id: string;
@@ -41,6 +48,9 @@ function getApiBaseUrl(): string {
 function createQuotesClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
   return {
+    getJob(jobId: string): Promise<JobDetail> {
+      return client.request<JobDetail>(`/jobs/${jobId}`);
+    },
     listQuotes(jobId: string): Promise<{ items: QuoteItem[]; view: string }> {
       return client.request<{ items: QuoteItem[]; view: string }>(`/jobs/${jobId}/quotes`);
     },
@@ -53,6 +63,17 @@ function createQuotesClient(getToken: () => string | null | Promise<string | nul
   };
 }
 
+export function canAcceptQuote(jobStatus: string | null | undefined, quoteStatus: string): boolean {
+  return (jobStatus === "open" || jobStatus === "quoted") && quoteStatus === "submitted";
+}
+
+export function shouldShowCompletion(
+  jobStatus: string | null | undefined,
+  quoteStatus: string | null | undefined,
+): boolean {
+  return quoteStatus === "accepted" && jobStatus !== "completed" && jobStatus !== "cancelled";
+}
+
 type PageProps = {
   params: Promise<{ locale: string; id: string }>;
 };
@@ -63,6 +84,7 @@ export default function JobComparePage({ params }: PageProps) {
   const t = useTranslations("services.quotes");
   const tb = useTranslations("services.badges");
   const { session, loading: sessionLoading } = useSession();
+  const [job, setJob] = useState<JobDetail | null>(null);
   const [quotes, setQuotes] = useState<QuoteItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,13 +102,17 @@ export default function JobComparePage({ params }: PageProps) {
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const quotesClient = useMemo(() => createQuotesClient(getToken), [getToken]);
 
-  const loadQuotes = useCallback(async () => {
+  const loadJobAndQuotes = useCallback(async () => {
     if (!jobId) {
       return;
     }
     setLoading(true);
     try {
-      const response = await quotesClient.listQuotes(jobId);
+      const [jobResponse, response] = await Promise.all([
+        quotesClient.getJob(jobId),
+        quotesClient.listQuotes(jobId),
+      ]);
+      setJob(jobResponse);
       setQuotes(response.items);
       setError(null);
     } catch (err) {
@@ -108,8 +134,8 @@ export default function JobComparePage({ params }: PageProps) {
       setLoading(false);
       return;
     }
-    void loadQuotes();
-  }, [jobId, loadQuotes, session, sessionLoading]);
+    void loadJobAndQuotes();
+  }, [jobId, loadJobAndQuotes, session, sessionLoading]);
 
   const handleDecline = async (quoteId: string) => {
     setSubmitting(true);
@@ -117,13 +143,19 @@ export default function JobComparePage({ params }: PageProps) {
       await quotesClient.declineQuote(quoteId, declineReason.trim() || undefined);
       setDeclineQuoteId(null);
       setDeclineReason("");
-      await loadQuotes();
+      await loadJobAndQuotes();
     } catch {
       setError(t("errors.declineFailed"));
     } finally {
       setSubmitting(false);
     }
   };
+
+  const acceptedQuote = quotes.find((quote) => quote.status === "accepted") ?? null;
+  const acceptedBalanceNgwee = acceptedQuote
+    ? acceptedQuote.amount_ngwee -
+      previewDepositNgwee(acceptedQuote.amount_ngwee, DEFAULT_DEPOSIT_PCT)
+    : 0;
 
   if (sessionLoading || loading) {
     return (
@@ -145,6 +177,11 @@ export default function JobComparePage({ params }: PageProps) {
         </Link>
         <h2 className="font-display text-h2 text-display-ink">{t("compareTitle")}</h2>
         <p className="text-sm text-text-2">{t("compareIntro")}</p>
+        {job ? (
+          <p className="text-xs text-text-2">
+            {t("list.status", { status: t(`status.${job.status}`) })}
+          </p>
+        ) : null}
       </header>
 
       {error ? <p className="text-sm text-danger">{error}</p> : null}
@@ -195,7 +232,17 @@ export default function JobComparePage({ params }: PageProps) {
                 </p>
               ) : null}
 
-              {declineQuoteId === quote.id ? (
+              {canAcceptQuote(job?.status, quote.status) ? (
+                <AcceptFlow
+                  locale={locale}
+                  jobId={jobId}
+                  quoteId={quote.id}
+                  vendorName={quote.provider?.display_name ?? t("unknownProvider")}
+                  totalNgwee={quote.amount_ngwee}
+                />
+              ) : null}
+
+              {declineQuoteId === quote.id && canAcceptQuote(job?.status, quote.status) ? (
                 <div className="mt-auto space-y-2 border-t border-border pt-3">
                   <FormField id={`decline-${quote.id}`} label={t("decline.reasonLabel")}>
                     <Input
@@ -229,7 +276,7 @@ export default function JobComparePage({ params }: PageProps) {
                     </Button>
                   </div>
                 </div>
-              ) : (
+              ) : canAcceptQuote(job?.status, quote.status) ? (
                 <Button
                   type="button"
                   variant="secondary"
@@ -239,11 +286,22 @@ export default function JobComparePage({ params }: PageProps) {
                 >
                   {t("decline.open")}
                 </Button>
-              )}
+              ) : quote.status === "accepted" ? (
+                <Badge variant="public" label={t("status.accepted")} />
+              ) : null}
             </article>
           ))}
         </div>
       )}
+
+      {shouldShowCompletion(job?.status, acceptedQuote?.status) && acceptedQuote ? (
+        <CompleteConfirm
+          jobId={jobId}
+          balanceNgwee={acceptedBalanceNgwee}
+          allowConfirmAttempt
+          onConfirmed={() => void loadJobAndQuotes()}
+        />
+      ) : null}
 
       {jobId ? <ServiceReviewForm jobId={jobId} /> : null}
     </section>

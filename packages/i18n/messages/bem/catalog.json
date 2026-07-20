@@ -224,6 +224,24 @@
       "filtersActive": "Ama-filters (yakonka)"
     }
   },
+  "reviews": {
+    "report": {
+      "cta": "Reporteni",
+      "heading": "Reporteni review iyi",
+      "reasonLegend": "Tubeleni ifyo tulefwaya ukulola.",
+      "submit": "Tumeni report",
+      "cancel": "Lekelelani",
+      "success": "Natotela — team ya moderation ikalola.",
+      "signedOut": "Ingileni mukati ukureporta review.",
+      "error": "Tatwaishibe ukutuma report iyi. Wesheni limbi.",
+      "reasons": {
+        "spam": "Spam nangu ama-adverts",
+        "abuse": "Amashiwi ya bulwani nangu ukutuka",
+        "privateInfo": "Ilelanda ifya private",
+        "notRelevant": "Tekwa product iyi"
+      }
+    }
+  },
   "returnableBadge": {
     "label": "Cingabwelela mu nsiku {days}"
   }

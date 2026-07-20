@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 
-const DEFAULT_DEPOSIT_PCT = 50;
+export const DEFAULT_DEPOSIT_PCT = 50;
 
 type AcceptResponse = {
   checkout_group_id: string;
@@ -34,7 +34,7 @@ function getApiBaseUrl(): string {
 }
 
 /** Half-up integer ngwee — mirrors the server deposit math for a consistent preview. */
-function previewDepositNgwee(totalNgwee: number, depositPct: number): number {
+export function previewDepositNgwee(totalNgwee: number, depositPct: number): number {
   return Math.floor((totalNgwee * depositPct + 50) / 100);
 }
 

@@ -336,6 +336,22 @@
     "loading": "Loading reviews…",
     "starFilled": "★",
     "starEmpty": "☆",
+    "report": {
+      "cta": "Report",
+      "heading": "Report this review",
+      "reasonLegend": "Tell us what needs checking.",
+      "submit": "Submit report",
+      "cancel": "Cancel",
+      "success": "Thanks — our moderation team will review it.",
+      "signedOut": "Sign in to report a review.",
+      "error": "Could not submit this report. Please try again.",
+      "reasons": {
+        "spam": "Spam or advertising",
+        "abuse": "Abusive or hateful content",
+        "privateInfo": "Shares private information",
+        "notRelevant": "Not relevant to this product"
+      }
+    },
     "errors": {
       "rateLimited": "Too many review requests. Please wait and try again."
     }

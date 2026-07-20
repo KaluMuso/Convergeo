@@ -5,6 +5,8 @@ import { ImageGallery, type GalleryImage } from "@vergeo/ui/src/media/image-gall
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { ReportReview, type ReportReviewLabels } from "./report-review";
+
 export type ReviewRow = {
   id: string;
   order_item_id: string;
@@ -28,6 +30,7 @@ export type ReviewsSectionLabels = {
   galleryIndicator: string;
   starFilled: string;
   starEmpty: string;
+  report: ReportReviewLabels;
 };
 
 type ReviewsSectionProps = {
@@ -149,6 +152,9 @@ export function ReviewsSection({
                   <p className="text-text-2">{review.vendor_reply}</p>
                 </div>
               ) : null}
+              <div className="border-t border-border pt-1">
+                <ReportReview reviewId={review.id} labels={labels.report} />
+              </div>
             </li>
           ))}
         </ul>

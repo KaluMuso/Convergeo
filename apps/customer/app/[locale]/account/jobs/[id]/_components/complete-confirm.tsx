@@ -22,6 +22,8 @@ type CompleteConfirmProps = {
   balanceNgwee: number;
   /** True once the provider has marked the job complete (confirm is otherwise blocked). */
   providerMarked?: boolean;
+  /** Allows the current customer page to attempt confirm; the API still rejects before provider mark. */
+  allowConfirmAttempt?: boolean;
   onConfirmed?: () => void;
 };
 
@@ -33,6 +35,7 @@ export function CompleteConfirm({
   jobId,
   balanceNgwee,
   providerMarked = false,
+  allowConfirmAttempt = false,
   onConfirmed,
 }: CompleteConfirmProps) {
   const t = useTranslations("services.completion.customer");
@@ -91,7 +94,7 @@ export function CompleteConfirm({
           <p className="text-sm font-medium text-success">{t("confirmed")}</p>
           <p className="text-xs text-text-2">{t("reviewUnlocked")}</p>
         </div>
-      ) : providerMarked ? (
+      ) : providerMarked || allowConfirmAttempt ? (
         <>
           {error ? <p className="text-sm text-danger">{error}</p> : null}
           <Button
