@@ -1,9 +1,6 @@
-import { Badge } from "@vergeo/ui/src/badge";
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
-import { ProductCard } from "@vergeo/ui/src/product-card";
-import Link from "next/link";
+import { shouldShowSampleListingBadge } from "../demo-listing";
 
-import { isDemoListingPublicId, shouldShowSampleListingBadge } from "../demo-listing";
+import { ListingCard, type ListingCardLabels } from "./listing-card";
 
 export type CatalogListing = {
   id: string;
@@ -19,17 +16,7 @@ export type CatalogListing = {
   distanceM: number | null;
 };
 
-type ListingGridLabels = {
-  vendor: string;
-  noReviews: string;
-  reviewCount: string;
-  quickAdd: string;
-  wishlist: string;
-  outOfStock: string;
-  distance: string;
-  /** Subtle beta/demo disclosure — only shown when media proves demo seed + gate allows. */
-  sampleListing?: string;
-};
+type ListingGridLabels = ListingCardLabels;
 
 type ListingGridProps = {
   locale: string;
@@ -39,97 +26,36 @@ type ListingGridProps = {
   priorityCount?: number;
   /** Injectable for tests; defaults to production-safe sample gate. */
   showSampleBadge?: boolean;
+  density?: "default" | "compact";
 };
 
-function formatDistance(meters: number | null): string | null {
-  if (meters === null) {
-    return null;
-  }
-  if (meters < 1000) {
-    return `${Math.round(meters)} m`;
-  }
-  return `${(meters / 1000).toFixed(1)} km`;
-}
-
+/**
+ * Catalog product grid — RSC-safe shell over client `ListingCard` (wishlist localStorage).
+ */
 export function ListingGrid({
   locale,
   listings,
   labels,
   priorityCount = 2,
   showSampleBadge = shouldShowSampleListingBadge(),
+  density = "default",
 }: ListingGridProps) {
   return (
     <div
       data-testid="listing-grid"
       className="motion-fade grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4"
     >
-      {listings.map((listing, index) => {
-        const distance = formatDistance(listing.distanceM);
-        const distanceLabel =
-          distance !== null ? labels.distance.replace("{distance}", distance) : undefined;
-        const isDemo = isDemoListingPublicId(listing.imagePublicId);
-        const sampleLabel = labels.sampleListing;
-
-        const badge = !listing.inStock ? (
-          <Badge variant="sold_out" label={labels.outOfStock} />
-        ) : isDemo && sampleLabel && showSampleBadge ? (
-          <Badge variant="sample" label={sampleLabel} />
-        ) : distanceLabel ? (
-          <Badge variant="public" label={distanceLabel} />
-        ) : undefined;
-
-        const card = (
-          <ProductCard
-            title={listing.title}
-            vendorLabel={labels.vendor.replace("{vendor}", listing.vendorName)}
-            ngwee={listing.priceNgwee}
-            rating={listing.rating}
-            reviewCount={listing.reviewCount}
-            noReviewsLabel={labels.noReviews}
-            reviewCountLabel={labels.reviewCount}
-            quickAddLabel={labels.quickAdd}
-            wishlistLabel={labels.wishlist}
-            badge={badge}
-            media={
-              listing.imagePublicId ? (
-                <CloudinaryImage
-                  publicId={listing.imagePublicId}
-                  alt={listing.title}
-                  width={360}
-                  ratio="4/3"
-                  priority={index < priorityCount}
-                  sizes="(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw"
-                  className="h-full w-full object-cover"
-                />
-              ) : undefined
-            }
-          />
-        );
-
-        // Never invent a product URL — a missing slug is not "all products".
-        if (!listing.productSlug) {
-          return (
-            <div
-              key={listing.id}
-              className="min-w-0"
-              data-testid="listing-card-no-slug"
-              aria-label={listing.title}
-            >
-              {card}
-            </div>
-          );
-        }
-
-        return (
-          <Link
-            key={listing.id}
-            href={`/${locale}/p/${listing.productSlug}`}
-            className="min-w-0 no-underline"
-          >
-            {card}
-          </Link>
-        );
-      })}
+      {listings.map((listing, index) => (
+        <ListingCard
+          key={listing.id}
+          locale={locale}
+          listing={listing}
+          labels={labels}
+          priority={index < priorityCount}
+          showSampleBadge={showSampleBadge}
+          density={density}
+        />
+      ))}
     </div>
   );
 }

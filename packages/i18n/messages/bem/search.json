@@ -40,11 +40,13 @@
   },
   "result": {
     "category": "Mu {category}",
-    "priceFrom": "Ukufuma {price}"
+    "priceFrom": "Ukufuma {price}",
+    "marketplaceListing": "Listing ya marketplace"
   },
   "results": {
     "count": "{count, plural, one {# result} other {# amaresults}}",
-    "degraded": "Twalanga keyword matches (semantic search teyaisa)"
+    "degraded": "Twalanga keyword matches (semantic search teyaisa)",
+    "forQuery": "Ifyasangwa pa “{query}”"
   },
   "submit": "Fweni",
   "suggestionTerms": {

@@ -17,7 +17,7 @@ export type FacetCounts = {
   rating: { value: string; count: number }[];
 };
 
-type FacetPanelLabels = {
+export type FacetPanelLabels = {
   heading: string;
   price: string;
   minPrice: string;
@@ -41,13 +41,22 @@ type FacetPanelProps = {
   labels: FacetPanelLabels;
   facets: FacetCounts;
   initialState: PlpFilterState;
+  className?: string;
+  /** Called after a successful Apply / Clear navigation (e.g. close mobile drawer). */
+  onApplied?: () => void;
 };
 
 function facetCount(buckets: { value: string; count: number }[], value: string): number {
   return buckets.find((bucket) => bucket.value === value)?.count ?? 0;
 }
 
-export function FacetPanel({ labels, facets, initialState }: FacetPanelProps) {
+export function FacetPanel({
+  labels,
+  facets,
+  initialState,
+  className,
+  onApplied,
+}: FacetPanelProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -66,9 +75,10 @@ export function FacetPanel({ labels, facets, initialState }: FacetPanelProps) {
       const query = params.toString();
       startTransition(() => {
         router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+        onApplied?.();
       });
     },
-    [pathname, router, sortParam, startTransition],
+    [onApplied, pathname, router, sortParam, startTransition],
   );
 
   const toggleValue = useCallback((key: "condition" | "availability", value: string) => {
@@ -90,8 +100,14 @@ export function FacetPanel({ labels, facets, initialState }: FacetPanelProps) {
 
   return (
     <aside
-      className="flex flex-col gap-4 rounded-[var(--r-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 lg:sticky lg:top-20 lg:self-start"
+      className={[
+        "flex flex-col gap-4 rounded-[var(--r-lg)] border border-[var(--border)] bg-[var(--surface)] p-4 lg:sticky lg:top-20 lg:self-start",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-label={labels.heading}
+      data-testid="plp-facet-panel"
     >
       <h2 className="text-[var(--fs-h3)] font-semibold text-[var(--text)]">{labels.heading}</h2>
 
@@ -240,6 +256,7 @@ export function FacetPanel({ labels, facets, initialState }: FacetPanelProps) {
             const query = params.toString();
             startTransition(() => {
               router.push(query ? `${pathname}?${query}` : pathname, { scroll: false });
+              onApplied?.();
             });
           }}
         >

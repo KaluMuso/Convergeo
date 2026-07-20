@@ -2,11 +2,13 @@
 
 import { formatK } from "@vergeo/i18n";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { ProductCard } from "@vergeo/ui/src/product-card";
 import { Tabs } from "@vergeo/ui/src/tabs";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo } from "react";
 
+import { useLocalWishlist } from "../plp/use-local-wishlist";
 import {
   ProgressiveLoadControls,
   type ProgressiveLoadControlsLabels,
@@ -66,6 +68,13 @@ export type ResultsTabsLabels = ProgressiveLoadControlsLabels & {
   degraded: string;
   priceFrom: string;
   category: string;
+  /** Honest fallback when search hits omit vendor (never invent a shop name). */
+  marketplaceListing: string;
+  wishlist: string;
+  wishlistRemove: string;
+  mediaEmpty: string;
+  noReviews: string;
+  reviewCount: string;
 };
 
 export type ResultsTabsProps = {
@@ -114,7 +123,7 @@ function formatCategoryLabel(categoryPath: string | null): string | null {
   return leaf.replace(/-/g, " ");
 }
 
-function SearchResultCard({
+function SearchResultRow({
   hit,
   locale,
   labels,
@@ -129,7 +138,10 @@ function SearchResultCard({
   const priceNgwee = hit.price_min_ngwee ?? hit.price_max_ngwee;
 
   return (
-    <article className="flex gap-3 rounded-lg border border-border bg-surface p-3">
+    <article
+      className="flex gap-3 rounded-lg border border-border bg-surface p-3"
+      data-testid="search-result-row"
+    >
       {imagePublicId ? (
         <Link href={href} className="relative block h-20 w-20 shrink-0 overflow-hidden rounded-md">
           <CloudinaryImage
@@ -166,27 +178,99 @@ function SearchResultCard({
   );
 }
 
+function SearchProductCard({
+  hit,
+  locale,
+  labels,
+}: {
+  hit: SearchHit;
+  locale: string;
+  labels: ResultsTabsLabels;
+}) {
+  const imagePublicId = readImagePublicId(hit);
+  const href = searchResultHref(locale, hit);
+  const priceNgwee = hit.price_min_ngwee ?? hit.price_max_ngwee ?? 0;
+  const category = formatCategoryLabel(hit.category_path);
+  const slug = typeof hit.slug === "string" && hit.slug.trim() ? hit.slug : null;
+  const { isWishlisted, toggleWishlist, enabled } = useLocalWishlist(slug);
+  const wishlistLabel = isWishlisted ? labels.wishlistRemove : labels.wishlist;
+
+  const card = (
+    <ProductCard
+      title={hit.title}
+      vendorLabel={category ?? labels.marketplaceListing}
+      ngwee={priceNgwee}
+      rating={0}
+      reviewCount={0}
+      noReviewsLabel={labels.noReviews}
+      reviewCountLabel={labels.reviewCount.replace("{count}", "0")}
+      quickAddLabel=""
+      wishlistLabel={wishlistLabel}
+      density="compact"
+      mediaEmptyLabel={labels.mediaEmpty}
+      isWishlisted={isWishlisted}
+      onWishlistToggle={enabled ? toggleWishlist : undefined}
+      media={
+        imagePublicId ? (
+          <CloudinaryImage
+            publicId={imagePublicId}
+            alt={hit.title}
+            width={360}
+            ratio="1/1"
+            sizes="(max-width: 360px) 50vw, 25vw"
+            className="h-full w-full object-cover"
+          />
+        ) : undefined
+      }
+    />
+  );
+
+  return (
+    <Link href={href} className="min-w-0 no-underline" data-testid="search-product-card">
+      {card}
+    </Link>
+  );
+}
+
 function ResultsList({
   hits,
   locale,
   labels,
+  preferProductGrid,
 }: {
   hits: SearchHit[];
   locale: string;
   labels: ResultsTabsLabels;
+  preferProductGrid: boolean;
 }) {
   if (hits.length === 0) {
     return null;
   }
 
+  const productHits = hits.filter((hit) => hit.entity_kind === "product");
+  const otherHits = hits.filter((hit) => hit.entity_kind !== "product");
+  const showProductGrid = preferProductGrid || productHits.length > 0;
+
   return (
-    <ul className="space-y-3" data-testid="search-results-list">
-      {hits.map((hit) => (
-        <li key={hit.id}>
-          <SearchResultCard hit={hit} locale={locale} labels={labels} />
-        </li>
-      ))}
-    </ul>
+    <div className="space-y-4" data-testid="search-results-list">
+      {showProductGrid && productHits.length > 0 ? (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3" data-testid="search-product-grid">
+          {productHits.map((hit) => (
+            <SearchProductCard key={hit.id} hit={hit} locale={locale} labels={labels} />
+          ))}
+        </div>
+      ) : null}
+
+      {otherHits.length > 0 || (!showProductGrid && hits.length > 0) ? (
+        <ul className="space-y-3 p-0">
+          {(showProductGrid ? otherHits : hits).map((hit) => (
+            <li key={hit.id}>
+              <SearchResultRow hit={hit} locale={locale} labels={labels} />
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }
 
@@ -282,9 +366,16 @@ export function ResultsTabs({
       ),
       panel: (
         <div className="space-y-4">
-          <p className="text-sm text-text-2">{labels.resultsCount}</p>
+          <p className="text-sm text-text-2" aria-live="polite" data-testid="search-results-count">
+            {labels.resultsCount}
+          </p>
           {response.degraded ? <p className="text-xs text-text-3">{labels.degraded}</p> : null}
-          <ResultsList hits={items} locale={locale} labels={labels} />
+          <ResultsList
+            hits={items}
+            locale={locale}
+            labels={labels}
+            preferProductGrid={activeKind === "products" || activeKind === "all"}
+          />
           <ProgressiveLoadControls
             status={status}
             hasMore={hasMore}
@@ -298,6 +389,7 @@ export function ResultsTabs({
       ),
     }));
   }, [
+    activeKind,
     controlLabels,
     hasMore,
     items,

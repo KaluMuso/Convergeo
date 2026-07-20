@@ -40,11 +40,13 @@
   },
   "result": {
     "category": "Mu {category}",
-    "priceFrom": "Kuyambira {price}"
+    "priceFrom": "Kuyambira {price}",
+    "marketplaceListing": "Listing ya marketplace"
   },
   "results": {
     "count": "{count, plural, one {# result} other {# ma-results}}",
-    "degraded": "Tikuwonetsa keyword matches (semantic search silipo)"
+    "degraded": "Tikuwonetsa keyword matches (semantic search silipo)",
+    "forQuery": "Zotsatira za “{query}”"
   },
   "submit": "Sakani",
   "suggestionTerms": {

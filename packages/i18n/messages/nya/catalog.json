@@ -179,7 +179,9 @@
       "quickAdd": "Onjezani mwachangu",
       "reviewCount": "({count})",
       "vendor": "Agulitsa {vendor}",
-      "wishlist": "Sungani ku wishlist"
+      "wishlist": "Sungani ku wishlist",
+      "wishlistRemove": "Chotsani ku wishlist",
+      "mediaEmpty": "Palibe chithunzi cha product"
     },
     "defaultCategory": "Zinthu zonse",
     "emptyBody": "Yesani kuchotsa ma-filters kapena yang'anani category ina.",
@@ -197,7 +199,13 @@
     "results": "{count, plural, one {# listing} other {# ma-listings}}",
     "title": "Yang'anani {category}",
     "unavailableBody": "Sitinathe kutenga zinthu za category iyi pano. Yesaninso, kapena sakani.",
-    "unavailableTitle": "Ma-listings salipo"
+    "unavailableTitle": "Ma-listings salipo",
+    "resultsUnknown": "Chiwerengero cha listings sichipezeka",
+    "childCategories": "Gulani mu subcategory",
+    "facets": {
+      "openFilters": "Ma-filters",
+      "filtersActive": "Ma-filters (yogwira)"
+    }
   },
   "returnableBadge": {
     "label": "Itha kubwezeredwa mkati mwa masiku {days}"

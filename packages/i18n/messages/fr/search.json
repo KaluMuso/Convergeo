@@ -53,7 +53,8 @@
   },
   "results": {
     "count": "{count, plural, one {# résultat} other {# résultats}}",
-    "degraded": "Affichage des correspondances par mot-clé (recherche sémantique indisponible)"
+    "degraded": "Affichage des correspondances par mot-clé (recherche sémantique indisponible)",
+    "forQuery": "Résultats pour « {query} »"
   },
   "input": {
     "ariaLabel": "Rechercher",
@@ -70,6 +71,7 @@
   },
   "result": {
     "priceFrom": "À partir de {price}",
-    "category": "Dans {category}"
+    "category": "Dans {category}",
+    "marketplaceListing": "Annonce marketplace"
   }
 }
