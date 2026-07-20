@@ -51,4 +51,9 @@ describe("DesktopHeader", () => {
     expect(screen.queryByRole("link", { name: /browse/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /theme|dark|light/i })).not.toBeInTheDocument();
   });
+
+  it("matches the approved desktop chrome structure snapshot", () => {
+    const { container } = render(<DesktopHeader locale="en" labels={labels} />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
 });

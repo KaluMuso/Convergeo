@@ -180,6 +180,11 @@ describe("HomeHeroBand", () => {
       "/en/sell",
     );
   });
+
+  it("matches the approved merch-first hero structure snapshot", () => {
+    const { container } = render(<HomeHeroBand locale="en" t={t} brandName="Vergeo5" />);
+    expect(container.firstChild).toMatchSnapshot();
+  });
 });
 
 describe("HomeSellCta", () => {

@@ -18,7 +18,6 @@ import { FeaturedCollections } from "./_components/featured-collections";
 import { FlashDeal } from "./_components/flash-deal";
 import { HomeHero } from "./_components/hero";
 import {
-  hasDefaultHomeContent,
   HomeHeroBand,
   HomeProductRail,
   HomeSellCta,
@@ -182,10 +181,10 @@ export default async function ShopHomePage({ params }: PageProps) {
       <JsonLdScript data={[organizationJsonLd, websiteJsonLd]} />
       {plan.useCampaignHero ? (
         renderCampaignSection("hero", locale, t, merch.slots, merch.categories)
-      ) : plan.useDefaultHero && hasDefaultHomeContent(merch.categories, defaultData) ? (
-        <HomeHeroBand locale={locale} t={t} brandName={brandName} />
       ) : (
-        <HomeHero locale={locale} t={t} />
+        // Merch-first default hero even when rails are empty — brand must still
+        // lead the first viewport (audit §4.1). Campaign heroes stay opt-in.
+        <HomeHeroBand locale={locale} t={t} brandName={brandName} />
       )}
 
       <HomeTrustStrip labels={trustLabels} />
