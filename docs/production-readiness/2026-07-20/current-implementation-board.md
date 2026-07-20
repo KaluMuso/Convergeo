@@ -23,8 +23,9 @@
 | Live `refunds.source_key`  | **Absent** — column missing; index still `refunds_order_id_active_uniq`                                                                |
 | Live money/KYC rows        | `payments=0`, `ledger_transactions=0`, `orders=0`, `kyc_records=0`                                                                     |
 | Live FORCE RLS             | `order_money_gates`/`payments`/`refunds` = true; **`ticket_type_instances` / `ticket_type_price_tiers` / `product_relations` = false** |
-| n8n live                   | **2 workflows**, both active: notification dispatch; payment reconciliation crons                                                      |
+| n8n live                   | **3 workflows**, all **inactive**: dispatch `sevKtX1AmimQCWsG`; recon bundle `C1MpTNjrfLACMG3f`; shared error alert `LVuHqWgT1tqjYOtc` |
 | Repo n8n JSON              | 19 files under `infra/n8n/*.json`; backup is `backup-schedule.md` only (no `backup.json`)                                              |
+| n8n fleet evidence         | `docs/production-readiness/2026-07-20/n8n-fleet-import-verify.md` — S4/G5/G21 remain **FAIL** (API 502; no money activation)           |
 
 ### Critical migration collision (blocks naive “apply 0063”)
 
@@ -48,7 +49,7 @@
 | Live migrations | “`0057–0062` may lag”                    | Unverified (Supabase unauth); assumed lag past `0056`             | **Updated:** `0057–0062` **are applied**; residual is **source_key** + numbering collision + FORCE RLS            |
 | Frontend deploy | Historical SHA lag / categories 500      | DL-1/DL-2 closed at `1d137ae`                                     | **Updated:** customer prod @ **`b1ea6a3`**; vendor prod @ `1d137ae`                                               |
 | #352 / returns  | “Merge #352” still in next program       | Listed unmerged                                                   | **ALREADY_CLOSED** in repo; **DEPLOYMENT_REQUIRED** for live schema                                               |
-| n8n             | 2/19 active                              | 2/19 active                                                       | **Confirmed** still 2                                                                                             |
+| n8n             | 2/19 active                              | 2/19 active                                                       | **Updated 2026-07-20:** both unpublished (fail-closed); +1 dormant Error Trigger; 0/19 registry active            |
 | Money rows      | Empty                                    | Empty (07-19)                                                     | **Confirmed** still empty                                                                                         |
 
 **Blended headline for execution:** code ~90–93% of v1; production-ready per gates **~30–40%**; browse-safe invite beta **conditional**; real money / `public_launch` **NO-GO**.
@@ -352,14 +353,14 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate / gap:** S4 / G5 / G21 / DL-4
 - **Priority:** P0
-- **Status:** `DEPLOYMENT_REQUIRED`
-- **Evidence:** n8n MCP count=2; repo has release-job, order-jobs, tickets-*, event-release, lifecycle JSONs inactive live
-- **Files:** `infra/n8n/*.json` (import)
-- **Deps:** API internal routes + tokens; RC-03 for backup
+- **Status:** `BLOCKED_EXTERNAL` (API `502`) → then `DEPLOYMENT_REQUIRED`
+- **Evidence:** Prompt 7 report `n8n-fleet-import-verify.md` — live count=3 all inactive; dispatch fail-closed fixtures `12345`–`12347` (502); money ticks not activated; S4/G5/G21 **FAIL**
+- **Files:** `infra/n8n/*.json` (UI import after API green); shared error alert live id `LVuHqWgT1tqjYOtc`
+- **Deps:** API `healthz`/`readyz` 200; missing Header Auth creds; RC-02/ledger before money; RC-03 for backup
 - **Acceptance:** release + tickets-issue/release + event-release active; idempotent single-tick proof
-- **Verify:** n8n execution IDs; unauthorized tick → 401/403
+- **Verify:** n8n execution IDs; unauthorized tick → 401/403; double-run no duplicate side effects
 - **Blocks browse-beta:** no · **real-money:** yes · **public_launch:** yes
-- **PR boundary:** ops runbook + optional evidence doc only
+- **PR boundary:** ops evidence doc (this session); full import remains ops after API recovery
 
 #### DEP-03 — Pin + record API GHCR digest; confirm tip routes
 
