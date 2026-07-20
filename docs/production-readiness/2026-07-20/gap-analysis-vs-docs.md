@@ -14,6 +14,11 @@
 
 **Companions:** `docs/plan/00-status.md`, `docs/plan/launch-checklist.md`, `docs/production-readiness/2026-07-19/vision-audit/01-audit-findings.md`.
 
+> **CCP-08 supersession note:** This remains a point-in-time gap analysis. The
+> `docs/plan/00-status.md` header no longer claims founder gates are the only
+> remaining launch work; use the 2026-07-20 go/no-go report and implementation board
+> for current deploy/verify/ops/money-drill truth.
+
 ---
 
 ## Executive verdict
@@ -48,7 +53,7 @@ Each area score is the **minimum** of three lenses (so understatement is intenti
 | **Concept** (`docs/concept` → plan distillations) | Multi-vendor ZM commerce: products, services/RFQ, events/tickets, supplies B2B-lite, directory, MoMo escrow, WhatsApp | **78%** product vision in code; **35%** proven live | Live money path; real vendor liquidity; vernacular i18n; M17 video feed (deferred)                        |
 | **Designs** (`docs/designs`)                      | Tokens + fidelity to SELECTION; missing HTML sources imported                                                         | **72%**                                             | 6 HTML sources still missing (F7); vendor default-palette leftovers; some desktop polish debt             |
 | **Ops** (`docs/ops`)                              | Lenco/WhatsApp/n8n/DR/CI operable                                                                                     | **40%**                                             | Creds/templates (F5/F9); 17/19 n8n workflows dormant; backup restore undemonstrated; API digest unaudited |
-| **Plan** (`docs/plan`)                            | Mountains shipped; launch-checklist gates checked                                                                     | **55%**                                             | Status file overstates “founder gates only”; checklist Section 0 unchecked; staging proofs open           |
+| **Plan** (`docs/plan`)                            | Mountains shipped; launch-checklist gates checked                                                                     | **55%**                                             | Status header now points to go/no-go/board; checklist Section 0 unchecked; staging proofs open            |
 | **Production-readiness**                          | S0–S7 / G-gates PASS; scorecard green                                                                                 | **22%**                                             | Nearly all S*/G* FAIL or Conditional; money tables still empty                                            |
 
 ---

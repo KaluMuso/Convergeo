@@ -8,6 +8,8 @@ dump into a **fresh** DB and asserts core tables + config seed + migration curre
 - **RTO target:** ≤ 30 min · **RPO target:** ≤ 24 h (see `docs/ops/runbook-disaster-recovery.md`).
 - Nightly source dumps: `infra/scripts/db-dump.sh` → OCI `db/vergeo5-<ts>.sql.gz`.
 - No secrets are ever pasted here — DB URLs are redacted / referenced by env var name.
+- **Current repo tip for new drills (2026-07-20):** `0065_refunds_source_key_uniq.sql`.
+  Older entries are historical transcripts; do not rewrite their recorded migration counts.
 
 ---
 
@@ -126,16 +128,16 @@ ERROR: SOURCE_DB_URL and target are identical — refusing to clobber the source
 
 ### Result
 
-| Check                              | Result |
-| ---------------------------------- | ------ |
-| `bash -n restore-staging.sh`       | PASS   |
-| `--dry-run`                        | PASS (exit 0, no mutation) |
-| dump → fresh restore → smoke       | PASS (total ~2.0s local) |
-| 35 core tables present             | PASS   |
-| config seed tables non-empty       | PASS (9/3/16/4/3/7 rows) |
-| migrations current (29 / 0029)     | PASS   |
-| smoke fails on empty seed          | PASS (exit 3) |
-| guards refuse prod / self-clobber  | PASS (exit 1) |
+| Check                             | Result                     |
+| --------------------------------- | -------------------------- |
+| `bash -n restore-staging.sh`      | PASS                       |
+| `--dry-run`                       | PASS (exit 0, no mutation) |
+| dump → fresh restore → smoke      | PASS (total ~2.0s local)   |
+| 35 core tables present            | PASS                       |
+| config seed tables non-empty      | PASS (9/3/16/4/3/7 rows)   |
+| migrations current (29 / 0029)    | PASS                       |
+| smoke fails on empty seed         | PASS (exit 3)              |
+| guards refuse prod / self-clobber | PASS (exit 1)              |
 
 > Local timings (~2s) are **not** the RTO measurement — the ~420 KB local schema+seed is a
 > fraction of real staging data. The ≤30-min RTO is measured in the founder-gated live drill.
@@ -171,9 +173,10 @@ date -u +'DRILL END %Y-%m-%dT%H:%M:%SZ'
 
 **Record (paste into a new dated entry above):** START/END timestamps and **elapsed
 minutes (must be ≤ 30)**; dump size; restore duration; smoke output (35 core tables, seed
-non-empty, migrations current == latest repo migration); the source dump object name/age
-(RPO must be ≤ 24 h); any anomalies. If elapsed > 30 min or any smoke assertion fails, open
-a follow-up and note the remediation.
+non-empty, migrations current == latest repo migration — currently `0065` unless a newer
+migration has merged); the source dump object name/age (RPO must be ≤ 24 h); any anomalies.
+If elapsed > 30 min or any smoke assertion fails, open a follow-up and note the remediation.
+
 ```
 ### <date> — staging restore drill — <PASS|FAIL>   <-- founder fills this in
 ```

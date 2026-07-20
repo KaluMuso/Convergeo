@@ -123,7 +123,7 @@ Evidence 2026-07-20 (`docs/production-readiness/2026-07-20/ops-drills/`): approv
 
 ### G8 — Critical test suite and CI gates
 
-**Current:** **FAIL** — `secret-scan` and other jobs still `continue-on-error`; branch protection NOT_AUDITABLE. App lint/type/test green on merges does not clear this gate.
+**Current:** **FAIL** — CI YAML now makes `secret-scan`, `deps-audit`, security gates, migration replay, DB/typegen, money DB triggers, COD container smoke, and Lighthouse blocking, while `i18n-lint`, the demo seed helper, and the broad `tests/rls` sweep remain intentionally advisory. Branch protection / no-bypass required-check configuration is still **NOT_AUDITABLE**, so app lint/type/test green on merges does not clear this gate.
 
 ### G9 — Deployment / rollback evidence
 
