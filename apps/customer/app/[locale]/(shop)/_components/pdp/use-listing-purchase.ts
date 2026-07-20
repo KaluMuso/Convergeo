@@ -45,16 +45,19 @@ export function useListingPurchase(
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
 
+  const listingStockMode = listing?.stockMode;
+  const listingStockQty = listing?.stockQty;
+  const listingInStock = listing?.inStock;
+
   useEffect(() => {
     if (!listing) {
       return;
     }
+    // Intentional identity deps (id / stock bounds) — avoid resetting on new object identity each render.
     setQuantity(clampQuantity(listing.moq, listing));
     setAddError(null);
     setAddedMessage(null);
-    // Reset only when the selected listing identity / stock bounds change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional identity deps
-  }, [listingId, listingMoq, listing?.stockMode, listing?.stockQty, listing?.inStock]);
+  }, [listing, listingId, listingMoq, listingStockMode, listingStockQty, listingInStock]);
 
   const maxQuantity = useMemo(() => (listing ? getMaxQuantity(listing) : null), [listing]);
 

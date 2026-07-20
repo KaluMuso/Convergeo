@@ -492,18 +492,21 @@ export function PdpInteractiveBody({
     return productImages;
   }, [productImages, selectedListing]);
 
-  const buyBoxListing: BuyBoxListing | null = selectedListing
-    ? {
-        id: selectedListing.id,
-        title: selectedListing.title,
-        priceNgwee: selectedListing.priceNgwee,
-        condition: selectedListing.condition,
-        stockMode: selectedListing.stockMode,
-        stockQty: selectedListing.stockQty,
-        moq: selectedListing.moq,
-        inStock: selectedListing.inStock,
-      }
-    : null;
+  const buyBoxListing: BuyBoxListing | null = useMemo(() => {
+    if (!selectedListing) {
+      return null;
+    }
+    return {
+      id: selectedListing.id,
+      title: selectedListing.title,
+      priceNgwee: selectedListing.priceNgwee,
+      condition: selectedListing.condition,
+      stockMode: selectedListing.stockMode,
+      stockQty: selectedListing.stockQty,
+      moq: selectedListing.moq,
+      inStock: selectedListing.inStock,
+    };
+  }, [selectedListing]);
 
   const purchase = useListingPurchase(buyBoxListing, buyBoxLabels);
 

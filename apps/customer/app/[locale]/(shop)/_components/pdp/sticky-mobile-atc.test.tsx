@@ -3,11 +3,12 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRef } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { StickyMobileAtc } from "./sticky-mobile-atc";
 
 import type { BuyBoxLabels, BuyBoxListing } from "./buy-box";
-import { StickyMobileAtc } from "./sticky-mobile-atc";
 import type { ListingPurchaseControls } from "./use-listing-purchase";
 
 afterEach(() => {

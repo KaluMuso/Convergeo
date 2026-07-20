@@ -8,6 +8,7 @@ import { useCallback, useMemo, useState, type Ref } from "react";
 import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
 
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
+
 import type { ListingPurchaseControls } from "./use-listing-purchase";
 
 export type BuyBoxListing = {
