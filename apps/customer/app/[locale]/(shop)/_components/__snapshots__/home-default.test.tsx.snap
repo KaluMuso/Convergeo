@@ -1,0 +1,90 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`HomeHeroBand > matches the approved merch-first hero structure snapshot 1`] = `
+<section
+  aria-labelledby="home-hero-heading"
+  class="motion-rise relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden bg-panel text-panel-text"
+  data-testid="home-hero-band"
+>
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute inset-0 opacity-90"
+    style="background: radial-gradient(120% 80% at 85% 20%, color-mix(in srgb, var(--primary) 35%, transparent) 0%, transparent 55%), linear-gradient(135deg, var(--panel) 0%, color-mix(in srgb, var(--primary-deep) 55%, var(--panel)) 100%);"
+  />
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute -right-8 top-6 h-48 w-48 rounded-full bg-primary/20 blur-2xl motion-reduce:blur-none sm:h-64 sm:w-64 lg:right-[12%] lg:top-10"
+  />
+  <div
+    aria-hidden="true"
+    class="pointer-events-none absolute bottom-0 left-[8%] h-40 w-40 rounded-full bg-accent/15 blur-xl motion-reduce:blur-none"
+  />
+  <div
+    class="relative mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-10 sm:px-6 lg:flex-row lg:items-end lg:justify-between lg:gap-10 lg:px-6 lg:py-14"
+  >
+    <div
+      class="flex max-w-2xl flex-col gap-3 lg:gap-4"
+    >
+      <p
+        class="font-display text-hero leading-none tracking-tight text-panel-text"
+        data-testid="home-hero-brand"
+      >
+        Vergeo5
+      </p>
+      <h1
+        class="font-display text-h1 text-panel-text lg:text-h2"
+        id="home-hero-heading"
+      >
+        Shop products, services, and events across Zambia
+      </h1>
+      <p
+        class="max-w-xl text-body text-panel-muted"
+      >
+        Compare sellers, arrange Lusaka delivery or nationwide pickup, and discover what is nearby.
+      </p>
+      <div
+        class="flex flex-wrap gap-2 pt-1"
+      >
+        <a
+          class="inline-flex items-center justify-center rounded font-body font-medium transition-[background-color,box-shadow,opacity,transform] duration-fast ease-std active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:shadow-focusRing disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 bg-primary text-[var(--primary-btn-fg)] hover:bg-[var(--primary-btn-hover)] disabled:bg-text-3 disabled:text-surface h-11 min-h-11 px-4 text-body gap-2"
+          href="/en/search"
+        >
+          Start browsing
+        </a>
+        <a
+          class="inline-flex items-center justify-center rounded font-body font-medium transition-[background-color,box-shadow,opacity,transform] duration-fast ease-std active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:shadow-focusRing disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100 bg-surface text-text border border-border hover:bg-bg-2 disabled:bg-bg-2 disabled:text-text-3 h-11 min-h-11 px-4 text-body gap-2 border-panel-muted/40 bg-transparent text-panel-text hover:bg-panel-text/10"
+          href="/en/sell"
+        >
+          Learn about selling
+        </a>
+      </div>
+    </div>
+    <div
+      aria-hidden="true"
+      class="relative mt-2 aspect-[16/10] w-full max-w-md overflow-hidden rounded-lg border border-panel-muted/20 bg-surface/10 shadow-2 lg:mt-0 lg:max-w-sm"
+      data-testid="home-hero-visual"
+    >
+      <div
+        class="absolute inset-0"
+        style="background: linear-gradient(160deg, color-mix(in srgb, var(--surface) 18%, transparent) 0%, transparent 45%), radial-gradient(circle at 30% 70%, color-mix(in srgb, var(--accent) 40%, transparent), transparent 50%);"
+      />
+      <div
+        class="absolute inset-x-6 bottom-6 top-8 grid grid-cols-3 gap-2 opacity-80"
+      >
+        <span
+          class="rounded bg-surface/25"
+        />
+        <span
+          class="col-span-2 rounded bg-surface/15"
+        />
+        <span
+          class="col-span-2 rounded bg-surface/20"
+        />
+        <span
+          class="rounded bg-surface/30"
+        />
+      </div>
+    </div>
+  </div>
+</section>
+`;

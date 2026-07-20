@@ -1,0 +1,210 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 1`] = `
+<header
+  class="sticky top-0 z-50 hidden border-b border-border bg-surface lg:block"
+  data-compact="false"
+  data-testid="desktop-header"
+  style="box-shadow: none; transition: box-shadow var(--dur) var(--ease-std);"
+>
+  <a
+    class="sr-only rounded bg-primary text-sm font-medium text-surface focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:inline-flex focus:min-h-11 focus:items-center focus:px-4 focus:shadow-focusRing"
+    href="#shop-main"
+  >
+    Skip to content
+  </a>
+  <nav
+    aria-label="Primary navigation"
+    class="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 transition-[height] duration-fast ease-std motion-reduce:transition-none"
+    style="height: 4rem;"
+  >
+    <a
+      class="shrink-0 font-display text-2xl leading-none text-primary transition-transform duration-fast ease-std"
+      href="/en"
+    >
+      Vergeo5
+    </a>
+    <form
+      action="/en/search"
+      class="min-w-0 max-w-2xl flex-1"
+      role="search"
+    >
+      <div
+        class="flex w-full items-center gap-2 rounded-pill border border-border bg-surface transition-[border-color,box-shadow] duration-fast ease-std motion-reduce:transition-none focus-within:border-primary focus-within:shadow-focusRing h-11 bg-bg"
+        data-testid="search-field"
+      >
+        <span
+          aria-hidden="true"
+          class="pl-4 text-text-2"
+        >
+          <svg
+            aria-hidden="true"
+            class="h-[1.15em] w-[1.15em] shrink-0"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.75"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="11"
+              cy="11"
+              r="6.5"
+            />
+            <path
+              d="m16 16 4 4"
+            />
+          </svg>
+        </span>
+        <input
+          aria-label="Search products, services, events…"
+          class="w-full bg-surface font-body text-text border border-border placeholder:text-text-3 transition-[border-color,box-shadow,background-color] duration-fast ease-std motion-reduce:transition-none focus-visible:outline-none focus-visible:border-primary focus-visible:shadow-focusRing disabled:cursor-not-allowed disabled:bg-bg-2 disabled:text-text-3 aria-[invalid=true]:border-danger min-w-0 flex-1 rounded-pill border-0 bg-transparent shadow-none focus-visible:shadow-none h-11 min-h-11 px-4 text-body pl-0 pr-0"
+          name="q"
+          placeholder="Search products, services, events…"
+          type="search"
+        />
+        <div
+          class="pr-2"
+        >
+          <button
+            aria-label="Search"
+            class="inline-flex min-h-9 min-w-9 items-center justify-center rounded-pill text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+            type="submit"
+          >
+            <svg
+              aria-hidden="true"
+              class="h-[1.15em] w-[1.15em] shrink-0"
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.75"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="11"
+                cy="11"
+                r="6.5"
+              />
+              <path
+                d="m16 16 4 4"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </form>
+    <ul
+      class="flex shrink-0 list-none items-center gap-0.5 p-0"
+    >
+      <li>
+        <button
+          type="button"
+        >
+          All Categories
+        </button>
+      </li>
+      <li>
+        <a
+          class="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+          href="/en/directory"
+        >
+          Directory
+        </a>
+      </li>
+      <li>
+        <a
+          class="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+          href="/en/services"
+        >
+          Services
+        </a>
+      </li>
+      <li>
+        <a
+          class="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+          href="/en/events"
+        >
+          Events
+        </a>
+      </li>
+      <li>
+        <a
+          class="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+          href="/en/ask"
+        >
+          Ask Vergeo
+        </a>
+      </li>
+    </ul>
+    <div
+      class="ml-auto flex shrink-0 items-center gap-1"
+    >
+      <a
+        class="inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+        href="/en/account"
+      >
+        <svg
+          aria-hidden="true"
+          class="h-[1.15em] w-[1.15em] shrink-0"
+          fill="none"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.75"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle
+            cx="12"
+            cy="8"
+            r="3.5"
+          />
+          <path
+            d="M5 19.5c1.6-3.2 4-4.5 7-4.5s5.4 1.3 7 4.5"
+          />
+        </svg>
+        <span>
+          Account
+        </span>
+      </a>
+      <a
+        class="inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+        href="/en/cart"
+      >
+        <svg
+          aria-hidden="true"
+          class="h-[1.15em] w-[1.15em] shrink-0"
+          fill="none"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="1.75"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M3.5 5h2l1.2 11h11.6l1.5-8H7"
+          />
+          <circle
+            cx="10"
+            cy="19.5"
+            r="1.25"
+          />
+          <circle
+            cx="16.5"
+            cy="19.5"
+            r="1.25"
+          />
+        </svg>
+        <span>
+          Cart
+        </span>
+      </a>
+    </div>
+  </nav>
+</header>
+`;
