@@ -191,6 +191,13 @@
     "unavailableTitle": "Produit indisponible",
     "unavailableBody": "Nous n'avons pas pu charger ce produit pour le moment. Vérifiez votre connexion et réessayez.",
     "unavailableRetry": "Réessayer",
+    "breadcrumbAria": "Fil d'Ariane",
+    "sellerCount": "{count, plural, one {# vendeur} other {# vendeurs}}",
+    "noSellers": {
+      "title": "Aucun vendeur disponible",
+      "body": "Ce produit n'a aucune offre active pour le moment. Parcourez d'autres produits, ou revenez plus tard.",
+      "browseCta": "Parcourir les produits"
+    },
     "meta": {
       "notFoundTitle": "Produit introuvable",
       "descriptionFallback": "Achetez {name} sur Vergeo5"
@@ -206,7 +213,11 @@
     },
     "related": {
       "heading": "Plus dans cette catégorie",
-      "fromPrice": "À partir de {price}"
+      "fromPrice": "À partir de {price}",
+      "vendorFallback": "Même catégorie"
+    },
+    "recentlyViewed": {
+      "heading": "Consultés récemment"
     },
     "gallery": {
       "empty": "Pas encore d'images",
@@ -233,7 +244,12 @@
       "lowStock": "Plus que {count} en stock",
       "alwaysAvailable": "Disponible",
       "singleVendor": "Vendu uniquement par ce vendeur",
-      "moq": "Commande minimum : {count}"
+      "moq": "Commande minimum : {count}",
+      "lowestPrice": "Prix le plus bas parmi les vendeurs",
+      "moreThanLowest": "{diff} de plus que l'offre la plus basse",
+      "wishlistAdd": "Ajouter à la liste de souhaits",
+      "wishlistRemove": "Retirer de la liste de souhaits",
+      "wishlistSaved": "Ajouté à la liste de souhaits"
     },
     "stickyAtc": {
       "ariaLabel": "Ajout rapide au panier"
@@ -303,7 +319,8 @@
     "rating": "{rating} ({count} avis)",
     "conditionNew": "Neuf",
     "conditionRefurbished": "Reconditionné",
-    "usingFallbackLocation": "Distances calculées depuis le centre-ville de Lusaka jusqu'à ce que vous partagiez votre position."
+    "usingFallbackLocation": "Distances calculées depuis le centre-ville de Lusaka jusqu'à ce que vous partagiez votre position.",
+    "lowestPriceBadge": "Prix le plus bas"
   },
   "reviews": {
     "heading": "Avis des clients",

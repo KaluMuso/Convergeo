@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import catalogMessages from "../../../../../../../packages/i18n/messages/en/catalog.json";
 import frCatalog from "../../../../../../../packages/i18n/messages/fr/catalog.json";
@@ -20,6 +20,22 @@ vi.mock("../cart/mini-cart-drawer", () => ({
 
 afterEach(() => {
   cleanup();
+});
+
+beforeAll(() => {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }),
+  });
 });
 
 const listing: ProductListing = {
@@ -68,6 +84,8 @@ function renderBody(
     <NextIntlClientProvider locale={locale} messages={{ catalog }} onError={() => {}}>
       <PdpInteractiveBody
         locale={locale}
+        productId="product-1"
+        productSlug="tecno-spark-20"
         productImages={options.productImages ?? []}
         listings={[activeListing]}
         comparisonListings={[]}
@@ -113,6 +131,7 @@ function renderBody(
           conditionNew: "New",
           conditionRefurbished: "Refurbished",
           usingFallbackLocation: "Using Lusaka CBD",
+          lowestPriceBadge: "Lowest price",
         }}
         vendorLabels={{
           heading: "Seller",
@@ -121,13 +140,17 @@ function renderBody(
           viewStore: "View store",
         }}
         trustLabels={{
-          preferredSeller: "Preferred seller: {name}",
-          seller: "Seller: {name}",
           delivery: "Delivery available",
           pickup: "Pickup available",
           returns: "Returns policy",
           escrow: "Held in escrow until you confirm",
         }}
+        wishlistLabels={{
+          add: "Save to wishlist",
+          remove: "Remove from wishlist",
+          saved: "Saved to wishlist",
+        }}
+        comparePageLabel="Compare sellers"
       />
     </NextIntlClientProvider>,
   );

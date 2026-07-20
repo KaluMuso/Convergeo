@@ -10,6 +10,8 @@ import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
 import { BuyerTrustPanel } from "./buyer-trust-panel";
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
 import { PdpGallery } from "./gallery";
+import { buildOfferPriceContext } from "./offer-price-context";
+import { PdpWishlistButton } from "./pdp-wishlist-button";
 import { StickyMobileAtc } from "./sticky-mobile-atc";
 import { useListingPurchase } from "./use-listing-purchase";
 import { VendorBlock } from "./vendor-block";
@@ -59,6 +61,8 @@ export type ComparisonLabels = {
   conditionNew: string;
   conditionRefurbished: string;
   usingFallbackLocation: string;
+  /** Shown on the cheapest offer card/row when multi-seller. */
+  lowestPriceBadge: string;
 };
 
 type ComparisonSort = "price" | "distance";
@@ -90,6 +94,8 @@ export type ProductListing = {
 
 export type PdpInteractiveBodyProps = {
   locale: string;
+  productId: string;
+  productSlug: string;
   productImages: Array<{ publicId: string; alt: string }>;
   listings: ProductListing[];
   comparisonListings: ComparisonListing[];
@@ -107,13 +113,17 @@ export type PdpInteractiveBodyProps = {
     viewStore: string;
   };
   trustLabels: {
-    preferredSeller: string;
-    seller: string;
     delivery: string;
     pickup: string;
     returns: string;
     escrow: string;
   };
+  wishlistLabels: {
+    add: string;
+    remove: string;
+    saved: string;
+  };
+  comparePageLabel: string;
 };
 
 export function shouldShowComparison(listingCount: number): boolean {
@@ -238,6 +248,16 @@ export function Comparison({ listings, selectedListingId, labels, onSelect }: Co
     [listings, sort, userCoords],
   );
 
+  const lowestPriceNgwee = useMemo(() => {
+    if (listings.length === 0) {
+      return null;
+    }
+    return listings.reduce(
+      (lowest, listing) => Math.min(lowest, listing.priceNgwee),
+      listings[0]?.priceNgwee ?? Number.POSITIVE_INFINITY,
+    );
+  }, [listings]);
+
   const distanceByListingId = useMemo(() => {
     const distances = new Map<string, number>();
     for (const listing of listings) {
@@ -329,8 +349,13 @@ export function Comparison({ listings, selectedListingId, labels, onSelect }: Co
                       {listing.vendor.preferredBadge ? (
                         <CornerRibbon trust="preferred" trustLabel={labels.preferredBadge} />
                       ) : null}
+                      {lowestPriceNgwee !== null && listing.priceNgwee === lowestPriceNgwee ? (
+                        <span data-testid={`comparison-lowest-${listing.id}`}>
+                          <Badge variant="public" label={labels.lowestPriceBadge} />
+                        </span>
+                      ) : null}
                     </div>
-                    <p className="mt-1 font-mono text-xl font-semibold text-text">
+                    <p className="mt-1 font-mono text-xl font-semibold text-[var(--price)]">
                       {formatK(listing.priceNgwee)}
                     </p>
                     <p className="mt-1 text-xs text-text-2">{ratingLabel}</p>
@@ -407,8 +432,13 @@ export function Comparison({ listings, selectedListingId, labels, onSelect }: Co
                       <span className="text-xs text-text-2">{ratingLabel}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 align-top font-medium text-text">
-                    {formatK(listing.priceNgwee)}
+                  <td className="px-4 py-3 align-top font-medium text-[var(--price)]">
+                    <div className="flex flex-col gap-1">
+                      <span>{formatK(listing.priceNgwee)}</span>
+                      {lowestPriceNgwee !== null && listing.priceNgwee === lowestPriceNgwee ? (
+                        <Badge variant="public" label={labels.lowestPriceBadge} />
+                      ) : null}
+                    </div>
                   </td>
                   <td className="px-4 py-3 align-top">
                     <ConditionBadge
@@ -456,6 +486,8 @@ export function Comparison({ listings, selectedListingId, labels, onSelect }: Co
 
 export function PdpInteractiveBody({
   locale,
+  productId,
+  productSlug,
   productImages,
   listings,
   comparisonListings,
@@ -467,6 +499,8 @@ export function PdpInteractiveBody({
   comparisonLabels,
   vendorLabels,
   trustLabels,
+  wishlistLabels,
+  comparePageLabel,
 }: PdpInteractiveBodyProps) {
   const t = useTranslations("catalog");
   const buyBoxRef = useRef<HTMLElement | null>(null);
@@ -510,6 +544,36 @@ export function PdpInteractiveBody({
 
   const purchase = useListingPurchase(buyBoxListing, buyBoxLabels);
 
+  const priceContextLabel = useMemo(() => {
+    if (!selectedListing) {
+      return null;
+    }
+    const context = buildOfferPriceContext(
+      selectedListing.priceNgwee,
+      comparisonListings.map((listing) => listing.priceNgwee),
+    );
+    if (!context) {
+      return null;
+    }
+    if (context.kind === "lowest") {
+      return t("pdp.buyBox.lowestPrice");
+    }
+    return t("pdp.buyBox.moreThanLowest", { diff: formatK(context.diffNgwee) });
+  }, [comparisonListings, selectedListing, t]);
+
+  const sellerRatingLabel = useMemo(() => {
+    if (!selectedListing) {
+      return null;
+    }
+    if (selectedListing.vendor.ratingAvg !== null && selectedListing.vendor.ratingCount > 0) {
+      return t("pdp.vendor.rating", {
+        rating: selectedListing.vendor.ratingAvg,
+        count: selectedListing.vendor.ratingCount,
+      });
+    }
+    return vendorLabels.noReviews;
+  }, [selectedListing, t, vendorLabels.noReviews]);
+
   const handleSelect = useCallback((listingId: string) => {
     setSelectedListingId(listingId);
   }, []);
@@ -517,6 +581,10 @@ export function PdpInteractiveBody({
   const handleStickyVisibleChange = useCallback((visible: boolean) => {
     setStickyAtcVisible(visible);
   }, []);
+
+  const compareHref = shouldShowComparison(comparisonListings.length)
+    ? `/${locale}/compare?product=${encodeURIComponent(productSlug)}`
+    : null;
 
   return (
     /* Mobile (<1024px): gallery → buy-box → compare cards → vendor.
@@ -528,6 +596,7 @@ export function PdpInteractiveBody({
       ]
         .filter(Boolean)
         .join(" ")}
+      data-testid="pdp-interactive-body"
     >
       <div className="min-w-0 lg:col-start-1 lg:row-start-1">
         <PdpGallery
@@ -548,12 +617,30 @@ export function PdpInteractiveBody({
             labels={buyBoxLabels}
             purchase={purchase}
             buyBoxRef={buyBoxRef}
+            seller={{
+              displayName: selectedListing.vendor.displayName,
+              ratingLabel: sellerRatingLabel,
+              preferred: selectedListing.vendor.preferredBadge,
+            }}
+            priceContextLabel={priceContextLabel}
+            compareHref={compareHref}
+            compareLabel={comparePageLabel}
+            wishlistSlot={
+              <PdpWishlistButton
+                productId={productId}
+                addLabel={wishlistLabels.add}
+                removeLabel={wishlistLabels.remove}
+                savedAnnounceLabel={wishlistLabels.saved}
+              />
+            }
           />
           <BuyerTrustPanel
-            sellerStatusLabel={(selectedListing.vendor.preferredBadge
-              ? trustLabels.preferredSeller
-              : trustLabels.seller
-            ).replace("{name}", selectedListing.vendor.displayName)}
+            sellerStatusLabel={t(
+              selectedListing.vendor.preferredBadge
+                ? "pdp.trust.preferredSeller"
+                : "pdp.trust.seller",
+              { name: selectedListing.vendor.displayName },
+            )}
             deliveryLabel={selectedComparison?.deliveryAvailable ? trustLabels.delivery : null}
             pickupLabel={selectedComparison?.pickupAvailable ? trustLabels.pickup : null}
             returnsLabel={trustLabels.returns}

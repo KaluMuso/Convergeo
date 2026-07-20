@@ -191,6 +191,13 @@
     "unavailableTitle": "Product unavailable",
     "unavailableBody": "We could not load this product right now. Check your connection and try again.",
     "unavailableRetry": "Try again",
+    "breadcrumbAria": "Breadcrumb",
+    "sellerCount": "{count, plural, one {# seller} other {# sellers}}",
+    "noSellers": {
+      "title": "No sellers available",
+      "body": "This product has no active offers right now. Browse other products, or check back later.",
+      "browseCta": "Browse products"
+    },
     "meta": {
       "notFoundTitle": "Product not found",
       "descriptionFallback": "Shop {name} on Vergeo5"
@@ -206,7 +213,11 @@
     },
     "related": {
       "heading": "More in this category",
-      "fromPrice": "From {price}"
+      "fromPrice": "From {price}",
+      "vendorFallback": "Same category"
+    },
+    "recentlyViewed": {
+      "heading": "Recently viewed"
     },
     "gallery": {
       "empty": "No images yet",
@@ -233,7 +244,12 @@
       "lowStock": "Only {count} left",
       "alwaysAvailable": "Available",
       "singleVendor": "Sold by this vendor only",
-      "moq": "Minimum order: {count}"
+      "moq": "Minimum order: {count}",
+      "lowestPrice": "Lowest price among sellers",
+      "moreThanLowest": "{diff} more than the lowest offer",
+      "wishlistAdd": "Save to wishlist",
+      "wishlistRemove": "Remove from wishlist",
+      "wishlistSaved": "Saved to wishlist"
     },
     "stickyAtc": {
       "ariaLabel": "Quick add to cart"
@@ -303,7 +319,8 @@
     "rating": "{rating} ({count} reviews)",
     "conditionNew": "New",
     "conditionRefurbished": "Refurbished",
-    "usingFallbackLocation": "Distances shown from Lusaka CBD until you share your location."
+    "usingFallbackLocation": "Distances shown from Lusaka CBD until you share your location.",
+    "lowestPriceBadge": "Lowest price"
   },
   "reviews": {
     "heading": "Customer reviews",

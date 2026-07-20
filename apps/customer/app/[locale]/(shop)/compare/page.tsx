@@ -139,6 +139,7 @@ function comparisonLabels(t: CatalogTranslator): ComparisonLabels {
     conditionNew: t("comparison.conditionNew"),
     conditionRefurbished: t("comparison.conditionRefurbished"),
     usingFallbackLocation: t("comparison.usingFallbackLocation"),
+    lowestPriceBadge: t("comparison.lowestPriceBadge"),
   };
 }
 

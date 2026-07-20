@@ -101,6 +101,13 @@
     }
   },
   "pdp": {
+    "breadcrumbAria": "Njira ya peji",
+    "sellerCount": "{count, plural, one {# wogulitsa} other {# ogulitsa}}",
+    "noSellers": {
+      "title": "Palibe ogulitsa",
+      "body": "Chinthu ichi chilibe ma-offers ogwira ntchito pano. Fufuzani zinthu zina, kapena bwerani pambuyo pake.",
+      "browseCta": "Fufuzani zinthu"
+    },
     "buyBox": {
       "addToCart": "Onjezani ku cart",
       "addToCartError": "Sitinathe kuonjezera ku cart. Onani connection ndi yesaninso.",
@@ -116,7 +123,12 @@
       "outOfStock": "Palibe mu stock",
       "priceLabel": "Mtengo",
       "quantityLabel": "Chiwerengero",
-      "singleVendor": "Agulitsa vendor uyu yekha"
+      "singleVendor": "Agulitsa vendor uyu yekha",
+      "lowestPrice": "Mtengo wotsika kwambiri pakati pa ogulitsa",
+      "moreThanLowest": "{diff} kuposa offer yotsika",
+      "wishlistAdd": "Sungani ku wishlist",
+      "wishlistRemove": "Chotsani ku wishlist",
+      "wishlistSaved": "Zasungidwa ku wishlist"
     },
     "stickyAtc": {
       "ariaLabel": "Onjezani mwachangu ku cart"
@@ -143,7 +155,11 @@
     },
     "related": {
       "fromPrice": "Kuyambira {price}",
-      "heading": "Zina mu category iyi"
+      "heading": "Zina mu category iyi",
+      "vendorFallback": "Category yomweyo"
+    },
+    "recentlyViewed": {
+      "heading": "Zomwe mwaonapo"
     },
     "specs": {
       "empty": "Palibe specifications",

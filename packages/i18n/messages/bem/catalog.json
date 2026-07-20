@@ -101,6 +101,13 @@
     }
   },
   "pdp": {
+    "breadcrumbAria": "Inshila ya peji",
+    "sellerCount": "{count, plural, one {# ushitisha} other {# abashitisha}}",
+    "noSellers": {
+      "title": "Takwaba abashitisha",
+      "body": "Ici cintu takwata ama-offers ayabomba nomba. Twaleni ifintu fimbi, nangu bweleleni limbi.",
+      "browseCta": "Twaleni ifintu"
+    },
     "buyBox": {
       "addToCart": "Longeni mu cart",
       "addToCartError": "Tatwaishibe ukulenga mu cart. Checkeni connection no wesheni limbi.",
@@ -116,7 +123,12 @@
       "outOfStock": "Takwaba mu stock",
       "priceLabel": "Mutengo",
       "quantityLabel": "Ubunji",
-      "singleVendor": "Ashitisha vendor uyu fye"
+      "singleVendor": "Ashitisha vendor uyu fye",
+      "lowestPrice": "Mutengo uucepa pakati ka abashitisha",
+      "moreThanLowest": "{diff} ukucila ku offer iucepa",
+      "wishlistAdd": "Sungileni ku wishlist",
+      "wishlistRemove": "Futeni ku wishlist",
+      "wishlistSaved": "Yasungilwe ku wishlist"
     },
     "stickyAtc": {
       "ariaLabel": "Longeni bwangu mu cart"
@@ -143,7 +155,11 @@
     },
     "related": {
       "fromPrice": "Ukufuma {price}",
-      "heading": "Fimbi mu category iyi"
+      "heading": "Fimbi mu category iyi",
+      "vendorFallback": "Category imo"
+    },
+    "recentlyViewed": {
+      "heading": "Ifyo mwamonapo"
     },
     "specs": {
       "empty": "Takwaba specifications",

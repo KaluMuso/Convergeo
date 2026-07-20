@@ -191,6 +191,13 @@
     "unavailableTitle": "商品暂时无法加载",
     "unavailableBody": "我们目前无法加载此商品。请检查网络后重试。",
     "unavailableRetry": "重试",
+    "breadcrumbAria": "面包屑导航",
+    "sellerCount": "{count, plural, one {# 位卖家} other {# 位卖家}}",
+    "noSellers": {
+      "title": "暂无卖家",
+      "body": "该商品目前没有有效报价。请浏览其他商品，或稍后再来查看。",
+      "browseCta": "浏览商品"
+    },
     "meta": {
       "notFoundTitle": "未找到该商品",
       "descriptionFallback": "在 Vergeo5 上选购 {name}"
@@ -206,7 +213,11 @@
     },
     "related": {
       "heading": "此类别更多商品",
-      "fromPrice": "{price} 起"
+      "fromPrice": "{price} 起",
+      "vendorFallback": "同类别"
+    },
+    "recentlyViewed": {
+      "heading": "最近浏览"
     },
     "gallery": {
       "empty": "暂无图片",
@@ -233,7 +244,12 @@
       "lowStock": "仅剩 {count} 件",
       "alwaysAvailable": "有货",
       "singleVendor": "仅由该商家销售",
-      "moq": "最低起订量：{count}"
+      "moq": "最低起订量：{count}",
+      "lowestPrice": "卖家中最低价",
+      "moreThanLowest": "比最低报价高 {diff}",
+      "wishlistAdd": "加入心愿单",
+      "wishlistRemove": "移出心愿单",
+      "wishlistSaved": "已加入心愿单"
     },
     "stickyAtc": {
       "ariaLabel": "快速加入购物车"
@@ -303,7 +319,8 @@
     "rating": "{rating} ({count} 条评价)",
     "conditionNew": "全新",
     "conditionRefurbished": "翻新",
-    "usingFallbackLocation": "在您共享位置之前，距离以卢萨卡市中心为基准显示。"
+    "usingFallbackLocation": "在您共享位置之前，距离以卢萨卡市中心为基准显示。",
+    "lowestPriceBadge": "最低价"
   },
   "reviews": {
     "heading": "顾客评价",
