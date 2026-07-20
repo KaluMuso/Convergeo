@@ -95,7 +95,7 @@ See `versions.txt`, `commands/executed.md`, `logs/preflight-refresh.txt`.
 ### Harness
 
 - Committed: `load/k6/checkout-load.js`, `load/k6/browse-load.js`, `load/invariant-check.py`
-- Offline: `node --check` + `py_compile` **PASS** (`logs/load-offline-recheck.log`)
+- Offline: `node --check` + `py_compile` **PASS** (`logs/load-offline-recheck.txt`)
 - Thresholds (unchanged after this drill):
 
 | Metric                | Target   |
@@ -136,11 +136,11 @@ ops-drills/
   versions.txt
   commands/executed.md
   logs/
-    preflight-refresh.log
-    restore-drill.log
+    preflight-refresh.txt
+    restore-drill.txt
     restore-psql.out
-    load-offline-validation.log
-    load-offline-recheck.log
+    load-offline-validation.txt
+    load-offline-recheck.txt
   restore-verification/
     artifact-manifest.json
     checksum.txt
