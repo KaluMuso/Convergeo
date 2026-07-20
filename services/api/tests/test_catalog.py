@@ -200,12 +200,12 @@ SEED_STORE: dict[str, list[dict[str, Any]]] = {
     "listing_images": [
         {
             "listing_id": PHONE_LISTING_ID,
-            "cloudinary_public_id": "vergeo5/demo/phone-a",
+            "cloudinary_public_id": "vergeo5/catalog/phone-a",
             "position": 1,
         },
         {
             "listing_id": CHITENGE_LISTING_ID,
-            "cloudinary_public_id": "vergeo5/demo/chitenge-b",
+            "cloudinary_public_id": "vergeo5/catalog/chitenge-b",
             "position": 1,
         },
     ],

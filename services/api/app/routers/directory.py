@@ -7,6 +7,10 @@ from typing import Annotated, Any, Literal, Protocol, cast
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.business.access import BusinessAccess, get_business_access
+from app.services.listings.demo import (
+    fetch_demo_listing_ids,
+    fetch_demo_only_vendor_ids,
+)
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
@@ -295,15 +299,21 @@ def _vendor_category_paths(client: Any, vendor_ids: list[str]) -> dict[str, set[
 
     listings_response = (
         client.table("vendor_listings")
-        .select("vendor_id, products(category_id, categories(path))")
+        .select("id, vendor_id, products(category_id, categories(path))")
         .in_("vendor_id", vendor_ids)
         .eq("status", "active")
         .execute()
     )
     listing_rows = listings_response.data or []
+    demo_listing_ids = fetch_demo_listing_ids(
+        client, [str(row["id"]) for row in listing_rows if row.get("id")]
+    )
 
     category_paths: dict[str, set[str]] = {vendor_id: set() for vendor_id in vendor_ids}
     for row in listing_rows:
+        listing_id = str(row.get("id") or "")
+        if listing_id in demo_listing_ids:
+            continue
         vendor_id = str(row.get("vendor_id") or "")
         if vendor_id not in category_paths:
             continue
@@ -324,13 +334,20 @@ def _vendor_listing_counts(client: Any, vendor_ids: list[str]) -> dict[str, int]
 
     listings_response = (
         client.table("vendor_listings")
-        .select("vendor_id")
+        .select("id, vendor_id")
         .in_("vendor_id", vendor_ids)
         .eq("status", "active")
         .execute()
     )
+    listing_rows = listings_response.data or []
+    demo_listing_ids = fetch_demo_listing_ids(
+        client, [str(row["id"]) for row in listing_rows if row.get("id")]
+    )
     counts: dict[str, int] = {vendor_id: 0 for vendor_id in vendor_ids}
-    for row in listings_response.data or []:
+    for row in listing_rows:
+        listing_id = str(row.get("id") or "")
+        if listing_id in demo_listing_ids:
+            continue
         vendor_id = str(row.get("vendor_id") or "")
         if vendor_id in counts:
             counts[vendor_id] += 1
@@ -498,6 +515,16 @@ def list_directory_vendors(
     )
     vendor_rows = vendors_response.data or []
     vendor_ids = [str(row["id"]) for row in vendor_rows if row.get("id")]
+    # D25 / VC-P06: vendors whose catalogue is entirely demo seed inventory are
+    # excluded from the public directory (demo lives on demo routes only).
+    demo_only_vendor_ids = fetch_demo_only_vendor_ids(client, vendor_ids)
+    if demo_only_vendor_ids:
+        vendor_rows = [
+            row
+            for row in vendor_rows
+            if str(row.get("id") or "") not in demo_only_vendor_ids
+        ]
+        vendor_ids = [str(row["id"]) for row in vendor_rows if row.get("id")]
 
     from app.services.kyc.eligibility import load_approved_tiers_for_client
 
@@ -712,6 +739,12 @@ def get_vendor_profile(
         # public storefront unless the caller is a verified business buyer.
         listing_rows = [row for row in listing_rows if not row.get("wholesale")]
     listing_ids = [str(item["id"]) for item in listing_rows if item.get("id")]
+    demo_listing_ids = fetch_demo_listing_ids(client, listing_ids)
+    if demo_listing_ids:
+        listing_rows = [
+            row for row in listing_rows if str(row.get("id") or "") not in demo_listing_ids
+        ]
+        listing_ids = [str(item["id"]) for item in listing_rows if item.get("id")]
 
     images_by_listing: dict[str, str | None] = {listing_id: None for listing_id in listing_ids}
     if listing_ids:
@@ -758,6 +791,9 @@ def get_vendor_profile(
     )
     services = _fetch_vendor_services(client, vendor_id)
     events = _fetch_vendor_events(client, vendor_id)
+    # Demo-only storefronts are hidden on the public directory (D25 / VC-P06).
+    if not listings and not services and not events and demo_listing_ids:
+        raise AppError("vendor.not_found", "Vendor not found", 404)
     order_count = _count_completed_orders(client, vendor_id)
 
     return VendorProfileResponse(
