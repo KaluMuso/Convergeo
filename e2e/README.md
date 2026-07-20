@@ -7,13 +7,15 @@ so it never perturbs app builds.
 
 ## Specs (critical paths)
 
-| Spec | Path | Founder/staging-gated legs |
-| --- | --- | --- |
-| `shop-checkout-momo` | browse → search → PDP → cart → checkout → **MoMo pay** → confirmation → WhatsApp receipt | Lenco sandbox charge (`LENCO_SANDBOX`), WhatsApp assertion (`WHATSAPP_MOCK`) |
-| `shop-cod` | PDP → cart → checkout → **Cash-on-Delivery** → confirmation | none (runs on any live target) |
-| `vendor-sell` | approved vendor → list → receive order → **ship** | vendor OTP session (`E2E_TEST_PHONE`/`E2E_TEST_OTP`) |
-| `event-ticket` | buy ticket → wallet → **scan verify → duplicate rejected** | purchase (`LENCO_SANDBOX`), scan (vendor OTP + `E2E_TICKET_QR`) |
-| `auth-otp` | phone → request OTP → **verify → signed in** | verify leg (`E2E_TEST_PHONE`/`E2E_TEST_OTP`) |
+| Spec                     | Path                                                                                         | Founder/staging-gated legs                                                                               |
+| ------------------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `shop-checkout-momo`     | browse → search → PDP → cart → checkout → **MoMo pay** → confirmation → WhatsApp receipt     | Lenco sandbox charge (`LENCO_SANDBOX`), WhatsApp assertion (`WHATSAPP_MOCK`)                             |
+| `shop-cod`               | PDP → cart → checkout → **Cash-on-Delivery** → confirmation                                  | none (runs on any live target)                                                                           |
+| `vendor-sell`            | approved vendor → list → receive order → **ship**                                            | vendor OTP session (`E2E_TEST_PHONE`/`E2E_TEST_OTP`)                                                     |
+| `event-ticket`           | buy ticket → wallet → **scan verify → duplicate rejected**                                   | purchase (`LENCO_SANDBOX`), scan (vendor OTP + `E2E_TICKET_QR`)                                          |
+| `auth-otp`               | phone → request OTP → **verify → signed in**                                                 | verify leg (`E2E_TEST_PHONE`/`E2E_TEST_OTP`)                                                             |
+| `checkout-false-success` | VB-P07 (S6/G4): pending/failed MoMo **never renders paid**; COD never claims prepaid success | forced-decline leg (`LENCO_SANDBOX` + `E2E_MOMO_DECLINE_NUMBER`); pending/COD assertions credential-free |
+| `critical-path`          | VE-P07 (G16): home → search → PDP → cart → **sandbox MoMo pay** → order confirmation         | Lenco sandbox charge (`LENCO_SANDBOX`); pre-payment journey credential-free                              |
 
 Every gated leg **skips with an annotation** when its env is absent — it asserts
 up to a safe boundary (e.g. pay-initiation, "code sent") and never hammers a real
@@ -21,18 +23,19 @@ payment/SMS endpoint. No credentials are committed; all come from env/secrets.
 
 ## Environment variables
 
-| Var | Purpose |
-| --- | --- |
-| `E2E_BASE_URL` | Customer app origin (staging deploy or `http://localhost:3000`). |
-| `E2E_VENDOR_BASE_URL` / `E2E_ADMIN_BASE_URL` | Separate app origins (default to customer). |
-| `E2E_LOCALE` | Locale segment for `[locale]/` routing (default `en`). |
-| `E2E_THROTTLE` | `0` disables Fast-3G throttling (default on). |
-| `E2E_SEED_RESET_URL` / `E2E_SEED_TOKEN` | Deterministic, idempotent seed reset (staging-only, token-guarded). |
-| `LENCO_SANDBOX` + `LENCO_SANDBOX_SECRET_KEY` / `_PUBLIC_KEY` / `_MOMO_NUMBER` | Enables the live Lenco sandbox pay leg (**founder gate F9b**). |
-| `WHATSAPP_MOCK` + `WHATSAPP_MOCK_OUTBOX_URL` | Enables WhatsApp receipt assertions via the mock outbox. |
-| `E2E_TEST_PHONE` + `E2E_TEST_OTP` | Deterministic OTP for the verify + vendor/organiser legs. |
-| `E2E_TICKET_QR` | A seeded single-use ticket token for the scanner duplicate-reject test. |
-| `PW_CHROMIUM_PATH` | Path to a pre-installed Chromium (skips download). |
+| Var                                                                           | Purpose                                                                                              |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `E2E_BASE_URL`                                                                | Customer app origin (staging deploy or `http://localhost:3000`).                                     |
+| `E2E_VENDOR_BASE_URL` / `E2E_ADMIN_BASE_URL`                                  | Separate app origins (default to customer).                                                          |
+| `E2E_LOCALE`                                                                  | Locale segment for `[locale]/` routing (default `en`).                                               |
+| `E2E_THROTTLE`                                                                | `0` disables Fast-3G throttling (default on).                                                        |
+| `E2E_SEED_RESET_URL` / `E2E_SEED_TOKEN`                                       | Deterministic, idempotent seed reset (staging-only, token-guarded).                                  |
+| `LENCO_SANDBOX` + `LENCO_SANDBOX_SECRET_KEY` / `_PUBLIC_KEY` / `_MOMO_NUMBER` | Enables the live Lenco sandbox pay leg (**founder gate F9b**).                                       |
+| `WHATSAPP_MOCK` + `WHATSAPP_MOCK_OUTBOX_URL`                                  | Enables WhatsApp receipt assertions via the mock outbox.                                             |
+| `E2E_TEST_PHONE` + `E2E_TEST_OTP`                                             | Deterministic OTP for the verify + vendor/organiser legs.                                            |
+| `E2E_TICKET_QR`                                                               | A seeded single-use ticket token for the scanner duplicate-reject test.                              |
+| `E2E_MOMO_DECLINE_NUMBER`                                                     | A Lenco sandbox MSISDN that declines the USSD push (forced-failure leg of `checkout-false-success`). |
+| `PW_CHROMIUM_PATH`                                                            | Path to a pre-installed Chromium (skips download).                                                   |
 
 ## Run locally
 
