@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AcceptFlow, DEFAULT_DEPOSIT_PCT, previewDepositNgwee } from "./_components/accept-flow";
 import { CompleteConfirm } from "./_components/complete-confirm";
+import { canAcceptQuote, shouldShowCompletion } from "./_components/job-status";
 import { ServiceReviewForm } from "./_components/service-review-form";
 
 type JobDetail = {
@@ -61,17 +62,6 @@ function createQuotesClient(getToken: () => string | null | Promise<string | nul
       });
     },
   };
-}
-
-export function canAcceptQuote(jobStatus: string | null | undefined, quoteStatus: string): boolean {
-  return (jobStatus === "open" || jobStatus === "quoted") && quoteStatus === "submitted";
-}
-
-export function shouldShowCompletion(
-  jobStatus: string | null | undefined,
-  quoteStatus: string | null | undefined,
-): boolean {
-  return quoteStatus === "accepted" && jobStatus !== "completed" && jobStatus !== "cancelled";
 }
 
 type PageProps = {
