@@ -273,41 +273,43 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 - **Blocks browse-beta:** no · **real-money:** soft · **public_launch:** yes
 - **PR boundary:** n8n JSON + ops note
 
+> **Sequenced programme:** `docs/production-readiness/2026-07-20/code-completion-programme.md` (Prompt 11 — CCP-01…08). Implement each approved CCP on its own branch; do not batch.
+
 #### RC-09 — Wire orphan UI: `report-review`, `accept-flow`
 
 - **Gate / gap:** 00-status carried debt
 - **Priority:** P2
-- **Status:** `REPO_CLOSABLE`
+- **Status:** `REPO_CLOSABLE` → programme **CCP-04** (also `complete-confirm.tsx`; mount-or-remove after SM check)
 - **Evidence:** components exist; no page importers (grep)
 - **Files likely:** PDP review section; `account/jobs/[id]/page.tsx`
 - **Deps:** none
-- **Acceptance:** mounted + i18n keys
+- **Acceptance:** mounted + i18n keys **or** deliberately removed
 - **Verify:** typecheck + smoke
 - **Blocks browse-beta / real-money / public_launch:** no / no / soft
-- **PR boundary:** customer UI PR
+- **PR boundary:** customer UI PR (`cursor/ccp-04-orphan-ui-da3e`)
 
 #### RC-10 — De-route `zh` from public LOCALES
 
 - **Gate / gap:** VF-P02 / NB-1
 - **Priority:** P2
-- **Status:** `REPO_CLOSABLE`
+- **Status:** `REPO_CLOSABLE` → programme **CCP-01**
 - **Evidence:** `packages/i18n/src/locales.ts` includes `zh`
-- **Files likely:** locales + middleware + tests
+- **Files likely:** locales + profile switcher + tests (keep `messages/zh/**`)
 - **Deps:** none
 - **Acceptance:** public switcher EN/bem/nya/fr only
 - **Verify:** i18n lint + route tests
 - **Blocks:** no / no / soft for public_launch
-- **PR boundary:** i18n-only
+- **PR boundary:** i18n-only (`cursor/ccp-01-deroute-zh-da3e`)
 
 #### RC-11 — bem/nya namespace completion
 
 - **Gate / gap:** G18 / VF-P01
 - **Priority:** P2 / post-launch OK for invite-beta
-- **Status:** `REPO_CLOSABLE` (+ human review)
+- **Status:** `REPO_CLOSABLE` (+ human review) → programme **CCP-02** + **CCP-03a–f**
 - **Evidence:** ~8/17 namespaces; `PHASE1_NATIVE_REVIEW.md`
 - **Files likely:** `packages/i18n/messages/{bem,nya}/*`
 - **Deps:** FOUNDER native review
-- **Acceptance:** purchase/legal/checkout keys complete
+- **Acceptance:** purchase/legal/checkout keys complete **or** marked pending human review
 - **Verify:** i18n-lint
 - **Blocks browse-beta:** no · **real-money:** no · **public_launch:** soft (D27)
 - **PR boundary:** per-namespace PRs
@@ -316,21 +318,21 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate / gap:** UI follow-up
 - **Priority:** P2
-- **Status:** `REPO_CLOSABLE`
+- **Status:** `REPO_CLOSABLE` → programme **CCP-06**
 - **Evidence:** ~12–14 vendor components using `neutral-*`/`emerald-*`/etc.
 - **Files likely:** `apps/vendor/**`
 - **Blocks:** no / no / no
-- **PR boundary:** vendor polish PR
+- **PR boundary:** vendor polish PR (`cursor/ccp-06-vendor-dark-tokens-da3e`)
 
 #### RC-13 — CSP nonce enforce mode
 
 - **Gate / gap:** M15-P03 residual
 - **Priority:** P2
-- **Status:** `REPO_CLOSABLE`
+- **Status:** `REPO_CLOSABLE` → programme **CCP-07a/b** (RO evidence before enforce)
 - **Evidence:** `docs/ops/security-headers.md` report-only deferral
 - **Files likely:** next configs + middleware
 - **Blocks:** no / no / soft
-- **PR boundary:** security headers PR
+- **PR boundary:** security headers PRs (nonce+RO, then enforce)
 
 ---
 
@@ -527,10 +529,10 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate:** VF-P04 / MR-B07
 - **Priority:** P1
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
-- **Evidence:** 07-19 observed `degraded=true`; no proven fix
-- **Deps:** embeddings cron (DEP-02)
-- **Acceptance:** `/search` healthy with embeddings or documented degraded mode
+- **Status:** `LIVE_VERIFICATION_REQUIRED` → programme **CCP-05**
+- **Evidence:** 07-19 observed `degraded=true`; no proven fix; honest UI banner already ships
+- **Deps:** embeddings cron (DEP-02) + OpenRouter key; API health for live probe
+- **Acceptance:** root cause documented; `/search` healthy with embeddings or honest degraded mode (never fake green)
 - **Blocks browse-beta:** soft · **real-money:** no · **public_launch:** soft
 
 #### LIVE-13 — Paid-ticket exactly-once + event escrow
@@ -612,18 +614,18 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 ### 3.H STALE_DOCUMENTATION
 
-| ID    | Doc claim                                                                       | Why stale                                                | Fix boundary                                   |
-| ----- | ------------------------------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------- |
-| SD-01 | Gap analysis: “#352 pending”; tip pre-source_key                                | #352 merged at `496819b`                                 | note in this board; optional later doc refresh |
-| SD-02 | Representation report: tip `1d137ae`; #352/#353 unmerged; Supabase unverifiable | tip `b1ea6a3`; Supabase re-probed; #352/#353/#355 merged | this board supersedes                          |
-| SD-03 | Gap analysis: “`0057–0062` may lag”                                             | applied live 2026-07-20                                  | this board                                     |
-| SD-04 | Vision audit DL-1 categories 500 / customer `cc4a824`                           | customer prod `b1ea6a3`                                  | vision-audit age                               |
-| SD-05 | Vision audit DL-3 unapplied `0051`/`0053`–`0056`                                | applied; new residual is source_key collision + FORCE    | vision-audit age                               |
-| SD-06 | `00-status.md` “remaining = founder gates only”                                 | deploy/verify/ops/money drills remain                    | status refresh (separate PR)                   |
-| SD-07 | `launch-checklist` F7 “7 design files”                                          | SOURCES.md: **6** missing                                | checklist wording                              |
-| SD-08 | `docs/ops/ci.md` secret-scan as required while `continue-on-error`              | CI still advisory                                        | ci.md + RC-06                                  |
-| SD-09 | Release-gates “`0056` unapplied” / G12 note                                     | `0056` applied; G12 still needs LIVE-05                  | release-gates refresh                          |
-| SD-10 | Representation “0 gates PASS” still directionally true                          | keep; do not claim PASS without evidence packs           | n/a                                            |
+| ID    | Doc claim                                                                       | Why stale                                                | Fix boundary                                      |
+| ----- | ------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------- |
+| SD-01 | Gap analysis: “#352 pending”; tip pre-source_key                                | #352 merged at `496819b`                                 | note in this board; optional later doc refresh    |
+| SD-02 | Representation report: tip `1d137ae`; #352/#353 unmerged; Supabase unverifiable | tip `b1ea6a3`; Supabase re-probed; #352/#353/#355 merged | this board supersedes                             |
+| SD-03 | Gap analysis: “`0057–0062` may lag”                                             | applied live 2026-07-20                                  | this board                                        |
+| SD-04 | Vision audit DL-1 categories 500 / customer `cc4a824`                           | customer prod `b1ea6a3`                                  | vision-audit age                                  |
+| SD-05 | Vision audit DL-3 unapplied `0051`/`0053`–`0056`                                | applied; new residual is source_key collision + FORCE    | vision-audit age                                  |
+| SD-06 | `00-status.md` “remaining = founder gates only”                                 | deploy/verify/ops/money drills remain                    | programme **CCP-08**                              |
+| SD-07 | `launch-checklist` F7 “7 design files”                                          | SOURCES.md: **6** missing                                | programme **CCP-08**                              |
+| SD-08 | `docs/ops/ci.md` secret-scan as required while `continue-on-error`              | CI still advisory                                        | programme **CCP-08** (+ RC-06 if making blocking) |
+| SD-09 | Release-gates “`0056` unapplied” / G12 note                                     | `0056` applied; G12 still needs LIVE-05                  | programme **CCP-08**                              |
+| SD-10 | Representation “0 gates PASS” still directionally true                          | keep; do not claim PASS without evidence packs           | n/a                                               |
 
 _Per task scope: only this board file is added unless a link would break — no mass doc rewrites in this PR._
 
