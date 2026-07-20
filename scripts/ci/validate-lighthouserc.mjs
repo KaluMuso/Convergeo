@@ -15,20 +15,26 @@ if (!Array.isArray(matrix) || !matrix.length) {
   throw new Error("missing ci.assert.assertMatrix (blocking G19 policy)");
 }
 
+/** URL patterns allowed to keep SEO at warn (documented noindex / SERP waivers). */
+function isSeoWarnAllowed(pattern) {
+  return /checkout/.test(pattern || "");
+}
+
 for (const row of matrix) {
+  const pattern = row.matchingUrlPattern || "";
   for (const [key, spec] of Object.entries(row.assertions || {})) {
     if (!Array.isArray(spec) || spec[0] === "off") continue;
-    // Checkout SEO may stay warn (noindex waiver); everything else must error.
-    const isCheckoutSeo = /checkout/.test(row.matchingUrlPattern || "") && key === "categories:seo";
-    if (!isCheckoutSeo && spec[0] !== "error") {
-      throw new Error(
-        `assertion ${key} on ${row.matchingUrlPattern} must be error (got ${spec[0]})`,
-      );
+    const isCheckoutSeoWarn =
+      key === "categories:seo" && isSeoWarnAllowed(pattern) && spec[0] === "warn";
+    if (isCheckoutSeoWarn) continue;
+    if (spec[0] !== "error") {
+      throw new Error(`assertion ${key} on ${pattern} must be error (got ${spec[0]})`);
     }
   }
 }
 
-const lcp = matrix[matrix.length - 1].assertions["largest-contentful-paint"]?.[1]?.maxNumericValue;
+const defaultRow = matrix[matrix.length - 1];
+const lcp = defaultRow.assertions["largest-contentful-paint"]?.[1]?.maxNumericValue;
 console.log(
   "lighthouserc.json OK —",
   cfg.ci.collect.url.length,
