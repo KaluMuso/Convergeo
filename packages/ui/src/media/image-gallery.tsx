@@ -1,10 +1,25 @@
 "use client";
 
-import { useCallback, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 
 import { CloudinaryImage } from "./cloudinary-image";
 
 const MAX_IMAGES = 8;
+
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return reduced;
+}
 
 export type GalleryImage = {
   publicId: string;
@@ -36,6 +51,7 @@ export function ImageGallery({
   const galleryId = useId();
   const stripRef = useRef<HTMLDivElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const cappedImages =
     images.length > MAX_IMAGES
@@ -49,20 +65,27 @@ export function ImageGallery({
         })()
       : images;
 
-  const scrollToIndex = useCallback((index: number) => {
-    const strip = stripRef.current;
-    if (strip) {
-      const slide = strip.children.item(index) as HTMLElement | null;
-      if (slide) {
-        if (typeof slide.scrollIntoView === "function") {
-          slide.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-        } else {
-          strip.scrollLeft = slide.offsetLeft;
+  const scrollToIndex = useCallback(
+    (index: number) => {
+      const strip = stripRef.current;
+      if (strip) {
+        const slide = strip.children.item(index) as HTMLElement | null;
+        if (slide) {
+          if (typeof slide.scrollIntoView === "function") {
+            slide.scrollIntoView({
+              behavior: prefersReducedMotion ? "auto" : "smooth",
+              inline: "center",
+              block: "nearest",
+            });
+          } else {
+            strip.scrollLeft = slide.offsetLeft;
+          }
         }
       }
-    }
-    setCurrentIndex(index);
-  }, []);
+      setCurrentIndex(index);
+    },
+    [prefersReducedMotion],
+  );
 
   const goPrevious = useCallback(() => {
     const next = Math.max(0, currentIndex - 1);
@@ -131,7 +154,7 @@ export function ImageGallery({
             display: "flex",
             overflowX: "auto",
             scrollSnapType: "x mandatory",
-            scrollBehavior: "smooth",
+            scrollBehavior: prefersReducedMotion ? "auto" : "smooth",
             gap: "var(--sp-2)",
             borderRadius: "var(--r)",
             WebkitOverflowScrolling: "touch",

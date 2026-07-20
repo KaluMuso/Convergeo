@@ -2,8 +2,10 @@
 
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
+import { PriceBlock } from "@vergeo/ui/src/price-block";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useState, type Ref } from "react";
+import { useCallback, useMemo, useState, type ReactNode, type Ref } from "react";
 
 import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
 
@@ -20,6 +22,12 @@ export type BuyBoxListing = {
   stockQty: number | null;
   moq: number;
   inStock: boolean;
+};
+
+export type BuyBoxSellerSummary = {
+  displayName: string;
+  ratingLabel: string | null;
+  preferred: boolean;
 };
 
 export type BuyBoxLabels = {
@@ -50,6 +58,12 @@ export type BuyBoxProps = {
   /** Shared qty/ATC when sticky mobile bar is wired from the parent. */
   purchase?: ListingPurchaseControls;
   buyBoxRef?: Ref<HTMLElement | null>;
+  seller?: BuyBoxSellerSummary | null;
+  /** Honest multi-seller price framing (lowest / delta). */
+  priceContextLabel?: string | null;
+  compareHref?: string | null;
+  compareLabel?: string;
+  wishlistSlot?: ReactNode;
 };
 
 export function getMaxQuantity(listing: BuyBoxListing): number | null {
@@ -99,6 +113,11 @@ export function BuyBox({
   onAddedToCart,
   purchase,
   buyBoxRef,
+  seller,
+  priceContextLabel,
+  compareHref,
+  compareLabel,
+  wishlistSlot,
 }: BuyBoxProps) {
   const t = useTranslations("catalog");
   const [quantity, setQuantity] = useState(() => clampQuantity(listing.moq, listing));
@@ -186,10 +205,24 @@ export function BuyBox({
 
       <div>
         <p className="text-sm text-text-2">{labels.priceLabel}</p>
-        <p className="font-mono text-2xl font-semibold text-text" data-testid="pdp-price">
+        <PriceBlock ngwee={listing.priceNgwee} className="mt-0.5" />
+        {priceContextLabel ? (
+          <p className="mt-1 text-xs font-medium text-text-2" data-testid="pdp-price-context">
+            {priceContextLabel}
+          </p>
+        ) : null}
+        {/* Keep a test hook for the formatted price string used by existing tests. */}
+        <p className="sr-only" data-testid="pdp-price">
           {formatK(listing.priceNgwee)}
         </p>
       </div>
+
+      {seller ? (
+        <div data-testid="pdp-buy-box-seller" className="flex flex-col gap-0.5">
+          <p className="text-sm font-medium text-text">{seller.displayName}</p>
+          {seller.ratingLabel ? <p className="text-xs text-text-2">{seller.ratingLabel}</p> : null}
+        </div>
+      ) : null}
 
       <p
         className={`text-sm font-medium ${listing.inStock ? "text-success" : "text-danger"}`}
@@ -237,20 +270,33 @@ export function BuyBox({
         </div>
       </div>
 
-      <Button
-        type="button"
-        variant="primary"
-        size="lg"
-        className="w-full"
-        disabled={!listing.inStock || isAdding}
-        loading={isAdding}
-        loadingLabel={labels.addingToCartLabel}
-        data-testid="pdp-add-to-cart"
-        aria-label={listing.inStock ? labels.addToCartLabel : labels.outOfStockLabel}
-        onClick={onAdd}
-      >
-        {labels.addToCartLabel}
-      </Button>
+      <div className="flex items-stretch gap-2">
+        <Button
+          type="button"
+          variant="primary"
+          size="lg"
+          className="min-w-0 flex-1"
+          disabled={!listing.inStock || isAdding}
+          loading={isAdding}
+          loadingLabel={labels.addingToCartLabel}
+          data-testid="pdp-add-to-cart"
+          aria-label={listing.inStock ? labels.addToCartLabel : labels.outOfStockLabel}
+          onClick={onAdd}
+        >
+          {labels.addToCartLabel}
+        </Button>
+        {wishlistSlot}
+      </div>
+
+      {compareHref && compareLabel ? (
+        <Link
+          href={compareHref}
+          data-testid="pdp-buy-box-compare"
+          className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+        >
+          {compareLabel}
+        </Link>
+      ) : null}
 
       <p className="sr-only" aria-live="polite">
         {successMessage}

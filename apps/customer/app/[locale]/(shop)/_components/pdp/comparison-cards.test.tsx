@@ -32,6 +32,7 @@ const labels: ComparisonLabels = {
   conditionNew: "New",
   conditionRefurbished: "Refurbished",
   usingFallbackLocation: "Distances from Lusaka CBD.",
+  lowestPriceBadge: "Lowest price",
 };
 
 const listings: ComparisonListing[] = [
@@ -88,5 +89,25 @@ describe("Comparison mobile cards", () => {
 
     await user.click(screen.getByTestId("comparison-card-b"));
     expect(onSelect).toHaveBeenCalledWith("b");
+  });
+
+  it("marks the lowest-price offer without inventing comparison when only one seller", () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(
+      <Comparison listings={listings} selectedListingId="a" labels={labels} onSelect={onSelect} />,
+    );
+
+    expect(screen.getByTestId("comparison-lowest-b")).toBeInTheDocument();
+    expect(screen.queryByTestId("comparison-lowest-a")).not.toBeInTheDocument();
+
+    rerender(
+      <Comparison
+        listings={[listings[0]!]}
+        selectedListingId="a"
+        labels={labels}
+        onSelect={onSelect}
+      />,
+    );
+    expect(screen.queryByTestId("pdp-comparison")).not.toBeInTheDocument();
   });
 });

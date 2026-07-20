@@ -1,7 +1,7 @@
 import { createApiClient } from "@vergeo/config";
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { Breadcrumbs } from "@vergeo/ui/src/breadcrumbs";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import {
   buildBreadcrumbListJsonLd,
   buildCanonicalAlternates,
@@ -30,7 +30,10 @@ import {
   type Listing,
   type ProductDetail,
 } from "../../_components/pdp/fetch-product";
+import { NoSellersPanel } from "../../_components/pdp/no-sellers-panel";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
+import { RecentlyViewedRail } from "../../_components/pdp/recently-viewed";
+import { RelatedProducts } from "../../_components/pdp/related-products";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
 
 import {
@@ -507,17 +510,55 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
     },
   ];
 
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const hasOffers = productListings.length > 0;
+  const relatedCardLabels = {
+    heading: t("pdp.related.heading"),
+    vendorFallback: t("pdp.related.vendorFallback"),
+    noReviews: t("plp.card.noReviews"),
+    reviewCount: t("plp.card.reviewCount"),
+    quickAdd: t("plp.card.quickAdd"),
+    wishlist: t("plp.card.wishlist"),
+    mediaEmpty: t("pdp.gallery.empty"),
+  };
+
   return (
     <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6 motion-rise lg:max-w-6xl">
       {productJsonLd ? <JsonLdScript data={productJsonLd} /> : null}
       <JsonLdScript data={breadcrumbJsonLd} />
-      <ProductViewTracker productId={product.id} listingId={selectedListing?.id} />
+      <ProductViewTracker
+        productId={product.id}
+        listingId={selectedListing?.id}
+        recent={{
+          slug: product.slug,
+          name: product.name,
+          imagePublicId: product.images[0]?.public_id ?? null,
+          fromPriceNgwee: lowestListingPriceNgwee(product.listings),
+        }}
+      />
 
-      <header className="flex flex-col gap-2">
+      <Breadcrumbs
+        ariaLabel={t("pdp.breadcrumbAria")}
+        ellipsisLabel="…"
+        LinkComponent={Link}
+        items={[
+          { key: "home", label: t("home.nav.home"), href: `/${locale}` },
+          { key: "product", label: product.name },
+        ]}
+      />
+
+      <header className="flex flex-col gap-2" data-testid="pdp-header">
         {product.brand ? (
           <p className="text-sm font-medium uppercase tracking-wide text-text-2">{product.brand}</p>
         ) : null}
-        <h1 className="font-display text-2xl font-semibold text-text">{product.name}</h1>
+        <h1 className="font-display text-2xl font-semibold text-text lg:text-3xl">
+          {product.name}
+        </h1>
+        {product.listing_count > 0 ? (
+          <p className="text-sm text-text-2" data-testid="pdp-seller-count">
+            {t("pdp.sellerCount", { count: product.listing_count })}
+          </p>
+        ) : null}
         {product.listing_count > 1 ? (
           <Link
             href={`/${locale}/compare?product=${encodeURIComponent(product.slug)}`}
@@ -529,115 +570,121 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         ) : null}
       </header>
 
-      <PdpInteractiveBody
-        locale={locale}
-        productImages={images}
-        listings={productListings}
-        comparisonListings={comparisonListings}
-        initialListingId={listingId}
-        singleVendor={singleVendor}
-        cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
-        galleryLabels={{
-          // Strings only — indicator text is formatted inside the client body
-          // (passing a function here caused live digest 1378788464).
-          empty: t("pdp.gallery.empty"),
-          previous: t("pdp.gallery.previous"),
-          next: t("pdp.gallery.next"),
-        }}
-        buyBoxLabels={{
-          priceLabel: t("pdp.buyBox.priceLabel"),
-          quantityLabel: t("pdp.buyBox.quantityLabel"),
-          decreaseLabel: t("pdp.buyBox.decrease"),
-          increaseLabel: t("pdp.buyBox.increase"),
-          decreaseSymbol: t("pdp.buyBox.decreaseSymbol"),
-          increaseSymbol: t("pdp.buyBox.increaseSymbol"),
-          addToCartLabel: t("pdp.buyBox.addToCart"),
-          addingToCartLabel: t("pdp.buyBox.addingToCart"),
-          addToCartErrorLabel: t("pdp.buyBox.addToCartError"),
-          inStockLabel: t("pdp.buyBox.inStock"),
-          outOfStockLabel: t("pdp.buyBox.outOfStock"),
-          alwaysAvailableLabel: t("pdp.buyBox.alwaysAvailable"),
-          singleVendorLabel: t("pdp.buyBox.singleVendor"),
-          conditionNewLabel: t("pdp.condition.new"),
-          conditionRefurbishedLabel: t("pdp.condition.refurbished"),
-        }}
-        comparisonLabels={{
-          heading: t("comparison.heading"),
-          vendorCount: t("comparison.vendorCount"),
-          sortLabel: t("comparison.sortLabel"),
-          sortPrice: t("comparison.sortPrice"),
-          sortDistance: t("comparison.sortDistance"),
-          price: t("comparison.price"),
-          condition: t("comparison.condition"),
-          distance: t("comparison.distance"),
-          vendor: t("comparison.vendor"),
-          fulfillment: t("comparison.fulfillment"),
-          delivery: t("comparison.delivery"),
-          pickup: t("comparison.pickup"),
-          selectListing: t("comparison.selectListing"),
-          selectedListing: t("comparison.selectedListing"),
-          preferredBadge: t("comparison.preferredBadge"),
-          noReviews: t("comparison.noReviews"),
-          rating: t("comparison.rating"),
-          conditionNew: t("comparison.conditionNew"),
-          conditionRefurbished: t("comparison.conditionRefurbished"),
-          usingFallbackLocation: t("comparison.usingFallbackLocation"),
-        }}
-        vendorLabels={{
-          heading: t("pdp.vendor.heading"),
-          preferredBadge: t("pdp.vendor.preferredBadge"),
-          noReviews: t("pdp.vendor.noReviews"),
-          viewStore: t("pdp.vendor.viewStore"),
-        }}
-        trustLabels={{
-          preferredSeller: t("pdp.trust.preferredSeller"),
-          seller: t("pdp.trust.seller"),
-          delivery: t("pdp.trust.delivery"),
-          pickup: t("pdp.trust.pickup"),
-          returns: t("pdp.trust.returns"),
-          escrow: t("pdp.trust.escrow"),
-        }}
-      />
+      {hasOffers ? (
+        <PdpInteractiveBody
+          locale={locale}
+          productId={product.id}
+          productSlug={product.slug}
+          productImages={images}
+          listings={productListings}
+          comparisonListings={comparisonListings}
+          initialListingId={listingId}
+          singleVendor={singleVendor}
+          cloudName={cloudName}
+          galleryLabels={{
+            // Strings only — indicator text is formatted inside the client body
+            // (passing a function here caused live digest 1378788464).
+            empty: t("pdp.gallery.empty"),
+            previous: t("pdp.gallery.previous"),
+            next: t("pdp.gallery.next"),
+          }}
+          buyBoxLabels={{
+            priceLabel: t("pdp.buyBox.priceLabel"),
+            quantityLabel: t("pdp.buyBox.quantityLabel"),
+            decreaseLabel: t("pdp.buyBox.decrease"),
+            increaseLabel: t("pdp.buyBox.increase"),
+            decreaseSymbol: t("pdp.buyBox.decreaseSymbol"),
+            increaseSymbol: t("pdp.buyBox.increaseSymbol"),
+            addToCartLabel: t("pdp.buyBox.addToCart"),
+            addingToCartLabel: t("pdp.buyBox.addingToCart"),
+            addToCartErrorLabel: t("pdp.buyBox.addToCartError"),
+            inStockLabel: t("pdp.buyBox.inStock"),
+            outOfStockLabel: t("pdp.buyBox.outOfStock"),
+            alwaysAvailableLabel: t("pdp.buyBox.alwaysAvailable"),
+            singleVendorLabel: t("pdp.buyBox.singleVendor"),
+            conditionNewLabel: t("pdp.condition.new"),
+            conditionRefurbishedLabel: t("pdp.condition.refurbished"),
+          }}
+          comparisonLabels={{
+            heading: t("comparison.heading"),
+            vendorCount: t("comparison.vendorCount"),
+            sortLabel: t("comparison.sortLabel"),
+            sortPrice: t("comparison.sortPrice"),
+            sortDistance: t("comparison.sortDistance"),
+            price: t("comparison.price"),
+            condition: t("comparison.condition"),
+            distance: t("comparison.distance"),
+            vendor: t("comparison.vendor"),
+            fulfillment: t("comparison.fulfillment"),
+            delivery: t("comparison.delivery"),
+            pickup: t("comparison.pickup"),
+            selectListing: t("comparison.selectListing"),
+            selectedListing: t("comparison.selectedListing"),
+            preferredBadge: t("comparison.preferredBadge"),
+            noReviews: t("comparison.noReviews"),
+            rating: t("comparison.rating"),
+            conditionNew: t("comparison.conditionNew"),
+            conditionRefurbished: t("comparison.conditionRefurbished"),
+            usingFallbackLocation: t("comparison.usingFallbackLocation"),
+            lowestPriceBadge: t("comparison.lowestPriceBadge"),
+          }}
+          vendorLabels={{
+            heading: t("pdp.vendor.heading"),
+            preferredBadge: t("pdp.vendor.preferredBadge"),
+            noReviews: t("pdp.vendor.noReviews"),
+            viewStore: t("pdp.vendor.viewStore"),
+          }}
+          trustLabels={{
+            preferredSeller: t("pdp.trust.preferredSeller"),
+            seller: t("pdp.trust.seller"),
+            delivery: t("pdp.trust.delivery"),
+            pickup: t("pdp.trust.pickup"),
+            returns: t("pdp.trust.returns"),
+            escrow: t("pdp.trust.escrow"),
+          }}
+          priceContextLabels={{
+            lowestPrice: t("pdp.buyBox.lowestPrice"),
+            moreThanLowest: t("pdp.buyBox.moreThanLowest"),
+          }}
+          wishlistLabels={{
+            add: t("pdp.buyBox.wishlistAdd"),
+            remove: t("pdp.buyBox.wishlistRemove"),
+            saved: t("pdp.buyBox.wishlistSaved"),
+          }}
+          comparePageLabel={t("comparePage.entryCta")}
+        />
+      ) : (
+        <NoSellersPanel
+          title={t("pdp.noSellers.title")}
+          body={t("pdp.noSellers.body")}
+          browseLabel={t("pdp.noSellers.browseCta")}
+          browseHref={`/${locale}/c/all`}
+        />
+      )}
 
       <Tabs items={detailTabs} ariaLabel={t("pdp.tabs.ariaLabel")} mountInactivePanels />
 
-      {related.length > 0 ? (
-        <section aria-labelledby="pdp-related-heading" className="flex flex-col gap-3">
-          <h2 id="pdp-related-heading" className="font-display text-lg font-semibold text-text">
-            {t("pdp.related.heading")}
-          </h2>
-          <ul className="grid list-none grid-cols-2 gap-3 p-0 md:grid-cols-3 lg:grid-cols-4">
-            {related.map((item) => (
-              <li key={item.slug}>
-                <Link
-                  href={`/${locale}/p/${item.slug}`}
-                  className="card-lift block overflow-hidden rounded-lg border border-border bg-surface no-underline shadow-1"
-                >
-                  <div className="aspect-[4/3] w-full bg-bg-2">
-                    {item.image_public_id ? (
-                      <CloudinaryImage
-                        publicId={item.image_public_id}
-                        alt={item.name}
-                        width={360}
-                        ratio="4/3"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : null}
-                  </div>
-                  <div className="space-y-1 p-3">
-                    <p className="truncate text-sm font-medium text-text">{item.name}</p>
-                    {item.from_price_ngwee !== null ? (
-                      <p className="text-sm text-text-2">
-                        {t("pdp.related.fromPrice", { price: formatK(item.from_price_ngwee) })}
-                      </p>
-                    ) : null}
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      <RelatedProducts
+        locale={locale}
+        items={related}
+        labels={relatedCardLabels}
+        cloudName={cloudName}
+      />
+
+      <RecentlyViewedRail
+        locale={locale}
+        currentSlug={product.slug}
+        labels={{
+          heading: t("pdp.recentlyViewed.heading"),
+          vendorFallback: relatedCardLabels.vendorFallback,
+          noReviews: relatedCardLabels.noReviews,
+          reviewCount: relatedCardLabels.reviewCount,
+          quickAdd: relatedCardLabels.quickAdd,
+          wishlist: relatedCardLabels.wishlist,
+          mediaEmpty: relatedCardLabels.mediaEmpty,
+        }}
+        cloudName={cloudName}
+      />
     </main>
   );
 }
