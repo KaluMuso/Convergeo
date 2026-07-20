@@ -123,10 +123,16 @@ export function IconChevronDown(props: IconProps) {
   );
 }
 
-export function IconHeart(props: IconProps) {
+export function IconHeart({ filled = false, ...props }: IconProps & { filled?: boolean }) {
   return (
-    <BaseIcon {...props}>
-      <path d="M12 19s-7-4.35-7-9.2A3.8 3.8 0 0 1 12 7a3.8 3.8 0 0 1 7 2.8C19 14.65 12 19 12 19Z" />
+    <BaseIcon
+      {...props}
+      className={[filled ? "fill-current" : undefined, props.className].filter(Boolean).join(" ")}
+    >
+      <path
+        d="M12 19s-7-4.35-7-9.2A3.8 3.8 0 0 1 12 7a3.8 3.8 0 0 1 7 2.8C19 14.65 12 19 12 19Z"
+        fill={filled ? "currentColor" : "none"}
+      />
     </BaseIcon>
   );
 }

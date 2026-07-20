@@ -37,6 +37,14 @@
       "apply": "Appliquer les filtres",
       "clear": "Effacer les filtres"
     },
+    "filters": {
+      "appliedAria": "Filtres appliqués",
+      "clearAll": "Tout effacer",
+      "removeChip": "Retirer le filtre {filter}",
+      "priceRange": "K{min} – K{max}",
+      "minPriceOnly": "À partir de K{min}",
+      "maxPriceOnly": "Jusqu'à K{max}"
+    },
     "card": {
       "vendor": "Vendu par {vendor}",
       "noReviews": "Pas encore d'avis",

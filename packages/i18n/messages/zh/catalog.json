@@ -37,6 +37,14 @@
       "apply": "应用筛选",
       "clear": "清除筛选"
     },
+    "filters": {
+      "appliedAria": "已应用的筛选",
+      "clearAll": "全部清除",
+      "removeChip": "移除筛选 {filter}",
+      "priceRange": "K{min} – K{max}",
+      "minPriceOnly": "从 K{min} 起",
+      "maxPriceOnly": "最高 K{max}"
+    },
     "card": {
       "vendor": "由 {vendor} 销售",
       "noReviews": "暂无评价",

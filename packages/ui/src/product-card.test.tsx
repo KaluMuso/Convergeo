@@ -42,12 +42,19 @@ describe("ProductCard", () => {
   it("truncates long Nyanja title with line-clamp", () => {
     render(<ProductCard {...baseProps} title={LONG_NYANJA_TITLE} />);
     const heading = screen.getByRole("heading", { level: 3 });
-    expect(heading).toHaveStyle({
-      display: "-webkit-box",
-      WebkitLineClamp: 2,
-      overflow: "hidden",
-    });
+    expect(heading.className).toMatch(/line-clamp-2/);
     expect(heading.textContent).toBe(LONG_NYANJA_TITLE);
+  });
+
+  it("renders an empty media stage when no image is provided", () => {
+    render(<ProductCard {...baseProps} />);
+    expect(screen.getByTestId("product-card-media-empty")).toBeInTheDocument();
+  });
+
+  it("does not render dead wishlist/quick-add controls without handlers", () => {
+    render(<ProductCard {...baseProps} />);
+    expect(screen.queryByTestId("product-card-wishlist")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("product-card-quick-add")).not.toBeInTheDocument();
   });
 
   it("fires quick-add and wishlist callbacks", async () => {

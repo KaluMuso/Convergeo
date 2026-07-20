@@ -1,5 +1,6 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 
+import { IconHeart } from "./icons";
 import { PriceBlock } from "./price-block";
 import { StarRating } from "./star-rating";
 
@@ -17,59 +18,48 @@ export type ProductCardProps = {
   reviewCount: number;
   noReviewsLabel?: ReactNode;
   reviewCountLabel?: string;
+  /** Required for a11y when `onQuickAdd` is provided. */
   quickAddLabel: string;
+  /** Required for a11y when `onWishlistToggle` is provided. */
   wishlistLabel: string;
   onQuickAdd?: () => void;
   onWishlistToggle?: () => void;
   isWishlisted?: boolean;
   skeleton?: boolean;
   className?: string;
+  /** Accessible label for the empty media stage when no image is provided. */
+  mediaEmptyLabel?: string;
 };
 
-const cardBaseStyle: CSSProperties = {
-  backgroundColor: "var(--surface)",
-  borderRadius: "var(--r-lg)",
-  boxShadow: "var(--shadow-1)",
-  border: "1px solid var(--border)",
-  overflow: "hidden",
-  display: "flex",
-  flexDirection: "column",
-  minWidth: 0,
-  transition: "box-shadow var(--dur) var(--ease-out), transform var(--dur) var(--ease-out)",
-};
-
-const shimmerBlock: CSSProperties = {
-  background: "linear-gradient(90deg, var(--bg-2) 25%, var(--border) 50%, var(--bg-2) 75%)",
-  backgroundSize: "200% 100%",
-  animation: "shimmer 1.4s ease-in-out infinite",
-};
+function cx(...parts: Array<string | false | undefined>): string {
+  return parts.filter(Boolean).join(" ");
+}
 
 function ProductCardSkeleton({ className }: { className?: string }) {
   return (
     <article
-      className={className}
+      className={cx(
+        "flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-1",
+        className,
+      )}
       data-testid="product-card-skeleton"
       aria-busy="true"
-      style={cardBaseStyle}
     >
-      <div style={{ ...shimmerBlock, aspectRatio: "4 / 3", width: "100%" }} />
-      <div
-        style={{
-          padding: "var(--card-pad, var(--sp-3))",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--sp-2)",
-        }}
-      >
-        <div style={{ ...shimmerBlock, height: 14, width: "40%", borderRadius: "var(--r-pill)" }} />
-        <div style={{ ...shimmerBlock, height: 18, width: "90%", borderRadius: "var(--r-sm)" }} />
-        <div style={{ ...shimmerBlock, height: 14, width: "60%", borderRadius: "var(--r-sm)" }} />
-        <div style={{ ...shimmerBlock, height: 20, width: "50%", borderRadius: "var(--r-sm)" }} />
+      <div className="aspect-[4/3] w-full animate-[shimmer_1.4s_ease-in-out_infinite] bg-bg-2 motion-reduce:animate-none" />
+      <div className="flex flex-col gap-2 p-[var(--card-pad,var(--sp-3))]">
+        <div className="h-3.5 w-2/5 rounded-pill bg-bg-2" />
+        <div className="h-4 w-[90%] rounded-sm bg-bg-2" />
+        <div className="h-3.5 w-3/5 rounded-sm bg-bg-2" />
+        <div className="h-5 w-1/2 rounded-sm bg-bg-2" />
       </div>
     </article>
   );
 }
 
+/**
+ * Marketplace product card — surface stage, clamped title, price emphasis.
+ * Wishlist / quick-add render only when handlers are provided (no dead affordances).
+ */
 export function ProductCard({
   as: Component = "article",
   title,
@@ -91,6 +81,7 @@ export function ProductCard({
   isWishlisted = false,
   skeleton = false,
   className,
+  mediaEmptyLabel,
 }: ProductCardProps) {
   if (skeleton) {
     return <ProductCardSkeleton className={className} />;
@@ -98,114 +89,78 @@ export function ProductCard({
 
   return (
     <Component
-      className={["card-lift", "tap", className].filter(Boolean).join(" ")}
+      className={cx(
+        "card-lift",
+        "tap",
+        "group flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-1",
+        className,
+      )}
       data-testid="product-card"
-      style={{
-        ...cardBaseStyle,
-        ...(categoryColor
-          ? { background: `linear-gradient(180deg, ${categoryColor}22 0%, var(--surface) 48px)` }
-          : {}),
-      }}
+      style={
+        categoryColor
+          ? {
+              background: `linear-gradient(180deg, ${categoryColor}22 0%, var(--surface) 48px)`,
+            }
+          : undefined
+      }
     >
-      <div style={{ position: "relative", aspectRatio: "4 / 3", backgroundColor: "var(--bg-2)" }}>
-        {media}
-        {badge ? (
-          <div style={{ position: "absolute", top: "var(--sp-2)", left: "var(--sp-2)" }}>
-            {badge}
+      <div className="relative aspect-[4/3] bg-bg-2">
+        {media ?? (
+          <div
+            className="flex h-full w-full items-center justify-center bg-gradient-to-br from-bg-2 to-border/40"
+            data-testid="product-card-media-empty"
+            role={mediaEmptyLabel ? "img" : undefined}
+            aria-label={mediaEmptyLabel}
+            aria-hidden={mediaEmptyLabel ? undefined : true}
+          >
+            <span className="h-12 w-16 rounded border border-dashed border-border/80 bg-surface/40" />
           </div>
+        )}
+        {badge ? <div className="absolute left-2 top-2 z-[1]">{badge}</div> : null}
+        {onWishlistToggle ? (
+          <button
+            type="button"
+            aria-label={wishlistLabel}
+            aria-pressed={isWishlisted}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onWishlistToggle();
+            }}
+            data-testid="product-card-wishlist"
+            className="absolute right-2 top-2 z-[1] inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border bg-surface text-text-2 shadow-1 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+          >
+            <IconHeart
+              filled={isWishlisted}
+              className={isWishlisted ? "text-discount" : undefined}
+            />
+          </button>
         ) : null}
-        <div
-          style={{
-            position: "absolute",
-            top: "var(--sp-2)",
-            right: "var(--sp-2)",
-            display: "flex",
-            gap: "var(--sp-2)",
-          }}
-        >
-          {onWishlistToggle ? (
-            <button
-              type="button"
-              aria-label={wishlistLabel}
-              aria-pressed={isWishlisted}
-              onClick={onWishlistToggle}
-              data-testid="product-card-wishlist"
-              style={{
-                minWidth: 44,
-                minHeight: 44,
-                borderRadius: "50%",
-                border: "1px solid var(--border)",
-                backgroundColor: "var(--surface)",
-                cursor: "pointer",
-              }}
-            >
-              {isWishlisted ? "♥" : "♡"}
-            </button>
-          ) : null}
-        </div>
         {onQuickAdd ? (
           <button
             type="button"
-            onClick={onQuickAdd}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onQuickAdd();
+            }}
             aria-label={quickAddLabel}
             data-testid="product-card-quick-add"
-            style={{
-              position: "absolute",
-              bottom: "var(--sp-2)",
-              right: "var(--sp-2)",
-              minHeight: 44,
-              padding: "0 var(--sp-3)",
-              borderRadius: "var(--r-pill)",
-              border: "none",
-              backgroundColor: "var(--primary)",
-              color: "var(--surface)",
-              fontWeight: 600,
-              fontSize: "var(--fs-sm)",
-              cursor: "pointer",
-            }}
+            className={cx(
+              "absolute bottom-2 right-2 z-[1] inline-flex min-h-11 items-center rounded-pill bg-primary px-3 text-sm font-semibold text-[var(--primary-btn-fg)] shadow-1",
+              "transition-opacity duration-fast ease-std motion-reduce:transition-none",
+              "focus-visible:outline-none focus-visible:shadow-focusRing",
+              // Always visible on coarse pointers; reveal on hover/focus for fine pointers.
+              "max-md:opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100",
+            )}
           >
             {quickAddLabel}
           </button>
         ) : null}
       </div>
-      {/* Content padding is themeable per app/breakpoint via --card-pad
-          (falls back to the mobile-tuned --sp-3). */}
-      <div
-        style={{
-          padding: "var(--card-pad, var(--sp-3))",
-          display: "flex",
-          flexDirection: "column",
-          gap: "var(--sp-2)",
-          minWidth: 0,
-        }}
-      >
-        <p
-          style={{
-            margin: 0,
-            fontSize: "var(--fs-sm)",
-            color: "var(--text-2)",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {vendorLabel}
-        </p>
-        <h3
-          style={{
-            margin: 0,
-            fontSize: "var(--fs-h3)",
-            fontWeight: 600,
-            color: "var(--text)",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-            lineHeight: 1.3,
-          }}
-        >
-          {title}
-        </h3>
+      <div className="flex min-w-0 flex-col gap-2 p-[var(--card-pad,var(--sp-3))]">
+        <p className="m-0 truncate text-sm text-text-2">{vendorLabel}</p>
+        <h3 className="m-0 line-clamp-2 text-h3 font-semibold leading-snug text-text">{title}</h3>
         <StarRating
           value={rating}
           reviewCount={reviewCount}
