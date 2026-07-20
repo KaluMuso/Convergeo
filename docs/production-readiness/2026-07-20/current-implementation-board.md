@@ -6,7 +6,7 @@
 **Live probes (Prompt 12):** Supabase `dpadrlxukcjbewpqympu`, n8n MCP, Vercel, `api.vergeo5.com`, customer routes.  
 **Companions:** `go-no-go-report.md`, `gap-analysis-vs-docs.md`, `master-vs-docs-representation-report.md`, `docs/plan/00-status.md`, `docs/plan/launch-checklist.md`, `docs/production-readiness/2026-07-18/consolidated/release-gates.md`, programme PRs #375–#380 merged; #381 go/no-go (this PR); ops-drills on master via #379.
 
-**Do not reimplement:** `refunds.source_key` / repo file `supabase/migrations/0063_refunds_source_key_uniq.sql` (merged via PR #352). Ops must **apply** that SQL to live after resolving the version collision below — not rewrite the feature.
+**Do not reimplement:** `refunds.source_key` / repo file `supabase/migrations/0065_refunds_source_key_uniq.sql` (originally merged via PR #352, renumbered by RC-02). Ops must **apply** that SQL to live after `0064` FORCE RLS — not rewrite the feature.
 
 ---
 
@@ -19,7 +19,7 @@
 | Vendor Vercel production   | **Prompt 6:** READY @ `5a4668a` — **behind** tip                                                                                       |
 | Admin Vercel production    | **Prompt 6:** READY @ `2f99711` — missing #369 only                                                                                    |
 | API                        | **Prompt 6:** `api.vergeo5.com` **502**; host digest NOT_AUDITABLE                                                                     |
-| Live DB migrations         | Through live tip `0063_revoke_execute_review_reply_guards`; repo source_key + FORCE RLS **unapplied**                                  |
+| Live DB migrations         | Through live tip `0063_revoke_execute_review_reply_guards`; repo `0064` FORCE RLS + `0065` source_key **unapplied**                    |
 | Live `refunds.source_key`  | **Absent** — column missing; index still `refunds_order_id_active_uniq`                                                                |
 | Live money/KYC rows        | `payments=0`, `ledger_transactions=0`, `orders=0`, `kyc_records=0`                                                                     |
 | Live FORCE RLS             | `order_money_gates`/`payments`/`refunds` = true; **`ticket_type_instances` / `ticket_type_price_tiers` / `product_relations` = false** |
@@ -28,13 +28,14 @@
 
 ### Critical migration collision (blocks naive “apply 0063”)
 
-| Plane               | Version / name                                  | Content                                         |
-| ------------------- | ----------------------------------------------- | ----------------------------------------------- |
-| **Repo master**     | `0063_refunds_source_key_uniq.sql` (#352)       | Adds `refunds.source_key` + partial unique      |
-| **Live DB**         | `0063_revoke_execute_review_reply_guards`       | Revokes EXECUTE on review-reply guards          |
-| **Unmerged branch** | `claude/convergeo-bug-audit-nu1g4b` @ `9d146cc` | Same revoke SQL applied live; **not** on master |
+| Plane                | Version / name                                  | Content                                                            |
+| -------------------- | ----------------------------------------------- | ------------------------------------------------------------------ |
+| **Repo pre-RC-02**   | `0063` source_key migration (#352)              | Added `refunds.source_key` + partial unique but collided with live |
+| **Repo after RC-02** | `0063_revoke…`, `0064_force…`, `0065_refunds…`  | Matches live revoke tip; keeps FORCE RLS before source_key         |
+| **Live DB**          | `0063_revoke_execute_review_reply_guards`       | Revokes EXECUTE on review-reply guards                             |
+| **Source branch**    | `claude/convergeo-bug-audit-nu1g4b` @ `9d146cc` | Same revoke SQL applied live                                       |
 
-**Implication:** Live already consumed the `0063` ledger slot for revoke hygiene. Repo `0063` (source_key) has **not** been applied. Closing this needs a **numbering reconcile PR** (land revoke file to match live + renumber source_key → `0064` **without changing SQL semantics**), then apply source_key to live. Do **not** invent a second source_key design.
+**Implication:** Live already consumed the `0063` ledger slot for revoke hygiene. RC-02 lands that revoke file to match live and renumbers source_key → `0065` **without changing SQL semantics** because `0064` remains FORCE RLS. Apply order after merge: `0064` FORCE RLS, then `0065` source_key. Do **not** invent a second source_key design.
 
 ---
 
@@ -107,7 +108,7 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 - **Gate / gap:** returns / MR-B03
 - **Priority:** P0
 - **Status:** `ALREADY_CLOSED` (repo); live apply tracked separately as DEP-02
-- **Evidence:** merge `496819b`; file `supabase/migrations/0063_refunds_source_key_uniq.sql` on master; CI seed fix `7e886d2`
+- **Evidence:** merge `496819b`; file `supabase/migrations/0065_refunds_source_key_uniq.sql` after RC-02 renumber; CI seed fix `7e886d2`
 - **Files:** do **not** rewrite feature
 - **Deps:** DEP-01 numbering reconcile before live apply
 - **Acceptance:** source_key column + `refunds_source_key_active_uniq` on master schema replay
@@ -186,8 +187,8 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 - **Gate / gap:** G9 / migration drift
 - **Priority:** P0
 - **Status:** `REPO_CLOSABLE`
-- **Evidence:** live name `0063_revoke_execute_review_reply_guards` not on master; master `0063_refunds_source_key_uniq.sql`; branch `claude/convergeo-bug-audit-nu1g4b` holds revoke file
-- **Files likely:** add `0063_revoke_execute_review_reply_guards.sql` (match live), renumber source_key → `0064_refunds_source_key_uniq.sql`, update any path refs/tests; **preserve SQL body of #352**
+- **Evidence:** live name `0063_revoke_execute_review_reply_guards` needed to be represented on master; branch `claude/convergeo-bug-audit-nu1g4b` holds revoke file; source_key becomes `0065_refunds_source_key_uniq.sql`
+- **Files likely:** add `0063_revoke_execute_review_reply_guards.sql` (match live), renumber source_key → `0065_refunds_source_key_uniq.sql`, update any path refs/tests; **preserve SQL body of #352**
 - **Deps:** none
 - **Acceptance:** fresh `db reset` applies revoke then source_key; live can apply source_key as next version without double-`0063`
 - **Verify:** `scripts/ci/migration-replay.sh` / CI db job
@@ -657,7 +658,7 @@ _Per task scope: only this board file is added unless a link would break — no 
 
 ### P0 repo tasks (`REPO_CLOSABLE`)
 
-1. **RC-02** migration ledger reconcile (revoke on master + renumber source_key → 0064) — **do not reimplement source_key**
+1. **RC-02** migration ledger reconcile (revoke on master + renumber source_key → 0065) — **do not reimplement source_key**
 2. **RC-01** FORCE RLS migration
 3. **RC-03** `backup.json`
 4. **RC-05** false-success + critical-path E2E specs

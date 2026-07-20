@@ -51,19 +51,19 @@ Repo-prefix `0052` appears as timestamp `20260717100303` / name `0052_product_re
 
 ### 2.3 Repo master migration files after live tip (content not on live)
 
-| Repo file                                      | Live status     | Notes                                                                                                           |
-| ---------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------- |
-| `0063_refunds_source_key_uniq.sql` (#352)      | **NOT applied** | `refunds.source_key` column **absent**; `refunds_order_id_active_uniq` still present                            |
-| `0064_force_rls_launch_tables.sql` (#367)      | **NOT applied** | `ticket_type_instances` / `ticket_type_price_tiers` / `product_relations` have ENABLE RLS but **FORCE = false** |
-| Live `0063_revoke_execute_review_reply_guards` | Applied live    | **Missing from `origin/master` files** (exists only on branch `claude/convergeo-bug-audit-nu1g4b` @ `9d146cc`)  |
+| Repo file                                                      | Live status     | Notes                                                                                                           |
+| -------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------- |
+| `0065_refunds_source_key_uniq.sql` (#352 body, RC-02 renumber) | **NOT applied** | `refunds.source_key` column **absent**; `refunds_order_id_active_uniq` still present                            |
+| `0064_force_rls_launch_tables.sql` (#367)                      | **NOT applied** | `ticket_type_instances` / `ticket_type_price_tiers` / `product_relations` have ENABLE RLS but **FORCE = false** |
+| Live `0063_revoke_execute_review_reply_guards`                 | Applied live    | **Missing from `origin/master` files** (exists only on branch `claude/convergeo-bug-audit-nu1g4b` @ `9d146cc`)  |
 
 ### 2.4 Numbering collision (RC-02) — blocks naive apply
 
-| Plane       | `0063` meaning                                                                                       |
-| ----------- | ---------------------------------------------------------------------------------------------------- |
-| Live ledger | revoke EXECUTE on review-reply guards                                                                |
-| Repo master | `refunds.source_key` uniqueness (#352)                                                               |
-| Repo `0064` | FORCE RLS launch tables (#367) — would collide with any reconcile that renumbers source_key → `0064` |
+| Plane             | `0063` meaning                                                                           |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| Live ledger       | revoke EXECUTE on review-reply guards                                                    |
+| Repo before RC-02 | `refunds.source_key` uniqueness (#352) occupied the `0063` prefix                        |
+| Repo after RC-02  | `0063` matches live revoke; `0064` remains FORCE RLS; source_key is renumbered to `0065` |
 
 **Do not** run `supabase db push` / apply repo `0063_*.sql` by filename against live.
 
@@ -75,7 +75,7 @@ Repo-prefix `0052` appears as timestamp `20260717100303` / name `0052_product_re
 
 1. **Recoverable backup verified** — dated OCI logical dump object listed **or** founder-confirmed Supabase backup/PITR artifact for `dpadrlxukcjbewpqympu`.  
    **This session:** `BLOCKED_EXTERNAL` (no OCI Object Storage list; no host SSH; workspace `SUPABASE_DB_URL` was a local leftover, not prod).
-2. Land **RC-02 reconcile PR** on master: add `0063_revoke_execute_review_reply_guards.sql` (match live), renumber source_key → next free version (likely `0065` if `0064` stays FORCE RLS), keep #352 SQL body unchanged.
+2. Land **RC-02 reconcile PR** on master: add `0063_revoke_execute_review_reply_guards.sql` (match live), keep `0064_force_rls_launch_tables.sql` as-is, renumber source_key → `0065_refunds_source_key_uniq.sql`, keep #352 SQL body unchanged.
 3. Freeze money automations if any live money rows appear (currently `orders=payments=refunds=ledger=kyc=0`).
 
 ### Step A — `refunds_source_key` (content of #352)
@@ -173,7 +173,7 @@ platform_config: no public_launch / collections_enabled keys
 
 1. Repair API on OCI (`docker compose ps`, logs, `redeploy-api.sh` pin to known GHCR digest).
 2. Promote/redeploy Vercel production to `d9839db` (or latest master) for customer + vendor (+ admin if desired).
-3. After backup: RC-02 reconcile → apply source_key → apply FORCE RLS → re-run §5.
+3. After backup: RC-02 reconcile → apply FORCE RLS (`0064`) → apply source_key (`0065`) → re-run §5.
 
 ---
 

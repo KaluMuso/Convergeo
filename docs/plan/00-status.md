@@ -4,7 +4,7 @@
 
 **Build-out:** ✅ M01–M16 code-complete on master (M17 Clips deliberately deferred). **Launch gap is DEPLOY + VERIFY + OPS + FOUNDER/LEGAL**, not missing mountains.
 
-**Live (2026-07-20):** API `api.vergeo5.com` **502**; customer/vendor health OK (prod SHAs behind tip); admin Access-gated; DB tip `0063_revoke_execute_review_reply_guards` (collision vs repo `0063` source_key; `0064` FORCE RLS unapplied); `public_launch=false`; money tables **0**; n8n **0 active**; S1–S6 / G0–G9 **not PASS**. ✅ **F1 (vergeo5.com) done.** F4/F9b open.
+**Live (2026-07-20):** API `api.vergeo5.com` **502**; customer/vendor health OK (prod SHAs behind tip); admin Access-gated; DB tip `0063_revoke_execute_review_reply_guards` (RC-02 reconciles repo numbering; `0064` FORCE RLS and `0065` source_key unapplied); `public_launch=false`; money tables **0**; n8n **0 active**; S1–S6 / G0–G9 **not PASS**. ✅ **F1 (vergeo5.com) done.** F4/F9b open.
 
 **Historical note:** earlier “remaining = founder gates + staging only” understated deploy/ops/money-drill debt — superseded by Prompt 12 percentages (build ~92% · real-money ~8%). Callouts below are chronological history and may be stale vs the go/no-go report.
 

@@ -23,15 +23,15 @@
 
 ## 1. Preconditions (read before any activation)
 
-| Check                                  | Result @ 2026-07-20                                                                                     |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `GET https://api.vergeo5.com/healthz`  | **502**                                                                                                 |
-| `GET https://api.vergeo5.com/readyz`   | **502**                                                                                                 |
-| Live migration tip / RC-02 collision   | Open — see deploy-migration-truth (live `0063` revoke ≠ repo `0063` source_key)                         |
-| Ledger / money rows                    | Empty historically; no sandbox release drill in this session                                            |
-| `infra/n8n/backup.json` on master      | **Absent** (contract `backup-schedule.md` only; PR #374 may land later)                                 |
-| WhatsApp Header Auth credential in n8n | **Missing**                                                                                             |
-| MCP JSON file import                   | **Unavailable** — only Workflow SDK `create_workflow_from_code` (no raw `infra/n8n/*.json` import path) |
+| Check                                  | Result @ 2026-07-20                                                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `GET https://api.vergeo5.com/healthz`  | **502**                                                                                                       |
+| `GET https://api.vergeo5.com/readyz`   | **502**                                                                                                       |
+| Live migration tip / RC-02 collision   | Open — see deploy-migration-truth (RC-02 makes repo `0063` match live revoke; `0064`/`0065` remain unapplied) |
+| Ledger / money rows                    | Empty historically; no sandbox release drill in this session                                                  |
+| `infra/n8n/backup.json` on master      | **Absent** (contract `backup-schedule.md` only; PR #374 may land later)                                       |
+| WhatsApp Header Auth credential in n8n | **Missing**                                                                                                   |
+| MCP JSON file import                   | **Unavailable** — only Workflow SDK `create_workflow_from_code` (no raw `infra/n8n/*.json` import path)       |
 
 **Rule applied:** do not activate money-moving workflows before API health, migration/ledger preflight, and fail-closed controls are verified.
 
