@@ -49,8 +49,8 @@ create policy user_wishlist_admin_all
   on public.user_wishlist
   for all
   to authenticated
-  using (public.is_admin())
-  with check (public.is_admin());
+  using (public.has_role('admin'))
+  with check (public.has_role('admin'));
 
 -- Recently viewed: owner CRUD; admin all.
 create policy user_recently_viewed_owner_select
@@ -82,8 +82,8 @@ create policy user_recently_viewed_admin_all
   on public.user_recently_viewed
   for all
   to authenticated
-  using (public.is_admin())
-  with check (public.is_admin());
+  using (public.has_role('admin'))
+  with check (public.has_role('admin'));
 
 comment on table public.user_wishlist is
   'Per-user saved products (server sync for signed-in customers).';
