@@ -40,6 +40,22 @@ describe("TopNav", () => {
     expect(screen.getByText("5")).toBeInTheDocument();
   });
 
+  it("includes cart count in the accessible name and live region", () => {
+    render(
+      <TopNav
+        logo={<span>Logo</span>}
+        cartIcon={<span />}
+        cartCount={3}
+        cartLabel="Cart"
+        cartCountLabel="Cart, 3 items"
+        skipLinkTargetId="main-content"
+        navAriaLabel="Primary"
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Cart, 3 items" })).toBeInTheDocument();
+    expect(screen.getByText("Cart, 3 items")).toBeInTheDocument();
+  });
+
   it("toggles scrolled shadow class after scroll", () => {
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb: FrameRequestCallback) => {
       cb(0);

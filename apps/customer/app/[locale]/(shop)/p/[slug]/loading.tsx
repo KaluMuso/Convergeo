@@ -7,8 +7,8 @@ import { Skeleton } from "@vergeo/ui/src/skeleton";
  */
 export default function PdpLoading() {
   return (
-    <main
-      className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6 motion-fade lg:max-w-6xl"
+    <div
+      className="mx-auto flex w-full max-w-lg flex-col gap-6 py-6 motion-fade lg:max-w-6xl"
       aria-hidden="true"
     >
       <Skeleton height="18rem" />
@@ -34,6 +34,6 @@ export default function PdpLoading() {
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

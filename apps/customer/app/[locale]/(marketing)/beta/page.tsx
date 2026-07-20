@@ -51,7 +51,7 @@ export default async function BetaPage({ params }: PageProps) {
   const clientMessages = await loadMarketing(locale);
 
   return (
-    <main className="mx-auto w-full max-w-md px-4 py-10">
+    <main id="marketing-main" className="mx-auto w-full max-w-md px-4 py-10">
       <header className="mb-8 space-y-3">
         <p className="text-sm font-semibold uppercase tracking-wide text-primary">
           {t("hero.eyebrow")}
