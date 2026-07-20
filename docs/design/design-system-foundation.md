@@ -83,3 +83,25 @@ See audit §7. Updates from this work:
 - Button → **refactored** (RSC-safe + on-danger)
 - LinkButton / SearchField / ThemePreference → **added**
 - Badge / PriceBlock / Empty / Error → **refactored**
+
+## Browser verification (2026-07-20, localhost)
+
+Screenshots: [`evidence/foundation/`](./evidence/foundation/)
+
+| Check                                              | Result                                                                  |
+| -------------------------------------------------- | ----------------------------------------------------------------------- |
+| Light home — cream, no purple                      | Pass (`ds-home-light-1366.png`)                                         |
+| Dark home — charcoal, no purple                    | Pass (`ds-home-dark-1366.png`)                                          |
+| Footer light — charcoal + Display preferences link | Pass (`ds-footer-light-1366.png`)                                       |
+| Mobile 360 light/dark — no navbar theme toggle     | Pass                                                                    |
+| Fonts — `DM Sans` on body                          | Pass                                                                    |
+| UI gallery light/dark                              | Pass (`/en/ui`)                                                         |
+| Preferences radios                                 | Auth-gated; ThemePreference unit-tested; footer link → login            |
+| Keyboard focus ring                                | Partially verified; `focus-visible:shadow-focusRing` retained on Button |
+
+### Test / build evidence
+
+- `pnpm --filter @vergeo/ui test` — 170 passed
+- `pnpm --filter @vergeo/ui typecheck`
+- `pnpm --filter customer typecheck` · `lint` · `build`
+- `pnpm --filter @vergeo/i18n test` + phase1 overlay OK
