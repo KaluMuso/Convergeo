@@ -3,11 +3,13 @@
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, type Ref } from "react";
 
 import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
 
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
+
+import type { ListingPurchaseControls } from "./use-listing-purchase";
 
 export type BuyBoxListing = {
   id: string;
@@ -45,6 +47,9 @@ export type BuyBoxProps = {
   labels: BuyBoxLabels;
   singleVendor: boolean;
   onAddedToCart?: () => void;
+  /** Shared qty/ATC when sticky mobile bar is wired from the parent. */
+  purchase?: ListingPurchaseControls;
+  buyBoxRef?: Ref<HTMLElement | null>;
 };
 
 export function getMaxQuantity(listing: BuyBoxListing): number | null {
@@ -87,7 +92,14 @@ export function getStockLabel(
   return labels.inStockLabel;
 }
 
-export function BuyBox({ listing, labels, singleVendor, onAddedToCart }: BuyBoxProps) {
+export function BuyBox({
+  listing,
+  labels,
+  singleVendor,
+  onAddedToCart,
+  purchase,
+  buyBoxRef,
+}: BuyBoxProps) {
   const t = useTranslations("catalog");
   const [quantity, setQuantity] = useState(() => clampQuantity(listing.moq, listing));
   const [adding, setAdding] = useState(false);
@@ -95,7 +107,7 @@ export function BuyBox({ listing, labels, singleVendor, onAddedToCart }: BuyBoxP
   const [addError, setAddError] = useState<string | null>(null);
 
   const maxQuantity = useMemo(() => getMaxQuantity(listing), [listing]);
-  const stockLabel = useMemo(
+  const localStockLabel = useMemo(
     () =>
       getStockLabel(listing, {
         ...labels,
@@ -144,11 +156,20 @@ export function BuyBox({ listing, labels, singleVendor, onAddedToCart }: BuyBoxP
     quantity,
   ]);
 
-  const atMin = quantity <= Math.max(1, listing.moq);
-  const atMax = maxQuantity !== null && quantity >= maxQuantity;
+  const qty = purchase?.quantity ?? quantity;
+  const onDecrease = purchase?.decrease ?? decrease;
+  const onIncrease = purchase?.increase ?? increase;
+  const atMin = purchase?.atMin ?? quantity <= Math.max(1, listing.moq);
+  const atMax = purchase?.atMax ?? (maxQuantity !== null && quantity >= maxQuantity);
+  const isAdding = purchase?.adding ?? adding;
+  const errorMessage = purchase?.addError ?? addError;
+  const successMessage = purchase?.addedMessage ?? addedMessage;
+  const stockLabel = purchase?.stockLabel || localStockLabel;
+  const onAdd = purchase?.handleAddToCart ?? (() => void handleAddToCart());
 
   return (
     <section
+      ref={buyBoxRef}
       data-testid="pdp-buy-box"
       data-in-stock={listing.inStock ? "true" : "false"}
       className="flex flex-col gap-4 rounded border border-border bg-surface p-4"
@@ -190,8 +211,8 @@ export function BuyBox({ listing, labels, singleVendor, onAddedToCart }: BuyBoxP
             type="button"
             aria-label={labels.decreaseLabel}
             data-testid="pdp-qty-decrease"
-            onClick={decrease}
-            disabled={!listing.inStock || atMin}
+            onClick={onDecrease}
+            disabled={!listing.inStock || atMin || isAdding}
             className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span aria-hidden="true">{labels.decreaseSymbol}</span>
@@ -201,14 +222,14 @@ export function BuyBox({ listing, labels, singleVendor, onAddedToCart }: BuyBoxP
             className="min-w-12 text-center font-mono text-lg"
             aria-live="polite"
           >
-            {quantity}
+            {qty}
           </output>
           <button
             type="button"
             aria-label={labels.increaseLabel}
             data-testid="pdp-qty-increase"
-            onClick={increase}
-            disabled={!listing.inStock || atMax}
+            onClick={onIncrease}
+            disabled={!listing.inStock || atMax || isAdding}
             className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span aria-hidden="true">{labels.increaseSymbol}</span>
@@ -221,27 +242,27 @@ export function BuyBox({ listing, labels, singleVendor, onAddedToCart }: BuyBoxP
         variant="primary"
         size="lg"
         className="w-full"
-        disabled={!listing.inStock || adding}
-        loading={adding}
+        disabled={!listing.inStock || isAdding}
+        loading={isAdding}
         loadingLabel={labels.addingToCartLabel}
         data-testid="pdp-add-to-cart"
         aria-label={listing.inStock ? labels.addToCartLabel : labels.outOfStockLabel}
-        onClick={() => void handleAddToCart()}
+        onClick={onAdd}
       >
         {labels.addToCartLabel}
       </Button>
 
       <p className="sr-only" aria-live="polite">
-        {addedMessage}
+        {successMessage}
       </p>
-      {addError ? (
+      {errorMessage ? (
         <p className="text-sm text-danger" role="alert" data-testid="pdp-add-to-cart-error">
-          {addError}
+          {errorMessage}
         </p>
       ) : null}
-      {addedMessage ? (
+      {successMessage ? (
         <p className="text-sm font-medium text-success" data-testid="pdp-add-to-cart-success">
-          {addedMessage}
+          {successMessage}
         </p>
       ) : null}
     </section>

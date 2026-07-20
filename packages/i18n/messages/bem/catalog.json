@@ -117,6 +117,9 @@
       "quantityLabel": "Ubunji",
       "singleVendor": "Ashitisha vendor uyu fye"
     },
+    "stickyAtc": {
+      "ariaLabel": "Longeni bwangu mu cart"
+    },
     "condition": {
       "new": "Cipya",
       "refurbished": "Cilukilwe"

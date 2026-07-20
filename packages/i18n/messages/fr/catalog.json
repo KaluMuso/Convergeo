@@ -228,6 +228,9 @@
       "singleVendor": "Vendu uniquement par ce vendeur",
       "moq": "Commande minimum : {count}"
     },
+    "stickyAtc": {
+      "ariaLabel": "Ajout rapide au panier"
+    },
     "vendor": {
       "heading": "Vendeur",
       "preferredBadge": "Vendeur privilégié",

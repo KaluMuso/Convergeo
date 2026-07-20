@@ -228,6 +228,9 @@
       "singleVendor": "仅由该商家销售",
       "moq": "最低起订量：{count}"
     },
+    "stickyAtc": {
+      "ariaLabel": "快速加入购物车"
+    },
     "vendor": {
       "heading": "卖家",
       "preferredBadge": "优选卖家",

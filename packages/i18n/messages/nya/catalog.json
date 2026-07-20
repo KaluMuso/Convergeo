@@ -117,6 +117,9 @@
       "quantityLabel": "Chiwerengero",
       "singleVendor": "Agulitsa vendor uyu yekha"
     },
+    "stickyAtc": {
+      "ariaLabel": "Onjezani mwachangu ku cart"
+    },
     "condition": {
       "new": "Yatsopano",
       "refurbished": "Yokonzedwanso"
