@@ -1,7 +1,7 @@
 export { formatDate, formatK, formatNumber } from "./format";
 export { flattenMessages, loadRawNamespace, localeNamespaceKeys } from "./catalog";
 export { deepMergeMessages } from "./deep-merge";
-export { DEFAULT_LOCALE, LOCALES, type Locale } from "./locales";
+export { DEFAULT_LOCALE, LOCALES, PUBLIC_LOCALES, type Locale, type PublicLocale } from "./locales";
 export {
   extractIcuPlaceholders,
   isUnexpectedEnglishFallback,
