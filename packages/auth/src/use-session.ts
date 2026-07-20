@@ -11,6 +11,13 @@ export type UseSessionResult = {
   loading: boolean;
 };
 
+declare global {
+  interface Window {
+    /** Set by Playwright payment fixtures when NEXT_PUBLIC_E2E_MOCK_SESSION=1. */
+    __VERGEO_E2E_SESSION__?: Session;
+  }
+}
+
 export function useSession(): UseSessionResult {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -18,6 +25,25 @@ export function useSession(): UseSessionResult {
   useEffect(() => {
     let active = true;
     let unsubscribe: (() => void) | undefined;
+
+    // Deterministic E2E buyer session (CI payment-mock mode only). Never active
+    // unless NEXT_PUBLIC_E2E_MOCK_SESSION=1 is compiled into the client bundle.
+    // Allow Playwright-injected sessions in development, or when the explicit
+    // NEXT_PUBLIC_E2E_MOCK_SESSION=1 flag is compiled into the client (staging
+    // honesty specs). Never honour the injection in production builds without
+    // that flag.
+    const e2eMockAllowed =
+      process.env.NEXT_PUBLIC_E2E_MOCK_SESSION === "1" || process.env.NODE_ENV === "development";
+    if (e2eMockAllowed) {
+      const injected = window.__VERGEO_E2E_SESSION__;
+      if (injected?.access_token) {
+        setSession(injected);
+        setLoading(false);
+        return () => {
+          active = false;
+        };
+      }
+    }
 
     // Load the Supabase browser client lazily so @supabase/ssr + supabase-js do
     // NOT land in the first-load JS of every route that reads the session — the

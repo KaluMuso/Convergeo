@@ -297,6 +297,7 @@ export default function CardCheckoutPage() {
       <section
         className="space-y-4 rounded-card border border-border bg-surface p-5 text-center"
         aria-live="polite"
+        data-testid={`payment-card-${viewState}`}
       >
         <p className="font-body text-sm text-text-2">{statusMessage}</p>
         {sessionData ? (
