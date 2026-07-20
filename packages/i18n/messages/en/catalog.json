@@ -228,6 +228,9 @@
       "singleVendor": "Sold by this vendor only",
       "moq": "Minimum order: {count}"
     },
+    "stickyAtc": {
+      "ariaLabel": "Quick add to cart"
+    },
     "vendor": {
       "heading": "Seller",
       "preferredBadge": "Preferred seller",

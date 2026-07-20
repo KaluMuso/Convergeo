@@ -4,12 +4,14 @@ import { formatK } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
 import { BuyerTrustPanel } from "./buyer-trust-panel";
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
 import { PdpGallery } from "./gallery";
+import { StickyMobileAtc } from "./sticky-mobile-atc";
+import { useListingPurchase } from "./use-listing-purchase";
 import { VendorBlock } from "./vendor-block";
 
 import type { PdpGalleryLabelStrings } from "./gallery-labels";
@@ -288,7 +290,80 @@ export function Comparison({ listings, selectedListingId, labels, onSelect }: Co
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Mobile: stacked seller cards (audit E10) */}
+      <ul className="flex list-none flex-col gap-3 p-4 lg:hidden" data-testid="pdp-compare-cards">
+        {sortedListings.map((listing) => {
+          const distanceM = distanceByListingId.get(listing.id);
+          const distanceLabel =
+            distanceM !== undefined
+              ? labels.distance.replace("{distance}", formatDistanceMeters(distanceM))
+              : "—";
+          const isSelected = listing.id === selectedListingId;
+          const ratingLabel =
+            listing.vendor.ratingAvg !== null && listing.vendor.ratingCount > 0
+              ? labels.rating
+                  .replace("{rating}", String(listing.vendor.ratingAvg))
+                  .replace("{count}", String(listing.vendor.ratingCount))
+              : labels.noReviews;
+
+          return (
+            <li key={listing.id}>
+              <button
+                type="button"
+                data-testid={`comparison-card-${listing.id}`}
+                aria-pressed={isSelected}
+                aria-label={isSelected ? labels.selectedListing : labels.selectListing}
+                onClick={() => onSelect(listing.id)}
+                className={[
+                  "w-full rounded border p-4 text-left transition-colors",
+                  isSelected
+                    ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                    : "border-border bg-bg hover:bg-surface",
+                ].join(" ")}
+                style={{ borderRadius: "var(--r)" }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-text">{listing.vendor.displayName}</span>
+                      {listing.vendor.preferredBadge ? (
+                        <CornerRibbon trust="preferred" trustLabel={labels.preferredBadge} />
+                      ) : null}
+                    </div>
+                    <p className="mt-1 font-mono text-xl font-semibold text-text">
+                      {formatK(listing.priceNgwee)}
+                    </p>
+                    <p className="mt-1 text-xs text-text-2">{ratingLabel}</p>
+                  </div>
+                  <span className="shrink-0 text-sm font-medium text-primary">
+                    {isSelected ? labels.selectedListing : labels.selectListing}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <ConditionBadge
+                    condition={listing.condition}
+                    label={
+                      listing.condition === "new"
+                        ? labels.conditionNew
+                        : labels.conditionRefurbished
+                    }
+                  />
+                  <span className="text-xs text-text-2">{distanceLabel}</span>
+                  {listing.deliveryAvailable ? (
+                    <Badge variant="public" label={labels.delivery} />
+                  ) : null}
+                  {listing.pickupAvailable ? (
+                    <Badge variant="public" label={labels.pickup} />
+                  ) : null}
+                </div>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Desktop: comparison table */}
+      <div className="hidden overflow-x-auto lg:block">
         <table className="min-w-full text-left text-sm">
           <thead className="bg-bg text-text-2">
             <tr>
@@ -394,6 +469,8 @@ export function PdpInteractiveBody({
   trustLabels,
 }: PdpInteractiveBodyProps) {
   const t = useTranslations("catalog");
+  const buyBoxRef = useRef<HTMLElement | null>(null);
+  const [stickyAtcVisible, setStickyAtcVisible] = useState(false);
   const [selectedListingId, setSelectedListingId] = useState<string | null>(
     () => selectListingById(listings, initialListingId)?.id ?? null,
   );
@@ -428,15 +505,27 @@ export function PdpInteractiveBody({
       }
     : null;
 
+  const purchase = useListingPurchase(buyBoxListing, buyBoxLabels);
+
   const handleSelect = useCallback((listingId: string) => {
     setSelectedListingId(listingId);
   }, []);
 
+  const handleStickyVisibleChange = useCallback((visible: boolean) => {
+    setStickyAtcVisible(visible);
+  }, []);
+
   return (
-    /* Mobile (<1024px): unchanged single column (DOM order = gallery, buy-box,
-       comparison, vendor). lg+: two-column grid — gallery left, sticky buy-box
-       right; comparison + vendor span the full width below. */
-    <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start lg:gap-8">
+    /* Mobile (<1024px): gallery → buy-box → compare cards → vendor.
+       lg+: two-column grid — gallery left, sticky buy-box right; comparison table + vendor full width. */
+    <div
+      className={[
+        "flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start lg:gap-8",
+        stickyAtcVisible ? "pb-20 lg:pb-0" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div className="min-w-0 lg:col-start-1 lg:row-start-1">
         <PdpGallery
           images={galleryImages}
@@ -448,9 +537,15 @@ export function PdpInteractiveBody({
         />
       </div>
 
-      {buyBoxListing && selectedListing ? (
+      {buyBoxListing && selectedListing && purchase ? (
         <div className="flex flex-col gap-3 lg:sticky lg:top-20 lg:col-start-2 lg:row-start-1">
-          <BuyBox listing={buyBoxListing} singleVendor={singleVendor} labels={buyBoxLabels} />
+          <BuyBox
+            listing={buyBoxListing}
+            singleVendor={singleVendor}
+            labels={buyBoxLabels}
+            purchase={purchase}
+            buyBoxRef={buyBoxRef}
+          />
           <BuyerTrustPanel
             sellerStatusLabel={(selectedListing.vendor.preferredBadge
               ? trustLabels.preferredSeller
@@ -502,6 +597,17 @@ export function PdpInteractiveBody({
             viewStoreLabel={vendorLabels.viewStore}
           />
         </div>
+      ) : null}
+
+      {buyBoxListing && purchase ? (
+        <StickyMobileAtc
+          listing={buyBoxListing}
+          labels={buyBoxLabels}
+          purchase={purchase}
+          observeRef={buyBoxRef}
+          ariaLabel={t("pdp.stickyAtc.ariaLabel")}
+          onVisibleChange={handleStickyVisibleChange}
+        />
       ) : null}
     </div>
   );
