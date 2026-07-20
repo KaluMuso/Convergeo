@@ -30,6 +30,41 @@ from app.services.commissions.engine import compute_order_commission, parse_snap
 from app.services.db import SqlResult
 from app.services.orders.audit import run_sql_script, sql_literal
 
+
+def scale_commission_snapshot_for_gross(
+    snapshot: Mapping[str, Any],
+    *,
+    target_gross_ngwee: int,
+    original_gross_ngwee: int,
+) -> dict[str, Any]:
+    """Scale purchase-time line totals to fit a remainder-release gross.
+
+    Used when a partial PRE_RELEASE refund left escrow: release must capture
+    commission and net against ``target_gross_ngwee`` only, never the original
+    order gross. Integer floor with last-line remainder absorption.
+    """
+    if target_gross_ngwee <= 0:
+        return {"lines": []}
+    lines = parse_snapshot_lines(snapshot)
+    if not lines:
+        return {"lines": []}
+    if original_gross_ngwee <= 0 or target_gross_ngwee >= original_gross_ngwee:
+        return {"lines": [dict(line) for line in lines]}
+
+    scaled: list[dict[str, Any]] = []
+    allocated = 0
+    last_index = len(lines) - 1
+    for index, line in enumerate(lines):
+        line_total = int(line.get("line_total_ngwee", 0))
+        if index == last_index:
+            new_total = max(0, target_gross_ngwee - allocated)
+        else:
+            new_total = (line_total * target_gross_ngwee) // original_gross_ngwee
+            allocated += new_total
+        scaled.append({**line, "line_total_ngwee": new_total})
+    return {"lines": scaled}
+
+
 ACTIVE_REFUND_STATUSES = frozenset({"pending", "processing", "completed"})
 
 REFUND_LEDGER_KINDS = frozenset({"refund_lane1", "refund_lane2"})
@@ -202,12 +237,48 @@ WHERE order_id = {order_sql}
     return _require_count_row(result, error_code="refund_lookup_failed") > 0
 
 
+def remaining_escrow_ngwee(order_id: str) -> int:
+    """Escrow still held after charge − commission − release − refund drains."""
+    summary = summarize_order_release_ledger(order_id)
+    return (
+        summary.charge_received_ngwee
+        - summary.commission_captured_ngwee
+        - summary.vendor_released_ngwee
+        - summary.refund_drained_ngwee
+    )
+
+
+def order_has_refund_remainder(order_id: str) -> bool:
+    """True when a partial PRE_RELEASE refund left escrow for the vendor.
+
+    Requires a refund ledger drain (not merely a refunds row) and positive
+    remaining escrow. Full-order refunds and in-flight refunds with no ledger
+    yet stay blocked.
+    """
+    summary = summarize_order_release_ledger(order_id)
+    remaining = (
+        summary.charge_received_ngwee
+        - summary.commission_captured_ngwee
+        - summary.vendor_released_ngwee
+        - summary.refund_drained_ngwee
+    )
+    return summary.refund_drained_ngwee > 0 and remaining > 0
+
+
 def order_is_refund_blocked(order_id: str) -> bool:
     """True when an active refund row or refund ledger drain blocks vendor release.
 
+    Partial item-scoped PRE_RELEASE refunds drain only the returned slice; the
+    remainder must still release to the vendor. Full refunds (remaining ≤ 0) and
+    refund-in-flight with no ledger drain yet stay blocked.
+
     Propagates ``ReleaseAccountingError`` on lookup failure (fail-closed).
     """
-    return order_has_active_refund(order_id) or order_has_refund_ledger(order_id)
+    if not (order_has_active_refund(order_id) or order_has_refund_ledger(order_id)):
+        return False
+    if order_has_refund_remainder(order_id):
+        return False
+    return True
 
 
 def order_has_open_dispute(order_id: str) -> bool:

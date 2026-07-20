@@ -19,7 +19,10 @@ from app.services.escrow.release_accounting import (
     ReleaseAccountingError,
     compute_release_amounts,
     order_has_open_dispute,
+    order_has_refund_remainder,
     release_blocked_reason,
+    remaining_escrow_ngwee,
+    scale_commission_snapshot_for_gross,
 )
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
@@ -396,6 +399,26 @@ def evaluate_and_release(
             rule=rule,
         )
 
+    # Partial item PRE_RELEASE refunds drain only the returned slice; release the
+    # remaining escrow (never the original full-order gross) so kept items reach
+    # the vendor. Full refunds leave remaining ≤ 0 and stay blocked above.
+    release_gross_ngwee = context.gross_ngwee
+    release_snapshot = context.commission_snapshot
+    if order_has_refund_remainder(order_id):
+        remaining = remaining_escrow_ngwee(order_id)
+        if remaining <= 0:
+            return ReleaseResult(
+                order_id=order_id,
+                outcome="not_eligible",
+                reason="order_refunded",
+            )
+        release_gross_ngwee = remaining
+        release_snapshot = scale_commission_snapshot_for_gross(
+            context.commission_snapshot,
+            target_gross_ngwee=remaining,
+            original_gross_ngwee=context.gross_ngwee,
+        )
+
     # Capture platform commission from the immutable purchase-time snapshot BEFORE
     # releasing the vendor's net (mirrors COD capture-then-release). With PR #274
     # posting CHARGE_RECEIVED at collection, escrow holds the full gross; this
@@ -407,8 +430,8 @@ def evaluate_and_release(
     try:
         amounts = compute_release_amounts(
             order_id=order_id,
-            gross_ngwee=context.gross_ngwee,
-            commission_snapshot=context.commission_snapshot,
+            gross_ngwee=release_gross_ngwee,
+            commission_snapshot=release_snapshot,
         )
     except ReleaseAccountingError:
         return ReleaseResult(
@@ -436,7 +459,7 @@ def evaluate_and_release(
 
     capture_order_commission(
         order_id=order_id,
-        commission_snapshot=context.commission_snapshot,
+        commission_snapshot=release_snapshot,
         idempotency_key_prefix=release_idempotency_key(order_id),
     )
     transaction_id = _post_release(
