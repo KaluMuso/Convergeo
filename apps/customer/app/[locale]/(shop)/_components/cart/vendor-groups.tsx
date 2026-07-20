@@ -263,6 +263,8 @@ function CartLoadError({
         variant="primary"
         size="md"
         className="w-fit"
+        loading={false}
+        loadingLabel={labels.loadErrorRetry}
         data-testid="cart-load-error-retry"
         onClick={onRetry}
       >
