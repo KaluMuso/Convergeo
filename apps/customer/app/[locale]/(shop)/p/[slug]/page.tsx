@@ -32,6 +32,7 @@ import {
 } from "../../_components/pdp/fetch-product";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
+import { RecordRecentlyViewed } from "../../_components/recently-viewed/record-recently-viewed";
 
 import {
   ReviewsSection,
@@ -512,6 +513,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
       {productJsonLd ? <JsonLdScript data={productJsonLd} /> : null}
       <JsonLdScript data={breadcrumbJsonLd} />
       <ProductViewTracker productId={product.id} listingId={selectedListing?.id} />
+      <RecordRecentlyViewed slug={product.slug} name={product.name} />
 
       <header className="flex flex-col gap-2">
         {product.brand ? (

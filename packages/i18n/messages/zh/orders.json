@@ -13,7 +13,9 @@
     "viewOrder": "查看订单",
     "status": "状态：{status}",
     "paymentCod": "货到付款",
-    "paymentPrepaid": "已预付"
+    "paymentPrepaid": "已预付",
+    "paymentPending": "付款待确认",
+    "paymentPendingHint": "付款尚未确认 — 这不是已完成的已付订单。"
   },
   "detail": {
     "title": "订单详情",

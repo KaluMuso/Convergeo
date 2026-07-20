@@ -13,7 +13,9 @@
     "viewOrder": "View order",
     "status": "Status: {status}",
     "paymentCod": "Pay on delivery",
-    "paymentPrepaid": "Paid upfront"
+    "paymentPrepaid": "Paid upfront",
+    "paymentPending": "Payment pending",
+    "paymentPendingHint": "Payment is not confirmed yet — this is not a completed paid order."
   },
   "detail": {
     "title": "Order details",

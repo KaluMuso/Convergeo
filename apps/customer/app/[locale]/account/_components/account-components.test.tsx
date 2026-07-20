@@ -168,7 +168,7 @@ describe("ProfileForm locale switch", () => {
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => {
-      expect(assign).toHaveBeenCalledWith("/bem/account");
+      expect(assign).toHaveBeenCalledWith("/bem/account/profile");
     });
   });
 });
