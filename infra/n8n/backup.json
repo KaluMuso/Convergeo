@@ -1,0 +1,107 @@
+{
+  "name": "Nightly Database Backup",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-backup",
+      "name": "Daily At 02:00 Lusaka",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "command": "cd /home/opc/vergeo5/infra && set -a && . ./.env && set +a && export BACKUP_RETENTION_DAYS=14 && bash scripts/db-dump.sh"
+      },
+      "id": "run-db-dump",
+      "name": "Run db-dump.sh",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [520, 300],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 300000
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.WHATSAPP_CLOUD_API_TOKEN}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{$env.FOUNDER_WHATSAPP_TO}}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"ops_uptime_alert\",\n    \"language\": { \"code\": \"en\" },\n    \"components\": [\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          { \"type\": \"text\", \"text\": \"DB backup FAILED\" },\n          { \"type\": \"text\", \"text\": \"Check: docker compose logs n8n; ssh VM and run scripts/db-dump.sh manually\" },\n          { \"type\": \"text\", \"text\": \"{{$now}}\" }\n        ]\n      }\n    ]\n  }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "backup-failure-alert",
+      "name": "Page Founder On Failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [780, 420]
+    }
+  ],
+  "connections": {
+    "Daily At 02:00 Lusaka": {
+      "main": [
+        [
+          {
+            "node": "Run db-dump.sh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run db-dump.sh": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Page Founder On Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Africa/Lusaka"
+  },
+  "versionId": "vd-p04-backup",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "M15",
+      "createdAt": "2026-07-20T00:00:00.000Z",
+      "updatedAt": "2026-07-20T00:00:00.000Z"
+    }
+  ]
+}

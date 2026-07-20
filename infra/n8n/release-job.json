@@ -47,7 +47,10 @@
           "id": "REPLACE_WITH_CREDENTIAL_ID",
           "name": "Vergeo5 Internal Release Job"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     }
   ],
   "connections": {
