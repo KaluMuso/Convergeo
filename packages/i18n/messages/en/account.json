@@ -1,11 +1,18 @@
 {
   "title": "My account",
   "nav": {
-    "profile": "Profile",
+    "overview": "Overview",
+    "orders": "Orders",
+    "tickets": "Tickets",
+    "jobs": "Jobs",
+    "saved": "Saved",
     "addresses": "Addresses",
     "preferences": "Preferences",
+    "profile": "Profile",
     "privacy": "Data & privacy",
-    "business": "Business mode"
+    "business": "Business mode",
+    "signOut": "Sign out",
+    "signingOut": "Signing out…"
   },
   "business": {
     "title": "Business mode",
@@ -166,5 +173,62 @@
     "nya": "Nyanja",
     "fr": "French",
     "zh": "Chinese"
+  },
+  "hub": {
+    "title": "Account overview",
+    "description": "Manage orders, saved products, delivery details, and how Vergeo5 looks on your device.",
+    "backToShop": "Back to shopping",
+    "ordersTitle": "Orders",
+    "ordersBody": "Track delivery, pickup, and payment status for each seller.",
+    "ordersCta": "View orders",
+    "savedTitle": "Saved items",
+    "savedEmpty": "No saved products on this device yet.",
+    "savedCount": "{count} saved on this device",
+    "savedCta": "Open saved items",
+    "recentTitle": "Recently viewed",
+    "recentEmpty": "Products you view will appear here on this device.",
+    "recentCta": "Manage history",
+    "addressesTitle": "Addresses",
+    "addressesBody": "Landmarks and GPS pins for faster checkout.",
+    "addressesCta": "Manage addresses",
+    "preferencesTitle": "Preferences",
+    "preferencesBody": "Theme (system, light, dark) and notification choices.",
+    "preferencesCta": "Open preferences",
+    "helpTitle": "Help",
+    "helpBody": "Guides for orders, payments, and account questions.",
+    "helpCta": "Visit help centre",
+    "deviceNote": "Saved items and recently viewed stay on this device unless you clear them. They are not a stock or price hold."
+  },
+  "saved": {
+    "title": "Saved items",
+    "description": "Products you hearted while browsing. Available on this device.",
+    "disclaimer": "Saving an item does not reserve stock or lock the price.",
+    "emptyTitle": "Nothing saved yet",
+    "emptyBody": "Tap the heart on a product to save it for later on this device.",
+    "browseCta": "Browse products",
+    "loading": "Loading saved items…",
+    "loadError": "Could not load this product. Try again or remove it.",
+    "remove": "Remove",
+    "removeLabel": "Remove {name} from saved items",
+    "moveToCart": "Move to cart",
+    "movingToCart": "Adding to cart…",
+    "viewProduct": "View product",
+    "unavailable": "No longer available",
+    "outOfStock": "Currently out of stock",
+    "fromPrice": "From {price}",
+    "signedOutNote": "You can save items without signing in. Sign in to manage orders and addresses."
+  },
+  "recent": {
+    "title": "Recently viewed",
+    "description": "A short history of products opened on this device.",
+    "privacyNote": "Stored only in this browser. Not synced across devices. Clear anytime.",
+    "emptyTitle": "No recent products",
+    "emptyBody": "Open a product page and it will show up here.",
+    "browseCta": "Start browsing",
+    "clear": "Clear history",
+    "clearing": "Clearing…",
+    "remove": "Remove",
+    "removeLabel": "Remove {name} from recently viewed",
+    "viewProduct": "View"
   }
 }

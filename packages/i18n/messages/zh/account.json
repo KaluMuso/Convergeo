@@ -1,11 +1,18 @@
 {
   "title": "我的账户",
   "nav": {
-    "profile": "个人资料",
+    "overview": "概览",
+    "orders": "订单",
+    "tickets": "门票",
+    "jobs": "服务请求",
+    "saved": "收藏",
     "addresses": "地址",
     "preferences": "偏好设置",
+    "profile": "个人资料",
     "privacy": "数据与隐私",
-    "business": "企业模式"
+    "business": "企业模式",
+    "signOut": "退出登录",
+    "signingOut": "正在退出…"
   },
   "business": {
     "title": "企业模式",
@@ -166,5 +173,62 @@
     "nya": "尼扬贾语",
     "fr": "法语",
     "zh": "中文"
+  },
+  "hub": {
+    "title": "账户概览",
+    "description": "管理订单、收藏商品、配送信息以及 Vergeo5 的显示方式。",
+    "backToShop": "返回购物",
+    "ordersTitle": "订单",
+    "ordersBody": "跟踪每位卖家的配送、自提与付款状态。",
+    "ordersCta": "查看订单",
+    "savedTitle": "收藏商品",
+    "savedEmpty": "此设备上还没有收藏。",
+    "savedCount": "此设备上有 {count} 件收藏",
+    "savedCta": "打开收藏",
+    "recentTitle": "最近浏览",
+    "recentEmpty": "您浏览的商品会显示在此设备上。",
+    "recentCta": "管理历史",
+    "addressesTitle": "地址",
+    "addressesBody": "地标与 GPS，结账更快。",
+    "addressesCta": "管理地址",
+    "preferencesTitle": "偏好设置",
+    "preferencesBody": "主题（跟随系统 / 浅色 / 深色）与通知。",
+    "preferencesCta": "打开偏好",
+    "helpTitle": "帮助",
+    "helpBody": "订单、付款与账户相关指南。",
+    "helpCta": "帮助中心",
+    "deviceNote": "收藏与最近浏览保存在此设备，可随时清除。不代表锁库存或锁价。"
+  },
+  "saved": {
+    "title": "收藏商品",
+    "description": "浏览时收藏的商品，保存在此设备。",
+    "disclaimer": "收藏不会预留库存或锁定价格。",
+    "emptyTitle": "还没有收藏",
+    "emptyBody": "在商品上点亮心形，即可在此设备保存。",
+    "browseCta": "浏览商品",
+    "loading": "正在加载收藏…",
+    "loadError": "无法加载该商品。请重试或移除。",
+    "remove": "移除",
+    "removeLabel": "将 {name} 移出收藏",
+    "moveToCart": "加入购物车",
+    "movingToCart": "正在加入购物车…",
+    "viewProduct": "查看商品",
+    "unavailable": "已不可用",
+    "outOfStock": "暂时缺货",
+    "fromPrice": "起价 {price}",
+    "signedOutNote": "未登录也可收藏。登录后可管理订单与地址。"
+  },
+  "recent": {
+    "title": "最近浏览",
+    "description": "此设备上打开过的商品简短记录。",
+    "privacyNote": "仅保存在本浏览器，不同步到其他设备，可随时清除。",
+    "emptyTitle": "没有最近浏览",
+    "emptyBody": "打开商品页后会显示在这里。",
+    "browseCta": "开始浏览",
+    "clear": "清除历史",
+    "clearing": "正在清除…",
+    "remove": "移除",
+    "removeLabel": "从最近浏览移除 {name}",
+    "viewProduct": "查看"
   }
 }

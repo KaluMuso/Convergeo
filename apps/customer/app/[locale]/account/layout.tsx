@@ -1,4 +1,5 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
@@ -35,19 +36,32 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
   const t = createTranslator({ locale, messages, namespace: "account" });
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-8">
-      <header className="mb-2">
+    <div className="mx-auto w-full max-w-3xl px-4 py-8">
+      <header className="mb-2 flex flex-wrap items-end justify-between gap-3">
         <h1 className="font-display text-h1 text-display-ink">{t("title")}</h1>
+        <Link
+          href={`/${locale}`}
+          className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+        >
+          {t("hub.backToShop")}
+        </Link>
       </header>
       <AccountNav
         locale={locale}
         labels={{
           ariaLabel: t("title"),
-          profile: t("nav.profile"),
+          overview: t("nav.overview"),
+          orders: t("nav.orders"),
+          tickets: t("nav.tickets"),
+          jobs: t("nav.jobs"),
+          saved: t("nav.saved"),
           addresses: t("nav.addresses"),
           preferences: t("nav.preferences"),
+          profile: t("nav.profile"),
           business: t("nav.business"),
           privacy: t("nav.privacy"),
+          signOut: t("nav.signOut"),
+          signingOut: t("nav.signingOut"),
         }}
       />
       {children}

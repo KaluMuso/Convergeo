@@ -13,7 +13,9 @@
     "viewOrder": "Voir la commande",
     "status": "Statut : {status}",
     "paymentCod": "Paiement à la livraison",
-    "paymentPrepaid": "Payé d'avance"
+    "paymentPrepaid": "Payé d'avance",
+    "paymentPending": "Paiement en attente",
+    "paymentPendingHint": "Le paiement n’est pas encore confirmé — ce n’est pas une commande payée."
   },
   "detail": {
     "title": "Détails de la commande",
