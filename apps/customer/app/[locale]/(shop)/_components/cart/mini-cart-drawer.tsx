@@ -155,7 +155,9 @@ async function loadCartWithNotices(): Promise<{ cart: CartResponse; notices: Cha
 let storeState: CartStoreState = {
   cart: null,
   notices: [],
-  loading: false,
+  // Start loading so the cart page does not flash an empty state before the
+  // first refresh completes (empty vs load-error must stay distinct).
+  loading: true,
   loadError: false,
   drawerOpen: false,
   lastAddedMessage: null,
