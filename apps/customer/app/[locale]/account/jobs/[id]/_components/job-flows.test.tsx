@@ -6,13 +6,13 @@ import userEvent from "@testing-library/user-event";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import type { ReactNode } from "react";
+
 import servicesMessages from "../../../../../../../../packages/i18n/messages/en/services.json";
-import { canAcceptQuote, shouldShowCompletion } from "./job-status";
 
 import { AcceptFlow, previewDepositNgwee } from "./accept-flow";
 import { CompleteConfirm } from "./complete-confirm";
-
-import type { ReactNode } from "react";
+import { canAcceptQuote, shouldShowCompletion } from "./job-status";
 
 const mocks = vi.hoisted(() => ({
   request: vi.fn(),
