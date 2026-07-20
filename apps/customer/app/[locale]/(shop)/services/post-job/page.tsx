@@ -49,10 +49,10 @@ export default async function PostJobPage({ params, searchParams }: PageProps) {
   const servicesMessages = await loadNamespace(locale as Locale, "services");
 
   return (
-    <main className="px-4 py-6 lg:mx-auto lg:w-full lg:max-w-2xl">
+    <div className="py-6 lg:mx-auto lg:w-full lg:max-w-2xl">
       <NextIntlClientProvider locale={locale} messages={{ services: servicesMessages }}>
         <PostJobForm locale={locale} initialCategory={category} />
       </NextIntlClientProvider>
-    </main>
+    </div>
   );
 }

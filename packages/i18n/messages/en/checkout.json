@@ -45,7 +45,15 @@
     "noticePriceChanged": "Price updated from {oldPrice} to {newPrice}",
     "noticeOutOfStock": "This item is now out of stock",
     "noticeQtyReduced": "Only {available} left — quantity adjusted from {requested}",
-    "outOfStockLine": "Out of stock"
+    "outOfStockLine": "Out of stock",
+    "loadErrorTitle": "Could not load your cart",
+    "loadErrorBody": "Check your connection and try again. Your items are not lost.",
+    "loadErrorRetry": "Retry",
+    "multiSellerNote": "Items from different sellers may have different delivery or pickup options. Each seller is checked out with its own fulfilment choice.",
+    "escrowTeaser": "When you pay online, Vergeo5 holds your money until delivery — then releases it to the seller.",
+    "stockUnavailableNotice": "An item is no longer available. Review your cart before continuing to checkout.",
+    "summaryHeading": "Order summary",
+    "sellerIndex": "Seller {index} of {total}"
   },
   "checkout": {
     "pageTitle": "Checkout",
@@ -135,7 +143,13 @@
       "codRejected": "Cash on delivery is not available for this order total",
       "railRejected": "That mobile money network is not supported",
       "error": "Could not save your payment method. Try again.",
-      "paymentsDisabled": "Online payment is temporarily unavailable. Please use Cash on Delivery where available, or try again shortly."
+      "paymentsDisabled": "Online payment is temporarily unavailable. Please use Cash on Delivery where available, or try again shortly.",
+      "momoHelp": "Approve a USSD prompt on your phone. Funds are held by Vergeo5 until delivery.",
+      "cardHelp": "Pay on Lenco’s secure page. Vergeo5 never sees your card details.",
+      "codHelp": "Pay cash to the courier on delivery for eligible orders.",
+      "codUnavailableTitle": "Cash on delivery unavailable",
+      "selected": "Selected",
+      "unavailable": "Unavailable"
     },
     "review": {
       "title": "Review your order",
@@ -159,7 +173,13 @@
       "consentLabel": "I agree to the Terms & Conditions and Privacy Policy",
       "consentRequired": "Accept the Terms & Conditions to continue",
       "placeOrder": "Place order",
-      "loading": "Please wait…"
+      "loading": "Please wait…",
+      "placingOrder": "Placing your order…",
+      "placeOrderUnavailable": "Order placement is temporarily unavailable. Your payment method is saved — try again shortly or contact support if this continues.",
+      "whatHappensNext": "What happens next",
+      "nextMomo": "You’ll get a USSD prompt on your phone. Approve it to start payment — the order is not confirmed until we verify approval.",
+      "nextCard": "You’ll continue on Lenco’s secure page. Do not close that page until payment finishes.",
+      "nextCod": "Your order is placed for cash on delivery. Pay the courier when the order arrives — online payment is not taken now."
     },
     "pending": {
       "pageTitle": "Approve payment",

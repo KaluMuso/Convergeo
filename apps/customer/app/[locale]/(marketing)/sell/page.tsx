@@ -87,7 +87,7 @@ export default async function SellPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         type="application/ld+json"
       />
-      <main>
+      <main id="marketing-main">
         <Hero locale={locale} t={t} />
         <CommissionTable t={t} />
         <HowItWorks t={t} />

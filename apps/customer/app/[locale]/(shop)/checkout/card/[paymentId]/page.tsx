@@ -288,7 +288,7 @@ export default function CardCheckoutPage() {
   })();
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-8">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-6 py-8">
       <header className="space-y-2 text-center">
         <h1 className="font-display text-h1 text-display-ink">{title}</h1>
         <p className="font-body text-sm text-text-2">{t("subtitle")}</p>
@@ -339,6 +339,6 @@ export default function CardCheckoutPage() {
           {t("verifying")}
         </button>
       ) : null}
-    </main>
+    </div>
   );
 }

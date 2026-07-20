@@ -6,7 +6,7 @@ import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
 import { Radio } from "@vergeo/ui/src/radio";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import {
   DEFAULT_COUNTRY_CODE,
@@ -25,6 +25,9 @@ export type PaymentStepLabels = {
   momo: string;
   card: string;
   cod: string;
+  momoHelp: string;
+  cardHelp: string;
+  codHelp: string;
   railMtn: string;
   railAirtel: string;
   payerLabel: string;
@@ -34,6 +37,9 @@ export type PaymentStepLabels = {
   nationalNumber: string;
   cardExplainer: string;
   codIneligible: (cap: string) => string;
+  codUnavailableTitle: string;
+  selected: string;
+  unavailable: string;
   continue: string;
   loading: string;
   required: string;
@@ -69,6 +75,22 @@ type StepPaymentProps = {
   onComplete: (payment: ValidatedPayment, options: PaymentOptions) => void;
 };
 
+function MethodOption({ selected, children }: { selected: boolean; children: ReactNode }) {
+  return (
+    <div
+      className={[
+        "rounded-card border p-4 transition-[border-color,background-color] duration-fast ease-std motion-reduce:transition-none",
+        selected
+          ? "border-primary bg-primary/5"
+          : "border-border bg-surface hover:border-primary/50",
+      ].join(" ")}
+      data-selected={selected ? "true" : "false"}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function StepPayment({
   locale,
   sessionId,
@@ -76,6 +98,8 @@ export function StepPayment({
   labels,
   onComplete,
 }: StepPaymentProps) {
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
+  const groupLabelId = useId();
   const [options, setOptions] = useState<PaymentOptions | null>(null);
   const [method, setMethod] = useState<PaymentMethod>("momo");
   const [rail, setRail] = useState<MomoRail>("mtn");
@@ -117,6 +141,16 @@ export function StepPayment({
       cancelled = true;
     };
   }, [accessToken, labels.error, method, sessionId]);
+
+  useEffect(() => {
+    if (!errorMessage) {
+      return;
+    }
+    const node = errorRef.current;
+    if (node && typeof node.scrollIntoView === "function") {
+      node.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [errorMessage]);
 
   const handleSubmit = async () => {
     setErrorMessage(null);
@@ -209,42 +243,98 @@ export function StepPayment({
   return (
     <div className="space-y-5">
       <div className="space-y-1">
-        <h2 className="font-display text-h2 text-display-ink">{labels.title}</h2>
+        <h2 id={groupLabelId} className="font-display text-h2 text-display-ink">
+          {labels.title}
+        </h2>
         <p className="font-body text-sm text-text-2">{labels.subtitle}</p>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Radio
-          name="payment-method"
-          label={labels.momo}
-          checked={method === "momo"}
-          onChange={() => {
-            setMethod("momo");
-            setErrorMessage(null);
-          }}
-        />
-        <Radio
-          name="payment-method"
-          label={labels.card}
-          checked={method === "card"}
-          onChange={() => {
-            setMethod("card");
-            setErrorMessage(null);
-          }}
-        />
+      <div
+        role="radiogroup"
+        aria-labelledby={groupLabelId}
+        className="flex flex-col gap-3"
+        data-testid="checkout-payment-methods"
+      >
+        <MethodOption selected={method === "momo"}>
+          <div className="flex items-start justify-between gap-3">
+            <Radio
+              name="payment-method"
+              label={labels.momo}
+              checked={method === "momo"}
+              onChange={() => {
+                setMethod("momo");
+                setErrorMessage(null);
+              }}
+            />
+            {method === "momo" ? (
+              <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-surface">
+                {labels.selected}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.momoHelp}</p>
+        </MethodOption>
+
+        <MethodOption selected={method === "card"}>
+          <div className="flex items-start justify-between gap-3">
+            <Radio
+              name="payment-method"
+              label={labels.card}
+              checked={method === "card"}
+              onChange={() => {
+                setMethod("card");
+                setErrorMessage(null);
+              }}
+            />
+            {method === "card" ? (
+              <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-surface">
+                {labels.selected}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.cardHelp}</p>
+        </MethodOption>
+
         {options.cod_eligible ? (
-          <Radio
-            name="payment-method"
-            label={labels.cod}
-            checked={method === "cod"}
-            onChange={() => {
-              setMethod("cod");
-              setErrorMessage(null);
-            }}
-          />
+          <MethodOption selected={method === "cod"}>
+            <div className="flex items-start justify-between gap-3">
+              <Radio
+                name="payment-method"
+                label={labels.cod}
+                checked={method === "cod"}
+                onChange={() => {
+                  setMethod("cod");
+                  setErrorMessage(null);
+                }}
+              />
+              {method === "cod" ? (
+                <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-surface">
+                  {labels.selected}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 pl-8 font-body text-sm text-text-2">{labels.codHelp}</p>
+          </MethodOption>
         ) : (
-          <div className="rounded-md bg-bg-2 px-3 py-2">
-            <p className="font-body text-sm text-text-3">{labels.codIneligible(codCapFormatted)}</p>
+          <div
+            className="rounded-card border border-dashed border-border bg-bg-2 p-4"
+            data-testid="checkout-cod-unavailable"
+            aria-disabled="true"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-body text-sm font-semibold text-text-3">{labels.cod}</p>
+                <p className="mt-1 font-body text-sm font-medium text-text">
+                  {labels.codUnavailableTitle}
+                </p>
+                <p className="mt-1 font-body text-sm text-text-3">
+                  {labels.codIneligible(codCapFormatted)}
+                </p>
+              </div>
+              <span className="shrink-0 rounded-full bg-surface px-2 py-0.5 text-xs font-medium text-text-3">
+                {labels.unavailable}
+              </span>
+            </div>
           </div>
         )}
       </div>
@@ -311,6 +401,7 @@ export function StepPayment({
 
       {errorMessage && method !== "momo" ? (
         <p
+          ref={errorRef}
           role="alert"
           className="font-body text-sm text-danger"
           data-testid="checkout-payment-error"
@@ -319,12 +410,17 @@ export function StepPayment({
         </p>
       ) : null}
 
+      {errorMessage && method === "momo" ? (
+        <span ref={errorRef} className="sr-only" aria-hidden="true" />
+      ) : null}
+
       <Button
         type="button"
         size="lg"
         className="w-full"
         loading={loading}
         loadingLabel={labels.loading}
+        disabled={loading}
         onClick={() => {
           void handleSubmit();
         }}

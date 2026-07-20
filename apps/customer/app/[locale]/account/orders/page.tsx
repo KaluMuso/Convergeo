@@ -100,8 +100,24 @@ export default async function AccountOrdersPage({ params }: PageProps) {
                     <p className="text-xs text-text-2">
                       {order.payment_mode === "cod"
                         ? t("list.paymentCod")
-                        : t("list.paymentPrepaid")}
+                        : order.paid
+                          ? t("list.paymentPrepaid")
+                          : t("list.paymentPending")}
                     </p>
+                    {!order.paid && order.payment_mode === "prepaid" ? (
+                      <p
+                        className="text-xs font-medium text-warning"
+                        role="status"
+                        data-testid={`order-payment-pending-${order.id}`}
+                      >
+                        {t("list.paymentPendingHint")}
+                      </p>
+                    ) : null}
+                    {order.status === "cancelled" ? (
+                      <p className="text-xs font-medium text-danger" role="status">
+                        {t("status.cancelled")}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
                     <p className="font-mono text-sm text-display-ink">

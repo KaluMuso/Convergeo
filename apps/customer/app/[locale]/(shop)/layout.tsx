@@ -96,6 +96,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         }
         cartIcon={<IconCart />}
         cartLabel={t("home.nav.cart")}
+        cartWithCountLabel={t("home.nav.cartWithCount")}
         skipLinkTargetId="shop-main"
         skipLinkLabel={tCommon("nav.skipToContent")}
         navAriaLabel={t("home.nav.ariaLabel")}
@@ -120,6 +121,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           askVergeo: t("home.nav.askVergeo"),
           account: t("home.nav.account"),
           cart: t("home.nav.cart"),
+          cartWithCount: t("home.nav.cartWithCount"),
         }}
       />
       <main

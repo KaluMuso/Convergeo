@@ -6,7 +6,7 @@ import { ProductCard } from "@vergeo/ui/src/product-card";
 import { Tabs } from "@vergeo/ui/src/tabs";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useLocalWishlist } from "../plp/use-local-wishlist";
 import {
@@ -194,6 +194,16 @@ function SearchProductCard({
   const slug = typeof hit.slug === "string" && hit.slug.trim() ? hit.slug : null;
   const { isWishlisted, toggleWishlist, enabled } = useLocalWishlist(slug);
   const wishlistLabel = isWishlisted ? labels.wishlistRemove : labels.wishlist;
+  const [wishlistStatusAnnouncement, setWishlistStatusAnnouncement] = useState("");
+  const wishlistMountedRef = useRef(false);
+
+  useEffect(() => {
+    if (!wishlistMountedRef.current) {
+      wishlistMountedRef.current = true;
+      return;
+    }
+    setWishlistStatusAnnouncement(wishlistLabel);
+  }, [isWishlisted, wishlistLabel]);
 
   const card = (
     <ProductCard
@@ -206,6 +216,7 @@ function SearchProductCard({
       reviewCountLabel={labels.reviewCount.replace("{count}", "0")}
       quickAddLabel=""
       wishlistLabel={wishlistLabel}
+      wishlistStatusAnnouncement={wishlistStatusAnnouncement}
       density="compact"
       mediaEmptyLabel={labels.mediaEmpty}
       isWishlisted={isWishlisted}

@@ -4,7 +4,11 @@ import "@testing-library/jest-dom/vitest";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { resetLocalWishlistStoreForTests, useLocalWishlist } from "./use-local-wishlist";
+import {
+  resetLocalWishlistStoreForTests,
+  useLocalWishlist,
+  useLocalWishlistSlugs,
+} from "./use-local-wishlist";
 
 afterEach(() => {
   cleanup();
@@ -46,5 +50,20 @@ describe("useLocalWishlist", () => {
       result.current.toggleWishlist();
     });
     expect(window.localStorage.getItem("vergeo5:wishlist:v1")).toBeNull();
+  });
+
+  it("lists and removes saved slugs for the wishlist page", () => {
+    const toggle = renderHook(() => useLocalWishlist("itel-a70"));
+    act(() => {
+      toggle.result.current.toggleWishlist();
+    });
+
+    const list = renderHook(() => useLocalWishlistSlugs());
+    expect(list.result.current.slugs).toContain("itel-a70");
+
+    act(() => {
+      list.result.current.remove("itel-a70");
+    });
+    expect(list.result.current.slugs).not.toContain("itel-a70");
   });
 });

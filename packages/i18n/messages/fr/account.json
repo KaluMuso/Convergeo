@@ -1,11 +1,18 @@
 {
   "title": "Mon compte",
   "nav": {
-    "profile": "Profil",
+    "overview": "Aperçu",
+    "orders": "Commandes",
+    "tickets": "Billets",
+    "jobs": "Demandes",
+    "saved": "Enregistrés",
     "addresses": "Adresses",
     "preferences": "Préférences",
+    "profile": "Profil",
     "privacy": "Données et confidentialité",
-    "business": "Mode entreprise"
+    "business": "Mode entreprise",
+    "signOut": "Se déconnecter",
+    "signingOut": "Déconnexion…"
   },
   "business": {
     "title": "Mode entreprise",
@@ -166,5 +173,62 @@
     "nya": "Nyanja",
     "fr": "Français",
     "zh": "Chinois"
+  },
+  "hub": {
+    "title": "Aperçu du compte",
+    "description": "Gérez commandes, produits enregistrés, livraison et l’affichage de Vergeo5.",
+    "backToShop": "Retour aux achats",
+    "ordersTitle": "Commandes",
+    "ordersBody": "Suivez livraison, retrait et paiement pour chaque vendeur.",
+    "ordersCta": "Voir les commandes",
+    "savedTitle": "Articles enregistrés",
+    "savedEmpty": "Aucun produit enregistré sur cet appareil.",
+    "savedCount": "{count} enregistrés sur cet appareil",
+    "savedCta": "Ouvrir les enregistrés",
+    "recentTitle": "Vus récemment",
+    "recentEmpty": "Les produits consultés apparaîtront ici sur cet appareil.",
+    "recentCta": "Gérer l’historique",
+    "addressesTitle": "Adresses",
+    "addressesBody": "Repères et GPS pour un paiement plus rapide.",
+    "addressesCta": "Gérer les adresses",
+    "preferencesTitle": "Préférences",
+    "preferencesBody": "Thème (système, clair, sombre) et notifications.",
+    "preferencesCta": "Ouvrir les préférences",
+    "helpTitle": "Aide",
+    "helpBody": "Guides pour commandes, paiements et compte.",
+    "helpCta": "Centre d’aide",
+    "deviceNote": "Les enregistrés et vus récemment restent sur cet appareil. Ce n’est pas une réserve de stock ni de prix."
+  },
+  "saved": {
+    "title": "Articles enregistrés",
+    "description": "Produits que vous avez mis en favori. Disponibles sur cet appareil.",
+    "disclaimer": "Enregistrer un article ne réserve ni le stock ni le prix.",
+    "emptyTitle": "Rien d’enregistré",
+    "emptyBody": "Appuyez sur le cœur d’un produit pour l’enregistrer sur cet appareil.",
+    "browseCta": "Parcourir les produits",
+    "loading": "Chargement…",
+    "loadError": "Impossible de charger ce produit. Réessayez ou retirez-le.",
+    "remove": "Retirer",
+    "removeLabel": "Retirer {name} des enregistrés",
+    "moveToCart": "Ajouter au panier",
+    "movingToCart": "Ajout au panier…",
+    "viewProduct": "Voir le produit",
+    "unavailable": "Plus disponible",
+    "outOfStock": "Rupture de stock",
+    "fromPrice": "À partir de {price}",
+    "signedOutNote": "Vous pouvez enregistrer sans connexion. Connectez-vous pour commandes et adresses."
+  },
+  "recent": {
+    "title": "Vus récemment",
+    "description": "Historique court des produits ouverts sur cet appareil.",
+    "privacyNote": "Stocké uniquement dans ce navigateur. Non synchronisé. Effacez à tout moment.",
+    "emptyTitle": "Aucun produit récent",
+    "emptyBody": "Ouvrez une fiche produit pour la voir ici.",
+    "browseCta": "Commencer",
+    "clear": "Effacer l’historique",
+    "clearing": "Effacement…",
+    "remove": "Retirer",
+    "removeLabel": "Retirer {name} des vus récemment",
+    "viewProduct": "Voir"
   }
 }

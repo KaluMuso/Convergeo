@@ -75,4 +75,13 @@ describe("Button", () => {
     await user.keyboard(" ");
     expect(onClick).toHaveBeenCalledTimes(2);
   });
+
+  it("keeps sm size at a 44px minimum touch target", () => {
+    render(
+      <Button size="sm" loadingLabel="loading.action">
+        action.sm
+      </Button>,
+    );
+    expect(screen.getByRole("button", { name: "action.sm" })).toHaveClass("min-h-11");
+  });
 });

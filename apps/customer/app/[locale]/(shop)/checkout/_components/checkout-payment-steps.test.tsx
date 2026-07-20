@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -18,6 +18,9 @@ const paymentLabels = {
   momo: checkoutMessages.checkout.payment.momo,
   card: checkoutMessages.checkout.payment.card,
   cod: checkoutMessages.checkout.payment.cod,
+  momoHelp: checkoutMessages.checkout.payment.momoHelp,
+  cardHelp: checkoutMessages.checkout.payment.cardHelp,
+  codHelp: checkoutMessages.checkout.payment.codHelp,
   railMtn: checkoutMessages.checkout.payment.railMtn,
   railAirtel: checkoutMessages.checkout.payment.railAirtel,
   payerLabel: checkoutMessages.checkout.payment.payerLabel,
@@ -28,6 +31,9 @@ const paymentLabels = {
   cardExplainer: checkoutMessages.checkout.payment.cardExplainer,
   codIneligible: (cap: string) =>
     checkoutMessages.checkout.payment.codIneligible.replace("{cap}", cap),
+  codUnavailableTitle: checkoutMessages.checkout.payment.codUnavailableTitle,
+  selected: checkoutMessages.checkout.payment.selected,
+  unavailable: checkoutMessages.checkout.payment.unavailable,
   continue: checkoutMessages.checkout.payment.continue,
   loading: checkoutMessages.checkout.payment.loading,
   required: checkoutMessages.checkout.payment.required,
@@ -62,6 +68,12 @@ const reviewLabels = {
   consentRequired: checkoutMessages.checkout.review.consentRequired,
   placeOrder: checkoutMessages.checkout.review.placeOrder,
   loading: checkoutMessages.checkout.review.loading,
+  placingOrder: checkoutMessages.checkout.review.placingOrder,
+  placeOrderUnavailable: checkoutMessages.checkout.review.placeOrderUnavailable,
+  whatHappensNext: checkoutMessages.checkout.review.whatHappensNext,
+  nextMomo: checkoutMessages.checkout.review.nextMomo,
+  nextCard: checkoutMessages.checkout.review.nextCard,
+  nextCod: checkoutMessages.checkout.review.nextCod,
 };
 
 const sampleSession: CheckoutSession = {
@@ -101,6 +113,13 @@ const totalsAboveCap: PaymentOptions = {
   cod_eligible: false,
 };
 
+const totalsCodEligible: PaymentOptions = {
+  ...totalsAboveCap,
+  total_ngwee: 40_000,
+  subtotal_ngwee: 40_000,
+  cod_eligible: true,
+};
+
 vi.mock("@vergeo/config", () => ({
   ApiError: class ApiError extends Error {
     code: string;
@@ -133,9 +152,29 @@ describe("StepPayment", () => {
 
     expect(await screen.findByText(checkoutMessages.checkout.payment.momo)).toBeInTheDocument();
     expect(screen.queryByLabelText(checkoutMessages.checkout.payment.cod)).not.toBeInTheDocument();
+    expect(screen.getByTestId("checkout-cod-unavailable")).toBeInTheDocument();
     expect(
       screen.getByText(checkoutMessages.checkout.payment.codIneligible.replace("{cap}", "K500.00")),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(checkoutMessages.checkout.payment.codUnavailableTitle),
+    ).toBeInTheDocument();
+  });
+
+  it("renders method help copy on selectable payment cards", async () => {
+    render(
+      <StepPayment
+        locale="en"
+        sessionId="session-1"
+        accessToken="token"
+        labels={paymentLabels}
+        onComplete={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByTestId("checkout-payment-methods")).toBeInTheDocument();
+    expect(screen.getByText(checkoutMessages.checkout.payment.momoHelp)).toBeInTheDocument();
+    expect(screen.getByText(checkoutMessages.checkout.payment.cardHelp)).toBeInTheDocument();
   });
 });
 
@@ -167,19 +206,74 @@ describe("StepReview", () => {
     expect(onPlaceOrder).toHaveBeenCalledTimes(1);
   });
 
-  it("shows escrow trust copy", () => {
+  it("prevents duplicate submission while place order is pending", async () => {
+    const user = userEvent.setup();
+    let resolveOrder: (() => void) | undefined;
+    const onPlaceOrder = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveOrder = resolve;
+        }),
+    );
+
     render(
       <StepReview
         locale="en"
         session={sampleSession}
         totals={totalsAboveCap}
+        payment={{ method: "card", rail: null, payer_number: null }}
+        labels={reviewLabels}
+        onPlaceOrder={onPlaceOrder}
+      />,
+    );
+
+    await user.click(screen.getByRole("checkbox", { name: reviewLabels.consentLabel }));
+    const placeOrderButton = screen.getByTestId("checkout-place-order");
+    await user.click(placeOrderButton);
+
+    expect(onPlaceOrder).toHaveBeenCalledTimes(1);
+    expect(placeOrderButton).toBeDisabled();
+
+    await user.click(placeOrderButton);
+    expect(onPlaceOrder).toHaveBeenCalledTimes(1);
+
+    resolveOrder?.();
+    await waitFor(() => expect(placeOrderButton).not.toBeDisabled());
+  });
+
+  it("shows honest unavailable state when place-order handler is missing", () => {
+    render(
+      <StepReview
+        locale="en"
+        session={sampleSession}
+        totals={totalsAboveCap}
+        payment={{ method: "momo", rail: "mtn", payer_number: "+260971234567" }}
+        labels={reviewLabels}
+      />,
+    );
+
+    expect(screen.getByTestId("checkout-place-order-unavailable")).toHaveTextContent(
+      checkoutMessages.checkout.review.placeOrderUnavailable,
+    );
+    expect(screen.getByTestId("checkout-place-order")).toBeDisabled();
+    expect(screen.getByText(checkoutMessages.checkout.review.nextMomo)).toBeInTheDocument();
+  });
+
+  it("shows escrow trust copy and COD next-step copy", () => {
+    render(
+      <StepReview
+        locale="en"
+        session={sampleSession}
+        totals={totalsCodEligible}
         payment={{ method: "cod", rail: null, payer_number: null }}
         labels={reviewLabels}
+        onPlaceOrder={vi.fn()}
       />,
     );
 
     expect(screen.getByText(checkoutMessages.checkout.review.escrowStep1)).toBeInTheDocument();
     expect(screen.getByText(checkoutMessages.checkout.review.escrowStep2)).toBeInTheDocument();
     expect(screen.getByText(checkoutMessages.checkout.review.escrowStep3)).toBeInTheDocument();
+    expect(screen.getByText(checkoutMessages.checkout.review.nextCod)).toBeInTheDocument();
   });
 });

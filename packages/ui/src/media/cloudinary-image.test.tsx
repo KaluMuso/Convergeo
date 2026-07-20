@@ -51,6 +51,22 @@ describe("CloudinaryImage", () => {
     expect(box).toHaveStyle({ aspectRatio: "4/3" });
   });
 
+  it("reserves intrinsic dimensions from width + ratio to reduce CLS", () => {
+    render(
+      <CloudinaryImage
+        publicId="product.jpg"
+        alt="Product"
+        width={360}
+        ratio="4/3"
+        cloudName="test-cloud"
+      />,
+    );
+
+    const img = screen.getByRole("img", { name: "Product" });
+    expect(img).toHaveAttribute("width", "360");
+    expect(img).toHaveAttribute("height", "270");
+  });
+
   it("reveals the image after load and shows a labelled fallback on error", () => {
     render(
       <CloudinaryImage

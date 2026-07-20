@@ -35,11 +35,11 @@ export default function AccountPrivacyPage() {
   }, []);
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-8 px-4 py-8">
+    <div className="flex w-full max-w-lg flex-col gap-8">
       <PrivacyIntro locale={locale} />
       <ExportSection locale={locale} />
       <DeleteSection locale={locale} />
-    </main>
+    </div>
   );
 }
 

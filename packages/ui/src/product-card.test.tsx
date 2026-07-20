@@ -89,6 +89,20 @@ describe("ProductCard", () => {
     expect(onWishlistToggle).toHaveBeenCalledTimes(1);
   });
 
+  it("announces wishlist status changes via a polite live region", () => {
+    render(
+      <ProductCard
+        {...baseProps}
+        onWishlistToggle={() => undefined}
+        isWishlisted
+        wishlistStatusAnnouncement="Saved to wishlist"
+      />,
+    );
+    const status = screen.getByTestId("product-card-wishlist-status");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveTextContent("Saved to wishlist");
+  });
+
   it("fits two cards in a 360px grid without horizontal overflow", () => {
     const { container } = render(
       <div

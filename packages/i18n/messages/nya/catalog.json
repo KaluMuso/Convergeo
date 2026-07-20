@@ -45,6 +45,7 @@
       "browse": "Yang'anani",
       "browseChipsAria": "Yang'anani ndi gawo",
       "cart": "Ngolo ya zinthu",
+      "cartWithCount": "Ngolo ya zinthu, zinthu {count}",
       "categoriesEmpty": "Ma-categories salipo pano. Yesaninso posachedwa.",
       "categoriesLoading": "Ikuyenda ma-categories…",
       "categoriesPanelAria": "Ma-categories onse",

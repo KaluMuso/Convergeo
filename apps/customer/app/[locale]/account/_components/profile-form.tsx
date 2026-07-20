@@ -55,7 +55,7 @@ export function ProfileForm({ locale, accessToken, initialProfile, labels }: Pro
       setStatus(labels.updated.replace("{name}", name));
 
       if (updated.locale !== locale) {
-        window.location.assign(`/${updated.locale}/account`);
+        window.location.assign(`/${updated.locale}/account/profile`);
         return;
       }
 
