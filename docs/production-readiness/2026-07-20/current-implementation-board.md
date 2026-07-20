@@ -23,9 +23,8 @@
 | Live `refunds.source_key`  | **Absent** — column missing; index still `refunds_order_id_active_uniq`                                                                |
 | Live money/KYC rows        | `payments=0`, `ledger_transactions=0`, `orders=0`, `kyc_records=0`                                                                     |
 | Live FORCE RLS             | `order_money_gates`/`payments`/`refunds` = true; **`ticket_type_instances` / `ticket_type_price_tiers` / `product_relations` = false** |
-| n8n live                   | **3 workflows**, all **inactive**: dispatch `sevKtX1AmimQCWsG`; recon bundle `C1MpTNjrfLACMG3f`; shared error alert `LVuHqWgT1tqjYOtc` |
-| Repo n8n JSON              | 19 files under `infra/n8n/*.json`; backup is `backup-schedule.md` only (no `backup.json`)                                              |
-| n8n fleet evidence         | `docs/production-readiness/2026-07-20/n8n-fleet-import-verify.md` — S4/G5/G21 remain **FAIL** (API 502; no money activation)           |
+| n8n live                   | **2 workflows**, both active: notification dispatch; payment reconciliation crons                                                      |
+| Repo n8n JSON              | 20 files under `infra/n8n/*.json` including `backup.json` (inactive; CODE_COMPLETE — G7 still needs live dump + restore)               |
 
 ### Critical migration collision (blocks naive “apply 0063”)
 
@@ -199,12 +198,13 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate / gap:** G7 / VD-P04 / BG-5
 - **Priority:** P0
-- **Status:** `REPO_CLOSABLE`
-- **Evidence:** `infra/n8n/backup-schedule.md` only; no `backup.json` among 19 JSONs
-- **Files likely:** `infra/n8n/backup.json`, `docs/ops/n8n-workflows.md`
-- **Deps:** DEP-03 import
-- **Acceptance:** importable workflow producing dated backup artifact per contract
-- **Verify:** n8n validate + dry execution
+- **Status:** `CODE_COMPLETE` (repo) / `DEPLOYMENT_REQUIRED` (live) — **not G7 PASS**
+- **Evidence:** `infra/n8n/backup.json` + enhanced `db-dump.sh` + watchdog; registry/runbook/restore-drill docs; validators green. Live OCI dated dump + timed restore still required for G7.
+- **Files:** `infra/n8n/backup.json`, `infra/scripts/db-dump.sh`, `infra/scripts/db-backup-watchdog.sh`, `docs/ops/n8n-workflows.md`, `docs/ops/backup-runbook.md`, `docs/ops/backup-restore-drill.md`
+- **Deps:** DEP-03 import + host SSH/OCI env
+- **Acceptance (repo):** importable workflow JSON + scripts + docs — **met as CODE_COMPLETE**
+- **Acceptance (G7):** dated OCI artifact + documented timed restore — **still open**
+- **Verify:** `bash scripts/ci/validate-backup-workflow.sh`; founder import + one dump object list
 - **Blocks browse-beta:** no · **real-money:** yes · **public_launch:** yes
 - **PR boundary:** `VD-P04` alone
 
