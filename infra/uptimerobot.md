@@ -1,4 +1,4 @@
-# UptimeRobot — Vergeo5 uptime monitoring (M16-P06)
+# UptimeRobot — Vergeo5 uptime monitoring (M16-P06 / Prompt 9)
 
 External black-box monitoring for the Vergeo5 surfaces. When a monitor trips, UptimeRobot
 POSTs to the n8n `uptime-alert` webhook, which pages the founder on WhatsApp
@@ -8,30 +8,26 @@ the paging rationale are in [`docs/ops/observability.md`](../docs/ops/observabil
 **Founder-gated:** creating the account + monitors and firing a real alert needs a live
 UptimeRobot account (free tier: 50 monitors, 5-min interval; Pro: 1-min). Nothing here is
 secret and nothing is committed as a credential — the webhook URL and any API key stay in
-the n8n environment only.
+the n8n / UptimeRobot environment only.
 
 ---
 
 ## Monitors
 
-| #   | Monitor         | Type            | Target                                              | Interval | Up =                                                |
-| --- | --------------- | --------------- | --------------------------------------------------- | -------- | --------------------------------------------------- |
-| 1   | API health      | HTTP(s) keyword | `https://api.vergeo5.com/health`                    | 1 min    | HTTP 200 + body contains `ok`                       |
-| 2   | Customer origin | HTTP(s)         | `https://vergeo5.com/en`                            | 1 min    | HTTP 200                                            |
-| 3   | Vendor origin   | HTTP(s)         | `https://vendor.vergeo5.com/en`                     | 1 min    | HTTP 200                                            |
-| 4   | Admin origin    | HTTP(s)         | `https://admin.vergeo5.com/en`                      | 5 min    | HTTP 200 / 401 (allowlist+Access may 401 the probe) |
-| 5   | Payment webhook | HTTP(s) keyword | `https://api.vergeo5.com/health` (webhook liveness) | 1 min    | HTTP 200                                            |
+| #   | Monitor                | Type            | Target                                 | Interval | Up =                          |
+| --- | ---------------------- | --------------- | -------------------------------------- | -------- | ----------------------------- |
+| 1   | Customer locale health | HTTP(s) keyword | `https://vergeo5.com/en/health`        | 1 min    | HTTP 200 + body contains `ok` |
+| 2   | Vendor locale health   | HTTP(s) keyword | `https://vendor.vergeo5.com/en/health` | 1 min    | HTTP 200 + body contains `ok` |
+| 3   | Admin locale health    | HTTP(s)         | `https://admin.vergeo5.com/en/health`  | 5 min    | HTTP 200 / 401 (Access/IP)    |
+| 4   | API healthz            | HTTP(s) keyword | `https://api.vergeo5.com/healthz`      | 1 min    | HTTP 200 + body contains `ok` |
+| 5   | API readyz             | HTTP(s) keyword | `https://api.vergeo5.com/readyz`       | 1 min    | HTTP 200 + body contains `ok` |
 
 Notes:
 
-- Monitor 1 uses the **keyword** type so a 200 with a broken body still counts as down.
-- Monitor 4 (admin) is IP-allowlisted behind Cloudflare Access, so a `401`/`403` from the
-  probe is expected and treated as "reachable"; only a timeout / 5xx is "down". Keep it at
-  a 5-min interval to avoid noise.
-- Monitor 5 watches the payment webhook path's liveness. The webhook itself is idempotent
-  and authenticated, so we monitor the API's health as its liveness proxy rather than
-  POSTing a fake payment. If a dedicated unauthenticated webhook-ping route is added later,
-  repoint this monitor at it.
+- Locale health routes return `{status, app, env, buildId}` — keyword `ok` catches broken bodies.
+- Admin may 401 under Cloudflare Access / IP allowlist; treat timeout/5xx as down.
+- `readyz` may return `status: degraded` with HTTP 200 when Supabase is slow — still "up"
+  for black-box paging; investigate via Sentry/logs separately.
 - "Down" for paging = **2 consecutive** failed checks (see error budget).
 
 ---
@@ -40,8 +36,11 @@ Notes:
 
 Add a single **Webhook** alert contact and attach it to every monitor above:
 
-- **URL:** `https://n8n.vergeo5.com/webhook/uptime-alert` (the n8n workflow's production path)
+- **URL:** `https://n8n.vergeo5.com/webhook/uptime-alert`
 - **Method:** `POST`, **JSON** payload (enable "Send as JSON").
+- **Custom HTTP header (required):**
+  - Name: `X-Uptime-Secret`
+  - Value: the same string as n8n `$env.UPTIME_WEBHOOK_SECRET` (never commit)
 - **POST value (JSON):**
 
   ```json
@@ -55,43 +54,37 @@ Add a single **Webhook** alert contact and attach it to every monitor above:
   ```
 
   UptimeRobot substitutes the `*...*` tokens. `alertType` is `1` for **down** and `2` for
-  **up**; the n8n workflow only pages on `1`.
+  **up**; the n8n workflow only pages on `1`, and only after the secret gate passes.
 
-- Enable the contact for **Down** and **Up** events (n8n filters; the "up" event lets you
-  extend the workflow with an all-clear later).
+- Enable the contact for **Down** and **Up** events (n8n filters).
 
 ---
 
 ## Setup transcript (founder, one-time)
 
 ```
-1. Sign up / log in at https://uptimerobot.com  (Pro plan for 1-min interval on 1,2,3,5).
+1. Sign up / log in at https://uptimerobot.com  (Pro plan for 1-min interval on 1,2,4,5).
 
-2. My Settings → API → create a Main API Key (store in the n8n env only, if used;
-   the webhook flow below needs no API key).
+2. Generate a high-entropy UPTIME_WEBHOOK_SECRET (openssl rand -hex 32).
+   Set it in n8n env AND in the UptimeRobot webhook contact header.
 
 3. My Settings → Alert Contacts → Add Alert Contact
      Type:            Webhook
      Friendly Name:   Vergeo5 n8n uptime-alert
      URL to Notify:   https://n8n.vergeo5.com/webhook/uptime-alert
+     Custom headers:  X-Uptime-Secret: <same as n8n env>
      POST value:      (the JSON block above)  ✅ Send as JSON
      → Save.
 
-4. Dashboard → + Add New Monitor  (repeat for each row in the Monitors table):
-     Monitor Type:        HTTP(s)   (or "Keyword" for #1 and #5, keyword = ok)
-     Friendly Name:       <e.g. "API health">
-     URL/IP:              <target from table>
-     Monitoring Interval: 1 minute (5 for admin)
-     Alert Contacts:      ☑ Vergeo5 n8n uptime-alert
-     → Create Monitor.
+4. Dashboard → + Add New Monitor  (repeat for each row in the Monitors table).
 
 5. In n8n, import infra/n8n/uptime-alert.json, set env
-   WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_CLOUD_API_TOKEN / FOUNDER_WHATSAPP_TO,
-   register the `ops_uptime_alert` WhatsApp template (founder action F5), then Activate.
+   UPTIME_WEBHOOK_SECRET / WHATSAPP_* / FOUNDER_WHATSAPP_TO,
+   register the `ops_uptime_alert` WhatsApp template (F5), then Activate.
 
-6. Verify: UptimeRobot → a monitor → "Test Notification" (or pause the API briefly).
-   Expect a WhatsApp message to the founder within ~2 minutes.
+6. Verify auth fail-closed: POST without header → no WhatsApp send.
+7. Verify: UptimeRobot → a monitor → "Test Notification" (or pause briefly).
+   Expect a WhatsApp message to the founder within ~2 minutes. Record latency.
 ```
 
-**DEFERRED-AC (founder-gated):** step 6 — a real trip firing a real WhatsApp page —
-requires the live UptimeRobot account + WhatsApp template and is verified by the founder.
+**DEFERRED-AC (founder-gated):** steps 6–7 require live UptimeRobot + WhatsApp template.

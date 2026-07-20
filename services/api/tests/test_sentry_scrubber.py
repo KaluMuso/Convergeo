@@ -39,6 +39,13 @@ def test_sensitive_keys_redacted_in_event() -> None:
                 "delivery_address": ADDRESS,
                 "user_email": EMAIL,
                 "access_token": BEARER,
+                "refresh_token": "rt_secret",
+                "cookie": "session=abc",
+                "service_role_key": "srk_live",
+                "x-lenco-signature": "deadbeef",
+                "webhook_signature": "sig",
+                "payment_payload": {"amount": 100},
+                "card_number": "4622943127013705",
                 "quantity": 3,
             }
         },
@@ -50,6 +57,13 @@ def test_sensitive_keys_redacted_in_event() -> None:
     assert data["delivery_address"] == REDACTED
     assert data["user_email"] == REDACTED
     assert data["access_token"] == REDACTED
+    assert data["refresh_token"] == REDACTED
+    assert data["cookie"] == REDACTED
+    assert data["service_role_key"] == REDACTED
+    assert data["x-lenco-signature"] == REDACTED
+    assert data["webhook_signature"] == REDACTED
+    assert data["payment_payload"] == REDACTED
+    assert data["card_number"] == REDACTED
     # Non-PII field untouched.
     assert data["quantity"] == 3
     assert scrubbed["user"]["id"] == "user-1"
@@ -57,7 +71,7 @@ def test_sensitive_keys_redacted_in_event() -> None:
     assert scrubbed["user"]["phone_number"] == REDACTED
     # None of the raw PII survives anywhere in the serialised event.
     blob = _blob(scrubbed)
-    for pii in (PHONE, EMAIL, ADDRESS, "supersecrettoken"):
+    for pii in (PHONE, EMAIL, ADDRESS, "supersecrettoken", "srk_live", "deadbeef"):
         assert pii not in blob
 
 

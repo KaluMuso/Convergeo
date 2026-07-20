@@ -1,9 +1,10 @@
 """Sentry initialisation + PII scrubbing for the Vergeo5 API.
 
 The scrubber (`scrub`) is the core invariant of this module: no phone number,
-street/landmark address, email, or auth token may ever leave the process inside a
-Sentry event or breadcrumb. It runs on BOTH the event body (`before_send`) and every
-breadcrumb (`before_breadcrumb`).
+street/landmark address, email, auth token, cookie, payment payload, service-role
+key, or webhook signature may ever leave the process inside a Sentry event or
+breadcrumb. It runs on BOTH the event body (`before_send`) and every breadcrumb
+(`before_breadcrumb`).
 
 `init_sentry` is a strict no-op when `SENTRY_DSN` is unset, so development and CI never
 talk to Sentry and never need a DSN. Live capture is founder-gated on a real DSN.
@@ -23,9 +24,8 @@ EMAIL_MASK = "[redacted-email]"
 PHONE_MASK = "[redacted-phone]"
 TOKEN_MASK = "[redacted-token]"
 
-# Keys whose VALUE is PII regardless of content — redacted wholesale (recursively).
-# Matched case-insensitively as a substring of the key, so `user_email`,
-# `delivery_address`, `x-authorization` etc. all match.
+# Keys whose VALUE is PII/secret regardless of content — redacted wholesale.
+# Matched case-insensitively as a substring of the key.
 _SENSITIVE_KEY_PARTS: tuple[str, ...] = (
     "phone",
     "msisdn",
@@ -48,10 +48,26 @@ _SENSITIVE_KEY_PARTS: tuple[str, ...] = (
     "apikey",
     "otp",
     "pin",
+    "cookie",
+    "set-cookie",
+    "refresh",
+    "access_token",
+    "refresh_token",
+    "service_role",
+    "service-role",
+    "webhook_signature",
+    "x-lenco-signature",
+    "signature",
+    "card_number",
+    "pan",
+    "cvv",
+    "cvc",
+    "payment_payload",
+    "encrypted_payload",
+    "lenco",
 )
 
-# Value-level patterns applied to free-text strings (e.g. a log message or a
-# stringified payload) where PII is not isolated behind a well-known key.
+# Value-level patterns applied to free-text strings.
 _TOKEN_RE = re.compile(
     r"(?i)bearer\s+[A-Za-z0-9._\-]+"  # `Bearer <jwt|opaque>`
     r"|\beyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+\b"  # bare JWT
@@ -81,8 +97,8 @@ def _key_is_sensitive(key: str) -> bool:
 def scrub(obj: Any) -> Any:
     """Recursively scrub PII from an arbitrary JSON-like structure.
 
-    - dict: a key that names PII (phone/address/email/token/...) has its whole
-      value redacted; other values are recursed into.
+    - dict: a key that names PII/secret has its whole value redacted; other
+      values are recursed into.
     - list/tuple: every item is scrubbed.
     - str: PII patterns (email/phone/token) are masked in place.
     - other scalars: returned unchanged.
@@ -114,6 +130,33 @@ def before_breadcrumb(
     return scrub(crumb)  # type: ignore[no-any-return]
 
 
+def bind_request_scope(
+    *,
+    request_id: str,
+    route: str,
+    release: str | None = None,
+    order_id: str | None = None,
+    payment_id: str | None = None,
+) -> None:
+    """Attach non-sensitive tags to the current Sentry scope (no-op if SDK inactive)."""
+    try:
+        import sentry_sdk
+    except ImportError:  # pragma: no cover
+        return
+
+    scope = sentry_sdk.get_current_scope()
+    scope.set_tag("application", "api")
+    scope.set_tag("request_id", request_id)
+    scope.set_tag("route", route)
+    if release:
+        scope.set_tag("release_sha", release)
+    # Only opaque encoded IDs (ord-*, pay-*) — never phones/emails.
+    if order_id and order_id.startswith("ord-"):
+        scope.set_tag("order_id", order_id)
+    if payment_id and payment_id.startswith("pay-"):
+        scope.set_tag("payment_id", payment_id)
+
+
 def init_sentry(settings: Settings) -> bool:
     """Initialise Sentry from settings. No-op (returns False) when no DSN is set,
     so dev/CI never emit events and no DSN is required. Returns True when init ran."""
@@ -123,12 +166,14 @@ def init_sentry(settings: Settings) -> bool:
 
     import sentry_sdk
 
+    release = settings.sentry_release or settings.git_sha or None
+    environment = settings.sentry_environment or settings.env
+
     sentry_sdk.init(
         dsn=dsn,
-        environment=settings.sentry_environment or settings.env,
-        release=settings.sentry_release or None,
-        # PII scrubbing invariant — both hooks are mandatory. The SDK types these
-        # against its Event TypedDict; our hooks operate on the plain event dict.
+        environment=environment,
+        release=release,
+        # PII scrubbing invariant — both hooks are mandatory.
         before_send=before_send,  # type: ignore[arg-type]
         before_breadcrumb=before_breadcrumb,
         # Never let the SDK attach request bodies / headers / cookies itself.
@@ -136,4 +181,7 @@ def init_sentry(settings: Settings) -> bool:
         traces_sample_rate=settings.sentry_traces_sample_rate,
         max_breadcrumbs=50,
     )
+    sentry_sdk.set_tag("application", "api")
+    if release:
+        sentry_sdk.set_tag("release_sha", release)
     return True

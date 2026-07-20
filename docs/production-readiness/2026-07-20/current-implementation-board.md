@@ -264,14 +264,14 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate / gap:** G6 / VD-P05
 - **Priority:** P1
-- **Status:** `REPO_CLOSABLE`
-- **Evidence:** `infra/n8n/uptime-alert.json` webhook `options: {}`
-- **Files likely:** that JSON + UptimeRobot shared-secret docs
-- **Deps:** DEP-03 import; FOUNDER UptimeRobot
-- **Acceptance:** unauthenticated POST rejected
-- **Verify:** curl without secret → 401/403
+- **Status:** `CODE_COMPLETE` → FOUNDER activate (`UPTIME_WEBHOOK_SECRET` + import)
+- **Evidence:** Prompt 9 — `Require Uptime Secret` IF vs `$env.UPTIME_WEBHOOK_SECRET`; docs in `observability.md` / `uptimerobot.md`; pytest `test_uptime_alert_workflow.py`
+- **Files:** `infra/n8n/uptime-alert.json`, ops docs
+- **Deps:** FOUNDER UptimeRobot + n8n env secret
+- **Acceptance:** unauthenticated POST never reaches WhatsApp
+- **Verify:** live POST without secret → no page; with secret + alertType=1 → page
 - **Blocks browse-beta:** no · **real-money:** soft · **public_launch:** yes
-- **PR boundary:** n8n JSON + ops note
+- **PR boundary:** included in observability PR
 
 > **Sequenced programme:** `docs/production-readiness/2026-07-20/code-completion-programme.md` (Prompt 11 — CCP-01…08). Implement each approved CCP on its own branch; do not batch.
 
@@ -497,9 +497,10 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate:** G6
 - **Priority:** P0
-- **Status:** `LIVE_VERIFICATION_REQUIRED` (+ FOUNDER project create)
-- **Deps:** FOUNDER DSNs / UptimeRobot; RC-08
-- **Acceptance:** test event ingested; uptime alert fires
+- **Status:** `BLOCKED_EXTERNAL` (Sentry create 403; UptimeRobot NOT_AUDITABLE)
+- **Evidence:** `observability-live-evidence.md` — repo CODE_COMPLETE; no ingested test events; no alert latency
+- **Deps:** FOUNDER project create + DSNs / UptimeRobot; RC-08 activate
+- **Acceptance:** test event ingested per surface; uptime alert fires with recorded latency
 - **Blocks:** no / yes / yes
 
 #### LIVE-09 — G7 backup + ≤30-min restore

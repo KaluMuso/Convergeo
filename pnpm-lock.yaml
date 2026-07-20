@@ -65,6 +65,9 @@ importers:
       '@vergeo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@vergeo/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
       '@vergeo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -120,6 +123,9 @@ importers:
       '@vergeo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@vergeo/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
       '@vergeo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -187,6 +193,9 @@ importers:
       '@vergeo/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@vergeo/observability':
+        specifier: workspace:*
+        version: link:../../packages/observability
       '@vergeo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -311,6 +320,18 @@ importers:
       vitest:
         specifier: ^3.0.9
         version: 3.2.7(@types/node@26.1.1)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.49.0)(yaml@2.9.0)
+
+  packages/observability:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.1
+        version: 22.20.1
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.9
+        version: 3.2.7(@types/node@22.20.1)(jiti@2.7.0)(jsdom@26.1.0)(lightningcss@1.32.0)(terser@5.49.0)(yaml@2.9.0)
 
   packages/types:
     devDependencies:

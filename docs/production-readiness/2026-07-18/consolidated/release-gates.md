@@ -96,7 +96,16 @@ Evidence: Supabase SQL 2026-07-20 (`go-no-go-report.md` §1).
 
 ### G6 — Error monitoring and actionable logs
 
-**Current:** **BLOCKED_EXTERNAL** — no Vergeo5 Sentry projects (create 403); uptime NOT_AUDITABLE (Prompt 9 / PR #378).
+| Check                             | Automated       | Manual     | Pass criteria                  |
+| --------------------------------- | --------------- | ---------- | ------------------------------ |
+| Sentry projects exist             | Sentry list     | —          | Vergeo5 projects present       |
+| Test error ingested               | Trigger per app | Event link | Release tags match             |
+| Uptime on health                  | Monitor API     | —          | Monitors green                 |
+| Payment/webhook errors actionable | Sentry/log      | —          | Alert on signature/ledger fail |
+
+**Current:** FAIL (2026-07-20 Prompt 9: repo scrub/tags/test-paths/uptime-auth CODE_COMPLETE; Sentry `create_project` 403; no test-event ingestion; uptime alert NOT_AUDITABLE — see `…/2026-07-20/observability-live-evidence.md`).
+
+---
 
 ### G7 — Backups and restore proof
 
