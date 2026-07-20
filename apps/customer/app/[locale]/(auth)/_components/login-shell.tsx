@@ -102,8 +102,8 @@ export function AuthLoginShell({
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <header className="space-y-2 text-center">
-        <h1 className="font-display text-2xl text-display-ink">{labels.title}</h1>
+      <header className="space-y-1.5 text-center">
+        <h1 className="font-display text-h2 text-display-ink">{labels.title}</h1>
         <p className="font-body text-sm text-text-2">{labels.subtitle}</p>
       </header>
 
@@ -231,8 +231,8 @@ export function AuthSignupShell({
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <header className="space-y-2 text-center">
-        <h1 className="font-display text-2xl text-display-ink">{labels.title}</h1>
+      <header className="space-y-1.5 text-center">
+        <h1 className="font-display text-h2 text-display-ink">{labels.title}</h1>
         <p className="font-body text-sm text-text-2">{labels.subtitle}</p>
       </header>
 
