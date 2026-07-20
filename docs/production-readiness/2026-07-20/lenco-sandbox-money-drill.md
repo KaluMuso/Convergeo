@@ -52,14 +52,14 @@ No production collection credentials were used. `public_launch` was not enabled.
 
 ### B2 — Deployed API / migration tip not at intended target
 
-| Check                                                | Result                                                                                                     |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `GET https://api.vergeo5.com/healthz`                | **502**                                                                                                    |
-| `GET https://api.vergeo5.com/readyz`                 | **502**                                                                                                    |
-| Live migration tip (Supabase `dpadrlxukcjbewpqympu`) | `0063_revoke_execute_review_reply_guards`                                                                  |
-| Repo tip money migration on master                   | `0063_refunds_source_key_uniq` (and later FORCE RLS work) — **collision / unapplied `refunds.source_key`** |
-| `refunds.source_key` column live                     | **false** (SQL probe)                                                                                      |
-| Prior deploy truth                                   | PR #375 — NO-GO; API digest UNKNOWN; frontend SHAs behind tip                                              |
+| Check                                                | Result                                                                                                                                  |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET https://api.vergeo5.com/healthz`                | **502**                                                                                                                                 |
+| `GET https://api.vergeo5.com/readyz`                 | **502**                                                                                                                                 |
+| Live migration tip (Supabase `dpadrlxukcjbewpqympu`) | `0063_revoke_execute_review_reply_guards`                                                                                               |
+| Repo tip money migration on master                   | RC-02 target `0065_refunds_source_key_uniq` after live-matching `0063` revoke and `0064` FORCE RLS — **unapplied `refunds.source_key`** |
+| `refunds.source_key` column live                     | **false** (SQL probe)                                                                                                                   |
+| Prior deploy truth                                   | PR #375 — NO-GO; API digest UNKNOWN; frontend SHAs behind tip                                                                           |
 
 **Conclusion:** per Prompt 8, stop — drills must not run against an unconfirmed tip (especially refund `source_key` matrix F).
 

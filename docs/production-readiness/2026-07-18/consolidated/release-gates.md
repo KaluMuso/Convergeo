@@ -27,7 +27,7 @@ Allowed statuses: `PASS` · `FAIL` · `CONDITIONAL` · `BLOCKED_EXTERNAL` · `NO
 
 | ID  | Gate                                    | Pass criteria                                                     | Current (2026-07-20)                                                                      |
 | --- | --------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| S0  | Staging schema target                   | Agreed migrations applied without tip collision                   | **FAIL** — live tip `0063_revoke…` ≠ repo `0063_refunds_source_key`; `0064` unapplied     |
+| S0  | Staging schema target                   | Agreed migrations applied without tip collision                   | **FAIL** — live tip `0063_revoke…`; apply repo `0064` FORCE RLS then `0065` source_key    |
 | S1  | Sandbox MoMo prepaid → ledger           | `CHARGE_RECEIVED` balanced; idempotent replay                     | **BLOCKED_EXTERNAL** — F9b + API 502 (Prompt 8 / PR #377 — see go-no-go-report §2)        |
 | S2  | Sandbox card prepaid → ledger           | Same                                                              | **BLOCKED_EXTERNAL** — same                                                               |
 | S3  | Release accounting drill                | `COMMISSION_CAPTURE` before `RELEASE_TO_VENDOR`; double-tick safe | **FAIL** — not executed; money n8n unpublished                                            |
@@ -135,7 +135,7 @@ Evidence 2026-07-20 (`docs/production-readiness/2026-07-20/ops-drills/`): approv
 | Rollback drill             | —                   | Prior Vercel + API tag | Time recorded                                  |
 | Feature flags              | SQL flags           | —                      | `public_launch` intentional; Zamtel matches UI |
 
-**Current (2026-07-20 Prompt 6):** FAIL / NO-GO. Frontend prod SHAs **recorded** (customer `cde40bf`, vendor `5a4668a`, admin `2f99711`) but **behind** master tip `d9839db`. Live migration tip = `0063_revoke_execute_review_reply_guards` (not repo tip: source_key + FORCE RLS unapplied; RC-02 collision). API host digest **NOT_AUDITABLE** (`api.vergeo5.com` **502**); GHCR `latest` digest known but not proof of running container. Rollback drill still open. Evidence: `docs/production-readiness/2026-07-20/deploy-migration-truth.md`.
+**Current (2026-07-20 Prompt 6):** FAIL / NO-GO. Frontend prod SHAs **recorded** (customer `cde40bf`, vendor `5a4668a`, admin `2f99711`) but **behind** master tip `d9839db`. Live migration tip = `0063_revoke_execute_review_reply_guards`; RC-02 reconciles repo numbering, while `0064` FORCE RLS and `0065` source_key remain unapplied. API host digest **NOT_AUDITABLE** (`api.vergeo5.com` **502**); GHCR `latest` digest known but not proof of running container. Rollback drill still open. Evidence: `docs/production-readiness/2026-07-20/deploy-migration-truth.md`.
 
 ---
 

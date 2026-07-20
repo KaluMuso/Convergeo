@@ -20,18 +20,18 @@ Hard P0 failures are **not** averaged away.
 
 ## 1. Fingerprint (verified this audit)
 
-| #   | Check              | Result                                                   | Evidence                                                                   |
-| --- | ------------------ | -------------------------------------------------------- | -------------------------------------------------------------------------- |
-| 1   | Master SHA         | `d9839db349887ab48a52c18546e05961a62498d6`               | `git rev-parse origin/master` — Merge #369 customer commerce discovery     |
-| 2   | Customer prod SHA  | `cde40bf32763d14511deb72c59c1a7586867f93e`               | `GET https://www.vergeo5.com/en/health` → 200; Vercel prod `dpl_6Pgevsi…`  |
-| 3   | Vendor prod SHA    | `5a4668a10291b3c381613975139431658c3c5be4`               | Vercel prod `dpl_3qg4H35…`; `/en/health` → 200 after redirect              |
-| 4   | Admin prod SHA     | `2f9971110797ca722dfb6a68e73a66955e0f714c`               | Vercel prod `dpl_298135…`; unauth `/en/health` → **302** Cloudflare Access |
-| 5   | API digest         | **UNKNOWN**                                              | `GET https://api.vergeo5.com/{healthz,readyz,fingerprint}` → **HTTP 502**  |
-| 6   | Live migration tip | `0063_revoke_execute_review_reply_guards`                | Supabase `dpadrlxukcjbewpqympu` `schema_migrations` DESC                   |
-| 7   | Repo migration tip | `0064_force_rls_launch_tables.sql`                       | `supabase/migrations/` on master                                           |
-| 8   | Collision          | Live `0063` = revoke; repo `0063` = `refunds.source_key` | Column `refunds.source_key` **absent** live                                |
-| 9   | `0056` KYC         | **Applied**                                              | Migration name `0056_kyc_integrity` present                                |
-| 10  | `0064` FORCE RLS   | **Not applied**                                          | `has_0064_force_rls=false`; ticket tiers FORCE still false                 |
+| #   | Check              | Result                                                                                       | Evidence                                                                   |
+| --- | ------------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 1   | Master SHA         | `d9839db349887ab48a52c18546e05961a62498d6`                                                   | `git rev-parse origin/master` — Merge #369 customer commerce discovery     |
+| 2   | Customer prod SHA  | `cde40bf32763d14511deb72c59c1a7586867f93e`                                                   | `GET https://www.vergeo5.com/en/health` → 200; Vercel prod `dpl_6Pgevsi…`  |
+| 3   | Vendor prod SHA    | `5a4668a10291b3c381613975139431658c3c5be4`                                                   | Vercel prod `dpl_3qg4H35…`; `/en/health` → 200 after redirect              |
+| 4   | Admin prod SHA     | `2f9971110797ca722dfb6a68e73a66955e0f714c`                                                   | Vercel prod `dpl_298135…`; unauth `/en/health` → **302** Cloudflare Access |
+| 5   | API digest         | **UNKNOWN**                                                                                  | `GET https://api.vergeo5.com/{healthz,readyz,fingerprint}` → **HTTP 502**  |
+| 6   | Live migration tip | `0063_revoke_execute_review_reply_guards`                                                    | Supabase `dpadrlxukcjbewpqympu` `schema_migrations` DESC                   |
+| 7   | Repo migration tip | `0064_force_rls_launch_tables.sql`                                                           | `supabase/migrations/` on master                                           |
+| 8   | Collision          | Live `0063` = revoke; RC-02 makes repo `0063` match and moves `refunds.source_key` to `0065` | Column `refunds.source_key` **absent** live                                |
+| 9   | `0056` KYC         | **Applied**                                                                                  | Migration name `0056_kyc_integrity` present                                |
+| 10  | `0064` FORCE RLS   | **Not applied**                                                                              | `has_0064_force_rls=false`; ticket tiers FORCE still false                 |
 
 ### RLS / FORCE RLS (live sample)
 
