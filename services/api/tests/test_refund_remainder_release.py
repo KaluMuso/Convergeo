@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -22,7 +23,7 @@ ORDER_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 VENDOR_ID = "11111111-1111-1111-1111-111111111111"
 
 
-def _snapshot(*, line_a: int = 100_000, line_b: int = 100_000) -> dict:
+def _snapshot(*, line_a: int = 100_000, line_b: int = 100_000) -> dict[str, Any]:
     return {
         "lines": [
             {
@@ -169,11 +170,19 @@ def test_evaluate_and_release_caps_gross_to_remainder() -> None:
         delivered_at=now - timedelta(hours=1),
         shipped_at=now - timedelta(hours=2),
     )
-    captured: dict[str, object] = {}
+    captured_gross: int | None = None
+    captured_snapshot: dict[str, Any] | None = None
 
-    def fake_compute(*, order_id: str, gross_ngwee: int, commission_snapshot: dict) -> MagicMock:
-        captured["gross_ngwee"] = gross_ngwee
-        captured["snapshot"] = commission_snapshot
+    def fake_compute(
+        *,
+        order_id: str,
+        gross_ngwee: int,
+        commission_snapshot: dict[str, Any],
+    ) -> MagicMock:
+        nonlocal captured_gross, captured_snapshot
+        _ = order_id
+        captured_gross = gross_ngwee
+        captured_snapshot = commission_snapshot
         result = MagicMock()
         result.net_ngwee = 92_000
         result.commission_ngwee = 8_000
@@ -211,10 +220,13 @@ def test_evaluate_and_release_caps_gross_to_remainder() -> None:
         result = evaluate_and_release(MagicMock(), ORDER_ID, now=now)
 
     assert result.outcome == "released"
-    assert captured["gross_ngwee"] == 100_000
-    assert sum(int(line["line_total_ngwee"]) for line in captured["snapshot"]["lines"]) == 100_000
+    assert captured_gross == 100_000
+    assert captured_snapshot is not None
+    lines = captured_snapshot["lines"]
+    assert isinstance(lines, list)
+    assert sum(int(line["line_total_ngwee"]) for line in lines) == 100_000
     capture.assert_called_once()
-    assert capture.call_args.kwargs["commission_snapshot"] is captured["snapshot"]
+    assert capture.call_args.kwargs["commission_snapshot"] is captured_snapshot
     post_release.assert_called_once_with(
         order_id=ORDER_ID,
         vendor_id=VENDOR_ID,
