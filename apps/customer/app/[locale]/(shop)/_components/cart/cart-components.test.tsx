@@ -9,8 +9,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import checkoutMessages from "../../../../../../../packages/i18n/messages/en/checkout.json";
 
 import { ChangeNotices } from "./change-notices";
+import { MiniCartEmptyState } from "./mini-cart-drawer";
 import { QtyStepper } from "./qty-stepper";
-import { VendorGroups, indexNoticesByListing } from "./vendor-groups";
+import { CartEmptyState, VendorGroups, indexNoticesByListing } from "./vendor-groups";
 
 import type { CartLine, CartResponse, ChangeNotice, VendorGroup } from "./mini-cart-drawer";
 
@@ -44,6 +45,12 @@ const noticeLabels = {
   priceChanged: checkoutMessages.cart.noticePriceChanged,
   outOfStock: checkoutMessages.cart.noticeOutOfStock,
   qtyReduced: checkoutMessages.cart.noticeQtyReduced,
+};
+
+const emptyTrustLabels = {
+  escrow: checkoutMessages.cart.emptyTrustEscrow,
+  delivery: checkoutMessages.cart.emptyTrustDelivery,
+  pickup: checkoutMessages.cart.emptyTrustPickup,
 };
 
 const sampleLine: CartLine = {
@@ -81,6 +88,9 @@ describe("checkout.cart i18n", () => {
     expect(checkoutMessages.cart.title).toBeTruthy();
     expect(checkoutMessages.cart.noticePriceChanged).toContain("{oldPrice}");
     expect(checkoutMessages.cart.freeDeliveryProgress).toContain("{threshold}");
+    expect(checkoutMessages.cart.emptyTrustEscrow).toContain("Vergeo5");
+    expect(checkoutMessages.cart.emptyTrustDelivery.toLowerCase()).toContain("lusaka");
+    expect(checkoutMessages.cart.emptyTrustPickup.toLowerCase()).toContain("pickup");
   });
 
   it("keeps free-delivery copy Lusaka/zone honest (LB-P2-04)", () => {
@@ -253,6 +263,57 @@ describe("QtyStepper optimistic rollback", () => {
 });
 
 describe("empty cart render state", () => {
+  it("renders the page empty state with trust cues and no emoji icon", () => {
+    render(
+      <CartEmptyState
+        locale="en"
+        labels={{
+          emptyTitle: checkoutMessages.cart.emptyTitle,
+          emptyBody: checkoutMessages.cart.emptyBody,
+          emptyTrust: emptyTrustLabels,
+          browseCta: checkoutMessages.cart.browseCta,
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId("cart-empty-state")).toHaveTextContent(
+      checkoutMessages.cart.emptyTitle,
+    );
+    expect(screen.getByTestId("cart-empty-trust-list")).toHaveTextContent(
+      checkoutMessages.cart.emptyTrustEscrow,
+    );
+    expect(screen.getByTestId("cart-empty-panel")).not.toHaveTextContent("🛒");
+    expect(screen.getByRole("link", { name: checkoutMessages.cart.browseCta })).toHaveAttribute(
+      "href",
+      "/en",
+    );
+  });
+
+  it("renders mini-cart empty state with the same trust cues", () => {
+    render(
+      <MiniCartEmptyState
+        locale="en"
+        labels={{
+          emptyTitle: checkoutMessages.cart.emptyTitle,
+          emptyBody: checkoutMessages.cart.emptyBody,
+          emptyTrust: emptyTrustLabels,
+          browseCta: checkoutMessages.cart.browseCta,
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId("mini-cart-empty")).toHaveTextContent(
+      checkoutMessages.cart.emptyBody,
+    );
+    expect(screen.getByTestId("cart-empty-trust-list")).toHaveTextContent(
+      checkoutMessages.cart.emptyTrustPickup,
+    );
+    expect(screen.getByRole("link", { name: checkoutMessages.cart.browseCta })).toHaveAttribute(
+      "href",
+      "/en",
+    );
+  });
+
   it("indexes notices by listing id", () => {
     const notices: ChangeNotice[] = [
       {

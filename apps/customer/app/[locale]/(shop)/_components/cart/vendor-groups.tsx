@@ -12,7 +12,9 @@ import { CartLineItem, type CartLineItemLabels } from "./line-items";
 import {
   FREE_DELIVERY_THRESHOLD_NGEWEE,
   type ChangeNotice,
+  type CartEmptyTrustLabels,
   type VendorGroup,
+  CartEmptyTrustList,
   CartHost,
   CartProvider,
   getCartItemCount,
@@ -164,6 +166,7 @@ export type CartPageLabels = {
   title: string;
   emptyTitle: string;
   emptyBody: string;
+  emptyTrust: CartEmptyTrustLabels;
   browseCta: string;
   itemCount: string;
   subtotal: string;
@@ -176,10 +179,45 @@ export type CartPageLabels = {
   miniCart: MiniCartLabels;
 };
 
+export type CartEmptyStateLabels = Pick<
+  CartPageLabels,
+  "emptyTitle" | "emptyBody" | "emptyTrust" | "browseCta"
+>;
+
 type CartPageViewProps = {
   locale: string;
   labels: CartPageLabels;
 };
+
+export function CartEmptyState({
+  locale,
+  labels,
+}: {
+  locale: string;
+  labels: CartEmptyStateLabels;
+}) {
+  return (
+    <section
+      className="rounded-lg border border-border bg-bg-2/70 px-3 py-4 sm:px-6"
+      data-testid="cart-empty-panel"
+    >
+      <EmptyState
+        title={labels.emptyTitle}
+        body={labels.emptyBody}
+        data-testid="cart-empty-state"
+        action={
+          <Link
+            href={`/${locale}`}
+            className="inline-flex h-11 min-h-11 items-center justify-center rounded bg-primary px-4 text-body font-medium text-surface"
+          >
+            {labels.browseCta}
+          </Link>
+        }
+      />
+      <CartEmptyTrustList labels={labels.emptyTrust} />
+    </section>
+  );
+}
 
 function CartPageBody({ locale, labels }: CartPageViewProps) {
   const { cart, notices, loading } = useCartStore();
@@ -219,22 +257,7 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
     }, {}) ?? {};
 
   if (!loading && (!cart || itemCount === 0)) {
-    return (
-      <EmptyState
-        icon="🛒"
-        title={labels.emptyTitle}
-        body={labels.emptyBody}
-        data-testid="cart-empty-state"
-        action={
-          <Link
-            href={`/${locale}`}
-            className="inline-flex h-11 min-h-11 items-center justify-center rounded bg-primary px-4 text-body font-medium text-surface"
-          >
-            {labels.browseCta}
-          </Link>
-        }
-      />
-    );
+    return <CartEmptyState locale={locale} labels={labels} />;
   }
 
   return (
