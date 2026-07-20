@@ -1,11 +1,14 @@
 # Release Gates — Vergeo5 / Convergeo
 
-**Date:** 2026-07-18 (refresh after PRs #274, #289–#294)  
+**Date:** 2026-07-20 (Prompt 12 fresh audit)  
 **Purpose:** Exact automated and manual evidence required before real-money / public release.  
-**Rule:** A gate is **PASS** only with VERIFIED evidence at the required maturity layer. PARTIAL / NOT_AUDITABLE / CODE_COMPLETE-only = **FAIL** for launch.  
-**While any P0 gate fails, the system is not production-ready** (no readiness %).
+**Rule:** A gate is **PASS** only with VERIFIED evidence at the required maturity layer. PARTIAL / CODE_COMPLETE-only / programme docs on unmerged branches ≠ PASS for launch.  
+**While any P0 gate fails, the system is not production-ready** (no single blended readiness %).
 
-Related: `master-reconciliation-register.md` · `production-readiness-scorecard.md` · `panel-backlogs.md`
+**Authoritative go/no-go:** `docs/production-readiness/2026-07-20/go-no-go-report.md`  
+**Board:** `docs/production-readiness/2026-07-20/current-implementation-board.md`
+
+Allowed statuses: `PASS` · `FAIL` · `CONDITIONAL` · `BLOCKED_EXTERNAL` · `NOT_APPLICABLE`.
 
 ---
 
@@ -18,104 +21,38 @@ Related: `master-reconciliation-register.md` · `production-readiness-scorecard.
 | Public positioning / `public_launch` | **PRODUCTION_VERIFIED** probes on live URLs + flags                    |
 | Legal                                | Written artifact (not code)                                            |
 
-**Explicit:** PR **#274** collection accounting and PR **#294** release accounting are **CODE_COMPLETE** and **staging-unverified** → G3/G4 remain **FAIL**.  
-**Explicit:** PR **#293** KYC integrity is **CODE_COMPLETE** while migration **`0056`** remains staging/production rollout-dependent → G12 remains **FAIL**.
-
----
-
-## Gate statuses
-
-| Status | Meaning                                                                                |
-| ------ | -------------------------------------------------------------------------------------- |
-| PASS   | VERIFIED evidence attached at required maturity                                        |
-| FAIL   | Missing, broken, contradicted, or only CODE_COMPLETE                                   |
-| WAIVED | Founder-signed waiver with expiry + residual risk (never for ledger/RLS/false-success) |
-
 ---
 
 ## Staging gates (must PASS before production money enablement)
 
-| ID  | Gate                                    | Automated evidence             | Manual evidence                    | Pass criteria                                                                | Current                                                                                           |
-| --- | --------------------------------------- | ------------------------------ | ---------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| S0  | Staging schema target                   | `schema_migrations` on staging | Migration plan review              | Agreed set includes needed `0051`/`0053`–`0056` as decided                   | FAIL                                                                                              |
-| S1  | Sandbox MoMo prepaid → ledger           | SQL aggregates + pytest        | Lenco sandbox dashboard (redacted) | `CHARGE_RECEIVED` (+ hold posture) balanced; idempotent replay               | FAIL / BLOCKED_EXTERNAL (2026-07-20 Prompt 8: no F9b + API 502; `…/lenco-sandbox-money-drill.md`) |
-| S2  | Sandbox card prepaid → ledger           | Same                           | Same                               | Same                                                                         | FAIL / BLOCKED_EXTERNAL (same preflight)                                                          |
-| S3  | Release accounting drill                | Release tick + SQL             | Recon summary fields               | `COMMISSION_CAPTURE` before `RELEASE_TO_VENDOR`; escrow→0; double-tick safe  | FAIL / BLOCKED_EXTERNAL (same; release ticks inactive)                                            |
-| S4  | n8n release + tickets active on staging | Workflow active=true           | Execution IDs                      | Authenticated ticks succeed; no double release/issue                         | FAIL (2026-07-20: fleet inactive; `…/n8n-fleet-import-verify.md`)                                 |
-| S5  | KYC lifecycle drill                     | API tests + SQL                | Admin Access session               | submit→under_review→approve; orphan report; privileges freeze without record | FAIL (`0056` unapplied live)                                                                      |
-| S6  | False-success E2E                       | Playwright/E2E                 | —                                  | Pending/failed ≠ paid; COD isolated                                          | FAIL / BLOCKED_EXTERNAL (Prompt 8 D NOT RUN)                                                      |
-| S7  | Staging UAT notes                       | —                              | 3–5 tester journeys                | Written pack attached                                                        | FAIL                                                                                              |
+| ID  | Gate                                    | Pass criteria                                                     | Current (2026-07-20)                                                                      |
+| --- | --------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| S0  | Staging schema target                   | Agreed migrations applied without tip collision                   | **FAIL** — live tip `0063_revoke…` ≠ repo `0063_refunds_source_key`; `0064` unapplied     |
+| S1  | Sandbox MoMo prepaid → ledger           | `CHARGE_RECEIVED` balanced; idempotent replay                     | **BLOCKED_EXTERNAL** — F9b + API 502 (Prompt 8 / PR #377 — see go-no-go-report §2)        |
+| S2  | Sandbox card prepaid → ledger           | Same                                                              | **BLOCKED_EXTERNAL** — same                                                               |
+| S3  | Release accounting drill                | `COMMISSION_CAPTURE` before `RELEASE_TO_VENDOR`; double-tick safe | **FAIL** — not executed; money n8n unpublished                                            |
+| S4  | n8n release + tickets active on staging | Authenticated ticks succeed; no double release/issue              | **FAIL** — 0 active money/release workflows (Prompt 7 / PR #376 — see go-no-go-report §2) |
+| S5  | KYC lifecycle drill                     | submit→under_review→approve; orphan report                        | **FAIL** — `0056` applied; drill not run (`kyc_records=0`)                                |
+| S6  | False-success E2E                       | Pending/failed ≠ paid; COD isolated                               | **FAIL** — Playwright CODE on PR #370; not staging-verified                               |
+| S7  | Staging UAT notes                       | Written pack attached                                             | **FAIL**                                                                                  |
 
 ---
 
-## P0 production gates (must all PASS for real-money)
+## P0 production gates
 
 ### G0 — Authentication / authorization / RLS
 
-| Check                                                    | Automated                             | Manual                  | Pass criteria                  |
-| -------------------------------------------------------- | ------------------------------------- | ----------------------- | ------------------------------ |
-| RLS enabled on money/PII tables                          | SQL `relrowsecurity` inventory        | —                       | No unexpected disabled RLS     |
-| FORCE RLS on ticket tiers (+ product_relations decision) | `relforcerowsecurity`                 | FD-07 note              | `true` **or** signed exception |
-| Role isolation                                           | customer/vendor/admin suites          | Cross-tenant deny       | Tests green                    |
-| Role provisioning                                        | `0051` applied **or** FD-03 exception | Auth hook if using 0051 | JWT/`user_roles` consistent    |
-| Admin Access                                             | HTTP challenge without token          | Policy review           | Anonymous blocked              |
-| KYC migration                                            | `0056` in `schema_migrations`         | Orphan report           | Trigger/view present           |
+**Current:** **FAIL** — RLS on for money/PII sample; FORCE RLS **false** on `ticket_type_instances`, `ticket_type_price_tiers`, `product_relations`; repo `0064_force_rls_launch_tables` **not applied**; `0056` **is** applied.
 
-```sql
-BEGIN READ ONLY;
-SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity
-FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-WHERE n.nspname='public' AND c.relkind='r'
-  AND c.relname IN (
-    'orders','payments','ledger_transactions','ledger_postings',
-    'tickets','ticket_type_instances','ticket_type_price_tiers',
-    'user_roles','vendors','vendor_listings','kyc_records','product_relations'
-  )
-ORDER BY 1;
-SELECT version, name FROM supabase_migrations.schema_migrations
-WHERE version LIKE '%0051%' OR version LIKE '%0056%' OR name ILIKE '%kyc_integrity%'
-ORDER BY version;
-COMMIT;
-```
-
-**Current:** FAIL (migration drift; FORCE RLS false on ticket tiers; role hook absent; `0056` not applied).
-
----
+Evidence: Supabase SQL 2026-07-20 (`go-no-go-report.md` §1).
 
 ### G1 — Customer / vendor / admin route integrity
 
-| Check                        | Automated                                          | Manual     | Pass criteria                                                    |
-| ---------------------------- | -------------------------------------------------- | ---------- | ---------------------------------------------------------------- |
-| Customer/vendor/admin health | HTTP probes                                        | Spot-check | Health OK; admin Access-gated                                    |
-| Critical customer routes     | `/en`, `/en/sell`, `/en/categories`, `/en/compare` | —          | Expected codes; honesty empty OK                                 |
-| Deploy SHA parity            | Vercel production SHAs                             | —          | Intended release SHAs recorded (include #289–#291 when deployed) |
-| API health                   | `/healthz` `/readyz`                               | —          | 200 behind Caddy                                                 |
-
-```bash
-curl -sS -m 15 https://www.vergeo5.com/en/health
-curl -sS -m 15 -o /dev/null -w "%{http_code}\n" https://www.vergeo5.com/en/categories
-curl -sS -m 15 -o /dev/null -w "%{http_code}\n" https://www.vergeo5.com/en/compare
-curl -sS -m 15 -o /dev/null -w "%{http_code}\n" https://vendor.vergeo5.com/en/health
-curl -sS -m 15 -o /dev/null -w "%{http_code}\n" https://admin.vergeo5.com/en/health
-curl -sS -m 15 https://api.vergeo5.com/healthz
-curl -sS -m 15 https://api.vergeo5.com/readyz
-```
-
-**Current:** Conditional PASS on health shells; FAIL overall until panel deploy PRODUCTION_VERIFIED + sell CTA policy (G2/G10).
-
----
+**Current:** **FAIL** — customer/vendor health 200; admin Access 302 OK; **API healthz/readyz/fingerprint 502**; frontend prod SHAs behind master `d9839db`.
 
 ### G2 — No localhost production links
 
-| Check                                                 | Automated            | Manual        | Pass criteria                 |
-| ----------------------------------------------------- | -------------------- | ------------- | ----------------------------- |
-| No `localhost:3001` in customer HTML                  | Grep sell/home       | —             | Zero matches                  |
-| Seller CTA → vendor prod                              | Parse href           | Click-through | `https://vendor.vergeo5.com…` |
-| No prod `localhost:8000` API fallbacks on money paths | Bundle/source review | —             | Fail-closed                   |
-
-**Current:** PASS on vendor localhost leak (fail-closed); FAIL on CTA availability; PARTIAL on residual API localhost fallbacks (integration review).
-
----
+**Current:** **CONDITIONAL** — probed customer HTML has **zero** localhost leaks (**PASS** aspect); seller CTA intentionally **disabled** (invite-only honesty), not a live vendor CTA.
 
 ### G3 — Payment ledger / reconciliation correctness
 
@@ -159,16 +96,7 @@ curl -sS -m 15 https://api.vergeo5.com/readyz
 
 ### G6 — Error monitoring and actionable logs
 
-| Check                             | Automated       | Manual     | Pass criteria                  |
-| --------------------------------- | --------------- | ---------- | ------------------------------ |
-| Sentry projects exist             | Sentry list     | —          | Vergeo5 projects present       |
-| Test error ingested               | Trigger per app | Event link | Release tags match             |
-| Uptime on health                  | Monitor API     | —          | Monitors green                 |
-| Payment/webhook errors actionable | Sentry/log      | —          | Alert on signature/ledger fail |
-
-**Current:** FAIL (no Vergeo5 Sentry projects; uptime NOT_AUDITABLE).
-
----
+**Current:** **BLOCKED_EXTERNAL** — no Vergeo5 Sentry projects (create 403); uptime NOT_AUDITABLE (Prompt 9 / PR #378).
 
 ### G7 — Backups and restore proof
 
@@ -186,17 +114,7 @@ Evidence 2026-07-20 (`docs/production-readiness/2026-07-20/ops-drills/`): approv
 
 ### G8 — Critical test suite and CI gates
 
-| Check                              | Automated                                  | Manual               | Pass criteria           |
-| ---------------------------------- | ------------------------------------------ | -------------------- | ----------------------- |
-| JS lint/typecheck/test             | `pnpm lint && pnpm typecheck && pnpm test` | —                    | Green on release commit |
-| API lint/type/tests                | `uv run ruff` / `mypy` / `pytest`          | —                    | Green                   |
-| Money/KYC/authz failure-path tests | pytest incl. prepaid/release/kyc suites    | —                    | Present + green         |
-| secret-scan blocking               | CI without `continue-on-error`             | Branch protection UI | Required; no bypass     |
-| Contract/OpenAPI checks            | CI                                         | —                    | Required on `master`    |
-
-**Current:** FAIL (secret-scan/Lighthouse non-blocking; branch protection NOT_AUDITABLE). Note: panel integration recorded green lint/type/test/build on combined master for apps — does not clear G8 security gates.
-
----
+**Current:** **FAIL** — `secret-scan` and other jobs still `continue-on-error`; branch protection NOT_AUDITABLE. App lint/type/test green on merges does not clear this gate.
 
 ### G9 — Deployment / rollback evidence
 
@@ -214,86 +132,48 @@ Evidence 2026-07-20 (`docs/production-readiness/2026-07-20/ops-drills/`): approv
 
 ## P1 gates (required before open public positioning)
 
-| ID  | Gate                                  | Evidence                                                          | Current                        |
-| --- | ------------------------------------- | ----------------------------------------------------------------- | ------------------------------ |
-| G10 | Seller CTA live                       | CUST-01 HTML probe                                                | FAIL                           |
-| G11 | Demo catalogue remediated/labelled    | Catalog + SEO; FD-04                                              | FAIL                           |
-| G12 | KYC integrity live                    | No privileged bare tier; `0056` applied; orphan ops               | FAIL (CODE_COMPLETE #293 only) |
-| G13 | Legal counsel sign-off                | Written artifact FD-08                                            | FAIL                           |
-| G14 | Zamtel collections decision + UI gate | FD-01 + checkout methods                                          | FAIL                           |
-| G15 | Admin RBAC decision closed            | FD-02 ADR/decisions                                               | FAIL                           |
-| G16 | Staging UAT (core journeys)           | S7 pack                                                           | FAIL                           |
-| G17 | Panel honesty PRODUCTION_VERIFIED     | Deploy #289–#291; probe categories/compare/SW/admin empty honesty | FAIL                           |
+| ID  | Gate                                  | Current (2026-07-20)                                                               |
+| --- | ------------------------------------- | ---------------------------------------------------------------------------------- |
+| G10 | Seller CTA live                       | **FAIL** — `/en/sell` CTA disabled invite-only                                     |
+| G11 | Demo catalogue remediated/labelled    | **CONDITIONAL** — exclusion CODE (#368 path); API 502 blocks live discovery verify |
+| G12 | KYC integrity live                    | **CONDITIONAL** — `0056` applied; no live drill                                    |
+| G13 | Legal counsel sign-off                | **BLOCKED_EXTERNAL** — F4 absent                                                   |
+| G14 | Zamtel collections decision + UI gate | **CONDITIONAL** — `zamtel_collections=false`                                       |
+| G15 | Admin RBAC decision closed            | **FAIL**                                                                           |
+| G16 | Staging UAT (core journeys)           | **FAIL**                                                                           |
+| G17 | Panel honesty PRODUCTION_VERIFIED     | **FAIL** — tip/deploy parity incomplete                                            |
 
 ---
 
 ## P2 gates (hardening; track but do not block invite-beta)
 
-| ID  | Gate                                | Notes                  |
-| --- | ----------------------------------- | ---------------------- |
-| G18 | Vernacular Bemba/Nyanja core flows  | After 0053; D27 timing |
-| G19 | Lighthouse budgets                  | Perf/SEO/A11y          |
-| G20 | Leaked-password protection on       | Auth advisor           |
-| G21 | Lifecycle n8n                       | After money path       |
-| G22 | Doc SoT banners on superseded plans | MR-L02                 |
+| ID  | Gate                                | Current                                     |
+| --- | ----------------------------------- | ------------------------------------------- |
+| G18 | Vernacular Bemba/Nyanja core flows  | **FAIL**                                    |
+| G19 | Lighthouse budgets                  | **FAIL**                                    |
+| G20 | Leaked-password protection on       | **NOT_APPLICABLE** (not re-probed; no PASS) |
+| G21 | Lifecycle n8n                       | **FAIL**                                    |
+| G22 | Doc SoT banners on superseded plans | **FAIL**                                    |
 
 ---
 
-## Release evidence pack (template)
+## Go / No-Go (2026-07-20)
 
-```text
-release_id:
-git_sha_frontends: {customer, vendor, admin}
-api_image_digest:
-db_migration_head:
-migrations_applied_includes_0056: yes|no
-n8n_workflows_active: [list]
-sentry_projects: [list]
-uptime_monitors: [list]
-backup_artifact: {date, location}
-restore_drill: {date, result}
-sandbox_payments:
-  momo: {payment_id_redacted, ledger_txn_ids}
-  card: {payment_id_redacted, ledger_txn_ids}
-  release: {capture_id_redacted, release_id_redacted, escrow_net}
-rls_probe: {path}
-kyc:
-  migration_0056: applied|not
-  orphan_report_count:
-ci_run_url:
-rollback_drill: {date, result}
-legal_signoff: {doc ref}
-flags: {public_launch, zamtel_collections, ...}
-code_complete_prs: {274, 288, 289, 290, 291, 293, 294}
-maturity:
-  collection_accounting: CODE_COMPLETE|STAGING_VERIFIED|PRODUCTION_VERIFIED
-  release_accounting: CODE_COMPLETE|STAGING_VERIFIED|PRODUCTION_VERIFIED
-  kyc_integrity: CODE_COMPLETE|STAGING_VERIFIED|PRODUCTION_VERIFIED
-gate_results: {S0..S7, G0..G9: PASS|FAIL}
-```
+| Decision                           | Condition                                                                                                         | Today                   |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| **NO-GO real money**               | Any of G0–G9 = FAIL/BLOCKED_EXTERNAL/CONDITIONAL-without-waiver **or** S1–S6 ≠ PASS                               | **YES — NO_GO**         |
+| **NO-GO public_launch=true**       | Any P0 FAIL **or** G10–G13 ≠ PASS                                                                                 | **YES — NO_GO**         |
+| **GO invite-beta (no real money)** | Health shells OK + G2 localhost PASS + demo disclosure + `public_launch=false` + API healthy enough for catalogue | **NO** — API 502 blocks |
+| **GO sandbox transaction beta**    | S0–S6 cleared + G3–G5 path                                                                                        | **NO**                  |
+| **GO real-money beta**             | All P0 PASS + G13 + staging pack                                                                                  | **NO**                  |
+| **GO open launch**                 | Real-money GO + G10–G17 PASS                                                                                      | **NO**                  |
+
+### Recommendation
+
+**NO_GO** — see `docs/production-readiness/2026-07-20/go-no-go-report.md`.
+
+Next level `BROWSE_ONLY_CONTROLLED_BETA` blocked primarily by **G1** (API 502), **G11** live verify, and deploy tip parity (**G9** partial).
 
 ---
 
-## Go / No-Go
-
-| Decision                           | Condition                                                                            |
-| ---------------------------------- | ------------------------------------------------------------------------------------ |
-| **NO-GO real money**               | Any of G0–G9 = FAIL/NOT_AUDITABLE **or** S1–S6 = FAIL                                |
-| **NO-GO public_launch=true**       | Any P0 gate FAIL **or** G10–G13 FAIL                                                 |
-| **GO invite-beta (no real money)** | Health shells OK + G2 localhost check PASS + demo disclosure + `public_launch=false` |
-| **GO real-money beta**             | All P0 gates PASS + G13 legal PASS + staging pack STAGING_VERIFIED attached          |
-| **GO open launch**                 | Real-money beta GO + G10–G17 PASS                                                    |
-
-### Today (2026-07-18)
-
-| Claim                             | Result                                           |
-| --------------------------------- | ------------------------------------------------ |
-| Real money                        | **NO-GO**                                        |
-| Open launch                       | **NO-GO**                                        |
-| Invite/demo browse                | Conditional OK with disclosure                   |
-| Treat #274/#294 as launch-cleared | **NO** — CODE_COMPLETE, staging-unverified       |
-| Treat #293 as launch-cleared      | **NO** — CODE_COMPLETE, `0056` rollout-dependent |
-
----
-
-_Do not declare production readiness while payment reconciliation, migration rollout, RLS, workflows, monitoring, backup/restore, rollback, or live configuration evidence remains incomplete._
+_Do not declare production readiness while payment reconciliation, migration rollout, FORCE RLS, workflows, monitoring, backup/restore, rollback, or live configuration evidence remains incomplete._

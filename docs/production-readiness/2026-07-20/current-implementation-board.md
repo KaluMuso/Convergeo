@@ -1,16 +1,16 @@
 # Current Implementation Board — 2026-07-20
 
 **Purpose:** Evidence-based production-readiness board for execution **before** further runtime/product changes.  
-**Master tip assessed (board draft):** `b1ea6a3` (Merge PR #355) — **superseded for deploy truth** by Prompt 6 @ `d9839db`.  
-**Deploy/migration truth:** `deploy-migration-truth.md` + `deploy-migration-plan.md` (**NO-GO**).  
-**Live probes:** Supabase `dpadrlxukcjbewpqympu`, Vercel, public HTTP.  
-**Companions:** `gap-analysis-vs-docs.md`, `master-vs-docs-representation-report.md`, `docs/plan/00-status.md`, `docs/plan/launch-checklist.md`, `docs/production-readiness/2026-07-18/consolidated/release-gates.md`, `docs/production-readiness/2026-07-19/vision-audit/`.
+**Master tip assessed (Prompt 12):** `d9839db` (Merge PR #369)  
+**Go/No-Go:** `go-no-go-report.md` → recommendation **NO_GO** (2026-07-20T15:30Z)  
+**Live probes (Prompt 12):** Supabase `dpadrlxukcjbewpqympu`, n8n MCP, Vercel, `api.vergeo5.com`, customer routes.  
+**Companions:** `go-no-go-report.md`, `gap-analysis-vs-docs.md`, `master-vs-docs-representation-report.md`, `docs/plan/00-status.md`, `docs/plan/launch-checklist.md`, `docs/production-readiness/2026-07-18/consolidated/release-gates.md`, programme PRs #375–#380 merged; #381 go/no-go (this PR); ops-drills on master via #379.
 
 **Do not reimplement:** `refunds.source_key` / repo file `supabase/migrations/0063_refunds_source_key_uniq.sql` (merged via PR #352). Ops must **apply** that SQL to live after resolving the version collision below — not rewrite the feature.
 
 ---
 
-## 0. Fingerprint (verified)
+## 0. Fingerprint (verified Prompt 12 — supersedes earlier same-day rows)
 
 | Surface                    | Evidence @ board time                                                                                                                  |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
@@ -52,7 +52,7 @@
 | n8n             | 2/19 active                              | 2/19 active                                                       | **Updated 2026-07-20:** both unpublished (fail-closed); +1 dormant Error Trigger; 0/19 registry active            |
 | Money rows      | Empty                                    | Empty (07-19)                                                     | **Confirmed** still empty                                                                                         |
 
-**Blended headline for execution:** code ~90–93% of v1; production-ready per gates **~30–40%**; browse-safe invite beta **conditional**; real money / `public_launch` **NO-GO**.
+**Prompt 12 headline (do not blend):** build ~92% · deployed ~45% · ops ~22% · real-money ~8% · browse-only ~35% · public ~5%. **Recommendation: NO_GO.** See `go-no-go-report.md`.
 
 ---
 
