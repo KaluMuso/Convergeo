@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
 
+import { resetWishlistStoreForTests } from "../../../../../lib/wishlist-local";
+
 import {
   isWishlisted,
   readWishlist,
@@ -11,6 +13,7 @@ import {
 
 afterEach(() => {
   window.localStorage.clear();
+  resetWishlistStoreForTests();
 });
 
 describe("wishlist-storage", () => {
@@ -27,5 +30,16 @@ describe("wishlist-storage", () => {
     expect(readWishlist()).toEqual({});
     writeWishlist({ p2: "2026-01-01T00:00:00.000Z" });
     expect(isWishlisted("p2")).toBe(true);
+  });
+
+  it("shares storage with slug-based PLP wishlist", () => {
+    toggleWishlist("prod-uuid", "tecno-spark");
+    const raw = JSON.parse(window.localStorage.getItem(WISHLIST_STORAGE_KEY) ?? "[]") as Array<{
+      slug: string;
+      productId?: string;
+    }>;
+    expect(
+      raw.some((entry) => entry.slug === "tecno-spark" && entry.productId === "prod-uuid"),
+    ).toBe(true);
   });
 });

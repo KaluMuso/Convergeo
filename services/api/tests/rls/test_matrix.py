@@ -2164,6 +2164,36 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: all_permit(),
         Persona.ADMIN: all_permit(),
     },
+    "user_recently_viewed": {
+        # 0066: owner select/insert/update/delete; admin all. Same owner-scoped
+        # probe shape as `addresses` (bare insert denied by WITH CHECK).
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.ADMIN: all_permit(),
+    },
     "user_roles": {
         Persona.ANON: {
             "select": "deny",
@@ -2201,6 +2231,36 @@ EXPECTATIONS: TableExpectations = {
             "update": "permit",
             "delete": "permit",
         },
+    },
+    "user_wishlist": {
+        # 0066: owner select/insert/delete (no owner UPDATE policy); admin all.
+        # Missing UPDATE policy → WHERE-false probes permit (0 rows).
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.ADMIN: all_permit(),
     },
     "vendor_listings": {
         Persona.ANON: {

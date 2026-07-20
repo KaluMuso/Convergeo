@@ -4,7 +4,7 @@ import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { IconChevronDown } from "@vergeo/ui/src/icons";
 import { useFocusTrap } from "@vergeo/ui/src/modal";
 import Link from "next/link";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { buildCategoryTree, type CategoryRecord, type NavCategory } from "./category-tree";
 
@@ -70,10 +70,13 @@ export function CategoryMegaMenu({
   const loadRef = useRef(loadCategories);
   const panelId = useId();
 
-  useFocusTrap(panelRef, open, () => {
+  const closeMenu = useCallback(() => {
     setOpen(false);
+    // Restore focus for outside-click / link / scroll closes (Escape via trap).
     triggerRef.current?.focus();
-  });
+  }, []);
+
+  useFocusTrap(panelRef, open, closeMenu);
 
   useEffect(() => {
     loadRef.current = loadCategories;
@@ -117,25 +120,25 @@ export function CategoryMegaMenu({
     }
     const onPointerDown = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setOpen(false);
+        closeMenu();
       }
     };
     document.addEventListener("mousedown", onPointerDown);
     return () => {
       document.removeEventListener("mousedown", onPointerDown);
     };
-  }, [open]);
+  }, [open, closeMenu]);
 
   useEffect(() => {
     if (!open || !closeOnScroll) {
       return;
     }
     const onScroll = () => {
-      setOpen(false);
+      closeMenu();
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [open, closeOnScroll]);
+  }, [open, closeOnScroll, closeMenu]);
 
   return (
     <div ref={containerRef} className="relative">
@@ -178,7 +181,7 @@ export function CategoryMegaMenu({
                 <li key={category.id} className="min-w-0">
                   <Link
                     href={`/${locale}/c/${category.slug}`}
-                    onClick={() => setOpen(false)}
+                    onClick={closeMenu}
                     className="block truncate font-display text-h3 text-display-ink transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
                   >
                     {category.name}
@@ -189,7 +192,7 @@ export function CategoryMegaMenu({
                         <li key={child.id} className="min-w-0">
                           <Link
                             href={`/${locale}/c/${child.slug}`}
-                            onClick={() => setOpen(false)}
+                            onClick={closeMenu}
                             className="block truncate text-sm text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
                           >
                             {child.name}
@@ -203,7 +206,7 @@ export function CategoryMegaMenu({
             </ul>
             <Link
               href={`/${locale}/categories`}
-              onClick={() => setOpen(false)}
+              onClick={closeMenu}
               className="inline-flex min-h-11 items-center text-sm font-medium text-primary transition-colors hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
             >
               {labels.viewAll}

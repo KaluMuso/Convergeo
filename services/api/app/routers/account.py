@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from app.core.auth import CurrentUser, get_current_user
@@ -408,3 +409,164 @@ async def patch_preferences(
             notif_prefs=_normalize_notif_prefs(rows[0].get("notif_prefs")),
         )
     return PreferencesResponse(notif_prefs=NotificationPrefs(**merged))
+
+
+RECENTLY_VIEWED_MAX = 20
+
+
+class WishlistItemOut(BaseModel):
+    product_id: str
+    slug: str
+    name: str
+    created_at: str
+
+
+class WishlistResponse(BaseModel):
+    items: list[WishlistItemOut]
+
+
+class WishlistPutRequest(BaseModel):
+    product_ids: list[str] = Field(default_factory=list, max_length=200)
+
+
+class RecentlyViewedItemOut(BaseModel):
+    product_id: str
+    slug: str
+    name: str
+    viewed_at: str
+
+
+class RecentlyViewedResponse(BaseModel):
+    items: list[RecentlyViewedItemOut]
+
+
+class RecentlyViewedPostRequest(BaseModel):
+    product_id: str = Field(min_length=1)
+
+
+@router.get("/wishlist", response_model=WishlistResponse)
+async def get_wishlist(
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> WishlistResponse:
+    client = _user_client(current_user)
+    response = (
+        client.table("user_wishlist")
+        .select("product_id, created_at, products(id, slug, name)")
+        .eq("user_id", current_user.id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    rows = _extract_data(response)
+    items: list[WishlistItemOut] = []
+    if isinstance(rows, list):
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            product = row.get("products")
+            if not isinstance(product, dict):
+                continue
+            items.append(
+                WishlistItemOut(
+                    product_id=str(product.get("id") or row.get("product_id")),
+                    slug=str(product.get("slug") or ""),
+                    name=str(product.get("name") or ""),
+                    created_at=str(row.get("created_at") or ""),
+                )
+            )
+    return WishlistResponse(items=items)
+
+
+@router.put("/wishlist", response_model=WishlistResponse)
+async def put_wishlist(
+    body: WishlistPutRequest,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> WishlistResponse:
+    """Replace wishlist with the provided product id set (deduped, order preserved)."""
+    client = _user_client(current_user)
+    seen: set[str] = set()
+    product_ids: list[str] = []
+    for raw in body.product_ids:
+        pid = raw.strip()
+        if not pid or pid in seen:
+            continue
+        seen.add(pid)
+        product_ids.append(pid)
+
+    client.table("user_wishlist").delete().eq("user_id", current_user.id).execute()
+    if product_ids:
+        client.table("user_wishlist").insert(
+            [{"user_id": current_user.id, "product_id": pid} for pid in product_ids]
+        ).execute()
+    return await get_wishlist(current_user)
+
+
+@router.get("/recently-viewed", response_model=RecentlyViewedResponse)
+async def get_recently_viewed(
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> RecentlyViewedResponse:
+    client = _user_client(current_user)
+    response = (
+        client.table("user_recently_viewed")
+        .select("product_id, viewed_at, products(id, slug, name)")
+        .eq("user_id", current_user.id)
+        .order("viewed_at", desc=True)
+        .limit(RECENTLY_VIEWED_MAX)
+        .execute()
+    )
+    rows = _extract_data(response)
+    items: list[RecentlyViewedItemOut] = []
+    if isinstance(rows, list):
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            product = row.get("products")
+            if not isinstance(product, dict):
+                continue
+            items.append(
+                RecentlyViewedItemOut(
+                    product_id=str(product.get("id") or row.get("product_id")),
+                    slug=str(product.get("slug") or ""),
+                    name=str(product.get("name") or ""),
+                    viewed_at=str(row.get("viewed_at") or ""),
+                )
+            )
+    return RecentlyViewedResponse(items=items)
+
+
+@router.post("/recently-viewed", response_model=RecentlyViewedResponse)
+async def post_recently_viewed(
+    body: RecentlyViewedPostRequest,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> RecentlyViewedResponse:
+    client = _user_client(current_user)
+    product_id = body.product_id.strip()
+    client.table("user_recently_viewed").upsert(
+        {
+            "user_id": current_user.id,
+            "product_id": product_id,
+            "viewed_at": datetime.now(UTC).isoformat(),
+        },
+        on_conflict="user_id,product_id",
+    ).execute()
+
+    # Cap to RECENTLY_VIEWED_MAX by deleting oldest beyond the window.
+    listed = (
+        client.table("user_recently_viewed")
+        .select("product_id, viewed_at")
+        .eq("user_id", current_user.id)
+        .order("viewed_at", desc=True)
+        .execute()
+    )
+    rows = _extract_data(listed)
+    if isinstance(rows, list) and len(rows) > RECENTLY_VIEWED_MAX:
+        drop_ids = [
+            str(row["product_id"])
+            for row in rows[RECENTLY_VIEWED_MAX:]
+            if isinstance(row, dict) and row.get("product_id")
+        ]
+        if drop_ids:
+            client.table("user_recently_viewed").delete().eq(
+                "user_id", current_user.id
+            ).in_("product_id", drop_ids).execute()
+
+    return await get_recently_viewed(current_user)

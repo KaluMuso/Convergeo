@@ -1,60 +1,49 @@
 /**
- * Local-only PDP wishlist (audit P1/P4). Server sync is intentionally out of scope.
- * Keys are product IDs; values are ISO timestamps of when the item was saved.
+ * PDP wishlist adapter over the unified local store.
+ * Keys may be product IDs and/or slugs; v1 map/array payloads are migrated on read.
  */
 
-export const WISHLIST_STORAGE_KEY = "vergeo5:wishlist:v1";
+import {
+  isWishlistedLocal,
+  listWishlistEntries,
+  replaceWishlistLocal,
+  toggleWishlistLocal,
+  WISHLIST_STORAGE_KEY,
+} from "../../../../../lib/wishlist-local";
 
+export { WISHLIST_STORAGE_KEY };
+
+/** Legacy map shape retained for tests that assert productId → ISO. */
 export type WishlistMap = Record<string, string>;
 
-function canUseStorage(): boolean {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
-}
-
 export function readWishlist(): WishlistMap {
-  if (!canUseStorage()) {
-    return {};
+  const map: WishlistMap = {};
+  for (const entry of listWishlistEntries()) {
+    if (entry.productId) {
+      map[entry.productId] = entry.savedAt;
+    }
   }
-  try {
-    const raw = window.localStorage.getItem(WISHLIST_STORAGE_KEY);
-    if (!raw) {
-      return {};
-    }
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return {};
-    }
-    const result: WishlistMap = {};
-    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-      if (typeof key === "string" && key.length > 0 && typeof value === "string") {
-        result[key] = value;
-      }
-    }
-    return result;
-  } catch {
-    return {};
-  }
+  return map;
 }
 
 export function writeWishlist(map: WishlistMap): void {
-  if (!canUseStorage()) {
-    return;
-  }
-  window.localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(map));
+  // Test/compat path: replace with productId-keyed entries (slug = productId).
+  replaceWishlistLocal(
+    Object.entries(map).map(([productId, savedAt]) => ({
+      productId,
+      slug: productId,
+      savedAt,
+    })),
+  );
 }
 
 export function isWishlisted(productId: string): boolean {
-  return Boolean(readWishlist()[productId]);
+  return isWishlistedLocal({ productId, slug: productId });
 }
 
-export function toggleWishlist(productId: string): boolean {
-  const map = readWishlist();
-  if (map[productId]) {
-    delete map[productId];
-    writeWishlist(map);
-    return false;
-  }
-  map[productId] = new Date().toISOString();
-  writeWishlist(map);
-  return true;
+export function toggleWishlist(productId: string, slug?: string): boolean {
+  return toggleWishlistLocal({
+    productId,
+    slug: slug?.trim() || productId,
+  });
 }

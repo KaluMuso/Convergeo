@@ -19,6 +19,8 @@
     "unitPrice": "每件 {amount}",
     "remove": "移除",
     "removeLabel": "从购物车中移除 {title}",
+    "saveForLater": "稍后再买",
+    "saveForLaterLabel": "将 {title} 保存到稍后再买",
     "qtyDecrease": "减少数量",
     "qtyIncrease": "增加数量",
     "qtyDecreaseSymbol": "-",

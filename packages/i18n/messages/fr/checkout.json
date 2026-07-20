@@ -19,6 +19,8 @@
     "unitPrice": "{amount} l'unité",
     "remove": "Retirer",
     "removeLabel": "Retirer {title} du panier",
+    "saveForLater": "Enregistrer pour plus tard",
+    "saveForLaterLabel": "Enregistrer {title} pour plus tard",
     "qtyDecrease": "Diminuer la quantité",
     "qtyIncrease": "Augmenter la quantité",
     "qtyDecreaseSymbol": "-",

@@ -42,6 +42,8 @@
     "qtyValue": "Chiwerengero: {count}",
     "remove": "Chotsani",
     "removeLabel": "Chotsani {title} kuchokera ku cart",
+    "saveForLater": "Sungeni kwa nthawi ina",
+    "saveForLaterLabel": "Sungeni {title} kwa nthawi ina",
     "subtotal": "Subtotal yokha",
     "title": "Cart yanu",
     "total": "Zonse",

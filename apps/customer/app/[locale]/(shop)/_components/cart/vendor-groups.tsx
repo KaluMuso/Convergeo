@@ -44,6 +44,7 @@ type VendorGroupsProps = {
   lineLabels: CartLineItemLabels;
   onQtyChange: (listingId: string, qty: number) => Promise<void>;
   onRemove: (listingId: string) => Promise<void>;
+  onSaveForLater?: (listingId: string) => Promise<void>;
 };
 
 function deliveryProgress(subtotalNgwee: number): number {
@@ -61,6 +62,7 @@ export function VendorGroups({
   lineLabels,
   onQtyChange,
   onRemove,
+  onSaveForLater,
 }: VendorGroupsProps) {
   const multiSeller = groups.length > 1;
 
@@ -162,6 +164,7 @@ export function VendorGroups({
                   labels={lineLabels}
                   onQtyChange={onQtyChange}
                   onRemove={onRemove}
+                  onSaveForLater={onSaveForLater}
                 />
               ))}
             </div>
@@ -276,7 +279,7 @@ function CartLoadError({
 
 function CartPageBody({ locale, labels }: CartPageViewProps) {
   const { cart, notices, loading, loadError } = useCartStore();
-  const { refresh, updateQty, removeItem } = useCartActions();
+  const { refresh, updateQty, removeItem, saveForLater } = useCartActions();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const stockNotice = searchParams.get("notice") === "stock_unavailable";
@@ -304,6 +307,18 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
       await removeItem(listingId);
     },
     [removeItem],
+  );
+
+  const handleSaveForLater = useCallback(
+    async (listingId: string) => {
+      setErrorMessage(null);
+      try {
+        await saveForLater(listingId);
+      } catch {
+        setErrorMessage(labels.updateError);
+      }
+    },
+    [labels.updateError, saveForLater],
   );
 
   const itemCount = getCartItemCount(cart);
@@ -427,6 +442,7 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
             lineLabels={labels.line}
             onQtyChange={handleQtyChange}
             onRemove={handleRemove}
+            onSaveForLater={handleSaveForLater}
           />
         ) : null}
       </div>

@@ -7,10 +7,10 @@ import { NextIntlClientProvider } from "next-intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import servicesMessages from "../../../../../../../../packages/i18n/messages/en/services.json";
-import { canAcceptQuote, shouldShowCompletion } from "../page";
 
 import { AcceptFlow, previewDepositNgwee } from "./accept-flow";
 import { CompleteConfirm } from "./complete-confirm";
+import { canAcceptQuote, shouldShowCompletion } from "./job-status";
 
 import type { ReactNode } from "react";
 

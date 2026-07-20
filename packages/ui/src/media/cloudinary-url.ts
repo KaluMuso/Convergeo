@@ -13,12 +13,12 @@ export type CldSrcSetOptions = {
   cloudName?: string;
 };
 
-function resolveCloudName(cloudName?: string): string {
+function resolveCloudName(cloudName?: string): string | null {
   const resolved = cloudName ?? process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  if (!resolved) {
-    throw new Error("Cloudinary cloud name is required");
+  if (!resolved || !resolved.trim()) {
+    return null;
   }
-  return resolved;
+  return resolved.trim();
 }
 
 /** Strip protocol-smuggling attempts while preserving intentional path slashes. */
@@ -37,6 +37,10 @@ export function sanitizePublicId(publicId: string): string {
 export function cldUrl(publicId: string, options: CldUrlOptions): string {
   const safeId = sanitizePublicId(publicId);
   const cloud = resolveCloudName(options.cloudName);
+  if (!cloud) {
+    // Soft-fail: discovery grids must not throw when env is missing (ops gap).
+    return "";
+  }
   const quality = options.quality ?? "auto";
   const qualityToken = quality === "auto" ? "q_auto" : `q_${quality}`;
 
@@ -46,6 +50,9 @@ export function cldUrl(publicId: string, options: CldUrlOptions): string {
 export function cldLqipUrl(publicId: string, options?: { cloudName?: string }): string {
   const safeId = sanitizePublicId(publicId);
   const cloud = resolveCloudName(options?.cloudName);
+  if (!cloud) {
+    return "";
+  }
   return `https://${CLOUDINARY_HOST}/${cloud}/image/upload/w_24,e_blur:1000,q_30/${safeId}`;
 }
 

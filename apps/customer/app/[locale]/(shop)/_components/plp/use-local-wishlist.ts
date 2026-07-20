@@ -2,107 +2,29 @@
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
-const STORAGE_KEY = "vergeo5:wishlist:v1";
-
-type WishlistStore = {
-  slugs: Set<string>;
-  hydrated: boolean;
-  listeners: Set<() => void>;
-};
-
-const store: WishlistStore = {
-  slugs: new Set(),
-  hydrated: false,
-  listeners: new Set(),
-};
-
-function readSlugs(): Set<string> {
-  if (typeof window === "undefined") {
-    return new Set();
-  }
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return new Set();
-    }
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) {
-      return new Set();
-    }
-    return new Set(
-      parsed.filter((entry): entry is string => typeof entry === "string" && entry.length > 0),
-    );
-  } catch {
-    return new Set();
-  }
-}
-
-function writeSlugs(slugs: Set<string>): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...slugs]));
-}
-
-function emit(): void {
-  for (const listener of store.listeners) {
-    listener();
-  }
-}
-
-function ensureHydrated(): void {
-  if (store.hydrated || typeof window === "undefined") {
-    return;
-  }
-  store.slugs = readSlugs();
-  store.hydrated = true;
-}
-
-function subscribe(listener: () => void): () => void {
-  ensureHydrated();
-  store.listeners.add(listener);
-  return () => {
-    store.listeners.delete(listener);
-  };
-}
-
-function getSnapshot(): string {
-  ensureHydrated();
-  return [...store.slugs].join("\0");
-}
-
-function getServerSnapshot(): string {
-  return "";
-}
-
-function parseSlugs(snapshot: string): string[] {
-  if (!snapshot) {
-    return [];
-  }
-  return snapshot.split("\0").filter(Boolean);
-}
+import { syncWishlistWithServer } from "../../../../../lib/engagement-api";
+import {
+  clearWishlistLocal,
+  getWishlistServerSnapshot,
+  getWishlistSnapshot,
+  parseWishlistSnapshot,
+  removeWishlistLocal,
+  resetWishlistStoreForTests,
+  subscribeWishlist,
+  toggleWishlistLocal,
+} from "../../../../../lib/wishlist-local";
 
 /** Test helper — clears in-memory store between vitest cases. */
 export function resetLocalWishlistStoreForTests(): void {
-  store.slugs = new Set();
-  store.hydrated = false;
-  emit();
+  resetWishlistStoreForTests();
 }
 
 export function removeWishlistSlug(productSlug: string): void {
-  ensureHydrated();
-  if (!store.slugs.has(productSlug)) {
-    return;
-  }
-  const next = new Set(store.slugs);
-  next.delete(productSlug);
-  store.slugs = next;
-  writeSlugs(next);
-  emit();
+  removeWishlistLocal({ slug: productSlug });
 }
 
 /**
- * Browser-local wishlist by product slug. No server API yet — honest client persistence only.
+ * Browser-local wishlist by product slug, with optional server sync when signed in.
  * Saving an item does not reserve stock or price.
  */
 export function useLocalWishlist(productSlug: string | null): {
@@ -110,29 +32,27 @@ export function useLocalWishlist(productSlug: string | null): {
   toggleWishlist: () => void;
   enabled: boolean;
 } {
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const snapshot = useSyncExternalStore(
+    subscribeWishlist,
+    getWishlistSnapshot,
+    getWishlistServerSnapshot,
+  );
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const isWishlisted = Boolean(productSlug && parseSlugs(snapshot).includes(productSlug));
+  const isWishlisted = Boolean(
+    productSlug && parseWishlistSnapshot(snapshot).some((entry) => entry.slug === productSlug),
+  );
 
   const toggleWishlist = useCallback(() => {
     if (!productSlug) {
       return;
     }
-    ensureHydrated();
-    const next = new Set(store.slugs);
-    if (next.has(productSlug)) {
-      next.delete(productSlug);
-    } else {
-      next.add(productSlug);
-    }
-    store.slugs = next;
-    writeSlugs(next);
-    emit();
+    toggleWishlistLocal({ slug: productSlug });
+    void syncWishlistWithServer();
   }, [productSlug]);
 
   return {
@@ -142,31 +62,39 @@ export function useLocalWishlist(productSlug: string | null): {
   };
 }
 
-/** Ordered wishlist slugs for the Saved items page (insertion order preserved). */
+/** Ordered wishlist slugs for the Saved items page (newest first). */
 export function useLocalWishlistSlugs(): {
   slugs: string[];
   hydrated: boolean;
   remove: (slug: string) => void;
   clear: () => void;
 } {
-  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const snapshot = useSyncExternalStore(
+    subscribeWishlist,
+    getWishlistSnapshot,
+    getWishlistServerSnapshot,
+  );
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    void syncWishlistWithServer();
   }, []);
 
   const clear = useCallback(() => {
-    ensureHydrated();
-    store.slugs = new Set();
-    writeSlugs(store.slugs);
-    emit();
+    clearWishlistLocal();
+    void syncWishlistWithServer();
+  }, []);
+
+  const remove = useCallback((slug: string) => {
+    removeWishlistLocal({ slug });
+    void syncWishlistWithServer();
   }, []);
 
   return {
-    slugs: parseSlugs(snapshot),
+    slugs: parseWishlistSnapshot(snapshot).map((entry) => entry.slug),
     hydrated: mounted,
-    remove: removeWishlistSlug,
+    remove,
     clear,
   };
 }

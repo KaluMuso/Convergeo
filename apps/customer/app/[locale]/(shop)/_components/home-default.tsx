@@ -5,6 +5,7 @@ import { VendorCard } from "@vergeo/ui/src/vendor-card";
 import Link from "next/link";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
+import { fetchJson } from "../../../../lib/fetch-json";
 
 import { ListingGrid, type CatalogListing } from "./plp/listing-grid";
 
@@ -104,13 +105,9 @@ async function fetchRailListings(query: string): Promise<CatalogListing[]> {
     if (!url) {
       return [];
     }
-    const response = await fetch(url, {
+    const data = await fetchJson<CatalogApiResponse>(url, {
       next: { revalidate: 60 },
     });
-    if (!response.ok) {
-      return [];
-    }
-    const data = (await response.json()) as CatalogApiResponse;
     return (data.items ?? []).map(mapListing);
   } catch {
     return [];
@@ -133,11 +130,9 @@ async function fetchServicesRail(limit: number): Promise<ServiceRailItem[]> {
     if (!url) {
       return [];
     }
-    const response = await fetch(url, { next: { revalidate: 60 } });
-    if (!response.ok) {
-      return [];
-    }
-    const data = (await response.json()) as { items?: ServiceApiItem[] };
+    const data = await fetchJson<{ items?: ServiceApiItem[] }>(url, {
+      next: { revalidate: 60 },
+    });
     return (data.items ?? []).slice(0, limit).map((item) => ({
       id: item.id,
       slug: item.slug,
@@ -172,11 +167,9 @@ async function fetchTopVendorsRail(limit: number): Promise<VendorRailItem[]> {
     if (!url) {
       return [];
     }
-    const response = await fetch(url, { next: { revalidate: 60 } });
-    if (!response.ok) {
-      return [];
-    }
-    const data = (await response.json()) as { items?: VendorApiItem[] };
+    const data = await fetchJson<{ items?: VendorApiItem[] }>(url, {
+      next: { revalidate: 60 },
+    });
     return (data.items ?? [])
       .slice()
       .sort(

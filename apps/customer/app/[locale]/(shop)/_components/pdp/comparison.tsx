@@ -628,6 +628,7 @@ export function PdpInteractiveBody({
             wishlistSlot={
               <PdpWishlistButton
                 productId={productId}
+                productSlug={productSlug}
                 addLabel={wishlistLabels.add}
                 removeLabel={wishlistLabels.remove}
                 savedAnnounceLabel={wishlistLabels.saved}

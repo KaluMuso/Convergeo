@@ -39,7 +39,7 @@ exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 
         >
           <svg
             aria-hidden="true"
-            class="h-[1.15em] w-[1.15em] shrink-0"
+            class="h-5 w-5 shrink-0"
             fill="none"
             stroke="currentColor"
             stroke-linecap="round"
@@ -75,7 +75,7 @@ exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 
           >
             <svg
               aria-hidden="true"
-              class="h-[1.15em] w-[1.15em] shrink-0"
+              class="h-5 w-5 shrink-0"
               fill="none"
               stroke="currentColor"
               stroke-linecap="round"
@@ -149,7 +149,7 @@ exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 
       >
         <svg
           aria-hidden="true"
-          class="h-[1.15em] w-[1.15em] shrink-0"
+          class="h-5 w-5 shrink-0"
           fill="none"
           stroke="currentColor"
           stroke-linecap="round"
@@ -178,7 +178,7 @@ exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 
       >
         <svg
           aria-hidden="true"
-          class="h-[1.15em] w-[1.15em] shrink-0"
+          class="h-5 w-5 shrink-0"
           fill="none"
           stroke="currentColor"
           stroke-linecap="round"

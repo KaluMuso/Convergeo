@@ -26,6 +26,8 @@ const lineLabels = {
   lineTotal: checkoutMessages.cart.lineTotal,
   remove: checkoutMessages.cart.remove,
   removeLabel: checkoutMessages.cart.removeLabel,
+  saveForLater: checkoutMessages.cart.saveForLater,
+  saveForLaterLabel: checkoutMessages.cart.saveForLaterLabel,
   outOfStockLine: checkoutMessages.cart.outOfStockLine,
 };
 

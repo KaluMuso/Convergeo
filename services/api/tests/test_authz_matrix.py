@@ -111,6 +111,9 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/cart/items"),
         ("DELETE", "/cart/items/{listing_id}"),
         ("PATCH", "/cart/items/{listing_id}"),
+        # Guest-cookie + optional bearer cart owner resolution (same as other /cart/*).
+        ("POST", "/cart/items/{listing_id}/save-for-later"),
+        ("POST", "/cart/revalidate"),
         ("GET", "/catalog/listings"),
         ("GET", "/directory"),
         ("GET", "/directory/{slug}"),
