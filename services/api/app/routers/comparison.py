@@ -7,6 +7,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.products import _aggregate_vendor_ratings, _parse_vendor_row
 from app.services.business.access import BusinessAccess, get_business_access
+from app.services.listings.demo import fetch_demo_listing_ids
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
@@ -151,6 +152,17 @@ def build_comparison(
         # Wholesale-only listings are B2B supplies: excluded from the consumer
         # price comparison unless the caller is a verified business buyer.
         listing_rows = [row for row in listing_rows if not row.get("wholesale")]
+
+    listing_ids = [str(row["id"]) for row in listing_rows if row.get("id")]
+    demo_listing_ids = fetch_demo_listing_ids(client, listing_ids)
+    if demo_listing_ids:
+        remaining = [
+            row for row in listing_rows if str(row.get("id") or "") not in demo_listing_ids
+        ]
+        # Demo-only products are hidden on public comparison (same as PDP).
+        if listing_rows and not remaining:
+            raise AppError("product.not_found", "Product not found", 404)
+        listing_rows = remaining
 
     vendor_ids: list[str] = []
     for row in listing_rows:

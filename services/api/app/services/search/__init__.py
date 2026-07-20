@@ -7,6 +7,7 @@ from typing import Any, cast
 
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.analytics.search_log import log_search_query
+from app.services.listings.demo import drop_demo_listing_hits
 from app.services.search.embedding_client import fetch_query_embedding, format_vector_for_rpc
 from app.services.search.query_builder import (
     DEFAULT_PAGE,
@@ -277,6 +278,8 @@ async def run_search(
     )
     if not include_wholesale:
         hits = drop_wholesale_listing_hits(client, hits)
+    # D25 / VC-P06: demo seed inventory never appears in public discovery.
+    hits = drop_demo_listing_hits(client, hits)
     page_items, total = paginate(hits, page=page, page_size=page_size)
     page_items = attach_route_slugs(client, page_items)
 
@@ -326,6 +329,7 @@ def run_suggest(
     )
     if not include_wholesale:
         hits = drop_wholesale_listing_hits(client, hits)
+    hits = drop_demo_listing_hits(client, hits)
 
     suggestions: list[SuggestItem] = []
     seen_titles: set[str] = set()

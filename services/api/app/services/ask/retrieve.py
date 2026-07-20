@@ -4,6 +4,7 @@ from typing import Any
 
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.ask.filters import AskFilters
+from app.services.listings.demo import drop_demo_listing_hits
 from app.services.search import SearchHit, call_search_rrf, drop_wholesale_listing_hits
 from app.services.search.embedding_client import fetch_query_embedding
 from app.services.search.query_builder import build_filters
@@ -65,4 +66,6 @@ async def top_k(
     # The answer cache is keyed by query alone, so gating by caller eligibility would
     # leak across users; wholesale discovery lives in the gated supplies feed instead.
     hits = drop_wholesale_listing_hits(client, hits)
+    # D25 / VC-P06: demo seed inventory must not ground Ask answers.
+    hits = drop_demo_listing_hits(client, hits)
     return [_hit_to_doc(hit) for hit in hits[:limit]]
