@@ -21,7 +21,7 @@
 | Live money/KYC rows        | `payments=0`, `ledger_transactions=0`, `orders=0`, `kyc_records=0`                                                                     |
 | Live FORCE RLS             | `order_money_gates`/`payments`/`refunds` = true; **`ticket_type_instances` / `ticket_type_price_tiers` / `product_relations` = false** |
 | n8n live                   | **2 workflows**, both active: notification dispatch; payment reconciliation crons                                                      |
-| Repo n8n JSON              | 19 files under `infra/n8n/*.json`; backup is `backup-schedule.md` only (no `backup.json`)                                              |
+| Repo n8n JSON              | 20 files under `infra/n8n/*.json` including `backup.json` (inactive; CODE_COMPLETE — G7 still needs live dump + restore)               |
 
 ### Critical migration collision (blocks naive “apply 0063”)
 
