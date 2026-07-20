@@ -1,8 +1,9 @@
 # Current Implementation Board — 2026-07-20
 
 **Purpose:** Evidence-based production-readiness board for execution **before** further runtime/product changes.  
-**Master tip assessed:** `b1ea6a3` (Merge PR #355)  
-**Live probes (same day):** Supabase project `dpadrlxukcjbewpqympu`, n8n MCP, Vercel deployments.  
+**Master tip assessed (board draft):** `b1ea6a3` (Merge PR #355) — **superseded for deploy truth** by Prompt 6 @ `d9839db`.  
+**Deploy/migration truth:** `deploy-migration-truth.md` + `deploy-migration-plan.md` (**NO-GO**).  
+**Live probes:** Supabase `dpadrlxukcjbewpqympu`, Vercel, public HTTP.  
 **Companions:** `gap-analysis-vs-docs.md`, `master-vs-docs-representation-report.md`, `docs/plan/00-status.md`, `docs/plan/launch-checklist.md`, `docs/production-readiness/2026-07-18/consolidated/release-gates.md`, `docs/production-readiness/2026-07-19/vision-audit/`.
 
 **Do not reimplement:** `refunds.source_key` / repo file `supabase/migrations/0063_refunds_source_key_uniq.sql` (merged via PR #352). Ops must **apply** that SQL to live after resolving the version collision below — not rewrite the feature.
@@ -13,10 +14,12 @@
 
 | Surface                    | Evidence @ board time                                                                                                                  |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `origin/master`            | `b1ea6a3` — includes #350, #351, #352, #353, #355                                                                                      |
-| Customer Vercel production | READY @ `b1ea6a3` (DL-1 closed at tip)                                                                                                 |
-| Vendor Vercel production   | READY @ `1d137ae` (#351); docs-only tip lag (#353/#355) — non-runtime                                                                  |
-| Live DB migrations         | Through timestamped `0062_payments_checkout_success_uniq` **plus** live-only name `0063_revoke_execute_review_reply_guards`            |
+| `origin/master`            | **Prompt 6:** `d9839db` (#369). Board draft tip `b1ea6a3` is stale.                                                                    |
+| Customer Vercel production | **Prompt 6:** READY @ `cde40bf` — **behind** tip (missing #367–#369)                                                                   |
+| Vendor Vercel production   | **Prompt 6:** READY @ `5a4668a` — **behind** tip                                                                                       |
+| Admin Vercel production    | **Prompt 6:** READY @ `2f99711` — missing #369 only                                                                                    |
+| API                        | **Prompt 6:** `api.vergeo5.com` **502**; host digest NOT_AUDITABLE                                                                     |
+| Live DB migrations         | Through live tip `0063_revoke_execute_review_reply_guards`; repo source_key + FORCE RLS **unapplied**                                  |
 | Live `refunds.source_key`  | **Absent** — column missing; index still `refunds_order_id_active_uniq`                                                                |
 | Live money/KYC rows        | `payments=0`, `ledger_transactions=0`, `orders=0`, `kyc_records=0`                                                                     |
 | Live FORCE RLS             | `order_money_gates`/`payments`/`refunds` = true; **`ticket_type_instances` / `ticket_type_price_tiers` / `product_relations` = false** |
