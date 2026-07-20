@@ -2,6 +2,8 @@
 
 One namespace file = one owning pebble per wave. Feature pebbles add keys only to their assigned namespace under `messages/{locale}/{namespace}.json`.
 
+**Bemba / Nyanja (bem/nya):** Phase-1 critical strings and native-speaker sign-off live in [`PHASE1_NATIVE_REVIEW.md`](./PHASE1_NATIVE_REVIEW.md). Until sign-off criteria there are met, bem/nya remain `noindex` (see `packages/i18n/src/seo-publication.ts`).
+
 | Namespace       | Owning pebble (wave)   |
 | --------------- | ---------------------- |
 | `common`        | M02-P02 (shared shell) |
