@@ -1,0 +1,52 @@
+{
+  "title": "Zogulitsa za wholesale",
+  "description": "Zogulitsa za wholesale zokhala ndi mitengo ya tiers ndi minimum order quantities.",
+  "results": "{count, plural, one {# listing ya wholesale} other {# listings za wholesale}}",
+  "t2Notice": {
+    "title": "Ogulitsa a T2 verified okha",
+    "body": "Zogulitsa za wholesale pa Vergeo5 zimalembedwa ndi mabizinesi a T2-verified. Ogulitsa a retail okha sangathe kufalitsa listings za tier pricing."
+  },
+  "sort": {
+    "label": "Sanjani mwa",
+    "moq": "MOQ yotsika",
+    "unitPrice": "Unit price yabwino"
+  },
+  "empty": {
+    "title": "Palibe listings za wholesale pano",
+    "body": "Bweraninso posachedwa — opereka a verified akuwonjezera stock ya bulk ndi tier pricing."
+  },
+  "card": {
+    "vendor": "Wagulitsa {vendor}",
+    "quantityLabel": "Quantity yowonera",
+    "decrease": "Chepetsani quantity",
+    "increase": "Onjezerani quantity",
+    "decreaseSymbol": "−",
+    "increaseSymbol": "+",
+    "noImage": "Palibe chithunzi",
+    "viewListing": "Onani listing"
+  },
+  "tier": {
+    "quantityHeader": "Qty",
+    "priceHeader": "Unit price",
+    "priceFrom": "Kuyambira {amount} pa {qty}+ units"
+  },
+  "moq": {
+    "badge": "MOQ {qty}",
+    "label": "Minimum order:",
+    "tableLabel": "MOQ:"
+  },
+  "preview": {
+    "line": "{qty} × {unitPrice} = {total}"
+  },
+  "gate": {
+    "title": "Business mode ikufunika",
+    "body": "Zogulitsa za wholesale ndi tier pricing ndi za mabizinesi a verified. Enable business mode kuti muone ndi kugula mu bulk.",
+    "signInBody": "Lowani ndi account ya business yoverified kuti muone zogulitsa za wholesale.",
+    "pendingTitle": "Verification ikuyang'aniridwa",
+    "pendingBody": "Tikuyang'ana zambiri za business yanu. Mudzapeza wholesale access mukaverified.",
+    "rejectedTitle": "Business sinatsimikizidwe",
+    "rejectedBody": "Situnathe kuverify business yanu. Sinthani zambiri ndi kutumizanso kuti mutsegule wholesale.",
+    "apply": "Enable business mode",
+    "signIn": "Lowani"
+  }
+}

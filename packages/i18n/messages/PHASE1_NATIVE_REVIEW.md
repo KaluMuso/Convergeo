@@ -14,6 +14,8 @@ Record each review session in the table. One row per reviewer × locale batch (o
 
 **Namespaces in scope for Phase-1 money/trust copy:** `catalog`, `checkout`, `orders`, `account`, `search`, `common`, `notifications`, `marketing` (present today). **`legal`** — sign off only when bem/nya `legal.json` exists (CCP-03d); until then, criterion 3 blocks SEO flip for vernacular legal pages.
 
+**CCP-03e verticals (2026-07-20):** `services`, `events`, `directory`, `supplies` exist for bem/nya with key parity to EN (best-effort vernacular; **pending native-speaker review** — not a SEO-flip blocker by themselves, but do not claim native-complete).
+
 ## Noindex removal criteria (authoritative)
 
 All four must be true before opening the SEO-flip PR (`cursor/ccp-02-seo-flip-bem-nya-da3e`):

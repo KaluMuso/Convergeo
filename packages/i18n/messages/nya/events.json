@@ -1,0 +1,166 @@
+{
+  "title": "Events",
+  "browse": {
+    "title": "Events",
+    "subtitle": "Pezani workshops, shows, ndi community gatherings mu Zambia yonse.",
+    "emptyTitle": "Palibe events mu window iyi",
+    "emptyBody": "Yesani date filter ina kapena bweraninso posachedwa pa listings zatsopano.",
+    "soldOut": "Zapatha",
+    "free": "Free",
+    "viewEvent": "Onani event",
+    "verified": "Verified",
+    "calendarLabel": "Masiku omwe ali ndi events mwezi uno",
+    "hostCta": "Pangani event",
+    "hostPitch": "Gulitsani tickets ndi dynamic QR check-in ndi kulandira ndalama motetezeka."
+  },
+  "filters": {
+    "tonight": "Usikuuno",
+    "thisWeekend": "Weekend ino",
+    "allDates": "Zonse zikubwera",
+    "categoryLabel": "Category"
+  },
+  "categories": {
+    "all": "Zonse",
+    "workshops": "Workshops & education",
+    "comedy-theatre": "Comedy & theatre",
+    "pop-up-dinners": "Pop-up dinners",
+    "cultural-arts": "Cultural & arts",
+    "lifestyle-community": "Lifestyle & community",
+    "free-rsvp": "Free RSVP"
+  },
+  "detail": {
+    "metaTitle": "{title} — Events",
+    "metaDescription": "{title} ku {venue}. Onani masiku, tickets, ndi venue details pa Vergeo5.",
+    "about": "Za event iyi",
+    "dates": "Masiku ndi maola",
+    "tickets": "Tickets",
+    "venue": "Venue",
+    "landmark": "Pafupi ndi {landmark}",
+    "mapHint": "Tsegulani mu maps",
+    "organiser": "Organised by",
+    "organiserCta": "Onani organiser",
+    "soldOut": "Zapatha",
+    "free": "Free RSVP",
+    "fromPrice": "Kuyambira {price}",
+    "ticketRemaining": "{count, plural, one {# yatsala} other {# zatsala}}",
+    "getTickets": "Pezani tickets",
+    "getTicketsSoon": "Ticket sales zikubwera posachedwa",
+    "pastInstance": "Yapita",
+    "spots": "{sold} / {total} spots"
+  },
+  "organiser": {
+    "imageAlt": "Chithunzi cha event {position}"
+  },
+  "ticketPurchase": {
+    "selectInstance": "Sankhani tsiku",
+    "selectType": "Ticket type",
+    "quantity": "Quantity",
+    "decrease": "Chepetsani quantity",
+    "decreaseSymbol": "−",
+    "increase": "Onjezerani quantity",
+    "increaseSymbol": "+",
+    "total": "Total",
+    "freeRsvpCta": "Sungani free spot",
+    "payCta": "Pezani tickets",
+    "processing": "Ikuprocess…",
+    "successRsvp": "Spot yasungidwa",
+    "successCheckout": "Yaonjezedwa — pitirizani ku payment",
+    "soldOut": "Zapatha",
+    "remaining": "{count, plural, one {# yatsala} other {# zatsala}}",
+    "perCustomerCap": "Max {count} pa munthu",
+    "earlyBird": "Early-bird: {price} mpaka {until}",
+    "groupTier": "Gulani {minQty}+ pa {price} chilichonse",
+    "groupUpsell": "Onjezerani {count, plural, one {# ina} other {# zina}} kuti mulipire {price} chilichonse",
+    "discountApplied": "Discount yapangidwa — {price} chilichonse",
+    "attendeeNamesLabel": "Mayina a attendees",
+    "attendeeNameLabel": "Dzina la attendee {index}",
+    "attendeeNamePlaceholder": "Dzina lonse",
+    "loginRequired": "Lowani kuti mupeze tickets",
+    "errors": {
+      "generic": "Situnathe kumaliza request. Yesaninso.",
+      "freeUseRsvp": "Iyi ndi free event — gwiritsani Reserve.",
+      "paidUseCheckout": "Ticket iyi ikufuna payment.",
+      "oversell": "Siliponso",
+      "attendeeNamesRequired": "Lembani dzina pa ticket iliyonse.",
+      "attendeeNamesMismatch": "Lembani dzina limodzi lokha pa ticket iliyonse."
+    }
+  },
+  "wallet": {
+    "title": "Tickets zanga",
+    "emptyTitle": "Palibe tickets pano",
+    "emptyBody": "Tickets zomwe mugula kapena RSVP zidzaonekera apa ndi rotating QR code yolowera.",
+    "emptyCta": "Browse events",
+    "list": {
+      "viewTicket": "Onani ticket",
+      "status": {
+        "issued": "Ready to scan",
+        "checked_in": "Checked in",
+        "transferred": "Transferred",
+        "void": "Void"
+      },
+      "startsAt": "Imayamba {datetime}"
+    },
+    "detail": {
+      "metaTitle": "Ticket — {event}",
+      "back": "Bwerani ku tickets",
+      "eventLabel": "Event",
+      "venueLabel": "Venue",
+      "startsLabel": "Imayamba",
+      "typeLabel": "Ticket type",
+      "holderLabel": "Dzina la attendee",
+      "qrLabel": "Onetsani QR iyi ku gate",
+      "qrAria": "Rotating entry QR code",
+      "pinLabel": "PIN backup",
+      "pinAria": "Six-digit entry PIN {pin}",
+      "pinUnavailable": "PIN inatumizidwa pamene munagula ticket iyi. Onani messages zanu ngati mukufuna.",
+      "refreshIn": "Ikurefresh mu {seconds}s",
+      "offlineTitle": "Muli offline",
+      "offlineBody": "Tikugwiritsa cached entry codes. Sync mukabwerera online pa codes zatsopano.",
+      "offlineExpired": "Cached codes zapatha — gwiritsani PIN yanu ku gate.",
+      "syncHorizon": "Ikusync offline codes…",
+      "status": {
+        "issued": "Ready to scan",
+        "checked_in": "Checked in",
+        "transferred": "Ticket iyi yatransferred ndipo singagwiritsidwenso.",
+        "void": "Ticket iyi silinso valid."
+      },
+      "transferBanner": "Tickets za transferred sizingascanidwe. Recipient ali ndi QR ndi PIN yatsopano.",
+      "voidBanner": "Ticket iyi yavoided ndipo singagwiritsidwe ku entry."
+    }
+  },
+  "transfer": {
+    "back": "Bwerani ku ticket",
+    "title": "Transfer ticket",
+    "subtitle": "Tumizani ticket iyi kwa bwenzi free. Adzalowa ndi nambala ya foni pansipa kuti apeze.",
+    "phoneLabel": "Nambala ya foni ya recipient",
+    "phonePlaceholder": "e.g. 0977 123 456",
+    "cutoffNotice": "Transfers zimatseka maola 6 event isanayambe.",
+    "submitCta": "Tumizani transfer",
+    "submitting": "Ikutumiza…",
+    "successBody": "Tawadziwitsa {phone}. Angapeze ticket iyi polowa ndi nambala ija.",
+    "cancelCta": "Cancel transfer",
+    "cancelling": "Ikucancel…",
+    "cancelledNotice": "Transfer yacancelled.",
+    "pendingNotice": "Pending transfer ku {phone}",
+    "claimBanner": {
+      "title": "Bwenzi akutumizirani ticket",
+      "body": "{event} imayamba {datetime}. Pezani isanathe.",
+      "claimCta": "Pezani ticket",
+      "claiming": "Ikupeza…",
+      "claimedNotice": "Ticket yapezedwa — pezani mu Tickets zanga.",
+      "dismiss": "Dismiss"
+    },
+    "errors": {
+      "generic": "Situnathe kumaliza request. Yesaninso.",
+      "notFound": "Ticket sinapezeke.",
+      "notHolder": "Ticket holder yekha angatransfer ticket iyi.",
+      "notTransferable": "Ticket iyi singatransferred.",
+      "cutoffPassed": "Transfers zimatseka maola 6 event isanayambe.",
+      "pendingExists": "Ticket iyi ili ndi pending transfer kale.",
+      "notPending": "Transfer iyi silinso pending.",
+      "expired": "Transfer offer iyi yaexpired.",
+      "phoneMismatch": "Lowani ndi nambala ya foni yomwe ticket inatumizidwa.",
+      "rateLimited": "Ma request ambiri. Yesaninso posachedwa."
+    }
+  }
+}

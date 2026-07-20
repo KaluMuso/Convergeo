@@ -1,0 +1,52 @@
+{
+  "title": "Fyakulangulula",
+  "description": "Ifintu ifya wholesale ifyaliko amaprices ya tiers na minimum order quantities.",
+  "results": "{count, plural, one {# listing ya wholesale} other {# listings sha wholesale}}",
+  "t2Notice": {
+    "title": "Bashitisha aba T2 verified fye",
+    "body": "Fyakulangulula fya wholesale pa Vergeo5 fyalembwa na mabushiness ya T2-verified. Abashitisha ba retail fye tabangapo listings sha tier pricing."
+  },
+  "sort": {
+    "label": "Panga ukulingana na",
+    "moq": "MOQ iya panshi",
+    "unitPrice": "Unit price isuma"
+  },
+  "empty": {
+    "title": "Takuli listings sha wholesale pano",
+    "body": "Bwelako limbi — abashipilisha aba verified balelengapo stock ya bulk na tier pricing."
+  },
+  "card": {
+    "vendor": "Ashitisha {vendor}",
+    "quantityLabel": "Quantity yakulolesha",
+    "decrease": "Chekesha quantity",
+    "increase": "Onjesha quantity",
+    "decreaseSymbol": "−",
+    "increaseSymbol": "+",
+    "noImage": "Takuli icithunzi",
+    "viewListing": "Lolesha listing"
+  },
+  "tier": {
+    "quantityHeader": "Qty",
+    "priceHeader": "Unit price",
+    "priceFrom": "Kufuma {amount} pa {qty}+ units"
+  },
+  "moq": {
+    "badge": "MOQ {qty}",
+    "label": "Minimum order:",
+    "tableLabel": "MOQ:"
+  },
+  "preview": {
+    "line": "{qty} × {unitPrice} = {total}"
+  },
+  "gate": {
+    "title": "Business mode ilefwailwa",
+    "body": "Fyakulangulula fya wholesale na tier pricing fyaliikilwa ku mabushiness ya verified. Enable business mode ukulolesha no kushita mu bulk.",
+    "signInBody": "Ingilani na account ya business iya verified ukumona fyakulangulula fya wholesale.",
+    "pendingTitle": "Verification ilimo kukabiliwa",
+    "pendingBody": "Tulolesha ifyakulanda fyenu fya business. Mukapoka wholesale access nga mwa verified.",
+    "rejectedTitle": "Business taverified",
+    "rejectedBody": "Tatwakwanisha ukuverify business yenu. Update ifyakulanda no kutuma again ukufungula wholesale.",
+    "apply": "Enable business mode",
+    "signIn": "Ingilani"
+  }
+}
