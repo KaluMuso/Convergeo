@@ -42,7 +42,18 @@ Add a single **Webhook** alert contact and attach it to every monitor above:
 
 - **URL:** `https://n8n.vergeo5.com/webhook/uptime-alert` (the n8n workflow's production path)
 - **Method:** `POST`, **JSON** payload (enable "Send as JSON").
-- **POST value (JSON):**
+- **Custom HTTP headers (required):**
+
+  | Header            | Value                                         |
+  | ----------------- | --------------------------------------------- |
+  | `X-Uptime-Secret` | same value as n8n env `UPTIME_WEBHOOK_SECRET` |
+
+  UptimeRobot → Alert Contact → advanced/custom headers (or “Send as HTTP headers”).
+  Requests **without** this header, or with the wrong value, receive **401** and never
+  page WhatsApp. The secret lives only in the n8n host environment — never in the
+  committed workflow JSON.
+
+- **POST value (JSON)** — non-sensitive health-monitor schema only:
 
   ```json
   {
@@ -59,6 +70,23 @@ Add a single **Webhook** alert contact and attach it to every monitor above:
 
 - Enable the contact for **Down** and **Up** events (n8n filters; the "up" event lets you
   extend the workflow with an all-clear later).
+
+### Secret rotation & test-event procedure
+
+1. Generate a new secret (`openssl rand -hex 32`) on the OCI host.
+2. Set `UPTIME_WEBHOOK_SECRET` in the n8n container env (compose / `.env`), restart n8n.
+3. Update the UptimeRobot alert contact `X-Uptime-Secret` header to the new value.
+4. **Test event:** UptimeRobot → monitor → “Test Notification”, or:
+   ```bash
+   curl -sS -X POST https://n8n.vergeo5.com/webhook/uptime-alert \
+     -H 'Content-Type: application/json' \
+     -H "X-Uptime-Secret: $UPTIME_WEBHOOK_SECRET" \
+     -d '{"monitorFriendlyName":"test","monitorURL":"https://api.vergeo5.com/health","alertType":"1","alertDetails":"manual test","alertDateTime":"now"}'
+   ```
+   Expect HTTP 200 and a WhatsApp page for `alertType=1`. Repeat with a wrong/missing
+   header → HTTP 401 and **no** WhatsApp send. `alertType=2` with a valid secret → 200,
+   `paged: false`.
+5. Discard the previous secret after a successful test.
 
 ---
 
@@ -86,11 +114,13 @@ Add a single **Webhook** alert contact and attach it to every monitor above:
      → Create Monitor.
 
 5. In n8n, import infra/n8n/uptime-alert.json, set env
-   WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_CLOUD_API_TOKEN / FOUNDER_WHATSAPP_TO,
-   register the `ops_uptime_alert` WhatsApp template (founder action F5), then Activate.
+   UPTIME_WEBHOOK_SECRET / WHATSAPP_PHONE_NUMBER_ID / WHATSAPP_CLOUD_API_TOKEN /
+   FOUNDER_WHATSAPP_TO, register the `ops_uptime_alert` WhatsApp template
+   (founder action F5), configure the alert-contact header, then Activate.
 
 6. Verify: UptimeRobot → a monitor → "Test Notification" (or pause the API briefly).
-   Expect a WhatsApp message to the founder within ~2 minutes.
+   Expect a WhatsApp message to the founder within ~2 minutes. Also confirm a request
+   without `X-Uptime-Secret` returns 401.
 ```
 
 **DEFERRED-AC (founder-gated):** step 6 — a real trip firing a real WhatsApp page —

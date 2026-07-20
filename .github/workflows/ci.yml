@@ -168,18 +168,31 @@ jobs:
   secret-scan:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
+    # Blocking (RC-06 / G8 / VE-P04): any real finding fails the job.
+    # Pinned CLI >=8.28 — path/regex allowlists are broken on gitleaks 8.24.x.
+    env:
+      GITLEAKS_VERSION: "8.28.0"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
+      - name: Install gitleaks
+        run: |
+          curl -sSfL \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Self-test scanner catches planted secret
+        run: bash scripts/ci/gitleaks-self-test.sh
+
+      - name: Validate n8n workflows have no plaintext secrets
+        run: bash scripts/ci/validate-n8n-no-plaintext-secrets.sh
+
       - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@v3
-        continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_CONFIG: .gitleaks.toml
+        run: gitleaks detect --source . --config .gitleaks.toml --verbose --redact
 
   deps-audit:
     name: Dependency audit

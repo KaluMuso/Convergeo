@@ -129,14 +129,33 @@ Monitors and the exact setup transcript live in
 [`infra/n8n/uptime-alert.json`](../../infra/n8n/uptime-alert.json):
 
 ```
-UptimeRobot (monitor trips) → webhook → n8n "Uptime Downtime Founder Alert"
+UptimeRobot (monitor trips)
+  → POST /webhook/uptime-alert + header X-Uptime-Secret
+  → n8n constant-time verify against $env.UPTIME_WEBHOOK_SECRET
+  → (auth fail → 401, no WhatsApp)
   → (alertType == down) → WhatsApp Cloud API (template: ops_uptime_alert) → founder
 ```
+
+**Auth (VD-P05 / RC-08):** inbound requests must present `X-Uptime-Secret` matching the
+n8n environment variable `UPTIME_WEBHOOK_SECRET`. Verification uses
+`crypto.timingSafeEqual` in the workflow Code node. The secret is **never** committed in
+workflow JSON (CI: `scripts/ci/validate-n8n-no-plaintext-secrets.sh`). Rotation and
+test-event steps are in [`infra/uptimerobot.md`](../../infra/uptimerobot.md).
 
 The n8n workflow calls the **WhatsApp Cloud API directly** (not the notification outbox /
 our own API), on purpose: an outage of the API or its database must not swallow its own
 downtime alert. The recovery ("up" again) event is `alertType == 2` and is ignored by the
 paging branch — recovery is confirmed from the UptimeRobot dashboard.
+
+### Money-workflow failure paging (VD-P06)
+
+The money/ops ticks (`release-job`, `reconciliation`, `payment-sweeper`,
+`payout-failure-alert`) retry transient HTTP failures (3× / 5s) and, on workflow error,
+page the founder with a **metadata-only** WhatsApp body (workflow name, status, last
+node, timestamp — no payment refs, tokens, or PII). Shared template:
+[`infra/n8n/money-workflow-error-alert.json`](../../infra/n8n/money-workflow-error-alert.json).
+Each money workflow also embeds the same Error Trigger path so paging works without a
+cross-workflow `errorWorkflow` id at import time.
 
 ---
 
@@ -146,7 +165,8 @@ paging branch — recovery is confirmed from the UptimeRobot dashboard.
    (API) and `NEXT_PUBLIC_SENTRY_DSN` (per web app) in env; set `SENTRY_AUTH_TOKEN` +
    `SENTRY_ORG` + `SENTRY_PROJECT` on the deploy env to enable source-map upload.
 2. **UptimeRobot** — create the monitors in `infra/uptimerobot.md`; point their webhook
-   alert contact at the n8n `uptime-alert` webhook URL.
+   alert contact at the n8n `uptime-alert` webhook URL and set the `X-Uptime-Secret`
+   header to match n8n `UPTIME_WEBHOOK_SECRET`.
 3. **WhatsApp** — register the `ops_uptime_alert` utility template (founder action F5) and
-   set `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_CLOUD_API_TOKEN`, `FOUNDER_WHATSAPP_TO` in the
-   n8n environment.
+   set `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_CLOUD_API_TOKEN`, `FOUNDER_WHATSAPP_TO`, and
+   `UPTIME_WEBHOOK_SECRET` in the n8n environment.

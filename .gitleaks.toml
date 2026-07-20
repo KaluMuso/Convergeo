@@ -1,5 +1,8 @@
 # Vergeo5 gitleaks config — tuned allowlists for docs/fixtures/examples only.
 # Must NOT allowlist real secret shapes (AWS keys, JWTs, private keys, etc.).
+#
+# Requires gitleaks >= 8.28 (path/regex allowlists are broken on 8.24.x).
+# CI installs a pinned CLI — see .github/workflows/ci.yml secret-scan job.
 
 title = "Vergeo5 gitleaks"
 
@@ -27,4 +30,26 @@ regexes = [
 description = "Documented dummy CI values referenced in workflow comments"
 regexes = [
   '''ci-dummy-(google|apple)-''',
+]
+
+[[allowlists]]
+description = "Intentional synthetic secrets used only to unit-test scrubbers / webhook verifiers"
+paths = [
+  '''(?i)services/api/tests/test_sentry_scrubber\.py$''',
+  '''(?i)supabase/functions/send-sms-otp/index\.test\.ts$''',
+  '''(?i)services/api/tests/test_ticket_wallet\.py$''',
+]
+
+[[allowlists]]
+description = "Public Vergeo5 hostnames used as staging negative-fixtures (not credentials)"
+regexes = [
+  '''(?i)api\.vergeo5\.com''',
+]
+
+[[allowlists]]
+description = "Verified generic-api-key false positives (non-secret substrings in history)"
+regexes = [
+  '''question=normalized''',
+  '''dispute/cancel''',
+  '''golden-fixture-key-42''',
 ]

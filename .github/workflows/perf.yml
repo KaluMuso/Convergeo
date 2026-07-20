@@ -176,8 +176,24 @@ jobs:
           const cfg = JSON.parse(readFileSync('lighthouserc.json', 'utf8'));
           if (!cfg.ci?.collect?.url?.length) throw new Error('missing ci.collect.url');
           if (!cfg.vergeo?.bundle?.defaultMaxKbGz) throw new Error('missing vergeo.bundle');
+          const matrix = cfg.ci.assert?.assertMatrix;
+          if (!Array.isArray(matrix) || !matrix.length) {
+          throw new Error('missing ci.assert.assertMatrix (blocking G19 policy)');
+          }
+          for (const row of matrix) {
+          for (const [key, spec] of Object.entries(row.assertions || {})) {
+          if (!Array.isArray(spec) || spec[0] === 'off') continue;
+          // Checkout SEO may stay warn (noindex waiver); everything else must error.
+          const isCheckoutSeo =
+          /checkout/.test(row.matchingUrlPattern || '') && key === 'categories:seo';
+          if (!isCheckoutSeo && spec[0] !== 'error') {
+          throw new Error(\`assertion \${key} on \${row.matchingUrlPattern} must be error (got \${spec[0]})\`);
+          }
+          }
+          }
+          const lcp = matrix[matrix.length - 1].assertions['largest-contentful-paint']?.[1]?.maxNumericValue;
           console.log('lighthouserc.json OK —', cfg.ci.collect.url.length, 'URLs,',
-          'LCP ≤', cfg.ci.assert.assertions['largest-contentful-paint'][1].maxNumericValue, 'ms');
+          'assertMatrix rows', matrix.length, ', default LCP ≤', lcp, 'ms (blocking)');
           "
 
       - name: Start production server
@@ -209,11 +225,12 @@ jobs:
             fi
           done
 
-      - name: Lighthouse CI (advisory — see lighthouserc.json)
-        # Advisory until LHCI runs against a real Vercel preview: assertions are
-        # `warn` (never non-zero) and this step is non-blocking so a CI-environment
-        # score dip or LHCI flake can't fail a PR. Blocking gate = bundle-guard + image-lint above.
-        continue-on-error: true
+      - name: Lighthouse CI (blocking — see lighthouserc.json)
+        # Blocking (G19 / VE-P06 / RC-06): assertMatrix uses error level for a11y,
+        # best-practices, SEO (except checkout noindex waiver), and CI perf/LCP floors.
+        # Bundle-guard + image-lint remain the hard first-load JS/image gates.
+        # Rollback: temporarily pin this step to continue-on-error ONLY if LHCI/Chrome
+        # itself is unavailable (not for score dips) — document in the PR.
         run: pnpm exec lhci autorun --config=lighthouserc.json
 
       - name: Stop servers

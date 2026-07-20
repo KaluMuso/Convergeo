@@ -23,33 +23,40 @@ and delivers directly to the founder's WhatsApp.
   on the API and mirror it in n8n `$env`.
 - Founder recipients use `$env` (`FOUNDER_WHATSAPP_TO` / `FOUNDER_WHATSAPP_E164`,
   `WHATSAPP_CLOUD_API_URL`, `WHATSAPP_CLOUD_API_TOKEN`) — never in workflow JSON.
+- Uptime webhook auth uses `$env.UPTIME_WEBHOOK_SECRET` + header `X-Uptime-Secret`
+  (constant-time compare in workflow Code node). See `infra/uptimerobot.md`.
+- Money ticks (`release-job`, `reconciliation`, `payment-sweeper`,
+  `payout-failure-alert`) retry HTTP 3×/5s and page the founder on workflow error
+  with metadata only (no payment refs / PII). Optional shared handler:
+  `money-workflow-error-alert.json`.
 
 ## Registry
 
 Every `infra/n8n/*.json` (schedule = `scheduleTrigger`; all default **inactive** —
 activate per environment after credentials + F5 WhatsApp are live):
 
-| Workflow file                | Trigger               | API endpoint                              | Purpose                                                                                           | Owner   |
-| ---------------------------- | --------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------- | ------- |
-| `admin-digest.json`          | Daily 06:00 UTC       | `POST /internal/digest`                   | Founder daily digest: GMV, orders, payouts due, reconciliation, KYC queue, flags → WhatsApp       | M13-P11 |
-| `notification-dispatch.json` | Every 1m              | `POST /internal/dispatch/tick`            | Drain `notification_outbox` → WhatsApp → SMS → email                                              | M14-P01 |
-| `kyc-nudge.json`             | Every 6h              | `POST /internal/n8n/kyc-stalled/tick`     | Nudge vendor applicants stalled 48h+ in pending KYC                                               | M14-P06 |
-| `payout-failure-alert.json`  | Every 1h              | `POST /internal/n8n/payout-failures/tick` | Alert founder of failed payouts                                                                   | M14-P06 |
-| `low-stock-alert.json`       | Daily 07:00 UTC       | `POST /internal/n8n/low-stock/tick`       | Alert vendor owners of low-stock listings                                                         | M14-P06 |
-| `review-request.json`        | Every 4h              | `POST /internal/n8n/review-requests/tick` | Request customer reviews +24h post-completion                                                     | M14-P06 |
-| `abandoned-cart.json`        | Every 2h              | `POST /internal/n8n/abandoned-carts/tick` | Nudge customers with abandoned carts (flag-gated)                                                 | M14-P06 |
-| `order-jobs.json`            | Every 1h              | `POST /internal/order-jobs/auto-confirm`  | Auto-confirm delivered orders + auto-release escrow                                               | M09-P10 |
-| `payment-sweeper.json`       | Every 5m              | `POST /internal/payment-sweeper/tick`     | Reconcile in-flight Lenco payment statuses                                                        | M08-P04 |
-| `release-job.json`           | Every 1h              | `POST /internal/release-job/tick`         | Sweep eligible escrow releases                                                                    | M08-P08 |
-| `reconciliation.json`        | Every 30m             | `POST /internal/reconciliation/poll-tick` | Poll Lenco + emit daily reconciliation report                                                     | M08-P07 |
-| `reservation-sweeper.json`   | Every 2m              | `POST /internal/stock-sweeper/tick`       | Expire stale stock reservations                                                                   | M07-P02 |
-| `funnel-abandon.json`        | Every 5m              | `POST /internal/funnel/abandon-tick`      | Sweep abandoned checkout funnels for analytics                                                    | M07-P08 |
-| `analytics-retention.json`   | Daily 03:00 UTC       | `POST /internal/analytics/retention-tick` | DPA retention sweep: NULL person-links >30d (search_query_log / funnel_events / analytics_events) | M16-P07 |
-| `embeddings-cron.json`       | Every 5m              | `POST /internal/embeddings/tick`          | Generate embeddings for pending catalog rows                                                      | M06-P01 |
-| `event-release.json`         | Every 1h              | `POST /internal/event-release/tick`       | Release due event-escrow phases                                                                   | M10-P08 |
-| `tickets-issue.json`         | Every 60s             | `POST /internal/tickets/issue-tick`       | Issue tickets for paid ticket orders                                                              | M10     |
-| `tickets-release.json`       | Every 2m              | `POST /internal/tickets/release-tick`     | Release stale ticket holds                                                                        | M10     |
-| `uptime-alert.json`          | Webhook (UptimeRobot) | WhatsApp Cloud API (direct)               | Page founder on WhatsApp when a monitor trips (API-independent)                                   | M16-P06 |
+| Workflow file                     | Trigger                 | API endpoint                                               | Purpose                                                                                           | Owner            |
+| --------------------------------- | ----------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------- |
+| `admin-digest.json`               | Daily 06:00 UTC         | `POST /internal/digest`                                    | Founder daily digest: GMV, orders, payouts due, reconciliation, KYC queue, flags → WhatsApp       | M13-P11          |
+| `notification-dispatch.json`      | Every 1m                | `POST /internal/dispatch/tick`                             | Drain `notification_outbox` → WhatsApp → SMS → email                                              | M14-P01          |
+| `kyc-nudge.json`                  | Every 6h                | `POST /internal/n8n/kyc-stalled/tick`                      | Nudge vendor applicants stalled 48h+ in pending KYC                                               | M14-P06          |
+| `payout-failure-alert.json`       | Every 1h                | `POST /internal/n8n/payout-failures/tick`                  | Alert founder of failed payouts (+ retry + error-page on tick failure)                            | M14-P06 / VD-P06 |
+| `money-workflow-error-alert.json` | Error Trigger           | WhatsApp Cloud API (direct)                                | Shared metadata-only founder page for money-workflow failures (optional errorWorkflow target)     | VD-P06           |
+| `low-stock-alert.json`            | Daily 07:00 UTC         | `POST /internal/n8n/low-stock/tick`                        | Alert vendor owners of low-stock listings                                                         | M14-P06          |
+| `review-request.json`             | Every 4h                | `POST /internal/n8n/review-requests/tick`                  | Request customer reviews +24h post-completion                                                     | M14-P06          |
+| `abandoned-cart.json`             | Every 2h                | `POST /internal/n8n/abandoned-carts/tick`                  | Nudge customers with abandoned carts (flag-gated)                                                 | M14-P06          |
+| `order-jobs.json`                 | Every 1h                | `POST /internal/order-jobs/auto-confirm`                   | Auto-confirm delivered orders + auto-release escrow                                               | M09-P10          |
+| `payment-sweeper.json`            | Every 5m                | `POST /internal/payment-sweeper/tick`                      | Reconcile in-flight Lenco payment statuses (+ retry + error-page)                                 | M08-P04 / VD-P06 |
+| `release-job.json`                | Every 1h                | `POST /internal/release-job/tick`                          | Sweep eligible escrow releases (+ retry + error-page)                                             | M08-P08 / VD-P06 |
+| `reconciliation.json`             | Every 30m + daily 05:00 | `POST /internal/reconciliation/poll-tick` (+ daily-report) | Poll Lenco + emit daily reconciliation report (+ retry + error-page)                              | M08-P07 / VD-P06 |
+| `reservation-sweeper.json`        | Every 2m                | `POST /internal/stock-sweeper/tick`                        | Expire stale stock reservations                                                                   | M07-P02          |
+| `funnel-abandon.json`             | Every 5m                | `POST /internal/funnel/abandon-tick`                       | Sweep abandoned checkout funnels for analytics                                                    | M07-P08          |
+| `analytics-retention.json`        | Daily 03:00 UTC         | `POST /internal/analytics/retention-tick`                  | DPA retention sweep: NULL person-links >30d (search_query_log / funnel_events / analytics_events) | M16-P07          |
+| `embeddings-cron.json`            | Every 5m                | `POST /internal/embeddings/tick`                           | Generate embeddings for pending catalog rows                                                      | M06-P01          |
+| `event-release.json`              | Every 1h                | `POST /internal/event-release/tick`                        | Release due event-escrow phases                                                                   | M10-P08          |
+| `tickets-issue.json`              | Every 60s               | `POST /internal/tickets/issue-tick`                        | Issue tickets for paid ticket orders                                                              | M10              |
+| `tickets-release.json`            | Every 2m                | `POST /internal/tickets/release-tick`                      | Release stale ticket holds                                                                        | M10              |
+| `uptime-alert.json`               | Webhook (UptimeRobot)   | WhatsApp Cloud API (direct)                                | Page founder on downtime; requires `X-Uptime-Secret` / `$env.UPTIME_WEBHOOK_SECRET`               | M16-P06 / VD-P05 |
 
 ### Founder digest aggregates (`admin-digest.json`)
 
