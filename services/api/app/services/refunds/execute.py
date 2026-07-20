@@ -276,9 +276,19 @@ def _compute_lane_amounts(
     order_id: str,
     lane: Lane,
     return_transport_ngwee: int,
+    item_ngwee_override: int | None = None,
+    delivery_fee_ngwee_override: int | None = None,
 ) -> tuple[int, Lane1RefundAmount | None, Lane2RefundBreakdown | None]:
-    delivery_fee = int(order.get("delivery_fee_ngwee", 0))
-    item_total = _order_item_total_ngwee(service_client, order_id)
+    delivery_fee = (
+        delivery_fee_ngwee_override
+        if delivery_fee_ngwee_override is not None
+        else int(order.get("delivery_fee_ngwee", 0))
+    )
+    item_total = (
+        item_ngwee_override
+        if item_ngwee_override is not None
+        else _order_item_total_ngwee(service_client, order_id)
+    )
     if lane == 1:
         lane1 = compute_lane1_refund(item_ngwee=item_total, delivery_fee_ngwee=delivery_fee)
         return lane1.refund_ngwee, lane1, None
@@ -401,12 +411,18 @@ def _resume_processing_refund(
     key = str(idempotency_key) if isinstance(idempotency_key, str) else None
     ledger_key_base = _stable_ledger_key_base(key, order_id)
 
+    item_override = breakdown.get("item_ngwee_override")
+    delivery_override = breakdown.get("delivery_fee_ngwee_override")
     refund_amount, lane1, lane2 = _compute_lane_amounts(
         service_client=service_client,
         order=order,
         order_id=order_id,
         lane=lane,
         return_transport_ngwee=return_transport_ngwee,
+        item_ngwee_override=int(item_override) if isinstance(item_override, int) else None,
+        delivery_fee_ngwee_override=(
+            int(delivery_override) if isinstance(delivery_override, int) else None
+        ),
     )
     stored_amount = int(existing.get("amount_ngwee") or 0)
     if stored_amount > 0:
@@ -440,8 +456,18 @@ def execute_refund(
     customer_momo: str,
     dispute_id: str | None = None,
     idempotency_key: str | None = None,
+    item_ngwee_override: int | None = None,
+    delivery_fee_ngwee_override: int | None = None,
 ) -> RefundExecutionResult:
-    """Execute or return an existing refund for an order (double-execution guarded)."""
+    """Execute or return an existing refund for an order (double-execution guarded).
+
+    By default the refund is order-scoped (all order items + full delivery), which is
+    correct for a whole-order dispute/admin refund. Per-item return callers (returns
+    lane 1/2) pass ``item_ngwee_override`` / ``delivery_fee_ngwee_override`` so the
+    refund covers only the returned item — matching the amount previewed to the
+    customer. Without these overrides a single-item return on a multi-order-item order
+    would over-refund every item the customer keeps.
+    """
     existing = _find_existing_refund(service_client, order_id)
     if existing is not None:
         status = str(existing.get("status") or "")
@@ -475,6 +501,8 @@ def execute_refund(
         order_id=order_id,
         lane=lane,
         return_transport_ngwee=return_transport_ngwee,
+        item_ngwee_override=item_ngwee_override,
+        delivery_fee_ngwee_override=delivery_fee_ngwee_override,
     )
 
     if refund_amount <= 0:
@@ -546,6 +574,10 @@ def execute_refund(
         breakdown["dispute_id"] = dispute_id
     if idempotency_key:
         breakdown["idempotency_key"] = idempotency_key
+    if item_ngwee_override is not None:
+        breakdown["item_ngwee_override"] = item_ngwee_override
+    if delivery_fee_ngwee_override is not None:
+        breakdown["delivery_fee_ngwee_override"] = delivery_fee_ngwee_override
 
     ledger_key_base = _stable_ledger_key_base(idempotency_key, order_id)
 

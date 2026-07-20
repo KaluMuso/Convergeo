@@ -254,7 +254,11 @@ def _enqueue_status_notification(
     enqueue_outbox_row(
         service_client.client,
         event_type="order-status-changed",
-        entity_id=order_id,
+        # Include the destination status so each transition is its own outbox row.
+        # Keyed on order_id alone, only the FIRST status change ever notified the
+        # customer — every later transition (confirmed/shipped/delivered) collided
+        # on the same dedupe_key and was dropped.
+        entity_id=f"{order_id}:{to_status}",
         channel="whatsapp",
         template=STATUS_NOTIFICATION_TEMPLATE,
         payload={

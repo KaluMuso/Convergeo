@@ -433,6 +433,10 @@ def create_lane2_return(
         customer_rail=customer_rail,
         customer_momo=customer_momo,
         idempotency_key=f"return-{return_id}",
+        # Scope the refund to the single returned item (and its prorated outbound
+        # delivery) instead of the whole order, matching the previewed breakdown.
+        item_ngwee_override=item_ngwee,
+        delivery_fee_ngwee_override=outbound_delivery,
     )
 
     if refund.amount_ngwee != breakdown.refund_ngwee:

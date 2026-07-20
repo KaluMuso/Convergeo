@@ -765,3 +765,26 @@ def test_kyc_state_machine_status_derivation(
     assert status == KycApplicationStatus.REJECTED
     assert record is not None
     assert record.status == "rejected"
+
+
+def test_cod_cap_zero_is_honored_not_replaced_by_default() -> None:
+    """Regression: a configured cod_cap_ngwee of 0 (COD disabled) must be read back
+    as 0, not silently replaced by the hardcoded default."""
+    import app.services.kyc.caps as caps_module
+
+    caps_module._cod_cap_cache = None
+    fake = FakeSupabaseClient()
+    fake.tables["platform_config"].rows.append({"key": "cod_cap_ngwee", "value": 0})
+
+    parsed = caps_module._parse_config_int(fake, "cod_cap_ngwee", 50_000)
+    assert parsed == 0
+
+    caps_module._cod_cap_cache = None
+    fake2 = FakeSupabaseClient()
+    fake2.tables["platform_config"].rows.append({"key": "cod_cap_ngwee", "value": 25_000})
+    assert caps_module._parse_config_int(fake2, "cod_cap_ngwee", 50_000) == 25_000
+
+    caps_module._cod_cap_cache = None
+    fake3 = FakeSupabaseClient()  # no row → falls back to the supplied default
+    assert caps_module._parse_config_int(fake3, "cod_cap_ngwee", 50_000) == 50_000
+    caps_module._cod_cap_cache = None

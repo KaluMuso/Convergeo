@@ -362,6 +362,62 @@ class TestCreateLane2Return:
         assert mock_execute.call_args.kwargs["lane"] == 2
         assert mock_execute.call_args.kwargs["return_transport_ngwee"] == 5_000
 
+    @patch("app.services.returns.lane2.execute_refund")
+    def test_multi_item_order_refunds_only_returned_item(self, mock_execute: MagicMock) -> None:
+        """Regression: a single-item return on a multi-item order must scope the
+        refund to the returned item (+ prorated delivery), never the whole order."""
+        fake = FakeSupabaseClient()
+        _seed_eligible_order(
+            fake,
+            delivered_at=datetime.now(tz=UTC) - timedelta(hours=24),
+            item_ngwee=200_000,
+            delivery_fee=10_000,
+        )
+        # A second, unrelated item the customer keeps — order subtotal is now 500_000.
+        fake.tables["order_items"].rows.append(
+            {
+                "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+                "order_id": ORDER_ID,
+                "qty": 1,
+                "unit_price_ngwee": 300_000,
+            }
+        )
+        # Prorated outbound for the returned item: 10_000 * 200_000 // 500_000 = 4_000.
+        prorated_delivery = 4_000
+        preview = compute_lane2_breakdown(
+            item_ngwee=200_000,
+            outbound_delivery_ngwee=prorated_delivery,
+            return_transport_ngwee=5_000,
+            restocking_pct=10,
+        )
+        mock_execute.return_value = RefundExecutionResult(
+            refund_id="refund-1",
+            order_id=ORDER_ID,
+            lane=2,
+            phase=RefundPhase.PRE_RELEASE,
+            amount_ngwee=preview.refund_ngwee,
+            payout_id="payout-1",
+            lenco_reference="pay-ref",
+            ledger_transaction_ids=("ledger-1",),
+            breakdown={"refund_ngwee": preview.refund_ngwee},
+            created=True,
+        )
+
+        create_lane2_return(
+            FakeServiceClient(fake),
+            order_item_id=ORDER_ITEM_ID,
+            customer_id=CUSTOMER_ID,
+            unused_declared=True,
+            return_transport_ngwee=5_000,
+            customer_momo=CUSTOMER_MOMO,
+        )
+
+        kwargs = mock_execute.call_args.kwargs
+        # The returned item's value and its prorated delivery — not the 500_000
+        # order subtotal or the full 10_000 delivery.
+        assert kwargs["item_ngwee_override"] == 200_000
+        assert kwargs["delivery_fee_ngwee_override"] == prorated_delivery
+
     def test_create_requires_unused_declaration(self) -> None:
         fake = FakeSupabaseClient()
         _seed_eligible_order(

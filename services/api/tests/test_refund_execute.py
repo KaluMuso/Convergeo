@@ -25,6 +25,8 @@ from app.services.payments.references import make_refund_reference
 from app.services.refunds.execute import RefundPhase, execute_refund
 from postgrest.exceptions import APIError
 
+_PRE_RELEASE_GATE = RefundGateDecision(phase="pre_release", claimed=True)
+
 ORDER_ID = "70707070-7070-7070-7070-707070707070"
 VENDOR_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 CUSTOMER_MOMO = "+260971234567"
@@ -547,3 +549,88 @@ class TestPartialUniqueIndexRealPostgres:
         )
         assert third.returncode == 0, third.stderr
         _psql(f"delete from public.refunds where order_id = '{order_id}';")
+
+
+class TestItemScopedRefund:
+    """Per-item return callers must be able to scope the refund to one order item."""
+
+    def test_override_scopes_lane1_refund_to_returned_item(self) -> None:
+        from tests.test_refund_execute import (
+            FakeServiceClient,
+            FakeSupabaseClient,
+            IdempotentPostTransaction,
+        )
+
+        fake = FakeSupabaseClient()
+        # Multi-item order: returned item 200_000 + a kept item 300_000.
+        fake.tables["orders"].rows.append(
+            {"id": ORDER_ID, "vendor_id": VENDOR_ID, "delivery_fee_ngwee": 5_000,
+             "status": "delivered"}
+        )
+        fake.tables["order_items"].rows.append(
+            {"order_id": ORDER_ID, "qty": 1, "unit_price_ngwee": 200_000}
+        )
+        fake.tables["order_items"].rows.append(
+            {"order_id": ORDER_ID, "qty": 1, "unit_price_ngwee": 300_000}
+        )
+        service = FakeServiceClient(fake)
+        ledger = IdempotentPostTransaction()
+
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                return_value=_PRE_RELEASE_GATE,
+            ),
+        ):
+            result = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+                idempotency_key=CALLER_KEY,
+                item_ngwee_override=200_000,
+            )
+
+        # Only the returned item (200_000) + full delivery (5_000) — NOT the whole
+        # 500_000 order subtotal the un-scoped path would have refunded.
+        assert result.amount_ngwee == 205_000
+
+    def test_no_override_is_order_scoped_default(self) -> None:
+        from tests.test_refund_execute import (
+            FakeServiceClient,
+            FakeSupabaseClient,
+            IdempotentPostTransaction,
+        )
+
+        fake = FakeSupabaseClient()
+        fake.tables["orders"].rows.append(
+            {"id": ORDER_ID, "vendor_id": VENDOR_ID, "delivery_fee_ngwee": 5_000,
+             "status": "delivered"}
+        )
+        fake.tables["order_items"].rows.append(
+            {"order_id": ORDER_ID, "qty": 1, "unit_price_ngwee": 200_000}
+        )
+        fake.tables["order_items"].rows.append(
+            {"order_id": ORDER_ID, "qty": 1, "unit_price_ngwee": 300_000}
+        )
+        service = FakeServiceClient(fake)
+        ledger = IdempotentPostTransaction()
+
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                return_value=_PRE_RELEASE_GATE,
+            ),
+        ):
+            result = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+                idempotency_key=CALLER_KEY,
+            )
+
+        # Whole order (500_000 items + 5_000 delivery) — the dispute/admin default.
+        assert result.amount_ngwee == 505_000
