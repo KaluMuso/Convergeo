@@ -229,7 +229,7 @@ export function SearchInput({
         />
         <button
           type="submit"
-          className="absolute right-1 top-1/2 inline-flex min-h-9 min-w-9 -translate-y-1/2 items-center justify-center rounded px-2 text-sm font-medium text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+          className="absolute right-1 top-1/2 inline-flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded px-2 text-sm font-medium text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
           aria-label={labels.submit}
         >
           <svg

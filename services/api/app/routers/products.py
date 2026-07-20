@@ -6,6 +6,7 @@ from typing import Annotated, Any, Protocol
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.business.access import BusinessAccess, get_business_access
+from app.services.listings.demo import fetch_demo_listing_ids, is_demo_public_id
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
@@ -408,6 +409,18 @@ def build_product_detail(
         listing_rows = [row for row in listing_rows if not row.get("wholesale")]
 
     listing_ids = [str(row["id"]) for row in listing_rows if row.get("id")]
+    # D25 / VC-P06: hide demo seed inventory on the public PDP. When every
+    # active listing is demo, hide the product (demo only on demo routes).
+    demo_listing_ids = fetch_demo_listing_ids(client, listing_ids)
+    if demo_listing_ids:
+        remaining = [
+            row for row in listing_rows if str(row.get("id") or "") not in demo_listing_ids
+        ]
+        if listing_rows and not remaining:
+            raise AppError("product.not_found", "Product not found", 404)
+        listing_rows = remaining
+        listing_ids = [str(row["id"]) for row in listing_rows if row.get("id")]
+
     images_by_listing: dict[str, list[dict[str, Any]]] = {
         listing_id: [] for listing_id in listing_ids
     }
@@ -525,10 +538,16 @@ def _shoppable_related_items(
         .order("price_ngwee")
         .execute()
     )
+    listing_rows = list(listings_response.data or [])
+    all_listing_ids = [str(row["id"]) for row in listing_rows if row.get("id")]
+    demo_listing_ids = fetch_demo_listing_ids(client, all_listing_ids)
 
-    # Cheapest active listing per product (rows arrive price-ascending).
+    # Cheapest active *non-demo* listing per product (rows arrive price-ascending).
     cheapest_by_product: dict[str, dict[str, Any]] = {}
-    for listing_row in listings_response.data or []:
+    for listing_row in listing_rows:
+        listing_id = str(listing_row.get("id") or "")
+        if listing_id in demo_listing_ids:
+            continue
         pid = str(listing_row.get("product_id") or "")
         if pid and pid in sibling_by_id and pid not in cheapest_by_product:
             cheapest_by_product[pid] = listing_row
@@ -554,6 +573,7 @@ def _shoppable_related_items(
                 and listing_id not in image_by_listing
                 and isinstance(public_id, str)
                 and public_id
+                and not is_demo_public_id(public_id)
             ):
                 image_by_listing[listing_id] = public_id
 

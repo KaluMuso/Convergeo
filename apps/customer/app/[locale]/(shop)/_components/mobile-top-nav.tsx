@@ -14,6 +14,8 @@ type MobileTopNavProps = {
   actions?: ReactNode;
   cartIcon: ReactNode;
   cartLabel: string;
+  /** Localised “Cart, {count} items” template (ICU `{count}`). */
+  cartWithCountLabel?: string;
   skipLinkTargetId: string;
   skipLinkLabel: string;
   navAriaLabel: string;
@@ -33,6 +35,7 @@ export function MobileTopNav({
   actions,
   cartIcon,
   cartLabel,
+  cartWithCountLabel,
   skipLinkTargetId,
   skipLinkLabel,
   navAriaLabel,
@@ -46,6 +49,10 @@ export function MobileTopNav({
   }, [refresh]);
 
   const cartCount = getCartItemCount(cart);
+  const cartCountLabel =
+    cartCount > 0 && cartWithCountLabel
+      ? cartWithCountLabel.replace("{count}", String(cartCount > 99 ? 99 : cartCount))
+      : undefined;
   const topNavProps: ComponentProps<typeof TopNav> = {
     className: "lg:hidden",
     logo,
@@ -55,6 +62,7 @@ export function MobileTopNav({
     cartCount,
     cartHref: `/${locale}/cart`,
     cartLabel,
+    cartCountLabel,
     skipLinkTargetId,
     skipLinkLabel,
     navAriaLabel,

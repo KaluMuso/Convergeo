@@ -22,13 +22,14 @@ describe("coerceSitemapId", () => {
 });
 
 describe("sitemap locale publication", () => {
-  it("lists only SEO-indexable locales (omits unreviewed bem/nya)", () => {
+  it("lists only SEO-indexable locales (omits unreviewed bem/nya and QA-only zh)", () => {
     expect(sitemapLocales()).toEqual([...SEO_INDEXABLE_LOCALES]);
-    expect(sitemapLocales()).toEqual(["en", "fr", "zh"]);
+    expect(sitemapLocales()).toEqual(["en", "fr"]);
     expect(sitemapLocales()).not.toContain("bem");
     expect(sitemapLocales()).not.toContain("nya");
+    expect(sitemapLocales()).not.toContain("zh");
     // Routes remain available — publication is a subset of LOCALES.
-    expect(LOCALES).toEqual(expect.arrayContaining(["bem", "nya", ...SEO_INDEXABLE_LOCALES]));
+    expect(LOCALES).toEqual(expect.arrayContaining(["bem", "nya", "zh", ...SEO_INDEXABLE_LOCALES]));
   });
 });
 

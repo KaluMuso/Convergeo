@@ -7,6 +7,8 @@
     "defaultCategory": "All products",
     "breadcrumbAria": "Breadcrumb",
     "results": "{count, plural, one {# listing} other {# listings}}",
+    "resultsUnknown": "Listing count unavailable",
+    "childCategories": "Shop by subcategory",
     "emptyTitle": "No listings found",
     "emptyBody": "Try clearing filters or browsing another category.",
     "unavailableTitle": "Listings unavailable",
@@ -35,7 +37,9 @@
       "location": "Near me",
       "radiusKm": "Within {km} km",
       "apply": "Apply filters",
-      "clear": "Clear filters"
+      "clear": "Clear filters",
+      "openFilters": "Filters",
+      "filtersActive": "Filters (active)"
     },
     "filters": {
       "appliedAria": "Applied filters",
@@ -51,6 +55,8 @@
       "reviewCount": "({count})",
       "quickAdd": "Quick add",
       "wishlist": "Save to wishlist",
+      "wishlistRemove": "Remove from wishlist",
+      "mediaEmpty": "No product image",
       "outOfStock": "Out of stock",
       "distance": "{distance} away"
     },
@@ -75,6 +81,7 @@
       "orders": "Orders",
       "account": "Account",
       "cart": "Cart",
+      "cartWithCount": "Cart, {count} items",
       "searchPlaceholder": "Search products, services, events…",
       "searchSubmit": "Search",
       "allCategories": "All Categories",

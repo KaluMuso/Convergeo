@@ -11,6 +11,7 @@ from app.services.business.access import (
     get_business_access,
     require_wholesale_access,
 )
+from app.services.listings.demo import fetch_demo_listing_ids, is_demo_public_id
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
@@ -488,6 +489,11 @@ def _matches_filters(
 def _build_candidates(client: Any, category_path: str | None) -> list[_CatalogCandidate]:
     search_docs = _fetch_search_documents(client, category_path)
     listing_ids = [doc.entity_id for doc in search_docs]
+    # D25 / VC-P06: drop demo seed listings before facets / pagination / totals.
+    demo_listing_ids = fetch_demo_listing_ids(client, listing_ids)
+    if demo_listing_ids:
+        search_docs = [doc for doc in search_docs if doc.entity_id not in demo_listing_ids]
+        listing_ids = [doc.entity_id for doc in search_docs]
     listings = _fetch_listings(client, listing_ids)
     vendor_ids = sorted({listing.vendor_id for listing in listings.values()})
     product_ids = sorted(
@@ -682,6 +688,9 @@ def list_wholesale_supplies(client: Any, *, limit: int) -> CatalogListResponse:
     """Wholesale/supplies feed. Callers MUST gate this behind verified-business access;
     the endpoint enforces that, this function assumes it and returns B2B pricing."""
     listings = _fetch_wholesale_listings(client, limit)
+    demo_listing_ids = fetch_demo_listing_ids(client, [row.id for row in listings])
+    if demo_listing_ids:
+        listings = [row for row in listings if row.id not in demo_listing_ids]
     vendor_ids = sorted({row.vendor_id for row in listings})
     product_ids = sorted({row.product_id for row in listings if row.product_id is not None})
     vendors = _fetch_vendors(client, vendor_ids)
@@ -695,6 +704,11 @@ def list_wholesale_supplies(client: Any, *, limit: int) -> CatalogListResponse:
             continue  # vendor storefront not active
         product = products.get(row.product_id) if row.product_id else None
         title = str(product["name"]) if product else (row.title_override or "")
+        image_public_id = images.get(row.id)
+        # Defence in depth: never surface a demo public_id even if the batch
+        # probe missed an edge-case row shape.
+        if is_demo_public_id(image_public_id):
+            continue
         items.append(
             CatalogListingItem(
                 id=row.id,
@@ -705,7 +719,7 @@ def list_wholesale_supplies(client: Any, *, limit: int) -> CatalogListResponse:
                 price_ngwee=row.price_ngwee,
                 condition=row.condition,
                 in_stock=True,
-                image_public_id=images.get(row.id),
+                image_public_id=image_public_id,
                 wholesale=True,
                 moq=row.moq,
                 price_tiers=row.price_tiers,

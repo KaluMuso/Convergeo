@@ -9,13 +9,13 @@ Findings from the k6 load suite (`load/`) and the post-run money-safety invarian
 
 ## Scope
 
-| Deliverable | State |
-| --- | --- |
-| `load/k6/checkout-load.js` — 100cc cart→reserve→order→payment-initiate (Lenco stub) | Delivered, structure-validated |
-| `load/k6/browse-load.js` — search + PLP + suggest read mix | Delivered, structure-validated |
-| `load/invariant-check.py` — oversell / ledger / invoice-gap, non-zero exit on violation | Delivered, `py_compile` clean |
-| `load/README.md` — run procedure, env, thresholds, tuning log | Delivered |
-| Live 100cc run + p95 measurement | **Deferred — founder/staging-gated** |
+| Deliverable                                                                             | State                                |
+| --------------------------------------------------------------------------------------- | ------------------------------------ |
+| `load/k6/checkout-load.js` — 100cc cart→reserve→order→payment-initiate (Lenco stub)     | Delivered, structure-validated       |
+| `load/k6/browse-load.js` — search + PLP + suggest read mix                              | Delivered, structure-validated       |
+| `load/invariant-check.py` — oversell / ledger / invoice-gap, non-zero exit on violation | Delivered, `py_compile` clean        |
+| `load/README.md` — run procedure, env, thresholds, tuning log                           | Delivered                            |
+| Live 100cc run + p95 measurement                                                        | **Deferred — founder/staging-gated** |
 
 ## Encoded thresholds (authoritative in the scripts)
 
@@ -56,10 +56,12 @@ _Paste console output of these checks into a run entry when re-validating._
 
 ## Live run results (founder to complete against staging)
 
-| Date | Commit | Scenario | VUs | p50 | p95 | p99 | err rate | oversell_errors | orders_created | invariant-check |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| _pending_ | _staging-gated_ | checkout_100cc | 100 | — | — | — | — | — | — | — |
-| _pending_ | _staging-gated_ | browse_mix | 100 | — | — | — | — | n/a | n/a | n/a |
+| Date       | Commit          | Scenario       | VUs | p50 | p95 | p99 | err rate | oversell_errors | orders_created | invariant-check                                      |
+| ---------- | --------------- | -------------- | --- | --- | --- | --- | -------- | --------------- | -------------- | ---------------------------------------------------- |
+| 2026-07-20 | `d9839db`       | checkout_100cc | 100 | —   | —   | —   | —        | —               | —              | NOT_RUN (ops-drills: k6 absent; API 502; no staging) |
+| 2026-07-20 | `d9839db`       | browse_mix     | 100 | —   | —   | —   | —        | n/a             | n/a            | n/a                                                  |
+| _pending_  | _staging-gated_ | checkout_100cc | 100 | —   | —   | —   | —        | —               | —              | —                                                    |
+| _pending_  | _staging-gated_ | browse_mix     | 100 | —   | —   | —   | —        | n/a             | n/a            | n/a                                                  |
 
 ## Interpreting a run
 

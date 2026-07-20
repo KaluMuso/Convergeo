@@ -15,6 +15,7 @@ import {
   type SearchResponse,
   type TabCounts,
 } from "../_components/search/results-tabs";
+import { SearchAnalytics } from "../_components/search/search-analytics";
 import { SearchInput } from "../_components/search/search-input";
 import { searchTabKinds, type SearchKind } from "../_components/search/search-kinds";
 import {
@@ -193,9 +194,26 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       : `/${locale}/search`;
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-4 motion-rise sm:py-6">
+    // Shop layout already provides the page <main> landmark — avoid nesting.
+    <div className="mx-auto w-full max-w-3xl py-4 motion-rise sm:py-6 lg:max-w-5xl">
+      {view.status === "results" ? (
+        <SearchAnalytics
+          normalizedTerm={view.query}
+          zeroResult={false}
+          resultCount={view.response.total}
+        />
+      ) : null}
+      {view.status === "zero" ? (
+        <SearchAnalytics normalizedTerm={view.query} zeroResult resultCount={0} />
+      ) : null}
+
       <header className="mb-4 space-y-3">
         <h1 className="font-display text-h1 text-display-ink">{t("title")}</h1>
+        {query ? (
+          <p className="text-sm text-text-2" data-testid="search-query-summary">
+            {t("results.forQuery", { query })}
+          </p>
+        ) : null}
         <SearchInput
           locale={locale}
           initialQuery={query || (normalized.status === "invalid" ? (q?.trim() ?? "") : "")}
@@ -312,6 +330,12 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
               degraded: t("results.degraded"),
               priceFrom: t("result.priceFrom"),
               category: t("result.category"),
+              marketplaceListing: t("result.marketplaceListing"),
+              wishlist: tCatalog("plp.card.wishlist"),
+              wishlistRemove: tCatalog("plp.card.wishlistRemove"),
+              mediaEmpty: tCatalog("plp.card.mediaEmpty"),
+              noReviews: tCatalog("plp.card.noReviews"),
+              reviewCount: tCatalog("plp.card.reviewCount"),
               loadMore: t("pagination.loadMore"),
               loading: t("pagination.loading"),
               moreLoaded: t("pagination.moreLoaded"),
@@ -322,6 +346,6 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
           />
         </Suspense>
       ) : null}
-    </main>
+    </div>
   );
 }

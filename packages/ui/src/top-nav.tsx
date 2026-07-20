@@ -16,6 +16,11 @@ export type TopNavProps = {
   cartCount?: number;
   cartHref?: string;
   cartLabel: ReactNode;
+  /**
+   * Accessible name when the cart has items. Prefer a localised ICU string
+   * (`Cart, {count} items`). Falls back to `${cartLabel}, {count}` when omitted.
+   */
+  cartCountLabel?: string;
   /** Id of the main-content landmark this nav's skip link jumps to. */
   skipLinkTargetId: string;
   /** Localised "Skip to content" label. When provided, a keyboard-visible skip link renders first. */
@@ -45,6 +50,7 @@ export function TopNav({
   cartCount = 0,
   cartHref = "#",
   cartLabel,
+  cartCountLabel,
   skipLinkTargetId,
   skipLinkLabel,
   navAriaLabel,
@@ -53,6 +59,22 @@ export function TopNav({
   condensed = false,
 }: TopNavProps) {
   const [scrolled, setScrolled] = useState(false);
+  const cartAccessibleName = (() => {
+    if (typeof cartLabel !== "string") {
+      return undefined;
+    }
+    if (cartCount <= 0) {
+      return cartLabel;
+    }
+    if (cartCountLabel) {
+      return cartCountLabel;
+    }
+    return `${cartLabel}, ${formatCartCount(cartCount)}`;
+  })();
+  const cartStatusText =
+    cartCount > 0 && typeof cartLabel === "string"
+      ? (cartCountLabel ?? `${cartLabel}: ${formatCartCount(cartCount)}`)
+      : "";
 
   useEffect(() => {
     let ticking = false;
@@ -122,16 +144,22 @@ export function TopNav({
           <LinkComponent
             href={cartHref}
             className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded text-primary"
-            aria-label={typeof cartLabel === "string" ? cartLabel : undefined}
+            aria-label={cartAccessibleName}
           >
             <span aria-hidden>{cartIcon}</span>
             {cartCount > 0 ? (
-              <span className="absolute -right-0.5 -top-0.5 flex min-h-5 min-w-5 items-center justify-center rounded-pill bg-accent px-1 text-micro font-semibold text-surface">
+              <span
+                aria-hidden
+                className="absolute -right-0.5 -top-0.5 flex min-h-5 min-w-5 items-center justify-center rounded-pill bg-accent px-1 text-micro font-semibold text-surface"
+              >
                 {formatCartCount(cartCount)}
               </span>
             ) : null}
             {typeof cartLabel !== "string" ? <span className="sr-only">{cartLabel}</span> : null}
           </LinkComponent>
+          <span className="sr-only" aria-live="polite" aria-atomic="true">
+            {cartStatusText}
+          </span>
         </div>
       </nav>
     </header>

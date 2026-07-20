@@ -12,6 +12,12 @@ vi.mock("./category-mega-menu", () => ({
   ),
 }));
 
+vi.mock("./cart/mini-cart-drawer", () => ({
+  useCartStore: () => ({ cart: null }),
+  useCartActions: () => ({ refresh: vi.fn() }),
+  getCartItemCount: () => 0,
+}));
+
 afterEach(cleanup);
 
 const labels = {
@@ -31,6 +37,7 @@ const labels = {
   askVergeo: "Ask Vergeo",
   account: "Account",
   cart: "Cart",
+  cartWithCount: "Cart, {count} items",
 };
 
 describe("DesktopHeader", () => {

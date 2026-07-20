@@ -5,6 +5,7 @@ import { SearchField } from "@vergeo/ui/src/search-field";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { getCartItemCount, useCartActions, useCartStore } from "./cart/mini-cart-drawer";
 import { CategoryMegaMenu } from "./category-mega-menu";
 
 type DesktopHeaderLabels = {
@@ -24,6 +25,7 @@ type DesktopHeaderLabels = {
   askVergeo: string;
   account: string;
   cart: string;
+  cartWithCount: string;
 };
 
 type DesktopHeaderProps = {
@@ -41,6 +43,12 @@ const SCROLL_COMPACT_PX = 48;
  */
 export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
   const [compact, setCompact] = useState(false);
+  const { cart } = useCartStore();
+  const { refresh } = useCartActions();
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     let ticking = false;
@@ -58,6 +66,12 @@ export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const cartCount = getCartItemCount(cart);
+  const cartAriaLabel =
+    cartCount > 0
+      ? labels.cartWithCount.replace("{count}", String(cartCount > 99 ? 99 : cartCount))
+      : labels.cart;
 
   const navLinks = [
     { key: "directory", href: `/${locale}/directory`, label: labels.directory },
@@ -104,7 +118,7 @@ export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
               <button
                 type="submit"
                 aria-label={labels.searchSubmit}
-                className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-pill text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-pill text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
               >
                 <IconSearch />
               </button>
@@ -149,11 +163,23 @@ export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
           </Link>
           <Link
             href={`/${locale}/cart`}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+            aria-label={cartAriaLabel}
+            className="relative inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
           >
-            <IconCart />
+            <IconCart aria-hidden />
+            {cartCount > 0 ? (
+              <span
+                aria-hidden
+                className="absolute right-1 top-1 flex min-h-5 min-w-5 items-center justify-center rounded-pill bg-accent px-1 text-micro font-semibold text-surface"
+              >
+                {cartCount > 99 ? "99+" : cartCount}
+              </span>
+            ) : null}
             <span className={compact ? "sr-only" : undefined}>{labels.cart}</span>
           </Link>
+          <span className="sr-only" aria-live="polite" aria-atomic="true">
+            {cartCount > 0 ? cartAriaLabel : ""}
+          </span>
         </div>
       </nav>
     </header>

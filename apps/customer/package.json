@@ -17,6 +17,7 @@
     "@vergeo/auth": "workspace:*",
     "@vergeo/config": "workspace:*",
     "@vergeo/i18n": "workspace:*",
+    "@vergeo/observability": "workspace:*",
     "@vergeo/ui": "workspace:*",
     "next": "^15.2.4",
     "next-intl": "^4.13.2",

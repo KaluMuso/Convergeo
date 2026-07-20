@@ -319,35 +319,100 @@ class _ListingTableQuery(_EmptyTableQuery):
         self._rows = rows
         self._ids: set[str] | None = None
         self._wholesale_only = False
+        self._status: str | None = None
+        self._parent_column: str | None = None
 
     def select(self, *_a: Any, **_k: Any) -> _ListingTableQuery:
         return self
 
-    def in_(self, _column: str, values: list[str]) -> _ListingTableQuery:
+    def in_(self, column: str, values: list[str]) -> _ListingTableQuery:
         self._ids = {str(value) for value in values}
+        if column in {"product_id", "vendor_id"}:
+            self._parent_column = column
         return self
 
     def eq(self, column: str, value: Any) -> _ListingTableQuery:
         if column == "wholesale":
             self._wholesale_only = bool(value)
+        if column == "status":
+            self._status = str(value)
+        return self
+
+    def execute(self) -> FakeRpcResponse:
+        rows = self._rows
+        if self._parent_column is not None and self._ids is not None:
+            rows = [
+                row
+                for row in rows
+                if str(row.get(self._parent_column)) in self._ids
+            ]
+        elif self._ids is not None:
+            rows = [row for row in rows if str(row.get("id")) in self._ids]
+        if self._wholesale_only:
+            rows = [row for row in rows if row.get("wholesale")]
+        if self._status is not None:
+            rows = [row for row in rows if str(row.get("status", "active")) == self._status]
+        # Parent lookups (demo product/vendor probes) need id + parent columns.
+        if self._parent_column is not None:
+            return FakeRpcResponse(
+                [
+                    {
+                        "id": row["id"],
+                        self._parent_column: row.get(self._parent_column),
+                    }
+                    for row in rows
+                    if row.get("id") is not None
+                ]
+            )
+        return FakeRpcResponse([{"id": row["id"]} for row in rows])
+
+
+class _ImageTableQuery(_EmptyTableQuery):
+    """Minimal stub for listing_images demo-marker lookups."""
+
+    def __init__(self, rows: list[dict[str, Any]]) -> None:
+        self._rows = rows
+        self._ids: set[str] | None = None
+
+    def select(self, *_a: Any, **_k: Any) -> _ImageTableQuery:
+        return self
+
+    def in_(self, _column: str, values: list[str]) -> _ImageTableQuery:
+        self._ids = {str(value) for value in values}
         return self
 
     def execute(self) -> FakeRpcResponse:
         rows = self._rows
         if self._ids is not None:
-            rows = [row for row in rows if str(row.get("id")) in self._ids]
-        if self._wholesale_only:
-            rows = [row for row in rows if row.get("wholesale")]
-        return FakeRpcResponse([{"id": row["id"]} for row in rows])
+            rows = [row for row in rows if str(row.get("listing_id")) in self._ids]
+        return FakeRpcResponse(
+            [
+                {
+                    "listing_id": row["listing_id"],
+                    "cloudinary_public_id": row.get("cloudinary_public_id"),
+                }
+                for row in rows
+            ]
+        )
 
 
 class FakeClientWithListings(FakeSupabaseClient):
-    def __init__(self, handler: Any, listing_rows: list[dict[str, Any]]) -> None:
+    def __init__(
+        self,
+        handler: Any,
+        listing_rows: list[dict[str, Any]],
+        image_rows: list[dict[str, Any]] | None = None,
+    ) -> None:
         super().__init__(handler)
         self._listing_rows = listing_rows
+        self._image_rows = image_rows or []
 
-    def table(self, _name: str) -> _ListingTableQuery:
-        return _ListingTableQuery(self._listing_rows)
+    def table(self, name: str) -> _EmptyTableQuery:
+        if name == "listing_images":
+            return _ImageTableQuery(self._image_rows)
+        if name == "vendor_listings":
+            return _ListingTableQuery(self._listing_rows)
+        return _EmptyTableQuery()
 
 
 async def _no_embedding(_query: str) -> list[float] | None:

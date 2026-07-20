@@ -44,7 +44,7 @@ export function LegalShell({
   afterSections,
 }: LegalShellProps) {
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <main id="marketing-main" className="mx-auto w-full max-w-2xl px-4 py-8">
       <header className="mb-8 space-y-4">
         <h1 className="font-display text-h1 text-display-ink">{title}</h1>
         <p className="text-sm text-text-2">{updatedLabel}</p>

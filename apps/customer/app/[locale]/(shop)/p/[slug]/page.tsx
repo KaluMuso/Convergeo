@@ -1,6 +1,5 @@
 import { createApiClient } from "@vergeo/config";
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
-import { Breadcrumbs } from "@vergeo/ui/src/breadcrumbs";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import {
   buildBreadcrumbListJsonLd,
@@ -11,7 +10,6 @@ import {
   JsonLdScript,
   resolveCloudinaryImageUrls,
 } from "@vergeo/ui/src/seo/json-ld";
-import { Tabs, type TabItem } from "@vergeo/ui/src/tabs";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -32,7 +30,6 @@ import {
 } from "../../_components/pdp/fetch-product";
 import { NoSellersPanel } from "../../_components/pdp/no-sellers-panel";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
-import { RecentlyViewedRail } from "../../_components/pdp/recently-viewed";
 import { RelatedProducts } from "../../_components/pdp/related-products";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
 
@@ -397,7 +394,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   if (result.kind === "unavailable") {
     const retryHref = `/${locale}/p/${encodeURIComponent(slug)}`;
     return (
-      <main className="mx-auto w-full max-w-3xl px-4 py-10">
+      <div className="mx-auto w-full max-w-3xl py-10">
         <EmptyState
           title={t("pdp.unavailableTitle")}
           body={t("pdp.unavailableBody")}
@@ -411,7 +408,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             </Link>
           }
         />
-      </main>
+      </div>
     );
   }
 
@@ -469,47 +466,6 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
     </Suspense>
   );
 
-  // mountInactivePanels keeps every panel in the server-rendered HTML, so the
-  // specs and reviews stay crawlable even when Overview is the default tab.
-  const detailTabs: TabItem[] = [
-    ...(overviewParagraphs.length > 0
-      ? [
-          {
-            key: "overview",
-            label: t("pdp.tabs.overview"),
-            panel: (
-              <section className="flex flex-col gap-3">
-                <h2 className="font-display text-lg font-semibold text-text">
-                  {t("pdp.overview.heading")}
-                </h2>
-                <div className="flex flex-col gap-2 text-sm leading-relaxed text-text-2">
-                  {overviewParagraphs.map((paragraph, index) => (
-                    <p key={index}>{paragraph}</p>
-                  ))}
-                </div>
-              </section>
-            ),
-          },
-        ]
-      : []),
-    {
-      key: "specs",
-      label: t("pdp.tabs.specs"),
-      panel: (
-        <SpecsTable
-          rows={specRows}
-          heading={t("pdp.specs.heading")}
-          emptyLabel={t("pdp.specs.empty")}
-        />
-      ),
-    },
-    {
-      key: "reviews",
-      label: t("pdp.tabs.reviews"),
-      panel: reviewsPanel,
-    },
-  ];
-
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const hasOffers = productListings.length > 0;
   const relatedCardLabels = {
@@ -523,7 +479,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 py-6 motion-rise lg:max-w-6xl">
+    // Shop layout already provides the page <main> landmark — avoid nesting.
+    <div className="mx-auto flex w-full max-w-lg flex-col gap-6 py-6 motion-rise lg:max-w-6xl">
       {productJsonLd ? <JsonLdScript data={productJsonLd} /> : null}
       <JsonLdScript data={breadcrumbJsonLd} />
       <ProductViewTracker
@@ -532,20 +489,27 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         recent={{
           slug: product.slug,
           name: product.name,
-          imagePublicId: product.images[0]?.public_id ?? null,
-          fromPriceNgwee: lowestListingPriceNgwee(product.listings),
         }}
       />
 
-      <Breadcrumbs
-        ariaLabel={t("pdp.breadcrumbAria")}
-        ellipsisLabel="…"
-        LinkComponent={Link}
-        items={[
-          { key: "home", label: t("home.nav.home"), href: `/${locale}` },
-          { key: "product", label: product.name },
-        ]}
-      />
+      <nav aria-label={t("pdp.breadcrumbAria")} className="text-sm text-text-2">
+        <ol className="m-0 flex list-none flex-wrap items-center gap-1 p-0">
+          <li className="flex min-w-0 items-center gap-1">
+            <Link
+              href={`/${locale}`}
+              className="truncate text-primary hover:underline focus-visible:outline-none"
+            >
+              {t("home.nav.home")}
+            </Link>
+            <span className="shrink-0 text-text-3 before:content-['/']" aria-hidden />
+          </li>
+          <li className="flex min-w-0 items-center gap-1">
+            <span className="truncate font-medium text-text" aria-current="page">
+              {product.name}
+            </span>
+          </li>
+        </ol>
+      </nav>
 
       <header className="flex flex-col gap-2" data-testid="pdp-header">
         {product.brand ? (
@@ -656,7 +620,28 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         />
       )}
 
-      <Tabs items={detailTabs} ariaLabel={t("pdp.tabs.ariaLabel")} mountInactivePanels />
+      <section aria-label={t("pdp.tabs.ariaLabel")} className="flex flex-col gap-5">
+        {overviewParagraphs.length > 0 ? (
+          <section className="flex flex-col gap-3">
+            <h2 className="font-display text-lg font-semibold text-text">
+              {t("pdp.overview.heading")}
+            </h2>
+            <div className="flex flex-col gap-2 text-sm leading-relaxed text-text-2">
+              {overviewParagraphs.map((paragraph, index) => (
+                <p key={index}>{paragraph}</p>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        <SpecsTable
+          rows={specRows}
+          heading={t("pdp.specs.heading")}
+          emptyLabel={t("pdp.specs.empty")}
+        />
+
+        {reviewsPanel}
+      </section>
 
       <RelatedProducts
         locale={locale}
@@ -664,21 +649,6 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         labels={relatedCardLabels}
         cloudName={cloudName}
       />
-
-      <RecentlyViewedRail
-        locale={locale}
-        currentSlug={product.slug}
-        labels={{
-          heading: t("pdp.recentlyViewed.heading"),
-          vendorFallback: relatedCardLabels.vendorFallback,
-          noReviews: relatedCardLabels.noReviews,
-          reviewCount: relatedCardLabels.reviewCount,
-          quickAdd: relatedCardLabels.quickAdd,
-          wishlist: relatedCardLabels.wishlist,
-          mediaEmpty: relatedCardLabels.mediaEmpty,
-        }}
-        cloudName={cloudName}
-      />
-    </main>
+    </div>
   );
 }

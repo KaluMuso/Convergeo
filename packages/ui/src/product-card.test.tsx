@@ -57,6 +57,18 @@ describe("ProductCard", () => {
     expect(screen.queryByTestId("product-card-quick-add")).not.toBeInTheDocument();
   });
 
+  it("supports compact density and unavailable state", () => {
+    render(<ProductCard {...baseProps} density="compact" unavailable />);
+    const card = screen.getByTestId("product-card");
+    expect(card).toHaveAttribute("data-density", "compact");
+    expect(card).toHaveAttribute("data-unavailable", "true");
+  });
+
+  it("renders optional meta without inventing content", () => {
+    render(<ProductCard {...baseProps} meta={<span>Pickup available</span>} />);
+    expect(screen.getByText("Pickup available")).toBeInTheDocument();
+  });
+
   it("fires quick-add and wishlist callbacks", async () => {
     const user = userEvent.setup();
     const onQuickAdd = vi.fn();
@@ -75,6 +87,20 @@ describe("ProductCard", () => {
     await user.click(screen.getByTestId("product-card-wishlist"));
     expect(onQuickAdd).toHaveBeenCalledTimes(1);
     expect(onWishlistToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it("announces wishlist status changes via a polite live region", () => {
+    render(
+      <ProductCard
+        {...baseProps}
+        onWishlistToggle={() => undefined}
+        isWishlisted
+        wishlistStatusAnnouncement="Saved to wishlist"
+      />,
+    );
+    const status = screen.getByTestId("product-card-wishlist-status");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveTextContent("Saved to wishlist");
   });
 
   it("fits two cards in a 360px grid without horizontal overflow", () => {

@@ -41,9 +41,19 @@ export default async function AuthLayout({ children, params }: AuthLayoutProps) 
 
   return (
     <div className="flex min-h-dvh flex-col bg-bg">
+      <a
+        href="#auth-main"
+        className="sr-only rounded bg-primary text-sm font-medium text-surface focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:inline-flex focus:min-h-11 focus:items-center focus:px-4 focus:shadow-focusRing"
+      >
+        {tCommon("nav.skipToContent")}
+      </a>
       <AuthBrandHeader appName={tCommon("app.name")} tagline={tAuth("chrome.customerTagline")} />
       <span className="sr-only">{locale}</span>
-      <main className="relative z-10 mx-auto -mt-5 flex w-full max-w-[400px] flex-1 flex-col px-4 pb-8">
+      <main
+        id="auth-main"
+        tabIndex={-1}
+        className="relative z-10 mx-auto -mt-5 flex w-full max-w-[400px] flex-1 flex-col px-4 pb-8 focus-visible:outline-none"
+      >
         <div className="motion-rise rounded-lg border border-border bg-surface p-5 shadow-2 sm:p-6">
           {children}
         </div>

@@ -205,7 +205,7 @@ export function FeedbackWidget({
           type="button"
           onClick={close}
           aria-label={labels.close}
-          className="inline-flex size-8 items-center justify-center rounded text-text-2 hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing"
+          className="inline-flex size-11 min-h-11 min-w-11 items-center justify-center rounded text-text-2 hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing"
         >
           <span aria-hidden="true">✕</span>
         </button>

@@ -83,7 +83,13 @@ const cameraAllowedHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  transpilePackages: ["@vergeo/config", "@vergeo/i18n", "@vergeo/types", "@vergeo/ui"],
+  transpilePackages: [
+    "@vergeo/config",
+    "@vergeo/i18n",
+    "@vergeo/observability",
+    "@vergeo/types",
+    "@vergeo/ui",
+  ],
   eslint: {
     dirs: ["app"],
   },

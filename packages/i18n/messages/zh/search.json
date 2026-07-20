@@ -53,7 +53,8 @@
   },
   "results": {
     "count": "{count, plural, one {#个结果} other {#个结果}}",
-    "degraded": "显示关键词匹配结果（语义搜索不可用）"
+    "degraded": "显示关键词匹配结果（语义搜索不可用）",
+    "forQuery": "“{query}” 的结果"
   },
   "input": {
     "ariaLabel": "搜索",
@@ -70,6 +71,7 @@
   },
   "result": {
     "priceFrom": "{price} 起",
-    "category": "属于 {category}"
+    "category": "属于 {category}",
+    "marketplaceListing": "市场商品"
   }
 }

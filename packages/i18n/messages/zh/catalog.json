@@ -35,7 +35,9 @@
       "location": "附近",
       "radiusKm": "{km} 公里内",
       "apply": "应用筛选",
-      "clear": "清除筛选"
+      "clear": "清除筛选",
+      "openFilters": "筛选",
+      "filtersActive": "筛选（已启用）"
     },
     "filters": {
       "appliedAria": "已应用的筛选",
@@ -52,14 +54,18 @@
       "quickAdd": "快速添加",
       "wishlist": "加入心愿单",
       "outOfStock": "缺货",
-      "distance": "相距 {distance}"
+      "distance": "相距 {distance}",
+      "wishlistRemove": "移出收藏",
+      "mediaEmpty": "暂无商品图片"
     },
     "loadMore": "加载更多",
     "loading": "加载中…",
     "moreLoaded": "已加载另外 {count} 条结果。",
     "endOfResults": "已到结果末尾。",
     "loadError": "无法加载更多结果。",
-    "retry": "重试"
+    "retry": "重试",
+    "resultsUnknown": "暂时无法显示商品数量",
+    "childCategories": "按子分类选购"
   },
   "home": {
     "meta": {
@@ -75,6 +81,7 @@
       "orders": "订单",
       "account": "账户",
       "cart": "购物车",
+      "cartWithCount": "购物车，{count} 件商品",
       "searchPlaceholder": "搜索商品、服务、活动…",
       "searchSubmit": "搜索",
       "allCategories": "全部类别",

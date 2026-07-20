@@ -124,14 +124,14 @@ export function PayoutsView({ locale }: PayoutsViewProps) {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <p className="text-sm text-muted-foreground">{t("payouts.eyebrow")}</p>
+        <p className="text-sm text-text-2">{t("payouts.eyebrow")}</p>
         <h1 className="font-display text-2xl font-semibold">{t("payouts.title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("payouts.intro")}</p>
+        <p className="text-sm text-text-2">{t("payouts.intro")}</p>
       </header>
 
       {balances?.payouts_blocked ? (
         <div
-          className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"
+          className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm text-text"
           role="status"
         >
           <p className="font-medium">{t("payouts.hold.noticeTitle")}</p>
@@ -140,14 +140,14 @@ export function PayoutsView({ locale }: PayoutsViewProps) {
       ) : null}
 
       {error ? (
-        <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+        <p className="rounded-lg border border-danger/30 bg-danger/5 p-3 text-sm text-danger">
           {error}
         </p>
       ) : null}
 
       {balances ? (
-        <section className="grid gap-3 rounded-xl border border-border bg-card p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <section className="grid gap-3 rounded-xl border border-border bg-surface p-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-text-3">
             {t("payouts.balances.heading")}
           </h2>
           <div className="grid gap-3">
@@ -170,13 +170,13 @@ export function PayoutsView({ locale }: PayoutsViewProps) {
               </span>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">{t("payouts.balances.ledgerNote")}</p>
+          <p className="text-xs text-text-3">{t("payouts.balances.ledgerNote")}</p>
         </section>
       ) : null}
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-text-3">
             {t("payouts.history.heading")}
           </h2>
           <Link
@@ -187,7 +187,7 @@ export function PayoutsView({ locale }: PayoutsViewProps) {
           </Link>
         </div>
         {history.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("payouts.history.empty")}</p>
+          <p className="text-sm text-text-2">{t("payouts.history.empty")}</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {history.map((item) => (
@@ -197,7 +197,7 @@ export function PayoutsView({ locale }: PayoutsViewProps) {
               >
                 <div className="min-w-0">
                   <p className="font-mono text-sm font-semibold">{formatK(item.amount_ngwee)}</p>
-                  <p className="truncate text-xs text-muted-foreground">{item.lenco_reference}</p>
+                  <p className="truncate text-xs text-text-3">{item.lenco_reference}</p>
                 </div>
                 <Badge label={statusLabel(item.status, t)} variant={statusVariant(item.status)} />
               </li>
@@ -206,14 +206,14 @@ export function PayoutsView({ locale }: PayoutsViewProps) {
         )}
       </section>
 
-      <section className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+      <section className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-text-3">
           {t("payouts.statement.heading")}
         </h2>
         <label className="flex flex-col gap-1 text-sm">
           <span>{t("payouts.statement.monthLabel")}</span>
           <input
-            className="min-h-11 rounded-md border border-input bg-background px-3"
+            className="min-h-11 rounded-md border border-border bg-surface px-3"
             type="month"
             value={month}
             onChange={(event) => setMonth(event.target.value)}
@@ -228,7 +228,7 @@ export function PayoutsView({ locale }: PayoutsViewProps) {
         >
           {t("payouts.statement.downloadCsv")}
         </Button>
-        <p className="text-xs text-muted-foreground">{t("payouts.statement.pdfStub")}</p>
+        <p className="text-xs text-text-3">{t("payouts.statement.pdfStub")}</p>
       </section>
     </div>
   );

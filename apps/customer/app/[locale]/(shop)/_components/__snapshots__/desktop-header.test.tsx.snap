@@ -70,7 +70,7 @@ exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 
         >
           <button
             aria-label="Search"
-            class="inline-flex min-h-9 min-w-9 items-center justify-center rounded-pill text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+            class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-pill text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
             type="submit"
           >
             <svg
@@ -172,7 +172,8 @@ exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 
         </span>
       </a>
       <a
-        class="inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+        aria-label="Cart"
+        class="relative inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
         href="/en/cart"
       >
         <svg
@@ -204,6 +205,11 @@ exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 
           Cart
         </span>
       </a>
+      <span
+        aria-atomic="true"
+        aria-live="polite"
+        class="sr-only"
+      />
     </div>
   </nav>
 </header>

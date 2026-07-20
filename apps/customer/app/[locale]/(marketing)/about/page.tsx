@@ -52,7 +52,7 @@ export default async function AboutPage({ params }: PageProps) {
   const t = await getMarketingTranslator(locale);
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8">
+    <main id="marketing-main" className="mx-auto w-full max-w-2xl px-4 py-8">
       <header className="mb-10 space-y-3">
         <p className="text-sm font-semibold uppercase tracking-wide text-primary">
           {t("hero.eyebrow")}

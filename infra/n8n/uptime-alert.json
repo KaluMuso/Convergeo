@@ -12,15 +12,32 @@
       "name": "UptimeRobot Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [260, 300],
+      "position": [200, 300],
       "webhookId": "uptime-alert"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{!!$env.UPTIME_WEBHOOK_SECRET && (($json.headers['x-uptime-secret'] || $json.headers['X-Uptime-Secret'] || '') === $env.UPTIME_WEBHOOK_SECRET)}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "auth-gate",
+      "name": "Require Uptime Secret",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [440, 300]
     },
     {
       "parameters": {
         "conditions": {
           "string": [
             {
-              "value1": "={{$json.body.alertType}}",
+              "value1": "={{$json.body.alertType || $json.alertType}}",
               "operation": "equal",
               "value2": "1"
             }
@@ -31,7 +48,7 @@
       "name": "Only When Down",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [520, 300]
+      "position": [680, 220]
     },
     {
       "parameters": {
@@ -52,7 +69,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{$env.FOUNDER_WHATSAPP_TO}}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"ops_uptime_alert\",\n    \"language\": { \"code\": \"en\" },\n    \"components\": [\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          { \"type\": \"text\", \"text\": \"{{$json.body.monitorFriendlyName}}\" },\n          { \"type\": \"text\", \"text\": \"{{$json.body.alertDetails}}\" },\n          { \"type\": \"text\", \"text\": \"{{$json.body.alertDateTime}}\" }\n        ]\n      }\n    ]\n  }\n}",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{$env.FOUNDER_WHATSAPP_TO}}\",\n  \"type\": \"template\",\n  \"template\": {\n    \"name\": \"ops_uptime_alert\",\n    \"language\": { \"code\": \"en\" },\n    \"components\": [\n      {\n        \"type\": \"body\",\n        \"parameters\": [\n          { \"type\": \"text\", \"text\": \"{{$json.body.monitorFriendlyName || $json.monitorFriendlyName}}\" },\n          { \"type\": \"text\", \"text\": \"{{$json.body.alertDetails || $json.alertDetails}}\" },\n          { \"type\": \"text\", \"text\": \"{{$json.body.alertDateTime || $json.alertDateTime}}\" }\n        ]\n      }\n    ]\n  }\n}",
         "options": {
           "timeout": 30000
         }
@@ -61,7 +78,7 @@
       "name": "Page Founder On WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [780, 220]
+      "position": [940, 140]
     }
   ],
   "connections": {
@@ -69,11 +86,23 @@
       "main": [
         [
           {
-            "node": "Only When Down",
+            "node": "Require Uptime Secret",
             "type": "main",
             "index": 0
           }
         ]
+      ]
+    },
+    "Require Uptime Secret": {
+      "main": [
+        [
+          {
+            "node": "Only When Down",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     },
     "Only When Down": {
@@ -93,7 +122,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "m16-p06-uptime-alert",
+  "versionId": "prompt9-uptime-alert-auth",
   "meta": {
     "templateCredsSetupCompleted": false
   },

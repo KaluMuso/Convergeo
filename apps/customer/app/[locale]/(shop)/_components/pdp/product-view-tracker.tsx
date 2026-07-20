@@ -3,7 +3,7 @@
 import { track } from "@vergeo/analytics";
 import { useEffect } from "react";
 
-import { recordRecentlyViewed } from "./recently-viewed-storage";
+import { recordRecentlyViewed } from "../recently-viewed/use-recently-viewed";
 
 type Props = {
   productId: string;
@@ -12,8 +12,6 @@ type Props = {
   recent?: {
     slug: string;
     name: string;
-    imagePublicId: string | null;
-    fromPriceNgwee: number | null;
   };
 };
 
@@ -24,8 +22,6 @@ type Props = {
 export function ProductViewTracker({ productId, listingId, recent }: Props): null {
   const recentSlug = recent?.slug;
   const recentName = recent?.name;
-  const recentImage = recent?.imagePublicId ?? null;
-  const recentPrice = recent?.fromPriceNgwee ?? null;
 
   useEffect(() => {
     track(
@@ -33,14 +29,9 @@ export function ProductViewTracker({ productId, listingId, recent }: Props): nul
       listingId ? { product_id: productId, listing_id: listingId } : { product_id: productId },
     );
     if (recentSlug && recentName) {
-      recordRecentlyViewed({
-        slug: recentSlug,
-        name: recentName,
-        imagePublicId: recentImage,
-        fromPriceNgwee: recentPrice,
-      });
+      recordRecentlyViewed(recentSlug, recentName);
     }
-  }, [productId, listingId, recentSlug, recentName, recentImage, recentPrice]);
+  }, [productId, listingId, recentSlug, recentName]);
 
   return null;
 }
