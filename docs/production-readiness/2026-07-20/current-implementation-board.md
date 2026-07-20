@@ -1,27 +1,31 @@
 # Current Implementation Board — 2026-07-20
 
 **Purpose:** Evidence-based production-readiness board for execution **before** further runtime/product changes.  
-**Master tip assessed:** `b1ea6a3` (Merge PR #355)  
-**Live probes (same day):** Supabase project `dpadrlxukcjbewpqympu`, n8n MCP, Vercel deployments.  
-**Companions:** `gap-analysis-vs-docs.md`, `master-vs-docs-representation-report.md`, `docs/plan/00-status.md`, `docs/plan/launch-checklist.md`, `docs/production-readiness/2026-07-18/consolidated/release-gates.md`, `docs/production-readiness/2026-07-19/vision-audit/`.
+**Master tip assessed (Prompt 12):** `d9839db` (Merge PR #369)  
+**Go/No-Go:** `go-no-go-report.md` → recommendation **NO_GO** (2026-07-20T15:30Z)  
+**Live probes (Prompt 12):** Supabase `dpadrlxukcjbewpqympu`, n8n MCP, Vercel, `api.vergeo5.com`, customer routes.  
+**Companions:** `go-no-go-report.md`, `gap-analysis-vs-docs.md`, `master-vs-docs-representation-report.md`, `docs/plan/00-status.md`, `docs/plan/launch-checklist.md`, `docs/production-readiness/2026-07-18/consolidated/release-gates.md`, programme PRs #376–#380 (evidence; not all on master).
 
 **Do not reimplement:** `refunds.source_key` / repo file `supabase/migrations/0063_refunds_source_key_uniq.sql` (merged via PR #352). Ops must **apply** that SQL to live after resolving the version collision below — not rewrite the feature.
 
 ---
 
-## 0. Fingerprint (verified)
+## 0. Fingerprint (verified Prompt 12 — supersedes earlier same-day rows)
 
-| Surface                    | Evidence @ board time                                                                                                                  |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `origin/master`            | `b1ea6a3` — includes #350, #351, #352, #353, #355                                                                                      |
-| Customer Vercel production | READY @ `b1ea6a3` (DL-1 closed at tip)                                                                                                 |
-| Vendor Vercel production   | READY @ `1d137ae` (#351); docs-only tip lag (#353/#355) — non-runtime                                                                  |
-| Live DB migrations         | Through timestamped `0062_payments_checkout_success_uniq` **plus** live-only name `0063_revoke_execute_review_reply_guards`            |
-| Live `refunds.source_key`  | **Absent** — column missing; index still `refunds_order_id_active_uniq`                                                                |
-| Live money/KYC rows        | `payments=0`, `ledger_transactions=0`, `orders=0`, `kyc_records=0`                                                                     |
-| Live FORCE RLS             | `order_money_gates`/`payments`/`refunds` = true; **`ticket_type_instances` / `ticket_type_price_tiers` / `product_relations` = false** |
-| n8n live                   | **2 workflows**, both active: notification dispatch; payment reconciliation crons                                                      |
-| Repo n8n JSON              | 19 files under `infra/n8n/*.json`; backup is `backup-schedule.md` only (no `backup.json`)                                              |
+| Surface                    | Evidence @ 2026-07-20T15:30Z                                                                                                 |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `origin/master`            | `d9839db349887ab48a52c18546e05961a62498d6` — includes through #369                                                           |
+| Customer Vercel production | READY @ `cde40bf…` (`dpl_6Pgevsi…`) — **behind** master tip                                                                  |
+| Vendor Vercel production   | READY @ `5a4668a…` (`dpl_3qg4H35…`) — behind tip                                                                             |
+| Admin Vercel production    | READY @ `2f99711…` (`dpl_298135…`) — Access-gated                                                                            |
+| API                        | **502** on `/healthz` `/readyz` `/fingerprint` — digest **UNKNOWN**                                                          |
+| Live DB migrations         | Tip `0063_revoke_execute_review_reply_guards`; through `0062_…`; `0056_kyc_integrity` **applied**; repo `0064` **unapplied** |
+| Live `refunds.source_key`  | **Absent**                                                                                                                   |
+| Live money/KYC rows        | `payments=0`, `ledger_transactions=0`, `orders=0`, `kyc_records=0`; products=150; listings=134                               |
+| Live FORCE RLS             | Money tables FORCE true; **`ticket_type_instances` / `ticket_type_price_tiers` / `product_relations` = false**               |
+| Flags                      | `public_launch=false`, `zamtel_collections=false`                                                                            |
+| n8n live                   | **3 workflows**, all **inactive** (dispatch, payment recon, shared error alert) — fail-closed                                |
+| Repo n8n JSON              | 19 files under `infra/n8n/*.json`; backup is `backup-schedule.md` only (no `backup.json`)                                    |
 
 ### Critical migration collision (blocks naive “apply 0063”)
 
@@ -48,7 +52,7 @@
 | n8n             | 2/19 active                              | 2/19 active                                                       | **Confirmed** still 2                                                                                             |
 | Money rows      | Empty                                    | Empty (07-19)                                                     | **Confirmed** still empty                                                                                         |
 
-**Blended headline for execution:** code ~90–93% of v1; production-ready per gates **~30–40%**; browse-safe invite beta **conditional**; real money / `public_launch` **NO-GO**.
+**Prompt 12 headline (do not blend):** build ~92% · deployed ~45% · ops ~22% · real-money ~8% · browse-only ~35% · public ~5%. **Recommendation: NO_GO.** See `go-no-go-report.md`.
 
 ---
 
