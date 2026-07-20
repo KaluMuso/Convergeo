@@ -195,12 +195,13 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate / gap:** G7 / VD-P04 / BG-5
 - **Priority:** P0
-- **Status:** `REPO_CLOSABLE`
-- **Evidence:** `infra/n8n/backup-schedule.md` only; no `backup.json` among 19 JSONs
-- **Files likely:** `infra/n8n/backup.json`, `docs/ops/n8n-workflows.md`
-- **Deps:** DEP-03 import
-- **Acceptance:** importable workflow producing dated backup artifact per contract
-- **Verify:** n8n validate + dry execution
+- **Status:** `CODE_COMPLETE` (repo) / `DEPLOYMENT_REQUIRED` (live) — **not G7 PASS**
+- **Evidence:** `infra/n8n/backup.json` + enhanced `db-dump.sh` + watchdog; registry/runbook/restore-drill docs; validators green. Live OCI dated dump + timed restore still required for G7.
+- **Files:** `infra/n8n/backup.json`, `infra/scripts/db-dump.sh`, `infra/scripts/db-backup-watchdog.sh`, `docs/ops/n8n-workflows.md`, `docs/ops/backup-runbook.md`, `docs/ops/backup-restore-drill.md`
+- **Deps:** DEP-03 import + host SSH/OCI env
+- **Acceptance (repo):** importable workflow JSON + scripts + docs — **met as CODE_COMPLETE**
+- **Acceptance (G7):** dated OCI artifact + documented timed restore — **still open**
+- **Verify:** `bash scripts/ci/validate-backup-workflow.sh`; founder import + one dump object list
 - **Blocks browse-beta:** no · **real-money:** yes · **public_launch:** yes
 - **PR boundary:** `VD-P04` alone
 
