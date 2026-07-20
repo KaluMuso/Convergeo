@@ -178,7 +178,9 @@ curl -sS -m 15 https://api.vergeo5.com/readyz
 | Restore drill        | —                         | Scratch restore      | Documented success        |
 | Pre-migration backup | Checklist before DB-01/02 | —                    | Timestamp before migrate  |
 
-**Current:** FAIL / NOT_AUDITABLE.
+**Current:** FAIL.
+
+Evidence 2026-07-20 (`docs/production-readiness/2026-07-20/ops-drills/`): approved n8n/OCI backup workflow+artifact **absent**; CONDITIONAL isolated restore of a `backup_mode=drill` local-ci dump only (checksum OK, RTO numeric ≤30min, production not overwritten). Does **not** clear G7.
 
 ---
 
