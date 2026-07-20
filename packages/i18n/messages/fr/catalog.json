@@ -35,7 +35,9 @@
       "location": "Près de moi",
       "radiusKm": "Dans un rayon de {km} km",
       "apply": "Appliquer les filtres",
-      "clear": "Effacer les filtres"
+      "clear": "Effacer les filtres",
+      "openFilters": "Filtres",
+      "filtersActive": "Filtres (actifs)"
     },
     "filters": {
       "appliedAria": "Filtres appliqués",
@@ -52,14 +54,18 @@
       "quickAdd": "Ajout rapide",
       "wishlist": "Ajouter aux favoris",
       "outOfStock": "En rupture de stock",
-      "distance": "À {distance}"
+      "distance": "À {distance}",
+      "wishlistRemove": "Retirer de la liste",
+      "mediaEmpty": "Pas d’image produit"
     },
     "loadMore": "Voir plus",
     "loading": "Chargement…",
     "moreLoaded": "{count} résultats supplémentaires chargés.",
     "endOfResults": "Vous avez atteint la fin des résultats.",
     "loadError": "Impossible de charger plus de résultats.",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "resultsUnknown": "Nombre d’annonces indisponible",
+    "childCategories": "Parcourir les sous-catégories"
   },
   "home": {
     "meta": {

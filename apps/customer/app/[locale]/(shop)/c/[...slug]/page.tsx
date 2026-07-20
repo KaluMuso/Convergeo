@@ -12,10 +12,14 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../../lib/api-base-url";
+import { buildCategoryTree } from "../../_components/category-tree";
+import { fetchCategoriesResult } from "../../_components/merch-data";
 import { AppliedFilterBar } from "../../_components/plp/applied-filter-bar";
+import { ChildCategoryNav } from "../../_components/plp/child-category-nav";
 import { FacetPanel, type FacetCounts } from "../../_components/plp/facet-panel";
 import { type CatalogListing } from "../../_components/plp/listing-grid";
 import { PlpBrowseClient } from "../../_components/plp/load-more";
+import { MobileFilterDrawer } from "../../_components/plp/mobile-filter-drawer";
 import { decodePlpFilters } from "../../_components/plp/plp-filters";
 import { type CatalogSort, SortBar } from "../../_components/plp/sort-bar";
 
@@ -203,15 +207,54 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
   const total = catalog?.total ?? 0;
   const apiBaseUrl = getApiBaseUrl();
 
+  const categoriesResult = await fetchCategoriesResult();
+  const categoryTree =
+    categoriesResult.ok && categoriesResult.categories.length > 0
+      ? buildCategoryTree(categoriesResult.categories)
+      : [];
+  const leafSlug = slug[slug.length - 1] ?? "";
+  const activeNav =
+    leafSlug && leafSlug !== "all"
+      ? categoryTree.find((entry) => entry.slug === leafSlug)
+      : undefined;
+  const childCategories =
+    activeNav?.children.map((child) => ({ slug: child.slug, name: child.name })) ??
+    (leafSlug === "all" || !leafSlug
+      ? categoryTree.map((entry) => ({ slug: entry.slug, name: entry.name }))
+      : []);
+  const childParentParts = activeNav ? [activeNav.slug] : [];
+
+  const facetLabels = {
+    heading: t("plp.facets.heading"),
+    price: t("plp.facets.price"),
+    minPrice: t("plp.facets.minPrice"),
+    maxPrice: t("plp.facets.maxPrice"),
+    condition: t("plp.facets.condition"),
+    conditionNew: t("plp.facets.conditionNew"),
+    conditionRefurbished: t("plp.facets.conditionRefurbished"),
+    availability: t("plp.facets.availability"),
+    inStock: t("plp.facets.inStock"),
+    outOfStock: t("plp.facets.outOfStock"),
+    rating: t("plp.facets.rating"),
+    rating4Plus: t("plp.facets.rating4Plus"),
+    rating3Plus: t("plp.facets.rating3Plus"),
+    location: t("plp.facets.location"),
+    radiusKm: t("plp.facets.radiusKm"),
+    apply: t("plp.facets.apply"),
+    clear: t("plp.facets.clear"),
+  };
+
   const gridLabels = {
     vendor: t("plp.card.vendor"),
     noReviews: t("plp.card.noReviews"),
     reviewCount: t("plp.card.reviewCount"),
     quickAdd: t("plp.card.quickAdd"),
     wishlist: t("plp.card.wishlist"),
+    wishlistRemove: t("plp.card.wishlistRemove"),
     outOfStock: t("plp.card.outOfStock"),
     distance: t("plp.card.distance"),
     sampleListing: t("home.demo.sampleListing"),
+    mediaEmpty: t("plp.card.mediaEmpty"),
   };
 
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [
@@ -239,46 +282,48 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
         <h1 className="font-display text-h1 text-display-ink">
           {t("plp.title", { category: categoryName })}
         </h1>
-        <p className="text-sm text-text-2">{t("plp.results", { count: total })}</p>
+        <p className="text-sm text-text-2" data-testid="plp-results-count" aria-live="polite">
+          {catalogUnavailable ? t("plp.resultsUnknown") : t("plp.results", { count: total })}
+        </p>
       </header>
 
+      <ChildCategoryNav
+        locale={locale}
+        heading={t("plp.childCategories")}
+        categories={childCategories}
+        parentSlugParts={childParentParts}
+      />
+
       <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <FacetPanel
-          labels={{
-            heading: t("plp.facets.heading"),
-            price: t("plp.facets.price"),
-            minPrice: t("plp.facets.minPrice"),
-            maxPrice: t("plp.facets.maxPrice"),
-            condition: t("plp.facets.condition"),
-            conditionNew: t("plp.facets.conditionNew"),
-            conditionRefurbished: t("plp.facets.conditionRefurbished"),
-            availability: t("plp.facets.availability"),
-            inStock: t("plp.facets.inStock"),
-            outOfStock: t("plp.facets.outOfStock"),
-            rating: t("plp.facets.rating"),
-            rating4Plus: t("plp.facets.rating4Plus"),
-            rating3Plus: t("plp.facets.rating3Plus"),
-            location: t("plp.facets.location"),
-            radiusKm: t("plp.facets.radiusKm"),
-            apply: t("plp.facets.apply"),
-            clear: t("plp.facets.clear"),
-          }}
-          facets={facets}
-          initialState={filterState}
-        />
+        <div className="hidden lg:block">
+          <FacetPanel labels={facetLabels} facets={facets} initialState={filterState} />
+        </div>
 
         <section className="flex min-w-0 flex-col gap-4">
-          <SortBar
-            labels={{
-              label: t("plp.sort.label"),
-              relevance: t("plp.sort.relevance"),
-              cheapest: t("plp.sort.cheapest"),
-              nearest: t("plp.sort.nearest"),
-              newest: t("plp.sort.newest"),
-            }}
-            value={sort}
-            hasLocation={hasLocation}
-          />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <SortBar
+                labels={{
+                  label: t("plp.sort.label"),
+                  relevance: t("plp.sort.relevance"),
+                  cheapest: t("plp.sort.cheapest"),
+                  nearest: t("plp.sort.nearest"),
+                  newest: t("plp.sort.newest"),
+                }}
+                value={sort}
+                hasLocation={hasLocation}
+              />
+            </div>
+            <MobileFilterDrawer
+              labels={{
+                ...facetLabels,
+                openFilters: t("plp.facets.openFilters"),
+                filtersActive: t("plp.facets.filtersActive"),
+              }}
+              facets={facets}
+              initialState={filterState}
+            />
+          </div>
 
           <AppliedFilterBar
             pathname={plpPathname}

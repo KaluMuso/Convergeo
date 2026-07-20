@@ -179,7 +179,9 @@
       "quickAdd": "Longeni bwangu",
       "reviewCount": "({count})",
       "vendor": "Ashitisha {vendor}",
-      "wishlist": "Sungileni ku wishlist"
+      "wishlist": "Sungileni ku wishlist",
+      "wishlistRemove": "Fumyeni ku wishlist",
+      "mediaEmpty": "Takwaba picture ya product"
     },
     "defaultCategory": "Ifintu fyonse",
     "emptyBody": "Wesheni ukufuta filters nangu twaleni category yambi.",
@@ -197,7 +199,13 @@
     "results": "{count, plural, one {# listing} other {# amalistings}}",
     "title": "Twaleni {category}",
     "unavailableBody": "Tatwaishibe ukuleta ifintu fyamu category iyi nomba. Wesheni limbi, nangu fweni.",
-    "unavailableTitle": "Listings tashifikapo"
+    "unavailableTitle": "Listings tashifikapo",
+    "resultsUnknown": "Ubunji bwa listings tabwaisa",
+    "childCategories": "Shiteni mu subcategory",
+    "facets": {
+      "openFilters": "Ama-filters",
+      "filtersActive": "Ama-filters (yakonka)"
+    }
   },
   "returnableBadge": {
     "label": "Cingabwelela mu nsiku {days}"

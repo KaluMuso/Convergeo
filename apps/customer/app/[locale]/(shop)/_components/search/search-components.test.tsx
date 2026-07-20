@@ -49,6 +49,12 @@ const resultsTabsLabels = {
   degraded: "Keyword only",
   priceFrom: "From {price}",
   category: "In {category}",
+  marketplaceListing: "Marketplace listing",
+  wishlist: "Save to wishlist",
+  wishlistRemove: "Remove from wishlist",
+  mediaEmpty: "No product image",
+  noReviews: "No reviews yet",
+  reviewCount: "({count})",
   loadMore: "Load more",
   loading: "Loading more…",
   moreLoaded: "{count} more results loaded.",
@@ -165,11 +171,10 @@ describe("ResultsTabs tab counts", () => {
     expect(screen.getByTestId("search-tab-products")).toHaveTextContent("Products (2)");
     expect(screen.getByTestId("search-tab-events")).toHaveTextContent("Events (0)");
     expect(screen.getByTestId("search-results-list")).toBeInTheDocument();
+    expect(screen.getByTestId("search-product-grid")).toBeInTheDocument();
     // Search → PDP must use the public slug, never the entity UUID.
-    expect(screen.getByRole("link", { name: "Itel A70 Smartphone" })).toHaveAttribute(
-      "href",
-      "/en/p/itel-a70",
-    );
+    expect(screen.getByTestId("search-product-card")).toHaveAttribute("href", "/en/p/itel-a70");
+    expect(screen.getByRole("heading", { name: "Itel A70 Smartphone" })).toBeInTheDocument();
     // Wholesale supplies are a B2B-gated surface (own /supplies page), not a
     // global-search tab — it must not render here.
     expect(screen.queryByTestId("search-tab-supplies")).not.toBeInTheDocument();

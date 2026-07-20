@@ -4,6 +4,8 @@ import { IconHeart } from "./icons";
 import { PriceBlock } from "./price-block";
 import { StarRating } from "./star-rating";
 
+export type ProductCardDensity = "default" | "compact";
+
 export type ProductCardProps = {
   as?: "article" | "div";
   title: string;
@@ -29,6 +31,12 @@ export type ProductCardProps = {
   className?: string;
   /** Accessible label for the empty media stage when no image is provided. */
   mediaEmptyLabel?: string;
+  /** Layout density — compact for dense rails / search product grids. */
+  density?: ProductCardDensity;
+  /** Dims the card when the listing is unavailable (honest OOS styling). */
+  unavailable?: boolean;
+  /** Optional secondary meta (fulfillment, etc.) — never invent content here. */
+  meta?: ReactNode;
 };
 
 function cx(...parts: Array<string | false | undefined>): string {
@@ -82,10 +90,15 @@ export function ProductCard({
   skeleton = false,
   className,
   mediaEmptyLabel,
+  density = "default",
+  unavailable = false,
+  meta,
 }: ProductCardProps) {
   if (skeleton) {
     return <ProductCardSkeleton className={className} />;
   }
+
+  const compact = density === "compact";
 
   return (
     <Component
@@ -93,9 +106,12 @@ export function ProductCard({
         "card-lift",
         "tap",
         "group flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-1",
+        unavailable && "opacity-80",
         className,
       )}
       data-testid="product-card"
+      data-density={density}
+      data-unavailable={unavailable ? "true" : "false"}
       style={
         categoryColor
           ? {
@@ -104,7 +120,7 @@ export function ProductCard({
           : undefined
       }
     >
-      <div className="relative aspect-[4/3] bg-bg-2">
+      <div className={cx("relative bg-bg-2", compact ? "aspect-square" : "aspect-[4/3]")}>
         {media ?? (
           <div
             className="flex h-full w-full items-center justify-center bg-gradient-to-br from-bg-2 to-border/40"
@@ -158,16 +174,41 @@ export function ProductCard({
           </button>
         ) : null}
       </div>
-      <div className="flex min-w-0 flex-col gap-2 p-[var(--card-pad,var(--sp-3))]">
-        <p className="m-0 truncate text-sm text-text-2">{vendorLabel}</p>
-        <h3 className="m-0 line-clamp-2 text-h3 font-semibold leading-snug text-text">{title}</h3>
-        <StarRating
-          value={rating}
-          reviewCount={reviewCount}
-          noReviewsSlot={noReviewsLabel}
-          reviewCountLabel={reviewCountLabel}
-        />
+      <div
+        className={cx(
+          "flex min-w-0 flex-col p-[var(--card-pad,var(--sp-3))]",
+          compact ? "gap-1.5" : "gap-2",
+        )}
+      >
+        <p className={cx("m-0 truncate text-text-2", compact ? "text-xs" : "text-sm")}>
+          {vendorLabel}
+        </p>
+        <h3
+          className={cx(
+            "m-0 line-clamp-2 font-semibold leading-snug text-text",
+            compact ? "text-sm" : "text-h3",
+          )}
+        >
+          {title}
+        </h3>
+        {!compact ? (
+          <StarRating
+            value={rating}
+            reviewCount={reviewCount}
+            noReviewsSlot={noReviewsLabel}
+            reviewCountLabel={reviewCountLabel}
+          />
+        ) : null}
         <PriceBlock ngwee={ngwee} oldNgwee={oldNgwee} savingsLabel={savingsLabel} />
+        {meta ? <div className="text-xs text-text-2">{meta}</div> : null}
+        {compact && reviewCount > 0 ? (
+          <StarRating
+            value={rating}
+            reviewCount={reviewCount}
+            noReviewsSlot={noReviewsLabel}
+            reviewCountLabel={reviewCountLabel}
+          />
+        ) : null}
       </div>
     </Component>
   );

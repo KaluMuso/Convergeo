@@ -53,6 +53,7 @@
   },
   "results": {
     "count": "{count, plural, one {# result} other {# results}}",
+    "forQuery": "Results for “{query}”",
     "degraded": "Showing keyword matches (semantic search unavailable)"
   },
   "input": {
@@ -70,6 +71,7 @@
   },
   "result": {
     "priceFrom": "From {price}",
-    "category": "In {category}"
+    "category": "In {category}",
+    "marketplaceListing": "Marketplace listing"
   }
 }

@@ -57,6 +57,18 @@ describe("ProductCard", () => {
     expect(screen.queryByTestId("product-card-quick-add")).not.toBeInTheDocument();
   });
 
+  it("supports compact density and unavailable state", () => {
+    render(<ProductCard {...baseProps} density="compact" unavailable />);
+    const card = screen.getByTestId("product-card");
+    expect(card).toHaveAttribute("data-density", "compact");
+    expect(card).toHaveAttribute("data-unavailable", "true");
+  });
+
+  it("renders optional meta without inventing content", () => {
+    render(<ProductCard {...baseProps} meta={<span>Pickup available</span>} />);
+    expect(screen.getByText("Pickup available")).toBeInTheDocument();
+  });
+
   it("fires quick-add and wishlist callbacks", async () => {
     const user = userEvent.setup();
     const onQuickAdd = vi.fn();
