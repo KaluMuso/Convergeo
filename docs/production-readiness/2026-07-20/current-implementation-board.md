@@ -427,9 +427,9 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate:** S1 / G3
 - **Priority:** P0
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
-- **Evidence:** code complete; `payments=0` live
-- **Deps:** F9b sandbox creds; DEP-03
+- **Status:** `BLOCKED_EXTERNAL` (F9b + API tip)
+- **Evidence:** Prompt 8 `lenco-sandbox-money-drill.md` — no agent `LENCO_*`; API 502; live money rows still 0; drill A NOT RUN
+- **Deps:** F9b sandbox creds; DEP-03; isolated stack
 - **Acceptance:** `CHARGE_RECEIVED` + hold legs; idempotent replay
 - **Verify:** VB-P01 drill + redacted Lenco dashboard
 - **Blocks browse-beta:** no · **real-money:** yes · **public_launch:** yes
@@ -439,8 +439,9 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate:** S2 / G3
 - **Priority:** P0
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
-- **Deps:** F9b; hosted widget
+- **Status:** `BLOCKED_EXTERNAL` (same preflight)
+- **Evidence:** Prompt 8 section B NOT RUN
+- **Deps:** F9b; hosted widget; healthy sandbox API
 - **Acceptance:** same as S1 for card
 - **Blocks:** no / yes / yes
 
@@ -448,7 +449,8 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate:** S3 / G3
 - **Priority:** P0
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
+- **Status:** `BLOCKED_EXTERNAL` (same + release inactive)
+- **Evidence:** Prompt 8 section E NOT RUN; n8n release-job not active
 - **Deps:** DEP-02 release-job; LIVE-01
 - **Acceptance:** `COMMISSION_CAPTURE` before `RELEASE_TO_VENDOR`; escrow→0; double-tick safe
 - **Verify:** release tick + SQL
@@ -477,7 +479,8 @@ Each item: gap/gate · priority · status · evidence · files · deps · accept
 
 - **Gate:** S6 / G4
 - **Priority:** P0
-- **Status:** `LIVE_VERIFICATION_REQUIRED`
+- **Status:** `BLOCKED_EXTERNAL` (Prompt 8 D NOT RUN)
+- **Evidence:** `lenco-sandbox-money-drill.md` — provider pending/failed/cancelled/malformed/timeout matrix not executed
 - **Deps:** RC-05; deployed target + F9b
 - **Acceptance:** pending/failed ≠ paid
 - **Blocks:** no / yes / yes
