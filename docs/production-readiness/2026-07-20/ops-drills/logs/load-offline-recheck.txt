@@ -1,0 +1,48 @@
+=== Load offline recheck 2026-07-20T15:24:02Z ===
+browse-load.js: SYNTAX_OK
+checkout-load.js: SYNTAX_OK
+invariant-check.py: COMPILE_OK
+load/k6/browse-load.js:25:const TERMS = new SharedArray('terms', () => [
+load/k6/browse-load.js:38:const CATEGORY_PATHS = new SharedArray('categories', () => [
+load/k6/browse-load.js:64:    'http_req_duration{route:search}': ['p95<400'],
+load/k6/browse-load.js:65:    'http_req_duration{route:plp}': ['p95<400'],
+load/k6/browse-load.js:66:    'http_req_duration{route:suggest}': ['p95<250'],
+load/k6/browse-load.js:68:    checks: ['rate>0.99'],
+load/k6/browse-load.js:83:  check(res, { 'search: 200': (r) => r.status === 200 });
+load/k6/browse-load.js:93:  check(res, { 'plp: 200': (r) => r.status === 200 });
+load/k6/browse-load.js:102:  check(res, { 'suggest: 200': (r) => r.status === 200 });
+load/k6/checkout-load.js:4://   cart (pre-seeded) -> POST /checkout/session (reserve stock)
+load/k6/checkout-load.js:5://                     -> POST /checkout/steps/fulfilment
+load/k6/checkout-load.js:6://                     -> POST /checkout/steps/payment
+load/k6/checkout-load.js:7://                     -> POST /orders            (create per-vendor orders)
+load/k6/checkout-load.js:8://                     -> payment-initiate        (Lenco STUB — never a real endpoint)
+load/k6/checkout-load.js:33:  .map((t) => t.trim())
+load/k6/checkout-load.js:34:  .filter((t) => t.length > 0);
+load/k6/checkout-load.js:48:const tokens = new SharedArray('auth-tokens', () => AUTH_TOKENS);
+load/k6/checkout-load.js:81:    'http_req_duration{scenario:checkout_100cc}': ['p95<500'],
+load/k6/checkout-load.js:83:    order_create_ms: ['p95<500'],
+load/k6/checkout-load.js:84:    checkout_session_ms: ['p95<500'],
+load/k6/checkout-load.js:85:    // Fewer than 1% transport failures and >99% functional checks pass.
+load/k6/checkout-load.js:87:    checks: ['rate>0.99'],
+load/k6/checkout-load.js:90:    orders_created: ['count>0'],
+load/k6/checkout-load.js:108:// The claim guard (stock_qty >= qty, decrement-in-place) returns HTTP 409
+load/k6/checkout-load.js:139:  group('01_create_session', () => {
+load/k6/checkout-load.js:145:      check(res, { 'session: clean stock rejection (409)': () => true });
+load/k6/checkout-load.js:149:      'session: 200': (r) => r.status === 200,
+load/k6/checkout-load.js:150:      'session: has session_id': (r) => {
+load/k6/checkout-load.js:161:    vendorGroups = (body.vendor_groups || []).map((g) => ({
+load/k6/checkout-load.js:172:  group('02_fulfilment', () => {
+load/k6/checkout-load.js:175:      groups: vendorGroups.map((g) => ({ vendor_id: g.vendor_id, fulfilment: 'pickup' })),
+load/k6/checkout-load.js:178:    check(res, { 'fulfilment: 200': (r) => r.status === 200 });
+load/k6/checkout-load.js:181:  group('03_payment_method', () => {
+load/k6/checkout-load.js:189:    check(res, { 'payment-method: 200': (r) => r.status === 200 });
+load/k6/checkout-load.js:194:  group('04_create_orders', () => {
+load/k6/checkout-load.js:208:      check(res, { 'orders: clean stock rejection (409)': () => true });
+load/k6/checkout-load.js:212:      'orders: 200': (r) => r.status === 200,
+load/k6/checkout-load.js:213:      'orders: has orders[]': (r) => {
+load/k6/checkout-load.js:215:          return Array.isArray(r.json('orders')) && r.json('orders').length > 0;
+load/k6/checkout-load.js:221:      'orders: no oversell in 2xx body': (r) => {
+load/k6/checkout-load.js:237:  group('05_payment_initiate_stub', () => {
+load/k6/checkout-load.js:250:    check(res, { 'payment-initiate stub: 2xx': (r) => r.status >= 200 && r.status < 300 });
+THRESHOLDS_UNCHANGED=true
+LIVE_100CC=NOT_RUN

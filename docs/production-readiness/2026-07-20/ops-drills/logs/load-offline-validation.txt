@@ -1,0 +1,27 @@
+=== Load offline validation 2026-07-20T15:23:29Z ===
+k6_binary=ABSENT
+approved_target_required=staging API with Lenco stub + seeded JWTs
+live_api_healthz=502 — refusing real-provider / prod load
+invariant-check_py_compile=PASS
+load/k6/browse-load.js:10:// The live 100cc/soak run is FOUNDER/STAGING-GATED (no staging reachable from build env).
+load/k6/browse-load.js:18:const VUS = Number(__ENV.BROWSE_VUS || 100);
+load/k6/browse-load.js:51:      executor: 'ramping-vus',
+load/k6/browse-load.js:64:    'http_req_duration{route:search}': ['p95<400'],
+load/k6/browse-load.js:65:    'http_req_duration{route:plp}': ['p95<400'],
+load/k6/browse-load.js:66:    'http_req_duration{route:suggest}': ['p95<250'],
+load/k6/checkout-load.js:1:// checkout-load.js — Vergeo5 100-concurrent checkout load test (k6).
+load/k6/checkout-load.js:13:// The 100cc run + p95 numbers are FOUNDER/STAGING-GATED (no staging is reachable from
+load/k6/checkout-load.js:29:// Comma-separated pre-seeded Supabase JWTs, one per seeded customer+cart. 100cc needs
+load/k6/checkout-load.js:66:    checkout_100cc: {
+load/k6/checkout-load.js:67:      executor: 'ramping-vus',
+load/k6/checkout-load.js:72:        { duration: '1m', target: 100 }, // ramp to 100 concurrent
+load/k6/checkout-load.js:73:        { duration: '2m', target: 100 }, // hold 100cc — the stress window
+load/k6/checkout-load.js:80:    // p95 < 500ms end-to-end HTTP at 100 concurrent checkouts — the headline SLO.
+load/k6/checkout-load.js:81:    'http_req_duration{scenario:checkout_100cc}': ['p95<500'],
+load/k6/checkout-load.js:83:    order_create_ms: ['p95<500'],
+load/k6/checkout-load.js:84:    checkout_session_ms: ['p95<500'],
+load/k6/checkout-load.js:104:    tags: { scenario: 'checkout_100cc' },
+load/k6/checkout-load.js:247:      tags: { scenario: 'checkout_100cc', stub: 'lenco' },
+live_100cc_run=NOT_RUN
+p50=n/a p95=n/a p99=n/a throughput=n/a http_error_rate=n/a
+=== end ===

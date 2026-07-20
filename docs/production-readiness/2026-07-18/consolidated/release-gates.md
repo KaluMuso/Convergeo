@@ -56,15 +56,43 @@ Evidence: Supabase SQL 2026-07-20 (`go-no-go-report.md` §1).
 
 ### G3 — Payment ledger / reconciliation correctness
 
-**Current:** **FAIL** — live `payments=0`, `ledger_transactions=0`; sandbox drills BLOCKED_EXTERNAL (Prompt 8).
+| Check                        | Automated   | Manual          | Pass criteria                            |
+| ---------------------------- | ----------- | --------------- | ---------------------------------------- |
+| Sandbox MoMo → ledger        | S1          | Lenco match     | Collection posts (#274) STAGING_VERIFIED |
+| Sandbox card → ledger        | S2          | Same            | Same                                     |
+| Release capture → vendor net | S3          | Recon fields    | #294 invariants STAGING_VERIFIED         |
+| Webhook idempotency          | Replay      | —               | Single ledger txn                        |
+| Recon cron                   | n8n success | Forced mismatch | Alerted; no silent drift                 |
+| Integer ngwee only           | Unit tests  | Review          | No float money math                      |
+
+**Current:** FAIL — CODE_COMPLETE only (#274/#294); live `payments=0`, `ledger_transactions=0`. Prompt 8 sandbox drill **BLOCKED_EXTERNAL** (`docs/production-readiness/2026-07-20/lenco-sandbox-money-drill.md`) — no F9b creds; API 502; tip mismatch.
+
+---
 
 ### G4 — No false payment-success state
 
-**Current:** **FAIL** — no staging E2E false-success pack attached to live tip.
+| Check         | Automated   | Manual | Pass criteria                                                                                |
+| ------------- | ----------- | ------ | -------------------------------------------------------------------------------------------- |
+| Pending UI    | E2E abandon | —      | Not success                                                                                  |
+| Webhook delay | E2E         | —      | Success only after confirmed policy (order_confirmed / confirming≠paid; ledger per contract) |
+| COD path      | E2E ≤K500   | —      | Never claims MoMo success                                                                    |
+
+**Current:** FAIL — UI CODE_COMPLETE (#289); staging E2E open; Prompt 8 false-success matrix **NOT RUN** (BLOCKED_EXTERNAL).
+
+---
 
 ### G5 — Workflow reliability / retries
 
-**Current:** **FAIL** — live n8n: 3 workflows, all `active=false` (fail-closed under API 502). Escrow/tickets ticks not proven.
+| Check                                  | Automated              | Manual                   | Pass criteria   |
+| -------------------------------------- | ---------------------- | ------------------------ | --------------- |
+| Escrow auto-release active             | n8n active release-job | Sandbox release tick     | MR-W01          |
+| Tickets-issue (+ event-release) active | n8n                    | Paid ticket exactly-once | MR-W02          |
+| Internal ticks auth                    | Unauthorized → 401/403 | —                        | Tokens required |
+| Notification dispatch                  | Live workflow          | Sandbox send             | Outbox drains   |
+
+**Current:** FAIL (2026-07-20: dispatch + payment recon **unpublished** fail-closed under API 502; release/tickets never activated — Prompt 7 `n8n-fleet-import-verify.md` + Prompt 8 did not activate money workflows).
+
+---
 
 ### G6 — Error monitoring and actionable logs
 
@@ -72,7 +100,17 @@ Evidence: Supabase SQL 2026-07-20 (`go-no-go-report.md` §1).
 
 ### G7 — Backups and restore proof
 
-**Current:** **FAIL** — no approved backup workflow/artifact; restore CONDITIONAL on local-ci drill dump only (Prompt 10 / PR #379).
+| Check                | Automated                 | Manual               | Pass criteria             |
+| -------------------- | ------------------------- | -------------------- | ------------------------- |
+| Scheduled backup     | n8n or host cron listing  | OCI names/dates only | Dated artifact within RPO |
+| Restore drill        | —                         | Scratch restore      | Documented success        |
+| Pre-migration backup | Checklist before DB-01/02 | —                    | Timestamp before migrate  |
+
+**Current:** FAIL.
+
+Evidence 2026-07-20 (`docs/production-readiness/2026-07-20/ops-drills/`): approved n8n/OCI backup workflow+artifact **absent**; CONDITIONAL isolated restore of a `backup_mode=drill` local-ci dump only (checksum OK, RTO numeric ≤30min, production not overwritten). Does **not** clear G7.
+
+---
 
 ### G8 — Critical test suite and CI gates
 
@@ -80,7 +118,15 @@ Evidence: Supabase SQL 2026-07-20 (`go-no-go-report.md` §1).
 
 ### G9 — Deployment / rollback evidence
 
-**Current:** **FAIL** — API digest UNKNOWN; migration tip drift; rollback drill NOT_RUN (Prompt 10). Frontend SHAs recorded but behind tip.
+| Check                      | Automated           | Manual                 | Pass criteria                                  |
+| -------------------------- | ------------------- | ---------------------- | ---------------------------------------------- |
+| Frontend SHAs recorded     | Vercel deployments  | —                      | SHA per app                                    |
+| API image digest recorded  | Host/GHCR           | —                      | Digest ≠ unknown                               |
+| DB migrations match target | `schema_migrations` | —                      | Incl. agreed `0056`                            |
+| Rollback drill             | —                   | Prior Vercel + API tag | Time recorded                                  |
+| Feature flags              | SQL flags           | —                      | `public_launch` intentional; Zamtel matches UI |
+
+**Current (2026-07-20 Prompt 6):** FAIL / NO-GO. Frontend prod SHAs **recorded** (customer `cde40bf`, vendor `5a4668a`, admin `2f99711`) but **behind** master tip `d9839db`. Live migration tip = `0063_revoke_execute_review_reply_guards` (not repo tip: source_key + FORCE RLS unapplied; RC-02 collision). API host digest **NOT_AUDITABLE** (`api.vergeo5.com` **502**); GHCR `latest` digest known but not proof of running container. Rollback drill still open. Evidence: `docs/production-readiness/2026-07-20/deploy-migration-truth.md`.
 
 ---
 
