@@ -97,7 +97,7 @@ describe("chunked sitemap manifest", () => {
     expect(indexXml).toContain("https://vergeo5.com/sitemap/5.xml");
   });
 
-  it("builds chunk 0 with SEO_INDEXABLE_LOCALES only (excludes bem/nya)", async () => {
+  it("builds chunk 0 with SEO_INDEXABLE_LOCALES only (excludes bem/nya/zh)", async () => {
     const mod = await import("./sitemap-build");
     const entries = await mod.buildSitemapChunk(0);
     expect(entries).not.toBeNull();
@@ -108,6 +108,7 @@ describe("chunked sitemap manifest", () => {
     }
     expect(locs.some((url) => url.includes("/bem"))).toBe(false);
     expect(locs.some((url) => url.includes("/nya"))).toBe(false);
+    expect(locs.some((url) => url.includes("/zh"))).toBe(false);
 
     // Policy: no search/cart/checkout/private/demo shells.
     for (const forbidden of [
@@ -138,11 +139,11 @@ describe("chunked sitemap manifest", () => {
       expect.arrayContaining([
         "https://vergeo5.com/en/p/itel-a70",
         "https://vergeo5.com/fr/p/itel-a70",
-        "https://vergeo5.com/zh/p/solar-lantern",
       ]),
     );
-    expect(locs.every((url) => /\/(en|fr|zh)\/p\//.test(url))).toBe(true);
+    expect(locs.every((url) => /\/(en|fr)\/p\//.test(url))).toBe(true);
     expect(locs.some((url) => url.includes("/bem/") || url.includes("/nya/"))).toBe(false);
+    expect(locs.some((url) => url.includes("/zh/"))).toBe(false);
   });
 
   it("returns null for unknown chunk ids", async () => {
@@ -157,6 +158,7 @@ describe("isCanonicalPublicSitemapUrl", () => {
     expect(isCanonicalPublicSitemapUrl("https://vergeo5.com/en/p/itel-a70")).toBe(true);
     expect(isCanonicalPublicSitemapUrl("https://vergeo5.com/fr/c/electronics")).toBe(true);
     expect(isCanonicalPublicSitemapUrl("https://vergeo5.com/bem")).toBe(false);
+    expect(isCanonicalPublicSitemapUrl("https://vergeo5.com/zh")).toBe(false);
     expect(isCanonicalPublicSitemapUrl("https://vergeo5.com/en/cart")).toBe(false);
     expect(isCanonicalPublicSitemapUrl("https://vergeo5.com/en/search?q=phone")).toBe(false);
     expect(isCanonicalPublicSitemapUrl("https://evil.example/en")).toBe(false);

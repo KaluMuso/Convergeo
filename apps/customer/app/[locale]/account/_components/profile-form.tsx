@@ -1,6 +1,6 @@
 "use client";
 
-import { LOCALES } from "@vergeo/i18n";
+import { PUBLIC_LOCALES } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
@@ -84,7 +84,7 @@ export function ProfileForm({ locale, accessToken, initialProfile, labels }: Pro
           onChange={(event) => setSelectedLocale(event.target.value)}
           aria-label={labels.localeLabel}
         >
-          {LOCALES.map((code) => (
+          {PUBLIC_LOCALES.map((code) => (
             <option key={code} value={code}>
               {labels.locales[code] ?? code}
             </option>
