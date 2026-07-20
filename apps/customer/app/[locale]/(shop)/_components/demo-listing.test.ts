@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isDemoListingPublicId } from "./demo-listing";
+import { isDemoListingPublicId, shouldShowSampleListingBadge } from "./demo-listing";
 
 describe("isDemoListingPublicId", () => {
   it("detects demo/ seed public IDs", () => {
@@ -15,5 +15,31 @@ describe("isDemoListingPublicId", () => {
     expect(isDemoListingPublicId("demodex/hero")).toBe(false);
     expect(isDemoListingPublicId(null)).toBe(false);
     expect(isDemoListingPublicId("")).toBe(false);
+  });
+});
+
+describe("shouldShowSampleListingBadge", () => {
+  it("hides sample badges in production by default", () => {
+    expect(shouldShowSampleListingBadge({ NODE_ENV: "production" })).toBe(false);
+  });
+
+  it("shows sample badges outside production", () => {
+    expect(shouldShowSampleListingBadge({ NODE_ENV: "development" })).toBe(true);
+    expect(shouldShowSampleListingBadge({ NODE_ENV: "test" })).toBe(true);
+  });
+
+  it("honours the explicit public env flag", () => {
+    expect(
+      shouldShowSampleListingBadge({
+        NODE_ENV: "production",
+        NEXT_PUBLIC_SHOW_SAMPLE_LISTINGS: "true",
+      }),
+    ).toBe(true);
+    expect(
+      shouldShowSampleListingBadge({
+        NODE_ENV: "development",
+        NEXT_PUBLIC_SHOW_SAMPLE_LISTINGS: "0",
+      }),
+    ).toBe(false);
   });
 });

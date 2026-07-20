@@ -9,6 +9,53 @@ export type PlpFilterState = {
   lng?: string;
 };
 
+export type AppliedFilterChip =
+  | { id: string; kind: "price"; min?: string; max?: string }
+  | { id: string; kind: "condition"; value: string }
+  | { id: string; kind: "availability"; value: string }
+  | { id: string; kind: "rating"; value: string }
+  | { id: string; kind: "location"; radiusKm?: string };
+
+export function hasActivePlpFilters(state: PlpFilterState): boolean {
+  return buildAppliedFilterChips(state).length > 0;
+}
+
+/** Stable chip list for the applied-filter summary bar. */
+export function buildAppliedFilterChips(state: PlpFilterState): AppliedFilterChip[] {
+  const chips: AppliedFilterChip[] = [];
+
+  if (state.minPrice || state.maxPrice) {
+    chips.push({
+      id: "price",
+      kind: "price",
+      min: state.minPrice,
+      max: state.maxPrice,
+    });
+  }
+
+  for (const value of state.condition) {
+    chips.push({ id: `condition:${value}`, kind: "condition", value });
+  }
+
+  for (const value of state.availability) {
+    chips.push({ id: `availability:${value}`, kind: "availability", value });
+  }
+
+  if (state.minRating) {
+    chips.push({ id: `rating:${state.minRating}`, kind: "rating", value: state.minRating });
+  }
+
+  if (state.lat && state.lng) {
+    chips.push({
+      id: "location",
+      kind: "location",
+      radiusKm: state.radiusKm,
+    });
+  }
+
+  return chips;
+}
+
 export function encodePlpFilters(state: PlpFilterState): URLSearchParams {
   const params = new URLSearchParams();
   if (state.minPrice) {

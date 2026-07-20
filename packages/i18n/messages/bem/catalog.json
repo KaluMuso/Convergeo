@@ -181,6 +181,14 @@
     "defaultCategory": "Ifintu fyonse",
     "emptyBody": "Wesheni ukufuta filters nangu twaleni category yambi.",
     "emptyTitle": "Takwaba listings",
+    "filters": {
+      "appliedAria": "Filters ifyakubomfya",
+      "clearAll": "Futeni fyonse",
+      "removeChip": "Futeni filter {filter}",
+      "priceRange": "K{min} – K{max}",
+      "minPriceOnly": "Ukufuma K{min}",
+      "maxPriceOnly": "Mpaka K{max}"
+    },
     "loadMore": "Leteni fimbi",
     "loading": "Ilekete…",
     "results": "{count, plural, one {# listing} other {# amalistings}}",

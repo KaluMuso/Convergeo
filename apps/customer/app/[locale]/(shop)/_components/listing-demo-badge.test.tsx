@@ -63,6 +63,34 @@ describe("ListingGrid demo disclosure (CUST-HOME-01)", () => {
     );
 
     expect(screen.getByText("Sample listing")).toBeInTheDocument();
-    expect(screen.getAllByTestId("badge-public")).toHaveLength(1);
+    expect(screen.getAllByTestId("badge-sample")).toHaveLength(1);
+  });
+
+  it("hides Sample listing when the production gate is closed", () => {
+    render(
+      <ListingGrid
+        locale="en"
+        labels={labels}
+        showSampleBadge={false}
+        listings={[
+          {
+            id: "demo-1",
+            title: "Demo phone",
+            productSlug: "demo-phone",
+            vendorName: "Sandbox",
+            priceNgwee: 10000,
+            condition: "new",
+            inStock: true,
+            imagePublicId: "demo/products/phone",
+            rating: 0,
+            reviewCount: 0,
+            distanceM: null,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.queryByText("Sample listing")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("badge-sample")).not.toBeInTheDocument();
   });
 });

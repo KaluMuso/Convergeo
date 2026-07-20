@@ -12,6 +12,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../../lib/api-base-url";
+import { AppliedFilterBar } from "../../_components/plp/applied-filter-bar";
 import { FacetPanel, type FacetCounts } from "../../_components/plp/facet-panel";
 import { type CatalogListing } from "../../_components/plp/listing-grid";
 import { PlpBrowseClient } from "../../_components/plp/load-more";
@@ -210,6 +211,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
     wishlist: t("plp.card.wishlist"),
     outOfStock: t("plp.card.outOfStock"),
     distance: t("plp.card.distance"),
+    sampleListing: t("home.demo.sampleListing"),
   };
 
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [
@@ -217,8 +219,12 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
     { name: categoryName, path: `c/${slug.join("/")}` },
   ]);
 
+  const plpPathname = `/${locale}/c/${slug.join("/")}`;
+  const activeSearchParams = new URLSearchParams(queryString);
+
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 motion-rise">
+    // Shop layout already provides the page <main> landmark — avoid nesting.
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
       <JsonLdScript data={breadcrumbJsonLd} />
       <Breadcrumbs
         ariaLabel={t("plp.breadcrumbAria")}
@@ -230,10 +236,10 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
         ]}
       />
       <header className="flex flex-col gap-1">
-        <h1 className="font-display text-[var(--fs-h1)] text-[var(--text)]">
+        <h1 className="font-display text-h1 text-display-ink">
           {t("plp.title", { category: categoryName })}
         </h1>
-        <p className="text-sm text-[var(--text-2)]">{t("plp.results", { count: total })}</p>
+        <p className="text-sm text-text-2">{t("plp.results", { count: total })}</p>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
@@ -274,6 +280,28 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
             hasLocation={hasLocation}
           />
 
+          <AppliedFilterBar
+            pathname={plpPathname}
+            searchParams={activeSearchParams}
+            filterState={filterState}
+            labels={{
+              ariaLabel: t("plp.filters.appliedAria"),
+              clearAll: t("plp.filters.clearAll"),
+              removeChip: t("plp.filters.removeChip"),
+              priceRange: t("plp.filters.priceRange"),
+              minPriceOnly: t("plp.filters.minPriceOnly"),
+              maxPriceOnly: t("plp.filters.maxPriceOnly"),
+              conditionNew: t("plp.facets.conditionNew"),
+              conditionRefurbished: t("plp.facets.conditionRefurbished"),
+              inStock: t("plp.facets.inStock"),
+              outOfStock: t("plp.facets.outOfStock"),
+              rating4Plus: t("plp.facets.rating4Plus"),
+              rating3Plus: t("plp.facets.rating3Plus"),
+              nearMe: t("plp.facets.location"),
+              radiusKm: t("plp.facets.radiusKm"),
+            }}
+          />
+
           {catalogUnavailable ? (
             <EmptyState
               title={t("plp.unavailableTitle")}
@@ -307,6 +335,6 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
           )}
         </section>
       </div>
-    </main>
+    </div>
   );
 }

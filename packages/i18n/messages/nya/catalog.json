@@ -181,6 +181,14 @@
     "defaultCategory": "Zinthu zonse",
     "emptyBody": "Yesani kuchotsa ma-filters kapena yang'anani category ina.",
     "emptyTitle": "Palibe ma-listings",
+    "filters": {
+      "appliedAria": "Ma-filters ogwiritsidwa",
+      "clearAll": "Chotsani zonse",
+      "removeChip": "Chotsani filter {filter}",
+      "priceRange": "K{min} – K{max}",
+      "minPriceOnly": "Kuyambira K{min}",
+      "maxPriceOnly": "Mpaka K{max}"
+    },
     "loadMore": "Tengani zina",
     "loading": "Ikuyenda…",
     "results": "{count, plural, one {# listing} other {# ma-listings}}",

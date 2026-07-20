@@ -3,7 +3,7 @@ import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import Link from "next/link";
 
-import { isDemoListingPublicId } from "../demo-listing";
+import { isDemoListingPublicId, shouldShowSampleListingBadge } from "../demo-listing";
 
 export type CatalogListing = {
   id: string;
@@ -27,7 +27,7 @@ type ListingGridLabels = {
   wishlist: string;
   outOfStock: string;
   distance: string;
-  /** Subtle beta/demo disclosure — only shown when media proves demo seed. */
+  /** Subtle beta/demo disclosure — only shown when media proves demo seed + gate allows. */
   sampleListing?: string;
 };
 
@@ -37,6 +37,8 @@ type ListingGridProps = {
   labels: ListingGridLabels;
   /** How many leading cards get priority image loading (LCP). Default keeps PLP behaviour. */
   priorityCount?: number;
+  /** Injectable for tests; defaults to production-safe sample gate. */
+  showSampleBadge?: boolean;
 };
 
 function formatDistance(meters: number | null): string | null {
@@ -49,9 +51,18 @@ function formatDistance(meters: number | null): string | null {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
-export function ListingGrid({ locale, listings, labels, priorityCount = 2 }: ListingGridProps) {
+export function ListingGrid({
+  locale,
+  listings,
+  labels,
+  priorityCount = 2,
+  showSampleBadge = shouldShowSampleListingBadge(),
+}: ListingGridProps) {
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+    <div
+      data-testid="listing-grid"
+      className="motion-fade grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4"
+    >
       {listings.map((listing, index) => {
         const distance = formatDistance(listing.distanceM);
         const distanceLabel =
@@ -61,8 +72,8 @@ export function ListingGrid({ locale, listings, labels, priorityCount = 2 }: Lis
 
         const badge = !listing.inStock ? (
           <Badge variant="sold_out" label={labels.outOfStock} />
-        ) : isDemo && sampleLabel ? (
-          <Badge variant="public" label={sampleLabel} />
+        ) : isDemo && sampleLabel && showSampleBadge ? (
+          <Badge variant="sample" label={sampleLabel} />
         ) : distanceLabel ? (
           <Badge variant="public" label={distanceLabel} />
         ) : undefined;
