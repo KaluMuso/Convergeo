@@ -168,7 +168,7 @@ def test_settlement_posts_balanced_charge_received(
     assert postings.rows == ["escrow|-25000", "platform_cash|25000"]
 
 
-def test_settlement_idempotent_by_payment_id(
+def test_settlement_idempotent_by_checkout_group(
     db: PgConn,
     fake_service: FakeServiceClient,
     payment_id: str,
@@ -191,8 +191,113 @@ def test_settlement_idempotent_by_payment_id(
 
     assert first.created is True
     assert second.created is False
+    assert second.skipped_sibling is False
     assert second.transaction_id == first.transaction_id
     assert _ledger_txn_count(db, payment_id) == 1
+
+
+def _checkout_charge_count(pg: PgConn, checkout_group_id: str) -> int:
+    result = pg.run(
+        f"""
+        SELECT count(*)::text
+        FROM public.ledger_transactions
+        WHERE checkout_group_id = '{checkout_group_id}'::uuid
+          AND kind = 'charge_received';
+        """
+    )
+    assert result.ok
+    return int(result.rows[0])
+
+
+def test_late_success_sibling_does_not_double_settle(
+    db: PgConn,
+    fake_service: FakeServiceClient,
+) -> None:
+    """Retry payment B settles; late SUCCESS on failed payment A must not re-charge."""
+    payment_a = str(uuid.uuid4())
+    payment_b = str(uuid.uuid4())
+    _seed_db_payment(db, payment_id=payment_a, reference=f"ord-{payment_a}")
+    _seed_db_payment(db, payment_id=payment_b, reference=f"ord-{payment_b}")
+    _seed_ussd_payment(
+        fake_service.client,
+        payment_id=payment_a,
+        status="failed",
+        reference=f"ord-{payment_a}",
+    )
+    _seed_ussd_payment(
+        fake_service.client,
+        payment_id=payment_b,
+        reference=f"ord-{payment_b}",
+    )
+
+    # Winner: retry payment B
+    b_outcome = apply_payment_status(
+        fake_service,
+        payment_id=payment_b,
+        incoming_status=PaymentStatus.SUCCESS,
+        actor_id="00000000-0000-0000-0000-000000000001",
+        note="Retry payment success",
+    )
+    assert b_outcome is not None
+    assert b_outcome.to_status == PaymentStatus.SUCCESS
+    assert _checkout_charge_count(db, CHECKOUT_GROUP_ID) == 1
+
+    # Late SUCCESS on prior failed attempt A — settle skipped, status unchanged
+    a_outcome = apply_payment_status(
+        fake_service,
+        payment_id=payment_a,
+        incoming_status=PaymentStatus.SUCCESS,
+        actor_id="00000000-0000-0000-0000-000000000001",
+        note="Late success after sibling settled",
+    )
+    assert a_outcome is None
+    assert _checkout_charge_count(db, CHECKOUT_GROUP_ID) == 1
+
+    payment_a_row = next(
+        row
+        for row in fake_service.client.tables["payments"].rows
+        if row["id"] == payment_a
+    )
+    assert payment_a_row["status"] == PaymentStatus.FAILED.value
+
+    audits = [
+        row
+        for row in fake_service.client.tables["audit_log"].rows
+        if row.get("entity_id") == payment_a
+    ]
+    assert any(
+        "late_success_after_sibling_settled" in str(row.get("after", {}))
+        for row in audits
+    )
+
+
+def test_settle_sibling_payment_skips_second_charge(
+    db: PgConn,
+    fake_service: FakeServiceClient,
+) -> None:
+    payment_a = str(uuid.uuid4())
+    payment_b = str(uuid.uuid4())
+    _seed_db_payment(db, payment_id=payment_a, reference=f"ord-{payment_a}")
+    _seed_db_payment(db, payment_id=payment_b, reference=f"ord-{payment_b}")
+
+    first = settle_prepaid_collection(
+        fake_service,
+        payment_id=payment_a,
+        checkout_group_id=CHECKOUT_GROUP_ID,
+        amount_ngwee=AMOUNT_NGWEE,
+    )
+    second = settle_prepaid_collection(
+        fake_service,
+        payment_id=payment_b,
+        checkout_group_id=CHECKOUT_GROUP_ID,
+        amount_ngwee=AMOUNT_NGWEE,
+    )
+
+    assert first.created is True
+    assert second.created is False
+    assert second.skipped_sibling is True
+    assert second.transaction_id == first.transaction_id
+    assert _checkout_charge_count(db, CHECKOUT_GROUP_ID) == 1
 
 
 def test_apply_success_settles_before_status_transition(
@@ -326,7 +431,7 @@ def test_reconciliation_visibility_payment_linked(
     assert kind == LedgerTemplate.CHARGE_RECEIVED.value
     assert linked_payment_id == payment_id
     assert checkout_group_id == CHECKOUT_GROUP_ID
-    assert idempotency_key == prepaid_collection_idempotency_key(payment_id)
+    assert idempotency_key == prepaid_collection_idempotency_key(CHECKOUT_GROUP_ID)
 
     today = datetime.now(UTC).date()
     ledger_rows = fetch_ledger_day_rows(today)

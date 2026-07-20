@@ -12,16 +12,20 @@ import os
 import subprocess
 import threading
 import uuid
+from collections.abc import Callable
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 from app.services.escrow.order_money_gate import RefundGateDecision
+from app.services.escrow.release_accounting import OrderReleaseLedgerSummary
 from app.services.ledger.engine import PostedTransaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.payments.references import make_refund_reference
 from app.services.refunds.execute import RefundPhase, execute_refund
 from postgrest.exceptions import APIError
+
+_PRE_RELEASE_GATE = RefundGateDecision(phase="pre_release", claimed=True)
 
 ORDER_ID = "70707070-7070-7070-7070-707070707070"
 VENDOR_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
@@ -124,7 +128,7 @@ class FakeQuery:
 
 
 class FakeTable:
-    #: statuses that the 0032 partial unique index treats as occupying an order.
+    #: statuses that the source_key partial unique index treats as occupying a key.
     _ACTIVE = frozenset({"pending", "processing", "completed"})
 
     def __init__(self, name: str) -> None:
@@ -161,17 +165,17 @@ class FakeTable:
     def do_insert(self, row: dict[str, Any]) -> dict[str, Any]:
         with self.lock:
             if self.name == "refunds":
-                order_id = row.get("order_id")
+                source_key = row.get("source_key")
                 status = row.get("status")
-                if status in self._ACTIVE and any(
-                    r.get("order_id") == order_id and r.get("status") in self._ACTIVE
+                if status in self._ACTIVE and source_key and any(
+                    r.get("source_key") == source_key and r.get("status") in self._ACTIVE
                     for r in self.rows
                 ):
                     raise APIError(
                         {
                             "code": "23505",
                             "message": "duplicate key value violates unique constraint "
-                            '"refunds_order_id_active_uniq"',
+                            '"refunds_source_key_active_uniq"',
                         }
                     )
             self.rows.append(row)
@@ -224,7 +228,9 @@ def _seed_order(fake: FakeSupabaseClient, *, item_total: int = 100_000, delivery
         )
 
 
-def _gate_decision_for_fake(fake: FakeSupabaseClient):
+def _gate_decision_for_fake(
+    fake: FakeSupabaseClient,
+) -> Callable[[str], RefundGateDecision]:
     """DB-less stand-in for decide_refund_phase_under_gate (avoids real SQL)."""
 
     def _decide(order_id: str) -> RefundGateDecision:
@@ -272,6 +278,16 @@ class TestConcurrentAndRetry:
                 "app.services.refunds.execute.decide_refund_phase_under_gate",
                 side_effect=_gate_decision_for_fake(fake),
             ),
+            patch(
+                "app.services.refunds.execute.summarize_order_release_ledger",
+                return_value=OrderReleaseLedgerSummary(
+                    order_id=ORDER_ID,
+                    charge_received_ngwee=0,
+                    commission_captured_ngwee=0,
+                    vendor_released_ngwee=0,
+                    refund_drained_ngwee=0,
+                ),
+            ),
         ):
             threads = [threading.Thread(target=worker) for _ in range(2)]
             for t in threads:
@@ -281,10 +297,11 @@ class TestConcurrentAndRetry:
 
         assert not errors, f"worker raised: {errors}"
         assert len(results) == 2
-        # Exactly one active refund row for the order (the 0032 backstop held).
+        # Exactly one active refund row for this source_key (0063 backstop held).
         active = [r for r in fake.tables["refunds"].rows
                   if r["status"] in FakeTable._ACTIVE]
         assert len(active) == 1
+        assert active[0]["source_key"] == CALLER_KEY
         # Exactly one payout — the loser returned the winner's refund, never paid out.
         assert len(fake.tables["payouts"].rows) == 1
         # Escrow drained exactly once: one distinct ledger idempotency key created.
@@ -309,6 +326,16 @@ class TestConcurrentAndRetry:
                 "app.services.refunds.execute.decide_refund_phase_under_gate",
                 side_effect=_gate_decision_for_fake(fake),
             ),
+            patch(
+                "app.services.refunds.execute.summarize_order_release_ledger",
+                return_value=OrderReleaseLedgerSummary(
+                    order_id=ORDER_ID,
+                    charge_received_ngwee=0,
+                    commission_captured_ngwee=0,
+                    vendor_released_ngwee=0,
+                    refund_drained_ngwee=0,
+                ),
+            ),
         ):
             first = execute_refund(service_client=service, order_id=ORDER_ID, lane=1,
                                    customer_momo=CUSTOMER_MOMO, idempotency_key=CALLER_KEY)
@@ -321,29 +348,108 @@ class TestConcurrentAndRetry:
         assert len(fake.tables["payouts"].rows) == 1  # no second payout
         assert ledger.created_count == 1  # no second ledger drain
 
-    def test_duplicate_insert_returns_existing_without_ledger_or_payout(self) -> None:
-        # Winner already inserted (fast-path pre-check will still miss it in this thread's
-        # snapshot only if seeded after; here we seed it so the insert hits the unique index).
+    def test_duplicate_insert_resumes_processing_winner(self) -> None:
+        # Winner already inserted processing — loser must resume (not no-op leave stranded).
         fake = FakeSupabaseClient()
         _seed_order(fake, released=False)
         winner_id = "c0ffee00-0000-0000-0000-000000000001"
         fake.tables["refunds"].rows.append(
-            {"id": winner_id, "order_id": ORDER_ID, "lane": 1, "amount_ngwee": 105_000,
-             "status": "processing",
-             "breakdown": {"phase": "pre_release", "lenco_reference": "rfd-winner",
-                           "ledger_transaction_ids": ["txn-w"]}}
+            {
+                "id": winner_id,
+                "order_id": ORDER_ID,
+                "source_key": CALLER_KEY,
+                "lane": 1,
+                "amount_ngwee": 105_000,
+                "status": "processing",
+                "breakdown": {
+                    "phase": "pre_release",
+                    "idempotency_key": CALLER_KEY,
+                },
+            }
         )
         service = FakeServiceClient(fake)
         ledger = IdempotentPostTransaction()
 
-        with patch("app.services.refunds.execute.post_transaction", ledger):
-            result = execute_refund(service_client=service, order_id=ORDER_ID, lane=1,
-                                    customer_momo=CUSTOMER_MOMO, idempotency_key=CALLER_KEY)
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                side_effect=_gate_decision_for_fake(fake),
+            ),
+        ):
+            result = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+                idempotency_key=CALLER_KEY,
+            )
 
         assert result.created is False
         assert result.refund_id == winner_id
-        assert ledger.created_count == 0
-        assert len(fake.tables["payouts"].rows) == 0
+        assert ledger.created_count == 1
+        assert len(fake.tables["payouts"].rows) == 1
+        assert fake.tables["refunds"].rows[0]["status"] == "completed"
+
+
+class TestProcessingResume:
+    def test_resume_processing_refund_completes_ledger_and_payout(self) -> None:
+        """Crash after insert(status=processing) must finish on the next execute_refund."""
+        fake = FakeSupabaseClient()
+        _seed_order(fake, released=False)
+        refund_id = "c0ffee00-0000-0000-0000-000000000099"
+        fake.tables["refunds"].rows.append(
+            {
+                "id": refund_id,
+                "order_id": ORDER_ID,
+                "source_key": CALLER_KEY,
+                "lane": 1,
+                "amount_ngwee": 105_000,
+                "status": "processing",
+                "breakdown": {
+                    "phase": "pre_release",
+                    "idempotency_key": CALLER_KEY,
+                },
+            }
+        )
+        service = FakeServiceClient(fake)
+        ledger = IdempotentPostTransaction()
+
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                side_effect=_gate_decision_for_fake(fake),
+            ),
+        ):
+            first = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+                idempotency_key=CALLER_KEY,
+            )
+            second = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+                idempotency_key=CALLER_KEY,
+            )
+
+        assert first.created is False
+        assert first.refund_id == refund_id
+        assert first.phase == RefundPhase.PRE_RELEASE
+        assert ledger.created_count == 1
+        assert ledger.keys == [f"{CALLER_KEY}-ledger"]
+        assert len(fake.tables["payouts"].rows) == 1
+        assert fake.tables["refunds"].rows[0]["status"] == "completed"
+        assert fake.tables["refunds"].rows[0]["payout_ref"] == first.payout_id
+        # Completed refund is returned as-is — no second ledger/payout.
+        assert second.created is False
+        assert second.refund_id == refund_id
+        assert ledger.created_count == 1
+        assert len(fake.tables["payouts"].rows) == 1
 
 
 class TestKeyDerivation:
@@ -373,12 +479,23 @@ class TestKeyDerivation:
         _seed_order(fake, released=True)
         service = FakeServiceClient(fake)
         ledger = IdempotentPostTransaction()
+        full_release = OrderReleaseLedgerSummary(
+            order_id=ORDER_ID,
+            charge_received_ngwee=105_000,
+            commission_captured_ngwee=0,
+            vendor_released_ngwee=105_000,
+            refund_drained_ngwee=0,
+        )
 
         with (
             patch("app.services.refunds.execute.post_transaction", ledger),
             patch(
                 "app.services.refunds.execute.decide_refund_phase_under_gate",
                 side_effect=_gate_decision_for_fake(fake),
+            ),
+            patch(
+                "app.services.refunds.execute.summarize_order_release_ledger",
+                return_value=full_release,
             ),
         ):
             result = execute_refund(service_client=service, order_id=ORDER_ID, lane=1,
@@ -409,9 +526,8 @@ class TestKeyDerivation:
 
 
 # ---------------------------------------------------------------------------
-# Real-Postgres backstop: the 0032 partial unique index itself. Gated on a DB URL
-# (set FIXB_TEST_DB_URL to a Postgres 16 with all migrations applied) so the suite
-# stays hermetic in CI environments without a database.
+# Real-Postgres backstop: the 0063 source_key partial unique index. Gated on a
+# DB URL (set FIXB_TEST_DB_URL) so the suite stays hermetic without a database.
 # ---------------------------------------------------------------------------
 
 _DB_URL = os.environ.get("FIXB_TEST_DB_URL")
@@ -427,7 +543,7 @@ def _psql(sql: str) -> subprocess.CompletedProcess[str]:
 
 @pytest.mark.skipif(_DB_URL is None, reason="FIXB_TEST_DB_URL not set")
 class TestPartialUniqueIndexRealPostgres:
-    def test_index_rejects_second_active_refund_but_allows_after_failed(self) -> None:
+    def test_index_rejects_duplicate_source_key_allows_second_item(self) -> None:
         # Requires a seeded order+vendor; skip cleanly if fixtures are absent.
         oid = _psql("select id::text from public.orders limit 1;")
         assert oid.returncode == 0, oid.stderr
@@ -437,21 +553,183 @@ class TestPartialUniqueIndexRealPostgres:
 
         _psql(f"delete from public.refunds where order_id = '{order_id}';")
         first = _psql(
-            f"insert into public.refunds (order_id, lane, amount_ngwee, status) "
-            f"values ('{order_id}', 1, 1000, 'processing');"
+            f"insert into public.refunds "
+            f"(order_id, source_key, lane, amount_ngwee, status) "
+            f"values ('{order_id}', 'return-a-refund', 1, 1000, 'processing');"
         )
         assert first.returncode == 0, first.stderr
         second = _psql(
-            f"insert into public.refunds (order_id, lane, amount_ngwee, status) "
-            f"values ('{order_id}', 1, 1000, 'processing');"
+            f"insert into public.refunds "
+            f"(order_id, source_key, lane, amount_ngwee, status) "
+            f"values ('{order_id}', 'return-a-refund', 1, 1000, 'processing');"
         )
         assert second.returncode != 0
-        assert "refunds_order_id_active_uniq" in second.stderr
-        # Once the first refund is failed, the order is free for a fresh refund again.
-        _psql(f"update public.refunds set status = 'failed' where order_id = '{order_id}';")
+        assert "refunds_source_key_active_uniq" in second.stderr
+        # Distinct source_key on the same order is allowed (second item return).
+        other_item = _psql(
+            f"insert into public.refunds "
+            f"(order_id, source_key, lane, amount_ngwee, status) "
+            f"values ('{order_id}', 'return-b-refund', 1, 2000, 'processing');"
+        )
+        assert other_item.returncode == 0, other_item.stderr
+        # Once the first refund is failed, that source_key is free again.
+        _psql(
+            f"update public.refunds set status = 'failed' "
+            f"where order_id = '{order_id}' and source_key = 'return-a-refund';"
+        )
         third = _psql(
-            f"insert into public.refunds (order_id, lane, amount_ngwee, status) "
-            f"values ('{order_id}', 1, 1000, 'processing');"
+            f"insert into public.refunds "
+            f"(order_id, source_key, lane, amount_ngwee, status) "
+            f"values ('{order_id}', 'return-a-refund', 1, 1000, 'processing');"
         )
         assert third.returncode == 0, third.stderr
         _psql(f"delete from public.refunds where order_id = '{order_id}';")
+
+
+class TestItemScopedRefund:
+    """Per-item return callers must be able to scope the refund to one order item."""
+
+    def test_override_scopes_lane1_refund_to_returned_item(self) -> None:
+        from tests.test_refund_execute import (
+            FakeServiceClient,
+            FakeSupabaseClient,
+            IdempotentPostTransaction,
+        )
+
+        fake = FakeSupabaseClient()
+        # Multi-item order: returned item 200_000 + a kept item 300_000.
+        fake.tables["orders"].rows.append(
+            {"id": ORDER_ID, "vendor_id": VENDOR_ID, "delivery_fee_ngwee": 5_000,
+             "status": "delivered"}
+        )
+        fake.tables["order_items"].rows.append(
+            {"order_id": ORDER_ID, "qty": 1, "unit_price_ngwee": 200_000}
+        )
+        fake.tables["order_items"].rows.append(
+            {"order_id": ORDER_ID, "qty": 1, "unit_price_ngwee": 300_000}
+        )
+        service = FakeServiceClient(fake)
+        ledger = IdempotentPostTransaction()
+
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                return_value=_PRE_RELEASE_GATE,
+            ),
+        ):
+            result = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+                idempotency_key=CALLER_KEY,
+                item_ngwee_override=200_000,
+            )
+
+        # Only the returned item (200_000) + full delivery (5_000) — NOT the whole
+        # 500_000 order subtotal the un-scoped path would have refunded.
+        assert result.amount_ngwee == 205_000
+
+    def test_no_override_is_order_scoped_default(self) -> None:
+        from tests.test_refund_execute import (
+            FakeServiceClient,
+            FakeSupabaseClient,
+            IdempotentPostTransaction,
+        )
+
+        fake = FakeSupabaseClient()
+        fake.tables["orders"].rows.append(
+            {"id": ORDER_ID, "vendor_id": VENDOR_ID, "delivery_fee_ngwee": 5_000,
+             "status": "delivered"}
+        )
+        fake.tables["order_items"].rows.append(
+            {"order_id": ORDER_ID, "qty": 1, "unit_price_ngwee": 200_000}
+        )
+        fake.tables["order_items"].rows.append(
+            {"order_id": ORDER_ID, "qty": 1, "unit_price_ngwee": 300_000}
+        )
+        service = FakeServiceClient(fake)
+        ledger = IdempotentPostTransaction()
+
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                return_value=_PRE_RELEASE_GATE,
+            ),
+        ):
+            result = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+                idempotency_key=CALLER_KEY,
+            )
+
+        # Whole order (500_000 items + 5_000 delivery) — the dispute/admin default.
+        assert result.amount_ngwee == 505_000
+
+    def test_second_item_return_creates_distinct_refund(self) -> None:
+        """Distinct source_keys on one order must not reuse the first refund amount."""
+        fake = FakeSupabaseClient()
+        fake.tables["orders"].rows.append(
+            {"id": ORDER_ID, "vendor_id": VENDOR_ID, "delivery_fee_ngwee": 5_000,
+             "status": "delivered"}
+        )
+        fake.tables["order_items"].rows.append(
+            {"order_id": ORDER_ID, "qty": 1, "unit_price_ngwee": 200_000}
+        )
+        fake.tables["order_items"].rows.append(
+            {"order_id": ORDER_ID, "qty": 1, "unit_price_ngwee": 300_000}
+        )
+        service = FakeServiceClient(fake)
+        ledger = IdempotentPostTransaction()
+
+        with (
+            patch("app.services.refunds.execute.post_transaction", ledger),
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                return_value=_PRE_RELEASE_GATE,
+            ),
+            patch(
+                "app.services.refunds.execute.summarize_order_release_ledger",
+                return_value=OrderReleaseLedgerSummary(
+                    order_id=ORDER_ID,
+                    charge_received_ngwee=0,
+                    commission_captured_ngwee=0,
+                    vendor_released_ngwee=0,
+                    refund_drained_ngwee=0,
+                ),
+            ),
+        ):
+            first = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+                idempotency_key="return-item-a-refund",
+                item_ngwee_override=200_000,
+            )
+            second = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+                idempotency_key="return-item-b-refund",
+                item_ngwee_override=300_000,
+            )
+
+        assert first.created is True
+        assert second.created is True
+        assert first.refund_id != second.refund_id
+        assert first.amount_ngwee == 205_000
+        assert second.amount_ngwee == 305_000
+        active = [r for r in fake.tables["refunds"].rows if r["status"] in FakeTable._ACTIVE]
+        assert len(active) == 2
+        assert {r["source_key"] for r in active} == {
+            "return-item-a-refund",
+            "return-item-b-refund",
+        }
+        assert len(fake.tables["payouts"].rows) == 2
+        assert ledger.created_count == 2

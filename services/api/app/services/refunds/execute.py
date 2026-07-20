@@ -12,6 +12,7 @@ from app.services.escrow.order_money_gate import (
     OrderMoneyGateError,
     decide_refund_phase_under_gate,
 )
+from app.services.escrow.release_accounting import summarize_order_release_ledger
 from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.refunds.clawback import clawback_outstanding_from_payable_balance
@@ -27,19 +28,25 @@ from postgrest.exceptions import APIError
 
 Lane = Literal[1, 2]
 ACTIVE_REFUND_STATUSES = frozenset({"pending", "processing", "completed"})
-# Postgres unique_violation SQLSTATE — raised when the 0032 partial unique index
-# (one active/settled refund per order) rejects a concurrent/retried second insert.
+# Postgres unique_violation SQLSTATE — raised when the source_key partial unique
+# index rejects a concurrent/retried second insert for the same caller key.
 _UNIQUE_VIOLATION = "23505"
 
 
 def _stable_ledger_key_base(idempotency_key: str | None, order_id: str) -> str:
-    """Stable idempotency base shared by ledger keys + payout reference.
+    """Stable idempotency base shared by ledger keys + payout reference + source_key.
 
     Derived from the caller's idempotency_key so a retry collapses to one ledger
-    posting and one payout. Falls back to the order id (at most one active refund per
-    order under the 0032 index), never to the per-call refund_id.
+    posting and one payout. Falls back to the order id for whole-order
+    dispute/admin refunds (one active refund per that fallback key), never to the
+    per-call refund_id.
     """
     return idempotency_key if idempotency_key else f"refund-order-{order_id}"
+
+
+def _refund_source_key(idempotency_key: str | None, order_id: str) -> str:
+    """Durable refund identity column — one active refund per source_key (0063)."""
+    return _stable_ledger_key_base(idempotency_key, order_id)
 
 
 class RefundPhase(StrEnum):
@@ -102,7 +109,7 @@ def _order_item_total_ngwee(service_client: ServiceRoleClient, order_id: str) ->
 def _fetch_order(service_client: ServiceRoleClient, order_id: str) -> dict[str, Any]:
     response = (
         service_client.client.table("orders")
-        .select("id, vendor_id, delivery_fee_ngwee, status")
+        .select("id, vendor_id, delivery_fee_ngwee, status, cod")
         .eq("id", order_id)
         .maybe_single()
         .execute()
@@ -113,14 +120,46 @@ def _fetch_order(service_client: ServiceRoleClient, order_id: str) -> dict[str, 
     return row
 
 
+def _order_is_cod(order: dict[str, Any]) -> bool:
+    raw = order.get("cod")
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str):
+        return raw.lower() in {"t", "true", "1"}
+    return bool(raw)
+
+
+def _cod_cash_collected(order_id: str) -> bool:
+    """True when platform has booked COD_COLLECTED for this order."""
+    from app.services.orders.audit import run_sql_script, sql_literal
+    from app.services.payments.cod import collection_idempotency_key
+
+    key_sql = sql_literal(collection_idempotency_key(order_id))
+    result = run_sql_script(
+        f"""
+SELECT id::text
+FROM public.ledger_transactions
+WHERE idempotency_key = {key_sql}
+LIMIT 1;
+"""
+    )
+    return bool(result.ok and result.rows)
+
+
 def _find_existing_refund(
     service_client: ServiceRoleClient,
-    order_id: str,
+    *,
+    source_key: str,
 ) -> dict[str, Any] | None:
+    """Return the active/settled refund for this caller key, if any.
+
+    Lookup is by ``source_key`` (not order_id) so a second item return on the
+    same order can create its own refund. Retries with the same key collapse.
+    """
     response = (
         service_client.client.table("refunds")
         .select("*")
-        .eq("order_id", order_id)
+        .eq("source_key", source_key)
         .order("created_at", desc=True)
         .limit(1)
         .execute()
@@ -242,114 +281,57 @@ def _post_post_release_clawback(
     return posted.id
 
 
-def execute_refund(
+def _compute_lane_amounts(
     *,
     service_client: ServiceRoleClient,
+    order: dict[str, Any],
     order_id: str,
     lane: Lane,
-    return_transport_ngwee: int = 0,
-    customer_rail: CustomerRail = "mtn",
-    customer_momo: str,
-    dispute_id: str | None = None,
-    idempotency_key: str | None = None,
-) -> RefundExecutionResult:
-    """Execute or return an existing refund for an order (double-execution guarded)."""
-    existing = _find_existing_refund(service_client, order_id)
-    if existing is not None:
-        return _result_from_existing(existing)
-
-    order = _fetch_order(service_client, order_id)
-    vendor_id = str(order["vendor_id"])
-    delivery_fee = int(order.get("delivery_fee_ngwee", 0))
-    item_total = _order_item_total_ngwee(service_client, order_id)
-
-    lane1: Lane1RefundAmount | None = None
-    lane2: Lane2RefundBreakdown | None = None
+    return_transport_ngwee: int,
+    item_ngwee_override: int | None = None,
+    delivery_fee_ngwee_override: int | None = None,
+) -> tuple[int, Lane1RefundAmount | None, Lane2RefundBreakdown | None]:
+    delivery_fee = (
+        delivery_fee_ngwee_override
+        if delivery_fee_ngwee_override is not None
+        else int(order.get("delivery_fee_ngwee", 0))
+    )
+    item_total = (
+        item_ngwee_override
+        if item_ngwee_override is not None
+        else _order_item_total_ngwee(service_client, order_id)
+    )
     if lane == 1:
         lane1 = compute_lane1_refund(item_ngwee=item_total, delivery_fee_ngwee=delivery_fee)
-        refund_amount = lane1.refund_ngwee
-    else:
-        restocking_bps = load_restocking_fee_bps(service_client)
-        lane2 = compute_lane2_refund(
-            item_ngwee=item_total,
-            outbound_delivery_ngwee=delivery_fee,
-            return_transport_ngwee=return_transport_ngwee,
-            restocking_fee_bps=restocking_bps,
-        )
-        refund_amount = lane2.refund_ngwee
-
-    if refund_amount <= 0:
-        raise AppError(
-            "refund_amount_zero",
-            "Computed refund amount is zero",
-            422,
-            {"order_id": order_id, "lane": lane},
-        )
-
-    # D17 single-drain: decide phase under the shared order escrow gate so a
-    # concurrent release cannot also drain escrow after we chose PRE_RELEASE.
-    try:
-        gate_decision = decide_refund_phase_under_gate(order_id)
-    except OrderMoneyGateError as exc:
-        if exc.code == "release_in_progress":
-            raise AppError(
-                "release_in_progress",
-                "Vendor release is in progress; retry refund shortly",
-                409,
-                {"order_id": order_id},
-            ) from exc
-        raise AppError(
-            "refund_gate_failed",
-            "Could not claim escrow for refund",
-            503,
-            {"order_id": order_id, "reason": exc.code},
-        ) from exc
-    phase = (
-        RefundPhase.POST_RELEASE
-        if gate_decision.phase == "post_release"
-        else RefundPhase.PRE_RELEASE
+        return lane1.refund_ngwee, lane1, None
+    restocking_bps = load_restocking_fee_bps(service_client)
+    lane2 = compute_lane2_refund(
+        item_ngwee=item_total,
+        outbound_delivery_ngwee=delivery_fee,
+        return_transport_ngwee=return_transport_ngwee,
+        restocking_fee_bps=restocking_bps,
     )
+    return lane2.refund_ngwee, None, lane2
 
-    refund_id = str(uuid.uuid4())
-    breakdown: dict[str, Any]
-    if lane == 1:
-        assert lane1 is not None
-        breakdown = _lane1_breakdown(lane1, phase)
-    else:
-        assert lane2 is not None
-        breakdown = _lane2_breakdown(lane2, phase)
-    if dispute_id:
-        breakdown["dispute_id"] = dispute_id
-    if idempotency_key:
-        breakdown["idempotency_key"] = idempotency_key
 
-    ledger_key_base = _stable_ledger_key_base(idempotency_key, order_id)
-
-    insert_row = {
-        "id": refund_id,
-        "order_id": order_id,
-        "lane": lane,
-        "breakdown": breakdown,
-        "amount_ngwee": refund_amount,
-        "status": "processing",
-    }
-    try:
-        insert_response = service_client.client.table("refunds").insert(insert_row).execute()
-    except APIError as exc:
-        # The 0032 partial unique index rejected a concurrent/retried second refund for
-        # this order. Return the already-created refund WITHOUT posting a second ledger
-        # transaction or payout. If it is not yet visible (race with the winner's insert),
-        # re-raise so the caller retries rather than silently minting a duplicate.
-        if getattr(exc, "code", None) != _UNIQUE_VIOLATION:
-            raise
-        existing = _find_existing_refund(service_client, order_id)
-        if existing is None:
-            raise
-        return _result_from_existing(existing)
-    inserted = _single_row(insert_response)
-    if inserted is not None:
-        refund_id = str(inserted.get("id", refund_id))
-
+def _complete_refund_money_path(
+    *,
+    service_client: ServiceRoleClient,
+    refund_id: str,
+    order_id: str,
+    vendor_id: str,
+    lane: Lane,
+    phase: RefundPhase,
+    refund_amount: int,
+    breakdown: dict[str, Any],
+    ledger_key_base: str,
+    lane1: Lane1RefundAmount | None,
+    lane2: Lane2RefundBreakdown | None,
+    customer_rail: CustomerRail,
+    customer_momo: str,
+    created: bool,
+) -> RefundExecutionResult:
+    """Post ledger + customer payout and mark the refund completed (idempotent keys)."""
     ledger_ids: list[str] = []
     if phase == RefundPhase.PRE_RELEASE:
         ledger_ids.extend(
@@ -406,6 +388,286 @@ def execute_refund(
         lenco_reference=payout.lenco_reference,
         ledger_transaction_ids=tuple(ledger_ids),
         breakdown=breakdown,
+        created=created,
+    )
+
+
+def _resume_processing_refund(
+    *,
+    service_client: ServiceRoleClient,
+    existing: dict[str, Any],
+    return_transport_ngwee: int,
+    customer_rail: CustomerRail,
+    customer_momo: str,
+) -> RefundExecutionResult:
+    """Finish a refund stuck in processing after a mid-flight crash.
+
+    Ledger posts use stable idempotency keys; customer payout looks up the existing
+    ``rfd-*`` row by reference before insert — safe to re-enter.
+    """
+    order_id = str(existing["order_id"])
+    refund_id = str(existing["id"])
+    lane = cast(Lane, int(existing["lane"]))
+    order = _fetch_order(service_client, order_id)
+    vendor_id = str(order["vendor_id"])
+
+    raw_breakdown = existing.get("breakdown")
+    breakdown: dict[str, Any] = dict(raw_breakdown) if isinstance(raw_breakdown, dict) else {}
+    phase_raw = breakdown.get("phase", RefundPhase.PRE_RELEASE.value)
+    try:
+        phase = RefundPhase(str(phase_raw))
+    except ValueError:
+        phase = RefundPhase.PRE_RELEASE
+
+    idempotency_key = breakdown.get("idempotency_key")
+    key = str(idempotency_key) if isinstance(idempotency_key, str) else None
+    ledger_key_base = _stable_ledger_key_base(key, order_id)
+
+    item_override = breakdown.get("item_ngwee_override")
+    delivery_override = breakdown.get("delivery_fee_ngwee_override")
+    refund_amount, lane1, lane2 = _compute_lane_amounts(
+        service_client=service_client,
+        order=order,
+        order_id=order_id,
+        lane=lane,
+        return_transport_ngwee=return_transport_ngwee,
+        item_ngwee_override=int(item_override) if isinstance(item_override, int) else None,
+        delivery_fee_ngwee_override=(
+            int(delivery_override) if isinstance(delivery_override, int) else None
+        ),
+    )
+    stored_amount = int(existing.get("amount_ngwee") or 0)
+    if stored_amount > 0:
+        refund_amount = stored_amount
+
+    return _complete_refund_money_path(
+        service_client=service_client,
+        refund_id=refund_id,
+        order_id=order_id,
+        vendor_id=vendor_id,
+        lane=lane,
+        phase=phase,
+        refund_amount=refund_amount,
+        breakdown=breakdown,
+        ledger_key_base=ledger_key_base,
+        lane1=lane1,
+        lane2=lane2,
+        customer_rail=customer_rail,
+        customer_momo=customer_momo,
+        created=False,
+    )
+
+
+def execute_refund(
+    *,
+    service_client: ServiceRoleClient,
+    order_id: str,
+    lane: Lane,
+    return_transport_ngwee: int = 0,
+    customer_rail: CustomerRail = "mtn",
+    customer_momo: str,
+    dispute_id: str | None = None,
+    idempotency_key: str | None = None,
+    item_ngwee_override: int | None = None,
+    delivery_fee_ngwee_override: int | None = None,
+) -> RefundExecutionResult:
+    """Execute or return an existing refund for a caller source_key (double-execution guarded).
+
+    By default the refund is order-scoped (all order items + full delivery), which is
+    correct for a whole-order dispute/admin refund. Per-item return callers (returns
+    lane 1/2) pass ``item_ngwee_override`` / ``delivery_fee_ngwee_override`` so the
+    refund covers only the returned item — matching the amount previewed to the
+    customer. Without these overrides a single-item return on a multi-order-item order
+    would over-refund every item the customer keeps.
+
+    Dedup is by ``source_key`` (from ``idempotency_key``, else ``refund-order-{order_id}``)
+    so distinct item returns on the same order each get their own refund row/payout.
+    """
+    source_key = _refund_source_key(idempotency_key, order_id)
+    existing = _find_existing_refund(service_client, source_key=source_key)
+    if existing is not None:
+        status = str(existing.get("status") or "")
+        if status == "completed":
+            return _result_from_existing(existing)
+        if status in {"processing", "pending"}:
+            return _resume_processing_refund(
+                service_client=service_client,
+                existing=existing,
+                return_transport_ngwee=return_transport_ngwee,
+                customer_rail=customer_rail,
+                customer_momo=customer_momo,
+            )
+        return _result_from_existing(existing)
+
+    order = _fetch_order(service_client, order_id)
+    vendor_id = str(order["vendor_id"])
+
+    # Uncollected COD has only a receivable open — never MoMo-refund cash we never held.
+    if _order_is_cod(order) and not _cod_cash_collected(order_id):
+        raise AppError(
+            "cod_not_collected",
+            "COD refunds require confirmed cash collection first",
+            409,
+            {"order_id": order_id},
+        )
+
+    refund_amount, lane1, lane2 = _compute_lane_amounts(
+        service_client=service_client,
+        order=order,
+        order_id=order_id,
+        lane=lane,
+        return_transport_ngwee=return_transport_ngwee,
+        item_ngwee_override=item_ngwee_override,
+        delivery_fee_ngwee_override=delivery_fee_ngwee_override,
+    )
+
+    if refund_amount <= 0:
+        raise AppError(
+            "refund_amount_zero",
+            "Computed refund amount is zero",
+            422,
+            {"order_id": order_id, "lane": lane},
+        )
+
+    # D17 single-drain: decide phase under the shared order escrow gate so a
+    # concurrent release cannot also drain escrow after we chose PRE_RELEASE.
+    try:
+        gate_decision = decide_refund_phase_under_gate(order_id)
+    except OrderMoneyGateError as exc:
+        if exc.code == "release_in_progress":
+            raise AppError(
+                "release_in_progress",
+                "Vendor release is in progress; retry refund shortly",
+                409,
+                {"order_id": order_id},
+            ) from exc
+        raise AppError(
+            "refund_gate_failed",
+            "Could not claim escrow for refund",
+            503,
+            {"order_id": order_id, "reason": exc.code},
+        ) from exc
+    phase = (
+        RefundPhase.POST_RELEASE
+        if gate_decision.phase == "post_release"
+        else RefundPhase.PRE_RELEASE
+    )
+
+    # Event phased releases post release_to_vendor for ~50% net while the rest
+    # remains in escrow. The gate treats ANY release_to_vendor as post_release,
+    # so a naive full clawback would MoMo-refund the customer from platform cash
+    # while stranding phase-2 escrow and over-clawing the vendor. Fail closed
+    # until a hybrid drain (escrow remainder + clawback released) ships.
+    if phase == RefundPhase.POST_RELEASE:
+        summary = summarize_order_release_ledger(order_id)
+        remaining_escrow_ngwee = (
+            summary.charge_received_ngwee
+            - summary.commission_captured_ngwee
+            - summary.vendor_released_ngwee
+            - summary.refund_drained_ngwee
+        )
+        if remaining_escrow_ngwee > 0:
+            raise AppError(
+                "partial_release_refund_blocked",
+                "Refund blocked: order has a partial vendor release with escrow remaining",
+                409,
+                {
+                    "order_id": order_id,
+                    "remaining_escrow_ngwee": remaining_escrow_ngwee,
+                    "vendor_released_ngwee": summary.vendor_released_ngwee,
+                },
+            )
+    else:
+        # Multi-item returns may stack PRE_RELEASE drains. Cap against remaining
+        # escrow when charge legs are order-linked (skip when charge is only on
+        # checkout_group — remaining would under-read as 0 and false-block).
+        summary = summarize_order_release_ledger(order_id)
+        if summary.charge_received_ngwee > 0:
+            remaining_escrow_ngwee = (
+                summary.charge_received_ngwee
+                - summary.commission_captured_ngwee
+                - summary.vendor_released_ngwee
+                - summary.refund_drained_ngwee
+            )
+            if refund_amount > remaining_escrow_ngwee:
+                raise AppError(
+                    "refund_exceeds_escrow",
+                    "Refund amount exceeds remaining escrow for this order",
+                    409,
+                    {
+                        "order_id": order_id,
+                        "refund_ngwee": refund_amount,
+                        "remaining_escrow_ngwee": remaining_escrow_ngwee,
+                    },
+                )
+
+    refund_id = str(uuid.uuid4())
+    breakdown: dict[str, Any]
+    if lane == 1:
+        assert lane1 is not None
+        breakdown = _lane1_breakdown(lane1, phase)
+    else:
+        assert lane2 is not None
+        breakdown = _lane2_breakdown(lane2, phase)
+    if dispute_id:
+        breakdown["dispute_id"] = dispute_id
+    breakdown["idempotency_key"] = source_key
+    if item_ngwee_override is not None:
+        breakdown["item_ngwee_override"] = item_ngwee_override
+    if delivery_fee_ngwee_override is not None:
+        breakdown["delivery_fee_ngwee_override"] = delivery_fee_ngwee_override
+
+    ledger_key_base = source_key
+
+    insert_row = {
+        "id": refund_id,
+        "order_id": order_id,
+        "source_key": source_key,
+        "lane": lane,
+        "breakdown": breakdown,
+        "amount_ngwee": refund_amount,
+        "status": "processing",
+    }
+    try:
+        insert_response = service_client.client.table("refunds").insert(insert_row).execute()
+    except APIError as exc:
+        # Source-key unique index rejected a concurrent/retried second insert for
+        # this caller. Resume the winner if mid-flight; return completed as-is.
+        if getattr(exc, "code", None) != _UNIQUE_VIOLATION:
+            raise
+        raced = _find_existing_refund(service_client, source_key=source_key)
+        if raced is None:
+            raise
+        raced_status = str(raced.get("status") or "")
+        if raced_status == "completed":
+            return _result_from_existing(raced)
+        if raced_status in {"processing", "pending"}:
+            return _resume_processing_refund(
+                service_client=service_client,
+                existing=raced,
+                return_transport_ngwee=return_transport_ngwee,
+                customer_rail=customer_rail,
+                customer_momo=customer_momo,
+            )
+        return _result_from_existing(raced)
+    inserted = _single_row(insert_response)
+    if inserted is not None:
+        refund_id = str(inserted.get("id", refund_id))
+
+    return _complete_refund_money_path(
+        service_client=service_client,
+        refund_id=refund_id,
+        order_id=order_id,
+        vendor_id=vendor_id,
+        lane=lane,
+        phase=phase,
+        refund_amount=refund_amount,
+        breakdown=breakdown,
+        ledger_key_base=ledger_key_base,
+        lane1=lane1,
+        lane2=lane2,
+        customer_rail=customer_rail,
+        customer_momo=customer_momo,
         created=True,
     )
 

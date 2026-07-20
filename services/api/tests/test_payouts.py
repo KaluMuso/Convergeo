@@ -685,12 +685,11 @@ async def test_velocity_cap_boundary_at_cap_ok_plus_one_deferred(
 
     assert first.outcome == PayoutOutcome.PAID
     assert second.outcome == PayoutOutcome.DEFERRED
-    assert second.status == "pending"
-    deferred_row = next(
-        row for row in fake_client.tables["payouts"].rows if row["id"] == second.payout_id
-    )
-    assert deferred_row["resolve_snapshot"]["hold_reason"] == "velocity_cap"
-    assert deferred_row["resolve_snapshot"]["deferred"] is True
+    assert second.status == "deferred"
+    assert second.payout_id == ""
+    # Soft deferral must not park a reserving payouts row (would freeze balance).
+    assert all(row.get("status") != "deferred" for row in fake_client.tables["payouts"].rows)
+    assert len([r for r in fake_client.tables["payouts"].rows if r["status"] == "pending"]) == 0
     assert successful_momo_payout.await_count == 1
 
 
@@ -729,6 +728,46 @@ def test_compute_eligibility_accounts_for_reserved_payouts(
         assert snapshot.released_balance_ngwee == 100_000
         assert snapshot.reserved_ngwee == 40_000
         assert snapshot.available_ngwee == 60_000
+
+
+def test_compute_eligibility_excludes_customer_refund_and_deferred_rows(
+    service_client: FakeServiceClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Customer-refund + legacy deferred pending rows must not freeze vendor available."""
+    with patch(
+        "app.services.payouts.eligibility.vendor_payable_balance_ngwee",
+        return_value=-100_000,
+    ):
+        fake_client = service_client.client
+        fake_client.tables["payouts"].rows.extend(
+            [
+                {
+                    "id": str(uuid.uuid4()),
+                    "vendor_id": VENDOR_ID,
+                    "amount_ngwee": 30_000,
+                    "status": "pending",
+                    "resolve_snapshot": {"kind": "customer_refund"},
+                },
+                {
+                    "id": str(uuid.uuid4()),
+                    "vendor_id": VENDOR_ID,
+                    "amount_ngwee": 25_000,
+                    "status": "pending",
+                    "resolve_snapshot": {"deferred": True, "hold_reason": "velocity_cap"},
+                },
+                {
+                    "id": str(uuid.uuid4()),
+                    "vendor_id": VENDOR_ID,
+                    "amount_ngwee": 10_000,
+                    "status": "processing",
+                    "resolve_snapshot": {"matched": True},
+                },
+            ]
+        )
+        snapshot = compute_eligibility(service_client, VENDOR_ID)
+        assert snapshot.reserved_ngwee == 10_000
+        assert snapshot.available_ngwee == 90_000
 
 
 @pytest.mark.asyncio

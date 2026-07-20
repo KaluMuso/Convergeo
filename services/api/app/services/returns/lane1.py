@@ -430,6 +430,10 @@ def vendor_accept_lane1_return(
         lane=1,
         customer_momo=customer_momo,
         idempotency_key=f"return-{return_id}-refund",
+        # Scope the refund to the returned item (+ full delivery, per the lane-1
+        # preview) rather than the whole order, so a single-item return on a
+        # multi-item order no longer refunds the items the customer keeps.
+        item_ngwee_override=_item_ngwee(item),
     )
 
     return_shipping_ngwee = _load_return_shipping_ngwee(service_client, order=order)
