@@ -35,16 +35,16 @@ Related: `master-reconciliation-register.md` · `production-readiness-scorecard.
 
 ## Staging gates (must PASS before production money enablement)
 
-| ID  | Gate                                    | Automated evidence             | Manual evidence                    | Pass criteria                                                                | Current                             |
-| --- | --------------------------------------- | ------------------------------ | ---------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------- |
-| S0  | Staging schema target                   | `schema_migrations` on staging | Migration plan review              | Agreed set includes needed `0051`/`0053`–`0056` as decided                   | FAIL                                |
-| S1  | Sandbox MoMo prepaid → ledger           | SQL aggregates + pytest        | Lenco sandbox dashboard (redacted) | `CHARGE_RECEIVED` (+ hold posture) balanced; idempotent replay               | FAIL (CODE_COMPLETE #274 only)      |
-| S2  | Sandbox card prepaid → ledger           | Same                           | Same                               | Same                                                                         | FAIL                                |
-| S3  | Release accounting drill                | Release tick + SQL             | Recon summary fields               | `COMMISSION_CAPTURE` before `RELEASE_TO_VENDOR`; escrow→0; double-tick safe  | FAIL (CODE_COMPLETE #288/#294 only) |
-| S4  | n8n release + tickets active on staging | Workflow active=true           | Execution IDs                      | Authenticated ticks succeed; no double release/issue                         | FAIL                                |
-| S5  | KYC lifecycle drill                     | API tests + SQL                | Admin Access session               | submit→under_review→approve; orphan report; privileges freeze without record | FAIL (`0056` unapplied live)        |
-| S6  | False-success E2E                       | Playwright/E2E                 | —                                  | Pending/failed ≠ paid; COD isolated                                          | FAIL                                |
-| S7  | Staging UAT notes                       | —                              | 3–5 tester journeys                | Written pack attached                                                        | FAIL                                |
+| ID  | Gate                                    | Automated evidence             | Manual evidence                    | Pass criteria                                                                | Current                                                                                |
+| --- | --------------------------------------- | ------------------------------ | ---------------------------------- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| S0  | Staging schema target                   | `schema_migrations` on staging | Migration plan review              | Agreed set includes needed `0051`/`0053`–`0056` as decided                   | FAIL                                                                                   |
+| S1  | Sandbox MoMo prepaid → ledger           | SQL aggregates + pytest        | Lenco sandbox dashboard (redacted) | `CHARGE_RECEIVED` (+ hold posture) balanced; idempotent replay               | FAIL (CODE_COMPLETE #274 only)                                                         |
+| S2  | Sandbox card prepaid → ledger           | Same                           | Same                               | Same                                                                         | FAIL                                                                                   |
+| S3  | Release accounting drill                | Release tick + SQL             | Recon summary fields               | `COMMISSION_CAPTURE` before `RELEASE_TO_VENDOR`; escrow→0; double-tick safe  | FAIL (CODE_COMPLETE #288/#294 only)                                                    |
+| S4  | n8n release + tickets active on staging | Workflow active=true           | Execution IDs                      | Authenticated ticks succeed; no double release/issue                         | FAIL (2026-07-20: fleet still inactive; see `…/2026-07-20/n8n-fleet-import-verify.md`) |
+| S5  | KYC lifecycle drill                     | API tests + SQL                | Admin Access session               | submit→under_review→approve; orphan report; privileges freeze without record | FAIL (`0056` unapplied live)                                                           |
+| S6  | False-success E2E                       | Playwright/E2E                 | —                                  | Pending/failed ≠ paid; COD isolated                                          | FAIL                                                                                   |
+| S7  | Staging UAT notes                       | —                              | 3–5 tester journeys                | Written pack attached                                                        | FAIL                                                                                   |
 
 ---
 
@@ -153,7 +153,7 @@ curl -sS -m 15 https://api.vergeo5.com/readyz
 | Internal ticks auth                    | Unauthorized → 401/403 | —                        | Tokens required |
 | Notification dispatch                  | Live workflow          | Sandbox send             | Outbox drains   |
 
-**Current:** FAIL (only dispatch + payment recon live).
+**Current:** FAIL (2026-07-20: dispatch + payment recon **unpublished** fail-closed under API 502; release/tickets never activated; see `docs/production-readiness/2026-07-20/n8n-fleet-import-verify.md`).
 
 ---
 
