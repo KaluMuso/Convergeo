@@ -45,7 +45,15 @@
     "noticePriceChanged": "Prix mis à jour de {oldPrice} à {newPrice}",
     "noticeOutOfStock": "Cet article est désormais en rupture de stock",
     "noticeQtyReduced": "Il n'en reste que {available} — quantité ajustée depuis {requested}",
-    "outOfStockLine": "En rupture de stock"
+    "outOfStockLine": "En rupture de stock",
+    "loadErrorTitle": "Impossible de charger votre panier",
+    "loadErrorBody": "Vérifiez votre connexion et réessayez. Vos articles ne sont pas perdus.",
+    "loadErrorRetry": "Réessayer",
+    "multiSellerNote": "Les articles de différents vendeurs peuvent avoir des options de livraison ou de retrait différentes. Chaque vendeur a son propre choix de fulfillment.",
+    "escrowTeaser": "Lorsque vous payez en ligne, Vergeo5 conserve votre argent jusqu'à la livraison — puis le libère au vendeur.",
+    "stockUnavailableNotice": "Un article n'est plus disponible. Vérifiez votre panier avant de continuer.",
+    "summaryHeading": "Récapitulatif",
+    "sellerIndex": "Vendeur {index} sur {total}"
   },
   "checkout": {
     "pageTitle": "Paiement",
@@ -135,7 +143,13 @@
       "codRejected": "Le paiement à la livraison n'est pas disponible pour ce total de commande",
       "railRejected": "Ce réseau mobile money n'est pas pris en charge",
       "error": "Impossible d'enregistrer votre mode de paiement. Réessayez.",
-      "paymentsDisabled": "Le paiement en ligne est temporairement indisponible. Utilisez le paiement à la livraison si disponible, ou réessayez sous peu."
+      "paymentsDisabled": "Le paiement en ligne est temporairement indisponible. Utilisez le paiement à la livraison si disponible, ou réessayez sous peu.",
+      "momoHelp": "Approuvez une invite USSD sur votre téléphone. Les fonds sont conservés par Vergeo5 jusqu'à la livraison.",
+      "cardHelp": "Payez sur la page sécurisée de Lenco. Vergeo5 ne voit jamais les détails de votre carte.",
+      "codHelp": "Payez en espèces au livreur à la livraison pour les commandes éligibles.",
+      "codUnavailableTitle": "Paiement à la livraison indisponible",
+      "selected": "Sélectionné",
+      "unavailable": "Indisponible"
     },
     "review": {
       "title": "Vérifiez votre commande",
@@ -159,7 +173,13 @@
       "consentLabel": "J'accepte les Conditions générales et la Politique de confidentialité",
       "consentRequired": "Acceptez les Conditions générales pour continuer",
       "placeOrder": "Passer la commande",
-      "loading": "Veuillez patienter…"
+      "loading": "Veuillez patienter…",
+      "placingOrder": "Passage de la commande…",
+      "placeOrderUnavailable": "Le passage de commande est temporairement indisponible. Votre mode de paiement est enregistré — réessayez sous peu.",
+      "whatHappensNext": "Et ensuite",
+      "nextMomo": "Vous recevrez une invite USSD. Approuvez-la pour démarrer le paiement — la commande n'est confirmée qu'après vérification.",
+      "nextCard": "Vous continuerez sur la page sécurisée Lenco. Ne fermez pas cette page avant la fin du paiement.",
+      "nextCod": "Votre commande est placée en paiement à la livraison. Payez le livreur à l'arrivée — aucun paiement en ligne n'est pris maintenant."
     },
     "pending": {
       "pageTitle": "Approuver le paiement",

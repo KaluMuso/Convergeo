@@ -38,6 +38,7 @@ const vendorLabels = {
   deliveryScopeNote: checkoutMessages.cart.deliveryScopeNote,
   freeDeliveryProgress: checkoutMessages.cart.freeDeliveryProgress,
   freeDeliveryUnlocked: checkoutMessages.cart.freeDeliveryUnlocked,
+  sellerIndex: checkoutMessages.cart.sellerIndex,
 };
 
 const noticeLabels = {
@@ -220,6 +221,39 @@ describe("VendorGroups", () => {
     expect(screen.getByTestId("cart-line-oos")).toHaveTextContent(
       checkoutMessages.cart.outOfStockLine,
     );
+  });
+
+  it("labels multi-seller groups with seller index", () => {
+    const secondGroup: VendorGroup = {
+      vendor_id: "vendor-b",
+      items: [{ ...sampleLine, id: "line-2", listing_id: "listing-2", vendor_id: "vendor-b" }],
+      subtotal_ngwee: 100_000,
+      delivery_eligible: false,
+    };
+
+    render(
+      <VendorGroups
+        groups={[belowThresholdGroup, secondGroup]}
+        noticesByListingId={{}}
+        labels={vendorLabels}
+        lineLabels={lineLabels}
+        onQtyChange={vi.fn().mockResolvedValue(undefined)}
+        onRemove={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(screen.getByText("Seller 1 of 2")).toBeInTheDocument();
+    expect(screen.getByText("Seller 2 of 2")).toBeInTheDocument();
+  });
+});
+
+describe("cart presentation i18n", () => {
+  it("includes load-error and multi-seller honesty keys", () => {
+    expect(checkoutMessages.cart.loadErrorTitle).toBeTruthy();
+    expect(checkoutMessages.cart.loadErrorRetry).toBeTruthy();
+    expect(checkoutMessages.cart.multiSellerNote.toLowerCase()).toContain("different");
+    expect(checkoutMessages.cart.escrowTeaser.toLowerCase()).toContain("holds");
+    expect(checkoutMessages.cart.summaryHeading).toBeTruthy();
   });
 });
 
