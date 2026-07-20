@@ -26,8 +26,9 @@ CSP is **nonce-based**: `script-src` uses `'strict-dynamic'` + a per-request
 _scripts_ here.)
 
 Next.js injects the nonce into its own bootstrap scripts only when the nonce arrives
-on the **request** (set by middleware). That middleware wiring is owned/locked in a
-separate pebble this wave. Until it lands we ship in two layers so nothing breaks:
+on the **request** (set by middleware). CCP-07a wires that middleware in all three
+apps and substitutes `{{CSP_NONCE}}` in the report-only policy per request. We still
+ship in two layers so nothing breaks while violations are observed:
 
 1. **Enforced now** (`Content-Security-Policy`): the framing/hardening directives that
    do **not** govern Next's inline scripts and therefore need no live nonce —
@@ -38,13 +39,13 @@ separate pebble this wave. Until it lands we ship in two layers so nothing break
    policy (`default-src`, nonce'd `script-src`, `connect-src`, `img-src`, …). Browsers
    report violations without blocking, so we tune the allowlist against real traffic.
 
-The report-only policy carries a `{{CSP_NONCE}}` placeholder token — the per-request
-substitution point once the nonce middleware is enabled.
+The report-only policy carries a `{{CSP_NONCE}}` placeholder token in config; middleware
+replaces it with a fresh per-request nonce before sending the response.
 
 ### Flip to enforce (runbook)
 
-1. Land the nonce middleware (emits a per-request nonce on the request and substitutes
-   `{{CSP_NONCE}}`); confirm Next attaches `nonce=…` to its scripts.
+1. Confirm report-only headers carry a fresh `nonce=…` and Next attaches it to its
+   scripts.
 2. Run the critical E2E paths (browse → cart → checkout → **card widget** on customer;
    listing create + **QR scan** on vendor; dashboards on admin). Collect
    `Content-Security-Policy-Report-Only` violations (browser console / report endpoint).

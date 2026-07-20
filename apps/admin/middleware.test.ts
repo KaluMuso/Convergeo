@@ -1,3 +1,4 @@
+import { CSP_NONCE_PLACEHOLDER, CSP_REPORT_ONLY_HEADER } from "@vergeo/auth/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -140,6 +141,21 @@ describe("admin middleware — CF Access enforcement", () => {
 
     expect(response.status).toBe(200);
     expect(verifyCfAccessAssertionMock).not.toHaveBeenCalled();
+  });
+
+  it("substitutes a report-only CSP nonce without enabling unsafe script directives", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+
+    const response = await middleware(new NextRequest("https://admin.vergeo5.com/en"));
+    const csp = response.headers.get(CSP_REPORT_ONLY_HEADER);
+    const scriptSrc = csp?.split("; ").find((directive) => directive.startsWith("script-src"));
+
+    expect(csp).toBeTruthy();
+    expect(csp).not.toContain(CSP_NONCE_PLACEHOLDER);
+    expect(scriptSrc).toMatch(/'nonce-[^']+'/);
+    expect(scriptSrc).toContain("'strict-dynamic'");
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
+    expect(scriptSrc).not.toContain("'unsafe-eval'");
   });
 });
 

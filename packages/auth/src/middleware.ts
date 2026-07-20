@@ -8,6 +8,75 @@ import { getRolesFromUser, hasRole, type AppRole } from "./roles";
 
 export type AuthGate = "none" | "vendor" | "admin";
 
+export const CSP_NONCE_HEADER = "x-nonce";
+export const CSP_REPORT_ONLY_HEADER = "Content-Security-Policy-Report-Only";
+export const CSP_NONCE_PLACEHOLDER = "{{CSP_NONCE}}";
+
+const MIDDLEWARE_OVERRIDE_HEADER = "x-middleware-override-headers";
+
+export function createCspNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes));
+}
+
+export function substituteCspNonce(policy: string, nonce: string): string {
+  return policy.replaceAll(CSP_NONCE_PLACEHOLDER, nonce);
+}
+
+function copyMiddlewareRequestHeaders(source: NextResponse, target: NextResponse): void {
+  const sourceKeys = source.headers.get(MIDDLEWARE_OVERRIDE_HEADER);
+  if (!sourceKeys) {
+    return;
+  }
+
+  const overrideKeys = new Set(
+    (target.headers.get(MIDDLEWARE_OVERRIDE_HEADER) ?? "")
+      .split(",")
+      .map((key) => key.trim())
+      .filter(Boolean),
+  );
+
+  for (const key of sourceKeys.split(",")) {
+    const normalizedKey = key.trim();
+    if (!normalizedKey) {
+      continue;
+    }
+
+    const middlewareHeader = `x-middleware-request-${normalizedKey}`;
+    const value = source.headers.get(middlewareHeader);
+    if (value !== null) {
+      target.headers.set(middlewareHeader, value);
+      overrideKeys.add(normalizedKey);
+    }
+  }
+
+  if (overrideKeys.size > 0) {
+    target.headers.set(MIDDLEWARE_OVERRIDE_HEADER, [...overrideKeys].join(","));
+  }
+}
+
+export function applyReportOnlyCspNonce(
+  request: NextRequest,
+  response: NextResponse,
+  reportOnlyPolicy: string,
+  nonce = createCspNonce(),
+): NextResponse {
+  const csp = substituteCspNonce(reportOnlyPolicy, nonce);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(CSP_NONCE_HEADER, nonce);
+  requestHeaders.set(CSP_REPORT_ONLY_HEADER, csp);
+
+  const requestOverride = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+  copyMiddlewareRequestHeaders(requestOverride, response);
+  response.headers.set(CSP_REPORT_ONLY_HEADER, csp);
+  return response;
+}
+
 export type UpdateSessionResult = {
   response: NextResponse;
   user: User | null;

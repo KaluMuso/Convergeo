@@ -133,10 +133,63 @@ function checkAppConfig(app, opts) {
   }
 }
 
+/**
+ * @param {string} app
+ * @param {{ allowLenco: boolean }} opts
+ */
+function checkAppMiddleware(app, opts) {
+  const relPath = `apps/${app}/middleware.ts`;
+  const src = read(relPath);
+  const where = relative(ROOT, join(ROOT, relPath));
+
+  assert(
+    `${app}: middleware applies report-only CSP nonce`,
+    src.includes("applyReportOnlyCspNonce"),
+    `missing nonce application in ${where}`,
+  );
+  assert(
+    `${app}: middleware uses nonce placeholder`,
+    src.includes("CSP_NONCE_PLACEHOLDER"),
+    `missing nonce placeholder substitution in ${where}`,
+  );
+
+  const scriptSrcLines = src.split("\n").filter((line) => line.includes("script-src"));
+  const scriptUnsafeInline = scriptSrcLines.some((line) => line.includes("unsafe-inline"));
+  const scriptUnsafeEval = scriptSrcLines.some((line) => line.includes("unsafe-eval"));
+  assert(
+    `${app}: middleware script-src has no unsafe-inline`,
+    !scriptUnsafeInline,
+    `middleware script-src allows unsafe-inline in ${where}`,
+  );
+  assert(
+    `${app}: middleware script-src has no unsafe-eval`,
+    !scriptUnsafeEval,
+    `middleware script-src allows unsafe-eval in ${where}`,
+  );
+
+  const allowsLencoHost = /lenco\.co/i.test(src);
+  if (opts.allowLenco) {
+    assert(
+      `${app}: middleware Lenco scoped to checkout/card route`,
+      src.includes("isCheckoutCardRoute") && src.includes("checkout") && src.includes("card"),
+      `middleware Lenco allowance not tied to checkout/card in ${where}`,
+    );
+  } else {
+    assert(
+      `${app}: middleware has NO Lenco allowance`,
+      !allowsLencoHost,
+      `Lenco widget host leaked into ${where}`,
+    );
+  }
+}
+
 // ── App origins ──────────────────────────────────────────────────────────────
 checkAppConfig("customer", { frameAncestors: "'self'", allowLenco: true });
 checkAppConfig("vendor", { frameAncestors: "'self'", allowLenco: false });
 checkAppConfig("admin", { frameAncestors: "'none'", allowLenco: false });
+checkAppMiddleware("customer", { allowLenco: true });
+checkAppMiddleware("vendor", { allowLenco: false });
+checkAppMiddleware("admin", { allowLenco: false });
 
 // Vendor camera scoping: denied by default, allowed only on the scanner routes.
 {

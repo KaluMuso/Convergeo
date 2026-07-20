@@ -1,4 +1,6 @@
 import {
+  CSP_NONCE_PLACEHOLDER,
+  applyReportOnlyCspNonce,
   createLoginRedirect,
   getLocaleFromPath,
   isAdminBypassActive,
@@ -19,6 +21,31 @@ const intlMiddleware = createMiddleware({
   defaultLocale: DEFAULT_LOCALE,
   localePrefix: "always",
 });
+
+const NONCE = `'nonce-${CSP_NONCE_PLACEHOLDER}'`;
+const CLOUDINARY = "https://res.cloudinary.com";
+const SUPABASE = "https://*.supabase.co";
+const SUPABASE_WS = "wss://*.supabase.co";
+const SENTRY_INGEST =
+  "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
+
+const REPORT_ONLY_CSP = [
+  "default-src 'self'",
+  `script-src 'self' 'strict-dynamic' ${NONCE}`,
+  "style-src 'self' 'unsafe-inline'",
+  `img-src 'self' data: blob: ${CLOUDINARY}`,
+  "font-src 'self' data:",
+  `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${SENTRY_INGEST}`,
+  "frame-src 'none'",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  "media-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "form-action 'self'",
+  "upgrade-insecure-requests",
+].join("; ");
 
 export function isProductionCfAccessRequired(): boolean {
   return process.env.NODE_ENV === "production" && !isAdminBypassActive();
@@ -48,7 +75,7 @@ export default async function middleware(request: NextRequest) {
     const assertion = request.headers.get(CF_ACCESS_HEADER);
     const cfAccess = await verifyCfAccessAssertion(assertion);
     if (!cfAccess.ok) {
-      return createCfAccessForbiddenResponse();
+      return applyReportOnlyCspNonce(request, createCfAccessForbiddenResponse(), REPORT_ONLY_CSP);
     }
   }
 
@@ -57,11 +84,19 @@ export default async function middleware(request: NextRequest) {
       adminBypass,
     })
   ) {
-    return createLoginRedirect(request, locale, session.response);
+    return applyReportOnlyCspNonce(
+      request,
+      createLoginRedirect(request, locale, session.response),
+      REPORT_ONLY_CSP,
+    );
   }
 
   const localeResponse = intlMiddleware(request);
-  return mergeSessionCookies(session.response, localeResponse);
+  return applyReportOnlyCspNonce(
+    request,
+    mergeSessionCookies(session.response, localeResponse),
+    REPORT_ONLY_CSP,
+  );
 }
 
 export const config = {

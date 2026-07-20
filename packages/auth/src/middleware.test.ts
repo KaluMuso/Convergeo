@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  CSP_NONCE_HEADER,
+  CSP_NONCE_PLACEHOLDER,
+  CSP_REPORT_ONLY_HEADER,
+  applyReportOnlyCspNonce,
   createLoginRedirect,
   getLocaleFromPath,
   isAdminBypassActive,
@@ -72,6 +76,28 @@ describe("mergeSessionCookies", () => {
     mergeSessionCookies(source, target);
 
     expect(target.cookies.get("sb-access-token")?.value).toBe("token");
+  });
+});
+
+describe("applyReportOnlyCspNonce", () => {
+  it("substitutes the report-only CSP nonce and forwards it on the request", () => {
+    const request = new NextRequest("http://localhost:3000/en");
+    const response = applyReportOnlyCspNonce(
+      request,
+      NextResponse.next(),
+      `script-src 'self' 'strict-dynamic' 'nonce-${CSP_NONCE_PLACEHOLDER}'`,
+      "fixed-test-nonce",
+    );
+
+    expect(response.headers.get(CSP_REPORT_ONLY_HEADER)).toBe(
+      "script-src 'self' 'strict-dynamic' 'nonce-fixed-test-nonce'",
+    );
+    expect(response.headers.get(`x-middleware-request-${CSP_NONCE_HEADER}`)).toBe(
+      "fixed-test-nonce",
+    );
+    expect(
+      response.headers.get(`x-middleware-request-${CSP_REPORT_ONLY_HEADER.toLowerCase()}`),
+    ).toBe("script-src 'self' 'strict-dynamic' 'nonce-fixed-test-nonce'");
   });
 });
 
