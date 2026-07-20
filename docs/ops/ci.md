@@ -4,16 +4,21 @@ Vergeo5 gates every PR via [`.github/workflows/ci.yml`](../../.github/workflows/
 
 ## Jobs
 
-| Job name                      | Workflow job id | What it gates                                                                                                                                                                                                      |
-| ----------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| JavaScript / TypeScript       | `js`            | Turbo-affected lint, typecheck, test, build across Next.js apps and packages                                                                                                                                       |
-| Python API                    | `python`        | `ruff`, `mypy`, unit pytest (no live database)                                                                                                                                                                     |
-| Migration replay (fast)       | `migrations`    | Dockerless Postgres 16 replay of `supabase/migrations/00*.sql` via [`scripts/ci/migration-replay.sh`](../../scripts/ci/migration-replay.sh) — catches immutability, ordering, and column-reference bugs in seconds |
-| Database / typegen drift      | `db`            | Full Supabase stack `db reset --no-seed`, typegen, and `git diff` on `packages/types/src/db.ts`                                                                                                                    |
-| RLS isolation matrix          | `rls`           | Live stack + `uv run pytest services/api/tests/rls` (M03-P09 suite)                                                                                                                                                |
-| Secret scan (gitleaks)        | `secret-scan`   | Repository secret scan with [`.gitleaks.toml`](../../.gitleaks.toml) allowlists for docs/fixtures only                                                                                                             |
-| Dependency audit              | `deps-audit`    | `pnpm audit` + `pip-audit` (warn-only until M15-P05)                                                                                                                                                               |
-| i18n hardcoded strings (warn) | `i18n-lint`     | ESLint no-hardcoded-strings (non-blocking)                                                                                                                                                                         |
+| Job name                   | Workflow job id       | What it gates                                                                                                                                                                                                                        |
+| -------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| JavaScript / TypeScript    | `js`                  | Turbo-affected lint, typecheck, test, build across Next.js apps and packages                                                                                                                                                         |
+| Python API                 | `python`              | `ruff`, `mypy`, unit pytest (no live database)                                                                                                                                                                                       |
+| Ask Vergeo grounding evals | `ask-evals`           | RAG grounding eval set — zero fabricated listings (M06-P05)                                                                                                                                                                          |
+| Staging guards             | `staging-guards`      | Asserts staging/prod safety invariants in config before deploy                                                                                                                                                                       |
+| Security gates             | `security-gates`      | `scripts/ci/check-headers.mjs` + `tests/test_authz_matrix.py` (headers/CSP + route×role authz)                                                                                                                                       |
+| Migration replay (fast)    | `migrations`          | Dockerless Postgres 16 replay of `supabase/migrations/00*.sql` via [`scripts/ci/migration-replay.sh`](../../scripts/ci/migration-replay.sh) — catches immutability, ordering, duplicate-prefix, and column-reference bugs in seconds |
+| Database / typegen drift   | `db`                  | Full Supabase stack `db reset --no-seed`, typegen, and `git diff` on `packages/types/src/db.ts`                                                                                                                                      |
+| RLS isolation matrix       | `rls`                 | Live stack + `uv run pytest services/api/tests/rls` (M03-P09 suite) + curated DB-backed integration tests                                                                                                                            |
+| Money DB triggers          | `money-db-triggers`   | Release / release-accounting / reconcile DB-trigger tests, each against a freshly-reset schema                                                                                                                                       |
+| COD container smoke        | `cod-container-smoke` | Boots the built API image and smoke-checks the COD path                                                                                                                                                                              |
+| Secret scan (gitleaks)     | `secret-scan`         | Repository secret scan with [`.gitleaks.toml`](../../.gitleaks.toml) allowlists for docs/fixtures only — **blocking** (fails CI on any finding)                                                                                      |
+| Dependency audit           | `deps-audit`          | `pnpm audit` + `pip-audit`, **fail-on-high** (blocking since M15-P05; one justified allowlist for `tmp`/`@lhci/cli`)                                                                                                                 |
+| Performance budgets        | `perf` (perf.yml)     | Bundle guard (≤150KB gz, blocking) + image lint (blocking) + i18n completeness sweep (blocking) + Lighthouse (advisory, see `docs/ops/performance-budgets.md`)                                                                       |
 
 ### Job ordering
 
@@ -32,9 +37,12 @@ Mark these jobs as **required** on `master` in GitHub → Settings → Branches 
 - `migrations`
 - `db`
 - `rls`
-- `secret-scan`
+- `secret-scan` (now blocking — `continue-on-error` removed)
+- `deps-audit` (now blocking — fail-on-high)
+- `security-gates`
+- `money-db-triggers`
 
-`deps-audit` and `i18n-lint` are informational (warn / continue-on-error) and should **not** be required until their fail-on-high behavior lands.
+The performance-budgets job (`perf.yml`) is blocking on bundle/image/i18n and advisory on Lighthouse; require it once a stable measurement target exists. `i18n-lint` (the ESLint variant) remains informational; the blocking i18n completeness sweep runs inside `perf`.
 
 ### Do not allow bypassing
 

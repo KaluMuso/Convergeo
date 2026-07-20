@@ -94,7 +94,7 @@ real-money public launch until cleared.** They are founder-side, not code — do
 - [ ] **F4 — Counsel (escrow / NPS Act 2026):** Zambian counsel review of the Lenco-held escrow flow — **pre-real-money launch gate.** — **Owner: Founder + Counsel** — Evidence: _____
 - [ ] **F5 — Meta/WhatsApp Cloud API:** Meta Business + WhatsApp Cloud API activation (real number needs F1). — **Owner: Founder** — Evidence: `docs/ops/whatsapp-cloud-api-setup.md`
 - [ ] **F6 — Courier MOUs:** Platinum couriers / bus-freight conversations (post-beta acceptable). — **Owner: Founder** — Evidence: _____
-- [ ] **F7 — Design files:** upload remaining 7 design HTML files (`docs/designs/SOURCES.md`). — **Owner: Founder** — Evidence: _____
+- [ ] **F7 — Design files:** upload the remaining 6 design HTML files (canonical list in `docs/designs/SOURCES.md`; tokens are already locked). — **Owner: Founder** — Evidence: _____
 - [ ] **F8 — COD cap:** confirm or invert D12's COD cap (≤K500 recommended). — **Owner: Founder** — Evidence: `platform_config.cod_cap_ngwee`
 - [ ] **F9 — Lenco credentials (payments go-live):**
   - [ ] **F9a — Zamtel collections:** enable when Lenco confirms (currently payout-only; rail hidden at checkout). — **Owner: Founder** — Evidence: _____
