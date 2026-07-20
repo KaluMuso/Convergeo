@@ -113,11 +113,10 @@
 }
 
 /* ── Motion layer (CSS-first, token-driven). ─────────────────────────────────
-   Keyframes `page-in`/`shimmer` live in base.css (imported above). The global
-   `prefers-reduced-motion: reduce` neutraliser also lives in base.css, zeroing
-   every animation/transition duration — so all utilities below auto-disable for
-   users who ask for reduced motion. Keep effects subtle (≤ --dur / ~250ms):
-   Zambia-on-3G, not a splash reel. */
+   Keyframes live in base.css and read motion CSS variables. Reduced-motion sets
+   transform distances to zero, so entrance utilities become opacity-only while
+   decorative loops still collapse to a single frame. Keep effects subtle
+   (≤ --dur / ~250ms): Zambia-on-3G, not a splash reel. */
 
 @keyframes v-fade-in {
   from {
@@ -184,6 +183,20 @@
 }
 .card-lift:focus-within {
   box-shadow: var(--shadow-2) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-rise,
+  .motion-rise-slow,
+  .motion-fade,
+  .motion-stagger > * {
+    animation-duration: var(--dur-fast) !important;
+    animation-timing-function: var(--ease-std) !important;
+  }
+
+  .motion-stagger > * {
+    animation-delay: 0ms !important;
+  }
 }
 
 /* Content container — max width + gutters from tokens. */
