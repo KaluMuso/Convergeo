@@ -113,8 +113,6 @@ export type PdpInteractiveBodyProps = {
     viewStore: string;
   };
   trustLabels: {
-    preferredSeller: string;
-    seller: string;
     delivery: string;
     pickup: string;
     returns: string;
@@ -637,10 +635,12 @@ export function PdpInteractiveBody({
             }
           />
           <BuyerTrustPanel
-            sellerStatusLabel={(selectedListing.vendor.preferredBadge
-              ? trustLabels.preferredSeller
-              : trustLabels.seller
-            ).replace("{name}", selectedListing.vendor.displayName)}
+            sellerStatusLabel={t(
+              selectedListing.vendor.preferredBadge
+                ? "pdp.trust.preferredSeller"
+                : "pdp.trust.seller",
+              { name: selectedListing.vendor.displayName },
+            )}
             deliveryLabel={selectedComparison?.deliveryAvailable ? trustLabels.delivery : null}
             pickupLabel={selectedComparison?.pickupAvailable ? trustLabels.pickup : null}
             returnsLabel={trustLabels.returns}

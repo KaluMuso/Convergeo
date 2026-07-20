@@ -140,8 +140,6 @@ function renderBody(
           viewStore: "View store",
         }}
         trustLabels={{
-          preferredSeller: "Preferred seller: {name}",
-          seller: "Seller: {name}",
           delivery: "Delivery available",
           pickup: "Pickup available",
           returns: "Returns policy",

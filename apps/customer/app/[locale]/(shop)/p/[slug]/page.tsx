@@ -635,8 +635,6 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             viewStore: t("pdp.vendor.viewStore"),
           }}
           trustLabels={{
-            preferredSeller: t("pdp.trust.preferredSeller"),
-            seller: t("pdp.trust.seller"),
             delivery: t("pdp.trust.delivery"),
             pickup: t("pdp.trust.pickup"),
             returns: t("pdp.trust.returns"),
