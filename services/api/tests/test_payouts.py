@@ -230,6 +230,25 @@ def service_client(fake_client: FakeSupabaseClient) -> FakeServiceClient:
     return FakeServiceClient(fake_client)
 
 
+@pytest.fixture(autouse=True)
+def _shim_reserve_payout_row(
+    fake_client: FakeSupabaseClient,
+    service_client: FakeServiceClient,
+) -> Generator[None, None, None]:
+    """``reserve_payout_row`` runs SQL (advisory lock + balance check) against Postgres in
+    prod; these unit tests mock balances with in-memory fakes. Shim it for the whole module
+    so any test that drives ``execute_vendor_payout`` reserves against the fake and never
+    reaches the real DB — this is the safety net that stops a new test from silently hitting
+    live SQL in the DB-less CI job just because it forgot to patch the reservation."""
+    with patch(
+        "app.services.payouts.execution.reserve_payout_row",
+        side_effect=lambda **kwargs: _reserve_payout_for_test(
+            fake_client, service_client, **kwargs
+        ),
+    ):
+        yield
+
+
 @pytest.fixture
 def matched_resolve() -> AsyncMock:
     return AsyncMock(
@@ -288,12 +307,6 @@ async def test_balance_race_two_concurrent_payouts_never_exceed_released(
             "app.services.payouts.execution._post_payout_ledger",
             side_effect=_mock_ledger_post,
         ),
-        patch(
-            "app.services.payouts.execution.reserve_payout_row",
-            side_effect=lambda **kwargs: _reserve_payout_for_test(
-                fake_client, service_client, **kwargs
-            ),
-        ),
     ):
 
         async def _attempt() -> int | None:
@@ -340,17 +353,9 @@ async def test_resolve_mismatch_held_and_not_sent(
     )
     momo_payout = AsyncMock()
 
-    with (
-        patch(
-            "app.services.payouts.eligibility.vendor_payable_balance_ngwee",
-            return_value=-RELEASED_NGWEE,
-        ),
-        patch(
-            "app.services.payouts.execution.reserve_payout_row",
-            side_effect=lambda **kwargs: _reserve_payout_for_test(
-                fake_client, service_client, **kwargs
-            ),
-        ),
+    with patch(
+        "app.services.payouts.eligibility.vendor_payable_balance_ngwee",
+        return_value=-RELEASED_NGWEE,
     ):
         result = await execute_vendor_payout(
             service_client,
@@ -658,12 +663,6 @@ async def test_velocity_cap_boundary_at_cap_ok_plus_one_deferred(
         patch(
             "app.services.payouts.execution._post_payout_ledger",
             return_value="ledger-1",
-        ),
-        patch(
-            "app.services.payouts.execution.reserve_payout_row",
-            side_effect=lambda **kwargs: _reserve_payout_for_test(
-                fake_client, service_client, **kwargs
-            ),
         ),
     ):
         first = await execute_vendor_payout(
