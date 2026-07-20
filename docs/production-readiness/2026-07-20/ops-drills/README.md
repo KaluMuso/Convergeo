@@ -25,7 +25,7 @@ Do not declare G7 / G9 / load PASS. Thresholds were not altered after results.
 | Sandbox/test fixtures                            | **PASS**        | Drill dump + offline k6/invariant checks only.                                                                                              |
 | Rollback targets known                           | **PARTIAL**     | Vercel deployment IDs recorded; API immutable digest missing.                                                                               |
 
-See `versions.txt`, `commands/executed.md`, `logs/preflight-refresh.log`.
+See `versions.txt`, `commands/executed.md`, `logs/preflight-refresh.txt`.
 
 ---
 
@@ -41,7 +41,7 @@ See `versions.txt`, `commands/executed.md`, `logs/preflight-refresh.log`.
    - `restore-verification/checksum.txt`
 3. Restored into **isolated non-production** local Postgres 16 DB `vergeo5_restore_drill_20260720152311` (then dropped).
 4. Timestamps: start `2026-07-20T15:23:11Z`, finish `2026-07-20T15:23:11Z`, elapsed **0s**.
-5. Verification (see `logs/restore-drill.log`, `logs/restore-psql.out`, `restore-verification/checklist.md`):
+5. Verification (see `logs/restore-drill.txt`, `logs/restore-psql.out`, `restore-verification/checklist.md`):
 
 | Check                                 | Result                                                         |
 | ------------------------------------- | -------------------------------------------------------------- |
