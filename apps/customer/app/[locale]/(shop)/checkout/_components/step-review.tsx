@@ -3,7 +3,7 @@
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { Checkbox } from "@vergeo/ui/src/checkbox";
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import type { CheckoutSession } from "./step-fulfilment";
 import type { PaymentMethod, MomoRail, PaymentOptions } from "./step-payment";
@@ -31,6 +31,12 @@ export type ReviewStepLabels = {
   consentRequired: string;
   placeOrder: string;
   loading: string;
+  placingOrder: string;
+  placeOrderUnavailable: string;
+  whatHappensNext: string;
+  nextMomo: string;
+  nextCard: string;
+  nextCod: string;
 };
 
 export type ReviewPayment = {
@@ -45,7 +51,7 @@ type StepReviewProps = {
   totals: PaymentOptions;
   payment: ReviewPayment;
   labels: ReviewStepLabels;
-  onPlaceOrder?: () => void;
+  onPlaceOrder?: () => void | Promise<void>;
 };
 
 function lineTitle(item: CheckoutSession["vendor_groups"][number]["items"][number]): string {
@@ -60,11 +66,14 @@ export function StepReview({
   labels,
   onPlaceOrder,
 }: StepReviewProps) {
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
+  const nextId = useId();
   const [consent, setConsent] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const amountLocale = `${locale}-ZM`;
+  const placeOrderAvailable = typeof onPlaceOrder === "function";
 
   const paymentLabel = (() => {
     if (payment.method === "cod") {
@@ -77,15 +86,45 @@ export function StepReview({
     return labels.methodMomo.replace("{rail}", railLabel);
   })();
 
-  const handleSubmit = () => {
+  const nextCopy =
+    payment.method === "cod"
+      ? labels.nextCod
+      : payment.method === "card"
+        ? labels.nextCard
+        : labels.nextMomo;
+
+  useEffect(() => {
+    if (!errorMessage) {
+      return;
+    }
+    const node = errorRef.current;
+    if (node && typeof node.scrollIntoView === "function") {
+      node.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [errorMessage]);
+
+  const handleSubmit = async () => {
     if (!consent) {
       setErrorMessage(labels.consentRequired);
       return;
     }
+    if (!onPlaceOrder) {
+      setErrorMessage(labels.placeOrderUnavailable);
+      return;
+    }
+    if (loading) {
+      return;
+    }
+    const placeOrder = onPlaceOrder;
     setErrorMessage(null);
     setLoading(true);
-    onPlaceOrder?.();
-    setLoading(false);
+    try {
+      await Promise.resolve(placeOrder());
+    } catch {
+      setErrorMessage(labels.placeOrderUnavailable);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -108,7 +147,7 @@ export function StepReview({
             <ul className="space-y-2">
               {group.items.map((item) => (
                 <li key={item.id} className="flex items-start justify-between gap-2 text-sm">
-                  <span className="font-body text-text-2">
+                  <span className="min-w-0 break-words font-body text-text-2">
                     {lineTitle(item)}{" "}
                     <span className="text-text-3">
                       {labels.qtyTemplate.replace("{qty}", String(item.qty))}
@@ -125,15 +164,15 @@ export function StepReview({
       </section>
 
       <div className="space-y-2 rounded-card border border-border bg-bg-2 px-4 py-3 font-mono text-sm">
-        <div className="flex justify-between">
+        <div className="flex justify-between gap-3">
           <span>{labels.subtotal}</span>
           <span>{formatK(totals.subtotal_ngwee, { locale: amountLocale })}</span>
         </div>
-        <div className="flex justify-between">
+        <div className="flex justify-between gap-3">
           <span>{labels.deliveryFees}</span>
           <span>{formatK(totals.delivery_fee_ngwee, { locale: amountLocale })}</span>
         </div>
-        <div className="flex justify-between font-semibold text-text">
+        <div className="flex justify-between gap-3 font-semibold text-text">
           <span>{labels.total}</span>
           <span>{formatK(totals.total_ngwee, { locale: amountLocale })}</span>
         </div>
@@ -149,6 +188,16 @@ export function StepReview({
         ) : null}
       </div>
 
+      <div
+        className="space-y-2 rounded-card border border-border bg-surface px-4 py-3"
+        aria-labelledby={nextId}
+      >
+        <p id={nextId} className="font-body text-sm font-semibold text-text">
+          {labels.whatHappensNext}
+        </p>
+        <p className="font-body text-sm text-text-2">{nextCopy}</p>
+      </div>
+
       <div className="space-y-2 rounded-card border border-primary/20 bg-primary/5 px-4 py-3">
         <p className="font-body text-sm font-semibold text-text">{labels.escrowTitle}</p>
         <ol className="list-decimal space-y-1 pl-5 font-body text-sm text-text-2">
@@ -157,6 +206,16 @@ export function StepReview({
           <li>{labels.escrowStep3}</li>
         </ol>
       </div>
+
+      {!placeOrderAvailable ? (
+        <p
+          role="status"
+          className="rounded-md border border-warning/40 bg-warning/10 px-3 py-2 font-body text-sm text-text"
+          data-testid="checkout-place-order-unavailable"
+        >
+          {labels.placeOrderUnavailable}
+        </p>
+      ) : null}
 
       <Checkbox
         id="checkout-consent"
@@ -171,19 +230,26 @@ export function StepReview({
       />
 
       {errorMessage ? (
-        <p role="alert" className="font-body text-sm text-danger">
+        <p ref={errorRef} role="alert" className="font-body text-sm text-danger">
           {errorMessage}
         </p>
       ) : null}
+
+      <p className="sr-only" aria-live="polite">
+        {loading ? labels.placingOrder : ""}
+      </p>
 
       <Button
         type="button"
         size="lg"
         className="w-full"
         loading={loading}
-        loadingLabel={labels.loading}
-        disabled={!consent}
-        onClick={handleSubmit}
+        loadingLabel={labels.placingOrder}
+        disabled={!consent || loading || !placeOrderAvailable}
+        data-testid="checkout-place-order"
+        onClick={() => {
+          void handleSubmit();
+        }}
       >
         {labels.placeOrder}
       </Button>

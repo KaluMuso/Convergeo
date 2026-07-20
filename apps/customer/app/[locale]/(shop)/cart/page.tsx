@@ -1,6 +1,7 @@
 import { loadNamespace, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
 
 import { CartPageView, type CartPageLabels } from "../_components/cart/vendor-groups";
 
@@ -41,6 +42,13 @@ export default async function CartPage({ params }: CartPageProps) {
     total: t("cart.total"),
     checkoutCta: t("cart.checkoutCta"),
     updateError: t("cart.updateError"),
+    loadErrorTitle: t("cart.loadErrorTitle"),
+    loadErrorBody: t("cart.loadErrorBody"),
+    loadErrorRetry: t("cart.loadErrorRetry"),
+    multiSellerNote: t("cart.multiSellerNote"),
+    escrowTeaser: t("cart.escrowTeaser"),
+    stockUnavailableNotice: t("cart.stockUnavailableNotice"),
+    summaryHeading: t("cart.summaryHeading"),
     vendor: {
       vendorGroup: t("cart.vendorGroup"),
       vendorSubtotal: t("cart.vendorSubtotal"),
@@ -50,6 +58,7 @@ export default async function CartPage({ params }: CartPageProps) {
       deliveryScopeNote: t("cart.deliveryScopeNote"),
       freeDeliveryProgress: t("cart.freeDeliveryProgress"),
       freeDeliveryUnlocked: t("cart.freeDeliveryUnlocked"),
+      sellerIndex: t("cart.sellerIndex"),
     },
     line: {
       decrease: t("cart.qtyDecrease"),
@@ -91,8 +100,10 @@ export default async function CartPage({ params }: CartPageProps) {
   };
 
   return (
-    <div className="lg:mx-auto lg:w-full lg:max-w-2xl">
-      <CartPageView locale={locale} labels={labels} />
+    <div className="mx-auto w-full max-w-lg px-4 py-6 lg:max-w-5xl">
+      <Suspense fallback={null}>
+        <CartPageView locale={locale} labels={labels} />
+      </Suspense>
     </div>
   );
 }
