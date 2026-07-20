@@ -1,17 +1,16 @@
-import { formatK } from "@vergeo/i18n";
-
 /**
  * Honest multi-seller price framing for the buy box.
  * Never invents a “was” price — only compares live offer prices.
+ *
+ * Returns a structured result so ICU messages can be formatted with
+ * `t("…", { diff })` on the client (avoid calling `t` without ICU values).
  */
+export type OfferPriceContext = { kind: "lowest" } | { kind: "more"; diffNgwee: number };
+
 export function buildOfferPriceContext(
   selectedPriceNgwee: number,
   offerPricesNgwee: number[],
-  labels: {
-    lowestPrice: string;
-    moreThanLowest: string;
-  },
-): string | null {
+): OfferPriceContext | null {
   if (offerPricesNgwee.length < 2) {
     return null;
   }
@@ -22,9 +21,8 @@ export function buildOfferPriceContext(
   }
 
   if (selectedPriceNgwee <= lowest) {
-    return labels.lowestPrice;
+    return { kind: "lowest" };
   }
 
-  const diff = selectedPriceNgwee - lowest;
-  return labels.moreThanLowest.replace("{diff}", formatK(diff));
+  return { kind: "more", diffNgwee: selectedPriceNgwee - lowest };
 }

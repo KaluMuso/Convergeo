@@ -120,10 +120,6 @@ export type PdpInteractiveBodyProps = {
     returns: string;
     escrow: string;
   };
-  priceContextLabels: {
-    lowestPrice: string;
-    moreThanLowest: string;
-  };
   wishlistLabels: {
     add: string;
     remove: string;
@@ -505,7 +501,6 @@ export function PdpInteractiveBody({
   comparisonLabels,
   vendorLabels,
   trustLabels,
-  priceContextLabels,
   wishlistLabels,
   comparePageLabel,
 }: PdpInteractiveBodyProps) {
@@ -555,12 +550,18 @@ export function PdpInteractiveBody({
     if (!selectedListing) {
       return null;
     }
-    return buildOfferPriceContext(
+    const context = buildOfferPriceContext(
       selectedListing.priceNgwee,
       comparisonListings.map((listing) => listing.priceNgwee),
-      priceContextLabels,
     );
-  }, [comparisonListings, priceContextLabels, selectedListing]);
+    if (!context) {
+      return null;
+    }
+    if (context.kind === "lowest") {
+      return t("pdp.buyBox.lowestPrice");
+    }
+    return t("pdp.buyBox.moreThanLowest", { diff: formatK(context.diffNgwee) });
+  }, [comparisonListings, selectedListing, t]);
 
   const sellerRatingLabel = useMemo(() => {
     if (!selectedListing) {

@@ -2,47 +2,63 @@
 
 **Base SHA:** `bbec8e8c66a4e196d5d4500622b6b75876c18a14` (`master` / `origin/master`)  
 **Working branch:** `cursor/customer-pdp-redesign-077d`  
+**PR:** https://github.com/KaluMuso/Convergeo/pull/371  
 **Audit refs:** `docs/design/vergeo5-ui-ux-audit.md` §4.4, E10, P1 sticky ATC + mobile compare cards
 
 ## Baseline (pre-edit)
 
 Sticky mobile ATC and mobile seller compare cards already shipped on `master`
-(`403a42e`). This PR focuses on conversion hierarchy, honest offer states,
-gallery/motion polish, related cards, local wishlist + recently viewed, and
-tests.
+(`403a42e`). Live audit baseline: `before-live-product-detail-1366.png` (from
+`docs/design/evidence/live-product-detail-1366.png`).
 
-Live reference: https://vergeo5.com/en/p/tecno-spark-20 (and seed products).
+## Layout decisions
 
-## Implementation plan
+| Viewport | Composition                                                                                                                                                                                                                    |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Mobile   | Breadcrumbs → brand/title/seller count → gallery → buy box (price/stock/seller/qty/ATC/wishlist/compare) → trust → seller cards (multi only) → vendor → tabs → related → recently viewed → sticky ATC when buy box leaves view |
+| Desktop  | Breadcrumbs + title full width; gallery \| sticky buy box + trust; full-width compare table; vendor; tabs; related; recently viewed                                                                                            |
 
-### Layout
+Seller comparison stays **inline** (cards on mobile, table on desktop) plus the
+existing `/compare` route entry — no drawer. Comparison UI is omitted when
+`listing_count ≤ 1`.
 
-| Viewport | Composition                                                                                                                                                                                                       |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mobile   | Breadcrumbs → brand/title → gallery → buy box (price/stock/seller/qty/ATC/wishlist/compare) → trust → seller cards (multi only) → vendor → tabs → related → recently viewed → sticky ATC when buy box leaves view |
-| Desktop  | Breadcrumbs + title full width; gallery \| sticky buy box + trust; full-width compare table; vendor; tabs; related; recently viewed                                                                               |
+## Components introduced / consolidated
 
-### Honest data rules
+| Component                                | Role                                                 |
+| ---------------------------------------- | ---------------------------------------------------- |
+| `NoSellersPanel`                         | Honest zero-offer state                              |
+| `PdpWishlistButton` + `wishlist-storage` | Local wishlist near ATC                              |
+| `RelatedProducts`                        | Shared `ProductCard` rail                            |
+| `RecentlyViewedRail` + storage           | Local recently viewed                                |
+| `buildOfferPriceContext`                 | Lowest / delta framing (live offers only)            |
+| Buy box enhancements                     | `PriceBlock`, seller summary, compare, wishlist slot |
+| `ImageGallery`                           | `prefers-reduced-motion` scroll                      |
 
-- No previous-price / savings without API compare-at fields.
-- No product-level star aggregate (API has seller ratings only) — surface selected seller rating near purchase when present.
-- No variants / buy-now (unsupported).
-- No comparison UI when `listing_count ≤ 1`.
-- Dedicated empty when zero listings; keep API-unavailable EmptyState.
+## After screenshots (local mock API)
 
-### Components
+- `pdp-multi-seller-1366.png` / `pdp-multi-seller-360.png`
+- `pdp-seller-selected-1366.png`
+- `pdp-sticky-atc-360.png`
+- `pdp-one-seller-1366.png`
+- `pdp-no-sellers-1366.png`
 
-| Change                                           | Notes                                          |
-| ------------------------------------------------ | ---------------------------------------------- |
-| Visible `Breadcrumbs`                            | Home → product name (JSON-LD already present)  |
-| `NoSellersPanel`                                 | Zero-listing honesty                           |
-| Buy box seller summary + compare link + wishlist | Wishlist = localStorage only                   |
-| Comparison preference chips                      | Lowest price / selected — real deltas only     |
-| Related rail → `ProductCard`                     | Thin data: price + no-reviews                  |
-| `RecentlyViewedRail`                             | localStorage, exclude current                  |
-| Gallery                                          | `prefers-reduced-motion` scroll; clearer empty |
-| Loading skeleton                                 | Title before gallery (matches mobile order)    |
+Artifacts also under `/opt/cursor/artifacts/pdp-after/`.
 
-### Out of scope
+## Known data limitations
 
-Cart/checkout redesign, payment logic, inventing delivery ETAs, wishlist server sync.
+- No compare-at / previous price on API → no savings chip.
+- No product-level aggregate rating → seller ratings only.
+- No variants / buy-now.
+- Wishlist and recently viewed are localStorage only.
+- Related API is thin (no vendor/rating) → `ProductCard` uses honest no-reviews.
+
+## Remaining conversion / UX risks
+
+- Live Cloudinary / cart API health still gates real conversion (audit E09).
+- Sticky ATC competes with bottom nav height on small phones — verify on device.
+- Category breadcrumb not wired (`category_id` present; slug resolution deferred).
+
+## Recommended next PR
+
+Wishlist route + server sync seam, or category-aware PDP breadcrumbs once category
+slug lookup is cheap on the product payload.

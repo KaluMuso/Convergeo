@@ -147,10 +147,6 @@ function renderBody(
           returns: "Returns policy",
           escrow: "Held in escrow until you confirm",
         }}
-        priceContextLabels={{
-          lowestPrice: "Lowest price among sellers",
-          moreThanLowest: "{diff} more than the lowest offer",
-        }}
         wishlistLabels={{
           add: "Save to wishlist",
           remove: "Remove from wishlist",

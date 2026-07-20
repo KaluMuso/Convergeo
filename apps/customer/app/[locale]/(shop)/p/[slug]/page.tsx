@@ -642,10 +642,6 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             returns: t("pdp.trust.returns"),
             escrow: t("pdp.trust.escrow"),
           }}
-          priceContextLabels={{
-            lowestPrice: t("pdp.buyBox.lowestPrice"),
-            moreThanLowest: t("pdp.buyBox.moreThanLowest"),
-          }}
           wishlistLabels={{
             add: t("pdp.buyBox.wishlistAdd"),
             remove: t("pdp.buyBox.wishlistRemove"),
