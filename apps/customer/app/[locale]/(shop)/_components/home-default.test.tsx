@@ -162,12 +162,15 @@ describe("HomeProductRail", () => {
 });
 
 describe("HomeHeroBand", () => {
-  it("renders the escrow trust messaging and both CTAs", () => {
-    render(<HomeHeroBand locale="en" t={t} />);
-    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
-    expect(screen.getByText("You pay")).toBeInTheDocument();
-    expect(screen.getByText("Held by Vergeo5")).toBeInTheDocument();
-    expect(screen.getByText("Released on delivery")).toBeInTheDocument();
+  it("renders brand-first merch hero with CTAs and no escrow pill row", () => {
+    render(<HomeHeroBand locale="en" t={t} brandName="Vergeo5" />);
+    expect(screen.getByTestId("home-hero-brand")).toHaveTextContent("Vergeo5");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      /Shop products, services, and events/i,
+    );
+    expect(screen.getByTestId("home-hero-visual")).toBeInTheDocument();
+    expect(screen.queryByText("You pay")).not.toBeInTheDocument();
+    expect(screen.queryByText("Held by Vergeo5")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Start browsing" })).toHaveAttribute(
       "href",
       "/en/search",

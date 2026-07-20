@@ -114,7 +114,7 @@ describe("HomeHero fallback", () => {
 
     expect(screen.getByTestId("hero-default")).toBeInTheDocument();
     expect(
-      screen.getByText("Discover products, services, and events across Zambia"),
+      screen.getByText("Shop products, services, and events across Zambia"),
     ).toBeInTheDocument();
   });
 
@@ -135,7 +135,7 @@ describe("HomeHero fallback", () => {
 
     expect(screen.getByTestId("hero-editorial-light")).toBeInTheDocument();
     expect(
-      screen.getByText("Discover products, services, and events across Zambia"),
+      screen.getByText("Shop products, services, and events across Zambia"),
     ).toBeInTheDocument();
     expect(screen.queryByText("Welcome to Vergeo5")).not.toBeInTheDocument();
     expect(
@@ -160,7 +160,7 @@ describe("HomeHero fallback", () => {
     );
 
     expect(
-      screen.getByText("Discover products, services, and events across Zambia"),
+      screen.getByText("Shop products, services, and events across Zambia"),
     ).toBeInTheDocument();
     expect(screen.queryByText("Welcome to Vergeo5")).not.toBeInTheDocument();
   });

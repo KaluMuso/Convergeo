@@ -124,8 +124,17 @@ export default async function ShopHomePage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [tRaw, merch] = await Promise.all([getCatalogTranslator(locale), loadHomeMerchData()]);
+  const [tRaw, merch, baseMessages] = await Promise.all([
+    getCatalogTranslator(locale),
+    loadHomeMerchData(),
+    getMessages(),
+  ]);
   const t = tRaw as unknown as CatalogTranslator;
+  const tCommon = createTranslator({
+    locale,
+    messages: baseMessages as AbstractIntlMessages,
+    namespace: "common",
+  });
 
   // Always load catalogue rails so partial/placeholder merch cannot suppress discovery.
   const defaultData = await loadHomeDefaultData(merch.categories);
@@ -137,6 +146,9 @@ export default async function ShopHomePage({ params }: PageProps) {
     fulfillment: t("home.trust.fulfillment"),
     returns: t("home.trust.returns"),
     escrow: t("home.trust.escrow"),
+    escrowStep1: t("home.hero.escrowStep1"),
+    escrowStep2: t("home.hero.escrowStep2"),
+    escrowStep3: t("home.hero.escrowStep3"),
   };
 
   const railLabels = {
@@ -150,9 +162,11 @@ export default async function ShopHomePage({ params }: PageProps) {
     sampleListing: t("home.demo.sampleListing"),
   };
 
-  const campaignKeysExcludingDiscovery = plan.campaignSectionKeys.filter(
-    (key) => key !== "category_grid",
+  // Audit hierarchy: categories before flash/campaign; events after product rails.
+  const earlyCampaignKeys = plan.campaignSectionKeys.filter(
+    (key) => key !== "hero" && key !== "category_grid" && key !== "events_row",
   );
+  const showEventsRow = plan.campaignSectionKeys.includes("events_row");
 
   const organizationJsonLd = buildOrganizationJsonLd({ name: "Vergeo5" });
   const websiteJsonLd = buildWebSiteJsonLd({
@@ -161,24 +175,20 @@ export default async function ShopHomePage({ params }: PageProps) {
     searchUrlTemplate: buildSearchActionUrlTemplate(DEFAULT_LOCALE),
   });
 
+  const brandName = tCommon("app.name");
+
   return (
     <div className="flex flex-col gap-6 lg:gap-10">
       <JsonLdScript data={[organizationJsonLd, websiteJsonLd]} />
       {plan.useCampaignHero ? (
         renderCampaignSection("hero", locale, t, merch.slots, merch.categories)
       ) : plan.useDefaultHero && hasDefaultHomeContent(merch.categories, defaultData) ? (
-        <HomeHeroBand locale={locale} t={t} />
+        <HomeHeroBand locale={locale} t={t} brandName={brandName} />
       ) : (
         <HomeHero locale={locale} t={t} />
       )}
 
       <HomeTrustStrip labels={trustLabels} />
-
-      {campaignKeysExcludingDiscovery
-        .filter((key) => key !== "hero")
-        .map((sectionKey) =>
-          renderCampaignSection(sectionKey, locale, t, merch.slots, merch.categories),
-        )}
 
       {plan.showCategoryGrid ? (
         <CategoryGrid
@@ -188,6 +198,10 @@ export default async function ShopHomePage({ params }: PageProps) {
           t={t}
         />
       ) : null}
+
+      {earlyCampaignKeys.map((sectionKey) =>
+        renderCampaignSection(sectionKey, locale, t, merch.slots, merch.categories),
+      )}
 
       {plan.showDefaultRails ? (
         <>
@@ -213,6 +227,15 @@ export default async function ShopHomePage({ params }: PageProps) {
               labels={railLabels}
             />
           ))}
+        </>
+      ) : null}
+
+      {showEventsRow
+        ? renderCampaignSection("events_row", locale, t, merch.slots, merch.categories)
+        : null}
+
+      {plan.showDefaultRails ? (
+        <>
           <HomeServicesRail
             id="home-rail-services"
             title={t("home.rails.servicesTitle")}

@@ -72,17 +72,24 @@
       "allCategories": "Toutes les catégories",
       "categoriesPanelAria": "Toutes les catégories",
       "categoriesLoading": "Chargement des catégories…",
+      "categoriesEmpty": "Les catégories sont indisponibles pour le moment. Réessayez bientôt.",
       "viewAllCategories": "Voir toutes les catégories",
+      "directory": "Annuaire",
       "services": "Services",
       "events": "Événements",
       "askVergeo": "Demander à Vergeo",
       "supplies": "Fournitures",
-      "desktopAriaLabel": "Navigation principale"
+      "desktopAriaLabel": "Navigation principale",
+      "browseChipsAria": "Parcourir par rubrique"
+    },
+    "serviceBar": {
+      "ariaLabel": "Informations sur la livraison et le retrait",
+      "message": "Livraison à Lusaka · Retrait national · Séquestre lorsque vous payez en ligne"
     },
     "hero": {
       "eyebrow": "La marketplace de la Zambie",
-      "fallbackTitle": "Découvrez produits, services et événements partout en Zambie",
-      "fallbackSubtitle": "Comparez les prix des vendeurs en Zambie, et organisez une livraison à Lusaka ou un retrait partout en Zambie lorsque l'annonce le permet.",
+      "fallbackTitle": "Achetez produits, services et événements partout en Zambie",
+      "fallbackSubtitle": "Comparez les vendeurs, organisez une livraison à Lusaka ou un retrait national, et découvrez ce qui est près de vous.",
       "primaryCta": "Commencer à parcourir",
       "secondaryCta": "En savoir plus sur la vente",
       "placeholder": {

@@ -1,7 +1,11 @@
+"use client";
+
+import { IconAccount, IconCart, IconSearch } from "@vergeo/ui/src/icons";
+import { SearchField } from "@vergeo/ui/src/search-field";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { CategoryMegaMenu } from "./category-mega-menu";
-import { SuppliesNavLink } from "./supplies-nav-link";
 
 type DesktopHeaderLabels = {
   appName: string;
@@ -12,12 +16,12 @@ type DesktopHeaderLabels = {
   allCategories: string;
   categoriesPanelAria: string;
   categoriesLoading: string;
+  categoriesEmpty: string;
   viewAllCategories: string;
-  browse: string;
+  directory: string;
   services: string;
   events: string;
   askVergeo: string;
-  supplies: string;
   account: string;
   cart: string;
 };
@@ -27,22 +31,51 @@ type DesktopHeaderProps = {
   labels: DesktopHeaderLabels;
 };
 
+const SCROLL_COMPACT_PX = 48;
+
 /**
- * Desktop-only (lg+) shop header — logo · search · primary nav · account/cart/theme.
- * Mobile (<1024px) keeps the existing TopNav untouched; this header is `hidden`
- * below the lg breakpoint. Sticky, token-driven (bg-surface / border-border),
- * structure inherited from the committed design's Nav (docs/designs, SELECTION §3).
+ * Desktop-only (lg+) shop header — Logo · Search · Categories · Directory ·
+ * Services · Events · Ask · Account · Cart. Theme lives in Preferences; Supplies
+ * is demoted out of primary nav (account / gated routes). Sticky; mega-menu
+ * closes on scroll.
  */
 export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
+  const [compact, setCompact] = useState(false);
+
+  useEffect(() => {
+    let ticking = false;
+    const update = () => {
+      setCompact(window.scrollY > SCROLL_COMPACT_PX);
+      ticking = false;
+    };
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(update);
+      }
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const navLinks = [
-    { key: "browse", href: `/${locale}/search`, label: labels.browse },
+    { key: "directory", href: `/${locale}/directory`, label: labels.directory },
     { key: "services", href: `/${locale}/services`, label: labels.services },
     { key: "events", href: `/${locale}/events`, label: labels.events },
     { key: "ask", href: `/${locale}/ask`, label: labels.askVergeo },
   ];
 
   return (
-    <header className="sticky top-0 z-50 hidden border-b border-border bg-surface shadow-1 lg:block">
+    <header
+      data-testid="desktop-header"
+      data-compact={compact ? "true" : "false"}
+      className="sticky top-0 z-50 hidden border-b border-border bg-surface lg:block"
+      style={{
+        boxShadow: compact ? "var(--shadow-1)" : "none",
+        transition: "box-shadow var(--dur) var(--ease-std)",
+      }}
+    >
       <a
         href="#shop-main"
         className="sr-only rounded bg-primary text-sm font-medium text-surface focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:inline-flex focus:min-h-11 focus:items-center focus:px-4 focus:shadow-focusRing"
@@ -51,48 +84,45 @@ export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
       </a>
       <nav
         aria-label={labels.navAriaLabel}
-        className="mx-auto flex h-16 w-full max-w-7xl items-center gap-6 px-6"
+        className="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 transition-[height] duration-fast ease-std motion-reduce:transition-none"
+        style={{ height: compact ? "3.5rem" : "4rem" }}
       >
         <Link
           href={`/${locale}`}
-          className="shrink-0 font-display text-2xl leading-none text-primary"
+          className="shrink-0 font-display text-2xl leading-none text-primary transition-transform duration-fast ease-std"
         >
           {labels.appName}
         </Link>
 
-        {/* Native GET form → /{locale}/search?q=… — works without JS; the search
-            page reads searchParams.q. */}
-        <form
-          role="search"
-          action={`/${locale}/search`}
-          className="flex h-11 min-w-0 max-w-xl flex-1 items-center gap-2 rounded-pill border border-border bg-bg px-4 transition-colors focus-within:border-primary focus-within:shadow-focusRing"
-        >
-          <input
-            type="search"
+        <form role="search" action={`/${locale}/search`} className="min-w-0 max-w-2xl flex-1">
+          <SearchField
             name="q"
             aria-label={labels.searchPlaceholder}
             placeholder={labels.searchPlaceholder}
-            className="min-w-0 flex-1 bg-transparent text-sm text-text placeholder:text-text-3 focus-visible:outline-none"
+            leadingIcon={<IconSearch />}
+            trailing={
+              <button
+                type="submit"
+                aria-label={labels.searchSubmit}
+                className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-pill text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+              >
+                <IconSearch />
+              </button>
+            }
+            className="h-11 bg-bg"
           />
-          <button
-            type="submit"
-            aria-label={labels.searchSubmit}
-            className="inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-pill text-base text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-          >
-            <span aria-hidden className="leading-none">
-              {"\u{1F50D}"}
-            </span>
-          </button>
         </form>
 
-        <ul className="flex shrink-0 list-none items-center gap-1 p-0">
+        <ul className="flex shrink-0 list-none items-center gap-0.5 p-0">
           <li>
             <CategoryMegaMenu
               locale={locale}
+              closeOnScroll
               labels={{
                 trigger: labels.allCategories,
                 panelAria: labels.categoriesPanelAria,
                 loading: labels.categoriesLoading,
+                empty: labels.categoriesEmpty,
                 viewAll: labels.viewAllCategories,
               }}
             />
@@ -101,34 +131,28 @@ export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
             <li key={link.key}>
               <Link
                 href={link.href}
-                className="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text"
+                className="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
               >
                 {link.label}
               </Link>
             </li>
           ))}
-          {/* Wholesale Supplies — verified business buyers only (client-gated). */}
-          <SuppliesNavLink locale={locale} label={labels.supplies} />
         </ul>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1">
           <Link
             href={`/${locale}/account`}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
           >
-            <span aria-hidden className="text-base leading-none">
-              {"\u{1F464}"}
-            </span>
-            {labels.account}
+            <IconAccount />
+            <span className={compact ? "sr-only" : undefined}>{labels.account}</span>
           </Link>
           <Link
             href={`/${locale}/cart`}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
           >
-            <span aria-hidden className="text-base leading-none">
-              {"\u{1F6D2}"}
-            </span>
-            {labels.cart}
+            <IconCart />
+            <span className={compact ? "sr-only" : undefined}>{labels.cart}</span>
           </Link>
         </div>
       </nav>

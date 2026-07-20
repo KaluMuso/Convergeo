@@ -27,6 +27,9 @@ function labelsFrom(messages: typeof catalogMessages) {
     fulfillment: t("home.trust.fulfillment"),
     returns: t("home.trust.returns"),
     escrow: t("home.trust.escrow"),
+    escrowStep1: t("home.hero.escrowStep1"),
+    escrowStep2: t("home.hero.escrowStep2"),
+    escrowStep3: t("home.hero.escrowStep3"),
   };
 }
 
@@ -34,9 +37,11 @@ const ACTIVE_PAYMENT_CLAIMS =
   /pay with mobile money|mobile-money payouts|card checkout is live|momo checkout is live|start selling today/i;
 
 describe("HomeTrustStrip (CUST-HOME-01)", () => {
-  it("renders localised trust items", () => {
+  it("renders localised trust items and the escrow ladder", () => {
     render(<HomeTrustStrip labels={labelsFrom(catalogMessages)} />);
     expect(screen.getByTestId("home-trust-strip")).toBeInTheDocument();
+    expect(screen.getByTestId("home-trust-escrow-ladder")).toHaveTextContent("You pay");
+    expect(screen.getByTestId("home-trust-escrow-ladder")).toHaveTextContent("Held by Vergeo5");
     expect(screen.getByTestId("home-trust-sellers")).toHaveTextContent(
       catalogMessages.home.trust.sellers,
     );

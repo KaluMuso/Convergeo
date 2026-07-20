@@ -98,7 +98,7 @@ export function ProductCard({
 
   return (
     <Component
-      className={["card-lift", className].filter(Boolean).join(" ")}
+      className={["card-lift", "tap", className].filter(Boolean).join(" ")}
       data-testid="product-card"
       style={{
         ...cardBaseStyle,
