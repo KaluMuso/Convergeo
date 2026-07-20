@@ -19,6 +19,14 @@ function assertIntegerNgwee(value: number, field: string): number {
   return value;
 }
 
+function cx(...parts: Array<string | false | undefined>): string {
+  return parts.filter(Boolean).join(" ");
+}
+
+/**
+ * Product price + optional struck old price and savings chip.
+ * Uses semantic `--price` / `--discount` tokens.
+ */
 export function PriceBlock({ ngwee, oldNgwee, savingsLabel, className }: PriceBlockProps) {
   const priceNgwee = assertIntegerNgwee(ngwee, "ngwee");
   const formattedPrice = formatK(priceNgwee);
@@ -28,28 +36,14 @@ export function PriceBlock({ ngwee, oldNgwee, savingsLabel, className }: PriceBl
   const formattedOldPrice = hasOldPrice ? formatK(oldNgwee) : undefined;
 
   return (
-    <div className={className} data-testid="price-block">
-      <span
-        className="font-mono text-price font-bold text-text"
-        style={{ fontSize: "var(--fs-price)" }}
-      >
-        {formattedPrice}
-      </span>
+    <div className={cx("flex flex-wrap items-baseline gap-2", className)} data-testid="price-block">
+      <span className="font-mono text-price font-bold text-[var(--price)]">{formattedPrice}</span>
       {formattedOldPrice ? (
-        <span
-          className="ml-2 font-mono text-sm line-through"
-          style={{ color: "var(--text-3)", textDecoration: "line-through" }}
-        >
-          {formattedOldPrice}
-        </span>
+        <span className="font-mono text-sm text-text-3 line-through">{formattedOldPrice}</span>
       ) : null}
       {hasOldPrice && savingsLabel ? (
         <span
-          className="ml-2 inline-block rounded-pill px-2 py-0.5 text-micro font-semibold uppercase tracking-wide"
-          style={{
-            color: "var(--accent)",
-            backgroundColor: "color-mix(in srgb, var(--accent) 12%, transparent)",
-          }}
+          className="inline-block rounded-pill bg-[color-mix(in_srgb,var(--discount)_12%,transparent)] px-2 py-0.5 text-micro font-semibold uppercase tracking-wide text-discount"
           data-testid="price-savings"
         >
           {savingsLabel}

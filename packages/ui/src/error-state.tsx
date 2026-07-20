@@ -12,6 +12,20 @@ export type ErrorStateProps = {
   "data-testid"?: string;
 };
 
+function DefaultErrorIcon() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M12 7v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="12" cy="16.5" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+/**
+ * Error-state foundation with optional retry. Uses `--primary-btn-fg` so the
+ * retry CTA stays AA in dark mode.
+ */
 export function ErrorState({
   icon,
   title,
@@ -37,14 +51,18 @@ export function ErrorState({
         color: "var(--text-2)",
       }}
     >
-      {icon && (
-        <div
-          aria-hidden="true"
-          style={{ fontSize: "2.5rem", lineHeight: 1, marginBottom: "var(--sp-2)" }}
-        >
-          {icon}
-        </div>
-      )}
+      <div
+        aria-hidden="true"
+        style={{
+          color: "var(--danger)",
+          marginBottom: "var(--sp-2)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {icon ?? <DefaultErrorIcon />}
+      </div>
       <h3
         style={{
           margin: 0,
@@ -55,7 +73,9 @@ export function ErrorState({
       >
         {title}
       </h3>
-      {body && <p style={{ margin: 0, fontSize: "var(--fs-body)", maxWidth: "20rem" }}>{body}</p>}
+      {body ? (
+        <p style={{ margin: 0, fontSize: "var(--fs-body)", maxWidth: "20rem" }}>{body}</p>
+      ) : null}
       <div
         style={{
           display: "flex",
@@ -65,7 +85,7 @@ export function ErrorState({
           marginTop: "var(--sp-2)",
         }}
       >
-        {onRetry && retryLabel && (
+        {onRetry && retryLabel ? (
           <button
             type="button"
             onClick={onRetry}
@@ -75,18 +95,18 @@ export function ErrorState({
               minWidth: "2.75rem",
               padding: "var(--sp-2) var(--sp-5)",
               background: "var(--primary)",
-              color: "var(--surface)",
+              color: "var(--primary-btn-fg)",
               border: "none",
               borderRadius: "var(--r)",
               fontSize: "var(--fs-body)",
               fontWeight: 600,
               cursor: "pointer",
-              transition: `opacity var(--dur-fast) var(--ease-std)`,
+              transition: `opacity var(--dur-fast) var(--ease-std), transform var(--dur-fast) var(--ease-std)`,
             }}
           >
             {retryLabel}
           </button>
-        )}
+        ) : null}
         {action}
       </div>
     </div>

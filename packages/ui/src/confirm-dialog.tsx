@@ -50,7 +50,7 @@ export function ConfirmDialog({
     cursor: pending ? "wait" : "pointer",
     opacity: pending ? 0.7 : 1,
     background: destructive ? "var(--danger)" : "var(--primary)",
-    color: "var(--surface)",
+    color: destructive ? "var(--on-danger)" : "var(--primary-btn-fg)",
     transition: `transform var(--dur) var(--ease-spring), opacity var(--dur-fast) var(--ease-std)`,
   };
 

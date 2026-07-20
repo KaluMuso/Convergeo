@@ -23,6 +23,10 @@ const shapeDefaults: Record<SkeletonShape, CSSProperties> = {
   circle: { width: "3rem", height: "3rem", borderRadius: "50%" },
 };
 
+/**
+ * Shimmer loading placeholder. Honours prefers-reduced-motion via base.css
+ * (shimmer freezes). Decorative — always aria-hidden.
+ */
 export function Skeleton({
   shape = "block",
   width,
