@@ -397,12 +397,29 @@ def apply_payment_status(
     if incoming_status == PaymentStatus.SUCCESS:
         from app.services.payments.settlement import settle_prepaid_collection
 
-        settle_prepaid_collection(
+        settlement = settle_prepaid_collection(
             service_client,
             payment_id=payment_id,
             checkout_group_id=snapshot.checkout_group_id,
             amount_ngwee=snapshot.amount_ngwee,
         )
+        if settlement.skipped_sibling:
+            # Another payment already posted CHARGE_RECEIVED for this checkout
+            # (retry won; this is a late SUCCESS on a prior FAILED/EXPIRED attempt).
+            # Do not mark this row SUCCESS — unique index + books stay single-gross.
+            # Ops refunds the duplicate MoMo collection out-of-band.
+            write_payment_audit_log(
+                service_client,
+                actor_id=actor_id,
+                payment_id=payment_id,
+                from_status=snapshot.status.value,
+                to_status=snapshot.status.value,
+                note=(
+                    f"{note} [late_success_after_sibling_settled "
+                    f"txn={settlement.transaction_id}]"
+                ),
+            )
+            return None
     return transition_payment(
         service_client,
         payment_id=payment_id,
