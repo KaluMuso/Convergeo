@@ -2,11 +2,32 @@
 
 Best-effort vernacular overlays for CUST-I18N-01. CI completeness requires every critical key; the strings below need a native Bemba / Nyanja review before production.
 
+**Process owner:** CCP-02 (`docs/production-readiness/2026-07-20/code-completion-programme.md`). SEO flip is a **separate PR** after sign-off — do not add `bem`/`nya` to `SEO_INDEXABLE_LOCALES` until all criteria below are met.
+
+## Native-speaker sign-off (authoritative)
+
+Record each review session in the table. One row per reviewer × locale batch (or one row covering both locales if the same reviewer signs both).
+
+| Reviewer (name + role) | Date (YYYY-MM-DD) | Locale(s) | Namespace(s) covered | Checklist sections signed | Notes |
+| ---------------------- | ----------------- | --------- | -------------------- | ------------------------- | ----- |
+| _pending_              | —                 | —         | —                    | —                         | —     |
+
+**Namespaces in scope for Phase-1 money/trust copy:** `catalog`, `checkout`, `orders`, `account`, `search`, `common`, `notifications`, `marketing` (present today). **`legal`** — sign off only when bem/nya `legal.json` exists (CCP-03d); until then, criterion 3 blocks SEO flip for vernacular legal pages.
+
+## Noindex removal criteria (authoritative)
+
+All four must be true before opening the SEO-flip PR (`cursor/ccp-02-seo-flip-bem-nya-da3e`):
+
+1. **Phase-1 critical prefixes green in CI** — `phase1-critical` tests pass (`packages/i18n/src/phase1-critical.ts` and related test suite).
+2. **Checklist signed** — escrow, COD, USSD, consent, refunds, and any vernacular **legal** pages that exist are signed off in the table above for each locale being published.
+3. **No unchecked machine-only strings** — no legal/checkout strings marked “pending human review” (or equivalent) remain for the locales being published.
+4. **Code flip** — add `"bem"` and/or `"nya"` to `SEO_INDEXABLE_LOCALES` in `packages/i18n/src/seo-publication.ts`; update `seo-publication.test.ts` and sitemap/json-ld tests to expect indexable locales.
+
+Until then, **bem** and **nya** stay routable but are **not** SEO-published (`noindex,follow`; omitted from hreflang + sitemap).
+
 ## SEO publication (after native sign-off)
 
-Until the trust/payment terms below are signed off, **bem** and **nya** stay routable but are **not** SEO-published (`noindex,follow`; omitted from hreflang + sitemap).
-
-**Single flip after approval:** add `"bem"` and/or `"nya"` to `SEO_INDEXABLE_LOCALES` in `packages/i18n/src/seo-publication.ts`.
+**Single flip after approval:** add `"bem"` and/or `"nya"` to `SEO_INDEXABLE_LOCALES` in `packages/i18n/src/seo-publication.ts` (step 4 above only).
 
 ## Escrow triad (pay → hold → release)
 
