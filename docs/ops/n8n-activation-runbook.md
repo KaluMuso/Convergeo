@@ -5,6 +5,12 @@ run (notification dispatch; the reconciliation-crons bundle = webhook-drain +
 reconciliation-poll + payment-sweeper + daily-report). The other workflows are
 authored but not imported/activated.
 
+> **Founder decision (2026-07-20): Wave A may be activated now; Wave B is HELD.**
+> The money & ticketing workflows (`release-job`, `order-jobs`, `event-release`,
+> `tickets-issue`, `tickets-release`) stay **inactive** until the Lenco **sandbox**
+> money path is proven (VB-P01…P06) **and** legal **F4** (NPS-Act escrow) has cleared.
+> Do not activate Wave B before both gates are green.
+
 **Why this is a founder/ops task (not code).** Every internal tick is **fail-closed**:
 `app/core/internal_token.resolve_internal_token` returns **503** in `ENV=production`
 when the endpoint's `INTERNAL_*_TOKEN` is missing or still the dev default. So a
