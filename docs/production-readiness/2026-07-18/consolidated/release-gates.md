@@ -35,16 +35,16 @@ Related: `master-reconciliation-register.md` · `production-readiness-scorecard.
 
 ## Staging gates (must PASS before production money enablement)
 
-| ID  | Gate                                    | Automated evidence             | Manual evidence                    | Pass criteria                                                                | Current                             |
-| --- | --------------------------------------- | ------------------------------ | ---------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------- |
-| S0  | Staging schema target                   | `schema_migrations` on staging | Migration plan review              | Agreed set includes needed `0051`/`0053`–`0056` as decided                   | FAIL                                |
-| S1  | Sandbox MoMo prepaid → ledger           | SQL aggregates + pytest        | Lenco sandbox dashboard (redacted) | `CHARGE_RECEIVED` (+ hold posture) balanced; idempotent replay               | FAIL (CODE_COMPLETE #274 only)      |
-| S2  | Sandbox card prepaid → ledger           | Same                           | Same                               | Same                                                                         | FAIL                                |
-| S3  | Release accounting drill                | Release tick + SQL             | Recon summary fields               | `COMMISSION_CAPTURE` before `RELEASE_TO_VENDOR`; escrow→0; double-tick safe  | FAIL (CODE_COMPLETE #288/#294 only) |
-| S4  | n8n release + tickets active on staging | Workflow active=true           | Execution IDs                      | Authenticated ticks succeed; no double release/issue                         | FAIL                                |
-| S5  | KYC lifecycle drill                     | API tests + SQL                | Admin Access session               | submit→under_review→approve; orphan report; privileges freeze without record | FAIL (`0056` unapplied live)        |
-| S6  | False-success E2E                       | Playwright/E2E                 | —                                  | Pending/failed ≠ paid; COD isolated                                          | FAIL                                |
-| S7  | Staging UAT notes                       | —                              | 3–5 tester journeys                | Written pack attached                                                        | FAIL                                |
+| ID  | Gate                                    | Automated evidence             | Manual evidence                    | Pass criteria                                                                | Current                                                                                           |
+| --- | --------------------------------------- | ------------------------------ | ---------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| S0  | Staging schema target                   | `schema_migrations` on staging | Migration plan review              | Agreed set includes needed `0051`/`0053`–`0056` as decided                   | FAIL                                                                                              |
+| S1  | Sandbox MoMo prepaid → ledger           | SQL aggregates + pytest        | Lenco sandbox dashboard (redacted) | `CHARGE_RECEIVED` (+ hold posture) balanced; idempotent replay               | FAIL / BLOCKED_EXTERNAL (2026-07-20 Prompt 8: no F9b + API 502; `…/lenco-sandbox-money-drill.md`) |
+| S2  | Sandbox card prepaid → ledger           | Same                           | Same                               | Same                                                                         | FAIL / BLOCKED_EXTERNAL (same preflight)                                                          |
+| S3  | Release accounting drill                | Release tick + SQL             | Recon summary fields               | `COMMISSION_CAPTURE` before `RELEASE_TO_VENDOR`; escrow→0; double-tick safe  | FAIL / BLOCKED_EXTERNAL (same; release ticks inactive)                                            |
+| S4  | n8n release + tickets active on staging | Workflow active=true           | Execution IDs                      | Authenticated ticks succeed; no double release/issue                         | FAIL (2026-07-20: fleet inactive; `…/n8n-fleet-import-verify.md`)                                 |
+| S5  | KYC lifecycle drill                     | API tests + SQL                | Admin Access session               | submit→under_review→approve; orphan report; privileges freeze without record | FAIL (`0056` unapplied live)                                                                      |
+| S6  | False-success E2E                       | Playwright/E2E                 | —                                  | Pending/failed ≠ paid; COD isolated                                          | FAIL / BLOCKED_EXTERNAL (Prompt 8 D NOT RUN)                                                      |
+| S7  | Staging UAT notes                       | —                              | 3–5 tester journeys                | Written pack attached                                                        | FAIL                                                                                              |
 
 ---
 
@@ -128,7 +128,7 @@ curl -sS -m 15 https://api.vergeo5.com/readyz
 | Recon cron                   | n8n success | Forced mismatch | Alerted; no silent drift                 |
 | Integer ngwee only           | Unit tests  | Review          | No float money math                      |
 
-**Current:** FAIL — CODE_COMPLETE only (#274/#294); live `payments=0`, `ledger_transactions=0`.
+**Current:** FAIL — CODE_COMPLETE only (#274/#294); live `payments=0`, `ledger_transactions=0`. Prompt 8 sandbox drill **BLOCKED_EXTERNAL** (`docs/production-readiness/2026-07-20/lenco-sandbox-money-drill.md`) — no F9b creds; API 502; tip mismatch.
 
 ---
 
@@ -140,7 +140,7 @@ curl -sS -m 15 https://api.vergeo5.com/readyz
 | Webhook delay | E2E         | —      | Success only after confirmed policy (order_confirmed / confirming≠paid; ledger per contract) |
 | COD path      | E2E ≤K500   | —      | Never claims MoMo success                                                                    |
 
-**Current:** FAIL — UI CODE_COMPLETE (#289); staging E2E + residual checkout localhost fallbacks open.
+**Current:** FAIL — UI CODE_COMPLETE (#289); staging E2E open; Prompt 8 false-success matrix **NOT RUN** (BLOCKED_EXTERNAL).
 
 ---
 
@@ -153,7 +153,7 @@ curl -sS -m 15 https://api.vergeo5.com/readyz
 | Internal ticks auth                    | Unauthorized → 401/403 | —                        | Tokens required |
 | Notification dispatch                  | Live workflow          | Sandbox send             | Outbox drains   |
 
-**Current:** FAIL (only dispatch + payment recon live).
+**Current:** FAIL (2026-07-20: dispatch + payment recon **unpublished** fail-closed under API 502; release/tickets never activated — Prompt 7 `n8n-fleet-import-verify.md` + Prompt 8 did not activate money workflows).
 
 ---
 
@@ -208,9 +208,7 @@ Evidence 2026-07-20 (`docs/production-readiness/2026-07-20/ops-drills/`): approv
 | Rollback drill             | —                   | Prior Vercel + API tag | Time recorded                                  |
 | Feature flags              | SQL flags           | —                      | `public_launch` intentional; Zamtel matches UI |
 
-**Current:** FAIL.
-
-Evidence 2026-07-20 (`docs/production-readiness/2026-07-20/ops-drills/`): frontend prod SHAs + Vercel rollback candidates recorded; API digest **UNKNOWN**; API health **502**; controlled promote/rollback drill **NOT_RUN** (aborted to avoid undefended production mutate). DB tip drift remains. Does **not** clear G9.
+**Current (2026-07-20 Prompt 6):** FAIL / NO-GO. Frontend prod SHAs **recorded** (customer `cde40bf`, vendor `5a4668a`, admin `2f99711`) but **behind** master tip `d9839db`. Live migration tip = `0063_revoke_execute_review_reply_guards` (not repo tip: source_key + FORCE RLS unapplied; RC-02 collision). API host digest **NOT_AUDITABLE** (`api.vergeo5.com` **502**); GHCR `latest` digest known but not proof of running container. Rollback drill still open. Evidence: `docs/production-readiness/2026-07-20/deploy-migration-truth.md`.
 
 ---
 
