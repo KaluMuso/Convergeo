@@ -198,7 +198,8 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     activeKind === "all" ||
     activeKind === "products" ||
     activeKind === "services" ||
-    activeKind === "events";
+    activeKind === "events" ||
+    activeKind === "vendors";
   const showPriceFilters = activeKind === "all" || activeKind === "products";
 
   const categoriesResult = await fetchCategoriesResult();

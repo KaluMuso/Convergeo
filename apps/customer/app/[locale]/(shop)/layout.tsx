@@ -7,12 +7,12 @@ import {
   IconOrders,
   IconSearch,
 } from "@vergeo/ui/src/icons";
-import Link from "next/link";
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { BottomNavClient } from "./_components/bottom-nav-client";
 import { DesktopHeader } from "./_components/desktop-header";
+import { MerchPreviewLink } from "./_components/merch-preview-nav";
 import { MobileHeaderSearch } from "./_components/mobile-header-search";
 import { MobileTopNav } from "./_components/mobile-top-nav";
 import { ServiceInfoBar } from "./_components/service-info-bar";
@@ -96,9 +96,9 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       <MobileTopNav
         locale={locale}
         logo={
-          <Link href={`/${locale}`} className="font-display text-lg text-primary">
+          <MerchPreviewLink href={`/${locale}`} className="font-display text-lg text-primary">
             {tCommon("app.name")}
-          </Link>
+          </MerchPreviewLink>
         }
         searchSlot={
           <MobileHeaderSearch
