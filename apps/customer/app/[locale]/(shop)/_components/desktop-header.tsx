@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { getCartItemCount, useCartActions, useCartStore } from "./cart/mini-cart-drawer";
 import { CategoryMegaMenu } from "./category-mega-menu";
 import { DesktopHeaderSearch } from "./desktop-header-search";
+import { useMerchPreviewToken, withMerchPreviewParam } from "./merch-preview-nav";
 
 import type { SearchInputLabels } from "./search/search-input";
 
@@ -50,6 +51,7 @@ const SCROLL_COMPACT_PX = 48;
  */
 export function DesktopHeader({ locale, labels, localeSwitcher }: DesktopHeaderProps) {
   const [compact, setCompact] = useState(false);
+  const previewToken = useMerchPreviewToken();
   const { cart } = useCartStore();
   const { refresh } = useCartActions();
 
@@ -85,7 +87,12 @@ export function DesktopHeader({ locale, labels, localeSwitcher }: DesktopHeaderP
     { key: "services", href: `/${locale}/services`, label: labels.services },
     { key: "events", href: `/${locale}/events`, label: labels.events },
     { key: "ask", href: `/${locale}/ask`, label: labels.askVergeo },
-  ];
+  ].map((link) => ({
+    ...link,
+    href: withMerchPreviewParam(link.href, previewToken),
+  }));
+
+  const homeHref = withMerchPreviewParam(`/${locale}`, previewToken);
 
   return (
     <header
@@ -109,7 +116,7 @@ export function DesktopHeader({ locale, labels, localeSwitcher }: DesktopHeaderP
         style={{ height: compact ? "3.5rem" : "4rem" }}
       >
         <Link
-          href={`/${locale}`}
+          href={homeHref}
           className="shrink-0 font-display text-2xl leading-none text-primary transition-transform duration-fast ease-std"
         >
           {labels.appName}

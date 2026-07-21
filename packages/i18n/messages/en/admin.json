@@ -507,7 +507,8 @@
       "miniPrice": "Price label (optional)",
       "promoText": "Promo copy",
       "promoCta": "Promo button label",
-      "promoHref": "Promo link href"
+      "promoHref": "Promo link href",
+      "previewHint": "Save a draft, then open the customer preview link above. Mega-menu changes appear on any shop page while ?merch_preview= is in the URL."
     },
     "slots": {
       "hero": "Hero",
