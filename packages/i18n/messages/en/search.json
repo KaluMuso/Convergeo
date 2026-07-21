@@ -25,7 +25,8 @@
   "unavailable": {
     "title": "Search unavailable",
     "body": "We could not load search results right now. Try again shortly, or browse categories.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "browseHeading": "Browse instead"
   },
   "invalid": {
     "title": "That search is too long",

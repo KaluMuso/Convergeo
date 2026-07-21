@@ -25,7 +25,8 @@
   "unavailable": {
     "title": "Recherche indisponible",
     "body": "Nous n'avons pas pu charger les résultats. Réessayez sous peu, ou parcourez les catégories.",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "browseHeading": "Parcourir plutôt"
   },
   "invalid": {
     "title": "Cette recherche est trop longue",

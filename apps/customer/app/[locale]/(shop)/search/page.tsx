@@ -2,7 +2,6 @@ import { createApiClient } from "@vergeo/config";
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
-import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
@@ -26,9 +25,9 @@ import {
   encodeSearchFilters,
   type SearchFilterState,
 } from "../_components/search/search-filters";
-import { SearchInput } from "../_components/search/search-input";
 import { searchTabKinds, type SearchKind } from "../_components/search/search-kinds";
 import { SearchMobileFilterDrawer } from "../_components/search/search-mobile-filter-drawer";
+import { SearchUnavailablePanel } from "../_components/search/search-unavailable-panel";
 import {
   normalizeSearchQuery,
   parseSearchKind,
@@ -237,6 +236,30 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     t("suggestionTerms.lusakaVendors"),
   ];
 
+  const browseDiscoveryChips = [
+    {
+      key: "categories",
+      href: `/${locale}/categories`,
+      label: tCatalog("home.nav.allCategories"),
+    },
+    {
+      key: "directory",
+      href: `/${locale}/directory`,
+      label: tCatalog("home.nav.directory"),
+    },
+    {
+      key: "services",
+      href: `/${locale}/services`,
+      label: tCatalog("home.nav.services"),
+    },
+    {
+      key: "events",
+      href: `/${locale}/events`,
+      label: tCatalog("home.nav.events"),
+    },
+  ];
+  const browseDiscoveryAria = tCatalog("home.nav.browseChipsAria");
+
   const retryParams = new URLSearchParams();
   if (query.length > 0) {
     retryParams.set("q", query);
@@ -341,31 +364,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
           }}
         />
         {!query ? (
-          <BrowseDiscoveryChips
-            ariaLabel={tCatalog("home.nav.browseChipsAria")}
-            chips={[
-              {
-                key: "categories",
-                href: `/${locale}/categories`,
-                label: tCatalog("home.nav.allCategories"),
-              },
-              {
-                key: "directory",
-                href: `/${locale}/directory`,
-                label: tCatalog("home.nav.directory"),
-              },
-              {
-                key: "services",
-                href: `/${locale}/services`,
-                label: tCatalog("home.nav.services"),
-              },
-              {
-                key: "events",
-                href: `/${locale}/events`,
-                label: tCatalog("home.nav.events"),
-              },
-            ]}
-          />
+          <BrowseDiscoveryChips ariaLabel={browseDiscoveryAria} chips={browseDiscoveryChips} />
         ) : null}
       </header>
 
@@ -381,18 +380,16 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       />
 
       {view.status === "unavailable" ? (
-        <EmptyState
-          title={t("unavailable.title")}
-          body={t("unavailable.body")}
-          data-testid="search-unavailable"
-          action={
-            <Link
-              href={retryHref}
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-[var(--primary-btn-fg)]"
-            >
-              {t("unavailable.retry")}
-            </Link>
-          }
+        <SearchUnavailablePanel
+          retryHref={retryHref}
+          labels={{
+            title: t("unavailable.title"),
+            body: t("unavailable.body"),
+            retry: t("unavailable.retry"),
+            browseHeading: t("unavailable.browseHeading"),
+          }}
+          chips={browseDiscoveryChips}
+          browseAriaLabel={browseDiscoveryAria}
         />
       ) : null}
 
