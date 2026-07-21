@@ -17,7 +17,19 @@
   },
   "nav": {
     "home": "Kwenu",
-    "skipToContent": "Pita ku content"
+    "skipToContent": "Pita ku content",
+    "marketing": {
+      "ariaLabel": "Navigation ya marketing",
+      "about": "About",
+      "contact": "Contact",
+      "help": "Help",
+      "sell": "Sell pa Vergeo5",
+      "signIn": "Sign in"
+    },
+    "account": {
+      "ariaLabel": "Navigation ya account",
+      "menuAria": "Account menu"
+    }
   },
   "offline": {
     "body": "Takwaba connection nomba. Amapeji mwalola kale yakonka — connecteni limbi ukutwala ifyonse.",

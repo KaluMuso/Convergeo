@@ -17,7 +17,19 @@
   },
   "nav": {
     "home": "Kwathu",
-    "skipToContent": "Pitani ku content"
+    "skipToContent": "Pitani ku content",
+    "marketing": {
+      "ariaLabel": "Navigation ya marketing",
+      "about": "About",
+      "contact": "Contact",
+      "help": "Help",
+      "sell": "Sell pa Vergeo5",
+      "signIn": "Sign in"
+    },
+    "account": {
+      "ariaLabel": "Navigation ya account",
+      "menuAria": "Account menu"
+    }
   },
   "offline": {
     "body": "Palibe connection pano. Mapeji omwe mwaonako kale amagwirabe ntchito — connectaninso kuti muone zonse.",
