@@ -537,7 +537,8 @@ async def test_marketing_row_suppressed_when_all_channels_disabled(
     )
     assert row is not None
 
-    stats = await dispatcher.run_batch()
+    now = datetime(2026, 7, 8, 12, 0, tzinfo=UTC)
+    stats = await dispatcher.run_batch(now=now)
 
     assert stats.skipped == 1
     assert len(noop.sent) == 0
@@ -597,7 +598,8 @@ async def test_marketing_falls_back_to_enabled_channel(
     )
     assert row is not None
 
-    stats = await dispatcher.run_batch()
+    now = datetime(2026, 7, 8, 12, 0, tzinfo=UTC)
+    stats = await dispatcher.run_batch(now=now)
 
     assert stats.sent == 1
     assert noop.sent[0].channel == "sms"
