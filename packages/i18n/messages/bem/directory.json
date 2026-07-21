@@ -77,6 +77,8 @@
     "quickAdd": "Onja bwangu",
     "wishlist": "Sunga mu wishlist",
     "outOfStock": "Stock yapwa",
-    "distance": "{distance} ukutali"
+    "distance": "{distance} ukutali",
+    "conditionNew": "Cipya",
+    "conditionRefurbished": "Yakonzedwa"
   }
 }

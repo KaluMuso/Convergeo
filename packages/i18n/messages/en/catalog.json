@@ -59,7 +59,9 @@
       "wishlistRemove": "Remove from wishlist",
       "mediaEmpty": "No product image",
       "outOfStock": "Out of stock",
-      "distance": "{distance} away"
+      "distance": "{distance} away",
+      "conditionNew": "New",
+      "conditionRefurbished": "Refurbished"
     },
     "loadMore": "Load more",
     "loading": "Loading…",

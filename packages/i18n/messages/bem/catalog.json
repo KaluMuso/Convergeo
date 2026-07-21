@@ -202,7 +202,9 @@
       "wishlist": "Sungileni ku wishlist",
       "wishlistRemove": "Fumyeni ku wishlist",
       "mediaEmpty": "Takwaba picture ya product",
-      "quickAddError": "Tatwaishibe ukulenga mu cart. Checkeni connection no wesheni limbi."
+      "quickAddError": "Tatwaishibe ukulenga mu cart. Checkeni connection no wesheni limbi.",
+      "conditionNew": "Cipya",
+      "conditionRefurbished": "Yakonzedwa"
     },
     "defaultCategory": "Ifintu fyonse",
     "emptyBody": "Wesheni ukufuta filters nangu twaleni category yambi.",

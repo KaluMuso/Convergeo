@@ -253,6 +253,8 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
     distance: t("plp.card.distance"),
     sampleListing: t("home.demo.sampleListing"),
     mediaEmpty: t("plp.card.mediaEmpty"),
+    conditionNew: t("plp.card.conditionNew"),
+    conditionRefurbished: t("plp.card.conditionRefurbished"),
   };
 
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [

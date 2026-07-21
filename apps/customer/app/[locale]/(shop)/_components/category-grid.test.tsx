@@ -65,6 +65,28 @@ describe("CategoryGrid (CUST-HOME-01)", () => {
     expect(screen.getByRole("link", { name: "Browse Electronics" })).toBeInTheDocument();
   });
 
+  it("uses a denser marketplace category grid on desktop", () => {
+    render(
+      <CategoryGrid
+        categories={[
+          {
+            id: "1",
+            name: "Electronics",
+            slug: "electronics",
+            path: "electronics",
+            position: 0,
+            parent_id: null,
+            prohibited: false,
+          },
+        ]}
+        locale="en"
+        t={t}
+      />,
+    );
+    const grid = screen.getByTestId("home-category-grid");
+    expect(grid).toHaveClass("md:grid-cols-4", "lg:grid-cols-6", "xl:grid-cols-8");
+  });
+
   it("uses an approved merch image when provided", () => {
     render(
       <CategoryGrid

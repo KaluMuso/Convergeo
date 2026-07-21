@@ -164,6 +164,8 @@ export default async function ShopHomePage({ params }: PageProps) {
     distance: t("plp.card.distance"),
     sampleListing: t("home.demo.sampleListing"),
     mediaEmpty: t("plp.card.mediaEmpty"),
+    conditionNew: t("plp.card.conditionNew"),
+    conditionRefurbished: t("plp.card.conditionRefurbished"),
   };
 
   // Audit hierarchy: categories before flash/campaign; events after product rails.
