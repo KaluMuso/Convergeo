@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import type { ComponentProps } from "react";
 import { useSyncExternalStore } from "react";
+
+import type { ComponentProps } from "react";
 
 const PREVIEW_PARAM = "merch_preview";
 
