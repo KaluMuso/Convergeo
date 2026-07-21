@@ -4,6 +4,7 @@ import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
@@ -22,6 +23,7 @@ type EmailFormLabels = {
   invalidCredentials: string;
   emailNotConfirmed: string;
   alreadyRegistered: string;
+  forgotPassword?: string;
 };
 
 function messageForAuthError(
@@ -132,6 +134,17 @@ export function EmailForm({ locale, labels, mode, defaultNextPath, nextParam }: 
           onChange={(event) => setPassword(event.target.value)}
         />
       </FormField>
+
+      {mode === "login" && labels.forgotPassword ? (
+        <div className="-mt-1 flex justify-end">
+          <Link
+            href={`/${locale}/reset-password`}
+            className="min-h-11 inline-flex items-center font-body text-sm text-primary underline-offset-2 hover:underline"
+          >
+            {labels.forgotPassword}
+          </Link>
+        </div>
+      ) : null}
 
       {errorMessage ? (
         <p role="alert" className="font-body text-sm text-danger">

@@ -51,6 +51,7 @@ export function createLoginLabels(
       invalidCredentials: t("errors.invalidCredentials"),
       emailNotConfirmed: t("errors.emailNotConfirmed"),
       alreadyRegistered: t("errors.alreadyRegistered"),
+      forgotPassword: t("login.forgotPassword"),
     },
     divider: t("login.divider"),
     emailToggle: t("login.emailToggle"),
