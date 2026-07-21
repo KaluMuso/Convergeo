@@ -32,6 +32,24 @@
     "loadError": "Sitinathe kutenga results zina.",
     "retry": "Yesaninso"
   },
+  "filters": {
+    "heading": "Sankhani products",
+    "price": "Mtengo (ngwee)",
+    "minPrice": "Zochepa",
+    "maxPrice": "Zambiri",
+    "category": "Category",
+    "categoryAll": "Ma-categories onse",
+    "apply": "Ikani ma-filters",
+    "clear": "Chotsani ma-filters",
+    "openFilters": "Ma-filters",
+    "filtersActive": "Ma-filters (active)",
+    "appliedAria": "Ma-filters ogwira",
+    "clearAll": "Chotsani zonse",
+    "removeChip": "Chotsani {filter}",
+    "priceRange": "K{min} – K{max}",
+    "minPriceOnly": "Kuyambira K{min}",
+    "maxPriceOnly": "Kufikira K{max}"
+  },
   "placeholder": "Sakani pa Vergeo5",
   "recent": {
     "clear": "Chotsani zonse",

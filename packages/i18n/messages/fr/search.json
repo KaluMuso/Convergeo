@@ -69,6 +69,24 @@
     "loadError": "Impossible de charger plus de résultats.",
     "retry": "Réessayer"
   },
+  "filters": {
+    "heading": "Filtrer les produits",
+    "price": "Prix (ngwee)",
+    "minPrice": "Min",
+    "maxPrice": "Max",
+    "category": "Catégorie",
+    "categoryAll": "Toutes les catégories",
+    "apply": "Appliquer les filtres",
+    "clear": "Effacer les filtres",
+    "openFilters": "Filtres",
+    "filtersActive": "Filtres (actifs)",
+    "appliedAria": "Filtres appliqués",
+    "clearAll": "Tout effacer",
+    "removeChip": "Retirer {filter}",
+    "priceRange": "K{min} – K{max}",
+    "minPriceOnly": "À partir de K{min}",
+    "maxPriceOnly": "Jusqu’à K{max}"
+  },
   "result": {
     "priceFrom": "À partir de {price}",
     "category": "Dans {category}",

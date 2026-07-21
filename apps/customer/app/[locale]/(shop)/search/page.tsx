@@ -8,7 +8,17 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { resolveApiBaseUrl } from "../../../../lib/api-base-url";
+import { fetchCategoriesResult, type CategoryRow } from "../_components/merch-data";
 import { BrowseDiscoveryChips } from "../_components/browse-discovery-chips";
+import { SearchAppliedFilterBar } from "../_components/search/search-applied-filter-bar";
+import { SearchFilterPanel } from "../_components/search/search-filter-panel";
+import { SearchMobileFilterDrawer } from "../_components/search/search-mobile-filter-drawer";
+import {
+  appendSearchFiltersToApiParams,
+  decodeSearchFilters,
+  encodeSearchFilters,
+  type SearchFilterState,
+} from "../_components/search/search-filters";
 import { RecentSearches } from "../_components/search/recent-searches";
 import {
   ResultsTabs,
@@ -34,6 +44,9 @@ type PageProps = {
     q?: string;
     kind?: string;
     page?: string;
+    min_price?: string;
+    max_price?: string;
+    category_path?: string;
   }>;
 };
 
@@ -46,6 +59,7 @@ async function fetchSearch(params: {
   kind?: SearchKind;
   page?: number;
   pageSize?: number;
+  filters?: SearchFilterState;
 }): Promise<SearchResponse | null> {
   const baseUrl = resolveApiBaseUrl();
   if (!baseUrl) {
@@ -60,12 +74,31 @@ async function fetchSearch(params: {
   if (params.kind) {
     searchParams.set("kind", params.kind);
   }
+  if (params.filters) {
+    appendSearchFiltersToApiParams(searchParams, params.filters);
+  }
 
   try {
     return await client.request<SearchResponse>(`/search?${searchParams.toString()}`);
   } catch {
     return null;
   }
+}
+
+function buildSearchCategoryOptions(categories: CategoryRow[]) {
+  return categories
+    .filter((row) => !row.prohibited)
+    .sort((left, right) => left.position - right.position)
+    .map((row) => ({
+      path: row.path || row.slug,
+      label: row.name,
+    }));
+}
+
+function buildCategoryLabelMap(
+  options: Array<{ path: string; label: string }>,
+): Record<string, string> {
+  return Object.fromEntries(options.map((option) => [option.path, option.label]));
 }
 
 async function fetchTabCounts(query: string): Promise<TabCounts | null> {
@@ -125,7 +158,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
 
 export default async function SearchPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
-  const { q, kind: kindParam, page: pageParam } = await searchParams;
+  const resolvedSearchParams = await searchParams;
+  const { q, kind: kindParam, page: pageParam } = resolvedSearchParams;
 
   if (!LOCALES.includes(locale as Locale)) {
     return null;
@@ -152,6 +186,21 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   const activeKind = parseSearchKind(kindParam);
   const page = parseSearchPage(pageParam);
   const query = normalized.status === "ok" ? normalized.query : "";
+  const filterParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(resolvedSearchParams)) {
+    if (typeof value === "string" && value.length > 0) {
+      filterParams.set(key, value);
+    }
+  }
+  const filterState = decodeSearchFilters(filterParams);
+  const showProductFilters = activeKind === "all" || activeKind === "products";
+
+  const categoriesResult = await fetchCategoriesResult();
+  const searchCategoryOptions =
+    categoriesResult.ok && categoriesResult.categories.length > 0
+      ? buildSearchCategoryOptions(categoriesResult.categories)
+      : [];
+  const categoryLabelMap = buildCategoryLabelMap(searchCategoryOptions);
 
   const [searchResponse, tabCounts] =
     normalized.status === "ok"
@@ -160,6 +209,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
             q: query,
             kind: activeKind === "all" ? undefined : activeKind,
             page,
+            filters: showProductFilters ? filterState : undefined,
           }),
           fetchTabCounts(query),
         ])
@@ -186,12 +236,47 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     t("suggestionTerms.lusakaVendors"),
   ];
 
+  const retryParams = new URLSearchParams();
+  if (query.length > 0) {
+    retryParams.set("q", query);
+  }
+  if (activeKind !== "all") {
+    retryParams.set("kind", activeKind);
+  }
+  if (page > 1) {
+    retryParams.set("page", String(page));
+  }
+  for (const [key, value] of encodeSearchFilters(filterState).entries()) {
+    retryParams.set(key, value);
+  }
   const retryHref =
-    query.length > 0
-      ? `/${locale}/search?q=${encodeURIComponent(query)}${
-          activeKind !== "all" ? `&kind=${activeKind}` : ""
-        }${page > 1 ? `&page=${page}` : ""}`
+    retryParams.toString().length > 0
+      ? `/${locale}/search?${retryParams.toString()}`
       : `/${locale}/search`;
+
+  const filterPanelLabels = {
+    heading: t("filters.heading"),
+    price: t("filters.price"),
+    minPrice: t("filters.minPrice"),
+    maxPrice: t("filters.maxPrice"),
+    category: t("filters.category"),
+    categoryAll: t("filters.categoryAll"),
+    apply: t("filters.apply"),
+    clear: t("filters.clear"),
+    openFilters: t("filters.openFilters"),
+    filtersActive: t("filters.filtersActive"),
+  };
+
+  const appliedFilterLabels = {
+    ariaLabel: t("filters.appliedAria"),
+    clearAll: t("filters.clearAll"),
+    removeChip: t("filters.removeChip"),
+    priceRange: t("filters.priceRange"),
+    minPriceOnly: t("filters.minPriceOnly"),
+    maxPriceOnly: t("filters.maxPriceOnly"),
+  };
+
+  const searchPathname = `/${locale}/search`;
 
   return (
     // Shop layout already provides the page <main> landmark — avoid nesting.
@@ -309,41 +394,103 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
 
       {view.status === "results" ? (
         <Suspense fallback={null}>
-          <ResultsTabs
-            key={`${locale}|${view.query}|${view.kind}|${page}`}
-            locale={locale}
-            query={view.query}
-            activeKind={view.kind}
-            page={page}
-            response={view.response}
-            tabCounts={view.tabCounts}
-            apiBaseUrl={resolveApiBaseUrl() ?? ""}
-            labels={{
-              ariaLabel: t("tabs.ariaLabel"),
-              all: t("tabs.all"),
-              products: t("tabs.products"),
-              services: t("tabs.services"),
-              events: t("tabs.events"),
-              vendors: t("tabs.vendors"),
-              count: t("tabs.count"),
-              resultsCount: t("results.count", { count: view.response.total }),
-              degraded: t("results.degraded"),
-              priceFrom: t("result.priceFrom"),
-              category: t("result.category"),
-              marketplaceListing: t("result.marketplaceListing"),
-              wishlist: tCatalog("plp.card.wishlist"),
-              wishlistRemove: tCatalog("plp.card.wishlistRemove"),
-              mediaEmpty: tCatalog("plp.card.mediaEmpty"),
-              noReviews: tCatalog("plp.card.noReviews"),
-              reviewCount: tCatalog("plp.card.reviewCount"),
-              loadMore: t("pagination.loadMore"),
-              loading: t("pagination.loading"),
-              moreLoaded: t("pagination.moreLoaded"),
-              endOfResults: t("pagination.endOfResults"),
-              loadError: t("pagination.loadError"),
-              retry: t("pagination.retry"),
-            }}
-          />
+          {showProductFilters ? (
+            <div className="grid gap-3 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-4 xl:grid-cols-[15rem_minmax(0,1fr)]">
+              <div className="hidden lg:block">
+                <SearchFilterPanel
+                  labels={filterPanelLabels}
+                  categories={searchCategoryOptions}
+                  initialState={filterState}
+                />
+              </div>
+              <div className="flex min-w-0 flex-col gap-3">
+                <SearchMobileFilterDrawer
+                  labels={filterPanelLabels}
+                  categories={searchCategoryOptions}
+                  initialState={filterState}
+                />
+                <SearchAppliedFilterBar
+                  pathname={searchPathname}
+                  searchParams={filterParams}
+                  filterState={filterState}
+                  categoryLabels={categoryLabelMap}
+                  labels={appliedFilterLabels}
+                />
+                <ResultsTabs
+                  key={`${locale}|${view.query}|${view.kind}|${page}|${JSON.stringify(filterState)}`}
+                  locale={locale}
+                  query={view.query}
+                  activeKind={view.kind}
+                  page={page}
+                  response={view.response}
+                  tabCounts={view.tabCounts}
+                  apiBaseUrl={resolveApiBaseUrl() ?? ""}
+                  filterState={filterState}
+                  labels={{
+                    ariaLabel: t("tabs.ariaLabel"),
+                    all: t("tabs.all"),
+                    products: t("tabs.products"),
+                    services: t("tabs.services"),
+                    events: t("tabs.events"),
+                    vendors: t("tabs.vendors"),
+                    count: t("tabs.count"),
+                    resultsCount: t("results.count", { count: view.response.total }),
+                    degraded: t("results.degraded"),
+                    priceFrom: t("result.priceFrom"),
+                    category: t("result.category"),
+                    marketplaceListing: t("result.marketplaceListing"),
+                    wishlist: tCatalog("plp.card.wishlist"),
+                    wishlistRemove: tCatalog("plp.card.wishlistRemove"),
+                    mediaEmpty: tCatalog("plp.card.mediaEmpty"),
+                    noReviews: tCatalog("plp.card.noReviews"),
+                    reviewCount: tCatalog("plp.card.reviewCount"),
+                    loadMore: t("pagination.loadMore"),
+                    loading: t("pagination.loading"),
+                    moreLoaded: t("pagination.moreLoaded"),
+                    endOfResults: t("pagination.endOfResults"),
+                    loadError: t("pagination.loadError"),
+                    retry: t("pagination.retry"),
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <ResultsTabs
+              key={`${locale}|${view.query}|${view.kind}|${page}`}
+              locale={locale}
+              query={view.query}
+              activeKind={view.kind}
+              page={page}
+              response={view.response}
+              tabCounts={view.tabCounts}
+              apiBaseUrl={resolveApiBaseUrl() ?? ""}
+              labels={{
+                ariaLabel: t("tabs.ariaLabel"),
+                all: t("tabs.all"),
+                products: t("tabs.products"),
+                services: t("tabs.services"),
+                events: t("tabs.events"),
+                vendors: t("tabs.vendors"),
+                count: t("tabs.count"),
+                resultsCount: t("results.count", { count: view.response.total }),
+                degraded: t("results.degraded"),
+                priceFrom: t("result.priceFrom"),
+                category: t("result.category"),
+                marketplaceListing: t("result.marketplaceListing"),
+                wishlist: tCatalog("plp.card.wishlist"),
+                wishlistRemove: tCatalog("plp.card.wishlistRemove"),
+                mediaEmpty: tCatalog("plp.card.mediaEmpty"),
+                noReviews: tCatalog("plp.card.noReviews"),
+                reviewCount: tCatalog("plp.card.reviewCount"),
+                loadMore: t("pagination.loadMore"),
+                loading: t("pagination.loading"),
+                moreLoaded: t("pagination.moreLoaded"),
+                endOfResults: t("pagination.endOfResults"),
+                loadError: t("pagination.loadError"),
+                retry: t("pagination.retry"),
+              }}
+            />
+          )}
         </Suspense>
       ) : null}
     </div>

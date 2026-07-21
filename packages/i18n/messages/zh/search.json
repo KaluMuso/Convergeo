@@ -69,6 +69,24 @@
     "loadError": "无法加载更多结果。",
     "retry": "重试"
   },
+  "filters": {
+    "heading": "筛选商品",
+    "price": "价格（恩格韦）",
+    "minPrice": "最低",
+    "maxPrice": "最高",
+    "category": "分类",
+    "categoryAll": "全部分类",
+    "apply": "应用筛选",
+    "clear": "清除筛选",
+    "openFilters": "筛选",
+    "filtersActive": "筛选（已启用）",
+    "appliedAria": "已应用的筛选",
+    "clearAll": "全部清除",
+    "removeChip": "移除 {filter}",
+    "priceRange": "K{min} – K{max}",
+    "minPriceOnly": "从 K{min} 起",
+    "maxPriceOnly": "最高 K{max}"
+  },
   "result": {
     "priceFrom": "{price} 起",
     "category": "属于 {category}",
