@@ -7,6 +7,7 @@ import { useEffect, type ReactNode } from "react";
 import { getCartItemCount, useCartActions, useCartStore } from "./cart/mini-cart-drawer";
 import { CategoryMegaMenu } from "./category-mega-menu";
 import { DesktopHeaderSearch } from "./desktop-header-search";
+import { MerchPreviewLink, useMerchPreviewToken, withMerchPreviewParam } from "./merch-preview-nav";
 import { useBusinessEligibility } from "./use-business-eligibility";
 
 import type { SearchInputLabels } from "./search/search-input";
@@ -53,6 +54,7 @@ const navLinkClassName =
  * gated Supplies link for verified business buyers.
  */
 export function ShopHeader({ locale, labels, localeSwitcher, mobileSearchSlot }: ShopHeaderProps) {
+  const previewToken = useMerchPreviewToken();
   const { cart } = useCartStore();
   const { refresh } = useCartActions();
   const eligibleForSupplies = useBusinessEligibility();
@@ -72,11 +74,17 @@ export function ShopHeader({ locale, labels, localeSwitcher, mobileSearchSlot }:
     { key: "services", href: `/${locale}/services`, label: labels.services },
     { key: "events", href: `/${locale}/events`, label: labels.events },
     { key: "ask", href: `/${locale}/ask`, label: labels.askVergeo },
-  ];
+  ].map((link) => ({
+    ...link,
+    href: withMerchPreviewParam(link.href, previewToken),
+  }));
 
   const suppliesSlot = eligibleForSupplies ? (
     <li>
-      <Link href={`/${locale}/supplies`} className={navLinkClassName}>
+      <Link
+        href={withMerchPreviewParam(`/${locale}/supplies`, previewToken)}
+        className={navLinkClassName}
+      >
         {labels.supplies}
       </Link>
     </li>
@@ -87,7 +95,11 @@ export function ShopHeader({ locale, labels, localeSwitcher, mobileSearchSlot }:
       variant="shop"
       data-testid="shop-header"
       appName={labels.appName}
-      logoHref={`/${locale}`}
+      logo={
+        <MerchPreviewLink href={`/${locale}`} className="font-display text-primary">
+          {labels.appName}
+        </MerchPreviewLink>
+      }
       mobileSearchSlot={mobileSearchSlot}
       desktopSearchSlot={<DesktopHeaderSearch locale={locale} labels={labels.searchInput} />}
       categoriesSlot={
@@ -110,11 +122,11 @@ export function ShopHeader({ locale, labels, localeSwitcher, mobileSearchSlot }:
       suppliesSlot={suppliesSlot}
       localeSwitcher={localeSwitcher}
       cartCount={cartCount}
-      cartHref={`/${locale}/cart`}
+      cartHref={withMerchPreviewParam(`/${locale}/cart`, previewToken)}
       cartLabel={labels.cart}
       cartCountLabel={cartCountLabel}
       accountLabel={labels.account}
-      accountHref={`/${locale}/account`}
+      accountHref={withMerchPreviewParam(`/${locale}/account`, previewToken)}
       skipLinkTargetId="shop-main"
       skipLinkLabel={labels.skipToContent}
       navAriaLabel={labels.navAriaLabel}

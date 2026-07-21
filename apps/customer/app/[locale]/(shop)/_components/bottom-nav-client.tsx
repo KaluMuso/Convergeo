@@ -4,6 +4,7 @@ import { BottomNav, type BottomNavItem } from "@vergeo/ui/src/bottom-nav";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { useMerchPreviewToken, withMerchPreviewParam } from "./merch-preview-nav";
 import { useBusinessEligibility } from "./use-business-eligibility";
 
 type BottomNavClientProps = {
@@ -32,15 +33,20 @@ function normalise(path: string): string {
  */
 export function BottomNavClient({ items, ariaLabel, locale, suppliesItem }: BottomNavClientProps) {
   const pathname = usePathname();
+  const previewToken = useMerchPreviewToken();
   const eligibleForSupplies = useBusinessEligibility();
   const current = normalise(pathname ?? `/${locale}`);
   const home = normalise(`/${locale}`);
 
   const navItems = suppliesItem && eligibleForSupplies ? [...items, suppliesItem] : items;
+  const previewAwareItems = navItems.map((item) => ({
+    ...item,
+    href: withMerchPreviewParam(item.href, previewToken),
+  }));
 
   let bestIndex = -1;
   let bestLength = -1;
-  navItems.forEach((item, index) => {
+  previewAwareItems.forEach((item, index) => {
     const href = normalise(item.href);
     const matches =
       href === home ? current === home : current === href || current.startsWith(`${href}/`);
@@ -50,7 +56,7 @@ export function BottomNavClient({ items, ariaLabel, locale, suppliesItem }: Bott
     }
   });
 
-  const resolved: BottomNavItem[] = navItems.map((item, index) => ({
+  const resolved: BottomNavItem[] = previewAwareItems.map((item, index) => ({
     ...item,
     active: index === bestIndex,
   }));
