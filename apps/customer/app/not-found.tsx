@@ -22,7 +22,7 @@ export default async function RootNotFound() {
 
   return (
     <html lang={locale}>
-      <body className={`${fontVariables} bg-bg text-text antialiased`}>
+      <body className={`${fontVariables()} bg-bg text-text antialiased`}>
         <main className="mx-auto flex min-h-dvh w-full max-w-[360px] flex-col items-start justify-center gap-4 p-6">
           <p aria-hidden="true" className="font-mono text-5xl font-bold text-primary">
             {t("code")}
