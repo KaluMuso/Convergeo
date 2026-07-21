@@ -18,8 +18,8 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { SentryInit } from "../sentry-init";
 
-import { LocaleSwitcher } from "./_components/locale-switcher";
 import { type LegalTranslator } from "./(marketing)/legal/_components/legal-shell";
+import { LocaleSwitcher } from "./_components/locale-switcher";
 import { ServiceWorkerRegister } from "./_components/service-worker-register";
 
 import type { Metadata, Viewport } from "next";
