@@ -77,6 +77,8 @@
     "quickAdd": "Onjezani mwachangu",
     "wishlist": "Sungani mu wishlist",
     "outOfStock": "Stock yapatha",
-    "distance": "{distance} kutali"
+    "distance": "{distance} kutali",
+    "conditionNew": "Chatsopano",
+    "conditionRefurbished": "Chokonzedwa"
   }
 }

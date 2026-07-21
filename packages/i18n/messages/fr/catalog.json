@@ -57,7 +57,9 @@
       "distance": "À {distance}",
       "wishlistRemove": "Retirer de la liste",
       "mediaEmpty": "Pas d’image produit",
-      "quickAddError": "Impossible d’ajouter au panier. Vérifiez votre connexion et réessayez."
+      "quickAddError": "Impossible d’ajouter au panier. Vérifiez votre connexion et réessayez.",
+      "conditionNew": "Neuf",
+      "conditionRefurbished": "Reconditionné"
     },
     "loadMore": "Voir plus",
     "loading": "Chargement…",

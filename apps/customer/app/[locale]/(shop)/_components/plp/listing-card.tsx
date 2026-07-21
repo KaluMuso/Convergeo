@@ -38,7 +38,24 @@ export type ListingCardLabels = {
   distance: string;
   sampleListing?: string;
   mediaEmpty?: string;
+  /** Honest condition copy — only shown for known API values. */
+  conditionNew?: string;
+  conditionRefurbished?: string;
 };
+
+/** Map listing.condition to a label; unknown values render nothing (no invention). */
+export function listingConditionLabel(
+  condition: string,
+  labels: Pick<ListingCardLabels, "conditionNew" | "conditionRefurbished">,
+): string | undefined {
+  if (condition === "new") {
+    return labels.conditionNew;
+  }
+  if (condition === "refurbished") {
+    return labels.conditionRefurbished;
+  }
+  return undefined;
+}
 
 type ListingCardProps = {
   locale: string;
@@ -88,6 +105,7 @@ export function ListingCard({
 
   const wishlistLabel =
     isWishlisted && labels.wishlistRemove ? labels.wishlistRemove : labels.wishlist;
+  const conditionLabel = listingConditionLabel(listing.condition, labels);
 
   useEffect(() => {
     if (!wishlistMountedRef.current) {
@@ -132,6 +150,11 @@ export function ListingCard({
         density={density}
         unavailable={!listing.inStock}
         mediaEmptyLabel={labels.mediaEmpty}
+        meta={
+          conditionLabel ? (
+            <span data-testid="listing-card-condition">{conditionLabel}</span>
+          ) : undefined
+        }
         isWishlisted={isWishlisted}
         onWishlistToggle={enabled ? toggleWishlist : undefined}
         onQuickAdd={listing.inStock ? onQuickAdd : undefined}

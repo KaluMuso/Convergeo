@@ -302,6 +302,8 @@ export default async function VendorProfilePage({ params }: PageProps) {
             wishlist: t("listings.wishlist"),
             outOfStock: t("listings.outOfStock"),
             distance: t("listings.distance"),
+            conditionNew: t("listings.conditionNew"),
+            conditionRefurbished: t("listings.conditionRefurbished"),
           }}
         />
       ),

@@ -77,6 +77,8 @@
     "quickAdd": "快速添加",
     "wishlist": "加入心愿单",
     "outOfStock": "缺货",
-    "distance": "相距 {distance}"
+    "distance": "相距 {distance}",
+    "conditionNew": "全新",
+    "conditionRefurbished": "翻新"
   }
 }

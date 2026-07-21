@@ -202,7 +202,9 @@
       "wishlist": "Sungani ku wishlist",
       "wishlistRemove": "Chotsani ku wishlist",
       "mediaEmpty": "Palibe chithunzi cha product",
-      "quickAddError": "Sitinathe kuonjezera ku cart. Onani connection ndi yesaninso."
+      "quickAddError": "Sitinathe kuonjezera ku cart. Onani connection ndi yesaninso.",
+      "conditionNew": "Chatsopano",
+      "conditionRefurbished": "Chokonzedwa"
     },
     "defaultCategory": "Zinthu zonse",
     "emptyBody": "Yesani kuchotsa ma-filters kapena yang'anani category ina.",

@@ -77,6 +77,8 @@
     "quickAdd": "Ajout rapide",
     "wishlist": "Ajouter aux favoris",
     "outOfStock": "En rupture de stock",
-    "distance": "À {distance}"
+    "distance": "À {distance}",
+    "conditionNew": "Neuf",
+    "conditionRefurbished": "Reconditionné"
   }
 }

@@ -57,7 +57,9 @@
       "distance": "相距 {distance}",
       "wishlistRemove": "移出收藏",
       "mediaEmpty": "暂无商品图片",
-      "quickAddError": "无法加入购物车。请检查网络后重试。"
+      "quickAddError": "无法加入购物车。请检查网络后重试。",
+      "conditionNew": "全新",
+      "conditionRefurbished": "翻新"
     },
     "loadMore": "加载更多",
     "loading": "加载中…",
