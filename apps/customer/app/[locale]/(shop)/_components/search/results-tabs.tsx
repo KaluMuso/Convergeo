@@ -239,10 +239,17 @@ function SearchProductCard({
     />
   );
 
+  // Stretched link sibling — keeps wishlist control out of the anchor.
   return (
-    <Link href={href} className="min-w-0 no-underline" data-testid="search-product-card">
+    <div className="relative min-w-0" data-testid="search-product-card">
       {card}
-    </Link>
+      <Link
+        href={href}
+        className="absolute inset-0 z-[1] rounded-lg focus-visible:outline-none focus-visible:shadow-focusRing"
+        aria-label={hit.title}
+        data-testid="search-product-card-link"
+      />
+    </div>
   );
 }
 

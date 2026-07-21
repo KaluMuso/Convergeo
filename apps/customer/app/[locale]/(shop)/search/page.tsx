@@ -8,6 +8,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { resolveApiBaseUrl } from "../../../../lib/api-base-url";
+import { BackToTop } from "../_components/back-to-top";
 import { BrowseDiscoveryChips } from "../_components/browse-discovery-chips";
 import { RecentSearches } from "../_components/search/recent-searches";
 import {
@@ -346,6 +347,8 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
           />
         </Suspense>
       ) : null}
+
+      {view.status === "results" ? <BackToTop label={t("pagination.backToTop")} /> : null}
     </div>
   );
 }

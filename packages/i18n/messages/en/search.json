@@ -67,7 +67,8 @@
     "moreLoaded": "{count} more results loaded.",
     "endOfResults": "You’ve reached the end of the results.",
     "loadError": "Couldn’t load more results.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "backToTop": "Back to top"
   },
   "result": {
     "priceFrom": "From {price}",
