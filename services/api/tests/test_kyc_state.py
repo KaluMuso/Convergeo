@@ -13,6 +13,7 @@ from app.errors import AppError
 from app.services.kyc.state_machine import (
     KycTransitionError,
     transition_approve,
+    transition_reject,
     transition_start_review,
 )
 from tests.rls.conftest import (
@@ -266,3 +267,33 @@ class TestKycVendorCas:
 
         assert exc_info.value.code == "kyc_invalid_transition"
         assert exc_info.value.http_status == 409
+
+    def test_concurrent_reject_exactly_one_wins(self, db: PgConn) -> None:
+        vendor_id = str(uuid.uuid4())
+        kyc_id = str(uuid.uuid4())
+        _seed_pending_kyc_vendor(db, vendor_id=vendor_id, kyc_id=kyc_id)
+        wrapper = _ServiceWrapper(db)
+
+        def reject() -> object:
+            try:
+                return transition_reject(
+                    actor_id=ADMIN_ID,
+                    vendor_id=vendor_id,
+                    kyc_record_id=kyc_id,
+                    reviewer_notes="duplicate reject race",
+                    service_client=wrapper,
+                )
+            except AppError as exc:
+                if exc.code == "kyc_transition_conflict":
+                    return None
+                raise
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [executor.submit(reject), executor.submit(reject)]
+            results = [future.result() for future in futures]
+
+        result = db.run(f"SELECT status FROM public.kyc_records WHERE id = '{kyc_id}';")
+        assert result.ok and result.rows
+        assert result.rows[0] == "rejected"
+        successes = [result for result in results if result is not None]
+        assert len(successes) == 1

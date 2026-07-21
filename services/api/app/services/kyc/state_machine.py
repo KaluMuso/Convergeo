@@ -58,6 +58,7 @@ class KycRecordSnapshot:
     vendor_id: str
     tier: int
     status: str
+    db_status: str
     doc_storage_paths: list[str]
     momo_name_match: dict[str, Any] | None
     reviewer_notes: str | None
@@ -172,6 +173,7 @@ def _snapshot_from_row(row: dict[str, Any]) -> KycRecordSnapshot:
         vendor_id=str(row["vendor_id"]),
         tier=int(row["tier"]),
         status=normalize_record_status(str(row["status"])),
+        db_status=str(row["status"]),
         doc_storage_paths=doc_paths,
         momo_name_match=momo_match,
         reviewer_notes=str(reviewer_notes) if isinstance(reviewer_notes, str) else None,
@@ -347,6 +349,7 @@ def _update_kyc_record(
     service_client: ServiceRoleClient,
     kyc_record_id: str,
     *,
+    expected_status: str,
     status: str | None = None,
     momo_name_match: dict[str, Any] | None = None,
     reviewer_notes: str | None = None,
@@ -377,15 +380,19 @@ def _update_kyc_record(
         service_client.client.table("kyc_records")
         .update(payload)
         .eq("id", kyc_record_id)
+        .eq("status", expected_status)
         .execute()
     )
     row = _single_row(response)
     if row is None:
         rows = _rows(response)
-        if rows:
-            row = rows[0]
-    if row is None:
-        raise AppError(code="not_found", message="KYC record not found", http_status=404)
+        if not rows:
+            raise AppError(
+                code="kyc_transition_conflict",
+                message="Concurrent transition changed KYC record state",
+                http_status=409,
+            )
+        row = rows[0]
     return row
 
 
@@ -550,6 +557,7 @@ def transition_start_review(
         kyc_after = _update_kyc_record(
             client,
             kyc_record_id,
+            expected_status=kyc_record.db_status,
             status="under_review",
             lifecycle_reason=lifecycle_reason,
         )
@@ -619,6 +627,7 @@ def transition_approve(
     kyc_after = _update_kyc_record(
         client,
         kyc_record_id,
+        expected_status=kyc_record.db_status,
         status="approved",
         reviewer_notes=reviewer_notes,
         reviewed_by=actor_id,
@@ -683,6 +692,7 @@ def transition_reject(
     kyc_after = _update_kyc_record(
         client,
         kyc_record_id,
+        expected_status=kyc_record.db_status,
         status="rejected",
         reviewer_notes=reviewer_notes,
         reviewed_by=actor_id,
@@ -735,6 +745,7 @@ def transition_suspend(
     kyc_after = _update_kyc_record(
         client,
         kyc_record_id,
+        expected_status=kyc_record.db_status,
         status="suspended",
         lifecycle_reason=reason,
         reviewer_notes=reason,
@@ -797,6 +808,7 @@ def transition_revoke(
     kyc_after = _update_kyc_record(
         client,
         kyc_record_id,
+        expected_status=kyc_record.db_status,
         status="revoked",
         lifecycle_reason=reason,
         reviewer_notes=reason,
