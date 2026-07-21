@@ -1,7 +1,6 @@
 "use client";
 
 import { AppHeader } from "@vergeo/ui/src/app-header";
-import { IconCart } from "@vergeo/ui/src/icons";
 import Link from "next/link";
 import { useEffect } from "react";
 
@@ -54,13 +53,11 @@ export function AccountHeaderSearch({
   );
 }
 
-export function AccountHeaderCart({
+export function AccountAppHeaderClient({
   locale,
   labels,
-}: {
-  locale: string;
-  labels: Pick<AccountHeaderClientLabels, "cart" | "cartWithCount">;
-}) {
+  localeSwitcher,
+}: AccountHeaderClientProps) {
   const { cart } = useCartStore();
   const { refresh } = useCartActions();
 
@@ -69,52 +66,30 @@ export function AccountHeaderCart({
   }, [refresh]);
 
   const cartCount = getCartItemCount(cart);
-  const cartAriaLabel =
-    cartCount > 0
-      ? labels.cartWithCount.replace("{count}", formatCartCount(cartCount))
-      : labels.cart;
+  const cartCountLabel =
+    cartCount > 0 ? labels.cartWithCount.replace("{count}", formatCartCount(cartCount)) : undefined;
 
-  return (
-    <>
-      <Link
-        href={`/${locale}/cart`}
-        aria-label={cartAriaLabel}
-        className="relative inline-flex min-h-11 min-w-11 items-center justify-center rounded text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-      >
-        <IconCart aria-hidden />
-        {cartCount > 0 ? (
-          <span
-            aria-hidden
-            className="absolute -right-0.5 -top-0.5 flex min-h-5 min-w-5 items-center justify-center rounded-pill bg-accent px-1 text-micro font-semibold text-surface"
-          >
-            {formatCartCount(cartCount)}
-          </span>
-        ) : null}
-        <span className="sr-only">{labels.cart}</span>
-      </Link>
-      <span className="sr-only" aria-live="polite" aria-atomic="true">
-        {cartCount > 0 ? cartAriaLabel : ""}
-      </span>
-    </>
-  );
-}
+  const searchSlot = <AccountHeaderSearch locale={locale} placeholder={labels.searchPlaceholder} />;
 
-export function AccountAppHeaderClient({
-  locale,
-  labels,
-  localeSwitcher,
-}: AccountHeaderClientProps) {
   return (
     <AppHeader
       variant="account"
+      features={{ showAccount: false }}
+      appName={labels.appName}
       logo={
-        <Link href={`/${locale}`} className="font-display text-lg text-primary">
+        <Link href={`/${locale}`} className="font-display text-primary">
           {labels.appName}
         </Link>
       }
       navAriaLabel={labels.navAriaLabel}
-      trailingSlot={localeSwitcher}
-      searchSlot={<AccountHeaderSearch locale={locale} placeholder={labels.searchPlaceholder} />}
+      skipLinkTargetId="account-main"
+      mobileSearchSlot={searchSlot}
+      desktopSearchSlot={searchSlot}
+      localeSwitcher={localeSwitcher}
+      cartCount={cartCount}
+      cartHref={`/${locale}/cart`}
+      cartLabel={labels.cart}
+      cartCountLabel={cartCountLabel}
       accountMenuSlot={
         <AccountHeaderMenu
           locale={locale}
@@ -128,7 +103,6 @@ export function AccountAppHeaderClient({
           }}
         />
       }
-      cartSlot={<AccountHeaderCart locale={locale} labels={labels} />}
       LinkComponent={Link}
     />
   );

@@ -18,7 +18,7 @@ type MarketingAppHeaderProps = {
 };
 
 export function MarketingAppHeader({ locale, labels }: MarketingAppHeaderProps) {
-  const links = [
+  const navLinks = [
     { key: "about", href: `/${locale}/about`, label: labels.about },
     { key: "contact", href: `/${locale}/contact`, label: labels.contact },
     { key: "help", href: `/${locale}/help`, label: labels.help },
@@ -28,13 +28,16 @@ export function MarketingAppHeader({ locale, labels }: MarketingAppHeaderProps) 
   return (
     <AppHeader
       variant="marketing"
+      features={{ showSearch: false }}
+      appName={labels.appName}
       logo={
-        <Link href={`/${locale}`} className="font-display text-lg text-primary">
+        <Link href={`/${locale}`} className="font-display text-primary">
           {labels.appName}
         </Link>
       }
       navAriaLabel={labels.navAriaLabel}
-      links={links}
+      skipLinkTargetId="marketing-main"
+      navLinks={navLinks}
       signInSlot={
         <LinkButton href={`/${locale}/login`} variant="primary" size="md" LinkComponent={Link}>
           {labels.signIn}

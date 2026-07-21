@@ -121,7 +121,31 @@
       "escrowLine": "在线支付可用时提供托管保护——款项由 Vergeo5 保管至送达后再放款。",
       "escrowStep1": "您付款",
       "escrowStep2": "由 Vergeo5 保管",
-      "escrowStep3": "送达后放款"
+      "escrowStep3": "送达后放款",
+      "carousel": {
+        "previous": "上一张",
+        "next": "下一张",
+        "slideOf": "第 {current} 张，共 {total} 张",
+        "ariaLabel": "首页主视觉轮播"
+      },
+      "slides": {
+        "fashion": {
+          "title": "赞比亚卖家的服饰与面料",
+          "subtitle": "发现奇滕格、传统服饰与日常穿搭。"
+        },
+        "tech": {
+          "title": "手机、电脑与日常科技",
+          "subtitle": "结账前比较价格与卖家。"
+        },
+        "power": {
+          "title": "家用与商用的太阳能与电力",
+          "subtitle": "查找附近的太阳能板、电池与备用电源。"
+        },
+        "essentials": {
+          "title": "厨房与家居必需品",
+          "subtitle": "采购厨具、家电与家居用品。"
+        }
+      }
     },
     "trust": {
       "ariaLabel": "为何选择 Vergeo5",

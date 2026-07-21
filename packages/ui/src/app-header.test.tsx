@@ -12,78 +12,128 @@ describe("AppHeader", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders marketing links and sign-in slot", () => {
+  it("renders shop variant with Directory primary link and gated supplies slot", () => {
     render(
       <AppHeader
-        variant="marketing"
-        logo={<span>Vergeo5</span>}
-        navAriaLabel="Marketing"
-        links={[
-          { key: "about", href: "/en/about", label: "About" },
-          { key: "contact", href: "/en/contact", label: "Contact" },
+        variant="shop"
+        appName="Vergeo5"
+        cartLabel="Cart"
+        skipLinkTargetId="shop-main"
+        navAriaLabel="Shop navigation"
+        navLinks={[
+          { key: "directory", href: "/en/directory", label: "Directory" },
+          { key: "services", href: "/en/services", label: "Services" },
         ]}
-        signInSlot={<a href="/en/login">Sign in</a>}
+        desktopSearchSlot={<div role="search">Search</div>}
+        suppliesSlot={
+          <li>
+            <a href="/en/supplies">Supplies</a>
+          </li>
+        }
+        LinkComponent={({ href, children, className }) => (
+          <a href={href} className={className}>
+            {children}
+          </a>
+        )}
       />,
     );
 
-    expect(screen.getByTestId("app-header")).toHaveAttribute("data-variant", "marketing");
-    expect(screen.getAllByRole("link", { name: "About" }).length).toBe(2);
-    expect(screen.getByRole("link", { name: "Sign in" })).toBeInTheDocument();
-  });
-
-  it("renders account search, menu, and cart slots", () => {
-    render(
-      <AppHeader
-        variant="account"
-        logo={<span>Vergeo5</span>}
-        navAriaLabel="Account"
-        searchSlot={<a href="/en/search">Search products</a>}
-        accountMenuSlot={<button type="button">Account menu</button>}
-        cartSlot={<a href="/en/cart">Cart</a>}
-      />,
-    );
-
-    expect(screen.getByTestId("app-header")).toHaveAttribute("data-variant", "account");
-    expect(screen.getByRole("link", { name: "Search products" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Account menu" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Cart" })).toBeInTheDocument();
-  });
-
-  it("renders optional skip link", () => {
-    render(
-      <AppHeader
-        variant="marketing"
-        logo={<span>Vergeo5</span>}
-        navAriaLabel="Marketing"
-        skipLink={{ targetId: "marketing-main", label: "Skip to content" }}
-      />,
-    );
-
-    expect(screen.getByRole("link", { name: "Skip to content" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Directory" })).toHaveAttribute(
       "href",
-      "#marketing-main",
+      "/en/directory",
     );
+    expect(screen.getByRole("link", { name: "Supplies" })).toHaveAttribute("href", "/en/supplies");
+    expect(screen.getByRole("search")).toBeInTheDocument();
   });
 
-  it("toggles scrolled shadow class after scroll", () => {
+  it("hides cart badge when count is 0", () => {
+    render(
+      <AppHeader
+        variant="shop"
+        appName="Vergeo5"
+        cartLabel="Cart"
+        cartCount={0}
+        cartHref="/en/cart"
+        skipLinkTargetId="shop-main"
+        navAriaLabel="Shop navigation"
+        LinkComponent={({ href, children, ...rest }) => (
+          <a href={href} {...rest}>
+            {children}
+          </a>
+        )}
+      />,
+    );
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
+  });
+
+  it("includes cart count in accessible name and live region", () => {
+    render(
+      <AppHeader
+        variant="shop"
+        appName="Vergeo5"
+        cartLabel="Cart"
+        cartCount={3}
+        cartCountLabel="Cart, 3 items"
+        cartHref="/en/cart"
+        skipLinkTargetId="shop-main"
+        navAriaLabel="Shop navigation"
+        LinkComponent={({ href, children, ...rest }) => (
+          <a href={href} {...rest}>
+            {children}
+          </a>
+        )}
+      />,
+    );
+    expect(screen.getAllByRole("link", { name: "Cart, 3 items" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Cart, 3 items").length).toBe(1);
+  });
+
+  it("renders auth variant with hero wordmark and no cart", () => {
+    render(
+      <AppHeader
+        variant="auth"
+        appName="Vergeo5"
+        tagline="Discover Zambia"
+        skipLinkTargetId="auth-main"
+        skipLinkLabel="Skip to content"
+        navAriaLabel="Auth"
+        secondaryLink={<a href="/en">Back to shop</a>}
+      />,
+    );
+
+    expect(screen.getByTestId("app-header-wordmark")).toHaveTextContent("Vergeo5");
+    expect(screen.getByText("Discover Zambia")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Back to shop" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /cart/i })).not.toBeInTheDocument();
+  });
+
+  it("toggles compact scrolled state on shop variant", () => {
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb: FrameRequestCallback) => {
       cb(0);
-      return 0;
+      return 1;
     });
+    Object.defineProperty(window, "scrollY", { value: 0, writable: true, configurable: true });
 
     const { container } = render(
-      <AppHeader variant="marketing" logo={<span>Vergeo5</span>} navAriaLabel="Marketing" />,
+      <AppHeader
+        variant="shop"
+        appName="Vergeo5"
+        cartLabel="Cart"
+        cartCount={2}
+        skipLinkTargetId="shop-main"
+        navAriaLabel="Shop navigation"
+      />,
     );
 
-    const header = container.querySelector('[data-testid="app-header"]');
-    expect(header).not.toBeNull();
-    expect(header).not.toHaveClass("app-header--scrolled");
+    const header = container.querySelector("header");
+    expect(header).toHaveAttribute("data-compact", "false");
 
     act(() => {
-      Object.defineProperty(window, "scrollY", { value: 80, configurable: true });
+      Object.defineProperty(window, "scrollY", { value: 80, writable: true, configurable: true });
       window.dispatchEvent(new Event("scroll"));
     });
 
-    expect(header).toHaveClass("app-header--scrolled");
+    expect(header).toHaveAttribute("data-compact", "true");
+    expect(header).toHaveStyle({ boxShadow: "var(--shadow-1)" });
   });
 });
