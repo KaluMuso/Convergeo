@@ -7,6 +7,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
+import { BackToTop } from "../_components/back-to-top";
 import {
   DateFilterChips,
   EVENT_CATEGORIES,
@@ -130,6 +131,12 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
   setRequestLocale(locale);
 
   const t = await getEventsTranslator(locale);
+  const catalogMessages = await loadNamespace(locale as Locale, "catalog");
+  const tCatalog = createTranslator({
+    locale,
+    messages: { catalog: catalogMessages },
+    namespace: "catalog",
+  }) as EventsTranslator;
   const dateWindow = parseDateWindow(query.date_window);
   const category = parseCategory(query.category);
   const data = await fetchEvents({ dateWindow, category });
@@ -183,17 +190,20 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
       {items.length === 0 ? (
         <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
       ) : (
-        <EventGrid
-          items={items}
-          locale={locale}
-          labels={{
-            free: t("browse.free"),
-            soldOut: t("browse.soldOut"),
-            viewEvent: t("browse.viewEvent"),
-            capacityTemplate: t("detail.spots", { sold: "{sold}", total: "{total}" }),
-            verified: t("browse.verified"),
-          }}
-        />
+        <>
+          <EventGrid
+            items={items}
+            locale={locale}
+            labels={{
+              free: t("browse.free"),
+              soldOut: t("browse.soldOut"),
+              viewEvent: t("browse.viewEvent"),
+              capacityTemplate: t("detail.spots", { sold: "{sold}", total: "{total}" }),
+              verified: t("browse.verified"),
+            }}
+          />
+          <BackToTop label={tCatalog("plp.backToTop")} />
+        </>
       )}
     </div>
   );

@@ -7,6 +7,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
+import { BackToTop } from "../_components/back-to-top";
 
 import { ServiceGrid, type ServiceBrowseItem } from "./_components/service-grid";
 import { SERVICE_VERTICALS, VerticalFilterChips } from "./_components/vertical-filter-chips";
@@ -116,6 +117,12 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
   setRequestLocale(locale);
 
   const t = await getServicesTranslator(locale);
+  const catalogMessages = await loadNamespace(locale as Locale, "catalog");
+  const tCatalog = createTranslator({
+    locale,
+    messages: { catalog: catalogMessages },
+    namespace: "catalog",
+  }) as ServicesTranslator;
   const category = parseCategory(query.category);
   const area = query.area ?? "";
   const data = await fetchServices({ category, area });
@@ -172,21 +179,24 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
       {items.length === 0 ? (
         <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
       ) : (
-        <ServiceGrid
-          items={items}
-          locale={locale}
-          labels={{
-            viewService: t("browse.viewService"),
-            fromPrice: t("browse.fromPrice"),
-            askForQuote: t("browse.askForQuote"),
-            badges: {
-              fast: t("badges.fast"),
-              same_day: t("badges.same_day"),
-              slow: t("badges.slow"),
-            },
-            preferredBadge: t("browse.preferredBadge"),
-          }}
-        />
+        <>
+          <ServiceGrid
+            items={items}
+            locale={locale}
+            labels={{
+              viewService: t("browse.viewService"),
+              fromPrice: t("browse.fromPrice"),
+              askForQuote: t("browse.askForQuote"),
+              badges: {
+                fast: t("badges.fast"),
+                same_day: t("badges.same_day"),
+                slow: t("badges.slow"),
+              },
+              preferredBadge: t("browse.preferredBadge"),
+            }}
+          />
+          <BackToTop label={tCatalog("plp.backToTop")} />
+        </>
       )}
     </div>
   );

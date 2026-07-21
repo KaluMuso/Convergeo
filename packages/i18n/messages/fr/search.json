@@ -72,7 +72,7 @@
   },
   "filters": {
     "heading": "Filtrer les produits",
-    "price": "Prix (ngwee)",
+    "price": "Prix (K)",
     "minPrice": "Min",
     "maxPrice": "Max",
     "category": "Catégorie",
