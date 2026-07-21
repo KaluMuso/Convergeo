@@ -6,6 +6,15 @@ import userEvent from "@testing-library/user-event";
 import { createRef } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, number>) => {
+    if (key === "pdp.buyBox.moq") {
+      return `Minimum order: ${values?.count ?? 0}`;
+    }
+    return key;
+  },
+}));
+
 import { StickyMobileAtc } from "./sticky-mobile-atc";
 
 import type { BuyBoxLabels, BuyBoxListing } from "./buy-box";
@@ -142,12 +151,42 @@ describe("StickyMobileAtc", () => {
     expect(await screen.findByTestId("pdp-sticky-mobile-atc")).toBeInTheDocument();
     expect(screen.getByTestId("pdp-sticky-qty-value")).toHaveTextContent("2");
     expect(screen.getByTestId("pdp-sticky-price")).toHaveTextContent(/K/);
+    expect(screen.getByTestId("pdp-sticky-stock")).toHaveTextContent("In stock");
 
     await user.click(screen.getByTestId("pdp-sticky-qty-increase"));
     expect(purchase.increase).toHaveBeenCalled();
 
     await user.click(screen.getByTestId("pdp-sticky-add-to-cart"));
     expect(purchase.handleAddToCart).toHaveBeenCalled();
+  });
+
+  it("appends MOQ on the sticky stock line when required", async () => {
+    const observeRef = createRef<HTMLElement | null>();
+    observeRef.current = document.createElement("section");
+
+    render(
+      <StickyMobileAtc
+        listing={{ ...listing, moq: 3 }}
+        labels={labels}
+        purchase={makePurchase()}
+        observeRef={observeRef}
+        ariaLabel="Quick add to cart"
+      />,
+    );
+
+    observerCallback?.(
+      [
+        {
+          isIntersecting: false,
+          target: observeRef.current!,
+        } as unknown as IntersectionObserverEntry,
+      ],
+      {} as IntersectionObserver,
+    );
+
+    expect(await screen.findByTestId("pdp-sticky-stock")).toHaveTextContent(
+      "In stock · Minimum order: 3",
+    );
   });
 
   it("does not render when listing is out of stock", () => {

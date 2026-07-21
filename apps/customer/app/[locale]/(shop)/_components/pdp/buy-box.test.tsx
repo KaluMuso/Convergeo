@@ -135,4 +135,19 @@ describe("BuyBox", () => {
     expect(screen.getByTestId("pdp-qty-increase")).toBeDisabled();
     expect(screen.getByTestId("pdp-single-vendor")).toBeInTheDocument();
   });
+
+  it("surfaces preferred seller at the purchase moment", () => {
+    render(
+      <BuyBox
+        listing={inStockListing}
+        labels={labels}
+        singleVendor={false}
+        seller={{ displayName: "Lusaka Hub", ratingLabel: "4.8 (12)", preferred: true }}
+        preferredBadgeLabel="Preferred seller"
+      />,
+    );
+
+    expect(screen.getByTestId("pdp-buy-box-seller")).toHaveTextContent("Lusaka Hub");
+    expect(screen.getByTestId("corner-ribbon-trust")).toHaveTextContent("Preferred seller");
+  });
 });
