@@ -246,6 +246,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
     noReviews: t("plp.card.noReviews"),
     reviewCount: t("plp.card.reviewCount"),
     quickAdd: t("plp.card.quickAdd"),
+    quickAddError: t("plp.card.quickAddError"),
     wishlist: t("plp.card.wishlist"),
     wishlistRemove: t("plp.card.wishlistRemove"),
     outOfStock: t("plp.card.outOfStock"),

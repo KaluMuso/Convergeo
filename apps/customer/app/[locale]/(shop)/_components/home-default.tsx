@@ -327,9 +327,13 @@ type RailLabels = {
   noReviews: string;
   reviewCount: string;
   quickAdd: string;
+  quickAddError?: string;
   wishlist: string;
+  wishlistRemove?: string;
   outOfStock: string;
   distance: string;
+  sampleListing?: string;
+  mediaEmpty?: string;
 };
 
 type HomeProductRailProps = {

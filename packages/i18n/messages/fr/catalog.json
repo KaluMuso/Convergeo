@@ -56,7 +56,8 @@
       "outOfStock": "En rupture de stock",
       "distance": "À {distance}",
       "wishlistRemove": "Retirer de la liste",
-      "mediaEmpty": "Pas d’image produit"
+      "mediaEmpty": "Pas d’image produit",
+      "quickAddError": "Impossible d’ajouter au panier. Vérifiez votre connexion et réessayez."
     },
     "loadMore": "Voir plus",
     "loading": "Chargement…",
@@ -168,7 +169,10 @@
         "verified": "Vérifié",
         "location": "Zambie",
         "view": "Visiter la boutique"
-      }
+      },
+      "recentTitle": "Vu récemment",
+      "recentView": "Voir",
+      "recentViewProduct": "Voir {name}"
     },
     "sellCta": {
       "title": "La vente sur Vergeo5 est sur invitation pour le moment",
