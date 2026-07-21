@@ -35,6 +35,7 @@ const searchInputLabels = {
   ariaLabel: "Search",
   suggestionsLabel: "Search suggestions",
   noSuggestions: "No suggestions",
+  recentTitle: "Recent searches",
 };
 
 const resultsTabsLabels = {
@@ -112,7 +113,12 @@ describe("SearchInput autocomplete", () => {
     request.mockResolvedValue({
       query: "ite",
       suggestions: [
-        { title: "Itel A70 Smartphone", entity_kind: "product", entity_id: "prod-1" },
+        {
+          title: "Itel A70 Smartphone",
+          entity_kind: "product",
+          entity_id: "prod-1",
+          slug: "itel-a70",
+        },
         { title: "Itel accessories", entity_kind: "product", entity_id: "prod-2" },
       ],
     });
@@ -142,7 +148,20 @@ describe("SearchInput autocomplete", () => {
 
     await user.keyboard("{Enter}");
 
-    expect(push).toHaveBeenCalledWith("/en/search?q=Itel%20A70%20Smartphone");
+    expect(push).toHaveBeenCalledWith("/en/p/itel-a70");
+  });
+
+  it("shows recent searches when focused with an empty query", async () => {
+    vi.useRealTimers();
+    addRecentSearch("chitenge");
+    const user = userEvent.setup();
+    render(<SearchInput locale="en" labels={searchInputLabels} />);
+
+    const input = screen.getByRole("searchbox");
+    await user.click(input);
+
+    expect(screen.getByRole("listbox", { name: "Recent searches" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "chitenge" })).toBeInTheDocument();
   });
 });
 

@@ -18,6 +18,7 @@ from app.services.search.query_builder import (
 )
 from app.services.search.search_facets import (
     SearchFacets,
+    call_search_query_facets,
     compute_search_facets,
     filter_search_hits,
 )
@@ -63,6 +64,7 @@ class SuggestItem(StrictModel):
     title: str
     entity_kind: str
     entity_id: str
+    slug: str | None = None
 
 
 class SuggestResponse(StrictModel):
@@ -290,12 +292,27 @@ async def run_search(
 
     facets: SearchFacets | None = None
     if trimmed and (kind is None or kind == "products"):
-        facets = compute_search_facets(
-            hits,
-            category_path=category_path,
-            price_min_ngwee=price_min_ngwee,
-            price_max_ngwee=price_max_ngwee,
+        facet_filters: dict[str, Any] = {}
+        if category_path:
+            facet_filters["category_path"] = category_path
+        if price_min_ngwee is not None:
+            facet_filters["price_min_ngwee"] = price_min_ngwee
+        if price_max_ngwee is not None:
+            facet_filters["price_max_ngwee"] = price_max_ngwee
+
+        facets = call_search_query_facets(
+            client,
+            query=trimmed,
+            embedding=embedding,
+            filters=facet_filters,
         )
+        if facets is None:
+            facets = compute_search_facets(
+                hits,
+                category_path=category_path,
+                price_min_ngwee=price_min_ngwee,
+                price_max_ngwee=price_max_ngwee,
+            )
 
     display_hits = filter_search_hits(
         hits,
@@ -354,6 +371,7 @@ def run_suggest(
     if not include_wholesale:
         hits = drop_wholesale_listing_hits(client, hits)
     hits = drop_demo_listing_hits(client, hits)
+    hits = attach_route_slugs(client, hits)
 
     suggestions: list[SuggestItem] = []
     seen_titles: set[str] = set()
@@ -367,6 +385,7 @@ def run_suggest(
                 title=hit.title,
                 entity_kind=hit.entity_kind,
                 entity_id=hit.entity_id,
+                slug=hit.slug,
             )
         )
         if len(suggestions) >= limit:

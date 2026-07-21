@@ -15,7 +15,8 @@ import {
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 
-import { addRecentSearch } from "./recent-searches";
+import { addRecentSearch, readRecentSearches } from "./recent-searches";
+import { searchResultHref } from "./search-result-href";
 
 import type { SearchKind } from "./search-kinds";
 
@@ -25,6 +26,7 @@ export type SuggestItem = {
   title: string;
   entity_kind: string;
   entity_id: string;
+  slug?: string | null;
 };
 
 export type SuggestResponse = {
@@ -38,6 +40,7 @@ export type SearchInputLabels = {
   ariaLabel: string;
   suggestionsLabel: string;
   noSuggestions: string;
+  recentTitle: string;
 };
 
 export type SearchInputProps = {
@@ -68,7 +71,9 @@ export function SearchInput({
   const listboxId = useId();
   const [value, setValue] = useState(initialQuery);
   const [suggestions, setSuggestions] = useState<SuggestItem[]>([]);
+  const [recentTerms, setRecentTerms] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [showRecents, setShowRecents] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -86,20 +91,41 @@ export function SearchInput({
       }
       addRecentSearch(trimmed);
       setIsOpen(false);
+      setShowRecents(false);
       router.push(buildSearchHref(locale, trimmed));
     },
     [locale, router],
   );
 
+  const navigateToSuggestion = useCallback(
+    (item: SuggestItem) => {
+      addRecentSearch(item.title);
+      setIsOpen(false);
+      setShowRecents(false);
+      router.push(searchResultHref(locale, item));
+    },
+    [locale, router],
+  );
+
+  const openRecentDropdown = useCallback(() => {
+    const recent = readRecentSearches();
+    setRecentTerms(recent);
+    setShowRecents(recent.length > 0);
+    setIsOpen(recent.length > 0);
+    setActiveIndex(recent.length > 0 ? 0 : -1);
+  }, []);
+
   const fetchSuggestions = useCallback(async (query: string) => {
     const trimmed = query.trim();
     if (!trimmed) {
       setSuggestions([]);
+      setShowRecents(false);
       setIsOpen(false);
       setActiveIndex(-1);
       return;
     }
 
+    setShowRecents(false);
     const requestId = ++requestIdRef.current;
     setIsLoading(true);
 
@@ -149,24 +175,35 @@ export function SearchInput({
     };
   }, []);
 
+  const optionCount = showRecents ? recentTerms.length : suggestions.length;
+
   const handleChange = (nextValue: string) => {
     setValue(nextValue);
+    if (!nextValue.trim()) {
+      openRecentDropdown();
+      return;
+    }
     scheduleSuggest(nextValue);
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (showRecents && activeIndex >= 0 && recentTerms[activeIndex]) {
+      navigateToSearch(recentTerms[activeIndex]);
+      return;
+    }
     if (activeIndex >= 0 && suggestions[activeIndex]) {
-      navigateToSearch(suggestions[activeIndex].title);
+      navigateToSuggestion(suggestions[activeIndex]);
       return;
     }
     navigateToSearch(value);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (!isOpen || suggestions.length === 0) {
+    if (!isOpen || optionCount === 0) {
       if (event.key === "Escape") {
         setIsOpen(false);
+        setShowRecents(false);
       }
       return;
     }
@@ -174,21 +211,25 @@ export function SearchInput({
     switch (event.key) {
       case "ArrowDown":
         event.preventDefault();
-        setActiveIndex((current) => (current + 1) % suggestions.length);
+        setActiveIndex((current) => (current + 1) % optionCount);
         break;
       case "ArrowUp":
         event.preventDefault();
-        setActiveIndex((current) => (current <= 0 ? suggestions.length - 1 : current - 1));
+        setActiveIndex((current) => (current <= 0 ? optionCount - 1 : current - 1));
         break;
       case "Enter":
-        if (activeIndex >= 0 && suggestions[activeIndex]) {
+        if (showRecents && activeIndex >= 0 && recentTerms[activeIndex]) {
           event.preventDefault();
-          navigateToSearch(suggestions[activeIndex].title);
+          navigateToSearch(recentTerms[activeIndex]);
+        } else if (activeIndex >= 0 && suggestions[activeIndex]) {
+          event.preventDefault();
+          navigateToSuggestion(suggestions[activeIndex]);
         }
         break;
       case "Escape":
         event.preventDefault();
         setIsOpen(false);
+        setShowRecents(false);
         setActiveIndex(-1);
         break;
       default:
@@ -212,12 +253,19 @@ export function SearchInput({
           onChange={(event) => handleChange(event.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => {
+            if (!value.trim()) {
+              openRecentDropdown();
+              return;
+            }
             if (suggestions.length > 0) {
               setIsOpen(true);
             }
           }}
           onBlur={() => {
-            window.setTimeout(() => setIsOpen(false), 120);
+            window.setTimeout(() => {
+              setIsOpen(false);
+              setShowRecents(false);
+            }, 120);
           }}
           placeholder={labels.placeholder}
           aria-label={labels.ariaLabel}
@@ -252,35 +300,67 @@ export function SearchInput({
           <ul
             id={listboxId}
             role="listbox"
-            aria-label={labels.suggestionsLabel}
+            aria-label={showRecents ? labels.recentTitle : labels.suggestionsLabel}
             className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-border bg-surface shadow-1"
           >
-            {suggestions.length === 0 && !isLoading ? (
-              <li className="px-3 py-2 text-sm text-text-3">{labels.noSuggestions}</li>
-            ) : null}
-            {suggestions.map((item, index) => {
-              const optionId = `${listboxId}-option-${index}`;
-              const selected = index === activeIndex;
-              return (
-                <li
-                  key={`${item.entity_kind}-${item.entity_id}`}
-                  id={optionId}
-                  role="option"
-                  aria-selected={selected}
-                  className={
-                    selected
-                      ? "cursor-pointer bg-bg-2 px-3 py-2 text-sm text-text"
-                      : "cursor-pointer px-3 py-2 text-sm text-text hover:bg-bg"
-                  }
-                  onMouseDown={(event) => event.preventDefault()}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  onClick={() => navigateToSearch(item.title)}
-                >
-                  <span className="block truncate">{item.title}</span>
-                  <span className="text-xs text-text-3">{item.entity_kind}</span>
+            {showRecents ? (
+              <>
+                <li className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-text-3">
+                  {labels.recentTitle}
                 </li>
-              );
-            })}
+                {recentTerms.map((term, index) => {
+                  const optionId = `${listboxId}-option-${index}`;
+                  const selected = index === activeIndex;
+                  return (
+                    <li
+                      key={term}
+                      id={optionId}
+                      role="option"
+                      aria-selected={selected}
+                      className={
+                        selected
+                          ? "cursor-pointer bg-bg-2 px-3 py-2 text-sm text-text"
+                          : "cursor-pointer px-3 py-2 text-sm text-text hover:bg-bg"
+                      }
+                      onMouseDown={(event) => event.preventDefault()}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onClick={() => navigateToSearch(term)}
+                    >
+                      <span className="block truncate">{term}</span>
+                    </li>
+                  );
+                })}
+              </>
+            ) : (
+              <>
+                {suggestions.length === 0 && !isLoading ? (
+                  <li className="px-3 py-2 text-sm text-text-3">{labels.noSuggestions}</li>
+                ) : null}
+                {suggestions.map((item, index) => {
+                  const optionId = `${listboxId}-option-${index}`;
+                  const selected = index === activeIndex;
+                  return (
+                    <li
+                      key={`${item.entity_kind}-${item.entity_id}`}
+                      id={optionId}
+                      role="option"
+                      aria-selected={selected}
+                      className={
+                        selected
+                          ? "cursor-pointer bg-bg-2 px-3 py-2 text-sm text-text"
+                          : "cursor-pointer px-3 py-2 text-sm text-text hover:bg-bg"
+                      }
+                      onMouseDown={(event) => event.preventDefault()}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onClick={() => navigateToSuggestion(item)}
+                    >
+                      <span className="block truncate">{item.title}</span>
+                      <span className="text-xs text-text-3">{item.entity_kind}</span>
+                    </li>
+                  );
+                })}
+              </>
+            )}
           </ul>
         ) : null}
       </div>

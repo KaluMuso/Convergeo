@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import Literal, Protocol
+from collections.abc import Sequence
+from typing import Any, Literal, Protocol
 
 from app.schemas.base import StrictModel
+from app.services.search.embedding_client import format_vector_for_rpc
 
 PriceBucket = Literal["under_50k", "50k_200k", "200k_500k", "over_500k"]
 
@@ -61,12 +63,65 @@ def _matches_price(
     return True
 
 
-def _product_hits[T: FacetHit](hits: list[T]) -> list[T]:
+def _product_hits[T: FacetHit](hits: Sequence[T]) -> list[T]:
     return [hit for hit in hits if hit.entity_kind in _PRODUCT_ENTITY_KINDS]
 
 
+def _parse_facet_buckets(raw: Any) -> list[SearchFacetBucket]:
+    if not isinstance(raw, list):
+        return []
+    buckets: list[SearchFacetBucket] = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        value = entry.get("value")
+        count = entry.get("count")
+        if isinstance(value, str) and isinstance(count, int):
+            buckets.append(SearchFacetBucket(value=value, count=count))
+    return buckets
+
+
+def _parse_facets_payload(payload: Any) -> SearchFacets | None:
+    if not isinstance(payload, dict):
+        return None
+    return SearchFacets(
+        categories=_parse_facet_buckets(payload.get("categories")),
+        price=_parse_facet_buckets(payload.get("price")),
+    )
+
+
+def call_search_query_facets(
+    client: Any,
+    *,
+    query: str,
+    embedding: list[float] | None,
+    filters: dict[str, Any],
+) -> SearchFacets | None:
+    """Full-corpus facet counts via ``search_query_facets`` RPC (not RRF top-N)."""
+    rpc_args: dict[str, Any] = {
+        "query": query,
+        "filters": filters,
+    }
+    if embedding is not None:
+        rpc_args["query_embedding"] = format_vector_for_rpc(embedding)
+
+    try:
+        response = client.rpc("search_query_facets", rpc_args).execute()
+    except Exception:
+        return None
+
+    data = getattr(response, "data", None)
+    if data is None:
+        return None
+    if isinstance(data, list):
+        if not data:
+            return None
+        return _parse_facets_payload(data[0])
+    return _parse_facets_payload(data)
+
+
 def compute_search_facets[T: FacetHit](
-    hits: list[T],
+    hits: Sequence[T],
     *,
     category_path: str | None = None,
     price_min_ngwee: int | None = None,

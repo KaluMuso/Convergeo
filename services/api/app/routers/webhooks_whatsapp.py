@@ -9,6 +9,7 @@ import logging
 import os
 import re
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Any, Literal, Protocol
 
@@ -40,21 +41,20 @@ CHANNEL_WHATSAPP = "whatsapp"
 EVENT_OPT_STOP = "whatsapp_opt_stop"
 EVENT_OPT_START = "whatsapp_opt_start"
 TEMPLATE_COMPLIANCE_CONFIRMATION = "compliance_confirmation"
-def _resolve_notifications_i18n_dir() -> Path | None:
-    """Locate ``packages/i18n/messages`` from monorepo checkout or return None.
+_NOTIFICATIONS_I18N_DIR_ENV = "VERGEO5_NOTIFICATIONS_I18N_DIR"
 
-    The production API image copies only ``services/api`` into ``/app``, so the
-    monorepo ``packages/`` tree is absent at runtime — module import must not
-    assume ``parents[4]`` exists.
-    """
-    for ancestor in Path(__file__).resolve().parents:
-        candidate = ancestor / "packages" / "i18n" / "messages"
+
+@lru_cache(maxsize=1)
+def _notifications_i18n_dir() -> Path | None:
+    override = os.environ.get(_NOTIFICATIONS_I18N_DIR_ENV, "").strip()
+    if override:
+        path = Path(override)
+        return path if path.is_dir() else None
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "packages" / "i18n" / "messages"
         if candidate.is_dir():
             return candidate
     return None
-
-
-_NOTIFICATIONS_I18N_DIR = _resolve_notifications_i18n_dir()
 
 _STOP_KEYWORDS = frozenset({"stop", "unsubscribe", "cancel", "end", "quit"})
 _START_KEYWORDS = frozenset({"start", "subscribe", "unstop"})
@@ -289,9 +289,10 @@ def _resolve_profile_by_phone(client: Any, phone: str) -> dict[str, Any] | None:
 
 
 def _load_notifications_messages(locale: str) -> dict[str, Any]:
-    if _NOTIFICATIONS_I18N_DIR is None:
+    base = _notifications_i18n_dir()
+    if base is None:
         return {}
-    path = _NOTIFICATIONS_I18N_DIR / locale / "notifications.json"
+    path = base / locale / "notifications.json"
     if not path.is_file():
         return {}
     raw = json.loads(path.read_text(encoding="utf-8"))
