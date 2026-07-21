@@ -86,6 +86,10 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
         payload["category"] = "home_services"
         payload["service_area"] = "Lusaka"
         payload["description_preview"] = "Fix kitchen sink"
+    elif template_id == "compliance_confirmation":
+        payload["confirmation_body"] = (
+            "You have been unsubscribed from Vergeo5 marketing messages."
+        )
     return payload
 
 

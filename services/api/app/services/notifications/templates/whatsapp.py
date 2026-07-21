@@ -17,6 +17,7 @@ WhatsAppTemplateId = Literal[
     "vendor_new_order",
     "otp_login",
     "rfq_job_broadcast",
+    "compliance_confirmation",
 ]
 
 SUPPORTED_LOCALES = frozenset({"en", "bem", "nya"})
@@ -187,6 +188,10 @@ def _map_rfq_job_broadcast(payload: Mapping[str, Any]) -> tuple[str, ...]:
     return (category, area_str, preview_str)
 
 
+def _map_compliance_confirmation(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    return (_require_str(payload, "confirmation_body"),)
+
+
 @dataclass(frozen=True, slots=True)
 class WhatsAppTemplateDefinition:
     template_id: WhatsAppTemplateId
@@ -236,6 +241,11 @@ WHATSAPP_TEMPLATES: dict[WhatsAppTemplateId, WhatsAppTemplateDefinition] = {
         template_id="rfq_job_broadcast",
         meta_template_name="rfq_job_broadcast",
         map_variables=_map_rfq_job_broadcast,
+    ),
+    "compliance_confirmation": WhatsAppTemplateDefinition(
+        template_id="compliance_confirmation",
+        meta_template_name="compliance_confirmation",
+        map_variables=_map_compliance_confirmation,
     ),
 }
 
