@@ -6,9 +6,10 @@
 
 ## Preconditions (founder / ops)
 
-- [ ] Staging API healthy (`/healthz`, `/readyz`) — **currently 502**; customer `/en/health` OK
+- [x] Staging API healthy (`/healthz`, `/readyz`) — **200** as of 2026-07-21; customer `/en/health` OK
 - [x] Migration `0066_user_wishlist_recently_viewed.sql` applied on staging (2026-07-20)
-- [ ] Lenco **sandbox** credentials only (`LENCO_SANDBOX` / non-prod keys)
+- [x] Non-demo catalog fixtures for drill — see `scripts/ops/staging-money-drill-fixtures.sql` + preflight note (`docs/production-readiness/2026-07-20/staging-money-drill-preflight.md`). Suggested SKU: `tea-coffee-standard` (K28.97, COD-eligible).
+- [ ] Lenco **sandbox** credentials only (`LENCO_SANDBOX` / non-prod keys) — **F9b**
 - [ ] Seed buyer with phone OTP path; cart with in-stock listing
 - [ ] `public_launch` remains **false**
 
