@@ -51,6 +51,7 @@ export function MegaMenuEditor({
       <div>
         <h3 className="text-sm font-semibold text-text">{t("title")}</h3>
         <p className="text-xs text-muted">{t("subtitle")}</p>
+        <p className="mt-1 text-xs text-muted">{t("previewHint")}</p>
       </div>
 
       <div className="space-y-3">

@@ -57,6 +57,8 @@ TEMPLATE_CLASSIFICATION: dict[str, TemplateClass] = {
     "order_delivered": TemplateClass.TRANSACTIONAL,
     "vendor_new_order": TemplateClass.TRANSACTIONAL,
     "otp_login": TemplateClass.TRANSACTIONAL,
+    "event_cancelled": TemplateClass.TRANSACTIONAL,
+    "event_schedule_changed": TemplateClass.TRANSACTIONAL,
     # Email receipts & KYC outcomes
     "payment_receipt": TemplateClass.TRANSACTIONAL,
     "order_receipt": TemplateClass.TRANSACTIONAL,

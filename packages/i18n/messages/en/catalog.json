@@ -108,6 +108,9 @@
       "ariaLabel": "Delivery and pickup information",
       "message": "Lusaka delivery · Nationwide pickup · Escrow when you pay online"
     },
+    "merchPreview": {
+      "banner": "Draft preview — merchandising changes are not live until you publish in admin."
+    },
     "hero": {
       "eyebrow": "Zambia's marketplace",
       "fallbackTitle": "Shop products, services, and events across Zambia",

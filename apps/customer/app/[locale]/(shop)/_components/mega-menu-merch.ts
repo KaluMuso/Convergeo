@@ -1,3 +1,8 @@
+import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
+import { createApiClient } from "@vergeo/config";
+
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
+
 export type MegaMenuMini = {
   title: string;
   href: string;
@@ -106,4 +111,54 @@ export function pickMegaMenuMerchSlot(
     return null;
   }
   return parseMegaMenuMerchPayload(slot.payload);
+}
+
+/** Pick mega_menu from API-resolved slots (schedule already applied server-side). */
+export function pickMegaMenuMerchFromResolvedSlots(
+  rows: MerchSlotRow[],
+): MegaMenuMerchPayload | null {
+  const slot = rows.find((row) => row.slot_key === "mega_menu");
+  if (!slot) {
+    return null;
+  }
+  return parseMegaMenuMerchPayload(slot.payload);
+}
+
+export function readMerchPreviewToken(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  return new URLSearchParams(window.location.search).get("merch_preview");
+}
+
+export async function fetchMegaMenuMerchSlot(
+  previewToken?: string | null,
+): Promise<MegaMenuMerchPayload | null> {
+  const baseUrl = getApiBaseUrl();
+  if (baseUrl) {
+    try {
+      const path = previewToken
+        ? `/merch/slots?merch_preview=${encodeURIComponent(previewToken)}`
+        : "/merch/slots";
+      const slots = await createApiClient({ baseUrl }).request<MerchSlotRow[]>(path);
+      return pickMegaMenuMerchFromResolvedSlots(slots);
+    } catch {
+      // Fall through to direct Supabase read.
+    }
+  }
+
+  try {
+    const supabase = await getBrowserClient();
+    const { data, error } = await supabase
+      .from("merch_slots")
+      .select("slot_key, payload, active, schedule_from, schedule_to")
+      .eq("slot_key", "mega_menu");
+    if (!error && data) {
+      return pickMegaMenuMerchSlot(data);
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 }

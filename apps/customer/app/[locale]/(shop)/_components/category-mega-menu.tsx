@@ -12,10 +12,12 @@ import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
 import { buildCategoryTree, type CategoryRecord, type NavCategory } from "./category-tree";
 import {
-  pickMegaMenuMerchSlot,
+  fetchMegaMenuMerchSlot,
+  readMerchPreviewToken,
   withLocaleHref,
   type MegaMenuMerchPayload,
 } from "./mega-menu-merch";
+import { useMerchPreviewToken, withMerchPreviewParam } from "./merch-preview-nav";
 
 export type { NavCategory } from "./category-tree";
 export { buildCategoryTree } from "./category-tree";
@@ -108,19 +110,8 @@ async function defaultLoadFeaturedContent(
   locale: string,
   labels: CategoryMegaMenuLabels,
 ): Promise<MegaMenuFeaturedContent> {
-  let merch: MegaMenuMerchPayload | null = null;
-  try {
-    const supabase = await getBrowserClient();
-    const { data, error } = await supabase
-      .from("merch_slots")
-      .select("slot_key, payload, active, schedule_from, schedule_to")
-      .eq("slot_key", "mega_menu");
-    if (!error && data) {
-      merch = pickMegaMenuMerchSlot(data);
-    }
-  } catch {
-    merch = null;
-  }
+  const previewToken = readMerchPreviewToken();
+  const merch = await fetchMegaMenuMerchSlot(previewToken);
 
   const cmsMinis = merch ? featuredFromMerch(locale, merch) : [];
   const minis = cmsMinis.length > 0 ? cmsMinis : await loadCatalogFeaturedMinis(locale);
@@ -147,6 +138,11 @@ export function CategoryMegaMenu({
   loadFeaturedContent,
   closeOnScroll = false,
 }: CategoryMegaMenuProps) {
+  const previewToken = useMerchPreviewToken();
+  const previewHref = useCallback(
+    (href: string) => withMerchPreviewParam(href, previewToken),
+    [previewToken],
+  );
   const resolveFeaturedContent = useCallback(
     (activeLocale: string) =>
       loadFeaturedContent
@@ -288,7 +284,7 @@ export function CategoryMegaMenu({
                 {categories.map((category) => (
                   <li key={category.id} className="min-w-0">
                     <Link
-                      href={`/${locale}/c/${category.slug}`}
+                      href={previewHref(`/${locale}/c/${category.slug}`)}
                       onClick={closeMenu}
                       className="block truncate font-display text-h3 text-display-ink transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
                     >
@@ -299,7 +295,7 @@ export function CategoryMegaMenu({
                         {category.children.map((child) => (
                           <li key={child.id} className="min-w-0">
                             <Link
-                              href={`/${locale}/c/${child.slug}`}
+                              href={previewHref(`/${locale}/c/${child.slug}`)}
                               onClick={closeMenu}
                               className="block truncate text-sm text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
                             >
@@ -313,7 +309,7 @@ export function CategoryMegaMenu({
                 ))}
               </ul>
               <Link
-                href={`/${locale}/categories`}
+                href={previewHref(`/${locale}/categories`)}
                 onClick={closeMenu}
                 className="inline-flex min-h-11 items-center text-sm font-medium text-primary transition-colors hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
               >
@@ -334,7 +330,7 @@ export function CategoryMegaMenu({
                   {featuredContent.minis.map((mini) => (
                     <li key={mini.href}>
                       <Link
-                        href={mini.href}
+                        href={previewHref(mini.href)}
                         onClick={closeMenu}
                         className="block rounded-md px-2 py-1.5 transition-colors hover:bg-surface focus-visible:outline-none focus-visible:shadow-focusRing"
                       >
@@ -351,7 +347,7 @@ export function CategoryMegaMenu({
               ) : null}
               <p className="mt-3 text-xs text-text-2">{featuredContent.promoText}</p>
               <Link
-                href={featuredContent.promoHref}
+                href={previewHref(featuredContent.promoHref)}
                 onClick={closeMenu}
                 className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
               >
