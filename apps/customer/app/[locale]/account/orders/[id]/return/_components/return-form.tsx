@@ -6,6 +6,8 @@ import { Button } from "@vergeo/ui/src/button";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../../../../lib/api-base-url";
+
 export type ReturnFormLabels = {
   title: string;
   body: string;
@@ -70,10 +72,6 @@ const MAX_EVIDENCE_FILES = 8;
 const MAX_EVIDENCE_BYTES = 10_485_760;
 
 const ACCEPTED_EVIDENCE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function ReturnForm({ orderId, orderItemId, accessToken, labels }: ReturnFormProps) {
   const router = useRouter();

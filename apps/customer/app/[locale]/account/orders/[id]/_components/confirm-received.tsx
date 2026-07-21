@@ -5,6 +5,8 @@ import { Button } from "@vergeo/ui/src/button";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
+
 export type ConfirmReceivedLabels = {
   title: string;
   body: string;
@@ -28,10 +30,6 @@ type ConfirmResponse = {
   status: "completed";
   already_confirmed: boolean;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function ConfirmReceivedBlock({
   orderId,

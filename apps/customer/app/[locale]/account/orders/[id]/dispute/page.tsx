@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 import { getAccountAccessToken } from "../../../_components/account-server";
 import { createOrdersApiClient } from "../../_components/orders-api";
 
@@ -52,7 +53,7 @@ export default async function AccountOrderDisputePage({ params }: PageProps) {
 
   let initialDispute = null;
   const apiClient = createApiClient({
-    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000",
+    baseUrl: getApiBaseUrl(),
     getToken: () => accessToken,
   });
   try {

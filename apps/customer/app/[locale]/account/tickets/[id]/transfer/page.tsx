@@ -10,6 +10,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
+
 type TicketSummary = {
   id: string;
   status: "issued" | "checked_in" | "transferred" | "void";
@@ -33,10 +35,6 @@ type TicketTransfer = {
   expires_at: string;
   created_at: string;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function createTransferClient(getToken: () => string | null) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });

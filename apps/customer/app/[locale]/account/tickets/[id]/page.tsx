@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 import { getAccountAccessToken } from "../../_components/account-server";
 
 import type { Metadata } from "next";
@@ -61,15 +62,15 @@ type HorizonResponse = {
   }>;
 };
 
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
-
 async function fetchTicketDetail(
   accessToken: string,
   ticketId: string,
 ): Promise<WalletTicketDetail> {
-  const response = await fetch(`${getApiBaseUrl()}/account/tickets/${ticketId}`, {
+  const base = getApiBaseUrl();
+  if (!base) {
+    throw new Error("Ticket detail unavailable: missing API base");
+  }
+  const response = await fetch(`${base}/account/tickets/${ticketId}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/json",
@@ -89,7 +90,11 @@ async function fetchHorizon(
   accessToken: string,
   ticketId: string,
 ): Promise<HorizonResponse | null> {
-  const response = await fetch(`${getApiBaseUrl()}/account/tickets/${ticketId}/horizon`, {
+  const base = getApiBaseUrl();
+  if (!base) {
+    return null;
+  }
+  const response = await fetch(`${base}/account/tickets/${ticketId}/horizon`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/json",

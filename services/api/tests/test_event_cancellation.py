@@ -202,6 +202,7 @@ def test_schedule_change_enqueues_event_schedule_changed_template() -> None:
         client,
         event_id=EVENT_ID,
         event_title="Jazz Night",
+        venue="Lusaka Showgrounds",
         holder_user_ids={HOLDER_ID},
     )
 
@@ -213,4 +214,5 @@ def test_schedule_change_enqueues_event_schedule_changed_template() -> None:
     assert row["payload"]["recipient_id"] == HOLDER_ID
     assert row["payload"]["event_title"] == "Jazz Night"
     assert row["payload"]["event_date"] == "15 Aug 2026, 18:00 UTC"
+    assert row["payload"]["venue"] == "Lusaka Showgrounds"
     assert "todo" not in row["payload"]

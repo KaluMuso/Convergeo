@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { getAccountAccessToken } from "../_components/account-server";
 
 import { TicketTransferClaimBanner } from "./_components/claim-banner";
@@ -40,12 +41,12 @@ type WalletTicketSummary = {
   };
 };
 
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
-
 async function fetchWalletTickets(accessToken: string): Promise<WalletTicketSummary[]> {
-  const response = await fetch(`${getApiBaseUrl()}/account/tickets`, {
+  const base = getApiBaseUrl();
+  if (!base) {
+    return [];
+  }
+  const response = await fetch(`${base}/account/tickets`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/json",

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { getAccountAccessToken } from "../_components/account-server";
 
 import type { Metadata } from "next";
@@ -17,12 +18,12 @@ type JobSummary = {
   budget_band_max_ngwee: number | null;
 };
 
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
-
 async function fetchCustomerJobs(accessToken: string): Promise<JobSummary[]> {
-  const response = await fetch(`${getApiBaseUrl()}/jobs`, {
+  const base = getApiBaseUrl();
+  if (!base) {
+    return [];
+  }
+  const response = await fetch(`${base}/jobs`, {
     headers: { Authorization: `Bearer ${accessToken}` },
     cache: "no-store",
   });

@@ -220,6 +220,58 @@ def test_order_ready_pickup_payload_renders_via_whatsapp_template() -> None:
     assert "PIN 123456" in rendered.body_parameters
 
 
+def test_event_cancelled_payload_renders_via_whatsapp_template() -> None:
+    """EVENT_REGISTRY cancellation payload must satisfy the WhatsApp template."""
+    client = _fresh_client()
+    row = emit_event(
+        client,
+        event="event_cancelled",
+        entity_id="evt-1:holder-1",
+        recipient_id=CUSTOMER_ID,
+        payload={
+            "event_title": "Jazz Night",
+            "event_date": "15 Aug 2026, 18:00 UTC",
+            "refund_detail": "Your payment refund is being processed by Vergeo5.",
+            "recipient_id": CUSTOMER_ID,
+        },
+    )
+    assert row is not None
+    payload = dict(row["payload"])
+    payload["to"] = "+260970000000"
+    payload["locale"] = "en"
+    rendered = render_whatsapp_template("event_cancelled", payload)
+    assert "Jazz Night" in rendered.body_parameters
+    assert "15 Aug 2026" in rendered.body_parameters[1]
+    assert "refund" in rendered.body_parameters[2].lower()
+
+
+def test_event_schedule_changed_payload_renders_via_whatsapp_template() -> None:
+    """EVENT_REGISTRY schedule-change payload must satisfy the WhatsApp template."""
+    client = _fresh_client()
+    row = emit_event(
+        client,
+        event="event_schedule_changed",
+        entity_id="evt-1:holder-1",
+        recipient_id=CUSTOMER_ID,
+        payload={
+            "event_title": "Jazz Night",
+            "event_date": "20 Aug 2026, 18:00 UTC",
+            "venue": "Lusaka Showgrounds",
+            "recipient_id": CUSTOMER_ID,
+        },
+    )
+    assert row is not None
+    payload = dict(row["payload"])
+    payload["to"] = "+260970000000"
+    payload["locale"] = "en"
+    rendered = render_whatsapp_template("event_schedule_changed", payload)
+    assert rendered.body_parameters == (
+        "Jazz Night",
+        "20 Aug 2026, 18:00 UTC",
+        "Lusaka Showgrounds",
+    )
+
+
 # --------------------------------------------------------------------------
 # 2. audience routing
 # --------------------------------------------------------------------------
