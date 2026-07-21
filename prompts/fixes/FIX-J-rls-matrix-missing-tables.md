@@ -2,6 +2,13 @@
 
 # FIX-J — RLS test-matrix coverage gaps (🟢 hygiene / RC-07)
 
+> **STATUS (2026-07-21): ALREADY COMPLETE ON MASTER — do not dispatch.** All five
+> tables (`event_categories`, `product_relations`, `service_reviews`,
+> `embedding_jobs`, `reconciliation_reports`) already carry full six-persona
+> `EXPECTATIONS` entries in `services/api/tests/rls/test_matrix.py`, so
+> `test_no_untested_tables` is green. The 2026-07-19 audit flag was stale. Kept for
+> the finding trail only.
+
 ## Findings (from `docs/production-readiness/2026-07-21/code-reconciliation-since-audits.md` R-5 + 2026-07-19 vision-audit §5)
 
 - Tables **policied but absent** from the RLS test registry `services/api/tests/rls/test_matrix.py`: `event_categories`, `product_relations`, `service_reviews` (plus legacy `embedding_jobs`, `reconciliation_reports`). `test_no_untested_tables` tolerates them only via allowlist/skip.
