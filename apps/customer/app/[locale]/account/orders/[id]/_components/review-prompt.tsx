@@ -6,6 +6,8 @@ import { FormField } from "@vergeo/ui/src/form-field";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
+
 export type ReviewPromptLabels = {
   title: string;
   body: string;
@@ -45,10 +47,6 @@ type ReviewResponse = {
   order_item_id: string;
   rating: number;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function StarPicker({
   value,

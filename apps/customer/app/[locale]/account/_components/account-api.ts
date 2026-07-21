@@ -1,5 +1,7 @@
 import { createApiClient } from "@vergeo/config";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
+
 export type Profile = {
   id: string;
   phone: string | null;
@@ -29,10 +31,6 @@ export type AddressInput = {
   lng?: number | null;
   phone?: string | null;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function createAccountApiClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });

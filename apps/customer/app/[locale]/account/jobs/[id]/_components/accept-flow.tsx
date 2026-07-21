@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
+
 export const DEFAULT_DEPOSIT_PCT = 50;
 
 type AcceptResponse = {
@@ -28,10 +30,6 @@ type AcceptFlowProps = {
   depositPct?: number;
   onCancel?: () => void;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 /** Half-up integer ngwee — mirrors the server deposit math for a consistent preview. */
 export function previewDepositNgwee(totalNgwee: number, depositPct: number): number {

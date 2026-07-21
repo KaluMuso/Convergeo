@@ -1,5 +1,7 @@
 import { createApiClient } from "@vergeo/config";
 
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+
 export type BusinessStatusValue = "pending" | "verified" | "rejected" | "suspended";
 
 export type BusinessStatus = {
@@ -17,10 +19,6 @@ export type BusinessApplyBody = {
   registration_no: string;
   tpin?: string | null;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function createBusinessApiClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });

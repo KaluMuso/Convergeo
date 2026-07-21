@@ -7,6 +7,8 @@ import { Button } from "@vergeo/ui/src/button";
 import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
+
 type ConfirmResponse = {
   job_id: string;
   order_id: string;
@@ -26,10 +28,6 @@ type CompleteConfirmProps = {
   allowConfirmAttempt?: boolean;
   onConfirmed?: () => void;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 export function CompleteConfirm({
   jobId,

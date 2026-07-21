@@ -1,5 +1,7 @@
 import { createApiClient } from "@vergeo/config";
 
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+
 export type OrderSummary = {
   id: string;
   vendor_id: string;
@@ -67,10 +69,6 @@ export type OrderDetail = {
   invoice: InvoiceLink | null;
   related_orders: OrderSummary[];
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 // Point the invoice link at the real signed download endpoint (M15-P07).
 // The API returns a relative stub path (`/account/orders/{id}/invoice`); we lift the

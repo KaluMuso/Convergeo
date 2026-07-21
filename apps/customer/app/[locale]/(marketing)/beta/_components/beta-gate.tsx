@@ -13,13 +13,11 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
 
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+
 type RedeemOutcome = "redeemed" | "public" | "invalid" | "expired" | "exhausted" | "inactive";
 
 type Status = "idle" | "submitting" | "success" | "error";
-
-function apiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 const OUTCOME_ERROR_KEY: Record<Exclude<RedeemOutcome, "redeemed" | "public">, string> = {
   invalid: "errors.invalid",
@@ -46,7 +44,7 @@ export function BetaGate({ locale }: { locale: string }) {
     setStatus("submitting");
 
     try {
-      const res = await fetch(`${apiBaseUrl()}/beta/redeem`, {
+      const res = await fetch(`${getApiBaseUrl()}/beta/redeem`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: trimmed }),
@@ -114,7 +112,7 @@ export function BetaGate({ locale }: { locale: string }) {
 
   async function submitFeedback(input: FeedbackInput): Promise<FeedbackSubmitResult> {
     try {
-      const res = await fetch(`${apiBaseUrl()}/beta/feedback`, {
+      const res = await fetch(`${getApiBaseUrl()}/beta/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

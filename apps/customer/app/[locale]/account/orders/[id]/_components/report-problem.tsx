@@ -6,6 +6,8 @@ import { FormField } from "@vergeo/ui/src/form-field";
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
+
 export type ReportProblemLabels = {
   title: string;
   body: string;
@@ -64,10 +66,6 @@ const ACCEPTED_EVIDENCE_TYPES = new Set([
   "image/webp",
   "application/pdf",
 ]);
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function successMessage(route: ReportResponse["route"], labels: ReportProblemLabels): string {
   switch (route) {
