@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, Literal, Protocol
 
 from app.schemas.base import StrictModel
@@ -62,7 +63,7 @@ def _matches_price(
     return True
 
 
-def _product_hits[T: FacetHit](hits: list[T]) -> list[T]:
+def _product_hits[T: FacetHit](hits: Sequence[T]) -> list[T]:
     return [hit for hit in hits if hit.entity_kind in _PRODUCT_ENTITY_KINDS]
 
 
@@ -120,7 +121,7 @@ def call_search_query_facets(
 
 
 def compute_search_facets(
-    hits: list[FacetHit],
+    hits: Sequence[FacetHit],
     *,
     category_path: str | None = None,
     price_min_ngwee: int | None = None,

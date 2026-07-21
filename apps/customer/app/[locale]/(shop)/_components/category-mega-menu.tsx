@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
+
 import { buildCategoryTree, type CategoryRecord, type NavCategory } from "./category-tree";
 import {
   pickMegaMenuMerchSlot,
