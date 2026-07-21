@@ -9,13 +9,13 @@
 ## Required fix
 
 - Add a **public, read-only, cacheable** endpoint that returns the active commission rates: `GET /public/config/commission-rates` → `{ rates: [{ category_key, rate_pct }], updated_at }`. No auth, no secrets, service-role read of `commission_rates`, RLS-safe (rates are public info). Add a short `Cache-Control`/`s-maxage` (e.g. 300s) — this is 3G-sensitive, cache aggressively.
-- In `apps/customer`, fetch this endpoint **server-side (RSC)** on the Sell page and render via the existing `buildCommissionTableRows(...)`. Keep `commission-rates.ts` **only** as a typed fallback if the fetch fails (degrade to last-known constant, never crash the page), or delete it if you wire a stable fallback in the fetch layer. Preserve the existing i18n category labels + `formatK`-style rate formatting.
+- In `apps/customer`, fetch this endpoint **server-side (RSC)** in `sell/page.tsx` and feed `_components/commission-table.tsx` via the existing `buildCommissionTableRows(...)`. Keep `commission-rates.ts` **only** as a typed fallback if the fetch fails (degrade to last-known constant, never crash the page). Preserve the existing i18n category labels + `formatK`-style rate formatting.
 - Rates stay integer/`Decimal`-clean; do not introduce float rounding on `rate_pct`.
 
 ## Files (ONLY)
 
 - Add `services/api/app/routers/public_config.py` (+ `services/api/tests/test_public_config.py`)
-- Modify `apps/customer/app/[locale]/(marketing)/sell/page.tsx` and `apps/customer/app/[locale]/(marketing)/sell/_components/commission-rates.ts` (and its co-located test if present)
+- Modify `apps/customer/app/[locale]/(marketing)/sell/page.tsx`, `.../sell/_components/commission-table.tsx`, `.../sell/_components/commission-rates.ts` (+ `.../sell/sell.test.ts`)
 - **Do NOT touch** `main.py`, `admin_config.py`, `vendor_listings.py`, migrations, or any other router/page.
 
 ## Tests (RUN)

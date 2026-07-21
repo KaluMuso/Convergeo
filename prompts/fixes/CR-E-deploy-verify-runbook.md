@@ -9,7 +9,7 @@ Per `docs/plan/00-status.md` (2026-07-20) the launch gap is deploy/ops, not feat
 ## Required fix (runbook + verification scripts, idempotent, read-mostly)
 
 - Author `docs/ops/deploy-verify-runbook.md` — the **single source** for: (1) applying outstanding Supabase migrations to the target env in order (0051, 0053–0056, + any newer) with a pre-apply `supabase db diff` check; (2) deploying the API to OCI (Docker Compose: api/caddy/n8n) and confirming `api.vergeo5.com` returns 200 on `/healthz` + `/readyz`; (3) promoting the three Vercel frontends and confirming DNS for customer/vendor/admin origins; (4) activating the required n8n workflows and confirming they are live; (5) a **rollback** procedure for each (API image, migration, Vercel deployment) with a ≤30-min restore-drill checklist.
-- Add `scripts/ops/verify_live.sh` — a **non-destructive** post-deploy verifier that curls the health endpoints (via the agent proxy per `/root/.ccr/README.md`), checks the applied-migration list matches expected, checks n8n active-workflow count, and prints a PASS/FAIL matrix mapped to gates G0–G9. Read-only; no writes to prod.
+- Add `scripts/ops/verify_live.sh` — a **non-destructive** post-deploy verifier that curls the existing health surface (`/healthz`, `/health`, `/readyz`, and **`/fingerprint`** — which returns `env` + `git_sha` + `supabase_project_ref`, so the script can assert **staging ≠ production** and that the deployed `git_sha` matches master tip), checks the applied-migration list matches expected, checks the n8n active-workflow count, and prints a PASS/FAIL matrix mapped to gates G0–G9. Read-only; no writes to prod.
 - Cross-link the runbook from `launch-checklist.md §3` (reference only — do not edit the checklist's gate signatures).
 
 ## Files (ONLY)
