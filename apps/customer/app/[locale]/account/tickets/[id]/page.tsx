@@ -1,5 +1,6 @@
 import { ApiError } from "@vergeo/config";
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { QrCode } from "@vergeo/ui/src/qr";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -179,6 +180,21 @@ export default async function AccountTicketDetailPage({ params }: PageProps) {
   const remaining = detail.qr?.seconds_remaining ?? 60;
   const progress = (60 - remaining) / 60;
   const livePayload = detail.qr?.qr_payload ?? null;
+  const currentWindow = detail.qr?.window ?? null;
+
+  // Pre-render a QR per cached horizon window so rotation works OFFLINE by
+  // toggling visibility (the encoder runs server-side only — nothing ships to
+  // the client). Online, the page reloads each window for a fresh horizon.
+  const qrWindowMap = new Map<number, string>();
+  for (const entry of horizon?.entries ?? []) {
+    qrWindowMap.set(entry.window, entry.qr_payload);
+  }
+  if (detail.qr) {
+    qrWindowMap.set(detail.qr.window, detail.qr.qr_payload);
+  }
+  const qrWindows = [...qrWindowMap.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([window, payload]) => ({ window, payload }));
 
   const startsAt = new Date(detail.instance.starts_at).toLocaleString(locale, {
     dateStyle: "full",
@@ -262,9 +278,18 @@ export default async function AccountTicketDetailPage({ params }: PageProps) {
           className="space-y-4 rounded border border-border bg-surface p-4"
         >
           <div className="flex items-center justify-between gap-2">
-            <h3 id="ticket-qr-heading" className="font-display text-h3 text-display-ink">
-              {t("qrLabel")}
-            </h3>
+            <div className="space-y-1">
+              <span className="inline-flex w-fit items-center gap-1.5 rounded-pill bg-primary/10 px-2.5 py-1 text-micro font-semibold uppercase tracking-wide text-primary">
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-1.5 w-1.5 rounded-pill bg-primary"
+                />
+                {t("liveTicket")}
+              </span>
+              <h3 id="ticket-qr-heading" className="font-display text-h3 text-display-ink">
+                {t("qrLabel")}
+              </h3>
+            </div>
             <p className="font-mono text-xs text-text-2" data-ticket-countdown>
               {t("refreshIn", { seconds: remaining })}
             </p>
@@ -273,16 +298,31 @@ export default async function AccountTicketDetailPage({ params }: PageProps) {
           <div className="relative mx-auto aspect-square w-full max-w-[240px] p-2">
             <ProgressRing progress={progress} />
             <div className="absolute inset-3 rounded bg-surface p-2">
-              {livePayload ? (
-                <div
-                  aria-label={t("qrAria")}
-                  className="flex h-full w-full items-center justify-center rounded bg-surface p-2"
-                  data-ticket-qr-payload
-                  role="img"
-                >
-                  <p className="break-all text-center font-mono text-[10px] leading-tight text-display-ink">
-                    {livePayload}
-                  </p>
+              {qrWindows.length > 0 ? (
+                <div className="relative h-full w-full">
+                  {qrWindows.map(({ window, payload }) => (
+                    <div
+                      key={window}
+                      className="absolute inset-0"
+                      data-ticket-qr-window={window}
+                      hidden={window !== currentWindow}
+                    >
+                      <QrCode
+                        value={payload}
+                        title={t("qrAria")}
+                        level="M"
+                        size={200}
+                        className="h-full w-full"
+                      />
+                    </div>
+                  ))}
+                  <div
+                    className="absolute inset-0 flex items-center justify-center text-center text-xs text-text-2"
+                    data-ticket-qr-expired
+                    hidden={livePayload !== null}
+                  >
+                    {t("offlineExpired")}
+                  </div>
                 </div>
               ) : (
                 <div className="flex h-full items-center justify-center text-center text-xs text-text-2">
@@ -317,7 +357,7 @@ export default async function AccountTicketDetailPage({ params }: PageProps) {
       {detail.status === "issued" ? (
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var cfg=${walletScript};var KEY="vergeo5:ticket-horizon:"+cfg.ticketId;var WINDOW=60;var R=46;var C=2*Math.PI*R;function cw(){return Math.floor(Date.now()/1000/WINDOW)}function sr(){return WINDOW-(Math.floor(Date.now()/1000)%WINDOW)}function read(){try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){return null}}function write(h){if(h)localStorage.setItem(KEY,JSON.stringify(h))}function payloadFor(w){var c=read();if(c&&Array.isArray(c.entries)){var e=c.entries.find(function(x){return x.window===w});if(e)return e.qr_payload}if(cfg.horizon&&Array.isArray(cfg.horizon.entries)){var e2=cfg.horizon.entries.find(function(x){return x.window===w});if(e2)return e2.qr_payload}return null}function setOffline(on,expired){var b=document.querySelector("[data-ticket-offline-banner]");var body=document.querySelector("[data-ticket-offline-body]");if(!b||!body)return;b.classList.toggle("hidden",!on);if(on)body.textContent=expired?cfg.labels.offlineExpired:cfg.labels.offlineBody}function tick(){var rem=sr();var prog=(WINDOW-rem)/WINDOW;var cd=document.querySelector("[data-ticket-countdown]");if(cd)cd.textContent=cfg.labels.refreshInTemplate.replace("__SEC__",String(rem));var ring=document.querySelector("[data-ticket-ring=progress]");if(ring)ring.setAttribute("stroke-dashoffset",String(C*(1-prog)));var node=document.querySelector("[data-ticket-qr-payload] p");var p=payloadFor(cw());if(node&&p)node.textContent=p;var offline=!navigator.onLine;var cache=read();var expired=offline&&(!cache||cw()>cache.last_window)&&!p;setOffline(offline,expired);if(rem<=1&&navigator.onLine)location.reload()}if(cfg.horizon)write({ticket_id:cfg.horizon.ticket_id,from_window:cfg.horizon.from_window,last_window:cfg.horizon.last_window,pin:cfg.horizon.pin,entries:cfg.horizon.entries,cached_at:new Date().toISOString()});tick();setInterval(tick,1000);window.addEventListener("online",tick);window.addEventListener("offline",tick)})();`,
+            __html: `(function(){var cfg=${walletScript};var KEY="vergeo5:ticket-horizon:"+cfg.ticketId;var WINDOW=60;var R=46;var C=2*Math.PI*R;function cw(){return Math.floor(Date.now()/1000/WINDOW)}function sr(){return WINDOW-(Math.floor(Date.now()/1000)%WINDOW)}function read(){try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){return null}}function write(h){if(h)localStorage.setItem(KEY,JSON.stringify(h))}function payloadFor(w){var c=read();if(c&&Array.isArray(c.entries)){var e=c.entries.find(function(x){return x.window===w});if(e)return e.qr_payload}if(cfg.horizon&&Array.isArray(cfg.horizon.entries)){var e2=cfg.horizon.entries.find(function(x){return x.window===w});if(e2)return e2.qr_payload}return null}function setOffline(on,expired){var b=document.querySelector("[data-ticket-offline-banner]");var body=document.querySelector("[data-ticket-offline-body]");if(!b||!body)return;b.classList.toggle("hidden",!on);if(on)body.textContent=expired?cfg.labels.offlineExpired:cfg.labels.offlineBody}function tick(){var rem=sr();var prog=(WINDOW-rem)/WINDOW;var cd=document.querySelector("[data-ticket-countdown]");if(cd)cd.textContent=cfg.labels.refreshInTemplate.replace("__SEC__",String(rem));var ring=document.querySelector("[data-ticket-ring=progress]");if(ring)ring.setAttribute("stroke-dashoffset",String(C*(1-prog)));var p=payloadFor(cw());var cur=cw();var qn=document.querySelectorAll("[data-ticket-qr-window]");for(var qi=0;qi<qn.length;qi++){qn[qi].hidden=parseInt(qn[qi].getAttribute("data-ticket-qr-window"),10)!==cur;}var qx=document.querySelector("[data-ticket-qr-expired]");if(qx)qx.hidden=!!p;var offline=!navigator.onLine;var cache=read();var expired=offline&&(!cache||cw()>cache.last_window)&&!p;setOffline(offline,expired);if(rem<=1&&navigator.onLine)location.reload()}if(cfg.horizon)write({ticket_id:cfg.horizon.ticket_id,from_window:cfg.horizon.from_window,last_window:cfg.horizon.last_window,pin:cfg.horizon.pin,entries:cfg.horizon.entries,cached_at:new Date().toISOString()});tick();setInterval(tick,1000);window.addEventListener("online",tick);window.addEventListener("offline",tick)})();`,
           }}
         />
       ) : null}

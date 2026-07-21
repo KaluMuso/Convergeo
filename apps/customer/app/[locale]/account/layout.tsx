@@ -36,16 +36,14 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
   await requireAuthenticatedAccount(locale);
 
   const baseMessages = await getMessages();
-  const [accountMessages, catalogMessages, commonMessages, navMessages] = await Promise.all([
+  const [accountMessages, commonMessages, navMessages] = await Promise.all([
     loadNamespace(locale as Locale, "account"),
-    loadNamespace(locale as Locale, "catalog"),
     loadNamespace(locale as Locale, "common"),
     loadNamespace(locale as Locale, "nav"),
   ]);
   const messages = {
     ...baseMessages,
     account: accountMessages,
-    catalog: catalogMessages,
     common: commonMessages,
     nav: navMessages,
   } as AbstractIntlMessages;
@@ -120,7 +118,6 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
           signingOut: t("nav.signingOut"),
         }}
         localeSwitcherLabels={localeSwitcherLabels}
-        catalogMessages={catalogMessages as Record<string, unknown>}
       />
       <div className="mx-auto w-full max-w-3xl flex-1 px-4 pb-20 pt-8 lg:pb-12">
         <main id="account-main" tabIndex={-1} className="focus-visible:outline-none">
