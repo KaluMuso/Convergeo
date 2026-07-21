@@ -342,6 +342,8 @@
     "loading": "Loading reviews…",
     "starFilled": "★",
     "starEmpty": "☆",
+    "distributionHeading": "Rating breakdown",
+    "distributionRowAria": "{star}★: {count}",
     "report": {
       "cta": "Report",
       "heading": "Report this review",

@@ -215,6 +215,14 @@ Reconciles the flagship's cream/serif system, the dark prototype's panels, the p
 
 Hi-fi = usable high-fidelity design exists. WF = lo-fi wireframe only. ∅ = nothing anywhere.
 
+> **Reconciliation — 2026-07-21 (customer app verified against source).** Most items below are no longer open. The list is retained for historical scope; use this status map instead:
+>
+> - **Closed (shipped, customer):** #1 Checkout — real stepped `contact→fulfilment→payment→review` flow (`checkout/page.tsx` → `CheckoutShell`, no "Coming soon"). · #2 Mobile-money USSD wait — full pending/approve/timeout/retry/failed/COD (`checkout/pending/[groupId]` → `ussd-wait.tsx`, backoff poll). · #5 Disputes & returns — `account/orders/[id]/dispute` + `/return`. · #8 Order tracking — `account/orders` + per-step `order-timeline.tsx`. · #11 Wishlist / account / addresses — `wishlist`, `account/profile`, `account/addresses`, `account/recent`. · #14 Search results (mobile) — `search` + `results-tabs.tsx`.
+> - **Partial (customer):** #6 RFQ — entry `services/post-job` + inbox `account/jobs` exist; vendor quote-compose unverified. · #9 Onboarding — `login/otp/signup` exist; language/interest picker not built. · #13 PWA/system — `offline` route + `sw.ts` exist; install-prompt/low-bandwidth fallbacks partial.
+> - **Still open / not audited here (vendor & admin apps):** #3 KYC upload · #4 Admin queue detail views · #7 Scanner/check-in · #10 Buyer↔vendor messaging · #12 Vendor payout detail. Ticket QR exists but renders as **text, not a scannable matrix** (`account/tickets/[id]`) — see the 2026-07-21 fidelity notes.
+>
+> Remaining **design-fidelity** deltas (elements weaker than the source bundles) are tracked separately: logistics pills (§3), PLP struck-price/discount-% chip, default-hero product imagery, PDP tabs + rating histogram, payment-rail brand colours, commercial-tier ladder activation.
+
 1. **Checkout (hi-fi)** — WF only (3 shapes). No hi-fi cart→delivery→pay→review page flow in any variant; the flagship's "Proceed to Checkout" routes to an explicit _"This page is part of the full build. Coming soon."_ placeholder.
 2. **Mobile-money USSD/STK-push wait state** — ∅. Prototype offline jumps select→success. Needs: "Approve on your phone" pending screen (with the operator's USSD dial-code fallback), timeout/retry, failed-payment recovery, offline-queued state. **Critical Zambian flow.**
 3. **KYC upload (hi-fi)** — WF only (NRC front/back auto-read, PACRA docs). Needs camera capture, review/blur check, status pending/rejected states. (Trust-ladder _semantics_ designed in Prototype Standalone; screens missing.)
