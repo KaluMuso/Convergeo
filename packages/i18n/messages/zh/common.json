@@ -17,6 +17,15 @@
     "system": "系统",
     "displayPreferences": "显示偏好"
   },
+  "locale": {
+    "switchAria": "选择语言",
+    "names": {
+      "en": "英语",
+      "bem": "本巴语",
+      "nya": "尼扬贾语",
+      "fr": "法语"
+    }
+  },
   "greeting": "您好，{name}！",
   "offline": {
     "code": "离线",

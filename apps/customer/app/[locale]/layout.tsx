@@ -18,6 +18,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { SentryInit } from "../sentry-init";
 
+import { LocaleSwitcher } from "./_components/locale-switcher";
 import { type LegalTranslator } from "./(marketing)/legal/_components/legal-shell";
 import { ServiceWorkerRegister } from "./_components/service-worker-register";
 
@@ -95,6 +96,15 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   }) as unknown as LegalTranslator;
   const year = new Date().getFullYear();
   const appName = tCommon("app.name");
+  const localeSwitcherLabels = {
+    ariaLabel: tCommon("locale.switchAria"),
+    names: {
+      en: tCommon("locale.names.en"),
+      bem: tCommon("locale.names.bem"),
+      nya: tCommon("locale.names.nya"),
+      fr: tCommon("locale.names.fr"),
+    },
+  };
 
   const footerColumns = [
     {
@@ -178,15 +188,18 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
               paymentNote={tLegal("footer.paymentNote")}
               LinkComponent={Link}
               trailing={
-                <p className="m-0 text-micro" style={{ color: "var(--panel-muted)" }}>
-                  <Link
-                    href={`/${locale}/account/preferences`}
-                    className="inline-flex min-h-11 items-center underline-offset-2 hover:underline"
-                    style={{ color: "var(--panel-muted)" }}
-                  >
-                    {tCommon("theme.displayPreferences")}
-                  </Link>
-                </p>
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+                  <LocaleSwitcher locale={locale} labels={localeSwitcherLabels} />
+                  <p className="m-0 text-micro" style={{ color: "var(--panel-muted)" }}>
+                    <Link
+                      href={`/${locale}/account/preferences`}
+                      className="inline-flex min-h-11 items-center underline-offset-2 hover:underline"
+                      style={{ color: "var(--panel-muted)" }}
+                    >
+                      {tCommon("theme.displayPreferences")}
+                    </Link>
+                  </p>
+                </div>
               }
             />
           </NextIntlClientProvider>

@@ -32,5 +32,14 @@
     "light": "Cilanguka",
     "system": "System ya device",
     "displayPreferences": "Ifyo mukwata fyakulangulula"
+  },
+  "locale": {
+    "switchAria": "Sungeni ululimi",
+    "names": {
+      "en": "English",
+      "bem": "IciBemba",
+      "nya": "IciNyanja",
+      "fr": "Français"
+    }
   }
 }
