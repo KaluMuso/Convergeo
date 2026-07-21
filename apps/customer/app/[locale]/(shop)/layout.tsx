@@ -7,15 +7,13 @@ import {
   IconOrders,
   IconSearch,
 } from "@vergeo/ui/src/icons";
-import Link from "next/link";
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { BottomNavClient } from "./_components/bottom-nav-client";
-import { DesktopHeader } from "./_components/desktop-header";
 import { MobileHeaderSearch } from "./_components/mobile-header-search";
-import { MobileTopNav } from "./_components/mobile-top-nav";
 import { ServiceInfoBar } from "./_components/service-info-bar";
+import { ShopHeader } from "./_components/shop-header";
 import { ShopLocaleSwitcher } from "./_components/shop-locale-switcher";
 
 type ShopLayoutProps = {
@@ -28,14 +26,19 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
   setRequestLocale(locale);
 
   const baseMessages = await getMessages();
-  const catalogMessages = await loadNamespace(locale as Locale, "catalog");
-  const searchMessages = await loadNamespace(locale as Locale, "search");
+  const [catalogMessages, searchMessages, navMessages] = await Promise.all([
+    loadNamespace(locale as Locale, "catalog"),
+    loadNamespace(locale as Locale, "search"),
+    loadNamespace(locale as Locale, "nav"),
+  ]);
   const messages = {
     ...baseMessages,
     catalog: catalogMessages,
     search: searchMessages,
+    nav: navMessages,
   } as AbstractIntlMessages;
-  const t = createTranslator({ locale, messages, namespace: "catalog" });
+  const t = createTranslator({ locale, messages, namespace: "nav" });
+  const tCatalog = createTranslator({ locale, messages, namespace: "catalog" });
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
   const tSearch = createTranslator({ locale, messages, namespace: "search" });
   const localeSwitcherLabels = {
@@ -53,61 +56,61 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
     {
       key: "home",
       icon: <IconHome />,
-      label: t("home.nav.home"),
+      label: t("shop.home"),
       href: `/${locale}`,
     },
     {
       key: "browse",
       icon: <IconSearch />,
-      label: t("home.nav.browse"),
+      label: t("shop.browse"),
       href: `/${locale}/search`,
     },
     {
       key: "ask",
       icon: <IconAsk />,
-      label: t("home.nav.ask"),
+      label: t("shop.ask"),
       href: `/${locale}/ask`,
     },
     {
       key: "orders",
       icon: <IconOrders />,
-      label: t("home.nav.orders"),
+      label: t("shop.orders"),
       href: `/${locale}/account/orders`,
     },
     {
       key: "account",
       icon: <IconAccount />,
-      label: t("home.nav.account"),
+      label: t("shop.account"),
       href: `/${locale}/account`,
     },
   ];
 
+  const suppliesItem = {
+    key: "supplies",
+    icon: <IconCart />,
+    label: t("shop.supplies"),
+    href: `/${locale}/supplies`,
+  };
+
   return (
-    // Shop client components (`useTranslations("catalog")`) need the catalog
-    // namespace. Root layout only ships `common` (+ `legal` for the footer).
     <NextIntlClientProvider locale={locale} messages={messages}>
       <ServiceInfoBar
         labels={{
-          ariaLabel: t("home.serviceBar.ariaLabel"),
-          message: t("home.serviceBar.message"),
+          ariaLabel: tCatalog("home.serviceBar.ariaLabel"),
+          message: tCatalog("home.serviceBar.message"),
         }}
       />
-      {/* Mobile/tablet chrome (<1024px). Hidden on lg+ where the desktop header takes over. */}
-      <MobileTopNav
+      <ShopHeader
         locale={locale}
-        logo={
-          <Link href={`/${locale}`} className="font-display text-lg text-primary">
-            {tCommon("app.name")}
-          </Link>
-        }
-        searchSlot={
+        localeSwitcher={localeSwitcher}
+        mobileSearchSlot={
           <MobileHeaderSearch
             locale={locale}
-            triggerLabel={t("home.nav.searchPlaceholder")}
+            triggerLabel={t("shop.searchPlaceholder")}
             sheetTitle={tSearch("title")}
             labels={{
-              placeholder: t("home.nav.searchPlaceholder"),
-              submit: t("home.nav.searchSubmit"),
+              placeholder: t("shop.searchPlaceholder"),
+              submit: t("shop.searchSubmit"),
               ariaLabel: tSearch("input.ariaLabel"),
               suggestionsLabel: tSearch("input.suggestionsLabel"),
               noSuggestions: tSearch("input.noSuggestions"),
@@ -115,42 +118,32 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
             }}
           />
         }
-        cartIcon={<IconCart />}
-        cartLabel={t("home.nav.cart")}
-        cartWithCountLabel={t("home.nav.cartWithCount")}
-        skipLinkTargetId="shop-main"
-        skipLinkLabel={tCommon("nav.skipToContent")}
-        navAriaLabel={t("home.nav.ariaLabel")}
-        actions={localeSwitcher}
-        condensed
-      />
-      <DesktopHeader
-        locale={locale}
-        localeSwitcher={localeSwitcher}
         labels={{
           appName: tCommon("app.name"),
           skipToContent: tCommon("nav.skipToContent"),
-          navAriaLabel: t("home.nav.desktopAriaLabel"),
-          searchPlaceholder: t("home.nav.searchPlaceholder"),
-          searchSubmit: t("home.nav.searchSubmit"),
-          allCategories: t("home.nav.allCategories"),
-          categoriesPanelAria: t("home.nav.categoriesPanelAria"),
-          categoriesLoading: t("home.nav.categoriesLoading"),
-          categoriesEmpty: t("home.nav.categoriesEmpty"),
-          viewAllCategories: t("home.nav.viewAllCategories"),
-          featuredTitle: t("home.nav.featuredTitle"),
-          featuredPromo: t("home.nav.featuredPromo"),
-          featuredPromoCta: t("home.nav.featuredPromoCta"),
-          directory: t("home.nav.directory"),
-          services: t("home.nav.services"),
-          events: t("home.nav.events"),
-          askVergeo: t("home.nav.askVergeo"),
-          account: t("home.nav.account"),
-          cart: t("home.nav.cart"),
-          cartWithCount: t("home.nav.cartWithCount"),
+          navAriaLabel: t("shop.ariaLabel"),
+          desktopAriaLabel: t("shop.desktopAriaLabel"),
+          searchPlaceholder: t("shop.searchPlaceholder"),
+          searchSubmit: t("shop.searchSubmit"),
+          allCategories: t("shop.allCategories"),
+          categoriesPanelAria: t("shop.categoriesPanelAria"),
+          categoriesLoading: t("shop.categoriesLoading"),
+          categoriesEmpty: t("shop.categoriesEmpty"),
+          viewAllCategories: t("shop.viewAllCategories"),
+          featuredTitle: t("shop.featuredTitle"),
+          featuredPromo: t("shop.featuredPromo"),
+          featuredPromoCta: t("shop.featuredPromoCta"),
+          directory: t("shop.directory"),
+          services: t("shop.services"),
+          events: t("shop.events"),
+          askVergeo: t("shop.askVergeo"),
+          supplies: t("shop.supplies"),
+          account: t("shop.account"),
+          cart: t("shop.cart"),
+          cartWithCount: t("shop.cartWithCount"),
           searchInput: {
-            placeholder: t("home.nav.searchPlaceholder"),
-            submit: t("home.nav.searchSubmit"),
+            placeholder: t("shop.searchPlaceholder"),
+            submit: t("shop.searchSubmit"),
             ariaLabel: tSearch("input.ariaLabel"),
             suggestionsLabel: tSearch("input.suggestionsLabel"),
             noSuggestions: tSearch("input.noSuggestions"),
@@ -167,8 +160,9 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       </main>
       <BottomNavClient
         items={bottomItems}
-        ariaLabel={t("home.nav.bottomAriaLabel")}
+        ariaLabel={t("shop.bottomAriaLabel")}
         locale={locale}
+        suppliesItem={suppliesItem}
       />
     </NextIntlClientProvider>
   );

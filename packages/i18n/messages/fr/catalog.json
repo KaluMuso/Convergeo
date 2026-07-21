@@ -121,7 +121,31 @@
       "escrowLine": "Protection acheteur avec séquestre lorsque le paiement en ligne est disponible — conservé par Vergeo5 jusqu'à la livraison, puis versé.",
       "escrowStep1": "Vous payez",
       "escrowStep2": "Conservé par Vergeo5",
-      "escrowStep3": "Versé à la livraison"
+      "escrowStep3": "Versé à la livraison",
+      "carousel": {
+        "previous": "Diapositive précédente",
+        "next": "Diapositive suivante",
+        "slideOf": "Diapositive {current} sur {total}",
+        "ariaLabel": "Carrousel hero de la page d'accueil"
+      },
+      "slides": {
+        "fashion": {
+          "title": "Mode et tissus de vendeurs zambiens",
+          "subtitle": "Découvrez chitenge, tenues traditionnelles et style du quotidien."
+        },
+        "tech": {
+          "title": "Téléphones, ordinateurs et tech du quotidien",
+          "subtitle": "Comparez prix et vendeurs avant de payer."
+        },
+        "power": {
+          "title": "Solaire et énergie pour la maison et l'entreprise",
+          "subtitle": "Trouvez panneaux, batteries et solutions de secours près de vous."
+        },
+        "essentials": {
+          "title": "Cuisine et essentiels pour la maison",
+          "subtitle": "Équipez-vous en ustensiles, appareils et articles ménagers."
+        }
+      }
     },
     "trust": {
       "ariaLabel": "Pourquoi acheter sur Vergeo5",

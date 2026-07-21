@@ -1,4 +1,3 @@
-import { LinkButton } from "@vergeo/ui/src/link-button";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { ServiceCard } from "@vergeo/ui/src/service-card";
 import { VendorCard } from "@vergeo/ui/src/vendor-card";
@@ -7,6 +6,7 @@ import Link from "next/link";
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { fetchJson } from "../../../../lib/fetch-json";
 
+import { HomeHeroCarousel } from "./home-hero-carousel";
 import { ListingGrid, type CatalogListing } from "./plp/listing-grid";
 
 import type { CategoryRow } from "./merch-data";
@@ -260,91 +260,14 @@ export function pickHeroVisualPublicId(listings: CatalogListing[]): string | nul
 }
 
 /**
- * Merch-first default hero (audit §4.1): brand + one headline + one sentence +
- * CTAs on an edge-to-edge visual plane. Escrow ladder lives in HomeTrustStrip.
+ * Merch-first default hero (audit §4.1): rotating carousel with curated imagery,
+ * brand + headline + CTAs on slide 1. Escrow ladder lives in HomeTrustStrip.
  */
-export function HomeHeroBand({ locale, t, brandName, visualPublicId }: HomeHeroBandProps) {
-  const merchPublicId = visualPublicId?.trim() || null;
-
+export function HomeHeroBand({ locale, brandName }: HomeHeroBandProps) {
   return (
-    <section
-      data-testid="home-hero-band"
-      aria-labelledby="home-hero-heading"
-      className="motion-rise relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden bg-panel text-panel-text"
-    >
-      {merchPublicId ? (
-        <div
-          aria-hidden
-          data-testid="home-hero-visual"
-          className="pointer-events-none absolute inset-0"
-        >
-          <CloudinaryImageStatic
-            publicId={merchPublicId}
-            alt=""
-            width={1440}
-            ratio="21/9"
-            priority
-            sizes="100vw"
-            className="h-full w-full object-cover"
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(105deg, color-mix(in srgb, var(--panel) 92%, transparent) 0%, color-mix(in srgb, var(--panel) 72%, transparent) 42%, color-mix(in srgb, var(--panel) 35%, transparent) 100%)",
-            }}
-          />
-        </div>
-      ) : (
-        <>
-          <div
-            aria-hidden
-            data-testid="home-hero-visual"
-            className="pointer-events-none absolute inset-0 opacity-90"
-            style={{
-              background:
-                "radial-gradient(120% 80% at 85% 20%, color-mix(in srgb, var(--primary) 35%, transparent) 0%, transparent 55%), linear-gradient(135deg, var(--panel) 0%, color-mix(in srgb, var(--primary-deep) 55%, var(--panel)) 100%)",
-            }}
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-8 top-6 h-48 w-48 rounded-full bg-primary/20 blur-2xl motion-reduce:blur-none sm:h-64 sm:w-64 lg:right-[12%] lg:top-10"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute bottom-0 left-[8%] h-40 w-40 rounded-full bg-accent/15 blur-xl motion-reduce:blur-none"
-          />
-        </>
-      )}
-
-      <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-12 sm:px-6 lg:px-6 lg:py-16">
-        <div className="flex max-w-2xl flex-col gap-3 lg:gap-4">
-          <p
-            data-testid="home-hero-brand"
-            className="font-display text-hero leading-none tracking-tight text-panel-text"
-          >
-            {brandName}
-          </p>
-          <h1 id="home-hero-heading" className="font-display text-h1 text-panel-text lg:text-h2">
-            {t("home.hero.fallbackTitle")}
-          </h1>
-          <p className="max-w-xl text-body text-panel-muted">{t("home.hero.fallbackSubtitle")}</p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            <LinkButton href={`/${locale}/search`} variant="primary" LinkComponent={Link}>
-              {t("home.hero.primaryCta")}
-            </LinkButton>
-            <LinkButton
-              href={`/${locale}/sell`}
-              variant="secondary"
-              LinkComponent={Link}
-              className="border-panel-muted/40 bg-transparent text-panel-text hover:bg-panel-text/10"
-            >
-              {t("home.hero.secondaryCta")}
-            </LinkButton>
-          </div>
-        </div>
-      </div>
-    </section>
+    <div data-testid="home-hero-band">
+      <HomeHeroCarousel locale={locale} brandName={brandName} />
+    </div>
   );
 }
 

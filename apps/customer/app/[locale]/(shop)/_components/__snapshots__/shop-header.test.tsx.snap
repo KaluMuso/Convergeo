@@ -1,10 +1,11 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 1`] = `
+exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`] = `
 <header
-  class="sticky top-0 z-50 hidden border-b border-border bg-surface lg:block"
+  class="sticky top-0 z-50 border-b border-border bg-surface"
   data-compact="false"
-  data-testid="desktop-header"
+  data-testid="shop-header"
+  data-variant="shop"
   style="box-shadow: none; transition: box-shadow var(--dur) var(--ease-std);"
 >
   <a
@@ -14,16 +15,105 @@ exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 
     Skip to content
   </a>
   <nav
+    aria-label="Shop navigation"
+    class="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 lg:hidden"
+  >
+    <div
+      class="flex w-full items-center justify-between gap-3"
+    >
+      <div
+        class="min-w-0 shrink-0 [&_a]:text-lg [&_a]:leading-none"
+      >
+        <a
+          class="font-display text-primary"
+          href="/en"
+        >
+          Vergeo5
+        </a>
+      </div>
+      <div
+        class="flex shrink-0 items-center gap-1"
+      >
+        <a
+          class="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+          href="/en/account"
+        >
+          <svg
+            aria-hidden="true"
+            class="h-5 w-5 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.75"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle
+              cx="12"
+              cy="8"
+              r="3.5"
+            />
+            <path
+              d="M5 19.5c1.6-3.2 4-4.5 7-4.5s5.4 1.3 7 4.5"
+            />
+          </svg>
+          <span>
+            Account
+          </span>
+        </a>
+        <a
+          aria-label="Cart"
+          class="relative inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing lg:min-w-0"
+          href="/en/cart"
+        >
+          <svg
+            aria-hidden="true"
+            class="h-5 w-5 shrink-0"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.75"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M3.5 5h2l1.2 11h11.6l1.5-8H7"
+            />
+            <circle
+              cx="10"
+              cy="19.5"
+              r="1.25"
+            />
+            <circle
+              cx="16.5"
+              cy="19.5"
+              r="1.25"
+            />
+          </svg>
+          <span>
+            Cart
+          </span>
+        </a>
+      </div>
+    </div>
+  </nav>
+  <nav
     aria-label="Primary navigation"
-    class="mx-auto flex w-full max-w-7xl items-center gap-4 px-6 transition-[height] duration-fast ease-std motion-reduce:transition-none"
+    class="mx-auto hidden w-full max-w-7xl items-center gap-4 px-6 transition-[height] duration-fast ease-std motion-reduce:transition-none lg:flex"
     style="height: 4rem;"
   >
-    <a
-      class="shrink-0 font-display text-2xl leading-none text-primary transition-transform duration-fast ease-std"
-      href="/en"
+    <div
+      class="shrink-0 [&_a]:text-2xl [&_a]:leading-none [&_a]:transition-transform [&_a]:duration-fast [&_a]:ease-std"
     >
-      Vergeo5
-    </a>
+      <a
+        class="font-display text-primary"
+        href="/en"
+      >
+        Vergeo5
+      </a>
+    </div>
     <div
       class="min-w-0 max-w-3xl flex-1 xl:max-w-4xl"
     >
@@ -80,7 +170,7 @@ exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 
       class="ml-auto flex shrink-0 items-center gap-1"
     >
       <a
-        class="inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+        class="inline-flex min-h-11 items-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
         href="/en/account"
       >
         <svg
@@ -109,7 +199,7 @@ exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 
       </a>
       <a
         aria-label="Cart"
-        class="relative inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
+        class="relative inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing lg:min-w-0"
         href="/en/cart"
       >
         <svg
@@ -141,11 +231,6 @@ exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 
           Cart
         </span>
       </a>
-      <span
-        aria-atomic="true"
-        aria-live="polite"
-        class="sr-only"
-      />
     </div>
   </nav>
 </header>

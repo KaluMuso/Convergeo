@@ -18,15 +18,15 @@ the same flag, so a failure here is recovered on the next sweep.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any, Protocol
 
 from app.services.escrow.event_release import MASS_REFUND_FLAG_ACTION
-from app.services.notifications.dedupe import enqueue_outbox_row
+from app.services.notifications.events import emit_event
 from app.services.orders.state import SYSTEM_ACTOR_ID
 
 EVENT_CANCELLED_EVENT = "event_cancelled"
 _SOLD_TICKET_STATUSES = frozenset({"issued", "checked_in"})
-_TEMPLATE_TODO = "TODO(M14): map event_cancelled to a WhatsApp template"
 
 
 class ServiceRoleClient(Protocol):
@@ -48,6 +48,42 @@ def _rows(response: Any) -> list[dict[str, Any]]:
 def _instance_ids(client: Any, event_id: str) -> list[str]:
     resp = client.table("event_instances").select("id").eq("event_id", event_id).execute()
     return [str(row["id"]) for row in _rows(resp) if row.get("id")]
+
+
+def _format_event_date(raw: Any) -> str:
+    if not isinstance(raw, str) or not raw.strip():
+        return ""
+    normalized = raw.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return raw.strip()
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC).strftime("%d %b %Y, %H:%M UTC")
+
+
+def _earliest_event_date(client: Any, instance_ids: list[str]) -> str:
+    if not instance_ids:
+        return ""
+    resp = (
+        client.table("event_instances")
+        .select("starts_at")
+        .in_("id", instance_ids)
+        .order("starts_at")
+        .limit(1)
+        .execute()
+    )
+    rows = _rows(resp)
+    if not rows:
+        return ""
+    return _format_event_date(rows[0].get("starts_at"))
+
+
+def _refund_detail(refund_status: str) -> str:
+    if refund_status == "pending":
+        return "Your payment refund is being processed by Vergeo5."
+    return "No payment was found on your account for this event."
 
 
 def _holder_ids(client: Any, instance_ids: list[str]) -> set[str]:
@@ -139,18 +175,26 @@ def _flag_refund(client: Any, *, order_id: str, event_id: str) -> bool:
     return True
 
 
-def _notify(client: Any, *, event_id: str, event_title: str, recipient_id: str) -> None:
-    enqueue_outbox_row(
+def _notify(
+    client: Any,
+    *,
+    event_id: str,
+    event_title: str,
+    event_date: str,
+    recipient_id: str,
+    refund_status: str,
+) -> None:
+    emit_event(
         client,
-        event_type=EVENT_CANCELLED_EVENT,
+        event=EVENT_CANCELLED_EVENT,
         entity_id=f"{event_id}:{recipient_id}",
-        channel="whatsapp",
-        template=None,
+        recipient_id=recipient_id,
         payload={
             "event_id": event_id,
             "event_title": event_title,
-            "recipient_id": recipient_id,
-            "todo": _TEMPLATE_TODO,
+            "event_date": event_date,
+            "refund_status": refund_status,
+            "refund_detail": _refund_detail(refund_status),
         },
     )
 
@@ -162,6 +206,8 @@ def process_event_cancellation(
     client = service_client.client
     instance_ids = _instance_ids(client, event_id)
     orders = _paid_orders(client, instance_ids)
+    event_date = _earliest_event_date(client, instance_ids)
+    paid_buyers = {customer_id for _, customer_id in orders if customer_id}
 
     flagged = 0
     for order_id, _customer_id in orders:
@@ -171,6 +217,14 @@ def process_event_cancellation(
     recipients = {customer_id for _, customer_id in orders if customer_id}
     recipients |= _holder_ids(client, instance_ids)
     for recipient_id in sorted(recipients):
-        _notify(client, event_id=event_id, event_title=event_title, recipient_id=recipient_id)
+        refund_status = "pending" if recipient_id in paid_buyers else "none"
+        _notify(
+            client,
+            event_id=event_id,
+            event_title=event_title,
+            event_date=event_date,
+            recipient_id=recipient_id,
+            refund_status=refund_status,
+        )
 
     return EventCancellationResult(orders_flagged=flagged, recipients_notified=len(recipients))

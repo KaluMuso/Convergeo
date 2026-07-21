@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 EmbeddingFetcher = Callable[[str], Awaitable[list[float] | None]]
 
-_FACET_TAB_KINDS = frozenset({None, "products", "services", "events"})
+_FACET_TAB_KINDS = frozenset({None, "products", "services", "events", "vendors"})
 
 
 class SearchHit(StrictModel):
