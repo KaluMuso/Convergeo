@@ -15,7 +15,7 @@ This document describes what happens when a customer exercises Zambia Data Prote
 | Reviews (rating retained)                    | **Body/photos cleared**                           | Life of anonymized order record                                     | Verified-purchase integrity without personal commentary    |
 | Disputes / returns evidence                  | **Evidence paths cleared**                        | Case metadata while order retained                                  | Remove uploaded PII while preserving case outcome          |
 | Auth login (`auth.users`)                    | **Removed or permanently banned**                 | —                                                                   | Re-login must be impossible                                |
-| Export JSON bundles (Storage)                | **Auto-expire via short-lived signed URL**        | **15 minutes** download window; objects purged per bucket lifecycle | Transient DPA portability artefact                         |
+| Export JSON bundles (Storage)                | **Auto-expire via short-lived signed URL**        | **15 minutes** download window; ⚠ object auto-purge **not yet configured** (no Storage lifecycle rule) — follow-up | Transient DPA portability artefact                         |
 
 ## Deleted vs anonymized-and-retained
 
@@ -76,7 +76,7 @@ The flows above cover **customer-initiated** export/deletion. Separately, the an
 | `analytics_events` | `user_id` + `session_id` → NULL                       | `event_type`, `entity_*`, `props`                               |
 
 - **Sweeper:** `app/services/analytics/retention.py::sweep_analytics_retention` — idempotent (a second run touches nothing) and service-role. Reuses `search_log.trim_search_pii` for the search table.
-- **Schedule:** `POST /internal/analytics/retention-tick` (shared `X-Internal-Token`), driven daily by n8n `infra/n8n/analytics-retention.json` (03:00 UTC).
+- **Schedule:** `POST /internal/analytics/retention-tick` (shared `X-Internal-Token`), driven daily by n8n `infra/n8n/analytics-retention.json` at hour 03:00 in the **n8n instance timezone** — the workflow sets no `settings.timezone`, so this is not guaranteed UTC (set `settings.timezone:"UTC"` in the workflow, or `GENERIC_TIMEZONE` on the n8n container, to pin it).
 - **Window:** 30 days — matches the documented `search_query_log` window. Nothing tax-bound lives in these tables (orders/payments/invoices keep their own 7-year retention above).
 - **Separate concerns (not this sweeper):** `ask_usage`/`ask_spend_monthly` are quota/spend accounting keyed to the billing month (not swept here); `notification_outbox` delivery payloads (which can hold a phone) are pruned by the outbox lifecycle, tracked separately — a documented follow-up, not part of the analytics sweep.
 
