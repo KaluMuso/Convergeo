@@ -38,4 +38,4 @@ Environment refresh (nvm node + pnpm, uv + API deps) is handled by the startup u
 
 - JS/TS: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` (turbo, all workspaces). Only the `customer` app currently has vitest tests.
 - API: from `services/api`, `uv run ruff check .`, `uv run mypy app tests scripts`, `uv run pytest` (Makefile wrappers `make api-lint|api-test|api-typecheck` are still placeholders — call `uv run ...` directly).
-- The i18n messages (`packages/i18n/messages/*/common.json`) currently use flat dotted keys, so some pages render raw keys (e.g. `nav.home`) — this is the current scaffold state, not an environment problem.
+- The i18n messages live in `packages/i18n/messages/<locale>/<namespace>.json` (17 namespaces, nested keys). EN is the source-of-truth with full coverage and `fr`/`zh` are complete; `bem`/`nya` are partial (13/17 namespaces — `admin`/`ai`/`legal`/`vendor` still EN-only) and fall back to EN via runtime deep-merge (`packages/i18n/src/request.ts`), so a missing vernacular key renders English, never a raw key path.
