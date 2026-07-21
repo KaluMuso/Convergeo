@@ -12,6 +12,8 @@ import {
   type ComparisonListing,
 } from "../_components/pdp/comparison";
 
+import { BackToTop } from "../_components/back-to-top";
+
 import { CompareResults } from "./_components/compare-results";
 
 import type { ListingCondition } from "../_components/pdp/condition-badge";
@@ -238,7 +240,10 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
           body={t("comparePage.singleSellerBody")}
         />
       ) : (
-        <CompareResults listings={listings} labels={comparisonLabels(t)} />
+        <>
+          <CompareResults listings={listings} labels={comparisonLabels(t)} />
+          <BackToTop label={t("plp.backToTop")} />
+        </>
       )}
 
       <Link

@@ -41,6 +41,13 @@ describe("LocaleSwitcher", () => {
     ]);
   });
 
+  it("renders shop variant with surface styling", () => {
+    render(<LocaleSwitcher locale="en" labels={labels} variant="shop" />);
+
+    const select = screen.getByTestId("locale-switcher");
+    expect(select.className).toContain("bg-surface");
+  });
+
   it("navigates to the same route under the new locale", async () => {
     Object.defineProperty(window, "location", {
       configurable: true,

@@ -15,6 +15,7 @@ import { BottomNavClient } from "./_components/bottom-nav-client";
 import { DesktopHeader } from "./_components/desktop-header";
 import { MobileTopNav } from "./_components/mobile-top-nav";
 import { ServiceInfoBar } from "./_components/service-info-bar";
+import { ShopLocaleSwitcher } from "./_components/shop-locale-switcher";
 
 type ShopLayoutProps = {
   children: React.ReactNode;
@@ -33,6 +34,16 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
   } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "catalog" });
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
+  const localeSwitcherLabels = {
+    ariaLabel: tCommon("locale.switchAria"),
+    names: {
+      en: tCommon("locale.names.en"),
+      bem: tCommon("locale.names.bem"),
+      nya: tCommon("locale.names.nya"),
+      fr: tCommon("locale.names.fr"),
+    },
+  };
+  const localeSwitcher = <ShopLocaleSwitcher locale={locale} labels={localeSwitcherLabels} />;
 
   const bottomItems = [
     {
@@ -100,10 +111,12 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         skipLinkTargetId="shop-main"
         skipLinkLabel={tCommon("nav.skipToContent")}
         navAriaLabel={t("home.nav.ariaLabel")}
+        actions={localeSwitcher}
         condensed
       />
       <DesktopHeader
         locale={locale}
+        localeSwitcher={localeSwitcher}
         labels={{
           appName: tCommon("app.name"),
           skipToContent: tCommon("nav.skipToContent"),
