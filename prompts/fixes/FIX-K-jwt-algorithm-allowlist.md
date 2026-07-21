@@ -1,4 +1,6 @@
 > **Prepend `prompts/_header.md`.** Branch from + PR against **`master`**. **Touch ONLY the files below.** **⚙ do NOT use `git stash`.** **No migration.** **Auth-critical — run the full auth test suite before reporting.** Foreground blocking calls only.
+>
+> **Status: ✅ RESOLVED (2026-07-21)** — merged in #427. `verify_supabase_jwt` allow-list is `["RS256", "ES256"]`; tests in `tests/test_auth_dep.py`.
 
 # FIX-K — Narrow the JWT algorithm allow-list to match the JWKS verifier (🟠 MED, security hardening)
 

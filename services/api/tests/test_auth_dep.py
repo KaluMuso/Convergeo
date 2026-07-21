@@ -329,7 +329,7 @@ def test_verify_supabase_jwt_accepts_rs256_jwks_token(
 def test_verify_supabase_jwt_rejects_hs256_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    secret = "test-hmac-secret"
+    secret = "abcdefghijklmnopqrstuvwxyz012345"
     now = int(time.time())
     claims = {
         "sub": USER_ID,
