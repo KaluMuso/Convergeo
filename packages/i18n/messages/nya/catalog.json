@@ -85,7 +85,10 @@
         "view": "Pitani ku store"
       },
       "vendorsTitle": "Ogulitsa apamwamba",
-      "viewAll": "Onani zonse"
+      "viewAll": "Onani zonse",
+      "recentTitle": "Zomwe mwaonapo",
+      "recentView": "Onani",
+      "recentViewProduct": "Onani {name}"
     },
     "sellCta": {
       "body": "Signup ya public sinayatsebe. Ogulitsa oitanidwa atha kupitiriza onboarding; ena atha kuphunzira momwe seller beta imagwirira ntchito.",
@@ -198,7 +201,8 @@
       "vendor": "Agulitsa {vendor}",
       "wishlist": "Sungani ku wishlist",
       "wishlistRemove": "Chotsani ku wishlist",
-      "mediaEmpty": "Palibe chithunzi cha product"
+      "mediaEmpty": "Palibe chithunzi cha product",
+      "quickAddError": "Sitinathe kuonjezera ku cart. Onani connection ndi yesaninso."
     },
     "defaultCategory": "Zinthu zonse",
     "emptyBody": "Yesani kuchotsa ma-filters kapena yang'anani category ina.",

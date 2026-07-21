@@ -4,8 +4,9 @@ import { Badge } from "@vergeo/ui/src/badge";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
 import { isDemoListingPublicId, shouldShowSampleListingBadge } from "../demo-listing";
 
 import { useLocalWishlist } from "./use-local-wishlist";
@@ -17,6 +18,7 @@ export type ListingCardLabels = {
   noReviews: string;
   reviewCount: string;
   quickAdd: string;
+  quickAddError?: string;
   wishlist: string;
   wishlistRemove?: string;
   outOfStock: string;
@@ -54,6 +56,8 @@ export function ListingCard({
 }: ListingCardProps) {
   const { isWishlisted, toggleWishlist, enabled } = useLocalWishlist(listing.productSlug);
   const [wishlistStatusAnnouncement, setWishlistStatusAnnouncement] = useState("");
+  const [quickAdding, setQuickAdding] = useState(false);
+  const [quickAddAnnouncement, setQuickAddAnnouncement] = useState("");
   const wishlistMountedRef = useRef(false);
   const distance = formatDistance(listing.distanceM);
   const distanceLabel =
@@ -80,38 +84,66 @@ export function ListingCard({
     setWishlistStatusAnnouncement(wishlistLabel);
   }, [isWishlisted, wishlistLabel]);
 
+  const onQuickAdd = useCallback(() => {
+    if (!listing.inStock || quickAdding) {
+      return;
+    }
+    setQuickAdding(true);
+    setQuickAddAnnouncement("");
+    void addCartItem(listing.id, 1)
+      .then(() => {
+        setLastAddedMessage(labels.quickAdd);
+        openMiniCart();
+        setQuickAddAnnouncement(labels.quickAdd);
+      })
+      .catch(() => {
+        setQuickAddAnnouncement(labels.quickAddError ?? labels.quickAdd);
+      })
+      .finally(() => {
+        setQuickAdding(false);
+      });
+  }, [labels.quickAdd, labels.quickAddError, listing.id, listing.inStock, quickAdding]);
+
   const card = (
-    <ProductCard
-      title={listing.title}
-      vendorLabel={labels.vendor.replace("{vendor}", listing.vendorName)}
-      ngwee={listing.priceNgwee}
-      rating={listing.rating}
-      reviewCount={listing.reviewCount}
-      noReviewsLabel={labels.noReviews}
-      reviewCountLabel={labels.reviewCount}
-      quickAddLabel={labels.quickAdd}
-      wishlistLabel={wishlistLabel}
-      wishlistStatusAnnouncement={wishlistStatusAnnouncement}
-      badge={badge}
-      density={density}
-      unavailable={!listing.inStock}
-      mediaEmptyLabel={labels.mediaEmpty}
-      isWishlisted={isWishlisted}
-      onWishlistToggle={enabled ? toggleWishlist : undefined}
-      media={
-        listing.imagePublicId ? (
-          <CloudinaryImage
-            publicId={listing.imagePublicId}
-            alt={listing.title}
-            width={360}
-            ratio="4/3"
-            priority={priority}
-            sizes="(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw"
-            className="h-full w-full object-cover"
-          />
-        ) : undefined
-      }
-    />
+    <>
+      <ProductCard
+        title={listing.title}
+        vendorLabel={labels.vendor.replace("{vendor}", listing.vendorName)}
+        ngwee={listing.priceNgwee}
+        rating={listing.rating}
+        reviewCount={listing.reviewCount}
+        noReviewsLabel={labels.noReviews}
+        reviewCountLabel={labels.reviewCount}
+        quickAddLabel={labels.quickAdd}
+        wishlistLabel={wishlistLabel}
+        wishlistStatusAnnouncement={wishlistStatusAnnouncement}
+        badge={badge}
+        density={density}
+        unavailable={!listing.inStock}
+        mediaEmptyLabel={labels.mediaEmpty}
+        isWishlisted={isWishlisted}
+        onWishlistToggle={enabled ? toggleWishlist : undefined}
+        onQuickAdd={listing.inStock ? onQuickAdd : undefined}
+        media={
+          listing.imagePublicId ? (
+            <CloudinaryImage
+              publicId={listing.imagePublicId}
+              alt={listing.title}
+              width={360}
+              ratio="4/3"
+              priority={priority}
+              sizes="(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw"
+              className="h-full w-full object-cover"
+            />
+          ) : undefined
+        }
+      />
+      {quickAddAnnouncement ? (
+        <p className="sr-only" aria-live="polite" data-testid="listing-card-quick-add-status">
+          {quickAddAnnouncement}
+        </p>
+      ) : null}
+    </>
   );
 
   if (!listing.productSlug) {

@@ -56,7 +56,8 @@
       "outOfStock": "缺货",
       "distance": "相距 {distance}",
       "wishlistRemove": "移出收藏",
-      "mediaEmpty": "暂无商品图片"
+      "mediaEmpty": "暂无商品图片",
+      "quickAddError": "无法加入购物车。请检查网络后重试。"
     },
     "loadMore": "加载更多",
     "loading": "加载中…",
@@ -168,7 +169,10 @@
         "verified": "已认证",
         "location": "赞比亚",
         "view": "访问店铺"
-      }
+      },
+      "recentTitle": "最近浏览",
+      "recentView": "查看",
+      "recentViewProduct": "查看 {name}"
     },
     "sellCta": {
       "title": "目前 Vergeo5 卖家入驻仅限邀请",

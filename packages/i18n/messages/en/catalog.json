@@ -54,6 +54,7 @@
       "noReviews": "No reviews yet",
       "reviewCount": "({count})",
       "quickAdd": "Quick add",
+      "quickAddError": "Could not add to cart. Check your connection and try again.",
       "wishlist": "Save to wishlist",
       "wishlistRemove": "Remove from wishlist",
       "mediaEmpty": "No product image",
@@ -150,6 +151,9 @@
     "rails": {
       "newTitle": "New on Vergeo5",
       "departmentTitle": "New in {category}",
+      "recentTitle": "Recently viewed",
+      "recentView": "View",
+      "recentViewProduct": "View {name}",
       "viewAll": "View all",
       "servicesTitle": "Services",
       "vendorsTitle": "Top vendors",

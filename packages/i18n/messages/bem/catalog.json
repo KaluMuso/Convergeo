@@ -85,7 +85,10 @@
         "view": "Piteni ku store"
       },
       "vendorsTitle": "Basellers abakalamba",
-      "viewAll": "Loleni fyonse"
+      "viewAll": "Loleni fyonse",
+      "recentTitle": "Fyaliyalola",
+      "recentView": "Loleni",
+      "recentViewProduct": "Loleni {name}"
     },
     "sellCta": {
       "body": "Signup ya public teyaisa kale. Basellers abaitwa bengakonka onboarding; bambi bengasamba ifyo seller beta ikonka.",
@@ -198,7 +201,8 @@
       "vendor": "Ashitisha {vendor}",
       "wishlist": "Sungileni ku wishlist",
       "wishlistRemove": "Fumyeni ku wishlist",
-      "mediaEmpty": "Takwaba picture ya product"
+      "mediaEmpty": "Takwaba picture ya product",
+      "quickAddError": "Tatwaishibe ukulenga mu cart. Checkeni connection no wesheni limbi."
     },
     "defaultCategory": "Ifintu fyonse",
     "emptyBody": "Wesheni ukufuta filters nangu twaleni category yambi.",

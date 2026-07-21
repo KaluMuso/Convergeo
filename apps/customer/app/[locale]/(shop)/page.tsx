@@ -26,6 +26,7 @@ import {
   loadHomeDefaultData,
 } from "./_components/home-default";
 import { planHomeLayout } from "./_components/home-layout";
+import { HomeRecentlyViewedRail } from "./_components/home-recently-viewed-rail";
 import { HomeTrustStrip } from "./_components/home-trust-strip";
 import { loadHomeMerchData, pickSlot, type HomeSectionKey } from "./_components/merch-data";
 
@@ -155,10 +156,13 @@ export default async function ShopHomePage({ params }: PageProps) {
     noReviews: t("plp.card.noReviews"),
     reviewCount: t("plp.card.reviewCount"),
     quickAdd: t("plp.card.quickAdd"),
+    quickAddError: t("plp.card.quickAddError"),
     wishlist: t("plp.card.wishlist"),
+    wishlistRemove: t("plp.card.wishlistRemove"),
     outOfStock: t("plp.card.outOfStock"),
     distance: t("plp.card.distance"),
     sampleListing: t("home.demo.sampleListing"),
+    mediaEmpty: t("plp.card.mediaEmpty"),
   };
 
   // Audit hierarchy: categories before flash/campaign; events after product rails.
@@ -201,6 +205,16 @@ export default async function ShopHomePage({ params }: PageProps) {
       {earlyCampaignKeys.map((sectionKey) =>
         renderCampaignSection(sectionKey, locale, t, merch.slots, merch.categories),
       )}
+
+      <HomeRecentlyViewedRail
+        locale={locale}
+        labels={{
+          title: t("home.rails.recentTitle"),
+          viewAll: t("home.rails.viewAll"),
+          viewProduct: t("home.rails.recentViewProduct"),
+          view: t("home.rails.recentView"),
+        }}
+      />
 
       {plan.showDefaultRails ? (
         <>
