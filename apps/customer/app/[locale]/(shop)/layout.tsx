@@ -11,6 +11,7 @@ import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } f
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { BottomNavClient } from "./_components/bottom-nav-client";
+import { MobileHeaderSearch } from "./_components/mobile-header-search";
 import { ServiceInfoBar } from "./_components/service-info-bar";
 import { ShopHeader } from "./_components/shop-header";
 import { ShopLocaleSwitcher } from "./_components/shop-locale-switcher";
@@ -102,6 +103,21 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       <ShopHeader
         locale={locale}
         localeSwitcher={localeSwitcher}
+        mobileSearchSlot={
+          <MobileHeaderSearch
+            locale={locale}
+            triggerLabel={t("shop.searchPlaceholder")}
+            sheetTitle={tSearch("title")}
+            labels={{
+              placeholder: t("shop.searchPlaceholder"),
+              submit: t("shop.searchSubmit"),
+              ariaLabel: tSearch("input.ariaLabel"),
+              suggestionsLabel: tSearch("input.suggestionsLabel"),
+              noSuggestions: tSearch("input.noSuggestions"),
+              recentTitle: tSearch("recent.title"),
+            }}
+          />
+        }
         labels={{
           appName: tCommon("app.name"),
           skipToContent: tCommon("nav.skipToContent"),

@@ -531,8 +531,11 @@ def test_post_sale_date_change_enqueues_notification(
     assert len(fake_client.tables["notification_outbox"].rows) == 1
     outbox = fake_client.tables["notification_outbox"].rows[0]
     assert outbox["dedupe_key"].startswith("event_schedule_changed:")
+    assert outbox["template"] == "event_schedule_changed"
     assert outbox["payload"]["recipient_id"] == HOLDER_ID
-    assert "TODO(M14)" in outbox["payload"]["todo"]
+    assert outbox["payload"]["event_title"]
+    assert outbox["payload"]["event_date"]
+    assert "todo" not in outbox["payload"]
 
 
 def test_post_sale_venue_change_enqueues_notification(

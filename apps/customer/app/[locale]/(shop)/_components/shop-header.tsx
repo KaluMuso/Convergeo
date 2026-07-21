@@ -1,9 +1,8 @@
 "use client";
 
 import { AppHeader } from "@vergeo/ui/src/app-header";
-import { IconSearch } from "@vergeo/ui/src/icons";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import { getCartItemCount, useCartActions, useCartStore } from "./cart/mini-cart-drawer";
 import { CategoryMegaMenu } from "./category-mega-menu";
@@ -42,6 +41,8 @@ type ShopHeaderProps = {
   locale: string;
   labels: ShopHeaderLabels;
   localeSwitcher?: React.ReactNode;
+  /** Mobile search affordance — typically `MobileHeaderSearch` from the layout. */
+  mobileSearchSlot?: ReactNode;
 };
 
 const navLinkClassName =
@@ -51,7 +52,7 @@ const navLinkClassName =
  * Unified shop header (360→1440) — wraps AppHeader with cart, mega-menu, and
  * gated Supplies link for verified business buyers.
  */
-export function ShopHeader({ locale, labels, localeSwitcher }: ShopHeaderProps) {
+export function ShopHeader({ locale, labels, localeSwitcher, mobileSearchSlot }: ShopHeaderProps) {
   const { cart } = useCartStore();
   const { refresh } = useCartActions();
   const eligibleForSupplies = useBusinessEligibility();
@@ -87,15 +88,7 @@ export function ShopHeader({ locale, labels, localeSwitcher }: ShopHeaderProps) 
       data-testid="shop-header"
       appName={labels.appName}
       logoHref={`/${locale}`}
-      mobileSearchSlot={
-        <Link
-          href={`/${locale}/search`}
-          className="flex h-11 w-full max-w-md items-center gap-2 rounded-pill border border-border bg-surface px-4 text-sm text-text-3 transition-colors hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-        >
-          <IconSearch className="text-text-2" />
-          <span className="truncate">{labels.searchPlaceholder}</span>
-        </Link>
-      }
+      mobileSearchSlot={mobileSearchSlot}
       desktopSearchSlot={<DesktopHeaderSearch locale={locale} labels={labels.searchInput} />}
       categoriesSlot={
         <CategoryMegaMenu

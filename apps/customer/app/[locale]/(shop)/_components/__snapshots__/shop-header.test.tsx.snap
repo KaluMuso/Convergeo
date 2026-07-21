@@ -98,40 +98,6 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
         </a>
       </div>
     </div>
-    <div
-      class="w-full min-w-0"
-    >
-      <a
-        class="flex h-11 w-full max-w-md items-center gap-2 rounded-pill border border-border bg-surface px-4 text-sm text-text-3 transition-colors hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-        href="/en/search"
-      >
-        <svg
-          aria-hidden="true"
-          class="h-5 w-5 shrink-0 text-text-2"
-          fill="none"
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="1.75"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <circle
-            cx="11"
-            cy="11"
-            r="6.5"
-          />
-          <path
-            d="m16 16 4 4"
-          />
-        </svg>
-        <span
-          class="truncate"
-        >
-          Search products, services, events…
-        </span>
-      </a>
-    </div>
   </nav>
   <nav
     aria-label="Primary navigation"

@@ -13,6 +13,7 @@ from app.services.search.query_builder import (
     DEFAULT_PAGE,
     DEFAULT_PAGE_SIZE,
     SearchKind,
+    build_facet_rpc_filters,
     build_filters,
     paginate,
 )
@@ -28,6 +29,8 @@ from pydantic import Field
 logger = logging.getLogger(__name__)
 
 EmbeddingFetcher = Callable[[str], Awaitable[list[float] | None]]
+
+_FACET_TAB_KINDS = frozenset({None, "products", "services", "events"})
 
 
 class SearchHit(StrictModel):
@@ -291,14 +294,14 @@ async def run_search(
     hits = drop_demo_listing_hits(client, hits)
 
     facets: SearchFacets | None = None
-    if trimmed and (kind is None or kind == "products"):
-        facet_filters: dict[str, Any] = {}
-        if category_path:
-            facet_filters["category_path"] = category_path
-        if price_min_ngwee is not None:
-            facet_filters["price_min_ngwee"] = price_min_ngwee
-        if price_max_ngwee is not None:
-            facet_filters["price_max_ngwee"] = price_max_ngwee
+    if trimmed and kind in _FACET_TAB_KINDS:
+        facet_filters = build_facet_rpc_filters(
+            kind=kind,
+            category_path=category_path,
+            price_min_ngwee=price_min_ngwee,
+            price_max_ngwee=price_max_ngwee,
+            include_wholesale=include_wholesale,
+        )
 
         facets = call_search_query_facets(
             client,

@@ -18,6 +18,8 @@ WhatsAppTemplateId = Literal[
     "otp_login",
     "rfq_job_broadcast",
     "compliance_confirmation",
+    "event_cancelled",
+    "event_schedule_changed",
 ]
 
 SUPPORTED_LOCALES = frozenset({"en", "bem", "nya"})
@@ -192,6 +194,21 @@ def _map_compliance_confirmation(payload: Mapping[str, Any]) -> tuple[str, ...]:
     return (_require_str(payload, "confirmation_body"),)
 
 
+def _map_event_cancelled(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    return (
+        _require_str(payload, "event_title"),
+        _require_str(payload, "event_date"),
+        _require_str(payload, "refund_detail"),
+    )
+
+
+def _map_event_schedule_changed(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    return (
+        _require_str(payload, "event_title"),
+        _require_str(payload, "event_date"),
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class WhatsAppTemplateDefinition:
     template_id: WhatsAppTemplateId
@@ -246,6 +263,16 @@ WHATSAPP_TEMPLATES: dict[WhatsAppTemplateId, WhatsAppTemplateDefinition] = {
         template_id="compliance_confirmation",
         meta_template_name="compliance_confirmation",
         map_variables=_map_compliance_confirmation,
+    ),
+    "event_cancelled": WhatsAppTemplateDefinition(
+        template_id="event_cancelled",
+        meta_template_name="event_cancelled",
+        map_variables=_map_event_cancelled,
+    ),
+    "event_schedule_changed": WhatsAppTemplateDefinition(
+        template_id="event_schedule_changed",
+        meta_template_name="event_schedule_changed",
+        map_variables=_map_event_schedule_changed,
     ),
 }
 
