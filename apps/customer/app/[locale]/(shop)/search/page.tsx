@@ -8,17 +8,8 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { resolveApiBaseUrl } from "../../../../lib/api-base-url";
-import { fetchCategoriesResult, type CategoryRow } from "../_components/merch-data";
 import { BrowseDiscoveryChips } from "../_components/browse-discovery-chips";
-import { SearchAppliedFilterBar } from "../_components/search/search-applied-filter-bar";
-import { SearchFilterPanel } from "../_components/search/search-filter-panel";
-import { SearchMobileFilterDrawer } from "../_components/search/search-mobile-filter-drawer";
-import {
-  appendSearchFiltersToApiParams,
-  decodeSearchFilters,
-  encodeSearchFilters,
-  type SearchFilterState,
-} from "../_components/search/search-filters";
+import { fetchCategoriesResult, type CategoryRow } from "../_components/merch-data";
 import { RecentSearches } from "../_components/search/recent-searches";
 import {
   ResultsTabs,
@@ -26,8 +17,17 @@ import {
   type TabCounts,
 } from "../_components/search/results-tabs";
 import { SearchAnalytics } from "../_components/search/search-analytics";
+import { SearchAppliedFilterBar } from "../_components/search/search-applied-filter-bar";
+import { SearchFilterPanel } from "../_components/search/search-filter-panel";
+import {
+  appendSearchFiltersToApiParams,
+  decodeSearchFilters,
+  encodeSearchFilters,
+  type SearchFilterState,
+} from "../_components/search/search-filters";
 import { SearchInput } from "../_components/search/search-input";
 import { searchTabKinds, type SearchKind } from "../_components/search/search-kinds";
+import { SearchMobileFilterDrawer } from "../_components/search/search-mobile-filter-drawer";
 import {
   normalizeSearchQuery,
   parseSearchKind,

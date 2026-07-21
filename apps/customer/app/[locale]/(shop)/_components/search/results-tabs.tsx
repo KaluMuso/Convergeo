@@ -16,7 +16,6 @@ import {
 import { useProgressiveLoad } from "../progressive-load/use-progressive-load";
 
 import { appendSearchFiltersToApiParams, type SearchFilterState } from "./search-filters";
-
 import {
   SEARCH_KINDS,
   searchTabKinds,
