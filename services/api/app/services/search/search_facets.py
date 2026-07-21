@@ -127,7 +127,6 @@ def compute_search_facets(
     price_max_ngwee: int | None = None,
 ) -> SearchFacets:
     """Disjunctive facet counts from the RRF hit pool (top ~300 matches)."""
-    product_hits = _product_hits(hits)
     category_counts: dict[str, int] = {}
     price_counts: dict[str, int] = {
         "under_50k": 0,
@@ -136,8 +135,8 @@ def compute_search_facets(
         "over_500k": 0,
     }
 
-    for hit in product_hits:
-        if not _matches_price(
+    for hit in hits:
+        if hit.entity_kind in _PRODUCT_ENTITY_KINDS and not _matches_price(
             hit,
             price_min_ngwee=price_min_ngwee,
             price_max_ngwee=price_max_ngwee,
@@ -147,7 +146,7 @@ def compute_search_facets(
         if path:
             category_counts[path] = category_counts.get(path, 0) + 1
 
-    for hit in product_hits:
+    for hit in _product_hits(hits):
         if not _matches_category(hit, category_path):
             continue
         bucket = _price_bucket(hit.price_min_ngwee)
@@ -172,17 +171,16 @@ def filter_search_hits[T: FacetHit](
     price_min_ngwee: int | None = None,
     price_max_ngwee: int | None = None,
 ) -> list[T]:
-    """Apply product filters in Python (mirrors search_rrf JSON filter semantics)."""
+    """Apply category/price filters in Python (mirrors search_rrf JSON filter semantics)."""
     filtered: list[T] = []
     for hit in hits:
-        if hit.entity_kind in _PRODUCT_ENTITY_KINDS:
-            if not _matches_category(hit, category_path):
-                continue
-            if not _matches_price(
-                hit,
-                price_min_ngwee=price_min_ngwee,
-                price_max_ngwee=price_max_ngwee,
-            ):
-                continue
+        if category_path is not None and not _matches_category(hit, category_path):
+            continue
+        if hit.entity_kind in _PRODUCT_ENTITY_KINDS and not _matches_price(
+            hit,
+            price_min_ngwee=price_min_ngwee,
+            price_max_ngwee=price_max_ngwee,
+        ):
+            continue
         filtered.append(hit)
     return filtered

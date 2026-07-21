@@ -73,6 +73,30 @@ KITCHEN_HIT = _hit(
     locale_terms=["kitchenware", "pots", "pans"],
     score=0.7,
 )
+SERVICE_HIT = _hit(
+    entity_id=UUID("00000000-0000-4000-8000-000000001001"),
+    title="Lusaka Plumbing Services",
+    entity_kind="service",
+    category_path="home-living/plumbing",
+    score=0.85,
+)
+EVENT_HIT = _hit(
+    entity_id=UUID("00000000-0000-4000-8000-000000002001"),
+    title="Lusaka Music Festival",
+    entity_kind="event",
+    category_path="events/music",
+    score=0.8,
+)
+
+
+def _matches_entity_scope(row: dict[str, Any], filters: dict[str, Any]) -> bool:
+    entity_kinds = filters.get("entity_kinds")
+    if isinstance(entity_kinds, list):
+        return row["entity_kind"] in entity_kinds
+    entity_kind = filters.get("entity_kind")
+    if entity_kind is not None:
+        return row["entity_kind"] == entity_kind
+    return True
 
 
 class FakeRpcResponse:
@@ -131,7 +155,6 @@ def _default_rpc_handler(name: str, params: dict[str, Any]) -> list[Any]:
 
     query = str(params.get("query", "")).lower()
     filters = params.get("filters") or {}
-    entity_kind = filters.get("entity_kind")
     category_path = filters.get("category_path")
     price_min = filters.get("price_min_ngwee")
     price_max = filters.get("price_max_ngwee")
@@ -143,6 +166,10 @@ def _default_rpc_handler(name: str, params: dict[str, Any]) -> list[Any]:
         candidates.append(CHITENGE_HIT)
     if "dress" in query or "kitchen" in query or "party" in query:
         candidates.extend([DRESS_HIT, KITCHEN_HIT])
+    if "plumb" in query:
+        candidates.append(SERVICE_HIT)
+    if "festival" in query or "music" in query:
+        candidates.append(EVENT_HIT)
 
     if not candidates and query:
         candidates = [ITEL_HIT, CHITENGE_HIT, DRESS_HIT]
@@ -156,7 +183,7 @@ def _default_rpc_handler(name: str, params: dict[str, Any]) -> list[Any]:
             "over_500k": 0,
         }
         for row in candidates:
-            if entity_kind is not None and row["entity_kind"] != entity_kind:
+            if not _matches_entity_scope(row, filters):
                 continue
             row_path = row.get("category_path")
             row_max = row.get("price_max_ngwee")
@@ -170,7 +197,7 @@ def _default_rpc_handler(name: str, params: dict[str, Any]) -> list[Any]:
                 category_counts[row_path] = category_counts.get(row_path, 0) + 1
 
         for row in candidates:
-            if entity_kind is not None and row["entity_kind"] != entity_kind:
+            if not _matches_entity_scope(row, filters):
                 continue
             row_path = row.get("category_path")
             if category_path is not None and (
@@ -178,6 +205,8 @@ def _default_rpc_handler(name: str, params: dict[str, Any]) -> list[Any]:
             ):
                 continue
             price = row.get("price_min_ngwee") or 0
+            if row["entity_kind"] not in ("product", "listing"):
+                continue
             if price < 50_000:
                 bucket = "under_50k"
             elif price < 200_000:
@@ -203,7 +232,7 @@ def _default_rpc_handler(name: str, params: dict[str, Any]) -> list[Any]:
 
     filtered: list[dict[str, Any]] = []
     for row in candidates:
-        if entity_kind is not None and row["entity_kind"] != entity_kind:
+        if not _matches_entity_scope(row, filters):
             continue
         row_path = row.get("category_path")
         if category_path is not None and (
@@ -337,6 +366,16 @@ def test_search_returns_sql_facets(search_client: TestClient) -> None:
     assert body["facets"] is not None
     categories = {item["value"]: item["count"] for item in body["facets"]["categories"]}
     assert categories.get("electronics/phones", 0) >= 1
+
+
+def test_search_returns_service_tab_facets(search_client: TestClient) -> None:
+    response = search_client.get("/search", params={"q": "plumbing", "kind": "services"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["facets"] is not None
+    categories = {item["value"]: item["count"] for item in body["facets"]["categories"]}
+    assert categories.get("home-living/plumbing", 0) >= 1
+    assert all(bucket["count"] == 0 for bucket in body["facets"]["price"])
 
 
 def test_injection_safe_tsquery_string(search_client: TestClient) -> None:

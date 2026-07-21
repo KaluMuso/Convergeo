@@ -50,6 +50,48 @@ def build_filters(
     return filters
 
 
+_FACET_KIND_ENTITY_GROUPS: dict[SearchKind, list[str]] = {
+    "products": ["product", "listing"],
+    "services": ["service"],
+    "events": ["event"],
+    "vendors": ["vendor"],
+    "supplies": ["listing"],
+}
+
+
+def build_facet_rpc_filters(
+    *,
+    kind: SearchKind | None = None,
+    category_path: str | None = None,
+    price_min_ngwee: int | None = None,
+    price_max_ngwee: int | None = None,
+    include_wholesale: bool = False,
+) -> dict[str, Any]:
+    """Filters for ``search_query_facets`` RPC (entity scope + consumer exclusions)."""
+    filters: dict[str, Any] = {
+        "exclude_wholesale": not include_wholesale,
+        "exclude_demo": True,
+    }
+
+    if kind is None or kind == "products":
+        filters["entity_kinds"] = ["product", "listing"]
+    elif kind in _FACET_KIND_ENTITY_GROUPS:
+        filters["entity_kinds"] = _FACET_KIND_ENTITY_GROUPS[kind]
+
+    if category_path is not None:
+        trimmed = category_path.strip()
+        if trimmed:
+            filters["category_path"] = trimmed
+
+    if price_min_ngwee is not None:
+        filters["price_min_ngwee"] = price_min_ngwee
+
+    if price_max_ngwee is not None:
+        filters["price_max_ngwee"] = price_max_ngwee
+
+    return filters
+
+
 def normalize_page(page: int) -> int:
     return max(page, 1)
 
