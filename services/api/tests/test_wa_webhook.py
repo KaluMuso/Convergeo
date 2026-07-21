@@ -54,14 +54,6 @@ class _FakeQuery:
         self._payload = payload
         return self
 
-    def insert(self, payload: dict[str, Any] | list[dict[str, Any]]) -> _FakeQuery:
-        self._operation = "insert"
-        if isinstance(payload, list):
-            self._payload = payload[0]
-        else:
-            self._payload = payload
-        return self
-
     def eq(self, column: str, value: Any) -> _FakeQuery:
         self._filters.append(("eq", column, value))
         return self

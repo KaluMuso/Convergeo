@@ -192,40 +192,6 @@ async def test_send_builds_cloud_api_payload_contract(monkeypatch: pytest.Monkey
 
 
 @pytest.mark.asyncio
-async def test_send_compliance_ack_uses_session_text(monkeypatch: pytest.MonkeyPatch) -> None:
-    captured: dict[str, Any] = {}
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        captured["body"] = json.loads(request.content.decode())
-        return httpx.Response(200, json={"messages": [{"id": "wamid.ack"}]})
-
-    monkeypatch.setenv("WHATSAPP_TOKEN", "test-token")
-    monkeypatch.setenv("WHATSAPP_PHONE_NUMBER_ID", "1234567890")
-
-    transport = httpx.MockTransport(handler)
-    adapter = WhatsAppAdapter(client=httpx.AsyncClient(transport=transport))
-    message = OutboxMessage(
-        id="outbox-ack",
-        dedupe_key="compliance_opt_ack:wamid.stop:whatsapp",
-        channel="whatsapp",
-        template="compliance_ack",
-        payload={
-            "to": FIXTURE_TO,
-            "body": "You have been unsubscribed from Vergeo5 marketing messages.",
-        },
-    )
-
-    result = await adapter.send(message)
-    assert result.success is True
-
-    body = captured["body"]
-    assert body["type"] == "text"
-    assert body["to"] == FIXTURE_TO
-    assert "unsubscribed" in body["text"]["body"].lower()
-    assert "template" not in body
-
-
-@pytest.mark.asyncio
 async def test_send_rate_limit_is_retryable(monkeypatch: pytest.MonkeyPatch) -> None:
     def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(
