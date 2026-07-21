@@ -548,6 +548,21 @@ def _instances_changed(
     return False
 
 
+def _schedule_event_date_label(client: Any, event_id: str) -> str:
+    instances = _fetch_instances(client, event_id)
+    if not instances:
+        return ""
+    starts_at_values = [
+        _parse_starts_at(row["starts_at"])
+        for row in instances
+        if row.get("starts_at") is not None
+    ]
+    if not starts_at_values:
+        return ""
+    earliest = min(starts_at_values)
+    return earliest.astimezone(UTC).strftime("%d %b %Y, %H:%M UTC")
+
+
 def _notify_schedule_change(
     client: Any,
     *,
@@ -555,10 +570,12 @@ def _notify_schedule_change(
     event_title: str,
     holder_user_ids: set[str],
 ) -> None:
+    event_date = _schedule_event_date_label(client, event_id)
     for holder_id in holder_user_ids:
         payload = {
             "event_id": event_id,
             "event_title": event_title,
+            "event_date": event_date,
             "recipient_id": holder_id,
         }
         try:
@@ -575,11 +592,8 @@ def _notify_schedule_change(
                 event_type=_SCHEDULE_CHANGE_EVENT,
                 entity_id=f"{event_id}:{holder_id}",
                 channel="whatsapp",
-                template=None,
-                payload={
-                    **payload,
-                    "todo": "TODO(M14): map event_schedule_changed to WhatsApp template",
-                },
+                template="event_schedule_changed",
+                payload=payload,
             )
 
 
