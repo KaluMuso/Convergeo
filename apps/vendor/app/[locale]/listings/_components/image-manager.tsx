@@ -26,6 +26,7 @@ type SignUploadResponse = {
   signature: string;
   folder: string;
   allowed_formats: string;
+  max_file_size: number;
 };
 
 type CloudinaryUploadResponse = {
@@ -141,6 +142,7 @@ export async function uploadToCloudinaryWithProgress(
     formData.append("signature", signed.signature);
     formData.append("folder", signed.folder);
     formData.append("allowed_formats", signed.allowed_formats);
+    formData.append("max_file_size", String(signed.max_file_size));
     xhr.send(formData);
   });
 }

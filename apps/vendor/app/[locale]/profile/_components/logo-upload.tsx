@@ -18,6 +18,7 @@ type SignUploadResponse = {
   signature: string;
   folder: string;
   allowed_formats: string;
+  max_file_size: number;
 };
 
 type LogoUploadProps = {

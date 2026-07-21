@@ -110,6 +110,21 @@ def test_build_signed_params_never_returns_api_secret() -> None:
     assert "super-secret" not in str(signed.values())
 
 
+def test_build_signed_params_upload_params_match_signature() -> None:
+    """Upload params sent to Cloudinary must exactly match params that were signed."""
+    api_secret = "super-secret"
+    signed = build_signed_params(
+        folder=f"listings/{VENDOR_A}",
+        public_id="hero",
+        timestamp=1315060510,
+        api_secret=api_secret,
+        allowed_formats="jpg,png,webp,avif",
+        max_bytes=10_485_760,
+    )
+    upload_params = {key: value for key, value in signed.items() if key != "signature"}
+    assert sign_upload_parameters(upload_params, api_secret) == signed["signature"]
+
+
 def test_media_sign_returns_vendor_scoped_folder(media_client: TestClient) -> None:
     response = media_client.post(
         "/media/sign",
@@ -121,6 +136,7 @@ def test_media_sign_returns_vendor_scoped_folder(media_client: TestClient) -> No
     assert body["cloud_name"] == "test-cloud"
     assert body["api_key"] == "test-api-key"
     assert body["allowed_formats"] == "jpg,png,webp,avif"
+    assert body["max_file_size"] == 10_485_760
     assert body["signature"]
     assert "api_secret" not in body
     assert "test-api-secret" not in response.text

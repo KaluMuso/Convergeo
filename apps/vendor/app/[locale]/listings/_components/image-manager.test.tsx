@@ -15,6 +15,7 @@ vi.mock("next-intl", () => ({
 import {
   DOWNSCALE_MAX_EDGE,
   MAX_LISTING_IMAGES,
+  uploadToCloudinaryWithProgress,
   uploadWithRetry,
   wouldExceedImageCap,
 } from "./image-manager";
@@ -92,6 +93,7 @@ describe("uploadWithRetry", () => {
       signature: "sig",
       folder: "listings/vendor-a",
       allowed_formats: "jpg,png,webp,avif",
+      max_file_size: 10_485_760,
     };
 
     let attempts = 0;
@@ -123,5 +125,58 @@ describe("uploadWithRetry", () => {
 
     expect(result.public_id).toBe("listings/vendor-a/photo-1");
     expect(attempts).toBe(2);
+  });
+});
+
+describe("uploadToCloudinaryWithProgress", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("includes max_file_size in the signed upload FormData", async () => {
+    const signed = {
+      cloud_name: "test-cloud",
+      api_key: "key",
+      timestamp: 1_715_000_000,
+      signature: "sig",
+      folder: "listings/vendor-a",
+      allowed_formats: "jpg,png,webp,avif",
+      max_file_size: 10_485_760,
+    };
+
+    const appended = new Map<string, string>();
+    class MockFormData {
+      append(key: string, value: string | Blob) {
+        appended.set(key, typeof value === "string" ? value : "blob");
+      }
+    }
+
+    class MockXHR {
+      upload = { onprogress: null as ((event: ProgressEvent) => void) | null };
+      status = 200;
+      responseText = JSON.stringify({ public_id: "listings/vendor-a/photo-1" });
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+
+      open() {}
+
+      send() {
+        this.onload?.();
+      }
+    }
+
+    vi.stubGlobal("FormData", MockFormData);
+    vi.stubGlobal("XMLHttpRequest", MockXHR);
+
+    const result = await uploadToCloudinaryWithProgress(new Blob(["x"]), signed, () => undefined);
+
+    expect(result.public_id).toBe("listings/vendor-a/photo-1");
+    expect(appended.get("max_file_size")).toBe(String(signed.max_file_size));
+    expect(appended.get("api_key")).toBe(signed.api_key);
+    expect(appended.get("timestamp")).toBe(String(signed.timestamp));
+    expect(appended.get("signature")).toBe(signed.signature);
+    expect(appended.get("folder")).toBe(signed.folder);
+    expect(appended.get("allowed_formats")).toBe(signed.allowed_formats);
   });
 });
