@@ -17,6 +17,15 @@
     "system": "Système",
     "displayPreferences": "Préférences d'affichage"
   },
+  "locale": {
+    "switchAria": "Choisir la langue",
+    "names": {
+      "en": "Anglais",
+      "bem": "Bemba",
+      "nya": "Nyanja",
+      "fr": "Français"
+    }
+  },
   "greeting": "Bonjour, {name} !",
   "offline": {
     "code": "Hors ligne",
