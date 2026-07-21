@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   parseMegaMenuMerchPayload,
+  pickMegaMenuMerchFromResolvedSlots,
   pickMegaMenuMerchSlot,
   withLocaleHref,
 } from "./mega-menu-merch";
@@ -47,6 +48,25 @@ describe("mega-menu-merch", () => {
     );
 
     expect(payload?.featuredMinis[0]?.title).toBe("Mini");
+  });
+
+  it("picks mega_menu from API-resolved slots without schedule re-check", () => {
+    const payload = pickMegaMenuMerchFromResolvedSlots([
+      {
+        slot_key: "mega_menu",
+        active: false,
+        schedule_from: null,
+        schedule_to: null,
+        payload: {
+          featured_minis: [{ title: "Draft mini", href: "/en/p/draft" }],
+          promo_text: "Preview",
+          promo_cta_label: "Go",
+          promo_href: "/en/search",
+        },
+      },
+    ]);
+
+    expect(payload?.featuredMinis[0]?.title).toBe("Draft mini");
   });
 
   it("prefixes locale on root-relative hrefs", () => {

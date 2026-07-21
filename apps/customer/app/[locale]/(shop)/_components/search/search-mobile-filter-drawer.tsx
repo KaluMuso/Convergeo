@@ -19,6 +19,7 @@ type SearchMobileFilterDrawerProps = {
   categories: SearchCategoryOption[];
   initialState: SearchFilterState;
   categoryCounts?: Record<string, number>;
+  showPriceFilters?: boolean;
 };
 
 export function SearchMobileFilterDrawer({
@@ -26,6 +27,7 @@ export function SearchMobileFilterDrawer({
   categories,
   initialState,
   categoryCounts,
+  showPriceFilters = true,
 }: SearchMobileFilterDrawerProps) {
   const [open, setOpen] = useState(false);
   const active = hasActiveSearchFilters(initialState);
@@ -60,6 +62,7 @@ export function SearchMobileFilterDrawer({
           categoryCounts={categoryCounts}
           className="border-0 p-0 shadow-none"
           onApplied={() => setOpen(false)}
+          showPriceFilters={showPriceFilters}
         />
       </Modal>
     </div>

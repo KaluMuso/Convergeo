@@ -523,6 +523,13 @@ def vendor_contest_lane1_return(
     if not isinstance(evidence_paths, list):
         evidence_paths = []
 
+    _cas_update_return_status(
+        service_client,
+        return_id,
+        expected_status="requested",
+        new_status="rejected",
+    )
+
     dispute_response = (
         service_client.client.table("disputes")
         .insert(
@@ -541,13 +548,6 @@ def vendor_contest_lane1_return(
         dispute_row = rows[0] if rows else None
     if dispute_row is None or not dispute_row.get("id"):
         raise AppError(code="internal_error", message="Could not create dispute", http_status=500)
-
-    _cas_update_return_status(
-        service_client,
-        return_id,
-        expected_status="requested",
-        new_status="rejected",
-    )
 
     updated = _load_return_row(service_client, return_id)
     updated["_dispute_id"] = str(dispute_row["id"])
