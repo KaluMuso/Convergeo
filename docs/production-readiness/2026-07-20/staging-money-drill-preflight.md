@@ -51,3 +51,16 @@ rewrite five COD-eligible retail listings to `staging-drill/…` public_ids.
 2. Sign in as staging buyer → add `tea-coffee-standard` → cart revalidate → COD ≤K500
    and/or MoMo sandbox per `docs/ops/staging-money-drill.md`.
 3. Attach order id + `pay-*` / `ord-*` references to this folder when done.
+
+## n8n non-money activation (2026-07-21)
+
+Manual ticks against healthy API, then publish (money workflows left **unpublished**):
+
+| Workflow               | ID                 | Manual exec | Result                                              | Published          |
+| ---------------------- | ------------------ | ----------- | --------------------------------------------------- | ------------------ |
+| Notification dispatch  | `sevKtX1AmimQCWsG` | `12353`     | success `{processed:0}`                             | **yes**            |
+| Embeddings cron        | `oqjfSdMXClfsf3qd` | `12355`     | success `{processed:0,dead:0}`                      | **yes**            |
+| Reservation sweeper    | `F25zEWiPoIveARys` | `12354`     | **error** API 500 on `/internal/stock-sweeper/tick` | **no**             |
+| Payment reconciliation | `C1MpTNjrfLACMG3f` | —           | money-moving                                        | **no** (await F9b) |
+
+Credentials bound via MCP `setNodeCredential` (Dispatch + Embeddings + Stock Sweeper tokens present).
