@@ -4,8 +4,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@vergeo/ui/src/media/cloudinary-image", () => ({
-  CloudinaryImage: ({ alt }: { alt: string }) => <img alt={alt} />,
+vi.mock("@vergeo/ui/src/media/cloudinary-image-static", () => ({
+  CloudinaryImageStatic: ({ alt }: { alt: string }) => <img alt={alt} />,
 }));
 
 import { ListingGrid, type CatalogListing } from "./listing-grid";

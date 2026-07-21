@@ -1,7 +1,7 @@
 "use client";
 
 import { formatK } from "@vergeo/i18n";
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import { Tabs } from "@vergeo/ui/src/tabs";
 import Link from "next/link";
@@ -147,7 +147,7 @@ function SearchResultRow({
           href={href}
           className="relative block h-[4.5rem] w-[4.5rem] shrink-0 overflow-hidden rounded-md sm:h-20 sm:w-20"
         >
-          <CloudinaryImage
+          <CloudinaryImageStatic
             publicId={imagePublicId}
             alt=""
             width={720}
@@ -226,7 +226,7 @@ function SearchProductCard({
       onWishlistToggle={enabled ? toggleWishlist : undefined}
       media={
         imagePublicId ? (
-          <CloudinaryImage
+          <CloudinaryImageStatic
             publicId={imagePublicId}
             alt={hit.title}
             width={360}
