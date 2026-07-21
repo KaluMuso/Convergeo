@@ -91,6 +91,7 @@
   "unavailable": {
     "body": "Tatwaishibe ukuleta search results nomba. Wesheni limbi, nangu twaleni categories.",
     "retry": "Wesheni limbi",
-    "title": "Search teyaisa"
+    "title": "Search teyaisa",
+    "browseHeading": "Twaleni m'malo mwine"
   }
 }

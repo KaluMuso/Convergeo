@@ -25,7 +25,8 @@
   "unavailable": {
     "title": "搜索暂不可用",
     "body": "我们目前无法加载搜索结果。请稍后重试，或浏览分类。",
-    "retry": "重试"
+    "retry": "重试",
+    "browseHeading": "改为浏览"
   },
   "invalid": {
     "title": "搜索词过长",
