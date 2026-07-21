@@ -55,6 +55,7 @@
       "wishlist": "加入心愿单",
       "outOfStock": "缺货",
       "distance": "相距 {distance}",
+      "discount": "−{percent}%",
       "wishlistRemove": "移出收藏",
       "mediaEmpty": "暂无商品图片",
       "quickAddError": "无法加入购物车。请检查网络后重试。",

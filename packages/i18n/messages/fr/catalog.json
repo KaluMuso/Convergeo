@@ -55,6 +55,7 @@
       "wishlist": "Ajouter aux favoris",
       "outOfStock": "En rupture de stock",
       "distance": "À {distance}",
+      "discount": "−{percent}%",
       "wishlistRemove": "Retirer de la liste",
       "mediaEmpty": "Pas d’image produit",
       "quickAddError": "Impossible d’ajouter au panier. Vérifiez votre connexion et réessayez.",

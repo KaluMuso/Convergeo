@@ -1,8 +1,8 @@
-import type { ReactNode } from "react";
-
 import { IconHeart } from "./icons";
 import { PriceBlock } from "./price-block";
 import { StarRating } from "./star-rating";
+
+import type { ReactNode } from "react";
 
 export type ProductCardDensity = "default" | "compact";
 
@@ -16,6 +16,8 @@ export type ProductCardProps = {
   ngwee: number;
   oldNgwee?: number;
   savingsLabel?: string;
+  /** Pre-formatted discount chip on the image, e.g. "−38%". Parent owns the copy. */
+  discountLabel?: ReactNode;
   rating: number;
   reviewCount: number;
   noReviewsLabel?: ReactNode;
@@ -83,6 +85,7 @@ export function ProductCard({
   ngwee,
   oldNgwee,
   savingsLabel,
+  discountLabel,
   rating,
   reviewCount,
   noReviewsLabel,
@@ -138,8 +141,21 @@ export function ProductCard({
             <span className="h-12 w-16 rounded border border-dashed border-border/80 bg-surface/40" />
           </div>
         )}
-        {badge ? (
-          <div className={cx("absolute z-[1]", compact ? "left-1.5 top-1.5" : "left-2 top-2")}>
+        {badge || discountLabel ? (
+          <div
+            className={cx(
+              "absolute z-[1] flex flex-col items-start gap-1",
+              compact ? "left-1.5 top-1.5" : "left-2 top-2",
+            )}
+          >
+            {discountLabel ? (
+              <span
+                className="inline-block rounded-pill bg-[var(--discount)] px-2 py-0.5 text-micro font-bold uppercase tracking-wide text-[var(--on-danger)] shadow-1"
+                data-testid="product-card-discount"
+              >
+                {discountLabel}
+              </span>
+            ) : null}
             {badge}
           </div>
         ) : null}

@@ -34,6 +34,19 @@ describe("ProductCard", () => {
     expect(screen.getByText("K2,500.00")).toBeInTheDocument();
   });
 
+  it("renders a struck compare-at price and discount chip when on sale", () => {
+    render(<ProductCard {...baseProps} ngwee={250000} oldNgwee={400000} discountLabel="−38%" />);
+    const struck = screen.getByText("K4,000.00");
+    expect(struck).toBeInTheDocument();
+    expect(struck.className).toMatch(/line-through/);
+    expect(screen.getByTestId("product-card-discount")).toHaveTextContent("−38%");
+  });
+
+  it("omits the discount chip with no compare-at price", () => {
+    render(<ProductCard {...baseProps} />);
+    expect(screen.queryByTestId("product-card-discount")).not.toBeInTheDocument();
+  });
+
   it("renders skeleton variant", () => {
     render(<ProductCard {...baseProps} skeleton />);
     expect(screen.getByTestId("product-card-skeleton")).toBeInTheDocument();

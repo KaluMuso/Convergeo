@@ -252,6 +252,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
     wishlistRemove: t("plp.card.wishlistRemove"),
     outOfStock: t("plp.card.outOfStock"),
     distance: t("plp.card.distance"),
+    discount: t("plp.card.discount"),
     sampleListing: t("home.demo.sampleListing"),
     mediaEmpty: t("plp.card.mediaEmpty"),
     conditionNew: t("plp.card.conditionNew"),
