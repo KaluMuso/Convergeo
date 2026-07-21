@@ -1,39 +1,34 @@
-import { loadNamespace, type Locale } from "@vergeo/i18n";
-import { tokens } from "@vergeo/ui/tokens";
 import { ImageResponse } from "next/og";
-import { createTranslator } from "next-intl";
 
+/**
+ * Keep this Edge route tiny: do not import `@vergeo/i18n` or `@vergeo/ui`
+ * (message JSON + token graphs push the OG worker over Vercel's 1 MB limit).
+ * Title/price come from searchParams set by product/event/vendor pages.
+ */
 export const runtime = "edge";
 export const alt = "Vergeo5";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+const COLORS = {
+  bg: "#FAF7F2",
+  bg2: "#F3EDE3",
+  primary: "#2D4A7A",
+  primaryTint: "#E8F0FA",
+  displayInk: "#23324E",
+  accent: "#C8861A",
+  text2: "#6B5A3E",
+} as const;
 
 type ImageProps = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{ name?: string; price?: string }>;
 };
 
-export default async function OpenGraphImage({ params, searchParams }: ImageProps) {
-  const { locale } = await params;
+export default async function OpenGraphImage({ searchParams }: ImageProps) {
   const { name, price } = await searchParams;
-  const [commonMessages, catalogMessages] = await Promise.all([
-    loadNamespace(locale as Locale, "common"),
-    loadNamespace(locale as Locale, "catalog"),
-  ]);
-  const tCommon = createTranslator({
-    locale,
-    messages: { common: commonMessages },
-    namespace: "common",
-  }) as (key: string) => string;
-  const tCatalog = createTranslator({
-    locale,
-    messages: { catalog: catalogMessages },
-    namespace: "catalog",
-  }) as (key: string) => string;
-
-  const displayName = name?.trim() || tCommon("app.name");
+  const displayName = name?.trim() || "Vergeo5";
   const displayPrice = price?.trim() || null;
-  const tagline = tCatalog("home.meta.title");
 
   return new ImageResponse(
     <div
@@ -44,9 +39,9 @@ export default async function OpenGraphImage({ params, searchParams }: ImageProp
         flexDirection: "column",
         justifyContent: "space-between",
         padding: "64px",
-        background: `linear-gradient(135deg, ${tokens.colors.bg} 0%, ${tokens.colors.primaryTint} 55%, ${tokens.colors.bg2} 100%)`,
-        color: tokens.colors.displayInk,
-        fontFamily: tokens.fonts.body,
+        background: `linear-gradient(135deg, ${COLORS.bg} 0%, ${COLORS.primaryTint} 55%, ${COLORS.bg2} 100%)`,
+        color: COLORS.displayInk,
+        fontFamily: "ui-sans-serif, system-ui, sans-serif",
       }}
     >
       <div
@@ -56,7 +51,7 @@ export default async function OpenGraphImage({ params, searchParams }: ImageProp
           gap: "16px",
           fontSize: 28,
           fontWeight: 700,
-          color: tokens.colors.primary,
+          color: COLORS.primary,
         }}
       >
         <div
@@ -64,19 +59,19 @@ export default async function OpenGraphImage({ params, searchParams }: ImageProp
             width: 48,
             height: 48,
             borderRadius: 12,
-            background: tokens.colors.primary,
+            background: COLORS.primary,
           }}
         />
-        {tCommon("app.name")}
+        Vergeo5
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 900 }}>
         <div
           style={{
-            fontFamily: tokens.fonts.display,
             fontSize: 72,
             lineHeight: 1.05,
-            color: tokens.colors.displayInk,
+            color: COLORS.displayInk,
+            fontWeight: 700,
           }}
         >
           {displayName}
@@ -86,8 +81,8 @@ export default async function OpenGraphImage({ params, searchParams }: ImageProp
             style={{
               fontSize: 48,
               fontWeight: 700,
-              color: tokens.colors.accent,
-              fontFamily: tokens.fonts.mono,
+              color: COLORS.accent,
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
             }}
           >
             {displayPrice}
@@ -95,7 +90,9 @@ export default async function OpenGraphImage({ params, searchParams }: ImageProp
         ) : null}
       </div>
 
-      <div style={{ fontSize: 24, color: tokens.colors.text2 }}>{tagline}</div>
+      <div style={{ fontSize: 24, color: COLORS.text2 }}>
+        Zambia&apos;s marketplace — escrow-backed shopping
+      </div>
     </div>,
     {
       ...size,
