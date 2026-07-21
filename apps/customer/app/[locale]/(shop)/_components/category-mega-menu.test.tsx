@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { buildCategoryTree, CategoryMegaMenu, type NavCategory } from "./category-mega-menu";
+import {
+  buildCategoryTree,
+  CategoryMegaMenu,
+  type FeaturedMini,
+  type NavCategory,
+} from "./category-mega-menu";
 
 afterEach(cleanup);
 
@@ -14,7 +19,14 @@ const labels = {
   panelAria: "All categories",
   loading: "Loading categories…",
   viewAll: "View all categories",
+  featuredTitle: "New on Vergeo5",
+  featuredPromo: "Compare sellers online.",
+  featuredPromoCta: "Search marketplace",
 };
+
+const featured: FeaturedMini[] = [
+  { title: "Itel A70", href: "/en/p/itel-a70", priceLabel: "K450.00" },
+];
 
 const tree: NavCategory[] = [
   {
@@ -26,11 +38,20 @@ const tree: NavCategory[] = [
   { id: "2", name: "Home", slug: "home", children: [] },
 ];
 
+function isFocusInMegaMenuPanel(element: Element | null): boolean {
+  return Boolean(element?.closest('[role="dialog"]'));
+}
+
 describe("CategoryMegaMenu", () => {
   it("toggles the disclosure and lazily loads categories on first open", async () => {
     const user = userEvent.setup();
     render(
-      <CategoryMegaMenu locale="en" labels={labels} loadCategories={() => Promise.resolve(tree)} />,
+      <CategoryMegaMenu
+        locale="en"
+        labels={labels}
+        loadCategories={() => Promise.resolve(tree)}
+        loadFeaturedMinis={() => Promise.resolve(featured)}
+      />,
     );
 
     const trigger = screen.getByRole("button", { name: /all categories/i });
@@ -49,12 +70,60 @@ describe("CategoryMegaMenu", () => {
       "href",
       "/en/categories",
     );
+    expect(screen.getByTestId("mega-menu-featured")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Itel A70/i })).toHaveAttribute(
+      "href",
+      "/en/p/itel-a70",
+    );
+  });
+
+  it("traps focus inside the panel with Tab", async () => {
+    const user = userEvent.setup();
+    render(
+      <CategoryMegaMenu
+        locale="en"
+        labels={labels}
+        loadCategories={() => Promise.resolve(tree)}
+        loadFeaturedMinis={() => Promise.resolve(featured)}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: /all categories/i });
+    await user.click(trigger);
+    const phones = await screen.findByRole("link", { name: "Phones" });
+    phones.focus();
+    await user.tab();
+    const focused = document.activeElement;
+    expect(isFocusInMegaMenuPanel(focused)).toBe(true);
+  });
+
+  it("closes on outside click", async () => {
+    const user = userEvent.setup();
+    render(
+      <CategoryMegaMenu
+        locale="en"
+        labels={labels}
+        loadCategories={() => Promise.resolve(tree)}
+        loadFeaturedMinis={() => Promise.resolve(featured)}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: /all categories/i });
+    await user.click(trigger);
+    await screen.findByRole("link", { name: "Phones" });
+    fireEvent.mouseDown(document.documentElement);
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 
   it("closes on Escape and restores focus to the trigger", async () => {
     const user = userEvent.setup();
     render(
-      <CategoryMegaMenu locale="en" labels={labels} loadCategories={() => Promise.resolve(tree)} />,
+      <CategoryMegaMenu
+        locale="en"
+        labels={labels}
+        loadCategories={() => Promise.resolve(tree)}
+        loadFeaturedMinis={() => Promise.resolve(featured)}
+      />,
     );
 
     const trigger = screen.getByRole("button", { name: /all categories/i });
@@ -74,6 +143,7 @@ describe("CategoryMegaMenu", () => {
         locale="en"
         labels={{ ...labels, empty: "No categories" }}
         loadCategories={() => Promise.resolve([])}
+        loadFeaturedMinis={() => Promise.resolve([])}
       />,
     );
 

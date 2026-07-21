@@ -25,6 +25,7 @@ import {
   encodeSearchFilters,
   type SearchFilterState,
 } from "../_components/search/search-filters";
+import { SearchInput } from "../_components/search/search-input";
 import { searchTabKinds, type SearchKind } from "../_components/search/search-kinds";
 import { SearchMobileFilterDrawer } from "../_components/search/search-mobile-filter-drawer";
 import { SearchUnavailablePanel } from "../_components/search/search-unavailable-panel";
@@ -289,6 +290,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     clear: t("filters.clear"),
     openFilters: t("filters.openFilters"),
     filtersActive: t("filters.filtersActive"),
+    facetCount: t("filters.facetCount"),
   };
 
   const appliedFilterLabels = {
@@ -301,6 +303,13 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   };
 
   const searchPathname = `/${locale}/search`;
+
+  const categoryCounts =
+    view.status === "results" && view.response.facets
+      ? Object.fromEntries(
+          view.response.facets.categories.map((bucket) => [bucket.value, bucket.count]),
+        )
+      : {};
 
   const resultsTabsLabels = {
     ariaLabel: t("tabs.ariaLabel"),
@@ -427,6 +436,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                   labels={filterPanelLabels}
                   categories={searchCategoryOptions}
                   initialState={filterState}
+                  categoryCounts={categoryCounts}
                 />
               </div>
               <div className="flex min-w-0 flex-col gap-3">
@@ -434,6 +444,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                   labels={filterPanelLabels}
                   categories={searchCategoryOptions}
                   initialState={filterState}
+                  categoryCounts={categoryCounts}
                 />
                 <SearchAppliedFilterBar
                   pathname={searchPathname}

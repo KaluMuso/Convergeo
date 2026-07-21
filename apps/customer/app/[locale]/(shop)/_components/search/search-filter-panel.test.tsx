@@ -24,6 +24,7 @@ const labels = {
   categoryAll: "All categories",
   apply: "Apply filters",
   clear: "Clear filters",
+  facetCount: "{label} ({count})",
 };
 
 afterEach(() => {
@@ -54,5 +55,18 @@ describe("SearchFilterPanel", () => {
       "/en/search?q=phone&min_price=100&category_path=electronics",
       expect.objectContaining({ scroll: false }),
     );
+  });
+
+  it("shows facet counts beside category options", () => {
+    render(
+      <SearchFilterPanel
+        labels={labels}
+        categories={[{ path: "electronics", label: "Electronics" }]}
+        initialState={{}}
+        categoryCounts={{ electronics: 4 }}
+      />,
+    );
+
+    expect(screen.getByRole("option", { name: "Electronics (4)" })).toBeInTheDocument();
   });
 });

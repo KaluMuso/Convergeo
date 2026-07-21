@@ -28,12 +28,15 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
 
   const baseMessages = await getMessages();
   const catalogMessages = await loadNamespace(locale as Locale, "catalog");
+  const searchMessages = await loadNamespace(locale as Locale, "search");
   const messages = {
     ...baseMessages,
     catalog: catalogMessages,
+    search: searchMessages,
   } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "catalog" });
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
+  const tSearch = createTranslator({ locale, messages, namespace: "search" });
   const localeSwitcherLabels = {
     ariaLabel: tCommon("locale.switchAria"),
     names: {
@@ -128,6 +131,9 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           categoriesLoading: t("home.nav.categoriesLoading"),
           categoriesEmpty: t("home.nav.categoriesEmpty"),
           viewAllCategories: t("home.nav.viewAllCategories"),
+          featuredTitle: t("home.nav.featuredTitle"),
+          featuredPromo: t("home.nav.featuredPromo"),
+          featuredPromoCta: t("home.nav.featuredPromoCta"),
           directory: t("home.nav.directory"),
           services: t("home.nav.services"),
           events: t("home.nav.events"),
@@ -135,6 +141,13 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           account: t("home.nav.account"),
           cart: t("home.nav.cart"),
           cartWithCount: t("home.nav.cartWithCount"),
+          searchInput: {
+            placeholder: t("home.nav.searchPlaceholder"),
+            submit: t("home.nav.searchSubmit"),
+            ariaLabel: tSearch("input.ariaLabel"),
+            suggestionsLabel: tSearch("input.suggestionsLabel"),
+            noSuggestions: tSearch("input.noSuggestions"),
+          },
         }}
       />
       <main

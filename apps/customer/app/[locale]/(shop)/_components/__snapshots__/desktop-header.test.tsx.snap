@@ -24,79 +24,15 @@ exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 
     >
       Vergeo5
     </a>
-    <form
-      action="/en/search"
+    <div
       class="min-w-0 max-w-3xl flex-1 xl:max-w-4xl"
-      role="search"
     >
       <div
-        class="flex w-full items-center gap-2 rounded-pill border border-border bg-surface transition-[border-color,box-shadow] duration-fast ease-std motion-reduce:transition-none focus-within:border-primary focus-within:shadow-focusRing h-11 border-primary/30 bg-bg shadow-1"
-        data-testid="search-field"
+        role="search"
       >
-        <span
-          aria-hidden="true"
-          class="pl-4 text-text-2"
-        >
-          <svg
-            aria-hidden="true"
-            class="h-5 w-5 shrink-0"
-            fill="none"
-            stroke="currentColor"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="1.75"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle
-              cx="11"
-              cy="11"
-              r="6.5"
-            />
-            <path
-              d="m16 16 4 4"
-            />
-          </svg>
-        </span>
-        <input
-          aria-label="Search products, services, events…"
-          class="w-full bg-surface font-body text-text border border-border placeholder:text-text-3 transition-[border-color,box-shadow,background-color] duration-fast ease-std motion-reduce:transition-none focus-visible:outline-none focus-visible:border-primary focus-visible:shadow-focusRing disabled:cursor-not-allowed disabled:bg-bg-2 disabled:text-text-3 aria-[invalid=true]:border-danger min-w-0 flex-1 rounded-pill border-0 bg-transparent shadow-none focus-visible:shadow-none h-11 min-h-11 px-4 text-body pl-0 pr-0"
-          name="q"
-          placeholder="Search products, services, events…"
-          type="search"
-        />
-        <div
-          class="pr-2"
-        >
-          <button
-            aria-label="Search"
-            class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-pill text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-            type="submit"
-          >
-            <svg
-              aria-hidden="true"
-              class="h-5 w-5 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="1.75"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <circle
-                cx="11"
-                cy="11"
-                r="6.5"
-              />
-              <path
-                d="m16 16 4 4"
-              />
-            </svg>
-          </button>
-        </div>
+        Search
       </div>
-    </form>
+    </div>
     <ul
       class="flex shrink-0 list-none items-center gap-0.5 p-0"
     >

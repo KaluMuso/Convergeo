@@ -46,6 +46,8 @@ export type SearchInputProps = {
   initialQuery?: string;
   compact?: boolean;
   autoFocus?: boolean;
+  /** Extra classes on the underlying input (e.g. desktop header chrome). */
+  inputClassName?: string;
 };
 
 const DEBOUNCE_MS = 200;
@@ -60,6 +62,7 @@ export function SearchInput({
   initialQuery = "",
   compact = false,
   autoFocus = false,
+  inputClassName,
 }: SearchInputProps) {
   const router = useRouter();
   const listboxId = useId();
@@ -225,7 +228,7 @@ export function SearchInput({
           autoComplete="off"
           autoFocus={autoFocus}
           size={compact ? "sm" : "md"}
-          className="pr-12"
+          className={["pr-12", inputClassName].filter(Boolean).join(" ")}
         />
         <button
           type="submit"
