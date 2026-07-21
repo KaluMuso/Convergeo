@@ -21,8 +21,10 @@ import {
 import type { CategoryRow } from "./merch-data";
 import type { CatalogListing } from "./plp/listing-grid";
 
-vi.mock("@vergeo/ui/src/media/cloudinary-image", () => ({
-  CloudinaryImage: ({ alt }: { alt: string }) => <img alt={alt} data-testid="cloudinary-image" />,
+vi.mock("@vergeo/ui/src/media/cloudinary-image-static", () => ({
+  CloudinaryImageStatic: ({ alt }: { alt: string }) => (
+    <img alt={alt} data-testid="cloudinary-image" />
+  ),
 }));
 
 afterEach(() => {

@@ -1,4 +1,4 @@
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import Link from "next/link";
 
 import type { CategoryRow, MerchSlotRow } from "./merch-data";
@@ -154,7 +154,7 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
               >
                 {imagePublicId ? (
                   <span className="absolute inset-0" data-testid="category-image">
-                    <CloudinaryImage
+                    <CloudinaryImageStatic
                       publicId={imagePublicId}
                       alt=""
                       width={480}

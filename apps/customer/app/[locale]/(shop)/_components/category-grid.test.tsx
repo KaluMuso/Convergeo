@@ -9,8 +9,8 @@ import catalogMessages from "../../../../../../packages/i18n/messages/en/catalog
 
 import { CategoryGrid, readCategoryImageMap } from "./category-grid";
 
-vi.mock("@vergeo/ui/src/media/cloudinary-image", () => ({
-  CloudinaryImage: ({ publicId }: { publicId: string }) => (
+vi.mock("@vergeo/ui/src/media/cloudinary-image-static", () => ({
+  CloudinaryImageStatic: ({ publicId }: { publicId: string }) => (
     <img alt="" data-testid="cloudinary-image" data-public-id={publicId} />
   ),
 }));

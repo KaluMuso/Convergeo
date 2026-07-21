@@ -1,5 +1,5 @@
 import { LinkButton } from "@vergeo/ui/src/link-button";
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { ServiceCard } from "@vergeo/ui/src/service-card";
 import { VendorCard } from "@vergeo/ui/src/vendor-card";
 import Link from "next/link";
@@ -467,7 +467,7 @@ export function HomeServicesRail({
               providerLabel={labels.provider.replace("{provider}", service.providerName)}
               media={
                 service.imagePublicId ? (
-                  <CloudinaryImage
+                  <CloudinaryImageStatic
                     publicId={service.imagePublicId}
                     alt={service.title}
                     width={360}
@@ -515,7 +515,7 @@ type HomeVendorsRailProps = {
 function vendorRailLogo(logoUrl: string) {
   if (!logoUrl.startsWith("http://") && !logoUrl.startsWith("https://")) {
     return (
-      <CloudinaryImage
+      <CloudinaryImageStatic
         publicId={logoUrl}
         alt=""
         width={112}
