@@ -19,16 +19,16 @@
     "@vergeo/observability": "workspace:*",
     "@vergeo/ui": "workspace:*",
     "jose": "^5.10.0",
-    "next": "^15.2.4",
-    "next-intl": "^4.13.2",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "next": "^15.5.21",
+    "next-intl": "^4.13.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.0.14",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
-    "tailwindcss": "^4.0.14",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.8.2",
     "vitest": "^3.0.9"
   }

@@ -126,7 +126,7 @@ def _default_rpc_handler(name: str, params: dict[str, Any]) -> list[Any]:
             return [f"{query} chitenge"]
         return [query]
 
-    if name != "search_rrf":
+    if name != "search_rrf" and name != "search_query_facets":
         return []
 
     query = str(params.get("query", "")).lower()
@@ -146,6 +146,60 @@ def _default_rpc_handler(name: str, params: dict[str, Any]) -> list[Any]:
 
     if not candidates and query:
         candidates = [ITEL_HIT, CHITENGE_HIT, DRESS_HIT]
+
+    if name == "search_query_facets":
+        category_counts: dict[str, int] = {}
+        price_counts = {
+            "under_50k": 0,
+            "50k_200k": 0,
+            "200k_500k": 0,
+            "over_500k": 0,
+        }
+        for row in candidates:
+            if entity_kind is not None and row["entity_kind"] != entity_kind:
+                continue
+            row_path = row.get("category_path")
+            row_max = row.get("price_max_ngwee")
+            if price_min is not None and row_max is not None and row_max < price_min:
+                continue
+            if price_max is not None:
+                row_min = row.get("price_min_ngwee")
+                if row_min is not None and row_min > price_max:
+                    continue
+            if isinstance(row_path, str) and row_path:
+                category_counts[row_path] = category_counts.get(row_path, 0) + 1
+
+        for row in candidates:
+            if entity_kind is not None and row["entity_kind"] != entity_kind:
+                continue
+            row_path = row.get("category_path")
+            if category_path is not None and (
+                not isinstance(row_path, str) or not row_path.startswith(str(category_path))
+            ):
+                continue
+            price = row.get("price_min_ngwee") or 0
+            if price < 50_000:
+                bucket = "under_50k"
+            elif price < 200_000:
+                bucket = "50k_200k"
+            elif price < 500_000:
+                bucket = "200k_500k"
+            else:
+                bucket = "over_500k"
+            price_counts[bucket] += 1
+
+        return [
+            {
+                "categories": [
+                    {"value": value, "count": count}
+                    for value, count in sorted(category_counts.items())
+                ],
+                "price": [
+                    {"value": value, "count": price_counts[value]}
+                    for value in ("under_50k", "50k_200k", "200k_500k", "over_500k")
+                ],
+            }
+        ]
 
     filtered: list[dict[str, Any]] = []
     for row in candidates:
@@ -276,6 +330,15 @@ def test_facet_filters_compose(search_client: TestClient) -> None:
     assert body["results"][0]["title"] == "Itel A70 Smartphone"
 
 
+def test_search_returns_sql_facets(search_client: TestClient) -> None:
+    response = search_client.get("/search", params={"q": "itel"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["facets"] is not None
+    categories = {item["value"]: item["count"] for item in body["facets"]["categories"]}
+    assert categories.get("electronics/phones", 0) >= 1
+
+
 def test_injection_safe_tsquery_string(search_client: TestClient) -> None:
     malicious = 'foo & bar | baz !"()'
     response = search_client.get("/search", params={"q": malicious})
@@ -291,6 +354,58 @@ def test_suggest_returns_prefix_matches(search_client: TestClient) -> None:
     body = response.json()
     assert body["suggestions"]
     assert all(item["title"].lower().startswith("itel") for item in body["suggestions"])
+
+
+def test_suggest_includes_route_slugs(
+    fake_supabase: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.services.search import run_suggest
+
+    product_id = UUID("a0000133-0000-4000-8000-000000000001")
+
+    def handler(name: str, params: dict[str, Any]) -> list[Any]:
+        if name == "expand_search_terms":
+            return [str(params.get("p_query", ""))]
+        if name != "search_rrf":
+            return []
+        return [
+            _hit(
+                entity_id=product_id,
+                title="Itel A70 Smartphone",
+                entity_kind="product",
+                score=1.0,
+            ),
+        ]
+
+    class _SlugTableQuery(_EmptyTableQuery):
+        def __init__(self, table: str) -> None:
+            self._table = table
+            self._ids: set[str] | None = None
+
+        def select(self, *_a: Any, **_k: Any) -> _SlugTableQuery:
+            return self
+
+        def in_(self, _column: str, values: list[str]) -> _SlugTableQuery:
+            self._ids = {str(value) for value in values}
+            return self
+
+        def eq(self, *_a: Any, **_k: Any) -> _SlugTableQuery:
+            return self
+
+        def execute(self) -> FakeRpcResponse:
+            if self._table == "products":
+                return FakeRpcResponse(
+                    [{"id": str(product_id), "slug": "itel-a70"}]
+                )
+            return FakeRpcResponse([])
+
+    class _Client(FakeSupabaseClient):
+        def table(self, name: str) -> _SlugTableQuery:
+            return _SlugTableQuery(name)
+
+    suggestions = run_suggest(_Client(handler), query="itel").suggestions
+    assert suggestions[0].slug == "itel-a70"
 
 
 def test_search_rrf_uses_bound_parameters(fake_supabase: FakeSupabaseClient) -> None:

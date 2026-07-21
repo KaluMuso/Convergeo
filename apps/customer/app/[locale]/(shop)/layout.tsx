@@ -147,6 +147,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
             ariaLabel: tSearch("input.ariaLabel"),
             suggestionsLabel: tSearch("input.suggestionsLabel"),
             noSuggestions: tSearch("input.noSuggestions"),
+            recentTitle: tSearch("recent.title"),
           },
         }}
       />
