@@ -119,6 +119,7 @@ PHASE1_ENGLISH_ALLOWLIST = {
     "-",
     "+",
     "K",
+    "−%",  # discount chip "−{percent}%" — locale-neutral symbol format
     # Locale labels that stay as English / native endonyms
     "English",
     "Français",
