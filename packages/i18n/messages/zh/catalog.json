@@ -68,7 +68,8 @@
     "loadError": "无法加载更多结果。",
     "retry": "重试",
     "resultsUnknown": "暂时无法显示商品数量",
-    "childCategories": "按子分类选购"
+    "childCategories": "按子分类选购",
+    "backToTop": "返回顶部"
   },
   "home": {
     "meta": {

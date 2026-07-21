@@ -177,12 +177,14 @@ export function ListingCard({
   }
 
   return (
-    <Link
-      href={`/${locale}/p/${listing.productSlug}`}
-      className="min-w-0 no-underline"
-      data-testid="listing-card-link"
-    >
+    <div className="relative min-w-0" data-testid="listing-card">
       {card}
-    </Link>
+      <Link
+        href={`/${locale}/p/${listing.productSlug}`}
+        className="absolute inset-0 z-[1] rounded-lg focus-visible:outline-none focus-visible:shadow-focusRing"
+        aria-label={listing.title}
+        data-testid="listing-card-link"
+      />
+    </div>
   );
 }

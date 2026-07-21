@@ -68,7 +68,8 @@
     "loadError": "Impossible de charger plus de résultats.",
     "retry": "Réessayer",
     "resultsUnknown": "Nombre d’annonces indisponible",
-    "childCategories": "Parcourir les sous-catégories"
+    "childCategories": "Parcourir les sous-catégories",
+    "backToTop": "Retour en haut"
   },
   "home": {
     "meta": {

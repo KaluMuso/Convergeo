@@ -32,5 +32,14 @@
     "light": "Kuwala",
     "system": "System ya device",
     "displayPreferences": "Zokonda za maonekedwe"
+  },
+  "locale": {
+    "switchAria": "Sankhani chilankhulo",
+    "names": {
+      "en": "English",
+      "bem": "IciBemba",
+      "nya": "IciNyanja",
+      "fr": "Français"
+    }
   }
 }
