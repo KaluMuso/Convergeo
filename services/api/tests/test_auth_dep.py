@@ -1,22 +1,37 @@
 from __future__ import annotations
 
+import json
+import time
 from collections.abc import Generator
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from threading import Thread
 from typing import Annotated, Any
 from unittest.mock import MagicMock
 
+import jwt
 import pytest
-from app.core.auth import CurrentUser, _load_user_roles, get_current_user, require_role
+from app.core.auth import (
+    CurrentUser,
+    _jwks_client,
+    _load_user_roles,
+    get_current_user,
+    require_role,
+    verify_supabase_jwt,
+)
 from app.core.supabase import get_user_client
 from app.main import create_app
 from app.settings import get_settings
+from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
+from jwt.algorithms import RSAAlgorithm
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 
 USER_ID = "11111111-1111-1111-1111-111111111111"
 VALID_TOKEN = "valid.jwt.token"
 EXPIRED_TOKEN = "expired.jwt.token"
 TAMPERED_TOKEN = "tampered.jwt.token"
+JWT_KID = "test-rs256-kid"
 
 
 @pytest.fixture
@@ -243,3 +258,115 @@ def test_get_user_client_sets_bearer_token(monkeypatch: pytest.MonkeyPatch) -> N
 def test_require_role_without_roles_raises_value_error() -> None:
     with pytest.raises(ValueError, match="at least one role"):
         require_role()
+
+
+def _build_rs256_keypair() -> tuple[Any, dict[str, Any]]:
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    public_jwk: dict[str, Any] = json.loads(RSAAlgorithm.to_jwk(private_key.public_key()))
+    public_jwk.update({"kid": JWT_KID, "use": "sig", "alg": "RS256"})
+    return private_key, public_jwk
+
+
+def _mint_rs256_access_token(private_key: Any, issuer: str) -> str:
+    now = int(time.time())
+    claims = {
+        "sub": USER_ID,
+        "aud": "authenticated",
+        "role": "authenticated",
+        "iss": issuer,
+        "iat": now,
+        "exp": now + 3600,
+    }
+    return jwt.encode(claims, private_key, algorithm="RS256", headers={"kid": JWT_KID})
+
+
+@pytest.fixture
+def rs256_jwks_stub() -> Generator[tuple[str, str], None, None]:
+    private_key, public_jwk = _build_rs256_keypair()
+    jwks_body = json.dumps({"keys": [public_jwk]}).encode()
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(jwks_body)
+
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    port = server.server_address[1]
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    supabase_url = f"http://127.0.0.1:{port}"
+    issuer = f"{supabase_url}/auth/v1"
+    token = _mint_rs256_access_token(private_key, issuer)
+
+    try:
+        yield supabase_url, token
+    finally:
+        server.shutdown()
+
+
+def test_verify_supabase_jwt_accepts_rs256_jwks_token(
+    rs256_jwks_stub: tuple[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    supabase_url, token = rs256_jwks_stub
+    monkeypatch.setenv("SUPABASE_URL", supabase_url)
+    get_settings.cache_clear()
+    _jwks_client.cache_clear()
+
+    settings = get_settings()
+    claims = verify_supabase_jwt(token, settings)
+
+    assert claims["sub"] == USER_ID
+    assert claims["aud"] == "authenticated"
+
+
+def test_verify_supabase_jwt_rejects_hs256_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    secret = "test-hmac-secret"
+    now = int(time.time())
+    claims = {
+        "sub": USER_ID,
+        "aud": "authenticated",
+        "iss": "https://example.supabase.co/auth/v1",
+        "exp": now + 3600,
+    }
+    token = jwt.encode(claims, secret, algorithm="HS256")
+
+    signing_key = MagicMock()
+    signing_key.key = secret
+    mock_client = MagicMock()
+    mock_client.get_signing_key_from_jwt.return_value = signing_key
+    monkeypatch.setattr("app.core.auth._jwks_client", lambda _url: mock_client)
+
+    settings = get_settings()
+    with pytest.raises(InvalidTokenError):
+        verify_supabase_jwt(token, settings)
+
+
+def test_rs256_jwks_token_yields_current_user_with_roles(
+    auth_client: TestClient,
+    rs256_jwks_stub: tuple[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    supabase_url, token = rs256_jwks_stub
+    monkeypatch.setenv("SUPABASE_URL", supabase_url)
+    get_settings.cache_clear()
+    _jwks_client.cache_clear()
+    _mock_roles(monkeypatch, {USER_ID: frozenset({"customer"})})
+
+    response = auth_client.get(
+        "/test/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["id"] == USER_ID
+    assert body["roles"] == ["customer"]
