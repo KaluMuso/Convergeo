@@ -77,6 +77,19 @@ def _rfq_job_broadcast(p: Mapping[str, Any]) -> str:
     return f"Vergeo5: a customer needs {category} near {area}. Open Vergeo5 to send a quote."
 
 
+def _event_cancelled(p: Mapping[str, Any]) -> str:
+    title = _text(p, "event_title", "your event")
+    event_date = _text(p, "event_date", "the scheduled date")
+    refund_detail = _text(p, "refund_detail")
+    return f'Vergeo5: "{title}" on {event_date} cancelled. {refund_detail}'.strip()
+
+
+def _event_schedule_changed(p: Mapping[str, Any]) -> str:
+    title = _text(p, "event_title", "your event")
+    event_date = _text(p, "event_date", "a new date")
+    return f'Vergeo5: "{title}" rescheduled to {event_date}. Check the app for details.'
+
+
 SMS_TEMPLATES: dict[str, Callable[[Mapping[str, Any]], str]] = {
     "order_confirmed": _order_confirmed,
     "payment_received": _payment_received,
@@ -85,6 +98,8 @@ SMS_TEMPLATES: dict[str, Callable[[Mapping[str, Any]], str]] = {
     "order_delivered": _order_delivered,
     "vendor_new_order": _vendor_new_order,
     "rfq_job_broadcast": _rfq_job_broadcast,
+    "event_cancelled": _event_cancelled,
+    "event_schedule_changed": _event_schedule_changed,
 }
 
 
