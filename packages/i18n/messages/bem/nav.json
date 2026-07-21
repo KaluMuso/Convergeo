@@ -1,0 +1,33 @@
+{
+  "shop": {
+    "ariaLabel": "Shop navigation",
+    "desktopAriaLabel": "Primary navigation",
+    "bottomAriaLabel": "Primary shop navigation",
+    "home": "Home",
+    "browse": "Browse",
+    "ask": "Ask",
+    "orders": "Orders",
+    "account": "Account",
+    "cart": "Cart",
+    "cartWithCount": "Cart, {count} items",
+    "searchPlaceholder": "Search products, services, events…",
+    "searchSubmit": "Search",
+    "allCategories": "All Categories",
+    "categoriesPanelAria": "All categories",
+    "categoriesLoading": "Loading categories…",
+    "categoriesEmpty": "Categories are unavailable right now. Try again shortly.",
+    "viewAllCategories": "View all categories",
+    "featuredTitle": "New on Vergeo5",
+    "featuredPromo": "Compare sellers and pay with escrow when you checkout online.",
+    "featuredPromoCta": "Search the marketplace",
+    "directory": "Directory",
+    "services": "Services",
+    "events": "Events",
+    "askVergeo": "Ask Vergeo",
+    "supplies": "Ifya business"
+  },
+  "auth": {
+    "backToShop": "Back to shop",
+    "help": "Help"
+  }
+}

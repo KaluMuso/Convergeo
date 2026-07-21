@@ -19,3 +19,4 @@ export function resolveHeroVariant(variantKey: string): HeroVariantComponent {
 }
 
 export { HeroCarousel, HeroDefault, HeroEditorialLight, HeroGradientDark };
+export type { HeroCarouselLabels, HeroCarouselProps, HeroCarouselSlide } from "./hero-carousel";

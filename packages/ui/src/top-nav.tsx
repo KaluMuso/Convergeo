@@ -32,6 +32,16 @@ export type TopNavProps = {
   condensed?: boolean;
 };
 
+export type {
+  AppHeaderBrandProminence,
+  AppHeaderFeatures,
+  AppHeaderLinkProps,
+  AppHeaderNavLink,
+  AppHeaderProps,
+  AppHeaderVariant,
+} from "./app-header";
+export { AppHeader } from "./app-header";
+
 function mergeClasses(...classes: Array<string | false | undefined>): string {
   return classes.filter(Boolean).join(" ");
 }
@@ -42,6 +52,7 @@ function formatCartCount(count: number): string {
 
 const SCROLL_SHADOW_THRESHOLD_PX = 40;
 
+/** @deprecated Prefer `AppHeader` with `variant="shop"` for new chrome. */
 export function TopNav({
   logo,
   searchSlot,

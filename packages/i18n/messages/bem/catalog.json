@@ -29,7 +29,31 @@
         "title": "Mwaiseni pa Vergeo5"
       },
       "primaryCta": "Tampeniko kutwala",
-      "secondaryCta": "Sambeni ukushitisha"
+      "secondaryCta": "Sambeni ukushitisha",
+      "carousel": {
+        "previous": "Slide iilyapita",
+        "next": "Slide iilyakonkapo",
+        "slideOf": "Slide {current} pa {total}",
+        "ariaLabel": "Hero carousel ya homepage"
+      },
+      "slides": {
+        "fashion": {
+          "title": "Fashion na fabric kufuma ku basellers ba Zambia",
+          "subtitle": "Sangeni chitenge, traditional wear, na style ya bushiku."
+        },
+        "tech": {
+          "title": "Amafoni, laptops, na tech ya bushiku",
+          "subtitle": "Compare ama price na basellers ushita."
+        },
+        "power": {
+          "title": "Solar na power pa ng'anda na business",
+          "subtitle": "Sangeni panels, batteries, na backup options pepi."
+        },
+        "essentials": {
+          "title": "Kitchen na essentials sha pa ng'anda",
+          "subtitle": "Stockeni cookware, appliances, na household goods."
+        }
+      }
     },
     "meta": {
       "description": "Shita ifintu, booka services, no sanga events mu Zambia pa Vergeo5.",

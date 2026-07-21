@@ -883,6 +883,71 @@ def test_ask_retrieve_excludes_demo_service_and_event(
     assert ("event", DEMO_EVENT_ID) not in keys
 
 
+@pytest.mark.parametrize(
+    ("persona", "include_wholesale", "user_id"),
+    [
+        ("guest", False, None),
+        ("consumer", False, "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+        ("verified_business", True, "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+    ],
+)
+def test_demo_service_and_event_excluded_for_all_personas(
+    monkeypatch: pytest.MonkeyPatch,
+    persona: str,
+    include_wholesale: bool,
+    user_id: str | None,
+) -> None:
+    """Demo exclusion is unconditional — unlike wholesale gating."""
+    store = _Store()
+    _seed_service_event_mix(store)
+    store._rpc_hits = [
+        _hit(entity_id=REAL_SERVICE_ID, title="Office Cleaning", entity_kind="service", score=1.2),
+        _hit(
+            entity_id=DEMO_SERVICE_ID,
+            title="Laptop & Phone Repair (demo)",
+            entity_kind="service",
+            score=1.1,
+        ),
+        _hit(entity_id=REAL_EVENT_ID, title="Live Music Night", entity_kind="event", score=1.0),
+        _hit(
+            entity_id=DEMO_EVENT_ID,
+            title="Zed Summer Festival",
+            entity_kind="event",
+            score=0.9,
+        ),
+    ]
+    monkeypatch.setattr("app.services.search.fetch_query_embedding", _no_embedding)
+
+    result = asyncio.run(
+        run_search(
+            store,
+            query="laptop",
+            include_wholesale=include_wholesale,
+            user_id=user_id,
+        )
+    )
+    ids = {(hit.entity_kind, hit.entity_id) for hit in result.results}
+    assert ("service", DEMO_SERVICE_ID) not in ids, persona
+    assert ("event", DEMO_EVENT_ID) not in ids, persona
+    assert ("service", REAL_SERVICE_ID) in ids, persona
+    assert ("event", REAL_EVENT_ID) in ids, persona
+
+    suggestions = run_suggest(
+        store, query="laptop", include_wholesale=include_wholesale
+    ).suggestions
+    titles = {item.title for item in suggestions}
+    assert "Laptop & Phone Repair (demo)" not in titles, persona
+    assert "Zed Summer Festival" not in titles, persona
+    assert "Office Cleaning" in titles, persona
+
+    docs = asyncio.run(top_k(store, query="repair", filters=AskFilters(), limit=8))
+    keys = {(doc.entity_kind, doc.entity_id) for doc in docs}
+    assert ("service", DEMO_SERVICE_ID) not in keys, persona
+    assert ("event", DEMO_EVENT_ID) not in keys, persona
+    assert ("service", REAL_SERVICE_ID) in keys, persona
+    assert ("event", REAL_EVENT_ID) in keys, persona
+
+
 def test_services_browse_and_detail_exclude_demo_inventory() -> None:
     store = _Store()
     _seed_service_event_mix(store)

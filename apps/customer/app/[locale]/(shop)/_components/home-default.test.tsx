@@ -2,8 +2,8 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { createTranslator } from "next-intl";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { createTranslator, NextIntlClientProvider } from "next-intl";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import catalogMessages from "../../../../../../packages/i18n/messages/en/catalog.json";
 
@@ -24,12 +24,41 @@ import type { CatalogListing } from "./plp/listing-grid";
 
 vi.mock("@vergeo/ui/src/media/cloudinary-image-static", () => ({
   CloudinaryImageStatic: ({ alt }: { alt: string }) => (
-    <img alt={alt} data-testid="cloudinary-image" />
+    <img alt={alt} data-testid="cloudinary-image-static" />
   ),
 }));
 
+vi.mock("@vergeo/ui/src/media/cloudinary-image", () => ({
+  CloudinaryImage: ({ alt, priority }: { alt: string; priority?: boolean }) => (
+    <img alt={alt} data-testid="cloudinary-image" data-priority={priority ? "true" : "false"} />
+  ),
+}));
+
+function mockMatchMedia(matches: Record<string, boolean> = {}) {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn((query: string) => ({
+      matches: matches[query] ?? false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
+}
+
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+beforeEach(() => {
+  mockMatchMedia();
+  HTMLElement.prototype.scrollIntoView = vi.fn();
 });
 
 const t = createTranslator({
@@ -37,6 +66,18 @@ const t = createTranslator({
   messages: { catalog: catalogMessages },
   namespace: "catalog",
 }) as unknown as (key: string, values?: Record<string, string | number>) => string;
+
+function renderHomeHeroBand(props: {
+  locale: string;
+  t: (key: string, values?: Record<string, string | number>) => string;
+  brandName: string;
+}) {
+  return render(
+    <NextIntlClientProvider locale="en" messages={{ catalog: catalogMessages }} onError={() => {}}>
+      <HomeHeroBand {...props} />
+    </NextIntlClientProvider>,
+  );
+}
 
 function makeCategory(overrides: Partial<CategoryRow> = {}): CategoryRow {
   return {
@@ -178,14 +219,16 @@ describe("pickHeroVisualPublicId", () => {
 });
 
 describe("HomeHeroBand", () => {
-  it("renders brand-first merch hero with CTAs and no escrow pill row", () => {
-    render(<HomeHeroBand locale="en" t={t} brandName="Vergeo5" />);
+  it("renders brand-first carousel hero with CTAs and no escrow pill row", () => {
+    renderHomeHeroBand({ locale: "en", t, brandName: "Vergeo5" });
+    expect(screen.getByTestId("home-hero-band")).toBeInTheDocument();
+    expect(screen.getByTestId("hero-carousel")).toHaveAttribute("role", "region");
+    expect(screen.getByTestId("hero-carousel")).toHaveAttribute("aria-roledescription", "carousel");
     expect(screen.getByTestId("home-hero-brand")).toHaveTextContent("Vergeo5");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       /Shop products, services, and events/i,
     );
-    expect(screen.getByTestId("home-hero-visual")).toBeInTheDocument();
-    expect(screen.queryByTestId("cloudinary-image")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("cloudinary-image").length).toBeGreaterThan(0);
     expect(screen.queryByText("You pay")).not.toBeInTheDocument();
     expect(screen.queryByText("Held by Vergeo5")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Start browsing" })).toHaveAttribute(
@@ -198,22 +241,13 @@ describe("HomeHeroBand", () => {
     );
   });
 
-  it("matches the approved merch-first hero structure snapshot", () => {
-    const { container } = render(<HomeHeroBand locale="en" t={t} brandName="Vergeo5" />);
-    expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it("uses a full-bleed catalogue image when a public id is provided", () => {
-    render(
-      <HomeHeroBand
-        locale="en"
-        t={t}
-        brandName="Vergeo5"
-        visualPublicId="demo/categories/phones"
-      />,
+  it("uses curated fallback slides with priority on the first image", () => {
+    renderHomeHeroBand({ locale: "en", t, brandName: "Vergeo5" });
+    const images = screen.getAllByTestId("cloudinary-image");
+    expect(images[0]).toHaveAttribute("data-priority", "true");
+    expect(images.slice(1).every((image) => image.getAttribute("data-priority") === "false")).toBe(
+      true,
     );
-    expect(screen.getByTestId("cloudinary-image")).toBeInTheDocument();
-    expect(screen.getByTestId("home-hero-brand")).toHaveTextContent("Vergeo5");
   });
 });
 

@@ -15,6 +15,7 @@ from app.core.internal_token import InternalTokenMisconfigured, resolve_internal
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.notifications.dedupe import enqueue_outbox_row
+from app.services.notifications.dispatcher import has_any_channel_enabled
 from fastapi import APIRouter, Depends, Request
 
 router = APIRouter(prefix="/internal/n8n", tags=["internal-n8n"])
@@ -27,6 +28,9 @@ _LOW_STOCK_THRESHOLD_KEY = "low_stock_threshold"
 _DEFAULT_LOW_STOCK_THRESHOLD = 5
 _ABANDONED_CART_FLAG = "abandoned_cart"
 _BATCH_LIMIT = 100
+_MARKETING_EVENT_TYPES = frozenset(
+    {"review_request", "kyc_nudge", "abandoned_cart"},
+)
 
 KYC_STALLED_HOURS = 48
 REVIEW_REQUEST_HOURS = 24
@@ -113,7 +117,7 @@ def _load_profiles(
         return {}
     response = (
         _table(client, "profiles")
-        .select("id, phone, locale, display_name")
+        .select("id, phone, locale, display_name, notif_prefs")
         .in_("id", sorted(user_ids))
         .execute()
     )
@@ -446,7 +450,23 @@ def _enqueue_items(
 ) -> tuple[int, int]:
     enqueued = 0
     skipped = 0
+    marketing = event_type in _MARKETING_EVENT_TYPES
+    profiles_by_id: dict[str, dict[str, Any]] = {}
+    if marketing and items:
+        recipient_ids = {
+            str(item["recipient_id"]) for item in items if item.get("recipient_id")
+        }
+        profiles_by_id = _load_profiles(client, recipient_ids)
+
     for item in items:
+        if marketing:
+            recipient_id = str(item.get("recipient_id", ""))
+            profile = profiles_by_id.get(recipient_id, {})
+            notif_prefs = profile.get("notif_prefs")
+            prefs = notif_prefs if isinstance(notif_prefs, dict) else {}
+            if not has_any_channel_enabled(prefs):
+                skipped += 1
+                continue
         entity_id = str(item[entity_key])
         row = enqueue_outbox_row(
             client.client,

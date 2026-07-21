@@ -120,8 +120,8 @@ def call_search_query_facets(
     return _parse_facets_payload(data)
 
 
-def compute_search_facets(
-    hits: Sequence[FacetHit],
+def compute_search_facets[T: FacetHit](
+    hits: Sequence[T],
     *,
     category_path: str | None = None,
     price_min_ngwee: int | None = None,
