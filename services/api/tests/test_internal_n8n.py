@@ -506,3 +506,67 @@ class TestTickEnqueue:
         assert response.status_code == 200
         assert response.json()["enqueued"] == 0
         assert len(fake_client.tables["notification_outbox"].rows) == 0
+
+    def test_review_request_tick_skips_opted_out_recipient(
+        self, n8n_client: TestClient, fake_client: FakeSupabaseClient
+    ) -> None:
+        _seed_common(fake_client)
+        fake_client.tables["profiles"].rows[0]["notif_prefs"] = {
+            "whatsapp": False,
+            "sms": False,
+            "email": False,
+        }
+        fake_client.tables["orders"].rows.append(
+            {
+                "id": ORDER_ID,
+                "customer_id": USER_ID,
+                "vendor_id": VENDOR_ID,
+                "status": "completed",
+                "updated_at": _stale_iso(30),
+            }
+        )
+        fake_client.tables["order_events"].rows.append(
+            {
+                "order_id": ORDER_ID,
+                "to_status": "completed",
+                "created_at": _stale_iso(30),
+            }
+        )
+        response = n8n_client.post(
+            "/internal/n8n/review-requests/tick",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["enqueued"] == 0
+        assert body["skipped"] == 1
+        assert len(fake_client.tables["notification_outbox"].rows) == 0
+
+    def test_payout_failure_tick_still_enqueues_for_opted_out_vendor(
+        self, n8n_client: TestClient, fake_client: FakeSupabaseClient
+    ) -> None:
+        _seed_common(fake_client)
+        fake_client.tables["profiles"].rows[0]["notif_prefs"] = {
+            "whatsapp": False,
+            "sms": False,
+            "email": False,
+        }
+        fake_client.tables["payouts"].rows.append(
+            {
+                "id": PAYOUT_ID,
+                "vendor_id": VENDOR_ID,
+                "amount_ngwee": 99_000,
+                "lenco_reference": "pay-opt-out-001",
+                "status": "failed",
+                "updated_at": _recent_iso(1),
+            }
+        )
+        response = n8n_client.post(
+            "/internal/n8n/payout-failures/tick",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["enqueued"] == 1
+        assert body["skipped"] == 0
+        assert len(fake_client.tables["notification_outbox"].rows) == 1
