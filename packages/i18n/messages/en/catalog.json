@@ -60,6 +60,7 @@
       "mediaEmpty": "No product image",
       "outOfStock": "Out of stock",
       "distance": "{distance} away",
+      "discount": "−{percent}%",
       "conditionNew": "New",
       "conditionRefurbished": "Refurbished"
     },

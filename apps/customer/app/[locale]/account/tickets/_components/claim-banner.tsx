@@ -21,9 +21,9 @@ type InboundTransfer = {
 /**
  * Standalone inbound-transfer claim banner (M10-P07). Self-fetches
  * `/tickets/transfers/inbound` for the signed-in user's verified phone and
- * lets them claim a pending transfer. Not wired into `tickets/page.tsx` in
- * this pebble (M10-P04 owns that file) — a future pebble drops this
- * component into the wallet list/layout.
+ * lets them claim a pending transfer. Mounted in `tickets/page.tsx` (wrapped
+ * in a NextIntlClientProvider) above both the wallet list and the empty
+ * state, so a recipient claiming their first ticket still sees it.
  */
 export function TicketTransferClaimBanner() {
   const t = useTranslations("events.transfer.claimBanner");

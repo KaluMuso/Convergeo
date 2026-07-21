@@ -109,6 +109,7 @@
       "typeLabel": "Type de billet",
       "holderLabel": "Nom du participant",
       "qrLabel": "Présentez ce QR à l'entrée",
+      "liveTicket": "Billet en direct",
       "qrAria": "Code QR d'entrée rotatif",
       "pinLabel": "PIN de secours",
       "pinAria": "PIN d'entrée à six chiffres {pin}",

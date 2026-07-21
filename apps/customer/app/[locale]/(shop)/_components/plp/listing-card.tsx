@@ -35,6 +35,8 @@ export type ListingCardLabels = {
   wishlistRemove?: string;
   outOfStock: string;
   distance: string;
+  /** Discount chip template, e.g. "−{percent}%". Renders only when a compare-at price is present. */
+  discount?: string;
   sampleListing?: string;
   mediaEmpty?: string;
   /** Honest condition copy — only shown for known API values. */
@@ -107,6 +109,19 @@ export function ListingCard({
     isWishlisted && labels.wishlistRemove ? labels.wishlistRemove : labels.wishlist;
   const conditionLabel = listingConditionLabel(listing.condition, labels);
 
+  // Struck compare-at price only when in stock and genuinely cheaper now.
+  const hasDiscount =
+    listing.inStock &&
+    typeof listing.oldNgwee === "number" &&
+    listing.oldNgwee > listing.priceNgwee;
+  const discountLabel =
+    hasDiscount && labels.discount
+      ? labels.discount.replace(
+          "{percent}",
+          String(Math.round(((listing.oldNgwee! - listing.priceNgwee) / listing.oldNgwee!) * 100)),
+        )
+      : undefined;
+
   useEffect(() => {
     if (!wishlistMountedRef.current) {
       wishlistMountedRef.current = true;
@@ -139,6 +154,8 @@ export function ListingCard({
         title={listing.title}
         vendorLabel={labels.vendor.replace("{vendor}", listing.vendorName)}
         ngwee={listing.priceNgwee}
+        oldNgwee={hasDiscount ? listing.oldNgwee : undefined}
+        discountLabel={discountLabel}
         rating={listing.rating}
         reviewCount={listing.reviewCount}
         noReviewsLabel={labels.noReviews}
