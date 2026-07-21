@@ -146,6 +146,7 @@
       "description": "Leaks, blockages, and geyser installs in Lusaka",
       "service_area": "Lusaka",
       "from_price_ngwee": 150000,
+      "portfolio_images": ["demo/services/plumbing"],
       "status": "active"
     }
   ],
@@ -158,6 +159,7 @@
       "venue": "Lusaka Showgrounds",
       "lat": -15.4167,
       "lng": 28.2833,
+      "images": ["demo/events/zed-summer-festival"],
       "status": "published"
     }
   ],
