@@ -370,6 +370,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
             ariaLabel: t("input.ariaLabel"),
             suggestionsLabel: t("input.suggestionsLabel"),
             noSuggestions: t("input.noSuggestions"),
+            recentTitle: t("recent.title"),
           }}
         />
         {!query ? (

@@ -10,6 +10,11 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { buildCategoryTree, type CategoryRecord, type NavCategory } from "./category-tree";
+import {
+  pickMegaMenuMerchSlot,
+  withLocaleHref,
+  type MegaMenuMerchPayload,
+} from "./mega-menu-merch";
 
 export type { NavCategory } from "./category-tree";
 export { buildCategoryTree } from "./category-tree";
@@ -31,23 +36,25 @@ export type CategoryMegaMenuLabels = {
   featuredPromoCta: string;
 };
 
+type MegaMenuFeaturedContent = {
+  minis: FeaturedMini[];
+  promoText: string;
+  promoCtaLabel: string;
+  promoHref: string;
+};
+
 type CategoryMegaMenuProps = {
   locale: string;
   labels: CategoryMegaMenuLabels;
   /** Injectable for tests; defaults to a public (anon) browser-client query. */
   loadCategories?: () => Promise<NavCategory[]>;
-  /** Injectable featured minis; defaults to newest catalog listings. */
-  loadFeaturedMinis?: (locale: string) => Promise<FeaturedMini[]>;
+  /** Injectable featured sidebar; defaults to CMS slot with catalog fallback. */
+  loadFeaturedContent?: (locale: string) => Promise<MegaMenuFeaturedContent>;
   /** Close the panel when the document scrolls (desktop sticky header). */
   closeOnScroll?: boolean;
 };
 
 async function defaultLoadCategories(): Promise<NavCategory[]> {
-  // Category tree is publicly readable (RLS: categories_public_select "using (true)"),
-  // so the anon browser client can fetch it lazily without a server round-trip in the
-  // shop layout — which would otherwise force every shop route to render dynamically.
-  // getBrowserClient loads @supabase/ssr dynamically (only when the menu first
-  // opens) so it does not sit in the shared shop-shell first-load bundle.
   const supabase = await getBrowserClient();
   const { data, error } = await supabase
     .from("categories")
@@ -66,7 +73,7 @@ type CatalogListingItem = {
   price_ngwee: number;
 };
 
-async function defaultLoadFeaturedMinis(locale: string): Promise<FeaturedMini[]> {
+async function loadCatalogFeaturedMinis(locale: string): Promise<FeaturedMini[]> {
   const baseUrl = getApiBaseUrl();
   if (!baseUrl) {
     return [];
@@ -88,6 +95,43 @@ async function defaultLoadFeaturedMinis(locale: string): Promise<FeaturedMini[]>
   }
 }
 
+function featuredFromMerch(locale: string, merch: MegaMenuMerchPayload): FeaturedMini[] {
+  return merch.featuredMinis.map((mini) => ({
+    title: mini.title,
+    href: withLocaleHref(locale, mini.href),
+    priceLabel: mini.priceLabel ?? "",
+  }));
+}
+
+async function defaultLoadFeaturedContent(
+  locale: string,
+  labels: CategoryMegaMenuLabels,
+): Promise<MegaMenuFeaturedContent> {
+  let merch: MegaMenuMerchPayload | null = null;
+  try {
+    const supabase = await getBrowserClient();
+    const { data, error } = await supabase
+      .from("merch_slots")
+      .select("slot_key, payload, active, schedule_from, schedule_to")
+      .eq("slot_key", "mega_menu");
+    if (!error && data) {
+      merch = pickMegaMenuMerchSlot(data);
+    }
+  } catch {
+    merch = null;
+  }
+
+  const cmsMinis = merch ? featuredFromMerch(locale, merch) : [];
+  const minis = cmsMinis.length > 0 ? cmsMinis : await loadCatalogFeaturedMinis(locale);
+
+  return {
+    minis,
+    promoText: merch?.promoText ?? labels.featuredPromo,
+    promoCtaLabel: merch?.promoCtaLabel ?? labels.featuredPromoCta,
+    promoHref: withLocaleHref(locale, merch?.promoHref ?? `/${locale}/search`),
+  };
+}
+
 /**
  * Desktop "All Categories" disclosure menu. Accessible by design: a real
  * button toggles a panel of real links (no hover-only trap), so it behaves
@@ -99,12 +143,20 @@ export function CategoryMegaMenu({
   locale,
   labels,
   loadCategories = defaultLoadCategories,
-  loadFeaturedMinis = defaultLoadFeaturedMinis,
+  loadFeaturedContent,
   closeOnScroll = false,
 }: CategoryMegaMenuProps) {
+  const resolveFeaturedContent = useCallback(
+    (activeLocale: string) =>
+      loadFeaturedContent
+        ? loadFeaturedContent(activeLocale)
+        : defaultLoadFeaturedContent(activeLocale, labels),
+    [labels, loadFeaturedContent],
+  );
+
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<NavCategory[] | null>(null);
-  const [featuredMinis, setFeaturedMinis] = useState<FeaturedMini[] | null>(null);
+  const [featuredContent, setFeaturedContent] = useState<MegaMenuFeaturedContent | null>(null);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -112,12 +164,11 @@ export function CategoryMegaMenu({
   const startedRef = useRef(false);
   const mountedRef = useRef(true);
   const loadRef = useRef(loadCategories);
-  const featuredRef = useRef(loadFeaturedMinis);
+  const featuredRef = useRef(resolveFeaturedContent);
   const panelId = useId();
 
   const closeMenu = useCallback(() => {
     setOpen(false);
-    // Restore focus for outside-click / link / scroll closes (Escape via trap).
     triggerRef.current?.focus();
   }, []);
 
@@ -128,8 +179,8 @@ export function CategoryMegaMenu({
   }, [loadCategories]);
 
   useEffect(() => {
-    featuredRef.current = loadFeaturedMinis;
-  }, [loadFeaturedMinis]);
+    featuredRef.current = resolveFeaturedContent;
+  }, [resolveFeaturedContent]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -148,13 +199,18 @@ export function CategoryMegaMenu({
       .then(([tree, featured]) => {
         if (mountedRef.current) {
           setCategories(tree);
-          setFeaturedMinis(featured);
+          setFeaturedContent(featured);
         }
       })
       .catch(() => {
         if (mountedRef.current) {
           setCategories([]);
-          setFeaturedMinis([]);
+          setFeaturedContent({
+            minis: [],
+            promoText: labels.featuredPromo,
+            promoCtaLabel: labels.featuredPromoCta,
+            promoHref: `/${locale}/search`,
+          });
         }
       })
       .finally(() => {
@@ -162,7 +218,7 @@ export function CategoryMegaMenu({
           setLoading(false);
         }
       });
-  }, [locale, open]);
+  }, [labels.featuredPromo, labels.featuredPromoCta, locale, open]);
 
   useEffect(() => {
     if (!open) {
@@ -220,7 +276,7 @@ export function CategoryMegaMenu({
         tabIndex={-1}
         className="absolute left-0 top-full z-50 mt-1 max-h-[70vh] w-[min(52rem,92vw)] overflow-auto rounded-lg border border-border bg-surface p-4 shadow-3 motion-fade"
       >
-        {loading || categories === null || featuredMinis === null ? (
+        {loading || categories === null || featuredContent === null ? (
           <p className="text-sm text-text-2">{labels.loading}</p>
         ) : categories.length === 0 ? (
           <p className="text-sm text-text-2">{labels.empty ?? labels.loading}</p>
@@ -272,9 +328,9 @@ export function CategoryMegaMenu({
               <h3 id="mega-menu-featured-title" className="mb-2 text-sm font-semibold text-text">
                 {labels.featuredTitle}
               </h3>
-              {featuredMinis.length > 0 ? (
+              {featuredContent.minis.length > 0 ? (
                 <ul className="m-0 list-none space-y-2 p-0">
-                  {featuredMinis.map((mini) => (
+                  {featuredContent.minis.map((mini) => (
                     <li key={mini.href}>
                       <Link
                         href={mini.href}
@@ -284,19 +340,21 @@ export function CategoryMegaMenu({
                         <span className="block truncate text-sm font-medium text-text">
                           {mini.title}
                         </span>
-                        <span className="text-xs text-text-2">{mini.priceLabel}</span>
+                        {mini.priceLabel ? (
+                          <span className="text-xs text-text-2">{mini.priceLabel}</span>
+                        ) : null}
                       </Link>
                     </li>
                   ))}
                 </ul>
               ) : null}
-              <p className="mt-3 text-xs text-text-2">{labels.featuredPromo}</p>
+              <p className="mt-3 text-xs text-text-2">{featuredContent.promoText}</p>
               <Link
-                href={`/${locale}/search`}
+                href={featuredContent.promoHref}
                 onClick={closeMenu}
                 className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
               >
-                {labels.featuredPromoCta}
+                {featuredContent.promoCtaLabel}
               </Link>
             </aside>
           </div>

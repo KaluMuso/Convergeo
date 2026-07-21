@@ -54,6 +54,7 @@ export const SLOT_ORDER = [
   "events_row",
   "featured_collections",
   "category_grid",
+  "mega_menu",
 ] as const;
 
 export type SlotKey = (typeof SLOT_ORDER)[number];

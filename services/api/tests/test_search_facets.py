@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from app.services.search import SearchHit
-from app.services.search.search_facets import compute_search_facets, filter_search_hits
+from app.services.search.search_facets import (
+    SearchFacetBucket,
+    call_search_query_facets,
+    compute_search_facets,
+    filter_search_hits,
+)
 
 
 def test_compute_search_facets_counts_categories_and_price_buckets() -> None:
@@ -79,3 +84,38 @@ def test_filter_search_hits_applies_category_and_price() -> None:
         price_max_ngwee=50_000,
     )
     assert [hit.entity_kind for hit in filtered] == ["product", "vendor"]
+
+
+def test_call_search_query_facets_parses_rpc_payload() -> None:
+    class _RpcResponse:
+        def __init__(self, data: object) -> None:
+            self.data = data
+
+    class _FacetRpc:
+        def __init__(self, payload: dict[str, object]) -> None:
+            self._payload = payload
+
+        def execute(self) -> _RpcResponse:
+            return _RpcResponse([self._payload])
+
+    class _Client:
+        def rpc(self, name: str, _params: dict[str, object]) -> _FacetRpc:
+            assert name == "search_query_facets"
+            return _FacetRpc(
+                {
+                    "categories": [{"value": "electronics/phones", "count": 2}],
+                    "price": [{"value": "under_50k", "count": 1}],
+                }
+            )
+
+    facets = call_search_query_facets(
+        _Client(),
+        query="phone",
+        embedding=None,
+        filters={},
+    )
+    assert facets is not None
+    assert facets.categories == [
+        SearchFacetBucket(value="electronics/phones", count=2),
+    ]
+    assert facets.price[0].value == "under_50k"
