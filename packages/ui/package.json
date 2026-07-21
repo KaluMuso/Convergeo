@@ -21,16 +21,16 @@
     "./src/*": "./src/*.tsx"
   },
   "dependencies": {
-    "next": "^15.2.4",
+    "next": "^15.5.21",
     "@vergeo/i18n": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
-    "tailwindcss": "^4.0.14",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.8.2",
     "vitest": "^3.0.9",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@testing-library/react": "^16.2.0",
@@ -39,7 +39,7 @@
     "jsdom": "^26.0.0"
   },
   "peerDependencies": {
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   }
 }

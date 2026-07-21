@@ -15,7 +15,7 @@
     "test": "vitest run && python3 ../../scripts/check_phase1_overlays.py"
   },
   "dependencies": {
-    "next-intl": "^4.13.2"
+    "next-intl": "^4.13.3"
   },
   "devDependencies": {
     "vitest": "^3.0.9"
