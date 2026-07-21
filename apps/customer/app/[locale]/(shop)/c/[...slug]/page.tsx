@@ -69,6 +69,18 @@ async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> 
   }) as unknown as CatalogTranslator;
 }
 
+async function getNavTranslator(locale: string): Promise<CatalogTranslator> {
+  const baseMessages = await getMessages();
+  const navMessages = await loadNamespace(locale as Locale, "nav");
+  const messages = { ...baseMessages, nav: navMessages } as AbstractIntlMessages;
+
+  return createTranslator({
+    locale,
+    messages,
+    namespace: "nav",
+  }) as unknown as CatalogTranslator;
+}
+
 function slugToCategoryPath(slug: string[]): string | undefined {
   if (slug.length === 0) {
     return undefined;
@@ -186,6 +198,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
   setRequestLocale(locale);
 
   const t = await getCatalogTranslator(locale);
+  const tNav = await getNavTranslator(locale);
   const categoryPath = slugToCategoryPath(slug);
   const categoryName = categoryTitleFromPath(categoryPath) || t("plp.defaultCategory");
   const queryString = buildCatalogQuery(categoryPath, resolvedSearch);
@@ -259,7 +272,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
   };
 
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [
-    { name: t("home.nav.home"), path: "" },
+    { name: tNav("shop.home"), path: "" },
     { name: categoryName, path: `c/${slug.join("/")}` },
   ]);
 
@@ -275,7 +288,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
         ellipsisLabel="…"
         LinkComponent={Link}
         items={[
-          { key: "home", label: t("home.nav.home"), href: `/${locale}` },
+          { key: "home", label: tNav("shop.home"), href: `/${locale}` },
           { key: "category", label: categoryName },
         ]}
       />

@@ -87,6 +87,18 @@ async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> 
   }) as unknown as CatalogTranslator;
 }
 
+async function getNavTranslator(locale: string): Promise<CatalogTranslator> {
+  const baseMessages = await getMessages();
+  const navMessages = await loadNamespace(locale as Locale, "nav");
+  const messages = { ...baseMessages, nav: navMessages } as AbstractIntlMessages;
+
+  return createTranslator({
+    locale,
+    messages,
+    namespace: "nav",
+  }) as unknown as CatalogTranslator;
+}
+
 async function fetchComparison(slug: string): Promise<ComparisonApiResponse | null> {
   try {
     const url = absoluteApiUrl(`/products/${encodeURIComponent(slug)}/comparison`);
@@ -381,6 +393,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
 
   setRequestLocale(locale);
   const t = await getCatalogTranslator(locale);
+  const tNav = await getNavTranslator(locale);
   const result = await fetchProduct(slug);
 
   if (result.kind === "redirect") {
@@ -436,7 +449,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
     ? buildProductJsonLd(productJsonLdInput)
     : null;
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [
-    { name: t("home.nav.home"), path: "" },
+    { name: tNav("shop.home"), path: "" },
     { name: product.name, path: `p/${product.slug}` },
   ]);
   const productListings = toProductListings(product, product.name);
@@ -517,7 +530,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
               href={`/${locale}`}
               className="truncate text-primary hover:underline focus-visible:outline-none"
             >
-              {t("home.nav.home")}
+              {tNav("shop.home")}
             </Link>
             <span className="shrink-0 text-text-3 before:content-['/']" aria-hidden />
           </li>
