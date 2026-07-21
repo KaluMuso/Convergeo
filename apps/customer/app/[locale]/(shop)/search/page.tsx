@@ -2,13 +2,14 @@ import { createApiClient } from "@vergeo/config";
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
-import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { resolveApiBaseUrl } from "../../../../lib/api-base-url";
+import { BackToTop } from "../_components/back-to-top";
 import { BrowseDiscoveryChips } from "../_components/browse-discovery-chips";
+import { fetchCategoriesResult, type CategoryRow } from "../_components/merch-data";
 import { RecentSearches } from "../_components/search/recent-searches";
 import {
   ResultsTabs,
@@ -16,8 +17,18 @@ import {
   type TabCounts,
 } from "../_components/search/results-tabs";
 import { SearchAnalytics } from "../_components/search/search-analytics";
+import { SearchAppliedFilterBar } from "../_components/search/search-applied-filter-bar";
+import { SearchFilterPanel } from "../_components/search/search-filter-panel";
+import {
+  appendSearchFiltersToApiParams,
+  decodeSearchFilters,
+  encodeSearchFilters,
+  type SearchFilterState,
+} from "../_components/search/search-filters";
 import { SearchInput } from "../_components/search/search-input";
 import { searchTabKinds, type SearchKind } from "../_components/search/search-kinds";
+import { SearchMobileFilterDrawer } from "../_components/search/search-mobile-filter-drawer";
+import { SearchUnavailablePanel } from "../_components/search/search-unavailable-panel";
 import {
   normalizeSearchQuery,
   parseSearchKind,
@@ -34,6 +45,9 @@ type PageProps = {
     q?: string;
     kind?: string;
     page?: string;
+    min_price?: string;
+    max_price?: string;
+    category_path?: string;
   }>;
 };
 
@@ -46,6 +60,7 @@ async function fetchSearch(params: {
   kind?: SearchKind;
   page?: number;
   pageSize?: number;
+  filters?: SearchFilterState;
 }): Promise<SearchResponse | null> {
   const baseUrl = resolveApiBaseUrl();
   if (!baseUrl) {
@@ -60,12 +75,31 @@ async function fetchSearch(params: {
   if (params.kind) {
     searchParams.set("kind", params.kind);
   }
+  if (params.filters) {
+    appendSearchFiltersToApiParams(searchParams, params.filters);
+  }
 
   try {
     return await client.request<SearchResponse>(`/search?${searchParams.toString()}`);
   } catch {
     return null;
   }
+}
+
+function buildSearchCategoryOptions(categories: CategoryRow[]) {
+  return categories
+    .filter((row) => !row.prohibited)
+    .sort((left, right) => left.position - right.position)
+    .map((row) => ({
+      path: row.path || row.slug,
+      label: row.name,
+    }));
+}
+
+function buildCategoryLabelMap(
+  options: Array<{ path: string; label: string }>,
+): Record<string, string> {
+  return Object.fromEntries(options.map((option) => [option.path, option.label]));
 }
 
 async function fetchTabCounts(query: string): Promise<TabCounts | null> {
@@ -125,7 +159,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
 
 export default async function SearchPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
-  const { q, kind: kindParam, page: pageParam } = await searchParams;
+  const resolvedSearchParams = await searchParams;
+  const { q, kind: kindParam, page: pageParam } = resolvedSearchParams;
 
   if (!LOCALES.includes(locale as Locale)) {
     return null;
@@ -152,6 +187,27 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
   const activeKind = parseSearchKind(kindParam);
   const page = parseSearchPage(pageParam);
   const query = normalized.status === "ok" ? normalized.query : "";
+  const filterParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(resolvedSearchParams)) {
+    if (typeof value === "string" && value.length > 0) {
+      filterParams.set(key, value);
+    }
+  }
+  const filterState = decodeSearchFilters(filterParams);
+  const showCategoryFilters =
+    activeKind === "all" ||
+    activeKind === "products" ||
+    activeKind === "services" ||
+    activeKind === "events" ||
+    activeKind === "vendors";
+  const showPriceFilters = activeKind === "all" || activeKind === "products";
+
+  const categoriesResult = await fetchCategoriesResult();
+  const searchCategoryOptions =
+    categoriesResult.ok && categoriesResult.categories.length > 0
+      ? buildSearchCategoryOptions(categoriesResult.categories)
+      : [];
+  const categoryLabelMap = buildCategoryLabelMap(searchCategoryOptions);
 
   const [searchResponse, tabCounts] =
     normalized.status === "ok"
@@ -160,6 +216,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
             q: query,
             kind: activeKind === "all" ? undefined : activeKind,
             page,
+            filters: showCategoryFilters ? filterState : undefined,
           }),
           fetchTabCounts(query),
         ])
@@ -186,12 +243,107 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     t("suggestionTerms.lusakaVendors"),
   ];
 
+  const browseDiscoveryChips = [
+    {
+      key: "categories",
+      href: `/${locale}/categories`,
+      label: tCatalog("home.nav.allCategories"),
+    },
+    {
+      key: "directory",
+      href: `/${locale}/directory`,
+      label: tCatalog("home.nav.directory"),
+    },
+    {
+      key: "services",
+      href: `/${locale}/services`,
+      label: tCatalog("home.nav.services"),
+    },
+    {
+      key: "events",
+      href: `/${locale}/events`,
+      label: tCatalog("home.nav.events"),
+    },
+  ];
+  const browseDiscoveryAria = tCatalog("home.nav.browseChipsAria");
+
+  const retryParams = new URLSearchParams();
+  if (query.length > 0) {
+    retryParams.set("q", query);
+  }
+  if (activeKind !== "all") {
+    retryParams.set("kind", activeKind);
+  }
+  if (page > 1) {
+    retryParams.set("page", String(page));
+  }
+  for (const [key, value] of encodeSearchFilters(filterState).entries()) {
+    retryParams.set(key, value);
+  }
   const retryHref =
-    query.length > 0
-      ? `/${locale}/search?q=${encodeURIComponent(query)}${
-          activeKind !== "all" ? `&kind=${activeKind}` : ""
-        }${page > 1 ? `&page=${page}` : ""}`
+    retryParams.toString().length > 0
+      ? `/${locale}/search?${retryParams.toString()}`
       : `/${locale}/search`;
+
+  const filterPanelLabels = {
+    heading: t("filters.heading"),
+    price: t("filters.price"),
+    minPrice: t("filters.minPrice"),
+    maxPrice: t("filters.maxPrice"),
+    category: t("filters.category"),
+    categoryAll: t("filters.categoryAll"),
+    apply: t("filters.apply"),
+    clear: t("filters.clear"),
+    openFilters: t("filters.openFilters"),
+    filtersActive: t("filters.filtersActive"),
+    facetCount: t("filters.facetCount"),
+  };
+
+  const appliedFilterLabels = {
+    ariaLabel: t("filters.appliedAria"),
+    clearAll: t("filters.clearAll"),
+    removeChip: t("filters.removeChip"),
+    priceRange: t("filters.priceRange"),
+    minPriceOnly: t("filters.minPriceOnly"),
+    maxPriceOnly: t("filters.maxPriceOnly"),
+  };
+
+  const searchPathname = `/${locale}/search`;
+
+  const categoryCounts =
+    view.status === "results" && view.response.facets
+      ? Object.fromEntries(
+          view.response.facets.categories.map((bucket) => [bucket.value, bucket.count]),
+        )
+      : {};
+
+  const resultsTabsLabels = {
+    ariaLabel: t("tabs.ariaLabel"),
+    all: t("tabs.all"),
+    products: t("tabs.products"),
+    services: t("tabs.services"),
+    events: t("tabs.events"),
+    vendors: t("tabs.vendors"),
+    count: t("tabs.count"),
+    resultsCount: t("results.count", {
+      count: view.status === "results" ? view.response.total : 0,
+    }),
+    degraded: t("results.degraded"),
+    priceFrom: t("result.priceFrom"),
+    category: t("result.category"),
+    marketplaceListing: t("result.marketplaceListing"),
+    wishlist: tCatalog("plp.card.wishlist"),
+    wishlistRemove: tCatalog("plp.card.wishlistRemove"),
+    mediaEmpty: tCatalog("plp.card.mediaEmpty"),
+    noReviews: tCatalog("plp.card.noReviews"),
+    reviewCount: tCatalog("plp.card.reviewCount"),
+    loadMore: t("pagination.loadMore"),
+    loading: t("pagination.loading"),
+    moreLoaded: t("pagination.moreLoaded"),
+    endOfResults: t("pagination.endOfResults"),
+    loadError: t("pagination.loadError"),
+    retry: t("pagination.retry"),
+  };
 
   return (
     // Shop layout already provides the page <main> landmark — avoid nesting.
@@ -224,34 +376,11 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
             ariaLabel: t("input.ariaLabel"),
             suggestionsLabel: t("input.suggestionsLabel"),
             noSuggestions: t("input.noSuggestions"),
+            recentTitle: t("recent.title"),
           }}
         />
         {!query ? (
-          <BrowseDiscoveryChips
-            ariaLabel={tCatalog("home.nav.browseChipsAria")}
-            chips={[
-              {
-                key: "categories",
-                href: `/${locale}/categories`,
-                label: tCatalog("home.nav.allCategories"),
-              },
-              {
-                key: "directory",
-                href: `/${locale}/directory`,
-                label: tCatalog("home.nav.directory"),
-              },
-              {
-                key: "services",
-                href: `/${locale}/services`,
-                label: tCatalog("home.nav.services"),
-              },
-              {
-                key: "events",
-                href: `/${locale}/events`,
-                label: tCatalog("home.nav.events"),
-              },
-            ]}
-          />
+          <BrowseDiscoveryChips ariaLabel={browseDiscoveryAria} chips={browseDiscoveryChips} />
         ) : null}
       </header>
 
@@ -267,18 +396,16 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       />
 
       {view.status === "unavailable" ? (
-        <EmptyState
-          title={t("unavailable.title")}
-          body={t("unavailable.body")}
-          data-testid="search-unavailable"
-          action={
-            <Link
-              href={retryHref}
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-[var(--primary-btn-fg)]"
-            >
-              {t("unavailable.retry")}
-            </Link>
-          }
+        <SearchUnavailablePanel
+          retryHref={retryHref}
+          labels={{
+            title: t("unavailable.title"),
+            body: t("unavailable.body"),
+            retry: t("unavailable.retry"),
+            browseHeading: t("unavailable.browseHeading"),
+          }}
+          chips={browseDiscoveryChips}
+          browseAriaLabel={browseDiscoveryAria}
         />
       ) : null}
 
@@ -309,43 +436,63 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
 
       {view.status === "results" ? (
         <Suspense fallback={null}>
-          <ResultsTabs
-            key={`${locale}|${view.query}|${view.kind}|${page}`}
-            locale={locale}
-            query={view.query}
-            activeKind={view.kind}
-            page={page}
-            response={view.response}
-            tabCounts={view.tabCounts}
-            apiBaseUrl={resolveApiBaseUrl() ?? ""}
-            labels={{
-              ariaLabel: t("tabs.ariaLabel"),
-              all: t("tabs.all"),
-              products: t("tabs.products"),
-              services: t("tabs.services"),
-              events: t("tabs.events"),
-              vendors: t("tabs.vendors"),
-              count: t("tabs.count"),
-              resultsCount: t("results.count", { count: view.response.total }),
-              degraded: t("results.degraded"),
-              priceFrom: t("result.priceFrom"),
-              category: t("result.category"),
-              marketplaceListing: t("result.marketplaceListing"),
-              wishlist: tCatalog("plp.card.wishlist"),
-              wishlistRemove: tCatalog("plp.card.wishlistRemove"),
-              mediaEmpty: tCatalog("plp.card.mediaEmpty"),
-              noReviews: tCatalog("plp.card.noReviews"),
-              reviewCount: tCatalog("plp.card.reviewCount"),
-              loadMore: t("pagination.loadMore"),
-              loading: t("pagination.loading"),
-              moreLoaded: t("pagination.moreLoaded"),
-              endOfResults: t("pagination.endOfResults"),
-              loadError: t("pagination.loadError"),
-              retry: t("pagination.retry"),
-            }}
-          />
+          {showCategoryFilters ? (
+            <div className="grid gap-3 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-4 xl:grid-cols-[15rem_minmax(0,1fr)]">
+              <div className="hidden lg:block">
+                <SearchFilterPanel
+                  labels={filterPanelLabels}
+                  categories={searchCategoryOptions}
+                  initialState={filterState}
+                  categoryCounts={categoryCounts}
+                  showPriceFilters={showPriceFilters}
+                />
+              </div>
+              <div className="flex min-w-0 flex-col gap-3">
+                <SearchMobileFilterDrawer
+                  labels={filterPanelLabels}
+                  categories={searchCategoryOptions}
+                  initialState={filterState}
+                  categoryCounts={categoryCounts}
+                  showPriceFilters={showPriceFilters}
+                />
+                <SearchAppliedFilterBar
+                  pathname={searchPathname}
+                  searchParams={filterParams}
+                  filterState={filterState}
+                  categoryLabels={categoryLabelMap}
+                  labels={appliedFilterLabels}
+                />
+                <ResultsTabs
+                  key={`${locale}|${view.query}|${view.kind}|${page}|${JSON.stringify(filterState)}`}
+                  locale={locale}
+                  query={view.query}
+                  activeKind={view.kind}
+                  page={page}
+                  response={view.response}
+                  tabCounts={view.tabCounts}
+                  apiBaseUrl={resolveApiBaseUrl() ?? ""}
+                  filterState={filterState}
+                  labels={resultsTabsLabels}
+                />
+              </div>
+            </div>
+          ) : (
+            <ResultsTabs
+              key={`${locale}|${view.query}|${view.kind}|${page}`}
+              locale={locale}
+              query={view.query}
+              activeKind={view.kind}
+              page={page}
+              response={view.response}
+              tabCounts={view.tabCounts}
+              apiBaseUrl={resolveApiBaseUrl() ?? ""}
+              labels={resultsTabsLabels}
+            />
+          )}
         </Suspense>
       ) : null}
+
+      {view.status === "results" ? <BackToTop label={t("pagination.backToTop")} /> : null}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import Link from "next/link";
 
 import type { CategoryRow, MerchSlotRow } from "./merch-data";
@@ -129,7 +129,7 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
         </Link>
       </div>
       <ul
-        className="flex list-none gap-3 overflow-x-auto p-0 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-visible md:pb-0 md:snap-none lg:grid-cols-4 lg:gap-4 [&::-webkit-scrollbar]:hidden"
+        className="flex list-none gap-2 overflow-x-auto p-0 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] snap-x snap-mandatory md:grid md:grid-cols-4 md:gap-2.5 md:overflow-visible md:pb-0 md:snap-none lg:grid-cols-6 xl:grid-cols-8 xl:gap-3 [&::-webkit-scrollbar]:hidden"
         data-testid="home-category-grid"
       >
         {categories.map((category, index) => {
@@ -140,21 +140,21 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
           return (
             <li
               key={category.id}
-              className={`min-w-[9.75rem] snap-start md:min-w-0 ${isWide ? "md:col-span-2" : ""}`}
+              className={`min-w-[7.75rem] snap-start md:min-w-0 ${isWide ? "md:col-span-2" : ""}`}
             >
               <Link
                 href={`/${locale}/c/${category.slug}`}
                 aria-label={t("home.categories.browseLabel", { category: category.name })}
-                className="relative flex min-h-11 flex-col justify-end overflow-hidden rounded-lg p-4 text-text shadow-1 focus-visible:outline-none focus-visible:shadow-focusRing"
+                className="relative flex min-h-11 flex-col justify-end overflow-hidden rounded-[var(--r-lg)] p-3 text-text shadow-1 focus-visible:outline-none focus-visible:shadow-focusRing"
                 style={{
                   backgroundColor: fill,
-                  minHeight: isWide ? "7.5rem" : "6.25rem",
+                  minHeight: isWide ? "5.5rem" : "4.5rem",
                 }}
                 data-testid={`home-category-${category.slug}`}
               >
                 {imagePublicId ? (
                   <span className="absolute inset-0" data-testid="category-image">
-                    <CloudinaryImage
+                    <CloudinaryImageStatic
                       publicId={imagePublicId}
                       alt=""
                       width={480}
@@ -171,7 +171,7 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
                   <CategoryFallbackMark index={index} />
                 )}
                 <span
-                  className={`relative font-display text-h3 ${imagePublicId ? "text-surface" : ""}`}
+                  className={`relative font-display text-sm font-semibold leading-snug sm:text-base ${imagePublicId ? "text-surface" : ""}`}
                 >
                   {category.name}
                 </span>

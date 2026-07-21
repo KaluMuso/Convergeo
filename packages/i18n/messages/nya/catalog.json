@@ -29,7 +29,31 @@
         "title": "Takulandirani ku Vergeo5"
       },
       "primaryCta": "Yambani kuyang'ana",
-      "secondaryCta": "Phunzirani za kugulitsa"
+      "secondaryCta": "Phunzirani za kugulitsa",
+      "carousel": {
+        "previous": "Slide yapitayo",
+        "next": "Slide yotsatira",
+        "slideOf": "Slide {current} pa {total}",
+        "ariaLabel": "Hero carousel ya homepage"
+      },
+      "slides": {
+        "fashion": {
+          "title": "Fashion ndi nsalu kuchokera kwa ogulitsa a Zambia",
+          "subtitle": "Pezani chitenge, traditional wear, ndi style ya tsiku."
+        },
+        "tech": {
+          "title": "Mafoni, laptops, ndi tech ya tsiku",
+          "subtitle": "Fananizani mitengo ndi ogulitsa musanagule."
+        },
+        "power": {
+          "title": "Solar ndi magetsi pa nyumba ndi bizinesi",
+          "subtitle": "Pezani mapanel, mabatire, ndi zosunga magetsi pafupi."
+        },
+        "essentials": {
+          "title": "Kitchen ndi zofunikira pa nyumba",
+          "subtitle": "Sungani cookware, appliances, ndi zinthu za pa nyumba."
+        }
+      }
     },
     "meta": {
       "description": "Gulani zinthu, bookani services, ndi pezani events mu Zambia pa Vergeo5.",
@@ -58,7 +82,10 @@
       "searchSubmit": "Sakani",
       "services": "Ntchito",
       "supplies": "Za business",
-      "viewAllCategories": "Onani ma-categories onse"
+      "viewAllCategories": "Onani ma-categories onse",
+      "featuredTitle": "Zatsopano pa Vergeo5",
+      "featuredPromo": "Fananani ogulitsa ndikulipira ndi escrow pa intaneti.",
+      "featuredPromoCta": "Sakani msika"
     },
     "serviceBar": {
       "ariaLabel": "Zambiri za delivery ndi pickup",
@@ -202,7 +229,9 @@
       "wishlist": "Sungani ku wishlist",
       "wishlistRemove": "Chotsani ku wishlist",
       "mediaEmpty": "Palibe chithunzi cha product",
-      "quickAddError": "Sitinathe kuonjezera ku cart. Onani connection ndi yesaninso."
+      "quickAddError": "Sitinathe kuonjezera ku cart. Onani connection ndi yesaninso.",
+      "conditionNew": "Chatsopano",
+      "conditionRefurbished": "Chokonzedwa"
     },
     "defaultCategory": "Zinthu zonse",
     "emptyBody": "Yesani kuchotsa ma-filters kapena yang'anani category ina.",
@@ -226,7 +255,8 @@
     "facets": {
       "openFilters": "Ma-filters",
       "filtersActive": "Ma-filters (yogwira)"
-    }
+    },
+    "backToTop": "Bwererani pamwamba"
   },
   "reviews": {
     "report": {

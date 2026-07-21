@@ -1,15 +1,32 @@
 "use client";
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
+import { createApiClient } from "@vergeo/config";
+import { formatK } from "@vergeo/i18n";
 import { IconChevronDown } from "@vergeo/ui/src/icons";
 import { useFocusTrap } from "@vergeo/ui/src/modal";
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
+
 import { buildCategoryTree, type CategoryRecord, type NavCategory } from "./category-tree";
+import {
+  fetchMegaMenuMerchSlot,
+  readMerchPreviewToken,
+  withLocaleHref,
+  type MegaMenuMerchPayload,
+} from "./mega-menu-merch";
+import { useMerchPreviewToken, withMerchPreviewParam } from "./merch-preview-nav";
 
 export type { NavCategory } from "./category-tree";
 export { buildCategoryTree } from "./category-tree";
+
+export type FeaturedMini = {
+  title: string;
+  href: string;
+  priceLabel: string;
+};
 
 export type CategoryMegaMenuLabels = {
   trigger: string;
@@ -17,6 +34,16 @@ export type CategoryMegaMenuLabels = {
   loading: string;
   viewAll: string;
   empty?: string;
+  featuredTitle: string;
+  featuredPromo: string;
+  featuredPromoCta: string;
+};
+
+type MegaMenuFeaturedContent = {
+  minis: FeaturedMini[];
+  promoText: string;
+  promoCtaLabel: string;
+  promoHref: string;
 };
 
 type CategoryMegaMenuProps = {
@@ -24,16 +51,13 @@ type CategoryMegaMenuProps = {
   labels: CategoryMegaMenuLabels;
   /** Injectable for tests; defaults to a public (anon) browser-client query. */
   loadCategories?: () => Promise<NavCategory[]>;
+  /** Injectable featured sidebar; defaults to CMS slot with catalog fallback. */
+  loadFeaturedContent?: (locale: string) => Promise<MegaMenuFeaturedContent>;
   /** Close the panel when the document scrolls (desktop sticky header). */
   closeOnScroll?: boolean;
 };
 
 async function defaultLoadCategories(): Promise<NavCategory[]> {
-  // Category tree is publicly readable (RLS: categories_public_select "using (true)"),
-  // so the anon browser client can fetch it lazily without a server round-trip in the
-  // shop layout — which would otherwise force every shop route to render dynamically.
-  // getBrowserClient loads @supabase/ssr dynamically (only when the menu first
-  // opens) so it does not sit in the shared shop-shell first-load bundle.
   const supabase = await getBrowserClient();
   const { data, error } = await supabase
     .from("categories")
@@ -44,6 +68,60 @@ async function defaultLoadCategories(): Promise<NavCategory[]> {
     return [];
   }
   return buildCategoryTree(data as CategoryRecord[]);
+}
+
+type CatalogListingItem = {
+  title: string;
+  product_slug: string | null;
+  price_ngwee: number;
+};
+
+async function loadCatalogFeaturedMinis(locale: string): Promise<FeaturedMini[]> {
+  const baseUrl = getApiBaseUrl();
+  if (!baseUrl) {
+    return [];
+  }
+  try {
+    const client = createApiClient({ baseUrl });
+    const response = await client.request<{ items: CatalogListingItem[] }>(
+      "/catalog/listings?sort=newest&limit=3",
+    );
+    return response.items
+      .filter((item) => item.product_slug)
+      .map((item) => ({
+        title: item.title,
+        href: `/${locale}/p/${item.product_slug}`,
+        priceLabel: formatK(item.price_ngwee),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function featuredFromMerch(locale: string, merch: MegaMenuMerchPayload): FeaturedMini[] {
+  return merch.featuredMinis.map((mini) => ({
+    title: mini.title,
+    href: withLocaleHref(locale, mini.href),
+    priceLabel: mini.priceLabel ?? "",
+  }));
+}
+
+async function defaultLoadFeaturedContent(
+  locale: string,
+  labels: CategoryMegaMenuLabels,
+): Promise<MegaMenuFeaturedContent> {
+  const previewToken = readMerchPreviewToken();
+  const merch = await fetchMegaMenuMerchSlot(previewToken);
+
+  const cmsMinis = merch ? featuredFromMerch(locale, merch) : [];
+  const minis = cmsMinis.length > 0 ? cmsMinis : await loadCatalogFeaturedMinis(locale);
+
+  return {
+    minis,
+    promoText: merch?.promoText ?? labels.featuredPromo,
+    promoCtaLabel: merch?.promoCtaLabel ?? labels.featuredPromoCta,
+    promoHref: withLocaleHref(locale, merch?.promoHref ?? `/${locale}/search`),
+  };
 }
 
 /**
@@ -57,10 +135,25 @@ export function CategoryMegaMenu({
   locale,
   labels,
   loadCategories = defaultLoadCategories,
+  loadFeaturedContent,
   closeOnScroll = false,
 }: CategoryMegaMenuProps) {
+  const previewToken = useMerchPreviewToken();
+  const previewHref = useCallback(
+    (href: string) => withMerchPreviewParam(href, previewToken),
+    [previewToken],
+  );
+  const resolveFeaturedContent = useCallback(
+    (activeLocale: string) =>
+      loadFeaturedContent
+        ? loadFeaturedContent(activeLocale)
+        : defaultLoadFeaturedContent(activeLocale, labels),
+    [labels, loadFeaturedContent],
+  );
+
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<NavCategory[] | null>(null);
+  const [featuredContent, setFeaturedContent] = useState<MegaMenuFeaturedContent | null>(null);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -68,11 +161,11 @@ export function CategoryMegaMenu({
   const startedRef = useRef(false);
   const mountedRef = useRef(true);
   const loadRef = useRef(loadCategories);
+  const featuredRef = useRef(resolveFeaturedContent);
   const panelId = useId();
 
   const closeMenu = useCallback(() => {
     setOpen(false);
-    // Restore focus for outside-click / link / scroll closes (Escape via trap).
     triggerRef.current?.focus();
   }, []);
 
@@ -81,6 +174,10 @@ export function CategoryMegaMenu({
   useEffect(() => {
     loadRef.current = loadCategories;
   }, [loadCategories]);
+
+  useEffect(() => {
+    featuredRef.current = resolveFeaturedContent;
+  }, [resolveFeaturedContent]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -95,16 +192,22 @@ export function CategoryMegaMenu({
     }
     startedRef.current = true;
     setLoading(true);
-    loadRef
-      .current()
-      .then((tree) => {
+    void Promise.all([loadRef.current(), featuredRef.current(locale)])
+      .then(([tree, featured]) => {
         if (mountedRef.current) {
           setCategories(tree);
+          setFeaturedContent(featured);
         }
       })
       .catch(() => {
         if (mountedRef.current) {
           setCategories([]);
+          setFeaturedContent({
+            minis: [],
+            promoText: labels.featuredPromo,
+            promoCtaLabel: labels.featuredPromoCta,
+            promoHref: `/${locale}/search`,
+          });
         }
       })
       .finally(() => {
@@ -112,7 +215,7 @@ export function CategoryMegaMenu({
           setLoading(false);
         }
       });
-  }, [open]);
+  }, [labels.featuredPromo, labels.featuredPromoCta, locale, open]);
 
   useEffect(() => {
     if (!open) {
@@ -168,49 +271,89 @@ export function CategoryMegaMenu({
         aria-label={labels.panelAria}
         hidden={!open}
         tabIndex={-1}
-        className="absolute left-0 top-full z-50 mt-1 max-h-[70vh] w-[min(44rem,90vw)] overflow-auto rounded-lg border border-border bg-surface p-4 shadow-3 motion-fade"
+        className="absolute left-0 top-full z-50 mt-1 max-h-[70vh] w-[min(52rem,92vw)] overflow-auto rounded-lg border border-border bg-surface p-4 shadow-3 motion-fade"
       >
-        {loading || categories === null ? (
+        {loading || categories === null || featuredContent === null ? (
           <p className="text-sm text-text-2">{labels.loading}</p>
         ) : categories.length === 0 ? (
           <p className="text-sm text-text-2">{labels.empty ?? labels.loading}</p>
         ) : (
-          <div className="space-y-4">
-            <ul className="grid list-none grid-cols-2 gap-x-6 gap-y-4 p-0 sm:grid-cols-3">
-              {categories.map((category) => (
-                <li key={category.id} className="min-w-0">
-                  <Link
-                    href={`/${locale}/c/${category.slug}`}
-                    onClick={closeMenu}
-                    className="block truncate font-display text-h3 text-display-ink transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-                  >
-                    {category.name}
-                  </Link>
-                  {category.children.length > 0 ? (
-                    <ul className="mt-1.5 list-none space-y-1 p-0">
-                      {category.children.map((child) => (
-                        <li key={child.id} className="min-w-0">
-                          <Link
-                            href={`/${locale}/c/${child.slug}`}
-                            onClick={closeMenu}
-                            className="block truncate text-sm text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-                          >
-                            {child.name}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-            <Link
-              href={`/${locale}/categories`}
-              onClick={closeMenu}
-              className="inline-flex min-h-11 items-center text-sm font-medium text-primary transition-colors hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+          <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
+            <div className="min-w-0 flex-1 space-y-4">
+              <ul className="grid list-none grid-cols-2 gap-x-6 gap-y-4 p-0 sm:grid-cols-3">
+                {categories.map((category) => (
+                  <li key={category.id} className="min-w-0">
+                    <Link
+                      href={previewHref(`/${locale}/c/${category.slug}`)}
+                      onClick={closeMenu}
+                      className="block truncate font-display text-h3 text-display-ink transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+                    >
+                      {category.name}
+                    </Link>
+                    {category.children.length > 0 ? (
+                      <ul className="mt-1.5 list-none space-y-1 p-0">
+                        {category.children.map((child) => (
+                          <li key={child.id} className="min-w-0">
+                            <Link
+                              href={previewHref(`/${locale}/c/${child.slug}`)}
+                              onClick={closeMenu}
+                              className="block truncate text-sm text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+                            >
+                              {child.name}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href={previewHref(`/${locale}/categories`)}
+                onClick={closeMenu}
+                className="inline-flex min-h-11 items-center text-sm font-medium text-primary transition-colors hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+              >
+                {labels.viewAll}
+              </Link>
+            </div>
+
+            <aside
+              aria-labelledby="mega-menu-featured-title"
+              className="w-full shrink-0 rounded-lg border border-border bg-bg-2 p-3 lg:w-56"
+              data-testid="mega-menu-featured"
             >
-              {labels.viewAll}
-            </Link>
+              <h3 id="mega-menu-featured-title" className="mb-2 text-sm font-semibold text-text">
+                {labels.featuredTitle}
+              </h3>
+              {featuredContent.minis.length > 0 ? (
+                <ul className="m-0 list-none space-y-2 p-0">
+                  {featuredContent.minis.map((mini) => (
+                    <li key={mini.href}>
+                      <Link
+                        href={previewHref(mini.href)}
+                        onClick={closeMenu}
+                        className="block rounded-md px-2 py-1.5 transition-colors hover:bg-surface focus-visible:outline-none focus-visible:shadow-focusRing"
+                      >
+                        <span className="block truncate text-sm font-medium text-text">
+                          {mini.title}
+                        </span>
+                        {mini.priceLabel ? (
+                          <span className="text-xs text-text-2">{mini.priceLabel}</span>
+                        ) : null}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <p className="mt-3 text-xs text-text-2">{featuredContent.promoText}</p>
+              <Link
+                href={previewHref(featuredContent.promoHref)}
+                onClick={closeMenu}
+                className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+              >
+                {featuredContent.promoCtaLabel}
+              </Link>
+            </aside>
           </div>
         )}
       </div>

@@ -77,6 +77,8 @@
     "quickAdd": "Quick add",
     "wishlist": "Save to wishlist",
     "outOfStock": "Out of stock",
-    "distance": "{distance} away"
+    "distance": "{distance} away",
+    "conditionNew": "New",
+    "conditionRefurbished": "Refurbished"
   }
 }

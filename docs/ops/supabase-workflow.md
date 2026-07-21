@@ -1,6 +1,6 @@
 # Supabase workflow (Vergeo5)
 
-Local-dev and CI reference for the Supabase CLI pipeline introduced in M01-P08. Domain tables and RLS land in M03 pebbles — this repo only ships `0001_extensions.sql` until then.
+Local-dev and CI reference for the Supabase CLI pipeline introduced in M01-P08. The repo now ships **66 migrations** (`0001_extensions.sql` … `0066_user_wishlist_recently_viewed.sql`) — the full domain schema (identity/catalog/orders/money/search/trust) with RLS on every table is landed. The migration mechanics below apply to every new migration.
 
 ## Prerequisites
 
@@ -29,12 +29,13 @@ docker exec supabase_db_vergeo5 psql -U postgres -c \
 
 ## Migrations
 
-| Rule                     | Detail                                                                                                |
-| ------------------------ | ----------------------------------------------------------------------------------------------------- |
-| **Naming**               | One file per pebble: `NNNN_slug.sql` (e.g. `0002_identity_vendors.sql`)                               |
-| **Pre-assigned numbers** | 0002 identity/vendors · 0003 catalog · 0004 services/events · 0005 orders · 0008 config · 0009 search |
-| **Additive-only**        | After M03-P08 merges, never edit shipped migrations — add a new numbered file                         |
-| **Contents (M01)**       | `0001_extensions.sql` only: `pgcrypto`, `pg_trgm`, `vector`                                           |
+| Rule                     | Detail                                                                                                                                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Naming**               | One file per pebble: `NNNN_slug.sql` (e.g. `0002_identity_vendors.sql`)                                                                                                                    |
+| **Pre-assigned numbers** | 0002 identity/vendors · 0003 catalog · 0004 services/events · 0005 orders · 0008 config · 0009 search                                                                                      |
+| **Additive-only**        | After M03-P08 merged, never edit shipped migrations — add a new numbered file (followed since; `0061`–`0066` are new guard/uniq files)                                                     |
+| **`0001` baseline**      | `0001_extensions.sql`: `pgcrypto`, `pg_trgm`, `vector`. Domain schema follows in `0002`–`0066`.                                                                                            |
+| **Numbering**            | Keep new migration PRs numbered **above master's current max** and merge promptly — duplicate prefixes are a fatal `schema_migrations` replay collision (guarded by `migration-replay.sh`) |
 
 Create a new migration from schema drift:
 

@@ -45,7 +45,7 @@ scrubber on `before_send` (event body) AND `before_breadcrumb` (every breadcrumb
   `coordinate`, `token`, `authorization`, `password`, `secret`, `api_key`, `otp`,
   `pin`, `cookie`, `refresh`, `access_token`, `service_role`, `signature`,
   `payment_payload`, `card_number`, `pan`, `cvv`, or `lenco` has its whole value
-  replaced with `[redacted]`.
+  replaced with `[redacted]`. The list here is **non-exhaustive** — see `packages/observability/src/scrub.ts` and `services/api/app/core/sentry.py` for the full set (also `passwd`, `set-cookie`, `refresh_token`, `service-role`, `x-lenco-signature`, `cvc`, `encrypted_payload`).
 - **Pattern-based masking** inside free text — emails → `[redacted-email]`, Zambian /
   E.164 phone numbers → `[redacted-phone]`, bearer tokens & JWTs → `[redacted-token]`.
 - `send_default_pii` / `sendDefaultPii` is left **off** so the SDK never attaches request

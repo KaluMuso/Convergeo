@@ -1,5 +1,4 @@
-import { LinkButton } from "@vergeo/ui/src/link-button";
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { ServiceCard } from "@vergeo/ui/src/service-card";
 import { VendorCard } from "@vergeo/ui/src/vendor-card";
 import Link from "next/link";
@@ -7,6 +6,7 @@ import Link from "next/link";
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { fetchJson } from "../../../../lib/fetch-json";
 
+import { HomeHeroCarousel } from "./home-hero-carousel";
 import { ListingGrid, type CatalogListing } from "./plp/listing-grid";
 
 import type { CategoryRow } from "./merch-data";
@@ -242,83 +242,32 @@ type HomeHeroBandProps = {
   t: CatalogTranslator;
   /** Brand wordmark — must remain the strongest first-viewport signal. */
   brandName: string;
+  /**
+   * Optional catalogue image for the full-bleed hero plane. Honest merch only —
+   * never invent a stock scene when the feed has no public ids.
+   */
+  visualPublicId?: string | null;
 };
 
-/**
- * Merch-first default hero (audit §4.1): brand + one headline + one sentence +
- * CTAs on an edge-to-edge visual plane. Escrow ladder lives in HomeTrustStrip.
- */
-export function HomeHeroBand({ locale, t, brandName }: HomeHeroBandProps) {
-  return (
-    <section
-      data-testid="home-hero-band"
-      aria-labelledby="home-hero-heading"
-      className="motion-rise relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden bg-panel text-panel-text"
-    >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-90"
-        style={{
-          background:
-            "radial-gradient(120% 80% at 85% 20%, color-mix(in srgb, var(--primary) 35%, transparent) 0%, transparent 55%), linear-gradient(135deg, var(--panel) 0%, color-mix(in srgb, var(--primary-deep) 55%, var(--panel)) 100%)",
-        }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-8 top-6 h-48 w-48 rounded-full bg-primary/20 blur-2xl motion-reduce:blur-none sm:h-64 sm:w-64 lg:right-[12%] lg:top-10"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute bottom-0 left-[8%] h-40 w-40 rounded-full bg-accent/15 blur-xl motion-reduce:blur-none"
-      />
+/** First newest listing with a Cloudinary public id (for the default hero plane). */
+export function pickHeroVisualPublicId(listings: CatalogListing[]): string | null {
+  for (const listing of listings) {
+    if (listing.imagePublicId && listing.imagePublicId.trim()) {
+      return listing.imagePublicId;
+    }
+  }
+  return null;
+}
 
-      <div className="relative mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-10 sm:px-6 lg:flex-row lg:items-end lg:justify-between lg:gap-10 lg:px-6 lg:py-14">
-        <div className="flex max-w-2xl flex-col gap-3 lg:gap-4">
-          <p
-            data-testid="home-hero-brand"
-            className="font-display text-hero leading-none tracking-tight text-panel-text"
-          >
-            {brandName}
-          </p>
-          <h1 id="home-hero-heading" className="font-display text-h1 text-panel-text lg:text-h2">
-            {t("home.hero.fallbackTitle")}
-          </h1>
-          <p className="max-w-xl text-body text-panel-muted">{t("home.hero.fallbackSubtitle")}</p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            <LinkButton href={`/${locale}/search`} variant="primary" LinkComponent={Link}>
-              {t("home.hero.primaryCta")}
-            </LinkButton>
-            <LinkButton
-              href={`/${locale}/sell`}
-              variant="secondary"
-              LinkComponent={Link}
-              className="border-panel-muted/40 bg-transparent text-panel-text hover:bg-panel-text/10"
-            >
-              {t("home.hero.secondaryCta")}
-            </LinkButton>
-          </div>
-        </div>
-        <div
-          aria-hidden
-          data-testid="home-hero-visual"
-          className="relative mt-2 aspect-[16/10] w-full max-w-md overflow-hidden rounded-lg border border-panel-muted/20 bg-surface/10 shadow-2 lg:mt-0 lg:max-w-sm"
-        >
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "linear-gradient(160deg, color-mix(in srgb, var(--surface) 18%, transparent) 0%, transparent 45%), radial-gradient(circle at 30% 70%, color-mix(in srgb, var(--accent) 40%, transparent), transparent 50%)",
-            }}
-          />
-          <div className="absolute inset-x-6 bottom-6 top-8 grid grid-cols-3 gap-2 opacity-80">
-            <span className="rounded bg-surface/25" />
-            <span className="col-span-2 rounded bg-surface/15" />
-            <span className="col-span-2 rounded bg-surface/20" />
-            <span className="rounded bg-surface/30" />
-          </div>
-        </div>
-      </div>
-    </section>
+/**
+ * Merch-first default hero (audit §4.1): rotating carousel with curated imagery,
+ * brand + headline + CTAs on slide 1. Escrow ladder lives in HomeTrustStrip.
+ */
+export function HomeHeroBand({ locale, brandName }: HomeHeroBandProps) {
+  return (
+    <div data-testid="home-hero-band">
+      <HomeHeroCarousel locale={locale} brandName={brandName} />
+    </div>
   );
 }
 
@@ -467,7 +416,7 @@ export function HomeServicesRail({
               providerLabel={labels.provider.replace("{provider}", service.providerName)}
               media={
                 service.imagePublicId ? (
-                  <CloudinaryImage
+                  <CloudinaryImageStatic
                     publicId={service.imagePublicId}
                     alt={service.title}
                     width={360}
@@ -515,7 +464,7 @@ type HomeVendorsRailProps = {
 function vendorRailLogo(logoUrl: string) {
   if (!logoUrl.startsWith("http://") && !logoUrl.startsWith("https://")) {
     return (
-      <CloudinaryImage
+      <CloudinaryImageStatic
         publicId={logoUrl}
         alt=""
         width={112}

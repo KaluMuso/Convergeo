@@ -2,8 +2,8 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { createTranslator } from "next-intl";
-import { afterEach, describe, expect, it } from "vitest";
+import { createTranslator, NextIntlClientProvider } from "next-intl";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import catalogMessages from "../../../../../../packages/i18n/messages/en/catalog.json";
 
@@ -18,8 +18,31 @@ import {
 
 import type { CatalogListing } from "./plp/listing-grid";
 
+vi.mock("@vergeo/ui/src/media/cloudinary-image", () => ({
+  CloudinaryImage: ({ alt }: { alt: string }) => <img alt={alt} data-testid="cloudinary-image" />,
+}));
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  );
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+});
+
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 const t = createTranslator({
@@ -183,7 +206,11 @@ describe("default homepage storefront rendering", () => {
     expect(mode).toBe("default");
 
     render(
-      <>
+      <NextIntlClientProvider
+        locale="en"
+        messages={{ catalog: catalogMessages }}
+        onError={() => {}}
+      >
         <HomeHeroBand locale="en" t={t} brandName="Vergeo5" />
         <HomeProductRail
           id="home-rail-new"
@@ -194,7 +221,7 @@ describe("default homepage storefront rendering", () => {
           locale="en"
           labels={railLabels}
         />
-      </>,
+      </NextIntlClientProvider>,
     );
 
     expect(screen.getByTestId("home-hero-brand")).toHaveTextContent("Vergeo5");

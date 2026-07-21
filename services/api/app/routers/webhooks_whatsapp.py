@@ -8,10 +8,22 @@ import json
 import logging
 import os
 import re
-from typing import Annotated, Any, Protocol
+from datetime import datetime
+from functools import lru_cache
+from pathlib import Path
+from typing import Annotated, Any, Literal, Protocol
 
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.notifications.dedupe import enqueue_outbox_row, split_dedupe_key
+from app.services.notifications.fallback import (
+    CHANNEL_WHATSAPP as FALLBACK_CHANNEL_WHATSAPP,
+)
+from app.services.notifications.fallback import (
+    DeliveryContext,
+    enqueue_fallback_row,
+    evaluate_lifecycle_fallback,
+)
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import PlainTextResponse
 
@@ -26,6 +38,23 @@ _APP_SECRET_FALLBACK_ENV = "META_APP_SECRET"
 OUTBOX_TABLE = "notification_outbox"
 PROFILES_TABLE = "profiles"
 CHANNEL_WHATSAPP = "whatsapp"
+EVENT_OPT_STOP = "whatsapp_opt_stop"
+EVENT_OPT_START = "whatsapp_opt_start"
+TEMPLATE_COMPLIANCE_CONFIRMATION = "compliance_confirmation"
+_NOTIFICATIONS_I18N_DIR_ENV = "VERGEO5_NOTIFICATIONS_I18N_DIR"
+
+
+@lru_cache(maxsize=1)
+def _notifications_i18n_dir() -> Path | None:
+    override = os.environ.get(_NOTIFICATIONS_I18N_DIR_ENV, "").strip()
+    if override:
+        path = Path(override)
+        return path if path.is_dir() else None
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "packages" / "i18n" / "messages"
+        if candidate.is_dir():
+            return candidate
+    return None
 
 _STOP_KEYWORDS = frozenset({"stop", "unsubscribe", "cancel", "end", "quit"})
 _START_KEYWORDS = frozenset({"start", "subscribe", "unstop"})
@@ -90,6 +119,8 @@ def _map_whatsapp_status(wa_status: str) -> tuple[str, str] | None:
     normalized = wa_status.strip().lower()
     if normalized == "failed":
         return "failed", "failed"
+    if normalized == "undelivered":
+        return "failed", "undelivered"
     if normalized in {"sent", "delivered", "read"}:
         return "sent", normalized
     return None
@@ -161,11 +192,92 @@ def _apply_status_update(client: Any, row: dict[str, Any], wa_status: str) -> bo
     return True
 
 
+def _parse_row_timestamp(row: dict[str, Any], key: str) -> datetime | None:
+    raw = row.get(key)
+    if not isinstance(raw, str):
+        return None
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _fetch_notif_prefs(client: Any, recipient_id: str) -> dict[str, Any]:
+    response = (
+        client.table(PROFILES_TABLE)
+        .select("notif_prefs")
+        .eq("id", recipient_id)
+        .maybe_single()
+        .execute()
+    )
+    row = _extract_data(response)
+    if isinstance(row, dict):
+        prefs = row.get("notif_prefs")
+        if isinstance(prefs, dict):
+            return prefs
+    return {}
+
+
+def _maybe_enqueue_lifecycle_fallback(
+    client: Any,
+    row: dict[str, Any],
+    *,
+    delivery_status: str,
+) -> None:
+    """After a WhatsApp delivery failure webhook, queue SMS fallback if appropriate."""
+    dedupe_key = str(row.get("dedupe_key", ""))
+    event_type, entity_id = split_dedupe_key(dedupe_key)
+    if not event_type or not entity_id:
+        logger.warning(
+            "whatsapp lifecycle fallback skipped: malformed dedupe_key",
+            extra={"dedupe_key": dedupe_key, "outbox_id": row.get("id")},
+        )
+        return
+
+    payload = row.get("payload")
+    payload_dict = dict(payload) if isinstance(payload, dict) else {}
+    recipient_id = payload_dict.get("recipient_id")
+    notif_prefs = _fetch_notif_prefs(client, str(recipient_id)) if recipient_id else {}
+
+    whatsapp_opt_in = payload_dict.get("whatsapp_opt_in", True)
+    if not isinstance(whatsapp_opt_in, bool):
+        whatsapp_opt_in = True
+
+    sent_at = _parse_row_timestamp(row, "updated_at") or _parse_row_timestamp(row, "created_at")
+    context = DeliveryContext(
+        channel=FALLBACK_CHANNEL_WHATSAPP,
+        whatsapp_opt_in=whatsapp_opt_in,
+        delivery_status=delivery_status,
+        sent_at=sent_at,
+    )
+    decision = evaluate_lifecycle_fallback(context, notif_prefs)
+    if decision.next_channel is None:
+        return
+
+    template = row.get("template")
+    try:
+        enqueue_fallback_row(
+            client,
+            event_type=event_type,
+            entity_id=entity_id,
+            decision=decision,
+            template=template if isinstance(template, str) else None,
+            payload=payload_dict,
+            attempts=int(row.get("attempts", 0)),
+        )
+    except Exception:
+        logger.warning(
+            "Failed to enqueue WhatsApp lifecycle SMS fallback",
+            exc_info=True,
+            extra={"outbox_id": row.get("id"), "dedupe_key": dedupe_key},
+        )
+
+
 def _resolve_profile_by_phone(client: Any, phone: str) -> dict[str, Any] | None:
     for candidate in _normalize_phone_candidates(phone):
         response = (
             client.table(PROFILES_TABLE)
-            .select("id,phone,notif_prefs")
+            .select("id,phone,locale,notif_prefs")
             .eq("phone", candidate)
             .maybe_single()
             .execute()
@@ -174,6 +286,84 @@ def _resolve_profile_by_phone(client: Any, phone: str) -> dict[str, Any] | None:
         if isinstance(row, dict):
             return row
     return None
+
+
+def _load_notifications_messages(locale: str) -> dict[str, Any]:
+    base = _notifications_i18n_dir()
+    if base is None:
+        return {}
+    path = base / locale / "notifications.json"
+    if not path.is_file():
+        return {}
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    return raw if isinstance(raw, dict) else {}
+
+
+def _resolve_compliance_message(
+    locale: str,
+    *,
+    kind: Literal["stop", "start"],
+) -> str:
+    key = "stopConfirmation" if kind == "stop" else "startConfirmation"
+    for candidate in (locale.strip().lower(), "en"):
+        messages = _load_notifications_messages(candidate)
+        compliance = messages.get("compliance")
+        if isinstance(compliance, dict):
+            value = compliance.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    msg = f"missing compliance message for {kind}"
+    raise KeyError(msg)
+
+
+def _enqueue_opt_confirmation(
+    client: Any,
+    *,
+    profile: dict[str, Any],
+    inbound_message_id: str,
+    kind: Literal["stop", "start"],
+) -> None:
+    profile_id = str(profile.get("id", ""))
+    phone = profile.get("phone")
+    if not profile_id or not isinstance(phone, str) or not phone.strip():
+        return
+
+    locale = profile.get("locale")
+    locale_str = locale.strip().lower() if isinstance(locale, str) and locale.strip() else "en"
+    try:
+        confirmation_body = _resolve_compliance_message(locale_str, kind=kind)
+    except KeyError:
+        logger.warning(
+            "whatsapp opt confirmation skipped: missing i18n copy",
+            extra={"profile_id": profile_id, "kind": kind, "locale": locale_str},
+        )
+        return
+
+    event_type = EVENT_OPT_STOP if kind == "stop" else EVENT_OPT_START
+    try:
+        enqueue_outbox_row(
+            client,
+            event_type=event_type,
+            entity_id=inbound_message_id,
+            channel=CHANNEL_WHATSAPP,
+            template=TEMPLATE_COMPLIANCE_CONFIRMATION,
+            payload={
+                "recipient_id": profile_id,
+                "to": phone.strip(),
+                "locale": locale_str,
+                "confirmation_body": confirmation_body,
+            },
+        )
+    except Exception:
+        logger.warning(
+            "Failed to enqueue WhatsApp opt confirmation",
+            exc_info=True,
+            extra={
+                "profile_id": profile_id,
+                "inbound_message_id": inbound_message_id,
+                "kind": kind,
+            },
+        )
 
 
 def _write_notif_prefs(client: Any, profile_id: str, prefs: dict[str, bool]) -> None:
@@ -185,12 +375,15 @@ def _handle_opt_keyword(
     *,
     phone: str,
     keyword: str,
+    inbound_message_id: str | None = None,
 ) -> bool:
     normalized = keyword.strip().lower()
     if normalized in _STOP_KEYWORDS:
         prefs = dict(_ALL_CHANNELS_OFF)
+        kind: Literal["stop", "start"] = "stop"
     elif normalized in _START_KEYWORDS:
         prefs = dict(_ALL_CHANNELS_ON)
+        kind = "start"
     else:
         return False
 
@@ -207,6 +400,13 @@ def _handle_opt_keyword(
         return True
 
     _write_notif_prefs(client, str(profile["id"]), prefs)
+    if inbound_message_id:
+        _enqueue_opt_confirmation(
+            client,
+            profile=profile,
+            inbound_message_id=inbound_message_id,
+            kind=kind,
+        )
     logger.info(
         "whatsapp opt keyword applied",
         extra={
@@ -253,7 +453,17 @@ def _process_statuses(client: Any, statuses: list[Any]) -> None:
                 extra={"whatsapp_message_id": message_id, "status": status},
             )
             continue
-        _apply_status_update(client, row, status)
+        updated = _apply_status_update(client, row, status)
+        normalized = status.strip().lower()
+        if normalized in {"failed", "undelivered"} and updated:
+            mapped = _map_whatsapp_status(status)
+            if mapped is not None:
+                _, delivery_status = mapped
+                _maybe_enqueue_lifecycle_fallback(
+                    client,
+                    row,
+                    delivery_status=delivery_status,
+                )
 
 
 def _process_messages(client: Any, messages: list[Any]) -> None:
@@ -267,7 +477,14 @@ def _process_messages(client: Any, messages: list[Any]) -> None:
 
         text = item.get("text")
         body = text.get("body") if isinstance(text, dict) else None
-        if isinstance(body, str) and _handle_opt_keyword(client, phone=sender, keyword=body):
+        inbound_message_id = item.get("id")
+        message_id = inbound_message_id if isinstance(inbound_message_id, str) else None
+        if isinstance(body, str) and _handle_opt_keyword(
+            client,
+            phone=sender,
+            keyword=body,
+            inbound_message_id=message_id,
+        ):
             continue
 
         _log_unknown_inbound(phone=sender, message=item)

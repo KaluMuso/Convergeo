@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { BackToTop } from "../_components/back-to-top";
 import { fetchCategoriesResult } from "../_components/merch-data";
 
 import { resolveCategoriesBrowseView } from "./categories-view";
@@ -75,32 +76,35 @@ export default async function CategoriesPage({ params }: PageProps) {
       </header>
 
       {view.kind === "populated" ? (
-        <ul className="grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 lg:grid-cols-3">
-          {view.tree.map((category) => (
-            <li key={category.id} className="min-w-0 space-y-2">
-              <Link
-                href={`/${locale}/c/${category.slug}`}
-                className="font-display text-h3 text-display-ink transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-              >
-                {category.name}
-              </Link>
-              {category.children.length > 0 ? (
-                <ul className="list-none space-y-1.5 p-0">
-                  {category.children.map((child) => (
-                    <li key={child.id}>
-                      <Link
-                        href={`/${locale}/c/${child.slug}`}
-                        className="block min-h-11 py-1 text-sm text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-                      >
-                        {child.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="grid list-none grid-cols-1 gap-6 p-0 sm:grid-cols-2 lg:grid-cols-3">
+            {view.tree.map((category) => (
+              <li key={category.id} className="min-w-0 space-y-2">
+                <Link
+                  href={`/${locale}/c/${category.slug}`}
+                  className="font-display text-h3 text-display-ink transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+                >
+                  {category.name}
+                </Link>
+                {category.children.length > 0 ? (
+                  <ul className="list-none space-y-1.5 p-0">
+                    {category.children.map((child) => (
+                      <li key={child.id}>
+                        <Link
+                          href={`/${locale}/c/${child.slug}`}
+                          className="block min-h-11 py-1 text-sm text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+                        >
+                          {child.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          <BackToTop label={t("plp.backToTop")} />
+        </>
       ) : view.kind === "empty" ? (
         <EmptyState
           title={t("browseCategories.emptyTitle")}

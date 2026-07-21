@@ -13,6 +13,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../../lib/api-base-url";
 import { fetchJson } from "../../../../../lib/fetch-json";
+import { BackToTop } from "../../_components/back-to-top";
 import { buildCategoryTree } from "../../_components/category-tree";
 import { fetchCategoriesResult } from "../../_components/merch-data";
 import { AppliedFilterBar } from "../../_components/plp/applied-filter-bar";
@@ -253,6 +254,8 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
     distance: t("plp.card.distance"),
     sampleListing: t("home.demo.sampleListing"),
     mediaEmpty: t("plp.card.mediaEmpty"),
+    conditionNew: t("plp.card.conditionNew"),
+    conditionRefurbished: t("plp.card.conditionRefurbished"),
   };
 
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [
@@ -379,6 +382,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
           )}
         </section>
       </div>
+      {!catalogUnavailable && listings.length > 0 ? <BackToTop label={t("plp.backToTop")} /> : null}
     </div>
   );
 }

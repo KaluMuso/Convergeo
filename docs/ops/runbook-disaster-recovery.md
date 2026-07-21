@@ -15,10 +15,10 @@ and **verification**. Sibling docs handle the mechanics this runbook orchestrate
 
 **Objectives (whole platform)**
 
-| Metric  | Target        | Basis                                                              |
-| ------- | ------------- | ----------------------------------------------------------------- |
-| **RTO** | ≤ **30 min**  | App pin + compose restart, or restore latest dump + smoke verify. |
-| **RPO** | ≤ **24 h**    | Nightly logical dump (02:00 Africa/Lusaka); worst case ~24h old.  |
+| Metric  | Target       | Basis                                                             |
+| ------- | ------------ | ----------------------------------------------------------------- |
+| **RTO** | ≤ **30 min** | App pin + compose restart, or restore latest dump + smoke verify. |
+| **RPO** | ≤ **24 h**   | Nightly logical dump (02:00 Africa/Lusaka); worst case ~24h old.  |
 
 > Backups contain **PII** (Zambia DPA). The OCI bucket is encryption-at-rest,
 > public-access-blocked, IAM limited to the VM deploy user + founder break-glass.
@@ -80,11 +80,13 @@ supabase projects list                     # note the ref for $SUPABASE_PROJECT_
 ### B2. Fallback — restore the latest nightly logical dump from OCI
 
 ```bash
-# Restores gzip logical dump into the target (guards refuse prod URLs unless --force).
+# Restores gzip logical dump into the target. The prod VM runs ENV=production, so the guard
+# (db-restore.sh:is_prod_url) REQUIRES --force AND an interactive `RESTORE` confirmation — a bare
+# `--latest` exits 1. This matches infra/ROLLBACK.md.
 cd /home/opc/vergeo5/infra
-SUPABASE_DB_URL="$SUPABASE_DB_URL" bash scripts/db-restore.sh --latest
+SUPABASE_DB_URL="$SUPABASE_DB_URL" bash scripts/db-restore.sh --latest --force   # then type: RESTORE
 # Or a specific object already downloaded:
-SUPABASE_DB_URL="$SUPABASE_DB_URL" bash scripts/db-restore.sh --file /var/backups/vergeo5/vergeo5-<ts>.sql.gz
+SUPABASE_DB_URL="$SUPABASE_DB_URL" bash scripts/db-restore.sh --file /var/backups/vergeo5/vergeo5-<ts>.sql.gz --force
 ```
 
 ### C. Verify the restore (schema + seed + migrations current)
@@ -131,8 +133,11 @@ chmod 600 .env
 # 3. Bring the stack up (api → healthcheck-gated caddy → n8n) and wait for health.
 docker compose up -d --build
 docker compose ps
+# api is expose-only (no host port mapping — only caddy publishes 80/443), so probe it
+# from inside the container, mirroring the compose healthcheck.
 for i in $(seq 1 30); do
-  curl -fsS -o /dev/null http://127.0.0.1:8000/healthz && break; sleep 2; done
+  docker compose exec -T api python -c \
+    "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')" && break; sleep 2; done
 
 # 4. Point Cloudflare DNS at the new VM public IP (see infra/cloudflare-dns.md).
 #    Update the A record for api.vergeo5.com → <new-vm-ip>, proxied (orange cloud).
@@ -245,14 +250,14 @@ SQL
 
 ## Scenario summary
 
-| # | Scenario                     | Trigger                              | RTO      | RPO    | Recovery path (this runbook) |
-|---|------------------------------|--------------------------------------|----------|--------|------------------------------|
-| 1 | DB loss / corruption         | DB corrupt / bad migration / drop    | ≤ 30 min | ≤ 24 h | Freeze → PITR or `db-restore.sh --latest` → `restore-smoke.sql` → recon → unfreeze |
-| 2 | OCI VM loss                  | VM terminated / unreachable          | ≤ 30 min | ≈ 0    | Re-provision → clone → `.env` from vault → `docker compose up` → DNS |
-| 3 | Supabase provider outage     | Provider incident, DB intact         | provider | 0      | Maintenance mode → monitor → smoke on recovery |
-| 4 | Vercel outage                | Edge/build outage (customer app)     | ≤ 15 min | 0      | Cloudflare maintenance failover → redeploy last-green |
-| 5 | Lenco outage                 | MoMo/card/webhooks failing           | provider | 0      | Freeze escrow/payouts → **COD + pickup continue** → replay on recovery |
+| #   | Scenario                 | Trigger                           | RTO      | RPO    | Recovery path (this runbook)                                                       |
+| --- | ------------------------ | --------------------------------- | -------- | ------ | ---------------------------------------------------------------------------------- |
+| 1   | DB loss / corruption     | DB corrupt / bad migration / drop | ≤ 30 min | ≤ 24 h | Freeze → PITR or `db-restore.sh --latest` → `restore-smoke.sql` → recon → unfreeze |
+| 2   | OCI VM loss              | VM terminated / unreachable       | ≤ 30 min | ≈ 0    | Re-provision → clone → `.env` from vault → `docker compose up` → DNS               |
+| 3   | Supabase provider outage | Provider incident, DB intact      | provider | 0      | Maintenance mode → monitor → smoke on recovery                                     |
+| 4   | Vercel outage            | Edge/build outage (customer app)  | ≤ 15 min | 0      | Cloudflare maintenance failover → redeploy last-green                              |
+| 5   | Lenco outage             | MoMo/card/webhooks failing        | provider | 0      | Freeze escrow/payouts → **COD + pickup continue** → replay on recovery             |
 
-**Drill cadence:** the restore drill (`scripts/ops/restore-staging.sh`) runs on a schedule
-against staging; results are logged in `docs/ops/drill-log.md`. The live ≤30-minute staging
-restore is founder/staging-gated (see the drill-log).
+**Drill cadence:** the restore drill (`scripts/ops/restore-staging.sh`) is run **manually**
+(founder/staging-gated — there is no CI/n8n scheduler wired for it yet); results are logged in
+`docs/ops/drill-log.md`. The live ≤30-minute staging restore is the target to demonstrate.

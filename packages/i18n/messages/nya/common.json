@@ -17,7 +17,19 @@
   },
   "nav": {
     "home": "Kwathu",
-    "skipToContent": "Pitani ku content"
+    "skipToContent": "Pitani ku content",
+    "marketing": {
+      "ariaLabel": "Navigation ya marketing",
+      "about": "Za Vergeo5",
+      "contact": "Titandizireni",
+      "help": "Thandizo",
+      "sell": "Sell pa Vergeo5",
+      "signIn": "Lowani"
+    },
+    "account": {
+      "ariaLabel": "Navigation ya account",
+      "menuAria": "Menyu ya akaunti"
+    }
   },
   "offline": {
     "body": "Palibe connection pano. Mapeji omwe mwaonako kale amagwirabe ntchito — connectaninso kuti muone zonse.",
@@ -32,5 +44,14 @@
     "light": "Kuwala",
     "system": "System ya device",
     "displayPreferences": "Zokonda za maonekedwe"
+  },
+  "locale": {
+    "switchAria": "Sankhani chilankhulo",
+    "names": {
+      "en": "English",
+      "bem": "IciBemba",
+      "nya": "IciNyanja",
+      "fr": "Français"
+    }
   }
 }

@@ -1,6 +1,6 @@
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import {
   buildCanonicalAlternates,
   buildLocaleCanonical,
@@ -158,7 +158,7 @@ function organiserLogo(logoUrl: string) {
     );
   }
   return (
-    <CloudinaryImage
+    <CloudinaryImageStatic
       publicId={logoUrl}
       alt=""
       width={96}
@@ -272,7 +272,7 @@ export default async function EventDetailPage({ params }: PageProps) {
       {/* Full-image overlay hero — aubergine gradient fallback when there is no image. */}
       <header className="relative overflow-hidden rounded-lg">
         {heroImage ? (
-          <CloudinaryImage
+          <CloudinaryImageStatic
             publicId={heroImage}
             alt={event.title}
             width={1280}

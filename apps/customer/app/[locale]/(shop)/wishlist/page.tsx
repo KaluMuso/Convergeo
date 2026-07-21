@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { BackToTop } from "../_components/back-to-top";
+
 import { SavedItemsPanel } from "./_components/saved-items-panel";
 
 import type { Metadata } from "next";
@@ -39,8 +41,14 @@ export default async function WishlistPage({ params }: PageProps) {
 
   const baseMessages = await getMessages();
   const accountMessages = await loadNamespace(locale as Locale, "account");
+  const catalogMessages = await loadNamespace(locale as Locale, "catalog");
   const messages = { ...baseMessages, account: accountMessages } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "account" });
+  const tCatalog = createTranslator({
+    locale,
+    messages: { catalog: catalogMessages },
+    namespace: "catalog",
+  }) as (key: string, values?: Record<string, string | number>) => string;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-6">
@@ -67,6 +75,7 @@ export default async function WishlistPage({ params }: PageProps) {
           signedOutNote: t("saved.signedOutNote"),
         }}
       />
+      <BackToTop label={tCatalog("plp.backToTop")} />
     </div>
   );
 }

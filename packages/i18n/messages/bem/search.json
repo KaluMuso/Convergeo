@@ -30,7 +30,27 @@
     "moreLoaded": "{count} amaresults yambi yaleetwa.",
     "endOfResults": "Mwafika ku nshila ya amaresults.",
     "loadError": "Tatwaishibe ukuleta amaresults yambi.",
-    "retry": "Wesheni limbi"
+    "retry": "Wesheni limbi",
+    "backToTop": "Bwelele pamo"
+  },
+  "filters": {
+    "heading": "Filter ifya product",
+    "price": "Price (K)",
+    "minPrice": "Min",
+    "maxPrice": "Max",
+    "category": "Category",
+    "categoryAll": "Categories fyonse",
+    "apply": "Apply filters",
+    "clear": "Clear filters",
+    "openFilters": "Filters",
+    "filtersActive": "Filters (active)",
+    "appliedAria": "Filters iya apply",
+    "clearAll": "Clear fyonse",
+    "removeChip": "Futeni {filter}",
+    "priceRange": "K{min} – K{max}",
+    "minPriceOnly": "Ukufuma K{min}",
+    "maxPriceOnly": "Kufika K{max}",
+    "facetCount": "{label} ({count})"
   },
   "placeholder": "Fweni pa Vergeo5",
   "recent": {
@@ -72,6 +92,7 @@
   "unavailable": {
     "body": "Tatwaishibe ukuleta search results nomba. Wesheni limbi, nangu twaleni categories.",
     "retry": "Wesheni limbi",
-    "title": "Search teyaisa"
+    "title": "Search teyaisa",
+    "browseHeading": "Twaleni m'malo mwine"
   }
 }

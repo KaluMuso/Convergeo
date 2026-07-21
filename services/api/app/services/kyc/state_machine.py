@@ -263,6 +263,7 @@ def _update_vendor(
     service_client: ServiceRoleClient,
     vendor_id: str,
     *,
+    expected_status: str,
     status: str | None = None,
     kyc_tier: int | None = None,
     clear_kyc_tier: bool = False,
@@ -278,15 +279,22 @@ def _update_vendor(
         raise ValueError("vendor update requires at least one field")
 
     response = (
-        service_client.client.table("vendors").update(payload).eq("id", vendor_id).execute()
+        service_client.client.table("vendors")
+        .update(payload)
+        .eq("id", vendor_id)
+        .eq("status", expected_status)
+        .execute()
     )
     row = _single_row(response)
     if row is None:
         rows = _rows(response)
-        if rows:
-            row = rows[0]
-    if row is None:
-        raise AppError(code="not_found", message="Vendor not found", http_status=404)
+        if not rows:
+            raise AppError(
+                code="kyc_transition_conflict",
+                message="Concurrent transition changed vendor state",
+                http_status=409,
+            )
+        row = rows[0]
     return row
 
 
@@ -451,7 +459,9 @@ def transition_submit(
         "kyc_record": _record_audit_slice(kyc_record) if kyc_record else None,
     }
 
-    vendor_after = _update_vendor(client, vendor_id, status="pending_kyc")
+    vendor_after = _update_vendor(
+        client, vendor_id, expected_status=vendor.status, status="pending_kyc"
+    )
     created = _insert_kyc_record(
         client,
         vendor_id=vendor_id,
@@ -615,7 +625,13 @@ def transition_approve(
         reviewed_at=reviewed_at,
         decision_reason=decision_reason,
     )
-    vendor_after = _update_vendor(client, vendor_id, status="active", kyc_tier=tier)
+    vendor_after = _update_vendor(
+        client,
+        vendor_id,
+        expected_status=vendor.status,
+        status="active",
+        kyc_tier=tier,
+    )
 
     after = {
         "vendor": {
@@ -727,6 +743,7 @@ def transition_suspend(
     vendor_after = _update_vendor(
         client,
         vendor_id,
+        expected_status=vendor.status,
         status="suspended",
         clear_kyc_tier=True,
     )
@@ -787,6 +804,7 @@ def transition_revoke(
     vendor_after = _update_vendor(
         client,
         vendor_id,
+        expected_status=vendor.status,
         status="draft",
         clear_kyc_tier=True,
     )
@@ -859,7 +877,9 @@ def transition_upgrade_tier(
         momo_name_match=momo_name_match,
         status="submitted",
     )
-    vendor_after = _update_vendor(client, vendor_id, status="pending_kyc")
+    vendor_after = _update_vendor(
+        client, vendor_id, expected_status=vendor.status, status="pending_kyc"
+    )
 
     after = {
         "vendor": {

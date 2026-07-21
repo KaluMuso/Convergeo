@@ -13,6 +13,7 @@ from uuid import uuid4
 import pytest
 from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
+from app.errors import AppError
 from app.main import create_app
 from app.services.ledger.engine import PostedTransaction
 from app.services.refunds.execute import RefundExecutionResult, RefundPhase
@@ -90,10 +91,12 @@ class FakeQuery:
 
         if self._pending_op == "update":
             assert isinstance(self._payload, dict)
+            updated: list[dict[str, Any]] = []
             for row in self._parent.rows:
                 if self._matches(row):
                     row.update(self._payload)
-            return MagicMock(data=[], count=None)
+                    updated.append(dict(row))
+            return MagicMock(data=updated, count=None)
 
         rows = self._filtered_rows()
         if self._order is not None:
@@ -463,3 +466,139 @@ def test_submit_return_api_success() -> None:
     body = response.json()
     assert body["lane"] == 1
     assert body["fee_breakdown"]["total_ngwee"] == ITEM_NGWEE + DELIVERY_NGWEE
+
+
+def test_cas_update_return_status_raises_conflict_on_stale_state() -> None:
+    fake = FakeSupabaseClient()
+    fake.tables["returns"].rows.append(
+        {
+            "id": RETURN_A_ID,
+            "order_item_id": ORDER_ITEM_A_ID,
+            "lane": 1,
+            "status": "rejected",
+        }
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        lane1_service._cas_update_return_status(
+            _FakeServiceWrapper(fake),
+            RETURN_A_ID,
+            expected_status="requested",
+            new_status="approved",
+        )
+
+    assert exc_info.value.code == "return_transition_conflict"
+    assert exc_info.value.http_status == 409
+
+
+@patch("app.services.returns.lane1.post_transaction")
+@patch("app.services.returns.lane1.execute_refund")
+def test_concurrent_accept_and_contest_exactly_one_wins(
+    mock_execute_refund: MagicMock,
+    mock_post_transaction: MagicMock,
+) -> None:
+    import concurrent.futures
+
+    fake = FakeSupabaseClient()
+    _seed_fixture(fake, delivered_at=datetime.now(tz=UTC) - timedelta(hours=1))
+    fake.tables["returns"].rows.append(
+        {
+            "id": RETURN_A_ID,
+            "order_item_id": ORDER_ITEM_A_ID,
+            "lane": 1,
+            "evidence_paths": [EVIDENCE_PATH],
+            "fee_breakdown": {},
+            "status": "requested",
+        }
+    )
+
+    mock_execute_refund.return_value = RefundExecutionResult(
+        refund_id=str(uuid4()),
+        order_id=ORDER_A_ID,
+        lane=1,
+        phase=RefundPhase.PRE_RELEASE,
+        amount_ngwee=ITEM_NGWEE + DELIVERY_NGWEE,
+        payout_id=str(uuid4()),
+        lenco_reference="pay-test",
+        ledger_transaction_ids=("ledger-refund-1",),
+        breakdown={},
+        created=True,
+    )
+    mock_post_transaction.return_value = PostedTransaction(
+        id="ledger-shipping-1",
+        kind="clawback",
+        idempotency_key=f"return-{RETURN_A_ID}-shipping",
+        created=True,
+    )
+
+    def accept() -> object:
+        try:
+            return lane1_service.vendor_accept_lane1_return(
+                _FakeServiceWrapper(fake),
+                return_id=RETURN_A_ID,
+                vendor_owner_id=VENDOR_OWNER_A,
+            )
+        except AppError as exc:
+            if exc.code in {"return_transition_conflict", "validation_error"}:
+                return None
+            raise
+
+    def contest() -> object:
+        try:
+            return lane1_service.vendor_contest_lane1_return(
+                _FakeServiceWrapper(fake),
+                return_id=RETURN_A_ID,
+                vendor_owner_id=VENDOR_OWNER_A,
+            )
+        except AppError as exc:
+            if exc.code in {"return_transition_conflict", "validation_error"}:
+                return None
+            raise
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [executor.submit(accept), executor.submit(contest)]
+        results = [future.result() for future in futures]
+
+    final_status = fake.tables["returns"].rows[0]["status"]
+    assert final_status in {"approved", "rejected", "completed"}
+    successes = [result for result in results if result is not None]
+    assert len(successes) == 1
+    assert len(fake.tables["disputes"].rows) <= 1
+
+
+def test_concurrent_contest_exactly_one_wins_no_duplicate_dispute() -> None:
+    import concurrent.futures
+
+    fake = FakeSupabaseClient()
+    _seed_fixture(fake, delivered_at=datetime.now(tz=UTC) - timedelta(hours=1))
+    fake.tables["returns"].rows.append(
+        {
+            "id": RETURN_A_ID,
+            "order_item_id": ORDER_ITEM_A_ID,
+            "lane": 1,
+            "evidence_paths": [EVIDENCE_PATH],
+            "fee_breakdown": {},
+            "status": "requested",
+        }
+    )
+
+    def contest() -> object:
+        try:
+            return lane1_service.vendor_contest_lane1_return(
+                _FakeServiceWrapper(fake),
+                return_id=RETURN_A_ID,
+                vendor_owner_id=VENDOR_OWNER_A,
+            )
+        except AppError as exc:
+            if exc.code in {"return_transition_conflict", "validation_error"}:
+                return None
+            raise
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [executor.submit(contest), executor.submit(contest)]
+        results = [future.result() for future in futures]
+
+    assert fake.tables["returns"].rows[0]["status"] == "rejected"
+    successes = [result for result in results if result is not None]
+    assert len(successes) == 1
+    assert len(fake.tables["disputes"].rows) == 1

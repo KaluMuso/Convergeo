@@ -9,17 +9,17 @@ from uuid import uuid4
 
 import pytest
 from app.errors import AppError
+from app.services.refunds.config import load_restocking_fee_bps
 from app.services.refunds.execute import RefundExecutionResult, RefundPhase
-from app.services.refunds.math import compute_lane2_refund
+from app.services.refunds.math import (
+    compute_lane2_refund,
+    normalize_restocking_fee_bps,
+    restocking_fee_ngwee,
+)
 from app.services.returns.lane2 import (
-    DEFAULT_RESTOCKING_PCT,
-    MAX_RESTOCKING_PCT,
-    MIN_RESTOCKING_PCT,
     check_eligibility,
     compute_lane2_breakdown,
     create_lane2_return,
-    load_restocking_pct,
-    normalize_restocking_pct,
     normalize_return_window_hours,
 )
 
@@ -184,26 +184,31 @@ class TestNormalizeHelpers:
         assert normalize_return_window_hours(72) == 72
         assert normalize_return_window_hours(999) == 168
 
-    def test_restocking_pct_default_and_clamp(self) -> None:
-        assert normalize_restocking_pct(None) == DEFAULT_RESTOCKING_PCT
-        assert normalize_restocking_pct(3) == MIN_RESTOCKING_PCT
-        assert normalize_restocking_pct(20) == MAX_RESTOCKING_PCT
+    def test_restocking_bps_default_and_clamp(self) -> None:
+        # Single bps representation (shared with lane-1 / disputes): default 1000
+        # (10%), clamp 500–1500. No lossy whole-percent hop.
+        assert normalize_restocking_fee_bps(None) == 1000
+        assert normalize_restocking_fee_bps(300) == 500
+        assert normalize_restocking_fee_bps(2000) == 1500
+        assert normalize_restocking_fee_bps(1250) == 1250
 
 
 class TestLane2FeeMath:
     @pytest.mark.parametrize(
-        ("pct", "item", "outbound", "transport", "expected_restocking", "expected_refund"),
+        ("bps", "item", "outbound", "transport", "expected_restocking", "expected_refund"),
         [
-            (5, 200_000, 10_000, 5_000, 10_000, 175_000),
-            (10, 200_000, 10_000, 5_000, 20_000, 165_000),
-            (15, 200_000, 10_000, 5_000, 30_000, 155_000),
-            (10, 123_456, 0, 0, 12_345, 111_111),
-            (15, 1_000, 500, 400, 150, 0),
+            (500, 200_000, 10_000, 5_000, 10_000, 175_000),
+            (1000, 200_000, 10_000, 5_000, 20_000, 165_000),
+            (1500, 200_000, 10_000, 5_000, 30_000, 155_000),
+            (1000, 123_456, 0, 0, 12_345, 111_111),
+            (1500, 1_000, 500, 400, 150, 0),
+            # 1250 bps (12.5%) survives intact — the old pct path truncated to 12%.
+            (1250, 200_000, 10_000, 5_000, 25_000, 160_000),
         ],
     )
     def test_compute_lane2_breakdown_goldens(
         self,
-        pct: int,
+        bps: int,
         item: int,
         outbound: int,
         transport: int,
@@ -214,7 +219,7 @@ class TestLane2FeeMath:
             item_ngwee=item,
             outbound_delivery_ngwee=outbound,
             return_transport_ngwee=transport,
-            restocking_pct=pct,
+            restocking_fee_bps=bps,
         )
         assert breakdown.item == max(0, item)
         assert breakdown.outbound_delivery == max(0, outbound)
@@ -227,18 +232,18 @@ class TestLane2FeeMath:
         item = 250_000
         outbound = 12_500
         transport = 7_500
-        pct = 10
+        bps = 1000
         preview = compute_lane2_breakdown(
             item_ngwee=item,
             outbound_delivery_ngwee=outbound,
             return_transport_ngwee=transport,
-            restocking_pct=pct,
+            restocking_fee_bps=bps,
         )
         executed = compute_lane2_refund(
             item_ngwee=item,
             outbound_delivery_ngwee=outbound,
             return_transport_ngwee=transport,
-            restocking_fee_bps=pct * 100,
+            restocking_fee_bps=bps,
         )
         assert preview.restocking == executed.restocking_fee_ngwee
         assert preview.refund_ngwee == executed.refund_ngwee
@@ -302,19 +307,32 @@ class TestEligibilityMatrix:
 
 
 class TestRestockingConfig:
-    def test_load_restocking_pct_from_platform_config(self) -> None:
+    def test_load_restocking_fee_bps_from_platform_config(self) -> None:
         fake = FakeSupabaseClient()
         fake.tables["platform_config"].rows.append(
-            {"key": "restocking_fee_pct", "value": 12}
+            {"key": "restocking_fee_bps", "value": 1250}
         )
-        assert load_restocking_pct(FakeServiceClient(fake)) == 12
+        assert load_restocking_fee_bps(FakeServiceClient(fake)) == 1250
 
-    def test_load_restocking_pct_falls_back_to_bps_config(self) -> None:
+    def test_load_restocking_fee_bps_defaults_when_absent(self) -> None:
         fake = FakeSupabaseClient()
-        fake.tables["platform_config"].rows.append(
-            {"key": "restocking_fee_bps", "value": 1500}
+        assert load_restocking_fee_bps(FakeServiceClient(fake)) == 1000
+
+    def test_sub_percent_bps_survives_across_paths(self) -> None:
+        # Regression for the bps↔pct divergence: a 1250 bps (12.5%) admin config
+        # must produce the SAME restocking on the returns/lane-2 preview as the
+        # direct dispute/lane-1 bps math — no `bps // 100` truncation to 12%.
+        item = 200_000
+        breakdown = compute_lane2_breakdown(
+            item_ngwee=item,
+            outbound_delivery_ngwee=10_000,
+            return_transport_ngwee=5_000,
+            restocking_fee_bps=1250,
         )
-        assert load_restocking_pct(FakeServiceClient(fake)) == 15
+        assert breakdown.restocking == restocking_fee_ngwee(
+            item_ngwee=item, restocking_fee_bps=1250
+        )
+        assert breakdown.restocking == 25_000  # 12.5%, not 24_000 (12%)
 
 
 class TestCreateLane2Return:
@@ -331,7 +349,7 @@ class TestCreateLane2Return:
             item_ngwee=200_000,
             outbound_delivery_ngwee=10_000,
             return_transport_ngwee=5_000,
-            restocking_pct=10,
+            restocking_fee_bps=1000,
         )
         mock_execute.return_value = RefundExecutionResult(
             refund_id="refund-1",
@@ -388,7 +406,7 @@ class TestCreateLane2Return:
             item_ngwee=200_000,
             outbound_delivery_ngwee=prorated_delivery,
             return_transport_ngwee=5_000,
-            restocking_pct=10,
+            restocking_fee_bps=1000,
         )
         mock_execute.return_value = RefundExecutionResult(
             refund_id="refund-1",

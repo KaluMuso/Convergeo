@@ -53,8 +53,9 @@ business crosses the VAT threshold and must fiscalise through ZRA's Smart Invoic
 ## 4. Invariants to preserve
 
 - Money stays **integer ngwee** end to end; `Decimal` only at any external decimal boundary.
-- Invoice numbers remain **gapless and sequential** via the existing `invoice_counters`
-  sequence — no new sequence table.
+- Invoice numbers remain **gapless and sequential** via the `invoice_counters` **counter table**
+  - `public.next_invoice_no()` (`FOR UPDATE` consume-in-transaction) — deliberately **not** a
+    Postgres `SEQUENCE`, which is not gapless on rollback.
 - Downloads stay **owner-scoped** (customer sees only own orders; vendor only own sales)
   and **rate-limited**; links are short-lived and HMAC-signed.
 - No secrets in the repo; VSDC credentials live in env.

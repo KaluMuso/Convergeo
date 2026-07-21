@@ -497,13 +497,27 @@
       "orderPriceAsc": "Price low → high",
       "orderPriceDesc": "Price high → low"
     },
+    "megaMenu": {
+      "title": "Mega-menu featured",
+      "subtitle": "Curate up to six product minis and a promo CTA in the All Categories panel.",
+      "addMini": "Add featured mini",
+      "removeMini": "Remove",
+      "miniTitle": "Title",
+      "miniHref": "Link href",
+      "miniPrice": "Price label (optional)",
+      "promoText": "Promo copy",
+      "promoCta": "Promo button label",
+      "promoHref": "Promo link href",
+      "previewHint": "Save a draft, then open the customer preview link above. Mega-menu changes appear on any shop page while ?merch_preview= is in the URL."
+    },
     "slots": {
       "hero": "Hero",
       "banner_row": "Banner row",
       "flash_deal": "Flash deal",
       "events_row": "Events row",
       "featured_collections": "Featured collections",
-      "category_grid": "Category grid"
+      "category_grid": "Category grid",
+      "mega_menu": "Mega menu"
     },
     "common": {
       "save": "Save",

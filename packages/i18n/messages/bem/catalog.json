@@ -29,7 +29,31 @@
         "title": "Mwaiseni pa Vergeo5"
       },
       "primaryCta": "Tampeniko kutwala",
-      "secondaryCta": "Sambeni ukushitisha"
+      "secondaryCta": "Sambeni ukushitisha",
+      "carousel": {
+        "previous": "Slide iilyapita",
+        "next": "Slide iilyakonkapo",
+        "slideOf": "Slide {current} pa {total}",
+        "ariaLabel": "Hero carousel ya homepage"
+      },
+      "slides": {
+        "fashion": {
+          "title": "Fashion na fabric kufuma ku basellers ba Zambia",
+          "subtitle": "Sangeni chitenge, traditional wear, na style ya bushiku."
+        },
+        "tech": {
+          "title": "Amafoni, laptops, na tech ya bushiku",
+          "subtitle": "Compare ama price na basellers ushita."
+        },
+        "power": {
+          "title": "Solar na power pa ng'anda na business",
+          "subtitle": "Sangeni panels, batteries, na backup options pepi."
+        },
+        "essentials": {
+          "title": "Kitchen na essentials sha pa ng'anda",
+          "subtitle": "Stockeni cookware, appliances, na household goods."
+        }
+      }
     },
     "meta": {
       "description": "Shita ifintu, booka services, no sanga events mu Zambia pa Vergeo5.",
@@ -58,7 +82,10 @@
       "searchSubmit": "Fweni",
       "services": "Imilimo",
       "supplies": "Ifya business",
-      "viewAllCategories": "Loleni categories shyonse"
+      "viewAllCategories": "Loleni categories shyonse",
+      "featuredTitle": "Ifintu ifipya pa Vergeo5",
+      "featuredPromo": "Fikulanisheni abacushi no kulipila na escrow pa intaneti.",
+      "featuredPromoCta": "Sakileni msika"
     },
     "serviceBar": {
       "ariaLabel": "Amashiwi ya delivery no pickup",
@@ -202,7 +229,9 @@
       "wishlist": "Sungileni ku wishlist",
       "wishlistRemove": "Fumyeni ku wishlist",
       "mediaEmpty": "Takwaba picture ya product",
-      "quickAddError": "Tatwaishibe ukulenga mu cart. Checkeni connection no wesheni limbi."
+      "quickAddError": "Tatwaishibe ukulenga mu cart. Checkeni connection no wesheni limbi.",
+      "conditionNew": "Cipya",
+      "conditionRefurbished": "Yakonzedwa"
     },
     "defaultCategory": "Ifintu fyonse",
     "emptyBody": "Wesheni ukufuta filters nangu twaleni category yambi.",
@@ -226,7 +255,8 @@
     "facets": {
       "openFilters": "Ama-filters",
       "filtersActive": "Ama-filters (yakonka)"
-    }
+    },
+    "backToTop": "Bwelele pamo"
   },
   "reviews": {
     "report": {

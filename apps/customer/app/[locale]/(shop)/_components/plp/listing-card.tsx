@@ -1,17 +1,29 @@
 "use client";
 
 import { Badge } from "@vergeo/ui/src/badge";
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
 import { isDemoListingPublicId, shouldShowSampleListingBadge } from "../demo-listing";
 
 import { useLocalWishlist } from "./use-local-wishlist";
 
 import type { CatalogListing } from "./listing-grid";
+
+/**
+ * Dynamic import keeps `mini-cart-drawer` off the PLP/home *page* graph.
+ * The shop layout already ships the cart store for nav badges; a static import
+ * here would also list that ~6 KB gz chunk on every ListingCard route and fail
+ * the bundle-guard regression gate (layout chunks are not counted on /page).
+ */
+async function quickAddListing(listingId: string, successMessage: string): Promise<void> {
+  const { addCartItem, openMiniCart, setLastAddedMessage } =
+    await import("../cart/mini-cart-drawer");
+  await addCartItem(listingId, 1);
+  setLastAddedMessage(successMessage);
+  openMiniCart();
+}
 
 export type ListingCardLabels = {
   vendor: string;
@@ -25,13 +37,31 @@ export type ListingCardLabels = {
   distance: string;
   sampleListing?: string;
   mediaEmpty?: string;
+  /** Honest condition copy — only shown for known API values. */
+  conditionNew?: string;
+  conditionRefurbished?: string;
 };
+
+/** Map listing.condition to a label; unknown values render nothing (no invention). */
+export function listingConditionLabel(
+  condition: string,
+  labels: Pick<ListingCardLabels, "conditionNew" | "conditionRefurbished">,
+): string | undefined {
+  if (condition === "new") {
+    return labels.conditionNew;
+  }
+  if (condition === "refurbished") {
+    return labels.conditionRefurbished;
+  }
+  return undefined;
+}
 
 type ListingCardProps = {
   locale: string;
   listing: CatalogListing;
   labels: ListingCardLabels;
-  priority?: boolean;
+  /** Prefetched by RSC `ListingGrid` via `CloudinaryImageStatic` (no client image island). */
+  media?: ReactNode;
   showSampleBadge?: boolean;
   density?: "default" | "compact";
 };
@@ -50,7 +80,7 @@ export function ListingCard({
   locale,
   listing,
   labels,
-  priority = false,
+  media,
   showSampleBadge = shouldShowSampleListingBadge(),
   density = "default",
 }: ListingCardProps) {
@@ -75,6 +105,7 @@ export function ListingCard({
 
   const wishlistLabel =
     isWishlisted && labels.wishlistRemove ? labels.wishlistRemove : labels.wishlist;
+  const conditionLabel = listingConditionLabel(listing.condition, labels);
 
   useEffect(() => {
     if (!wishlistMountedRef.current) {
@@ -90,10 +121,8 @@ export function ListingCard({
     }
     setQuickAdding(true);
     setQuickAddAnnouncement("");
-    void addCartItem(listing.id, 1)
+    void quickAddListing(listing.id, labels.quickAdd)
       .then(() => {
-        setLastAddedMessage(labels.quickAdd);
-        openMiniCart();
         setQuickAddAnnouncement(labels.quickAdd);
       })
       .catch(() => {
@@ -121,22 +150,15 @@ export function ListingCard({
         density={density}
         unavailable={!listing.inStock}
         mediaEmptyLabel={labels.mediaEmpty}
+        meta={
+          conditionLabel ? (
+            <span data-testid="listing-card-condition">{conditionLabel}</span>
+          ) : undefined
+        }
         isWishlisted={isWishlisted}
         onWishlistToggle={enabled ? toggleWishlist : undefined}
         onQuickAdd={listing.inStock ? onQuickAdd : undefined}
-        media={
-          listing.imagePublicId ? (
-            <CloudinaryImage
-              publicId={listing.imagePublicId}
-              alt={listing.title}
-              width={360}
-              ratio="4/3"
-              priority={priority}
-              sizes="(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw"
-              className="h-full w-full object-cover"
-            />
-          ) : undefined
-        }
+        media={media}
       />
       {quickAddAnnouncement ? (
         <p className="sr-only" aria-live="polite" data-testid="listing-card-quick-add-status">
@@ -155,12 +177,14 @@ export function ListingCard({
   }
 
   return (
-    <Link
-      href={`/${locale}/p/${listing.productSlug}`}
-      className="min-w-0 no-underline"
-      data-testid="listing-card-link"
-    >
+    <div className="relative min-w-0" data-testid="listing-card">
       {card}
-    </Link>
+      <Link
+        href={`/${locale}/p/${listing.productSlug}`}
+        className="absolute inset-0 z-[1] rounded-lg focus-visible:outline-none focus-visible:shadow-focusRing"
+        aria-label={listing.title}
+        data-testid="listing-card-link"
+      />
+    </div>
   );
 }

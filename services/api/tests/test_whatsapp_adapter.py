@@ -86,6 +86,17 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
         payload["category"] = "home_services"
         payload["service_area"] = "Lusaka"
         payload["description_preview"] = "Fix kitchen sink"
+    elif template_id == "compliance_confirmation":
+        payload["confirmation_body"] = (
+            "You have been unsubscribed from Vergeo5 marketing messages."
+        )
+    elif template_id == "event_cancelled":
+        payload["event_title"] = "Jazz Night"
+        payload["event_date"] = "15 Aug 2026, 18:00 UTC"
+        payload["refund_detail"] = "Your payment refund is being processed by Vergeo5."
+    elif template_id == "event_schedule_changed":
+        payload["event_title"] = "Jazz Night"
+        payload["event_date"] = "20 Aug 2026, 18:00 UTC"
     return payload
 
 

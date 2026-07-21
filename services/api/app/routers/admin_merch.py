@@ -1,8 +1,7 @@
 """Admin merchandising slots + public read with preview token.
 
-TODO(home): Customer home (`merch-data.ts`) reads `merch_slots` directly from Supabase.
-Wire `loadHomeMerchData()` to `GET /merch/slots?merch_preview=<token>` when
-`?merch_preview=draft` is present so draft overlays render without publishing.
+Customer home (`merch-data.ts`) uses `GET /merch/slots?merch_preview=<token>` when
+`?merch_preview` is on the home URL; mega-menu uses the same token client-side.
 """
 
 from __future__ import annotations
@@ -26,7 +25,15 @@ DEFAULT_PREVIEW_TOKEN = "draft"
 
 HERO_VARIANT_KEYS = frozenset({"editorial-light", "gradient-dark", "carousel", "default"})
 SLOT_KEYS = frozenset(
-    {"hero", "banner_row", "flash_deal", "events_row", "featured_collections", "category_grid"}
+    {
+        "hero",
+        "banner_row",
+        "flash_deal",
+        "events_row",
+        "featured_collections",
+        "category_grid",
+        "mega_menu",
+    }
 )
 MERCH_SLOT_COLUMNS = (
     "id, slot_key, variant_key, payload, schedule_from, schedule_to, "
@@ -642,6 +649,7 @@ async def get_preview_url() -> dict[str, str]:
         "token": token,
         "customer_path": f"/en?merch_preview={token}",
         "api_path": f"/merch/slots?merch_preview={token}",
+        "hint": "Opens customer shop with draft home + mega-menu overlays.",
     }
 
 

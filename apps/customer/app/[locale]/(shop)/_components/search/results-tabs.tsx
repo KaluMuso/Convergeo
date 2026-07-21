@@ -1,7 +1,7 @@
 "use client";
 
 import { formatK } from "@vergeo/i18n";
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import { Tabs } from "@vergeo/ui/src/tabs";
 import Link from "next/link";
@@ -15,6 +15,7 @@ import {
 } from "../progressive-load/progressive-load-controls";
 import { useProgressiveLoad } from "../progressive-load/use-progressive-load";
 
+import { appendSearchFiltersToApiParams, type SearchFilterState } from "./search-filters";
 import {
   SEARCH_KINDS,
   searchTabKinds,
@@ -44,6 +45,16 @@ export type SearchHit = {
   slug?: string | null;
 };
 
+export type SearchFacetBucket = {
+  value: string;
+  count: number;
+};
+
+export type SearchFacets = {
+  categories: SearchFacetBucket[];
+  price: SearchFacetBucket[];
+};
+
 export type SearchResponse = {
   query: string;
   expanded_query: string;
@@ -52,6 +63,7 @@ export type SearchResponse = {
   total: number;
   results: SearchHit[];
   degraded: boolean;
+  facets?: SearchFacets | null;
 };
 
 export type TabCounts = Record<SearchKindFilter, number>;
@@ -87,6 +99,8 @@ export type ResultsTabsProps = {
   labels: ResultsTabsLabels;
   /** API origin for client page appends (same base as SSR). */
   apiBaseUrl: string;
+  /** Product filters (price/category) — forwarded to progressive load requests. */
+  filterState?: SearchFilterState;
 };
 
 function tabLabel(labels: ResultsTabsLabels, kind: SearchKindFilter, count: number): string {
@@ -147,7 +161,7 @@ function SearchResultRow({
           href={href}
           className="relative block h-[4.5rem] w-[4.5rem] shrink-0 overflow-hidden rounded-md sm:h-20 sm:w-20"
         >
-          <CloudinaryImage
+          <CloudinaryImageStatic
             publicId={imagePublicId}
             alt=""
             width={720}
@@ -226,7 +240,7 @@ function SearchProductCard({
       onWishlistToggle={enabled ? toggleWishlist : undefined}
       media={
         imagePublicId ? (
-          <CloudinaryImage
+          <CloudinaryImageStatic
             publicId={imagePublicId}
             alt={hit.title}
             width={360}
@@ -239,10 +253,17 @@ function SearchProductCard({
     />
   );
 
+  // Stretched link sibling — keeps wishlist control out of the anchor.
   return (
-    <Link href={href} className="min-w-0 no-underline" data-testid="search-product-card">
+    <div className="relative min-w-0" data-testid="search-product-card">
       {card}
-    </Link>
+      <Link
+        href={href}
+        className="absolute inset-0 z-[1] rounded-lg focus-visible:outline-none focus-visible:shadow-focusRing"
+        aria-label={hit.title}
+        data-testid="search-product-card-link"
+      />
+    </div>
   );
 }
 
@@ -307,11 +328,13 @@ export function ResultsTabs({
   tabCounts,
   labels,
   apiBaseUrl,
+  filterState = {},
 }: ResultsTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const resetKey = `${locale}|${query}|${activeKind}|${page}|${response.page_size}|${response.total}`;
+  const filterKey = JSON.stringify(filterState);
+  const resetKey = `${locale}|${query}|${activeKind}|${page}|${response.page_size}|${response.total}|${filterKey}`;
 
   const fetchPage = useCallback(
     async (cursor: string, signal: AbortSignal) => {
@@ -323,6 +346,7 @@ export function ResultsTabs({
       if (activeKind !== "all") {
         params.set("kind", activeKind);
       }
+      appendSearchFiltersToApiParams(params, filterState);
       const res = await fetch(`${apiBaseUrl}/search?${params.toString()}`, { signal });
       if (!res.ok) {
         throw new Error(`Search load failed (${res.status})`);
@@ -333,7 +357,7 @@ export function ResultsTabs({
         nextCursor: nextPageCursor(body),
       };
     },
-    [activeKind, apiBaseUrl, query, response.page_size],
+    [activeKind, apiBaseUrl, filterState, query, response.page_size],
   );
 
   const { items, status, hasMore, lastAppendedCount, loadMore, sentinelRef } =

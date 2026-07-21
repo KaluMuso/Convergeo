@@ -8,7 +8,19 @@
   },
   "nav": {
     "home": "Home",
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "marketing": {
+      "ariaLabel": "Marketing navigation",
+      "about": "About",
+      "contact": "Contact",
+      "help": "Help",
+      "sell": "Sell on Vergeo5",
+      "signIn": "Sign in"
+    },
+    "account": {
+      "ariaLabel": "Account navigation",
+      "menuAria": "Account menu"
+    }
   },
   "theme": {
     "label": "Theme",
@@ -16,6 +28,15 @@
     "dark": "Dark",
     "system": "System",
     "displayPreferences": "Display preferences"
+  },
+  "locale": {
+    "switchAria": "Choose language",
+    "names": {
+      "en": "English",
+      "bem": "Bemba",
+      "nya": "Nyanja",
+      "fr": "French"
+    }
   },
   "greeting": "Hello, {name}!",
   "offline": {

@@ -326,6 +326,33 @@ def _load_return_row(service_client: ServiceRoleClient, return_id: str) -> dict[
     return row
 
 
+def _cas_update_return_status(
+    service_client: ServiceRoleClient,
+    return_id: str,
+    *,
+    expected_status: str,
+    new_status: str,
+) -> dict[str, Any]:
+    response = (
+        service_client.client.table("returns")
+        .update({"status": new_status})
+        .eq("id", return_id)
+        .eq("status", expected_status)
+        .execute()
+    )
+    row = _single_row(response)
+    if row is None:
+        rows = _rows(response)
+        if not rows:
+            raise AppError(
+                code="return_transition_conflict",
+                message="Concurrent transition changed return state",
+                http_status=409,
+            )
+        row = rows[0]
+    return row
+
+
 def _load_vendor_for_owner(service_client: ServiceRoleClient, owner_user_id: str) -> dict[str, Any]:
     response = (
         service_client.client.table("vendors")
@@ -419,9 +446,12 @@ def vendor_accept_lane1_return(
     customer_id = str(order["customer_id"])
     vendor_id = str(order["vendor_id"])
 
-    service_client.client.table("returns").update({"status": "approved"}).eq(
-        "id", return_id
-    ).execute()
+    _cas_update_return_status(
+        service_client,
+        return_id,
+        expected_status="requested",
+        new_status="approved",
+    )
 
     customer_momo = _load_customer_momo(service_client, customer_id)
     refund_result = execute_refund(
@@ -444,9 +474,12 @@ def vendor_accept_lane1_return(
         return_shipping_ngwee=return_shipping_ngwee,
     )
 
-    service_client.client.table("returns").update({"status": "completed"}).eq(
-        "id", return_id
-    ).execute()
+    _cas_update_return_status(
+        service_client,
+        return_id,
+        expected_status="approved",
+        new_status="completed",
+    )
 
     updated = _load_return_row(service_client, return_id)
     updated["_refund"] = {
@@ -490,6 +523,13 @@ def vendor_contest_lane1_return(
     if not isinstance(evidence_paths, list):
         evidence_paths = []
 
+    _cas_update_return_status(
+        service_client,
+        return_id,
+        expected_status="requested",
+        new_status="rejected",
+    )
+
     dispute_response = (
         service_client.client.table("disputes")
         .insert(
@@ -508,10 +548,6 @@ def vendor_contest_lane1_return(
         dispute_row = rows[0] if rows else None
     if dispute_row is None or not dispute_row.get("id"):
         raise AppError(code="internal_error", message="Could not create dispute", http_status=500)
-
-    service_client.client.table("returns").update({"status": "rejected"}).eq(
-        "id", return_id
-    ).execute()
 
     updated = _load_return_row(service_client, return_id)
     updated["_dispute_id"] = str(dispute_row["id"])

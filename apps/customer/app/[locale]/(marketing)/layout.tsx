@@ -2,6 +2,8 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { MarketingAppHeader } from "./_components/marketing-app-header";
+
 type MarketingLayoutProps = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
@@ -9,7 +11,7 @@ type MarketingLayoutProps = {
 
 /**
  * Marketing routes keep per-page `<main id="marketing-main">` landmarks.
- * This layout only adds a keyboard skip link into that landmark.
+ * This layout adds unified AppHeader chrome and a keyboard skip link into that landmark.
  */
 export default async function MarketingLayout({ children, params }: MarketingLayoutProps) {
   const { locale } = await params;
@@ -35,6 +37,18 @@ export default async function MarketingLayout({ children, params }: MarketingLay
       >
         {tCommon("nav.skipToContent")}
       </a>
+      <MarketingAppHeader
+        locale={locale}
+        labels={{
+          appName: tCommon("app.name"),
+          navAriaLabel: tCommon("nav.marketing.ariaLabel"),
+          about: tCommon("nav.marketing.about"),
+          contact: tCommon("nav.marketing.contact"),
+          help: tCommon("nav.marketing.help"),
+          sell: tCommon("nav.marketing.sell"),
+          signIn: tCommon("nav.marketing.signIn"),
+        }}
+      />
       {children}
     </>
   );

@@ -2,6 +2,7 @@
 
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
+import { useTranslations } from "next-intl";
 import { useEffect, useState, type RefObject } from "react";
 
 import type { BuyBoxLabels, BuyBoxListing } from "./buy-box";
@@ -29,8 +30,10 @@ export function StickyMobileAtc({
   ariaLabel,
   onVisibleChange,
 }: StickyMobileAtcProps) {
+  const t = useTranslations("catalog");
   const [buyBoxOutOfView, setBuyBoxOutOfView] = useState(false);
   const visible = buyBoxOutOfView && listing.inStock;
+  const moqLabel = listing.moq > 1 ? t("pdp.buyBox.moq", { count: listing.moq }) : null;
 
   useEffect(() => {
     const target = observeRef.current;
@@ -82,6 +85,13 @@ export function StickyMobileAtc({
             data-testid="pdp-sticky-price"
           >
             {formatK(listing.priceNgwee)}
+          </p>
+          <p
+            className="truncate text-micro font-medium text-success"
+            data-testid="pdp-sticky-stock"
+          >
+            {purchase.stockLabel}
+            {moqLabel ? <span className="font-normal text-text-2"> · {moqLabel}</span> : null}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">

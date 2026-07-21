@@ -5,13 +5,17 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
-from app.services.embeddings.client import embed_texts_with_fallback
+from app.services.embeddings.client import embed_texts_with_fallback, embedding_settings
 from app.services.search.embedding_client import format_vector_for_rpc
 
 logger = logging.getLogger(__name__)
 
 EMBEDDING_BATCH_LIMIT = 64
 MAX_JOB_ATTEMPTS = 5
+_CONFIG_ERROR_MARKERS = (
+    "OPENROUTER_API_KEY is not configured",
+    "OPENROUTER_API_KEY not configured",
+)
 
 
 class SupabaseEmbeddingService(Protocol):
@@ -94,6 +98,33 @@ def _mark_job_done(
     ).eq("id", job_id).execute()
 
 
+def _is_config_error(error_message: str) -> bool:
+    return any(marker in error_message for marker in _CONFIG_ERROR_MARKERS)
+
+
+def _release_claimed_for_config(
+    service: SupabaseEmbeddingService,
+    *,
+    job_ids: list[str],
+    error_message: str,
+) -> None:
+    """Return claimed jobs to queued without burning attempt budget.
+
+    Missing OpenRouter credentials are an ops/config failure, not a per-doc
+    transient. Burning attempts → dead permanently empties the semantic lane.
+    """
+    now = datetime.now(UTC).isoformat()
+    for job_id in job_ids:
+        service.client.table("embedding_jobs").update(
+            {
+                "status": "queued",
+                "last_error": error_message[:2000],
+                "batch_cost_usd": 0.0,
+                "updated_at": now,
+            }
+        ).eq("id", job_id).execute()
+
+
 def _mark_job_failure(
     service: SupabaseEmbeddingService,
     *,
@@ -101,6 +132,14 @@ def _mark_job_failure(
     error_message: str,
     cost_usd: float,
 ) -> str:
+    if _is_config_error(error_message):
+        _release_claimed_for_config(
+            service,
+            job_ids=[job_id],
+            error_message=error_message,
+        )
+        return "queued"
+
     response = (
         service.client.table("embedding_jobs")
         .select("attempts")
@@ -139,6 +178,13 @@ async def process_embedding_tick(
     limit: int = EMBEDDING_BATCH_LIMIT,
 ) -> TickResult:
     """Claim queued jobs, embed document text, and write search_documents.embedding."""
+    # Fail closed before claiming: a missing key must not burn the queue to dead.
+    if embedding_settings().api_key is None:
+        logger.error(
+            "OPENROUTER_API_KEY not configured; skipping embedding tick without claiming"
+        )
+        return TickResult(processed=0, dead=0, cost_usd=0.0)
+
     claimed = _claim_jobs(service, limit=limit)
     if not claimed:
         return TickResult(processed=0, dead=0, cost_usd=0.0)
@@ -155,12 +201,25 @@ async def process_embedding_tick(
     try:
         batch = await embed_batch(texts)
     except Exception as exc:
+        message = str(exc)
+        if _is_config_error(message):
+            _release_claimed_for_config(
+                service,
+                job_ids=[str(row["job_id"]) for row in claimed],
+                error_message=message,
+            )
+            logger.error(
+                "Embedding tick aborted for missing OpenRouter config; jobs re-queued",
+                extra={"claimed": len(claimed)},
+            )
+            return TickResult(processed=0, dead=0, cost_usd=0.0)
+
         dead = 0
         for row in claimed:
             status = _mark_job_failure(
                 service,
                 job_id=str(row["job_id"]),
-                error_message=str(exc),
+                error_message=message,
                 cost_usd=0.0,
             )
             if status == "dead":

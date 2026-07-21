@@ -25,7 +25,8 @@
   "unavailable": {
     "title": "搜索暂不可用",
     "body": "我们目前无法加载搜索结果。请稍后重试，或浏览分类。",
-    "retry": "重试"
+    "retry": "重试",
+    "browseHeading": "改为浏览"
   },
   "invalid": {
     "title": "搜索词过长",
@@ -67,7 +68,27 @@
     "moreLoaded": "已加载另外 {count} 条结果。",
     "endOfResults": "已到结果末尾。",
     "loadError": "无法加载更多结果。",
-    "retry": "重试"
+    "retry": "重试",
+    "backToTop": "返回顶部"
+  },
+  "filters": {
+    "heading": "筛选商品",
+    "price": "价格（K）",
+    "minPrice": "最低",
+    "maxPrice": "最高",
+    "category": "分类",
+    "categoryAll": "全部分类",
+    "apply": "应用筛选",
+    "clear": "清除筛选",
+    "openFilters": "筛选",
+    "filtersActive": "筛选（已启用）",
+    "appliedAria": "已应用的筛选",
+    "clearAll": "全部清除",
+    "removeChip": "移除 {filter}",
+    "priceRange": "K{min} – K{max}",
+    "minPriceOnly": "从 K{min} 起",
+    "maxPriceOnly": "最高 K{max}",
+    "facetCount": "{label}（{count}）"
   },
   "result": {
     "priceFrom": "{price} 起",

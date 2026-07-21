@@ -1,6 +1,6 @@
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -172,7 +172,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
       {/* Themed overlay hero — dark aubergine gradient (no per-category theme data yet). */}
       <header className="relative overflow-hidden rounded-lg">
         {service.portfolio_images[0] ? (
-          <CloudinaryImage
+          <CloudinaryImageStatic
             publicId={service.portfolio_images[0]}
             alt={service.title}
             width={1280}
@@ -237,7 +237,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
               <ul className="grid list-none grid-cols-2 gap-2 p-0">
                 {service.portfolio_images.slice(1).map((publicId, index) => (
                   <li key={publicId} className="overflow-hidden rounded-lg border border-border">
-                    <CloudinaryImage
+                    <CloudinaryImageStatic
                       publicId={publicId}
                       alt={t("detail.imageAlt", { position: index + 2 })}
                       width={480}

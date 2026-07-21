@@ -8,7 +8,7 @@ dump into a **fresh** DB and asserts core tables + config seed + migration curre
 - **RTO target:** ≤ 30 min · **RPO target:** ≤ 24 h (see `docs/ops/runbook-disaster-recovery.md`).
 - Nightly source dumps: `infra/scripts/db-dump.sh` → OCI `db/vergeo5-<ts>.sql.gz`.
 - No secrets are ever pasted here — DB URLs are redacted / referenced by env var name.
-- **Current repo tip for new drills (2026-07-20):** `0065_refunds_source_key_uniq.sql`.
+- **Current repo tip for new drills (2026-07-21):** `0066_user_wishlist_recently_viewed.sql`.
   Older entries are historical transcripts; do not rewrite their recorded migration counts.
 
 ---

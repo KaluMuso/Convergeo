@@ -59,14 +59,17 @@
       "wishlistRemove": "Remove from wishlist",
       "mediaEmpty": "No product image",
       "outOfStock": "Out of stock",
-      "distance": "{distance} away"
+      "distance": "{distance} away",
+      "conditionNew": "New",
+      "conditionRefurbished": "Refurbished"
     },
     "loadMore": "Load more",
     "loading": "Loading…",
     "moreLoaded": "{count} more results loaded.",
     "endOfResults": "You’ve reached the end of the results.",
     "loadError": "Couldn’t load more results.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "backToTop": "Back to top"
   },
   "home": {
     "meta": {
@@ -90,6 +93,9 @@
       "categoriesLoading": "Loading categories…",
       "categoriesEmpty": "Categories are unavailable right now. Try again shortly.",
       "viewAllCategories": "View all categories",
+      "featuredTitle": "New on Vergeo5",
+      "featuredPromo": "Compare sellers and pay with escrow when you checkout online.",
+      "featuredPromoCta": "Search the marketplace",
       "directory": "Directory",
       "services": "Services",
       "events": "Events",
@@ -101,6 +107,9 @@
     "serviceBar": {
       "ariaLabel": "Delivery and pickup information",
       "message": "Lusaka delivery · Nationwide pickup · Escrow when you pay online"
+    },
+    "merchPreview": {
+      "banner": "Draft preview — merchandising changes are not live until you publish in admin."
     },
     "hero": {
       "eyebrow": "Zambia's marketplace",
@@ -115,7 +124,31 @@
       "escrowLine": "Buyer protection with escrow when online payment is available — held by Vergeo5 until delivery, then released.",
       "escrowStep1": "You pay",
       "escrowStep2": "Held by Vergeo5",
-      "escrowStep3": "Released on delivery"
+      "escrowStep3": "Released on delivery",
+      "carousel": {
+        "previous": "Previous slide",
+        "next": "Next slide",
+        "slideOf": "Slide {current} of {total}",
+        "ariaLabel": "Homepage hero carousel"
+      },
+      "slides": {
+        "fashion": {
+          "title": "Fashion and fabric from Zambian sellers",
+          "subtitle": "Discover chitenge, traditional wear, and everyday style."
+        },
+        "tech": {
+          "title": "Phones, laptops, and everyday tech",
+          "subtitle": "Compare prices and sellers before you checkout."
+        },
+        "power": {
+          "title": "Solar and power for home and business",
+          "subtitle": "Find panels, batteries, and backup options nearby."
+        },
+        "essentials": {
+          "title": "Kitchen and home essentials",
+          "subtitle": "Stock up on cookware, appliances, and household goods."
+        }
+      }
     },
     "trust": {
       "ariaLabel": "Why shop on Vergeo5",

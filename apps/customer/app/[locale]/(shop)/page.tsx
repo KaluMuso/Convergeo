@@ -24,11 +24,13 @@ import {
   HomeServicesRail,
   HomeVendorsRail,
   loadHomeDefaultData,
+  pickHeroVisualPublicId,
 } from "./_components/home-default";
 import { planHomeLayout } from "./_components/home-layout";
 import { HomeRecentlyViewedRail } from "./_components/home-recently-viewed-rail";
 import { HomeTrustStrip } from "./_components/home-trust-strip";
 import { loadHomeMerchData, pickSlot, type HomeSectionKey } from "./_components/merch-data";
+import { MerchPreviewBanner } from "./_components/merch-preview-banner";
 
 import type { Metadata } from "next";
 
@@ -38,7 +40,22 @@ type CatalogTranslator = (key: string, values?: Record<string, string | number>)
 
 type PageProps = {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ merch_preview?: string | string[] }>;
 };
+
+function readMerchPreviewParam(
+  searchParams: { merch_preview?: string | string[] } | undefined,
+): string | null {
+  const raw = searchParams?.merch_preview;
+  if (typeof raw === "string" && raw.trim().length > 0) {
+    return raw.trim();
+  }
+  if (Array.isArray(raw)) {
+    const first = raw.find((value) => typeof value === "string" && value.trim().length > 0);
+    return first?.trim() ?? null;
+  }
+  return null;
+}
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
@@ -52,8 +69,10 @@ async function getCatalogTranslator(locale: string) {
   return createTranslator({ locale, messages, namespace: "catalog" });
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { locale } = await params;
+  const resolvedSearchParams = await searchParams;
+  const merchPreview = readMerchPreviewParam(resolvedSearchParams);
   const t = await getCatalogTranslator(locale);
 
   return {
@@ -67,10 +86,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       locale,
       url: buildLocaleCanonical(locale),
     },
-    robots: {
-      index: true,
-      follow: true,
-    },
+    robots: merchPreview
+      ? { index: false, follow: false }
+      : {
+          index: true,
+          follow: true,
+        },
   };
 }
 
@@ -120,13 +141,15 @@ function renderCampaignSection(
   }
 }
 
-export default async function ShopHomePage({ params }: PageProps) {
+export default async function ShopHomePage({ params, searchParams }: PageProps) {
   const { locale } = await params;
+  const resolvedSearchParams = await searchParams;
+  const merchPreview = readMerchPreviewParam(resolvedSearchParams);
   setRequestLocale(locale);
 
   const [tRaw, merch, baseMessages] = await Promise.all([
     getCatalogTranslator(locale),
-    loadHomeMerchData(),
+    loadHomeMerchData({ merchPreview }),
     getMessages(),
   ]);
   const t = tRaw as unknown as CatalogTranslator;
@@ -163,6 +186,8 @@ export default async function ShopHomePage({ params }: PageProps) {
     distance: t("plp.card.distance"),
     sampleListing: t("home.demo.sampleListing"),
     mediaEmpty: t("plp.card.mediaEmpty"),
+    conditionNew: t("plp.card.conditionNew"),
+    conditionRefurbished: t("plp.card.conditionRefurbished"),
   };
 
   // Audit hierarchy: categories before flash/campaign; events after product rails.
@@ -183,12 +208,18 @@ export default async function ShopHomePage({ params }: PageProps) {
   return (
     <div className="flex flex-col gap-6 lg:gap-10">
       <JsonLdScript data={[organizationJsonLd, websiteJsonLd]} />
+      {merch.isPreviewMode ? <MerchPreviewBanner message={t("home.merchPreview.banner")} /> : null}
       {plan.useCampaignHero ? (
         renderCampaignSection("hero", locale, t, merch.slots, merch.categories)
       ) : (
         // Merch-first default hero even when rails are empty — brand must still
         // lead the first viewport (audit §4.1). Campaign heroes stay opt-in.
-        <HomeHeroBand locale={locale} t={t} brandName={brandName} />
+        <HomeHeroBand
+          locale={locale}
+          t={t}
+          brandName={brandName}
+          visualPublicId={pickHeroVisualPublicId(defaultData.newest)}
+        />
       )}
 
       <HomeTrustStrip labels={trustLabels} />

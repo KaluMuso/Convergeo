@@ -622,6 +622,7 @@ export function PdpInteractiveBody({
               ratingLabel: sellerRatingLabel,
               preferred: selectedListing.vendor.preferredBadge,
             }}
+            preferredBadgeLabel={vendorLabels.preferredBadge}
             priceContextLabel={priceContextLabel}
             compareHref={compareHref}
             compareLabel={comparePageLabel}

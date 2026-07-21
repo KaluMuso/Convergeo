@@ -11,6 +11,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.kyc.state_machine import ServiceRoleClient
+from app.services.listings.demo import fetch_demo_service_ids, has_demo_media
 from app.services.moderation.prohibited import screen_listing
 from fastapi import APIRouter, Depends, Query
 from pydantic import Field, field_validator, model_validator
@@ -537,7 +538,12 @@ def build_browse_response(
 
     response = query.order("updated_at", desc=True).execute()
     rows = _rows(response)
-    vendor_ids = list({str(row.get("vendor_id")) for row in rows if row.get("vendor_id")})
+    service_ids = [str(row.get("id")) for row in rows if row.get("id")]
+    demo_service_ids = fetch_demo_service_ids(client, service_ids)
+    public_rows = [row for row in rows if str(row.get("id") or "") not in demo_service_ids]
+    vendor_ids = list(
+        {str(row.get("vendor_id")) for row in public_rows if row.get("vendor_id")}
+    )
     tiers = _fetch_response_tiers(client, vendor_ids)
 
     items = [
@@ -545,7 +551,7 @@ def build_browse_response(
             row,
             response_time_tier_value=tiers.get(str(row.get("vendor_id") or "")),
         )
-        for row in rows
+        for row in public_rows
     ]
     return ServiceBrowseResponse(items=items, total=len(items))
 
@@ -590,7 +596,7 @@ def get_service_detail(
         .execute()
     )
     row = _single_row(response)
-    if row is None:
+    if row is None or has_demo_media(row.get("portfolio_images")):
         raise AppError(
             code="not_found",
             message="Service not found",

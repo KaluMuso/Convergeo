@@ -57,7 +57,9 @@
       "distance": "À {distance}",
       "wishlistRemove": "Retirer de la liste",
       "mediaEmpty": "Pas d’image produit",
-      "quickAddError": "Impossible d’ajouter au panier. Vérifiez votre connexion et réessayez."
+      "quickAddError": "Impossible d’ajouter au panier. Vérifiez votre connexion et réessayez.",
+      "conditionNew": "Neuf",
+      "conditionRefurbished": "Reconditionné"
     },
     "loadMore": "Voir plus",
     "loading": "Chargement…",
@@ -66,7 +68,8 @@
     "loadError": "Impossible de charger plus de résultats.",
     "retry": "Réessayer",
     "resultsUnknown": "Nombre d’annonces indisponible",
-    "childCategories": "Parcourir les sous-catégories"
+    "childCategories": "Parcourir les sous-catégories",
+    "backToTop": "Retour en haut"
   },
   "home": {
     "meta": {
@@ -90,6 +93,9 @@
       "categoriesLoading": "Chargement des catégories…",
       "categoriesEmpty": "Les catégories sont indisponibles pour le moment. Réessayez bientôt.",
       "viewAllCategories": "Voir toutes les catégories",
+      "featuredTitle": "Nouveau sur Vergeo5",
+      "featuredPromo": "Comparez les vendeurs et payez avec séquestre en ligne.",
+      "featuredPromoCta": "Rechercher sur la place de marché",
       "directory": "Annuaire",
       "services": "Services",
       "events": "Événements",
@@ -115,7 +121,31 @@
       "escrowLine": "Protection acheteur avec séquestre lorsque le paiement en ligne est disponible — conservé par Vergeo5 jusqu'à la livraison, puis versé.",
       "escrowStep1": "Vous payez",
       "escrowStep2": "Conservé par Vergeo5",
-      "escrowStep3": "Versé à la livraison"
+      "escrowStep3": "Versé à la livraison",
+      "carousel": {
+        "previous": "Diapositive précédente",
+        "next": "Diapositive suivante",
+        "slideOf": "Diapositive {current} sur {total}",
+        "ariaLabel": "Carrousel hero de la page d'accueil"
+      },
+      "slides": {
+        "fashion": {
+          "title": "Mode et tissus de vendeurs zambiens",
+          "subtitle": "Découvrez chitenge, tenues traditionnelles et style du quotidien."
+        },
+        "tech": {
+          "title": "Téléphones, ordinateurs et tech du quotidien",
+          "subtitle": "Comparez prix et vendeurs avant de payer."
+        },
+        "power": {
+          "title": "Solaire et énergie pour la maison et l'entreprise",
+          "subtitle": "Trouvez panneaux, batteries et solutions de secours près de vous."
+        },
+        "essentials": {
+          "title": "Cuisine et essentiels pour la maison",
+          "subtitle": "Équipez-vous en ustensiles, appareils et articles ménagers."
+        }
+      }
     },
     "trust": {
       "ariaLabel": "Pourquoi acheter sur Vergeo5",

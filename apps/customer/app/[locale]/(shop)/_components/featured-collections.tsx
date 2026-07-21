@@ -1,4 +1,4 @@
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import Link from "next/link";
 
@@ -125,7 +125,7 @@ export function FeaturedCollections({ slot, locale, t }: FeaturedCollectionsProp
                       density="compact"
                       media={
                         item.imagePublicId ? (
-                          <CloudinaryImage
+                          <CloudinaryImageStatic
                             publicId={item.imagePublicId}
                             alt={item.title}
                             width={360}

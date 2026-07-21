@@ -1,4 +1,4 @@
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import Link from "next/link";
 
 import type { MerchSlotRow } from "./merch-data";
@@ -75,7 +75,7 @@ export function BannerRow({ slot, locale, t }: BannerRowProps) {
               className="flex min-h-11 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-1"
             >
               {item.imagePublicId ? (
-                <CloudinaryImage
+                <CloudinaryImageStatic
                   publicId={item.imagePublicId}
                   alt={item.title}
                   width={720}

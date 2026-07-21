@@ -5,6 +5,7 @@ import { DEFAULT_LOCALE, LOCALES, type Locale } from "./locales";
 
 export const NAMESPACES = [
   "common",
+  "nav",
   "auth",
   "catalog",
   "search",
@@ -43,6 +44,7 @@ export function getLoadedNamespaceKeys(): string[] {
 
 const namespaceLoaders: Record<Namespace, (locale: Locale) => Promise<Messages>> = {
   common: (locale) => import(`../messages/${locale}/common.json`).then((m) => m.default),
+  nav: (locale) => import(`../messages/${locale}/nav.json`).then((m) => m.default),
   auth: (locale) => import(`../messages/${locale}/auth.json`).then((m) => m.default),
   catalog: (locale) => import(`../messages/${locale}/catalog.json`).then((m) => m.default),
   search: (locale) => import(`../messages/${locale}/search.json`).then((m) => m.default),

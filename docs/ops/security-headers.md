@@ -23,7 +23,11 @@ headers so it does not clobber the richer per-route app values.
 CSP is **nonce-based**: `script-src` uses `'strict-dynamic'` + a per-request
 `'nonce-…'` and **never** `'unsafe-inline'` for scripts. (`style-src` keeps
 `'unsafe-inline'` — Next/Tailwind inject inline styles and CSP only forbids inline
-_scripts_ here.)
+_scripts_ here.) On customer + vendor, `script-src` also carries a bare `https:`
+scheme-source as a **CSP2 fallback** for legacy browsers; `'strict-dynamic'`-aware
+browsers ignore it, so the nonce guarantee holds on modern engines. `connect-src`
+on all three apps also allowlists **Sentry ingest** (`*.ingest.sentry.io` + region
+variants, added M16-P06) alongside self / Supabase / Cloudinary / GA4.
 
 Next.js injects the nonce into its own bootstrap scripts only when the nonce arrives
 on the **request** (set by middleware). CCP-07a wires that middleware in all three

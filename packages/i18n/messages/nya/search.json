@@ -30,7 +30,27 @@
     "moreLoaded": "{count} results zina zatengedwa.",
     "endOfResults": "Mwafika kumapeto a results.",
     "loadError": "Sitinathe kutenga results zina.",
-    "retry": "Yesaninso"
+    "retry": "Yesaninso",
+    "backToTop": "Bwererani pamwamba"
+  },
+  "filters": {
+    "heading": "Sankhani products",
+    "price": "Mtengo (K)",
+    "minPrice": "Zochepa",
+    "maxPrice": "Zambiri",
+    "category": "Category",
+    "categoryAll": "Ma-categories onse",
+    "apply": "Ikani ma-filters",
+    "clear": "Chotsani ma-filters",
+    "openFilters": "Ma-filters",
+    "filtersActive": "Ma-filters (active)",
+    "appliedAria": "Ma-filters ogwira",
+    "clearAll": "Chotsani zonse",
+    "removeChip": "Chotsani {filter}",
+    "priceRange": "K{min} – K{max}",
+    "minPriceOnly": "Kuyambira K{min}",
+    "maxPriceOnly": "Kufikira K{max}",
+    "facetCount": "{label} ({count})"
   },
   "placeholder": "Sakani pa Vergeo5",
   "recent": {
@@ -72,6 +92,7 @@
   "unavailable": {
     "body": "Sitinathe kutenga search results pano. Yesaninso, kapena yang'anani ma-categories.",
     "retry": "Yesaninso",
-    "title": "Search silipo"
+    "title": "Search silipo",
+    "browseHeading": "Yang'anani m'malo mwake"
   }
 }

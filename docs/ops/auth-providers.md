@@ -4,17 +4,19 @@ Phone OTP (primary), email+password, and Google OAuth. Secrets are env-only — 
 
 ## Environment variables (names only)
 
-| Variable                                  | Used by                                                    |
-| ----------------------------------------- | ---------------------------------------------------------- |
-| `SUPABASE_URL`                            | All apps + API                                             |
-| `SUPABASE_ANON_KEY`                       | Customer/vendor/admin browser clients                      |
-| `SUPABASE_SERVICE_ROLE_KEY`               | API server-side only                                       |
-| `SEND_SMS_HOOK_SECRET`                    | Supabase Auth Send SMS Hook + `send-sms-otp` edge function |
-| `AT_API_KEY`                              | `send-sms-otp` edge function                               |
-| `AT_USERNAME`                             | `send-sms-otp` edge function                               |
-| `AT_SENDER_ID`                            | `send-sms-otp` edge function (alphanumeric sender ID)      |
-| `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` | Supabase Auth Google provider                              |
-| `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`    | Supabase Auth Google provider                              |
+| Variable                                  | Used by                                                     |
+| ----------------------------------------- | ----------------------------------------------------------- |
+| `SUPABASE_URL`                            | API + Next.js server-side                                   |
+| `SUPABASE_ANON_KEY`                       | Server-side anon key                                        |
+| `NEXT_PUBLIC_SUPABASE_URL`                | Customer/vendor/admin **browser** clients (`packages/auth`) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`           | Customer/vendor/admin **browser** clients (`packages/auth`) |
+| `SUPABASE_SERVICE_ROLE_KEY`               | API server-side only                                        |
+| `SEND_SMS_HOOK_SECRET`                    | Supabase Auth Send SMS Hook + `send-sms-otp` edge function  |
+| `AT_API_KEY`                              | `send-sms-otp` edge function                                |
+| `AT_USERNAME`                             | `send-sms-otp` edge function                                |
+| `AT_SENDER_ID`                            | `send-sms-otp` edge function (alphanumeric sender ID)       |
+| `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` | Supabase Auth Google provider                               |
+| `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`    | Supabase Auth Google provider                               |
 
 Copy names from `.env.example`; fill values in your local `.env` / secret store.
 
