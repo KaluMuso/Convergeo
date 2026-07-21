@@ -7,12 +7,13 @@ import {
   IconOrders,
   IconSearch,
 } from "@vergeo/ui/src/icons";
-import Link from "next/link";
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { BottomNavClient } from "./_components/bottom-nav-client";
 import { DesktopHeader } from "./_components/desktop-header";
+import { MerchPreviewLink } from "./_components/merch-preview-nav";
+import { MobileHeaderSearch } from "./_components/mobile-header-search";
 import { MobileTopNav } from "./_components/mobile-top-nav";
 import { ServiceInfoBar } from "./_components/service-info-bar";
 import { ShopLocaleSwitcher } from "./_components/shop-locale-switcher";
@@ -95,18 +96,24 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       <MobileTopNav
         locale={locale}
         logo={
-          <Link href={`/${locale}`} className="font-display text-lg text-primary">
+          <MerchPreviewLink href={`/${locale}`} className="font-display text-lg text-primary">
             {tCommon("app.name")}
-          </Link>
+          </MerchPreviewLink>
         }
         searchSlot={
-          <Link
-            href={`/${locale}/search`}
-            className="flex h-11 w-full max-w-md items-center gap-2 rounded-pill border border-border bg-surface px-4 text-sm text-text-3 transition-colors hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-          >
-            <IconSearch className="text-text-2" />
-            <span className="truncate">{t("home.nav.searchPlaceholder")}</span>
-          </Link>
+          <MobileHeaderSearch
+            locale={locale}
+            triggerLabel={t("home.nav.searchPlaceholder")}
+            sheetTitle={tSearch("title")}
+            labels={{
+              placeholder: t("home.nav.searchPlaceholder"),
+              submit: t("home.nav.searchSubmit"),
+              ariaLabel: tSearch("input.ariaLabel"),
+              suggestionsLabel: tSearch("input.suggestionsLabel"),
+              noSuggestions: tSearch("input.noSuggestions"),
+              recentTitle: tSearch("recent.title"),
+            }}
+          />
         }
         cartIcon={<IconCart />}
         cartLabel={t("home.nav.cart")}
