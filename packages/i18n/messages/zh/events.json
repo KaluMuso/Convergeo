@@ -109,6 +109,7 @@
       "typeLabel": "门票类型",
       "holderLabel": "参与者姓名",
       "qrLabel": "在入口处出示此二维码",
+      "liveTicket": "实时门票",
       "qrAria": "动态入场二维码",
       "pinLabel": "PIN 备用码",
       "pinAria": "六位数入场 PIN {pin}",

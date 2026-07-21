@@ -109,6 +109,7 @@
       "typeLabel": "Ticket type",
       "holderLabel": "Dzina la attendee",
       "qrLabel": "Onetsani QR iyi ku gate",
+      "liveTicket": "Tikiti ya live",
       "qrAria": "Rotating entry QR code",
       "pinLabel": "PIN backup",
       "pinAria": "Six-digit entry PIN {pin}",

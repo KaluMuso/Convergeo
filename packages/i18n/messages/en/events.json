@@ -109,6 +109,7 @@
       "typeLabel": "Ticket type",
       "holderLabel": "Attendee name",
       "qrLabel": "Show this QR at the gate",
+      "liveTicket": "Live ticket",
       "qrAria": "Rotating entry QR code",
       "pinLabel": "PIN backup",
       "pinAria": "Six-digit entry PIN {pin}",
