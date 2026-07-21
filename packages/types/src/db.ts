@@ -3283,6 +3283,10 @@ export type Database = {
         Args: { p_entity_id: string; p_entity_kind: string }
         Returns: undefined
       }
+      search_query_facets: {
+        Args: { filters?: Json; query: string; query_embedding?: string }
+        Returns: Json
+      }
       search_remove_document: {
         Args: { p_entity_id: string; p_entity_kind: string }
         Returns: undefined
