@@ -6,13 +6,12 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { resolveApiBaseUrl } from "../../../../lib/api-base-url";
+import { BackToTop } from "../_components/back-to-top";
 import {
   shouldShowComparison,
   type ComparisonLabels,
   type ComparisonListing,
 } from "../_components/pdp/comparison";
-
-import { BackToTop } from "../_components/back-to-top";
 
 import { CompareResults } from "./_components/compare-results";
 
