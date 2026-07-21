@@ -193,6 +193,7 @@
     "breadcrumbAria": "Inshila ya peji",
     "card": {
       "distance": "{distance} ukutali",
+      "discount": "−{percent}%",
       "noReviews": "Takwaba ama-reviews",
       "outOfStock": "Takwaba mu stock",
       "quickAdd": "Longeni bwangu",

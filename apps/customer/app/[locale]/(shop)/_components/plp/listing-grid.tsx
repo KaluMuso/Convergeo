@@ -10,6 +10,8 @@ export type CatalogListing = {
   productSlug: string | null;
   vendorName: string;
   priceNgwee: number;
+  /** Optional compare-at price in ngwee; struck through when > priceNgwee. */
+  oldNgwee?: number;
   condition: string;
   inStock: boolean;
   imagePublicId: string | null;

@@ -193,6 +193,7 @@
     "breadcrumbAria": "Njira ya peji",
     "card": {
       "distance": "{distance} kutali",
+      "discount": "−{percent}%",
       "noReviews": "Palibe ma-reviews",
       "outOfStock": "Palibe mu stock",
       "quickAdd": "Onjezani mwachangu",
