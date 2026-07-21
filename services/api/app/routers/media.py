@@ -32,6 +32,7 @@ class SignUploadResponse(BaseModel):
     signature: str
     folder: str
     allowed_formats: str
+    max_file_size: int
 
 
 def _sanitize_public_id(public_id: str | None) -> str | None:
@@ -140,4 +141,5 @@ async def sign_upload(
         signature=str(signed["signature"]),
         folder=str(signed["folder"]),
         allowed_formats=str(signed["allowed_formats"]),
+        max_file_size=int(signed["max_file_size"]),
     )
