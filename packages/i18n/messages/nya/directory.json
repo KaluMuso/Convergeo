@@ -1,0 +1,82 @@
+{
+  "index": {
+    "title": "Directory ya mabizinesi",
+    "subtitle": "Pezani ogulitsa ndi mabizinesi mu Zambia yonse",
+    "results": "{count, plural, one {# business} other {# mabizinesi}}",
+    "searchPlaceholder": "Sakani mabizinesi",
+    "searchLabel": "Sakani mu directory",
+    "viewProfile": "Onani shop",
+    "becomeVendor": "Khalani vendor",
+    "heroPitch": "Lembani business yanu, fikitsani makasitomala mu Zambia yonse, ndi kulandira ndalama motetezeka."
+  },
+  "filters": {
+    "heading": "Filters",
+    "category": "Category",
+    "location": "Location",
+    "badges": "Badges",
+    "allCategories": "Categories zonse",
+    "allLocations": "Locations zonse",
+    "preferred": "Preferred vendor",
+    "verified": "Verified",
+    "apply": "Apply filters",
+    "clear": "Chotsani filters",
+    "facetCount": "{label} ({count})",
+    "categories": {
+      "electronics": "Electronics",
+      "fashion-beauty": "Fashion & beauty",
+      "home-living": "Home & living",
+      "groceries": "Groceries"
+    }
+  },
+  "card": {
+    "listings": "Listings",
+    "reviews": "Reviews",
+    "rating": "{rating, number, ::.1} ({count})",
+    "noReviews": "Palibe reviews pano",
+    "verifiedSince": "Verified kuyambira {year}",
+    "preferredBadge": "Preferred",
+    "verifiedBadge": "Verified",
+    "defaultLocation": "Zambia"
+  },
+  "empty": {
+    "title": "Palibe mabizinesi opezeka",
+    "body": "Yesani kuchotsa filters kapena kusaka business ina."
+  },
+  "profile": {
+    "metaDescription": "Gulani kuchokera kwa {name} pa Vergeo5",
+    "about": "Za",
+    "hours": "Maola otsegula",
+    "location": "Location",
+    "landmark": "Landmark",
+    "landmarkValue": "{landmark}",
+    "hoursLine": "{day}: {hours}",
+    "listingsHeading": "Zinthu za mu shop iyi",
+    "reviewsHeading": "Reviews za makasitomala",
+    "reviewsSummary": "{rating, number, ::.1} average kuchokera ku {count, plural, one {# review} other {# reviews}}",
+    "noReviews": "Palibe reviews pano",
+    "preferredBadge": "Preferred vendor",
+    "verifiedBadge": "Verified vendor",
+    "shareTitle": "{name} pa Vergeo5",
+    "statRating": "Rating",
+    "statReviews": "Reviews",
+    "statListings": "Zinthu",
+    "statOrders": "Orders",
+    "tierBusiness": "Business",
+    "tierPremium": "Premium",
+    "offeringsAria": "Zomwe vendor amagulitsa",
+    "tabProducts": "Zinthu",
+    "tabServices": "Services",
+    "tabEvents": "Events",
+    "serviceFrom": "Kuyambira {price}",
+    "whatsappCta": "Lankhulani pa WhatsApp"
+  },
+  "listings": {
+    "vendor": "Wagulitsa {vendor}",
+    "noReviews": "Palibe reviews pano",
+    "reviewCount": "({count})",
+    "quickAdd": "Onjezani mwachangu",
+    "wishlist": "Sungani mu wishlist",
+    "outOfStock": "Stock yapatha",
+    "distance": "{distance} kutali"
+  }
+}

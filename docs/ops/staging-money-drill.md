@@ -6,8 +6,8 @@
 
 ## Preconditions (founder / ops)
 
-- [ ] Staging API + customer app healthy (`/healthz`, `/en/health`)
-- [ ] Migration `0066_user_wishlist_recently_viewed.sql` applied on staging
+- [ ] Staging API healthy (`/healthz`, `/readyz`) — **currently 502**; customer `/en/health` OK
+- [x] Migration `0066_user_wishlist_recently_viewed.sql` applied on staging (2026-07-20)
 - [ ] Lenco **sandbox** credentials only (`LENCO_SANDBOX` / non-prod keys)
 - [ ] Seed buyer with phone OTP path; cart with in-stock listing
 - [ ] `public_launch` remains **false**

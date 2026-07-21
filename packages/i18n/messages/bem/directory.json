@@ -1,0 +1,82 @@
+{
+  "index": {
+    "title": "Directory ya mabushiness",
+    "subtitle": "Sanga abashitisha na mabushiness mu Zambia yonse",
+    "results": "{count, plural, one {# business} other {# mabushiness}}",
+    "searchPlaceholder": "Fwaya mabushiness",
+    "searchLabel": "Fwaya mu directory",
+    "viewProfile": "Lolesha shop",
+    "becomeVendor": "Ba vendor",
+    "heroPitch": "Lembeni business yenu, fikisheni abakashita mu Zambia yonse, no kupoka amali mu nsambu."
+  },
+  "filters": {
+    "heading": "Filters",
+    "category": "Category",
+    "location": "Location",
+    "badges": "Badges",
+    "allCategories": "Categories shonse",
+    "allLocations": "Locations shonse",
+    "preferred": "Preferred vendor",
+    "verified": "Verified",
+    "apply": "Apply filters",
+    "clear": "Futa filters",
+    "facetCount": "{label} ({count})",
+    "categories": {
+      "electronics": "Electronics",
+      "fashion-beauty": "Fashion & beauty",
+      "home-living": "Home & living",
+      "groceries": "Groceries"
+    }
+  },
+  "card": {
+    "listings": "Listings",
+    "reviews": "Reviews",
+    "rating": "{rating, number, ::.1} ({count})",
+    "noReviews": "Takuli reviews pano",
+    "verifiedSince": "Verified kufuma {year}",
+    "preferredBadge": "Preferred",
+    "verifiedBadge": "Verified",
+    "defaultLocation": "Zambia"
+  },
+  "empty": {
+    "title": "Takuli mabushiness ayasangwa",
+    "body": "Futeni filters nangu fwayeni business imbi."
+  },
+  "profile": {
+    "metaDescription": "Shita kufuma ku {name} pa Vergeo5",
+    "about": "Pali",
+    "hours": "Amaola yakufungula",
+    "location": "Location",
+    "landmark": "Landmark",
+    "landmarkValue": "{landmark}",
+    "hoursLine": "{day}: {hours}",
+    "listingsHeading": "Ifintu fya mu shop iyi",
+    "reviewsHeading": "Reviews sha bakashita",
+    "reviewsSummary": "{rating, number, ::.1} average kufuma ku {count, plural, one {# review} other {# reviews}}",
+    "noReviews": "Takuli reviews pano",
+    "preferredBadge": "Preferred vendor",
+    "verifiedBadge": "Verified vendor",
+    "shareTitle": "{name} pa Vergeo5",
+    "statRating": "Rating",
+    "statReviews": "Reviews",
+    "statListings": "Ifintu",
+    "statOrders": "Orders",
+    "tierBusiness": "Business",
+    "tierPremium": "Premium",
+    "offeringsAria": "Ifyo vendor ashitisha",
+    "tabProducts": "Ifintu",
+    "tabServices": "Services",
+    "tabEvents": "Events",
+    "serviceFrom": "Kufuma {price}",
+    "whatsappCta": "Landa pa WhatsApp"
+  },
+  "listings": {
+    "vendor": "Ashitisha {vendor}",
+    "noReviews": "Takuli reviews pano",
+    "reviewCount": "({count})",
+    "quickAdd": "Onja bwangu",
+    "wishlist": "Sunga mu wishlist",
+    "outOfStock": "Stock yapwa",
+    "distance": "{distance} ukutali"
+  }
+}

@@ -24,8 +24,8 @@ describe("loadRawNamespace", () => {
   });
 
   it("returns null when the locale has no file for the namespace (no fallback)", async () => {
-    // Raw access must NOT fall back to English — events is still absent for bem.
-    expect(await loadRawNamespace("bem", "events")).toBeNull();
+    // Raw access must NOT fall back to English — legal is still absent for bem.
+    expect(await loadRawNamespace("bem", "legal")).toBeNull();
   });
 
   it("returns bem catalog overlay without English merge (Phase-1 file exists)", async () => {
@@ -33,13 +33,22 @@ describe("loadRawNamespace", () => {
     expect(raw).not.toBeNull();
     expect(raw).toHaveProperty("home");
   });
+
+  it("returns bem events overlay after CCP-03e (no English merge at raw layer)", async () => {
+    const raw = await loadRawNamespace("bem", "events");
+    expect(raw).not.toBeNull();
+    expect(raw).toHaveProperty("ticketPurchase");
+  });
 });
 
 describe("localeNamespaceKeys", () => {
   it("lists the flat keys a locale defines, or [] when absent", async () => {
     const enKeys = await localeNamespaceKeys("en", "events");
     expect(enKeys).toContain("ticketPurchase.earlyBird");
-    expect(await localeNamespaceKeys("bem", "events")).toEqual([]);
+    const bemEvents = await localeNamespaceKeys("bem", "events");
+    expect(bemEvents).toContain("ticketPurchase.earlyBird");
+    expect(bemEvents).toEqual(enKeys);
+    expect(await localeNamespaceKeys("bem", "legal")).toEqual([]);
     const bemCatalog = await localeNamespaceKeys("bem", "catalog");
     expect(bemCatalog).toContain("home.hero.escrowStep1");
   });

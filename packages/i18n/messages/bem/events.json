@@ -1,0 +1,166 @@
+{
+  "title": "Events",
+  "browse": {
+    "title": "Events",
+    "subtitle": "Sanga workshops, shows, na community gatherings mu Zambia yonse.",
+    "emptyTitle": "Takuli events mu iyi window",
+    "emptyBody": "Esheni date filter imbi nangu bwelako limbi pa listings shishiya.",
+    "soldOut": "Yapwa",
+    "free": "Free",
+    "viewEvent": "Lolesha event",
+    "verified": "Verified",
+    "calendarLabel": "Amasuku ayali na events mweshi uyu",
+    "hostCta": "Panga event",
+    "hostPitch": "Shitisha tickets na dynamic QR check-in no kupoka amali mu nsambu."
+  },
+  "filters": {
+    "tonight": "Ulecungulo",
+    "thisWeekend": "Uyu weekend",
+    "allDates": "Shonse ishisa",
+    "categoryLabel": "Category"
+  },
+  "categories": {
+    "all": "Shonse",
+    "workshops": "Workshops & education",
+    "comedy-theatre": "Comedy & theatre",
+    "pop-up-dinners": "Pop-up dinners",
+    "cultural-arts": "Cultural & arts",
+    "lifestyle-community": "Lifestyle & community",
+    "free-rsvp": "Free RSVP"
+  },
+  "detail": {
+    "metaTitle": "{title} — Events",
+    "metaDescription": "{title} ku {venue}. Lolesha amasuku, tickets, na venue details pa Vergeo5.",
+    "about": "Pali iyi event",
+    "dates": "Amasuku na amaola",
+    "tickets": "Tickets",
+    "venue": "Venue",
+    "landmark": "Pepi na {landmark}",
+    "mapHint": "Fungula mu maps",
+    "organiser": "Organised by",
+    "organiserCta": "Lolesha organiser",
+    "soldOut": "Yapwa",
+    "free": "Free RSVP",
+    "fromPrice": "Kufuma {price}",
+    "ticketRemaining": "{count, plural, one {# ishale} other {# shishale}}",
+    "getTickets": "Poka tickets",
+    "getTicketsSoon": "Ticket sales shisa limbi",
+    "pastInstance": "Yapita",
+    "spots": "{sold} / {total} spots"
+  },
+  "organiser": {
+    "imageAlt": "Icithunzi ca event {position}"
+  },
+  "ticketPurchase": {
+    "selectInstance": "Sala usuku",
+    "selectType": "Ticket type",
+    "quantity": "Quantity",
+    "decrease": "Chekesha quantity",
+    "decreaseSymbol": "−",
+    "increase": "Onjesha quantity",
+    "increaseSymbol": "+",
+    "total": "Total",
+    "freeRsvpCta": "Sunga free spot",
+    "payCta": "Poka tickets",
+    "processing": "Ileprocess…",
+    "successRsvp": "Spot yasungwa",
+    "successCheckout": "Yaonjwa — pita ku payment",
+    "soldOut": "Yapwa",
+    "remaining": "{count, plural, one {# ishale} other {# shishale}}",
+    "perCustomerCap": "Max {count} pa umuntu",
+    "earlyBird": "Early-bird: {price} ukufika {until}",
+    "groupTier": "Shita {minQty}+ pa {price} cimo",
+    "groupUpsell": "Onja {count, plural, one {# imbi} other {# shimbi}} ukulipila {price} cimo",
+    "discountApplied": "Discount yapangwa — {price} cimo",
+    "attendeeNamesLabel": "Amasambu ya attendees",
+    "attendeeNameLabel": "Ishina lya attendee {index}",
+    "attendeeNamePlaceholder": "Ishina lyonse",
+    "loginRequired": "Ingilani ukupoka tickets",
+    "errors": {
+      "generic": "Tatwakwanisha ukupwisha request. Esheni again.",
+      "freeUseRsvp": "Iyi ni free event — use Reserve.",
+      "paidUseCheckout": "Iyi ticket ilefwailwa payment.",
+      "oversell": "Taikaliko",
+      "attendeeNamesRequired": "Lembeni ishina pa ticket cimo cimo.",
+      "attendeeNamesMismatch": "Lembeni ishina limo fye pa ticket cimo."
+    }
+  },
+  "wallet": {
+    "title": "Tickets shandi",
+    "emptyTitle": "Takuli tickets pano",
+    "emptyBody": "Tickets shomushita nangu RSVP shilaoneshwa apa na rotating QR code yakwingila.",
+    "emptyCta": "Browse events",
+    "list": {
+      "viewTicket": "Lolesha ticket",
+      "status": {
+        "issued": "Ready to scan",
+        "checked_in": "Checked in",
+        "transferred": "Transferred",
+        "void": "Void"
+      },
+      "startsAt": "Itampa {datetime}"
+    },
+    "detail": {
+      "metaTitle": "Ticket — {event}",
+      "back": "Bwelako ku tickets",
+      "eventLabel": "Event",
+      "venueLabel": "Venue",
+      "startsLabel": "Itampa",
+      "typeLabel": "Ticket type",
+      "holderLabel": "Ishina lya attendee",
+      "qrLabel": "Langa uyu QR ku gate",
+      "qrAria": "Rotating entry QR code",
+      "pinLabel": "PIN backup",
+      "pinAria": "Six-digit entry PIN {pin}",
+      "pinUnavailable": "PIN yatumiwa ilyo mwashita iyi ticket. Lolesha messages shenu nga mufwaya.",
+      "refreshIn": "Ilererefresh mu {seconds}s",
+      "offlineTitle": "Muli offline",
+      "offlineBody": "Tulebomfya cached entry codes. Sync nga mwabwelela online pa codes shishiya.",
+      "offlineExpired": "Cached codes shapwa — bomfya PIN yenu ku gate.",
+      "syncHorizon": "Ilesync offline codes…",
+      "status": {
+        "issued": "Ready to scan",
+        "checked_in": "Checked in",
+        "transferred": "Iyi ticket yatransferwa no tingabomfiwa.",
+        "void": "Iyi ticket taikaliko valid."
+      },
+      "transferBanner": "Tickets sha transferred tashiscanwa. Recipient ali na QR na PIN iishiya.",
+      "voidBanner": "Iyi ticket yavoidwa no tingabomfiwa ku entry."
+    }
+  },
+  "transfer": {
+    "back": "Bwelako ku ticket",
+    "title": "Transfer ticket",
+    "subtitle": "Tuma iyi ticket ku umwanakashi free. Bakangila na nomba ya foni panshi ukupoka.",
+    "phoneLabel": "Nomba ya foni ya recipient",
+    "phonePlaceholder": "e.g. 0977 123 456",
+    "cutoffNotice": "Transfers shalala maola 6 before event itampa.",
+    "submitCta": "Tuma transfer",
+    "submitting": "Iletuma…",
+    "successBody": "Twishibishe {phone}. Bangapoka iyi ticket pa kwingila na iyo nomba.",
+    "cancelCta": "Cancel transfer",
+    "cancelling": "Ilecancel…",
+    "cancelledNotice": "Transfer yacancelwa.",
+    "pendingNotice": "Pending transfer ku {phone}",
+    "claimBanner": {
+      "title": "Umwanakashi amutumine ticket",
+      "body": "{event} itampa {datetime}. Pokeni before ilexpira.",
+      "claimCta": "Poka ticket",
+      "claiming": "Ilepoka…",
+      "claimedNotice": "Ticket yapokelwa — sangeni mu Tickets shandi.",
+      "dismiss": "Dismiss"
+    },
+    "errors": {
+      "generic": "Tatwakwanisha ukupwisha request. Esheni again.",
+      "notFound": "Ticket tausangwa.",
+      "notHolder": "Ticket holder fye angatransfer iyi ticket.",
+      "notTransferable": "Iyi ticket tacingatransferwa.",
+      "cutoffPassed": "Transfers shalala maola 6 before event itampa.",
+      "pendingExists": "Iyi ticket ili na pending transfer kale.",
+      "notPending": "Uyu transfer tauli pending.",
+      "expired": "Iyi transfer offer yaexpira.",
+      "phoneMismatch": "Ingilani na nomba ya foni iyo ticket yatumiwa.",
+      "rateLimited": "Requests shingi. Esheni limbi."
+    }
+  }
+}

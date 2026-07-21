@@ -1,0 +1,293 @@
+{
+  "services.title": "Services",
+  "services.rfq.sent": "RFQ yatumiwa ku {count, plural, one {# vendor} other {# vendors}}",
+  "services.quote.received": "Quote kufuma ku {vendor}: {amount}",
+  "browse": {
+    "title": "Services",
+    "subtitle": "Sanga abapela services aba trustable mu Zambia yonse — kufuma ku beauty kufika ku home repairs.",
+    "emptyTitle": "Takuli services shilingana na filters shenu",
+    "emptyBody": "Esheni category nangu area imbi, nangu bwelako limbi pa listings shishiya.",
+    "viewService": "Lolesha service",
+    "askForQuote": "Fwaya quote",
+    "fromPrice": "Kufuma {price}",
+    "areaLabel": "Area",
+    "areaPlaceholder": "e.g. Lusaka",
+    "filterSubmit": "Filter",
+    "preferredBadge": "Preferred",
+    "verticalLabel": "Category",
+    "providerCta": "Lemba service yenu",
+    "providerPitch": "Fikisheni abakashita abafwaya ifyo mupela."
+  },
+  "categories": {
+    "all": "Shonse",
+    "beauty": "Beauty",
+    "food-catering": "Food & catering",
+    "auto": "Auto & mechanics",
+    "printing-creative": "Printing & creative",
+    "home-services": "Home services",
+    "tech-services": "Tech services",
+    "cleaning": "Cleaning",
+    "tailoring": "Tailoring"
+  },
+  "badges": {
+    "fast": "Asuka bwangu",
+    "same_day": "Asuka munshiku imo",
+    "slow": "Asuka mu nsiku imo"
+  },
+  "detail": {
+    "metaTitle": "{title} — Services",
+    "metaDescription": "{title} mu {area}. Lolesha portfolio no kufwaya quote pa Vergeo5.",
+    "about": "Pali iyi service",
+    "whatsIncluded": "Ifyo filimo",
+    "includeMarker": "✓",
+    "serviceArea": "Area ya service",
+    "portfolio": "Portfolio",
+    "fromPrice": "Kufuma {price}",
+    "askForQuote": "Fwaya quote",
+    "requestQuote": "Fwaya quote",
+    "requestQuoteHint": "Landa umulimo wenu no kupoka quotes kufuma ku providers abalingana.",
+    "provider": "Provider",
+    "providerCta": "Lolesha profile ya provider",
+    "imageAlt": "Icithunzi ca portfolio {position}"
+  },
+  "vendor": {
+    "eyebrow": "Services",
+    "list": {
+      "title": "Services shenu",
+      "intro": "Manage listings sha services abakashita bangalolesha no kufwaya quotes.",
+      "createCta": "Onja service",
+      "editCta": "Edit",
+      "empty": "Tamuli na service listings pano.",
+      "loading": "Ilelodisha services…",
+      "noArea": "Area tailembwa"
+    },
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "paused": "Paused"
+    },
+    "form": {
+      "createTitle": "Service iishiya",
+      "editTitle": "Edit service",
+      "titleLabel": "Title",
+      "categoryLabel": "Category",
+      "descriptionLabel": "Description",
+      "includesLabel": "Ifyo filimo",
+      "includesHint": "Cimo pa line — cilaoneshwa nga checklist pa service page yenu.",
+      "areaLabel": "Area ya service",
+      "fromPriceLabel": "From price (optional)",
+      "fromPriceHint": "Shieni blank ukulanga \"fwaya quote\"",
+      "bookableLabel": "Lekeni direct booking",
+      "bookableHint": "Abakashita bangabook no kulipila deposit pa fixed price, ukwabula kufwaya quote first.",
+      "bookingPriceLabel": "Fixed booking price",
+      "bookingPriceHint": "Total price ya direct booking. Abakashita balipila deposit pano na balance nga umulimo wapwa.",
+      "statusLabel": "Status",
+      "save": "Save",
+      "publish": "Publish",
+      "pause": "Pause",
+      "saving": "Ilesave…"
+    },
+    "errors": {
+      "loadFailed": "Tatwakwanisha ukulodisha services.",
+      "saveFailed": "Tatwakwanisha ukusave service.",
+      "bookablePrice": "Lekeni fixed booking price iyakila zero ukuleka direct booking.",
+      "authRequired": "Ingilani ukumanage services shenu."
+    }
+  },
+  "postJob": {
+    "title": "Posta umulimo",
+    "subtitle": "Landa ifyo mufwaya — providers abalingana bakatuma quotes.",
+    "category": {
+      "label": "Category ya service",
+      "beauty": "Beauty",
+      "food_catering": "Food & catering",
+      "auto": "Auto",
+      "printing_creative": "Printing & creative",
+      "home_services": "Home services",
+      "tech_services": "Tech services",
+      "cleaning": "Cleaning",
+      "tailoring": "Tailoring"
+    },
+    "description": {
+      "label": "Nshi mufwaya ukucita?",
+      "placeholder": "E.g. Fixa kitchen tap iya leaking before Saturday"
+    },
+    "serviceArea": {
+      "label": "Area",
+      "placeholder": "E.g. Lusaka, Woodlands"
+    },
+    "preferredDate": {
+      "label": "Preferred date (optional)"
+    },
+    "budgetBand": {
+      "label": "Budget range",
+      "under_500": "Panshi ya K500",
+      "500_2000": "K500 – K2,000",
+      "2000_5000": "K2,000 – K5,000",
+      "over_5000": "Ukucila K5,000",
+      "flexible": "Flexible / nshishibe"
+    },
+    "photos": {
+      "label": "Amaphoto (optional)",
+      "help": "Kufika ku 8 photos ukwafwilisha providers ukumfwikisha umulimo.",
+      "add": "Onja photo"
+    },
+    "submit": "Posta umulimo",
+    "submitting": "Ileposta…",
+    "authRequired": "Ingilani ukuposta umulimo wenu",
+    "authCta": "Pita na foni",
+    "draftSaved": "Draft yenu yalisungwa pa device iyi ukufika mwangila.",
+    "ack": {
+      "sent": "Twishibishe providers abalingana. Quotes shisangwa ukwisa mu nsiku imo.",
+      "noMatch": "Tatwasanga providers abalingana pano, lelo tukacitilako no kumwishibisha."
+    },
+    "errors": {
+      "required": "Fyaleni fields shonse shilefwailwa.",
+      "generic": "Cintu cilefyanya. Esheni again.",
+      "rateLimited": "Requests shingi. Loleni akanya."
+    }
+  },
+  "quotes": {
+    "list": {
+      "title": "Imilimo yenu",
+      "intro": "Compare quotes kufuma ku providers no kusala isuma.",
+      "emptyTitle": "Takuli imilimo pano",
+      "emptyBody": "Posteni umulimo ukupoka quotes kufuma ku providers abalingana.",
+      "postJobCta": "Posta umulimo",
+      "posted": "Yapostwa {date}",
+      "status": "Status: {status}",
+      "budget": "Budget {min} – {max}",
+      "budgetFlexible": "Budget ya flexible",
+      "compareCta": "Compare quotes"
+    },
+    "compareTitle": "Compare quotes",
+    "compareIntro": "Sorted by price, then provider rating. Quotes sha withdrawn na expired shilifiswa.",
+    "loading": "Ilelodisha quotes…",
+    "authRequired": "Ingilani ukucompare quotes.",
+    "back": "← Bwelako ku imilimo",
+    "empty": "Takuli quotes sha active pano — providers basangwa ukusuka mu nsiku imo.",
+    "unknownProvider": "Provider",
+    "preferredBadge": "Vergeo5 Preferred",
+    "rating": "{rating}★ ({count, plural, one {# review} other {# reviews}})",
+    "validUntil": "Valid ukufika {date}",
+    "status": {
+      "open": "Open",
+      "quoted": "Quotes shasangwa",
+      "accepted": "Yapokelwa",
+      "completed": "Yapwa",
+      "cancelled": "Cancelled"
+    },
+    "decline": {
+      "open": "Kana quote",
+      "reasonLabel": "Cifulo (optional)",
+      "reasonPlaceholder": "e.g. Price iyakila, ndefwaya date yabwangu…",
+      "submit": "Kana",
+      "submitting": "Ilekana…",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "loadFailed": "Tatwakwanisha ukulodisha quotes. Esheni again.",
+      "forbidden": "Mungacompare quotes pa imilimo yenu fye.",
+      "declineFailed": "Tatwakwanisha ukukana quote. Esheni again.",
+      "rateLimited": "Requests shingi. Loleni akanya.",
+      "notMatched": "Uyu provider taali matched ku umulimo."
+    }
+  },
+  "accept": {
+    "title": "Pokela iyi quote",
+    "intro": "Lipileni deposit ya {pct}% pano ukusunga {vendor}. Balance ilefwailwa nga umulimo wapwa.",
+    "quoteFrom": "Quote kufuma ku {vendor}",
+    "totalLabel": "Total value ya umulimo",
+    "depositLabel": "Deposit ilefwailwa pano",
+    "balanceLabel": "Balance pa completion",
+    "escrowNote": "Deposit yenu yalisungwa na Vergeo5 no kufumya ku provider fye nga umulimo wapokelwa.",
+    "confirmCta": "Lipila deposit ya {amount}",
+    "submitting": "Ilesetup deposit yenu…",
+    "cancel": "Te pano",
+    "errors": {
+      "notOwner": "Mungapokela quotes pa imilimo yenu fye.",
+      "mismatch": "Iyo quote taikaliko pa uyu umulimo.",
+      "invalidStatus": "Uyu umulimo nangu quote tacingapokelwa.",
+      "generic": "Tatwakwanisha ukutampa deposit. Esheni again.",
+      "rateLimited": "Requests shingi. Loleni akanya."
+    }
+  },
+  "completion": {
+    "provider": {
+      "title": "Marka umulimo ugapwa",
+      "intro": "Ishibisheni customer ati umulimo wapwa. Bali na maola 48 ukukonfirma before auto-confirm no kufumya payment yenu.",
+      "markCta": "Marka umulimo ugapwa",
+      "marking": "Ilemarka complete…",
+      "marked": "Yamarkwa complete. Tulolesha customer akonfirme.",
+      "alreadyMarked": "Mwamarka kale uyu umulimo ugapwa.",
+      "backToJobs": "Bwelako ku imilimo",
+      "errors": {
+        "notProvider": "Provider fye uwa assigned angamarka uyu umulimo ugapwa.",
+        "notFound": "Uyu umulimo tausangwa.",
+        "generic": "Tatwakwanisha ukumarka umulimo ugapwa. Esheni again.",
+        "rateLimited": "Requests shingi. Loleni akanya."
+      }
+    },
+    "customer": {
+      "title": "Konfirma ati umulimo wapwa",
+      "intro": "Konfirmisha ukufumya balance ku provider wenu. Nga tamucita cimo, tukakonfirma automatic after maola 48.",
+      "balanceLabel": "Balance ilefwailwa pa completion",
+      "confirmCta": "Konfirma no kulipila {amount}",
+      "confirming": "Ilekonfirma…",
+      "confirmed": "Yakonfirmwa. Provider wenu alipilwa.",
+      "awaitingProvider": "Tulolesha provider wenu akamarke umulimo ugapwa.",
+      "escrowNote": "Mwalipila → Yasungwa na Vergeo5 → Yafumya ku provider nga mwakonfirma.",
+      "reviewUnlocked": "Natotela! Mungaleka review pa uyu provider.",
+      "errors": {
+        "notOwner": "Mungakonfirma imilimo yenu fye.",
+        "notMarked": "Provider wenu taamarka umulimo ugapwa pano.",
+        "generic": "Tatwakwanisha ukukonfirma umulimo. Esheni again.",
+        "rateLimited": "Requests shingi. Loleni akanya."
+      }
+    }
+  },
+  "reviews": {
+    "heading": "Reviews sha uyu provider",
+    "subheading": "Kufuma ku bakashita abamilimo iyi provider yapwisha.",
+    "empty": "Takuli reviews pano.",
+    "reviewCount": "{count, plural, one {# review} other {# reviews}}",
+    "starsAria": "{rating} pa 5 stars",
+    "vendorReply": "Reply ya provider",
+    "form": {
+      "title": "Rate provider wenu",
+      "intro": "Umulimo wenu wapwa — landeni ifyo fyacitike.",
+      "ratingLabel": "Rating yenu",
+      "ratingAria": "Saleni rating kufuma 1 kufika 5 stars",
+      "bodyLabel": "Review yenu (optional)",
+      "bodyPlaceholder": "Landeni ifyo umulimo wacitike…",
+      "submit": "Tuma review",
+      "submitting": "Iletuma…",
+      "submitted": "Natotela! Review yenu yapublishwa.",
+      "edit": "Edit review yenu",
+      "yourReview": "Review yenu",
+      "loading": "Ilelodisha…"
+    },
+    "errors": {
+      "generic": "Tatwakwanisha ukutuma review yenu. Esheni again.",
+      "rateLimited": "Review requests shingi. Loleni akanya.",
+      "loadFailed": "Tatwakwanisha ukulodisha review status."
+    }
+  },
+  "booking": {
+    "title": "Booka iyi service",
+    "intro": "Lipileni deposit ya {pct}% pano; balance ilefwailwa nga umulimo wapwa.",
+    "priceLabel": "Fixed price",
+    "depositLabel": "Deposit ilefwailwa pano",
+    "balanceLabel": "Balance pa completion",
+    "escrowNote": "Mwalipila → Yasungwa na Vergeo5 → Yafumya ku provider nga mwakonfirma ati umulimo wapwa.",
+    "bookCta": "Booka no kulipila deposit ya {amount}",
+    "submitting": "Ilebooka…",
+    "errors": {
+      "authRequired": "Ingilani ukubooka iyi service.",
+      "notBookable": "Iyi service taikaliko pa direct booking pano.",
+      "ownService": "Tamungabooka service yenu.",
+      "rateLimited": "Requests shingi. Loleni akanya.",
+      "generic": "Tatwakwanisha ukutampa booking yenu. Esheni again."
+    }
+  }
+}

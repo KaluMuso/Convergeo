@@ -1,0 +1,293 @@
+{
+  "services.title": "Services",
+  "services.rfq.sent": "RFQ yatumizidwa ku {count, plural, one {# vendor} other {# vendors}}",
+  "services.quote.received": "Quote kuchokera kwa {vendor}: {amount}",
+  "browse": {
+    "title": "Services",
+    "subtitle": "Pezani opereka services oodalirika mu Zambia yonse — kuchokera ku beauty mpaka home repairs.",
+    "emptyTitle": "Palibe services zogwirizana ndi filters zanu",
+    "emptyBody": "Yesani category kapena area ina, kapena bweraninso posachedwa pa listings zatsopano.",
+    "viewService": "Onani service",
+    "askForQuote": "Pemphani quote",
+    "fromPrice": "Kuyambira {price}",
+    "areaLabel": "Area",
+    "areaPlaceholder": "e.g. Lusaka",
+    "filterSubmit": "Filter",
+    "preferredBadge": "Preferred",
+    "verticalLabel": "Category",
+    "providerCta": "Lembani service yanu",
+    "providerPitch": "Fikitsani makasitomala ofuna zomwe mupereka."
+  },
+  "categories": {
+    "all": "Zonse",
+    "beauty": "Beauty",
+    "food-catering": "Food & catering",
+    "auto": "Auto & mechanics",
+    "printing-creative": "Printing & creative",
+    "home-services": "Home services",
+    "tech-services": "Tech services",
+    "cleaning": "Cleaning",
+    "tailoring": "Tailoring"
+  },
+  "badges": {
+    "fast": "Oyankha mwachangu",
+    "same_day": "Oyankha tsiku lomwelo",
+    "slow": "Amayankha mkati mwa tsiku"
+  },
+  "detail": {
+    "metaTitle": "{title} — Services",
+    "metaDescription": "{title} mu {area}. Onani portfolio ndi kupempha quote pa Vergeo5.",
+    "about": "Za service iyi",
+    "whatsIncluded": "Zomwe zili mkati",
+    "includeMarker": "✓",
+    "serviceArea": "Area ya service",
+    "portfolio": "Portfolio",
+    "fromPrice": "Kuyambira {price}",
+    "askForQuote": "Pemphani quote",
+    "requestQuote": "Pemphani quote",
+    "requestQuoteHint": "Fotokozani ntchito yanu ndi kulandira quotes kuchokera kwa providers ogwirizana.",
+    "provider": "Provider",
+    "providerCta": "Onani profile ya provider",
+    "imageAlt": "Chithunzi cha portfolio {position}"
+  },
+  "vendor": {
+    "eyebrow": "Services",
+    "list": {
+      "title": "Services zanu",
+      "intro": "Manage listings za services zomwe makasitomala angawone ndi kupempha quotes.",
+      "createCta": "Onjezani service",
+      "editCta": "Edit",
+      "empty": "Mulibe service listings pano.",
+      "loading": "Ikuloda services…",
+      "noArea": "Area sinalembedwe"
+    },
+    "status": {
+      "draft": "Draft",
+      "active": "Active",
+      "paused": "Paused"
+    },
+    "form": {
+      "createTitle": "Service yatsopano",
+      "editTitle": "Edit service",
+      "titleLabel": "Title",
+      "categoryLabel": "Category",
+      "descriptionLabel": "Description",
+      "includesLabel": "Zomwe zili mkati",
+      "includesHint": "Chimodzi pa line — chimaonetsedwa ngati checklist pa service page yanu.",
+      "areaLabel": "Area ya service",
+      "fromPriceLabel": "From price (optional)",
+      "fromPriceHint": "Siyani blank kuti muwonetse \"pemphani quote\"",
+      "bookableLabel": "Lolani direct booking",
+      "bookableHint": "Makasitomala angabook ndi kulipira deposit pa fixed price, popanda kupempha quote first.",
+      "bookingPriceLabel": "Fixed booking price",
+      "bookingPriceHint": "Total price ya direct booking. Makasitomala amalipira deposit tsopano ndi balance ntchito ikatha.",
+      "statusLabel": "Status",
+      "save": "Save",
+      "publish": "Publish",
+      "pause": "Pause",
+      "saving": "Ikusave…"
+    },
+    "errors": {
+      "loadFailed": "Situnathe kuloda services.",
+      "saveFailed": "Situnathe kusave service.",
+      "bookablePrice": "Ikani fixed booking price yoposa zero kuti mulole direct booking.",
+      "authRequired": "Lowani kuti mumange services zanu."
+    }
+  },
+  "postJob": {
+    "title": "Postani ntchito",
+    "subtitle": "Fotokozani zomwe mukufuna — providers ogwirizana adzatuma quotes.",
+    "category": {
+      "label": "Category ya service",
+      "beauty": "Beauty",
+      "food_catering": "Food & catering",
+      "auto": "Auto",
+      "printing_creative": "Printing & creative",
+      "home_services": "Home services",
+      "tech_services": "Tech services",
+      "cleaning": "Cleaning",
+      "tailoring": "Tailoring"
+    },
+    "description": {
+      "label": "Chiyani mukufuna kuchita?",
+      "placeholder": "E.g. Konza kitchen tap yotayika before Saturday"
+    },
+    "serviceArea": {
+      "label": "Area",
+      "placeholder": "E.g. Lusaka, Woodlands"
+    },
+    "preferredDate": {
+      "label": "Preferred date (optional)"
+    },
+    "budgetBand": {
+      "label": "Budget range",
+      "under_500": "Pansi pa K500",
+      "500_2000": "K500 – K2,000",
+      "2000_5000": "K2,000 – K5,000",
+      "over_5000": "Kuposa K5,000",
+      "flexible": "Flexible / sindikudziwa"
+    },
+    "photos": {
+      "label": "Zithunzi (optional)",
+      "help": "Mpaka 8 photos kuti muthandize providers kumvetsetsa ntchito.",
+      "add": "Onjezani photo"
+    },
+    "submit": "Postani ntchito",
+    "submitting": "Ikuposta…",
+    "authRequired": "Lowani kuti muposte ntchito yanu",
+    "authCta": "Pitirizani ndi foni",
+    "draftSaved": "Draft yanu yasungidwa pa device iyi mpaka mulowe.",
+    "ack": {
+      "sent": "Tawadziwitsa providers ogwirizana. Quotes nthawi zambiri zimafika mkati mwa tsiku.",
+      "noMatch": "Situnapeza providers ogwirizana panopa, koma tipitiriza kufunafuna ndi kukudziwitsani."
+    },
+    "errors": {
+      "required": "Lembani fields zonse zofunika.",
+      "generic": "Chinachake chalakwika. Yesaninso.",
+      "rateLimited": "Ma request ambiri. Dikirani pang'ono."
+    }
+  },
+  "quotes": {
+    "list": {
+      "title": "Ntchito zanu",
+      "intro": "Compare quotes kuchokera kwa providers ndi kusankha yabwino.",
+      "emptyTitle": "Palibe ntchito pano",
+      "emptyBody": "Postani ntchito kuti mulandire quotes kuchokera kwa providers ogwirizana.",
+      "postJobCta": "Postani ntchito",
+      "posted": "Yaposted {date}",
+      "status": "Status: {status}",
+      "budget": "Budget {min} – {max}",
+      "budgetFlexible": "Budget yoflexible",
+      "compareCta": "Compare quotes"
+    },
+    "compareTitle": "Compare quotes",
+    "compareIntro": "Sorted by price, kenako provider rating. Quotes za withdrawn ndi expired zabisika.",
+    "loading": "Ikuloda quotes…",
+    "authRequired": "Lowani kuti mucompare quotes.",
+    "back": "← Bwerani ku ntchito",
+    "empty": "Palibe quotes za active pano — providers nthawi zambiri amayankha mkati mwa tsiku.",
+    "unknownProvider": "Provider",
+    "preferredBadge": "Vergeo5 Preferred",
+    "rating": "{rating}★ ({count, plural, one {# review} other {# reviews}})",
+    "validUntil": "Valid mpaka {date}",
+    "status": {
+      "open": "Open",
+      "quoted": "Quotes zalandiridwa",
+      "accepted": "Yavomerezedwa",
+      "completed": "Yatha",
+      "cancelled": "Cancelled"
+    },
+    "decline": {
+      "open": "Kanani quote",
+      "reasonLabel": "Chifukwa (optional)",
+      "reasonPlaceholder": "e.g. Price yayikulu, ndikufuna date yachangu…",
+      "submit": "Kanani",
+      "submitting": "Ikukana…",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "loadFailed": "Situnathe kuloda quotes. Yesaninso.",
+      "forbidden": "Mutha kufanizira quotes pa ntchito zanu zokha.",
+      "declineFailed": "Situnathe kukana quote. Yesaninso.",
+      "rateLimited": "Ma request ambiri. Dikirani pang'ono.",
+      "notMatched": "Provider uyu sanatched kwa ntchito."
+    }
+  },
+  "accept": {
+    "title": "Vomereza quote iyi",
+    "intro": "Lipirani deposit ya {pct}% tsopano kuti musunge {vendor}. Balance ikufunika ntchito ikatha.",
+    "quoteFrom": "Quote kuchokera kwa {vendor}",
+    "totalLabel": "Total value ya ntchito",
+    "depositLabel": "Deposit yofunika tsopano",
+    "balanceLabel": "Balance pa completion",
+    "escrowNote": "Deposit yanu yasungidwa ndi Vergeo5 ndipo imatulutsidwa kwa provider pokhapokha ntchito yatsimikizidwa.",
+    "confirmCta": "Lipirani deposit ya {amount}",
+    "submitting": "Ikukonza deposit yanu…",
+    "cancel": "Osati tsopano",
+    "errors": {
+      "notOwner": "Mutha kuvomereza quotes pa ntchito zanu zokha.",
+      "mismatch": "Quote iyoyo si ya ntchito iyi.",
+      "invalidStatus": "Ntchito kapena quote iyi singavomerezedwenso.",
+      "generic": "Situnathe kuyamba deposit. Yesaninso.",
+      "rateLimited": "Ma request ambiri. Dikirani pang'ono."
+    }
+  },
+  "completion": {
+    "provider": {
+      "title": "Markani ntchito yatha",
+      "intro": "Dziwitsani customer kuti ntchito yatha. Ali ndi maola 48 kutsimikiza before auto-confirm ndi kutulutsa payment yanu.",
+      "markCta": "Markani ntchito yatha",
+      "marking": "Ikumarka complete…",
+      "marked": "Yamarkidwa complete. Tikudikira customer atsimikize.",
+      "alreadyMarked": "Munamarka kale ntchito iyi yatha.",
+      "backToJobs": "Bwerani ku ntchito",
+      "errors": {
+        "notProvider": "Provider woyikidwa yekha angamarke ntchito iyi yatha.",
+        "notFound": "Ntchito iyi sinapezeke.",
+        "generic": "Situnathe kumarka ntchito yatha. Yesaninso.",
+        "rateLimited": "Ma request ambiri. Dikirani pang'ono."
+      }
+    },
+    "customer": {
+      "title": "Tsimikizani kuti ntchito yatha",
+      "intro": "Tsimikizani kuti mutulutse balance kwa provider wanu. Ngati simuchita kanthu, tidzatsimikiza automatic pambuyo pa maola 48.",
+      "balanceLabel": "Balance yofunika pa completion",
+      "confirmCta": "Tsimikizani ndi kulipira {amount}",
+      "confirming": "Ikutsimikiza…",
+      "confirmed": "Yatsimikizidwa. Provider wanu walipidwa.",
+      "awaitingProvider": "Tikudikira provider wanu amarke ntchito yatha.",
+      "escrowNote": "Munalipira → Yasungidwa ndi Vergeo5 → Yatulusidwa kwa provider mukatsimikiza.",
+      "reviewUnlocked": "Zikomo! Mutha kusiya review pa provider uyu.",
+      "errors": {
+        "notOwner": "Mutha kutsimikiza ntchito zanu zokha.",
+        "notMarked": "Provider wanu sanamarke ntchito yatha pano.",
+        "generic": "Situnathe kutsimikiza ntchito. Yesaninso.",
+        "rateLimited": "Ma request ambiri. Dikirani pang'ono."
+      }
+    }
+  },
+  "reviews": {
+    "heading": "Reviews za provider uyu",
+    "subheading": "Kuchokera kwa makasitomala omwe ntchito zao provider uyu anamaliza.",
+    "empty": "Palibe reviews pano.",
+    "reviewCount": "{count, plural, one {# review} other {# reviews}}",
+    "starsAria": "{rating} pa 5 stars",
+    "vendorReply": "Reply ya provider",
+    "form": {
+      "title": "Rate provider wanu",
+      "intro": "Ntchito yanu yatha — gawani mmene zinakhalira.",
+      "ratingLabel": "Rating yanu",
+      "ratingAria": "Sankhani rating kuchokera 1 mpaka 5 stars",
+      "bodyLabel": "Review yanu (optional)",
+      "bodyPlaceholder": "Gawani mmene ntchito inakhalira…",
+      "submit": "Tumizani review",
+      "submitting": "Ikutumiza…",
+      "submitted": "Zikomo! Review yanu yapublished.",
+      "edit": "Edit review yanu",
+      "yourReview": "Review yanu",
+      "loading": "Ikuloda…"
+    },
+    "errors": {
+      "generic": "Situnathe kutumiza review yanu. Yesaninso.",
+      "rateLimited": "Ma review request ambiri. Dikirani pang'ono.",
+      "loadFailed": "Situnathe kuloda review status."
+    }
+  },
+  "booking": {
+    "title": "Bookani service iyi",
+    "intro": "Lipirani deposit ya {pct}% tsopano; balance ikufunika ntchito ikatha.",
+    "priceLabel": "Fixed price",
+    "depositLabel": "Deposit yofunika tsopano",
+    "balanceLabel": "Balance pa completion",
+    "escrowNote": "Mulipira → Yasungidwa ndi Vergeo5 → Yatulusidwa kwa provider mukatsimikiza kuti ntchito yatha.",
+    "bookCta": "Bookani ndi kulipira deposit ya {amount}",
+    "submitting": "Ikubooka…",
+    "errors": {
+      "authRequired": "Chonde lowani kuti mubooke service iyi.",
+      "notBookable": "Service iyi silipo pa direct booking panopa.",
+      "ownService": "Simungabooke service yanu.",
+      "rateLimited": "Ma request ambiri. Dikirani pang'ono.",
+      "generic": "Situnathe kuyamba booking yanu. Yesaninso."
+    }
+  }
+}
