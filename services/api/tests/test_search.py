@@ -95,7 +95,7 @@ def _matches_entity_scope(row: dict[str, Any], filters: dict[str, Any]) -> bool:
         return row["entity_kind"] in entity_kinds
     entity_kind = filters.get("entity_kind")
     if entity_kind is not None:
-        return row["entity_kind"] == entity_kind
+        return bool(row["entity_kind"] == entity_kind)
     return True
 
 

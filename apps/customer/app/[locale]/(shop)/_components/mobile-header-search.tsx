@@ -1,7 +1,7 @@
 "use client";
 
-import { IconSearch } from "@vergeo/ui/src/icons";
 import { BottomSheet } from "@vergeo/ui/src/bottom-sheet";
+import { IconSearch } from "@vergeo/ui/src/icons";
 import { useState } from "react";
 
 import { SearchInput, type SearchInputLabels } from "./search/search-input";
