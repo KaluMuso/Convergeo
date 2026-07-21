@@ -97,6 +97,7 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
     elif template_id == "event_schedule_changed":
         payload["event_title"] = "Jazz Night"
         payload["event_date"] = "20 Aug 2026, 18:00 UTC"
+        payload["venue"] = "Lusaka Showgrounds"
     return payload
 
 

@@ -86,8 +86,12 @@ def _event_cancelled(p: Mapping[str, Any]) -> str:
 
 def _event_schedule_changed(p: Mapping[str, Any]) -> str:
     title = _text(p, "event_title", "your event")
-    event_date = _text(p, "event_date", "a new date")
-    return f'Vergeo5: "{title}" rescheduled to {event_date}. Check the app for details.'
+    event_date = _text(p, "event_date", "see the app")
+    venue = _text(p, "venue", "see the app")
+    return (
+        f'Vergeo5: "{title}" details updated. Date: {event_date}. Venue: {venue}. '
+        "Check the app for details."
+    )
 
 
 SMS_TEMPLATES: dict[str, Callable[[Mapping[str, Any]], str]] = {

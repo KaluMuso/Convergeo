@@ -203,9 +203,12 @@ def _map_event_cancelled(payload: Mapping[str, Any]) -> tuple[str, ...]:
 
 
 def _map_event_schedule_changed(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    venue = payload.get("venue")
+    venue_str = venue.strip() if isinstance(venue, str) and venue.strip() else "See the app"
     return (
         _require_str(payload, "event_title"),
         _require_str(payload, "event_date"),
+        venue_str,
     )
 
 

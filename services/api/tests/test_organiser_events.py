@@ -535,6 +535,7 @@ def test_post_sale_date_change_enqueues_notification(
     assert outbox["payload"]["recipient_id"] == HOLDER_ID
     assert outbox["payload"]["event_title"]
     assert outbox["payload"]["event_date"]
+    assert outbox["payload"]["venue"]
     assert "todo" not in outbox["payload"]
 
 
@@ -552,6 +553,8 @@ def test_post_sale_venue_change_enqueues_notification(
     )
     assert response.status_code == 200
     assert len(fake_client.tables["notification_outbox"].rows) == 1
+    outbox = fake_client.tables["notification_outbox"].rows[0]
+    assert outbox["payload"]["venue"] == "Moved Venue"
 
 
 def test_capacity_below_sold_rejected(
