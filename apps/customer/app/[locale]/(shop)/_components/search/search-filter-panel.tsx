@@ -32,6 +32,8 @@ type SearchFilterPanelProps = {
   categoryCounts?: Record<string, number>;
   className?: string;
   onApplied?: () => void;
+  /** Hide price inputs for non-commerce tabs (services/events). */
+  showPriceFilters?: boolean;
 };
 
 function mergeSearchParams(current: URLSearchParams, filters: SearchFilterState): URLSearchParams {
@@ -56,6 +58,7 @@ export function SearchFilterPanel({
   categoryCounts = {},
   className,
   onApplied,
+  showPriceFilters = true,
 }: SearchFilterPanelProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -88,33 +91,35 @@ export function SearchFilterPanel({
     >
       <h2 className="text-[var(--fs-h3)] font-semibold text-[var(--text)]">{labels.heading}</h2>
 
-      <fieldset className="flex flex-col gap-2 border-0 p-0">
-        <legend className="mb-1 text-sm font-medium text-[var(--text)]">{labels.price}</legend>
-        <div className="grid grid-cols-2 gap-2">
-          <Input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            placeholder={labels.minPrice}
-            value={state.minPrice ?? ""}
-            onChange={(event) =>
-              setState((current) => ({ ...current, minPrice: event.target.value || undefined }))
-            }
-            aria-label={labels.minPrice}
-          />
-          <Input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            placeholder={labels.maxPrice}
-            value={state.maxPrice ?? ""}
-            onChange={(event) =>
-              setState((current) => ({ ...current, maxPrice: event.target.value || undefined }))
-            }
-            aria-label={labels.maxPrice}
-          />
-        </div>
-      </fieldset>
+      {showPriceFilters ? (
+        <fieldset className="flex flex-col gap-2 border-0 p-0">
+          <legend className="mb-1 text-sm font-medium text-[var(--text)]">{labels.price}</legend>
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              placeholder={labels.minPrice}
+              value={state.minPrice ?? ""}
+              onChange={(event) =>
+                setState((current) => ({ ...current, minPrice: event.target.value || undefined }))
+              }
+              aria-label={labels.minPrice}
+            />
+            <Input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              placeholder={labels.maxPrice}
+              value={state.maxPrice ?? ""}
+              onChange={(event) =>
+                setState((current) => ({ ...current, maxPrice: event.target.value || undefined }))
+              }
+              aria-label={labels.maxPrice}
+            />
+          </div>
+        </fieldset>
+      ) : null}
 
       <fieldset className="flex flex-col gap-2 border-0 p-0">
         <legend className="mb-1 text-sm font-medium text-[var(--text)]">{labels.category}</legend>

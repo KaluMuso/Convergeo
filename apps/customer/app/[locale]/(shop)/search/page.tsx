@@ -194,7 +194,12 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     }
   }
   const filterState = decodeSearchFilters(filterParams);
-  const showProductFilters = activeKind === "all" || activeKind === "products";
+  const showCategoryFilters =
+    activeKind === "all" ||
+    activeKind === "products" ||
+    activeKind === "services" ||
+    activeKind === "events";
+  const showPriceFilters = activeKind === "all" || activeKind === "products";
 
   const categoriesResult = await fetchCategoriesResult();
   const searchCategoryOptions =
@@ -210,7 +215,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
             q: query,
             kind: activeKind === "all" ? undefined : activeKind,
             page,
-            filters: showProductFilters ? filterState : undefined,
+            filters: showCategoryFilters ? filterState : undefined,
           }),
           fetchTabCounts(query),
         ])
@@ -430,7 +435,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
 
       {view.status === "results" ? (
         <Suspense fallback={null}>
-          {showProductFilters ? (
+          {showCategoryFilters ? (
             <div className="grid gap-3 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-4 xl:grid-cols-[15rem_minmax(0,1fr)]">
               <div className="hidden lg:block">
                 <SearchFilterPanel
@@ -438,6 +443,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                   categories={searchCategoryOptions}
                   initialState={filterState}
                   categoryCounts={categoryCounts}
+                  showPriceFilters={showPriceFilters}
                 />
               </div>
               <div className="flex min-w-0 flex-col gap-3">
@@ -446,6 +452,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                   categories={searchCategoryOptions}
                   initialState={filterState}
                   categoryCounts={categoryCounts}
+                  showPriceFilters={showPriceFilters}
                 />
                 <SearchAppliedFilterBar
                   pathname={searchPathname}
