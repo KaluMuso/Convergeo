@@ -2,6 +2,7 @@
 
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
+import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { PriceBlock } from "@vergeo/ui/src/price-block";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -59,6 +60,8 @@ export type BuyBoxProps = {
   purchase?: ListingPurchaseControls;
   buyBoxRef?: Ref<HTMLElement | null>;
   seller?: BuyBoxSellerSummary | null;
+  /** Required when `seller.preferred` is true. */
+  preferredBadgeLabel?: string;
   /** Honest multi-seller price framing (lowest / delta). */
   priceContextLabel?: string | null;
   compareHref?: string | null;
@@ -114,6 +117,7 @@ export function BuyBox({
   purchase,
   buyBoxRef,
   seller,
+  preferredBadgeLabel,
   priceContextLabel,
   compareHref,
   compareLabel,
@@ -218,8 +222,13 @@ export function BuyBox({
       </div>
 
       {seller ? (
-        <div data-testid="pdp-buy-box-seller" className="flex flex-col gap-0.5">
-          <p className="text-sm font-medium text-text">{seller.displayName}</p>
+        <div data-testid="pdp-buy-box-seller" className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-medium text-text">{seller.displayName}</p>
+            {seller.preferred && preferredBadgeLabel ? (
+              <CornerRibbon trust="preferred" trustLabel={preferredBadgeLabel} />
+            ) : null}
+          </div>
           {seller.ratingLabel ? <p className="text-xs text-text-2">{seller.ratingLabel}</p> : null}
         </div>
       ) : null}
