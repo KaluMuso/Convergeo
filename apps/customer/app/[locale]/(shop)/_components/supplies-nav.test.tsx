@@ -11,6 +11,22 @@ vi.mock("./use-business-eligibility", () => ({
   useBusinessEligibility: () => eligible(),
 }));
 
+vi.mock("./category-mega-menu", () => ({
+  CategoryMegaMenu: ({ labels }: { labels: { trigger: string } }) => (
+    <button type="button">{labels.trigger}</button>
+  ),
+}));
+
+vi.mock("./desktop-header-search", () => ({
+  DesktopHeaderSearch: () => <div role="search">Search</div>,
+}));
+
+vi.mock("./cart/mini-cart-drawer", () => ({
+  useCartStore: () => ({ cart: null }),
+  useCartActions: () => ({ refresh: vi.fn() }),
+  getCartItemCount: () => 0,
+}));
+
 vi.mock("next/navigation", () => ({
   usePathname: () => "/en/search",
 }));
@@ -21,7 +37,7 @@ afterEach(() => {
 });
 
 import { BottomNavClient } from "./bottom-nav-client";
-import { SuppliesNavLink } from "./supplies-nav-link";
+import { ShopHeader } from "./shop-header";
 
 const baseItems = [
   { key: "home", icon: <span>H</span>, label: "Home", href: "/en" },
@@ -35,24 +51,49 @@ const suppliesItem = {
   href: "/en/supplies",
 };
 
-describe("SuppliesNavLink (desktop)", () => {
+const headerLabels = {
+  appName: "Vergeo5",
+  skipToContent: "Skip to content",
+  navAriaLabel: "Shop navigation",
+  desktopAriaLabel: "Primary navigation",
+  searchPlaceholder: "Search",
+  searchSubmit: "Search",
+  allCategories: "All Categories",
+  categoriesPanelAria: "Categories",
+  categoriesLoading: "Loading",
+  categoriesEmpty: "Empty",
+  viewAllCategories: "View all",
+  featuredTitle: "Featured",
+  featuredPromo: "Promo",
+  featuredPromoCta: "CTA",
+  directory: "Directory",
+  services: "Services",
+  events: "Events",
+  askVergeo: "Ask Vergeo",
+  supplies: "Supplies",
+  account: "Account",
+  cart: "Cart",
+  cartWithCount: "Cart, {count} items",
+  searchInput: {
+    placeholder: "Search",
+    submit: "Search",
+    ariaLabel: "Search",
+    suggestionsLabel: "Suggestions",
+    noSuggestions: "None",
+    recentTitle: "Recent",
+  },
+};
+
+describe("ShopHeader supplies gating (desktop)", () => {
   it("renders the wholesale link for verified business buyers", () => {
     eligible.mockReturnValue(true);
-    render(
-      <ul>
-        <SuppliesNavLink locale="en" label="Supplies" />
-      </ul>,
-    );
+    render(<ShopHeader locale="en" labels={headerLabels} />);
     expect(screen.getByRole("link", { name: "Supplies" })).toHaveAttribute("href", "/en/supplies");
   });
 
   it("renders nothing for guests / non-eligible viewers", () => {
     eligible.mockReturnValue(false);
-    render(
-      <ul>
-        <SuppliesNavLink locale="en" label="Supplies" />
-      </ul>,
-    );
+    render(<ShopHeader locale="en" labels={headerLabels} />);
     expect(screen.queryByRole("link", { name: "Supplies" })).not.toBeInTheDocument();
   });
 });
@@ -72,7 +113,6 @@ describe("BottomNavClient supplies gating (mobile)", () => {
       <BottomNavClient items={baseItems} ariaLabel="nav" locale="en" suppliesItem={suppliesItem} />,
     );
     expect(screen.queryByRole("link", { name: /Supplies/ })).not.toBeInTheDocument();
-    // Base tabs still render.
     expect(screen.getByRole("link", { name: /Browse/ })).toBeInTheDocument();
   });
 });

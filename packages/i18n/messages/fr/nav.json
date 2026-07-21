@@ -1,0 +1,34 @@
+{
+  "shop": {
+    "ariaLabel": "Navigation boutique",
+    "desktopAriaLabel": "Navigation principale",
+    "bottomAriaLabel": "Navigation boutique principale",
+    "home": "Accueil",
+    "browse": "Parcourir",
+    "ask": "Demander",
+    "orders": "Commandes",
+    "account": "Compte",
+    "cart": "Panier",
+    "cartWithCount": "Panier, {count} articles",
+    "searchPlaceholder": "Rechercher produits, services, événements…",
+    "searchSubmit": "Rechercher",
+    "allCategories": "Toutes les catégories",
+    "categoriesPanelAria": "Toutes les catégories",
+    "categoriesLoading": "Chargement des catégories…",
+    "categoriesEmpty": "Les catégories ne sont pas disponibles pour le moment. Réessayez bientôt.",
+    "viewAllCategories": "Voir toutes les catégories",
+    "featuredTitle": "Nouveau sur Vergeo5",
+    "featuredPromo": "Comparez les vendeurs et payez avec séquestre lors du paiement en ligne.",
+    "featuredPromoCta": "Rechercher sur la marketplace",
+    "directory": "Annuaire",
+    "services": "Services",
+    "events": "Événements",
+    "askVergeo": "Demander à Vergeo",
+    "supplies": "Fournitures",
+    "browseChipsAria": "Parcourir par zone"
+  },
+  "auth": {
+    "backToShop": "Retour à la boutique",
+    "help": "Aide"
+  }
+}
