@@ -9,6 +9,7 @@ exports[`HomeHeroBand > matches the approved merch-first hero structure snapshot
   <div
     aria-hidden="true"
     class="pointer-events-none absolute inset-0 opacity-90"
+    data-testid="home-hero-visual"
     style="background: radial-gradient(120% 80% at 85% 20%, color-mix(in srgb, var(--primary) 35%, transparent) 0%, transparent 55%), linear-gradient(135deg, var(--panel) 0%, color-mix(in srgb, var(--primary-deep) 55%, var(--panel)) 100%);"
   />
   <div
@@ -20,7 +21,7 @@ exports[`HomeHeroBand > matches the approved merch-first hero structure snapshot
     class="pointer-events-none absolute bottom-0 left-[8%] h-40 w-40 rounded-full bg-accent/15 blur-xl motion-reduce:blur-none"
   />
   <div
-    class="relative mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-10 sm:px-6 lg:flex-row lg:items-end lg:justify-between lg:gap-10 lg:px-6 lg:py-14"
+    class="relative mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-12 sm:px-6 lg:px-6 lg:py-16"
   >
     <div
       class="flex max-w-2xl flex-col gap-3 lg:gap-4"
@@ -57,32 +58,6 @@ exports[`HomeHeroBand > matches the approved merch-first hero structure snapshot
         >
           Learn about selling
         </a>
-      </div>
-    </div>
-    <div
-      aria-hidden="true"
-      class="relative mt-2 aspect-[16/10] w-full max-w-md overflow-hidden rounded-lg border border-panel-muted/20 bg-surface/10 shadow-2 lg:mt-0 lg:max-w-sm"
-      data-testid="home-hero-visual"
-    >
-      <div
-        class="absolute inset-0"
-        style="background: linear-gradient(160deg, color-mix(in srgb, var(--surface) 18%, transparent) 0%, transparent 45%), radial-gradient(circle at 30% 70%, color-mix(in srgb, var(--accent) 40%, transparent), transparent 50%);"
-      />
-      <div
-        class="absolute inset-x-6 bottom-6 top-8 grid grid-cols-3 gap-2 opacity-80"
-      >
-        <span
-          class="rounded bg-surface/25"
-        />
-        <span
-          class="col-span-2 rounded bg-surface/15"
-        />
-        <span
-          class="col-span-2 rounded bg-surface/20"
-        />
-        <span
-          class="rounded bg-surface/30"
-        />
       </div>
     </div>
   </div>
