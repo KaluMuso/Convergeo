@@ -44,7 +44,7 @@ as $$
         or not exists (
           select 1
           from public.vendor_listings vl
-          where vl.id::text = sd.entity_id
+          where vl.id = sd.entity_id
             and vl.wholesale = true
         )
       )
@@ -55,7 +55,7 @@ as $$
           select 1
           from public.vendor_listings vl
           join public.listing_images li on li.listing_id = vl.id
-          where vl.id::text = sd.entity_id
+          where vl.id = sd.entity_id
             and (
               lower(li.cloudinary_public_id) = 'demo'
               or lower(li.cloudinary_public_id) like 'demo/%'
