@@ -7,6 +7,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
+import { BackToTop } from "../_components/back-to-top";
 import { FilterBar } from "../_components/directory/filter-bar";
 import { VendorCardGrid } from "../_components/directory/vendor-card-grid";
 
@@ -124,6 +125,12 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
 
   setRequestLocale(locale);
   const t = await getDirectoryTranslator(locale);
+  const catalogMessages = await loadNamespace(locale as Locale, "catalog");
+  const tCatalog = createTranslator({
+    locale,
+    messages: { catalog: catalogMessages },
+    namespace: "catalog",
+  }) as DirectoryTranslator;
 
   const q = readParam(resolvedSearchParams, "q");
   const category = readParam(resolvedSearchParams, "category");
@@ -210,36 +217,39 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
           data-testid="directory-empty"
         />
       ) : (
-        <VendorCardGrid
-          locale={locale}
-          vendors={vendors.map((vendor) => ({
-            id: vendor.id,
-            slug: vendor.slug,
-            displayName: vendor.display_name,
-            description: vendor.description,
-            logoUrl: vendor.logo_url,
-            preferredBadge: vendor.preferred_badge,
-            verified: vendor.verified,
-            landmark: vendor.landmark,
-            categories: vendor.categories,
-            ratingAvg: vendor.rating_avg,
-            ratingCount: vendor.rating_count,
-            listingCount: vendor.listing_count,
-            createdAt: vendor.created_at,
-          }))}
-          labels={{
-            listings: t("card.listings"),
-            reviews: t("card.reviews"),
-            rating: t("card.rating"),
-            noReviews: t("card.noReviews"),
-            verifiedSince: t("card.verifiedSince"),
-            preferredBadge: t("card.preferredBadge"),
-            verifiedBadge: t("card.verifiedBadge"),
-            viewProfile: t("index.viewProfile"),
-            categoryLabels,
-            defaultLocation: t("card.defaultLocation"),
-          }}
-        />
+        <>
+          <VendorCardGrid
+            locale={locale}
+            vendors={vendors.map((vendor) => ({
+              id: vendor.id,
+              slug: vendor.slug,
+              displayName: vendor.display_name,
+              description: vendor.description,
+              logoUrl: vendor.logo_url,
+              preferredBadge: vendor.preferred_badge,
+              verified: vendor.verified,
+              landmark: vendor.landmark,
+              categories: vendor.categories,
+              ratingAvg: vendor.rating_avg,
+              ratingCount: vendor.rating_count,
+              listingCount: vendor.listing_count,
+              createdAt: vendor.created_at,
+            }))}
+            labels={{
+              listings: t("card.listings"),
+              reviews: t("card.reviews"),
+              rating: t("card.rating"),
+              noReviews: t("card.noReviews"),
+              verifiedSince: t("card.verifiedSince"),
+              preferredBadge: t("card.preferredBadge"),
+              verifiedBadge: t("card.verifiedBadge"),
+              viewProfile: t("index.viewProfile"),
+              categoryLabels,
+              defaultLocation: t("card.defaultLocation"),
+            }}
+          />
+          <BackToTop label={tCatalog("plp.backToTop")} />
+        </>
       )}
     </div>
   );
