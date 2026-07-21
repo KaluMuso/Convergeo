@@ -211,9 +211,12 @@ async def embed_texts_with_fallback(texts: list[str]) -> tuple[list[list[float]]
     settings = embedding_settings()
     prompt_tokens = 0
 
+    if settings.api_key is None:
+        # Do not attempt primary/fallback — both need the same key, and the
+        # generic wrap message would hide the ops fix (set OPENROUTER_API_KEY).
+        raise RuntimeError("OPENROUTER_API_KEY is not configured")
+
     try:
-        if settings.api_key is None:
-            raise RuntimeError("OPENROUTER_API_KEY is not configured")
         vectors, prompt_tokens = await _embed_with_model(
             texts,
             url=settings.openrouter_url,
