@@ -263,10 +263,10 @@ export function pickHeroVisualPublicId(listings: CatalogListing[]): string | nul
  * Merch-first default hero (audit §4.1): rotating carousel with curated imagery,
  * brand + headline + CTAs on slide 1. Escrow ladder lives in HomeTrustStrip.
  */
-export function HomeHeroBand({ locale, t, brandName }: HomeHeroBandProps) {
+export function HomeHeroBand({ locale, brandName }: HomeHeroBandProps) {
   return (
     <div data-testid="home-hero-band">
-      <HomeHeroCarousel locale={locale} t={t} brandName={brandName} />
+      <HomeHeroCarousel locale={locale} brandName={brandName} />
     </div>
   );
 }

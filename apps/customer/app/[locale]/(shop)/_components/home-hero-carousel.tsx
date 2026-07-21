@@ -4,21 +4,19 @@ import { LinkButton } from "@vergeo/ui/src/link-button";
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { HeroCarousel } from "@vergeo/ui/src/merch/hero-carousel";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 
 import { HOME_HERO_FALLBACK_SLIDES } from "./home-hero-slides";
 
-type CatalogTranslator = {
-  (key: string, values?: Record<string, string | number>): string;
-};
-
 type HomeHeroCarouselProps = {
   locale: string;
-  t: CatalogTranslator;
   brandName: string;
 };
 
-export function HomeHeroCarousel({ locale, t, brandName }: HomeHeroCarouselProps) {
+export function HomeHeroCarousel({ locale, brandName }: HomeHeroCarouselProps) {
+  const t = useTranslations("catalog");
+
   const slides = useMemo(() => {
     return HOME_HERO_FALLBACK_SLIDES.map((def, index) => {
       const isPrimary = def.primary === true;
