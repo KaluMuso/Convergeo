@@ -30,7 +30,8 @@
     "moreLoaded": "{count} amaresults yambi yaleetwa.",
     "endOfResults": "Mwafika ku nshila ya amaresults.",
     "loadError": "Tatwaishibe ukuleta amaresults yambi.",
-    "retry": "Wesheni limbi"
+    "retry": "Wesheni limbi",
+    "backToTop": "Bwelele pamo"
   },
   "placeholder": "Fweni pa Vergeo5",
   "recent": {

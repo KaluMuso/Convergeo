@@ -178,7 +178,10 @@ describe("ResultsTabs tab counts", () => {
     );
     expect(screen.getByTestId("search-result-row")).toHaveClass("p-2.5");
     // Search → PDP must use the public slug, never the entity UUID.
-    expect(screen.getByTestId("search-product-card")).toHaveAttribute("href", "/en/p/itel-a70");
+    expect(screen.getByTestId("search-product-card-link")).toHaveAttribute(
+      "href",
+      "/en/p/itel-a70",
+    );
     expect(screen.getByRole("heading", { name: "Itel A70 Smartphone" })).toBeInTheDocument();
     // Wholesale supplies are a B2B-gated surface (own /supplies page), not a
     // global-search tab — it must not render here.
