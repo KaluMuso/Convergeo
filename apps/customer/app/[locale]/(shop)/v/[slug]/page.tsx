@@ -1,6 +1,6 @@
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import {
   buildCanonicalAlternates,
   buildLocaleCanonical,
@@ -193,7 +193,7 @@ function VendorServicesGrid({
         >
           <div className="aspect-[4/3] w-full bg-bg-2">
             {service.image_public_id ? (
-              <CloudinaryImage
+              <CloudinaryImageStatic
                 publicId={service.image_public_id}
                 alt={service.title}
                 width={360}
@@ -233,7 +233,7 @@ function VendorEventsGrid({
         >
           <div className="aspect-[4/3] w-full bg-bg-2">
             {event.image_public_id ? (
-              <CloudinaryImage
+              <CloudinaryImageStatic
                 publicId={event.image_public_id}
                 alt={event.title}
                 width={360}

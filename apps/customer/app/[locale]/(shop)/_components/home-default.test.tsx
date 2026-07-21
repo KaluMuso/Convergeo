@@ -14,6 +14,7 @@ import {
   HomeSellCta,
   HomeServicesRail,
   HomeVendorsRail,
+  pickHeroVisualPublicId,
   pickRailDepartments,
   type HomeDefaultData,
 } from "./home-default";
@@ -21,8 +22,10 @@ import {
 import type { CategoryRow } from "./merch-data";
 import type { CatalogListing } from "./plp/listing-grid";
 
-vi.mock("@vergeo/ui/src/media/cloudinary-image", () => ({
-  CloudinaryImage: ({ alt }: { alt: string }) => <img alt={alt} data-testid="cloudinary-image" />,
+vi.mock("@vergeo/ui/src/media/cloudinary-image-static", () => ({
+  CloudinaryImageStatic: ({ alt }: { alt: string }) => (
+    <img alt={alt} data-testid="cloudinary-image" />
+  ),
 }));
 
 afterEach(() => {
@@ -161,6 +164,19 @@ describe("HomeProductRail", () => {
   });
 });
 
+describe("pickHeroVisualPublicId", () => {
+  it("returns the first listing public id and skips empty ids", () => {
+    expect(pickHeroVisualPublicId([])).toBeNull();
+    expect(
+      pickHeroVisualPublicId([
+        makeListing({ imagePublicId: null }),
+        makeListing({ id: "2", imagePublicId: "  " }),
+        makeListing({ id: "3", imagePublicId: "demo/categories/phones" }),
+      ]),
+    ).toBe("demo/categories/phones");
+  });
+});
+
 describe("HomeHeroBand", () => {
   it("renders brand-first merch hero with CTAs and no escrow pill row", () => {
     render(<HomeHeroBand locale="en" t={t} brandName="Vergeo5" />);
@@ -169,6 +185,7 @@ describe("HomeHeroBand", () => {
       /Shop products, services, and events/i,
     );
     expect(screen.getByTestId("home-hero-visual")).toBeInTheDocument();
+    expect(screen.queryByTestId("cloudinary-image")).not.toBeInTheDocument();
     expect(screen.queryByText("You pay")).not.toBeInTheDocument();
     expect(screen.queryByText("Held by Vergeo5")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Start browsing" })).toHaveAttribute(
@@ -184,6 +201,19 @@ describe("HomeHeroBand", () => {
   it("matches the approved merch-first hero structure snapshot", () => {
     const { container } = render(<HomeHeroBand locale="en" t={t} brandName="Vergeo5" />);
     expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it("uses a full-bleed catalogue image when a public id is provided", () => {
+    render(
+      <HomeHeroBand
+        locale="en"
+        t={t}
+        brandName="Vergeo5"
+        visualPublicId="demo/categories/phones"
+      />,
+    );
+    expect(screen.getByTestId("cloudinary-image")).toBeInTheDocument();
+    expect(screen.getByTestId("home-hero-brand")).toHaveTextContent("Vergeo5");
   });
 });
 

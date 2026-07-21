@@ -1,6 +1,6 @@
 import { formatK } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import Link from "next/link";
 
 export type ServiceBrowseItem = {
@@ -56,7 +56,7 @@ export function ServiceGrid({ items, locale, labels }: ServiceGridProps) {
               className="tap flex h-full flex-col overflow-hidden rounded-lg border border-border bg-surface transition-shadow duration-fast ease-std hover:shadow-2"
             >
               {hero ? (
-                <CloudinaryImage
+                <CloudinaryImageStatic
                   publicId={hero}
                   alt={item.title}
                   width={480}

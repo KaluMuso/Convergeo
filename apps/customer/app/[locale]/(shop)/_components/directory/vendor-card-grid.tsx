@@ -1,4 +1,4 @@
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { VendorCard } from "@vergeo/ui/src/vendor-card";
 import Link from "next/link";
 
@@ -59,7 +59,7 @@ function isCloudinaryPublicId(value: string): boolean {
 function VendorLogo({ logoUrl }: { logoUrl: string }) {
   if (isCloudinaryPublicId(logoUrl)) {
     return (
-      <CloudinaryImage
+      <CloudinaryImageStatic
         publicId={logoUrl}
         alt=""
         width={112}

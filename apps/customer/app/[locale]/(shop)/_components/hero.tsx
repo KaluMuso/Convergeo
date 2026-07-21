@@ -1,4 +1,4 @@
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { resolveHeroVariant } from "@vergeo/ui/src/merch/hero-registry";
 import Link from "next/link";
 import { preload } from "react-dom";
@@ -88,7 +88,13 @@ function buildHeroMedia(
   }
 
   return (
-    <CloudinaryImage publicId={publicId} alt={alt} width={720} ratio="16/9" priority={priority} />
+    <CloudinaryImageStatic
+      publicId={publicId}
+      alt={alt}
+      width={720}
+      ratio="16/9"
+      priority={priority}
+    />
   );
 }
 

@@ -1,10 +1,9 @@
 "use client";
 
 import { Badge } from "@vergeo/ui/src/badge";
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { isDemoListingPublicId, shouldShowSampleListingBadge } from "../demo-listing";
 
@@ -44,7 +43,8 @@ type ListingCardProps = {
   locale: string;
   listing: CatalogListing;
   labels: ListingCardLabels;
-  priority?: boolean;
+  /** Prefetched by RSC `ListingGrid` via `CloudinaryImageStatic` (no client image island). */
+  media?: ReactNode;
   showSampleBadge?: boolean;
   density?: "default" | "compact";
 };
@@ -63,7 +63,7 @@ export function ListingCard({
   locale,
   listing,
   labels,
-  priority = false,
+  media,
   showSampleBadge = shouldShowSampleListingBadge(),
   density = "default",
 }: ListingCardProps) {
@@ -135,19 +135,7 @@ export function ListingCard({
         isWishlisted={isWishlisted}
         onWishlistToggle={enabled ? toggleWishlist : undefined}
         onQuickAdd={listing.inStock ? onQuickAdd : undefined}
-        media={
-          listing.imagePublicId ? (
-            <CloudinaryImage
-              publicId={listing.imagePublicId}
-              alt={listing.title}
-              width={360}
-              ratio="4/3"
-              priority={priority}
-              sizes="(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw"
-              className="h-full w-full object-cover"
-            />
-          ) : undefined
-        }
+        media={media}
       />
       {quickAddAnnouncement ? (
         <p className="sr-only" aria-live="polite" data-testid="listing-card-quick-add-status">

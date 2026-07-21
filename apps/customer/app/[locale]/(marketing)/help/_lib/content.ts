@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { isHelpCategory, type HelpCategory, type HelpSearchDoc } from "./search";
 
@@ -15,9 +16,9 @@ export type HelpArticle = {
   body: string;
 };
 
-// Resolved relative to the app root (process cwd) — apps/customer — which holds at both
-// `next build` (static generation) and vitest run time.
-const CONTENT_DIR = join(process.cwd(), "content", "help");
+// Resolve from this module (not process.cwd) so SSG workers and vitest both find
+// apps/customer/content/help regardless of launch directory.
+const CONTENT_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../../../../content/help");
 
 /**
  * Parse a tiny YAML-ish frontmatter block delimited by `---`.

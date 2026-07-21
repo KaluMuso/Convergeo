@@ -24,6 +24,7 @@ import {
   HomeServicesRail,
   HomeVendorsRail,
   loadHomeDefaultData,
+  pickHeroVisualPublicId,
 } from "./_components/home-default";
 import { planHomeLayout } from "./_components/home-layout";
 import { HomeRecentlyViewedRail } from "./_components/home-recently-viewed-rail";
@@ -188,7 +189,12 @@ export default async function ShopHomePage({ params }: PageProps) {
       ) : (
         // Merch-first default hero even when rails are empty — brand must still
         // lead the first viewport (audit §4.1). Campaign heroes stay opt-in.
-        <HomeHeroBand locale={locale} t={t} brandName={brandName} />
+        <HomeHeroBand
+          locale={locale}
+          t={t}
+          brandName={brandName}
+          visualPublicId={pickHeroVisualPublicId(defaultData.newest)}
+        />
       )}
 
       <HomeTrustStrip labels={trustLabels} />

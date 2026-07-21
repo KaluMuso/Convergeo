@@ -1,5 +1,5 @@
 import { EventCard } from "@vergeo/ui/src/event-card";
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import Link from "next/link";
 
 import type { MerchSlotRow } from "./merch-data";
@@ -102,7 +102,7 @@ export function EventsRow({ slot, locale, t }: EventsRowProps) {
                 ctaLabel={t("home.events.cta")}
                 media={
                   item.imagePublicId ? (
-                    <CloudinaryImage
+                    <CloudinaryImageStatic
                       publicId={item.imagePublicId}
                       alt={item.title}
                       width={720}

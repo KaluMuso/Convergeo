@@ -1,4 +1,4 @@
-import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
+import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { ProductCard } from "@vergeo/ui/src/product-card";
 import Link from "next/link";
 
@@ -48,7 +48,7 @@ function RelatedMedia({
     );
   }
   return (
-    <CloudinaryImage
+    <CloudinaryImageStatic
       publicId={publicId}
       alt={alt}
       width={360}
