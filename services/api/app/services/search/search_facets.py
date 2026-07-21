@@ -65,8 +65,8 @@ def _product_hits[T: FacetHit](hits: list[T]) -> list[T]:
     return [hit for hit in hits if hit.entity_kind in _PRODUCT_ENTITY_KINDS]
 
 
-def compute_search_facets(
-    hits: list[FacetHit],
+def compute_search_facets[T: FacetHit](
+    hits: list[T],
     *,
     category_path: str | None = None,
     price_min_ngwee: int | None = None,
