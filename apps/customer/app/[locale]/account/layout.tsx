@@ -52,7 +52,6 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
   const t = createTranslator({ locale, messages, namespace: "account" });
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
   const tNav = createTranslator({ locale, messages, namespace: "nav" });
-  const tCatalog = createTranslator({ locale, messages, namespace: "catalog" });
 
   const localeSwitcherLabels = {
     ariaLabel: tCommon("locale.switchAria"),
@@ -68,31 +67,31 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
     {
       key: "home",
       icon: <IconHome />,
-      label: tCatalog("home.nav.home"),
+      label: tNav("shop.home"),
       href: `/${locale}`,
     },
     {
       key: "browse",
       icon: <IconSearch />,
-      label: tCatalog("home.nav.browse"),
+      label: tNav("shop.browse"),
       href: `/${locale}/search`,
     },
     {
       key: "ask",
       icon: <IconAsk />,
-      label: tCatalog("home.nav.ask"),
+      label: tNav("shop.ask"),
       href: `/${locale}/ask`,
     },
     {
       key: "orders",
       icon: <IconOrders />,
-      label: tCatalog("home.nav.orders"),
+      label: tNav("shop.orders"),
       href: `/${locale}/account/orders`,
     },
     {
       key: "account",
       icon: <IconAccount />,
-      label: tCatalog("home.nav.account"),
+      label: tNav("shop.account"),
       href: `/${locale}/account`,
     },
   ];
@@ -110,9 +109,9 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
         labels={{
           appName: tCommon("app.name"),
           navAriaLabel: tNav("account.ariaLabel"),
-          searchPlaceholder: tCatalog("home.nav.searchPlaceholder"),
-          cart: tCatalog("home.nav.cart"),
-          cartWithCount: tCatalog("home.nav.cartWithCount"),
+          searchPlaceholder: tNav("shop.searchPlaceholder"),
+          cart: tNav("shop.cart"),
+          cartWithCount: tNav("shop.cartWithCount"),
           accountMenuAria: tNav("account.menuAria"),
           accountOverview: t("nav.overview"),
           accountOrders: t("nav.orders"),
@@ -158,7 +157,7 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
       {ACCOUNT_BOTTOM_NAV_ENABLED ? (
         <BottomNavClient
           items={bottomItems}
-          ariaLabel={tCatalog("home.nav.bottomAriaLabel")}
+          ariaLabel={tNav("shop.bottomAriaLabel")}
           locale={locale}
         />
       ) : null}
