@@ -1,4 +1,5 @@
 import { LOCALES, loadMessages, type Locale } from "@vergeo/i18n";
+import { fontVariables } from "@vergeo/ui/fonts";
 import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import { ThemeScript } from "@vergeo/ui/src/theme-script";
 import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
@@ -80,12 +81,12 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   });
 
   return (
-    <html lang={locale}>
+    <html lang={locale} className={fontVariables()}>
       <head>
         {/* Pre-paint theme bootstrap — avoids a light/dark flash before hydration. */}
         <ThemeScript />
       </head>
-      <body className="antialiased">
+      <body className="font-body antialiased">
         <ThemeProvider>
           <NextIntlClientProvider messages={messages}>
             {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
