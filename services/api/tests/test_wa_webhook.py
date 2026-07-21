@@ -41,6 +41,14 @@ class _FakeQuery:
         self._operation = "select"
         return self
 
+    def insert(self, payload: dict[str, Any] | list[dict[str, Any]]) -> _FakeQuery:
+        self._operation = "insert"
+        if isinstance(payload, list):
+            self._payload = payload[0]
+        else:
+            self._payload = payload
+        return self
+
     def update(self, payload: dict[str, Any]) -> _FakeQuery:
         self._operation = "update"
         self._payload = payload
@@ -621,6 +629,30 @@ def test_duplicate_failed_status_webhook_does_not_double_enqueue_fallback(
     sms_rows = [row for row in store.outbox.values() if row["channel"] == "sms"]
     assert len(sms_rows) == 1
     assert store.outbox_inserts == 1
+
+
+def test_failed_status_skips_sms_fallback_when_all_channels_disabled(
+    webhook_client: TestClient,
+    store: InMemoryStore,
+) -> None:
+    store.seed_outbox(whatsapp_message_id=WAMID, status="sent")
+    store.seed_profile(
+        notif_prefs={"whatsapp": False, "sms": False, "email": False},
+    )
+    body = json.dumps(_status_payload(status="failed")).encode("utf-8")
+
+    response = webhook_client.post(
+        "/webhooks/whatsapp",
+        content=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Hub-Signature-256": _sign_body(body),
+        },
+    )
+
+    assert response.status_code == 200
+    assert [row for row in store.outbox.values() if row["channel"] == "sms"] == []
+    assert store.outbox_inserts == 0
 
 
 def test_undelivered_status_webhook_enqueues_sms_fallback(

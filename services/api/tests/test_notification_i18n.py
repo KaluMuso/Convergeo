@@ -199,6 +199,7 @@ def test_whatsapp_templates_classified_transactional(template_id: str) -> None:
         ("review_request", TemplateClass.MARKETING),
         ("abandoned_cart_recovery", TemplateClass.MARKETING),
         ("kyc_nudge", TemplateClass.MARKETING),
+        ("compliance_confirmation", TemplateClass.TRANSACTIONAL),
         ("payment_receipt", TemplateClass.TRANSACTIONAL),
         ("payout_failure_alert", TemplateClass.TRANSACTIONAL),
         ("low_stock_alert", TemplateClass.TRANSACTIONAL),
@@ -212,6 +213,9 @@ def test_template_classification_correctness(template_id: str, expected: Templat
 def test_all_classified_templates_have_message_keys() -> None:
     for template_id in TEMPLATE_CLASSIFICATION:
         if template_id in WHATSAPP_TEMPLATES:
+            if template_id == "compliance_confirmation":
+                # STOP/START ack copy is resolved at enqueue into confirmation_body.
+                continue
             resolve_notification_message("en", f"whatsapp.{template_id}.body")
         elif template_id in {"payment_receipt"}:
             resolve_notification_message("en", "email.receipt.subject")

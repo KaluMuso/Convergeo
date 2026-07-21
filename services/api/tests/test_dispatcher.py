@@ -19,6 +19,7 @@ from app.services.notifications.dedupe import (
 from app.services.notifications.dispatcher import (
     NotificationDispatcher,
     compute_backoff_seconds,
+    has_any_channel_enabled,
     resolve_channel,
 )
 from app.supabase_client import SupabaseServiceClient
@@ -513,6 +514,100 @@ def test_resolve_channel_honors_prefs_and_defaults() -> None:
     assert resolve_channel("whatsapp", None) == "whatsapp"
     assert resolve_channel("whatsapp", {"whatsapp": False, "sms": True}) == "sms"
     assert resolve_channel("email", {"whatsapp": False, "sms": False, "email": False}) == "email"
+
+
+def test_has_any_channel_enabled_defaults_true() -> None:
+    assert has_any_channel_enabled(None) is True
+    assert has_any_channel_enabled({}) is True
+    assert has_any_channel_enabled({"whatsapp": False, "sms": False, "email": False}) is False
+
+
+@pytest.mark.asyncio
+async def test_marketing_row_suppressed_when_all_channels_disabled(
+    store: InMemoryOutboxStore,
+    noop: NoopAdapter,
+    dispatcher: NotificationDispatcher,
+) -> None:
+    store.profiles["user-1"] = {
+        "id": "user-1",
+        "phone": "+260970000000",
+        "locale": "en",
+        "notif_prefs": {"whatsapp": False, "sms": False, "email": False},
+    }
+    row = enqueue_outbox_row(
+        store,
+        event_type="review_request",
+        entity_id="ord-1",
+        channel="whatsapp",
+        template="review_request",
+        payload={"recipient_id": "user-1"},
+    )
+    assert row is not None
+
+    stats = await dispatcher.run_batch()
+
+    assert stats.skipped == 1
+    assert len(noop.sent) == 0
+    updated = store.outbox[row["id"]]
+    assert updated["status"] == "sent"
+    assert updated["payload"]["_suppressed"] is True
+    assert updated["payload"]["suppression_reason"] == "marketing_opt_out"
+
+
+@pytest.mark.asyncio
+async def test_transactional_row_still_sends_when_all_channels_disabled(
+    store: InMemoryOutboxStore,
+    noop: NoopAdapter,
+    dispatcher: NotificationDispatcher,
+) -> None:
+    store.profiles["user-1"] = {
+        "id": "user-1",
+        "phone": "+260970000000",
+        "locale": "en",
+        "notif_prefs": {"whatsapp": False, "sms": False, "email": False},
+    }
+    row = enqueue_outbox_row(
+        store,
+        event_type="otp_login",
+        entity_id="otp-1",
+        channel="whatsapp",
+        template="otp_login",
+        payload={"recipient_id": "user-1", "otp_code": "123456", "to": "+260970000000"},
+    )
+    assert row is not None
+
+    stats = await dispatcher.run_batch()
+
+    assert stats.sent == 1
+    assert len(noop.sent) == 1
+
+
+@pytest.mark.asyncio
+async def test_marketing_falls_back_to_enabled_channel(
+    store: InMemoryOutboxStore,
+    noop: NoopAdapter,
+    dispatcher: NotificationDispatcher,
+) -> None:
+    store.profiles["user-1"] = {
+        "id": "user-1",
+        "phone": "+260970000000",
+        "locale": "en",
+        "notif_prefs": {"whatsapp": False, "sms": True, "email": False},
+    }
+    row = enqueue_outbox_row(
+        store,
+        event_type="review_request",
+        entity_id="ord-2",
+        channel="whatsapp",
+        template="review_request",
+        payload={"recipient_id": "user-1"},
+    )
+    assert row is not None
+
+    stats = await dispatcher.run_batch()
+
+    assert stats.sent == 1
+    assert noop.sent[0].channel == "sms"
 
 
 @pytest.fixture

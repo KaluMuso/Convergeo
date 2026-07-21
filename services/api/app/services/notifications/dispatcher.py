@@ -21,6 +21,7 @@ from app.services.notifications.dedupe import (
 )
 from app.services.notifications.fallback import (
     DeliveryContext,
+    channel_enabled,
     enqueue_fallback_row,
     resolve_fallback_channel,
 )
@@ -71,6 +72,8 @@ TEMPLATE_CLASSIFICATION: dict[str, TemplateClass] = {
     "review_request": TemplateClass.MARKETING,
     "abandoned_cart_recovery": TemplateClass.MARKETING,
     "kyc_nudge": TemplateClass.MARKETING,
+    # STOP/START auto-reply — transactional so it sends even after opt-out.
+    "compliance_confirmation": TemplateClass.TRANSACTIONAL,
 }
 
 
@@ -167,11 +170,10 @@ def _parse_timestamp(value: str | None) -> datetime | None:
     return parsed.astimezone(UTC)
 
 
-def _channel_enabled(channel: str, notif_prefs: dict[str, Any]) -> bool:
-    value = notif_prefs.get(channel)
-    if value is None:
-        return True
-    return bool(value)
+def has_any_channel_enabled(notif_prefs: dict[str, Any] | None) -> bool:
+    """Return True when at least one delivery channel is enabled in prefs."""
+    prefs = notif_prefs or {}
+    return any(channel_enabled(channel, prefs) for channel in DEFAULT_CHANNEL_ORDER)
 
 
 def resolve_channel(
@@ -182,11 +184,11 @@ def resolve_channel(
     prefs = notif_prefs or {}
     order = DEFAULT_CHANNEL_ORDER
 
-    if requested_channel in order and _channel_enabled(requested_channel, prefs):
+    if requested_channel in order and channel_enabled(requested_channel, prefs):
         return requested_channel
 
     for channel in order:
-        if _channel_enabled(channel, prefs):
+        if channel_enabled(channel, prefs):
             return channel
 
     return requested_channel
@@ -293,6 +295,23 @@ class NotificationDispatcher:
             {
                 "status": "failed",
                 "attempts": attempts,
+                "next_retry_at": None,
+            }
+        ).eq("id", row_id).execute()
+
+    def mark_suppressed(
+        self,
+        row_id: str,
+        *,
+        reason: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """Terminal no-send for marketing rows blocked by recipient consent."""
+        merged = {**payload, "_suppressed": True, "suppression_reason": reason}
+        self.client.table(OUTBOX_TABLE).update(
+            {
+                "status": "sent",
+                "payload": merged,
                 "next_retry_at": None,
             }
         ).eq("id", row_id).execute()
@@ -408,6 +427,17 @@ class NotificationDispatcher:
 
         requested_channel = str(fresh.get("channel", "whatsapp"))
         channel = resolve_channel(requested_channel, notif_prefs)
+        if (
+            template_class is TemplateClass.MARKETING
+            and not channel_enabled(channel, notif_prefs)
+        ):
+            self.mark_suppressed(
+                row_id,
+                reason="marketing_opt_out",
+                payload=payload_dict,
+            )
+            return "skipped"
+
         adapter = self._adapters.get(channel)
         if adapter is None:
             logger.error("No adapter registered for channel", extra={"channel": channel})

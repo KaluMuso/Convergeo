@@ -16,6 +16,11 @@ from typing import Annotated, Any, Literal, Protocol
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.notifications.dedupe import enqueue_outbox_row, split_dedupe_key
+from app.services.notifications.dispatcher import (
+    TemplateClass,
+    get_template_class,
+    has_any_channel_enabled,
+)
 from app.services.notifications.fallback import (
     CHANNEL_WHATSAPP as FALLBACK_CHANNEL_WHATSAPP,
 )
@@ -238,6 +243,14 @@ def _maybe_enqueue_lifecycle_fallback(
     payload_dict = dict(payload) if isinstance(payload, dict) else {}
     recipient_id = payload_dict.get("recipient_id")
     notif_prefs = _fetch_notif_prefs(client, str(recipient_id)) if recipient_id else {}
+
+    template = row.get("template")
+    template_name = template if isinstance(template, str) else None
+    if (
+        get_template_class(template_name) is TemplateClass.MARKETING
+        and not has_any_channel_enabled(notif_prefs)
+    ):
+        return
 
     whatsapp_opt_in = payload_dict.get("whatsapp_opt_in", True)
     if not isinstance(whatsapp_opt_in, bool):
