@@ -388,14 +388,17 @@ ON CONFLICT (id) DO NOTHING;
     for service in entities["services"]:
         sid = ids["services"][service["id_key"]]
         vendor_id = ids["vendors"][service["vendor_key"]]
+        portfolio_images = service.get("portfolio_images") or []
+        portfolio_sql = ", ".join(f"'{image}'" for image in portfolio_images)
         sql_parts.append(
             f"""
 INSERT INTO public.services (
-  id, vendor_id, category, title, description, service_area, from_price_ngwee, status
+  id, vendor_id, category, title, description, service_area, from_price_ngwee,
+  portfolio_images, status
 ) VALUES (
   '{sid}', '{vendor_id}', '{service["category"]}', '{service["title"]}',
   '{service["description"]}', '{service["service_area"]}', {service["from_price_ngwee"]},
-  '{service["status"]}'
+  ARRAY[{portfolio_sql}]::text[], '{service["status"]}'
 ) ON CONFLICT (id) DO NOTHING;
 """
         )
@@ -403,13 +406,15 @@ INSERT INTO public.services (
     for event in entities["events"]:
         eid = ids["events"][event["id_key"]]
         organiser = ids["vendors"][event["organiser_key"]]
+        event_images = event.get("images") or []
+        images_sql = ", ".join(f"'{image}'" for image in event_images)
         sql_parts.append(
             f"""
 INSERT INTO public.events (
-  id, organiser_vendor_id, title, slug, venue, lat, lng, status
+  id, organiser_vendor_id, title, slug, venue, lat, lng, images, status
 ) VALUES (
   '{eid}', '{organiser}', '{event["title"]}', '{event["slug"]}', '{event["venue"]}',
-  {event["lat"]}, {event["lng"]}, '{event["status"]}'
+  {event["lat"]}, {event["lng"]}, ARRAY[{images_sql}]::text[], '{event["status"]}'
 ) ON CONFLICT (id) DO NOTHING;
 """
         )

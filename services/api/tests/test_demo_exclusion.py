@@ -12,11 +12,13 @@ from app.routers.catalog import PlpFilterState, list_catalog
 from app.routers.comparison import build_comparison
 from app.routers.directory import VendorProfileResponse, get_vendor_profile, list_directory_vendors
 from app.routers.products import ProductDetailResponse, build_product_detail, build_related_products
+from app.routers.services_listings import build_browse_response, get_service_detail
 from app.services.ask.filters import AskFilters
 from app.services.ask.retrieve import top_k
 from app.services.listings.demo import (
     drop_demo_listing_hits,
     fetch_demo_listing_ids,
+    has_demo_media,
     is_demo_public_id,
 )
 from app.services.search import SearchHit, run_search, run_suggest
@@ -31,6 +33,10 @@ DEMO_VENDOR_ID = "ffffffff-ffff-ffff-ffff-fffffffffff1"
 MIXED_VENDOR_ID = "12345678-1234-1234-1234-1234567890ab"
 MIXED_REAL_LISTING = "11111111-1111-1111-1111-111111111111"
 MIXED_DEMO_LISTING = "22222222-2222-2222-2222-222222222222"
+REAL_SERVICE_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaa11"
+DEMO_SERVICE_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb11"
+REAL_EVENT_ID = "cccccccc-cccc-cccc-cccc-cccccccccc11"
+DEMO_EVENT_ID = "dddddddd-dddd-dddd-dddd-dddddddddd11"
 
 
 @pytest.mark.parametrize(
@@ -755,3 +761,141 @@ def test_vendor_manage_images_still_accept_demo_public_ids() -> None:
     # still classifies the marker so owners can label seed media while public
     # discovery excludes it.
     assert is_demo_public_id("demo/products/seed-sku") is True
+
+
+def test_has_demo_media_matches_portfolio_arrays() -> None:
+    assert has_demo_media(["demo/services/plumbing"]) is True
+    assert has_demo_media(["vergeo5/catalog/hero"]) is False
+    assert has_demo_media([]) is False
+
+
+def _seed_service_event_mix(store: _Store) -> None:
+    store.services = [
+        {
+            "id": REAL_SERVICE_ID,
+            "vendor_id": REAL_VENDOR_ID,
+            "category": "cleaning",
+            "title": "Office Cleaning",
+            "description": "Weekly office cleaning in Lusaka",
+            "service_area": "Lusaka",
+            "from_price_ngwee": 25000,
+            "portfolio_images": ["vergeo5/services/cleaning"],
+            "status": "active",
+            "vendors": {
+                "id": REAL_VENDOR_ID,
+                "slug": "real-shop",
+                "display_name": "Real Shop",
+                "preferred_badge": False,
+                "status": "active",
+            },
+        },
+        {
+            "id": DEMO_SERVICE_ID,
+            "vendor_id": REAL_VENDOR_ID,
+            "category": "tech-services",
+            "title": "Laptop & Phone Repair (demo)",
+            "description": "Demo repair service",
+            "service_area": "Lusaka",
+            "from_price_ngwee": 15000,
+            "portfolio_images": ["demo/services/tech-services"],
+            "status": "active",
+            "vendors": {
+                "id": REAL_VENDOR_ID,
+                "slug": "real-shop",
+                "display_name": "Real Shop",
+                "preferred_badge": True,
+                "status": "active",
+            },
+        },
+    ]
+    store.events = [
+        {
+            "id": REAL_EVENT_ID,
+            "images": ["vergeo5/events/live-music"],
+        },
+        {
+            "id": DEMO_EVENT_ID,
+            "images": ["demo/events/zed-summer-festival"],
+        },
+    ]
+
+
+def test_search_and_suggest_exclude_demo_service_and_event_hits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = _Store()
+    _seed_service_event_mix(store)
+    store._rpc_hits = [
+        _hit(entity_id=REAL_SERVICE_ID, title="Office Cleaning", entity_kind="service", score=1.2),
+        _hit(
+            entity_id=DEMO_SERVICE_ID,
+            title="Laptop & Phone Repair (demo)",
+            entity_kind="service",
+            score=1.1,
+        ),
+        _hit(entity_id=REAL_EVENT_ID, title="Live Music Night", entity_kind="event", score=1.0),
+        _hit(
+            entity_id=DEMO_EVENT_ID,
+            title="Zed Summer Festival",
+            entity_kind="event",
+            score=0.9,
+        ),
+    ]
+    monkeypatch.setattr("app.services.search.fetch_query_embedding", _no_embedding)
+
+    result = asyncio.run(run_search(store, query="laptop", include_wholesale=True))
+    ids = {(hit.entity_kind, hit.entity_id) for hit in result.results}
+    assert ("service", REAL_SERVICE_ID) in ids
+    assert ("service", DEMO_SERVICE_ID) not in ids
+    assert ("event", REAL_EVENT_ID) in ids
+    assert ("event", DEMO_EVENT_ID) not in ids
+    assert result.total == 2
+
+    suggestions = run_suggest(store, query="laptop", include_wholesale=True).suggestions
+    titles = {item.title for item in suggestions}
+    assert "Laptop & Phone Repair (demo)" not in titles
+    assert "Office Cleaning" in titles
+
+
+def test_ask_retrieve_excludes_demo_service_and_event(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = _Store()
+    _seed_service_event_mix(store)
+    store._rpc_hits = [
+        _hit(entity_id=REAL_SERVICE_ID, title="Office Cleaning", entity_kind="service"),
+        _hit(
+            entity_id=DEMO_SERVICE_ID,
+            title="Laptop & Phone Repair (demo)",
+            entity_kind="service",
+        ),
+        _hit(entity_id=REAL_EVENT_ID, title="Live Music Night", entity_kind="event"),
+        _hit(entity_id=DEMO_EVENT_ID, title="Zed Summer Festival", entity_kind="event"),
+    ]
+    monkeypatch.setattr(
+        "app.services.ask.retrieve.fetch_query_embedding", _no_embedding
+    )
+    docs = asyncio.run(top_k(store, query="repair", filters=AskFilters(), limit=8))
+    keys = {(doc.entity_kind, doc.entity_id) for doc in docs}
+    assert ("service", REAL_SERVICE_ID) in keys
+    assert ("service", DEMO_SERVICE_ID) not in keys
+    assert ("event", REAL_EVENT_ID) in keys
+    assert ("event", DEMO_EVENT_ID) not in keys
+
+
+def test_services_browse_and_detail_exclude_demo_inventory() -> None:
+    store = _Store()
+    _seed_service_event_mix(store)
+
+    browse = build_browse_response(store)
+    service_ids = {item.id for item in browse.items}
+    assert REAL_SERVICE_ID in service_ids
+    assert DEMO_SERVICE_ID not in service_ids
+    assert browse.total == 1
+
+    real = get_service_detail(REAL_SERVICE_ID, type("C", (), {"client": store})())
+    assert real.id == REAL_SERVICE_ID
+
+    with pytest.raises(AppError) as exc:
+        get_service_detail(DEMO_SERVICE_ID, type("C", (), {"client": store})())
+    assert exc.value.http_status == 404

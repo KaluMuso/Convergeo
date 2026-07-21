@@ -29,6 +29,13 @@ def is_demo_public_id(public_id: str | None) -> bool:
     )
 
 
+def has_demo_media(images: list[str] | None) -> bool:
+    """Return True when any entry in a media array is demo seed inventory."""
+    if not images:
+        return False
+    return any(is_demo_public_id(image) for image in images if isinstance(image, str))
+
+
 def _rows(response: Any) -> list[dict[str, Any]]:
     data = getattr(response, "data", None)
     if isinstance(data, list):
@@ -122,12 +129,51 @@ def fetch_demo_only_vendor_ids(client: Any, vendor_ids: list[str]) -> set[str]:
     return _demo_only_parent_ids(client, parent_ids=vendor_ids, parent_column="vendor_id")
 
 
+def fetch_demo_service_ids(client: Any, service_ids: list[str]) -> set[str]:
+    """Service IDs whose portfolio carries demo Cloudinary media."""
+    if not service_ids:
+        return set()
+    unique_ids = list(dict.fromkeys(service_ids))
+    response = (
+        client.table("services")
+        .select("id, portfolio_images")
+        .in_("id", unique_ids)
+        .execute()
+    )
+    demo_ids: set[str] = set()
+    for row in _rows(response):
+        service_id = row.get("id")
+        if service_id and has_demo_media(row.get("portfolio_images")):
+            demo_ids.add(str(service_id))
+    return demo_ids
+
+
+def fetch_demo_event_ids(client: Any, event_ids: list[str]) -> set[str]:
+    """Event IDs whose image array carries demo Cloudinary media."""
+    if not event_ids:
+        return set()
+    unique_ids = list(dict.fromkeys(event_ids))
+    response = (
+        client.table("events")
+        .select("id, images")
+        .in_("id", unique_ids)
+        .execute()
+    )
+    demo_ids: set[str] = set()
+    for row in _rows(response):
+        event_id = row.get("id")
+        if event_id and has_demo_media(row.get("images")):
+            demo_ids.add(str(event_id))
+    return demo_ids
+
+
 def drop_demo_listing_hits(client: Any, hits: list[Any]) -> list[Any]:
-    """Remove demo listing / product / vendor hits from a consumer result set.
+    """Remove demo discovery hits from a consumer result set.
 
     Mirrors ``drop_wholesale_listing_hits``: post-filter after ``search_rrf`` so
     the RPC stays unchanged. Listing hits drop when any image is demo; product
-    and vendor hits drop when every active listing under them is demo.
+    and vendor hits drop when every active listing under them is demo; service
+    and event hits drop when any portfolio/event image is demo.
     """
     if not hits:
         return hits
@@ -141,12 +187,26 @@ def drop_demo_listing_hits(client: Any, hits: list[Any]) -> list[Any]:
     vendor_ids = [
         hit.entity_id for hit in hits if getattr(hit, "entity_kind", None) == "vendor"
     ]
+    service_ids = [
+        hit.entity_id for hit in hits if getattr(hit, "entity_kind", None) == "service"
+    ]
+    event_ids = [
+        hit.entity_id for hit in hits if getattr(hit, "entity_kind", None) == "event"
+    ]
 
     demo_listing_ids = fetch_demo_listing_ids(client, listing_ids)
     demo_product_ids = fetch_demo_only_product_ids(client, product_ids)
     demo_vendor_ids = fetch_demo_only_vendor_ids(client, vendor_ids)
+    demo_service_ids = fetch_demo_service_ids(client, service_ids)
+    demo_event_ids = fetch_demo_event_ids(client, event_ids)
 
-    if not demo_listing_ids and not demo_product_ids and not demo_vendor_ids:
+    if (
+        not demo_listing_ids
+        and not demo_product_ids
+        and not demo_vendor_ids
+        and not demo_service_ids
+        and not demo_event_ids
+    ):
         return hits
 
     kept: list[Any] = []
@@ -158,6 +218,10 @@ def drop_demo_listing_hits(client: Any, hits: list[Any]) -> list[Any]:
         if kind == "product" and entity_id in demo_product_ids:
             continue
         if kind == "vendor" and entity_id in demo_vendor_ids:
+            continue
+        if kind == "service" and entity_id in demo_service_ids:
+            continue
+        if kind == "event" and entity_id in demo_event_ids:
             continue
         kept.append(hit)
     return kept
