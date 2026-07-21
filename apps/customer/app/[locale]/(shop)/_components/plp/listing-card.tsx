@@ -6,12 +6,25 @@ import { ProductCard } from "@vergeo/ui/src/product-card";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
 import { isDemoListingPublicId, shouldShowSampleListingBadge } from "../demo-listing";
 
 import { useLocalWishlist } from "./use-local-wishlist";
 
 import type { CatalogListing } from "./listing-grid";
+
+/**
+ * Dynamic import keeps `mini-cart-drawer` off the PLP/home *page* graph.
+ * The shop layout already ships the cart store for nav badges; a static import
+ * here would also list that ~6 KB gz chunk on every ListingCard route and fail
+ * the bundle-guard regression gate (layout chunks are not counted on /page).
+ */
+async function quickAddListing(listingId: string, successMessage: string): Promise<void> {
+  const { addCartItem, openMiniCart, setLastAddedMessage } =
+    await import("../cart/mini-cart-drawer");
+  await addCartItem(listingId, 1);
+  setLastAddedMessage(successMessage);
+  openMiniCart();
+}
 
 export type ListingCardLabels = {
   vendor: string;
@@ -90,10 +103,8 @@ export function ListingCard({
     }
     setQuickAdding(true);
     setQuickAddAnnouncement("");
-    void addCartItem(listing.id, 1)
+    void quickAddListing(listing.id, labels.quickAdd)
       .then(() => {
-        setLastAddedMessage(labels.quickAdd);
-        openMiniCart();
         setQuickAddAnnouncement(labels.quickAdd);
       })
       .catch(() => {
