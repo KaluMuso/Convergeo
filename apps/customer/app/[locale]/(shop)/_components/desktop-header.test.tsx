@@ -51,6 +51,7 @@ const labels = {
     ariaLabel: "Search",
     suggestionsLabel: "Search suggestions",
     noSuggestions: "No suggestions",
+    recentTitle: "Recent searches",
   },
 };
 

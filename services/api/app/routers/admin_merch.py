@@ -1,8 +1,7 @@
 """Admin merchandising slots + public read with preview token.
 
-TODO(home): Customer home (`merch-data.ts`) reads `merch_slots` directly from Supabase.
-Wire `loadHomeMerchData()` to `GET /merch/slots?merch_preview=<token>` when
-`?merch_preview=draft` is present so draft overlays render without publishing.
+Customer home (`merch-data.ts`) uses `GET /merch/slots?merch_preview=<token>` when
+`?merch_preview` is on the home URL; mega-menu uses the same token client-side.
 """
 
 from __future__ import annotations
