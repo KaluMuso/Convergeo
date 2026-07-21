@@ -6,6 +6,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { resolveApiBaseUrl } from "../../../../lib/api-base-url";
+import { BackToTop } from "../_components/back-to-top";
 import {
   shouldShowComparison,
   type ComparisonLabels,
@@ -238,7 +239,10 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
           body={t("comparePage.singleSellerBody")}
         />
       ) : (
-        <CompareResults listings={listings} labels={comparisonLabels(t)} />
+        <>
+          <CompareResults listings={listings} labels={comparisonLabels(t)} />
+          <BackToTop label={t("plp.backToTop")} />
+        </>
       )}
 
       <Link

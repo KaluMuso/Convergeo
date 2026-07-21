@@ -13,12 +13,14 @@ export type LocaleSwitcherLabels = {
 type LocaleSwitcherProps = {
   locale: string;
   labels: LocaleSwitcherLabels;
+  /** `shop` uses surface tokens for sticky header; `footer` uses panel chrome. */
+  variant?: "footer" | "shop";
 };
 
 /**
- * Footer locale control — preserves the current route when switching language.
+ * Locale control — preserves the current route when switching language.
  */
-export function LocaleSwitcher({ locale, labels }: LocaleSwitcherProps) {
+export function LocaleSwitcher({ locale, labels, variant = "footer" }: LocaleSwitcherProps) {
   const pathname = usePathname();
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -34,8 +36,12 @@ export function LocaleSwitcher({ locale, labels }: LocaleSwitcherProps) {
 
   return (
     <label
-      className="inline-flex min-h-11 items-center gap-2 text-micro"
-      style={{ color: "var(--panel-muted)" }}
+      className={
+        variant === "shop"
+          ? "inline-flex min-h-11 items-center gap-2 text-sm text-text-2"
+          : "inline-flex min-h-11 items-center gap-2 text-micro"
+      }
+      style={variant === "footer" ? { color: "var(--panel-muted)" } : undefined}
     >
       <span className="sr-only">{labels.ariaLabel}</span>
       <select
@@ -43,7 +49,11 @@ export function LocaleSwitcher({ locale, labels }: LocaleSwitcherProps) {
         onChange={handleChange}
         aria-label={labels.ariaLabel}
         data-testid="locale-switcher"
-        className="min-h-11 rounded border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-2 text-micro text-[color:var(--panel-text)]"
+        className={
+          variant === "shop"
+            ? "min-h-11 max-w-[6.5rem] truncate rounded border border-border bg-surface px-2 text-sm text-text"
+            : "min-h-11 rounded border border-[color:var(--panel-border)] bg-[color:var(--panel)] px-2 text-micro text-[color:var(--panel-text)]"
+        }
       >
         {PUBLIC_LOCALES.map((code) => (
           <option key={code} value={code}>

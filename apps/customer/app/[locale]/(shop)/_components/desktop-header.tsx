@@ -31,6 +31,7 @@ type DesktopHeaderLabels = {
 type DesktopHeaderProps = {
   locale: string;
   labels: DesktopHeaderLabels;
+  localeSwitcher?: React.ReactNode;
 };
 
 const SCROLL_COMPACT_PX = 48;
@@ -41,7 +42,7 @@ const SCROLL_COMPACT_PX = 48;
  * is demoted out of primary nav (account / gated routes). Sticky; mega-menu
  * closes on scroll.
  */
-export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
+export function DesktopHeader({ locale, labels, localeSwitcher }: DesktopHeaderProps) {
   const [compact, setCompact] = useState(false);
   const { cart } = useCartStore();
   const { refresh } = useCartActions();
@@ -158,6 +159,7 @@ export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
         </ul>
 
         <div className="ml-auto flex shrink-0 items-center gap-1">
+          {localeSwitcher}
           <Link
             href={`/${locale}/account`}
             className="inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing"
