@@ -4,8 +4,9 @@ import { cookies } from "next/headers";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { SavedItemsPanel } from "./_components/saved-items-panel";
 import { BackToTop } from "../_components/back-to-top";
+
+import { SavedItemsPanel } from "./_components/saved-items-panel";
 
 import type { Metadata } from "next";
 
@@ -47,7 +48,7 @@ export default async function WishlistPage({ params }: PageProps) {
     locale,
     messages: { catalog: catalogMessages },
     namespace: "catalog",
-  });
+  }) as (key: string, values?: Record<string, string | number>) => string;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-6">
