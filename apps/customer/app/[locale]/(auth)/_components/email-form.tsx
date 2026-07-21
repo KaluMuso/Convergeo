@@ -19,7 +19,30 @@ type EmailFormLabels = {
   invalidPassword: string;
   generic: string;
   throttled: string;
+  invalidCredentials: string;
+  emailNotConfirmed: string;
+  alreadyRegistered: string;
 };
+
+function messageForAuthError(
+  parsed: ReturnType<typeof parseAuthError>,
+  labels: EmailFormLabels,
+  mode: "login" | "signup",
+): string {
+  if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
+    return labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds));
+  }
+  if (parsed.code === "email_not_confirmed") {
+    return labels.emailNotConfirmed;
+  }
+  if (mode === "signup" && parsed.code === "already_registered") {
+    return labels.alreadyRegistered;
+  }
+  if (mode === "login" && (parsed.code === "invalid_credentials" || parsed.code === "wrong_code")) {
+    return labels.invalidCredentials;
+  }
+  return labels.generic;
+}
 
 type EmailFormProps = {
   locale: string;
@@ -65,27 +88,13 @@ export function EmailForm({ locale, labels, mode, defaultNextPath, nextParam }: 
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) {
-          const parsed = parseAuthError(error);
-          if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-            setErrorMessage(
-              labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)),
-            );
-          } else {
-            setErrorMessage(labels.generic);
-          }
+          setErrorMessage(messageForAuthError(parseAuthError(error), labels, "signup"));
           return;
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-          const parsed = parseAuthError(error);
-          if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-            setErrorMessage(
-              labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)),
-            );
-          } else {
-            setErrorMessage(labels.generic);
-          }
+          setErrorMessage(messageForAuthError(parseAuthError(error), labels, "login"));
           return;
         }
       }

@@ -1,7 +1,14 @@
 export const DEFAULT_COUNTRY_CODE = "+260";
 export const RESEND_COOLDOWN_SECONDS = 60;
 
-export type AuthErrorCode = "wrong_code" | "expired" | "throttled" | "generic";
+export type AuthErrorCode =
+  | "wrong_code"
+  | "expired"
+  | "throttled"
+  | "invalid_credentials"
+  | "email_not_confirmed"
+  | "already_registered"
+  | "generic";
 
 export type ParsedAuthError = {
   code: AuthErrorCode;
@@ -52,6 +59,20 @@ export function parseAuthError(error: unknown): ParsedAuthError {
   }
 
   const message = (record.message ?? "").toLowerCase();
+
+  // Email/password specifics — checked before the generic "invalid" match so the
+  // OTP flow keeps mapping its "invalid code" to wrong_code.
+  if (message.includes("already registered") || message.includes("already been registered")) {
+    return { code: "already_registered" };
+  }
+
+  if (message.includes("not confirmed")) {
+    return { code: "email_not_confirmed" };
+  }
+
+  if (message.includes("invalid login credentials") || message.includes("invalid credentials")) {
+    return { code: "invalid_credentials" };
+  }
 
   if (message.includes("expired")) {
     return { code: "expired" };
