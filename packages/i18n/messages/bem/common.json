@@ -20,15 +20,15 @@
     "skipToContent": "Pita ku content",
     "marketing": {
       "ariaLabel": "Navigation ya marketing",
-      "about": "About",
-      "contact": "Contact",
-      "help": "Help",
+      "about": "Paliba pa Vergeo5",
+      "contact": "Twalicilileni",
+      "help": "Ulubuto",
       "sell": "Sell pa Vergeo5",
-      "signIn": "Sign in"
+      "signIn": "Ingilani"
     },
     "account": {
       "ariaLabel": "Navigation ya account",
-      "menuAria": "Account menu"
+      "menuAria": "Menu ya akaunti"
     }
   },
   "offline": {

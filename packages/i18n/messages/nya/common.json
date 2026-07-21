@@ -20,15 +20,15 @@
     "skipToContent": "Pitani ku content",
     "marketing": {
       "ariaLabel": "Navigation ya marketing",
-      "about": "About",
-      "contact": "Contact",
-      "help": "Help",
+      "about": "Za Vergeo5",
+      "contact": "Titandizireni",
+      "help": "Thandizo",
       "sell": "Sell pa Vergeo5",
-      "signIn": "Sign in"
+      "signIn": "Lowani"
     },
     "account": {
       "ariaLabel": "Navigation ya account",
-      "menuAria": "Account menu"
+      "menuAria": "Menyu ya akaunti"
     }
   },
   "offline": {
