@@ -5,10 +5,14 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const addCartItem = vi.fn().mockResolvedValue({ items: [] });
+const openMiniCart = vi.fn();
+const setLastAddedMessage = vi.fn();
+
 vi.mock("../cart/mini-cart-drawer", () => ({
-  addCartItem: vi.fn().mockResolvedValue({ items: [] }),
-  openMiniCart: vi.fn(),
-  setLastAddedMessage: vi.fn(),
+  addCartItem: (...args: unknown[]) => addCartItem(...args),
+  openMiniCart: (...args: unknown[]) => openMiniCart(...args),
+  setLastAddedMessage: (...args: unknown[]) => setLastAddedMessage(...args),
 }));
 
 vi.mock("./use-local-wishlist", () => ({
@@ -18,8 +22,6 @@ vi.mock("./use-local-wishlist", () => ({
     enabled: true,
   }),
 }));
-
-import { addCartItem, openMiniCart } from "../cart/mini-cart-drawer";
 
 import { ListingCard } from "./listing-card";
 
