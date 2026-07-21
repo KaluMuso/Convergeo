@@ -1,3 +1,5 @@
+> **✅ IMPLEMENTED directly on branch `claude/convergeo-codebase-review-a5wvgp` (2026-07-21).** `services/api/app/services/returns/lane2.py` + `tests/test_returns_lane2.py` unified on bps; the lossy `bps // 100` pct hop is gone. Verified: `test_returns_lane2.py` 19/19 pass, ruff + mypy clean; regression golden proves 1250 bps → 12.5% (25 000 ngwee), not 12% (24 000). **This prompt is retained as the spec/record — do NOT re-run in Cursor.**
+
 > **Prepend `prompts/_header.md`.** Branch from + PR against **`master`**. **Touch ONLY the files below.** **⚙ do NOT use `git stash`.** No migration. **⚠ MONEY PATH — heightened review; failure-path tests required.** Foreground blocking only; run the FULL `uv run pytest` before reporting.
 
 # FIX-I — Restocking fee has two representations (bps vs pct) that diverge (💰)
