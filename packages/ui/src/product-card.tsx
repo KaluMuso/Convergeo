@@ -126,7 +126,7 @@ export function ProductCard({
           : undefined
       }
     >
-      <div className={cx("relative bg-bg-2", compact ? "aspect-square" : "aspect-[4/3]")}>
+      <div className="relative aspect-[4/3] bg-bg-2">
         {media ?? (
           <div
             className="flex h-full w-full items-center justify-center bg-gradient-to-br from-bg-2 to-border/40"
@@ -138,7 +138,11 @@ export function ProductCard({
             <span className="h-12 w-16 rounded border border-dashed border-border/80 bg-surface/40" />
           </div>
         )}
-        {badge ? <div className="absolute left-2 top-2 z-[1]">{badge}</div> : null}
+        {badge ? (
+          <div className={cx("absolute z-[1]", compact ? "left-1.5 top-1.5" : "left-2 top-2")}>
+            {badge}
+          </div>
+        ) : null}
         {onWishlistToggle ? (
           <button
             type="button"
@@ -192,8 +196,8 @@ export function ProductCard({
       </div>
       <div
         className={cx(
-          "flex min-w-0 flex-col p-[var(--card-pad,var(--sp-3))]",
-          compact ? "gap-1.5" : "gap-2",
+          "flex min-w-0 flex-col",
+          compact ? "gap-1 p-[var(--sp-2)]" : "gap-1.5 p-[var(--sp-2)] sm:p-[var(--sp-3)]",
         )}
       >
         <p className={cx("m-0 truncate text-text-2", compact ? "text-xs" : "text-sm")}>

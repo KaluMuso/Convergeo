@@ -198,7 +198,7 @@ export function SearchInput({
   return (
     <form
       onSubmit={handleSubmit}
-      className={compact ? "w-full" : "mx-auto w-full max-w-xl"}
+      className={compact ? "w-full" : "mx-auto w-full max-w-2xl lg:max-w-3xl"}
       role="search"
     >
       <div className="relative">

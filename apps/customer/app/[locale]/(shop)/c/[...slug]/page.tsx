@@ -264,7 +264,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
 
   return (
     // Shop layout already provides the page <main> landmark — avoid nesting.
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 lg:gap-4">
       <JsonLdScript data={breadcrumbJsonLd} />
       <Breadcrumbs
         ariaLabel={t("plp.breadcrumbAria")}
@@ -291,7 +291,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
         parentSlugParts={childParentParts}
       />
 
-      <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+      <div className="grid gap-3 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-4 xl:grid-cols-[15rem_minmax(0,1fr)]">
         <div className="hidden lg:block">
           <FacetPanel labels={facetLabels} facets={facets} initialState={filterState} />
         </div>

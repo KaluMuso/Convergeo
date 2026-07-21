@@ -108,7 +108,11 @@ export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
           {labels.appName}
         </Link>
 
-        <form role="search" action={`/${locale}/search`} className="min-w-0 max-w-2xl flex-1">
+        <form
+          role="search"
+          action={`/${locale}/search`}
+          className="min-w-0 max-w-3xl flex-1 xl:max-w-4xl"
+        >
           <SearchField
             name="q"
             aria-label={labels.searchPlaceholder}
@@ -123,7 +127,7 @@ export function DesktopHeader({ locale, labels }: DesktopHeaderProps) {
                 <IconSearch />
               </button>
             }
-            className="h-11 bg-bg"
+            className="h-11 border-primary/30 bg-bg shadow-1"
           />
         </form>
 

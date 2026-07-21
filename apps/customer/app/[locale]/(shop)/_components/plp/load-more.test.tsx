@@ -73,6 +73,7 @@ describe("PlpBrowseClient progressive loading", () => {
     );
 
     expect(screen.getByText("Listing One")).toBeInTheDocument();
+    expect(screen.getByTestId("product-card")).toHaveAttribute("data-density", "compact");
     expect(screen.getByTestId("plp-load-more")).toBeInTheDocument();
   });
 

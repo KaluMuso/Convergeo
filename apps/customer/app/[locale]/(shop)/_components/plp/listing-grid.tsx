@@ -43,7 +43,7 @@ export function ListingGrid({
   return (
     <div
       data-testid="listing-grid"
-      className="motion-fade grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4"
+      className="motion-fade grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
     >
       {listings.map((listing, index) => (
         <ListingCard

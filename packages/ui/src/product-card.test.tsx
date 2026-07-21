@@ -62,6 +62,8 @@ describe("ProductCard", () => {
     const card = screen.getByTestId("product-card");
     expect(card).toHaveAttribute("data-density", "compact");
     expect(card).toHaveAttribute("data-unavailable", "true");
+    expect(card.firstElementChild).toHaveClass("aspect-[4/3]");
+    expect(card.children[1]).toHaveClass("p-[var(--sp-2)]");
   });
 
   it("renders optional meta without inventing content", () => {
