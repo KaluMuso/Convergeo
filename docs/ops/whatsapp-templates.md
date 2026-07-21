@@ -119,6 +119,22 @@ Ready for founder action **F5** (Meta Business / WhatsApp Manager). Create each 
 
 ---
 
+## 8. `rfq_job_broadcast` (Utility — RFQ provider fan-out)
+
+**Variables:** `{{1}}` service category · `{{2}}` service area · `{{3}}` description preview
+
+> **Live send — must be submitted.** The API sends this on `channel="whatsapp"` when an RFQ is broadcast to matching providers (`services/api/app/services/rfq/broadcast.py`). If it is **not** approved by Meta, every RFQ broadcast fails `132001` and silently downgrades to SMS.
+
+| Locale     | Body                                                                                                  |
+| ---------- | ----------------------------------------------------------------------------------------------------- |
+| **en**     | New Vergeo5 quote request in {{1}} ({{2}}): {{3}} Open the vendor app to quote. Reply STOP to opt out. |
+| **bem_ZM** | _(add translation — F5 language variant; keep vernacular human-reviewed per D27)_                     |
+| **nya_ZM** | _(add translation — F5 language variant; keep vernacular human-reviewed per D27)_                     |
+
+**Sample values:** `Plumbing` · `Lusaka — Kabulonga` · `Fix a burst geyser pipe, urgent`
+
+---
+
 ## API wiring (reference)
 
 - Env: `WHATSAPP_TOKEN` (or `WHATSAPP_ACCESS_TOKEN`), `WHATSAPP_PHONE_NUMBER_ID`, optional `WHATSAPP_API_VERSION` (default `v23.0`).

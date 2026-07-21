@@ -6,8 +6,10 @@ Phone OTP (primary), email+password, and Google OAuth. Secrets are env-only — 
 
 | Variable                                  | Used by                                                    |
 | ----------------------------------------- | ---------------------------------------------------------- |
-| `SUPABASE_URL`                            | All apps + API                                             |
-| `SUPABASE_ANON_KEY`                       | Customer/vendor/admin browser clients                      |
+| `SUPABASE_URL`                            | API + Next.js server-side                                  |
+| `SUPABASE_ANON_KEY`                       | Server-side anon key                                       |
+| `NEXT_PUBLIC_SUPABASE_URL`                | Customer/vendor/admin **browser** clients (`packages/auth`) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`           | Customer/vendor/admin **browser** clients (`packages/auth`) |
 | `SUPABASE_SERVICE_ROLE_KEY`               | API server-side only                                       |
 | `SEND_SMS_HOOK_SECRET`                    | Supabase Auth Send SMS Hook + `send-sms-otp` edge function |
 | `AT_API_KEY`                              | `send-sms-otp` edge function                               |

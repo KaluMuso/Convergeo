@@ -35,6 +35,7 @@ Costs (July 2026, "Rest of Africa" band): utility templates ≈ **$0.006/msg** a
 
 ### 5. Webhooks (delivery/read/inbound events)
 - App dashboard → WhatsApp → Configuration → Webhook: callback `https://api.vergeo5.com/webhooks/whatsapp`, verify token = random secret (env `WHATSAPP_WEBHOOK_VERIFY_TOKEN`); subscribe to `messages`. The backend must answer the GET challenge, then validate `X-Hub-Signature-256` on POSTs.
+- **Also set `WHATSAPP_APP_SECRET`** (App Dashboard → Settings → Basic → **App Secret**; env `WHATSAPP_APP_SECRET`, fallback `META_APP_SECRET`). The POST signature check (`verify_hub_signature`) **fails closed** without it — every delivery-status and inbound STOP/START POST is rejected **403**, silently breaking delivery tracking, SMS-fallback triggers, and opt-out handling, even though the GET challenge still passes. The var is already listed in `infra/.env.example`.
 
 ### 6. Business Verification (lifts limits; do in parallel, not blocking dev)
 - Business Settings → **Security Centre** → Start Verification: legal name, address, phone, vergeo5.com; upload PACRA certificate + proof of address; verify a business phone/email/domain. Typically days.
@@ -48,13 +49,16 @@ Create in WhatsApp Manager → Message templates, category **Utility** (or Authe
 - `order_delivered` — + review nudge (keep it utility-toned; pure marketing copy → Marketing category and 4× the price)
 - `otp_login` (Authentication category, one-tap copy-code button)
 - `vendor_new_order` — "New order {{1}} on Vergeo5: {{2}} × {{3}}. Confirm in the vendor app."
-- `rfq_new_quote`, `ticket_delivery` (QR link) when those verticals ship.
+- `rfq_job_broadcast` — RFQ provider fan-out; the code sends this **live** on `channel="whatsapp"` (params `{{1}}` category · `{{2}}` service area · `{{3}}` description preview). **Must be submitted to Meta** — otherwise every RFQ broadcast fails with error `132001` and silently downgrades to SMS.
+
+Tickets are delivered in-app via the QR wallet — there is **no** `ticket_delivery` template. The full authoritative registry (`meta_template_name` + variable positions) lives in [`whatsapp-templates.md`](./whatsapp-templates.md).
+
 English first; add Bemba/Nyanja translations as separate template languages later (each language reviewed once).
 
 ### 8. Go-live checklist
 - App Mode → Live (needs privacy policy URL — legal pages pebble supplies vergeo5.com/privacy).
 - Opt-in: collect WhatsApp consent at checkout/signup (checkbox, stored with timestamp) — Meta policy + quality rating both demand it; every template footer offers "Reply STOP".
-- Keep quality **green**: transactional sends only to opted-in users, SMS fallback on template failure (webhook `message_status=failed` → Africa's Talking).
+- Keep quality **green**: transactional sends only to opted-in users. SMS fallback fires on a **synchronous send failure** at dispatch time (`dispatcher.py`). ⚠ A template Graph accepts (HTTP 200) that **later** reports `failed`/`undelivered` via webhook does **not** yet fall back to SMS — the lifecycle-fallback path (`fallback.py::evaluate_lifecycle_fallback`) exists but is not wired to the webhook handler (tracked fix).
 - Optional later: **Official Business Account** (green tick) application once brand presence exists.
 
 ### Interim before the real number is live

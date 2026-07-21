@@ -57,8 +57,14 @@ bash infra/scripts/db-dump.sh
 
 ## B. Timed restore into scratch
 
-Prefer `scripts/ops/restore-staging.sh` (schema + seed + migration currency) or
-`infra/scripts/db-restore.sh` for a gzip logical dump.
+Two tools, two dump formats — do not mix them:
+
+- **`infra/scripts/db-restore.sh`** restores the **nightly plain-gzip `.sql.gz`** artifact
+  (`db-dump.sh` writes `--format=plain | gzip`; restore is `gunzip | psql`). Use this for the
+  drill below and for restoring a downloaded OCI nightly.
+- **`scripts/ops/restore-staging.sh`** is a self-contained SOURCE→TARGET drill that dumps and
+  restores in **custom format** (`pg_dump --format=custom` → `pg_restore`) plus schema/seed/
+  migration-currency checks. It does **not** consume the nightly `.sql.gz`.
 
 ```bash
 # Example: restore latest downloaded dump into a scratch DB (never prod URL without --force).
