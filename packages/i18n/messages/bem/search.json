@@ -33,6 +33,24 @@
     "retry": "Wesheni limbi",
     "backToTop": "Bwelele pamo"
   },
+  "filters": {
+    "heading": "Filter ifya product",
+    "price": "Price (ngwee)",
+    "minPrice": "Min",
+    "maxPrice": "Max",
+    "category": "Category",
+    "categoryAll": "Categories fyonse",
+    "apply": "Apply filters",
+    "clear": "Clear filters",
+    "openFilters": "Filters",
+    "filtersActive": "Filters (active)",
+    "appliedAria": "Filters iya apply",
+    "clearAll": "Clear fyonse",
+    "removeChip": "Futeni {filter}",
+    "priceRange": "K{min} – K{max}",
+    "minPriceOnly": "Ukufuma K{min}",
+    "maxPriceOnly": "Kufika K{max}"
+  },
   "placeholder": "Fweni pa Vergeo5",
   "recent": {
     "clear": "Futeni fyonse",

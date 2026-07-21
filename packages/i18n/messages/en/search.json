@@ -70,6 +70,24 @@
     "retry": "Retry",
     "backToTop": "Back to top"
   },
+  "filters": {
+    "heading": "Filter products",
+    "price": "Price (ngwee)",
+    "minPrice": "Min",
+    "maxPrice": "Max",
+    "category": "Category",
+    "categoryAll": "All categories",
+    "apply": "Apply filters",
+    "clear": "Clear filters",
+    "openFilters": "Filters",
+    "filtersActive": "Filters (active)",
+    "appliedAria": "Applied filters",
+    "clearAll": "Clear all",
+    "removeChip": "Remove {filter}",
+    "priceRange": "K{min} – K{max}",
+    "minPriceOnly": "From K{min}",
+    "maxPriceOnly": "Up to K{max}"
+  },
   "result": {
     "priceFrom": "From {price}",
     "category": "In {category}",

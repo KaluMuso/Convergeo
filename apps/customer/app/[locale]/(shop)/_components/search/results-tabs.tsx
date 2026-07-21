@@ -15,6 +15,7 @@ import {
 } from "../progressive-load/progressive-load-controls";
 import { useProgressiveLoad } from "../progressive-load/use-progressive-load";
 
+import { appendSearchFiltersToApiParams, type SearchFilterState } from "./search-filters";
 import {
   SEARCH_KINDS,
   searchTabKinds,
@@ -87,6 +88,8 @@ export type ResultsTabsProps = {
   labels: ResultsTabsLabels;
   /** API origin for client page appends (same base as SSR). */
   apiBaseUrl: string;
+  /** Product filters (price/category) — forwarded to progressive load requests. */
+  filterState?: SearchFilterState;
 };
 
 function tabLabel(labels: ResultsTabsLabels, kind: SearchKindFilter, count: number): string {
@@ -314,11 +317,13 @@ export function ResultsTabs({
   tabCounts,
   labels,
   apiBaseUrl,
+  filterState = {},
 }: ResultsTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const resetKey = `${locale}|${query}|${activeKind}|${page}|${response.page_size}|${response.total}`;
+  const filterKey = JSON.stringify(filterState);
+  const resetKey = `${locale}|${query}|${activeKind}|${page}|${response.page_size}|${response.total}|${filterKey}`;
 
   const fetchPage = useCallback(
     async (cursor: string, signal: AbortSignal) => {
@@ -330,6 +335,7 @@ export function ResultsTabs({
       if (activeKind !== "all") {
         params.set("kind", activeKind);
       }
+      appendSearchFiltersToApiParams(params, filterState);
       const res = await fetch(`${apiBaseUrl}/search?${params.toString()}`, { signal });
       if (!res.ok) {
         throw new Error(`Search load failed (${res.status})`);
@@ -340,7 +346,7 @@ export function ResultsTabs({
         nextCursor: nextPageCursor(body),
       };
     },
-    [activeKind, apiBaseUrl, query, response.page_size],
+    [activeKind, apiBaseUrl, filterState, query, response.page_size],
   );
 
   const { items, status, hasMore, lastAppendedCount, loadMore, sentinelRef } =
