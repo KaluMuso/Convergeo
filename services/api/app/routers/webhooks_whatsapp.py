@@ -9,11 +9,12 @@ import logging
 import os
 import re
 from datetime import datetime
-from typing import Annotated, Any, Protocol
+from pathlib import Path
+from typing import Annotated, Any, Literal, Protocol
 
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.services.notifications.dedupe import split_dedupe_key
+from app.services.notifications.dedupe import enqueue_outbox_row, split_dedupe_key
 from app.services.notifications.fallback import (
     CHANNEL_WHATSAPP as FALLBACK_CHANNEL_WHATSAPP,
 )
@@ -36,6 +37,12 @@ _APP_SECRET_FALLBACK_ENV = "META_APP_SECRET"
 OUTBOX_TABLE = "notification_outbox"
 PROFILES_TABLE = "profiles"
 CHANNEL_WHATSAPP = "whatsapp"
+EVENT_OPT_STOP = "whatsapp_opt_stop"
+EVENT_OPT_START = "whatsapp_opt_start"
+TEMPLATE_COMPLIANCE_CONFIRMATION = "compliance_confirmation"
+_NOTIFICATIONS_I18N_DIR = (
+    Path(__file__).resolve().parents[4] / "packages" / "i18n" / "messages"
+)
 
 _STOP_KEYWORDS = frozenset({"stop", "unsubscribe", "cancel", "end", "quit"})
 _START_KEYWORDS = frozenset({"start", "subscribe", "unstop"})
@@ -258,7 +265,7 @@ def _resolve_profile_by_phone(client: Any, phone: str) -> dict[str, Any] | None:
     for candidate in _normalize_phone_candidates(phone):
         response = (
             client.table(PROFILES_TABLE)
-            .select("id,phone,notif_prefs")
+            .select("id,phone,locale,notif_prefs")
             .eq("phone", candidate)
             .maybe_single()
             .execute()
@@ -267,6 +274,81 @@ def _resolve_profile_by_phone(client: Any, phone: str) -> dict[str, Any] | None:
         if isinstance(row, dict):
             return row
     return None
+
+
+def _load_notifications_messages(locale: str) -> dict[str, Any]:
+    path = _NOTIFICATIONS_I18N_DIR / locale / "notifications.json"
+    if not path.is_file():
+        return {}
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    return raw if isinstance(raw, dict) else {}
+
+
+def _resolve_compliance_message(
+    locale: str,
+    *,
+    kind: Literal["stop", "start"],
+) -> str:
+    key = "stopConfirmation" if kind == "stop" else "startConfirmation"
+    for candidate in (locale.strip().lower(), "en"):
+        messages = _load_notifications_messages(candidate)
+        compliance = messages.get("compliance")
+        if isinstance(compliance, dict):
+            value = compliance.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    msg = f"missing compliance message for {kind}"
+    raise KeyError(msg)
+
+
+def _enqueue_opt_confirmation(
+    client: Any,
+    *,
+    profile: dict[str, Any],
+    inbound_message_id: str,
+    kind: Literal["stop", "start"],
+) -> None:
+    profile_id = str(profile.get("id", ""))
+    phone = profile.get("phone")
+    if not profile_id or not isinstance(phone, str) or not phone.strip():
+        return
+
+    locale = profile.get("locale")
+    locale_str = locale.strip().lower() if isinstance(locale, str) and locale.strip() else "en"
+    try:
+        confirmation_body = _resolve_compliance_message(locale_str, kind=kind)
+    except KeyError:
+        logger.warning(
+            "whatsapp opt confirmation skipped: missing i18n copy",
+            extra={"profile_id": profile_id, "kind": kind, "locale": locale_str},
+        )
+        return
+
+    event_type = EVENT_OPT_STOP if kind == "stop" else EVENT_OPT_START
+    try:
+        enqueue_outbox_row(
+            client,
+            event_type=event_type,
+            entity_id=inbound_message_id,
+            channel=CHANNEL_WHATSAPP,
+            template=TEMPLATE_COMPLIANCE_CONFIRMATION,
+            payload={
+                "recipient_id": profile_id,
+                "to": phone.strip(),
+                "locale": locale_str,
+                "confirmation_body": confirmation_body,
+            },
+        )
+    except Exception:
+        logger.warning(
+            "Failed to enqueue WhatsApp opt confirmation",
+            exc_info=True,
+            extra={
+                "profile_id": profile_id,
+                "inbound_message_id": inbound_message_id,
+                "kind": kind,
+            },
+        )
 
 
 def _write_notif_prefs(client: Any, profile_id: str, prefs: dict[str, bool]) -> None:
@@ -278,12 +360,15 @@ def _handle_opt_keyword(
     *,
     phone: str,
     keyword: str,
+    inbound_message_id: str | None = None,
 ) -> bool:
     normalized = keyword.strip().lower()
     if normalized in _STOP_KEYWORDS:
         prefs = dict(_ALL_CHANNELS_OFF)
+        kind: Literal["stop", "start"] = "stop"
     elif normalized in _START_KEYWORDS:
         prefs = dict(_ALL_CHANNELS_ON)
+        kind = "start"
     else:
         return False
 
@@ -300,6 +385,13 @@ def _handle_opt_keyword(
         return True
 
     _write_notif_prefs(client, str(profile["id"]), prefs)
+    if inbound_message_id:
+        _enqueue_opt_confirmation(
+            client,
+            profile=profile,
+            inbound_message_id=inbound_message_id,
+            kind=kind,
+        )
     logger.info(
         "whatsapp opt keyword applied",
         extra={
@@ -370,7 +462,14 @@ def _process_messages(client: Any, messages: list[Any]) -> None:
 
         text = item.get("text")
         body = text.get("body") if isinstance(text, dict) else None
-        if isinstance(body, str) and _handle_opt_keyword(client, phone=sender, keyword=body):
+        inbound_message_id = item.get("id")
+        message_id = inbound_message_id if isinstance(inbound_message_id, str) else None
+        if isinstance(body, str) and _handle_opt_keyword(
+            client,
+            phone=sender,
+            keyword=body,
+            inbound_message_id=message_id,
+        ):
             continue
 
         _log_unknown_inbound(phone=sender, message=item)

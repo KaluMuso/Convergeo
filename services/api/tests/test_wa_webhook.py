@@ -174,11 +174,13 @@ class InMemoryStore:
         *,
         profile_id: str = PROFILE_ID,
         phone: str = PHONE_E164,
+        locale: str = "en",
         notif_prefs: dict[str, bool] | None = None,
     ) -> dict[str, Any]:
         row = {
             "id": profile_id,
             "phone": phone,
+            "locale": locale,
             "notif_prefs": notif_prefs
             or {"whatsapp": True, "sms": True, "email": True},
         }
@@ -292,7 +294,12 @@ def _status_payload(*, message_id: str = WAMID, status: str = "delivered") -> di
     }
 
 
-def _inbound_payload(*, body: str, sender: str = PHONE_WA) -> dict[str, Any]:
+def _inbound_payload(
+    *,
+    body: str,
+    sender: str = PHONE_WA,
+    message_id: str = "wamid.inbound",
+) -> dict[str, Any]:
     return {
         "object": "whatsapp_business_account",
         "entry": [
@@ -307,7 +314,7 @@ def _inbound_payload(*, body: str, sender: str = PHONE_WA) -> dict[str, Any]:
                             "messages": [
                                 {
                                     "from": sender,
-                                    "id": "wamid.inbound",
+                                    "id": message_id,
                                     "timestamp": "1710000001",
                                     "text": {"body": body},
                                     "type": "text",
@@ -420,6 +427,85 @@ def test_stop_disables_all_channels(
     assert response.status_code == 200
     prefs = store.profiles[PROFILE_ID]["notif_prefs"]
     assert prefs == {"whatsapp": False, "sms": False, "email": False}
+
+
+def test_stop_inbound_enqueues_stop_confirmation(
+    webhook_client: TestClient,
+    store: InMemoryStore,
+) -> None:
+    store.seed_profile()
+    inbound_id = "wamid.stop-ack-1"
+    body = json.dumps(_inbound_payload(body="STOP", message_id=inbound_id)).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "X-Hub-Signature-256": _sign_body(body),
+    }
+
+    response = webhook_client.post("/webhooks/whatsapp", content=body, headers=headers)
+
+    assert response.status_code == 200
+    ack_rows = [
+        row
+        for row in store.outbox.values()
+        if row.get("template") == "compliance_confirmation"
+    ]
+    assert len(ack_rows) == 1
+    ack = ack_rows[0]
+    assert ack["dedupe_key"] == build_dedupe_key("whatsapp_opt_stop", inbound_id, "whatsapp")
+    assert "unsubscribed" in ack["payload"]["confirmation_body"].lower()
+    assert ack["payload"]["recipient_id"] == PROFILE_ID
+
+
+def test_start_inbound_enqueues_start_confirmation(
+    webhook_client: TestClient,
+    store: InMemoryStore,
+) -> None:
+    store.seed_profile(notif_prefs={"whatsapp": False, "sms": False, "email": False})
+    inbound_id = "wamid.start-ack-1"
+    body = json.dumps(_inbound_payload(body="start", message_id=inbound_id)).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "X-Hub-Signature-256": _sign_body(body),
+    }
+
+    response = webhook_client.post("/webhooks/whatsapp", content=body, headers=headers)
+
+    assert response.status_code == 200
+    ack_rows = [
+        row
+        for row in store.outbox.values()
+        if row.get("template") == "compliance_confirmation"
+    ]
+    assert len(ack_rows) == 1
+    ack = ack_rows[0]
+    assert ack["dedupe_key"] == build_dedupe_key("whatsapp_opt_start", inbound_id, "whatsapp")
+    assert "subscribed" in ack["payload"]["confirmation_body"].lower()
+
+
+def test_duplicate_stop_inbound_does_not_double_enqueue_confirmation(
+    webhook_client: TestClient,
+    store: InMemoryStore,
+) -> None:
+    store.seed_profile()
+    inbound_id = "wamid.stop-dup"
+    body = json.dumps(_inbound_payload(body="STOP", message_id=inbound_id)).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "X-Hub-Signature-256": _sign_body(body),
+    }
+
+    first = webhook_client.post("/webhooks/whatsapp", content=body, headers=headers)
+    second = webhook_client.post("/webhooks/whatsapp", content=body, headers=headers)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    ack_rows = [
+        row
+        for row in store.outbox.values()
+        if row.get("template") == "compliance_confirmation"
+    ]
+    assert len(ack_rows) == 1
+    assert store.outbox_inserts == 1
 
 
 def test_start_reenables_all_channels(
@@ -535,6 +621,28 @@ def test_duplicate_failed_status_webhook_does_not_double_enqueue_fallback(
     sms_rows = [row for row in store.outbox.values() if row["channel"] == "sms"]
     assert len(sms_rows) == 1
     assert store.outbox_inserts == 1
+
+
+def test_undelivered_status_webhook_enqueues_sms_fallback(
+    webhook_client: TestClient,
+    store: InMemoryStore,
+) -> None:
+    store.seed_outbox(whatsapp_message_id=WAMID, status="sent")
+    store.seed_profile()
+    body = json.dumps(_status_payload(status="undelivered")).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "X-Hub-Signature-256": _sign_body(body),
+    }
+
+    response = webhook_client.post("/webhooks/whatsapp", content=body, headers=headers)
+
+    assert response.status_code == 200
+    whatsapp_row = next(row for row in store.outbox.values() if row["channel"] == "whatsapp")
+    assert whatsapp_row["status"] == "failed"
+    assert whatsapp_row["payload"]["delivery_status"] == "undelivered"
+    sms_rows = [row for row in store.outbox.values() if row["channel"] == "sms"]
+    assert len(sms_rows) == 1
 
 
 def test_delivered_status_webhook_enqueues_no_fallback(
