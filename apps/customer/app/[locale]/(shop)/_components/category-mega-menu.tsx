@@ -1,15 +1,24 @@
 "use client";
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
+import { createApiClient } from "@vergeo/config";
+import { formatK } from "@vergeo/i18n";
 import { IconChevronDown } from "@vergeo/ui/src/icons";
 import { useFocusTrap } from "@vergeo/ui/src/modal";
 import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { buildCategoryTree, type CategoryRecord, type NavCategory } from "./category-tree";
 
 export type { NavCategory } from "./category-tree";
 export { buildCategoryTree } from "./category-tree";
+
+export type FeaturedMini = {
+  title: string;
+  href: string;
+  priceLabel: string;
+};
 
 export type CategoryMegaMenuLabels = {
   trigger: string;
@@ -17,6 +26,9 @@ export type CategoryMegaMenuLabels = {
   loading: string;
   viewAll: string;
   empty?: string;
+  featuredTitle: string;
+  featuredPromo: string;
+  featuredPromoCta: string;
 };
 
 type CategoryMegaMenuProps = {
@@ -24,6 +36,8 @@ type CategoryMegaMenuProps = {
   labels: CategoryMegaMenuLabels;
   /** Injectable for tests; defaults to a public (anon) browser-client query. */
   loadCategories?: () => Promise<NavCategory[]>;
+  /** Injectable featured minis; defaults to newest catalog listings. */
+  loadFeaturedMinis?: (locale: string) => Promise<FeaturedMini[]>;
   /** Close the panel when the document scrolls (desktop sticky header). */
   closeOnScroll?: boolean;
 };
@@ -46,6 +60,34 @@ async function defaultLoadCategories(): Promise<NavCategory[]> {
   return buildCategoryTree(data as CategoryRecord[]);
 }
 
+type CatalogListingItem = {
+  title: string;
+  product_slug: string | null;
+  price_ngwee: number;
+};
+
+async function defaultLoadFeaturedMinis(locale: string): Promise<FeaturedMini[]> {
+  const baseUrl = getApiBaseUrl();
+  if (!baseUrl) {
+    return [];
+  }
+  try {
+    const client = createApiClient({ baseUrl });
+    const response = await client.request<{ items: CatalogListingItem[] }>(
+      "/catalog/listings?sort=newest&limit=3",
+    );
+    return response.items
+      .filter((item) => item.product_slug)
+      .map((item) => ({
+        title: item.title,
+        href: `/${locale}/p/${item.product_slug}`,
+        priceLabel: formatK(item.price_ngwee),
+      }));
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Desktop "All Categories" disclosure menu. Accessible by design: a real
  * button toggles a panel of real links (no hover-only trap), so it behaves
@@ -57,10 +99,12 @@ export function CategoryMegaMenu({
   locale,
   labels,
   loadCategories = defaultLoadCategories,
+  loadFeaturedMinis = defaultLoadFeaturedMinis,
   closeOnScroll = false,
 }: CategoryMegaMenuProps) {
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<NavCategory[] | null>(null);
+  const [featuredMinis, setFeaturedMinis] = useState<FeaturedMini[] | null>(null);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -68,6 +112,7 @@ export function CategoryMegaMenu({
   const startedRef = useRef(false);
   const mountedRef = useRef(true);
   const loadRef = useRef(loadCategories);
+  const featuredRef = useRef(loadFeaturedMinis);
   const panelId = useId();
 
   const closeMenu = useCallback(() => {
@@ -83,6 +128,10 @@ export function CategoryMegaMenu({
   }, [loadCategories]);
 
   useEffect(() => {
+    featuredRef.current = loadFeaturedMinis;
+  }, [loadFeaturedMinis]);
+
+  useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
@@ -95,16 +144,17 @@ export function CategoryMegaMenu({
     }
     startedRef.current = true;
     setLoading(true);
-    loadRef
-      .current()
-      .then((tree) => {
+    void Promise.all([loadRef.current(), featuredRef.current(locale)])
+      .then(([tree, featured]) => {
         if (mountedRef.current) {
           setCategories(tree);
+          setFeaturedMinis(featured);
         }
       })
       .catch(() => {
         if (mountedRef.current) {
           setCategories([]);
+          setFeaturedMinis([]);
         }
       })
       .finally(() => {
@@ -112,7 +162,7 @@ export function CategoryMegaMenu({
           setLoading(false);
         }
       });
-  }, [open]);
+  }, [locale, open]);
 
   useEffect(() => {
     if (!open) {
@@ -168,49 +218,87 @@ export function CategoryMegaMenu({
         aria-label={labels.panelAria}
         hidden={!open}
         tabIndex={-1}
-        className="absolute left-0 top-full z-50 mt-1 max-h-[70vh] w-[min(44rem,90vw)] overflow-auto rounded-lg border border-border bg-surface p-4 shadow-3 motion-fade"
+        className="absolute left-0 top-full z-50 mt-1 max-h-[70vh] w-[min(52rem,92vw)] overflow-auto rounded-lg border border-border bg-surface p-4 shadow-3 motion-fade"
       >
-        {loading || categories === null ? (
+        {loading || categories === null || featuredMinis === null ? (
           <p className="text-sm text-text-2">{labels.loading}</p>
         ) : categories.length === 0 ? (
           <p className="text-sm text-text-2">{labels.empty ?? labels.loading}</p>
         ) : (
-          <div className="space-y-4">
-            <ul className="grid list-none grid-cols-2 gap-x-6 gap-y-4 p-0 sm:grid-cols-3">
-              {categories.map((category) => (
-                <li key={category.id} className="min-w-0">
-                  <Link
-                    href={`/${locale}/c/${category.slug}`}
-                    onClick={closeMenu}
-                    className="block truncate font-display text-h3 text-display-ink transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-                  >
-                    {category.name}
-                  </Link>
-                  {category.children.length > 0 ? (
-                    <ul className="mt-1.5 list-none space-y-1 p-0">
-                      {category.children.map((child) => (
-                        <li key={child.id} className="min-w-0">
-                          <Link
-                            href={`/${locale}/c/${child.slug}`}
-                            onClick={closeMenu}
-                            className="block truncate text-sm text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-                          >
-                            {child.name}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-            <Link
-              href={`/${locale}/categories`}
-              onClick={closeMenu}
-              className="inline-flex min-h-11 items-center text-sm font-medium text-primary transition-colors hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+          <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
+            <div className="min-w-0 flex-1 space-y-4">
+              <ul className="grid list-none grid-cols-2 gap-x-6 gap-y-4 p-0 sm:grid-cols-3">
+                {categories.map((category) => (
+                  <li key={category.id} className="min-w-0">
+                    <Link
+                      href={`/${locale}/c/${category.slug}`}
+                      onClick={closeMenu}
+                      className="block truncate font-display text-h3 text-display-ink transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+                    >
+                      {category.name}
+                    </Link>
+                    {category.children.length > 0 ? (
+                      <ul className="mt-1.5 list-none space-y-1 p-0">
+                        {category.children.map((child) => (
+                          <li key={child.id} className="min-w-0">
+                            <Link
+                              href={`/${locale}/c/${child.slug}`}
+                              onClick={closeMenu}
+                              className="block truncate text-sm text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+                            >
+                              {child.name}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href={`/${locale}/categories`}
+                onClick={closeMenu}
+                className="inline-flex min-h-11 items-center text-sm font-medium text-primary transition-colors hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+              >
+                {labels.viewAll}
+              </Link>
+            </div>
+
+            <aside
+              aria-labelledby="mega-menu-featured-title"
+              className="w-full shrink-0 rounded-lg border border-border bg-bg-2 p-3 lg:w-56"
+              data-testid="mega-menu-featured"
             >
-              {labels.viewAll}
-            </Link>
+              <h3 id="mega-menu-featured-title" className="mb-2 text-sm font-semibold text-text">
+                {labels.featuredTitle}
+              </h3>
+              {featuredMinis.length > 0 ? (
+                <ul className="m-0 list-none space-y-2 p-0">
+                  {featuredMinis.map((mini) => (
+                    <li key={mini.href}>
+                      <Link
+                        href={mini.href}
+                        onClick={closeMenu}
+                        className="block rounded-md px-2 py-1.5 transition-colors hover:bg-surface focus-visible:outline-none focus-visible:shadow-focusRing"
+                      >
+                        <span className="block truncate text-sm font-medium text-text">
+                          {mini.title}
+                        </span>
+                        <span className="text-xs text-text-2">{mini.priceLabel}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <p className="mt-3 text-xs text-text-2">{labels.featuredPromo}</p>
+              <Link
+                href={`/${locale}/search`}
+                onClick={closeMenu}
+                className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+              >
+                {labels.featuredPromoCta}
+              </Link>
+            </aside>
           </div>
         )}
       </div>

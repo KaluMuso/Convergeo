@@ -87,7 +87,8 @@
     "removeChip": "移除 {filter}",
     "priceRange": "K{min} – K{max}",
     "minPriceOnly": "从 K{min} 起",
-    "maxPriceOnly": "最高 K{max}"
+    "maxPriceOnly": "最高 K{max}",
+    "facetCount": "{label}（{count}）"
   },
   "result": {
     "priceFrom": "{price} 起",

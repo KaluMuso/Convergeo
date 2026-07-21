@@ -12,6 +12,10 @@ vi.mock("./category-mega-menu", () => ({
   ),
 }));
 
+vi.mock("./desktop-header-search", () => ({
+  DesktopHeaderSearch: () => <div role="search">Search</div>,
+}));
+
 vi.mock("./cart/mini-cart-drawer", () => ({
   useCartStore: () => ({ cart: null }),
   useCartActions: () => ({ refresh: vi.fn() }),
@@ -31,6 +35,9 @@ const labels = {
   categoriesLoading: "Loading…",
   categoriesEmpty: "Empty",
   viewAllCategories: "View all",
+  featuredTitle: "New on Vergeo5",
+  featuredPromo: "Compare sellers online.",
+  featuredPromoCta: "Search marketplace",
   directory: "Directory",
   services: "Services",
   events: "Events",
@@ -38,6 +45,13 @@ const labels = {
   account: "Account",
   cart: "Cart",
   cartWithCount: "Cart, {count} items",
+  searchInput: {
+    placeholder: "Search products, services, events…",
+    submit: "Search",
+    ariaLabel: "Search",
+    suggestionsLabel: "Search suggestions",
+    noSuggestions: "No suggestions",
+  },
 };
 
 describe("DesktopHeader", () => {

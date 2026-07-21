@@ -1,12 +1,14 @@
 "use client";
 
-import { IconAccount, IconCart, IconSearch } from "@vergeo/ui/src/icons";
-import { SearchField } from "@vergeo/ui/src/search-field";
+import { IconAccount, IconCart } from "@vergeo/ui/src/icons";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { getCartItemCount, useCartActions, useCartStore } from "./cart/mini-cart-drawer";
 import { CategoryMegaMenu } from "./category-mega-menu";
+import { DesktopHeaderSearch } from "./desktop-header-search";
+
+import type { SearchInputLabels } from "./search/search-input";
 
 type DesktopHeaderLabels = {
   appName: string;
@@ -19,6 +21,9 @@ type DesktopHeaderLabels = {
   categoriesLoading: string;
   categoriesEmpty: string;
   viewAllCategories: string;
+  featuredTitle: string;
+  featuredPromo: string;
+  featuredPromoCta: string;
   directory: string;
   services: string;
   events: string;
@@ -26,6 +31,7 @@ type DesktopHeaderLabels = {
   account: string;
   cart: string;
   cartWithCount: string;
+  searchInput: SearchInputLabels;
 };
 
 type DesktopHeaderProps = {
@@ -109,28 +115,9 @@ export function DesktopHeader({ locale, labels, localeSwitcher }: DesktopHeaderP
           {labels.appName}
         </Link>
 
-        <form
-          role="search"
-          action={`/${locale}/search`}
-          className="min-w-0 max-w-3xl flex-1 xl:max-w-4xl"
-        >
-          <SearchField
-            name="q"
-            aria-label={labels.searchPlaceholder}
-            placeholder={labels.searchPlaceholder}
-            leadingIcon={<IconSearch />}
-            trailing={
-              <button
-                type="submit"
-                aria-label={labels.searchSubmit}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-pill text-text-2 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
-              >
-                <IconSearch />
-              </button>
-            }
-            className="h-11 border-primary/30 bg-bg shadow-1"
-          />
-        </form>
+        <div className="min-w-0 max-w-3xl flex-1 xl:max-w-4xl">
+          <DesktopHeaderSearch locale={locale} labels={labels.searchInput} />
+        </div>
 
         <ul className="flex shrink-0 list-none items-center gap-0.5 p-0">
           <li>
@@ -143,6 +130,9 @@ export function DesktopHeader({ locale, labels, localeSwitcher }: DesktopHeaderP
                 loading: labels.categoriesLoading,
                 empty: labels.categoriesEmpty,
                 viewAll: labels.viewAllCategories,
+                featuredTitle: labels.featuredTitle,
+                featuredPromo: labels.featuredPromo,
+                featuredPromoCta: labels.featuredPromoCta,
               }}
             />
           </li>

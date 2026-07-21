@@ -16,6 +16,11 @@ from app.services.search.query_builder import (
     build_filters,
     paginate,
 )
+from app.services.search.search_facets import (
+    SearchFacets,
+    compute_search_facets,
+    filter_search_hits,
+)
 from app.services.search.synonyms import expand_query
 from pydantic import Field
 
@@ -51,6 +56,7 @@ class SearchResponse(StrictModel):
     total: int
     results: list[SearchHit]
     degraded: bool = False
+    facets: SearchFacets | None = None
 
 
 class SuggestItem(StrictModel):
@@ -251,7 +257,8 @@ async def run_search(
 ) -> SearchResponse:
     trimmed = query.strip()
     expanded_query = expand_query(client, trimmed)
-    filters = build_filters(
+    base_filters = build_filters(kind=kind)
+    display_filters = build_filters(
         kind=kind,
         category_path=category_path,
         price_min_ngwee=price_min_ngwee,
@@ -274,13 +281,29 @@ async def run_search(
         client,
         query=trimmed,
         embedding=embedding,
-        filters=filters,
+        filters=base_filters,
     )
     if not include_wholesale:
         hits = drop_wholesale_listing_hits(client, hits)
     # D25 / VC-P06: demo seed inventory never appears in public discovery.
     hits = drop_demo_listing_hits(client, hits)
-    page_items, total = paginate(hits, page=page, page_size=page_size)
+
+    facets: SearchFacets | None = None
+    if trimmed and (kind is None or kind == "products"):
+        facets = compute_search_facets(
+            hits,
+            category_path=category_path,
+            price_min_ngwee=price_min_ngwee,
+            price_max_ngwee=price_max_ngwee,
+        )
+
+    display_hits = filter_search_hits(
+        hits,
+        category_path=category_path,
+        price_min_ngwee=price_min_ngwee,
+        price_max_ngwee=price_max_ngwee,
+    )
+    page_items, total = paginate(display_hits, page=page, page_size=page_size)
     page_items = attach_route_slugs(client, page_items)
 
     if trimmed:
@@ -288,13 +311,13 @@ async def run_search(
         # consent, anonymized (normalized term only). Never breaks the search.
         log_search_query(
             term=trimmed,
-            entity_counts=dict(Counter(hit.entity_kind for hit in hits)),
+            entity_counts=dict(Counter(hit.entity_kind for hit in display_hits)),
             zero_result=total == 0,
             user_id=user_id,
         )
 
     if total == 0 and trimmed:
-        log_zero_result(query=trimmed, filters=filters, kind=kind)
+        log_zero_result(query=trimmed, filters=display_filters, kind=kind)
 
     return SearchResponse(
         query=trimmed,
@@ -304,6 +327,7 @@ async def run_search(
         total=total,
         results=page_items,
         degraded=degraded,
+        facets=facets,
     )
 
 

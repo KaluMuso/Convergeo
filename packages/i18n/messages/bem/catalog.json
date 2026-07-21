@@ -58,7 +58,10 @@
       "searchSubmit": "Fweni",
       "services": "Imilimo",
       "supplies": "Ifya business",
-      "viewAllCategories": "Loleni categories shyonse"
+      "viewAllCategories": "Loleni categories shyonse",
+      "featuredTitle": "Ifintu ifipya pa Vergeo5",
+      "featuredPromo": "Fikulanisheni abacushi no kulipila na escrow pa intaneti.",
+      "featuredPromoCta": "Sakileni msika"
     },
     "serviceBar": {
       "ariaLabel": "Amashiwi ya delivery no pickup",

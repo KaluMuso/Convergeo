@@ -87,7 +87,8 @@
     "removeChip": "Retirer {filter}",
     "priceRange": "K{min} – K{max}",
     "minPriceOnly": "À partir de K{min}",
-    "maxPriceOnly": "Jusqu’à K{max}"
+    "maxPriceOnly": "Jusqu’à K{max}",
+    "facetCount": "{label} ({count})"
   },
   "result": {
     "priceFrom": "À partir de {price}",

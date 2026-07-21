@@ -49,7 +49,8 @@
     "removeChip": "Chotsani {filter}",
     "priceRange": "K{min} – K{max}",
     "minPriceOnly": "Kuyambira K{min}",
-    "maxPriceOnly": "Kufikira K{max}"
+    "maxPriceOnly": "Kufikira K{max}",
+    "facetCount": "{label} ({count})"
   },
   "placeholder": "Sakani pa Vergeo5",
   "recent": {

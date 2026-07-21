@@ -22,12 +22,14 @@ export type SearchFilterPanelLabels = {
   categoryAll: string;
   apply: string;
   clear: string;
+  facetCount: string;
 };
 
 type SearchFilterPanelProps = {
   labels: SearchFilterPanelLabels;
   categories: SearchCategoryOption[];
   initialState: SearchFilterState;
+  categoryCounts?: Record<string, number>;
   className?: string;
   onApplied?: () => void;
 };
@@ -51,6 +53,7 @@ export function SearchFilterPanel({
   labels,
   categories,
   initialState,
+  categoryCounts = {},
   className,
   onApplied,
 }: SearchFilterPanelProps) {
@@ -126,11 +129,20 @@ export function SearchFilterPanel({
           aria-label={labels.category}
         >
           <option value="">{labels.categoryAll}</option>
-          {categories.map((category) => (
-            <option key={category.path} value={category.path}>
-              {category.label}
-            </option>
-          ))}
+          {categories.map((category) => {
+            const count = categoryCounts[category.path];
+            const label =
+              count !== undefined && count > 0
+                ? labels.facetCount
+                    .replace("{label}", category.label)
+                    .replace("{count}", String(count))
+                : category.label;
+            return (
+              <option key={category.path} value={category.path}>
+                {label}
+              </option>
+            );
+          })}
         </Select>
       </fieldset>
 

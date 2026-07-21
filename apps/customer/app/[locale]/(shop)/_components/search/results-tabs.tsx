@@ -45,6 +45,16 @@ export type SearchHit = {
   slug?: string | null;
 };
 
+export type SearchFacetBucket = {
+  value: string;
+  count: number;
+};
+
+export type SearchFacets = {
+  categories: SearchFacetBucket[];
+  price: SearchFacetBucket[];
+};
+
 export type SearchResponse = {
   query: string;
   expanded_query: string;
@@ -53,6 +63,7 @@ export type SearchResponse = {
   total: number;
   results: SearchHit[];
   degraded: boolean;
+  facets?: SearchFacets | null;
 };
 
 export type TabCounts = Record<SearchKindFilter, number>;
