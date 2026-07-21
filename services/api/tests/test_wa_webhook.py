@@ -14,6 +14,7 @@ import pytest
 from app.deps import get_supabase_client
 from app.main import create_app
 from app.routers.webhooks_whatsapp import verify_hub_signature
+from app.services.notifications.dedupe import build_dedupe_key
 from app.supabase_client import SupabaseServiceClient
 from fastapi.testclient import TestClient
 
@@ -45,6 +46,14 @@ class _FakeQuery:
         self._payload = payload
         return self
 
+    def insert(self, payload: dict[str, Any] | list[dict[str, Any]]) -> _FakeQuery:
+        self._operation = "insert"
+        if isinstance(payload, list):
+            self._payload = payload[0]
+        else:
+            self._payload = payload
+        return self
+
     def eq(self, column: str, value: Any) -> _FakeQuery:
         self._filters.append(("eq", column, value))
         return self
@@ -63,6 +72,10 @@ class _FakeQuery:
 
     def execute(self) -> MagicMock:
         if self._table == "notification_outbox":
+            if self._operation == "insert":
+                assert self._payload is not None
+                row = self._store.insert_outbox(self._payload)
+                return MagicMock(data=[row] if row else None)
             if self._operation == "update":
                 assert self._payload is not None
                 updated = self._store.update_outbox(self._filters, self._payload)
@@ -96,9 +109,32 @@ class InMemoryStore:
         self.profiles: dict[str, dict[str, Any]] = {}
         self.outbox_updates = 0
         self.profile_updates = 0
+        self.outbox_inserts = 0
 
     def table(self, name: str) -> _FakeQuery:
         return _FakeQuery(self, name)
+
+    def insert_outbox(self, payload: dict[str, Any]) -> dict[str, Any] | None:
+        dedupe_key = payload["dedupe_key"]
+        if any(row["dedupe_key"] == dedupe_key for row in self.outbox.values()):
+            return None
+        self.outbox_inserts += 1
+        row_id = str(uuid.uuid4())
+        now = datetime.now(UTC).isoformat()
+        row = {
+            "id": row_id,
+            "dedupe_key": dedupe_key,
+            "channel": payload["channel"],
+            "template": payload.get("template"),
+            "payload": copy.deepcopy(payload.get("payload", {})),
+            "status": payload.get("status", "pending"),
+            "attempts": payload.get("attempts", 0),
+            "next_retry_at": payload.get("next_retry_at"),
+            "created_at": now,
+            "updated_at": now,
+        }
+        self.outbox[row_id] = row
+        return copy.deepcopy(row)
 
     def seed_outbox(
         self,
@@ -106,15 +142,21 @@ class InMemoryStore:
         whatsapp_message_id: str,
         status: str = "sent",
         delivery_status: str | None = None,
+        recipient_id: str = PROFILE_ID,
+        event_type: str = "order_confirmed",
+        entity_id: str = "ord-test-1",
     ) -> dict[str, Any]:
         row_id = str(uuid.uuid4())
-        payload: dict[str, Any] = {"whatsapp_message_id": whatsapp_message_id}
+        payload: dict[str, Any] = {
+            "whatsapp_message_id": whatsapp_message_id,
+            "recipient_id": recipient_id,
+        }
         if delivery_status is not None:
             payload["delivery_status"] = delivery_status
         now = datetime.now(UTC).isoformat()
         row = {
             "id": row_id,
-            "dedupe_key": f"test:{whatsapp_message_id}",
+            "dedupe_key": build_dedupe_key(event_type, entity_id, "whatsapp"),
             "channel": "whatsapp",
             "template": "order_confirmed",
             "payload": payload,
@@ -430,6 +472,7 @@ def test_status_callback_updates_outbox(
     store: InMemoryStore,
 ) -> None:
     store.seed_outbox(whatsapp_message_id=WAMID, status="sent")
+    store.seed_profile()
     body = json.dumps(_status_payload(status="failed")).encode("utf-8")
 
     response = webhook_client.post(
@@ -443,9 +486,78 @@ def test_status_callback_updates_outbox(
 
     assert response.status_code == 200
     assert store.outbox_updates == 1
-    row = next(iter(store.outbox.values()))
+    row = next(row for row in store.outbox.values() if row["channel"] == "whatsapp")
     assert row["status"] == "failed"
     assert row["payload"]["delivery_status"] == "failed"
+
+
+def test_failed_status_webhook_enqueues_sms_fallback(
+    webhook_client: TestClient,
+    store: InMemoryStore,
+) -> None:
+    store.seed_outbox(whatsapp_message_id=WAMID, status="sent")
+    store.seed_profile()
+    body = json.dumps(_status_payload(status="failed")).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "X-Hub-Signature-256": _sign_body(body),
+    }
+
+    response = webhook_client.post("/webhooks/whatsapp", content=body, headers=headers)
+
+    assert response.status_code == 200
+    sms_rows = [row for row in store.outbox.values() if row["channel"] == "sms"]
+    assert len(sms_rows) == 1
+    sms = sms_rows[0]
+    assert sms["dedupe_key"] == build_dedupe_key("order_confirmed", "ord-test-1", "sms")
+    assert sms["status"] == "pending"
+    assert sms["payload"]["recipient_id"] == PROFILE_ID
+    assert sms["payload"]["fallback"]["to_channel"] == "sms"
+
+
+def test_duplicate_failed_status_webhook_does_not_double_enqueue_fallback(
+    webhook_client: TestClient,
+    store: InMemoryStore,
+) -> None:
+    store.seed_outbox(whatsapp_message_id=WAMID, status="sent")
+    store.seed_profile()
+    body = json.dumps(_status_payload(status="failed")).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "X-Hub-Signature-256": _sign_body(body),
+    }
+
+    first = webhook_client.post("/webhooks/whatsapp", content=body, headers=headers)
+    second = webhook_client.post("/webhooks/whatsapp", content=body, headers=headers)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    sms_rows = [row for row in store.outbox.values() if row["channel"] == "sms"]
+    assert len(sms_rows) == 1
+    assert store.outbox_inserts == 1
+
+
+def test_delivered_status_webhook_enqueues_no_fallback(
+    webhook_client: TestClient,
+    store: InMemoryStore,
+) -> None:
+    store.seed_outbox(whatsapp_message_id=WAMID, status="sent")
+    store.seed_profile()
+    body = json.dumps(_status_payload(status="delivered")).encode("utf-8")
+
+    response = webhook_client.post(
+        "/webhooks/whatsapp",
+        content=body,
+        headers={
+            "Content-Type": "application/json",
+            "X-Hub-Signature-256": _sign_body(body),
+        },
+    )
+
+    assert response.status_code == 200
+    sms_rows = [row for row in store.outbox.values() if row["channel"] == "sms"]
+    assert sms_rows == []
+    assert store.outbox_inserts == 0
 
 
 def test_unknown_sender_logged_and_200(

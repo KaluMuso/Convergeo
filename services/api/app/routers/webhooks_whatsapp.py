@@ -8,10 +8,20 @@ import json
 import logging
 import os
 import re
+from datetime import datetime
 from typing import Annotated, Any, Protocol
 
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.notifications.dedupe import split_dedupe_key
+from app.services.notifications.fallback import (
+    CHANNEL_WHATSAPP as FALLBACK_CHANNEL_WHATSAPP,
+)
+from app.services.notifications.fallback import (
+    DeliveryContext,
+    enqueue_fallback_row,
+    evaluate_lifecycle_fallback,
+)
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import PlainTextResponse
 
@@ -90,6 +100,8 @@ def _map_whatsapp_status(wa_status: str) -> tuple[str, str] | None:
     normalized = wa_status.strip().lower()
     if normalized == "failed":
         return "failed", "failed"
+    if normalized == "undelivered":
+        return "failed", "undelivered"
     if normalized in {"sent", "delivered", "read"}:
         return "sent", normalized
     return None
@@ -159,6 +171,87 @@ def _apply_status_update(client: Any, row: dict[str, Any], wa_status: str) -> bo
 
     client.table(OUTBOX_TABLE).update(update_body).eq("id", row_id).execute()
     return True
+
+
+def _parse_row_timestamp(row: dict[str, Any], key: str) -> datetime | None:
+    raw = row.get(key)
+    if not isinstance(raw, str):
+        return None
+    try:
+        return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _fetch_notif_prefs(client: Any, recipient_id: str) -> dict[str, Any]:
+    response = (
+        client.table(PROFILES_TABLE)
+        .select("notif_prefs")
+        .eq("id", recipient_id)
+        .maybe_single()
+        .execute()
+    )
+    row = _extract_data(response)
+    if isinstance(row, dict):
+        prefs = row.get("notif_prefs")
+        if isinstance(prefs, dict):
+            return prefs
+    return {}
+
+
+def _maybe_enqueue_lifecycle_fallback(
+    client: Any,
+    row: dict[str, Any],
+    *,
+    delivery_status: str,
+) -> None:
+    """After a WhatsApp delivery failure webhook, queue SMS fallback if appropriate."""
+    dedupe_key = str(row.get("dedupe_key", ""))
+    event_type, entity_id = split_dedupe_key(dedupe_key)
+    if not event_type or not entity_id:
+        logger.warning(
+            "whatsapp lifecycle fallback skipped: malformed dedupe_key",
+            extra={"dedupe_key": dedupe_key, "outbox_id": row.get("id")},
+        )
+        return
+
+    payload = row.get("payload")
+    payload_dict = dict(payload) if isinstance(payload, dict) else {}
+    recipient_id = payload_dict.get("recipient_id")
+    notif_prefs = _fetch_notif_prefs(client, str(recipient_id)) if recipient_id else {}
+
+    whatsapp_opt_in = payload_dict.get("whatsapp_opt_in", True)
+    if not isinstance(whatsapp_opt_in, bool):
+        whatsapp_opt_in = True
+
+    sent_at = _parse_row_timestamp(row, "updated_at") or _parse_row_timestamp(row, "created_at")
+    context = DeliveryContext(
+        channel=FALLBACK_CHANNEL_WHATSAPP,
+        whatsapp_opt_in=whatsapp_opt_in,
+        delivery_status=delivery_status,
+        sent_at=sent_at,
+    )
+    decision = evaluate_lifecycle_fallback(context, notif_prefs)
+    if decision.next_channel is None:
+        return
+
+    template = row.get("template")
+    try:
+        enqueue_fallback_row(
+            client,
+            event_type=event_type,
+            entity_id=entity_id,
+            decision=decision,
+            template=template if isinstance(template, str) else None,
+            payload=payload_dict,
+            attempts=int(row.get("attempts", 0)),
+        )
+    except Exception:
+        logger.warning(
+            "Failed to enqueue WhatsApp lifecycle SMS fallback",
+            exc_info=True,
+            extra={"outbox_id": row.get("id"), "dedupe_key": dedupe_key},
+        )
 
 
 def _resolve_profile_by_phone(client: Any, phone: str) -> dict[str, Any] | None:
@@ -253,7 +346,17 @@ def _process_statuses(client: Any, statuses: list[Any]) -> None:
                 extra={"whatsapp_message_id": message_id, "status": status},
             )
             continue
-        _apply_status_update(client, row, status)
+        updated = _apply_status_update(client, row, status)
+        normalized = status.strip().lower()
+        if normalized in {"failed", "undelivered"} and updated:
+            mapped = _map_whatsapp_status(status)
+            if mapped is not None:
+                _, delivery_status = mapped
+                _maybe_enqueue_lifecycle_fallback(
+                    client,
+                    row,
+                    delivery_status=delivery_status,
+                )
 
 
 def _process_messages(client: Any, messages: list[Any]) -> None:
