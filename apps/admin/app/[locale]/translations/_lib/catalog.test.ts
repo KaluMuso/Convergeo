@@ -15,10 +15,13 @@ describe("buildTranslationCatalog", () => {
     expect(events).toBeDefined();
     expect(events?.totalKeys).toBeGreaterThan(0);
 
-    // French translated the events namespace (PR1) → non-zero coverage; Bemba has
-    // no events file yet → zero. Coverage can never exceed the source key count.
+    // French + bem/nya events overlays exist (CCP-03e) → non-zero coverage.
+    // legal remains absent for bem → zero. Coverage can never exceed the source key count.
     expect(events?.perLocale.fr).toBeGreaterThan(0);
-    expect(events?.perLocale.bem).toBe(0);
+    expect(events?.perLocale.bem).toBe(events?.totalKeys);
+    expect(events?.perLocale.nya).toBe(events?.totalKeys);
+    const legal = catalog.namespaces.find((ns) => ns.namespace === "legal");
+    expect(legal?.perLocale.bem).toBe(0);
     for (const locale of catalog.translatableLocales) {
       expect(events?.perLocale[locale]).toBeLessThanOrEqual(events?.totalKeys ?? 0);
     }
