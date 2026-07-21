@@ -10,7 +10,11 @@ from typing import Any
 
 import pytest
 from app.errors import AppError
-from app.services.kyc.state_machine import transition_approve
+from app.services.kyc.state_machine import (
+    KycTransitionError,
+    transition_approve,
+    transition_start_review,
+)
 from tests.rls.conftest import (
     PgConn,
     apply_migrations,
@@ -220,3 +224,45 @@ class TestKycVendorCas:
         assert _vendor_status(db, vendor_id) == "active"
         successes = [result for result in results if result is not None]
         assert len(successes) == 1
+
+    def test_approve_happy_path_succeeds(self, db: PgConn) -> None:
+        vendor_id = str(uuid.uuid4())
+        kyc_id = str(uuid.uuid4())
+        _seed_pending_kyc_vendor(db, vendor_id=vendor_id, kyc_id=kyc_id)
+        wrapper = _ServiceWrapper(db)
+
+        result = transition_approve(
+            actor_id=ADMIN_ID,
+            vendor_id=vendor_id,
+            kyc_record_id=kyc_id,
+            tier=2,
+            service_client=wrapper,
+        )
+
+        assert result["vendor"]["status"] == "active"
+        assert result["kyc_record"]["status"] == "approved"
+        assert _vendor_status(db, vendor_id) == "active"
+
+    def test_illegal_transition_rejected_by_guard(self, db: PgConn) -> None:
+        vendor_id = str(uuid.uuid4())
+        kyc_id = str(uuid.uuid4())
+        _seed_pending_kyc_vendor(db, vendor_id=vendor_id, kyc_id=kyc_id)
+        wrapper = _ServiceWrapper(db)
+        transition_approve(
+            actor_id=ADMIN_ID,
+            vendor_id=vendor_id,
+            kyc_record_id=kyc_id,
+            tier=2,
+            service_client=wrapper,
+        )
+
+        with pytest.raises(KycTransitionError) as exc_info:
+            transition_start_review(
+                actor_id=ADMIN_ID,
+                vendor_id=vendor_id,
+                kyc_record_id=kyc_id,
+                service_client=wrapper,
+            )
+
+        assert exc_info.value.code == "kyc_invalid_transition"
+        assert exc_info.value.http_status == 409

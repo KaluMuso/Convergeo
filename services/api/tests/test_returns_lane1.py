@@ -563,3 +563,42 @@ def test_concurrent_accept_and_contest_exactly_one_wins(
     assert final_status in {"approved", "rejected", "completed"}
     successes = [result for result in results if result is not None]
     assert len(successes) == 1
+    assert len(fake.tables["disputes"].rows) <= 1
+
+
+def test_concurrent_contest_exactly_one_wins_no_duplicate_dispute() -> None:
+    import concurrent.futures
+
+    fake = FakeSupabaseClient()
+    _seed_fixture(fake, delivered_at=datetime.now(tz=UTC) - timedelta(hours=1))
+    fake.tables["returns"].rows.append(
+        {
+            "id": RETURN_A_ID,
+            "order_item_id": ORDER_ITEM_A_ID,
+            "lane": 1,
+            "evidence_paths": [EVIDENCE_PATH],
+            "fee_breakdown": {},
+            "status": "requested",
+        }
+    )
+
+    def contest() -> object:
+        try:
+            return lane1_service.vendor_contest_lane1_return(
+                _FakeServiceWrapper(fake),
+                return_id=RETURN_A_ID,
+                vendor_owner_id=VENDOR_OWNER_A,
+            )
+        except AppError as exc:
+            if exc.code in {"return_transition_conflict", "validation_error"}:
+                return None
+            raise
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [executor.submit(contest), executor.submit(contest)]
+        results = [future.result() for future in futures]
+
+    assert fake.tables["returns"].rows[0]["status"] == "rejected"
+    successes = [result for result in results if result is not None]
+    assert len(successes) == 1
+    assert len(fake.tables["disputes"].rows) == 1
