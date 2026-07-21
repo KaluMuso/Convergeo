@@ -121,7 +121,31 @@
       "escrowLine": "Buyer protection with escrow when online payment is available — held by Vergeo5 until delivery, then released.",
       "escrowStep1": "You pay",
       "escrowStep2": "Held by Vergeo5",
-      "escrowStep3": "Released on delivery"
+      "escrowStep3": "Released on delivery",
+      "carousel": {
+        "previous": "Previous slide",
+        "next": "Next slide",
+        "slideOf": "Slide {current} of {total}",
+        "ariaLabel": "Homepage hero carousel"
+      },
+      "slides": {
+        "fashion": {
+          "title": "Fashion and fabric from Zambian sellers",
+          "subtitle": "Discover chitenge, traditional wear, and everyday style."
+        },
+        "tech": {
+          "title": "Phones, laptops, and everyday tech",
+          "subtitle": "Compare prices and sellers before you checkout."
+        },
+        "power": {
+          "title": "Solar and power for home and business",
+          "subtitle": "Find panels, batteries, and backup options nearby."
+        },
+        "essentials": {
+          "title": "Kitchen and home essentials",
+          "subtitle": "Stock up on cookware, appliances, and household goods."
+        }
+      }
     },
     "trust": {
       "ariaLabel": "Why shop on Vergeo5",

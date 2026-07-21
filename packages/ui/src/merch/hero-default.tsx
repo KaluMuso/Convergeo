@@ -10,6 +10,8 @@ export type HeroDefaultProps = {
   secondaryCta?: ReactNode;
   media?: ReactNode;
   className?: string;
+  /** Ignored — carousel campaigns use `HeroCarousel` via hero-registry. */
+  slides?: unknown;
 };
 
 export function HeroDefault({
