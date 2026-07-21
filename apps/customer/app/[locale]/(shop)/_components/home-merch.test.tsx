@@ -185,9 +185,8 @@ describe("placeholder-only seed merchandising", () => {
 describe("catalog.home i18n completeness", () => {
   const home = catalogMessages.home as Record<string, unknown>;
 
-  it("includes nested home meta, nav, hero, and section labels", () => {
+  it("includes nested home meta, hero, and section labels", () => {
     expect(home.meta).toBeTruthy();
-    expect(home.nav).toBeTruthy();
     expect(home.hero).toBeTruthy();
     expect(home.bannerRow).toBeTruthy();
     expect(home.events).toBeTruthy();

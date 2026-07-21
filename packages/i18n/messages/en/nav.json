@@ -26,7 +26,8 @@
     "events": "Events",
     "browseChipsAria": "Browse by area",
     "askVergeo": "Ask Vergeo",
-    "supplies": "Supplies"
+    "supplies": "Supplies",
+    "browseChipsAria": "Browse by area"
   },
   "marketing": {
     "ariaLabel": "Marketing navigation",

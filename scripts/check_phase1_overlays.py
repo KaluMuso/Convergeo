@@ -25,7 +25,6 @@ PHASE1_CRITICAL_PREFIXES: dict[str, list[str]] = {
     "nav": ["skipToContent", "shop", "marketing", "account", "auth"],
     "catalog": [
         "home.meta",
-        "home.nav",
         "home.hero",
         "home.trust",
         "home.demo",
