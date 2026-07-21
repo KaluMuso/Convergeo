@@ -123,6 +123,7 @@ export const PHASE1_ENGLISH_ALLOWLIST = new Set([
   "-",
   "+",
   "K",
+  "−%", // discount chip "−{percent}%" — locale-neutral symbol format
   // Locale endonyms / place names that stay as-is in overlays
   "English",
   "Français",
