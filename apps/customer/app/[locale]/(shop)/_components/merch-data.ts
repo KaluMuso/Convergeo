@@ -1,6 +1,8 @@
 import { createServerClient } from "@vergeo/auth/server-client";
 import { cookies } from "next/headers";
 
+import { absoluteApiUrl } from "../../../../lib/api-base-url";
+
 export type MerchSlotRow = {
   id: string;
   slot_key: string;
@@ -10,6 +12,19 @@ export type MerchSlotRow = {
   schedule_to: string | null;
   position: number;
   active: boolean;
+};
+
+type ResolvedMerchSlotApiRow = {
+  id: string;
+  slot_key: string;
+  variant_key: string;
+  payload: Record<string, unknown>;
+  schedule_from: string | null;
+  schedule_to: string | null;
+  position: number;
+  active: boolean;
+  is_preview?: boolean;
+  is_fallback?: boolean;
 };
 
 export type CategoryRow = {
@@ -25,6 +40,8 @@ export type CategoryRow = {
 export type HomeMerchData = {
   slots: MerchSlotRow[];
   categories: CategoryRow[];
+  /** True when `?merch_preview=` was present (draft overlay, not cached for SEO). */
+  isPreviewMode?: boolean;
 };
 
 export const HOME_SECTION_ORDER = [
@@ -419,11 +436,72 @@ export async function fetchCategories(): Promise<CategoryRow[]> {
   return result.ok ? result.categories : [];
 }
 
-export async function loadHomeMerchData(): Promise<HomeMerchData> {
-  const [slots, categories] = await Promise.all([fetchMerchSlots(), fetchCategories()]);
+export function mapResolvedMerchSlot(row: ResolvedMerchSlotApiRow): MerchSlotRow {
+  return {
+    id: row.id,
+    slot_key: row.slot_key,
+    variant_key: row.variant_key,
+    payload:
+      row.payload && typeof row.payload === "object" && !Array.isArray(row.payload)
+        ? row.payload
+        : {},
+    schedule_from: row.schedule_from,
+    schedule_to: row.schedule_to,
+    position: row.position,
+    active: row.active,
+  };
+}
+
+/** Fetch resolved merchandising slots from the public API (supports draft preview token). */
+export async function fetchMerchSlotsFromApi(
+  merchPreview?: string | null,
+): Promise<MerchSlotRow[]> {
+  const query = merchPreview ? `?merch_preview=${encodeURIComponent(merchPreview)}` : "";
+  const url = absoluteApiUrl(`/merch/slots${query}`);
+  if (!url) {
+    return [];
+  }
+
+  try {
+    const response = await fetch(url, {
+      next: merchPreview ? { revalidate: 0 } : { revalidate: 60 },
+    });
+    if (!response.ok) {
+      return [];
+    }
+    const data: unknown = await response.json();
+    if (!Array.isArray(data)) {
+      return [];
+    }
+    return data
+      .filter((entry): entry is ResolvedMerchSlotApiRow => {
+        return Boolean(entry && typeof entry === "object" && "slot_key" in entry);
+      })
+      .map((entry) => mapResolvedMerchSlot(entry));
+  } catch {
+    return [];
+  }
+}
+
+export type LoadHomeMerchDataOptions = {
+  /** When set, loads draft overlays via `GET /merch/slots?merch_preview=…`. */
+  merchPreview?: string | null;
+};
+
+export async function loadHomeMerchData(
+  options: LoadHomeMerchDataOptions = {},
+): Promise<HomeMerchData> {
+  const { merchPreview = null } = options;
+  const isPreviewMode = Boolean(merchPreview?.trim());
+
+  const [rawSlots, categories] = await Promise.all([
+    isPreviewMode ? fetchMerchSlotsFromApi(merchPreview) : fetchMerchSlots(),
+    fetchCategories(),
+  ]);
 
   return {
-    slots: filterActiveSlots(slots),
+    slots: isPreviewMode ? rawSlots : filterActiveSlots(rawSlots),
     categories: getTopLevelCategories(categories),
+    isPreviewMode,
   };
 }
