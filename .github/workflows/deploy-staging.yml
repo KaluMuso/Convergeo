@@ -303,7 +303,7 @@ jobs:
           cat /tmp/staging-evidence/api-deploy.txt
 
       - name: Upload deploy record
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: staging-api-deploy-record
           path: /tmp/staging-evidence/api-deploy.txt
@@ -409,7 +409,7 @@ jobs:
         run: echo "migrate-supabase job succeeded (0056 verified in that job)"
 
       - name: Upload smoke evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: staging-smoke-evidence
           path: |
