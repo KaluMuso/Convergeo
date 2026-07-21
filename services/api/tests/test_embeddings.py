@@ -289,10 +289,13 @@ async def test_dimension_mismatch_from_provider_raises() -> None:
 async def test_process_embedding_tick_is_idempotent_on_second_run(
     fake_service: FakeSupabaseClient,
 ) -> None:
-    with patch(
-        "app.services.embeddings.batch.embed_texts_with_fallback",
-        new_callable=AsyncMock,
-        return_value=(_vectors(1), 0.00042),
+    with (
+        patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}, clear=False),
+        patch(
+            "app.services.embeddings.batch.embed_texts_with_fallback",
+            new_callable=AsyncMock,
+            return_value=(_vectors(1), 0.00042),
+        ),
     ):
         service = cast(SupabaseEmbeddingService, fake_service)
         first = await process_embedding_tick(service, limit=64)
@@ -310,10 +313,13 @@ async def test_dead_letter_after_five_attempts() -> None:
     store = DeadLetterStore(attempts=4)
     service = FakeSupabaseClient(store)
 
-    with patch(
-        "app.services.embeddings.batch.embed_texts_with_fallback",
-        new_callable=AsyncMock,
-        side_effect=RuntimeError("provider down"),
+    with (
+        patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}, clear=False),
+        patch(
+            "app.services.embeddings.batch.embed_texts_with_fallback",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("provider down"),
+        ),
     ):
         result = await process_embedding_tick(
             cast(SupabaseEmbeddingService, service),
@@ -325,6 +331,61 @@ async def test_dead_letter_after_five_attempts() -> None:
     assert job["status"] == "dead"
     assert job["attempts"] == 5
     assert "provider down" in str(job["last_error"])
+
+
+@pytest.mark.asyncio
+async def test_missing_openrouter_key_skips_claim_without_burning_queue(
+    fake_service: FakeSupabaseClient,
+) -> None:
+    env = {key: value for key, value in os.environ.items() if key != "OPENROUTER_API_KEY"}
+    with patch.dict(os.environ, env, clear=True):
+        result = await process_embedding_tick(
+            cast(SupabaseEmbeddingService, fake_service),
+            limit=64,
+        )
+
+    job = fake_service._store.tables["embedding_jobs"][0]
+    assert result.processed == 0
+    assert result.dead == 0
+    assert fake_service._store.claim_calls == 0
+    assert job["status"] == "queued"
+    assert job["attempts"] == 0
+
+
+@pytest.mark.asyncio
+async def test_config_error_after_claim_requeues_without_attempt_bump(
+    fake_service: FakeSupabaseClient,
+) -> None:
+    with (
+        patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key"}, clear=False),
+        patch(
+            "app.services.embeddings.batch.embed_texts_with_fallback",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("OPENROUTER_API_KEY is not configured"),
+        ),
+    ):
+        result = await process_embedding_tick(
+            cast(SupabaseEmbeddingService, fake_service),
+            limit=64,
+        )
+
+    job = fake_service._store.tables["embedding_jobs"][0]
+    assert result.processed == 0
+    assert result.dead == 0
+    assert fake_service._store.claim_calls == 1
+    assert job["status"] == "queued"
+    assert job["attempts"] == 0
+    assert "OPENROUTER_API_KEY" in str(job["last_error"])
+
+
+@pytest.mark.asyncio
+async def test_embed_texts_with_fallback_raises_clear_missing_key_error() -> None:
+    env = {key: value for key, value in os.environ.items() if key != "OPENROUTER_API_KEY"}
+    with (
+        patch.dict(os.environ, env, clear=True),
+        pytest.raises(RuntimeError, match="OPENROUTER_API_KEY is not configured"),
+    ):
+        await embed_texts_with_fallback(["hello"])
 
 
 def test_internal_embeddings_tick_requires_token(embeddings_client: TestClient) -> None:

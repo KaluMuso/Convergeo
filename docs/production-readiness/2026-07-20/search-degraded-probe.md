@@ -9,12 +9,12 @@
 
 ## Final gate stance
 
-| Gate / item    | Verdict                           | Why                                                                                                                            |
-| -------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **LIVE-12**    | **FAIL** (live probe **NOT_RUN**) | `api.vergeo5.com` returns **502** on `/search`, `/healthz`, and `/readyz`. Cannot observe `degraded` boolean on production.    |
-| **CCP-05 DoD** | **PARTIAL**                       | Code path traced; root-cause hypotheses documented; FOUNDER_REQUIRED filed. Live re-probe deferred until API healthy (DEP-03). |
+| Gate / item    | Verdict                                  | Why                                                                                                                                          |
+| -------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **LIVE-12**    | **FAIL** (honest `degraded=true`)        | API healthy (2026-07-21); live `/search` returns 200 with `degraded: true`. Semantic lane blocked by missing/invalid OpenRouter on API host. |
+| **CCP-05 DoD** | **PARTIAL** → code follow-up in progress | Live re-probe done; root cause confirmed (H2). Fail-closed tick + requeue SQL shipped so a broken key cannot burn the job queue to `dead`.   |
 
-Do **not** claim `degraded=false` or LIVE-12 PASS without a successful live `/search` JSON response.
+Do **not** claim `degraded=false` or LIVE-12 PASS until `OPENROUTER_API_KEY` is set and document embeddings drain (`search_documents.embedding` non-null).
 
 ---
 
@@ -166,3 +166,30 @@ curl -sS -o /dev/null -w "%{http_code}\n" https://api.vergeo5.com/readyz
 ---
 
 _Investigation evidence only. No runtime secrets committed._
+
+---
+
+## 8. Live refresh (2026-07-21) — API healthy
+
+| Check                          | Result                                                                                                         |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `GET /healthz` / `/readyz`     | **200**                                                                                                        |
+| `GET /search?q=tea&limit=1`    | **200**, `degraded: true`, `total: 2` (FTS/keyword lane OK)                                                    |
+| `search_documents`             | **288** rows, **0** with `embedding`                                                                           |
+| `embedding_jobs` (mid-session) | `dead=176`, `queued≈112` — last_error `Primary and fallback embedding providers failed`                        |
+| n8n embeddings cron            | Was published; tick returned `{processed:0, dead:26}` — **unpublished** same session to stop burning the queue |
+| Query + document lanes         | Both need `OPENROUTER_API_KEY` on API host (**FR-SD-02** still open)                                           |
+
+### Code follow-up (this PR)
+
+1. `process_embedding_tick` skips claim when key missing (no attempt burn).
+2. Config errors after claim re-queue without incrementing `attempts`.
+3. `embed_texts_with_fallback` raises clear `OPENROUTER_API_KEY is not configured` instead of wrapping as generic provider failure.
+4. Ops SQL: `scripts/ops/requeue-dead-embedding-jobs.sql` — run **after** key is set, then re-publish embeddings cron.
+
+### Founder order (updated)
+
+1. Set `OPENROUTER_API_KEY` on API host + restart container.
+2. Apply `scripts/ops/requeue-dead-embedding-jobs.sql`.
+3. Re-publish n8n `Vergeo5 — embeddings cron` (`oqjfSdMXClfsf3qd`).
+4. Confirm `GET /search?q=phone` → `degraded: false` and `search_documents.embedding` counts rising.
