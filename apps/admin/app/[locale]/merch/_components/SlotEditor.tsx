@@ -7,6 +7,7 @@ import { type HeroVariant, type MerchSlot, merchApi } from "./api";
 import { type BannerItemDraft, BannerEditor } from "./BannerEditor";
 import { type CollectionDraft, CollectionBuilder } from "./CollectionBuilder";
 import { HeroVariantPicker } from "./HeroVariantPicker";
+import { type MegaMenuMiniDraft, MegaMenuEditor } from "./MegaMenuEditor";
 
 type SlotEditorProps = {
   slot: MerchSlot;
@@ -105,6 +106,27 @@ function parseCollections(payload: Record<string, unknown>): CollectionDraft[] {
   });
 }
 
+function parseMegaMenuMinis(payload: Record<string, unknown>): MegaMenuMiniDraft[] {
+  const raw = payload.featured_minis;
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return [{ key: "mini-0", title: "", href: "/en/search" }];
+  }
+  return raw.flatMap((entry, index) => {
+    if (!entry || typeof entry !== "object") {
+      return [];
+    }
+    const record = entry as Record<string, unknown>;
+    return [
+      {
+        key: typeof record.key === "string" ? record.key : `mini-${index}`,
+        title: typeof record.title === "string" ? record.title : "",
+        href: typeof record.href === "string" ? record.href : "/en/search",
+        price_label: typeof record.price_label === "string" ? record.price_label : undefined,
+      },
+    ];
+  });
+}
+
 export function SlotEditor({ slot, variants, onSaved, onClose }: SlotEditorProps) {
   const tHero = useTranslations("admin.merch.hero");
   const tBoard = useTranslations("admin.merch.board");
@@ -140,6 +162,16 @@ export function SlotEditor({ slot, variants, onSaved, onClose }: SlotEditorProps
   );
   const [bannerItems, setBannerItems] = useState(() => parseBannerItems(merged.payload));
   const [collections, setCollections] = useState(() => parseCollections(merged.payload));
+  const [megaMenuMinis, setMegaMenuMinis] = useState(() => parseMegaMenuMinis(merged.payload));
+  const [megaMenuPromoText, setMegaMenuPromoText] = useState(
+    typeof merged.payload.promo_text === "string" ? merged.payload.promo_text : "",
+  );
+  const [megaMenuPromoCta, setMegaMenuPromoCta] = useState(
+    typeof merged.payload.promo_cta_label === "string" ? merged.payload.promo_cta_label : "",
+  );
+  const [megaMenuPromoHref, setMegaMenuPromoHref] = useState(
+    typeof merged.payload.promo_href === "string" ? merged.payload.promo_href : "/search",
+  );
   const [scheduleFrom, setScheduleFrom] = useState(toLocalDatetime(merged.schedule_from));
   const [scheduleTo, setScheduleTo] = useState(toLocalDatetime(merged.schedule_to));
   const [position, setPosition] = useState(merged.position);
@@ -163,6 +195,20 @@ export function SlotEditor({ slot, variants, onSaved, onClose }: SlotEditorProps
     }
     if (slot.slot_key === "featured_collections") {
       return { collections };
+    }
+    if (slot.slot_key === "mega_menu") {
+      return {
+        featured_minis: megaMenuMinis
+          .filter((mini) => mini.title.trim().length > 0)
+          .map(({ title, href, price_label }) => ({
+            title: title.trim(),
+            href: href.trim(),
+            ...(price_label?.trim() ? { price_label: price_label.trim() } : {}),
+          })),
+        promo_text: megaMenuPromoText.trim(),
+        promo_cta_label: megaMenuPromoCta.trim(),
+        promo_href: megaMenuPromoHref.trim() || "/search",
+      };
     }
     return { ...slot.payload };
   };
@@ -258,6 +304,19 @@ export function SlotEditor({ slot, variants, onSaved, onClose }: SlotEditorProps
 
       {slot.slot_key === "featured_collections" ? (
         <CollectionBuilder collections={collections} onChange={setCollections} />
+      ) : null}
+
+      {slot.slot_key === "mega_menu" ? (
+        <MegaMenuEditor
+          minis={megaMenuMinis}
+          promoText={megaMenuPromoText}
+          promoCtaLabel={megaMenuPromoCta}
+          promoHref={megaMenuPromoHref}
+          onMinisChange={setMegaMenuMinis}
+          onPromoTextChange={setMegaMenuPromoText}
+          onPromoCtaLabelChange={setMegaMenuPromoCta}
+          onPromoHrefChange={setMegaMenuPromoHref}
+        />
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-3">

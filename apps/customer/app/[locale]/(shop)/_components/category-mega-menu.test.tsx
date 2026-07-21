@@ -50,7 +50,14 @@ describe("CategoryMegaMenu", () => {
         locale="en"
         labels={labels}
         loadCategories={() => Promise.resolve(tree)}
-        loadFeaturedMinis={() => Promise.resolve(featured)}
+        loadFeaturedContent={() =>
+          Promise.resolve({
+            minis: featured,
+            promoText: labels.featuredPromo,
+            promoCtaLabel: labels.featuredPromoCta,
+            promoHref: "/en/search",
+          })
+        }
       />,
     );
 
@@ -84,7 +91,14 @@ describe("CategoryMegaMenu", () => {
         locale="en"
         labels={labels}
         loadCategories={() => Promise.resolve(tree)}
-        loadFeaturedMinis={() => Promise.resolve(featured)}
+        loadFeaturedContent={() =>
+          Promise.resolve({
+            minis: featured,
+            promoText: labels.featuredPromo,
+            promoCtaLabel: labels.featuredPromoCta,
+            promoHref: "/en/search",
+          })
+        }
       />,
     );
 
@@ -104,7 +118,14 @@ describe("CategoryMegaMenu", () => {
         locale="en"
         labels={labels}
         loadCategories={() => Promise.resolve(tree)}
-        loadFeaturedMinis={() => Promise.resolve(featured)}
+        loadFeaturedContent={() =>
+          Promise.resolve({
+            minis: featured,
+            promoText: labels.featuredPromo,
+            promoCtaLabel: labels.featuredPromoCta,
+            promoHref: "/en/search",
+          })
+        }
       />,
     );
 
@@ -122,7 +143,14 @@ describe("CategoryMegaMenu", () => {
         locale="en"
         labels={labels}
         loadCategories={() => Promise.resolve(tree)}
-        loadFeaturedMinis={() => Promise.resolve(featured)}
+        loadFeaturedContent={() =>
+          Promise.resolve({
+            minis: featured,
+            promoText: labels.featuredPromo,
+            promoCtaLabel: labels.featuredPromoCta,
+            promoHref: "/en/search",
+          })
+        }
       />,
     );
 
@@ -143,7 +171,14 @@ describe("CategoryMegaMenu", () => {
         locale="en"
         labels={{ ...labels, empty: "No categories" }}
         loadCategories={() => Promise.resolve([])}
-        loadFeaturedMinis={() => Promise.resolve([])}
+        loadFeaturedContent={() =>
+          Promise.resolve({
+            minis: [],
+            promoText: labels.featuredPromo,
+            promoCtaLabel: labels.featuredPromoCta,
+            promoHref: "/en/search",
+          })
+        }
       />,
     );
 
