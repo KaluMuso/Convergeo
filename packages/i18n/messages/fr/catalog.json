@@ -340,6 +340,8 @@
     "loading": "Chargement des avis…",
     "starFilled": "★",
     "starEmpty": "☆",
+    "distributionHeading": "Répartition des notes",
+    "distributionRowAria": "{star}★ : {count}",
     "report": {
       "cta": "Signaler",
       "heading": "Signaler cet avis",

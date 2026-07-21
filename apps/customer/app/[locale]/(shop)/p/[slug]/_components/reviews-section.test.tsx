@@ -44,6 +44,8 @@ const labels: ReviewsSectionLabels = {
   galleryIndicator: "Photo {current} of {total}",
   starFilled: "★",
   starEmpty: "☆",
+  distributionHeading: "Rating breakdown",
+  distributionRowAria: "{star}★: {count}",
   report: {
     cta: "Report",
     heading: "Report this review",
@@ -98,5 +100,39 @@ describe("ReviewsSection report control", () => {
       });
     });
     expect(screen.getByRole("status")).toHaveTextContent("moderation team");
+  });
+});
+
+describe("ReviewsSection rating distribution", () => {
+  const makeReview = (id: string, rating: number) => ({
+    id,
+    order_item_id: `item-${id}`,
+    rating,
+    body: null,
+    photos: [],
+    vendor_reply: null,
+    vendor_reply_at: null,
+    created_at: "2026-07-20T00:00:00Z",
+  });
+
+  it("renders a 5→1 breakdown with per-star counts", () => {
+    render(
+      <ReviewsSection
+        locale="en"
+        labels={labels}
+        reviews={[makeReview("a", 5), makeReview("b", 5), makeReview("c", 4)]}
+      />,
+    );
+
+    expect(screen.getByTestId("review-distribution")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Rating breakdown" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "5★: 2" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "4★: 1" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "3★: 0" })).toBeInTheDocument();
+  });
+
+  it("omits the breakdown when there are no reviews", () => {
+    render(<ReviewsSection locale="en" labels={labels} reviews={[]} />);
+    expect(screen.queryByTestId("review-distribution")).not.toBeInTheDocument();
   });
 });

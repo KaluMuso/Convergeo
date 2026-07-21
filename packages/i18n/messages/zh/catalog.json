@@ -340,6 +340,8 @@
     "loading": "正在加载评价…",
     "starFilled": "★",
     "starEmpty": "☆",
+    "distributionHeading": "评分分布",
+    "distributionRowAria": "{star}★：{count}",
     "report": {
       "cta": "举报",
       "heading": "举报此评价",

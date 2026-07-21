@@ -30,6 +30,10 @@ export type ReviewsSectionLabels = {
   galleryIndicator: string;
   starFilled: string;
   starEmpty: string;
+  /** Heading for the aggregate rating-distribution block. */
+  distributionHeading: string;
+  /** Per-row accessible label; `{star}` and `{count}` are interpolated. */
+  distributionRowAria: string;
   report: ReportReviewLabels;
 };
 
@@ -63,6 +67,66 @@ function StarRow({
         >
           {index < rating ? starFilled : starEmpty}
         </span>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Aggregate 5→1 star distribution above the review list (flagship PDP parity).
+ * Pure presentation of the already-loaded `reviews`; no extra fetch.
+ */
+function RatingDistribution({
+  reviews,
+  heading,
+  rowAria,
+  starGlyph,
+}: {
+  reviews: ReviewRow[];
+  heading: string;
+  rowAria: string;
+  starGlyph: string;
+}) {
+  const total = reviews.length;
+  const rows = [5, 4, 3, 2, 1].map((star) => {
+    const count = reviews.filter((review) => Math.round(review.rating) === star).length;
+    return { star, count, pct: total > 0 ? Math.round((count / total) * 100) : 0 };
+  });
+
+  return (
+    <div
+      role="group"
+      aria-label={heading}
+      data-testid="review-distribution"
+      className="space-y-1.5 rounded border border-border bg-surface p-4"
+    >
+      <p className="text-micro font-semibold uppercase tracking-wide text-text-2">{heading}</p>
+      {rows.map((row) => (
+        <div
+          key={row.star}
+          role="img"
+          aria-label={rowAria
+            .replace("{star}", String(row.star))
+            .replace("{count}", String(row.count))}
+          className="flex items-center gap-2"
+        >
+          <span aria-hidden="true" className="w-7 shrink-0 text-sm tabular-nums text-text-2">
+            {row.star}
+            {starGlyph}
+          </span>
+          <span aria-hidden="true" className="h-2 flex-1 overflow-hidden rounded-pill bg-bg-2">
+            <span
+              className="block h-full rounded-pill bg-warning"
+              style={{ width: `${row.pct}%` }}
+            />
+          </span>
+          <span
+            aria-hidden="true"
+            className="w-7 shrink-0 text-right text-sm tabular-nums text-text-3"
+          >
+            {row.count}
+          </span>
+        </div>
       ))}
     </div>
   );
@@ -108,56 +172,64 @@ export function ReviewsSection({
       {reviews.length === 0 ? (
         <p className="text-sm text-text-2">{labels.empty}</p>
       ) : (
-        <ul className="space-y-4">
-          {reviews.map((review) => (
-            <li key={review.id} className="space-y-3 rounded border border-border bg-surface p-4">
-              <StarRow
-                rating={review.rating}
-                ariaLabel={labels.starsAria.replace("{rating}", String(review.rating))}
-                starFilled={labels.starFilled}
-                starEmpty={labels.starEmpty}
-              />
-              {review.body ? <p className="text-sm text-display-ink">{review.body}</p> : null}
-              {review.photos.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {review.photos.map((publicId) => (
-                    <button
-                      key={publicId}
-                      type="button"
-                      className="h-16 w-16 overflow-hidden rounded border border-border focus-visible:outline-none focus-visible:shadow-focusRing"
-                      onClick={() =>
-                        setLightbox(
-                          review.photos.map((photoId) => ({
-                            publicId: photoId,
-                            alt: labels.photoAlt,
-                          })),
-                        )
-                      }
-                    >
-                      <CloudinaryImage
-                        publicId={publicId}
-                        alt={labels.photoAlt}
-                        cloudName={cloudName}
-                        ratio={1}
-                        width={128}
-                        className="h-full w-full"
-                      />
-                    </button>
-                  ))}
+        <>
+          <RatingDistribution
+            reviews={reviews}
+            heading={labels.distributionHeading}
+            rowAria={labels.distributionRowAria}
+            starGlyph={labels.starFilled}
+          />
+          <ul className="space-y-4">
+            {reviews.map((review) => (
+              <li key={review.id} className="space-y-3 rounded border border-border bg-surface p-4">
+                <StarRow
+                  rating={review.rating}
+                  ariaLabel={labels.starsAria.replace("{rating}", String(review.rating))}
+                  starFilled={labels.starFilled}
+                  starEmpty={labels.starEmpty}
+                />
+                {review.body ? <p className="text-sm text-display-ink">{review.body}</p> : null}
+                {review.photos.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {review.photos.map((publicId) => (
+                      <button
+                        key={publicId}
+                        type="button"
+                        className="h-16 w-16 overflow-hidden rounded border border-border focus-visible:outline-none focus-visible:shadow-focusRing"
+                        onClick={() =>
+                          setLightbox(
+                            review.photos.map((photoId) => ({
+                              publicId: photoId,
+                              alt: labels.photoAlt,
+                            })),
+                          )
+                        }
+                      >
+                        <CloudinaryImage
+                          publicId={publicId}
+                          alt={labels.photoAlt}
+                          cloudName={cloudName}
+                          ratio={1}
+                          width={128}
+                          className="h-full w-full"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                {review.vendor_reply ? (
+                  <div className="rounded bg-bg-2 px-3 py-2 text-sm">
+                    <p className="font-medium text-display-ink">{labels.vendorReply}</p>
+                    <p className="text-text-2">{review.vendor_reply}</p>
+                  </div>
+                ) : null}
+                <div className="border-t border-border pt-1">
+                  <ReportReview reviewId={review.id} labels={labels.report} />
                 </div>
-              ) : null}
-              {review.vendor_reply ? (
-                <div className="rounded bg-bg-2 px-3 py-2 text-sm">
-                  <p className="font-medium text-display-ink">{labels.vendorReply}</p>
-                  <p className="text-text-2">{review.vendor_reply}</p>
-                </div>
-              ) : null}
-              <div className="border-t border-border pt-1">
-                <ReportReview reviewId={review.id} labels={labels.report} />
-              </div>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
 
       {lightbox && lightbox.length > 0 ? (

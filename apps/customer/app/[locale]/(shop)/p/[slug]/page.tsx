@@ -461,6 +461,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           galleryIndicator: t("reviews.galleryIndicator"),
           starFilled: t("reviews.starFilled"),
           starEmpty: t("reviews.starEmpty"),
+          distributionHeading: t("reviews.distributionHeading"),
+          distributionRowAria: t("reviews.distributionRowAria"),
           report: {
             cta: t("reviews.report.cta"),
             heading: t("reviews.report.heading"),
