@@ -15,13 +15,13 @@ export default function ShopLoading() {
           <Skeleton key={index} shape="block" className="h-14 w-full rounded" />
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
         {Array.from({ length: 4 }, (_, index) => (
           <Skeleton key={index} shape="block" className="aspect-square w-full rounded-lg" />
         ))}
       </div>
-      <div className="motion-stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {Array.from({ length: 4 }, (_, index) => (
+      <div className="motion-stagger grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5">
+        {Array.from({ length: 5 }, (_, index) => (
           <Skeleton key={index} shape="block" className="aspect-[3/4] w-full rounded-lg" />
         ))}
       </div>

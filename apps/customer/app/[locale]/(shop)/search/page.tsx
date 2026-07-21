@@ -195,7 +195,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
 
   return (
     // Shop layout already provides the page <main> landmark — avoid nesting.
-    <div className="mx-auto w-full max-w-3xl py-4 motion-rise sm:py-6 lg:max-w-5xl">
+    <div className="mx-auto w-full max-w-3xl py-3 motion-rise sm:py-5 lg:max-w-6xl xl:max-w-7xl">
       {view.status === "results" ? (
         <SearchAnalytics
           normalizedTerm={view.query}
@@ -207,7 +207,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         <SearchAnalytics normalizedTerm={view.query} zeroResult resultCount={0} />
       ) : null}
 
-      <header className="mb-4 space-y-3">
+      <header className="mb-3 space-y-3 lg:mb-4">
         <h1 className="font-display text-h1 text-display-ink">{t("title")}</h1>
         {query ? (
           <p className="text-sm text-text-2" data-testid="search-query-summary">

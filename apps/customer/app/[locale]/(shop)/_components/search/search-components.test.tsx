@@ -171,7 +171,12 @@ describe("ResultsTabs tab counts", () => {
     expect(screen.getByTestId("search-tab-products")).toHaveTextContent("Products (2)");
     expect(screen.getByTestId("search-tab-events")).toHaveTextContent("Events (0)");
     expect(screen.getByTestId("search-results-list")).toBeInTheDocument();
-    expect(screen.getByTestId("search-product-grid")).toBeInTheDocument();
+    expect(screen.getByTestId("search-product-grid")).toHaveClass(
+      "gap-2",
+      "lg:grid-cols-4",
+      "xl:grid-cols-5",
+    );
+    expect(screen.getByTestId("search-result-row")).toHaveClass("p-2.5");
     // Search → PDP must use the public slug, never the entity UUID.
     expect(screen.getByTestId("search-product-card")).toHaveAttribute("href", "/en/p/itel-a70");
     expect(screen.getByRole("heading", { name: "Itel A70 Smartphone" })).toBeInTheDocument();

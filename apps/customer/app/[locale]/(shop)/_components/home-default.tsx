@@ -378,6 +378,7 @@ export function HomeProductRail({
         listings={listings}
         labels={labels}
         priorityCount={priorityCount}
+        density="compact"
       />
     </section>
   );

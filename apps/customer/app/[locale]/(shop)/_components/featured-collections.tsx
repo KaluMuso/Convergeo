@@ -109,7 +109,7 @@ export function FeaturedCollections({ slot, locale, t }: FeaturedCollectionsProp
         <div key={collection.key} className="flex flex-col gap-3">
           <h3 className="text-h3 font-semibold text-text">{collection.title}</h3>
           {collection.items.length > 0 ? (
-            <ul className="grid list-none grid-cols-2 gap-3 p-0">
+            <ul className="grid list-none grid-cols-2 gap-2 p-0 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {collection.items.map((item) => (
                 <li key={item.key}>
                   <Link href={item.href} className="block">
@@ -122,6 +122,7 @@ export function FeaturedCollections({ slot, locale, t }: FeaturedCollectionsProp
                       noReviewsLabel={t("home.featured.noReviews")}
                       quickAddLabel={t("home.featured.quickAdd")}
                       wishlistLabel={t("home.featured.wishlist")}
+                      density="compact"
                       media={
                         item.imagePublicId ? (
                           <CloudinaryImage

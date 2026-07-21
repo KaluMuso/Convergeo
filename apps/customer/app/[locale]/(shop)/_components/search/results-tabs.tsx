@@ -139,11 +139,14 @@ function SearchResultRow({
 
   return (
     <article
-      className="flex gap-3 rounded-lg border border-border bg-surface p-3"
+      className="flex gap-3 rounded-lg border border-border bg-surface p-2.5"
       data-testid="search-result-row"
     >
       {imagePublicId ? (
-        <Link href={href} className="relative block h-20 w-20 shrink-0 overflow-hidden rounded-md">
+        <Link
+          href={href}
+          className="relative block h-[4.5rem] w-[4.5rem] shrink-0 overflow-hidden rounded-md sm:h-20 sm:w-20"
+        >
           <CloudinaryImage
             publicId={imagePublicId}
             alt=""
@@ -263,9 +266,12 @@ function ResultsList({
   const showProductGrid = preferProductGrid || productHits.length > 0;
 
   return (
-    <div className="space-y-4" data-testid="search-results-list">
+    <div className="space-y-3" data-testid="search-results-list">
       {showProductGrid && productHits.length > 0 ? (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3" data-testid="search-product-grid">
+        <div
+          className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+          data-testid="search-product-grid"
+        >
           {productHits.map((hit) => (
             <SearchProductCard key={hit.id} hit={hit} locale={locale} labels={labels} />
           ))}
@@ -273,7 +279,7 @@ function ResultsList({
       ) : null}
 
       {otherHits.length > 0 || (!showProductGrid && hits.length > 0) ? (
-        <ul className="space-y-3 p-0">
+        <ul className="space-y-2.5 p-0">
           {(showProductGrid ? otherHits : hits).map((hit) => (
             <li key={hit.id}>
               <SearchResultRow hit={hit} locale={locale} labels={labels} />

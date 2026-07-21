@@ -26,11 +26,11 @@ exports[`DesktopHeader > matches the approved desktop chrome structure snapshot 
     </a>
     <form
       action="/en/search"
-      class="min-w-0 max-w-2xl flex-1"
+      class="min-w-0 max-w-3xl flex-1 xl:max-w-4xl"
       role="search"
     >
       <div
-        class="flex w-full items-center gap-2 rounded-pill border border-border bg-surface transition-[border-color,box-shadow] duration-fast ease-std motion-reduce:transition-none focus-within:border-primary focus-within:shadow-focusRing h-11 bg-bg"
+        class="flex w-full items-center gap-2 rounded-pill border border-border bg-surface transition-[border-color,box-shadow] duration-fast ease-std motion-reduce:transition-none focus-within:border-primary focus-within:shadow-focusRing h-11 border-primary/30 bg-bg shadow-1"
         data-testid="search-field"
       >
         <span
