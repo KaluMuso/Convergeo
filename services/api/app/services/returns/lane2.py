@@ -17,13 +17,6 @@ MIN_RETURN_WINDOW_HOURS = 48
 MAX_RETURN_WINDOW_HOURS = 168
 DEFAULT_RETURN_WINDOW_HOURS = 48
 
-DEFAULT_RESTOCKING_PCT = 10
-MIN_RESTOCKING_PCT = 5
-MAX_RESTOCKING_PCT = 15
-
-# TODO(M09-P08): read from platform_config when admin exposes restocking_fee_pct.
-RESTOCKING_PCT_CONFIG_KEY = "restocking_fee_pct"
-
 IneligibleReason = Literal[
     "order_item_not_found",
     "owner_mismatch",
@@ -110,63 +103,27 @@ def normalize_return_window_hours(raw: int | None) -> int:
     return max(MIN_RETURN_WINDOW_HOURS, min(MAX_RETURN_WINDOW_HOURS, raw))
 
 
-def normalize_restocking_pct(raw: int | None) -> int:
-    """Clamp restocking percentage to 5–15; default 10 when absent."""
-    if raw is None:
-        return DEFAULT_RESTOCKING_PCT
-    return max(MIN_RESTOCKING_PCT, min(MAX_RESTOCKING_PCT, raw))
-
-
-def _single_config_value(response: Any) -> Any | None:
-    data = getattr(response, "data", None)
-    if isinstance(data, dict):
-        return data.get("value")
-    return None
-
-
-def load_restocking_pct(service_client: ServiceRoleClient) -> int:
-    """Read restocking % from platform config, else derive from M08 bps config."""
-    response = (
-        service_client.client.table("platform_config")
-        .select("value")
-        .eq("key", RESTOCKING_PCT_CONFIG_KEY)
-        .maybe_single()
-        .execute()
-    )
-    raw = _single_config_value(response)
-    if isinstance(raw, bool):
-        return normalize_restocking_pct(None)
-    if isinstance(raw, int):
-        return normalize_restocking_pct(raw)
-    if isinstance(raw, float):
-        return normalize_restocking_pct(int(raw))
-    if isinstance(raw, str):
-        try:
-            return normalize_restocking_pct(int(raw))
-        except ValueError:
-            return normalize_restocking_pct(None)
-    # Align with M08-P10 execution when pct key is not configured yet.
-    bps = load_restocking_fee_bps(service_client)
-    return normalize_restocking_pct(bps // 100)
-
-
-def _restocking_bps_from_pct(restocking_pct: int) -> int:
-    return normalize_restocking_fee_bps(normalize_restocking_pct(restocking_pct) * 100)
-
-
 def compute_lane2_breakdown(
     *,
     item_ngwee: int,
     outbound_delivery_ngwee: int,
     return_transport_ngwee: int,
-    restocking_pct: int,
+    restocking_fee_bps: int,
 ) -> Lane2Breakdown:
-    """Itemized lane-2 refund preview — integer ngwee, matches M08-P10 lane-2 math."""
+    """Itemized lane-2 refund preview — integer ngwee, matches M08-P10 lane-2 math.
+
+    Restocking is expressed in **basis points** — the single platform-wide
+    representation shared with lane-1 and dispute refunds via ``refunds/math.py``
+    and ``refunds/config.py`` (key ``restocking_fee_bps``). There is no lossy
+    whole-percent hop: a 1250 bps (12.5%) admin config yields exactly 12.5% here,
+    identical to the dispute/lane-1 paths. Defensively clamps to the 500–1500 bps
+    band so a preview can never fall outside policy.
+    """
     lane2 = compute_lane2_refund(
         item_ngwee=item_ngwee,
         outbound_delivery_ngwee=outbound_delivery_ngwee,
         return_transport_ngwee=return_transport_ngwee,
-        restocking_fee_bps=_restocking_bps_from_pct(restocking_pct),
+        restocking_fee_bps=normalize_restocking_fee_bps(restocking_fee_bps),
     )
     return Lane2Breakdown(
         item=lane2.item_ngwee,
@@ -387,12 +344,12 @@ def create_lane2_return(
         order_item=order_item,
         delivery_fee_ngwee=int(order.get("delivery_fee_ngwee", 0)),
     )
-    restocking_pct = load_restocking_pct(service_client)
+    restocking_fee_bps = load_restocking_fee_bps(service_client)
     breakdown = compute_lane2_breakdown(
         item_ngwee=item_ngwee,
         outbound_delivery_ngwee=outbound_delivery,
         return_transport_ngwee=max(0, return_transport_ngwee),
-        restocking_pct=restocking_pct,
+        restocking_fee_bps=restocking_fee_bps,
     )
 
     if breakdown.refund_ngwee <= 0:
