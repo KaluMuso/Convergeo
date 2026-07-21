@@ -12,7 +12,8 @@ import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
 import { buildCategoryTree, type CategoryRecord, type NavCategory } from "./category-tree";
 import {
-  pickMegaMenuMerchSlot,
+  fetchMegaMenuMerchSlot,
+  readMerchPreviewToken,
   withLocaleHref,
   type MegaMenuMerchPayload,
 } from "./mega-menu-merch";
@@ -108,19 +109,8 @@ async function defaultLoadFeaturedContent(
   locale: string,
   labels: CategoryMegaMenuLabels,
 ): Promise<MegaMenuFeaturedContent> {
-  let merch: MegaMenuMerchPayload | null = null;
-  try {
-    const supabase = await getBrowserClient();
-    const { data, error } = await supabase
-      .from("merch_slots")
-      .select("slot_key, payload, active, schedule_from, schedule_to")
-      .eq("slot_key", "mega_menu");
-    if (!error && data) {
-      merch = pickMegaMenuMerchSlot(data);
-    }
-  } catch {
-    merch = null;
-  }
+  const previewToken = readMerchPreviewToken();
+  const merch = await fetchMegaMenuMerchSlot(previewToken);
 
   const cmsMinis = merch ? featuredFromMerch(locale, merch) : [];
   const minis = cmsMinis.length > 0 ? cmsMinis : await loadCatalogFeaturedMinis(locale);

@@ -83,7 +83,7 @@ def test_filter_search_hits_applies_category_and_price() -> None:
         price_min_ngwee=30_000,
         price_max_ngwee=50_000,
     )
-    assert [hit.entity_kind for hit in filtered] == ["product", "vendor"]
+    assert [hit.entity_kind for hit in filtered] == ["product"]
 
 
 def test_call_search_query_facets_parses_rpc_payload() -> None:

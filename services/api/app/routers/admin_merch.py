@@ -650,6 +650,7 @@ async def get_preview_url() -> dict[str, str]:
         "token": token,
         "customer_path": f"/en?merch_preview={token}",
         "api_path": f"/merch/slots?merch_preview={token}",
+        "hint": "Opens customer shop with draft home + mega-menu overlays.",
     }
 
 
