@@ -40,7 +40,7 @@
       "refund_none": "No payment was found on your account for this event."
     },
     "event_schedule_changed": {
-      "body": "Vergeo5 event \"{event_title}\" schedule has changed. New date: {event_date}. Check your tickets in the app. Reply STOP to opt out."
+      "body": "Vergeo5 event \"{event_title}\" details have changed. Date: {event_date}. Venue: {venue}. Check your tickets in the app. Reply STOP to opt out."
     }
   },
   "sms": {
@@ -84,7 +84,7 @@
       "body": "Vergeo5: \"{event_title}\" on {event_date} cancelled. {refund_detail}"
     },
     "event_schedule_changed": {
-      "body": "Vergeo5: \"{event_title}\" rescheduled to {event_date}. Check the app for details."
+      "body": "Vergeo5: \"{event_title}\" details updated. Date: {event_date}. Venue: {venue}. Check the app."
     }
   },
   "email": {

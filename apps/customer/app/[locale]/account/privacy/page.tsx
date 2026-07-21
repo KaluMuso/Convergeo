@@ -9,7 +9,9 @@ import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+import { getApiBaseUrl } from "../../../../lib/api-base-url";
+
+const API_BASE_URL = getApiBaseUrl();
 const DELETE_CONFIRMATION_PHRASE = "DELETE MY ACCOUNT";
 
 type ExportResponse = {

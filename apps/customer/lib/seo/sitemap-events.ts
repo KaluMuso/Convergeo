@@ -12,6 +12,8 @@
  * returning an aged instance and keeps the 30-day policy explicit here.
  */
 
+import { getApiBaseUrl } from "../api-base-url";
+
 /** Mirror of the detail page's noindex grace window (see event-jsonld.tsx). */
 export const EVENT_SITEMAP_STALE_DAYS = 30;
 const STALE_MS = EVENT_SITEMAP_STALE_DAYS * 24 * 60 * 60 * 1000;
@@ -25,10 +27,6 @@ type EventsListItem = {
 type EventsListResponse = {
   items: EventsListItem[];
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 /**
  * True when an event's latest known instance ended more than the grace window
@@ -50,8 +48,12 @@ export function isEventStaleForSitemap(
 
 /** Slugs of published, non-stale events for the sitemap events chunk. */
 export async function fetchEventSitemapSlugs(now: number = Date.now()): Promise<string[]> {
+  const base = getApiBaseUrl();
+  if (!base) {
+    return [];
+  }
   try {
-    const response = await fetch(`${getApiBaseUrl()}/events`, {
+    const response = await fetch(`${base}/events`, {
       next: { revalidate: 3600 },
     });
     if (!response.ok) {

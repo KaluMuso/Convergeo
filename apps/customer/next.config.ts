@@ -1,6 +1,8 @@
 import withSerwistInit from "@serwist/next";
 import createNextIntlPlugin from "next-intl/plugin";
 
+import { resolveApiBaseUrl } from "./lib/api-base-url";
+
 import type { NextConfig } from "next";
 
 const withNextIntl = createNextIntlPlugin("../../packages/i18n/src/request.ts");
@@ -148,7 +150,10 @@ const nextConfig: NextConfig = {
     // Same-origin proxy for the analytics beacon: navigator.sendBeacon posts to
     // /api/analytics/collect (same origin -> no CORS/preflight), which Next forwards
     // to the FastAPI ingest. Keeps the beacon cheap and CORS-free on 3G.
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+    const apiBase = resolveApiBaseUrl();
+    if (!apiBase) {
+      return [];
+    }
     return [
       {
         source: "/api/analytics/collect",

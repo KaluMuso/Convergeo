@@ -168,20 +168,23 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
 
   setRequestLocale(locale);
   const baseMessages = await getMessages();
-  const [searchMessages, catalogMessages] = await Promise.all([
+  const [searchMessages, catalogMessages, navMessages] = await Promise.all([
     loadNamespace(locale as Locale, "search"),
     loadNamespace(locale as Locale, "catalog"),
+    loadNamespace(locale as Locale, "nav"),
   ]);
   const messages = {
     ...baseMessages,
     search: searchMessages,
     catalog: catalogMessages,
+    nav: navMessages,
   } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "search" }) as (
     key: string,
     values?: Record<string, string | number>,
   ) => string;
   const tCatalog = createTranslator({ locale, messages, namespace: "catalog" });
+  const tNav = createTranslator({ locale, messages, namespace: "nav" });
 
   const normalized = normalizeSearchQuery(q);
   const activeKind = parseSearchKind(kindParam);
@@ -247,25 +250,25 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     {
       key: "categories",
       href: `/${locale}/categories`,
-      label: tCatalog("home.nav.allCategories"),
+      label: tNav("shop.allCategories"),
     },
     {
       key: "directory",
       href: `/${locale}/directory`,
-      label: tCatalog("home.nav.directory"),
+      label: tNav("shop.directory"),
     },
     {
       key: "services",
       href: `/${locale}/services`,
-      label: tCatalog("home.nav.services"),
+      label: tNav("shop.services"),
     },
     {
       key: "events",
       href: `/${locale}/events`,
-      label: tCatalog("home.nav.events"),
+      label: tNav("shop.events"),
     },
   ];
-  const browseDiscoveryAria = tCatalog("home.nav.browseChipsAria");
+  const browseDiscoveryAria = tNav("shop.browseChipsAria");
 
   const retryParams = new URLSearchParams();
   if (query.length > 0) {

@@ -12,6 +12,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+
 import { AcceptFlow, DEFAULT_DEPOSIT_PCT, previewDepositNgwee } from "./_components/accept-flow";
 import { CompleteConfirm } from "./_components/complete-confirm";
 import { canAcceptQuote, shouldShowCompletion } from "./_components/job-status";
@@ -41,10 +43,6 @@ type QuoteItem = {
   created_at: string;
   provider: QuoteProvider | null;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function createQuotesClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });

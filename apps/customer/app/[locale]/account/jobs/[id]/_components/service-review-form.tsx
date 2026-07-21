@@ -9,6 +9,8 @@ import { Textarea } from "@vergeo/ui/src/textarea";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
+
 type ServiceReviewData = {
   id: string;
   rating: number;
@@ -23,10 +25,6 @@ type Eligibility = {
   completed: boolean;
   review: ServiceReviewData | null;
 };
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 /**
  * Post-completion review prompt on the customer's job page. Fetches eligibility

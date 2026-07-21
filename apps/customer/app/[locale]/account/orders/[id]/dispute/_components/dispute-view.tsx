@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useRef, useState } from "react";
 
+import { getApiBaseUrl } from "../../../../../../../lib/api-base-url";
+
 export type DisputePageLabels = {
   title: string;
   body: string;
@@ -69,10 +71,6 @@ const ACCEPTED_EVIDENCE_TYPES = new Set([
   "image/webp",
   "application/pdf",
 ]);
-
-function getApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-}
 
 function statusLabel(status: string, labels: DisputePageLabels): string {
   const map: Record<string, string> = {

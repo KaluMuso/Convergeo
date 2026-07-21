@@ -20,7 +20,6 @@ from app.services.events.type_policy import (
     policy_for,
 )
 from app.services.kyc.state_machine import ServiceRoleClient
-from app.services.notifications.dedupe import enqueue_outbox_row
 from app.services.notifications.events import emit_event
 from fastapi import APIRouter, Depends
 from pydantic import Field, field_validator
@@ -568,6 +567,7 @@ def _notify_schedule_change(
     *,
     event_id: str,
     event_title: str,
+    venue: str,
     holder_user_ids: set[str],
 ) -> None:
     event_date = _schedule_event_date_label(client, event_id)
@@ -576,25 +576,16 @@ def _notify_schedule_change(
             "event_id": event_id,
             "event_title": event_title,
             "event_date": event_date,
+            "venue": venue,
             "recipient_id": holder_id,
         }
-        try:
-            emit_event(
-                client,
-                event=_SCHEDULE_CHANGE_EVENT,
-                entity_id=f"{event_id}:{holder_id}",
-                recipient_id=holder_id,
-                payload=payload,
-            )
-        except ValueError:
-            enqueue_outbox_row(
-                client,
-                event_type=_SCHEDULE_CHANGE_EVENT,
-                entity_id=f"{event_id}:{holder_id}",
-                channel="whatsapp",
-                template="event_schedule_changed",
-                payload=payload,
-            )
+        emit_event(
+            client,
+            event=_SCHEDULE_CHANGE_EVENT,
+            entity_id=f"{event_id}:{holder_id}",
+            recipient_id=holder_id,
+            payload=payload,
+        )
 
 
 def _load_ticket_holders(client: Any, event_id: str) -> set[str]:
@@ -928,6 +919,7 @@ async def update_organiser_event(
                 client,
                 event_id=event_id,
                 event_title=str(event_row.get("title") or ""),
+                venue=str(event_row.get("venue") or ""),
                 holder_user_ids=holders,
             )
 
