@@ -1,4 +1,5 @@
 {
+  "skipToContent": "Aller au contenu",
   "shop": {
     "ariaLabel": "Navigation boutique",
     "desktopAriaLabel": "Navigation principale",
@@ -26,6 +27,18 @@
     "askVergeo": "Demander à Vergeo",
     "supplies": "Fournitures",
     "browseChipsAria": "Parcourir par zone"
+  },
+  "marketing": {
+    "ariaLabel": "Navigation marketing",
+    "about": "À propos",
+    "contact": "Contact",
+    "help": "Aide",
+    "sell": "Vendre sur Vergeo5",
+    "signIn": "Se connecter"
+  },
+  "account": {
+    "ariaLabel": "Navigation du compte",
+    "menuAria": "Menu du compte"
   },
   "auth": {
     "backToShop": "Retour à la boutique",

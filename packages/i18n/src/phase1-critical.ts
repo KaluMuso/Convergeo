@@ -8,6 +8,7 @@ export const PHASE1_CRITICAL_LOCALES = ["bem", "nya"] as const;
 
 export const PHASE1_CRITICAL_NAMESPACES = [
   "common",
+  "nav",
   "catalog",
   "search",
   "checkout",
@@ -20,7 +21,8 @@ export type Phase1Namespace = (typeof PHASE1_CRITICAL_NAMESPACES)[number];
 
 /** Dotted prefixes (inclusive). A key matches if it equals a prefix or starts with `${prefix}.`. */
 export const PHASE1_CRITICAL_PREFIXES: Record<Phase1Namespace, readonly string[]> = {
-  common: ["app", "common", "nav", "theme", "greeting", "offline", "install"],
+  common: ["app", "common", "theme", "greeting", "offline", "install"],
+  nav: ["skipToContent", "shop", "marketing", "account", "auth"],
   catalog: [
     "home.meta",
     "home.nav",

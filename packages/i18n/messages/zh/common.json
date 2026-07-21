@@ -6,10 +6,6 @@
     "loading": "加载中…",
     "retry": "重试"
   },
-  "nav": {
-    "home": "首页",
-    "skipToContent": "跳到内容"
-  },
   "theme": {
     "label": "主题",
     "light": "浅色",

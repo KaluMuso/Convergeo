@@ -15,22 +15,6 @@
     "updateAction": "Reload kuti mu-update",
     "updateBody": "Version yatsopano ya Vergeo5 yalipo."
   },
-  "nav": {
-    "home": "Kwathu",
-    "skipToContent": "Pitani ku content",
-    "marketing": {
-      "ariaLabel": "Navigation ya marketing",
-      "about": "Za Vergeo5",
-      "contact": "Titandizireni",
-      "help": "Thandizo",
-      "sell": "Sell pa Vergeo5",
-      "signIn": "Lowani"
-    },
-    "account": {
-      "ariaLabel": "Navigation ya account",
-      "menuAria": "Menyu ya akaunti"
-    }
-  },
   "offline": {
     "body": "Palibe connection pano. Mapeji omwe mwaonako kale amagwirabe ntchito — connectaninso kuti muone zonse.",
     "code": "Offline",

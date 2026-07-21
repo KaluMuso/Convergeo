@@ -66,7 +66,7 @@ export default async function AuthLayout({ children, params }: AuthLayoutProps) 
           locale={locale}
           appName={tCommon("app.name")}
           tagline={tAuth("chrome.customerTagline")}
-          skipToContent={tCommon("nav.skipToContent")}
+          skipToContent={tNav("skipToContent")}
           backToShopLabel={tNav("auth.backToShop")}
           localeSwitcher={localeSwitcher}
         />

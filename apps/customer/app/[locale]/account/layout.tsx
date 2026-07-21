@@ -36,17 +36,22 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
   await requireAuthenticatedAccount(locale);
 
   const baseMessages = await getMessages();
-  const accountMessages = await loadNamespace(locale as Locale, "account");
-  const catalogMessages = await loadNamespace(locale as Locale, "catalog");
-  const commonMessages = await loadNamespace(locale as Locale, "common");
+  const [accountMessages, catalogMessages, commonMessages, navMessages] = await Promise.all([
+    loadNamespace(locale as Locale, "account"),
+    loadNamespace(locale as Locale, "catalog"),
+    loadNamespace(locale as Locale, "common"),
+    loadNamespace(locale as Locale, "nav"),
+  ]);
   const messages = {
     ...baseMessages,
     account: accountMessages,
     catalog: catalogMessages,
     common: commonMessages,
+    nav: navMessages,
   } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "account" });
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
+  const tNav = createTranslator({ locale, messages, namespace: "nav" });
   const tCatalog = createTranslator({ locale, messages, namespace: "catalog" });
 
   const localeSwitcherLabels = {
@@ -98,17 +103,17 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
         href="#account-main"
         className="sr-only rounded bg-primary text-sm font-medium text-surface focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:inline-flex focus:min-h-11 focus:items-center focus:px-4 focus:shadow-focusRing"
       >
-        {tCommon("nav.skipToContent")}
+        {tNav("skipToContent")}
       </a>
       <AccountAppHeader
         locale={locale}
         labels={{
           appName: tCommon("app.name"),
-          navAriaLabel: tCommon("nav.account.ariaLabel"),
+          navAriaLabel: tNav("account.ariaLabel"),
           searchPlaceholder: tCatalog("home.nav.searchPlaceholder"),
           cart: tCatalog("home.nav.cart"),
           cartWithCount: tCatalog("home.nav.cartWithCount"),
-          accountMenuAria: tCommon("nav.account.menuAria"),
+          accountMenuAria: tNav("account.menuAria"),
           accountOverview: t("nav.overview"),
           accountOrders: t("nav.orders"),
           accountPreferences: t("nav.preferences"),

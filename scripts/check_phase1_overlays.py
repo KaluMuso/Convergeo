@@ -21,7 +21,8 @@ MSG = ROOT / "packages" / "i18n" / "messages"
 # Mirror packages/i18n/src/phase1-critical.ts
 PHASE1_CRITICAL_LOCALES = ("bem", "nya")
 PHASE1_CRITICAL_PREFIXES: dict[str, list[str]] = {
-    "common": ["app", "common", "nav", "theme", "greeting", "offline", "install"],
+    "common": ["app", "common", "theme", "greeting", "offline", "install"],
+    "nav": ["skipToContent", "shop", "marketing", "account", "auth"],
     "catalog": [
         "home.meta",
         "home.nav",

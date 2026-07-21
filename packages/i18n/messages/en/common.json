@@ -6,22 +6,6 @@
     "loading": "Loading…",
     "retry": "Try again"
   },
-  "nav": {
-    "home": "Home",
-    "skipToContent": "Skip to content",
-    "marketing": {
-      "ariaLabel": "Marketing navigation",
-      "about": "About",
-      "contact": "Contact",
-      "help": "Help",
-      "sell": "Sell on Vergeo5",
-      "signIn": "Sign in"
-    },
-    "account": {
-      "ariaLabel": "Account navigation",
-      "menuAria": "Account menu"
-    }
-  },
   "theme": {
     "label": "Theme",
     "light": "Light",

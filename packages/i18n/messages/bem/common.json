@@ -15,22 +15,6 @@
     "updateAction": "Reload uku update",
     "updateBody": "Version yambi ya Vergeo5 yaisa."
   },
-  "nav": {
-    "home": "Kwenu",
-    "skipToContent": "Pita ku content",
-    "marketing": {
-      "ariaLabel": "Navigation ya marketing",
-      "about": "Paliba pa Vergeo5",
-      "contact": "Twalicilileni",
-      "help": "Ulubuto",
-      "sell": "Sell pa Vergeo5",
-      "signIn": "Ingilani"
-    },
-    "account": {
-      "ariaLabel": "Navigation ya account",
-      "menuAria": "Menu ya akaunti"
-    }
-  },
   "offline": {
     "body": "Takwaba connection nomba. Amapeji mwalola kale yakonka — connecteni limbi ukutwala ifyonse.",
     "code": "Offline",

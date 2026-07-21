@@ -120,7 +120,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         }
         labels={{
           appName: tCommon("app.name"),
-          skipToContent: tCommon("nav.skipToContent"),
+          skipToContent: t("skipToContent"),
           navAriaLabel: t("shop.ariaLabel"),
           desktopAriaLabel: t("shop.desktopAriaLabel"),
           searchPlaceholder: t("shop.searchPlaceholder"),

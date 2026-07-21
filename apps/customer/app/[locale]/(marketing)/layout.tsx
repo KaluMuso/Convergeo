@@ -22,12 +22,17 @@ export default async function MarketingLayout({ children, params }: MarketingLay
 
   setRequestLocale(locale);
   const baseMessages = await getMessages();
-  const commonMessages = await loadNamespace(locale as Locale, "common");
+  const [commonMessages, navMessages] = await Promise.all([
+    loadNamespace(locale as Locale, "common"),
+    loadNamespace(locale as Locale, "nav"),
+  ]);
   const messages = {
     ...baseMessages,
     common: commonMessages,
+    nav: navMessages,
   } as AbstractIntlMessages;
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
+  const tNav = createTranslator({ locale, messages, namespace: "nav" });
 
   return (
     <>
@@ -35,18 +40,18 @@ export default async function MarketingLayout({ children, params }: MarketingLay
         href="#marketing-main"
         className="sr-only rounded bg-primary text-sm font-medium text-surface focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:inline-flex focus:min-h-11 focus:items-center focus:px-4 focus:shadow-focusRing"
       >
-        {tCommon("nav.skipToContent")}
+        {tNav("skipToContent")}
       </a>
       <MarketingAppHeader
         locale={locale}
         labels={{
           appName: tCommon("app.name"),
-          navAriaLabel: tCommon("nav.marketing.ariaLabel"),
-          about: tCommon("nav.marketing.about"),
-          contact: tCommon("nav.marketing.contact"),
-          help: tCommon("nav.marketing.help"),
-          sell: tCommon("nav.marketing.sell"),
-          signIn: tCommon("nav.marketing.signIn"),
+          navAriaLabel: tNav("marketing.ariaLabel"),
+          about: tNav("marketing.about"),
+          contact: tNav("marketing.contact"),
+          help: tNav("marketing.help"),
+          sell: tNav("marketing.sell"),
+          signIn: tNav("marketing.signIn"),
         }}
       />
       {children}

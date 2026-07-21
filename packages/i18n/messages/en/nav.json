@@ -1,4 +1,5 @@
 {
+  "skipToContent": "Skip to content",
   "shop": {
     "ariaLabel": "Shop navigation",
     "desktopAriaLabel": "Primary navigation",
@@ -25,6 +26,18 @@
     "events": "Events",
     "askVergeo": "Ask Vergeo",
     "supplies": "Supplies"
+  },
+  "marketing": {
+    "ariaLabel": "Marketing navigation",
+    "about": "About",
+    "contact": "Contact",
+    "help": "Help",
+    "sell": "Sell on Vergeo5",
+    "signIn": "Sign in"
+  },
+  "account": {
+    "ariaLabel": "Account navigation",
+    "menuAria": "Account menu"
   },
   "auth": {
     "backToShop": "Back to shop",

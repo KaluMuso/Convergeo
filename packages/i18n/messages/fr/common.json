@@ -6,22 +6,6 @@
     "loading": "Chargement…",
     "retry": "Réessayer"
   },
-  "nav": {
-    "home": "Accueil",
-    "skipToContent": "Aller au contenu",
-    "marketing": {
-      "ariaLabel": "Navigation marketing",
-      "about": "À propos",
-      "contact": "Contact",
-      "help": "Aide",
-      "sell": "Vendre sur Vergeo5",
-      "signIn": "Se connecter"
-    },
-    "account": {
-      "ariaLabel": "Navigation du compte",
-      "menuAria": "Menu du compte"
-    }
-  },
   "theme": {
     "label": "Thème",
     "light": "Clair",
