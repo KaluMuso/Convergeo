@@ -228,6 +228,10 @@ def _parse_ts(value: str) -> datetime:
     return parsed.astimezone(UTC)
 
 
+# 12:00 UTC = 14:00 Africa/Lusaka — outside marketing quiet hours (21:00–07:00).
+_MARKETING_SEND_NOW = datetime(2026, 7, 8, 12, 0, tzinfo=UTC)
+
+
 @pytest.fixture
 def store() -> InMemoryOutboxStore:
     return InMemoryOutboxStore()
@@ -544,7 +548,7 @@ async def test_marketing_row_suppressed_when_all_channels_disabled(
     )
     assert row is not None
 
-    stats = await dispatcher.run_batch()
+    stats = await dispatcher.run_batch(now=_MARKETING_SEND_NOW)
 
     assert stats.skipped == 1
     assert len(noop.sent) == 0
@@ -604,7 +608,7 @@ async def test_marketing_falls_back_to_enabled_channel(
     )
     assert row is not None
 
-    stats = await dispatcher.run_batch()
+    stats = await dispatcher.run_batch(now=_MARKETING_SEND_NOW)
 
     assert stats.sent == 1
     assert noop.sent[0].channel == "sms"

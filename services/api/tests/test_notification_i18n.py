@@ -40,6 +40,8 @@ LOCALE_FALLBACK_MATRIX = (
     "marketing.review_request.body",
     "marketing.abandoned_cart_recovery.body",
     "compliance.stopReply",
+    "compliance.stopConfirmation",
+    "compliance.startConfirmation",
 )
 
 
