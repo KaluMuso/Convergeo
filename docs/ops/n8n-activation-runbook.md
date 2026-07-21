@@ -11,6 +11,21 @@ authored but not imported/activated.
 > money path is proven (VB-P01…P06) **and** legal **F4** (NPS-Act escrow) has cleared.
 > Do not activate Wave B before both gates are green.
 
+> **Activation status (2026-07-21).** Wave A **4 of 5 live**: `reservation-sweeper`,
+> `embeddings-cron`, `admin-digest`, `analytics-retention` created via MCP,
+> credential-bound, published, and each verified green. **`operational-nudges`
+> (KYC/low-stock/review/payout-failure, `INTERNAL_N8N_TOKEN`) is HELD as a draft by
+> founder decision** — it enqueues outward SMS/email that the live dispatch workflow
+> delivers, so it stays inactive **until real vendors onboard** (avoids messaging the
+> seeded demo vendors). Activate it once the demo catalogue is excluded (the
+> `vendor_listings.demo` flag from PR #384) or replaced by real vendors.
+>
+> **⚠ Prerequisite learned the hard way:** activation first returned 500s because the
+> host's `/root/vergeo5-api.env` was **missing `SUPABASE_DB_URL`** — the API fell back
+> to the local dev DSN and every direct-DB tick timed out. Set `SUPABASE_DB_URL` to the
+> Supabase **session pooler** (port 5432, not 6543) before activating anything; see
+> `infra/.env.example` / `infra/ENVIRONMENTS.md`. This also clears `/search degraded=true`.
+
 **Why this is a founder/ops task (not code).** Every internal tick is **fail-closed**:
 `app/core/internal_token.resolve_internal_token` returns **503** in `ENV=production`
 when the endpoint's `INTERNAL_*_TOKEN` is missing or still the dev default. So a
