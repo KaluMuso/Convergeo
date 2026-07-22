@@ -35,7 +35,7 @@ curl -s https://api.vergeo5.com/fingerprint   # env=production, but LENCO_ENV=sa
 # The payments gate should read enabled_sandbox — confirm via a drill checkout landing on 'pending', not 'disabled'.
 ```
 
-Seed a drill buyer (phone-OTP) + a verified vendor + one in-stock, COD-eligible listing. Fixtures: `scripts/ops/staging-money-drill-fixtures.sql` (suggested SKU `tea-coffee-standard`, K28.97). Preflight: `../2026-07-20/staging-money-drill-preflight.md`.
+Apply `scripts/ops/staging-money-drill-fixtures.sql` — it now preps **catalog visibility** (5 COD-eligible listings off the `demo/` prefix), **stock** (bumps the drill listings to ≥100 tracked units), and the **vendor payout destination** (sandbox MoMo `payout_msisdn`/`payout_rail`, hold cleared) so the release→payout leg can send. Idempotent + reversible; run the read-only verify block at the bottom to confirm readiness. The **buyer** is an operator step (phone-OTP sign-in — can't be fixtured). Primary SKU: `tea-coffee-standard` (K28.97). Preflight: `../2026-07-20/staging-money-drill-preflight.md`.
 
 ## 2. Section A — MoMo collection → ledger (gate **S1**)
 
