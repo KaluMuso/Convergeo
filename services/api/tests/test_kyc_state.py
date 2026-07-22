@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import concurrent.futures
 import json
-import re
 import threading
 import uuid
 from collections.abc import Generator
@@ -28,6 +27,8 @@ from tests.rls.conftest import (
 
 ADMIN_ID = "66666666-6666-6666-6666-666666666666"
 _PG_LOCK = threading.Lock()
+# Seeded by seed_matrix_fixtures (profiles FK on vendors.owner_user_id).
+VENDOR_OWNER_ID = "33333333-3333-3333-3333-333333333333"
 
 
 class _FakeResponse:
@@ -49,9 +50,8 @@ def _sql_value(value: Any) -> str:
 
 
 def _json_rows(rows: list[str]) -> list[dict[str, Any]]:
-    # psql -At may emit command tags (e.g. "UPDATE 1") alongside RETURNING rows.
-    command_tag = re.compile(r"^(?:INSERT \d+ \d+|UPDATE \d+|DELETE \d+|SELECT \d+)$")
-    return [json.loads(row) for row in rows if row and not command_tag.match(row)]
+    # psql -At emits command tags (e.g. UPDATE 1) alongside RETURNING jsonb rows.
+    return [json.loads(row) for row in rows if row.startswith("{")]
 
 
 class _SqlTableClient:
@@ -179,31 +179,11 @@ def db() -> Generator[PgConn, None, None]:
 
 
 def _seed_pending_kyc_vendor(db: PgConn, *, vendor_id: str, kyc_id: str) -> None:
-    owner_id = str(uuid.uuid4())
     slug = f"kyc-cas-{vendor_id[:8]}"
-    email = f"kyc-cas-{owner_id[:8]}@rls-matrix.test"
-    bootstrap = db.run(
-        f"""
-        INSERT INTO auth.users (
-          instance_id, id, aud, role, email, encrypted_password,
-          email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
-        ) VALUES (
-          '00000000-0000-0000-0000-000000000000', '{owner_id}', 'authenticated', 'authenticated',
-          '{email}', 'hash', timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
-          timezone('utc', now()), timezone('utc', now())
-        ) ON CONFLICT (id) DO NOTHING;
-        INSERT INTO public.profiles (id, phone, display_name)
-        VALUES ('{owner_id}', '+260971099999', 'CAS Owner')
-        ON CONFLICT (id) DO UPDATE SET
-          phone = EXCLUDED.phone,
-          display_name = EXCLUDED.display_name;
-        """
-    )
-    assert bootstrap.ok, bootstrap.error
     vendor_result = db.run(
         f"""
         INSERT INTO public.vendors (id, owner_user_id, slug, display_name, status)
-        VALUES ('{vendor_id}', '{owner_id}', '{slug}', 'CAS Vendor', 'pending_kyc');
+        VALUES ('{vendor_id}', '{VENDOR_OWNER_ID}', '{slug}', 'CAS Vendor', 'pending_kyc');
         """
     )
     assert vendor_result.ok, vendor_result.error
