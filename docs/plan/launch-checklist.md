@@ -76,6 +76,11 @@ staging environment or a founder gate are tagged and stay **unchecked**.
 
 ## 3. Staging-gated live-execution proofs (all UNCHECKED — need staging)
 
+> **Deploy / verify / rollback path:** executable runbook
+> [`docs/ops/deploy-verify-runbook.md`](../ops/deploy-verify-runbook.md) (migrations →
+> OCI API → Vercel/DNS → n8n activation → rollback drills) and read-only post-deploy
+> verifier [`scripts/ops/verify_live.sh`](../../scripts/ops/verify_live.sh) (G0–G9 matrix).
+
 These five artifacts are **built and unit/mock-verified on master** but their
 **live run requires the staging environment**, which this build env lacks.
 

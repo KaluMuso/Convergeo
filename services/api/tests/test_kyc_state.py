@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import json
+import threading
 import uuid
 from collections.abc import Generator
 from typing import Any
@@ -28,6 +29,9 @@ from tests.rls.conftest import (
 )
 
 ADMIN_ID = "66666666-6666-6666-6666-666666666666"
+_PG_LOCK = threading.Lock()
+# Seeded by seed_matrix_fixtures (profiles FK on vendors.owner_user_id).
+VENDOR_OWNER_ID = "33333333-3333-3333-3333-333333333333"
 
 
 class _FakeResponse:
@@ -49,12 +53,8 @@ def _sql_value(value: Any) -> str:
 
 
 def _json_rows(rows: list[str]) -> list[dict[str, Any]]:
-    parsed: list[dict[str, Any]] = []
-    for row in rows:
-        if not row or row[0] not in "{[":
-            continue
-        parsed.append(json.loads(row))
-    return parsed
+    # psql -At emits command tags (e.g. UPDATE 1) alongside RETURNING jsonb rows.
+    return [json.loads(row) for row in rows if row.startswith("{")]
 
 
 class _SqlTableClient:
@@ -106,45 +106,48 @@ class _SqlTableClient:
         return "WHERE " + " AND ".join(clauses)
 
     def execute(self) -> _FakeResponse:
-        if self._mode == "insert":
-            assert self._payload is not None
-            columns = list(self._payload.keys())
-            col_sql = ", ".join(columns)
-            val_sql = ", ".join(_sql_value(self._payload[col]) for col in columns)
+        with _PG_LOCK:
+            if self._mode == "insert":
+                assert self._payload is not None
+                columns = list(self._payload.keys())
+                col_sql = ", ".join(columns)
+                val_sql = ", ".join(_sql_value(self._payload[col]) for col in columns)
+                sql = (
+                    f"INSERT INTO public.{self._table} ({col_sql}) VALUES ({val_sql}) "
+                    f"RETURNING to_jsonb({self._table}.*);"
+                )
+                result = self._conn.run(sql)
+                assert result.ok, result.error
+                return _FakeResponse(_json_rows(result.rows))
+
+            if self._mode == "update":
+                assert self._payload is not None
+                set_sql = ", ".join(
+                    f"{col} = {_sql_value(val)}" for col, val in self._payload.items()
+                )
+                sql = (
+                    f"UPDATE public.{self._table} SET {set_sql} {self._where_sql()} "
+                    f"RETURNING to_jsonb({self._table}.*);"
+                )
+                result = self._conn.run(sql)
+                assert result.ok, result.error
+                return _FakeResponse(_json_rows(result.rows))
+
+            order_sql = ""
+            if self._order is not None:
+                column, desc = self._order
+                order_sql = f" ORDER BY {column} {'DESC' if desc else 'ASC'}"
+            limit_sql = f" LIMIT {self._limit}" if self._limit is not None else ""
             sql = (
-                f"INSERT INTO public.{self._table} ({col_sql}) VALUES ({val_sql}) "
-                f"RETURNING to_jsonb({self._table}.*);"
+                f"SELECT to_jsonb(t) FROM (SELECT {self._select_cols} FROM public.{self._table} "
+                f"{self._where_sql()}{order_sql}{limit_sql}) t;"
             )
             result = self._conn.run(sql)
             assert result.ok, result.error
-            return _FakeResponse(_json_rows(result.rows))
-
-        if self._mode == "update":
-            assert self._payload is not None
-            set_sql = ", ".join(f"{col} = {_sql_value(val)}" for col, val in self._payload.items())
-            sql = (
-                f"UPDATE public.{self._table} SET {set_sql} {self._where_sql()} "
-                f"RETURNING to_jsonb({self._table}.*);"
-            )
-            result = self._conn.run(sql)
-            assert result.ok, result.error
-            return _FakeResponse(_json_rows(result.rows))
-
-        order_sql = ""
-        if self._order is not None:
-            column, desc = self._order
-            order_sql = f" ORDER BY {column} {'DESC' if desc else 'ASC'}"
-        limit_sql = f" LIMIT {self._limit}" if self._limit is not None else ""
-        sql = (
-            f"SELECT to_jsonb(t) FROM (SELECT {self._select_cols} FROM public.{self._table} "
-            f"{self._where_sql()}{order_sql}{limit_sql}) t;"
-        )
-        result = self._conn.run(sql)
-        assert result.ok, result.error
-        rows = _json_rows(result.rows)
-        if self._maybe_single:
-            return _FakeResponse(rows[0] if rows else None)
-        return _FakeResponse(rows)
+            rows = _json_rows(result.rows)
+            if self._maybe_single:
+                return _FakeResponse(rows[0] if rows else None)
+            return _FakeResponse(rows)
 
 
 class _RealPgServiceClient:
@@ -179,36 +182,11 @@ def db() -> Generator[PgConn, None, None]:
 
 
 def _seed_pending_kyc_vendor(db: PgConn, *, vendor_id: str, kyc_id: str) -> None:
-    owner_id = str(uuid.uuid4())
     slug = f"kyc-cas-{vendor_id[:8]}"
-    email = f"kyc-cas-{owner_id[:8]}@rls-matrix.test"
-    auth_result = db.run(
-        f"""
-        INSERT INTO auth.users (
-          instance_id, id, aud, role, email, encrypted_password,
-          email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
-        ) VALUES (
-          '00000000-0000-0000-0000-000000000000', '{owner_id}', 'authenticated', 'authenticated',
-          '{email}', 'hash', timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
-          timezone('utc', now()), timezone('utc', now())
-        ) ON CONFLICT (id) DO NOTHING;
-        """
-    )
-    assert auth_result.ok, auth_result.error
-    profile_result = db.run(
-        f"""
-        INSERT INTO public.profiles (id, phone, display_name)
-        VALUES ('{owner_id}', '+260971009999', 'CAS Owner')
-        ON CONFLICT (id) DO UPDATE SET
-          phone = EXCLUDED.phone,
-          display_name = EXCLUDED.display_name;
-        """
-    )
-    assert profile_result.ok, profile_result.error
     vendor_result = db.run(
         f"""
         INSERT INTO public.vendors (id, owner_user_id, slug, display_name, status)
-        VALUES ('{vendor_id}', '{owner_id}', '{slug}', 'CAS Vendor', 'pending_kyc');
+        VALUES ('{vendor_id}', '{VENDOR_OWNER_ID}', '{slug}', 'CAS Vendor', 'pending_kyc');
         """
     )
     assert vendor_result.ok, vendor_result.error
