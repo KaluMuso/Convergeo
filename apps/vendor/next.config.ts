@@ -30,6 +30,7 @@ const GA4_IMG = "https://*.google-analytics.com https://*.googletagmanager.com";
 // subdomains only (incl. region variants), NOT a blanket sentry.io allowance.
 const SENTRY_INGEST =
   "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
+const CSP_REPORTING = "report-uri /api/csp-report; report-to csp-endpoint";
 
 const HSTS = "max-age=63072000; includeSubDomains; preload";
 
@@ -62,6 +63,7 @@ const REPORT_ONLY_CSP = [
   "frame-ancestors 'self'",
   "form-action 'self'",
   "upgrade-insecure-requests",
+  CSP_REPORTING,
 ].join("; ");
 
 // Headers common to every route (nonce/framing/transport). Permissions-Policy is

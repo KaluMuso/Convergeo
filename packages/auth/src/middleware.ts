@@ -11,6 +11,9 @@ export type AuthGate = "none" | "vendor" | "admin";
 export const CSP_NONCE_HEADER = "x-nonce";
 export const CSP_REPORT_ONLY_HEADER = "Content-Security-Policy-Report-Only";
 export const CSP_NONCE_PLACEHOLDER = "{{CSP_NONCE}}";
+export const CSP_REPORT_PATH = "/api/csp-report";
+export const CSP_REPORT_GROUP = "csp-endpoint";
+export const CSP_REPORTING_ENDPOINTS_HEADER = "Reporting-Endpoints";
 
 const MIDDLEWARE_OVERRIDE_HEADER = "x-middleware-override-headers";
 
@@ -22,6 +25,88 @@ export function createCspNonce(): string {
 
 export function substituteCspNonce(policy: string, nonce: string): string {
   return policy.replaceAll(CSP_NONCE_PLACEHOLDER, nonce);
+}
+
+type EnvBag = {
+  CSP_REPORT_URI?: string;
+};
+
+/** Same-origin sink by default; override with CSP_REPORT_URI for a central collector. */
+export function resolveCspReportUri(env: EnvBag = process.env): string {
+  const configured = env.CSP_REPORT_URI?.trim();
+  if (configured) {
+    return configured;
+  }
+  return CSP_REPORT_PATH;
+}
+
+export function appendCspReporting(
+  policy: string,
+  reportUri: string = resolveCspReportUri(),
+): string {
+  if (policy.includes("report-uri") || policy.includes("report-to")) {
+    return policy;
+  }
+  return `${policy}; report-uri ${reportUri}; report-to ${CSP_REPORT_GROUP}`;
+}
+
+export function buildReportingEndpointsHeader(reportUri: string = resolveCspReportUri()): string {
+  return `${CSP_REPORT_GROUP}="${reportUri}"`;
+}
+
+export function isCspReportRequest(
+  request: NextRequest,
+  reportUri: string = resolveCspReportUri(),
+): boolean {
+  if (request.method !== "POST") {
+    return false;
+  }
+  const { pathname } = request.nextUrl;
+  if (pathname === CSP_REPORT_PATH || pathname === reportUri) {
+    return true;
+  }
+  try {
+    const configured = new URL(reportUri, request.nextUrl.origin);
+    return configured.pathname === pathname;
+  } catch {
+    return false;
+  }
+}
+
+function summarizeCspReportBody(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return "";
+  }
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    const report =
+      (parsed["csp-report"] as Record<string, unknown> | undefined) ??
+      (Array.isArray(parsed.body) ? (parsed.body[0] as Record<string, unknown>) : undefined) ??
+      parsed;
+    return JSON.stringify({
+      blocked: report["blocked-uri"] ?? report.blockedURL ?? null,
+      violated: report["violated-directive"] ?? report.effectiveDirective ?? null,
+      source: report["source-file"] ?? report.sourceFile ?? null,
+      disposition: report.disposition ?? null,
+    });
+  } catch {
+    return trimmed.slice(0, 2048);
+  }
+}
+
+/** Accept CSP violation reports (report-uri / Reporting API) and log a redacted summary. */
+export async function handleCspReportRequest(request: NextRequest): Promise<NextResponse> {
+  try {
+    const raw = await request.text();
+    const summary = summarizeCspReportBody(raw);
+    if (summary) {
+      console.info("[csp-report]", summary);
+    }
+  } catch {
+    // Browsers may POST empty bodies on some report types — still return 204.
+  }
+  return new NextResponse(null, { status: 204 });
 }
 
 function copyMiddlewareRequestHeaders(source: NextResponse, target: NextResponse): void {
@@ -62,7 +147,8 @@ export function applyReportOnlyCspNonce(
   reportOnlyPolicy: string,
   nonce = createCspNonce(),
 ): NextResponse {
-  const csp = substituteCspNonce(reportOnlyPolicy, nonce);
+  const reportUri = resolveCspReportUri();
+  const csp = appendCspReporting(substituteCspNonce(reportOnlyPolicy, nonce), reportUri);
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(CSP_NONCE_HEADER, nonce);
   requestHeaders.set(CSP_REPORT_ONLY_HEADER, csp);
@@ -74,6 +160,7 @@ export function applyReportOnlyCspNonce(
   });
   copyMiddlewareRequestHeaders(requestOverride, response);
   response.headers.set(CSP_REPORT_ONLY_HEADER, csp);
+  response.headers.set(CSP_REPORTING_ENDPOINTS_HEADER, buildReportingEndpointsHeader(reportUri));
   return response;
 }
 

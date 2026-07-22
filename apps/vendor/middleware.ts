@@ -1,8 +1,11 @@
 import {
   CSP_NONCE_PLACEHOLDER,
+  appendCspReporting,
   applyReportOnlyCspNonce,
   createLoginRedirect,
   getLocaleFromPath,
+  handleCspReportRequest,
+  isCspReportRequest,
   mergeSessionCookies,
   shouldRedirectToLogin,
   updateSession,
@@ -28,25 +31,31 @@ const GA4_IMG = "https://*.google-analytics.com https://*.googletagmanager.com";
 const SENTRY_INGEST =
   "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
 
-const REPORT_ONLY_CSP = [
-  "default-src 'self'",
-  `script-src 'self' 'strict-dynamic' ${NONCE} https: ${GA4_SCRIPT}`,
-  "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${CLOUDINARY} ${GA4_IMG}`,
-  "font-src 'self' data:",
-  `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${GA4_CONNECT} ${SENTRY_INGEST}`,
-  "frame-src 'self'",
-  "worker-src 'self' blob:",
-  "manifest-src 'self'",
-  "media-src 'self'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  "frame-ancestors 'self'",
-  "form-action 'self'",
-  "upgrade-insecure-requests",
-].join("; ");
+const REPORT_ONLY_CSP = appendCspReporting(
+  [
+    "default-src 'self'",
+    `script-src 'self' 'strict-dynamic' ${NONCE} https: ${GA4_SCRIPT}`,
+    "style-src 'self' 'unsafe-inline'",
+    `img-src 'self' data: blob: ${CLOUDINARY} ${GA4_IMG}`,
+    "font-src 'self' data:",
+    `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${GA4_CONNECT} ${SENTRY_INGEST}`,
+    "frame-src 'self'",
+    "worker-src 'self' blob:",
+    "manifest-src 'self'",
+    "media-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'self'",
+    "form-action 'self'",
+    "upgrade-insecure-requests",
+  ].join("; "),
+);
 
 export default async function middleware(request: NextRequest) {
+  if (isCspReportRequest(request)) {
+    return handleCspReportRequest(request);
+  }
+
   const session = await updateSession(request);
   const locale = getLocaleFromPath(request.nextUrl.pathname, LOCALES, DEFAULT_LOCALE);
 
@@ -69,5 +78,5 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/(en|bem|nya|fr|zh)/:path*"],
+  matcher: ["/api/csp-report", "/", "/(en|bem|nya|fr|zh)/:path*"],
 };

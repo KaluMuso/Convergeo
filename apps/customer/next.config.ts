@@ -56,6 +56,7 @@ const LENCO_API = "https://api.lenco.co https://api.sandbox.lenco.co";
 // subdomains only (incl. region variants), NOT a blanket sentry.io allowance.
 const SENTRY_INGEST =
   "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
+const CSP_REPORTING = "report-uri /api/csp-report; report-to csp-endpoint";
 
 const HSTS = "max-age=63072000; includeSubDomains; preload";
 const PERMISSIONS_POLICY =
@@ -93,6 +94,7 @@ function buildReportOnlyCsp(lenco: boolean): string {
     "frame-ancestors 'self'",
     `form-action 'self'${lenco ? ` ${LENCO_WIDGET}` : ""}`,
     "upgrade-insecure-requests",
+    CSP_REPORTING,
   ].join("; ");
 }
 

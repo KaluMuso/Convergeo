@@ -90,6 +90,12 @@ function checkAppConfig(app, opts) {
   );
   assert(`${app}: CSP script-src nonce`, src.includes("'nonce-"), `absent in ${where}`);
 
+  assert(
+    `${app}: report-only CSP declares report-uri`,
+    src.includes("report-uri /api/csp-report") || src.includes("appendCspReporting"),
+    `missing report-uri wiring in ${where}`,
+  );
+
   const scriptSrcLines = src.split("\n").filter((line) => line.includes("script-src"));
   const scriptUnsafeInline = scriptSrcLines.some((line) => line.includes("unsafe-inline"));
   assert(
@@ -151,6 +157,21 @@ function checkAppMiddleware(app, opts) {
     `${app}: middleware uses nonce placeholder`,
     src.includes("CSP_NONCE_PLACEHOLDER"),
     `missing nonce placeholder substitution in ${where}`,
+  );
+  assert(
+    `${app}: middleware wires CSP report sink`,
+    src.includes("isCspReportRequest") && src.includes("handleCspReportRequest"),
+    `missing CSP report handler in ${where}`,
+  );
+  assert(
+    `${app}: middleware matches /api/csp-report`,
+    src.includes('"/api/csp-report"'),
+    `CSP report path not in middleware matcher for ${where}`,
+  );
+  assert(
+    `${app}: report-only CSP declares report-uri`,
+    src.includes("report-uri /api/csp-report") || src.includes("appendCspReporting"),
+    `missing report-uri wiring in ${where}`,
   );
 
   const scriptSrcLines = src.split("\n").filter((line) => line.includes("script-src"));
