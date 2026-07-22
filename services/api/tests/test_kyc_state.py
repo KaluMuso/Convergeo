@@ -48,7 +48,8 @@ def _sql_value(value: Any) -> str:
 
 
 def _json_rows(rows: list[str]) -> list[dict[str, Any]]:
-    return [json.loads(row) for row in rows]
+    # psql -At emits command tags (e.g. UPDATE 1) alongside RETURNING jsonb rows.
+    return [json.loads(row) for row in rows if row.startswith("{")]
 
 
 class _SqlTableClient:
