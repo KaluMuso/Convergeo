@@ -1,6 +1,9 @@
 import {
   CSP_NONCE_PLACEHOLDER,
+  appendCspReporting,
   applyReportOnlyCspNonce,
+  handleCspReportRequest,
+  isCspReportRequest,
   mergeSessionCookies,
   updateSession,
 } from "@vergeo/auth/middleware";
@@ -31,7 +34,7 @@ function buildReportOnlyCsp(lenco: boolean): string {
   const scriptExtra = lenco ? ` ${LENCO_WIDGET}` : "";
   const frameExtra = lenco ? ` ${LENCO_WIDGET}` : "";
   const connectExtra = lenco ? ` ${LENCO_WIDGET} ${LENCO_API}` : "";
-  return [
+  const base = [
     "default-src 'self'",
     `script-src 'self' 'strict-dynamic' ${NONCE} https: ${GA4_SCRIPT}${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
@@ -48,6 +51,7 @@ function buildReportOnlyCsp(lenco: boolean): string {
     `form-action 'self'${lenco ? ` ${LENCO_WIDGET}` : ""}`,
     "upgrade-insecure-requests",
   ].join("; ");
+  return appendCspReporting(base);
 }
 
 export function isCheckoutCardRoute(pathname: string): boolean {
@@ -63,6 +67,10 @@ export function isCheckoutCardRoute(pathname: string): boolean {
 }
 
 export default async function middleware(request: NextRequest) {
+  if (isCspReportRequest(request)) {
+    return handleCspReportRequest(request);
+  }
+
   const session = await updateSession(request);
   const localeResponse = intlMiddleware(request);
   const response = mergeSessionCookies(session.response, localeResponse);
@@ -74,5 +82,5 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/(en|bem|nya|fr|zh)/:path*"],
+  matcher: ["/api/csp-report", "/", "/(en|bem|nya|fr|zh)/:path*"],
 };

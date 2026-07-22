@@ -46,6 +46,42 @@ ship in two layers so nothing breaks while violations are observed:
 The report-only policy carries a `{{CSP_NONCE}}` placeholder token in config; middleware
 replaces it with a fresh per-request nonce before sending the response.
 
+### Report sink (CCP-07b PR1 — evidence window)
+
+All three browser apps now ship a **same-origin CSP report sink**:
+
+- **Endpoint:** `POST /api/csp-report` (handled in each app's middleware — no separate route file).
+- **Policy directives:** `report-uri /api/csp-report; report-to csp-endpoint` on the
+  report-only CSP, plus `Reporting-Endpoints: csp-endpoint="/api/csp-report"` on responses.
+- **Override:** set `CSP_REPORT_URI` to a central collector URL (absolute) if you prefer one
+  sink for staging/prod instead of per-app logs.
+- **Logs:** middleware logs a redacted JSON summary as `[csp-report] {"blocked":…,"violated":…}`
+  (no full document URLs with tokens). On Vercel/OCI, tail app logs during the RO window.
+
+#### Critical paths to exercise (staging)
+
+Run each flow once with DevTools console open **and** log tailing enabled. Record any
+`[csp-report]` lines or console `Content-Security-Policy-Report-Only` warnings.
+
+| App      | Flow                                                                          | What must stay clean                                           |
+| -------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Customer | Browse → PLP → PDP → cart → checkout → **card widget** (`/checkout/card/:id`) | Lenco `pay.*.lenco.co` script/frame/connect only on card route |
+| Vendor   | Listing create/edit → **QR scanner** (`/events/:id/scan`)                     | `camera=(self)` only on scan routes                            |
+| Admin    | Dashboards → KYC queue → disputes                                             | No third-party scripts; `frame-ancestors 'none'`               |
+
+#### Evidence log (update before PR2 enforce)
+
+| Window           | Environment | Reports observed              | Action                                                               |
+| ---------------- | ----------- | ----------------------------- | -------------------------------------------------------------------- |
+| 2026-07-22 → TBD | staging     | _pending founder/staging run_ | Collect 7d clean window; widen allowlist only for legitimate origins |
+
+**Allowlist (empty until staging proves otherwise):** do not add `'unsafe-inline'` /
+`'unsafe-eval'` to `script-src`. If a report names a missing origin, add it to the
+report-only builder for that route only (mirror the Lenco card-route pattern).
+
+**PR2 gate:** promote report-only → enforced `Content-Security-Policy` only after the
+table above shows zero unresolved violations on all three critical paths.
+
 ### Flip to enforce (runbook)
 
 1. Confirm report-only headers carry a fresh `nonce=…` and Next attaches it to its

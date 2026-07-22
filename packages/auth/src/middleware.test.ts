@@ -5,11 +5,15 @@ import {
   CSP_NONCE_HEADER,
   CSP_NONCE_PLACEHOLDER,
   CSP_REPORT_ONLY_HEADER,
+  CSP_REPORTING_ENDPOINTS_HEADER,
+  appendCspReporting,
   applyReportOnlyCspNonce,
   createLoginRedirect,
   getLocaleFromPath,
+  handleCspReportRequest,
   isAdminBypassActive,
   isAuthExemptPath,
+  isCspReportRequest,
   isVendorOnboardingPath,
   mergeSessionCookies,
   shouldRedirectToLogin,
@@ -90,14 +94,45 @@ describe("applyReportOnlyCspNonce", () => {
     );
 
     expect(response.headers.get(CSP_REPORT_ONLY_HEADER)).toBe(
-      "script-src 'self' 'strict-dynamic' 'nonce-fixed-test-nonce'",
+      "script-src 'self' 'strict-dynamic' 'nonce-fixed-test-nonce'; report-uri /api/csp-report; report-to csp-endpoint",
+    );
+    expect(response.headers.get(CSP_REPORTING_ENDPOINTS_HEADER)).toBe(
+      'csp-endpoint="/api/csp-report"',
     );
     expect(response.headers.get(`x-middleware-request-${CSP_NONCE_HEADER}`)).toBe(
       "fixed-test-nonce",
     );
     expect(
       response.headers.get(`x-middleware-request-${CSP_REPORT_ONLY_HEADER.toLowerCase()}`),
-    ).toBe("script-src 'self' 'strict-dynamic' 'nonce-fixed-test-nonce'");
+    ).toBe(
+      "script-src 'self' 'strict-dynamic' 'nonce-fixed-test-nonce'; report-uri /api/csp-report; report-to csp-endpoint",
+    );
+  });
+});
+
+describe("CSP reporting helpers", () => {
+  it("detects and accepts CSP report POSTs", async () => {
+    const request = new NextRequest("http://localhost:3000/api/csp-report", {
+      method: "POST",
+      headers: { "content-type": "application/csp-report" },
+      body: JSON.stringify({
+        "csp-report": {
+          "blocked-uri": "https://evil.example",
+          "violated-directive": "script-src",
+        },
+      }),
+    });
+
+    expect(isCspReportRequest(request)).toBe(true);
+    const response = await handleCspReportRequest(request);
+    expect(response.status).toBe(204);
+  });
+
+  it("appends report directives once", () => {
+    const policy = appendCspReporting("default-src 'self'");
+    expect(policy).toContain("report-uri /api/csp-report");
+    expect(policy).toContain("report-to csp-endpoint");
+    expect(appendCspReporting(policy)).toBe(policy);
   });
 });
 
