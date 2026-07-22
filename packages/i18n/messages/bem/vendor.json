@@ -1,0 +1,1472 @@
+{
+  "analytics": {
+    "meta": {
+      "title": "Analytics — Vergeo5 Vendor",
+      "description": "Moniteni ukuteka kwenu, orders, and cart activity over the last 7 or Masiku 30, see your top listings, and gauge cart-to-order conversion."
+    },
+    "eyebrow": "Storefront yenu",
+    "title": "Analytics",
+    "intro": "A quick read on how your storefront is performing.",
+    "loading": "Ilelodisha analytics…",
+    "window": {
+      "label": "Inshita",
+      "7d": "Masiku 7",
+      "30d": "Masiku 30"
+    },
+    "cards": {
+      "sales": "⚠ Sales",
+      "orders": "Ama-order",
+      "views": "Activity ya cart"
+    },
+    "sparkline": {
+      "sales": "⚠ Daily sales trend",
+      "orders": "Daily orders trend",
+      "views": "Daily cart activity trend"
+    },
+    "top": {
+      "heading": "Listings iikalamba",
+      "empty": "Tamuli ukuteka pa inshita iyi in this window.",
+      "untitled": "Listing itailembwa",
+      "units": "{count, plural, one {# sold} other {# sold}}"
+    },
+    "conversion": {
+      "heading": "Conversion",
+      "summary": "{orders, plural, one {# order} other {# orders}} from {views, plural, one {# cart action} other {# cart actions}}",
+      "pct": "⚠ {pct}% cart-to-order",
+      "empty": "Not enough activity yet to estimate conversion."
+    },
+    "errors": {
+      "loadFailed": "Tatwakwanisha ukulodisha your analytics. Esheni limbi.",
+      "invalidWindow": "Choose a 7 or 30 day window.",
+      "authRequired": "Ingilani ukulolesha analytics.",
+      "permissionDenied": "Tamuli na access to these analytics.",
+      "retryHint": "Loleni connection yenu, then try again."
+    },
+    "empty": {
+      "title": "Tamuli activity pano",
+      "body": "⚠ When you have real orders and cart activity, totals appear here. We never invent GMV."
+    }
+  },
+  "vendor.dashboard.title": "Dashboard ya vendor",
+  "vendor.listings.count": "{count, plural, one {# listing} other {# listings}}",
+  "vendor.payout.pending": "⚠ Payout iilindilila: {amount}",
+  "pitch": {
+    "signupUnavailable": "Public seller signup is not open. Seller onboarding is invite-only during the concierge beta — contact Vergeo5 if you were invited.",
+    "inviteOnlyNotice": "Invite fye seller beta. Public self-service selling is not open yet. Invited sellers can continue onboarding with the link they received.",
+    "meta": {
+      "title": "Gulitseni pa Vergeo5 — invite-only seller beta",
+      "description": "⚠ Vergeo5 seller onboarding is invite/concierge-only during beta. Learn about commissions, KYC, and mobile-money payouts — public self-service signup is not open yet."
+    },
+    "hero": {
+      "eyebrow": "Invite fye seller beta",
+      "headline": "Ukulandika kwabula ukulipila.",
+      "headlineEmphasis": "Lipileni fye nga mwashita.",
+      "subheadline": "Fikeni abakashita mu Zambia yonse with products, services, events, supplies, and your business profile — all from one vendor app.",
+      "primaryCta": "Yendeni pa invite ya seller",
+      "secondaryCta": "⚠ Lolesheni commissions",
+      "freeTierNote": "⚠ Invited sellers get the free tier (up to 30 listings) after admin approval. Public signup is not open."
+    },
+    "valueProps": {
+      "heading": "Inshila shitano sha kukula",
+      "products": {
+        "title": "Ifintu",
+        "description": "⚠ List on our canonical catalog — buyers compare prices across vendors."
+      },
+      "services": {
+        "title": "Imilimo",
+        "description": "Offer beauty, catering, repairs, printing, and more with RFQ support."
+      },
+      "events": {
+        "title": "Ificitike",
+        "description": "⚠ Sell tickets with dynamic QR check-in. Free RSVP events at 0% commission."
+      },
+      "supplies": {
+        "title": "Ifya business",
+        "description": "⚠ Wholesale tier pricing for verified businesses (T2+)."
+      },
+      "directory": {
+        "title": "Malo a basellers",
+        "description": "Get discovered with your storefront, hours, and location on the map."
+      }
+    },
+    "commission": {
+      "heading": "⚠ Commissions shabula ukubisa",
+      "intro": "Rates are shown before you publish each listing. You only pay when you make a sale.",
+      "categoryColumn": "Category",
+      "rateColumn": "⚠ Commission",
+      "footnote": "Rates may be reviewed quarterly. Free events stay at 0% forever.",
+      "categories": {
+        "electronics": "Electronics",
+        "home": "Home & living",
+        "fashion_beauty": "Fashion & beauty",
+        "services": "Imilimo",
+        "event_tickets": "Event tickets",
+        "supplies": "Ifya business & wholesale",
+        "groceries": "Groceries & staples",
+        "default": "All other categories",
+        "free_events": "Free RSVP events"
+      },
+      "rate": "{rate}%"
+    },
+    "howItWorks": {
+      "heading": "How it works",
+      "steps": {
+        "signup": {
+          "title": "Sign up in minutes",
+          "description": "⚠ Create your vendor account on mobile or desktop — no upfront fees."
+        },
+        "kyc": {
+          "title": "⚠ Verify with T1 KYC",
+          "description": "Upload your NRC and a selfie. We match your mobile-money name. Same-day approval."
+        },
+        "list": {
+          "title": "List your first products",
+          "description": "⚠ Attach to our catalog or quick-list. See your commission before you publish."
+        },
+        "sell": {
+          "title": "Sell and get paid",
+          "description": "⚠ Ama-order flow to your dashboard. Escrow protects buyers; payouts hit your MoMo fast."
+        }
+      }
+    },
+    "kyc": {
+      "heading": "⚠ Verification tiers",
+      "intro": "No unverified listings go public. Start at T1 and upgrade as you grow.",
+      "tiers": {
+        "t1": {
+          "badge": "T1 · Seller",
+          "title": "Same-day selling",
+          "description": "NRC photo + selfie + mobile-money name match. Up to 30 listings; first 5 orders capped at K500 each."
+        },
+        "t2": {
+          "badge": "T2 · Verified business",
+          "title": "Lift your caps",
+          "description": "PACRA certificate + company TPIN. Verified badge, supplies tab, and higher limits."
+        },
+        "t3": {
+          "badge": "T3 · Premium",
+          "title": "Invited partners",
+          "description": "API access and banner placement eligibility for high-volume sellers."
+        },
+        "preferred": {
+          "badge": "Vergeo5 Preferred",
+          "title": "Earned trust badge",
+          "description": "≥20 orders, ≥4.5★ rating, <2% disputes, <5% cancellations — reviewed monthly."
+        }
+      }
+    },
+    "payout": {
+      "heading": "⚠ Fast mobile-money payouts",
+      "promise": "Paid out in minutes on mobile money — always within 48 hours.",
+      "body": "⚠ Buyer payments are held in escrow until delivery is confirmed (or auto-confirmed after 48 hours). Once released, MTN and Airtel payouts typically arrive in under five minutes. Bank transfers take 24–36 hours."
+    },
+    "faq": {
+      "heading": "Frequently asked questions",
+      "items": {
+        "fees": {
+          "question": "⚠ Are there monthly fees?",
+          "answer": "⚠ No. Vergeo5 is free to list at launch. You pay a commission only when you sell. The free tier includes up to 30 listings."
+        },
+        "payout": {
+          "question": "When do I get paid?",
+          "answer": "⚠ After escrow releases on delivery confirmation. Mobile-money payouts usually arrive in minutes; we guarantee payout within 48 hours."
+        },
+        "whatCanISell": {
+          "question": "What can I sell?",
+          "answer": "Ifintu, services, event tickets, wholesale supplies, and directory listings across our launch categories — groceries, beauty, fashion, electronics, home goods, and more. Prohibited items (used phones, alcohol, pharma, etc.) are blocked."
+        },
+        "kyc": {
+          "question": "How long does verification take?",
+          "answer": "⚠ T1 sellers with a valid NRC, selfie, and matching MoMo name are typically approved the same day. Nothing goes live until you pass KYC."
+        }
+      }
+    },
+    "cta": {
+      "heading": "Invited to sell on Vergeo5?",
+      "body": "⚠ Seller onboarding is concierge/invite-only during beta. If you have an invite, continue below — listing and payout tools unlock only after admin approval.",
+      "button": "Yendeni pa invite ya seller",
+      "loadingLabel": "Funguleniing invite onboarding"
+    }
+  },
+  "onboarding": {
+    "meta": {
+      "title": "Seller invite onboarding — Vergeo5",
+      "description": "⚠ Complete your invite-only seller application and T1 KYC. Listings stay locked until admin approval."
+    },
+    "invite": {
+      "eyebrow": "Invite / concierge beta",
+      "body": "⚠ You are finishing a seller invite application. Catalogue, payouts, and the vendor dashboard stay locked until Vergeo5 approves your KYC and grants seller access."
+    },
+    "steps": {
+      "business": "Business",
+      "kyc": "Verify ID",
+      "review": "Review"
+    },
+    "stepAnnouncement": "⚠ Step {current} of {total}",
+    "doneIndicator": "✓",
+    "business": {
+      "heading": "Business basics",
+      "intro": "Tell buyers who you are. You can edit this later in your profile.",
+      "nameLabel": "Business or shop name",
+      "namePlaceholder": "e.g. Lusaka Electronics",
+      "categoryLabel": "Main category",
+      "categoryPlaceholder": "Select a category",
+      "categories": {
+        "electronics": "Electronics",
+        "home": "Home & living",
+        "fashion_beauty": "Fashion & beauty",
+        "services": "Imilimo",
+        "groceries": "Groceries",
+        "other": "Other"
+      },
+      "continue": "Continue",
+      "saving": "Saving…"
+    },
+    "kyc": {
+      "heading": "T1 verification",
+      "intro": "Upload your NRC and a selfie. We match your mobile-money name. Nothing goes public until approved.",
+      "nrcLabel": "NRC photo",
+      "nrcHelp": "Capture the front of your National Registration Card in good light.",
+      "selfieLabel": "Selfie",
+      "selfieHelp": "Hold your phone at eye level. Face the camera directly.",
+      "legalNameLabel": "Full name (as on your NRC)",
+      "legalNamePlaceholder": "e.g. Chanda Mwansa",
+      "legalNameHelp": "Must match the name registered on your mobile-money number.",
+      "momoLabel": "Mobile-money number",
+      "momoPlaceholder": "e.g. 0977123456",
+      "momoHelp": "⚠ MTN or Airtel number registered in your name for payouts.",
+      "continue": "Continue",
+      "uploading": "Uploading…",
+      "capture": "Take photo",
+      "retake": "Retake",
+      "usePhoto": "Use this photo",
+      "uploadFailed": "Upload failed. Loleni connection yenu and try again.",
+      "uploaded": "Saved",
+      "nrcDone": "NRC photo saved",
+      "selfieDone": "Selfie saved"
+    },
+    "quality": {
+      "heading": "Photo tips",
+      "light": "Use daylight or a bright room — avoid glare on the NRC.",
+      "steady": "Hold still; blurry photos are rejected.",
+      "frame": "Fill the frame — all four corners of the NRC visible.",
+      "face": "Remove hats and sunglasses for the selfie."
+    },
+    "review": {
+      "heading": "Review and submit",
+      "intro": "Check your details. After submission, our team reviews within one business day.",
+      "businessSection": "Business",
+      "docsSection": "Documents",
+      "momoSection": "Mobile money",
+      "nrcUploaded": "NRC photo uploaded",
+      "selfieUploaded": "Selfie uploaded",
+      "notUploaded": "Not uploaded",
+      "submit": "Tumizeni for review",
+      "submitting": "Tumizeniting…",
+      "editBusiness": "Edit business",
+      "editDocs": "Edit documents",
+      "gateNotice": "⚠ Your listings stay hidden until KYC is approved."
+    },
+    "status": {
+      "heading": "Verification status",
+      "pending": {
+        "title": "Under review",
+        "body": "We are verifying your documents. You will get a WhatsApp update when done.",
+        "cta": "Bweleleni to dashboard"
+      },
+      "approved": {
+        "title": "You are verified",
+        "body": "⚠ T1 KYC approved. You can create listings — buyers will see them once you publish.",
+        "cta": "Create your first listing",
+        "t2Link": "Upgrade to T2 (PACRA + TPIN)"
+      },
+      "rejected": {
+        "title": "Verification needs changes",
+        "body": "We could not approve your application.",
+        "reasonLabel": "Reason",
+        "resubmitCta": "Update documents",
+        "gateNotice": "Listings remain hidden until you pass verification."
+      },
+      "resubmit": {
+        "title": "Resubmit documents",
+        "body": "Update the items below and resubmit — you do not need to start over.",
+        "nrcRequired": "NRC photo required",
+        "selfieRequired": "Selfie required",
+        "submit": "Resubmit for review"
+      }
+    },
+    "t2": {
+      "stubLabel": "Upgrade to verified business (T2)",
+      "stubBody": "PACRA certificate and company TPIN — coming soon."
+    },
+    "errors": {
+      "required": "This field is required",
+      "invalidPhone": "Enter a valid Zambian mobile number",
+      "loadFailed": "Could not load your application. Try again.",
+      "saveFailed": "Could not save your business details. Try again.",
+      "submitFailed": "Submission failed. Try again.",
+      "authRequired": "Sign in to continue your seller invite application.",
+      "permissionDenied": "Tamuli na access to this seller application. Use the account that received the invite, or contact Vergeo5.",
+      "draftLocked": "Business details can no longer be edited after approval.",
+      "notFound": "We could not find your vendor application.",
+      "retryHint": "Loleni connection yenu, then try again."
+    },
+    "loading": "Ilelodisha…"
+  },
+  "listings": {
+    "images": {
+      "heading": "Photos",
+      "intro": "{count} of {max} photos. The first is your cover.",
+      "alt": "Listing photo {position}",
+      "cover_badge": "Cover",
+      "position_label": "Photo {position}",
+      "move_up": "Move up",
+      "move_down": "Move down",
+      "set_cover": "Set as cover",
+      "remove": "Remove",
+      "drop_label": "Drag photos here",
+      "browse_label": "Browse",
+      "compress_hint": "Photos are resized before upload to save data.",
+      "limit_reached": "You've reached the photo limit.",
+      "upload": "Add photos",
+      "uploading": "Uploading…",
+      "upload_failed": "Upload failed",
+      "retry": "Esheni limbi"
+    },
+    "meta": {
+      "title": "Create listing — Vergeo5 Vendor",
+      "description": "Attach to the catalog, submit a new product, or quick-list a commodity."
+    },
+    "title": "Create listing",
+    "intro": "⚠ Choose how you want to list. Commission is shown before you publish.",
+    "loading": "Ilelodisha…",
+    "tabs": {
+      "ariaLabel": "Listing creation mode",
+      "attach": "Catalog",
+      "newCanonical": "New product",
+      "quickList": "Quick list"
+    },
+    "commission": {
+      "heading": "⚠ Commission on this listing",
+      "body": "You only pay when you sell. Rate is fixed for this category.",
+      "rate": "{rate}%"
+    },
+    "attach": {
+      "searchPlaceholder": "Fweni catalog products",
+      "searching": "Fweniing…",
+      "empty": "No matching products. Try another name or submit a new product.",
+      "hint": "Fweni the Vergeo5 catalog to attach your offer.",
+      "changeProduct": "← Change product",
+      "specHeading": "Product specs",
+      "publish": "Publish listing",
+      "publishing": "Publishing…"
+    },
+    "newCanonical": {
+      "heading": "Tumizeni new product",
+      "intro": "We will review your product before it appears in the catalog.",
+      "nameLabel": "Product name",
+      "namePlaceholder": "e.g. Wireless earbuds",
+      "brandLabel": "Brand (optional)",
+      "brandPlaceholder": "e.g. Samsung",
+      "categoryLabel": "Category",
+      "categoryPlaceholder": "Select category",
+      "submit": "Tumizeni for review",
+      "submitting": "Tumizeniting…",
+      "moderationNotice": "Your listing stays in draft until our team approves the product."
+    },
+    "quickList": {
+      "heading": "Quick list",
+      "intro": "For commodities without a catalog match — fresh produce, bulk goods, etc.",
+      "titleLabel": "Listing title",
+      "titlePlaceholder": "e.g. Tomatoes per kg",
+      "publish": "Publish listing",
+      "publishing": "Publishing…"
+    },
+    "fields": {
+      "priceLabel": "⚠ Your price (ZMW)",
+      "pricePlaceholder": "0.00",
+      "priceHelp": "⚠ Enter kwacha and ngwee, e.g. 1,234.56",
+      "priceInvalid": "⚠ Enter a valid price like 1234.56",
+      "conditionLabel": "Condition",
+      "conditionNew": "New",
+      "conditionRefurbished": "Refurbished",
+      "stockModeLabel": "Stock",
+      "stockTracked": "Tracked quantity",
+      "stockAlways": "Always available",
+      "stockQtyLabel": "Quantity in stock",
+      "wholesaleLabel": "⚠ Wholesale tiers",
+      "wholesaleHelp": "T2+ verified businesses only",
+      "moqLabel": "Minimum order quantity"
+    },
+    "success": {
+      "live": "Listing is live!",
+      "moderation": "Tumizenited for review — we will notify you on WhatsApp."
+    },
+    "errors": {
+      "required": "This field is required",
+      "submitFailed": "Could not create listing. Try again.",
+      "wholesale_requires_t2": "Wholesale requires T2 verification",
+      "product_not_found": "Product not found",
+      "product_not_active": "This product cannot be attached yet",
+      "category_not_found": "Category not found",
+      "invalid_tiers": "⚠ Price tiers must rise in quantity and fall in unit price",
+      "authRequired": "Sign in to manage listings.",
+      "permissionDenied": "Tamuli na access to this vendor catalogue.",
+      "notFound": "That listing was not found for your shop.",
+      "retryHint": "Loleni connection yenu, then try again."
+    },
+    "import": {
+      "meta": {
+        "title": "Import listings — Vergeo5 Vendor",
+        "description": "⚠ Bulk upload vendor listings from a CSV file with row-level validation feedback."
+      },
+      "title": "Import listings",
+      "intro": "Upload a CSV to add or update many listings at once. Re-importing the same SKU updates the existing listing.",
+      "loading": "Ilelodisha…",
+      "signInRequired": "Sign in to import listings.",
+      "template": {
+        "heading": "Download template",
+        "body": "⚠ Use our CSV template with example rows. Prices are in ngwee (integer). SKU is your unique code per listing. Leave product_id blank to get catalogue-match suggestions in the preview.",
+        "download": "Download CSV template"
+      },
+      "upload": {
+        "heading": "Upload CSV",
+        "fileLabel": "Choose CSV file",
+        "selected": "Selected: {name}",
+        "submit": "Import listings",
+        "uploading": "Importing…"
+      },
+      "results": {
+        "accepted": "{count, plural, one {# row accepted} other {# rows accepted}}",
+        "rejected": "{count, plural, one {# row rejected} other {# rows rejected}}",
+        "row": "Row",
+        "status": "Status",
+        "details": "Details",
+        "ok": "OK",
+        "failed": "Failed",
+        "imported": "Imported"
+      },
+      "preview": {
+        "previewButton": "Preview rows",
+        "previewing": "Checking…",
+        "summary": "⚠ {valid} of {total} rows ready to import",
+        "itemColumn": "Item",
+        "matchColumn": "Catalogue match",
+        "suggestionsLabel": "Suggested matches",
+        "attachAction": "Attach: {name}",
+        "attached": "Attached: {name}",
+        "matched": "Matches: {name}",
+        "detach": "Change",
+        "standalone": "No match — lists on its own"
+      },
+      "apply": {
+        "button": "Apply import",
+        "applying": "Applying…"
+      },
+      "errors": {
+        "uploadFailed": "Import failed. Check your file and try again.",
+        "previewFailed": "Could not check your file. Esheni limbi.",
+        "no_file": "CSV file is required",
+        "no_payload": "Provide a CSV file or JSON rows"
+      }
+    },
+    "manage": {
+      "meta": {
+        "title": "Your listings — Vergeo5 Vendor",
+        "description": "⚠ View stock, pause listings, and edit prices."
+      },
+      "title": "Your listings",
+      "intro": "⚠ Tap a listing to edit price, stock, and returns.",
+      "loading": "Ilelodisha…",
+      "empty": "No listings yet.",
+      "createCta": "Create listing",
+      "editCta": "Edit",
+      "stockLabel": "Stock",
+      "stockValue": "{qty}",
+      "stockAlways": "Always available",
+      "decreaseSymbol": "−",
+      "increaseSymbol": "+",
+      "decreaseStock": "Decrease stock",
+      "increaseStock": "Increase stock",
+      "status": {
+        "draft": "Draft",
+        "active": "Live",
+        "paused": "Paused"
+      },
+      "edit": {
+        "meta": {
+          "title": "Edit listing — Vergeo5 Vendor",
+          "description": "⚠ Update price, stock, condition, and return policy."
+        },
+        "title": "Edit listing",
+        "save": "Save changes",
+        "saving": "Saving…",
+        "pause": "Pause listing",
+        "pausing": "Pausing…",
+        "unpause": "Resume listing",
+        "unpausing": "Resuming…",
+        "delete": "Delete listing",
+        "deleting": "Deleting…",
+        "returnableLabel": "Accept returns",
+        "returnableHelp": "Lane-2 return policy for this listing.",
+        "returnWindowLabel": "Return window (hours)",
+        "tierHeading": "⚠ Wholesale tiers",
+        "tierQtyLabel": "Min quantity",
+        "tierPriceLabel": "⚠ Unit price (ZMW)",
+        "addTier": "⚠ Add tier",
+        "removeTier": "⚠ Remove tier",
+        "saved": "Changes saved.",
+        "pausedNotice": "Listing paused because it has open orders.",
+        "deleted": "Listing removed.",
+        "priceChangedNotice": "⚠ Price updated — carts will be revalidated on next view."
+      },
+      "delete": {
+        "paused_instead": "This listing has open orders and was paused instead of deleted.",
+        "removed": "Listing removed."
+      },
+      "errors": {
+        "loadFailed": "Could not load listings. Try again.",
+        "saveFailed": "Could not save changes. Try again.",
+        "stockNotTracked": "Stock adjustments apply only to tracked listings.",
+        "stockQtyRequired": "Enter a stock quantity for tracked listings.",
+        "returnWindowRequired": "Enter a return window when returns are enabled."
+      },
+      "emptyTitle": "No listings yet",
+      "statusLabel": "Status"
+    },
+    "kycGate": {
+      "title": "Verification still in progress",
+      "body": "⚠ Listings may stay gated until your KYC application is approved with an auditable record. We never show a verified badge without that trail.",
+      "cta": "Check verification status",
+      "wholesaleLocked": "Wholesale pricing unlocks after auditable T2 verification."
+    }
+  },
+  "profile": {
+    "meta": {
+      "title": "Storefront profile — Vergeo5 Vendor",
+      "description": "Edit your public storefront: logo, description, hours, location, and shop URL."
+    },
+    "title": "Storefront profile",
+    "intro": "This is what buyers see on your directory page. Complete your profile to rank higher.",
+    "loading": "Ilelodisha profile…",
+    "sections": {
+      "basics": "Business details",
+      "contact": "Contact",
+      "cover": "Cover image",
+      "logo": "Logo",
+      "location": "Location"
+    },
+    "fields": {
+      "displayNameLabel": "Display name",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Tell buyers what you sell and why they should choose you…",
+      "descriptionHelp": "Aim for at least 50 characters — it helps buyers trust your shop.",
+      "whatsappLabel": "WhatsApp number",
+      "whatsappPlaceholder": "e.g. 0977 123456",
+      "whatsappHelp": "Optional. Buyers can message you directly — shown as a “Chat on WhatsApp” button on your storefront.",
+      "slugLabel": "Shop URL",
+      "slugPlaceholder": "lusaka-electronics",
+      "landmarkLabel": "Landmark",
+      "landmarkPlaceholder": "e.g. Near Manda Hill Mall",
+      "latLabel": "Latitude",
+      "latPlaceholder": "-15.3875",
+      "lngLabel": "Longitude",
+      "lngPlaceholder": "28.3228",
+      "locationHelp": "Pin your shop on the map with GPS plus a nearby landmark buyers know.",
+      "hoursLabel": "Funguleniing hours",
+      "hoursHelp": "Overnight hours are supported (e.g. close after midnight)."
+    },
+    "slug": {
+      "onceWarning": "You can only change your shop URL once. The old link will redirect automatically.",
+      "locked": "Your shop URL is locked after the one-time change.",
+      "previous": "Old URL {slug} redirects to your current shop page."
+    },
+    "hours": {
+      "days": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
+      },
+      "open": "Fungulenis",
+      "close": "Funenis",
+      "closed": "Funenid"
+    },
+    "logo": {
+      "alt": "Shop logo",
+      "empty": "No logo",
+      "upload": "Upload logo",
+      "uploading": "Uploading…",
+      "uploadFailed": "Logo upload failed. Try again.",
+      "help": "Square images work best. Resized before upload to save data."
+    },
+    "cover": {
+      "alt": "Shop cover image",
+      "empty": "No cover image",
+      "upload": "Upload cover",
+      "uploading": "Uploading…",
+      "remove": "Remove",
+      "uploadFailed": "Cover upload failed. Try again.",
+      "help": "A wide banner (about 3:1) heads your storefront. Resized before upload to save data."
+    },
+    "badge": {
+      "preferred": "Vergeo5 Preferred badge earned",
+      "hint": "Earn the Preferred badge with great service — ≥20 orders, ≥4.5★, low disputes."
+    },
+    "completeness": {
+      "heading": "Profile completeness",
+      "score": "{score}% complete",
+      "fields": {
+        "logo": "Logo uploaded",
+        "description": "Description (50+ characters)",
+        "hours": "Funguleniing hours set",
+        "location": "Location + landmark",
+        "badge": "Preferred badge earned"
+      }
+    },
+    "actions": {
+      "save": "Save profile",
+      "saving": "Saving…"
+    },
+    "success": {
+      "saved": "Profile saved. Changes appear on your public page within a minute."
+    },
+    "errors": {
+      "loadFailed": "Could not load your profile. Try again.",
+      "saveFailed": "Could not save your profile. Try again.",
+      "authRequired": "Sign in to edit your storefront profile.",
+      "slug_locked": "Your shop URL is already locked.",
+      "slug_taken": "That shop URL is already taken.",
+      "slug_charset": "Use only lowercase letters, numbers, and hyphens.",
+      "hours_empty": "Add at least one day of opening hours.",
+      "hours_invalid": "Check your opening and closing times.",
+      "hours_invalid_day": "One of the day names is invalid.",
+      "hours_all_closed": "Mark at least one day as open.",
+      "location_required": "Add your location before setting hours.",
+      "whatsapp_invalid": "Enter a valid Zambian mobile number (e.g. 0977 123456).",
+      "permissionDenied": "Tamuli na access to this storefront profile.",
+      "notFound": "Storefront profile not found for this account.",
+      "retryHint": "Loleni connection yenu, then try again."
+    }
+  },
+  "orders": {
+    "meta": {
+      "title": "Order detail — Vergeo5 Vendor",
+      "description": "View order items, payment context, timeline, and fulfilment actions."
+    },
+    "title": "Order",
+    "loading": "Ilelodisha order…",
+    "back": "Bweleleni to orders",
+    "status": {
+      "placed": "Placed",
+      "confirmed": "Tukishishenied",
+      "processing": "Processing",
+      "ready": "Ready for pickup",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "fulfilment": {
+      "delivery": "Delivery",
+      "pickup": "Pickup"
+    },
+    "payment": {
+      "heading": "Payment",
+      "cod": "Cash on delivery",
+      "paid": "⚠ Paid — held in escrow",
+      "unpaid": "Awaiting payment"
+    },
+    "items": {
+      "heading": "Items",
+      "qty": "Qty {qty}",
+      "empty": "No line items"
+    },
+    "timeline": {
+      "heading": "Inshitaline",
+      "empty": "No events yet",
+      "note": "Note: {note}"
+    },
+    "actions": {
+      "heading": "Actions",
+      "confirm": "Tukishisheni order",
+      "reject": "Reject order",
+      "pack": "Start packing",
+      "ship": "Mark shipped",
+      "ready_for_pickup": "Ready for pickup",
+      "confirming": "Tukishisheniing…",
+      "rejecting": "Rejecting…",
+      "packing": "Packing…",
+      "shipping": "Shipping…",
+      "markingReady": "Updating…",
+      "rejectPrompt": "Tell the customer why you cannot fulfil this order.",
+      "rejectLabel": "Reason (shown to customer)",
+      "rejectPlaceholder": "e.g. Out of stock — sorry for the inconvenience",
+      "shipPrompt": "Add tracking or courier details for the buyer.",
+      "shipLabel": "Tracking note",
+      "shipPlaceholder": "e.g. Yango courier — driver John 0977…",
+      "submitReject": "Reject with reason",
+      "submitShip": "Mark as shipped",
+      "cancel": "Cancel"
+    },
+    "success": {
+      "confirmed": "Order confirmed.",
+      "rejected": "Order rejected.",
+      "packed": "Order is now processing.",
+      "shipped": "Order marked shipped.",
+      "ready": "Order ready for pickup."
+    },
+    "errors": {
+      "loadFailed": "Could not load this order. Pull to refresh.",
+      "actionFailed": "Action failed. Try again.",
+      "forbidden": "You can only manage your own orders.",
+      "invalidTransition": "That action is not available for this order.",
+      "reasonRequired": "A reason is required when rejecting.",
+      "trackingRequired": "A tracking note is required when shipping."
+    }
+  },
+  "home": {
+    "title": "Today",
+    "eyebrow": "Vendor home",
+    "loading": "Ilelodisha dashboard…",
+    "offlineNotice": "Showing saved data — connect to refresh.",
+    "takings": {
+      "label": "Today's takings",
+      "caption": "⚠ Tukishishenied revenue for {date} (Lusaka time)",
+      "emptyCaption": "⚠ No confirmed revenue yet today — totals come from real orders only."
+    },
+    "needsAction": {
+      "heading": "Needs action",
+      "empty": "You're all caught up — no orders waiting on you.",
+      "emptyTitle": "You're all caught up"
+    },
+    "actions": {
+      "openQueue": "Funguleni order queue",
+      "confirmOrders": "Tukishisheni new orders"
+    },
+    "quickStart": {
+      "eyebrow": "For your {businessType} business",
+      "products": {
+        "heading": "Grow your catalogue",
+        "body": "⚠ Add products and keep your stock and prices up to date.",
+        "cta": "Manage your listings"
+      },
+      "services": {
+        "heading": "Grow your services",
+        "body": "Publish your services and reply to customer quote requests.",
+        "cta": "Manage your services"
+      }
+    },
+    "businessTypes": {
+      "electronics": "electronics",
+      "home": "home & living",
+      "fashion_beauty": "fashion & beauty",
+      "services": "services",
+      "groceries": "groceries",
+      "other": "retail"
+    },
+    "errors": {
+      "loadFailed": "Could not load your dashboard. Try again.",
+      "authRequired": "Ingilani ukulolesha your vendor home.",
+      "permissionDenied": "Tamuli na access to this vendor dashboard.",
+      "retryHint": "Loleni connection yenu, then try again."
+    },
+    "kycBanner": {
+      "title": "Finish verification",
+      "body": "⚠ Your shop is not marked verified until KYC is approved with an auditable record.",
+      "cta": "⚠ View KYC status"
+    },
+    "shortcuts": {
+      "ariaLabel": "Quick links",
+      "listings": "Catalogue",
+      "profile": "Profile"
+    }
+  },
+  "queue": {
+    "meta": {
+      "title": "Order queue — Vergeo5 Vendor",
+      "description": "Filter and fulfil orders with one-tap actions."
+    },
+    "title": "Ama-order",
+    "intro": "Tap an action to move orders forward. Pull down to refresh.",
+    "loading": "Ilelodisha orders…",
+    "refreshing": "Refreshing…",
+    "pullToRefresh": "Release to refresh",
+    "offlineNotice": "Offline — showing your last saved queue.",
+    "empty": "No orders in this view.",
+    "emptyCta": "Bweleleni to home",
+    "filters": {
+      "needsAction": "Needs action",
+      "placed": "New",
+      "confirmed": "Tukishishenied",
+      "processing": "Packing",
+      "all": "All"
+    },
+    "card": {
+      "items": "{count, plural, one {# item} other {# items}}"
+    },
+    "sheet": {
+      "title": "{action}?",
+      "body": "⚠ {title} · {amount}",
+      "confirm": "Yes, continue",
+      "cancel": "Not now"
+    },
+    "errors": {
+      "loadFailed": "Could not load orders. Pull to refresh."
+    }
+  },
+  "payouts": {
+    "meta": {
+      "title": "⚠ Payouts — Vergeo5 Vendor",
+      "description": "⚠ View escrow-held and released balances, payout history, and download monthly statements."
+    },
+    "eyebrow": "Money",
+    "title": "⚠ Payouts",
+    "intro": "⚠ Balances come straight from the ledger — no separate bookkeeping.",
+    "loading": "⚠ Ilelodisha payouts…",
+    "balances": {
+      "heading": "⚠ Your balances",
+      "escrowHeld": "⚠ Held in escrow",
+      "released": "Released & available",
+      "paidOut": "Paid out",
+      "ledgerNote": "These figures match your ledger accounts exactly."
+    },
+    "hold": {
+      "noticeTitle": "⚠ Payouts paused for 24 hours",
+      "noticeBody": "⚠ After changing your mobile-money number, payouts are held for 24 hours while we verify the change. You will be notified when payouts resume."
+    },
+    "history": {
+      "heading": "⚠ Payout history",
+      "empty": "⚠ No payouts yet.",
+      "status": {
+        "pending": "Iilindilila",
+        "processing": "Processing",
+        "paid": "Paid",
+        "failed": "Failed"
+      }
+    },
+    "statement": {
+      "heading": "Monthly statement",
+      "monthLabel": "Month",
+      "downloadCsv": "Download CSV",
+      "downloading": "Preparing CSV…",
+      "pdfStub": "PDF statements are coming soon — CSV is available now."
+    },
+    "method": {
+      "meta": {
+        "title": "⚠ Payout method — Vergeo5 Vendor",
+        "description": "⚠ Change the mobile-money number where your payouts are sent."
+      },
+      "link": "⚠ Change payout method",
+      "back": "⚠ ← Bweleleni to payouts",
+      "title": "⚠ Payout method",
+      "intro": "Enter the MTN, Airtel, or Zamtel number registered in your name. We re-verify via Lenco before saving.",
+      "msisdnLabel": "Mobile-money number",
+      "msisdnPlaceholder": "e.g. 0977123456",
+      "railLabel": "Network",
+      "rails": {
+        "mtn": "MTN",
+        "airtel": "Airtel",
+        "zamtel": "Zamtel"
+      },
+      "otpLabel": "Verification code",
+      "otpPlaceholder": "6-digit OTP",
+      "otpHelp": "We sent a code to your registered phone. Enter it to confirm this change.",
+      "submit": "⚠ Save payout method",
+      "saving": "Saving…",
+      "success": "⚠ Payout method updated. Payouts are paused for 24 hours."
+    },
+    "errors": {
+      "loadFailed": "⚠ Could not load payouts. Pull to refresh.",
+      "statementFailed": "Could not download the statement. Try again.",
+      "methodFailed": "⚠ Could not update payout method. Try again.",
+      "otpFailed": "Invalid or expired verification code.",
+      "nameMismatch": "That MoMo name does not match your verified legal name.",
+      "kycRequired": "⚠ Complete KYC before changing your payout method.",
+      "payoutsPaused": "⚠ Payouts are paused after a payout method change.",
+      "rateLimited": "Too many requests. Try again shortly.",
+      "methodChangeLimit": "⚠ Too many payout method changes today. Try again tomorrow."
+    }
+  },
+  "scan": {
+    "meta": {
+      "title": "Pickup scanner — Vergeo5 Vendor",
+      "description": "Scan customer pickup QR codes or enter PINs to mark orders as collected."
+    },
+    "eyebrow": "Pickup",
+    "title": "Scan pickup",
+    "intro": "Scan the customer's QR or enter their order ID and PIN. Verification needs an internet connection.",
+    "verifying": "Verifying pickup…",
+    "offline": {
+      "title": "You're offline",
+      "body": "Pickup verification needs connectivity. Reconnect to verify QR codes or PINs."
+    },
+    "camera": {
+      "hint": "Centre the pickup QR inside the frame",
+      "loading": "Starting camera…",
+      "denied": "Camera access blocked",
+      "deniedBody": "Allow camera access in your browser settings, or enter the customer's PIN instead.",
+      "usePin": "Enter PIN instead"
+    },
+    "pin": {
+      "heading": "Enter pickup PIN",
+      "intro": "The customer received a 6-digit PIN on WhatsApp. Enter their order ID and PIN.",
+      "orderIdLabel": "Order ID",
+      "orderIdPlaceholder": "Paste or type order ID",
+      "pinLabel": "6-digit PIN",
+      "pinPlaceholder": "000000",
+      "submit": "Verify pickup",
+      "submitting": "Verifying…",
+      "useCamera": "Use camera instead"
+    },
+    "success": {
+      "title": "Pickup verified",
+      "body": "Order {orderId} marked as collected.",
+      "scanAnother": "Scan another"
+    },
+    "errors": {
+      "retry": "Try again",
+      "wrongQr": {
+        "title": "Not a pickup code",
+        "body": "This looks like an event ticket or another QR — not an order pickup code. Ask the customer to open their order pickup QR from WhatsApp or the Vergeo5 app."
+      },
+      "offline": {
+        "title": "Cannot verify offline",
+        "body": "Connect to the internet to verify pickup codes."
+      },
+      "verifyFailed": {
+        "title": "Verification failed",
+        "body": "We could not verify this pickup. Check the code and try again."
+      },
+      "invalidPin": {
+        "title": "Invalid PIN",
+        "body": "The PIN does not match this order. Ask the customer to check their WhatsApp message."
+      },
+      "alreadyClaimed": {
+        "title": "Already collected",
+        "body": "This pickup was already verified. If you think this is wrong, contact support."
+      },
+      "staleToken": {
+        "title": "Code expired",
+        "body": "The customer may have a newer pickup code. Ask them to refresh their order page or WhatsApp message."
+      },
+      "forbidden": {
+        "title": "Not your order",
+        "body": "This pickup belongs to another vendor. Only scan orders from your shop."
+      }
+    },
+    "recent": {
+      "heading": "Recent this session",
+      "empty": "No verifications yet",
+      "order": "Order {orderId}"
+    },
+    "eventCheckIn": {
+      "meta": {
+        "title": "Event scanner — Vergeo5 Vendor",
+        "description": "Scan attendee ticket QR codes to check them in, online or offline."
+      },
+      "eyebrow": "Event check-in",
+      "title": "Scan tickets",
+      "intro": "Sync before doors open so scans keep working without a connection.",
+      "instanceLabel": "Session",
+      "sync": {
+        "button": "Sync tickets",
+        "syncing": "Syncing…",
+        "success": "Synced {count} tickets",
+        "error": "Sync failed — check your connection",
+        "lastSynced": "Last synced {time}",
+        "neverSynced": "Not synced yet — connect and sync before doors open"
+      },
+      "offline": {
+        "title": "You're offline",
+        "body": "Scans are validated from your last sync and queued. They'll confirm automatically once you're back online."
+      },
+      "camera": {
+        "hint": "Centre the ticket QR inside the frame",
+        "loading": "Starting camera…",
+        "denied": "Camera access blocked",
+        "deniedBody": "Allow camera access in your browser settings to scan tickets."
+      },
+      "count": {
+        "checkedIn": "{count, plural, one {# checked in} other {# checked in}}",
+        "pending": "{count, plural, one {# pending sync} other {# pending sync}}"
+      },
+      "result": {
+        "valid": {
+          "title": "Checked in",
+          "body": "Ticket {ticketId} admitted."
+        },
+        "queued": {
+          "title": "Checked in (offline)",
+          "body": "Ticket {ticketId} queued — will confirm once you're back online."
+        },
+        "conflict": {
+          "title": "Already checked in",
+          "body": "Ticket {ticketId} was already admitted."
+        },
+        "rejected": {
+          "title": "Yakanidwa",
+          "body": "Ticket {ticketId} could not be checked in."
+        },
+        "unknownTicket": {
+          "title": "Not recognised",
+          "body": "This ticket isn't in your synced list. Reconnect and sync, then try again."
+        },
+        "staleWindow": {
+          "title": "Code expired",
+          "body": "This QR code has expired. Ask the guest to refresh their ticket."
+        },
+        "notSynced": {
+          "title": "Outside synced window",
+          "body": "This code is outside your synced check-in window. Re-sync closer to the event."
+        },
+        "invalidSig": {
+          "title": "Invalid code",
+          "body": "This QR code does not match a valid ticket."
+        },
+        "invalidFormat": {
+          "title": "Not a ticket code",
+          "body": "This does not look like an event ticket QR."
+        },
+        "scanAnother": "Scan another"
+      },
+      "recent": {
+        "heading": "Recent scans",
+        "empty": "No scans yet",
+        "ticket": "Ticket {ticketId}"
+      },
+      "errors": {
+        "loadEventFailed": "Could not load event details",
+        "noInstances": "This event has no sessions to check in",
+        "unauthorized": "Sign in as the event organiser to scan tickets"
+      }
+    }
+  },
+  "events": {
+    "eyebrow": "Ificitike",
+    "list": {
+      "meta": {
+        "title": "Your events — Vergeo5 Vendor",
+        "description": "Create and manage ticketed events and free RSVPs."
+      },
+      "title": "Your events",
+      "intro": "Create workshops, shows, and community gatherings. Publish when you are ready to sell tickets.",
+      "loading": "Ilelodisha events…",
+      "empty": "No events yet.",
+      "createCta": "Create event",
+      "editCta": "Edit event",
+      "noVenue": "Venue TBD",
+      "ticketsSold": "{count, plural, one {# ticket sold} other {# tickets sold}}"
+    },
+    "form": {
+      "createMeta": {
+        "title": "Create event — Vergeo5 Vendor",
+        "description": "Set up a new event with dates, venue, and photos."
+      },
+      "editMeta": {
+        "title": "Edit event — Vergeo5 Vendor",
+        "description": "Update event details, instances, and publish status."
+      },
+      "createTitle": "Create event",
+      "editTitle": "Edit event",
+      "title": "Event title",
+      "titlePlaceholder": "e.g. Lusaka Comedy Night",
+      "description": "Description",
+      "descriptionPlaceholder": "Tell attendees what to expect…",
+      "venue": "Venue",
+      "venuePlaceholder": "e.g. East Park Mall car park",
+      "landmark": "Landmark",
+      "landmarkPlaceholder": "e.g. Near Shoprite entrance",
+      "lat": "Latitude",
+      "latPlaceholder": "-15.3875",
+      "lng": "Longitude",
+      "lngPlaceholder": "28.3228",
+      "save": "Save draft",
+      "saving": "Saving…",
+      "saved": "Changes saved.",
+      "backToList": "Bweleleni to events",
+      "ticketsSold": "{count, plural, one {# ticket sold} other {# tickets sold}}"
+    },
+    "instances": {
+      "heading": "Dates & capacity",
+      "label": "Instance {index}",
+      "add": "Add date",
+      "remove": "Remove",
+      "startsAt": "Starts",
+      "endsAt": "Ends (optional)",
+      "capacity": "Capacity",
+      "sold": "{count, plural, one {# ticket sold — capacity cannot go lower} other {# tickets sold — capacity cannot go lower}}"
+    },
+    "images": {
+      "heading": "Photos",
+      "intro": "{count} of {max} photos.",
+      "upload": "Add photos",
+      "uploading": "Uploading…",
+      "upload_failed": "Upload failed. Try again.",
+      "remove": "Remove",
+      "limit_reached": "You can add up to 8 photos."
+    },
+    "status": {
+      "draft": "Draft",
+      "published": "Published",
+      "cancelled": "Cancelled",
+      "completed": "Ended"
+    },
+    "actions": {
+      "publish": "Publish event",
+      "publishing": "Publishing…",
+      "publishSuccess": "Event is live.",
+      "cancel": "Cancel event",
+      "cancelling": "Cancelling…",
+      "cancelSuccess": "Event cancelled.",
+      "end": "Mark as ended",
+      "ending": "Ending…",
+      "endSuccess": "Event marked as ended."
+    },
+    "errors": {
+      "authRequired": "Sign in to manage events.",
+      "loadFailed": "Could not load events. Pull to refresh.",
+      "saveFailed": "Could not save event. Try again.",
+      "actionFailed": "Action failed. Try again.",
+      "notFound": "Event not found.",
+      "required": "This field is required",
+      "kyc_required": "⚠ Complete KYC verification before creating events.",
+      "capacity_below_sold": "Capacity cannot be lower than tickets already sold.",
+      "past_instance": "Move past dates forward before publishing.",
+      "ends_before_starts": "End time must be after the start time.",
+      "not_editable": "This event can no longer be edited.",
+      "invalid_transition": "That action is not available for this event."
+    }
+  },
+  "tickets": {
+    "meta": {
+      "title": "Ticket types",
+      "description": "Configure ticket types, pricing, and purchase caps for your event."
+    },
+    "heading": "Ticket types",
+    "subheading": "⚠ Set pricing tiers and caps before you publish.",
+    "addType": "Add ticket type",
+    "empty": "⚠ No ticket types yet. Add a fixed price, tier, or free RSVP type.",
+    "loading": "Ilelodisha ticket types…",
+    "saving": "Saving…",
+    "saved": "Ticket type saved",
+    "deleted": "Ticket type removed",
+    "backToEvent": "Bweleleni to event",
+    "allocation": {
+      "toggle": "Per-date limits",
+      "heading": "Per-date limits",
+      "help": "Cap how many of this type sell on each date. Leave a date blank for no limit.",
+      "loading": "Ilelodisha limits…",
+      "noInstances": "Add event dates first to set per-date limits.",
+      "placeholder": "No limit",
+      "soldLabel": "{count, plural, =0 {none sold} one {# sold} other {# sold}}",
+      "save": "Save limits",
+      "saving": "Saving…",
+      "saved": "Per-date limits saved",
+      "errors": {
+        "loadFailed": "Could not load per-date limits.",
+        "saveFailed": "Could not save per-date limits.",
+        "belowSold": "A limit is below the number of tickets already sold for that date.",
+        "invalid": "Enter a whole number of tickets (0 or more), or leave a date blank."
+      }
+    },
+    "pricing": {
+      "toggle": "Discounts",
+      "heading": "Discounts",
+      "baseLabel": "⚠ Base price {price}. Discounts must be lower than this.",
+      "loading": "Ilelodisha pricing…",
+      "saving": "Saving…",
+      "earlyBird": {
+        "heading": "⚠ Early-bird price",
+        "help": "⚠ A lower price until a cutoff date. Buyers before the cutoff pay this instead of the base price.",
+        "priceLabel": "⚠ Early-bird price (ZMW)",
+        "pricePlaceholder": "60.00",
+        "untilLabel": "Until",
+        "save": "Save early-bird",
+        "clear": "Clear",
+        "saved": "⚠ Early-bird price saved"
+      },
+      "tiers": {
+        "heading": "Group pricing",
+        "help": "⚠ A lower per-ticket price when buying at least this many at once.",
+        "minQtyLabel": "Min quantity",
+        "minQtyPlaceholder": "5",
+        "priceLabel": "⚠ Price each (ZMW)",
+        "pricePlaceholder": "65.00",
+        "add": "⚠ Add tier",
+        "remove": "Remove",
+        "save": "Save group pricing",
+        "saved": "Group pricing saved"
+      },
+      "errors": {
+        "loadFailed": "Could not load pricing.",
+        "saveFailed": "Could not save pricing.",
+        "priceInvalid": "⚠ Enter a valid price in kwacha.",
+        "notDiscount": "⚠ The early-bird price must be lower than the base price.",
+        "dateInvalid": "Enter a valid cutoff date and time.",
+        "pastCutoff": "The cutoff must be in the future.",
+        "earlyBirdIncomplete": "⚠ Set both an early-bird price and a cutoff, or clear both.",
+        "minQtyInvalid": "Minimum quantity must be a whole number of 2 or more.",
+        "duplicateMinQty": "⚠ Each group tier needs a different minimum quantity.",
+        "tierNotDiscount": "⚠ Each group price must be lower than the base price.",
+        "onFree": "Discounts are only available on paid ticket types."
+      }
+    },
+    "fields": {
+      "kindLabel": "Type",
+      "kindFixed": "⚠ Fixed price",
+      "kindTier": "⚠ Tier (e.g. Standard / VIP)",
+      "kindFreeRsvp": "Free RSVP",
+      "nameLabel": "Ishina",
+      "namePlaceholder": "General Admission",
+      "priceLabel": "⚠ Price (ZMW)",
+      "pricePlaceholder": "75.00",
+      "priceHelp": "⚠ Enter amount in kwacha; stored as ngwee (no decimals in DB).",
+      "priceFreeHelp": "Free RSVP is always K0.00.",
+      "qtyCapLabel": "Quantity cap (optional)",
+      "qtyCapPlaceholder": "Unlimited",
+      "qtyCapHelp": "⚠ Max tickets of this type across all sales.",
+      "perCustomerCapLabel": "Per-customer cap (optional)",
+      "perCustomerCapPlaceholder": "Unlimited",
+      "perCustomerCapHelp": "Max tickets one buyer can hold for this type.",
+      "soldLabel": "{count, plural, one {# sold} other {# sold}}",
+      "attendeeNamedLabel": "Collect attendee names",
+      "attendeeNamedHelp": "Require a name for each ticket at checkout — useful for workshops, dinners, and seated events.",
+      "attendeeNamedBadge": "Ishinas required"
+    },
+    "actions": {
+      "save": "Save type",
+      "cancel": "Cancel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Delete this ticket type?"
+    },
+    "errors": {
+      "loadFailed": "Could not load ticket types. Try again.",
+      "saveFailed": "Could not save ticket type.",
+      "deleteFailed": "Could not delete ticket type.",
+      "required": "This field is required",
+      "priceInvalid": "⚠ Enter a valid price (e.g. 75.00)",
+      "freeMustBeZero": "Free RSVP must be K0.00",
+      "paidMustBePositive": "Paid types must be greater than K0.00",
+      "duplicateTier": "⚠ A tier with this name already exists",
+      "duplicateFixed": "⚠ This event already has a fixed-price type",
+      "oversell": "Sold out — no tickets left at this cap",
+      "unauthorized": "Sign in to manage ticket types"
+    }
+  },
+  "disputes": {
+    "meta": {
+      "title": "Disputes",
+      "description": "View and respond to customer disputes on your orders."
+    },
+    "list": {
+      "title": "Disputes",
+      "empty": "No disputes on your orders",
+      "order": "Order {orderId}",
+      "status": "Status: {status}",
+      "view": "View dispute"
+    },
+    "detail": {
+      "title": "Dispute details",
+      "order": "Order {orderId}",
+      "statusLabel": "Status",
+      "statusDisplay": "Status: {status}",
+      "customerEvidence": "Customer evidence",
+      "evidenceCount": "{count, plural, one {# file} other {# files}}",
+      "yourResponse": "Your response",
+      "responseLabel": "Explain your side",
+      "responsePlaceholder": "What happened from your perspective?",
+      "evidenceLabel": "Add evidence",
+      "evidenceHelp": "Photos or PDFs, max 10 MB each.",
+      "addEvidence": "Add photo or PDF",
+      "uploading": "Uploading…",
+      "submit": "Tumizeni response",
+      "submitting": "Tumizeniting…",
+      "success": "Your response was submitted.",
+      "error": "Could not submit response. Esheni limbi.",
+      "back": "Bweleleni to disputes",
+      "alreadyResponded": "You have already responded to this dispute.",
+      "status": {
+        "open": "Awaiting your response",
+        "vendor_responded": "Response submitted",
+        "under_review": "Under admin review",
+        "resolved_refund": "⚠ Resolved — refund to customer",
+        "resolved_release": "Resolved — payment released",
+        "resolved_partial": "⚠ Resolved — partial refund",
+        "rejected": "Dispute rejected"
+      }
+    }
+  },
+  "returns": {
+    "meta": {
+      "title": "Return requests — Vergeo5 Vendor",
+      "description": "Accept or contest customer return requests for faulty or wrong items."
+    },
+    "title": "Return requests",
+    "intro": "⚠ Customers reported faulty or wrong items. Accept to issue a full refund, or contest for admin review.",
+    "loading": "Ilelodisha returns…",
+    "empty": "No return requests waiting on you.",
+    "card": {
+      "item": "{title} × {qty}",
+      "order": "Order {id}",
+      "refund": "⚠ Refund if accepted: {amount}",
+      "evidence": "{count, plural, one {# photo attached} other {# photos attached}}",
+      "viewOrder": "View order"
+    },
+    "actions": {
+      "accept": "Accept return",
+      "accepting": "Accepting…",
+      "contest": "Contest — send to admin",
+      "contesting": "Sending…"
+    },
+    "errors": {
+      "loadFailed": "Could not load return requests. Pull to refresh.",
+      "actionFailed": "Action failed. Try again."
+    }
+  },
+  "jobs": {
+    "eyebrow": "RFQ inbox",
+    "title": "Matched jobs",
+    "intro": "Jobs broadcast to you — submit a quote before others expire.",
+    "loading": "Ilelodisha jobs…",
+    "authRequired": "Ingilani ukulolesha matched jobs.",
+    "empty": "No open jobs match your services right now.",
+    "posted": "Posted {date}",
+    "yourQuote": "⚠ Your quote: {amount}",
+    "status": {
+      "new": "Awaiting quote",
+      "quoted": "Quote sent"
+    },
+    "categories": {
+      "beauty": "Beauty",
+      "food_catering": "Food & catering",
+      "auto": "Auto",
+      "printing_creative": "Printing & creative",
+      "home_services": "Home services",
+      "tech_services": "Tech services",
+      "cleaning": "Cleaning",
+      "tailoring": "Tailoring"
+    },
+    "quoteForm": {
+      "open": "Send quote",
+      "amountLabel": "⚠ Your price (ZMW)",
+      "amountPlaceholder": "e.g. 1,500.00",
+      "amountInvalid": "⚠ Enter a valid price greater than zero.",
+      "messageLabel": "Message (optional)",
+      "messagePlaceholder": "When you can start, what's included…",
+      "validityLabel": "Quote valid for (days)",
+      "validityInvalid": "Validity must be between 1 and Masiku 30.",
+      "submit": "Tumizeni quote",
+      "submitting": "Tumizeniting…",
+      "cancel": "Cancel",
+      "withdraw": "⚠ Withdraw quote",
+      "withdrawing": "⚠ Withdrawing…"
+    },
+    "errors": {
+      "loadFailed": "Could not load matched jobs. Pull to refresh.",
+      "submitFailed": "Could not submit quote. Try again.",
+      "withdrawFailed": "⚠ Could not withdraw quote. Try again.",
+      "notMatched": "You were not matched to this job.",
+      "alreadyQuoted": "You already have an active quote on this job."
+    }
+  },
+  "reviews": {
+    "meta": {
+      "title": "Customer reviews — Vergeo5 Vendor",
+      "description": "Reply to verified-purchase reviews on your listings."
+    },
+    "title": "Customer reviews",
+    "intro": "Reply once per review. You can edit your reply for 24 hours.",
+    "loading": "Ilelodisha reviews…",
+    "empty": "No customer reviews yet.",
+    "starFilled": "★",
+    "starEmpty": "☆",
+    "card": {
+      "unknownItem": "Order item",
+      "photoAlt": "Customer review photo",
+      "replyLabel": "Your reply",
+      "editReply": "Edit your reply",
+      "yourReply": "Your reply"
+    },
+    "actions": {
+      "submit": "Post reply",
+      "update": "Update reply",
+      "submitting": "Saving…"
+    },
+    "errors": {
+      "loadFailed": "Could not load reviews. Pull to refresh.",
+      "replyFailed": "Could not save your reply. Try again."
+    }
+  },
+  "eventDashboard": {
+    "meta": {
+      "title": "Event dashboard",
+      "description": "⚠ Sales by ticket type, check-in progress, and escrow status for your event."
+    },
+    "heading": "Event dashboard",
+    "subheading": "⚠ Sales, check-in progress, and escrow status at a glance.",
+    "backToEvent": "Bweleleni to event",
+    "loading": "Ilelodisha dashboard…",
+    "empty": "No ticket types yet.",
+    "massRefundFlagged": "⚠ This event was cancelled. Ticket holders are flagged for a refund; our team will process it shortly.",
+    "checkInProgress": "{checkedIn, number} of {issued, number} tickets checked in",
+    "viewRoster": "View attendee roster",
+    "sections": {
+      "revenue": "⚠ Revenue",
+      "checkIn": "Check-in progress",
+      "escrow": "⚠ Escrow",
+      "salesByType": "⚠ Sales by ticket type"
+    },
+    "labels": {
+      "pending": "Iilindilila release",
+      "released": "Released to you",
+      "eventStatus": "Event status",
+      "soldCheckedIn": "{sold, plural, one {# sold} other {# sold}} · {checkedIn, plural, one {# checked in} other {# checked in}}"
+    },
+    "errors": {
+      "loadFailed": "Could not load the dashboard. Pull to refresh.",
+      "unauthorized": "Sign in as an organiser to view this dashboard.",
+      "notFound": "Event not found.",
+      "forbidden": "You may only view the dashboard for your own events."
+    }
+  },
+  "eventRoster": {
+    "meta": {
+      "title": "Attendee roster",
+      "description": "The list of attendees for your event, with names captured at checkout."
+    },
+    "heading": "Attendee roster",
+    "subheading": "Who's coming, grouped by date. Ishinas appear for ticket types that collect them.",
+    "backToDashboard": "Bweleleni to dashboard",
+    "loading": "Ilelodisha roster…",
+    "empty": "No tickets sold yet.",
+    "noName": "No name collected",
+    "summary": "⚠ {checkedIn, number} of {total, number} checked in",
+    "truncated": "Showing the first {count, number} attendees.",
+    "dateCount": "{count, plural, one {# attendee} other {# attendees}}",
+    "downloadCsv": "Download roster (CSV)",
+    "downloading": "Preparing…",
+    "status": {
+      "checkedIn": "Checked in",
+      "issued": "Not checked in"
+    },
+    "errors": {
+      "loadFailed": "Could not load the roster. Pull to refresh.",
+      "downloadFailed": "Could not download the roster. Try again.",
+      "unauthorized": "Sign in as an organiser to view this roster."
+    }
+  },
+  "shell": {
+    "nav": {
+      "ariaLabel": "Vendor navigation",
+      "home": "Home",
+      "listings": "Listings",
+      "orders": "Ama-order",
+      "profile": "Profile"
+    }
+  }
+}

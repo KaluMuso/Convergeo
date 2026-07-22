@@ -39,6 +39,14 @@ describe("loadRawNamespace", () => {
     expect(raw).not.toBeNull();
     expect(raw).toHaveProperty("ticketPurchase");
   });
+
+  it("returns bem/nya vendor overlays with EN key parity (CCP-03f)", async () => {
+    const enKeys = await localeNamespaceKeys("en", "vendor");
+    const bemVendor = await localeNamespaceKeys("bem", "vendor");
+    const nyaVendor = await localeNamespaceKeys("nya", "vendor");
+    expect(bemVendor).toEqual(enKeys);
+    expect(nyaVendor).toEqual(enKeys);
+  });
 });
 
 describe("localeNamespaceKeys", () => {
