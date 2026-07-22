@@ -25,6 +25,8 @@ from tests.rls.conftest import (
 )
 
 ADMIN_ID = "66666666-6666-6666-6666-666666666666"
+# Seeded by seed_matrix_fixtures (profiles FK on vendors.owner_user_id).
+VENDOR_OWNER_ID = "33333333-3333-3333-3333-333333333333"
 
 
 class _FakeResponse:
@@ -171,15 +173,15 @@ def db() -> Generator[PgConn, None, None]:
 
 
 def _seed_pending_kyc_vendor(db: PgConn, *, vendor_id: str, kyc_id: str) -> None:
-    owner_id = str(uuid.uuid4())
     slug = f"kyc-cas-{vendor_id[:8]}"
-    db.run(
+    vendor_result = db.run(
         f"""
         INSERT INTO public.vendors (id, owner_user_id, slug, display_name, status)
-        VALUES ('{vendor_id}', '{owner_id}', '{slug}', 'CAS Vendor', 'pending_kyc');
+        VALUES ('{vendor_id}', '{VENDOR_OWNER_ID}', '{slug}', 'CAS Vendor', 'pending_kyc');
         """
     )
-    db.run(
+    assert vendor_result.ok, vendor_result.error
+    kyc_result = db.run(
         f"""
         INSERT INTO public.kyc_records (
           id, vendor_id, tier, doc_storage_paths, momo_name_match, status
@@ -188,6 +190,7 @@ def _seed_pending_kyc_vendor(db: PgConn, *, vendor_id: str, kyc_id: str) -> None
         );
         """
     )
+    assert kyc_result.ok, kyc_result.error
 
 
 def _vendor_status(db: PgConn, vendor_id: str) -> str:
