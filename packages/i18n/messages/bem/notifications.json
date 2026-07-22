@@ -33,6 +33,14 @@
     },
     "otp_login": {
       "body": "Code yenu ya kulowa mu Vergeo5 ni {otp_code}. Ilekefwa mu miniti 10. Musosele code iyi."
+    },
+    "event_cancelled": {
+      "body": "Event ya Vergeo5 \"{event_title}\" pa {event_date} yacancelwa. {refund_detail} Lemeni STOP ukuleka.",
+      "refund_pending": "Refund ya malipilo yenu ileprocesswa na Vergeo5.",
+      "refund_none": "Takwaba malipilo yasangwa pa account yenu pa event iyi."
+    },
+    "event_schedule_changed": {
+      "body": "Amashiwi ya event ya Vergeo5 \"{event_title}\" yaluka. Usiku: {event_date}. Venue: {venue}. Loleni tickets shenu mu app. Lemeni STOP ukuleka."
     }
   },
   "sms": {
@@ -71,6 +79,12 @@
     },
     "payout_failure_alert": {
       "body": "Vergeo5 payout yafilwa: {vendor_name} {amount} ref {lenco_reference}. Onani mu admin."
+    },
+    "event_cancelled": {
+      "body": "Vergeo5: \"{event_title}\" pa {event_date} yacancelwa. {refund_detail}"
+    },
+    "event_schedule_changed": {
+      "body": "Vergeo5: \"{event_title}\" details yasinthidwa. Usiku: {event_date}. Venue: {venue}. Loleni mu app."
     }
   },
   "email": {
