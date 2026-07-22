@@ -156,6 +156,21 @@ check_g1_api() {
     detail="${detail} readyz_body!=ok"
   fi
 
+  # CR-C: semantic lane is a sub-check — warn when degraded, never fail G1 on embedding alone.
+  if [[ -n "$hr" && "$hr" == \{* ]]; then
+    local search_rpc search_embedding
+    search_rpc="$(printf '%s' "$hr" | json_get search_rpc)"
+    search_embedding="$(printf '%s' "$hr" | json_get search_embedding)"
+    detail="${detail} search_rpc=${search_rpc:-?} search_embedding=${search_embedding:-?}"
+    if [[ "$search_rpc" == "degraded" ]]; then
+      fail=1
+      detail="${detail} search_rpc_degraded"
+    fi
+    if [[ "$search_embedding" == "degraded" ]]; then
+      warn "search_embedding=degraded — semantic lane down; keyword search should still work (LIVE-12)"
+    fi
+  fi
+
   # Fingerprint env + git_sha (G9 overlap)
   local fp_env fp_sha fp_ref
   if [[ -n "$fp" && "$fp" == \{* ]]; then

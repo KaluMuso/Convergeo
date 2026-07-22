@@ -186,13 +186,28 @@ tokens — see `infra/.env.example`.
 ```bash
 curl -fsS "https://api.vergeo5.com/healthz"
 curl -fsS "https://api.vergeo5.com/health"
-curl -fsS "https://api.vergeo5.com/readyz"    # expect {"status":"ok"} when DB reachable
+curl -fsS "https://api.vergeo5.com/readyz"    # expect {"status":"ok","search_rpc":"ok",...}
 curl -fsS "https://api.vergeo5.com/fingerprint" # env + git_sha + supabase_project_ref — no secrets
 
 bash scripts/ops/verify_live.sh
 ```
 
-`/readyz` returning `degraded` usually means `SUPABASE_DB_URL` is blank/wrong (API falls
+`/readyz` shape (CR-C):
+
+```json
+{
+  "status": "ok",
+  "search_rpc": "ok",
+  "search_embedding": "ok"
+}
+```
+
+- Overall `status=degraded` → Supabase unreachable **or** `search_rrf` RPC failing — **page**.
+- `search_embedding=degraded` alone (with `status=ok`) → `OPENROUTER_API_KEY` missing/invalid;
+  keyword search still works — **warn**, do not treat as API down. See
+  `infra/uptimerobot.md` monitor #6.
+
+`/readyz` returning `status: degraded` usually means `SUPABASE_DB_URL` is blank/wrong (API falls
 back to local DSN). Fix env and **recreate** the container.
 
 ### 2.3 API rollback (≤ 30 min drill)
@@ -336,18 +351,18 @@ bash scripts/ops/verify_live.sh
 
 Gate mapping (full criteria in `release-gates.md`):
 
-| Gate | Verifier check                                                                                   |
-| ---- | ------------------------------------------------------------------------------------------------ |
-| G0   | Migrations include `0064`; FORCE RLS true on three launch tables (needs `SUPABASE_DB_URL`)       |
-| G1   | `/healthz` `/health` `/readyz` HTTP 200; `readyz` body `ok`; customer/vendor health 200          |
-| G2   | No `localhost:3001` / `localhost:8000` in customer HTML (optional `CHECK_LOCALHOST=1`)           |
-| G3   | **SKIP** in verifier — requires Lenco sandbox money drill                                        |
-| G4   | **SKIP** — requires staging Playwright                                                           |
-| G5   | n8n active workflow count ≥ Wave A minimum; sample internal tick returns 401 not 503             |
-| G6   | **SKIP** — requires Sentry test event + UptimeRobot fire                                         |
-| G7   | **SKIP** — requires dated OCI backup artifact + restore drill log                                |
-| G8   | **SKIP** — CI / branch-protection audit                                                          |
-| G9   | `fingerprint.git_sha` matches `MASTER_GIT_SHA`; migration tip matches repo; deploy SHAs recorded |
+| Gate | Verifier check                                                                                                                         |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| G0   | Migrations include `0064`; FORCE RLS true on three launch tables (needs `SUPABASE_DB_URL`)                                             |
+| G1   | `/healthz` `/health` `/readyz` HTTP 200; `readyz.status=ok`; customer/vendor health 200; **warn** if `search_embedding=degraded` alone |
+| G2   | No `localhost:3001` / `localhost:8000` in customer HTML (optional `CHECK_LOCALHOST=1`)                                                 |
+| G3   | **SKIP** in verifier — requires Lenco sandbox money drill                                                                              |
+| G4   | **SKIP** — requires staging Playwright                                                                                                 |
+| G5   | n8n active workflow count ≥ Wave A minimum; sample internal tick returns 401 not 503                                                   |
+| G6   | **SKIP** — requires Sentry test event + UptimeRobot fire                                                                               |
+| G7   | **SKIP** — requires dated OCI backup artifact + restore drill log                                                                      |
+| G8   | **SKIP** — CI / branch-protection audit                                                                                                |
+| G9   | `fingerprint.git_sha` matches `MASTER_GIT_SHA`; migration tip matches repo; deploy SHAs recorded                                       |
 
 ---
 
