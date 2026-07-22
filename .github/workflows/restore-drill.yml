@@ -1,0 +1,37 @@
+name: Restore drill
+
+# Self-contained backup/restore drill: seed -> dump -> wipe -> restore -> assert, via
+# infra/scripts/restore-drill.sh. The script spins up a throwaway Postgres (Docker on CI
+# runners, local initdb fallback) — no external DB or secrets, nothing production is touched.
+#
+# NOT a PR gate: nightly + manual only, so a flaky drill never blocks a merge. It continuously
+# proves db-dump.sh / db-restore.sh + restore-smoke assertions still work. The LIVE
+# ≤30-min staging restore (scripts/ops/restore-staging.sh, against real staging) stays a
+# manual founder-gated drill — see docs/ops/runbook-disaster-recovery.md.
+
+on:
+  schedule:
+    - cron: "30 3 * * *" # 03:30 UTC nightly
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: restore-drill
+  cancel-in-progress: false
+
+jobs:
+  restore-drill:
+    name: Backup/restore drill (self-contained)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install PostgreSQL client (dump/restore tooling)
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Run self-contained restore drill
+        run: bash infra/scripts/restore-drill.sh
