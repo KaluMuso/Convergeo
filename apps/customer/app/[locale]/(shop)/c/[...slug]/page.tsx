@@ -42,6 +42,9 @@ type CatalogApiResponse = {
     rating: number;
     review_count: number;
     distance_m: number | null;
+    below_median?: boolean;
+    delivery_available?: boolean;
+    pickup_available?: boolean;
   }>;
   facets: FacetCounts;
   total: number;
@@ -153,6 +156,9 @@ function mapListing(item: CatalogApiResponse["items"][number]): CatalogListing {
     rating: item.rating,
     reviewCount: item.review_count,
     distanceM: item.distance_m,
+    belowMedian: item.below_median ?? false,
+    deliveryAvailable: item.delivery_available ?? false,
+    pickupAvailable: item.pickup_available ?? false,
   };
 }
 
@@ -264,12 +270,17 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
     wishlist: t("plp.card.wishlist"),
     wishlistRemove: t("plp.card.wishlistRemove"),
     outOfStock: t("plp.card.outOfStock"),
-    distance: t("plp.card.distance"),
     discount: t("plp.card.discount"),
     sampleListing: t("home.demo.sampleListing"),
     mediaEmpty: t("plp.card.mediaEmpty"),
     conditionNew: t("plp.card.conditionNew"),
     conditionRefurbished: t("plp.card.conditionRefurbished"),
+    logistics: {
+      nearest: t("plp.card.pill.nearest"),
+      belowMedian: t("plp.card.pill.belowMedian"),
+      delivery: t("plp.card.pill.delivery"),
+      pickup: t("plp.card.pill.pickup"),
+    },
   };
 
   const breadcrumbJsonLd = buildBreadcrumbListJsonLd(locale, [

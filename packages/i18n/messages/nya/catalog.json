@@ -204,7 +204,13 @@
       "mediaEmpty": "Palibe chithunzi cha product",
       "quickAddError": "Sitinathe kuonjezera ku cart. Onani connection ndi yesaninso.",
       "conditionNew": "Chatsopano",
-      "conditionRefurbished": "Chokonzedwa"
+      "conditionRefurbished": "Chokonzedwa",
+      "pill": {
+        "nearest": "{distance} kutali",
+        "belowMedian": "Pansi pa median",
+        "delivery": "Kutumiza ku Lusaka",
+        "pickup": "Pickup ilipo"
+      }
     },
     "defaultCategory": "Zinthu zonse",
     "emptyBody": "Yesani kuchotsa ma-filters kapena yang'anani category ina.",

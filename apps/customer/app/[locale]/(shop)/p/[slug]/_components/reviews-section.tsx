@@ -44,6 +44,7 @@ type ReviewsSectionProps = {
   cloudName?: string;
   labels: ReviewsSectionLabels;
   eligibleOrderId?: string;
+  hideHeading?: boolean;
 };
 
 function StarRow({
@@ -143,6 +144,7 @@ export function ReviewsSection({
   cloudName,
   labels,
   eligibleOrderId,
+  hideHeading = false,
 }: ReviewsSectionProps) {
   const [lightbox, setLightbox] = useState<GalleryImage[] | null>(null);
 
@@ -154,20 +156,25 @@ export function ReviewsSection({
   }, [eligibleOrderId, locale]);
 
   return (
-    <section aria-labelledby="product-reviews-heading" className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h2 id="product-reviews-heading" className="font-display text-h3 text-display-ink">
-          {labels.heading}
-        </h2>
-        {writeHref ? (
-          <Link
-            href={writeHref}
-            className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-2"
-          >
-            {labels.writeCta}
-          </Link>
-        ) : null}
-      </div>
+    <section
+      aria-labelledby={hideHeading ? undefined : "product-reviews-heading"}
+      className="space-y-4"
+    >
+      {hideHeading ? null : (
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="product-reviews-heading" className="font-display text-h3 text-display-ink">
+            {labels.heading}
+          </h2>
+          {writeHref ? (
+            <Link
+              href={writeHref}
+              className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-2"
+            >
+              {labels.writeCta}
+            </Link>
+          ) : null}
+        </div>
+      )}
 
       {reviews.length === 0 ? (
         <p className="text-sm text-text-2">{labels.empty}</p>

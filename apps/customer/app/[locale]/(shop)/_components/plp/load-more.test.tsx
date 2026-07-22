@@ -20,7 +20,12 @@ const gridLabels = {
   quickAdd: "Quick add",
   wishlist: "Save",
   outOfStock: "Out of stock",
-  distance: "{distance} away",
+  logistics: {
+    nearest: "{distance} away",
+    belowMedian: "Below median",
+    delivery: "Lusaka delivery",
+    pickup: "Pickup available",
+  },
 };
 
 const controlLabels = {
@@ -45,6 +50,9 @@ const initialListings = [
     rating: 4,
     reviewCount: 2,
     distanceM: null,
+    belowMedian: false,
+    deliveryAvailable: false,
+    pickupAvailable: false,
   },
 ];
 

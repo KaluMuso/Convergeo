@@ -23,6 +23,9 @@ type CatalogApiResponse = {
     rating: number;
     review_count: number;
     distance_m: number | null;
+    below_median?: boolean;
+    delivery_available?: boolean;
+    pickup_available?: boolean;
   }>;
   next_cursor: string | null;
 };
@@ -40,6 +43,9 @@ function mapListing(item: CatalogApiResponse["items"][number]): CatalogListing {
     rating: item.rating,
     reviewCount: item.review_count,
     distanceM: item.distance_m,
+    belowMedian: item.below_median ?? false,
+    deliveryAvailable: item.delivery_available ?? false,
+    pickupAvailable: item.pickup_available ?? false,
   };
 }
 

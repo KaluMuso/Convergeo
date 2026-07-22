@@ -62,7 +62,13 @@
       "distance": "{distance} away",
       "discount": "−{percent}%",
       "conditionNew": "New",
-      "conditionRefurbished": "Refurbished"
+      "conditionRefurbished": "Refurbished",
+      "pill": {
+        "nearest": "{distance} away",
+        "belowMedian": "Below median",
+        "delivery": "Lusaka delivery",
+        "pickup": "Pickup available"
+      }
     },
     "loadMore": "Load more",
     "loading": "Loading…",

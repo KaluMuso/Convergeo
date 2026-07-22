@@ -45,6 +45,7 @@ def _search_doc(
     lat: float,
     lng: float,
     updated_at: str = "2026-01-01T00:00:00Z",
+    boost_signals: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "entity_id": entity_id,
@@ -55,7 +56,7 @@ def _search_doc(
         "price_min_ngwee": price,
         "lat": lat,
         "lng": lng,
-        "boost_signals": {"in_stock": True, "verified": True},
+        "boost_signals": boost_signals or {"in_stock": True, "verified": True},
         "updated_at": updated_at,
     }
 
@@ -103,6 +104,7 @@ SEED_STORE: dict[str, list[dict[str, Any]]] = {
             lat=KABULONGA[0],
             lng=KABULONGA[1],
             updated_at="2026-03-01T00:00:00Z",
+            boost_signals={"in_stock": True, "verified": True, "below_median": True},
         ),
         _search_doc(
             DEMO_LISTING_ID,
@@ -393,6 +395,36 @@ def test_distance_sort_orders_by_lat_lng(fake_client: FakeSupabaseClient) -> Non
     distances = [item.distance_m for item in response.items if item.distance_m is not None]
     assert distances == sorted(distances)
     assert response.items[0].id == CHITENGE_LISTING_ID
+
+
+def test_relevance_sort_attaches_distance_when_lat_lng_provided(
+    fake_client: FakeSupabaseClient,
+) -> None:
+    response = list_catalog(
+        fake_client,
+        PlpFilterState(
+            sort="relevance",
+            lat=KABULONGA[0],
+            lng=KABULONGA[1],
+            limit=10,
+        ),
+    )
+    chitenge = next(item for item in response.items if item.id == CHITENGE_LISTING_ID)
+    assert chitenge.distance_m is not None
+    assert chitenge.distance_m < 1_000
+
+
+def test_listing_logistics_fields_exposed(fake_client: FakeSupabaseClient) -> None:
+    response = list_catalog(
+        fake_client,
+        PlpFilterState(limit=10),
+    )
+    chitenge = next(item for item in response.items if item.id == CHITENGE_LISTING_ID)
+    phone = next(item for item in response.items if item.id == PHONE_LISTING_ID)
+    assert chitenge.below_median is True
+    assert phone.below_median is False
+    assert chitenge.delivery_available is True
+    assert chitenge.pickup_available is True
 
 
 def test_filter_combinations_compose(fake_client: FakeSupabaseClient) -> None:

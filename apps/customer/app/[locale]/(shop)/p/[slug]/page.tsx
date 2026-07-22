@@ -29,6 +29,7 @@ import {
   type ProductDetail,
 } from "../../_components/pdp/fetch-product";
 import { NoSellersPanel } from "../../_components/pdp/no-sellers-panel";
+import { PdpDetailsTabs } from "../../_components/pdp/pdp-details-tabs";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { RelatedProducts } from "../../_components/pdp/related-products";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
@@ -196,17 +197,27 @@ async function ReviewsPanel({
   productId,
   cloudName,
   labels,
+  hideHeading = false,
 }: {
   locale: string;
   productId: string;
   cloudName?: string;
   labels: ReviewsSectionLabels;
+  hideHeading?: boolean;
 }) {
   const reviews = await fetchReviews(productId);
   if (!reviews) {
     return null;
   }
-  return <ReviewsSection locale={locale} reviews={reviews} cloudName={cloudName} labels={labels} />;
+  return (
+    <ReviewsSection
+      locale={locale}
+      reviews={reviews}
+      cloudName={cloudName}
+      labels={labels}
+      hideHeading={hideHeading}
+    />
+  );
 }
 
 function selectListing(listings: Listing[], listingId?: string): Listing | null {
@@ -462,6 +473,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         locale={locale}
         productId={product.id}
         cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
+        hideHeading
         labels={{
           heading: t("reviews.heading"),
           empty: t("reviews.empty"),
@@ -651,28 +663,31 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         />
       )}
 
-      <section aria-label={t("pdp.tabs.ariaLabel")} className="flex flex-col gap-5">
-        {overviewParagraphs.length > 0 ? (
-          <section className="flex flex-col gap-3">
-            <h2 className="font-display text-lg font-semibold text-text">
-              {t("pdp.overview.heading")}
-            </h2>
-            <div className="flex flex-col gap-2 text-sm leading-relaxed text-text-2">
-              {overviewParagraphs.map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <SpecsTable
-          rows={specRows}
-          heading={t("pdp.specs.heading")}
-          emptyLabel={t("pdp.specs.empty")}
-        />
-
-        {reviewsPanel}
-      </section>
+      <PdpDetailsTabs
+        labels={{
+          ariaLabel: t("pdp.tabs.ariaLabel"),
+          overview: t("pdp.tabs.overview"),
+          specs: t("pdp.tabs.specs"),
+          reviews: t("pdp.tabs.reviews"),
+        }}
+        hasOverview={overviewParagraphs.length > 0}
+        overviewPanel={
+          <div className="flex flex-col gap-2 text-sm leading-relaxed text-text-2">
+            {overviewParagraphs.map((paragraph, index) => (
+              <p key={index}>{paragraph}</p>
+            ))}
+          </div>
+        }
+        specsPanel={
+          <SpecsTable
+            rows={specRows}
+            heading={t("pdp.specs.heading")}
+            emptyLabel={t("pdp.specs.empty")}
+            hideHeading
+          />
+        }
+        reviewsPanel={reviewsPanel}
+      />
 
       <RelatedProducts
         locale={locale}
