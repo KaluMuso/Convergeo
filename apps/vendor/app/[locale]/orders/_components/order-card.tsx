@@ -9,7 +9,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
-import { VendorQuickNav } from "../../_components/vendor-quick-nav";
 import { isAuditableApproved } from "../../_lib/kyc-integrity";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { Badge, Button, FormField, Input, PriceBlock, Spinner } from "../../listings/new/_lib/ui";
@@ -670,8 +669,6 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
 
   return (
     <div className="flex flex-col gap-5 pb-8">
-      <VendorQuickNav locale={locale} active="home" />
-
       <header className="space-y-1 px-1">
         <p className="text-xs font-medium uppercase tracking-wide text-text-3">
           {t("home.eyebrow")}

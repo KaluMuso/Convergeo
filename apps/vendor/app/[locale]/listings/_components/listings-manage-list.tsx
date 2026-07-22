@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
-import { VendorQuickNav } from "../../_components/vendor-quick-nav";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { createManageClient, type ListingSummary } from "../[id]/edit/_lib/manage-client";
 import { Badge, Button, PriceBlock, Spinner } from "../new/_lib/ui";
@@ -122,8 +121,6 @@ export function ListingsManageList({ locale }: ListingsManageListProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <VendorQuickNav locale={locale} active="listings" />
-
       <header className="space-y-1 px-1">
         <h1 className="text-xl font-semibold text-text">{t("listings.manage.title")}</h1>
         <p className="text-sm text-text-2">{t("listings.manage.intro")}</p>
