@@ -210,12 +210,7 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
       </Suspense>
 
       {vendors.length === 0 ? (
-        <EmptyState
-          icon="🏪"
-          title={t("empty.title")}
-          body={t("empty.body")}
-          data-testid="directory-empty"
-        />
+        <EmptyState title={t("empty.title")} body={t("empty.body")} data-testid="directory-empty" />
       ) : (
         <>
           <VendorCardGrid
