@@ -37,6 +37,10 @@
   --price: #2a2118;
   --discount: #c0392b;
 
+  /* Zambia mobile-money rail brand marks (checkout/payout selectors). */
+  --payment-rail-mtn: #ffcc00;
+  --payment-rail-airtel: #ed1c24;
+
   /* Primary-button on-color pairing (kept AA in BOTH themes — see the dark block).
      Light: deep-blue bg + white text; hover deepens to --primary-deep. */
   --primary-btn-fg: var(--surface);
