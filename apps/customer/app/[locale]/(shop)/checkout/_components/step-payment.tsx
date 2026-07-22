@@ -16,6 +16,8 @@ import {
 } from "../../../(auth)/_components/auth-utils";
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 
+import { PaymentRailChoice } from "./payment-rail-choice";
+
 export type PaymentMethod = "momo" | "card" | "cod";
 export type MomoRail = "mtn" | "airtel";
 
@@ -341,17 +343,19 @@ export function StepPayment({
 
       {method === "momo" ? (
         <div className="space-y-4 rounded-card border border-border bg-surface p-4">
-          <div className="flex flex-col gap-2">
-            <Radio
+          <div className="flex flex-col gap-2" role="radiogroup" aria-label={labels.momo}>
+            <PaymentRailChoice
               name="momo-rail"
+              rail="mtn"
               label={labels.railMtn}
               checked={rail === "mtn"}
               onChange={() => {
                 setRail("mtn");
               }}
             />
-            <Radio
+            <PaymentRailChoice
               name="momo-rail"
+              rail="airtel"
               label={labels.railAirtel}
               checked={rail === "airtel"}
               onChange={() => {
