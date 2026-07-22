@@ -14,20 +14,28 @@ the n8n / UptimeRobot environment only.
 
 ## Monitors
 
-| #   | Monitor                | Type            | Target                                 | Interval | Up =                          |
-| --- | ---------------------- | --------------- | -------------------------------------- | -------- | ----------------------------- |
-| 1   | Customer locale health | HTTP(s) keyword | `https://vergeo5.com/en/health`        | 1 min    | HTTP 200 + body contains `ok` |
-| 2   | Vendor locale health   | HTTP(s) keyword | `https://vendor.vergeo5.com/en/health` | 1 min    | HTTP 200 + body contains `ok` |
-| 3   | Admin locale health    | HTTP(s)         | `https://admin.vergeo5.com/en/health`  | 5 min    | HTTP 200 / 401 (Access/IP)    |
-| 4   | API healthz            | HTTP(s) keyword | `https://api.vergeo5.com/healthz`      | 1 min    | HTTP 200 + body contains `ok` |
-| 5   | API readyz             | HTTP(s) keyword | `https://api.vergeo5.com/readyz`       | 1 min    | HTTP 200 + body contains `ok` |
+| #   | Monitor                | Type            | Target                                 | Interval | Up =                                               |
+| --- | ---------------------- | --------------- | -------------------------------------- | -------- | -------------------------------------------------- |
+| 1   | Customer locale health | HTTP(s) keyword | `https://vergeo5.com/en/health`        | 1 min    | HTTP 200 + body contains `ok`                      |
+| 2   | Vendor locale health   | HTTP(s) keyword | `https://vendor.vergeo5.com/en/health` | 1 min    | HTTP 200 + body contains `ok`                      |
+| 3   | Admin locale health    | HTTP(s)         | `https://admin.vergeo5.com/en/health`  | 5 min    | HTTP 200 / 401 (Access/IP)                         |
+| 4   | API healthz            | HTTP(s) keyword | `https://api.vergeo5.com/healthz`      | 1 min    | HTTP 200 + body contains `ok`                      |
+| 5   | API readyz             | HTTP(s) keyword | `https://api.vergeo5.com/readyz`       | 1 min    | HTTP 200 + body contains `"status":"ok"`           |
+| 6   | API search embedding   | HTTP(s) keyword | `https://api.vergeo5.com/readyz`       | 5 min    | HTTP 200 + body contains `"search_embedding":"ok"` |
 
 Notes:
 
 - Locale health routes return `{status, app, env, buildId}` — keyword `ok` catches broken bodies.
 - Admin may 401 under Cloudflare Access / IP allowlist; treat timeout/5xx as down.
-- `readyz` may return `status: degraded` with HTTP 200 when Supabase is slow — still "up"
-  for black-box paging; investigate via Sentry/logs separately.
+- `/readyz` returns `{status, search_rpc, search_embedding}`. Overall `status` is `ok` when
+  Supabase **and** `search_rrf` RPC are reachable — **not** when only the embedding key is
+  missing. That split is intentional: keyword search (FTS + pg_trgm) stays ready while the
+  semantic lane is degraded.
+- Monitor **#5** pages on true readiness failure (`status` or `search_rpc` degraded).
+- Monitor **#6** is a **warn-only** contact (email/dashboard, not the WhatsApp paging webhook):
+  `search_embedding=degraded` means `OPENROUTER_API_KEY` is unset/invalid — honest for LIVE-12,
+  not a full API outage. Pair with `GET /search?q=…` and confirm `degraded:true` + non-empty
+  results when investigating.
 - "Down" for paging = **2 consecutive** failed checks (see error budget).
 
 ---

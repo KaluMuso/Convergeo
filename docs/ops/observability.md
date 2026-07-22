@@ -116,14 +116,16 @@ a 1-minute interval (≈2 min to page — absorbs a single flaky probe).
 
 ### Alert thresholds → founder WhatsApp (via n8n)
 
-| Signal                                                    | Action                                      |
-| --------------------------------------------------------- | ------------------------------------------- |
-| API `/health` down ≥2 checks (~2 min)                     | **Page** founder on WhatsApp (n8n)          |
-| Any of the 3 web origins down ≥2 checks                   | **Page** founder on WhatsApp (n8n)          |
-| Payment webhook endpoint down ≥2 checks                   | **Page** founder on WhatsApp (n8n)          |
-| Fast burn: >20% of monthly budget in 1 h (>43 min down/h) | **Page** — likely full outage               |
-| Slow burn: >50% of monthly budget consumed (>108 min/mo)  | **Warn** — review before budget exhausts    |
-| Sentry: new unresolved `error`-level issue spike          | **Warn** (Sentry alert rule, founder-gated) |
+| Signal                                                    | Action                                                           |
+| --------------------------------------------------------- | ---------------------------------------------------------------- |
+| API `/health` down ≥2 checks (~2 min)                     | **Page** founder on WhatsApp (n8n)                               |
+| Any of the 3 web origins down ≥2 checks                   | **Page** founder on WhatsApp (n8n)                               |
+| Payment webhook endpoint down ≥2 checks                   | **Page** founder on WhatsApp (n8n)                               |
+| `/readyz` `search_embedding=degraded` (2+ checks)         | **Warn** — semantic search lane down; keyword search still works |
+| `/readyz` `status=degraded` or `search_rpc=degraded`      | **Page** — API not ready for discovery                           |
+| Fast burn: >20% of monthly budget in 1 h (>43 min down/h) | **Page** — likely full outage                                    |
+| Slow burn: >50% of monthly budget consumed (>108 min/mo)  | **Warn** — review before budget exhausts                         |
+| Sentry: new unresolved `error`-level issue spike          | **Warn** (Sentry alert rule, founder-gated)                      |
 
 Paging path (below) is deliberately **independent of the API**: if the API is the thing
 that is down, the alert must still get out.
