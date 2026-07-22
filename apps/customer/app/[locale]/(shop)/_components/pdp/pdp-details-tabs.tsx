@@ -1,6 +1,7 @@
 "use client";
 
 import { Tabs, type TabItem } from "@vergeo/ui/src/tabs";
+
 import type { ReactNode } from "react";
 
 export type PdpDetailsTabsLabels = {

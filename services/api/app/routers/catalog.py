@@ -6,13 +6,13 @@ from typing import Annotated, Any, Literal, cast
 
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.routers.comparison import is_lusaka_delivery_available
 from app.services.business.access import (
     BusinessAccess,
     get_business_access,
     require_wholesale_access,
 )
 from app.services.listings.demo import fetch_demo_listing_ids, is_demo_public_id
-from app.routers.comparison import is_lusaka_delivery_available
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 

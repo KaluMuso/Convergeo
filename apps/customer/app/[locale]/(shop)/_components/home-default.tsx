@@ -8,9 +8,9 @@ import { fetchJson } from "../../../../lib/fetch-json";
 
 import { HomeHeroCarousel } from "./home-hero-carousel";
 import { ListingGrid, type CatalogListing } from "./plp/listing-grid";
-import type { LogisticsPillLabels } from "./plp/logistics-pills";
 
 import type { CategoryRow } from "./merch-data";
+import type { LogisticsPillLabels } from "./plp/logistics-pills";
 
 type CatalogTranslator = {
   (key: string, values?: Record<string, string | number>): string;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildLogisticsPills } from "./logistics-pills";
+
 import type { CatalogListing } from "./listing-grid";
 
 const labels = {
