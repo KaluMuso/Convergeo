@@ -174,7 +174,7 @@ export default function VendorJobsPage({ params }: PageProps) {
 
   if (sessionLoading || loading) {
     return (
-      <main className="mx-auto flex min-h-dvh w-full max-w-[360px] flex-col p-4">
+      <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-4">
         <div className="flex min-h-[40vh] items-center justify-center">
           <Spinner label={t("loading")} />
         </div>
@@ -184,14 +184,14 @@ export default function VendorJobsPage({ params }: PageProps) {
 
   if (!session) {
     return (
-      <main className="mx-auto flex min-h-dvh w-full max-w-[360px] flex-col p-4">
+      <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-4">
         <p className="text-sm text-text-2">{t("authRequired")}</p>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[360px] flex-col gap-4 p-4">
+    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-4 p-4">
       <header className="space-y-1">
         <p className="text-xs font-medium uppercase tracking-wide text-text-2">{t("eyebrow")}</p>
         <h1 className="font-display text-h2 text-display-ink">{t("title")}</h1>
