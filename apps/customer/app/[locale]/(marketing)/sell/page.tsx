@@ -2,6 +2,7 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { fetchCommissionRates } from "./_components/commission-rates";
 import { CommissionTable } from "./_components/commission-table";
 import { Cta } from "./_components/cta";
 import { Faq, FAQ_KEYS } from "./_components/faq";
@@ -80,6 +81,7 @@ export default async function SellPage({ params }: PageProps) {
   setRequestLocale(locale);
   const t = await getPitchTranslator(locale);
   const faqSchema = buildFaqSchema(t);
+  const commissionRates = await fetchCommissionRates();
 
   return (
     <>
@@ -89,7 +91,7 @@ export default async function SellPage({ params }: PageProps) {
       />
       <main id="marketing-main">
         <Hero locale={locale} t={t} />
-        <CommissionTable t={t} />
+        <CommissionTable rates={commissionRates} t={t} />
         <HowItWorks t={t} />
         <KycExplainer t={t} />
         <PayoutPromise t={t} />
