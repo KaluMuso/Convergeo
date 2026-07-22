@@ -173,13 +173,33 @@ def db() -> Generator[PgConn, None, None]:
 def _seed_pending_kyc_vendor(db: PgConn, *, vendor_id: str, kyc_id: str) -> None:
     owner_id = str(uuid.uuid4())
     slug = f"kyc-cas-{vendor_id[:8]}"
-    db.run(
+    email = f"kyc-cas-{owner_id[:8]}@rls-matrix.test"
+    bootstrap = db.run(
+        f"""
+        INSERT INTO auth.users (
+          instance_id, id, aud, role, email, encrypted_password,
+          email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+        ) VALUES (
+          '00000000-0000-0000-0000-000000000000', '{owner_id}', 'authenticated', 'authenticated',
+          '{email}', 'hash', timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
+          timezone('utc', now()), timezone('utc', now())
+        ) ON CONFLICT (id) DO NOTHING;
+        INSERT INTO public.profiles (id, phone, display_name)
+        VALUES ('{owner_id}', '+260971099999', 'CAS Owner')
+        ON CONFLICT (id) DO UPDATE SET
+          phone = EXCLUDED.phone,
+          display_name = EXCLUDED.display_name;
+        """
+    )
+    assert bootstrap.ok, bootstrap.error
+    vendor_result = db.run(
         f"""
         INSERT INTO public.vendors (id, owner_user_id, slug, display_name, status)
         VALUES ('{vendor_id}', '{owner_id}', '{slug}', 'CAS Vendor', 'pending_kyc');
         """
     )
-    db.run(
+    assert vendor_result.ok, vendor_result.error
+    kyc_result = db.run(
         f"""
         INSERT INTO public.kyc_records (
           id, vendor_id, tier, doc_storage_paths, momo_name_match, status
@@ -188,6 +208,7 @@ def _seed_pending_kyc_vendor(db: PgConn, *, vendor_id: str, kyc_id: str) -> None
         );
         """
     )
+    assert kyc_result.ok, kyc_result.error
 
 
 def _vendor_status(db: PgConn, vendor_id: str) -> str:
