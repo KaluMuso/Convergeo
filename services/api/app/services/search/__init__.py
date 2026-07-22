@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from collections import Counter
 from collections.abc import Awaitable, Callable
 from typing import Any, cast
@@ -55,6 +56,9 @@ class SearchHit(StrictModel):
     # Public route slug for customer deep-links (product/listing → PDP slug,
     # vendor/event slug, service UUID). Absent when unresolved.
     slug: str | None = None
+    # Great-circle km from the searcher when a user location is supplied and the
+    # hit has coordinates; null otherwise (never dropped for missing geo).
+    distance_km: float | None = None
 
 
 class SearchResponse(StrictModel):
@@ -320,6 +324,44 @@ def log_zero_result(*, query: str, filters: dict[str, Any], kind: SearchKind | N
     )
 
 
+# Proximity re-rank tuning. The boost is bounded and multiplicative on rrf_score:
+# a co-located hit gains at most _GEO_WEIGHT of its score, decaying with distance,
+# so it nudges equally-relevant hits nearer the top but never lets a far, weakly
+# relevant hit outrank a near, strongly relevant one.
+_GEO_DECAY_KM = 12.0  # distance at which the proximity factor falls to ~1/e
+_GEO_WEIGHT = 0.5  # max fractional uplift for a co-located hit
+_EARTH_RADIUS_KM = 6371.0088
+
+
+def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lng2 - lng1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    return 2 * _EARTH_RADIUS_KM * math.asin(min(1.0, math.sqrt(a)))
+
+
+def _geo_rerank(
+    hits: list[SearchHit], *, user_lat: float, user_lng: float
+) -> list[SearchHit]:
+    """Stamp ``distance_km`` and re-sort by an rrf_score blended with a bounded
+    proximity boost. Hits without coordinates get no boost and are never dropped;
+    the stable sort preserves original RRF order among ties."""
+    scored: list[tuple[float, int, SearchHit]] = []
+    for idx, hit in enumerate(hits):
+        if hit.lat is None or hit.lng is None:
+            hit.distance_km = None
+            blended = hit.rrf_score
+        else:
+            distance = _haversine_km(user_lat, user_lng, hit.lat, hit.lng)
+            hit.distance_km = round(distance, 3)
+            geo_factor = math.exp(-distance / _GEO_DECAY_KM)  # (0, 1]
+            blended = hit.rrf_score * (1.0 + _GEO_WEIGHT * geo_factor)
+        scored.append((blended, idx, hit))
+    scored.sort(key=lambda item: (-item[0], item[1]))
+    return [hit for _blended, _idx, hit in scored]
+
+
 async def run_search(
     client: Any,
     *,
@@ -333,6 +375,8 @@ async def run_search(
     embedding_fetcher: EmbeddingFetcher | None = None,
     include_wholesale: bool = False,
     user_id: str | None = None,
+    user_lat: float | None = None,
+    user_lng: float | None = None,
 ) -> SearchResponse:
     trimmed = query.strip()
     expanded_query = expand_query(client, trimmed)
@@ -396,6 +440,11 @@ async def run_search(
         price_min_ngwee=price_min_ngwee,
         price_max_ngwee=price_max_ngwee,
     )
+    # Proximity-first discovery: when the searcher shares a location, re-rank the
+    # whole filtered candidate window by relevance blended with distance before
+    # paginating. Ranking is byte-identical when no location is supplied.
+    if user_lat is not None and user_lng is not None:
+        display_hits = _geo_rerank(display_hits, user_lat=user_lat, user_lng=user_lng)
     page_items, total = paginate(display_hits, page=page, page_size=page_size)
     page_items = attach_route_slugs(client, page_items)
 
