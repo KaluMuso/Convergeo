@@ -1,39 +1,30 @@
 # Post-#415 deploy + search honesty (2026-07-21)
 
-**UTC:** 2026-07-21T21:15Z (updated)  
-**Master tip:** `65908f1` (merge #437 FIX-I marketing consent + prior discovery/search stack)
+**UTC:** 2026-07-22T11:55Z (updated)  
+**Master tip:** `dd14b4c` (merge #480 — OpenRouter embedding model fix at 384 dims)
 
-## 1. API deploy gap — still BLOCKING for FIX-H / FIX-I / embeddings live
+## 1. API deploy — **redeploy required after #480**
 
-| Probe                                     | Result                                         |
+| Probe                                     | Result (2026-07-22T11:55Z)                     |
 | ----------------------------------------- | ---------------------------------------------- |
 | `GET https://api.vergeo5.com/fingerprint` | **200** `git_sha=unknown`, `image_tag=unknown` |
-| `GET /search?q=tea`                       | **200**, `degraded=true`, `total=2`            |
-| `GET /search?q=laptop`                    | _(re-probe after redeploy)_                    |
+| GHCR `API image` for `dd14b4c`            | **built** (run 29917287306 success)            |
+| Live embeddings tick (n8n exec 14613)     | `{processed:0}` — **still old image**          |
 
-**Root cause:** production API container has **not** been redeployed since master advanced (#415 FIX-H, #409 fail-closed embeddings, #437 FIX-I). GHCR image rebuilds on every `services/api` push — latest image should exist after #437 merge.
-
-**Founder action (Hetzner `api.vergeo5.com`, ~3 min):**
+**Founder:** pull the **new** image (your earlier redeploy was before #480 merged):
 
 ```bash
-# 1) Add OpenRouter key (value from Cursor env / secret store — never commit)
-grep -q '^OPENROUTER_API_KEY=' ~/vergeo5-api.env || \
-  echo 'OPENROUTER_API_KEY=PASTE_KEY_HERE' >> ~/vergeo5-api.env
-# Or edit in place: nano ~/vergeo5-api.env
+./redeploy-api.sh latest   # must show a new digest, not "Image is up to date" from pre-#480
 
-# 2) Pull + recreate container (infra/redeploy-api.sh)
-./redeploy-api.sh latest
+# Load env into shell (fixes "unauthorized" when $INTERNAL_EMBEDDINGS_TOKEN unset)
+set -a; source ~/vergeo5-api.env; set +a
 
-# 3) Verify
-curl -fsS https://api.vergeo5.com/fingerprint | jq .
-curl -fsS 'https://api.vergeo5.com/search?q=tea&limit=1' | jq '{degraded,total}'
+curl -sS -X POST https://api.vergeo5.com/internal/embeddings/tick \
+  -H "X-Internal-Token: $INTERNAL_EMBEDDINGS_TOKEN"
+# expect: {"processed":>0,"dead":0,"cost_usd":...}
+
+curl -sS 'https://api.vergeo5.com/search?q=tea'   # no jq needed
 ```
-
-**Expected after redeploy + key:**
-
-- `GET /search?q=laptop` → `total=0` (demo service excluded — FIX-H)
-- Marketing STOP suppresses nudges at dispatch/enqueue — FIX-I
-- Embeddings tick can drain queued jobs when cron is published
 
 ## 2. DB — demo service tagged (done)
 
