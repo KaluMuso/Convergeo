@@ -51,7 +51,11 @@ def _sql_value(value: Any) -> str:
 
 
 def _json_rows(rows: list[str]) -> list[dict[str, Any]]:
-    return [json.loads(row) for row in rows]
+    # psql -At appends a command-status tag after RETURNING output for
+    # data-modifying statements ("UPDATE 1", "UPDATE 0" on a zero-row CAS
+    # conflict, "INSERT 0 1"). Keep only JSON object/array lines so the tag
+    # never reaches json.loads.
+    return [json.loads(row) for row in rows if row[:1] in ("{", "[")]
 
 
 class _SqlTableClient:
