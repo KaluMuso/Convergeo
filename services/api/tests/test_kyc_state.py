@@ -1,4 +1,7 @@
-"""KYC state-machine compare-and-swap transition tests (FIX-J)."""
+"""KYC state-machine compare-and-swap transition tests (FIX-J).
+
+Uses a lightweight psql-backed Supabase client stub for DB integration coverage.
+"""
 
 from __future__ import annotations
 
