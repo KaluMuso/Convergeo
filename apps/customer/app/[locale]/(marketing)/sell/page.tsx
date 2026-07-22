@@ -91,7 +91,7 @@ export default async function SellPage({ params }: PageProps) {
       />
       <main id="marketing-main">
         <Hero locale={locale} t={t} />
-        <CommissionTable rates={commissionRates} t={t} />
+        <CommissionTable locale={locale} rates={commissionRates} t={t} />
         <HowItWorks t={t} />
         <KycExplainer t={t} />
         <PayoutPromise t={t} />
