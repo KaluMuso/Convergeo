@@ -183,12 +183,17 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
     wishlist: t("plp.card.wishlist"),
     wishlistRemove: t("plp.card.wishlistRemove"),
     outOfStock: t("plp.card.outOfStock"),
-    distance: t("plp.card.distance"),
     discount: t("plp.card.discount"),
     sampleListing: t("home.demo.sampleListing"),
     mediaEmpty: t("plp.card.mediaEmpty"),
     conditionNew: t("plp.card.conditionNew"),
     conditionRefurbished: t("plp.card.conditionRefurbished"),
+    logistics: {
+      nearest: t("plp.card.pill.nearest"),
+      belowMedian: t("plp.card.pill.belowMedian"),
+      delivery: t("plp.card.pill.delivery"),
+      pickup: t("plp.card.pill.pickup"),
+    },
   };
 
   // Audit hierarchy: categories before flash/campaign; events after product rails.

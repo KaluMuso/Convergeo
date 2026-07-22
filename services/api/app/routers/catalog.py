@@ -12,6 +12,7 @@ from app.services.business.access import (
     require_wholesale_access,
 )
 from app.services.listings.demo import fetch_demo_listing_ids, is_demo_public_id
+from app.routers.comparison import is_lusaka_delivery_available
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
@@ -54,6 +55,9 @@ class CatalogListingItem(BaseModel):
     lng: float | None = None
     distance_m: float | None = None
     landmark: str | None = None
+    below_median: bool = False
+    delivery_available: bool = False
+    pickup_available: bool = False
     # B2B wholesale fields — populated only on the gated wholesale/supplies feed.
     wholesale: bool | None = None
     moq: int | None = None
@@ -657,6 +661,41 @@ def _sort_candidates(
     )
 
 
+def _with_distance(
+    candidate: _CatalogCandidate,
+    *,
+    lat: float | None,
+    lng: float | None,
+) -> _CatalogCandidate:
+    if candidate.distance_m is not None or lat is None or lng is None:
+        return candidate
+    if candidate.search_doc.lat is None or candidate.search_doc.lng is None:
+        return candidate
+    return candidate.model_copy(
+        update={
+            "distance_m": haversine_m(
+                lat,
+                lng,
+                candidate.search_doc.lat,
+                candidate.search_doc.lng,
+            )
+        }
+    )
+
+
+def _listing_logistics_fields(
+    candidate: _CatalogCandidate,
+) -> dict[str, bool]:
+    lat = candidate.search_doc.lat
+    lng = candidate.search_doc.lng
+    boost = candidate.search_doc.boost_signals
+    return {
+        "below_median": bool(boost.get("below_median")),
+        "delivery_available": is_lusaka_delivery_available(lat, lng),
+        "pickup_available": lat is not None and lng is not None,
+    }
+
+
 class _WholesaleRow(BaseModel):
     id: str
     vendor_id: str
@@ -759,6 +798,10 @@ def list_catalog(
     start = filters.cursor
     end = start + filters.limit
     page_rows = sorted_rows[start:end]
+    if filters.lat is not None and filters.lng is not None:
+        page_rows = [
+            _with_distance(row, lat=filters.lat, lng=filters.lng) for row in page_rows
+        ]
 
     items = [
         CatalogListingItem(
@@ -777,6 +820,7 @@ def list_catalog(
             lng=row.search_doc.lng,
             distance_m=row.distance_m,
             landmark=row.landmark,
+            **_listing_logistics_fields(row),
         )
         for row in page_rows
     ]

@@ -7,16 +7,19 @@ export type SpecsTableProps = {
   rows: SpecRow[];
   heading: string;
   emptyLabel: string;
+  hideHeading?: boolean;
 };
 
 function formatSpecKey(key: string): string {
   return key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export function SpecsTable({ rows, heading, emptyLabel }: SpecsTableProps) {
+export function SpecsTable({ rows, heading, emptyLabel, hideHeading = false }: SpecsTableProps) {
   return (
     <section data-testid="pdp-specs-table" className="flex flex-col gap-3">
-      <h2 className="font-display text-lg font-semibold text-text">{heading}</h2>
+      {hideHeading ? null : (
+        <h2 className="font-display text-lg font-semibold text-text">{heading}</h2>
+      )}
 
       {rows.length === 0 ? (
         <p className="text-sm text-text-3">{emptyLabel}</p>

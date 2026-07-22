@@ -18,6 +18,9 @@ export type CatalogListing = {
   rating: number;
   reviewCount: number;
   distanceM: number | null;
+  belowMedian: boolean;
+  deliveryAvailable: boolean;
+  pickupAvailable: boolean;
 };
 
 type ListingGridLabels = ListingCardLabels;

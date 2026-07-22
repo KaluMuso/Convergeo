@@ -279,6 +279,9 @@ export default async function VendorProfilePage({ params }: PageProps) {
     rating: reviews.rating_avg ?? 0,
     reviewCount: reviews.rating_count,
     distanceM: null,
+    belowMedian: false,
+    deliveryAvailable: false,
+    pickupAvailable: false,
   }));
 
   const jsonLd = buildVendorJsonLd(vendor, reviews, locale);
@@ -301,7 +304,6 @@ export default async function VendorProfilePage({ params }: PageProps) {
             quickAdd: t("listings.quickAdd"),
             wishlist: t("listings.wishlist"),
             outOfStock: t("listings.outOfStock"),
-            distance: t("listings.distance"),
             conditionNew: t("listings.conditionNew"),
             conditionRefurbished: t("listings.conditionRefurbished"),
           }}
