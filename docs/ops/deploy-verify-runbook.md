@@ -351,18 +351,21 @@ bash scripts/ops/verify_live.sh
 
 Gate mapping (full criteria in `release-gates.md`):
 
-| Gate | Verifier check                                                                                                                         |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| G0   | Migrations include `0064`; FORCE RLS true on three launch tables (needs `SUPABASE_DB_URL`)                                             |
-| G1   | `/healthz` `/health` `/readyz` HTTP 200; `readyz.status=ok`; customer/vendor health 200; **warn** if `search_embedding=degraded` alone |
-| G2   | No `localhost:3001` / `localhost:8000` in customer HTML (optional `CHECK_LOCALHOST=1`)                                                 |
-| G3   | **SKIP** in verifier — requires Lenco sandbox money drill                                                                              |
-| G4   | **SKIP** — requires staging Playwright                                                                                                 |
-| G5   | n8n active workflow count ≥ Wave A minimum; sample internal tick returns 401 not 503                                                   |
-| G6   | **SKIP** — requires Sentry test event + UptimeRobot fire                                                                               |
-| G7   | **SKIP** — requires dated OCI backup artifact + restore drill log                                                                      |
-| G8   | **SKIP** — CI / branch-protection audit                                                                                                |
-| G9   | `fingerprint.git_sha` matches `MASTER_GIT_SHA`; migration tip matches repo; deploy SHAs recorded                                       |
+| Gate | Verifier check                                                                                                                          |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| G0   | Migrations include `0064`; FORCE RLS true on three launch tables (needs `SUPABASE_DB_URL`)                                              |
+| G1   | `/healthz` `/health` `/readyz` HTTP 200; `readyz.status=ok`; customer/vendor health 200; **warn** if `search_embedding=degraded` alone  |
+| G2   | No `localhost:3001` / `localhost:8000` in customer HTML (optional `CHECK_LOCALHOST=1`)                                                  |
+| G3   | **SKIP** in verifier — requires Lenco sandbox money drill                                                                               |
+| G4   | **SKIP** — requires staging Playwright                                                                                                  |
+| G5   | n8n active workflow count ≥ Wave A minimum; sample internal tick returns 401 not 503                                                    |
+| G6   | **SKIP** — requires Sentry test event + UptimeRobot fire                                                                                |
+| G7   | **SKIP** — requires dated OCI backup artifact + restore drill log                                                                       |
+| G8   | **SKIP** — CI / branch-protection audit                                                                                                 |
+| G9   | `fingerprint.git_sha` matches `MASTER_GIT_SHA`; migration tip matches repo; deploy SHAs recorded                                        |
+| L12  | `GET /search?q=phone` HTTP 200, `total≥1`; **FAIL** if empty; **PASS** with warn when `degraded=true` + non-empty (honest keyword lane) |
+
+Probe env: `SEARCH_PROBE_QUERY` (default `phone`), `SEARCH_PROBE_MIN_TOTAL` (default `1`).
 
 ---
 
@@ -389,14 +392,15 @@ never point at production `postgres` without `infra/scripts/db-restore.sh` guard
 
 ## 7. Troubleshooting
 
-| Symptom                     | Likely cause                        | Fix                                             |
-| --------------------------- | ----------------------------------- | ----------------------------------------------- |
-| API 502                     | Caddy upstream down / container OOM | `docker compose ps`; check `dmesg`; redeploy §2 |
-| `/readyz` degraded          | Missing `SUPABASE_DB_URL`           | Set session pooler DSN; recreate API            |
-| `/fingerprint` env mismatch | Wrong `ENV` in `infra/.env`         | Fix + recreate                                  |
-| Migration push fails        | Duplicate prefix / drift            | `migration-replay.sh`; RC-02 reconcile          |
-| n8n tick 503                | Token unset                         | Set `INTERNAL_*` + recreate API                 |
-| Vendor 404                  | Domain not on Vercel project        | Add domain in Vercel + DNS §3.2                 |
+| Symptom                     | Likely cause                           | Fix                                             |
+| --------------------------- | -------------------------------------- | ----------------------------------------------- |
+| API 502                     | Caddy upstream down / container OOM    | `docker compose ps`; check `dmesg`; redeploy §2 |
+| `/readyz` degraded          | Missing `SUPABASE_DB_URL`              | Set session pooler DSN; recreate API            |
+| `/search` `total=0`         | Index empty, API stale, or over-filter | Redeploy API; check `search_documents`; LIVE-12 |
+| `/fingerprint` env mismatch | Wrong `ENV` in `infra/.env`            | Fix + recreate                                  |
+| Migration push fails        | Duplicate prefix / drift               | `migration-replay.sh`; RC-02 reconcile          |
+| n8n tick 503                | Token unset                            | Set `INTERNAL_*` + recreate API                 |
+| Vendor 404                  | Domain not on Vercel project           | Add domain in Vercel + DNS §3.2                 |
 
 ---
 
