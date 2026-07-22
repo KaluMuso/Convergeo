@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "description": "Recorded Lenco sandbox money-drill outcomes for dry-run/cassette mode when F9b creds are unavailable.",
+  "checkout_group_id": "d1000000-0000-4000-8000-000000000001",
+  "payment_id": "d2000000-0000-4000-8000-000000000002",
+  "order_id": "d3000000-0000-4000-8000-000000000003",
+  "vendor_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "lenco_reference": "ord-drill-cassette-001",
+  "amount_ngwee": 25000,
+  "steps": {
+    "momo_collection": {
+      "payment_status": "success",
+      "charge_received_count": 1,
+      "idempotency_key": "prepaid-charge-checkout-d1000000-0000-4000-8000-000000000001",
+      "ledger_postings": {
+        "platform_cash": 25000,
+        "escrow": -25000
+      },
+      "global_ledger_sum_ngwee": 0
+    },
+    "webhook_replay": {
+      "webhook_event_id": "collection.successful:evt-cassette-001",
+      "replay_http_status": 200,
+      "webhook_rows_before": 1,
+      "webhook_rows_after": 1,
+      "charge_received_before": 1,
+      "charge_received_after": 1,
+      "ledger_txn_count_before": 1,
+      "ledger_txn_count_after": 1
+    },
+    "release_payout_refund": {
+      "commission_capture_count": 1,
+      "release_to_vendor_count": 1,
+      "payout_executed_count": 1,
+      "refund_lane1_count": 1,
+      "customer_refund_payout_status": "paid",
+      "escrow_remaining_ngwee": 0,
+      "orphaned_payout_count": 0,
+      "global_ledger_sum_ngwee": 0
+    },
+    "card_false_success": {
+      "verify_without_webhook": {
+        "client_status": "success",
+        "verified": false,
+        "order_confirmed": false,
+        "held": true
+      },
+      "verify_with_webhook": {
+        "verified": true,
+        "order_confirmed": true,
+        "held": false
+      }
+    }
+  }
+}
