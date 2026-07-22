@@ -27,6 +27,8 @@ async def search(
     price_max_ngwee: Annotated[int | None, Query(ge=0)] = None,
     page: Annotated[int, Query(ge=1)] = DEFAULT_PAGE,
     page_size: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
+    lat: Annotated[float | None, Query(ge=-90, le=90)] = None,
+    lng: Annotated[float | None, Query(ge=-180, le=180)] = None,
 ) -> SearchResponse:
     return await run_search(
         supabase.client,
@@ -39,6 +41,9 @@ async def search(
         page_size=page_size,
         include_wholesale=access.eligible,
         user_id=access.user_id,
+        # Only a complete lat/lng pair drives proximity ranking; a lone coord is ignored.
+        user_lat=lat if lng is not None else None,
+        user_lng=lng if lat is not None else None,
     )
 
 
