@@ -17,6 +17,7 @@ from app.services.embeddings.batch import (
 from app.services.embeddings.client import (
     EMBEDDING_DIMENSION,
     EmbeddingDimensionError,
+    _embedding_request_body,
     assert_embedding_dimensions,
     embed_texts_with_fallback,
 )
@@ -237,6 +238,15 @@ def test_embed_batch_chunks_over_sixty_four() -> None:
     assert call_sizes == [64, 64, 2]
     assert len(result.vectors) == 130
     assert result.cost_usd == pytest.approx(0.003)
+
+
+def test_embedding_request_body_pins_dimensions() -> None:
+    body = _embedding_request_body(model="openai/text-embedding-3-small", texts=["a", "b"])
+    assert body == {
+        "model": "openai/text-embedding-3-small",
+        "input": ["a", "b"],
+        "dimensions": EMBEDDING_DIMENSION,
+    }
 
 
 def test_dimension_mismatch_guard_raises() -> None:

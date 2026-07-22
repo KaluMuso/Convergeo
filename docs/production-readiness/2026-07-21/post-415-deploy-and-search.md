@@ -41,12 +41,13 @@ Live `services` row `1be21900-7a4f-48ee-bee5-19f770b75e55` has `portfolio_images
 
 ## 3. Embeddings / search degraded
 
-| Item                                     | State (2026-07-21T21:15Z)                                                                           |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `search_documents` with embedding        | **0 / 288**                                                                                         |
-| `embedding_jobs` queued                  | **288** (requeued via `scripts/ops/requeue-dead-embedding-jobs.sql` — done)                         |
-| `embedding_jobs` dead                    | **0**                                                                                               |
-| n8n embeddings cron (`oqjfSdMXClfsf3qd`) | **unpublished** — publish only after `OPENROUTER_API_KEY` live on API host + successful manual tick |
+| Item                                     | State (2026-07-21T21:15Z)                                                                                                       |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `search_documents` with embedding        | **0 / 288**                                                                                                                     |
+| `embedding_jobs` queued                  | **288** (requeued; attempts reset 2026-07-22 after provider-failure diagnosis)                                                  |
+| `embedding_jobs` dead                    | **0**                                                                                                                           |
+| Root cause (2026-07-22)                  | Default model `thenlper/gte-small` is **not on OpenRouter** → PR switches to `openai/text-embedding-3-small` + `dimensions=384` |
+| n8n embeddings cron (`oqjfSdMXClfsf3qd`) | **unpublished** — publish only after `OPENROUTER_API_KEY` live on API host + successful manual tick                             |
 
 **Activation sequence (after API redeploy + key):**
 
