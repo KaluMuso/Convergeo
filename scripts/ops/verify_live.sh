@@ -23,6 +23,8 @@
 #   N8N_API_KEY           Optional — list active workflows (no value logged)
 #   EXPECTED_N8N_ACTIVE_MIN  Minimum active workflows for Wave A (default 6)
 #   CHECK_LOCALHOST       Set to 1 to enable G2 localhost leak scan on customer HTML
+#   SEARCH_PROBE_QUERY    Canonical keyword for LIVE-12 (default phone)
+#   SEARCH_PROBE_MIN_TOTAL Minimum total hits required (default 1)
 #   CURL_BIN              curl binary (default curl)
 #
 set -euo pipefail
@@ -39,6 +41,8 @@ ADMIN_URL="${ADMIN_URL:-https://admin.vergeo5.com}"
 N8N_BASE_URL="${N8N_BASE_URL:-https://n8n.vergeo5.com}"
 EXPECTED_N8N_ACTIVE_MIN="${EXPECTED_N8N_ACTIVE_MIN:-6}"
 CHECK_LOCALHOST="${CHECK_LOCALHOST:-0}"
+SEARCH_PROBE_QUERY="${SEARCH_PROBE_QUERY:-phone}"
+SEARCH_PROBE_MIN_TOTAL="${SEARCH_PROBE_MIN_TOTAL:-1}"
 CURL_BIN="${CURL_BIN:-curl}"
 
 DRY_RUN=0
@@ -310,6 +314,41 @@ check_g2() {
   fi
 }
 
+# --- LIVE-12: search honesty (keyword lane must return hits) ----------------------
+check_live12_search() {
+  if [[ "$DRY_RUN" -eq 1 ]]; then
+    set_gate L12 SKIP "dry-run — search probe skipped"
+    return 0
+  fi
+
+  local url="${API_BASE_URL%/}/search?q=${SEARCH_PROBE_QUERY}&limit=5"
+  local code body degraded total
+  code="$(http_code "$url")"
+  body="$(http_body "$url")"
+
+  if [[ "$code" != "200" || -z "$body" || "$body" != \{* ]]; then
+    set_gate L12 FAIL "http=${code:-?} query=${SEARCH_PROBE_QUERY}"
+    return 0
+  fi
+
+  degraded="$(printf '%s' "$body" | json_get degraded)"
+  total="$(printf '%s' "$body" | json_get total)"
+  local detail="query=${SEARCH_PROBE_QUERY} degraded=${degraded:-?} total=${total:-?}"
+
+  if [[ -z "$total" || "$total" -lt "$SEARCH_PROBE_MIN_TOTAL" ]]; then
+    set_gate L12 FAIL "${detail} min_total=${SEARCH_PROBE_MIN_TOTAL}"
+    return 0
+  fi
+
+  if [[ "$degraded" == "True" || "$degraded" == "true" ]]; then
+    set_gate L12 PASS "${detail} (honest degraded — keyword lane OK)"
+    warn "LIVE-12: search degraded=true but non-empty — set OPENROUTER_API_KEY / drain embeddings for degraded=false"
+    return 0
+  fi
+
+  set_gate L12 PASS "$detail"
+}
+
 # --- G3/G4/G6/G7/G8: require creds or external systems ----------------------------
 check_blocked_gates() {
   set_gate G3 SKIP "Lenco sandbox money drill — needs F9b + staging ledger proof"
@@ -411,6 +450,7 @@ main() {
 
   check_g1_api
   check_g1_frontends
+  check_live12_search
   check_g0
   check_g2
   check_g5
@@ -421,7 +461,7 @@ main() {
   printf '%-6s %-8s %s\n' 'GATE' 'STATUS' 'DETAIL'
   printf '%-6s %-8s %s\n' '----' '------' '------'
   local g overall=0
-  for g in G0 G1 G2 G3 G4 G5 G6 G7 G8 G9; do
+  for g in G0 G1 L12 G2 G3 G4 G5 G6 G7 G8 G9; do
     local st="${GATE_STATUS[$g]:-SKIP}"
     local dt="${GATE_DETAIL[$g]:-}"
     printf '%-6s %-8s %s\n' "$g" "$st" "$dt"
