@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import json
+import threading
 import uuid
 from collections.abc import Generator
 from typing import Any
@@ -25,6 +26,7 @@ from tests.rls.conftest import (
 )
 
 ADMIN_ID = "66666666-6666-6666-6666-666666666666"
+_PG_LOCK = threading.Lock()
 # Seeded by seed_matrix_fixtures (profiles FK on vendors.owner_user_id).
 VENDOR_OWNER_ID = "33333333-3333-3333-3333-333333333333"
 
@@ -101,50 +103,48 @@ class _SqlTableClient:
         return "WHERE " + " AND ".join(clauses)
 
     def execute(self) -> _FakeResponse:
-        if self._mode == "insert":
-            assert self._payload is not None
-            columns = list(self._payload.keys())
-            col_sql = ", ".join(columns)
-            val_sql = ", ".join(_sql_value(self._payload[col]) for col in columns)
+        with _PG_LOCK:
+            if self._mode == "insert":
+                assert self._payload is not None
+                columns = list(self._payload.keys())
+                col_sql = ", ".join(columns)
+                val_sql = ", ".join(_sql_value(self._payload[col]) for col in columns)
+                sql = (
+                    f"INSERT INTO public.{self._table} ({col_sql}) VALUES ({val_sql}) "
+                    f"RETURNING to_jsonb({self._table}.*);"
+                )
+                result = self._conn.run(sql)
+                assert result.ok, result.error
+                return _FakeResponse(_json_rows(result.rows))
+
+            if self._mode == "update":
+                assert self._payload is not None
+                set_sql = ", ".join(
+                    f"{col} = {_sql_value(val)}" for col, val in self._payload.items()
+                )
+                sql = (
+                    f"UPDATE public.{self._table} SET {set_sql} {self._where_sql()} "
+                    f"RETURNING to_jsonb({self._table}.*);"
+                )
+                result = self._conn.run(sql)
+                assert result.ok, result.error
+                return _FakeResponse(_json_rows(result.rows))
+
+            order_sql = ""
+            if self._order is not None:
+                column, desc = self._order
+                order_sql = f" ORDER BY {column} {'DESC' if desc else 'ASC'}"
+            limit_sql = f" LIMIT {self._limit}" if self._limit is not None else ""
             sql = (
-                f"INSERT INTO public.{self._table} ({col_sql}) VALUES ({val_sql}) "
-                f"RETURNING to_jsonb(row);"
-            )
-            sql = sql.replace(
-                f"INSERT INTO public.{self._table}",
-                f"INSERT INTO public.{self._table} AS row",
-                1,
+                f"SELECT to_jsonb(t) FROM (SELECT {self._select_cols} FROM public.{self._table} "
+                f"{self._where_sql()}{order_sql}{limit_sql}) t;"
             )
             result = self._conn.run(sql)
             assert result.ok, result.error
-            return _FakeResponse(_json_rows(result.rows))
-
-        if self._mode == "update":
-            assert self._payload is not None
-            set_sql = ", ".join(f"{col} = {_sql_value(val)}" for col, val in self._payload.items())
-            sql = (
-                f"UPDATE public.{self._table} AS row SET {set_sql} {self._where_sql()} "
-                f"RETURNING to_jsonb(row);"
-            )
-            result = self._conn.run(sql)
-            assert result.ok, result.error
-            return _FakeResponse(_json_rows(result.rows))
-
-        order_sql = ""
-        if self._order is not None:
-            column, desc = self._order
-            order_sql = f" ORDER BY {column} {'DESC' if desc else 'ASC'}"
-        limit_sql = f" LIMIT {self._limit}" if self._limit is not None else ""
-        sql = (
-            f"SELECT to_jsonb(t) FROM (SELECT {self._select_cols} FROM public.{self._table} "
-            f"{self._where_sql()}{order_sql}{limit_sql}) t;"
-        )
-        result = self._conn.run(sql)
-        assert result.ok, result.error
-        rows = _json_rows(result.rows)
-        if self._maybe_single:
-            return _FakeResponse(rows[0] if rows else None)
-        return _FakeResponse(rows)
+            rows = _json_rows(result.rows)
+            if self._maybe_single:
+                return _FakeResponse(rows[0] if rows else None)
+            return _FakeResponse(rows)
 
 
 class _RealPgServiceClient:
