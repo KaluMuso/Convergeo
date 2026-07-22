@@ -51,6 +51,11 @@ These are small and specific — **not structural.** Cursor prompts in `prompts/
 ### 2.3 Search operational fragility  → `CR-C`
 Embeddings + RRF are built, but recent ops commits ("search degraded probe (CCP-05)") indicate the live path degrades. Concept treats intent-based discovery as core. Harden: explicit FTS-only fallback when the embedding/vector path is unavailable, a health probe, and a degraded-mode banner — so search never returns empty on a partial outage.
 
+### 2.4 Geo-distance ranking in discovery is ABSENT  → `CR-G` (added 2026-07-22)
+The concept's proximity-first discovery — *"sort nearest," "2–3× geo weight for commodities," "around me now," "on the route"* — is **not implemented**. Verified: `search_rrf` (`0009_search.sql`) ranks on FTS + pg_trgm + pgvector (RRF) plus `boost_signals` (`in_stock`, `verified`) **only — no distance term** (grep for `distance|haversine|ST_|<->|nearest` in search/migrations returns nothing). Yet the plumbing is ready: `search_documents.lat/lng` are populated (from first vendor location) and `SearchHit` already exposes `lat/lng`; the search API just accepts no user location. This is the **single biggest concept differentiator still thin in live code** — "found by proximity" is core to beating WhatsApp sellers. Plausibly an intentional Phase-2 deferral, but a founder call: `CR-G` adds a bounded distance decay to `search_rrf` + `lat/lng` on `/search`; `CR-G2` (follow-up) adds opt-in customer geolocation + "N km away" + a Nearest sort.
+
+**Sweep confirmation (2026-07-22) — these concept rules ARE enforced (not just present):** verified-purchase reviews (`reviews.py:529 _assert_verified_purchase`), free delivery ≥K200 (`cart/grouping.py FREE_DELIVERY_THRESHOLD_NGEWEE = 20_000`), escrow auto-release ≤48h (`escrow/release.py DEFAULT_RELEASE_AFTER_DELIVERED_HOURS = 48` + `AUTO_CONFIRM`), COD cap (`kyc/caps.py cod_cap_ngwee`), reservation TTL (`checkout.reservation_expired` + reservation-sweeper), anon→auth cart merge (`cart/merge.py`), Ask Vergeo $15 kill-switch + quotas (`ask/spend.py DEFAULT_MONTHLY_CAP_USD = 15`), prohibited-category fence (`moderation/prohibited.py`), landmark addressing (`0005_orders.sql landmark text NOT NULL`). **Caveat:** address `lat/lng` are **nullable**, so the concept's *"mandatory GPS pin"* is not enforced (only landmark is) — minor.
+
 ---
 
 ## 3. Launch-hardening (non-code-feature, but what actually gates GO)
@@ -79,3 +84,22 @@ The distillations flagged ~14 cross-document contradictions; the locked decision
 1. Treat feature work as **secondary** — the code fulfills Phase‑1. Put founder bandwidth on F4 (escrow legal) and deploy/verify.
 2. Ship the three small code gaps (`CR-A` commission binding, `CR-B` bem/nya customer parity, `CR-C` search resilience) — cheap, and they close real trust/accuracy/quality edges.
 3. Run the launch-hardening drills (`CR-D`, `CR-E`) in parallel — they surface deploy reality before public launch.
+
+---
+
+## 7. Process findings (this review cycle — 2026-07-22)
+
+Surfaced while reviewing/merging the `CR-*` PRs:
+
+- **Flaky CI test blocks merges → `CR-F`.** `test_kyc_state.py::TestKycVendorCas` fails intermittently on the **"RLS isolation matrix"** job with `AppError: Vendor not found` from `_load_vendor` (passed on #469, failed on #472 with identical code). Likely a cross-module schema-reset/seed race (`db` fixture is module-scoped and conditionally `DROP SCHEMA public CASCADE`). It intermittently red-flags unrelated PRs, and it's why two Cursor agents independently edited that file. Needs a dedicated test-infra fix (`CR-F`), not per-branch hacks.
+- **Auto-merge raced a review fix.** #473 (`CR-C`, carrying the buggy `/readyz` coupling) was auto-merged by `cursor[bot]` before the review fix could amend it, so the bug briefly hit `master`; fixed forward via `CR-C2` (#486, merged). If Cursor auto-merge stays on, gate it on review approval — review-fixes will otherwise always land as fresh follow-up PRs.
+
+## 8. Landed to master (2026-07-22)
+
+- ✅ `CR-A` (#472) — public commission-rates endpoint + live Sell binding.
+- ✅ `CR-E` (#469) — deploy/verify/rollback runbook + `scripts/ops/verify_live.sh`.
+- ✅ `CR-C` (#473, auto-merged) + `CR-C2` (#486) — search FTS fallback **and** the `/readyz` decouple.
+- ⏳ `CR-B` (#467) — awaiting native Bemba/Nyanja review. `CR-D` (#470) — drop `test_kyc_state.py` edit + run live Lenco sandbox.
+- 🆕 `CR-F` (flaky KYC test), `CR-G`/`CR-G2` (geo-distance ranking) — prompts ready, not yet run.
+
+**Open founder decisions:** geo-distance ranking Phase‑1 or defer (`CR-G`) · `legal` in bem/nya vs one English text · was the fully-translated non-public `zh` locale intentional.
