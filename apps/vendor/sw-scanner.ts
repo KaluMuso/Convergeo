@@ -1,3 +1,5 @@
+import { resolveApiBaseUrl } from "./lib/api-base-url";
+
 /**
  * Serwist runtime-caching fragment for the organiser event-ticket scanner.
  * Mirrors apps/customer/sw-wallet.ts -- a standalone fragment awaiting merge
@@ -30,7 +32,7 @@ export type ScannerRuntimeCaching = {
 const SCANNER_PAGE_PATTERN = /\/[^/]+\/events\/[^/]+\/scan(?:\/|$)/;
 
 function matchesScanSyncApi(url: URL): boolean {
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const apiBase = resolveApiBaseUrl();
   if (!apiBase) {
     return false;
   }

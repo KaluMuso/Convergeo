@@ -29,8 +29,21 @@ vi.mock("@vergeo/ui/src/media/cloudinary-image-static", () => ({
 }));
 
 vi.mock("@vergeo/ui/src/media/cloudinary-image", () => ({
-  CloudinaryImage: ({ alt, priority }: { alt: string; priority?: boolean }) => (
-    <img alt={alt} data-testid="cloudinary-image" data-priority={priority ? "true" : "false"} />
+  CloudinaryImage: ({
+    alt,
+    priority,
+    publicId,
+  }: {
+    alt: string;
+    priority?: boolean;
+    publicId?: string;
+  }) => (
+    <img
+      alt={alt}
+      data-testid="cloudinary-image"
+      data-priority={priority ? "true" : "false"}
+      data-public-id={publicId}
+    />
   ),
 }));
 
@@ -71,6 +84,7 @@ function renderHomeHeroBand(props: {
   locale: string;
   t: (key: string, values?: Record<string, string | number>) => string;
   brandName: string;
+  visualPublicId?: string | null;
 }) {
   return render(
     <NextIntlClientProvider locale="en" messages={{ catalog: catalogMessages }} onError={() => {}}>
@@ -245,9 +259,22 @@ describe("HomeHeroBand", () => {
     renderHomeHeroBand({ locale: "en", t, brandName: "Vergeo5" });
     const images = screen.getAllByTestId("cloudinary-image");
     expect(images[0]).toHaveAttribute("data-priority", "true");
+    expect(images[0]).toHaveAttribute("data-public-id", "demo/categories/mobile-phones");
     expect(images.slice(1).every((image) => image.getAttribute("data-priority") === "false")).toBe(
       true,
     );
+  });
+
+  it("uses live catalogue imagery on slide 1 when visualPublicId is provided", () => {
+    renderHomeHeroBand({
+      locale: "en",
+      t,
+      brandName: "Vergeo5",
+      visualPublicId: "vendors/acme/listing-hero",
+    });
+    const images = screen.getAllByTestId("cloudinary-image");
+    expect(images[0]).toHaveAttribute("data-public-id", "vendors/acme/listing-hero");
+    expect(images[1]).toHaveAttribute("data-public-id", "demo/categories/traditional-wear");
   });
 });
 

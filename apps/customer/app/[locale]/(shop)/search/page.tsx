@@ -6,7 +6,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
-import { resolveApiBaseUrl } from "../../../../lib/api-base-url";
+import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
 import { BrowseDiscoveryChips } from "../_components/browse-discovery-chips";
 import { fetchCategoriesResult, type CategoryRow } from "../_components/merch-data";
@@ -473,7 +473,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                   page={page}
                   response={view.response}
                   tabCounts={view.tabCounts}
-                  apiBaseUrl={resolveApiBaseUrl() ?? ""}
+                  apiBaseUrl={getApiBaseUrl()}
                   filterState={filterState}
                   labels={resultsTabsLabels}
                 />
@@ -488,7 +488,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
               page={page}
               response={view.response}
               tabCounts={view.tabCounts}
-              apiBaseUrl={resolveApiBaseUrl() ?? ""}
+              apiBaseUrl={getApiBaseUrl()}
               labels={resultsTabsLabels}
             />
           )}
