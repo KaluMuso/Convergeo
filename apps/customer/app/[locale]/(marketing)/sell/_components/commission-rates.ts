@@ -76,7 +76,10 @@ export function formatCommissionRateLabel(
   locale: string,
   t: (key: string, values?: Record<string, string | number>) => string,
 ): string {
-  const formattedRate = formatNumber(ratePct, locale);
+  const formattedRate = formatNumber(ratePct, locale, {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  });
 
   return t("commission.rate", { rate: formattedRate });
 }
