@@ -48,6 +48,9 @@ jobs:
         with:
           context: .
           file: infra/api.Dockerfile
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            API_IMAGE_TAG=${{ github.sha }}
           # amd64 for the x86 micro VM; arm64 for a potential A1.Flex free box.
           platforms: linux/amd64,linux/arm64
           push: true

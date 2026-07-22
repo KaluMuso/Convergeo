@@ -13,9 +13,14 @@ RUN uv sync --frozen --no-dev
 
 FROM python:3.12-slim-bookworm AS runtime
 
+ARG GIT_SHA=unknown
+ARG API_IMAGE_TAG=unknown
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/app/.venv/bin:$PATH" \
+    GIT_SHA=${GIT_SHA} \
+    API_IMAGE_TAG=${API_IMAGE_TAG}
 
 RUN groupadd --system vergeo && useradd --system --gid vergeo --create-home vergeo
 
