@@ -11,15 +11,17 @@ import httpx
 logger = logging.getLogger(__name__)
 
 EMBEDDING_DIMENSION = 384
-DEFAULT_PRIMARY_MODEL = "thenlper/gte-small"
-DEFAULT_FALLBACK_MODEL = "thenlper/gte-small"
+# thenlper/gte-small is not listed on OpenRouter; text-embedding-3-small supports
+# dimensions=384 and matches our search_documents.vector(384) schema.
+DEFAULT_PRIMARY_MODEL = "openai/text-embedding-3-small"
+DEFAULT_FALLBACK_MODEL = "qwen/qwen3-embedding-0.6b"
 DEFAULT_EMBEDDING_URL = "https://openrouter.ai/api/v1/embeddings"
 DEFAULT_GTE_SMALL_URL = "https://openrouter.ai/api/v1/embeddings"
 DEFAULT_EMBEDDING_TIMEOUT_SECONDS = 30.0
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_RETRY_BASE_SECONDS = 0.5
 
-# Rough OpenRouter pricing for gte-small class models (USD per 1M input tokens).
+# Rough OpenRouter pricing for small embedding models (USD per 1M input tokens).
 DEFAULT_COST_PER_MILLION_TOKENS = 0.02
 
 
@@ -134,6 +136,14 @@ def _extract_prompt_tokens(payload: Any) -> int:
     return 0
 
 
+def _embedding_request_body(*, model: str, texts: list[str]) -> dict[str, Any]:
+    """Build OpenAI-compatible embedding request; pin dimensions for our pgvector schema."""
+    body: dict[str, Any] = {"model": model, "input": texts}
+    if EMBEDDING_DIMENSION > 0:
+        body["dimensions"] = EMBEDDING_DIMENSION
+    return body
+
+
 async def _request_embeddings(
     *,
     texts: list[str],
@@ -150,7 +160,7 @@ async def _request_embeddings(
         response = await client.post(
             url,
             headers=headers,
-            json={"model": model, "input": texts},
+            json=_embedding_request_body(model=model, texts=texts),
         )
         response.raise_for_status()
         payload = response.json()
@@ -202,7 +212,7 @@ async def _embed_with_model(
 
 
 async def embed_texts_with_fallback(texts: list[str]) -> tuple[list[list[float]], float]:
-    """Embed a batch via OpenRouter primary model, falling back to gte-small."""
+    """Embed a batch via OpenRouter primary model, falling back to secondary model."""
     if not texts:
         return [], 0.0
     if len(texts) > 64:
@@ -228,8 +238,11 @@ async def embed_texts_with_fallback(texts: list[str]) -> tuple[list[list[float]]
         raise
     except Exception:
         logger.warning(
-            "Primary embedding model failed; falling back to gte-small",
-            extra={"primary_model": settings.primary_model},
+            "Primary embedding model failed; falling back to secondary model",
+            extra={
+                "primary_model": settings.primary_model,
+                "fallback_model": settings.fallback_model,
+            },
             exc_info=True,
         )
         try:
@@ -241,8 +254,9 @@ async def embed_texts_with_fallback(texts: list[str]) -> tuple[list[list[float]]
                 settings=settings,
             )
         except Exception as fallback_error:
+            detail = str(fallback_error).strip() or fallback_error.__class__.__name__
             raise RuntimeError(
-                "Primary and fallback embedding providers failed"
+                f"Primary and fallback embedding providers failed: {detail}"
             ) from fallback_error
 
     cost_usd = estimate_batch_cost_usd(

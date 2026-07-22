@@ -10,7 +10,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 EMBEDDING_DIMENSION = 384
-DEFAULT_EMBEDDING_MODEL = "thenlper/gte-small"
+DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small"
 DEFAULT_EMBEDDING_URL = "https://openrouter.ai/api/v1/embeddings"
 DEFAULT_EMBEDDING_TIMEOUT_SECONDS = 2.0
 
@@ -92,7 +92,11 @@ async def fetch_query_embedding(query: str) -> list[float] | None:
                 client.post(
                     url,
                     headers=headers,
-                    json={"model": model, "input": trimmed},
+                    json={
+                        "model": model,
+                        "input": trimmed,
+                        "dimensions": EMBEDDING_DIMENSION,
+                    },
                 ),
                 timeout=timeout,
             )
