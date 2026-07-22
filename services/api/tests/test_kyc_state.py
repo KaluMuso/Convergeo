@@ -46,7 +46,12 @@ def _sql_value(value: Any) -> str:
 
 
 def _json_rows(rows: list[str]) -> list[dict[str, Any]]:
-    return [json.loads(row) for row in rows]
+    parsed: list[dict[str, Any]] = []
+    for row in rows:
+        if not row or row[0] not in "{[":
+            continue
+        parsed.append(json.loads(row))
+    return parsed
 
 
 class _SqlTableClient:
@@ -105,7 +110,12 @@ class _SqlTableClient:
             val_sql = ", ".join(_sql_value(self._payload[col]) for col in columns)
             sql = (
                 f"INSERT INTO public.{self._table} ({col_sql}) VALUES ({val_sql}) "
-                f"RETURNING to_jsonb({self._table}.*);"
+                f"RETURNING to_jsonb(row);"
+            )
+            sql = sql.replace(
+                f"INSERT INTO public.{self._table}",
+                f"INSERT INTO public.{self._table} AS row",
+                1,
             )
             result = self._conn.run(sql)
             assert result.ok, result.error
@@ -115,8 +125,8 @@ class _SqlTableClient:
             assert self._payload is not None
             set_sql = ", ".join(f"{col} = {_sql_value(val)}" for col, val in self._payload.items())
             sql = (
-                f"UPDATE public.{self._table} SET {set_sql} {self._where_sql()} "
-                f"RETURNING to_jsonb({self._table}.*);"
+                f"UPDATE public.{self._table} AS row SET {set_sql} {self._where_sql()} "
+                f"RETURNING to_jsonb(row);"
             )
             result = self._conn.run(sql)
             assert result.ok, result.error
