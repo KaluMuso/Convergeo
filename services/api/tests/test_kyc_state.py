@@ -46,7 +46,12 @@ def _sql_value(value: Any) -> str:
 
 
 def _json_rows(rows: list[str]) -> list[dict[str, Any]]:
-    return [json.loads(row) for row in rows]
+    parsed: list[dict[str, Any]] = []
+    for row in rows:
+        if not row or row[0] not in "{[":
+            continue
+        parsed.append(json.loads(row))
+    return parsed
 
 
 class _SqlTableClient:
