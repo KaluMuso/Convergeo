@@ -69,14 +69,28 @@ export async function fetchCommissionRates(): Promise<CommissionRate[]> {
   }
 }
 
+export function formatCommissionRateLabel(
+  ratePct: number,
+  locale: string,
+  t: (key: string, values?: Record<string, string | number>) => string,
+): string {
+  const formattedRate = new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  }).format(ratePct);
+
+  return t("commission.rate", { rate: formattedRate });
+}
+
 export function buildCommissionTableRows(
   rates: readonly CommissionRate[],
+  locale: string,
   getCategoryLabel: (categoryKey: string) => string,
-  formatRate: (ratePct: number) => string,
+  t: (key: string, values?: Record<string, string | number>) => string,
 ): CommissionTableRow[] {
   return rates.map((rate) => ({
     categoryKey: rate.categoryKey,
     label: getCategoryLabel(rate.categoryKey),
-    rateLabel: formatRate(rate.ratePct),
+    rateLabel: formatCommissionRateLabel(rate.ratePct, locale, t),
   }));
 }

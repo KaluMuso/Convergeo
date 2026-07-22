@@ -9,15 +9,17 @@ type PitchTranslator = {
 };
 
 type CommissionTableProps = {
+  locale: string;
   t: PitchTranslator;
   rates: readonly CommissionRate[];
 };
 
-export function CommissionTable({ t, rates }: CommissionTableProps) {
+export function CommissionTable({ locale, t, rates }: CommissionTableProps) {
   const rows = buildCommissionTableRows(
     rates,
+    locale,
     (categoryKey) => t(`commission.categories.${categoryKey}`),
-    (ratePct) => t("commission.rate", { rate: ratePct }),
+    t,
   );
 
   return (

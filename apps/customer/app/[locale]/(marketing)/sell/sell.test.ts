@@ -6,6 +6,7 @@ import {
   buildCommissionTableRows,
   COMMISSION_RATES,
   fetchCommissionRates,
+  formatCommissionRateLabel,
 } from "./_components/commission-rates";
 
 vi.mock("../../../../../lib/api-base-url", () => ({
@@ -42,8 +43,9 @@ describe("commission-rates", () => {
   it("buildCommissionTableRows maps every seeded category", () => {
     const rows = buildCommissionTableRows(
       COMMISSION_RATES,
+      "en",
       (key) => `label:${key}`,
-      (pct) => `${pct}%`,
+      (key, values) => `${values?.rate}%`,
     );
 
     expect(rows).toHaveLength(COMMISSION_RATES.length);
@@ -53,6 +55,18 @@ describe("commission-rates", () => {
       expect(row.label).toBe(`label:${row.categoryKey}`);
       expect(row.rateLabel).toBe(`${seed!.ratePct}%`);
     }
+  });
+
+  it("formatCommissionRateLabel uses locale-aware decimals for fractional rates", () => {
+    const label = formatCommissionRateLabel(6.5, "fr", (key, values) => `${values?.rate} %`);
+
+    expect(label).toBe("6,5 %");
+  });
+
+  it("formatCommissionRateLabel keeps whole-number rates compact", () => {
+    const label = formatCommissionRateLabel(10, "en", (key, values) => `${values?.rate}%`);
+
+    expect(label).toBe("10%");
   });
 
   it("fetchCommissionRates renders live endpoint values", async () => {
