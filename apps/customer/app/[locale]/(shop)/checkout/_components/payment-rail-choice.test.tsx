@@ -3,7 +3,8 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, useState } from "vitest";
+import { useState } from "react";
+import { afterEach, describe, expect, it } from "vitest";
 
 import type { MomoRail } from "./step-payment";
 import { PaymentRailChoice } from "./payment-rail-choice";
