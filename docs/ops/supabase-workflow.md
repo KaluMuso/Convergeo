@@ -1,6 +1,6 @@
 # Supabase workflow (Vergeo5)
 
-Local-dev and CI reference for the Supabase CLI pipeline introduced in M01-P08. The repo now ships **66 migrations** (`0001_extensions.sql` … `0066_user_wishlist_recently_viewed.sql`) — the full domain schema (identity/catalog/orders/money/search/trust) with RLS on every table is landed. The migration mechanics below apply to every new migration.
+Local-dev and CI reference for the Supabase CLI pipeline introduced in M01-P08. The repo ships a **long sequential migration chain from `0001_extensions.sql`** (60+ files and growing) — the full domain schema (identity/catalog/orders/money/search/trust) with RLS on every table is landed. For the exact tip, run `ls supabase/migrations | tail -1` (avoid quoting a fixed count here — it rots within days). The migration mechanics below apply to every new migration.
 
 ## Prerequisites
 
