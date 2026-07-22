@@ -1,8 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import vendorMessages from "../../../../../../packages/i18n/messages/en/vendor.json";
 
-import { buildCommissionTableRows, COMMISSION_RATES } from "./_components/commission-rates";
+import {
+  buildCommissionTableRows,
+  COMMISSION_RATES,
+  fetchCommissionRates,
+} from "./_components/commission-rates";
+
+vi.mock("../../../../../lib/api-base-url", () => ({
+  absoluteApiUrl: (path: string) =>
+    path.startsWith("http") ? path : `https://api.example.test${path}`,
+}));
 
 /** Mirrors `0008_config.sql` commission_rates seed (rate_bps / 100). */
 const SEED_RATES: Record<string, number> = {
@@ -16,6 +25,11 @@ const SEED_RATES: Record<string, number> = {
   default: 8,
   free_events: 0,
 };
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
 
 describe("commission-rates", () => {
   it("matches D4 / 0008_config.sql seed values", () => {
@@ -39,6 +53,61 @@ describe("commission-rates", () => {
       expect(row.label).toBe(`label:${row.categoryKey}`);
       expect(row.rateLabel).toBe(`${seed!.ratePct}%`);
     }
+  });
+
+  it("fetchCommissionRates renders live endpoint values", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "https://api.example.test");
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          rates: [
+            { category_key: "electronics", rate_pct: 6.5 },
+            { category_key: "home", rate_pct: 8 },
+            { category_key: "fashion_beauty", rate_pct: 10 },
+            { category_key: "services", rate_pct: 12 },
+            { category_key: "event_tickets", rate_pct: 5 },
+            { category_key: "supplies", rate_pct: 3 },
+            { category_key: "groceries", rate_pct: 5 },
+            { category_key: "default", rate_pct: 8 },
+            { category_key: "free_events", rate_pct: 0 },
+          ],
+          updated_at: "2026-07-22T12:00:00+00:00",
+        }),
+      }),
+    );
+
+    const rates = await fetchCommissionRates();
+    const electronics = rates.find((rate) => rate.categoryKey === "electronics");
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.example.test/public/config/commission-rates",
+      expect.objectContaining({ next: { revalidate: 300 } }),
+    );
+    expect(electronics?.ratePct).toBe(6.5);
+    expect(rates).toHaveLength(COMMISSION_RATES.length);
+  });
+
+  it("fetchCommissionRates falls back without throwing when the API is unreachable", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+
+    await expect(fetchCommissionRates()).resolves.toEqual([...COMMISSION_RATES]);
+  });
+
+  it("fetchCommissionRates falls back on non-OK responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        json: async () => ({ error: { code: "unavailable" } }),
+      }),
+    );
+
+    await expect(fetchCommissionRates()).resolves.toEqual([...COMMISSION_RATES]);
   });
 });
 

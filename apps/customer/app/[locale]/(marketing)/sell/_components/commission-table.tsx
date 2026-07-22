@@ -1,4 +1,8 @@
-import { buildCommissionTableRows, COMMISSION_RATES } from "./commission-rates";
+import {
+  buildCommissionTableRows,
+  COMMISSION_RATES,
+  type CommissionRate,
+} from "./commission-rates";
 
 type PitchTranslator = {
   (key: string, values?: Record<string, string | number>): string;
@@ -6,11 +10,12 @@ type PitchTranslator = {
 
 type CommissionTableProps = {
   t: PitchTranslator;
+  rates: readonly CommissionRate[];
 };
 
-export function CommissionTable({ t }: CommissionTableProps) {
+export function CommissionTable({ t, rates }: CommissionTableProps) {
   const rows = buildCommissionTableRows(
-    COMMISSION_RATES,
+    rates,
     (categoryKey) => t(`commission.categories.${categoryKey}`),
     (ratePct) => t("commission.rate", { rate: ratePct }),
   );
