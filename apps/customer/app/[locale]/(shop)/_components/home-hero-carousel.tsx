@@ -12,15 +12,23 @@ import { HOME_HERO_FALLBACK_SLIDES } from "./home-hero-slides";
 type HomeHeroCarouselProps = {
   locale: string;
   brandName: string;
+  /** Live catalogue image for slide 1 — honest merch only; never invent stock art. */
+  catalogVisualPublicId?: string | null;
 };
 
-export function HomeHeroCarousel({ locale, brandName }: HomeHeroCarouselProps) {
+export function HomeHeroCarousel({
+  locale,
+  brandName,
+  catalogVisualPublicId,
+}: HomeHeroCarouselProps) {
   const t = useTranslations("catalog");
 
   const slides = useMemo(() => {
     return HOME_HERO_FALLBACK_SLIDES.map((def, index) => {
       const isPrimary = def.primary === true;
       const priority = index === 0;
+      const publicId =
+        isPrimary && catalogVisualPublicId?.trim() ? catalogVisualPublicId.trim() : def.publicId;
 
       return {
         key: def.key,
@@ -29,7 +37,7 @@ export function HomeHeroCarousel({ locale, brandName }: HomeHeroCarouselProps) {
         subtitle: def.subtitleKey ? t(def.subtitleKey) : undefined,
         media: (
           <CloudinaryImage
-            publicId={def.publicId}
+            publicId={publicId}
             alt=""
             width={1440}
             ratio="21/9"
@@ -55,7 +63,7 @@ export function HomeHeroCarousel({ locale, brandName }: HomeHeroCarouselProps) {
         ) : undefined,
       };
     });
-  }, [brandName, locale, t]);
+  }, [brandName, catalogVisualPublicId, locale, t]);
 
   const labels = useMemo(
     () => ({

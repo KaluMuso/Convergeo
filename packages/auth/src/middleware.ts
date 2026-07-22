@@ -27,12 +27,10 @@ export function substituteCspNonce(policy: string, nonce: string): string {
   return policy.replaceAll(CSP_NONCE_PLACEHOLDER, nonce);
 }
 
-type EnvBag = {
-  CSP_REPORT_URI?: string;
-};
+type EnvBag = Record<string, string | undefined>;
 
 /** Same-origin sink by default; override with CSP_REPORT_URI for a central collector. */
-export function resolveCspReportUri(env: EnvBag = process.env): string {
+export function resolveCspReportUri(env: EnvBag = process.env as EnvBag): string {
   const configured = env.CSP_REPORT_URI?.trim();
   if (configured) {
     return configured;
