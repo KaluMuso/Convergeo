@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from typing import Any
@@ -12,6 +13,11 @@ EMBEDDING_DIMENSION = 384
 DEFAULT_EMBEDDING_MODEL = "thenlper/gte-small"
 DEFAULT_EMBEDDING_URL = "https://openrouter.ai/api/v1/embeddings"
 DEFAULT_EMBEDDING_TIMEOUT_SECONDS = 2.0
+
+
+def get_embedding_timeout_seconds() -> float:
+    """Bounded wait budget for query embedding fetches (env-overridable)."""
+    return _embedding_settings()[3]
 
 
 def _embedding_settings() -> tuple[str | None, str, str, float]:
@@ -81,14 +87,30 @@ async def fetch_query_embedding(query: str) -> list[float] | None:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(
-                url,
-                headers=headers,
-                json={"model": model, "input": trimmed},
+        async with httpx.AsyncClient(timeout=httpx.Timeout(timeout)) as client:
+            response = await asyncio.wait_for(
+                client.post(
+                    url,
+                    headers=headers,
+                    json={"model": model, "input": trimmed},
+                ),
+                timeout=timeout,
             )
             response.raise_for_status()
             embedding = _parse_embedding_payload(response.json())
+    except TimeoutError:
+        logger.warning(
+            "Query embedding request timed out; degrading to keyword search",
+            extra={"query_length": len(trimmed), "timeout_seconds": timeout},
+        )
+        return None
+    except httpx.HTTPError:
+        logger.warning(
+            "Query embedding transport failed; degrading to keyword search",
+            exc_info=True,
+            extra={"query_length": len(trimmed)},
+        )
+        return None
     except Exception:
         logger.warning(
             "Query embedding request failed; degrading to keyword search",

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections import Counter
 from collections.abc import Awaitable, Callable
@@ -8,7 +9,11 @@ from typing import Any, cast
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.analytics.search_log import log_search_query
 from app.services.listings.demo import drop_demo_listing_hits
-from app.services.search.embedding_client import fetch_query_embedding, format_vector_for_rpc
+from app.services.search.embedding_client import (
+    fetch_query_embedding,
+    format_vector_for_rpc,
+    get_embedding_timeout_seconds,
+)
 from app.services.search.query_builder import (
     DEFAULT_PAGE,
     DEFAULT_PAGE_SIZE,
@@ -111,6 +116,75 @@ def call_search_rrf(
         if hit is not None:
             hits.append(hit)
     return hits
+
+
+def _call_search_rrf_with_fallback(
+    client: Any,
+    *,
+    query: str,
+    embedding: list[float] | None,
+    filters: dict[str, Any],
+) -> tuple[list[SearchHit], bool]:
+    """Run ``search_rrf``, retrying FTS+trgm-only when the vector leg fails."""
+    try:
+        return call_search_rrf(
+            client,
+            query=query,
+            embedding=embedding,
+            filters=filters,
+        ), False
+    except Exception:
+        if embedding is None:
+            raise
+        logger.warning(
+            "search_rrf vector leg failed; retrying keyword-only",
+            exc_info=True,
+            extra={"query_length": len(query)},
+        )
+        return call_search_rrf(
+            client,
+            query=query,
+            embedding=None,
+            filters=filters,
+        ), True
+
+
+async def _resolve_query_embedding(
+    fetcher: EmbeddingFetcher,
+    query: str,
+) -> tuple[list[float] | None, str | None]:
+    """Fetch a query vector with a bounded wait; never raises."""
+    trimmed = query.strip()
+    if not trimmed:
+        return None, None
+
+    timeout = get_embedding_timeout_seconds()
+    try:
+        embedding = await asyncio.wait_for(fetcher(trimmed), timeout=timeout)
+    except TimeoutError:
+        return None, "embedding_timeout"
+    except Exception:
+        logger.warning(
+            "Query embedding fetcher raised; degrading to keyword search",
+            exc_info=True,
+            extra={"query_length": len(trimmed)},
+        )
+        return None, "embedding_error"
+
+    if embedding is None:
+        return None, "embedding_unavailable"
+    return embedding, None
+
+
+def _log_search_degradation(*, query: str, reason: str) -> None:
+    logger.info(
+        "search_degraded",
+        extra={
+            "query_length": len(query),
+            "degradation_reason": reason,
+            "degraded": True,
+        },
+    )
 
 
 def drop_wholesale_listing_hits(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
@@ -271,23 +345,22 @@ async def run_search(
     )
 
     fetcher = embedding_fetcher or fetch_query_embedding
-    try:
-        embedding = await fetcher(trimmed)
-    except Exception:
-        logger.warning(
-            "Query embedding fetcher raised; degrading to keyword search",
-            exc_info=True,
-            extra={"query_length": len(trimmed)},
-        )
-        embedding = None
-    degraded = embedding is None and bool(trimmed)
+    embedding, embed_reason = await _resolve_query_embedding(fetcher, trimmed)
+    degraded = embed_reason is not None
 
-    hits = call_search_rrf(
+    hits, rpc_degraded = _call_search_rrf_with_fallback(
         client,
         query=trimmed,
         embedding=embedding,
         filters=base_filters,
     )
+    if rpc_degraded:
+        degraded = True
+        embedding = None
+
+    if degraded and trimmed:
+        reason = "vector_rpc_fallback" if rpc_degraded else (embed_reason or "unknown")
+        _log_search_degradation(query=trimmed, reason=reason)
     if not include_wholesale:
         hits = drop_wholesale_listing_hits(client, hits)
     # D25 / VC-P06: demo seed inventory never appears in public discovery.
