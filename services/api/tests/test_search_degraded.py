@@ -249,12 +249,44 @@ def test_search_http_degrades_on_embedding_failure(
 
 
 def test_readyz_includes_search_subchecks(client: TestClient) -> None:
+    # Default probe is cheap: the vector RPC is NOT called, so search_rpc is unchecked.
     response = client.get("/readyz")
     assert response.status_code == 200
     body = response.json()
     assert body["status"] in {"ok", "degraded"}
-    assert body["search_rpc"] in {"ok", "degraded"}
+    assert body["search_rpc"] == "unchecked"
     assert body["search_embedding"] in {"ok", "degraded"}
+
+    # Opt-in probe surfaces the vector RPC state.
+    opted = client.get("/readyz", params={"checks": "search"}).json()
+    assert opted["search_rpc"] in {"ok", "degraded"}
+
+
+def test_readyz_status_ignores_search_health(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Overall readiness must reflect Supabase only — search degradation never flips it."""
+    import app.routers.health as health
+
+    async def _supabase_up() -> bool:
+        return True
+
+    async def _search_down() -> bool:
+        return False
+
+    monkeypatch.setattr(health, "_supabase_reachable", _supabase_up)
+    monkeypatch.setattr(health, "_search_vector_rpc_present", _search_down)
+
+    # Default: vector RPC not probed; overall stays ok because Supabase is reachable.
+    body = client.get("/readyz").json()
+    assert body["status"] == "ok"
+    assert body["search_rpc"] == "unchecked"
+
+    # Opt-in: vector RPC is down, but overall readiness MUST NOT flip to degraded.
+    opted = client.get("/readyz", params={"checks": "search"}).json()
+    assert opted["status"] == "ok"
+    assert opted["search_rpc"] == "degraded"
 
 
 def test_readyz_search_embedding_reflects_env(

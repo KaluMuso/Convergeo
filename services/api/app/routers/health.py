@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import Annotated
 
 import httpx
 from app.core.env_guards import extract_supabase_project_ref
 from app.settings import get_settings
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 logger = logging.getLogger(__name__)
 
@@ -92,14 +93,29 @@ async def _search_vector_rpc_present() -> bool:
 
 
 @router.get("/readyz")
-async def readyz() -> dict[str, str]:
+async def readyz(checks: Annotated[str | None, Query()] = None) -> dict[str, str]:
+    """Readiness probe.
+
+    Overall ``status`` reflects **only** the critical dependency (Supabase). Search
+    has a graceful FTS fallback (``run_search`` never returns empty when the vector
+    leg is down), so search health is **informational** and must NOT flip the
+    platform to unready — the ``/readyz`` ``ok`` keyword is the black-box contract
+    UptimeRobot and ``scripts/ops/verify_live.sh`` (G1) depend on.
+
+    The vector-RPC probe runs a real ``search_rrf`` call, so it is **opt-in** via
+    ``?checks=search`` to keep the 60s uptime probe cheap and side-effect-free;
+    otherwise ``search_rpc`` reports ``unchecked``.
+    """
     supabase_ok = await _supabase_reachable()
-    search_rpc_ok = await _search_vector_rpc_present()
     search_embedding_ok = _search_embedding_configured()
 
-    overall_ok = supabase_ok and search_rpc_ok
+    search_rpc_state = "unchecked"
+    if checks == "search":
+        search_rpc_state = "ok" if await _search_vector_rpc_present() else "degraded"
+
+    overall_ok = supabase_ok
     return {
         "status": "ok" if overall_ok else "degraded",
-        "search_rpc": "ok" if search_rpc_ok else "degraded",
+        "search_rpc": search_rpc_state,
         "search_embedding": "ok" if search_embedding_ok else "degraded",
     }
