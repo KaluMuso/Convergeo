@@ -99,7 +99,7 @@ Assert a `payouts` row moves `pending → processing → success` against the sa
 
 ## 7. Activate reconciliation (only after S1+S3 pass)
 
-Publish the money n8n workflow `Vergeo5 — payment reconciliation crons` (`C1MpTNjrfLACMG3f`, currently inactive). It POSTs `/internal/reconciliation/{poll-tick,daily-report}`, webhook drain, and payment sweeper. Then force one mismatch and confirm it **detects + alerts** without destructive auto-correct.
+Publish the money n8n workflow `Vergeo5 — payment reconciliation crons` (`C1MpTNjrfLACMG3f`, currently inactive). Its four nodes: webhook-drain (1m), reconciliation poll (30m) + daily-report (02:00) — authed by the **Reconciliation Token** credential (`wHBamWZu96ONsPts`) — and payment-sweeper (10m), authed by the separate **Payment Sweeper Token** credential (`2YIzCrGVKzsl14F6`). The two endpoints check **different** env tokens, and the node→credential split is **already wired** (2026-07-22). Before activating, confirm the API host has **both** `INTERNAL_RECONCILIATION_TOKEN` and `INTERNAL_PAYMENT_SWEEPER_TOKEN` set to match those two credential values (header name `X-Internal-Token`). Then force one mismatch and confirm it **detects + alerts** without destructive auto-correct.
 
 ## 8. Evidence to log (`docs/ops/drill-log.md`)
 
