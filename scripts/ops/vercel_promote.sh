@@ -59,20 +59,12 @@ if [[ -z "${VERCEL_TOKEN:-}" ]]; then
   exit 0
 fi
 
-if ! command -v vercel >/dev/null 2>&1; then
-  log "Installing vercel CLI (npx)..."
-  NPM_CONFIG_YES=true npx --yes vercel@latest --version >/dev/null
-  VERCEL_BIN=(npx --yes vercel@latest)
-else
-  VERCEL_BIN=(vercel)
-fi
-
-vercel_api() {
+vercel_curl() {
   local attempt=0
   local max=4
   local delay=4
   while [[ "$attempt" -lt "$max" ]]; do
-    if "${VERCEL_BIN[@]}" "$@" 2>/tmp/vercel-promote-err.txt; then
+    if curl -fsS --max-time 60 "$@" 2>/tmp/vercel-promote-err.txt; then
       return 0
     fi
     if grep -qi 'rate limit' /tmp/vercel-promote-err.txt 2>/dev/null; then
@@ -88,10 +80,23 @@ vercel_api() {
   return 1
 }
 
+fetch_deployments_json() {
+  local project_id="$1"
+  vercel_curl -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+    "https://api.vercel.com/v6/deployments?projectId=${project_id}&teamId=${VERCEL_TEAM_ID}&limit=20"
+}
+
+promote_deployment() {
+  local project_id="$1"
+  local deployment_id="$2"
+  vercel_curl -X POST -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+    "https://api.vercel.com/v10/projects/${project_id}/promote/${deployment_id}?teamId=${VERCEL_TEAM_ID}"
+}
+
 promote_project() {
   local name="$1"
   local project_id="${PROJECT_IDS[$name]}"
-  log "Project ${name} (${project_id}) — finding latest ready deployment for ${MASTER_GIT_SHA}"
+  log "Project ${name} (${project_id}) — finding latest READY deployment for ${MASTER_GIT_SHA}"
 
   if [[ "$DRY_RUN" -eq 1 ]]; then
     printf '%s\tSKIP\tdry-run\n' "$name"
@@ -99,7 +104,7 @@ promote_project() {
   fi
 
   local deployments_json
-  deployments_json="$(vercel_api list "${project_id}" --token "$VERCEL_TOKEN" --scope "$VERCEL_TEAM_ID" 2>/dev/null || true)"
+  deployments_json="$(fetch_deployments_json "$project_id" || true)"
 
   local dpl_id dpl_sha
   dpl_id="$(printf '%s' "$deployments_json" | python3 -c '
@@ -110,31 +115,51 @@ if not raw:
     print("")
     raise SystemExit
 try:
-    rows = json.loads(raw)
+    payload = json.loads(raw)
 except json.JSONDecodeError:
-  # vercel CLI table output fallback — cannot parse
     print("")
     raise SystemExit
-for row in rows if isinstance(rows, list) else rows.get("deployments", []):
+rows = payload.get("deployments", payload if isinstance(payload, list) else [])
+for row in rows:
     meta = row.get("meta") or {}
     commit = meta.get("githubCommitSha") or meta.get("gitCommitSha") or ""
     state = (row.get("state") or row.get("readyState") or "").upper()
-    target = row.get("target") or ""
     uid = row.get("uid") or row.get("id") or ""
-    if state in ("READY", "BUILDING") and (not sha or commit.startswith(sha[:7]) or sha.startswith(commit[:7])):
+    if state != "READY":
+        continue
+    if not sha or commit.startswith(sha[:7]) or sha.startswith(commit[:7]):
         print(uid)
         break
 ' MASTER_GIT_SHA="$MASTER_GIT_SHA" 2>/dev/null || echo '')"
 
+  dpl_sha="$(printf '%s' "$deployments_json" | python3 -c '
+import json, sys, os
+sha = os.environ.get("MASTER_GIT_SHA", "")
+raw = sys.stdin.read().strip()
+if not raw:
+    raise SystemExit
+payload = json.loads(raw)
+rows = payload.get("deployments", payload if isinstance(payload, list) else [])
+for row in rows:
+    meta = row.get("meta") or {}
+    commit = meta.get("githubCommitSha") or ""
+    state = (row.get("state") or row.get("readyState") or "").upper()
+    uid = row.get("uid") or row.get("id") or ""
+    if state != "READY":
+        continue
+    if not sha or commit.startswith(sha[:7]) or sha.startswith(commit[:7]):
+        print(commit)
+        break
+' MASTER_GIT_SHA="$MASTER_GIT_SHA" 2>/dev/null || echo '')"
+
   if [[ -z "$dpl_id" ]]; then
-    warn "${name}: no matching deployment — trigger a preview build from master first"
+    warn "${name}: no READY deployment matching ${MASTER_GIT_SHA} — wait for Vercel git build or trigger master deploy"
     printf '%s\tFAIL\tno_deployment\n' "$name"
     return 1
   fi
 
-  if vercel_api promote "$dpl_id" --token "$VERCEL_TOKEN" --scope "$VERCEL_TEAM_ID"; then
-    dpl_sha="$(printf '%s' "$deployments_json" | python3 -c 'import json,sys; print("")' 2>/dev/null || echo '')"
-    printf '%s\tPASS\tdpl=%s\n' "$name" "$dpl_id"
+  if promote_deployment "$project_id" "$dpl_id" >/dev/null; then
+    printf '%s\tPASS\tdpl=%s sha=%s\n' "$name" "$dpl_id" "${dpl_sha:-unknown}"
     return 0
   fi
   printf '%s\tFAIL\tpromote_error\n' "$name"
