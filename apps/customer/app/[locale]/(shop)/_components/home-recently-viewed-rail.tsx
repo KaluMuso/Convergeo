@@ -1,5 +1,6 @@
 "use client";
 
+import { Rail } from "@vergeo/ui/src/rail";
 import Link from "next/link";
 
 import { RECENTLY_VIEWED_MAX, useRecentlyViewed } from "./recently-viewed/use-recently-viewed";
@@ -50,10 +51,7 @@ export function HomeRecentlyViewedRail({ locale, labels }: HomeRecentlyViewedRai
           {labels.viewAll}
         </Link>
       </div>
-      <ul
-        className="flex list-none gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        data-testid="home-recently-viewed-list"
-      >
+      <Rail as="ul" className="flex list-none gap-3 pb-1" data-testid="home-recently-viewed-list">
         {visible.map((entry) => (
           <li
             key={`${entry.slug}-${entry.viewedAt}`}
@@ -71,7 +69,7 @@ export function HomeRecentlyViewedRail({ locale, labels }: HomeRecentlyViewedRai
             </Link>
           </li>
         ))}
-      </ul>
+      </Rail>
     </section>
   );
 }
