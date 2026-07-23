@@ -162,6 +162,6 @@ describe("admin middleware — CF Access enforcement", () => {
 describe("admin middleware matrix", () => {
   it("documents locale matcher coverage for all supported locales", async () => {
     const { config } = await import("./middleware");
-    expect(config.matcher).toEqual(["/", "/(en|bem|nya|fr|zh)/:path*"]);
+    expect(config.matcher).toEqual(["/api/csp-report", "/", "/(en|bem|nya|fr|zh)/:path*"]);
   });
 });

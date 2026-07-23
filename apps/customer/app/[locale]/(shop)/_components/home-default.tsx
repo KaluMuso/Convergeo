@@ -10,6 +10,7 @@ import { HomeHeroCarousel } from "./home-hero-carousel";
 import { ListingGrid, type CatalogListing } from "./plp/listing-grid";
 
 import type { CategoryRow } from "./merch-data";
+import type { LogisticsPillLabels } from "./plp/logistics-pills";
 
 type CatalogTranslator = {
   (key: string, values?: Record<string, string | number>): string;
@@ -41,6 +42,9 @@ type CatalogApiItem = {
   rating: number;
   review_count: number;
   distance_m: number | null;
+  below_median?: boolean;
+  delivery_available?: boolean;
+  pickup_available?: boolean;
 };
 
 type CatalogApiResponse = {
@@ -95,6 +99,9 @@ function mapListing(item: CatalogApiItem): CatalogListing {
     rating: item.rating,
     reviewCount: item.review_count,
     distanceM: item.distance_m,
+    belowMedian: item.below_median ?? false,
+    deliveryAvailable: item.delivery_available ?? false,
+    pickupAvailable: item.pickup_available ?? false,
   };
 }
 
@@ -263,10 +270,14 @@ export function pickHeroVisualPublicId(listings: CatalogListing[]): string | nul
  * Merch-first default hero (audit §4.1): rotating carousel with curated imagery,
  * brand + headline + CTAs on slide 1. Escrow ladder lives in HomeTrustStrip.
  */
-export function HomeHeroBand({ locale, brandName }: HomeHeroBandProps) {
+export function HomeHeroBand({ locale, brandName, visualPublicId }: HomeHeroBandProps) {
   return (
     <div data-testid="home-hero-band">
-      <HomeHeroCarousel locale={locale} brandName={brandName} />
+      <HomeHeroCarousel
+        locale={locale}
+        brandName={brandName}
+        catalogVisualPublicId={visualPublicId}
+      />
     </div>
   );
 }
@@ -280,7 +291,7 @@ type RailLabels = {
   wishlist: string;
   wishlistRemove?: string;
   outOfStock: string;
-  distance: string;
+  logistics?: LogisticsPillLabels;
   sampleListing?: string;
   mediaEmpty?: string;
 };

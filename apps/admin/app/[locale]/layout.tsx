@@ -2,15 +2,13 @@ import { LOCALES, loadMessages, type Locale } from "@vergeo/i18n";
 import { fontVariables } from "@vergeo/ui/fonts";
 import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import { ThemeScript } from "@vergeo/ui/src/theme-script";
-import { ThemeToggle } from "@vergeo/ui/src/theme-toggle";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
+import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { SentryInit } from "../sentry-init";
 
-import { SignOutButton } from "./_components/sign-out-button";
+import { AdminShell } from "./_components/admin-shell";
 
 import type { Metadata, Viewport } from "next";
 
@@ -34,19 +32,6 @@ type LayoutProps = {
   params: Promise<{ locale: string }>;
 };
 
-const NAV_ITEMS = [
-  { href: "", key: "home" },
-  { href: "kyc", key: "kyc" },
-  { href: "business", key: "business" },
-  { href: "moderation", key: "moderation" },
-  { href: "disputes", key: "disputes" },
-  { href: "orders", key: "orders" },
-  { href: "config", key: "config" },
-  { href: "merch", key: "merch" },
-  { href: "translations", key: "translations" },
-  { href: "support", key: "support" },
-] as const;
-
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
@@ -63,22 +48,11 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     getMessages(),
     loadMessages(locale as Locale, ["admin"]),
   ]);
-  const t = createTranslator({
-    locale,
-    namespace: "admin",
-    messages: { admin: adminBundle.admin } as AbstractIntlMessages,
-  });
 
   const messages = {
     ...commonMessages,
     admin: adminBundle.admin,
   };
-
-  const tCommon = createTranslator({
-    locale,
-    namespace: "common",
-    messages: messages as AbstractIntlMessages,
-  });
 
   return (
     <html lang={locale} className={fontVariables()}>
@@ -91,57 +65,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
           <NextIntlClientProvider messages={messages}>
             {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
             <SentryInit />
-            <div className="min-h-dvh bg-bg text-text">
-              <header className="border-b border-border bg-panel text-panel-text">
-                <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs uppercase tracking-wide text-panel-muted">
-                      {t("shell.eyebrow")}
-                    </p>
-                    <h1 className="font-serif text-xl text-panel-text">{t("title")}</h1>
-                    <p className="text-xs text-panel-muted">{t("shell.environment")}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <ThemeToggle
-                      label={tCommon("theme.label")}
-                      lightLabel={tCommon("theme.light")}
-                      darkLabel={tCommon("theme.dark")}
-                      systemLabel={tCommon("theme.system")}
-                      className="border-panel-muted/40 bg-transparent text-panel-text hover:border-panel-text hover:text-panel-text"
-                    />
-                    <SignOutButton
-                      locale={locale}
-                      label={t("shell.signOut")}
-                      className="inline-flex min-h-11 items-center justify-center rounded-md border border-panel-muted/40 px-4 text-sm font-medium text-panel-text disabled:opacity-60"
-                    />
-                  </div>
-                </div>
-              </header>
-
-              <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 lg:flex-row">
-                <nav
-                  aria-label={t("title")}
-                  className="flex shrink-0 flex-row gap-2 overflow-x-auto lg:w-56 lg:flex-col lg:overflow-visible"
-                >
-                  {NAV_ITEMS.map((item) => {
-                    const href = item.href ? `/${locale}/${item.href}` : `/${locale}`;
-                    return (
-                      <Link
-                        key={item.key}
-                        className="inline-flex min-h-11 shrink-0 items-center rounded-md border border-border bg-surface px-3 text-sm font-medium text-text hover:border-primary hover:text-primary"
-                        href={href}
-                      >
-                        {t(`nav.${item.key}`)}
-                      </Link>
-                    );
-                  })}
-                </nav>
-
-                <main className="min-w-0 flex-1 rounded-lg border border-border bg-surface p-4 shadow-sm">
-                  {children}
-                </main>
-              </div>
-            </div>
+            {/* Authenticated chrome; renders bare children on the login route. */}
+            <AdminShell locale={locale}>{children}</AdminShell>
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

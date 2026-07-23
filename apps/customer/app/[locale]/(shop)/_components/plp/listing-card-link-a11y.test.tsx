@@ -31,7 +31,12 @@ const labels = {
   quickAdd: "Quick add",
   wishlist: "Save",
   outOfStock: "Out of stock",
-  distance: "{distance} away",
+  logistics: {
+    nearest: "{distance} away",
+    belowMedian: "Below median",
+    delivery: "Lusaka delivery",
+    pickup: "Pickup available",
+  },
 };
 
 describe("ListingCard link a11y", () => {
@@ -52,6 +57,9 @@ describe("ListingCard link a11y", () => {
           rating: 0,
           reviewCount: 0,
           distanceM: null,
+          belowMedian: false,
+          deliveryAvailable: false,
+          pickupAvailable: false,
         }}
       />,
     );

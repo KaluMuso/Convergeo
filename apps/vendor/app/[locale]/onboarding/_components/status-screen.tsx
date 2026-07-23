@@ -92,7 +92,7 @@ export function StatusScreen({
         : labels.pending.cta;
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[360px] flex-col gap-4 p-4">
+    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col gap-4 p-4">
       <header>
         <h1 className="font-display text-h3 text-display-ink">{labels.heading}</h1>
       </header>

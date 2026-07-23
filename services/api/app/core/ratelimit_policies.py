@@ -161,6 +161,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/payouts/execute": INTERNAL_CRON,
     "POST /internal/payouts/retry": INTERNAL_CRON,
     "POST /internal/payouts/tick": INTERNAL_CRON,
+    "POST /internal/privacy/export-purge-tick": INTERNAL_CRON,
     "POST /internal/reconciliation/daily-report": INTERNAL_CRON,
     "POST /internal/reconciliation/poll-tick": INTERNAL_CRON,
     "POST /internal/reconciliation/webhook-drain-tick": INTERNAL_CRON,

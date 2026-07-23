@@ -31,7 +31,7 @@ export default async function NewEventPage({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-[360px] flex-col p-4">
+    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-4">
       <EventForm locale={locale} mode="create" />
     </main>
   );

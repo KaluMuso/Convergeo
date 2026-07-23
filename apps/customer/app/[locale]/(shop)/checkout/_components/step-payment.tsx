@@ -16,6 +16,8 @@ import {
 } from "../../../(auth)/_components/auth-utils";
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 
+import { PaymentRailChoice } from "./payment-rail-choice";
+
 export type PaymentMethod = "momo" | "card" | "cod";
 export type MomoRail = "mtn" | "airtel";
 

@@ -60,7 +60,13 @@
       "mediaEmpty": "Pas d’image produit",
       "quickAddError": "Impossible d’ajouter au panier. Vérifiez votre connexion et réessayez.",
       "conditionNew": "Neuf",
-      "conditionRefurbished": "Reconditionné"
+      "conditionRefurbished": "Reconditionné",
+      "pill": {
+        "nearest": "À {distance}",
+        "belowMedian": "Sous la médiane",
+        "delivery": "Livraison Lusaka",
+        "pickup": "Retrait disponible"
+      }
     },
     "loadMore": "Voir plus",
     "loading": "Chargement…",

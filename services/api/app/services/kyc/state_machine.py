@@ -677,6 +677,12 @@ def transition_reject(
         raise AppError(code="not_found", message="KYC record not found", http_status=404)
 
     current = derive_application_status(vendor, kyc_record)
+    if current == KycApplicationStatus.REJECTED:
+        raise AppError(
+            code="kyc_transition_conflict",
+            message="KYC record already rejected",
+            http_status=409,
+        )
     _guard_transition(
         current,
         frozenset({KycApplicationStatus.SUBMITTED, KycApplicationStatus.UNDER_REVIEW}),

@@ -677,118 +677,14 @@ def post_manual_escrow_transaction(
             postings=postings,
         )
 
-    # TODO(M08-P05): remove stub once ledger engine is always available in all environments.
-    return _stub_post_manual_escrow(
-        order_id=order_id,
-        operation=operation,
-        amount_ngwee=amount_ngwee,
-        reason=reason,
-        confirmation_phrase=confirmation_phrase,
-        actor_id=actor_id,
-        service_client=service_client,
-        idempotency_key=idempotency_key,
-        template=template,
-    )
-
-
-def _stub_post_manual_escrow(
-    *,
-    order_id: str,
-    operation: EscrowOperation,
-    amount_ngwee: int,
-    reason: str,
-    confirmation_phrase: str,
-    actor_id: str,
-    service_client: ServiceRoleClient,
-    idempotency_key: str,
-    template: str,
-) -> ManualLedgerResult:
-    _ = actor_id
-    postings = _build_manual_escrow_postings(operation, amount_ngwee)
-    balance = sum(posting.amount_ngwee for posting in postings)
-    if balance != 0:
-        raise AppError(
-            code="ledger_imbalance",
-            message="Manual escrow postings must balance to zero",
-            http_status=500,
-            details={"balance_sum_ngwee": balance},
-        )
-
-    kind = (
-        f"{template}|manual|key={idempotency_key}|"
-        f"reason={reason.strip()[:80]}|confirm={confirmation_phrase.strip()}"
-    )
-    existing = (
-        _table(service_client, "ledger_transactions")
-        .select("id")
-        .eq("kind", kind)
-        .eq("order_id", order_id)
-        .maybe_single()
-        .execute()
-    )
-    if existing.data:
-        return ManualLedgerResult(
-            transaction_id=str(existing.data["id"]),
-            template=template,
-            manual=True,
-            postings=postings,
-        )
-
-    txn_response = (
-        _table(service_client, "ledger_transactions")
-        .insert(
-            {
-                "kind": kind,
-                "order_id": order_id,
-            }
-        )
-        .execute()
-    )
-    txn_rows = txn_response.data or []
-    if not txn_rows:
-        raise AppError(
-            code="ledger_write_failed",
-            message="Failed to create manual escrow ledger transaction",
-            http_status=500,
-        )
-    txn_id = str(txn_rows[0]["id"])
-
-    escrow_account = (
-        _table(service_client, "ledger_accounts")
-        .select("id")
-        .eq("kind", "escrow")
-        .is_("vendor_id", "null")
-        .maybe_single()
-        .execute()
-    )
-    cash_account = (
-        _table(service_client, "ledger_accounts")
-        .select("id")
-        .eq("kind", "platform_cash")
-        .is_("vendor_id", "null")
-        .maybe_single()
-        .execute()
-    )
-    escrow_id = escrow_account.data["id"] if escrow_account.data else None
-    cash_id = cash_account.data["id"] if cash_account.data else None
-
-    for posting in postings:
-        account_id = escrow_id if posting.account_kind == "escrow" else cash_id
-        if account_id is None:
-            continue
-        _table(service_client, "ledger_postings").insert(
-            {
-                "transaction_id": txn_id,
-                "account_id": account_id,
-                "amount_ngwee": posting.amount_ngwee,
-            }
-        ).execute()
-
-    return ManualLedgerResult(
-        transaction_id=txn_id,
-        template=template,
-        manual=True,
-        postings=postings,
+    # The ledger engine ships in the same package as this router, so at request
+    # time the lazy import always resolves; a None here means a genuine
+    # misconfiguration. Fail loudly rather than post a manual escrow through a
+    # non-audited path (M08-P05).
+    raise AppError(
+        code="ledger_engine_unavailable",
+        message="Ledger engine is unavailable; manual escrow cannot be posted",
+        http_status=500,
     )
 
 

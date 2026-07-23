@@ -50,6 +50,7 @@ const resultsTabsLabels = {
   degraded: "Keyword only",
   priceFrom: "From {price}",
   category: "In {category}",
+  distanceAway: "{km} km away",
   marketplaceListing: "Marketplace listing",
   wishlist: "Save to wishlist",
   wishlistRemove: "Remove from wishlist",

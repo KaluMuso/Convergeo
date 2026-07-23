@@ -4,6 +4,8 @@
  * `GET /public/config/commission-rates`; this constant is used only when that
  * request fails so the Sell page never crashes on a transient API outage.
  */
+import { formatNumber } from "@vergeo/i18n";
+
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 
 export type CommissionRate = {
@@ -74,10 +76,10 @@ export function formatCommissionRateLabel(
   locale: string,
   t: (key: string, values?: Record<string, string | number>) => string,
 ): string {
-  const formattedRate = new Intl.NumberFormat(locale, {
+  const formattedRate = formatNumber(ratePct, locale, {
     maximumFractionDigits: 2,
     minimumFractionDigits: 0,
-  }).format(ratePct);
+  });
 
   return t("commission.rate", { rate: formattedRate });
 }

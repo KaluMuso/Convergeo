@@ -181,7 +181,25 @@ def db() -> Generator[PgConn, None, None]:
     yield conn
 
 
+def _ensure_matrix_seed(db: PgConn) -> None:
+    """Guard against a sibling Postgres-backed module resetting the SHARED schema
+    between our tests.
+
+    The RLS-matrix CI job runs several modules against one database; both this
+    module's ``db`` fixture and ``rls/conftest`` conditionally
+    ``DROP SCHEMA public CASCADE`` + re-apply migrations + reseed. If a sibling
+    resets after our module set up, the ``VENDOR_OWNER_ID`` profile our vendor
+    FKs is gone, and ``_load_vendor`` later raises "Vendor not found". Re-running
+    the idempotent seed restores it (no-op when already present).
+    """
+    check = db.run(f"SELECT 1 FROM public.profiles WHERE id = '{VENDOR_OWNER_ID}';")
+    if check.ok and check.rows:
+        return
+    seed_matrix_fixtures(db)
+
+
 def _seed_pending_kyc_vendor(db: PgConn, *, vendor_id: str, kyc_id: str) -> None:
+    _ensure_matrix_seed(db)
     slug = f"kyc-cas-{vendor_id[:8]}"
     vendor_result = db.run(
         f"""
@@ -200,6 +218,14 @@ def _seed_pending_kyc_vendor(db: PgConn, *, vendor_id: str, kyc_id: str) -> None
         """
     )
     assert kyc_result.ok, kyc_result.error
+    # Read-back: fail loudly HERE if the row did not persist (e.g. a cross-module
+    # schema reset raced us), instead of as a misleading "Vendor not found" deep
+    # inside the transition under test.
+    readback = db.run(f"SELECT id FROM public.vendors WHERE id = '{vendor_id}';")
+    assert readback.ok and readback.rows, (
+        f"seeded vendor {vendor_id} not readable immediately after insert — "
+        "shared-schema reset race (see _ensure_matrix_seed)"
+    )
 
 
 def _vendor_status(db: PgConn, vendor_id: str) -> str:

@@ -125,13 +125,60 @@ Ready for founder action **F5** (Meta Business / WhatsApp Manager). Create each 
 
 > **Live send — must be submitted.** The API sends this on `channel="whatsapp"` when an RFQ is broadcast to matching providers (`services/api/app/services/rfq/broadcast.py`). If it is **not** approved by Meta, every RFQ broadcast fails `132001` and silently downgrades to SMS.
 
-| Locale     | Body                                                                                                  |
-| ---------- | ----------------------------------------------------------------------------------------------------- |
+| Locale     | Body                                                                                                   |
+| ---------- | ------------------------------------------------------------------------------------------------------ |
 | **en**     | New Vergeo5 quote request in {{1}} ({{2}}): {{3}} Open the vendor app to quote. Reply STOP to opt out. |
-| **bem_ZM** | _(add translation — F5 language variant; keep vernacular human-reviewed per D27)_                     |
-| **nya_ZM** | _(add translation — F5 language variant; keep vernacular human-reviewed per D27)_                     |
+| **bem_ZM** | _(add translation — F5 language variant; keep vernacular human-reviewed per D27)_                      |
+| **nya_ZM** | _(add translation — F5 language variant; keep vernacular human-reviewed per D27)_                      |
 
 **Sample values:** `Plumbing` · `Lusaka — Kabulonga` · `Fix a burst geyser pipe, urgent`
+
+---
+
+## 9. `event_cancelled` (Utility — ticket holders)
+
+**Variables:** `{{1}}` event title · `{{2}}` event date/time · `{{3}}` refund detail line
+
+> **Live send — must be submitted.** The API enqueues this when an organiser cancels a paid
+> event (`services/api/app/services/events/cancellation.py`). Without Meta approval, sends fail
+> `132001` and downgrade to SMS.
+
+| Locale     | Body                                                                              |
+| ---------- | --------------------------------------------------------------------------------- |
+| **en**     | Vergeo5 update: {{1}} on {{2}} was cancelled. {{3}} Reply STOP to opt out.        |
+| **bem_ZM** | _(add translation — F5 language variant; keep vernacular human-reviewed per D27)_ |
+| **nya_ZM** | _(add translation — F5 language variant; keep vernacular human-reviewed per D27)_ |
+
+**Sample values:** `Jazz Night` · `15 Aug 2026, 18:00 UTC` · `Your payment refund is being processed by Vergeo5.`
+
+---
+
+## 10. `event_schedule_changed` (Utility — ticket holders)
+
+**Variables:** `{{1}}` event title · `{{2}}` new date/time · `{{3}}` venue / location
+
+| Locale     | Body                                                                                                  |
+| ---------- | ----------------------------------------------------------------------------------------------------- |
+| **en**     | Vergeo5 update: {{1}} is now on {{2}} at {{3}}. Check the app for your ticket. Reply STOP to opt out. |
+| **bem_ZM** | _(add translation — F5 language variant)_                                                             |
+| **nya_ZM** | _(add translation — F5 language variant)_                                                             |
+
+**Sample values:** `Jazz Night` · `20 Aug 2026, 18:00 UTC` · `Lusaka Showgrounds`
+
+---
+
+## 11. `ops_uptime_alert` (Utility — founder paging)
+
+**Variables:** `{{1}}` monitor name · `{{2}}` alert details · `{{3}}` alert timestamp (UTC)
+
+> Used by n8n `uptime-alert.json` — calls WhatsApp Cloud API **directly** (not the notification
+> outbox) so API outages still page the founder.
+
+| Locale | Body                                                                                       |
+| ------ | ------------------------------------------------------------------------------------------ |
+| **en** | Vergeo5 ops alert: {{1}} — {{2}} at {{3}}. Check UptimeRobot / n8n. Reply STOP to opt out. |
+
+**Sample values:** `API /health` · `Monitor is DOWN` · `2026-07-21T14:30:00Z`
 
 ---
 

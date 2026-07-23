@@ -60,7 +60,13 @@
       "mediaEmpty": "暂无商品图片",
       "quickAddError": "无法加入购物车。请检查网络后重试。",
       "conditionNew": "全新",
-      "conditionRefurbished": "翻新"
+      "conditionRefurbished": "翻新",
+      "pill": {
+        "nearest": "相距 {distance}",
+        "belowMedian": "低于中位价",
+        "delivery": "卢萨卡配送",
+        "pickup": "可自提"
+      }
     },
     "loadMore": "加载更多",
     "loading": "加载中…",

@@ -15,7 +15,7 @@ This document describes what happens when a customer exercises Zambia Data Prote
 | Reviews (rating retained)                    | **Body/photos cleared**                           | Life of anonymized order record                                     | Verified-purchase integrity without personal commentary    |
 | Disputes / returns evidence                  | **Evidence paths cleared**                        | Case metadata while order retained                                  | Remove uploaded PII while preserving case outcome          |
 | Auth login (`auth.users`)                    | **Removed or permanently banned**                 | —                                                                   | Re-login must be impossible                                |
-| Export JSON bundles (Storage)                | **Auto-expire via short-lived signed URL**        | **15 minutes** download window; ⚠ object auto-purge **not yet configured** (no Storage lifecycle rule) — follow-up | Transient DPA portability artefact                         |
+| Export JSON bundles (Storage)                | **Auto-expire via short-lived signed URL**        | **15 minutes** download window; objects **auto-purged daily** by `POST /internal/privacy/export-purge-tick` (bundles older than `DATA_EXPORT_TTL_HOURS`, default 24h) | Transient DPA portability artefact                         |
 
 ## Deleted vs anonymized-and-retained
 

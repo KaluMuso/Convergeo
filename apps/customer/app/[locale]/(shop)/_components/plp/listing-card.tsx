@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 
 import { isDemoListingPublicId, shouldShowSampleListingBadge } from "../demo-listing";
 
+import { ListingLogisticsPills, type LogisticsPillLabels } from "./logistics-pills";
 import { useLocalWishlist } from "./use-local-wishlist";
 
 import type { CatalogListing } from "./listing-grid";
@@ -34,7 +35,6 @@ export type ListingCardLabels = {
   wishlist: string;
   wishlistRemove?: string;
   outOfStock: string;
-  distance: string;
   /** Discount chip template, e.g. "−{percent}%". Renders only when a compare-at price is present. */
   discount?: string;
   sampleListing?: string;
@@ -42,6 +42,7 @@ export type ListingCardLabels = {
   /** Honest condition copy — only shown for known API values. */
   conditionNew?: string;
   conditionRefurbished?: string;
+  logistics?: LogisticsPillLabels;
 };
 
 /** Map listing.condition to a label; unknown values render nothing (no invention). */
@@ -68,16 +69,6 @@ type ListingCardProps = {
   density?: "default" | "compact";
 };
 
-function formatDistance(meters: number | null): string | null {
-  if (meters === null) {
-    return null;
-  }
-  if (meters < 1000) {
-    return `${Math.round(meters)} m`;
-  }
-  return `${(meters / 1000).toFixed(1)} km`;
-}
-
 export function ListingCard({
   locale,
   listing,
@@ -91,9 +82,6 @@ export function ListingCard({
   const [quickAdding, setQuickAdding] = useState(false);
   const [quickAddAnnouncement, setQuickAddAnnouncement] = useState("");
   const wishlistMountedRef = useRef(false);
-  const distance = formatDistance(listing.distanceM);
-  const distanceLabel =
-    distance !== null ? labels.distance.replace("{distance}", distance) : undefined;
   const isDemo = isDemoListingPublicId(listing.imagePublicId);
   const sampleLabel = labels.sampleListing;
 
@@ -101,8 +89,6 @@ export function ListingCard({
     <Badge variant="sold_out" label={labels.outOfStock} />
   ) : isDemo && sampleLabel && showSampleBadge ? (
     <Badge variant="sample" label={sampleLabel} />
-  ) : distanceLabel ? (
-    <Badge variant="public" label={distanceLabel} />
   ) : undefined;
 
   const wishlistLabel =
@@ -168,8 +154,15 @@ export function ListingCard({
         unavailable={!listing.inStock}
         mediaEmptyLabel={labels.mediaEmpty}
         meta={
-          conditionLabel ? (
-            <span data-testid="listing-card-condition">{conditionLabel}</span>
+          conditionLabel || labels.logistics ? (
+            <div className="flex flex-col gap-1.5">
+              {labels.logistics ? (
+                <ListingLogisticsPills listing={listing} labels={labels.logistics} />
+              ) : null}
+              {conditionLabel ? (
+                <span data-testid="listing-card-condition">{conditionLabel}</span>
+              ) : null}
+            </div>
           ) : undefined
         }
         isWishlisted={isWishlisted}

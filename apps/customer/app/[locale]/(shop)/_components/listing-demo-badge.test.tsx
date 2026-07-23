@@ -23,7 +23,12 @@ const labels = {
   quickAdd: "Quick add",
   wishlist: "Save",
   outOfStock: "Out of stock",
-  distance: "{distance} away",
+  logistics: {
+    nearest: "{distance} away",
+    belowMedian: "Below median",
+    delivery: "Lusaka delivery",
+    pickup: "Pickup available",
+  },
   sampleListing: "Sample listing",
 };
 
@@ -46,6 +51,9 @@ describe("ListingGrid demo disclosure (CUST-HOME-01)", () => {
             rating: 0,
             reviewCount: 0,
             distanceM: null,
+            belowMedian: false,
+            deliveryAvailable: false,
+            pickupAvailable: false,
           },
           {
             id: "real-1",
@@ -59,6 +67,9 @@ describe("ListingGrid demo disclosure (CUST-HOME-01)", () => {
             rating: 0,
             reviewCount: 0,
             distanceM: null,
+            belowMedian: false,
+            deliveryAvailable: false,
+            pickupAvailable: false,
           },
         ]}
       />,
@@ -87,6 +98,9 @@ describe("ListingGrid demo disclosure (CUST-HOME-01)", () => {
             rating: 0,
             reviewCount: 0,
             distanceM: null,
+            belowMedian: false,
+            deliveryAvailable: false,
+            pickupAvailable: false,
           },
         ]}
       />,

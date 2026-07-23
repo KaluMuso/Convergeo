@@ -258,6 +258,9 @@ SQL
 | 4 | Vercel outage                | Edge/build outage (customer app)     | ≤ 15 min | 0      | Cloudflare maintenance failover → redeploy last-green |
 | 5 | Lenco outage                 | MoMo/card/webhooks failing           | provider | 0      | Freeze escrow/payouts → **COD + pickup continue** → replay on recovery |
 
-**Drill cadence:** the restore drill (`scripts/ops/restore-staging.sh`) is run **manually**
-(founder/staging-gated — there is no CI/n8n scheduler wired for it yet); results are logged in
-`docs/ops/drill-log.md`. The live ≤30-minute staging restore is the target to demonstrate.
+**Drill cadence:** the **self-contained** restore drill (`infra/scripts/restore-drill.sh` —
+seed → dump → wipe → restore → assert on a throwaway Postgres) now runs **nightly in CI**
+(`.github/workflows/restore-drill.yml`, non-blocking) + on manual dispatch, so the dump/restore
+tooling is continuously exercised. The **live staging** restore (`scripts/ops/restore-staging.sh`,
+against real staging) remains **manual / founder-gated**; results logged in `docs/ops/drill-log.md`.
+The live ≤30-minute staging restore is the target to demonstrate.

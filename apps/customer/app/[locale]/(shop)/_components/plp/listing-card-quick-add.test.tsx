@@ -38,7 +38,12 @@ const labels = {
   quickAddError: "Could not add",
   wishlist: "Save",
   outOfStock: "Out of stock",
-  distance: "{distance} away",
+  logistics: {
+    nearest: "{distance} away",
+    belowMedian: "Below median",
+    delivery: "Lusaka delivery",
+    pickup: "Pickup available",
+  },
 };
 
 describe("ListingCard quick-add", () => {
@@ -60,6 +65,9 @@ describe("ListingCard quick-add", () => {
           rating: 0,
           reviewCount: 0,
           distanceM: null,
+          belowMedian: false,
+          deliveryAvailable: false,
+          pickupAvailable: false,
         }}
       />,
     );
@@ -88,6 +96,9 @@ describe("ListingCard quick-add", () => {
           rating: 0,
           reviewCount: 0,
           distanceM: null,
+          belowMedian: false,
+          deliveryAvailable: false,
+          pickupAvailable: false,
         }}
       />,
     );

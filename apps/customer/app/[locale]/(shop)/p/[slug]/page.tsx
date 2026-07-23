@@ -30,6 +30,7 @@ import {
   type ProductDetail,
 } from "../../_components/pdp/fetch-product";
 import { NoSellersPanel } from "../../_components/pdp/no-sellers-panel";
+import { PdpDetailsTabs } from "../../_components/pdp/pdp-details-tabs";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { RelatedProducts } from "../../_components/pdp/related-products";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
@@ -197,17 +198,27 @@ async function ReviewsPanel({
   productId,
   cloudName,
   labels,
+  hideHeading = false,
 }: {
   locale: string;
   productId: string;
   cloudName?: string;
   labels: ReviewsSectionLabels;
+  hideHeading?: boolean;
 }) {
   const reviews = await fetchReviews(productId);
   if (!reviews) {
     return null;
   }
-  return <ReviewsSection locale={locale} reviews={reviews} cloudName={cloudName} labels={labels} />;
+  return (
+    <ReviewsSection
+      locale={locale}
+      reviews={reviews}
+      cloudName={cloudName}
+      labels={labels}
+      hideHeading={hideHeading}
+    />
+  );
 }
 
 function selectListing(listings: Listing[], listingId?: string): Listing | null {
@@ -463,6 +474,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         locale={locale}
         productId={product.id}
         cloudName={process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}
+        hideHeading
         labels={{
           heading: t("reviews.heading"),
           empty: t("reviews.empty"),

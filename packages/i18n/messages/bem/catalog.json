@@ -204,7 +204,13 @@
       "mediaEmpty": "Takwaba picture ya product",
       "quickAddError": "Tatwaishibe ukulenga mu cart. Checkeni connection no wesheni limbi.",
       "conditionNew": "Cipya",
-      "conditionRefurbished": "Yakonzedwa"
+      "conditionRefurbished": "Yakonzedwa",
+      "pill": {
+        "nearest": "{distance} ukutali",
+        "belowMedian": "Pansi pa median",
+        "delivery": "Ukutuma mu Lusaka",
+        "pickup": "Pickup ilipo"
+      }
     },
     "defaultCategory": "Ifintu fyonse",
     "emptyBody": "Wesheni ukufuta filters nangu twaleni category yambi.",

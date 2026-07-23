@@ -6,6 +6,7 @@ from typing import Annotated, Any, Literal, cast
 
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.routers.comparison import is_lusaka_delivery_available
 from app.services.business.access import (
     BusinessAccess,
     get_business_access,
@@ -54,6 +55,9 @@ class CatalogListingItem(BaseModel):
     lng: float | None = None
     distance_m: float | None = None
     landmark: str | None = None
+    below_median: bool = False
+    delivery_available: bool = False
+    pickup_available: bool = False
     # B2B wholesale fields — populated only on the gated wholesale/supplies feed.
     wholesale: bool | None = None
     moq: int | None = None
@@ -657,6 +661,41 @@ def _sort_candidates(
     )
 
 
+def _with_distance(
+    candidate: _CatalogCandidate,
+    *,
+    lat: float | None,
+    lng: float | None,
+) -> _CatalogCandidate:
+    if candidate.distance_m is not None or lat is None or lng is None:
+        return candidate
+    if candidate.search_doc.lat is None or candidate.search_doc.lng is None:
+        return candidate
+    return candidate.model_copy(
+        update={
+            "distance_m": haversine_m(
+                lat,
+                lng,
+                candidate.search_doc.lat,
+                candidate.search_doc.lng,
+            )
+        }
+    )
+
+
+def _listing_logistics_fields(
+    candidate: _CatalogCandidate,
+) -> dict[str, bool]:
+    lat = candidate.search_doc.lat
+    lng = candidate.search_doc.lng
+    boost = candidate.search_doc.boost_signals
+    return {
+        "below_median": bool(boost.get("below_median")),
+        "delivery_available": is_lusaka_delivery_available(lat, lng),
+        "pickup_available": lat is not None and lng is not None,
+    }
+
+
 class _WholesaleRow(BaseModel):
     id: str
     vendor_id: str
@@ -759,27 +798,36 @@ def list_catalog(
     start = filters.cursor
     end = start + filters.limit
     page_rows = sorted_rows[start:end]
+    if filters.lat is not None and filters.lng is not None:
+        page_rows = [
+            _with_distance(row, lat=filters.lat, lng=filters.lng) for row in page_rows
+        ]
 
-    items = [
-        CatalogListingItem(
-            id=row.listing.id,
-            title=row.search_doc.title,
-            product_slug=str(row.product["slug"]) if row.product else None,
-            vendor_name=str(row.vendor["display_name"]),
-            vendor_slug=str(row.vendor.get("slug")) if row.vendor.get("slug") else None,
-            price_ngwee=row.search_doc.price_min_ngwee or 0,
-            condition=row.listing.condition,
-            in_stock=row.in_stock,
-            image_public_id=row.image_public_id,
-            rating=row.rating,
-            review_count=row.review_count,
-            lat=row.search_doc.lat,
-            lng=row.search_doc.lng,
-            distance_m=row.distance_m,
-            landmark=row.landmark,
+    items: list[CatalogListingItem] = []
+    for row in page_rows:
+        logistics = _listing_logistics_fields(row)
+        items.append(
+            CatalogListingItem(
+                id=row.listing.id,
+                title=row.search_doc.title,
+                product_slug=str(row.product["slug"]) if row.product else None,
+                vendor_name=str(row.vendor["display_name"]),
+                vendor_slug=str(row.vendor.get("slug")) if row.vendor.get("slug") else None,
+                price_ngwee=row.search_doc.price_min_ngwee or 0,
+                condition=row.listing.condition,
+                in_stock=row.in_stock,
+                image_public_id=row.image_public_id,
+                rating=row.rating,
+                review_count=row.review_count,
+                lat=row.search_doc.lat,
+                lng=row.search_doc.lng,
+                distance_m=row.distance_m,
+                landmark=row.landmark,
+                below_median=logistics["below_median"],
+                delivery_available=logistics["delivery_available"],
+                pickup_available=logistics["pickup_available"],
+            )
         )
-        for row in page_rows
-    ]
 
     next_cursor = encode_plp_cursor(end) if end < total else None
     return CatalogListResponse(items=items, facets=facets, total=total, next_cursor=next_cursor)
