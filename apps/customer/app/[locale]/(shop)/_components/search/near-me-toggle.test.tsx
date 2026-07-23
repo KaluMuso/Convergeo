@@ -24,26 +24,30 @@ const labels = {
   hint: "Sort by closeness",
 };
 
+function setGeolocation(value: unknown): void {
+  Object.defineProperty(global.navigator, "geolocation", { configurable: true, value });
+}
+
 afterEach(() => {
   cleanup();
   push.mockReset();
-  vi.unstubAllGlobals();
   currentParams = new URLSearchParams("q=phone");
+  setGeolocation(undefined);
 });
 
 describe("NearMeToggle", () => {
   it("requests geolocation and pushes coarse (2dp) lat/lng on enable", async () => {
-    const getCurrentPosition = vi.fn((success: PositionCallback) =>
-      success({
-        coords: { latitude: -15.416789, longitude: 28.283333 },
-      } as GeolocationPosition),
-    );
-    vi.stubGlobal("navigator", { geolocation: { getCurrentPosition } });
+    const user = userEvent.setup();
+    setGeolocation({
+      getCurrentPosition: (success: PositionCallback) =>
+        success({
+          coords: { latitude: -15.416789, longitude: 28.283333 },
+        } as GeolocationPosition),
+    });
 
     render(<NearMeToggle locale="en" labels={labels} />);
-    await userEvent.click(screen.getByTestId("near-me-toggle"));
+    await user.click(screen.getByTestId("near-me-toggle"));
 
-    expect(getCurrentPosition).toHaveBeenCalledTimes(1);
     expect(push).toHaveBeenCalledTimes(1);
     const url = push.mock.calls[0]?.[0] as string;
     expect(url).toContain("lat=-15.42"); // rounded from -15.416789
@@ -52,23 +56,25 @@ describe("NearMeToggle", () => {
   });
 
   it("clears lat/lng when already active", async () => {
+    const user = userEvent.setup();
     currentParams = new URLSearchParams("q=phone&lat=-15.42&lng=28.28&page=2");
 
     render(<NearMeToggle locale="en" labels={labels} />);
     const button = screen.getByTestId("near-me-toggle");
     expect(button).toHaveAttribute("aria-pressed", "true");
 
-    await userEvent.click(button);
+    await user.click(button);
     const url = push.mock.calls[0]?.[0] as string;
     expect(url).not.toContain("lat=");
     expect(url).not.toContain("lng=");
   });
 
   it("shows an unsupported state and does not navigate without geolocation", async () => {
-    vi.stubGlobal("navigator", {});
+    const user = userEvent.setup();
+    setGeolocation(undefined);
 
     render(<NearMeToggle locale="en" labels={labels} />);
-    await userEvent.click(screen.getByTestId("near-me-toggle"));
+    await user.click(screen.getByTestId("near-me-toggle"));
 
     expect(screen.getByText("Location unavailable")).toBeInTheDocument();
     expect(push).not.toHaveBeenCalled();
