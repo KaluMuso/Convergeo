@@ -1,0 +1,169 @@
+name: Deploy production
+
+# Founder/ops workflow: pin-redeploy API on Hetzner + promote Vercel frontends.
+# Never auto-runs on push — explicit workflow_dispatch only.
+#
+# Required GitHub Environment: `production` with secrets:
+#   PRODUCTION_API_SSH_HOST   (e.g. 91.107.236.37)
+#   PRODUCTION_API_SSH_USER   (e.g. root)
+#   PRODUCTION_API_SSH_KEY    (PEM private key)
+#   VERCEL_TOKEN
+#   VERCEL_TEAM_ID            (team_I2OEqmMjTwN2k5g7ACbQW705)
+# Optional:
+#   VERCEL_PROJECT_ID_VENDOR  (default in vercel_promote.sh)
+#   VERCEL_PROJECT_ID_ADMIN
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_image_tag:
+        description: "Immutable GHCR tag (git SHA). Clears G9 fingerprint when container recreates."
+        required: true
+        type: string
+        default: "d591ef518980381aa75cd23f86e06e8990f7adbc"
+      skip_api:
+        description: "Skip Hetzner API redeploy"
+        required: false
+        type: boolean
+        default: false
+      skip_vercel:
+        description: "Skip Vercel vendor/admin promote"
+        required: false
+        type: boolean
+        default: false
+      verify_live:
+        description: "Run scripts/ops/verify_live.sh after deploy"
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PROD_API_HOST: api.vergeo5.com
+  PROD_SUPABASE_PROJECT_REF: dpadrlxukcjbewpqympu
+
+jobs:
+  guard:
+    name: Guard inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse latest tag
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.inputs.api_image_tag }}"
+          if [[ "$tag" == "latest" ]]; then
+            echo "::error::refusing image tag 'latest' — pin a git SHA"
+            exit 1
+          fi
+          if [[ ! "$tag" =~ ^[0-9a-f]{7,40}$ ]]; then
+            echo "::error::api_image_tag must be a git SHA (7–40 hex chars)"
+            exit 1
+          fi
+
+  deploy-api:
+    name: Redeploy API (Hetzner)
+    needs: guard
+    if: ${{ github.event.inputs.skip_api != true }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Deploy SHA-tagged image via SSH
+        env:
+          PRODUCTION_API_SSH_HOST: ${{ secrets.PRODUCTION_API_SSH_HOST }}
+          PRODUCTION_API_SSH_USER: ${{ secrets.PRODUCTION_API_SSH_USER }}
+          PRODUCTION_API_SSH_KEY: ${{ secrets.PRODUCTION_API_SSH_KEY }}
+          IMAGE_TAG: ${{ github.event.inputs.api_image_tag }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${PRODUCTION_API_SSH_HOST}" || -z "${PRODUCTION_API_SSH_KEY}" ]]; then
+            echo "::error::PRODUCTION_API_SSH_HOST / PRODUCTION_API_SSH_KEY required in production environment"
+            exit 1
+          fi
+          user="${PRODUCTION_API_SSH_USER:-root}"
+          install -m 600 /dev/null /tmp/prod_api_key
+          printf '%s\n' "${PRODUCTION_API_SSH_KEY}" > /tmp/prod_api_key
+
+          scp -i /tmp/prod_api_key -o StrictHostKeyChecking=accept-new \
+            infra/redeploy-api.sh \
+            "${user}@${PRODUCTION_API_SSH_HOST}:/tmp/redeploy-api.sh"
+
+          ssh -i /tmp/prod_api_key -o StrictHostKeyChecking=accept-new \
+            "${user}@${PRODUCTION_API_SSH_HOST}" \
+            "chmod +x /tmp/redeploy-api.sh && bash /tmp/redeploy-api.sh '${IMAGE_TAG}'"
+
+          rm -f /tmp/prod_api_key
+
+      - name: Fingerprint probe
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 30 "https://${PROD_API_HOST}/fingerprint" | tee /tmp/fingerprint.json
+          python3 - <<'PY'
+          import json, os, sys
+          fp = json.load(open("/tmp/fingerprint.json"))
+          want = os.environ["WANT_SHA"]
+          got = fp.get("git_sha") or ""
+          if got in ("unknown", ""):
+              print(f"::warning::fingerprint git_sha still unknown (got={got!r})")
+          elif not (got.startswith(want[:7]) or want.startswith(got[:7])):
+              print(f"::error::fingerprint sha mismatch want={want[:12]} got={got}")
+              sys.exit(1)
+          else:
+              print(f"OK fingerprint git_sha={got}")
+          PY
+        env:
+          WANT_SHA: ${{ github.event.inputs.api_image_tag }}
+
+      - name: Upload API deploy evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-api-fingerprint
+          path: /tmp/fingerprint.json
+
+  promote-vercel:
+    name: Promote vendor + admin
+    needs: guard
+    if: ${{ github.event.inputs.skip_vercel != true }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Promote frontends to master tip
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          MASTER_GIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${VERCEL_TOKEN:-}" ]]; then
+            echo "::error::VERCEL_TOKEN required in production environment"
+            exit 1
+          fi
+          bash scripts/ops/vercel_promote.sh --project vendor
+          bash scripts/ops/vercel_promote.sh --project admin
+
+  verify:
+    name: Post-deploy verify
+    needs: [deploy-api, promote-vercel]
+    if: >-
+      always() &&
+      github.event.inputs.verify_live == true &&
+      (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped') &&
+      (needs.promote-vercel.result == 'success' || needs.promote-vercel.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: verify_live.sh
+        env:
+          MASTER_GIT_SHA: ${{ github.event.inputs.api_image_tag }}
+          EXPECTED_ENV: production
+        run: bash scripts/ops/verify_live.sh
