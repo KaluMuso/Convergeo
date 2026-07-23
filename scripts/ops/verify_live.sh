@@ -25,6 +25,9 @@
 #   CHECK_LOCALHOST       Set to 1 to enable G2 localhost leak scan on customer HTML
 #   SEARCH_PROBE_QUERY    Canonical keyword for LIVE-12 (default phone)
 #   SEARCH_PROBE_MIN_TOTAL Minimum total hits required (default 1)
+#   MONEY_DRILL_REPORT      Optional JSON from lenco_sandbox_money_drill.py (G3)
+#   SENTRY_SMOKE_REPORT     Optional JSON from sentry_smoke.sh (G6)
+#   BACKUP_DRILL_REPORT     Optional JSON from backup_drill.sh (G7)
 #   CURL_BIN              curl binary (default curl)
 #
 set -euo pipefail
@@ -349,12 +352,79 @@ check_live12_search() {
   set_gate L12 PASS "$detail"
 }
 
-# --- G3/G4/G6/G7/G8: require creds or external systems ----------------------------
-check_blocked_gates() {
-  set_gate G3 SKIP "Lenco sandbox money drill — needs F9b + staging ledger proof"
-  set_gate G4 SKIP "Playwright false-success E2E — needs staging run"
-  set_gate G6 SKIP "Sentry test event + UptimeRobot alert — needs founder DSN/monitor"
+# --- G3/G4/G6/G7/G8: creds, reports, or external systems ----------------------------
+check_g3_money_drill() {
+  local report="${MONEY_DRILL_REPORT:-}"
+  if [[ -z "$report" || ! -f "$report" ]]; then
+    set_gate G3 SKIP "Lenco sandbox money drill — needs F9b + MONEY_DRILL_REPORT or live creds"
+    return 0
+  fi
+  local verdict imbalance mode detail
+  verdict="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('verdict','?'))" "$report" 2>/dev/null || echo '?')"
+  imbalance="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('ledger_imbalance_ngwee','?'))" "$report" 2>/dev/null || echo '?')"
+  mode="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('mode','?'))" "$report" 2>/dev/null || echo '?')"
+  detail="report=$(basename "$report") verdict=${verdict} mode=${mode} ledger_imbalance=${imbalance}"
+  if [[ "$verdict" == "PASS" && "$imbalance" == "0" && "$mode" == "live" ]]; then
+    set_gate G3 PASS "$detail"
+  elif [[ "$verdict" == "PASS" && "$imbalance" == "0" ]]; then
+    set_gate G3 SKIP "${detail} (harness only — need live F9b for STAGING_VERIFIED)"
+  else
+    set_gate G3 FAIL "$detail"
+  fi
+}
+
+check_g6_sentry() {
+  local report="${SENTRY_SMOKE_REPORT:-}"
+  if [[ -n "$report" && -f "$report" ]]; then
+    local verdict
+    verdict="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('verdict','?'))" "$report" 2>/dev/null || echo '?')"
+    if [[ "$verdict" == "PASS" ]]; then
+      set_gate G6 PASS "sentry_smoke verdict=PASS report=$(basename "$report")"
+      return 0
+    fi
+    if [[ "$verdict" == "FAIL" ]]; then
+      set_gate G6 FAIL "sentry_smoke verdict=FAIL"
+      return 0
+    fi
+  fi
+  if [[ -n "${INTERNAL_SENTRY_TEST_TOKEN:-}" && -n "${SENTRY_TEST_SECRET:-}" && "${ENABLE_SENTRY_TEST_ENDPOINT:-}" == "true" && "$DRY_RUN" -eq 0 ]]; then
+    if bash "${REPO_ROOT}/scripts/ops/sentry_smoke.sh" >/tmp/verify-g6-sentry.log 2>&1; then
+      set_gate G6 PASS "sentry_smoke executed inline"
+      return 0
+    fi
+    set_gate G6 FAIL "sentry_smoke inline run failed — see /tmp/verify-g6-sentry.log"
+    return 0
+  fi
+  set_gate G6 SKIP "Sentry test event — set DSNs + tokens + SENTRY_SMOKE_REPORT or run sentry_smoke.sh"
+}
+
+check_g7_backup() {
+  local report="${BACKUP_DRILL_REPORT:-}"
+  if [[ -n "$report" && -f "$report" ]]; then
+    local verdict detail
+    verdict="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('verdict','?'))" "$report" 2>/dev/null || echo '?')"
+    detail="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1])).get('detail','?'))" "$report" 2>/dev/null || echo '?')"
+    if [[ "$verdict" == "PASS" && "$detail" == *"staging restore"* ]]; then
+      set_gate G7 PASS "backup_drill ${detail}"
+      return 0
+    fi
+    if [[ "$verdict" == "PASS" ]]; then
+      set_gate G7 SKIP "local/OCI partial — log ≤30min staging restore in docs/ops/drill-log.md"
+      return 0
+    fi
+    if [[ "$verdict" == "FAIL" ]]; then
+      set_gate G7 FAIL "$detail"
+      return 0
+    fi
+  fi
   set_gate G7 SKIP "Dated OCI backup + restore drill — see docs/ops/backup-runbook.md"
+}
+
+check_blocked_gates() {
+  check_g3_money_drill
+  set_gate G4 SKIP "Playwright false-success E2E — needs staging run"
+  check_g6_sentry
+  check_g7_backup
   set_gate G8 SKIP "CI/branch-protection audit — run GitHub required-checks review"
 }
 
