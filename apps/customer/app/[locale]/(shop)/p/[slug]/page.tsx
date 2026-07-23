@@ -1,6 +1,7 @@
 import { createApiClient } from "@vergeo/config";
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import {
   buildBreadcrumbListJsonLd,
   buildCanonicalAlternates,
@@ -424,12 +425,14 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           body={t("pdp.unavailableBody")}
           data-testid="pdp-unavailable"
           action={
-            <Link
+            <LinkButton
               href={retryHref}
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-[var(--primary-btn-fg)]"
+              variant="primary"
+              className="rounded-lg text-sm"
+              LinkComponent={Link}
             >
               {t("pdp.unavailableRetry")}
-            </Link>
+            </LinkButton>
           }
         />
       </div>

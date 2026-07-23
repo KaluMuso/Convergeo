@@ -1,4 +1,5 @@
 import { loadNamespace, DEFAULT_LOCALE, type Locale } from "@vergeo/i18n";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getLocale } from "next-intl/server";
@@ -32,24 +33,15 @@ export default async function NotFound() {
       <h1 className="font-display text-h1 text-display-ink">{t("heading")}</h1>
       <p className="text-body text-text-2">{t("body")}</p>
       <div className="mt-2 flex w-full flex-col gap-3">
-        <Link
-          className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-4 text-body font-medium text-surface"
-          href={`/${locale}`}
-        >
+        <LinkButton href={`/${locale}`} variant="primary" LinkComponent={Link}>
           {t("home")}
-        </Link>
-        <Link
-          className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 text-body font-medium text-text"
-          href={`/${locale}/search`}
-        >
+        </LinkButton>
+        <LinkButton href={`/${locale}/search`} variant="secondary" LinkComponent={Link}>
           {t("search")}
-        </Link>
-        <Link
-          className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 text-body font-medium text-text"
-          href={`/${locale}/help`}
-        >
+        </LinkButton>
+        <LinkButton href={`/${locale}/help`} variant="secondary" LinkComponent={Link}>
           {t("help")}
-        </Link>
+        </LinkButton>
       </div>
     </main>
   );

@@ -9,6 +9,7 @@ import {
 } from "@vergeo/ui/src/feedback-widget";
 import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState, type FormEvent } from "react";
@@ -133,12 +134,9 @@ export function BetaGate({ locale }: { locale: string }) {
       <section className="space-y-4 rounded-lg border border-success/30 bg-success/10 p-6">
         <h2 className="font-display text-h2 text-display-ink">{t("success.heading")}</h2>
         <p className="text-body text-text">{t("success.body")}</p>
-        <Link
-          className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-5 text-body font-medium text-surface"
-          href={`/${locale}`}
-        >
+        <LinkButton href={`/${locale}`} variant="primary" className="px-5" LinkComponent={Link}>
           {t("success.cta")}
-        </Link>
+        </LinkButton>
         <FeedbackWidget labels={feedbackLabels()} onSubmit={submitFeedback} />
       </section>
     );

@@ -4,6 +4,7 @@ import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { ApiError } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
 import { BottomSheet } from "@vergeo/ui/src/bottom-sheet";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import {
   createContext,
@@ -426,13 +427,9 @@ export function MiniCartEmptyState({
         <p className="font-display text-xl text-display-ink">{labels.emptyTitle}</p>
         <p className="text-sm text-text-2">{labels.emptyBody}</p>
       </div>
-      <Link
-        href={`/${locale}`}
-        onClick={onBrowse}
-        className="inline-flex h-11 min-h-11 items-center justify-center rounded border border-border bg-surface px-4 text-body font-medium text-text hover:bg-bg-2"
-      >
+      <LinkButton href={`/${locale}`} variant="secondary" onClick={onBrowse} LinkComponent={Link}>
         {labels.browseCta}
-      </Link>
+      </LinkButton>
       <CartEmptyTrustList labels={labels.emptyTrust} compact />
     </div>
   );
@@ -514,20 +511,25 @@ export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
             </span>
           </div>
           <div className="flex flex-col gap-2">
-            <Link
+            <LinkButton
               href={`/${locale}/checkout`}
+              variant="primary"
+              size="lg"
+              className="w-full"
               onClick={closeDrawer}
-              className="inline-flex h-12 min-h-12 w-full items-center justify-center rounded bg-primary px-6 text-body font-medium text-surface hover:bg-primary-deep"
+              LinkComponent={Link}
             >
               {labels.checkoutCta}
-            </Link>
-            <Link
+            </LinkButton>
+            <LinkButton
               href={`/${locale}/cart`}
+              variant="secondary"
+              className="w-full"
               onClick={closeDrawer}
-              className="inline-flex h-11 min-h-11 w-full items-center justify-center rounded border border-border bg-surface px-4 text-body font-medium text-text hover:bg-bg-2"
+              LinkComponent={Link}
             >
               {labels.viewCart}
-            </Link>
+            </LinkButton>
           </div>
         </div>
       ) : (

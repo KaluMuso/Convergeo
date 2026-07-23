@@ -1,5 +1,6 @@
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
@@ -286,12 +287,14 @@ export default async function ServiceDetailPage({ params }: PageProps) {
                 ? t("detail.fromPrice", { price: formatK(service.from_price_ngwee) })
                 : t("detail.askForQuote")}
             </p>
-            <Link
+            <LinkButton
               href={quoteHref}
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-surface transition-colors hover:bg-primary-deep focus-visible:outline-none focus-visible:shadow-focusRing"
+              variant="primary"
+              className="w-full rounded-md text-sm font-semibold"
+              LinkComponent={Link}
             >
               {t("detail.requestQuote")}
-            </Link>
+            </LinkButton>
             <p className="text-center text-xs text-text-3">{t("detail.requestQuoteHint")}</p>
             <div className="border-t border-border pt-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-text-3">

@@ -1,6 +1,7 @@
 import { createServerClient } from "@vergeo/auth/server-client";
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import { cookies } from "next/headers";
 import Link from "next/link";
@@ -211,12 +212,14 @@ function SuppliesGate({
       >
         <p className="font-display text-h3 text-text">{title}</p>
         <p className="text-sm text-text-2">{body}</p>
-        <Link
+        <LinkButton
           href={href}
-          className="inline-flex min-h-11 w-fit items-center rounded-md bg-primary px-4 text-sm font-medium text-surface"
+          variant="primary"
+          className="w-fit rounded-md text-sm"
+          LinkComponent={Link}
         >
           {ctaLabel}
-        </Link>
+        </LinkButton>
       </div>
     </div>
   );

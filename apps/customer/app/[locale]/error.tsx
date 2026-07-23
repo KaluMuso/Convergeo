@@ -1,5 +1,6 @@
 "use client";
 
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -39,18 +40,12 @@ export default function ErrorBoundary({ reset }: ErrorProps) {
         >
           {t("retry")}
         </button>
-        <Link
-          className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 text-body font-medium text-text"
-          href={`/${locale}`}
-        >
+        <LinkButton href={`/${locale}`} variant="secondary" LinkComponent={Link}>
           {t("home")}
-        </Link>
-        <Link
-          className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 text-body font-medium text-text"
-          href={`/${locale}/help`}
-        >
+        </LinkButton>
+        <LinkButton href={`/${locale}/help`} variant="secondary" LinkComponent={Link}>
           {t("help")}
-        </Link>
+        </LinkButton>
       </div>
     </main>
   );

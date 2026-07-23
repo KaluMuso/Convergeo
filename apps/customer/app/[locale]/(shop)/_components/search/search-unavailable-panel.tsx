@@ -1,4 +1,5 @@
 import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 
 import { BrowseDiscoveryChips, type BrowseDiscoveryChip } from "../browse-discovery-chips";
@@ -30,12 +31,14 @@ export function SearchUnavailablePanel({
         title={labels.title}
         body={labels.body}
         action={
-          <Link
+          <LinkButton
             href={retryHref}
-            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-[var(--primary-btn-fg)]"
+            variant="primary"
+            className="rounded-lg text-sm"
+            LinkComponent={Link}
           >
             {labels.retry}
-          </Link>
+          </LinkButton>
         }
       />
       <section aria-labelledby="search-unavailable-browse">

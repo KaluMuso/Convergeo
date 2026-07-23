@@ -1,3 +1,4 @@
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import { Pill } from "@vergeo/ui/src/pill";
 import { tokens } from "@vergeo/ui/tokens";
 import Link from "next/link";
@@ -49,13 +50,15 @@ export function Hero({ locale, t }: HeroProps) {
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {signupUrl ? (
-            <Link
-              className="inline-flex h-12 min-h-12 items-center justify-center rounded bg-primary px-6 text-body font-medium text-surface transition-colors duration-fast hover:bg-primary-deep focus-visible:outline-none focus-visible:shadow-focusRing"
-              data-testid="vendor-hero-cta"
+            <LinkButton
               href={signupUrl}
+              variant="primary"
+              size="lg"
+              data-testid="vendor-hero-cta"
+              LinkComponent={Link}
             >
               {t("hero.primaryCta")}
-            </Link>
+            </LinkButton>
           ) : (
             <button
               aria-describedby="hero-vendor-signup-unavailable"

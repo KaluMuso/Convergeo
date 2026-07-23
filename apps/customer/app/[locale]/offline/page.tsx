@@ -1,5 +1,6 @@
 "use client";
 
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -35,12 +36,9 @@ export default function OfflinePage() {
         >
           {t("retry")}
         </button>
-        <Link
-          className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 text-body font-medium text-text"
-          href={`/${locale}`}
-        >
+        <LinkButton href={`/${locale}`} variant="secondary" LinkComponent={Link}>
           {t("home")}
-        </Link>
+        </LinkButton>
       </div>
     </main>
   );
