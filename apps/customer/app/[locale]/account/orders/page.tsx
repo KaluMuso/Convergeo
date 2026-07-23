@@ -126,12 +126,14 @@ export default async function AccountOrdersPage({ params }: PageProps) {
                     <p className="font-mono text-sm text-display-ink">
                       {formatK(order.total_ngwee)}
                     </p>
-                    <Link
+                    <LinkButton
                       href={`/${locale}/account/orders/${order.id}`}
-                      className="inline-flex min-h-11 items-center rounded border border-primary px-4 text-sm font-medium text-primary"
+                      variant="secondary"
+                      className="border-primary px-4 text-sm text-primary"
+                      LinkComponent={Link}
                     >
                       {t("list.viewOrder")}
-                    </Link>
+                    </LinkButton>
                   </div>
                 </li>
               ))}

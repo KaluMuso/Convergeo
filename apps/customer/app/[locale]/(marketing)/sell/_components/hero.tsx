@@ -71,12 +71,9 @@ export function Hero({ locale, t }: HeroProps) {
               {t("hero.primaryCta")}
             </button>
           )}
-          <a
-            className="inline-flex h-12 min-h-12 items-center justify-center rounded border border-border bg-surface px-6 text-body font-medium text-text transition-colors duration-fast hover:bg-bg-2 focus-visible:outline-none focus-visible:shadow-focusRing"
-            href="#commissions"
-          >
+          <LinkButton href="#commissions" variant="secondary" size="lg" LinkComponent={Link}>
             {t("hero.secondaryCta")}
-          </a>
+          </LinkButton>
         </div>
         {signupUrl ? null : (
           <p id="hero-vendor-signup-unavailable" className="text-sm text-text-3">
