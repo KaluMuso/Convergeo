@@ -22,7 +22,9 @@ const noHardcodedStringsRule = {
     return {
       JSXText(node) {
         const text = node.value.replace(/\s+/g, " ").trim();
-        if (text.length > 0) {
+        // Skip text with no translatable letters — pure separators/punctuation
+        // ("·", ":", "—", numbers) are not user-facing copy and need no key.
+        if (text.length > 0 && /\p{L}/u.test(text)) {
           context.report({ node, messageId: "noHardcoded" });
         }
       },
@@ -46,7 +48,16 @@ const noHardcodedStringsRule = {
 
 const USER_FACING_ATTRIBUTES = new Set(["placeholder", "title", "alt", "aria-label"]);
 
-const IGNORED_PATH_SEGMENTS = ["/services/", "/node_modules/", ".test.", ".spec.", "__tests__"];
+const IGNORED_PATH_SEGMENTS = [
+  "/services/",
+  "/node_modules/",
+  ".test.",
+  ".spec.",
+  "__tests__",
+  // OG / social-card generators render brand-language images, not localized UI.
+  "opengraph-image",
+  "twitter-image",
+];
 
 function shouldIgnoreFile(filename) {
   return IGNORED_PATH_SEGMENTS.some((segment) => filename.includes(segment));

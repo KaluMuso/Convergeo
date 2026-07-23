@@ -23,6 +23,9 @@ describe("@vergeo/no-hardcoded-strings", () => {
         "<span>{formatK(price)}</span>",
         '<input placeholder={t("search.placeholder")} />',
         "<img alt={label} />",
+        // Letter-free separators/punctuation are not translatable copy.
+        "<span> · </span>",
+        "<dd>{label}: {value}</dd>",
       ],
       invalid: [
         {
