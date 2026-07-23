@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages } from "next-intl/server";
 
+import type { LocaleSwitcherLabels } from "../../_components/locale-switcher";
+
 export type AccountTranslator = {
   (key: string, values?: Record<string, string | number>): string;
 };
@@ -51,4 +53,25 @@ export async function getAccountTranslator(locale: string): Promise<AccountTrans
     messages,
     namespace: "account",
   }) as unknown as AccountTranslator;
+}
+
+/**
+ * Locale-switcher labels sourced from the already-translated `common.locale.*`
+ * keys (same set the shop/account headers use). Lets account pages surface a
+ * language control without introducing new i18n keys.
+ */
+export async function getLocaleSwitcherLabels(locale: string): Promise<LocaleSwitcherLabels> {
+  const baseMessages = await getMessages();
+  const commonMessages = await loadNamespace(locale as Locale, "common");
+  const messages = { ...baseMessages, common: commonMessages } as AbstractIntlMessages;
+  const tCommon = createTranslator({ locale, messages, namespace: "common" });
+  return {
+    ariaLabel: tCommon("locale.switchAria"),
+    names: {
+      en: tCommon("locale.names.en"),
+      bem: tCommon("locale.names.bem"),
+      nya: tCommon("locale.names.nya"),
+      fr: tCommon("locale.names.fr"),
+    },
+  };
 }
