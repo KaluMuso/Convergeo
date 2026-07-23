@@ -14,6 +14,7 @@
     "orders": "Orders",
     "config": "Configuration",
     "merch": "Merchandising",
+    "theme": "Theme presets",
     "translations": "Translations",
     "support": "Support"
   },
@@ -433,6 +434,49 @@
         "warning": "Existing orders will continue — no cascade cancellation.",
         "confirm": "Suspend vendor"
       }
+    }
+  },
+  "theme": {
+    "title": "Theme presets",
+    "subtitle": "Seasonal brand re-skins. Each preset swaps a handful of brand tokens across the whole customer app.",
+    "activeLabel": "Active preset",
+    "activeHint": "This is what shoppers see now. Change it with the environment variable below, then redeploy.",
+    "defaultBadge": "Default",
+    "activeBadge": "Active",
+    "sampleCta": "Primary action",
+    "roles": {
+      "primary": "Primary",
+      "accent": "Accent",
+      "ground": "Ground"
+    },
+    "presets": {
+      "slate": {
+        "name": "Vergeo Slate",
+        "blurb": "The signature deep-blue brand palette. The default all year round."
+      },
+      "harvest": {
+        "name": "Harvest Gold",
+        "blurb": "Warm bronze and gold for Independence season in October."
+      },
+      "mauve": {
+        "name": "Dusty Mauve",
+        "blurb": "Soft plum and rose on a mauve ground for gentler campaigns."
+      },
+      "evergreen": {
+        "name": "Festive Evergreen",
+        "blurb": "Deep evergreen and gold for the year-end festive season."
+      }
+    },
+    "activation": {
+      "title": "Activating a preset",
+      "intro": "Presets are operator-controlled and apply to every shopper. Choose one with an environment variable, then redeploy.",
+      "envLabel": "Environment variable",
+      "step1": "Set {env} to a preset id — one of {ids}.",
+      "step2": "Redeploy the customer app. The palette is server-rendered, so it appears on first paint with no flash."
+    },
+    "roadmap": {
+      "title": "Coming next",
+      "body": "One-click activation and scheduled seasons arrive once the settings store is wired. Until then, activation is a deploy-time switch."
     }
   },
   "merch": {
