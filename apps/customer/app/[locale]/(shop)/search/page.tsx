@@ -10,6 +10,7 @@ import { getApiBaseUrl, resolveApiBaseUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
 import { BrowseDiscoveryChips } from "../_components/browse-discovery-chips";
 import { fetchCategoriesResult, type CategoryRow } from "../_components/merch-data";
+import { NearMeToggle } from "../_components/search/near-me-toggle";
 import { RecentSearches } from "../_components/search/recent-searches";
 import {
   ResultsTabs,
@@ -25,7 +26,6 @@ import {
   encodeSearchFilters,
   type SearchFilterState,
 } from "../_components/search/search-filters";
-import { NearMeToggle } from "../_components/search/near-me-toggle";
 import { SearchInput } from "../_components/search/search-input";
 import { searchTabKinds, type SearchKind } from "../_components/search/search-kinds";
 import { SearchMobileFilterDrawer } from "../_components/search/search-mobile-filter-drawer";
