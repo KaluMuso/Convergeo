@@ -122,12 +122,14 @@ export default async function AccountJobsPage({ params }: PageProps) {
                       })
                     : t("quotes.list.budgetFlexible")}
                 </p>
-                <Link
+                <LinkButton
                   href={`/${locale}/account/jobs/${job.id}`}
-                  className="inline-flex min-h-11 shrink-0 items-center rounded border border-primary px-4 text-sm font-medium text-primary"
+                  variant="secondary"
+                  className="shrink-0 border-primary px-4 text-sm text-primary"
+                  LinkComponent={Link}
                 >
                   {t("quotes.list.compareCta")}
-                </Link>
+                </LinkButton>
               </div>
             </article>
           </li>

@@ -143,12 +143,14 @@ export default async function AccountTicketsPage({ params }: PageProps) {
                 <p className="text-xs text-text-2">{t("list.startsAt", { datetime: startsAt })}</p>
                 <p className="text-xs font-medium text-primary">{t(`list.status.${statusKey}`)}</p>
               </div>
-              <Link
+              <LinkButton
                 href={`/${locale}/account/tickets/${ticket.id}`}
-                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded border border-primary px-4 text-sm font-medium text-primary"
+                variant="secondary"
+                className="shrink-0 border-primary px-4 text-sm text-primary"
+                LinkComponent={Link}
               >
                 {t("list.viewTicket")}
-              </Link>
+              </LinkButton>
             </li>
           );
         })}
