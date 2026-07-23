@@ -58,14 +58,30 @@ class NotificationPrefs(BaseModel):
     email: bool = True
 
 
+VALID_ONBOARDING_INTERESTS = frozenset(
+    {"electronics", "fashion", "groceries", "services", "events"},
+)
+
+
+class OnboardingState(BaseModel):
+    interests: list[str] = Field(default_factory=list)
+    completed_at: str | None = None
+
+
 class PreferencesResponse(BaseModel):
     notif_prefs: NotificationPrefs
+    onboarding: OnboardingState
 
 
 class PreferencesPatchRequest(BaseModel):
     whatsapp: bool | None = None
     sms: bool | None = None
     email: bool | None = None
+
+
+class OnboardingCompleteRequest(BaseModel):
+    interests: list[str] = Field(default_factory=list)
+    locale: str | None = None
 
 
 def _user_client(current_user: CurrentUser) -> Client:
@@ -100,6 +116,40 @@ def _normalize_notif_prefs(raw: Any) -> NotificationPrefs:
         whatsapp=bool(raw.get("whatsapp", True)),
         sms=bool(raw.get("sms", True)),
         email=bool(raw.get("email", True)),
+    )
+
+
+def _extract_onboarding(raw: Any) -> OnboardingState:
+    if not isinstance(raw, dict):
+        return OnboardingState()
+    onboarding = raw.get("onboarding")
+    if not isinstance(onboarding, dict):
+        return OnboardingState()
+    interests_raw = onboarding.get("interests")
+    interests: list[str] = []
+    if isinstance(interests_raw, list):
+        interests = [
+            str(item)
+            for item in interests_raw
+            if str(item) in VALID_ONBOARDING_INTERESTS
+        ]
+    completed_at = onboarding.get("completed_at")
+    return OnboardingState(
+        interests=interests,
+        completed_at=str(completed_at) if isinstance(completed_at, str) else None,
+    )
+
+
+def _merge_notif_prefs(raw: Any, channel_prefs: NotificationPrefs) -> dict[str, Any]:
+    merged: dict[str, Any] = dict(raw) if isinstance(raw, dict) else {}
+    merged.update(channel_prefs.model_dump())
+    return merged
+
+
+def _preferences_response(raw: Any) -> PreferencesResponse:
+    return PreferencesResponse(
+        notif_prefs=_normalize_notif_prefs(raw),
+        onboarding=_extract_onboarding(raw),
     )
 
 
@@ -358,7 +408,7 @@ async def get_preferences(
             message="Profile not found",
             http_status=404,
         )
-    return PreferencesResponse(notif_prefs=_normalize_notif_prefs(row.get("notif_prefs")))
+    return _preferences_response(row.get("notif_prefs"))
 
 
 @router.patch("/preferences", response_model=PreferencesResponse)
@@ -389,13 +439,16 @@ async def patch_preferences(
             http_status=404,
         )
 
-    merged = _normalize_notif_prefs(row.get("notif_prefs")).model_dump()
+    raw_prefs = row.get("notif_prefs")
+    merged_channels = _normalize_notif_prefs(raw_prefs).model_dump()
     if body.whatsapp is not None:
-        merged["whatsapp"] = body.whatsapp
+        merged_channels["whatsapp"] = body.whatsapp
     if body.sms is not None:
-        merged["sms"] = body.sms
+        merged_channels["sms"] = body.sms
     if body.email is not None:
-        merged["email"] = body.email
+        merged_channels["email"] = body.email
+
+    merged = _merge_notif_prefs(raw_prefs, NotificationPrefs(**merged_channels))
 
     response = (
         client.table("profiles")
@@ -405,10 +458,65 @@ async def patch_preferences(
     )
     rows = _extract_data(response)
     if isinstance(rows, list) and rows and isinstance(rows[0], dict):
-        return PreferencesResponse(
-            notif_prefs=_normalize_notif_prefs(rows[0].get("notif_prefs")),
+        return _preferences_response(rows[0].get("notif_prefs"))
+    return _preferences_response(merged)
+
+
+@router.patch("/onboarding", response_model=PreferencesResponse)
+async def complete_onboarding(
+    body: OnboardingCompleteRequest,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> PreferencesResponse:
+    invalid = [
+        interest
+        for interest in body.interests
+        if interest not in VALID_ONBOARDING_INTERESTS
+    ]
+    if invalid:
+        raise AppError(
+            code="validation_error",
+            message="Unsupported onboarding interest",
+            http_status=422,
+            details={"interests": invalid, "supported": sorted(VALID_ONBOARDING_INTERESTS)},
         )
-    return PreferencesResponse(notif_prefs=NotificationPrefs(**merged))
+
+    client = _user_client(current_user)
+    existing_response = (
+        client.table("profiles")
+        .select("notif_prefs")
+        .eq("id", current_user.id)
+        .maybe_single()
+        .execute()
+    )
+    row = _extract_data(existing_response)
+    if not isinstance(row, dict):
+        raise AppError(
+            code="not_found",
+            message="Profile not found",
+            http_status=404,
+        )
+
+    raw_prefs = row.get("notif_prefs")
+    merged = _merge_notif_prefs(raw_prefs, _normalize_notif_prefs(raw_prefs))
+    merged["onboarding"] = {
+        "interests": list(dict.fromkeys(body.interests)),
+        "completed_at": datetime.now(UTC).isoformat(),
+    }
+
+    profile_updates: dict[str, Any] = {"notif_prefs": merged}
+    if body.locale is not None:
+        profile_updates["locale"] = _validate_locale(body.locale)
+
+    response = (
+        client.table("profiles")
+        .update(profile_updates)
+        .eq("id", current_user.id)
+        .execute()
+    )
+    rows = _extract_data(response)
+    if isinstance(rows, list) and rows and isinstance(rows[0], dict):
+        return _preferences_response(rows[0].get("notif_prefs"))
+    return _preferences_response(merged)
 
 
 RECENTLY_VIEWED_MAX = 20

@@ -4,11 +4,13 @@ import authMessages from "../../../../../../packages/i18n/messages/en/auth.json"
 
 import {
   formatE164,
+  isOnboardingComplete,
   isValidZambianMobile,
   maskPhone,
   normalizeNationalNumber,
   parseAuthError,
   parseRetryAfterFromResponse,
+  resolveCustomerPostAuthPath,
   resolvePostAuthPath,
 } from "./auth-utils";
 
@@ -76,6 +78,20 @@ describe("auth-utils", () => {
     expect(resolvePostAuthPath("en", "/en/account", "/en")).toBe("/en/account");
     expect(resolvePostAuthPath("en", "https://evil.test", "/en")).toBe("/en");
     expect(resolvePostAuthPath("en", "/fr/account", "/en")).toBe("/en");
+  });
+
+  it("routes incomplete onboarding to welcome", () => {
+    expect(resolveCustomerPostAuthPath("en", null, "/en", false)).toBe("/en/welcome");
+    expect(resolveCustomerPostAuthPath("en", "/en/account", "/en", false)).toBe(
+      "/en/welcome?next=%2Fen%2Faccount",
+    );
+    expect(resolveCustomerPostAuthPath("en", null, "/en", true)).toBe("/en");
+  });
+
+  it("detects onboarding completion from completed_at", () => {
+    expect(isOnboardingComplete(null)).toBe(false);
+    expect(isOnboardingComplete({ completed_at: null })).toBe(false);
+    expect(isOnboardingComplete({ completed_at: "2026-07-23T12:00:00Z" })).toBe(true);
   });
 });
 

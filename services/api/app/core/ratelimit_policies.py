@@ -88,6 +88,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "DELETE /vendor/listings/{listing_id}": STANDARD_WRITE,
     "DELETE /vendor/listings/{listing_id}/images/{image_id}": STANDARD_WRITE,
     "PATCH /account/addresses/{address_id}": STANDARD_WRITE,
+    "PATCH /account/onboarding": STANDARD_WRITE,
     "PATCH /account/preferences": STANDARD_WRITE,
     "PATCH /account/profile": STANDARD_WRITE,
     "PATCH /cart/items/{listing_id}": STANDARD_WRITE,

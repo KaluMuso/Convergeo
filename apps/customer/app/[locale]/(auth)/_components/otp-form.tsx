@@ -7,12 +7,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import {
-  parseAuthError,
-  parseRetryAfterFromResponse,
-  RESEND_COOLDOWN_SECONDS,
-  resolvePostAuthPath,
-} from "./auth-utils";
+import { parseAuthError, parseRetryAfterFromResponse, RESEND_COOLDOWN_SECONDS } from "./auth-utils";
+import { navigateAfterCustomerAuth } from "./post-auth-navigation";
 import { ResendCountdown } from "./resend-countdown";
 
 type OtpFormLabels = {
@@ -82,9 +78,12 @@ export function OtpForm({
         return;
       }
 
-      const destination = resolvePostAuthPath(locale, nextParam, defaultNextPath);
-      router.push(destination);
-      router.refresh();
+      await navigateAfterCustomerAuth({
+        router,
+        locale,
+        nextParam,
+        fallbackPath: defaultNextPath,
+      });
     } catch (response) {
       if (response instanceof Response && response.status === 429) {
         let body: unknown;

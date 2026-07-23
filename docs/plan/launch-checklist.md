@@ -91,6 +91,7 @@ These five artifacts are **built and unit/mock-verified on master** but their
 - [ ] **Deploy + rollback demonstrated on staging** (M01 criterion). — **Owner: Founder/Ops** _(staging)_ — Evidence: _____
 - [ ] **Staging money drill** after place-order wiring (MoMo sandbox + COD + card session). — **Owner: Founder/Ops** _(staging + F9)_ — Evidence: runbook `docs/ops/staging-money-drill.md`
 - [ ] **Apply migration 0066** (`user_wishlist` / `user_recently_viewed`) on staging before engagement sync QA. — **Owner: Founder/Ops** _(staging)_ — Evidence: _____
+- [ ] **Apply migration 0070** (`vendor_commercial_tier`) on staging before API redeploy. — **Owner: Founder/Ops** _(staging)_ — Evidence: _____
 
 ---
 
