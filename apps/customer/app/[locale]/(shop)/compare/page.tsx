@@ -12,7 +12,6 @@ import {
   type ComparisonLabels,
   type ComparisonListing,
 } from "../_components/pdp/comparison";
-
 import { catalogLogisticsLabels } from "../_components/plp/logistics-pills";
 
 import { CompareResults } from "./_components/compare-results";

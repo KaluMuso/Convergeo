@@ -7,6 +7,7 @@ import {
   type ComparisonLabels,
   type ComparisonListing,
 } from "../../_components/pdp/comparison";
+
 import type { LogisticsPillLabels } from "../../_components/plp/logistics-pills";
 
 type CompareResultsProps = {
