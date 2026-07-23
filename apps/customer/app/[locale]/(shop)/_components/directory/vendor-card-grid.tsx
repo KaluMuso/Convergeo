@@ -2,6 +2,12 @@ import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-sta
 import { VendorCard } from "@vergeo/ui/src/vendor-card";
 import Link from "next/link";
 
+import {
+  vendorCommercialTier,
+  vendorTrustForCard,
+  type VendorLadderLabels,
+} from "./vendor-ladder-labels";
+
 export type DirectoryVendorCard = {
   id: string;
   slug: string;
@@ -9,6 +15,8 @@ export type DirectoryVendorCard = {
   description: string | null;
   logoUrl: string | null;
   preferredBadge: boolean;
+  kycTier: number | null;
+  commercialTier: string | null;
   verified: boolean;
   landmark: string | null;
   categories: string[];
@@ -26,6 +34,7 @@ type VendorCardGridLabels = {
   verifiedSince: string;
   preferredBadge: string;
   verifiedBadge: string;
+  trustLabels: VendorLadderLabels;
   viewProfile: string;
   defaultLocation: string;
   categoryLabels: Record<string, string>;
@@ -98,6 +107,17 @@ export function VendorCardGrid({ locale, vendors, labels }: VendorCardGridProps)
           "{year}",
           formatVerifiedYear(vendor.createdAt),
         );
+        const trust = vendorTrustForCard(
+          { preferredBadge: vendor.preferredBadge, kycTier: vendor.kycTier },
+          labels.trustLabels,
+        );
+        const commercial = vendorCommercialTier(vendor.commercialTier, labels.trustLabels);
+        const trustLabel =
+          trust.trust === "id_verified"
+            ? verifiedLabel
+            : trust.trust === "preferred"
+              ? labels.preferredBadge
+              : trust.trustLabel;
 
         return (
           <Link
@@ -110,16 +130,10 @@ export function VendorCardGrid({ locale, vendors, labels }: VendorCardGridProps)
               categoryLabel={categoryText}
               locationLabel={vendor.landmark ?? labels.defaultLocation}
               avatar={vendor.logoUrl ? <VendorLogo logoUrl={vendor.logoUrl} /> : undefined}
-              trust={
-                vendor.preferredBadge ? "preferred" : vendor.verified ? "id_verified" : undefined
-              }
-              trustLabel={
-                vendor.preferredBadge
-                  ? labels.preferredBadge
-                  : vendor.verified
-                    ? verifiedLabel
-                    : undefined
-              }
+              trust={trust.trust}
+              trustLabel={trustLabel}
+              tier={commercial.tier}
+              tierLabel={commercial.tierLabel}
               stats={[
                 { label: labels.listings, value: String(vendor.listingCount) },
                 { label: labels.reviews, value: ratingValue },

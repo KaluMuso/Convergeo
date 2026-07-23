@@ -38,6 +38,25 @@
     "verifiedBadge": "已验证",
     "defaultLocation": "赞比亚"
   },
+  "trust": {
+    "selfListed": "自主上架",
+    "idVerified": "身份已验证",
+    "sectorVerified": "行业已验证",
+    "preferred": "优选商家"
+  },
+  "tiers": {
+    "bronze": "青铜",
+    "silver": "白银",
+    "gold": "黄金",
+    "platinum": "铂金",
+    "stripAria": "商家订阅等级",
+    "perks": {
+      "bronze": "基础上架",
+      "silver": "标准上架 + 数据分析",
+      "gold": "精选展示 + 销售报告",
+      "platinum": "优先展示 + 分析 + B2B 门户"
+    }
+  },
   "empty": {
     "title": "未找到商家",
     "body": "请尝试清除筛选或搜索其他商家。"
@@ -61,8 +80,6 @@
     "statReviews": "评价",
     "statListings": "商品",
     "statOrders": "订单",
-    "tierBusiness": "商业版",
-    "tierPremium": "高级版",
     "offeringsAria": "卖家提供的商品和服务",
     "tabProducts": "商品",
     "tabServices": "服务",

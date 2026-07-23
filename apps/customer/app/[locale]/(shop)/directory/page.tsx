@@ -11,6 +11,7 @@ import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
 import { FilterBar } from "../_components/directory/filter-bar";
 import { VendorCardGrid } from "../_components/directory/vendor-card-grid";
+import { buildVendorLadderLabels } from "../_components/directory/vendor-ladder-labels";
 
 import type { Metadata } from "next";
 
@@ -24,6 +25,8 @@ type DirectoryApiResponse = {
     description: string | null;
     logo_url: string | null;
     preferred_badge: boolean;
+    kyc_tier: number | null;
+    commercial_tier: string | null;
     verified: boolean;
     landmark: string | null;
     categories: string[];
@@ -149,6 +152,7 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
     "home-living": t("filters.categories.home-living"),
     groceries: t("filters.categories.groceries"),
   };
+  const ladderLabels = buildVendorLadderLabels(t);
 
   const formatFacetLabel = (label: string, count: number) =>
     t("filters.facetCount", { label, count });
@@ -219,6 +223,8 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
               description: vendor.description,
               logoUrl: vendor.logo_url,
               preferredBadge: vendor.preferred_badge,
+              kycTier: vendor.kyc_tier,
+              commercialTier: vendor.commercial_tier,
               verified: vendor.verified,
               landmark: vendor.landmark,
               categories: vendor.categories,
@@ -235,6 +241,7 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
               verifiedSince: t("card.verifiedSince"),
               preferredBadge: t("card.preferredBadge"),
               verifiedBadge: t("card.verifiedBadge"),
+              trustLabels: ladderLabels,
               viewProfile: t("index.viewProfile"),
               categoryLabels,
               defaultLocation: t("card.defaultLocation"),

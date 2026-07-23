@@ -138,6 +138,7 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `abandoned-cart.json`             | Notifications               | no                      | DORMANT                                        |
 | `funnel-abandon.json`             | Analytics                   | no                      | DORMANT                                        |
 | `analytics-retention.json`        | Analytics / DPA             | no                      | DORMANT                                        |
+| `export-purge.json`               | DPA data-export purge       | no                      | DORMANT                                        |
 | `embeddings-cron.json`            | Search/AI                   | no                      | DORMANT                                        |
 | `uptime-alert.json`               | Observability               | no                      | DORMANT                                        |
 | `money-workflow-error-alert.json` | Money / ops error paging    | no                      | DORMANT (VD-P06 shared Error Trigger template) |

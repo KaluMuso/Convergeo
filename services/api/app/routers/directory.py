@@ -22,6 +22,7 @@ MAX_PAGE_SIZE = 48
 EARTH_RADIUS_M = 6_371_000
 
 DirectoryBadge = Literal["preferred", "verified"]
+CommercialTier = Literal["bronze", "silver", "gold", "platinum"]
 
 
 class _ServiceClient(Protocol):
@@ -40,6 +41,15 @@ class DirectoryFacets(BaseModel):
     badges: list[FacetBucket] = Field(default_factory=list)
 
 
+def _parse_commercial_tier(value: Any) -> CommercialTier | None:
+    if not isinstance(value, str):
+        return None
+    token = value.strip().lower()
+    if token in ("bronze", "silver", "gold", "platinum"):
+        return cast(CommercialTier, token)
+    return None
+
+
 class DirectoryVendorItem(BaseModel):
     id: str
     slug: str
@@ -48,6 +58,7 @@ class DirectoryVendorItem(BaseModel):
     logo_url: str | None = None
     preferred_badge: bool = False
     kyc_tier: int | None = None
+    commercial_tier: CommercialTier | None = None
     verified: bool = False
     landmark: str | None = None
     lat: float | None = None
@@ -98,6 +109,7 @@ class VendorProfileDetail(BaseModel):
     whatsapp_msisdn: str | None = None
     preferred_badge: bool = False
     kyc_tier: int | None = None
+    commercial_tier: CommercialTier | None = None
     verified: bool = False
     order_count: int = 0
     location: VendorLocationDetail | None = None
@@ -439,6 +451,7 @@ def _build_directory_item(
         logo_url=row.get("logo_url"),
         preferred_badge=preferred_badge,
         kyc_tier=effective_tier,
+        commercial_tier=_parse_commercial_tier(row.get("commercial_tier")),
         verified=_is_verified(effective_tier, preferred_badge),
         landmark=str(location_row.get("landmark")) if location_row else None,
         lat=(
@@ -506,8 +519,8 @@ def list_directory_vendors(
     vendors_response = (
         client.table("vendors")
         .select(
-            "id, slug, display_name, description, logo_url, status, kyc_tier, preferred_badge, "
-            "vendor_locations(landmark, lat, lng, hours)"
+            "id, slug, display_name, description, logo_url, status, kyc_tier, commercial_tier, "
+            "preferred_badge, vendor_locations(landmark, lat, lng, hours)"
         )
         .eq("status", "active")
         .order("display_name")
@@ -691,7 +704,7 @@ def get_vendor_profile(
         client.table("vendors")
         .select(
             "id, slug, display_name, description, logo_url, cover_url, whatsapp_msisdn, status, "
-            "kyc_tier, preferred_badge, created_at, "
+            "kyc_tier, commercial_tier, preferred_badge, created_at, "
             "vendor_locations(landmark, lat, lng, hours)"
         )
         .eq("slug", slug)
@@ -807,6 +820,7 @@ def get_vendor_profile(
             whatsapp_msisdn=row.get("whatsapp_msisdn"),
             preferred_badge=preferred_badge,
             kyc_tier=effective_tier,
+            commercial_tier=_parse_commercial_tier(row.get("commercial_tier")),
             verified=_is_verified(effective_tier, preferred_badge),
             order_count=order_count,
             location=location,

@@ -3014,6 +3014,7 @@ export type Database = {
         Row: {
           archetype: string | null
           caps_snapshot: Json
+          commercial_tier: string | null
           cover_url: string | null
           created_at: string
           description: string | null
@@ -3034,6 +3035,7 @@ export type Database = {
         Insert: {
           archetype?: string | null
           caps_snapshot?: Json
+          commercial_tier?: string | null
           cover_url?: string | null
           created_at?: string
           description?: string | null
@@ -3054,6 +3056,7 @@ export type Database = {
         Update: {
           archetype?: string | null
           caps_snapshot?: Json
+          commercial_tier?: string | null
           cover_url?: string | null
           created_at?: string
           description?: string | null
