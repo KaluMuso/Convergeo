@@ -93,8 +93,7 @@
   "result": {
     "priceFrom": "From {price}",
     "category": "In {category}",
-    "marketplaceListing": "Marketplace listing",
-    "distanceAway": "{km} km away"
+    "marketplaceListing": "Marketplace listing"
   },
   "nearMe": {
     "enable": "Near me",
@@ -103,6 +102,7 @@
     "denied": "Location blocked",
     "unsupported": "Location unavailable",
     "clear": "Show all",
-    "hint": "Sort results by how close they are to you"
+    "hint": "Sort results by how close they are to you",
+    "distanceAway": "{km} km away"
   }
 }

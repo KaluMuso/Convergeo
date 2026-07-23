@@ -359,7 +359,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     degraded: t("results.degraded"),
     priceFrom: t("result.priceFrom"),
     category: t("result.category"),
-    distanceAway: t("result.distanceAway"),
+    distanceAway: t("nearMe.distanceAway"),
     marketplaceListing: t("result.marketplaceListing"),
     wishlist: tCatalog("plp.card.wishlist"),
     wishlistRemove: tCatalog("plp.card.wishlistRemove"),
