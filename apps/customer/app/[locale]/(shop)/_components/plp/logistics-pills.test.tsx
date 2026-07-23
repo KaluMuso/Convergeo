@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildLogisticsPills } from "./logistics-pills";
+import { buildLogisticsPills, buildFulfillmentPills } from "./logistics-pills";
 
 import type { CatalogListing } from "./listing-grid";
 
@@ -51,5 +51,13 @@ describe("buildLogisticsPills", () => {
       labels,
     );
     expect(pills.map((pill) => pill.key)).toEqual(["below-median", "delivery", "pickup"]);
+  });
+
+  it("buildFulfillmentPills returns delivery/pickup only", () => {
+    const pills = buildFulfillmentPills(
+      { deliveryAvailable: true, pickupAvailable: false },
+      { delivery: labels.delivery, pickup: labels.pickup },
+    );
+    expect(pills).toEqual([expect.objectContaining({ key: "delivery", label: labels.delivery })]);
   });
 });

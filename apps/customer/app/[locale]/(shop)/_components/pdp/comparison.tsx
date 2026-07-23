@@ -6,6 +6,12 @@ import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  catalogLogisticsLabels,
+  FulfillmentLogisticsPills,
+  type LogisticsPillLabels,
+} from "../plp/logistics-pills";
+
 import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
 import { BuyerTrustPanel } from "./buyer-trust-panel";
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
@@ -209,10 +215,17 @@ type ComparisonProps = {
   listings: ComparisonListing[];
   selectedListingId: string | null;
   labels: ComparisonLabels;
+  logisticsPillLabels: Pick<LogisticsPillLabels, "delivery" | "pickup">;
   onSelect: (listingId: string) => void;
 };
 
-export function Comparison({ listings, selectedListingId, labels, onSelect }: ComparisonProps) {
+export function Comparison({
+  listings,
+  selectedListingId,
+  labels,
+  logisticsPillLabels,
+  onSelect,
+}: ComparisonProps) {
   const [sort, setSort] = useState<ComparisonSort>("price");
   const [geo, setGeo] = useState<GeoCoords | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
@@ -374,12 +387,11 @@ export function Comparison({ listings, selectedListingId, labels, onSelect }: Co
                     }
                   />
                   <span className="text-xs text-text-2">{distanceLabel}</span>
-                  {listing.deliveryAvailable ? (
-                    <Badge variant="public" label={labels.delivery} />
-                  ) : null}
-                  {listing.pickupAvailable ? (
-                    <Badge variant="public" label={labels.pickup} />
-                  ) : null}
+                  <FulfillmentLogisticsPills
+                    deliveryAvailable={listing.deliveryAvailable}
+                    pickupAvailable={listing.pickupAvailable}
+                    labels={logisticsPillLabels}
+                  />
                 </div>
               </button>
             </li>
@@ -452,14 +464,11 @@ export function Comparison({ listings, selectedListingId, labels, onSelect }: Co
                   </td>
                   <td className="px-4 py-3 align-top text-text-2">{distanceLabel}</td>
                   <td className="px-4 py-3 align-top">
-                    <div className="flex flex-wrap gap-1">
-                      {listing.deliveryAvailable ? (
-                        <Badge variant="public" label={labels.delivery} />
-                      ) : null}
-                      {listing.pickupAvailable ? (
-                        <Badge variant="public" label={labels.pickup} />
-                      ) : null}
-                    </div>
+                    <FulfillmentLogisticsPills
+                      deliveryAvailable={listing.deliveryAvailable}
+                      pickupAvailable={listing.pickupAvailable}
+                      labels={logisticsPillLabels}
+                    />
                   </td>
                   <td className="px-4 py-3 align-top">
                     <button
@@ -503,6 +512,7 @@ export function PdpInteractiveBody({
   comparePageLabel,
 }: PdpInteractiveBodyProps) {
   const t = useTranslations("catalog");
+  const logisticsPillLabels = useMemo(() => catalogLogisticsLabels(t), [t]);
   const buyBoxRef = useRef<HTMLElement | null>(null);
   const [stickyAtcVisible, setStickyAtcVisible] = useState(false);
   const [selectedListingId, setSelectedListingId] = useState<string | null>(
@@ -643,8 +653,9 @@ export function PdpInteractiveBody({
                 : "pdp.trust.seller",
               { name: selectedListing.vendor.displayName },
             )}
-            deliveryLabel={selectedComparison?.deliveryAvailable ? trustLabels.delivery : null}
-            pickupLabel={selectedComparison?.pickupAvailable ? trustLabels.pickup : null}
+            deliveryAvailable={selectedComparison?.deliveryAvailable ?? false}
+            pickupAvailable={selectedComparison?.pickupAvailable ?? false}
+            logisticsPillLabels={logisticsPillLabels}
             returnsLabel={trustLabels.returns}
             returnsHref={`/${locale}/legal/returns`}
             escrowLabel={trustLabels.escrow}
@@ -658,6 +669,7 @@ export function PdpInteractiveBody({
             listings={comparisonListings}
             selectedListingId={selectedListingId}
             labels={comparisonLabels}
+            logisticsPillLabels={logisticsPillLabels}
             onSelect={handleSelect}
           />
         </div>
