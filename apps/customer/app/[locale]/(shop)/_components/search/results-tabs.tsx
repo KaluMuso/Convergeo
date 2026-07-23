@@ -43,6 +43,8 @@ export type SearchHit = {
   rrf_score: number;
   /** Public route slug (product/vendor/event) when resolved by the search API. */
   slug?: string | null;
+  /** Great-circle km from the searcher when a location is supplied; null otherwise. */
+  distance_km?: number | null;
 };
 
 export type SearchFacetBucket = {
@@ -80,6 +82,8 @@ export type ResultsTabsLabels = ProgressiveLoadControlsLabels & {
   degraded: string;
   priceFrom: string;
   category: string;
+  /** "{km} km away" — shown only when the searcher shared a location. */
+  distanceAway: string;
   /** Honest fallback when search hits omit vendor (never invent a shop name). */
   marketplaceListing: string;
   wishlist: string;
@@ -101,6 +105,9 @@ export type ResultsTabsProps = {
   apiBaseUrl: string;
   /** Product filters (price/category) — forwarded to progressive load requests. */
   filterState?: SearchFilterState;
+  /** Searcher location — forwarded to progressive load so page 2+ keeps proximity ranking. */
+  userLat?: number | null;
+  userLng?: number | null;
 };
 
 function tabLabel(labels: ResultsTabsLabels, kind: SearchKindFilter, count: number): string {
@@ -137,6 +144,16 @@ function formatCategoryLabel(categoryPath: string | null): string | null {
   return leaf.replace(/-/g, " ");
 }
 
+/** "3.2 km away" under 10 km, "18 km away" beyond — from a hit's distance_km. */
+function distanceLabel(hit: SearchHit, labels: ResultsTabsLabels): string | null {
+  const km = hit.distance_km;
+  if (km == null || !Number.isFinite(km)) {
+    return null;
+  }
+  const value = km < 10 ? km.toFixed(1) : String(Math.round(km));
+  return labels.distanceAway.replace("{km}", value);
+}
+
 function SearchResultRow({
   hit,
   locale,
@@ -150,6 +167,7 @@ function SearchResultRow({
   const href = searchResultHref(locale, hit);
   const category = formatCategoryLabel(hit.category_path);
   const priceNgwee = hit.price_min_ngwee ?? hit.price_max_ngwee;
+  const distance = distanceLabel(hit, labels);
 
   return (
     <article
@@ -190,6 +208,11 @@ function SearchResultRow({
             {labels.priceFrom.replace("{price}", formatK(priceNgwee))}
           </p>
         ) : null}
+        {distance ? (
+          <p className="mt-1 text-xs font-medium text-primary" data-testid="search-result-distance">
+            {distance}
+          </p>
+        ) : null}
       </div>
     </article>
   );
@@ -208,6 +231,7 @@ function SearchProductCard({
   const href = searchResultHref(locale, hit);
   const priceNgwee = hit.price_min_ngwee ?? hit.price_max_ngwee ?? 0;
   const category = formatCategoryLabel(hit.category_path);
+  const distance = distanceLabel(hit, labels);
   const slug = typeof hit.slug === "string" && hit.slug.trim() ? hit.slug : null;
   const { isWishlisted, toggleWishlist, enabled } = useLocalWishlist(slug);
   const wishlistLabel = isWishlisted ? labels.wishlistRemove : labels.wishlist;
@@ -257,6 +281,14 @@ function SearchProductCard({
   return (
     <div className="relative min-w-0" data-testid="search-product-card">
       {card}
+      {distance ? (
+        <span
+          className="pointer-events-none absolute left-1.5 top-1.5 z-[2] rounded-full bg-panel/85 px-2 py-0.5 text-[0.7rem] font-medium text-panel-text"
+          data-testid="search-result-distance"
+        >
+          {distance}
+        </span>
+      ) : null}
       <Link
         href={href}
         className="absolute inset-0 z-[1] rounded-lg focus-visible:outline-none focus-visible:shadow-focusRing"
@@ -329,6 +361,8 @@ export function ResultsTabs({
   labels,
   apiBaseUrl,
   filterState = {},
+  userLat = null,
+  userLng = null,
 }: ResultsTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -347,6 +381,10 @@ export function ResultsTabs({
         params.set("kind", activeKind);
       }
       appendSearchFiltersToApiParams(params, filterState);
+      if (userLat != null && userLng != null) {
+        params.set("lat", String(userLat));
+        params.set("lng", String(userLng));
+      }
       const res = await fetch(`${apiBaseUrl}/search?${params.toString()}`, { signal });
       if (!res.ok) {
         throw new Error(`Search load failed (${res.status})`);
@@ -357,7 +395,7 @@ export function ResultsTabs({
         nextCursor: nextPageCursor(body),
       };
     },
-    [activeKind, apiBaseUrl, filterState, query, response.page_size],
+    [activeKind, apiBaseUrl, filterState, query, response.page_size, userLat, userLng],
   );
 
   const { items, status, hasMore, lastAppendedCount, loadMore, sentinelRef } =

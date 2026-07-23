@@ -94,5 +94,15 @@
     "priceFrom": "From {price}",
     "category": "In {category}",
     "marketplaceListing": "Marketplace listing"
+  },
+  "nearMe": {
+    "enable": "Near me",
+    "active": "Nearest first",
+    "locating": "Locating…",
+    "denied": "Location blocked",
+    "unsupported": "Location unavailable",
+    "clear": "Show all",
+    "hint": "Sort results by how close they are to you",
+    "distanceAway": "{km} km away"
   }
 }
