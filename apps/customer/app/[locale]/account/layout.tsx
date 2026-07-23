@@ -1,7 +1,7 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { IconAccount, IconAsk, IconHome, IconOrders, IconSearch } from "@vergeo/ui/src/icons";
 import Link from "next/link";
-import { createTranslator, type AbstractIntlMessages } from "next-intl";
+import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { BottomNavClient } from "../(shop)/_components/bottom-nav-client";
@@ -148,7 +148,16 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
               signingOut: t("nav.signingOut"),
             }}
           />
-          {children}
+          {/*
+           * Client i18n context for account pages. The root provider only carries
+           * `common`, so fully-client pages here (e.g. privacy) that call
+           * useTranslations("account.*") need the `account` namespace supplied
+           * explicitly — otherwise every key renders as MISSING_MESSAGE. The
+           * jobs/tickets subtrees add their own `services`/`events` providers.
+           */}
+          <NextIntlClientProvider locale={locale} messages={{ account: accountMessages }}>
+            {children}
+          </NextIntlClientProvider>
         </main>
       </div>
       {ACCOUNT_BOTTOM_NAV_ENABLED ? (

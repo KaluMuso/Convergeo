@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorErrorState } from "../../_components/async-state";
-import { VendorQuickNav } from "../../_components/vendor-quick-nav";
 import { shouldShowPreferredBadge } from "../../_lib/kyc-integrity";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import { Button, FormField, Input, Spinner, Switch } from "../../listings/new/_lib/ui";
@@ -30,11 +29,7 @@ const DEFAULT_HOURS = {
   sun: { open: "09:00", close: "13:00", closed: true },
 };
 
-type ProfileEditorProps = {
-  locale: string;
-};
-
-export function ProfileEditor({ locale }: ProfileEditorProps) {
+export function ProfileEditor() {
   const t = useTranslations("vendor");
   const tCommon = useTranslations("common");
   const { session, loading: sessionLoading } = useSession();
@@ -194,8 +189,6 @@ export function ProfileEditor({ locale }: ProfileEditorProps) {
 
   return (
     <div className="space-y-6">
-      <VendorQuickNav locale={locale} active="profile" />
-
       <header className="space-y-1 px-1">
         <h1 className="text-xl font-semibold text-text">{t("profile.title")}</h1>
         <p className="text-sm text-text-2">{t("profile.intro")}</p>

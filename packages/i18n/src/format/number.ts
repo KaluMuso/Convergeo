@@ -1,3 +1,7 @@
-export function formatNumber(value: number, locale: string): string {
-  return new Intl.NumberFormat(locale).format(value);
+export function formatNumber(
+  value: number,
+  locale: string,
+  options?: Intl.NumberFormatOptions,
+): string {
+  return new Intl.NumberFormat(locale, options).format(value);
 }
