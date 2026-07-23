@@ -33,6 +33,10 @@ class SignUploadResponse(BaseModel):
     folder: str
     allowed_formats: str
     max_file_size: int
+    # Returned only when a public_id was requested (and therefore signed). Kept in
+    # sync with the signed params so a client that requests a public_id can also SEND
+    # it — a signed-but-unreturned param would reproduce the #416 "Invalid Signature".
+    public_id: str | None = None
 
 
 def _sanitize_public_id(public_id: str | None) -> str | None:
@@ -142,4 +146,5 @@ async def sign_upload(
         folder=str(signed["folder"]),
         allowed_formats=str(signed["allowed_formats"]),
         max_file_size=int(signed["max_file_size"]),
+        public_id=str(signed["public_id"]) if signed.get("public_id") else None,
     )

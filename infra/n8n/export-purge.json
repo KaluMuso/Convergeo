@@ -1,5 +1,5 @@
 {
-  "name": "Analytics PII Retention Sweeper",
+  "name": "Vergeo5 — data-export purge",
   "nodes": [
     {
       "parameters": {
@@ -8,13 +8,13 @@
             {
               "field": "days",
               "daysInterval": 1,
-              "triggerAtHour": 3
+              "triggerAtHour": 4
             }
           ]
         }
       },
       "id": "schedule-trigger",
-      "name": "Daily 03:00 UTC",
+      "name": "Daily 04:00 UTC",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [260, 300]
@@ -22,7 +22,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{$env.API_URL}}/internal/analytics/retention-tick",
+        "url": "={{$env.API_URL}}/internal/privacy/export-purge-tick",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
@@ -30,7 +30,7 @@
           "parameters": [
             {
               "name": "X-Internal-Token",
-              "value": "={{$env.INTERNAL_ANALYTICS_TOKEN}}"
+              "value": "={{$env.INTERNAL_PRIVACY_TOKEN}}"
             }
           ]
         },
@@ -38,25 +38,25 @@
           "timeout": 60000
         }
       },
-      "id": "analytics-retention-tick",
-      "name": "Sweep Analytics PII",
+      "id": "export-purge-tick",
+      "name": "Purge Data-Export Bundles",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [520, 300],
       "credentials": {
         "httpHeaderAuth": {
           "id": "REPLACE_WITH_CREDENTIAL_ID",
-          "name": "Vergeo5 Internal Analytics"
+          "name": "Vergeo5 Internal - Privacy Token"
         }
       }
     }
   ],
   "connections": {
-    "Daily 03:00 UTC": {
+    "Daily 04:00 UTC": {
       "main": [
         [
           {
-            "node": "Sweep Analytics PII",
+            "node": "Purge Data-Export Bundles",
             "type": "main",
             "index": 0
           }
@@ -69,16 +69,16 @@
     "executionOrder": "v1",
     "timezone": "UTC"
   },
-  "versionId": "task3-analytics-retention",
+  "versionId": "task-data-export-purge",
   "meta": {
     "templateCredsSetupCompleted": false,
-    "note": "Daily DPA retention sweep: NULLs person-links (user_id / customer_id / session_id) on analytics rows older than 30 days across search_query_log, funnel_events, and analytics_events (and strips snapshot.customer_id). Idempotent + service-role."
+    "note": "Daily DPA sweep: deletes account-data-export bundles under private-artifacts/data-exports/ older than DATA_EXPORT_TTL_HOURS (default 24h). Idempotent + service-role. Auth via X-Internal-Token (INTERNAL_PRIVACY_TOKEN)."
   },
   "tags": [
     {
-      "name": "analytics",
-      "createdAt": "2026-07-18T00:00:00.000Z",
-      "updatedAt": "2026-07-18T00:00:00.000Z"
+      "name": "privacy",
+      "createdAt": "2026-07-22T00:00:00.000Z",
+      "updatedAt": "2026-07-22T00:00:00.000Z"
     }
   ]
 }
