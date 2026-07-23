@@ -1,5 +1,6 @@
 "use client";
 
+import { Rail } from "@vergeo/ui/src/rail";
 import Link from "next/link";
 
 export const SERVICE_VERTICALS = [
@@ -53,7 +54,7 @@ export function VerticalFilterChips({
         <p className="text-xs font-semibold uppercase tracking-wide text-text-3">
           {labels.verticalLabel}
         </p>
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        <Rail className="-mx-1 flex gap-2 px-1 pb-1">
           <Link
             href={hrefFor(null, activeArea)}
             className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-medium ${
@@ -77,7 +78,7 @@ export function VerticalFilterChips({
               {labels.categories[vertical] ?? vertical}
             </Link>
           ))}
-        </div>
+        </Rail>
       </div>
 
       <form action={`/${locale}/services`} method="get" className="flex flex-col gap-2">

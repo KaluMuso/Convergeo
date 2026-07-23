@@ -1,4 +1,5 @@
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
+import { Rail } from "@vergeo/ui/src/rail";
 import Link from "next/link";
 
 import type { CategoryRow, MerchSlotRow } from "./merch-data";
@@ -128,8 +129,10 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
           {t("home.categories.viewAll")}
         </Link>
       </div>
-      <ul
-        className="flex list-none gap-2 overflow-x-auto p-0 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] snap-x snap-mandatory md:grid md:grid-cols-4 md:gap-2.5 md:overflow-visible md:pb-0 md:snap-none lg:grid-cols-6 xl:grid-cols-8 xl:gap-3 [&::-webkit-scrollbar]:hidden"
+      <Rail
+        as="ul"
+        snap
+        className="flex list-none gap-2 p-0 pb-1 md:grid md:grid-cols-4 md:gap-2.5 md:overflow-visible md:pb-0 md:snap-none lg:grid-cols-6 xl:grid-cols-8 xl:gap-3"
         data-testid="home-category-grid"
       >
         {categories.map((category, index) => {
@@ -179,7 +182,7 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
             </li>
           );
         })}
-      </ul>
+      </Rail>
     </section>
   );
 }
