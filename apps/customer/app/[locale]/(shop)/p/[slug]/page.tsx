@@ -10,6 +10,7 @@ import {
   JsonLdScript,
   resolveCloudinaryImageUrls,
 } from "@vergeo/ui/src/seo/json-ld";
+import { Tabs } from "@vergeo/ui/src/tabs";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -651,28 +652,48 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
         />
       )}
 
-      <section aria-label={t("pdp.tabs.ariaLabel")} className="flex flex-col gap-5">
-        {overviewParagraphs.length > 0 ? (
-          <section className="flex flex-col gap-3">
-            <h2 className="font-display text-lg font-semibold text-text">
-              {t("pdp.overview.heading")}
-            </h2>
-            <div className="flex flex-col gap-2 text-sm leading-relaxed text-text-2">
-              {overviewParagraphs.map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <SpecsTable
-          rows={specRows}
-          heading={t("pdp.specs.heading")}
-          emptyLabel={t("pdp.specs.empty")}
-        />
-
-        {reviewsPanel}
-      </section>
+      <Tabs
+        ariaLabel={t("pdp.tabs.ariaLabel")}
+        mountInactivePanels
+        items={[
+          ...(overviewParagraphs.length > 0
+            ? [
+                {
+                  key: "overview",
+                  label: t("pdp.tabs.overview"),
+                  panel: (
+                    <section className="flex flex-col gap-3">
+                      <h2 className="font-display text-lg font-semibold text-text">
+                        {t("pdp.overview.heading")}
+                      </h2>
+                      <div className="flex flex-col gap-2 text-sm leading-relaxed text-text-2">
+                        {overviewParagraphs.map((paragraph, index) => (
+                          <p key={index}>{paragraph}</p>
+                        ))}
+                      </div>
+                    </section>
+                  ),
+                },
+              ]
+            : []),
+          {
+            key: "specs",
+            label: t("pdp.tabs.specs"),
+            panel: (
+              <SpecsTable
+                rows={specRows}
+                heading={t("pdp.specs.heading")}
+                emptyLabel={t("pdp.specs.empty")}
+              />
+            ),
+          },
+          {
+            key: "reviews",
+            label: t("pdp.tabs.reviews"),
+            panel: reviewsPanel,
+          },
+        ]}
+      />
 
       <RelatedProducts
         locale={locale}
