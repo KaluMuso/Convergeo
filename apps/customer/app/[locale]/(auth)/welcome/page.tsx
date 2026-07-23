@@ -5,8 +5,8 @@ import { redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
-import { getLocaleSwitcherLabels } from "../../account/_components/account-server";
 import { createAccountApiClient } from "../../account/_components/account-api";
+import { getLocaleSwitcherLabels } from "../../account/_components/account-server";
 import { isOnboardingComplete, resolvePostAuthPath } from "../_components/auth-utils";
 
 import { WelcomeForm, type WelcomeFormLabels } from "./_components/welcome-form";

@@ -5,8 +5,8 @@ import { Button } from "@vergeo/ui/src/button";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 
-import { createAccountApiClient } from "../../../account/_components/account-api";
 import { LocaleSwitcher, type LocaleSwitcherLabels } from "../../../_components/locale-switcher";
+import { createAccountApiClient } from "../../../account/_components/account-api";
 import {
   ONBOARDING_INTERESTS,
   resolvePostAuthPath,

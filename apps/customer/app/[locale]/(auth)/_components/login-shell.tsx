@@ -6,10 +6,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { resolvePostAuthPath } from "./auth-utils";
-import { navigateAfterCustomerAuth } from "./post-auth-navigation";
 import { EmailForm } from "./email-form";
 import { GoogleButton } from "./google-button";
 import { PhoneForm } from "./phone-form";
+import { navigateAfterCustomerAuth } from "./post-auth-navigation";
 
 export type AuthAppVariant = "customer" | "vendor" | "admin";
 
