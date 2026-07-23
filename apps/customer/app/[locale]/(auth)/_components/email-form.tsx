@@ -8,7 +8,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { parseAuthError, resolvePostAuthPath } from "./auth-utils";
+import { parseAuthError } from "./auth-utils";
+import { navigateAfterCustomerAuth } from "./post-auth-navigation";
 
 type EmailFormLabels = {
   emailLabel: string;
@@ -101,9 +102,12 @@ export function EmailForm({ locale, labels, mode, defaultNextPath, nextParam }: 
         }
       }
 
-      const destination = resolvePostAuthPath(locale, nextParam, defaultNextPath);
-      router.push(destination);
-      router.refresh();
+      await navigateAfterCustomerAuth({
+        router,
+        locale,
+        nextParam,
+        fallbackPath: defaultNextPath,
+      });
     } catch {
       setErrorMessage(labels.generic);
     } finally {

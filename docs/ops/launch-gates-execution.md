@@ -29,7 +29,7 @@ Scripts live under `scripts/ops/`; this doc is the single checklist. Never commi
 
 - [ ] `master` tip identified (`git rev-parse HEAD`)
 - [ ] API redeployed with fingerprint SHA (`infra/redeploy-api.sh <sha>`)
-- [ ] Migrations at repo tip on target Supabase
+- [ ] Migrations at repo tip on target Supabase — **apply `0070_vendor_commercial_tier.sql` on the target Supabase project before API redeploy** (vendor commercial-tier columns + RLS; API reads tier on deploy)
 - [ ] `public_launch=false`; production money flags unchanged
 - [ ] Isolated **staging** stack for money drills (never `api.vergeo5.com`)
 

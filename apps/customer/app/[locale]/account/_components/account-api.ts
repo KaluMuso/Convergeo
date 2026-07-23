@@ -24,6 +24,16 @@ export type NotificationPrefs = {
   email: boolean;
 };
 
+export type OnboardingState = {
+  interests: string[];
+  completed_at: string | null;
+};
+
+export type PreferencesResponse = {
+  notif_prefs: NotificationPrefs;
+  onboarding: OnboardingState;
+};
+
 export type AddressInput = {
   label?: string | null;
   landmark: string;
@@ -55,10 +65,14 @@ export function createAccountApiClient(getToken: () => string | null | Promise<s
       }),
     deleteAddress: (id: string) =>
       client.request<void>(`/account/addresses/${id}`, { method: "DELETE" }),
-    getPreferences: () =>
-      client.request<{ notif_prefs: NotificationPrefs }>("/account/preferences"),
+    getPreferences: () => client.request<PreferencesResponse>("/account/preferences"),
     patchPreferences: (body: Partial<NotificationPrefs>) =>
-      client.request<{ notif_prefs: NotificationPrefs }>("/account/preferences", {
+      client.request<PreferencesResponse>("/account/preferences", {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    completeOnboarding: (body: { interests: string[]; locale?: string }) =>
+      client.request<PreferencesResponse>("/account/onboarding", {
         method: "PATCH",
         body: JSON.stringify(body),
       }),

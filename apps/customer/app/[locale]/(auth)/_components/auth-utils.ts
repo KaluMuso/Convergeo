@@ -124,3 +124,33 @@ export function resolvePostAuthPath(
   }
   return nextParam;
 }
+
+export const ONBOARDING_INTERESTS = [
+  "electronics",
+  "fashion",
+  "groceries",
+  "services",
+  "events",
+] as const;
+
+export type OnboardingInterest = (typeof ONBOARDING_INTERESTS)[number];
+
+export function isOnboardingComplete(
+  onboarding?: { completed_at?: string | null } | null,
+): boolean {
+  return Boolean(onboarding?.completed_at);
+}
+
+export function resolveCustomerPostAuthPath(
+  locale: string,
+  nextParam: string | null | undefined,
+  fallbackPath: string,
+  onboardingComplete: boolean,
+): string {
+  if (onboardingComplete) {
+    return resolvePostAuthPath(locale, nextParam, fallbackPath);
+  }
+
+  const query = nextParam ? `?next=${encodeURIComponent(nextParam)}` : "";
+  return `/${locale}/welcome${query}`;
+}

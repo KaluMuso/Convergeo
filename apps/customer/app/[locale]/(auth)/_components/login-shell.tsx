@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { resolvePostAuthPath } from "./auth-utils";
+import { navigateAfterCustomerAuth } from "./post-auth-navigation";
 import { EmailForm } from "./email-form";
 import { GoogleButton } from "./google-button";
 import { PhoneForm } from "./phone-form";
@@ -97,12 +98,16 @@ export function AuthLoginShell({
         return;
       }
 
-      router.push(postAuthPath);
-      router.refresh();
+      await navigateAfterCustomerAuth({
+        router,
+        locale,
+        nextParam,
+        fallbackPath: defaultNextPath,
+      });
     };
 
     void completeOAuth();
-  }, [labels.genericError, postAuthPath, router]);
+  }, [defaultNextPath, labels.genericError, locale, nextParam, router]);
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -226,12 +231,16 @@ export function AuthSignupShell({
         return;
       }
 
-      router.push(postAuthPath);
-      router.refresh();
+      await navigateAfterCustomerAuth({
+        router,
+        locale,
+        nextParam,
+        fallbackPath: defaultNextPath,
+      });
     };
 
     void completeOAuth();
-  }, [labels.genericError, postAuthPath, router]);
+  }, [defaultNextPath, labels.genericError, locale, nextParam, router]);
 
   return (
     <div className="flex w-full flex-col gap-6">

@@ -481,11 +481,59 @@ def test_preferences_persist(account_client: TestClient) -> None:
 def test_preferences_defaults_when_empty_json(account_client: TestClient) -> None:
     response = account_client.get("/account/preferences", headers=auth_header(TOKEN_B))
     assert response.status_code == 200
-    assert response.json()["notif_prefs"] == {
+    body = response.json()
+    assert body["notif_prefs"] == {
         "whatsapp": True,
         "sms": True,
         "email": True,
     }
+    assert body["onboarding"] == {"interests": [], "completed_at": None}
+
+
+def test_onboarding_complete_persists_interests(account_client: TestClient) -> None:
+    response = account_client.patch(
+        "/account/onboarding",
+        headers=auth_header(TOKEN_A),
+        json={
+            "interests": ["electronics", "events", "electronics"],
+            "locale": "bem",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["onboarding"]["interests"] == ["electronics", "events"]
+    assert body["onboarding"]["completed_at"] is not None
+
+    follow_up = account_client.get("/account/preferences", headers=auth_header(TOKEN_A))
+    assert follow_up.json()["onboarding"]["interests"] == ["electronics", "events"]
+
+
+def test_preferences_patch_preserves_onboarding(account_client: TestClient) -> None:
+    account_client.patch(
+        "/account/onboarding",
+        headers=auth_header(TOKEN_A),
+        json={"interests": ["fashion"]},
+    )
+    patch_response = account_client.patch(
+        "/account/preferences",
+        headers=auth_header(TOKEN_A),
+        json={"email": False},
+    )
+    assert patch_response.status_code == 200
+    body = patch_response.json()
+    assert body["notif_prefs"]["email"] is False
+    assert body["onboarding"]["interests"] == ["fashion"]
+    assert body["onboarding"]["completed_at"] is not None
+
+
+def test_onboarding_rejects_unknown_interest(account_client: TestClient) -> None:
+    response = account_client.patch(
+        "/account/onboarding",
+        headers=auth_header(TOKEN_A),
+        json={"interests": ["widgets"]},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
 
 
 def test_account_requires_auth(account_client: TestClient) -> None:
