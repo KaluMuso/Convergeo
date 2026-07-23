@@ -371,11 +371,6 @@ export default async function VendorProfilePage({ params }: PageProps) {
               {vendor.verified ? (
                 <CornerRibbon trust="id_verified" trustLabel={t("profile.verifiedBadge")} />
               ) : null}
-              {vendor.kyc_tier && vendor.kyc_tier >= 2 ? (
-                <span className="inline-flex items-center rounded-full bg-panel px-2.5 py-0.5 text-xs font-medium text-panel-text">
-                  {vendor.kyc_tier >= 3 ? t("profile.tierPremium") : t("profile.tierBusiness")}
-                </span>
-              ) : null}
               {vendor.location ? (
                 <span className="text-sm text-text-3">{vendor.location.landmark}</span>
               ) : null}
