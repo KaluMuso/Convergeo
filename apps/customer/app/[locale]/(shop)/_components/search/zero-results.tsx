@@ -1,3 +1,4 @@
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 
 export type CategorySuggestion = {
@@ -37,12 +38,14 @@ export function ZeroResults({ query, locale, labels }: ZeroResultsProps) {
         <ul className="flex flex-wrap gap-2">
           {labels.suggestionTerms.map((term) => (
             <li key={term}>
-              <Link
+              <LinkButton
                 href={`/${locale}/search?q=${encodeURIComponent(term)}`}
-                className="inline-flex min-h-11 items-center rounded-pill border border-border bg-bg px-3 text-sm text-primary hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+                variant="secondary"
+                className="rounded-pill bg-bg px-3 text-sm text-primary hover:border-primary"
+                LinkComponent={Link}
               >
                 {term}
-              </Link>
+              </LinkButton>
             </li>
           ))}
         </ul>
@@ -55,12 +58,14 @@ export function ZeroResults({ query, locale, labels }: ZeroResultsProps) {
         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {labels.categories.map((category) => (
             <li key={category.key}>
-              <Link
+              <LinkButton
                 href={category.href}
-                className="flex min-h-11 items-center justify-center rounded-lg border border-border bg-surface px-3 text-center text-sm text-text hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+                variant="secondary"
+                className="rounded-lg text-center text-sm hover:border-primary"
+                LinkComponent={Link}
               >
                 {category.label}
-              </Link>
+              </LinkButton>
             </li>
           ))}
         </ul>
@@ -74,15 +79,17 @@ export function ZeroResults({ query, locale, labels }: ZeroResultsProps) {
           {labels.askVergeoTitle}
         </h2>
         <p className="mb-3 text-sm text-text-2">{labels.askVergeoTeaser}</p>
-        <Link
+        <LinkButton
           id="ask-vergeo-slot"
           data-testid="ask-vergeo-slot"
           href={`/${locale}/ask?q=${encodeURIComponent(query)}`}
           aria-label={labels.askVergeoSlotLabel}
-          className="flex min-h-24 items-center justify-center rounded-md border border-border bg-surface px-3 text-center text-sm font-medium text-primary hover:border-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+          variant="secondary"
+          className="min-h-24 w-full text-center text-sm font-medium text-primary hover:border-primary"
+          LinkComponent={Link}
         >
           {labels.askVergeoTitle}
-        </Link>
+        </LinkButton>
       </section>
     </div>
   );

@@ -1,4 +1,5 @@
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -70,12 +71,14 @@ export default async function AccountJobsPage({ params }: PageProps) {
       <section className="space-y-4 rounded border border-border bg-surface p-6 text-center">
         <h2 className="font-display text-h2 text-display-ink">{t("quotes.list.emptyTitle")}</h2>
         <p className="text-sm text-text-2">{t("quotes.list.emptyBody")}</p>
-        <Link
+        <LinkButton
           href={`/${locale}/services/post-job`}
-          className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-5 text-sm font-medium text-surface"
+          variant="primary"
+          className="px-5 text-sm"
+          LinkComponent={Link}
         >
           {t("quotes.list.postJobCta")}
-        </Link>
+        </LinkButton>
       </section>
     );
   }

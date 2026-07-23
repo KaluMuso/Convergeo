@@ -1,5 +1,6 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -185,12 +186,14 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
           <p className="text-body text-text-2">{t("comparePage.subtitle")}</p>
         </header>
         <EmptyState title={t("comparePage.noProductTitle")} body={t("comparePage.noProductBody")} />
-        <Link
+        <LinkButton
           href={`/${locale}/search`}
-          className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-5 text-sm font-medium text-surface"
+          variant="primary"
+          className="px-5 text-sm"
+          LinkComponent={Link}
         >
           {t("comparePage.browseCta")}
-        </Link>
+        </LinkButton>
       </div>
     );
   }
@@ -206,12 +209,14 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
           title={t("comparePage.unavailableTitle")}
           body={t("comparePage.unavailableBody")}
         />
-        <Link
+        <LinkButton
           href={`/${locale}/p/${slug}`}
-          className="inline-flex min-h-11 items-center justify-center rounded border border-border bg-surface px-5 text-sm font-medium text-text"
+          variant="secondary"
+          className="px-5 text-sm"
+          LinkComponent={Link}
         >
           {t("comparePage.backToProduct")}
-        </Link>
+        </LinkButton>
       </div>
     );
   }
@@ -250,12 +255,14 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
         </>
       )}
 
-      <Link
+      <LinkButton
         href={`/${locale}/p/${comparison.product_slug}`}
-        className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-5 text-sm font-medium text-surface"
+        variant="primary"
+        className="px-5 text-sm"
+        LinkComponent={Link}
       >
         {t("comparePage.chooseOnProduct")}
-      </Link>
+      </LinkButton>
     </div>
   );
 }

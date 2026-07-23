@@ -1,4 +1,5 @@
 import { Countdown } from "@vergeo/ui/src/countdown";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 
 import type { MerchSlotRow } from "./merch-data";
@@ -70,12 +71,14 @@ export function FlashDeal({ slot, locale, t }: FlashDealProps) {
           }}
           className="flex items-center gap-3"
         />
-        <Link
+        <LinkButton
           href={ctaHref}
-          className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-pill bg-panel-text px-6 text-sm font-semibold text-panel transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:shadow-focusRing"
+          variant="primary"
+          className="shrink-0 rounded-pill bg-panel-text px-6 text-sm font-semibold text-panel hover:opacity-90"
+          LinkComponent={Link}
         >
           {ctaLabel}
-        </Link>
+        </LinkButton>
       </div>
     </section>
   );

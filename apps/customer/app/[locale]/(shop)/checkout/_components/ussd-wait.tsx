@@ -3,6 +3,7 @@
 import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
 import { formatK } from "@vergeo/i18n";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import { Spinner } from "@vergeo/ui/src/spinner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -319,12 +320,15 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
           <p className="font-body text-sm text-text-2">
             {labels.codBody.replace("{amount}", formattedAmount)}
           </p>
-          <Link
+          <LinkButton
             href={orderPath}
-            className="inline-flex h-12 min-h-12 w-full items-center justify-center rounded bg-primary px-6 font-body text-body font-medium text-surface hover:bg-primary-deep"
+            variant="primary"
+            size="lg"
+            className="w-full"
+            LinkComponent={Link}
           >
             {labels.codCta}
-          </Link>
+          </LinkButton>
         </div>
       </div>
     );

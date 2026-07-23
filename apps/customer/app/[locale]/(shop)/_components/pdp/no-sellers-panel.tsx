@@ -1,3 +1,4 @@
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 
 export type NoSellersPanelProps = {
@@ -20,13 +21,15 @@ export function NoSellersPanel({ title, body, browseLabel, browseHref }: NoSelle
     >
       <h2 className="font-display text-lg font-semibold text-text">{title}</h2>
       <p className="text-sm leading-relaxed text-text-2">{body}</p>
-      <Link
+      <LinkButton
         href={browseHref}
         data-testid="pdp-no-sellers-browse"
-        className="inline-flex min-h-11 w-fit items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-[var(--primary-btn-fg)] focus-visible:outline-none focus-visible:shadow-focusRing"
+        variant="primary"
+        className="w-fit rounded-lg text-sm"
+        LinkComponent={Link}
       >
         {browseLabel}
-      </Link>
+      </LinkButton>
     </section>
   );
 }

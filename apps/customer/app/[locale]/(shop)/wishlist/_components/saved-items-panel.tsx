@@ -3,6 +3,7 @@
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import { Skeleton } from "@vergeo/ui/src/skeleton";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -136,12 +137,14 @@ export function SavedItemsPanel({ locale, labels, signedIn }: Props) {
           body={labels.emptyBody}
           data-testid="saved-items-empty"
           action={
-            <Link
+            <LinkButton
               href={`/${locale}`}
-              className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-4 text-sm font-medium text-surface"
+              variant="primary"
+              className="text-sm"
+              LinkComponent={Link}
             >
               {labels.browseCta}
-            </Link>
+            </LinkButton>
           }
         />
       ) : null}
@@ -216,12 +219,14 @@ export function SavedItemsPanel({ locale, labels, signedIn }: Props) {
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Link
+                  <LinkButton
                     href={`/${locale}/p/${row.slug}`}
-                    className="inline-flex min-h-11 items-center rounded border border-border px-3 text-sm font-medium text-text"
+                    variant="secondary"
+                    className="px-3 text-sm"
+                    LinkComponent={Link}
                   >
                     {labels.viewProduct}
-                  </Link>
+                  </LinkButton>
                   {listing && inStock ? (
                     <Button
                       type="button"

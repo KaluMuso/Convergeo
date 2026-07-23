@@ -1,4 +1,5 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -111,12 +112,9 @@ export default async function HelpArticlePage({ params }: PageProps) {
 
       <section className="space-y-3 rounded-lg border border-border bg-bg-2 p-6">
         <h2 className="font-display text-h3 text-display-ink">{t("article.notHelpful")}</h2>
-        <Link
-          className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-4 text-body font-medium text-surface"
-          href={`/${locale}/contact`}
-        >
+        <LinkButton href={`/${locale}/contact`} variant="primary" LinkComponent={Link}>
           {t("article.contactCta")}
-        </Link>
+        </LinkButton>
       </section>
     </main>
   );

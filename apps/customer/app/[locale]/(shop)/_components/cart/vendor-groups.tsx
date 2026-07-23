@@ -4,6 +4,7 @@ import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { IconChevronDown } from "@vergeo/ui/src/icons";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import { Skeleton } from "@vergeo/ui/src/skeleton";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -236,12 +237,9 @@ export function CartEmptyState({
         body={labels.emptyBody}
         data-testid="cart-empty-state"
         action={
-          <Link
-            href={`/${locale}`}
-            className="inline-flex h-11 min-h-11 items-center justify-center rounded bg-primary px-4 text-body font-medium text-surface"
-          >
+          <LinkButton href={`/${locale}`} variant="primary" LinkComponent={Link}>
             {labels.browseCta}
-          </Link>
+          </LinkButton>
         }
       />
       <CartEmptyTrustList labels={labels.emptyTrust} />

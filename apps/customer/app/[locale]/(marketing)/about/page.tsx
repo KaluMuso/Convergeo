@@ -1,4 +1,5 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -100,24 +101,15 @@ export default async function AboutPage({ params }: PageProps) {
       <section className="space-y-4 rounded-lg border border-border bg-bg-2 p-6">
         <h2 className="font-display text-h2 text-display-ink">{t("cta.heading")}</h2>
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Link
-            className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-4 text-body font-medium text-surface"
-            href={`/${locale}`}
-          >
+          <LinkButton href={`/${locale}`} variant="primary" LinkComponent={Link}>
             {t("cta.browse")}
-          </Link>
-          <Link
-            className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 text-body font-medium text-text"
-            href={`/${locale}/sell`}
-          >
+          </LinkButton>
+          <LinkButton href={`/${locale}/sell`} variant="secondary" LinkComponent={Link}>
             {t("cta.sell")}
-          </Link>
-          <Link
-            className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 text-body font-medium text-text"
-            href={`/${locale}/help`}
-          >
+          </LinkButton>
+          <LinkButton href={`/${locale}/help`} variant="secondary" LinkComponent={Link}>
             {t("cta.help")}
-          </Link>
+          </LinkButton>
         </div>
       </section>
     </main>

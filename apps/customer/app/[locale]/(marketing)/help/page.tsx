@@ -1,4 +1,5 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -79,12 +80,9 @@ export default async function HelpPage({ params }: PageProps) {
           >
             {t("cta.whatsapp")}
           </a>
-          <Link
-            className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 text-body font-medium text-text"
-            href={`/${locale}/contact`}
-          >
+          <LinkButton href={`/${locale}/contact`} variant="secondary" LinkComponent={Link}>
             {t("cta.contact")}
-          </Link>
+          </LinkButton>
         </div>
       </section>
     </main>

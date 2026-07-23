@@ -1,3 +1,4 @@
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import { ServiceCard } from "@vergeo/ui/src/service-card";
 import { VendorCard } from "@vergeo/ui/src/vendor-card";
@@ -376,12 +377,14 @@ export function HomeSellCta({ locale, t }: HomeSellCtaProps) {
         </h2>
         <p className="text-body text-panel-muted">{t("home.sellCta.body")}</p>
       </div>
-      <Link
+      <LinkButton
         href={`/${locale}/sell`}
-        className="inline-flex min-h-11 shrink-0 items-center justify-center self-start rounded-pill bg-primary px-6 text-sm font-semibold text-[var(--primary-btn-fg)] lg:self-center"
+        variant="primary"
+        className="shrink-0 self-start rounded-pill px-6 text-sm font-semibold lg:self-center"
+        LinkComponent={Link}
       >
         {t("home.sellCta.cta")}
-      </Link>
+      </LinkButton>
     </section>
   );
 }

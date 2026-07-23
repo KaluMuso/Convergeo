@@ -2,6 +2,7 @@
 
 import { useSession } from "@vergeo/auth/use-session";
 import { ApiError, createApiClient } from "@vergeo/config";
+import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -309,21 +310,25 @@ export default function CardCheckoutPage() {
       </section>
 
       {viewState === "success" ? (
-        <Link
+        <LinkButton
           href={ordersPath}
-          className="inline-flex min-h-11 w-full items-center justify-center rounded bg-primary px-5 text-sm font-medium text-surface"
+          variant="primary"
+          className="w-full px-5 text-sm"
+          LinkComponent={Link}
         >
           {t("viewOrders")}
-        </Link>
+        </LinkButton>
       ) : null}
 
       {viewState === "failed" || viewState === "error" ? (
-        <Link
+        <LinkButton
           href={checkoutPaymentPath}
-          className="inline-flex min-h-11 w-full items-center justify-center rounded border border-border bg-surface px-5 text-sm font-medium text-text"
+          variant="secondary"
+          className="w-full px-5 text-sm"
+          LinkComponent={Link}
         >
           {t("retryPayment")}
-        </Link>
+        </LinkButton>
       ) : null}
 
       {viewState === "pending" ? (
