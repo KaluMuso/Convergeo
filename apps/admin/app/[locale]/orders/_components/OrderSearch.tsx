@@ -1,5 +1,6 @@
 "use client";
 
+import { orderStatusTone, StatusChip } from "@vergeo/ui/src/status-chip";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -141,14 +142,19 @@ export function OrderSearch({ locale }: OrderSearchProps) {
             </thead>
             <tbody>
               {results.map((item) => (
-                <tr key={item.id} className="border-b border-border">
+                <tr key={item.id} className="border-b border-border hover:bg-bg-2">
                   <td className="px-2 py-3 font-mono text-xs">{item.id}</td>
                   <td className="px-2 py-3">
                     <div className="font-medium">{item.vendor_display_name}</div>
                     <div className="text-xs text-muted">{item.vendor_slug}</div>
                   </td>
                   <td className="px-2 py-3 text-muted">{item.customer_phone ?? "—"}</td>
-                  <td className="px-2 py-3">{t(`statuses.${item.status}`)}</td>
+                  <td className="px-2 py-3">
+                    <StatusChip
+                      tone={orderStatusTone(item.status)}
+                      label={t(`statuses.${item.status}`)}
+                    />
+                  </td>
                   <td className="px-2 py-3 text-right">
                     <button
                       type="button"

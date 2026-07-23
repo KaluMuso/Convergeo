@@ -73,7 +73,7 @@ export function KycQueue({ locale }: KycQueueProps) {
         </thead>
         <tbody>
           {items.map((item) => (
-            <tr key={item.id} className="border-b border-border">
+            <tr key={item.id} className="border-b border-border hover:bg-bg-2">
               <td className="px-2 py-3">
                 <div className="font-medium text-text">{item.vendor_display_name}</div>
                 <div className="text-xs text-muted">{t("tier", { tier: item.tier })}</div>
