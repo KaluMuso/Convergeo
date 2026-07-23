@@ -1,4 +1,5 @@
 import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { CommercialTierStrip } from "@vergeo/ui/src/commercial-tier-strip";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 import {
@@ -14,6 +15,12 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
+import {
+  buildTierStripItems,
+  buildVendorLadderLabels,
+  vendorCommercialTier,
+  vendorTrustRibbon,
+} from "../../_components/directory/vendor-ladder-labels";
 import { ListingGrid, type CatalogListing } from "../../_components/plp/listing-grid";
 
 import type { Metadata } from "next";
@@ -38,6 +45,7 @@ type VendorProfileApiResponse = {
     whatsapp_msisdn: string | null;
     preferred_badge: boolean;
     kyc_tier: number | null;
+    commercial_tier: string | null;
     verified: boolean;
     order_count: number;
     location: VendorLocation | null;
@@ -267,6 +275,13 @@ export default async function VendorProfilePage({ params }: PageProps) {
   }
 
   const { vendor, listings, services, events, reviews_summary: reviews } = profile;
+  const ladderLabels = buildVendorLadderLabels(t);
+  const trustRibbon = vendorTrustRibbon(
+    { preferredBadge: vendor.preferred_badge, kycTier: vendor.kyc_tier },
+    ladderLabels,
+  );
+  const commercial = vendorCommercialTier(vendor.commercial_tier, ladderLabels);
+  const tierStripItems = buildTierStripItems(ladderLabels);
   const listingsForGrid: CatalogListing[] = listings.map((listing) => ({
     id: listing.id,
     title: listing.title,
@@ -367,17 +382,8 @@ export default async function VendorProfilePage({ params }: PageProps) {
           <div className="min-w-0 flex-1 space-y-2 pb-1 sm:pb-3">
             <h1 className="font-display text-h1 text-display-ink">{vendor.display_name}</h1>
             <div className="flex flex-wrap items-center gap-2">
-              {vendor.preferred_badge ? (
-                <CornerRibbon trust="preferred" trustLabel={t("profile.preferredBadge")} />
-              ) : null}
-              {vendor.verified ? (
-                <CornerRibbon trust="id_verified" trustLabel={t("profile.verifiedBadge")} />
-              ) : null}
-              {vendor.kyc_tier && vendor.kyc_tier >= 2 ? (
-                <span className="inline-flex items-center rounded-full bg-panel px-2.5 py-0.5 text-xs font-medium text-panel-text">
-                  {vendor.kyc_tier >= 3 ? t("profile.tierPremium") : t("profile.tierBusiness")}
-                </span>
-              ) : null}
+              <CornerRibbon trust={trustRibbon.trust} trustLabel={trustRibbon.trustLabel} />
+              <CornerRibbon tier={commercial.tier} tierLabel={commercial.tierLabel} />
               {vendor.location ? (
                 <span className="text-sm text-text-3">{vendor.location.landmark}</span>
               ) : null}
@@ -420,6 +426,11 @@ export default async function VendorProfilePage({ params }: PageProps) {
             <dt className="text-micro text-text-3">{t("profile.statOrders")}</dt>
           </div>
         </dl>
+        <CommercialTierStrip
+          activeTier={commercial.tier}
+          items={tierStripItems}
+          ariaLabel={ladderLabels.tierStripAria}
+        />
       </header>
 
       {vendor.description || vendor.locations.length > 0 ? (

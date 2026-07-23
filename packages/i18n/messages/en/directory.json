@@ -38,6 +38,25 @@
     "verifiedBadge": "Verified",
     "defaultLocation": "Zambia"
   },
+  "trust": {
+    "selfListed": "Self-listed",
+    "idVerified": "ID verified",
+    "sectorVerified": "Sector verified",
+    "preferred": "Preferred vendor"
+  },
+  "tiers": {
+    "bronze": "Bronze",
+    "silver": "Silver",
+    "gold": "Gold",
+    "platinum": "Platinum",
+    "stripAria": "Vendor subscription tier",
+    "perks": {
+      "bronze": "Basic listing",
+      "silver": "Standard listing + analytics",
+      "gold": "Featured listing + sales reports",
+      "platinum": "Priority listing + analytics + B2B portal"
+    }
+  },
   "empty": {
     "title": "No businesses found",
     "body": "Try clearing filters or searching for another business."
@@ -61,8 +80,6 @@
     "statReviews": "Reviews",
     "statListings": "Products",
     "statOrders": "Orders",
-    "tierBusiness": "Business",
-    "tierPremium": "Premium",
     "offeringsAria": "Vendor offerings",
     "tabProducts": "Products",
     "tabServices": "Services",

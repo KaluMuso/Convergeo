@@ -35,6 +35,7 @@ def _vendor_row(
     status: str = "active",
     preferred_badge: bool = True,
     kyc_tier: int | None = 2,
+    commercial_tier: str | None = None,
     description: str = "Electronics and phones in Lusaka.",
     landmark: str = "East Park Mall, Lusaka",
     lat: float = LUSAKA_CBD[0],
@@ -50,6 +51,7 @@ def _vendor_row(
         "whatsapp_msisdn": whatsapp_msisdn,
         "status": status,
         "kyc_tier": kyc_tier,
+        "commercial_tier": commercial_tier,
         "preferred_badge": preferred_badge,
         "created_at": "2025-01-01T00:00:00Z",
         "vendor_locations": [
@@ -442,6 +444,26 @@ class TestVendorProfile:
         assert [loc["landmark"] for loc in payload["vendor"]["locations"]] == [
             "East Park Mall, Lusaka"
         ]
+
+    def test_profile_exposes_commercial_tier(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.vendors[0]["commercial_tier"] = "gold"
+
+        response = client.get("/directory/tech-hub-lusaka")
+        assert response.status_code == 200
+        assert response.json()["vendor"]["commercial_tier"] == "gold"
+
+    def test_directory_list_includes_commercial_tier(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.vendors[0]["commercial_tier"] = "silver"
+
+        response = client.get("/directory")
+        assert response.status_code == 200
+        assert response.json()["items"][0]["commercial_tier"] == "silver"
 
     def test_profile_exposes_whatsapp_contact(
         self, client: TestClient, store: FakeSupabaseStore

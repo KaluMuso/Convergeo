@@ -6,6 +6,11 @@ import Link from "next/link";
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { fetchJson } from "../../../../lib/fetch-json";
 
+import {
+  vendorCommercialTier,
+  vendorTrustForCard,
+  type VendorLadderLabels,
+} from "./directory/vendor-ladder-labels";
 import { HomeHeroCarousel } from "./home-hero-carousel";
 import { ListingGrid, type CatalogListing } from "./plp/listing-grid";
 
@@ -71,6 +76,8 @@ export type VendorRailItem = {
   displayName: string;
   logoUrl: string | null;
   preferredBadge: boolean;
+  kycTier: number | null;
+  commercialTier: string | null;
   verified: boolean;
   landmark: string | null;
   categories: string[];
@@ -159,6 +166,8 @@ type VendorApiItem = {
   display_name: string;
   logo_url: string | null;
   preferred_badge: boolean;
+  kyc_tier: number | null;
+  commercial_tier: string | null;
   verified: boolean;
   landmark: string | null;
   categories: string[];
@@ -191,6 +200,8 @@ async function fetchTopVendorsRail(limit: number): Promise<VendorRailItem[]> {
         displayName: item.display_name,
         logoUrl: item.logo_url,
         preferredBadge: item.preferred_badge,
+        kycTier: item.kyc_tier,
+        commercialTier: item.commercial_tier,
         verified: item.verified,
         landmark: item.landmark,
         categories: item.categories,
@@ -460,6 +471,7 @@ type VendorsRailLabels = {
   verified: string;
   location: string;
   view: string;
+  trustLabels: VendorLadderLabels;
 };
 
 type HomeVendorsRailProps = {
@@ -526,6 +538,19 @@ export function HomeVendorsRail({
                   .replace("{rating}", vendor.ratingAvg.toFixed(1))
                   .replace("{count}", String(vendor.ratingCount))
               : labels.noReviews;
+          const trust = vendorTrustForCard(
+            { preferredBadge: vendor.preferredBadge, kycTier: vendor.kycTier },
+            labels.trustLabels,
+          );
+          const commercial = vendorCommercialTier(vendor.commercialTier, labels.trustLabels);
+          const trustLabel =
+            trust.trust === "preferred"
+              ? labels.preferred
+              : trust.trust === "sector_verified"
+                ? labels.trustLabels.trust.sector_verified
+                : trust.trust === "id_verified"
+                  ? labels.verified
+                  : trust.trustLabel;
 
           return (
             <Link
@@ -538,16 +563,10 @@ export function HomeVendorsRail({
                 categoryLabel={categoryText}
                 locationLabel={vendor.landmark ?? labels.location}
                 avatar={vendor.logoUrl ? vendorRailLogo(vendor.logoUrl) : undefined}
-                trust={
-                  vendor.preferredBadge ? "preferred" : vendor.verified ? "id_verified" : undefined
-                }
-                trustLabel={
-                  vendor.preferredBadge
-                    ? labels.preferred
-                    : vendor.verified
-                      ? labels.verified
-                      : undefined
-                }
+                trust={trust.trust}
+                trustLabel={trustLabel}
+                tier={commercial.tier}
+                tierLabel={commercial.tierLabel}
                 stats={[
                   { label: labels.listings, value: String(vendor.listingCount) },
                   { label: labels.reviews, value: ratingValue },

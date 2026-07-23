@@ -13,6 +13,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { BannerRow } from "./_components/banner-row";
 import { CategoryGrid } from "./_components/category-grid";
+import { buildVendorLadderLabels } from "./_components/directory/vendor-ladder-labels";
 import { EventsRow } from "./_components/events-row";
 import { FeaturedCollections } from "./_components/featured-collections";
 import { FlashDeal } from "./_components/flash-deal";
@@ -147,12 +148,19 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   const merchPreview = readMerchPreviewParam(resolvedSearchParams);
   setRequestLocale(locale);
 
-  const [tRaw, merch, baseMessages] = await Promise.all([
+  const [tRaw, merch, baseMessages, directoryMessages] = await Promise.all([
     getCatalogTranslator(locale),
     loadHomeMerchData({ merchPreview }),
     getMessages(),
+    loadNamespace(locale as Locale, "directory"),
   ]);
   const t = tRaw as unknown as CatalogTranslator;
+  const tDirectory = createTranslator({
+    locale,
+    messages: { directory: directoryMessages } as AbstractIntlMessages,
+    namespace: "directory",
+  }) as unknown as (key: string) => string;
+  const vendorLadderLabels = buildVendorLadderLabels(tDirectory);
   const tCommon = createTranslator({
     locale,
     messages: baseMessages as AbstractIntlMessages,
@@ -316,6 +324,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
               verified: t("home.rails.vendors.verified"),
               location: t("home.rails.vendors.location"),
               view: t("home.rails.vendors.view"),
+              trustLabels: vendorLadderLabels,
             }}
           />
         </>

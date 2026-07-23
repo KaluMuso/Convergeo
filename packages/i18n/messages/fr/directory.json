@@ -38,6 +38,25 @@
     "verifiedBadge": "Vérifié",
     "defaultLocation": "Zambie"
   },
+  "trust": {
+    "selfListed": "Auto-inscrit",
+    "idVerified": "Identité vérifiée",
+    "sectorVerified": "Secteur vérifié",
+    "preferred": "Vendeur préféré"
+  },
+  "tiers": {
+    "bronze": "Bronze",
+    "silver": "Argent",
+    "gold": "Or",
+    "platinum": "Platine",
+    "stripAria": "Niveau d'abonnement vendeur",
+    "perks": {
+      "bronze": "Annonce de base",
+      "silver": "Annonce standard + analyses",
+      "gold": "Annonce en vedette + rapports",
+      "platinum": "Priorité + analyses + portail B2B"
+    }
+  },
   "empty": {
     "title": "Aucune entreprise trouvée",
     "body": "Essayez d'effacer les filtres ou de rechercher une autre entreprise."
@@ -61,8 +80,6 @@
     "statReviews": "Avis",
     "statListings": "Produits",
     "statOrders": "Commandes",
-    "tierBusiness": "Business",
-    "tierPremium": "Premium",
     "offeringsAria": "Offres du vendeur",
     "tabProducts": "Produits",
     "tabServices": "Services",

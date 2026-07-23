@@ -316,6 +316,27 @@ const vendorsRailLabels = {
   verified: "Verified",
   location: "Zambia",
   view: "Visit store",
+  trustLabels: {
+    trust: {
+      self_listed: "Self-listed",
+      id_verified: "ID verified",
+      sector_verified: "Sector verified",
+      preferred: "Preferred vendor",
+    },
+    tiers: {
+      bronze: "Bronze",
+      silver: "Silver",
+      gold: "Gold",
+      platinum: "Platinum",
+    },
+    tierPerks: {
+      bronze: "Basic listing",
+      silver: "Standard listing + analytics",
+      gold: "Featured listing + sales reports",
+      platinum: "Priority listing + analytics + B2B portal",
+    },
+    tierStripAria: "Vendor subscription tier",
+  },
 };
 
 describe("HomeServicesRail", () => {
@@ -391,6 +412,8 @@ describe("HomeVendorsRail", () => {
             displayName: "Kabwata Electronics",
             logoUrl: null,
             preferredBadge: true,
+            kycTier: 2,
+            commercialTier: "gold",
             verified: true,
             landmark: "Lusaka",
             categories: ["electronics"],
