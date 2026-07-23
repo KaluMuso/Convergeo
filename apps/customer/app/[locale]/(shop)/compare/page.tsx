@@ -12,6 +12,7 @@ import {
   type ComparisonLabels,
   type ComparisonListing,
 } from "../_components/pdp/comparison";
+import { catalogLogisticsLabels } from "../_components/plp/logistics-pills";
 
 import { CompareResults } from "./_components/compare-results";
 
@@ -240,7 +241,11 @@ export default async function ComparePage({ params, searchParams }: PageProps) {
         />
       ) : (
         <>
-          <CompareResults listings={listings} labels={comparisonLabels(t)} />
+          <CompareResults
+            listings={listings}
+            labels={comparisonLabels(t)}
+            logisticsPillLabels={catalogLogisticsLabels(t)}
+          />
           <BackToTop label={t("plp.backToTop")} />
         </>
       )}

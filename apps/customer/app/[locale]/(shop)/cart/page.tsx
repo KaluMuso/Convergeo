@@ -47,6 +47,7 @@ export default async function CartPage({ params }: CartPageProps) {
     loadErrorRetry: t("cart.loadErrorRetry"),
     multiSellerNote: t("cart.multiSellerNote"),
     escrowTeaser: t("cart.escrowTeaser"),
+    escrowSteps: [t("review.escrowStep1"), t("review.escrowStep2"), t("review.escrowStep3")],
     stockUnavailableNotice: t("cart.stockUnavailableNotice"),
     summaryHeading: t("cart.summaryHeading"),
     vendor: {

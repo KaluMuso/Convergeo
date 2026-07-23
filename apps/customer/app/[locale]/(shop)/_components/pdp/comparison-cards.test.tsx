@@ -35,6 +35,11 @@ const labels: ComparisonLabels = {
   lowestPriceBadge: "Lowest price",
 };
 
+const logisticsPillLabels = {
+  delivery: "Lusaka delivery",
+  pickup: "Pickup available",
+};
+
 const listings: ComparisonListing[] = [
   {
     id: "a",
@@ -80,7 +85,13 @@ describe("Comparison mobile cards", () => {
     const onSelect = vi.fn();
 
     render(
-      <Comparison listings={listings} selectedListingId="a" labels={labels} onSelect={onSelect} />,
+      <Comparison
+        listings={listings}
+        selectedListingId="a"
+        labels={labels}
+        logisticsPillLabels={logisticsPillLabels}
+        onSelect={onSelect}
+      />,
     );
 
     expect(screen.getByTestId("pdp-compare-cards")).toBeInTheDocument();
@@ -94,7 +105,13 @@ describe("Comparison mobile cards", () => {
   it("marks the lowest-price offer without inventing comparison when only one seller", () => {
     const onSelect = vi.fn();
     const { rerender } = render(
-      <Comparison listings={listings} selectedListingId="a" labels={labels} onSelect={onSelect} />,
+      <Comparison
+        listings={listings}
+        selectedListingId="a"
+        labels={labels}
+        logisticsPillLabels={logisticsPillLabels}
+        onSelect={onSelect}
+      />,
     );
 
     expect(screen.getByTestId("comparison-lowest-b")).toBeInTheDocument();
@@ -105,6 +122,7 @@ describe("Comparison mobile cards", () => {
         listings={[listings[0]!]}
         selectedListingId="a"
         labels={labels}
+        logisticsPillLabels={logisticsPillLabels}
         onSelect={onSelect}
       />,
     );

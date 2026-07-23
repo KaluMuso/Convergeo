@@ -1,9 +1,12 @@
 import Link from "next/link";
 
+import { FulfillmentLogisticsPills, type LogisticsPillLabels } from "../plp/logistics-pills";
+
 export type BuyerTrustPanelProps = {
   sellerStatusLabel: string;
-  deliveryLabel?: string | null;
-  pickupLabel?: string | null;
+  deliveryAvailable?: boolean;
+  pickupAvailable?: boolean;
+  logisticsPillLabels?: Pick<LogisticsPillLabels, "delivery" | "pickup">;
   returnsLabel: string;
   returnsHref: string;
   escrowLabel: string;
@@ -11,13 +14,14 @@ export type BuyerTrustPanelProps = {
 
 /**
  * Compact buyer-confidence strip placed near Add to Cart.
- * Delivery/pickup lines are omitted unless the listing actually supports them.
+ * Delivery/pickup pills are omitted unless the listing actually supports them.
  * Escrow copy must not claim online payments are live when they are gated.
  */
 export function BuyerTrustPanel({
   sellerStatusLabel,
-  deliveryLabel,
-  pickupLabel,
+  deliveryAvailable = false,
+  pickupAvailable = false,
+  logisticsPillLabels,
   returnsLabel,
   returnsHref,
   escrowLabel,
@@ -32,10 +36,14 @@ export function BuyerTrustPanel({
       <p data-testid="pdp-trust-seller" className="font-medium text-text">
         {sellerStatusLabel}
       </p>
-      {deliveryLabel ? (
-        <p data-testid="pdp-trust-delivery">{deliveryLabel}</p>
+      {logisticsPillLabels ? (
+        <FulfillmentLogisticsPills
+          deliveryAvailable={deliveryAvailable}
+          pickupAvailable={pickupAvailable}
+          labels={logisticsPillLabels}
+          testId="pdp-trust-logistics"
+        />
       ) : null}
-      {pickupLabel ? <p data-testid="pdp-trust-pickup">{pickupLabel}</p> : null}
       <p data-testid="pdp-trust-escrow">{escrowLabel}</p>
       <Link
         href={returnsHref}

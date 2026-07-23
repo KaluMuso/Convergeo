@@ -8,12 +8,15 @@ import {
   type ComparisonListing,
 } from "../../_components/pdp/comparison";
 
+import type { LogisticsPillLabels } from "../../_components/plp/logistics-pills";
+
 type CompareResultsProps = {
   listings: ComparisonListing[];
   labels: ComparisonLabels;
+  logisticsPillLabels: Pick<LogisticsPillLabels, "delivery" | "pickup">;
 };
 
-export function CompareResults({ listings, labels }: CompareResultsProps) {
+export function CompareResults({ listings, labels, logisticsPillLabels }: CompareResultsProps) {
   const [selectedListingId, setSelectedListingId] = useState<string | null>(
     () => listings[0]?.id ?? null,
   );
@@ -23,6 +26,7 @@ export function CompareResults({ listings, labels }: CompareResultsProps) {
       listings={listings}
       selectedListingId={selectedListingId}
       labels={labels}
+      logisticsPillLabels={logisticsPillLabels}
       onSelect={setSelectedListingId}
     />
   );

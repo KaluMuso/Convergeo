@@ -3,6 +3,7 @@
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { IconChevronDown } from "@vergeo/ui/src/icons";
 import { Skeleton } from "@vergeo/ui/src/skeleton";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -198,6 +199,8 @@ export type CartPageLabels = {
   loadErrorRetry: string;
   multiSellerNote: string;
   escrowTeaser: string;
+  /** 3-step escrow ladder (You pay → Held → Released); reuses checkout.review keys. */
+  escrowSteps: string[];
   stockUnavailableNotice: string;
   summaryHeading: string;
   vendor: VendorGroupLabels;
@@ -469,9 +472,22 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
               {formatK(cart.subtotal_ngwee)}
             </span>
           </div>
-          <p className="text-xs text-text-2" data-testid="cart-escrow-teaser">
-            {labels.escrowTeaser}
-          </p>
+          <ol
+            aria-label={labels.escrowTeaser}
+            data-testid="cart-escrow-ladder"
+            className="m-0 flex list-none flex-wrap items-center gap-x-2 gap-y-1 p-0 text-micro font-semibold uppercase tracking-wide text-text-2"
+          >
+            {labels.escrowSteps.map((step, index) => (
+              <li key={index} className="flex items-center gap-2">
+                {index > 0 ? (
+                  <IconChevronDown aria-hidden className="-rotate-90 text-text-3" />
+                ) : null}
+                <span className="rounded border border-border bg-bg-2 px-2.5 py-1 text-text-2">
+                  {step}
+                </span>
+              </li>
+            ))}
+          </ol>
           <Button
             variant="primary"
             size="lg"

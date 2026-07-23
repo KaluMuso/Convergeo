@@ -74,6 +74,73 @@ export function buildLogisticsPills(
   return pills;
 }
 
+export type FulfillmentFlags = {
+  deliveryAvailable: boolean;
+  pickupAvailable: boolean;
+};
+
+/** Delivery/pickup pills only — for PDP comparison and trust panel. */
+export function buildFulfillmentPills(
+  flags: FulfillmentFlags,
+  labels: Pick<LogisticsPillLabels, "delivery" | "pickup">,
+): LogisticsPillItem[] {
+  if (!flags.deliveryAvailable && !flags.pickupAvailable) {
+    return [];
+  }
+  return buildLogisticsPills(
+    {
+      id: "",
+      title: "",
+      productSlug: "",
+      vendorName: "",
+      priceNgwee: 0,
+      condition: "new",
+      inStock: true,
+      imagePublicId: null,
+      rating: 0,
+      reviewCount: 0,
+      distanceM: null,
+      belowMedian: false,
+      deliveryAvailable: flags.deliveryAvailable,
+      pickupAvailable: flags.pickupAvailable,
+    },
+    {
+      nearest: "",
+      belowMedian: "",
+      delivery: labels.delivery,
+      pickup: labels.pickup,
+    },
+  );
+}
+
+type FulfillmentLogisticsPillsProps = FulfillmentFlags & {
+  labels: Pick<LogisticsPillLabels, "delivery" | "pickup">;
+  className?: string;
+  testId?: string;
+};
+
+export function FulfillmentLogisticsPills({
+  deliveryAvailable,
+  pickupAvailable,
+  labels,
+  className,
+  testId = "fulfillment-logistics-pills",
+}: FulfillmentLogisticsPillsProps) {
+  const pills = buildFulfillmentPills({ deliveryAvailable, pickupAvailable }, labels);
+
+  if (pills.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className={className ?? "flex flex-wrap gap-1.5"} data-testid={testId}>
+      {pills.map((pill) => (
+        <Pill key={pill.key} label={pill.label} color={pill.color} />
+      ))}
+    </div>
+  );
+}
+
 type ListingLogisticsPillsProps = {
   listing: CatalogListing;
   labels: LogisticsPillLabels;
