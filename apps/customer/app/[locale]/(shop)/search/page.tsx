@@ -25,6 +25,7 @@ import {
   encodeSearchFilters,
   type SearchFilterState,
 } from "../_components/search/search-filters";
+import { NearMeToggle } from "../_components/search/near-me-toggle";
 import { SearchInput } from "../_components/search/search-input";
 import { searchTabKinds, type SearchKind } from "../_components/search/search-kinds";
 import { SearchMobileFilterDrawer } from "../_components/search/search-mobile-filter-drawer";
@@ -48,8 +49,22 @@ type PageProps = {
     min_price?: string;
     max_price?: string;
     category_path?: string;
+    lat?: string;
+    lng?: string;
   }>;
 };
+
+/** Parse a URL coordinate, bounded to valid lat/lng; null if absent or out of range. */
+function parseCoord(raw: string | undefined, bound: number): number | null {
+  if (raw == null || raw.trim() === "") {
+    return null;
+  }
+  const value = Number(raw);
+  if (!Number.isFinite(value) || Math.abs(value) > bound) {
+    return null;
+  }
+  return value;
+}
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
@@ -61,6 +76,8 @@ async function fetchSearch(params: {
   page?: number;
   pageSize?: number;
   filters?: SearchFilterState;
+  lat?: number | null;
+  lng?: number | null;
 }): Promise<SearchResponse | null> {
   const baseUrl = resolveApiBaseUrl();
   if (!baseUrl) {
@@ -77,6 +94,10 @@ async function fetchSearch(params: {
   }
   if (params.filters) {
     appendSearchFiltersToApiParams(searchParams, params.filters);
+  }
+  if (params.lat != null && params.lng != null) {
+    searchParams.set("lat", String(params.lat));
+    searchParams.set("lng", String(params.lng));
   }
 
   try {
@@ -197,6 +218,8 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     }
   }
   const filterState = decodeSearchFilters(filterParams);
+  const userLat = parseCoord(resolvedSearchParams.lat, 90);
+  const userLng = parseCoord(resolvedSearchParams.lng, 180);
   const showCategoryFilters =
     activeKind === "all" ||
     activeKind === "products" ||
@@ -220,6 +243,8 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
             kind: activeKind === "all" ? undefined : activeKind,
             page,
             filters: showCategoryFilters ? filterState : undefined,
+            lat: userLat,
+            lng: userLng,
           }),
           fetchTabCounts(query),
         ])
@@ -334,6 +359,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     degraded: t("results.degraded"),
     priceFrom: t("result.priceFrom"),
     category: t("result.category"),
+    distanceAway: t("result.distanceAway"),
     marketplaceListing: t("result.marketplaceListing"),
     wishlist: tCatalog("plp.card.wishlist"),
     wishlistRemove: tCatalog("plp.card.wishlistRemove"),
@@ -346,6 +372,16 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     endOfResults: t("pagination.endOfResults"),
     loadError: t("pagination.loadError"),
     retry: t("pagination.retry"),
+  };
+
+  const nearMeLabels = {
+    enable: t("nearMe.enable"),
+    active: t("nearMe.active"),
+    locating: t("nearMe.locating"),
+    denied: t("nearMe.denied"),
+    unsupported: t("nearMe.unsupported"),
+    clear: t("nearMe.clear"),
+    hint: t("nearMe.hint"),
   };
 
   return (
@@ -384,6 +420,11 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         />
         {!query ? (
           <BrowseDiscoveryChips ariaLabel={browseDiscoveryAria} chips={browseDiscoveryChips} />
+        ) : null}
+        {query ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <NearMeToggle locale={locale} labels={nearMeLabels} />
+          </div>
         ) : null}
       </header>
 
@@ -475,6 +516,8 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
                   tabCounts={view.tabCounts}
                   apiBaseUrl={getApiBaseUrl()}
                   filterState={filterState}
+                  userLat={userLat}
+                  userLng={userLng}
                   labels={resultsTabsLabels}
                 />
               </div>
@@ -489,6 +532,8 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
               response={view.response}
               tabCounts={view.tabCounts}
               apiBaseUrl={getApiBaseUrl()}
+              userLat={userLat}
+              userLng={userLng}
               labels={resultsTabsLabels}
             />
           )}
