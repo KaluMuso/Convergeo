@@ -12,10 +12,13 @@ import {
   IconChevronDown,
   IconDirectory,
   IconEvents,
+  IconFilter,
   IconHome,
+  IconLocation,
   IconOrders,
   IconSearch,
   IconServices,
+  IconShare,
 } from "./icons";
 
 const icons = [
@@ -30,6 +33,9 @@ const icons = [
   IconEvents,
   IconServices,
   IconChevronDown,
+  IconFilter,
+  IconShare,
+  IconLocation,
 ];
 
 describe("icons", () => {

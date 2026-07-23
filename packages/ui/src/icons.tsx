@@ -123,6 +123,34 @@ export function IconChevronDown(props: IconProps) {
   );
 }
 
+export function IconFilter(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M4 6h16M7 11h10M10 16h4" />
+    </BaseIcon>
+  );
+}
+
+export function IconShare(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <circle cx="6.5" cy="12" r="2.25" />
+      <circle cx="17.5" cy="6" r="2.25" />
+      <circle cx="17.5" cy="18" r="2.25" />
+      <path d="m8.5 10.9 6.9-3.8M8.5 13.1l6.9 3.8" />
+    </BaseIcon>
+  );
+}
+
+export function IconLocation(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M12 21c4-4.4 6-7.6 6-10.5A6 6 0 0 0 6 10.5C6 13.4 8 16.6 12 21Z" />
+      <circle cx="12" cy="10.5" r="2.25" />
+    </BaseIcon>
+  );
+}
+
 export function IconHeart({ filled = false, ...props }: IconProps & { filled?: boolean }) {
   return (
     <BaseIcon

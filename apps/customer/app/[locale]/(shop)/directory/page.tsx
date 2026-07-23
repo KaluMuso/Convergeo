@@ -1,5 +1,6 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
+import { PanelHero } from "@vergeo/ui/src/panel-hero";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -167,22 +168,18 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
 
   return (
     <div className="space-y-6 lg:mx-auto lg:w-full lg:max-w-6xl">
-      <section className="overflow-hidden rounded-lg bg-panel px-5 py-8 text-panel-text sm:px-8 sm:py-10">
-        <div className="max-w-2xl space-y-3">
-          <h1 className="font-display text-h1 text-panel-text">{t("index.title")}</h1>
-          <p className="text-body text-panel-muted">{t("index.subtitle")}</p>
-          <p className="text-sm text-panel-muted">{t("index.results", { count: total })}</p>
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <Link
-              href={`/${locale}/sell`}
-              className="inline-flex min-h-11 items-center rounded bg-panel-text px-5 text-sm font-semibold text-panel transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:shadow-focusRing"
-            >
-              {t("index.becomeVendor")}
-            </Link>
-            <span className="text-sm text-panel-muted">{t("index.heroPitch")}</span>
-          </div>
-        </div>
-      </section>
+      <PanelHero
+        title={t("index.title")}
+        subtitle={t("index.subtitle")}
+        cta={{
+          href: `/${locale}/sell`,
+          label: t("index.becomeVendor"),
+          pitch: t("index.heroPitch"),
+          LinkComponent: Link,
+        }}
+      >
+        <p className="text-sm text-panel-muted">{t("index.results", { count: total })}</p>
+      </PanelHero>
 
       <Suspense fallback={null}>
         <FilterBar
@@ -210,12 +207,7 @@ export default async function DirectoryPage({ params, searchParams }: PageProps)
       </Suspense>
 
       {vendors.length === 0 ? (
-        <EmptyState
-          icon="🏪"
-          title={t("empty.title")}
-          body={t("empty.body")}
-          data-testid="directory-empty"
-        />
+        <EmptyState title={t("empty.title")} body={t("empty.body")} data-testid="directory-empty" />
       ) : (
         <>
           <VendorCardGrid

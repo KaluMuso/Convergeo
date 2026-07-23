@@ -301,9 +301,8 @@ jobs:
           SUPABASE_ANON_KEY: test-anon-key
 
   i18n-lint:
-    name: i18n hardcoded strings (warn)
+    name: i18n hardcoded strings
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -320,29 +319,38 @@ jobs:
       - name: Install dependencies
         run: pnpm i --frozen-lockfile
 
-      - name: Run hardcoded-string lint (warn)
-        continue-on-error: true
+      - name: Run hardcoded-string lint (blocking)
         run: |
           cat > .github/i18n-eslint.ci.mjs <<'EOF'
           import vergeoPlugin from "../packages/config/eslint-rules/no-hardcoded-strings.js";
           import tseslint from "typescript-eslint";
 
-          export default tseslint.config(
+          // Isolated: only the @vergeo/no-hardcoded-strings rule (with the TS
+          // parser for TSX) so this gate fails ONLY on hardcoded user-facing
+          // strings, not on unrelated tseslint-recommended rules.
+          export default [
             { ignores: ["**/node_modules/**", "**/.next/**"] },
-            ...tseslint.configs.recommended,
             {
               files: ["apps/**/app/**/*.{tsx,jsx}"],
+              languageOptions: {
+                parser: tseslint.parser,
+                parserOptions: {
+                  ecmaFeatures: { jsx: true },
+                  ecmaVersion: "latest",
+                  sourceType: "module",
+                },
+              },
               plugins: { "@vergeo": vergeoPlugin },
-              rules: { "@vergeo/no-hardcoded-strings": "warn" },
+              rules: { "@vergeo/no-hardcoded-strings": "error" },
             },
-          );
+          ];
           EOF
           pnpm exec eslint \
             "apps/customer/app" \
             "apps/vendor/app" \
             "apps/admin/app" \
             --config .github/i18n-eslint.ci.mjs \
-            --max-warnings 9999
+            --max-warnings 0
 
   migrations:
     name: Migration replay (fast)

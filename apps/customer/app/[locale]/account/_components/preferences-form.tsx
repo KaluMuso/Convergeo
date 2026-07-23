@@ -6,6 +6,8 @@ import { ThemePreference } from "@vergeo/ui/src/theme-preference";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { LocaleSwitcher, type LocaleSwitcherLabels } from "../../_components/locale-switcher";
+
 import { createAccountApiClient, type NotificationPrefs } from "./account-api";
 
 export type PreferencesFormLabels = {
@@ -29,11 +31,19 @@ export type PreferencesFormLabels = {
 
 type PreferencesFormProps = {
   accessToken: string;
+  locale: string;
   initialPrefs: NotificationPrefs;
   labels: PreferencesFormLabels;
+  localeSwitcherLabels: LocaleSwitcherLabels;
 };
 
-export function PreferencesForm({ accessToken, initialPrefs, labels }: PreferencesFormProps) {
+export function PreferencesForm({
+  accessToken,
+  locale,
+  initialPrefs,
+  labels,
+  localeSwitcherLabels,
+}: PreferencesFormProps) {
   const router = useRouter();
   const api = createAccountApiClient(() => accessToken);
 
@@ -69,6 +79,11 @@ export function PreferencesForm({ accessToken, initialPrefs, labels }: Preferenc
         darkLabel={labels.themeDark}
         systemLabel={labels.themeSystem}
       />
+
+      <section className="space-y-2">
+        <h3 className="font-medium text-text">{localeSwitcherLabels.ariaLabel}</h3>
+        <LocaleSwitcher locale={locale} labels={localeSwitcherLabels} variant="shop" />
+      </section>
 
       <form className="space-y-5" onSubmit={(event) => void handleSubmit(event)}>
         <h3 className="font-medium text-text">{labels.notificationsTitle}</h3>

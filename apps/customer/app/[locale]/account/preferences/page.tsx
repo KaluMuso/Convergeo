@@ -2,7 +2,11 @@ import { LOCALES, type Locale } from "@vergeo/i18n";
 import { setRequestLocale } from "next-intl/server";
 
 import { createAccountApiClient } from "../_components/account-api";
-import { getAccountAccessToken, getAccountTranslator } from "../_components/account-server";
+import {
+  getAccountAccessToken,
+  getAccountTranslator,
+  getLocaleSwitcherLabels,
+} from "../_components/account-server";
 import { PreferencesForm } from "../_components/preferences-form";
 
 type PageProps = {
@@ -23,6 +27,7 @@ export default async function AccountPreferencesPage({ params }: PageProps) {
   setRequestLocale(locale);
   const accessToken = await getAccountAccessToken(locale);
   const t = await getAccountTranslator(locale);
+  const localeSwitcherLabels = await getLocaleSwitcherLabels(locale);
   const api = createAccountApiClient(() => accessToken);
   const preferences = await api.getPreferences();
 
@@ -34,7 +39,9 @@ export default async function AccountPreferencesPage({ params }: PageProps) {
       </header>
       <PreferencesForm
         accessToken={accessToken}
+        locale={locale}
         initialPrefs={preferences.notif_prefs}
+        localeSwitcherLabels={localeSwitcherLabels}
         labels={{
           themeTitle: t("preferences.themeTitle"),
           themeDescription: t("preferences.themeDescription"),
