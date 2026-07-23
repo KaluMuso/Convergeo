@@ -133,6 +133,7 @@
       "payerLabel": "Payer mobile number",
       "payerHelp": "The number that will receive the USSD payment prompt.",
       "payerPlaceholder": "97X XXX XXX",
+      "payerPlaceholderMtn": "96X XXX XXX",
       "countryCode": "Country code",
       "nationalNumber": "Mobile number",
       "cardExplainer": "After you place your order, you'll complete card payment on Lenco's secure hosted page. Vergeo5 never sees your card details.",

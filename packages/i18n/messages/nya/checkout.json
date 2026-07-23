@@ -97,6 +97,7 @@
       "payerHelp": "Nambala yomwe idzalandira USSD payment prompt.",
       "payerLabel": "Nambala ya payer",
       "payerPlaceholder": "97X XXX XXX",
+      "payerPlaceholderMtn": "96X XXX XXX",
       "paymentsDisabled": "Payment ya online silipo pano. Gwiritsani ntchito Cash on Delivery pamene ilipo, kapena yesaninso posachedwa.",
       "momoHelp": "Tsimikizani USSD prompt pa phone yanu. Ndalama zikusungidwa ndi Vergeo5 mpaka delivery.",
       "cardHelp": "Lipirani pa page ya Lenco yotetezedwa. Vergeo5 saona zinthu za card yanu.",

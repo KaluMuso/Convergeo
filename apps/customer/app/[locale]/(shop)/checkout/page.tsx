@@ -96,6 +96,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       payerLabel: t("checkout.payment.payerLabel"),
       payerHelp: t("checkout.payment.payerHelp"),
       payerPlaceholder: t("checkout.payment.payerPlaceholder"),
+      payerPlaceholderMtn: t("checkout.payment.payerPlaceholderMtn"),
       countryCode: t("checkout.payment.countryCode"),
       nationalNumber: t("checkout.payment.nationalNumber"),
       cardExplainer: t("checkout.payment.cardExplainer"),

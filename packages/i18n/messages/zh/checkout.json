@@ -133,6 +133,7 @@
       "payerLabel": "付款人手机号码",
       "payerHelp": "将收到 USSD 付款提示的号码。",
       "payerPlaceholder": "97X XXX XXX",
+      "payerPlaceholderMtn": "96X XXX XXX",
       "countryCode": "国家/地区代码",
       "nationalNumber": "手机号码",
       "cardExplainer": "下单后，您将在 Lenco 的安全托管页面完成银行卡付款。Vergeo5 绝不会看到您的银行卡信息。",

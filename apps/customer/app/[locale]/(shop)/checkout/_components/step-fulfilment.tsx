@@ -517,6 +517,7 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       payerLabel: messages.payment.payerLabel,
       payerHelp: messages.payment.payerHelp,
       payerPlaceholder: messages.payment.payerPlaceholder,
+      payerPlaceholderMtn: messages.payment.payerPlaceholderMtn,
       countryCode: messages.payment.countryCode,
       nationalNumber: messages.payment.nationalNumber,
       cardExplainer: messages.payment.cardExplainer,

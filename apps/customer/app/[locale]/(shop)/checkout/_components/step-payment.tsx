@@ -19,6 +19,13 @@ import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 export type PaymentMethod = "momo" | "card" | "cod";
 export type MomoRail = "mtn" | "airtel";
 
+/**
+ * Fixed mobile-money operator brand colours (MTN gold, Airtel red) — external
+ * brand identities, deliberately not themeable design tokens. Used only to give
+ * each rail its operator identity in the picker.
+ */
+const MOMO_BRAND: Record<MomoRail, string> = { mtn: "#FFCB05", airtel: "#E40000" };
+
 export type PaymentStepLabels = {
   title: string;
   subtitle: string;
@@ -33,6 +40,8 @@ export type PaymentStepLabels = {
   payerLabel: string;
   payerHelp: string;
   payerPlaceholder: string;
+  /** Rail-specific national-number hint for MTN (e.g. "96X XXX XXX"); falls back to payerPlaceholder. */
+  payerPlaceholderMtn?: string;
   countryCode: string;
   nationalNumber: string;
   cardExplainer: string;
@@ -342,22 +351,56 @@ export function StepPayment({
       {method === "momo" ? (
         <div className="space-y-4 rounded-card border border-border bg-surface p-4">
           <div className="flex flex-col gap-2">
-            <Radio
-              name="momo-rail"
-              label={labels.railMtn}
-              checked={rail === "mtn"}
-              onChange={() => {
-                setRail("mtn");
-              }}
-            />
-            <Radio
-              name="momo-rail"
-              label={labels.railAirtel}
-              checked={rail === "airtel"}
-              onChange={() => {
-                setRail("airtel");
-              }}
-            />
+            <div
+              className="flex items-center gap-2.5 rounded border border-border px-3 py-2 transition-colors"
+              style={
+                rail === "mtn"
+                  ? {
+                      borderColor: MOMO_BRAND.mtn,
+                      backgroundColor: `color-mix(in srgb, ${MOMO_BRAND.mtn} 12%, transparent)`,
+                    }
+                  : undefined
+              }
+            >
+              <span
+                aria-hidden
+                className="h-3 w-3 shrink-0 rounded-full"
+                style={{ backgroundColor: MOMO_BRAND.mtn }}
+              />
+              <Radio
+                name="momo-rail"
+                label={labels.railMtn}
+                checked={rail === "mtn"}
+                onChange={() => {
+                  setRail("mtn");
+                }}
+              />
+            </div>
+            <div
+              className="flex items-center gap-2.5 rounded border border-border px-3 py-2 transition-colors"
+              style={
+                rail === "airtel"
+                  ? {
+                      borderColor: MOMO_BRAND.airtel,
+                      backgroundColor: `color-mix(in srgb, ${MOMO_BRAND.airtel} 10%, transparent)`,
+                    }
+                  : undefined
+              }
+            >
+              <span
+                aria-hidden
+                className="h-3 w-3 shrink-0 rounded-full"
+                style={{ backgroundColor: MOMO_BRAND.airtel }}
+              />
+              <Radio
+                name="momo-rail"
+                label={labels.railAirtel}
+                checked={rail === "airtel"}
+                onChange={() => {
+                  setRail("airtel");
+                }}
+              />
+            </div>
           </div>
           <FormField
             label={labels.payerLabel}
@@ -380,7 +423,11 @@ export function StepPayment({
                 type="tel"
                 inputMode="numeric"
                 autoComplete="tel-national"
-                placeholder={labels.payerPlaceholder}
+                placeholder={
+                  rail === "mtn"
+                    ? (labels.payerPlaceholderMtn ?? labels.payerPlaceholder)
+                    : labels.payerPlaceholder
+                }
                 aria-label={labels.nationalNumber}
                 value={nationalNumber}
                 error={Boolean(errorMessage)}
