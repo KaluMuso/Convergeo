@@ -1,0 +1,84 @@
+{
+  "name": "Vergeo5 — data-export purge",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 4
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily 04:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/internal/privacy/export-purge-tick",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Token",
+              "value": "={{$env.INTERNAL_PRIVACY_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "export-purge-tick",
+      "name": "Purge Data-Export Bundles",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 Internal - Privacy Token"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 04:00 UTC": {
+      "main": [
+        [
+          {
+            "node": "Purge Data-Export Bundles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "UTC"
+  },
+  "versionId": "task-data-export-purge",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "note": "Daily DPA sweep: deletes account-data-export bundles under private-artifacts/data-exports/ older than DATA_EXPORT_TTL_HOURS (default 24h). Idempotent + service-role. Auth via X-Internal-Token (INTERNAL_PRIVACY_TOKEN)."
+  },
+  "tags": [
+    {
+      "name": "privacy",
+      "createdAt": "2026-07-22T00:00:00.000Z",
+      "updatedAt": "2026-07-22T00:00:00.000Z"
+    }
+  ]
+}

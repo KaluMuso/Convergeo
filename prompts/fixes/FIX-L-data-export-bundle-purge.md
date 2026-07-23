@@ -2,6 +2,16 @@
 
 # FIX-L — Auto-purge DPA data-export bundles from Storage (🟠 MED, Zambia DPA)
 
+> **Status: ✅ IMPLEMENTED (2026-07-22)** — shipped on `claude/convergeo-codebase-review-wzpj3g`:
+> `services/api/app/services/privacy/export_purge.py` (pure `select_expired` + injected
+> `purge_export_bundles`, unit-tested in `tests/test_export_purge.py`), the
+> `POST /internal/privacy/export-purge-tick` endpoint (`routers/internal_privacy.py`,
+> `INTERNAL_PRIVACY_TOKEN`), the `INTERNAL_CRON` rate-limit entry, `infra/n8n/export-purge.json`
+> (daily 04:00 UTC), and the `n8n-workflows.md` / `data-retention.md` updates. Tests + ratelimit
+> coverage + ruff + mypy green. **REMAINING: one live smoke** — the real Supabase-Storage adapter
+> (`_list_export_objects` / `bucket.remove`) is unvalidated against a live stack; drive the tick on
+> staging against an aged export and confirm `deleted` matches before relying on it.
+>
 > **Groundwork verified 2026-07-22.** The **easy parts:** the internal tick registers like the
 > others — add `"POST /internal/privacy/export-purge-tick": INTERNAL_CRON` to
 > `services/api/app/core/ratelimit_policies.py`; authz is **auto-classified** by the `/internal/`
