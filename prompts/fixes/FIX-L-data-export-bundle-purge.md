@@ -2,6 +2,18 @@
 
 # FIX-L — Auto-purge DPA data-export bundles from Storage (🟠 MED, Zambia DPA)
 
+> **Groundwork verified 2026-07-22.** The **easy parts:** the internal tick registers like the
+> others — add `"POST /internal/privacy/export-purge-tick": INTERNAL_CRON` to
+> `services/api/app/core/ratelimit_policies.py`; authz is **auto-classified** by the `/internal/`
+> prefix (`test_authz_matrix.py:209`), so no manual authz row is needed. The **risky core:** there
+> is **no existing storage `.list()`/`.remove()` usage anywhere** in `services/api` (the code only
+> `.upload()`s / signs URLs) — so the list-old-objects + delete logic is novel and **MUST be
+> validated against real Supabase Storage** (the exact `.list()` pagination/recursion + `.remove()`
+> shapes are version-dependent). Consider querying `storage.objects` (service-role) for
+> `bucket_id='private-artifacts' AND name LIKE 'data-exports/%' AND created_at < now()-TTL`, then
+> `.remove()` those paths via the Storage API. Inject the list+remove callables so the TTL logic is
+> unit-tested with fakes, and gate the real path on a live smoke check.
+
 ## Finding (from the 2026-07-22 docs/ops overview)
 
 `services/api/app/routers/privacy.py` uploads each account-data-export bundle to

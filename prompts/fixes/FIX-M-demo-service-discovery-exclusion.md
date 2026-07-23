@@ -1,46 +1,40 @@
-> **Prepend `prompts/_header.md`.** Branch from + PR against **`master`**. **Touch ONLY the files below.** **⚙ do NOT use `git stash`.** **No migration.** Run the FULL `uv run pytest` for the touched suites before reporting.
+> **Prepend `prompts/_header.md`.**
 >
-> **⚠ FIRST verify the leak still reproduces on current master** (it was reported 2026-07-21 and master has moved ~80 commits). Probe `GET /search?q=phone` and `GET /catalog/services` (or the services browse) on staging or in a test — if no `(demo)`-titled service surfaces, close this as already-fixed instead of implementing.
+> **Status: ⚠ RE-DIAGNOSED (2026-07-22) — this is a STAGING-DATA issue, not a code fix. Do NOT add a title heuristic.**
 
-# FIX-M — Exclude demo **services** from public discovery (🟠 MED, discovery quality)
+# FIX-M — Demo **service** leaks into discovery (re-diagnosed: data, not code)
 
-## Finding (from the 2026-07-21 api-recovery evidence)
+## Original report (2026-07-21 api-recovery evidence)
 
-Demo-inventory exclusion (`services/api/app/services/listings/demo.py`) is **image-marker-based**:
-a listing is "demo" when one of its images carries a `demo/` Cloudinary `public_id`
-(`is_demo_public_id` / `fetch_demo_listing_ids`). A seeded **service** titled e.g.
-`Laptop & Phone Repair (demo)` has **no demo image**, so the image marker never matches and it
-**still surfaces** in `GET /search` and the services browse. `#368`'s product-exclusion does not
-strip service titles.
+A seeded service titled `Laptop & Phone Repair (demo)` still surfaced in `GET /search?q=phone`;
+`#368`'s product demo-exclusion "does not strip service titles".
 
-## Required fix
+## What the code actually does (verified 2026-07-22)
 
-1. Add a **title-marker** helper to `demo.py` (e.g. `is_demo_title(title)`) that matches **only**
-   the exact marker the seed uses — confirm the seed's format first (`scripts/seed/…`), likely a
-   trailing `" (demo)"`. Be precise: must NOT hide a legitimate listing whose title merely
-   contains the word "demo" (e.g. "Demo Day tickets").
-2. Apply it on the **service** discovery paths where the image marker can't reach —
-   `services/api/app/services/search/__init__.py` (services hits) and the services browse
-   (`services/api/app/routers/services_listings.py` / its service query), complementing
-   `drop_demo_listing_hits`. Keep guests/consumers excluded; do not change product behaviour
-   (products already covered by the image marker).
-3. Keep the two markers unified conceptually — one demo-detection module, two signals
-   (image `public_id` + title suffix).
+The demo-exclusion is **correct and already covers services**:
 
-## Files (ONLY)
+- Canonical marker = the **`demo/` Cloudinary `public_id`** on a listing/portfolio image
+  (`services/api/app/services/listings/demo.py` docstring; `is_demo_public_id`).
+- `drop_demo_listing_hits` (called in `run_search` and `run_suggest`) drops **service** hits via
+  `fetch_demo_service_ids` — "service hits drop when any portfolio image is demo".
+- The repo has **no `(demo)` title convention** — a grep of `scripts/seed/` finds none; the seed
+  marks demo inventory only by the image prefix.
 
-- Modify `services/api/app/services/listings/demo.py` (add the title-marker helper)
-- Modify the service discovery path (`search/__init__.py` and/or `routers/services_listings.py`)
-- Extend `services/api/tests/` demo-exclusion tests (or add `test_demo_service_exclusion.py`)
-- **Do NOT** change product/vendor exclusion or the image-marker logic.
+## Conclusion — do this instead of a code change
 
-## Tests (RUN)
+The leaked service is a **data artifact**: it was seeded (directly on staging, not via the repo
+seed) with a `(demo)` title but **without** a `demo/` image, so the image-based exclusion — working
+as designed — does not catch it. The fix is **data-side** on staging, pick one:
 
-- A seeded `(demo)`-suffixed **service** is excluded from `run_search` and the services browse for
-  guests/consumers.
-- A legitimate service whose title merely contains "demo" (not the exact marker) is **kept**.
-- Products/vendors unchanged. **Full `uv run pytest`** on the search + services suites + `ruff` + `mypy`.
+1. **Mark it:** give the demo service a portfolio image with a `demo/…` Cloudinary `public_id`
+   (then `fetch_demo_service_ids` excludes it automatically). *(preferred — consistent with the marker)*
+2. **Remove/rename it:** delete the stray demo service, or drop the `(demo)` suffix if it's meant to be real.
 
-## Report
+**Do NOT** add an `is_demo_title` heuristic: it contradicts the canonical image-marker design and
+would risk hiding legitimate titles containing "demo". If a title marker is ever genuinely wanted,
+first make it a real seed convention, then gate consumer discovery on it — that's a design decision,
+not a bug fix.
 
-STATUS (incl. whether the leak still reproduced) / FILES / DEVIATIONS (the exact marker matched) / TESTS (paste the exclude + keep-legit cases) / EXCERPT the title-marker + where it's applied / QUESTIONS.
+## Files
+
+None (data action on staging). Verify after: `GET /search?q=phone` returns no `(demo)` service.
