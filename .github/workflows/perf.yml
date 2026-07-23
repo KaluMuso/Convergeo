@@ -224,6 +224,26 @@ jobs:
         # itself is unavailable (not for score dips) — document in the PR.
         run: pnpm exec lhci autorun --config=lighthouserc.json
 
+      - name: Install a11y smoke deps (standalone e2e package)
+        working-directory: e2e
+        run: |
+          npm install --no-package-lock
+          npx playwright install --with-deps chromium
+
+      - name: a11y smoke (axe critical/serious — blocking, H10)
+        # Full axe wcag2a/wcag2aa critical+serious sweep over /, /cart, /checkout
+        # against the already-running production server — complements LHCI's a11y
+        # score with the stricter rule engine (audit H10 / §10.1). Portable spec
+        # (also runs nightly against staging). Verified green locally against the
+        # current customer build before landing.
+        # Rollback: pin this step to continue-on-error ONLY if Playwright/Chromium
+        # itself is unavailable (not for real violations) — document in the PR.
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_THROTTLE: "0"
+        run: npx playwright test specs/a11y-smoke.spec.ts
+
       - name: Stop servers
         if: always()
         run: |
