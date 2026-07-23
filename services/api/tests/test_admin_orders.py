@@ -414,11 +414,41 @@ def test_manual_escrow_rejects_missing_confirmation_via_api(
     assert response.status_code == 422
 
 
-def test_manual_escrow_ledger_balance_stub(
+def test_manual_escrow_raises_when_engine_unavailable(
     fake_client: FakeSupabaseClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # The ledger engine ships in the same package as the router, so a None loader
+    # means a genuine misconfiguration — a manual escrow must fail loudly, never
+    # post through the old non-audited stub path (M08-P05).
     monkeypatch.setattr("app.routers.admin_orders._load_ledger_post_transaction", lambda: None)
+    service_wrapper = MagicMock()
+    service_wrapper.client = fake_client
+    _seed_search_fixtures(fake_client)
+
+    with pytest.raises(AppError) as exc:
+        post_manual_escrow_transaction(
+            order_id=ORDER_ID,
+            operation="hold",
+            amount_ngwee=25000,
+            reason="Investigate delivery dispute",
+            confirmation_phrase=MANUAL_ESCROW_CONFIRMATION_PHRASE,
+            actor_id=ADMIN_ID,
+            service_client=service_wrapper,
+        )
+    assert exc.value.code == "ledger_engine_unavailable"
+
+
+def test_manual_escrow_posts_via_ledger_engine(
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    posted = MagicMock()
+    posted.id = "led-txn-1"
+    engine_call = MagicMock(return_value=posted)
+    monkeypatch.setattr(
+        "app.routers.admin_orders._load_ledger_post_transaction", lambda: engine_call
+    )
     service_wrapper = MagicMock()
     service_wrapper.client = fake_client
     _seed_search_fixtures(fake_client)
@@ -432,10 +462,11 @@ def test_manual_escrow_ledger_balance_stub(
         actor_id=ADMIN_ID,
         service_client=service_wrapper,
     )
+    engine_call.assert_called_once()
+    assert result.transaction_id == "led-txn-1"
     assert result.manual is True
     assert result.balance_sum_ngwee == 0
     assert len(result.postings) == 2
-    assert sum(posting.amount_ngwee for posting in result.postings) == 0
 
 
 def test_non_admin_forbidden(
