@@ -202,6 +202,7 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
             errorMessage={errorMessage ?? undefined}
             required
             requiredMarker="*"
+            asGroup
           >
             <div className="flex gap-2">
               <Input
@@ -219,6 +220,7 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
                 autoComplete="tel-national"
                 placeholder={labels.phonePlaceholder}
                 aria-label={labels.nationalNumber}
+                aria-required
                 value={nationalNumber}
                 error={Boolean(errorMessage)}
                 onChange={(event) => {
