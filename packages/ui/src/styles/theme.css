@@ -19,6 +19,17 @@
 
 @import "./base.css";
 
+/* Force-generate the primary button's on-color utilities. Tailwind v4 auto-detection
+   skips node_modules, where the @vergeo/ui workspace package is symlinked, so these
+   arbitrary-value classes -- used ONLY inside packages/ui (Button/LinkButton) -- are
+   otherwise purged, leaving the primary button with inherited dark text on the navy
+   primary background (about 1.78 to 1, failing WCAG color contrast). Listing them inline
+   fixes the contrast without pulling the whole component library into every app scan.
+   The broader gap (packages/ui is unscanned, so other shared-only utilities are also
+   missing) is a tracked follow-up: enabling a full packages/ui source scan adds ~18KB
+   CSS and needs visual QA, so it is intentionally out of scope here. */
+@source inline("text-[var(--primary-btn-fg)] hover:bg-[var(--primary-btn-hover)]");
+
 /* Dark variant: applies when the element is inside (or is) [data-theme="dark"]. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 

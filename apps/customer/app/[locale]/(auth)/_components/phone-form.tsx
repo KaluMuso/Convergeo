@@ -108,6 +108,7 @@ export function PhoneForm({ locale, labels, otpPath, mode = "login" }: PhoneForm
         errorMessage={errorMessage ?? undefined}
         required
         requiredMarker="*"
+        asGroup
       >
         <div className="flex gap-2">
           <Input
@@ -125,6 +126,7 @@ export function PhoneForm({ locale, labels, otpPath, mode = "login" }: PhoneForm
             autoComplete="tel-national"
             placeholder={labels.phonePlaceholder}
             aria-label={labels.nationalNumber}
+            aria-required
             value={nationalNumber}
             error={Boolean(errorMessage)}
             onChange={(event) => {
