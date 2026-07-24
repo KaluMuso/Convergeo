@@ -335,3 +335,99 @@ class TestKycVendorCas:
         assert result.rows[0] == "rejected"
         successes = [result for result in results if result is not None]
         assert len(successes) == 1
+
+
+def _seed_decided_kyc_vendor(db: PgConn, *, vendor_id: str, kyc_id: str) -> None:
+    """Seed a vendor + an already-DECIDED (approved) kyc_records row with decision
+    evidence, tier, and document paths recorded — the precondition the
+    ``guard_kyc_record_integrity`` immutability invariants (migration 0056) fire on.
+    The BEFORE-UPDATE trigger does not touch INSERTs, so this seeds freely."""
+    _ensure_matrix_seed(db)
+    slug = f"kyc-guard-{vendor_id[:8]}"
+    vendor_result = db.run(
+        f"""
+        INSERT INTO public.vendors (id, owner_user_id, slug, display_name, status)
+        VALUES ('{vendor_id}', '{VENDOR_OWNER_ID}', '{slug}', 'Guard Vendor', 'active');
+        """
+    )
+    assert vendor_result.ok, vendor_result.error
+    kyc_result = db.run(
+        f"""
+        INSERT INTO public.kyc_records (
+          id, vendor_id, tier, doc_storage_paths, momo_name_match, status,
+          reviewed_by, reviewed_at, decision_reason
+        ) VALUES (
+          '{kyc_id}', '{vendor_id}', 2, '{{kyc/front.jpg}}', '{{"matched": true}}'::jsonb,
+          'approved', '{VENDOR_OWNER_ID}', now(), 'approved in review'
+        );
+        """
+    )
+    assert kyc_result.ok, kyc_result.error
+
+
+@pytest.mark.usefixtures("db")
+class TestKycIntegrityTrigger:
+    """DB-level ``guard_kyc_record_integrity`` trigger (migration 0056).
+
+    ``kyc_records`` UPDATE is RLS-``permit`` for owners, so this trigger is the
+    SOLE DB backstop making decision evidence, tier, and document paths immutable
+    once a decision is recorded. These run as the privileged (postgres) fixture
+    connection, so the non-privileged ``server-controlled`` branch is bypassed and
+    the immutability invariants — which fire for every caller — are exercised
+    directly. Skips when Postgres is unreachable (see the module ``db`` fixture).
+    """
+
+    @staticmethod
+    def _kyc_col(db: PgConn, kyc_id: str, column: str) -> str:
+        result = db.run(f"SELECT {column} FROM public.kyc_records WHERE id = '{kyc_id}';")
+        assert result.ok and result.rows
+        return result.rows[0]
+
+    def test_decision_evidence_is_immutable(self, db: PgConn) -> None:
+        vendor_id = str(uuid.uuid4())
+        kyc_id = str(uuid.uuid4())
+        _seed_decided_kyc_vendor(db, vendor_id=vendor_id, kyc_id=kyc_id)
+
+        result = db.run(
+            f"UPDATE public.kyc_records SET decision_reason = 'rewritten' WHERE id = '{kyc_id}';"
+        )
+        assert not result.ok
+        assert "kyc decision evidence is immutable" in (result.error or "")
+        assert self._kyc_col(db, kyc_id, "decision_reason") == "approved in review"
+
+    def test_tier_is_immutable_after_decision(self, db: PgConn) -> None:
+        vendor_id = str(uuid.uuid4())
+        kyc_id = str(uuid.uuid4())
+        _seed_decided_kyc_vendor(db, vendor_id=vendor_id, kyc_id=kyc_id)
+
+        # tier 3 passes the (1,2,3) CHECK constraint, so the raise is the trigger's.
+        result = db.run(f"UPDATE public.kyc_records SET tier = 3 WHERE id = '{kyc_id}';")
+        assert not result.ok
+        assert "tier is immutable after a decision" in (result.error or "")
+        assert self._kyc_col(db, kyc_id, "tier") == "2"
+
+    def test_doc_paths_are_immutable_after_decision(self, db: PgConn) -> None:
+        vendor_id = str(uuid.uuid4())
+        kyc_id = str(uuid.uuid4())
+        _seed_decided_kyc_vendor(db, vendor_id=vendor_id, kyc_id=kyc_id)
+
+        result = db.run(
+            f"UPDATE public.kyc_records SET doc_storage_paths = '{{kyc/back.jpg}}' "
+            f"WHERE id = '{kyc_id}';"
+        )
+        assert not result.ok
+        assert "kyc document paths are immutable" in (result.error or "")
+
+    def test_lifecycle_reason_update_is_allowed(self, db: PgConn) -> None:
+        """Control: the trigger must NOT block a legitimate lifecycle_reason edit
+        (no decision evidence / tier / doc-path change), so it isn't over-broad."""
+        vendor_id = str(uuid.uuid4())
+        kyc_id = str(uuid.uuid4())
+        _seed_decided_kyc_vendor(db, vendor_id=vendor_id, kyc_id=kyc_id)
+
+        result = db.run(
+            f"UPDATE public.kyc_records SET lifecycle_reason = 'under compliance watch' "
+            f"WHERE id = '{kyc_id}';"
+        )
+        assert result.ok, result.error
+        assert self._kyc_col(db, kyc_id, "lifecycle_reason") == "under compliance watch"

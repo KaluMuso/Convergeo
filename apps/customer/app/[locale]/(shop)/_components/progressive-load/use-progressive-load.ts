@@ -1,5 +1,6 @@
 "use client";
 
+import { usePrefersReducedData } from "@vergeo/ui/src/use-prefers-reduced-data";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 
 export type ProgressiveLoadStatus = "ready" | "loading" | "error" | "complete";
@@ -40,12 +41,6 @@ export type ProgressiveLoadResult<T extends { id: string }> = {
   sentinelRef: RefObject<HTMLDivElement | null>;
 };
 
-function prefersSaveData(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-  return Boolean(conn?.saveData);
-}
-
 function mergeUniqueById<T extends { id: string }>(existing: T[], incoming: T[]): T[] {
   if (incoming.length === 0) return existing;
   const seen = new Set(existing.map((item) => item.id));
@@ -76,6 +71,8 @@ export function useProgressiveLoad<T extends { id: string }>(
     enableIntersectionObserver = true,
     preferButtonOnly = false,
   } = options;
+
+  const prefersReducedData = usePrefersReducedData();
 
   const [items, setItems] = useState(initialItems);
   const [cursor, setCursor] = useState<string | null>(initialCursor);
@@ -174,7 +171,7 @@ export function useProgressiveLoad<T extends { id: string }>(
   useEffect(() => {
     if (!enableIntersectionObserver || preferButtonOnly) return;
     if (typeof IntersectionObserver === "undefined") return;
-    if (prefersSaveData()) return;
+    if (prefersReducedData) return;
     if (status !== "ready" || !cursor) return;
 
     const node = sentinelRef.current;
@@ -198,7 +195,7 @@ export function useProgressiveLoad<T extends { id: string }>(
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [enableIntersectionObserver, preferButtonOnly, status, cursor, loadMore]);
+  }, [enableIntersectionObserver, preferButtonOnly, prefersReducedData, status, cursor, loadMore]);
 
   return {
     items,
