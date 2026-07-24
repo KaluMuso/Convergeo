@@ -92,7 +92,10 @@ class FakeQuery:
                             'duplicate key value violates unique constraint '
                             '"service_reviews_job_id_key"'
                         )
-            now = "2026-07-17T00:00:00Z"
+            # Stamp the real insertion time (like the DB default) so the review
+            # edit-window math is relative to "now" — a hardcoded date is a
+            # time-bomb (created + REVIEW_EDIT_DAYS elapses on a fixed calendar day).
+            now = datetime.now(tz=UTC).isoformat()
             row = {
                 "id": f"rev-{len(self._parent.rows) + 1}",
                 "created_at": now,
