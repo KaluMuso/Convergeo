@@ -1,0 +1,1724 @@
+[
+  {
+    "method": "GET",
+    "path": "/account/addresses",
+    "tags": "account",
+    "summary": "List Addresses"
+  },
+  {
+    "method": "POST",
+    "path": "/account/addresses",
+    "tags": "account",
+    "summary": "Create Address"
+  },
+  {
+    "method": "GET",
+    "path": "/account/addresses/{address_id}",
+    "tags": "account",
+    "summary": "Get Address"
+  },
+  {
+    "method": "PATCH",
+    "path": "/account/addresses/{address_id}",
+    "tags": "account",
+    "summary": "Patch Address"
+  },
+  {
+    "method": "DELETE",
+    "path": "/account/addresses/{address_id}",
+    "tags": "account",
+    "summary": "Delete Address"
+  },
+  {
+    "method": "POST",
+    "path": "/account/delete",
+    "tags": "privacy",
+    "summary": "Delete Account"
+  },
+  {
+    "method": "POST",
+    "path": "/account/export",
+    "tags": "privacy",
+    "summary": "Export Account Data"
+  },
+  {
+    "method": "PATCH",
+    "path": "/account/onboarding",
+    "tags": "account",
+    "summary": "Complete Onboarding"
+  },
+  {
+    "method": "GET",
+    "path": "/account/orders",
+    "tags": "customer-orders",
+    "summary": "List Customer Orders"
+  },
+  {
+    "method": "GET",
+    "path": "/account/orders/{order_id}",
+    "tags": "customer-orders",
+    "summary": "Get Customer Order"
+  },
+  {
+    "method": "GET",
+    "path": "/account/preferences",
+    "tags": "account",
+    "summary": "Get Preferences"
+  },
+  {
+    "method": "PATCH",
+    "path": "/account/preferences",
+    "tags": "account",
+    "summary": "Patch Preferences"
+  },
+  {
+    "method": "GET",
+    "path": "/account/profile",
+    "tags": "account",
+    "summary": "Get Profile"
+  },
+  {
+    "method": "PATCH",
+    "path": "/account/profile",
+    "tags": "account",
+    "summary": "Patch Profile"
+  },
+  {
+    "method": "GET",
+    "path": "/account/recently-viewed",
+    "tags": "account",
+    "summary": "Get Recently Viewed"
+  },
+  {
+    "method": "POST",
+    "path": "/account/recently-viewed",
+    "tags": "account",
+    "summary": "Post Recently Viewed"
+  },
+  {
+    "method": "GET",
+    "path": "/account/tickets",
+    "tags": "ticket-wallet",
+    "summary": "List Wallet Tickets"
+  },
+  {
+    "method": "GET",
+    "path": "/account/tickets/{ticket_id}",
+    "tags": "ticket-wallet",
+    "summary": "Get Wallet Ticket"
+  },
+  {
+    "method": "GET",
+    "path": "/account/tickets/{ticket_id}/horizon",
+    "tags": "ticket-wallet",
+    "summary": "Get Wallet Horizon"
+  },
+  {
+    "method": "GET",
+    "path": "/account/wishlist",
+    "tags": "account",
+    "summary": "Get Wishlist"
+  },
+  {
+    "method": "PUT",
+    "path": "/account/wishlist",
+    "tags": "account",
+    "summary": "Put Wishlist"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/ai-spend/reset-kill-switch",
+    "tags": "admin",
+    "summary": "Reset Ai Kill Switch"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/business",
+    "tags": "admin-business",
+    "summary": "List Business Buyers"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/business/{buyer_id}/reject",
+    "tags": "admin-business",
+    "summary": "Reject Business Buyer"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/business/{buyer_id}/verify",
+    "tags": "admin-business",
+    "summary": "Verify Business Buyer"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/config/categories",
+    "tags": "admin",
+    "summary": "List Categories"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/config/categories/reorder",
+    "tags": "admin",
+    "summary": "Reorder Categories"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/config/categories/{category_id}",
+    "tags": "admin",
+    "summary": "Update Category"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/config/commissions",
+    "tags": "admin",
+    "summary": "List Commission Rates"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/config/commissions/{category_key}",
+    "tags": "admin",
+    "summary": "Update Commission Rate"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/config/delivery-zones",
+    "tags": "admin",
+    "summary": "List Delivery Zones"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/config/delivery-zones/{zone_key}",
+    "tags": "admin",
+    "summary": "Update Delivery Zone"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/config/flags",
+    "tags": "admin",
+    "summary": "List Feature Flags"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/config/flags/{flag}",
+    "tags": "admin",
+    "summary": "Update Feature Flag"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/config/platform",
+    "tags": "admin",
+    "summary": "List Platform Config"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/config/platform/{key}",
+    "tags": "admin",
+    "summary": "Update Platform Config"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/dashboard",
+    "tags": "admin",
+    "summary": "Get Admin Dashboard"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/disputes",
+    "tags": "admin",
+    "summary": "List Dispute Queue"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/disputes/{dispute_id}",
+    "tags": "admin",
+    "summary": "Get Dispute Detail"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/disputes/{dispute_id}/decide",
+    "tags": "admin",
+    "summary": "Decide Dispute"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/echo",
+    "tags": "admin",
+    "summary": "Admin Echo"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/flags",
+    "tags": "admin",
+    "summary": "List Flags"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/flags/{flag_id}/dismiss",
+    "tags": "admin",
+    "summary": "Dismiss Flag"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/flags/{flag_id}/escalate-suspend",
+    "tags": "admin",
+    "summary": "Escalate Suspend Vendor"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/flags/{flag_id}/remove",
+    "tags": "admin",
+    "summary": "Remove Flagged Entity"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/flags/{flag_id}/unpublish",
+    "tags": "admin",
+    "summary": "Unpublish Flagged Listing"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/flags/{flag_id}/warn-vendor",
+    "tags": "admin",
+    "summary": "Warn Vendor For Flag"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/governance/vendors",
+    "tags": "admin",
+    "summary": "List Vendor Governance"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/health",
+    "tags": "admin",
+    "summary": "Admin Health"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/kyc",
+    "tags": "admin",
+    "summary": "List Kyc Queue"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/kyc/orphaned-tiers",
+    "tags": "admin",
+    "summary": "List Orphaned Kyc Tiers"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/kyc/{kyc_record_id}",
+    "tags": "admin",
+    "summary": "Get Kyc Detail"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/kyc/{kyc_record_id}/approve",
+    "tags": "admin",
+    "summary": "Approve Kyc"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/kyc/{kyc_record_id}/reject",
+    "tags": "admin",
+    "summary": "Reject Kyc"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/kyc/{kyc_record_id}/request-resubmit",
+    "tags": "admin",
+    "summary": "Request Kyc Resubmit"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/kyc/{kyc_record_id}/revoke",
+    "tags": "admin",
+    "summary": "Revoke Kyc"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/kyc/{kyc_record_id}/start-review",
+    "tags": "admin",
+    "summary": "Start Kyc Review"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/kyc/{kyc_record_id}/suspend",
+    "tags": "admin",
+    "summary": "Suspend Kyc"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/merch/hero-variants",
+    "tags": "admin",
+    "summary": "List Hero Variants"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/merch/preview-url",
+    "tags": "admin",
+    "summary": "Get Preview Url"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/merch/slots",
+    "tags": "admin",
+    "summary": "List Merch Slots"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/merch/slots",
+    "tags": "admin",
+    "summary": "Create Merch Slot"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/merch/slots/{slot_id}",
+    "tags": "admin",
+    "summary": "Update Merch Slot"
+  },
+  {
+    "method": "DELETE",
+    "path": "/admin/merch/slots/{slot_id}",
+    "tags": "admin",
+    "summary": "Delete Merch Slot"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/merch/slots/{slot_id}/draft",
+    "tags": "admin",
+    "summary": "Save Merch Draft"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/merch/slots/{slot_id}/publish",
+    "tags": "admin",
+    "summary": "Publish Merch Draft"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/orders/search",
+    "tags": "admin",
+    "summary": "Search Orders"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/orders/{order_id}",
+    "tags": "admin",
+    "summary": "Get Order Detail"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/orders/{order_id}/cod/confirm-collection",
+    "tags": "cod",
+    "summary": "Admin Confirm Cod Collection"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/orders/{order_id}/cod/refuse-collection",
+    "tags": "cod",
+    "summary": "Admin Refuse Cod Collection"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/orders/{order_id}/dispatch",
+    "tags": "admin",
+    "summary": "Manual Dispatch"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/orders/{order_id}/escrow",
+    "tags": "admin",
+    "summary": "Manual Escrow"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/orders/{order_id}/intervene",
+    "tags": "admin",
+    "summary": "Intervene Order"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/products/duplicates",
+    "tags": "admin",
+    "summary": "List Duplicate Products"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/products/merge",
+    "tags": "admin",
+    "summary": "Merge Products"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/products/search",
+    "tags": "admin",
+    "summary": "Search Products"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/products/{product_id}/relations",
+    "tags": "admin",
+    "summary": "Get Product Relations"
+  },
+  {
+    "method": "PUT",
+    "path": "/admin/products/{product_id}/relations",
+    "tags": "admin",
+    "summary": "Set Product Relations"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/refunds/execute",
+    "tags": "admin",
+    "summary": "Admin Execute Refund"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/search-insights/ask-cost",
+    "tags": "admin",
+    "summary": "Get Ask Cost"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/search-insights/top-terms",
+    "tags": "admin",
+    "summary": "Get Top Terms"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/search-insights/zero-results",
+    "tags": "admin",
+    "summary": "Get Zero Result Terms"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/support/log",
+    "tags": "admin",
+    "summary": "Support Log"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/support/lookup",
+    "tags": "admin",
+    "summary": "Support Lookup"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/support/send",
+    "tags": "admin",
+    "summary": "Support Send"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/translations/overrides",
+    "tags": "admin-translations",
+    "summary": "List Overrides"
+  },
+  {
+    "method": "PUT",
+    "path": "/admin/translations/overrides",
+    "tags": "admin-translations",
+    "summary": "Upsert Override"
+  },
+  {
+    "method": "DELETE",
+    "path": "/admin/translations/overrides",
+    "tags": "admin-translations",
+    "summary": "Delete Override"
+  },
+  {
+    "method": "POST",
+    "path": "/analytics/collect",
+    "tags": "analytics",
+    "summary": "Collect"
+  },
+  {
+    "method": "POST",
+    "path": "/ask",
+    "tags": "ask",
+    "summary": "Ask Vergeo"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/guard/otp-quota",
+    "tags": "auth-guard",
+    "summary": "Consume Otp Quota"
+  },
+  {
+    "method": "POST",
+    "path": "/beta/feedback",
+    "tags": "beta",
+    "summary": "Submit Feedback"
+  },
+  {
+    "method": "GET",
+    "path": "/beta/gate",
+    "tags": "beta",
+    "summary": "Gate Status"
+  },
+  {
+    "method": "GET",
+    "path": "/beta/invites",
+    "tags": "beta",
+    "summary": "List Invites"
+  },
+  {
+    "method": "POST",
+    "path": "/beta/invites",
+    "tags": "beta",
+    "summary": "Create Invite"
+  },
+  {
+    "method": "POST",
+    "path": "/beta/redeem",
+    "tags": "beta",
+    "summary": "Redeem Invite"
+  },
+  {
+    "method": "POST",
+    "path": "/business/apply",
+    "tags": "business",
+    "summary": "Apply For Business"
+  },
+  {
+    "method": "GET",
+    "path": "/business/status",
+    "tags": "business",
+    "summary": "Get Business Status"
+  },
+  {
+    "method": "GET",
+    "path": "/cart",
+    "tags": "cart",
+    "summary": "Get Cart"
+  },
+  {
+    "method": "POST",
+    "path": "/cart/items",
+    "tags": "cart",
+    "summary": "Add Cart Item"
+  },
+  {
+    "method": "PATCH",
+    "path": "/cart/items/{listing_id}",
+    "tags": "cart",
+    "summary": "Update Cart Item"
+  },
+  {
+    "method": "DELETE",
+    "path": "/cart/items/{listing_id}",
+    "tags": "cart",
+    "summary": "Remove Cart Item"
+  },
+  {
+    "method": "POST",
+    "path": "/cart/items/{listing_id}/save-for-later",
+    "tags": "cart",
+    "summary": "Save Cart Item For Later"
+  },
+  {
+    "method": "POST",
+    "path": "/cart/merge",
+    "tags": "cart",
+    "summary": "Merge Cart On Login"
+  },
+  {
+    "method": "POST",
+    "path": "/cart/revalidate",
+    "tags": "cart",
+    "summary": "Revalidate Cart"
+  },
+  {
+    "method": "GET",
+    "path": "/catalog/listings",
+    "tags": "catalog",
+    "summary": "Catalog Listings"
+  },
+  {
+    "method": "POST",
+    "path": "/checkout/session",
+    "tags": "checkout",
+    "summary": "Create Checkout Session"
+  },
+  {
+    "method": "GET",
+    "path": "/checkout/session/{session_id}",
+    "tags": "checkout",
+    "summary": "Get Checkout Session Status"
+  },
+  {
+    "method": "POST",
+    "path": "/checkout/steps/contact",
+    "tags": "checkout",
+    "summary": "Validate Contact Step"
+  },
+  {
+    "method": "POST",
+    "path": "/checkout/steps/fulfilment",
+    "tags": "checkout",
+    "summary": "Validate Fulfilment Step"
+  },
+  {
+    "method": "POST",
+    "path": "/checkout/steps/payment",
+    "tags": "checkout",
+    "summary": "Validate Payment Method"
+  },
+  {
+    "method": "GET",
+    "path": "/checkout/steps/payment-options",
+    "tags": "checkout",
+    "summary": "Get Payment Options"
+  },
+  {
+    "method": "GET",
+    "path": "/directory",
+    "tags": "directory",
+    "summary": "List Directory"
+  },
+  {
+    "method": "GET",
+    "path": "/directory/{slug}",
+    "tags": "directory",
+    "summary": "Get Directory Vendor"
+  },
+  {
+    "method": "POST",
+    "path": "/disputes/orders/{order_id}",
+    "tags": "disputes",
+    "summary": "Customer Open Dispute"
+  },
+  {
+    "method": "GET",
+    "path": "/disputes/orders/{order_id}",
+    "tags": "disputes",
+    "summary": "Get Dispute By Order"
+  },
+  {
+    "method": "GET",
+    "path": "/disputes/vendor/mine",
+    "tags": "disputes",
+    "summary": "List My Vendor Disputes"
+  },
+  {
+    "method": "POST",
+    "path": "/disputes/vendor/orders/{order_id}/evidence/sign",
+    "tags": "disputes",
+    "summary": "Sign Vendor Evidence Upload"
+  },
+  {
+    "method": "GET",
+    "path": "/disputes/{dispute_id}",
+    "tags": "disputes",
+    "summary": "Get Dispute"
+  },
+  {
+    "method": "POST",
+    "path": "/disputes/{dispute_id}/escalate",
+    "tags": "disputes",
+    "summary": "Admin Escalate Dispute"
+  },
+  {
+    "method": "POST",
+    "path": "/disputes/{dispute_id}/resolve",
+    "tags": "disputes",
+    "summary": "Admin Resolve Dispute"
+  },
+  {
+    "method": "POST",
+    "path": "/disputes/{dispute_id}/respond",
+    "tags": "disputes",
+    "summary": "Vendor Respond To Dispute"
+  },
+  {
+    "method": "GET",
+    "path": "/events",
+    "tags": "events",
+    "summary": "List Events"
+  },
+  {
+    "method": "GET",
+    "path": "/events/{event_id}/instances/{instance_id}/scan-sync",
+    "tags": "ticket-scan-sync",
+    "summary": "Get Scan Sync"
+  },
+  {
+    "method": "GET",
+    "path": "/events/{slug}",
+    "tags": "events",
+    "summary": "Get Event"
+  },
+  {
+    "method": "GET",
+    "path": "/events/{slug}/calendar.ics",
+    "tags": "events",
+    "summary": "Event Calendar Ics"
+  },
+  {
+    "method": "GET",
+    "path": "/fingerprint",
+    "tags": "health",
+    "summary": "Fingerprint"
+  },
+  {
+    "method": "GET",
+    "path": "/health",
+    "tags": "health",
+    "summary": "Health"
+  },
+  {
+    "method": "GET",
+    "path": "/healthz",
+    "tags": "health",
+    "summary": "Healthz"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/analytics/retention-tick",
+    "tags": "internal-analytics",
+    "summary": "Analytics Retention Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/digest",
+    "tags": "internal-digest",
+    "summary": "Get Daily Digest"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/dispatch/tick",
+    "tags": "internal-dispatch",
+    "summary": "Dispatch Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/embeddings/tick",
+    "tags": "internal-embeddings",
+    "summary": "Embeddings Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/event-release/tick",
+    "tags": "internal-event-release",
+    "summary": "Event Release Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/funnel/abandon-tick",
+    "tags": "internal-funnel",
+    "summary": "Funnel Abandon Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/job-completion/auto-confirm",
+    "tags": "job-completion",
+    "summary": "Auto Confirm Batch"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/jobs/expire-tick",
+    "tags": "internal-job-jobs",
+    "summary": "Expire Tick Batch"
+  },
+  {
+    "method": "GET",
+    "path": "/internal/n8n/abandoned-carts",
+    "tags": "internal-n8n",
+    "summary": "Abandoned Carts"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/n8n/abandoned-carts/tick",
+    "tags": "internal-n8n",
+    "summary": "Abandoned Carts Tick"
+  },
+  {
+    "method": "GET",
+    "path": "/internal/n8n/kyc-stalled",
+    "tags": "internal-n8n",
+    "summary": "Kyc Stalled"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/n8n/kyc-stalled/tick",
+    "tags": "internal-n8n",
+    "summary": "Kyc Stalled Tick"
+  },
+  {
+    "method": "GET",
+    "path": "/internal/n8n/low-stock",
+    "tags": "internal-n8n",
+    "summary": "Low Stock"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/n8n/low-stock/tick",
+    "tags": "internal-n8n",
+    "summary": "Low Stock Tick"
+  },
+  {
+    "method": "GET",
+    "path": "/internal/n8n/payout-failures",
+    "tags": "internal-n8n",
+    "summary": "Payout Failures"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/n8n/payout-failures/tick",
+    "tags": "internal-n8n",
+    "summary": "Payout Failures Tick"
+  },
+  {
+    "method": "GET",
+    "path": "/internal/n8n/review-requests",
+    "tags": "internal-n8n",
+    "summary": "Review Requests"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/n8n/review-requests/tick",
+    "tags": "internal-n8n",
+    "summary": "Review Requests Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/order-jobs/auto-confirm",
+    "tags": "internal-order-jobs",
+    "summary": "Auto Confirm Batch"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/order-jobs/auto-release",
+    "tags": "internal-order-jobs",
+    "summary": "Auto Release Batch"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/payment-sweeper/tick",
+    "tags": "internal-payment-sweeper",
+    "summary": "Payment Sweeper Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/payouts/execute",
+    "tags": "internal-payouts",
+    "summary": "Execute Single Payout"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/payouts/retry",
+    "tags": "internal-payouts",
+    "summary": "Payouts Retry Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/payouts/tick",
+    "tags": "internal-payouts",
+    "summary": "Payouts Batch Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/privacy/export-purge-tick",
+    "tags": "internal-privacy",
+    "summary": "Export Purge Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/reconciliation/daily-report",
+    "tags": "internal-reconciliation",
+    "summary": "Reconciliation Daily Report"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/reconciliation/poll-tick",
+    "tags": "internal-reconciliation",
+    "summary": "Reconciliation Poll Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/reconciliation/webhook-drain-tick",
+    "tags": "internal-reconciliation",
+    "summary": "Reconciliation Webhook Drain Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/release-job/tick",
+    "tags": "internal-release-job",
+    "summary": "Release Job Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/review-aggregate/tick",
+    "tags": "internal-review-aggregate",
+    "summary": "Review Aggregate Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/sentry-test",
+    "tags": "internal-sentry-test",
+    "summary": "Sentry Test Event"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/stock-sweeper/tick",
+    "tags": "internal-stock-sweeper",
+    "summary": "Stock Sweeper Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/tickets/issue-tick",
+    "tags": "tickets",
+    "summary": "Tickets Issue Tick"
+  },
+  {
+    "method": "POST",
+    "path": "/internal/tickets/release-tick",
+    "tags": "tickets",
+    "summary": "Tickets Release Tick"
+  },
+  {
+    "method": "GET",
+    "path": "/invoices/download",
+    "tags": "invoices",
+    "summary": "Download Signed Invoice"
+  },
+  {
+    "method": "GET",
+    "path": "/invoices/{order_id}",
+    "tags": "invoices",
+    "summary": "Download Invoice"
+  },
+  {
+    "method": "GET",
+    "path": "/invoices/{order_id}/signed-url",
+    "tags": "invoices",
+    "summary": "Create Signed Invoice Url"
+  },
+  {
+    "method": "GET",
+    "path": "/jobs",
+    "tags": "jobs",
+    "summary": "List Jobs"
+  },
+  {
+    "method": "POST",
+    "path": "/jobs",
+    "tags": "jobs",
+    "summary": "Create Job"
+  },
+  {
+    "method": "GET",
+    "path": "/jobs/{job_id}",
+    "tags": "jobs",
+    "summary": "Get Job"
+  },
+  {
+    "method": "POST",
+    "path": "/jobs/{job_id}/cancel",
+    "tags": "jobs",
+    "summary": "Cancel Job"
+  },
+  {
+    "method": "POST",
+    "path": "/jobs/{job_id}/complete",
+    "tags": "job-completion",
+    "summary": "Mark Complete"
+  },
+  {
+    "method": "POST",
+    "path": "/jobs/{job_id}/confirm",
+    "tags": "job-completion",
+    "summary": "Confirm Completion"
+  },
+  {
+    "method": "POST",
+    "path": "/jobs/{job_id}/quotes",
+    "tags": "quotes",
+    "summary": "Submit Quote"
+  },
+  {
+    "method": "GET",
+    "path": "/jobs/{job_id}/quotes",
+    "tags": "quotes",
+    "summary": "List Job Quotes"
+  },
+  {
+    "method": "POST",
+    "path": "/jobs/{job_id}/quotes/{quote_id}/accept",
+    "tags": "rfq-engagement",
+    "summary": "Accept Job Quote"
+  },
+  {
+    "method": "POST",
+    "path": "/kyc/bootstrap",
+    "tags": "kyc",
+    "summary": "Bootstrap Kyc Application"
+  },
+  {
+    "method": "PATCH",
+    "path": "/kyc/draft",
+    "tags": "kyc",
+    "summary": "Update Kyc Draft"
+  },
+  {
+    "method": "POST",
+    "path": "/kyc/resubmit",
+    "tags": "kyc",
+    "summary": "Resubmit Kyc"
+  },
+  {
+    "method": "GET",
+    "path": "/kyc/status",
+    "tags": "kyc",
+    "summary": "Get Kyc Status"
+  },
+  {
+    "method": "POST",
+    "path": "/kyc/submit",
+    "tags": "kyc",
+    "summary": "Submit Kyc"
+  },
+  {
+    "method": "POST",
+    "path": "/listings/import",
+    "tags": "listing-import",
+    "summary": "Import Listings"
+  },
+  {
+    "method": "POST",
+    "path": "/listings/import/preview",
+    "tags": "listing-import",
+    "summary": "Preview Import"
+  },
+  {
+    "method": "GET",
+    "path": "/listings/import/template",
+    "tags": "listing-import",
+    "summary": "Download Import Template"
+  },
+  {
+    "method": "POST",
+    "path": "/media/kyc-doc/sign",
+    "tags": "media",
+    "summary": "Sign Kyc Doc Upload"
+  },
+  {
+    "method": "POST",
+    "path": "/media/sign",
+    "tags": "media",
+    "summary": "Sign Upload"
+  },
+  {
+    "method": "GET",
+    "path": "/merch/slots",
+    "tags": "merch",
+    "summary": "Get Public Merch Slots"
+  },
+  {
+    "method": "POST",
+    "path": "/orders",
+    "tags": "orders",
+    "summary": "Create Orders"
+  },
+  {
+    "method": "POST",
+    "path": "/orders/{order_id}/confirm-received",
+    "tags": "order-confirmation",
+    "summary": "Confirm Received"
+  },
+  {
+    "method": "POST",
+    "path": "/orders/{order_id}/evidence/sign",
+    "tags": "order-confirmation",
+    "summary": "Sign Order Evidence Upload"
+  },
+  {
+    "method": "POST",
+    "path": "/orders/{order_id}/report-problem",
+    "tags": "order-confirmation",
+    "summary": "Report Problem"
+  },
+  {
+    "method": "GET",
+    "path": "/organiser/events",
+    "tags": "organiser-events",
+    "summary": "List Organiser Events"
+  },
+  {
+    "method": "POST",
+    "path": "/organiser/events",
+    "tags": "organiser-events",
+    "summary": "Create Organiser Event"
+  },
+  {
+    "method": "GET",
+    "path": "/organiser/events/{event_id}",
+    "tags": "organiser-events",
+    "summary": "Get Organiser Event"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organiser/events/{event_id}",
+    "tags": "organiser-events",
+    "summary": "Update Organiser Event"
+  },
+  {
+    "method": "POST",
+    "path": "/organiser/events/{event_id}/cancel",
+    "tags": "organiser-events",
+    "summary": "Cancel Organiser Event"
+  },
+  {
+    "method": "POST",
+    "path": "/organiser/events/{event_id}/end",
+    "tags": "organiser-events",
+    "summary": "End Organiser Event"
+  },
+  {
+    "method": "POST",
+    "path": "/organiser/events/{event_id}/publish",
+    "tags": "organiser-events",
+    "summary": "Publish Organiser Event"
+  },
+  {
+    "method": "GET",
+    "path": "/organiser/events/{event_id}/roster",
+    "tags": "organiser-stats",
+    "summary": "Get Organiser Event Roster"
+  },
+  {
+    "method": "GET",
+    "path": "/organiser/events/{event_id}/roster.csv",
+    "tags": "organiser-stats",
+    "summary": "Download Organiser Event Roster Csv"
+  },
+  {
+    "method": "GET",
+    "path": "/organiser/events/{event_id}/stats",
+    "tags": "organiser-stats",
+    "summary": "Get Organiser Event Stats"
+  },
+  {
+    "method": "GET",
+    "path": "/organiser/events/{event_id}/ticket-types",
+    "tags": "ticket-types",
+    "summary": "List Ticket Types"
+  },
+  {
+    "method": "POST",
+    "path": "/organiser/events/{event_id}/ticket-types",
+    "tags": "ticket-types",
+    "summary": "Create Ticket Type"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organiser/ticket-types/{ticket_type_id}",
+    "tags": "ticket-types",
+    "summary": "Update Ticket Type"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organiser/ticket-types/{ticket_type_id}",
+    "tags": "ticket-types",
+    "summary": "Delete Ticket Type"
+  },
+  {
+    "method": "GET",
+    "path": "/organiser/ticket-types/{ticket_type_id}/allocations",
+    "tags": "ticket-types",
+    "summary": "List Allocations"
+  },
+  {
+    "method": "PUT",
+    "path": "/organiser/ticket-types/{ticket_type_id}/allocations",
+    "tags": "ticket-types",
+    "summary": "Set Allocations"
+  },
+  {
+    "method": "PUT",
+    "path": "/organiser/ticket-types/{ticket_type_id}/early-bird",
+    "tags": "ticket-types",
+    "summary": "Set Early Bird"
+  },
+  {
+    "method": "PUT",
+    "path": "/organiser/ticket-types/{ticket_type_id}/price-tiers",
+    "tags": "ticket-types",
+    "summary": "Set Price Tiers"
+  },
+  {
+    "method": "GET",
+    "path": "/organiser/ticket-types/{ticket_type_id}/pricing",
+    "tags": "ticket-types",
+    "summary": "Get Pricing"
+  },
+  {
+    "method": "POST",
+    "path": "/payments/card/session",
+    "tags": "payments-card",
+    "summary": "Create Card Session"
+  },
+  {
+    "method": "GET",
+    "path": "/payments/card/{payment_id}/session",
+    "tags": "payments-card",
+    "summary": "Get Card Session"
+  },
+  {
+    "method": "POST",
+    "path": "/payments/card/{payment_id}/verify",
+    "tags": "payments-card",
+    "summary": "Verify Card Return"
+  },
+  {
+    "method": "POST",
+    "path": "/payments/retry",
+    "tags": "payments",
+    "summary": "Retry Payment"
+  },
+  {
+    "method": "GET",
+    "path": "/payments/status",
+    "tags": "payments",
+    "summary": "Get Payment Status"
+  },
+  {
+    "method": "GET",
+    "path": "/products/{slug}",
+    "tags": "products",
+    "summary": "Get Product"
+  },
+  {
+    "method": "GET",
+    "path": "/products/{slug}/comparison",
+    "tags": "comparison",
+    "summary": "Get Product Comparison"
+  },
+  {
+    "method": "GET",
+    "path": "/products/{slug}/related",
+    "tags": "products",
+    "summary": "Get Related Products"
+  },
+  {
+    "method": "GET",
+    "path": "/provider/jobs",
+    "tags": "quotes",
+    "summary": "List Matched Jobs"
+  },
+  {
+    "method": "GET",
+    "path": "/public/config/commission-rates",
+    "tags": "public-config",
+    "summary": "Get Public Commission Rates"
+  },
+  {
+    "method": "POST",
+    "path": "/quotes/{quote_id}/decline",
+    "tags": "quotes",
+    "summary": "Decline Quote"
+  },
+  {
+    "method": "POST",
+    "path": "/quotes/{quote_id}/withdraw",
+    "tags": "quotes",
+    "summary": "Withdraw Quote"
+  },
+  {
+    "method": "GET",
+    "path": "/readyz",
+    "tags": "health",
+    "summary": "Readyz"
+  },
+  {
+    "method": "POST",
+    "path": "/refunds/execute",
+    "tags": "admin-refunds",
+    "summary": "Admin Execute Refund"
+  },
+  {
+    "method": "POST",
+    "path": "/returns",
+    "tags": "returns",
+    "summary": "Submit Return"
+  },
+  {
+    "method": "GET",
+    "path": "/returns/preview",
+    "tags": "returns",
+    "summary": "Preview Return"
+  },
+  {
+    "method": "GET",
+    "path": "/returns/vendor",
+    "tags": "returns",
+    "summary": "List Vendor Returns"
+  },
+  {
+    "method": "POST",
+    "path": "/returns/{return_id}/respond",
+    "tags": "returns",
+    "summary": "Vendor Respond To Return"
+  },
+  {
+    "method": "GET",
+    "path": "/reviews",
+    "tags": "reviews",
+    "summary": "List Product Reviews"
+  },
+  {
+    "method": "POST",
+    "path": "/reviews",
+    "tags": "reviews",
+    "summary": "Submit Review"
+  },
+  {
+    "method": "GET",
+    "path": "/reviews/order/{order_id}",
+    "tags": "reviews",
+    "summary": "List Order Review Items"
+  },
+  {
+    "method": "GET",
+    "path": "/reviews/vendor",
+    "tags": "reviews",
+    "summary": "List Vendor Reviews"
+  },
+  {
+    "method": "POST",
+    "path": "/reviews/{review_id}/reply",
+    "tags": "reviews",
+    "summary": "Submit Vendor Reply"
+  },
+  {
+    "method": "GET",
+    "path": "/search",
+    "tags": "search",
+    "summary": "Search"
+  },
+  {
+    "method": "GET",
+    "path": "/search/suggest",
+    "tags": "search",
+    "summary": "Suggest"
+  },
+  {
+    "method": "POST",
+    "path": "/service-reviews",
+    "tags": "service-reviews",
+    "summary": "Submit Service Review"
+  },
+  {
+    "method": "GET",
+    "path": "/service-reviews",
+    "tags": "service-reviews",
+    "summary": "List Service Reviews"
+  },
+  {
+    "method": "GET",
+    "path": "/service-reviews/eligibility/{job_id}",
+    "tags": "service-reviews",
+    "summary": "Service Review Eligibility"
+  },
+  {
+    "method": "POST",
+    "path": "/service-reviews/{review_id}/reply",
+    "tags": "service-reviews",
+    "summary": "Submit Service Vendor Reply"
+  },
+  {
+    "method": "GET",
+    "path": "/services",
+    "tags": "services-listings",
+    "summary": "Browse Services"
+  },
+  {
+    "method": "POST",
+    "path": "/services/{service_id}/book",
+    "tags": "service-booking",
+    "summary": "Book Service"
+  },
+  {
+    "method": "GET",
+    "path": "/services/{slug}",
+    "tags": "services-listings",
+    "summary": "Get Service Detail"
+  },
+  {
+    "method": "POST",
+    "path": "/tickets/checkout",
+    "tags": "tickets",
+    "summary": "Ticket Checkout"
+  },
+  {
+    "method": "POST",
+    "path": "/tickets/rsvp",
+    "tags": "tickets",
+    "summary": "Ticket Rsvp"
+  },
+  {
+    "method": "GET",
+    "path": "/tickets/transfers/inbound",
+    "tags": "ticket-transfer",
+    "summary": "List Inbound Transfers"
+  },
+  {
+    "method": "POST",
+    "path": "/tickets/transfers/{transfer_id}/cancel",
+    "tags": "ticket-transfer",
+    "summary": "Cancel Transfer"
+  },
+  {
+    "method": "POST",
+    "path": "/tickets/transfers/{transfer_id}/claim",
+    "tags": "ticket-transfer",
+    "summary": "Claim Transfer"
+  },
+  {
+    "method": "POST",
+    "path": "/tickets/verify",
+    "tags": "ticket-verify",
+    "summary": "Verify Ticket"
+  },
+  {
+    "method": "POST",
+    "path": "/tickets/verify/batch",
+    "tags": "ticket-verify",
+    "summary": "Verify Ticket Batch"
+  },
+  {
+    "method": "POST",
+    "path": "/tickets/{ticket_id}/transfer",
+    "tags": "ticket-transfer",
+    "summary": "Initiate Transfer"
+  },
+  {
+    "method": "GET",
+    "path": "/tickets/{ticket_id}/transfer",
+    "tags": "ticket-transfer",
+    "summary": "Get Current Transfer"
+  },
+  {
+    "method": "GET",
+    "path": "/vendor/analytics",
+    "tags": "vendor-analytics",
+    "summary": "Get Vendor Analytics"
+  },
+  {
+    "method": "GET",
+    "path": "/vendor/listings",
+    "tags": "vendor-listings-manage",
+    "summary": "List Vendor Listings"
+  },
+  {
+    "method": "POST",
+    "path": "/vendor/listings",
+    "tags": "vendor-listings",
+    "summary": "Create Listing"
+  },
+  {
+    "method": "GET",
+    "path": "/vendor/listings/canonical/{product_id}",
+    "tags": "vendor-listings",
+    "summary": "Get Canonical Preview"
+  },
+  {
+    "method": "GET",
+    "path": "/vendor/listings/categories",
+    "tags": "vendor-listings",
+    "summary": "List Listing Categories"
+  },
+  {
+    "method": "GET",
+    "path": "/vendor/listings/{listing_id}",
+    "tags": "vendor-listings-manage",
+    "summary": "Get Vendor Listing"
+  },
+  {
+    "method": "PATCH",
+    "path": "/vendor/listings/{listing_id}",
+    "tags": "vendor-listings-manage",
+    "summary": "Update Vendor Listing"
+  },
+  {
+    "method": "DELETE",
+    "path": "/vendor/listings/{listing_id}",
+    "tags": "vendor-listings-manage",
+    "summary": "Delete Vendor Listing"
+  },
+  {
+    "method": "POST",
+    "path": "/vendor/listings/{listing_id}/images",
+    "tags": "listing-images",
+    "summary": "Attach Listing Image"
+  },
+  {
+    "method": "PATCH",
+    "path": "/vendor/listings/{listing_id}/images/reorder",
+    "tags": "listing-images",
+    "summary": "Reorder Listing Images"
+  },
+  {
+    "method": "DELETE",
+    "path": "/vendor/listings/{listing_id}/images/{image_id}",
+    "tags": "listing-images",
+    "summary": "Detach Listing Image"
+  },
+  {
+    "method": "POST",
+    "path": "/vendor/listings/{listing_id}/pause",
+    "tags": "vendor-listings-manage",
+    "summary": "Pause Vendor Listing"
+  },
+  {
+    "method": "PATCH",
+    "path": "/vendor/listings/{listing_id}/stock",
+    "tags": "vendor-listings-manage",
+    "summary": "Adjust Listing Stock"
+  },
+  {
+    "method": "POST",
+    "path": "/vendor/listings/{listing_id}/unpause",
+    "tags": "vendor-listings-manage",
+    "summary": "Unpause Vendor Listing"
+  },
+  {
+    "method": "GET",
+    "path": "/vendor/orders/dashboard",
+    "tags": "vendor-orders",
+    "summary": "Get Vendor Dashboard"
+  },
+  {
+    "method": "GET",
+    "path": "/vendor/orders/queue",
+    "tags": "vendor-orders",
+    "summary": "List Vendor Orders Queue"
+  },
+  {
+    "method": "GET",
+    "path": "/vendor/orders/{order_id}",
+    "tags": "vendor-orders",
+    "summary": "Get Vendor Order"
+  },
+  {
+    "method": "POST",
+    "path": "/vendor/orders/{order_id}/cod/confirm-collection",
+    "tags": "cod",
+    "summary": "Vendor Confirm Cod Collection"
+  },
+  {
+    "method": "POST",
+    "path": "/vendor/orders/{order_id}/cod/refuse-collection",
+    "tags": "cod",
+    "summary": "Vendor Refuse Cod Collection"
+  },
+  {
+    "method": "POST",
+    "path": "/vendor/orders/{order_id}/confirm",
+    "tags": "vendor-orders",
+    "summary": "Confirm Vendor Order"
+  },
+  {
+    "method": "POST",
+    "path": "/vendor/orders/{order_id}/pack",
+    "tags": "vendor-orders",
+    "summary": "Pack Vendor Order"
+  },
+  {
+    "method": "POST",
+    "path": "/vendor/orders/{order_id}/ready-for-pickup",
+    "tags": "vendor-orders",
+    "summary": "Ready For Pickup Vendor Order"
+  },
+  {
+    "method": "POST",
+    "path": "/vendor/orders/{order_id}/reject",
+    "tags": "vendor-orders",
+    "summary": "Reject Vendor Order"
+  },
+  {
+    "method": "POST",
+    "path": "/vendor/orders/{order_id}/ship",
+    "tags": "vendor-orders",
+    "summary": "Ship Vendor Order"
+  },
+  {
+    "method": "GET",
+    "path": "/vendor/payouts",
+    "tags": "vendor-payouts",
+    "summary": "Get Vendor Payouts"
+  },
+  {
+    "method": "GET",
+    "path": "/vendor/payouts/history",
+    "tags": "vendor-payouts",
+    "summary": "Get Payout History"
+  },
+  {
+    "method": "POST",
+    "path": "/vendor/payouts/method",
+    "tags": "vendor-payouts",
+    "summary": "Change Payout Method"
+  },
+  {
+    "method": "GET",
+    "path": "/vendor/payouts/statement",
+    "tags": "vendor-payouts",
+    "summary": "Download Payout Statement"
+  },
+  {
+    "method": "POST",
+    "path": "/vendor/pickup/verify",
+    "tags": "pickup",
+    "summary": "Verify Pickup"
+  },
+  {
+    "method": "GET",
+    "path": "/vendor/profile",
+    "tags": "vendor-profile",
+    "summary": "Get Vendor Profile"
+  },
+  {
+    "method": "PATCH",
+    "path": "/vendor/profile",
+    "tags": "vendor-profile",
+    "summary": "Patch Vendor Profile"
+  },
+  {
+    "method": "GET",
+    "path": "/vendor/services",
+    "tags": "services-listings",
+    "summary": "List Vendor Services"
+  },
+  {
+    "method": "POST",
+    "path": "/vendor/services",
+    "tags": "services-listings",
+    "summary": "Create Vendor Service"
+  },
+  {
+    "method": "PATCH",
+    "path": "/vendor/services/{service_id}",
+    "tags": "services-listings",
+    "summary": "Update Vendor Service"
+  },
+  {
+    "method": "POST",
+    "path": "/webhooks/lenco",
+    "tags": "webhooks",
+    "summary": "Lenco Webhook"
+  },
+  {
+    "method": "GET",
+    "path": "/webhooks/whatsapp",
+    "tags": "webhooks-whatsapp",
+    "summary": "Whatsapp Verify"
+  },
+  {
+    "method": "POST",
+    "path": "/webhooks/whatsapp",
+    "tags": "webhooks-whatsapp",
+    "summary": "Whatsapp Webhook"
+  }
+]
