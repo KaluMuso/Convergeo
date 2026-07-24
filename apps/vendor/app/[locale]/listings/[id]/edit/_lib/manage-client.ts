@@ -15,6 +15,7 @@ export type ListingSummary = {
   id: string;
   title: string;
   price_ngwee: number;
+  compare_at_ngwee: number | null;
   condition: ListingCondition;
   stock_mode: StockMode;
   stock_qty: number | null;
@@ -29,6 +30,7 @@ export type ListingSummary = {
 
 export type ListingUpdatePayload = {
   price_ngwee?: number;
+  compare_at_ngwee?: number | null;
   condition?: ListingCondition;
   stock_mode?: StockMode;
   stock_qty?: number | null;

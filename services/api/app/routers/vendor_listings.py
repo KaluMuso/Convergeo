@@ -37,6 +37,7 @@ class ListingCreateRequest(StrictModel):
     aliases: list[str] = Field(default_factory=list)
     title_override: str | None = None
     price_ngwee: NgweeInt
+    compare_at_ngwee: NgweeInt | None = None
     condition: ListingCondition
     stock_mode: StockMode
     stock_qty: int | None = None
@@ -71,6 +72,8 @@ class ListingCreateRequest(StrictModel):
             raise ValueError("stock_qty is required when stock_mode is tracked")
         if self.returnable and self.return_window_hours is None:
             raise ValueError("return_window_hours is required when returnable is true")
+        if self.compare_at_ngwee is not None and self.compare_at_ngwee <= self.price_ngwee:
+            raise ValueError("compare_at_ngwee must be greater than price_ngwee")
         return self
 
 
@@ -475,6 +478,7 @@ async def create_listing(
         "product_id": product_id,
         "title_override": body.title_override.strip() if body.title_override else None,
         "price_ngwee": body.price_ngwee,
+        "compare_at_ngwee": body.compare_at_ngwee,
         "condition": body.condition,
         "stock_mode": body.stock_mode,
         "stock_qty": body.stock_qty,
