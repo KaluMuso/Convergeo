@@ -312,6 +312,103 @@ class TestExecuteRefundPaths:
         assert fake.tables["refunds"].rows[0]["status"] == "completed"
 
     @patch("app.services.refunds.execute.post_transaction")
+    def test_pre_release_refund_exceeding_remaining_escrow_blocked(
+        self,
+        mock_post: MagicMock,
+    ) -> None:
+        """Stacked PRE_RELEASE drains cannot exceed remaining escrow (money-loss guard).
+
+        When charge legs are order-linked, the lane-1 full refund (105_000) is
+        capped against remaining escrow. Prior drains here leave only 49_000, so
+        the refund is refused BEFORE any payout/ledger drain — the sole guard
+        stopping stacked multi-item returns from paying out more than the buyer
+        put in. Previously every PRE_RELEASE test skipped this branch by letting
+        charge_received read as 0 (see test_pre_release_lane1 above).
+        """
+        fake = FakeSupabaseClient()
+        _seed_order(fake, released=False)
+        service = FakeServiceClient(fake)
+        # 105_000 charge − 12_000 commission − 0 released − 44_000 drained = 49_000.
+        depleted = OrderReleaseLedgerSummary(
+            order_id=ORDER_ID,
+            charge_received_ngwee=105_000,
+            commission_captured_ngwee=12_000,
+            vendor_released_ngwee=0,
+            refund_drained_ngwee=44_000,
+        )
+
+        with (
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                side_effect=_gate_decision_for_fake(fake),
+            ),
+            patch(
+                "app.services.refunds.execute.summarize_order_release_ledger",
+                return_value=depleted,
+            ),
+        ):
+            with pytest.raises(AppError) as exc:
+                execute_refund(
+                    service_client=service,
+                    order_id=ORDER_ID,
+                    lane=1,
+                    customer_momo=CUSTOMER_MOMO,
+                )
+
+        assert exc.value.code == "refund_exceeds_escrow"
+        assert exc.value.details["remaining_escrow_ngwee"] == 49_000
+        assert exc.value.details["refund_ngwee"] == 105_000
+        mock_post.assert_not_called()
+        assert fake.tables["refunds"].rows == []
+
+    @patch("app.services.refunds.execute.post_transaction")
+    def test_pre_release_refund_within_escrow_proceeds(
+        self,
+        mock_post: MagicMock,
+    ) -> None:
+        """The escrow cap must NOT false-block when remaining escrow covers the refund.
+
+        Exercises the same charge_received > 0 branch as the block test, but with
+        remaining escrow (150_000) >= refund (105_000): the refund proceeds and
+        posts normally, proving the cap guards over-draining without penalising
+        legitimate order-linked refunds.
+        """
+        mock_post.return_value = _posted_txn("pre-lane1-capped-ok")
+        fake = FakeSupabaseClient()
+        _seed_order(fake, released=False)
+        service = FakeServiceClient(fake)
+        sufficient = OrderReleaseLedgerSummary(
+            order_id=ORDER_ID,
+            charge_received_ngwee=150_000,
+            commission_captured_ngwee=0,
+            vendor_released_ngwee=0,
+            refund_drained_ngwee=0,
+        )
+
+        with (
+            patch(
+                "app.services.refunds.execute.decide_refund_phase_under_gate",
+                side_effect=_gate_decision_for_fake(fake),
+            ),
+            patch(
+                "app.services.refunds.execute.summarize_order_release_ledger",
+                return_value=sufficient,
+            ),
+        ):
+            result = execute_refund(
+                service_client=service,
+                order_id=ORDER_ID,
+                lane=1,
+                customer_momo=CUSTOMER_MOMO,
+            )
+
+        assert result.created is True
+        assert result.phase == RefundPhase.PRE_RELEASE
+        assert result.amount_ngwee == 105_000
+        mock_post.assert_called_once()
+        assert fake.tables["refunds"].rows[0]["status"] == "completed"
+
+    @patch("app.services.refunds.execute.post_transaction")
     def test_post_release_lane1_posts_clawback(
         self,
         mock_post: MagicMock,
