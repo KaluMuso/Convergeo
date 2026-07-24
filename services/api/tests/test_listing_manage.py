@@ -354,6 +354,42 @@ def test_delete_without_open_orders_sets_removed(
     assert listing["status"] == "removed"
 
 
+def test_compare_at_update_sets_and_clears(
+    manage_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    # Set a compare-at above the price → persisted and echoed in the summary.
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"compare_at_ngwee": 150_000},
+    )
+    assert response.status_code == 200
+    assert response.json()["listing"]["compare_at_ngwee"] == 150_000
+    assert fake_client.tables["vendor_listings"].rows[0]["compare_at_ngwee"] == 150_000
+
+    # An explicit null clears it (ends the sale) — model_fields_set, not None-skip.
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"compare_at_ngwee": None},
+    )
+    assert response.status_code == 200
+    assert response.json()["listing"]["compare_at_ngwee"] is None
+    assert fake_client.tables["vendor_listings"].rows[0]["compare_at_ngwee"] is None
+
+
+def test_compare_at_update_rejects_not_above_price(manage_client: TestClient) -> None:
+    # Compare-at at or below the stored price is a friendly 422, not a DB error.
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"compare_at_ngwee": 1},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "invalid_compare_at"
+
+
 def test_tier_validation_rejects_bad_shape(manage_client: TestClient) -> None:
     response = manage_client.patch(
         f"/vendor/listings/{LISTING_A_ID}",

@@ -159,7 +159,7 @@ export function TranslatorView({ catalog }: { catalog: TranslationCatalog }) {
       </div>
 
       {overridesError ? (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+        <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
           {overridesError}
         </p>
       ) : null}
@@ -189,7 +189,7 @@ export function TranslatorView({ catalog }: { catalog: TranslationCatalog }) {
             ))}
           </div>
 
-          <section className="rounded-lg border border-border bg-card p-3 shadow-sm">
+          <section className="rounded-lg border border-border bg-surface p-3 shadow-sm">
             <p className="text-sm text-text-2">
               {t("localeSummary", {
                 locale: localeName(locale),
@@ -456,7 +456,7 @@ function EditableRow({
           </button>
         ) : null}
       </div>
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="text-xs text-danger">{error}</p> : null}
     </li>
   );
 }

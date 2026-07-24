@@ -220,14 +220,14 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
   }
 
   if (!session) {
-    return <p className="text-sm text-muted-foreground">{t("tickets.errors.unauthorized")}</p>;
+    return <p className="text-sm text-muted">{t("tickets.errors.unauthorized")}</p>;
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <h1 className="font-display text-xl font-semibold">{t("tickets.heading")}</h1>
-        <p className="text-sm text-muted-foreground">{t("tickets.subheading")}</p>
+        <p className="text-sm text-muted">{t("tickets.subheading")}</p>
       </div>
 
       <Link
@@ -238,7 +238,7 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
       </Link>
 
       {error ? (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+        <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
           {error}
         </p>
       ) : null}
@@ -249,18 +249,18 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
       ) : null}
 
       {types.length === 0 && !showForm ? (
-        <p className="text-sm text-muted-foreground">{t("tickets.empty")}</p>
+        <p className="text-sm text-muted">{t("tickets.empty")}</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {types.map((type) => (
-            <li key={type.id} className="rounded-lg border border-border bg-card p-3 shadow-sm">
+            <li key={type.id} className="rounded-lg border border-border bg-surface p-3 shadow-sm">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-medium">{type.name}</p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted">
                     {type.kind === "free_rsvp" ? formatK(0) : formatK(type.price_ngwee)}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted">
                     {t("tickets.fields.soldLabel", { count: type.tickets_sold })}
                   </p>
                   {type.attendee_named ? (
@@ -333,7 +333,7 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
       )}
 
       {showForm ? (
-        <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
+        <section className="rounded-lg border border-border bg-surface p-4 shadow-sm">
           <div className="flex flex-col gap-3">
             <FormField label={t("tickets.fields.kindLabel")}>
               <Select
@@ -408,9 +408,7 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
               />
               <span className="flex flex-col gap-0.5">
                 <span className="font-medium">{t("tickets.fields.attendeeNamedLabel")}</span>
-                <span className="text-xs text-muted-foreground">
-                  {t("tickets.fields.attendeeNamedHelp")}
-                </span>
+                <span className="text-xs text-muted">{t("tickets.fields.attendeeNamedHelp")}</span>
               </span>
             </label>
 

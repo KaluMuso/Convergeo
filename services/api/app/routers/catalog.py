@@ -46,6 +46,7 @@ class CatalogListingItem(BaseModel):
     vendor_name: str
     vendor_slug: str | None = None
     price_ngwee: int
+    compare_at_ngwee: int | None = None
     condition: str
     in_stock: bool
     image_public_id: str | None = None
@@ -159,6 +160,7 @@ class _ListingRow(BaseModel):
     stock_qty: int | None = None
     created_at: str | None = None
     wholesale: bool = False
+    compare_at_ngwee: int | None = None
 
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -319,7 +321,8 @@ def _fetch_listings(client: Any, listing_ids: list[str]) -> dict[str, _ListingRo
     response = (
         client.table("vendor_listings")
         .select(
-            "id,vendor_id,product_id,condition,stock_mode,stock_qty,created_at,status,wholesale"
+            "id,vendor_id,product_id,condition,stock_mode,stock_qty,created_at,status,"
+            "wholesale,compare_at_ngwee"
         )
         .in_("id", listing_ids)
         .eq("status", "active")
@@ -814,6 +817,7 @@ def list_catalog(
                 vendor_name=str(row.vendor["display_name"]),
                 vendor_slug=str(row.vendor.get("slug")) if row.vendor.get("slug") else None,
                 price_ngwee=row.search_doc.price_min_ngwee or 0,
+                compare_at_ngwee=row.listing.compare_at_ngwee,
                 condition=row.listing.condition,
                 in_stock=row.in_stock,
                 image_public_id=row.image_public_id,

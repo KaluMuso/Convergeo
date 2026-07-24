@@ -78,16 +78,14 @@ export function EventDashboard({ locale, eventId }: EventDashboardProps) {
   }
 
   if (!session) {
-    return (
-      <p className="text-sm text-muted-foreground">{t("eventDashboard.errors.unauthorized")}</p>
-    );
+    return <p className="text-sm text-muted">{t("eventDashboard.errors.unauthorized")}</p>;
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <h1 className="font-display text-xl font-semibold">{t("eventDashboard.heading")}</h1>
-        <p className="text-sm text-muted-foreground">{t("eventDashboard.subheading")}</p>
+        <p className="text-sm text-muted">{t("eventDashboard.subheading")}</p>
       </div>
 
       <Link
@@ -98,27 +96,27 @@ export function EventDashboard({ locale, eventId }: EventDashboardProps) {
       </Link>
 
       {error ? (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+        <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
           {error}
         </p>
       ) : null}
 
       {stats?.mass_refund_flagged ? (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+        <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
           {t("eventDashboard.massRefundFlagged")}
         </p>
       ) : null}
 
       {stats ? (
         <>
-          <section className="rounded-lg border border-border bg-card p-3 shadow-sm">
+          <section className="rounded-lg border border-border bg-surface p-3 shadow-sm">
             <h2 className="text-sm font-semibold">{t("eventDashboard.sections.revenue")}</h2>
             <p className="text-2xl font-semibold">{formatK(stats.revenue_ngwee)}</p>
           </section>
 
-          <section className="rounded-lg border border-border bg-card p-3 shadow-sm">
+          <section className="rounded-lg border border-border bg-surface p-3 shadow-sm">
             <h2 className="text-sm font-semibold">{t("eventDashboard.sections.checkIn")}</h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted">
               {t("eventDashboard.checkInProgress", {
                 checkedIn: stats.check_in.checked_in,
                 issued: stats.check_in.issued,
@@ -132,15 +130,15 @@ export function EventDashboard({ locale, eventId }: EventDashboardProps) {
             </Link>
           </section>
 
-          <section className="rounded-lg border border-border bg-card p-3 shadow-sm">
+          <section className="rounded-lg border border-border bg-surface p-3 shadow-sm">
             <h2 className="text-sm font-semibold">{t("eventDashboard.sections.escrow")}</h2>
             <dl className="mt-1 flex flex-col gap-1 text-sm">
               <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">{t("eventDashboard.labels.pending")}</dt>
+                <dt className="text-muted">{t("eventDashboard.labels.pending")}</dt>
                 <dd className="font-medium">{formatK(stats.escrow.pending_ngwee)}</dd>
               </div>
               <div className="flex items-center justify-between">
-                <dt className="text-muted-foreground">{t("eventDashboard.labels.released")}</dt>
+                <dt className="text-muted">{t("eventDashboard.labels.released")}</dt>
                 <dd className="font-medium">{formatK(stats.escrow.released_ngwee)}</dd>
               </div>
             </dl>
@@ -149,19 +147,19 @@ export function EventDashboard({ locale, eventId }: EventDashboardProps) {
           <section className="flex flex-col gap-2">
             <h2 className="text-sm font-semibold">{t("eventDashboard.sections.salesByType")}</h2>
             {stats.sales_by_type.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("eventDashboard.empty")}</p>
+              <p className="text-sm text-muted">{t("eventDashboard.empty")}</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {stats.sales_by_type.map((row) => (
                   <li
                     key={row.ticket_type_id}
-                    className="rounded-lg border border-border bg-card p-3 shadow-sm"
+                    className="rounded-lg border border-border bg-surface p-3 shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-medium">{row.name}</p>
                       <p className="font-medium">{formatK(row.revenue_ngwee)}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted">
                       {t("eventDashboard.labels.soldCheckedIn", {
                         sold: row.sold,
                         checkedIn: row.checked_in,

@@ -45,6 +45,7 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
   const [fieldValues, setFieldValues] = useState<ListingFieldValues | null>(null);
   const [returnable, setReturnable] = useState(false);
   const [returnWindowHours, setReturnWindowHours] = useState("");
+  const [compareAtZmw, setCompareAtZmw] = useState("");
   const [tiers, setTiers] = useState<TierDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -109,6 +110,7 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         setReturnWindowHours(
           row.return_window_hours === null ? "" : String(row.return_window_hours),
         );
+        setCompareAtZmw(row.compare_at_ngwee === null ? "" : ngweeToZmwInput(row.compare_at_ngwee));
         setTiers(tiersFromListing(row));
         setError(null);
       })
@@ -155,14 +157,25 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       setError(t("listings.manage.errors.returnWindowRequired"));
       return;
     }
+    const trimmedCompareAt = compareAtZmw.trim();
+    if (trimmedCompareAt !== "" && !isValidZmwDecimal(trimmedCompareAt)) {
+      setError(t("listings.manage.edit.compareAtInvalid"));
+      return;
+    }
 
     setSaving(true);
     setError(null);
     setNotice(null);
     try {
       const parsed = parseListingFieldValues(fieldValues);
+      const compareAtNgwee = trimmedCompareAt === "" ? null : zmwDecimalToNgwee(trimmedCompareAt);
+      if (compareAtNgwee !== null && compareAtNgwee <= parsed.priceNgwee) {
+        setError(t("listings.manage.edit.compareAtTooLow"));
+        return;
+      }
       const response = await manageClient.updateListing(listingId, {
         price_ngwee: parsed.priceNgwee,
+        compare_at_ngwee: compareAtNgwee,
         condition: fieldValues.condition,
         stock_mode: fieldValues.stockMode,
         stock_qty: parsed.stockQty,
@@ -304,6 +317,18 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
               current ? { ...current, priceZmw: event.target.value } : current,
             )
           }
+        />
+      </FormField>
+
+      <FormField
+        label={t("listings.manage.edit.compareAtLabel")}
+        helpText={t("listings.manage.edit.compareAtHelp")}
+      >
+        <Input
+          inputMode="decimal"
+          placeholder={fieldLabels.pricePlaceholder}
+          value={compareAtZmw}
+          onChange={(event) => setCompareAtZmw(event.target.value)}
         />
       </FormField>
 

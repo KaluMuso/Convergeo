@@ -42,6 +42,7 @@ type CatalogApiItem = {
   product_slug: string | null;
   vendor_name: string;
   price_ngwee: number;
+  compare_at_ngwee?: number | null;
   condition: string;
   in_stock: boolean;
   image_public_id: string | null;
@@ -101,6 +102,7 @@ function mapListing(item: CatalogApiItem): CatalogListing {
     productSlug: item.product_slug,
     vendorName: item.vendor_name,
     priceNgwee: item.price_ngwee,
+    oldNgwee: item.compare_at_ngwee ?? undefined,
     condition: item.condition,
     inStock: item.in_stock,
     imagePublicId: item.image_public_id,

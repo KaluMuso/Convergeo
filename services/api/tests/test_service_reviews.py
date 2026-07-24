@@ -92,7 +92,11 @@ class FakeQuery:
                             'duplicate key value violates unique constraint '
                             '"service_reviews_job_id_key"'
                         )
-            now = "2026-07-17T00:00:00Z"
+            # Relative to real now (was hardcoded 2026-07-17, which silently
+            # expired the review edit window once the wall clock passed it and
+            # broke test_submit_edits_within_window). Matches the relative dates
+            # the after-window test already uses.
+            now = (datetime.now(tz=UTC) - timedelta(hours=1)).isoformat()
             row = {
                 "id": f"rev-{len(self._parent.rows) + 1}",
                 "created_at": now,

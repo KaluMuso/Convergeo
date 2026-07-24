@@ -153,10 +153,10 @@ export function PricingEditor({ ticketTypeId, ticketsClient }: PricingEditorProp
   }
 
   return (
-    <div className="mt-3 flex flex-col gap-4 rounded-md bg-muted/40 p-3">
+    <div className="mt-3 flex flex-col gap-4 rounded-md bg-bg-2/40 p-3">
       <div>
         <p className="text-sm font-medium">{t("tickets.pricing.heading")}</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted">
           {t("tickets.pricing.baseLabel", {
             price: config ? formatK(config.base_price_ngwee) : "",
           })}
@@ -164,7 +164,7 @@ export function PricingEditor({ ticketTypeId, ticketsClient }: PricingEditorProp
       </div>
 
       {error ? (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+        <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
           {error}
         </p>
       ) : null}
@@ -177,7 +177,7 @@ export function PricingEditor({ ticketTypeId, ticketsClient }: PricingEditorProp
       {/* Early-bird */}
       <section className="flex flex-col gap-2">
         <p className="text-sm font-medium">{t("tickets.pricing.earlyBird.heading")}</p>
-        <p className="text-xs text-muted-foreground">{t("tickets.pricing.earlyBird.help")}</p>
+        <p className="text-xs text-muted">{t("tickets.pricing.earlyBird.help")}</p>
         <div className="flex flex-wrap items-end gap-3">
           <FormField label={t("tickets.pricing.earlyBird.priceLabel")}>
             <Input
@@ -225,7 +225,7 @@ export function PricingEditor({ ticketTypeId, ticketsClient }: PricingEditorProp
       {/* Group tiers */}
       <section className="flex flex-col gap-2">
         <p className="text-sm font-medium">{t("tickets.pricing.tiers.heading")}</p>
-        <p className="text-xs text-muted-foreground">{t("tickets.pricing.tiers.help")}</p>
+        <p className="text-xs text-muted">{t("tickets.pricing.tiers.help")}</p>
         <ul className="flex flex-col gap-2">
           {tierRows.map((row, index) => (
             <li key={index} className="flex items-end gap-2">

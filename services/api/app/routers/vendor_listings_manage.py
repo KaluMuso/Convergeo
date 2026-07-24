@@ -32,6 +32,7 @@ class ListingSummary(StrictModel):
     id: str
     title: str
     price_ngwee: int
+    compare_at_ngwee: int | None = None
     condition: ListingCondition
     stock_mode: StockMode
     stock_qty: int | None
@@ -46,6 +47,7 @@ class ListingSummary(StrictModel):
 
 class ListingUpdateRequest(StrictModel):
     price_ngwee: NgweeInt | None = None
+    compare_at_ngwee: NgweeInt | None = None
     condition: ListingCondition | None = None
     stock_mode: StockMode | None = None
     stock_qty: int | None = Field(default=None, ge=0)
@@ -68,6 +70,15 @@ class ListingUpdateRequest(StrictModel):
     def validate_return_window(self) -> ListingUpdateRequest:
         if self.returnable is True and self.return_window_hours is None:
             raise ValueError("return_window_hours is required when returnable is true")
+        # When both are supplied together, enforce a positive discount here for a
+        # friendly error; the compare-at-only case is checked in _apply_listing_update
+        # against the stored price (and the DB check constraint is the backstop).
+        if (
+            self.compare_at_ngwee is not None
+            and self.price_ngwee is not None
+            and self.compare_at_ngwee <= self.price_ngwee
+        ):
+            raise ValueError("compare_at_ngwee must be greater than price_ngwee")
         return self
 
 
@@ -182,6 +193,9 @@ def _to_listing_summary(row: dict[str, Any]) -> ListingSummary:
         id=str(row["id"]),
         title=_listing_title(row),
         price_ngwee=int(row["price_ngwee"]),
+        compare_at_ngwee=(
+            int(row["compare_at_ngwee"]) if row.get("compare_at_ngwee") is not None else None
+        ),
         condition=str(row["condition"]),  # type: ignore[arg-type]
         stock_mode=str(row["stock_mode"]),  # type: ignore[arg-type]
         stock_qty=int(row["stock_qty"]) if row.get("stock_qty") is not None else None,
@@ -204,8 +218,8 @@ def _load_listing(
     response = (
         service_client.client.table("vendor_listings")
         .select(
-            "id, vendor_id, product_id, title_override, price_ngwee, condition, "
-            "stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
+            "id, vendor_id, product_id, title_override, price_ngwee, compare_at_ngwee, "
+            "condition, stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
             "return_window_hours, status, products(name)"
         )
         .eq("id", listing_id)
@@ -373,6 +387,11 @@ def _apply_listing_update(
     update_payload: dict[str, Any] = {}
     if body.price_ngwee is not None:
         update_payload["price_ngwee"] = body.price_ngwee
+    # model_fields_set (not `is not None`) so an explicit null clears the
+    # compare-at price — i.e. ends a sale. Positive-discount is enforced below
+    # and by the DB check constraint.
+    if "compare_at_ngwee" in body.model_fields_set:
+        update_payload["compare_at_ngwee"] = body.compare_at_ngwee
     if body.condition is not None:
         update_payload["condition"] = body.condition
     if body.stock_mode is not None:
@@ -396,6 +415,19 @@ def _apply_listing_update(
         return listing, None
 
     old_price = int(listing["price_ngwee"])
+    # Compare-at set on its own must still exceed the effective price (the new
+    # price when it's changing, else the stored one) — a friendly 422 rather
+    # than a raw DB constraint violation.
+    new_compare_at = update_payload.get("compare_at_ngwee")
+    if new_compare_at is not None:
+        effective_price = int(update_payload.get("price_ngwee", old_price))
+        if int(new_compare_at) <= effective_price:
+            raise AppError(
+                code="invalid_compare_at",
+                message="compare_at_ngwee must be greater than price_ngwee",
+                http_status=422,
+                details={"message_key": "vendor.listings.errors.submitFailed"},
+            )
     price_changed = (
         body.price_ngwee is not None and int(body.price_ngwee) != old_price
     ) or body.price_tiers is not None
