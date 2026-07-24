@@ -2852,6 +2852,7 @@ export type Database = {
       }
       vendor_listings: {
         Row: {
+          compare_at_ngwee: number | null
           condition: string
           created_at: string
           id: string
@@ -2871,6 +2872,7 @@ export type Database = {
           wholesale: boolean
         }
         Insert: {
+          compare_at_ngwee?: number | null
           condition: string
           created_at?: string
           id?: string
@@ -2890,6 +2892,7 @@ export type Database = {
           wholesale?: boolean
         }
         Update: {
+          compare_at_ngwee?: number | null
           condition?: string
           created_at?: string
           id?: string
