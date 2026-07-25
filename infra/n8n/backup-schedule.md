@@ -5,9 +5,11 @@ Documents how the **daily off-peak logical dump** is scheduled on the OCI n8n in
 **Workflow JSON:** `infra/n8n/backup.json` (ships `active: false`).  
 **Runbook:** `docs/ops/backup-runbook.md` · **Restore drill:** `docs/ops/backup-restore-drill.md`.
 
-**Status:** **CODE_COMPLETE** in repo. **G7 PASS** still requires a real dated OCI dump +
-timed restore evidence (see restore-drill doc). Provider dashboard / PITR alone does **not**
-satisfy the independent-backup requirement.
+**Status:** **CODE_COMPLETE** in repo; imported into the live n8n instance **inactive** on
+2026-07-23 (see [Live n8n import & activation](#live-n8n-import--activation)). **G7 PASS**
+still requires a real dated OCI dump + timed restore evidence (see restore-drill doc) —
+importing the workflow does **not** satisfy G7. Provider dashboard / PITR alone does **not**
+satisfy the independent-backup requirement either.
 
 ## Schedule
 
@@ -21,6 +23,43 @@ satisfy the independent-backup requirement.
 | Destination | OCI Object Storage `oci://${OCI_BUCKET_NAME}/db/vergeo5-<timestamp>.sql.gz` |
 
 Off-peak avoids overlap with peak mobile-money traffic and Supabase maintenance windows.
+
+## Live n8n import & activation
+
+Imported into the live instance on **2026-07-23** (personal project), **inactive** — no
+schedule fires and the webhook is idle until it is activated.
+
+| Field        | Value                                                                                     |
+| ------------ | ----------------------------------------------------------------------------------------- |
+| Workflow     | `Vergeo5 — Database Backup`                                                               |
+| Workflow ID  | `OAdOD4kmIbSNehkJ`                                                                        |
+| URL          | `https://n8n.vergeo5.com/workflow/OAdOD4kmIbSNehkJ`                                       |
+| Manual drill | `POST https://n8n.vergeo5.com/webhook/58ecfba1-66ee-494c-a07e-378c38e683e8/backup-manual` |
+| State        | `active: false` (never published)                                                         |
+
+Reproduced faithfully from `backup.json` — the redaction regexes (all three Code nodes) and
+the `crypto.timingSafeEqual` webhook-auth check were byte-verified against source. Minor, safe
+deviations from the JSON: node `typeVersion`s bumped to instance-current releases; alert-message
+assembly rewritten from template literals to string concatenation (identical output); the
+`sha256` truncation marker `…` → `...`. The n8n-generated `webhookId` differs from the JSON's
+fixed value, so the manual-drill URL above is the authoritative one.
+
+### Activation checklist (founder-only)
+
+1. **Credentials** (both absent from n8n — create, then attach):
+   - `Vergeo5 OCI Host SSH` (SSH Private Key) → the 3 SSH nodes. Holds the OCI VM key.
+   - `Vergeo5 WhatsApp Cloud API` (Header Auth) → the 3 WhatsApp HTTP Request nodes.
+2. **n8n instance env:** `WHATSAPP_CLOUD_API_URL`, `WHATSAPP_CLOUD_API_TOKEN`,
+   `FOUNDER_WHATSAPP_TO`, `BACKUP_WEBHOOK_SECRET`, optional `BACKUP_MIN_BYTES` (default 10240).
+3. **OCI VM env** (`infra/.env`, see table below): `SUPABASE_DB_URL`, `OCI_NAMESPACE`,
+   `OCI_BUCKET_NAME`, `OCI_CLI_PROFILE` (or instance principal), `BACKUP_RETENTION_DAYS`.
+4. **Two settings the SDK import cannot set — set them in the workflow Settings panel before activating:**
+   - **Timezone → `Africa/Lusaka`** (otherwise the cron fires at 02:00 in the instance TZ).
+   - **Error Workflow → this workflow** (so `Error Trigger` catches its own failures; the inline
+     IF / continue-on-fail WhatsApp alert paths work regardless).
+5. **G7 evidence:** activate → fire the manual drill (header `X-Backup-Secret: <BACKUP_WEBHOOK_SECRET>`)
+   → confirm a dated `db/vergeo5-<ts>.sql.gz` in the bucket → timed restore per
+   `docs/ops/backup-restore-drill.md`. That evidence — not the import — flips G7 to PASS.
 
 ## n8n workflow shape (`backup.json`)
 

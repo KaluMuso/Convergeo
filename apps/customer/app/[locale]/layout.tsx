@@ -8,6 +8,7 @@ import {
 } from "@vergeo/i18n";
 import { fontVariables } from "@vergeo/ui/fonts";
 import { Footer } from "@vergeo/ui/src/footer";
+import { SeasonalThemeStyle } from "@vergeo/ui/src/seasonal-theme";
 import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import { ThemeScript } from "@vergeo/ui/src/theme-script";
 import Link from "next/link";
@@ -169,6 +170,13 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
             so the token palette (and body bg/text) never flash. Default choice
             is system (ThemeScript collapses missing/invalid storage to OS). */}
         <ThemeScript />
+        {/* Seasonal brand re-skin (SELECTION.md §8). Operator-selected via the
+            NEXT_PUBLIC_SEASONAL_THEME env (single knob both apps read) —
+            server-rendered inline CSS, so the seasonal palette is present on
+            first paint with no flash and no client cost. Overrides win by
+            specificity (see seasonalThemeCss), and the dark block applies once
+            <ThemeScript /> stamps data-theme. Default preset ⇒ renders null. */}
+        <SeasonalThemeStyle preset={process.env.NEXT_PUBLIC_SEASONAL_THEME} />
       </head>
       <body className="flex min-h-dvh flex-col font-body antialiased">
         <ThemeProvider>

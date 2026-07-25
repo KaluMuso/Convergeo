@@ -28,7 +28,8 @@ are all green. **Leave unchecked until then.**
 
 > **Prompt 12 audit (2026-07-20):** agent recommendation **NO_GO**.  
 > Evidence: `docs/production-readiness/2026-07-20/go-no-go-report.md` · gates: `docs/production-readiness/2026-07-18/consolidated/release-gates.md`.  
-> Live: API **502**; `public_launch=false`; money tables empty; n8n all inactive; F4/F9b open.  
+> **Fresh probe (2026-07-23):** API **UP** (was 502); customer prod **matches master** (`d591ef5`); DB **70/70** migrations (0069+0070 applied); `verify_live.sh` G1 PASS, **G9 FAIL** (`git_sha=unknown` on API). See `docs/production-readiness/2026-07-23/live-probe-gap-report.md`.  
+> Still: `public_launch=false`; money tables empty; n8n inactive; F4/F9b open.  
 > **Do not** treat this note as founder sign-off — founder lines below stay unchecked.
 
 - [ ] **GO / NO-GO — Founder** has reviewed Sections 1–5; every BLOCKING gate is green. — **Owner: Founder** — Evidence: _(link decision record; supersede agent NO_GO only with written founder decision)_
@@ -90,7 +91,8 @@ These five artifacts are **built and unit/mock-verified on master** but their
 - [ ] **Observability live-capture + alert fire** (M16-P06). — **Owner: Founder** _(DSN/UptimeRobot)_ — Evidence: _____
 - [ ] **Deploy + rollback demonstrated on staging** (M01 criterion). — **Owner: Founder/Ops** _(staging)_ — Evidence: _____
 - [ ] **Staging money drill** after place-order wiring (MoMo sandbox + COD + card session). — **Owner: Founder/Ops** _(staging + F9)_ — Evidence: runbook `docs/ops/staging-money-drill.md`
-- [ ] **Apply migration 0066** (`user_wishlist` / `user_recently_viewed`) on staging before engagement sync QA. — **Owner: Founder/Ops** _(staging)_ — Evidence: _____
+- [x] **Apply migration 0066** (`user_wishlist` / `user_recently_viewed`) on staging before engagement sync QA. — **Owner: Founder/Ops** _(staging)_ — Evidence: present in live `schema_migrations` as `0066_user_wishlist_recently_viewed` (applied 2026-07-20 batch); verified 2026-07-23 live probe.
+- [x] **Apply migration 0069** (`orders_commission_snapshot_immutable`) — PAY-07 defence-in-depth. — **Owner: Founder/Ops** _(staging)_ — Evidence: applied 2026-07-23 on Supabase `Vergeo5` (`dpadrlxukcjbewpqympu`); verified trigger `orders_commission_snapshot_immutable` on `public.orders`.
 - [x] **Apply migration 0070** (`vendor_commercial_tier`) on staging before API redeploy. — **Owner: Founder/Ops** _(staging)_ — Evidence: applied 2026-07-23 on Supabase `Vergeo5` (`dpadrlxukcjbewpqympu`, eu-north-1) via `0070_vendor_commercial_tier.sql`; verified `vendors.commercial_tier text` nullable + CHECK constraint. **API redeploy still required** to serve tier on directory/profile endpoints.
 
 ---
