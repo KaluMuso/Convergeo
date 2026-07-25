@@ -60,7 +60,7 @@ if [[ -z "$MASTER_GIT_SHA" ]]; then
   MASTER_GIT_SHA="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
 fi
 
-if [[ -z "${VERCEL_TOKEN:-}" ]]; then
+if [[ "$DRY_RUN" -eq 0 && -z "${VERCEL_TOKEN:-}" ]]; then
   log "SKIP: VERCEL_TOKEN unset — founder must promote in Vercel dashboard"
   exit 0
 fi
@@ -108,7 +108,7 @@ vercel_rest_post() {
   rm -f "$tmp"; return 1
 }
 
-# Pick the newest READY/BUILDING deployment matching MASTER_GIT_SHA from a
+# Pick the newest READY deployment matching MASTER_GIT_SHA from a
 # /deployments list payload. Emits "uid\tcommitSha" (or nothing) on stdout.
 select_deployment() {
   MASTER_GIT_SHA="$MASTER_GIT_SHA" python3 -c '
@@ -129,7 +129,7 @@ for row in rows:
     uid = row.get("uid") or row.get("id") or ""
     if not uid:
         continue
-    if state in ("READY", "BUILDING") and (not sha or (commit and (commit.startswith(sha[:7]) or sha.startswith(commit[:7])))):
+    if state == "READY" and (not sha or (commit and (commit.startswith(sha[:7]) or sha.startswith(commit[:7])))):
         print(uid + "\t" + commit)
         break
 '
@@ -138,7 +138,7 @@ for row in rows:
 promote_project() {
   local name="$1"
   local project_id="${PROJECT_IDS[$name]}"
-  log "Project ${name} (${project_id}) — latest ready deployment for ${MASTER_GIT_SHA}"
+  log "Project ${name} (${project_id}) — finding latest READY deployment for ${MASTER_GIT_SHA}"
 
   if [[ "$DRY_RUN" -eq 1 ]]; then
     REPORT_ROWS+=("${name}"$'\t'"SKIP"$'\t'""$'\t'""$'\t'"dry-run")
@@ -161,7 +161,7 @@ promote_project() {
   [[ "$dpl_sha" == "$match" ]] && dpl_sha=""
 
   if [[ -z "$dpl_id" ]]; then
-    warn "${name}: no matching READY deployment for ${MASTER_GIT_SHA} — trigger a build from master first"
+    warn "${name}: no READY deployment matching ${MASTER_GIT_SHA} — wait for Vercel git build or trigger master deploy"
     REPORT_ROWS+=("${name}"$'\t'"FAIL"$'\t'""$'\t'""$'\t'"no_deployment")
     printf '%s\tFAIL\tno_deployment\n' "$name"
     return 1
