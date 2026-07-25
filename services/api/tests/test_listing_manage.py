@@ -197,6 +197,7 @@ def _seed_base(fake: FakeSupabaseClient) -> None:
                 "product_id": PRODUCT_ID,
                 "title_override": None,
                 "price_ngwee": 100_000,
+                "compare_at_ngwee": None,
                 "condition": "new",
                 "stock_mode": "tracked",
                 "stock_qty": 5,
@@ -215,6 +216,7 @@ def _seed_base(fake: FakeSupabaseClient) -> None:
                 "product_id": PRODUCT_ID,
                 "title_override": "Vendor B listing",
                 "price_ngwee": 50_000,
+                "compare_at_ngwee": None,
                 "condition": "new",
                 "stock_mode": "tracked",
                 "stock_qty": 2,
@@ -390,6 +392,23 @@ def test_compare_at_update_rejects_not_above_price(manage_client: TestClient) ->
     assert response.json()["error"]["code"] == "invalid_compare_at"
 
 
+def test_price_update_rejects_crossing_existing_compare_at(
+    manage_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    fake_client.tables["vendor_listings"].rows[0]["compare_at_ngwee"] = 150_000
+
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"price_ngwee": 150_000},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "invalid_compare_at"
+    assert fake_client.tables["vendor_listings"].rows[0]["price_ngwee"] == 100_000
+
+
 def test_tier_validation_rejects_bad_shape(manage_client: TestClient) -> None:
     response = manage_client.patch(
         f"/vendor/listings/{LISTING_A_ID}",
@@ -482,6 +501,7 @@ def test_list_vendor_listings_scoped_to_owner(manage_client: TestClient) -> None
     body = response.json()
     assert len(body) == 1
     assert body[0]["id"] == LISTING_A_ID
+    assert body[0]["compare_at_ngwee"] is None
 
 
 def test_stock_adjust_updates_qty(manage_client: TestClient) -> None:

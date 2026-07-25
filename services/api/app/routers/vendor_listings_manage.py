@@ -418,7 +418,11 @@ def _apply_listing_update(
     # Compare-at set on its own must still exceed the effective price (the new
     # price when it's changing, else the stored one) — a friendly 422 rather
     # than a raw DB constraint violation.
-    new_compare_at = update_payload.get("compare_at_ngwee")
+    new_compare_at = (
+        update_payload["compare_at_ngwee"]
+        if "compare_at_ngwee" in update_payload
+        else listing.get("compare_at_ngwee")
+    )
     if new_compare_at is not None:
         effective_price = int(update_payload.get("price_ngwee", old_price))
         if int(new_compare_at) <= effective_price:
@@ -456,8 +460,9 @@ async def list_vendor_listings(
     response = (
         service_client.client.table("vendor_listings")
         .select(
-            "id, vendor_id, product_id, title_override, price_ngwee, condition, "
-            "stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, return_window_hours, "
+            "id, vendor_id, product_id, title_override, price_ngwee, compare_at_ngwee, "
+            "condition, stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
+            "return_window_hours, "
             "status, products(name)"
         )
         .eq("vendor_id", vendor_id)
