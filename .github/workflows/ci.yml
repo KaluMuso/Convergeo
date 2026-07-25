@@ -220,8 +220,13 @@ jobs:
         #     (Lighthouse CI). Dev/CI-only, never bundled into a shipped app or the API
         #     runtime => no production exposure. See docs/ops/owasp-audit.md (A06/F1).
         #     Remove this entry once @lhci/cli ships a tmp>=0.2.6.
+        #   GHSA-mh99-v99m-4gvg — brace-expansion<5.0.8, only in the legacy
+        #     chrome-launcher/glob/minimatch chain of @lhci/cli. The current
+        #     @lhci/cli release still ships this chain; it is CI-only and never
+        #     bundled into a shipped app or the API runtime. See A06/F3.
+        #     Remove this entry once @lhci/cli removes the legacy chain.
         run: |
-          ALLOWLIST="GHSA-ph9p-34f9-6g65"
+          ALLOWLIST="GHSA-ph9p-34f9-6g65 GHSA-mh99-v99m-4gvg"
           pnpm audit --audit-level=high --json > audit.json || true
           ALLOWLIST="$ALLOWLIST" python3 - <<'PY'
           import json, os, sys
