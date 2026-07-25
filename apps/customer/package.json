@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@sentry/nextjs": "^9.0.0",
+    "@sentry/nextjs": "^10.68.0",
     "@vergeo/analytics": "workspace:*",
     "@vergeo/auth": "workspace:*",
     "@vergeo/config": "workspace:*",
