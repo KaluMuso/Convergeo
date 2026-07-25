@@ -6,9 +6,9 @@
 
 | Category              | Count     | Location                           |
 | --------------------- | --------- | ---------------------------------- |
-| API pytest files      | **152**   | `services/api/tests/`              |
+| API pytest files      | **159**   | `services/api/tests/`              |
 | Customer vitest tests | **~100+** | `apps/customer/**/*.test.{ts,tsx}` |
-| UI package tests      | **~53**   | `packages/ui/src/**/*.test.tsx`    |
+| UI package tests      | **58**    | `packages/ui/src/**/*.test.{ts,tsx}` |
 | E2E Playwright specs  | **8**     | `e2e/specs/`                       |
 | Supabase pgTAP        | **15**    | `supabase/tests/`                  |
 | Load tests (k6)       | **2**     | `load/k6/`                         |
@@ -62,7 +62,7 @@
 
 ### Shared UI (`packages/ui`)
 
-- Every component has paired `.test.tsx`
+- Broad paired `.test.tsx` coverage; a small set of theme/merch variants and helpers are covered indirectly
 - Design tokens, seasonal theme, motion CSS
 
 ### Vendor/Admin

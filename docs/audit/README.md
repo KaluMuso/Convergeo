@@ -34,4 +34,4 @@ Evidence-based audit of the full platform. **No code fixes** — documentation o
 
 ## Evidence artifacts (internal)
 
-- `_prod_api_paths.json` — parsed from production OpenAPI (not committed if large)
+- [`_prod_api_paths.json`](./_prod_api_paths.json) — committed snapshot parsed from the production OpenAPI on the audit date

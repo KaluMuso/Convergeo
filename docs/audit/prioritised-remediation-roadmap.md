@@ -64,7 +64,7 @@
 | ----- | ------------------------------------------------------------------------ | -------- | ------ | ---------- |
 | T-040 | Unify API base URL env var name across apps (`NEXT_PUBLIC_API_BASE_URL`) | P3       | Config | Small      |
 | T-041 | Admin pages for `/admin/search-insights` and `/admin/governance`         | P3       | Admin  | Large      |
-| T-042 | Document production deployment promotion process                         | P3       | Docs   | Small      |
+| T-042 | Validate and adopt the documented production promotion process            | P3       | DevOps | Small      |
 | T-043 | Extend pgTAP coverage to migrations 0013–0070                            | P3       | DB     | Large      |
 | T-044 | Vendor staff RBAC (VEND-10) — design + implement                         | P2       | Vendor | Large      |
 

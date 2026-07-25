@@ -153,7 +153,7 @@ Validated by `services/api/tests/test_n8n_registry.py` against `infra/n8n/*.json
 | Abandoned cart (direct)      | Covered via `/internal/n8n/abandoned-carts`  |
 | Refund processing automation | Ledger-orchestrated in API, not separate n8n |
 | Dispute escalation cron      | Manual admin action                          |
-| VSDC invoice sync            | Seam only (`services/invoicing/vsdc.py`)     |
+| VSDC invoice sync            | Seam only (`services/api/app/services/invoicing/vsdc.py`) |
 
 ---
 

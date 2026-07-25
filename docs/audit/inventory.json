@@ -39,181 +39,181 @@
   "pages": [
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/login",
+      "route": "/[locale]/login",
       "source_file": "apps/customer/app/[locale]/(auth)/login/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/otp",
+      "route": "/[locale]/otp",
       "source_file": "apps/customer/app/[locale]/(auth)/otp/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/reset-password/confirm",
+      "route": "/[locale]/reset-password/confirm",
       "source_file": "apps/customer/app/[locale]/(auth)/reset-password/confirm/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/reset-password",
+      "route": "/[locale]/reset-password",
       "source_file": "apps/customer/app/[locale]/(auth)/reset-password/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/signup",
+      "route": "/[locale]/signup",
       "source_file": "apps/customer/app/[locale]/(auth)/signup/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/welcome",
+      "route": "/[locale]/welcome",
       "source_file": "apps/customer/app/[locale]/(auth)/welcome/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/ui",
+      "route": "/[locale]/ui",
       "source_file": "apps/customer/app/[locale]/(dev)/ui/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/about",
+      "route": "/[locale]/about",
       "source_file": "apps/customer/app/[locale]/(marketing)/about/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/beta",
+      "route": "/[locale]/beta",
       "source_file": "apps/customer/app/[locale]/(marketing)/beta/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/contact",
+      "route": "/[locale]/contact",
       "source_file": "apps/customer/app/[locale]/(marketing)/contact/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/help/[slug]",
+      "route": "/[locale]/help/[slug]",
       "source_file": "apps/customer/app/[locale]/(marketing)/help/[slug]/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/help",
+      "route": "/[locale]/help",
       "source_file": "apps/customer/app/[locale]/(marketing)/help/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/legal/privacy",
+      "route": "/[locale]/legal/privacy",
       "source_file": "apps/customer/app/[locale]/(marketing)/legal/privacy/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/legal/returns",
+      "route": "/[locale]/legal/returns",
       "source_file": "apps/customer/app/[locale]/(marketing)/legal/returns/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/legal/terms",
+      "route": "/[locale]/legal/terms",
       "source_file": "apps/customer/app/[locale]/(marketing)/legal/terms/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/legal/vendor-agreement",
+      "route": "/[locale]/legal/vendor-agreement",
       "source_file": "apps/customer/app/[locale]/(marketing)/legal/vendor-agreement/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/sell",
+      "route": "/[locale]/sell",
       "source_file": "apps/customer/app/[locale]/(marketing)/sell/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/ask",
+      "route": "/[locale]/ask",
       "source_file": "apps/customer/app/[locale]/(shop)/ask/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/c/[...slug]",
+      "route": "/[locale]/c/[...slug]",
       "source_file": "apps/customer/app/[locale]/(shop)/c/[...slug]/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/calendar",
+      "route": "/[locale]/calendar",
       "source_file": "apps/customer/app/[locale]/(shop)/calendar/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/cart",
+      "route": "/[locale]/cart",
       "source_file": "apps/customer/app/[locale]/(shop)/cart/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/categories",
+      "route": "/[locale]/categories",
       "source_file": "apps/customer/app/[locale]/(shop)/categories/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/checkout/card/[paymentId]",
+      "route": "/[locale]/checkout/card/[paymentId]",
       "source_file": "apps/customer/app/[locale]/(shop)/checkout/card/[paymentId]/page.tsx",
       "rendering": "client"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/checkout",
+      "route": "/[locale]/checkout",
       "source_file": "apps/customer/app/[locale]/(shop)/checkout/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/checkout/pending/[groupId]",
+      "route": "/[locale]/checkout/pending/[groupId]",
       "source_file": "apps/customer/app/[locale]/(shop)/checkout/pending/[groupId]/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/compare",
+      "route": "/[locale]/compare",
       "source_file": "apps/customer/app/[locale]/(shop)/compare/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/directory",
+      "route": "/[locale]/directory",
       "source_file": "apps/customer/app/[locale]/(shop)/directory/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/e/[slug]",
+      "route": "/[locale]/e/[slug]",
       "source_file": "apps/customer/app/[locale]/(shop)/e/[slug]/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/events",
+      "route": "/[locale]/events",
       "source_file": "apps/customer/app/[locale]/(shop)/events/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/p/[slug]",
+      "route": "/[locale]/p/[slug]",
       "source_file": "apps/customer/app/[locale]/(shop)/p/[slug]/page.tsx",
       "rendering": "server"
     },
@@ -225,289 +225,289 @@
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/s/[slug]",
+      "route": "/[locale]/s/[slug]",
       "source_file": "apps/customer/app/[locale]/(shop)/s/[slug]/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/search",
+      "route": "/[locale]/search",
       "source_file": "apps/customer/app/[locale]/(shop)/search/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/services",
+      "route": "/[locale]/services",
       "source_file": "apps/customer/app/[locale]/(shop)/services/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/services/post-job",
+      "route": "/[locale]/services/post-job",
       "source_file": "apps/customer/app/[locale]/(shop)/services/post-job/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/supplies",
+      "route": "/[locale]/supplies",
       "source_file": "apps/customer/app/[locale]/(shop)/supplies/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/v/[slug]",
+      "route": "/[locale]/v/[slug]",
       "source_file": "apps/customer/app/[locale]/(shop)/v/[slug]/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/wishlist",
+      "route": "/[locale]/wishlist",
       "source_file": "apps/customer/app/[locale]/(shop)/wishlist/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/[...rest]",
+      "route": "/[locale]/[...rest]",
       "source_file": "apps/customer/app/[locale]/[...rest]/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/addresses",
+      "route": "/[locale]/account/addresses",
       "source_file": "apps/customer/app/[locale]/account/addresses/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/business",
+      "route": "/[locale]/account/business",
       "source_file": "apps/customer/app/[locale]/account/business/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/jobs/[id]",
+      "route": "/[locale]/account/jobs/[id]",
       "source_file": "apps/customer/app/[locale]/account/jobs/[id]/page.tsx",
       "rendering": "client"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/jobs",
+      "route": "/[locale]/account/jobs",
       "source_file": "apps/customer/app/[locale]/account/jobs/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/orders/[id]/dispute",
+      "route": "/[locale]/account/orders/[id]/dispute",
       "source_file": "apps/customer/app/[locale]/account/orders/[id]/dispute/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/orders/[id]",
+      "route": "/[locale]/account/orders/[id]",
       "source_file": "apps/customer/app/[locale]/account/orders/[id]/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/orders/[id]/return",
+      "route": "/[locale]/account/orders/[id]/return",
       "source_file": "apps/customer/app/[locale]/account/orders/[id]/return/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/orders",
+      "route": "/[locale]/account/orders",
       "source_file": "apps/customer/app/[locale]/account/orders/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account",
+      "route": "/[locale]/account",
       "source_file": "apps/customer/app/[locale]/account/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/preferences",
+      "route": "/[locale]/account/preferences",
       "source_file": "apps/customer/app/[locale]/account/preferences/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/privacy",
+      "route": "/[locale]/account/privacy",
       "source_file": "apps/customer/app/[locale]/account/privacy/page.tsx",
       "rendering": "client"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/profile",
+      "route": "/[locale]/account/profile",
       "source_file": "apps/customer/app/[locale]/account/profile/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/recent",
+      "route": "/[locale]/account/recent",
       "source_file": "apps/customer/app/[locale]/account/recent/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/tickets/[id]",
+      "route": "/[locale]/account/tickets/[id]",
       "source_file": "apps/customer/app/[locale]/account/tickets/[id]/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/tickets/[id]/transfer",
+      "route": "/[locale]/account/tickets/[id]/transfer",
       "source_file": "apps/customer/app/[locale]/account/tickets/[id]/transfer/page.tsx",
       "rendering": "client"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/account/tickets",
+      "route": "/[locale]/account/tickets",
       "source_file": "apps/customer/app/[locale]/account/tickets/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/offline",
+      "route": "/[locale]/offline",
       "source_file": "apps/customer/app/[locale]/offline/page.tsx",
       "rendering": "client"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/privacy",
+      "route": "/[locale]/privacy",
       "source_file": "apps/customer/app/[locale]/privacy/page.tsx",
       "rendering": "server"
     },
     {
       "application": "customer",
-      "route": "/[locale]/[locale]/terms",
+      "route": "/[locale]/terms",
       "source_file": "apps/customer/app/[locale]/terms/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/login",
+      "route": "/[locale]/login",
       "source_file": "apps/vendor/app/[locale]/(auth)/login/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/analytics",
+      "route": "/[locale]/analytics",
       "source_file": "apps/vendor/app/[locale]/analytics/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/disputes/[id]",
+      "route": "/[locale]/disputes/[id]",
       "source_file": "apps/vendor/app/[locale]/disputes/[id]/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/disputes",
+      "route": "/[locale]/disputes",
       "source_file": "apps/vendor/app/[locale]/disputes/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/events/[id]/dashboard",
+      "route": "/[locale]/events/[id]/dashboard",
       "source_file": "apps/vendor/app/[locale]/events/[id]/dashboard/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/events/[id]/edit",
+      "route": "/[locale]/events/[id]/edit",
       "source_file": "apps/vendor/app/[locale]/events/[id]/edit/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/events/[id]/roster",
+      "route": "/[locale]/events/[id]/roster",
       "source_file": "apps/vendor/app/[locale]/events/[id]/roster/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/events/[id]/scan",
+      "route": "/[locale]/events/[id]/scan",
       "source_file": "apps/vendor/app/[locale]/events/[id]/scan/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/events/[id]/tickets",
+      "route": "/[locale]/events/[id]/tickets",
       "source_file": "apps/vendor/app/[locale]/events/[id]/tickets/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/events/new",
+      "route": "/[locale]/events/new",
       "source_file": "apps/vendor/app/[locale]/events/new/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/events",
+      "route": "/[locale]/events",
       "source_file": "apps/vendor/app/[locale]/events/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/jobs/[id]",
+      "route": "/[locale]/jobs/[id]",
       "source_file": "apps/vendor/app/[locale]/jobs/[id]/page.tsx",
       "rendering": "client"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/jobs",
+      "route": "/[locale]/jobs",
       "source_file": "apps/vendor/app/[locale]/jobs/page.tsx",
       "rendering": "client"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/listings/[id]/edit",
+      "route": "/[locale]/listings/[id]/edit",
       "source_file": "apps/vendor/app/[locale]/listings/[id]/edit/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/listings/import",
+      "route": "/[locale]/listings/import",
       "source_file": "apps/vendor/app/[locale]/listings/import/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/listings/new",
+      "route": "/[locale]/listings/new",
       "source_file": "apps/vendor/app/[locale]/listings/new/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/listings",
+      "route": "/[locale]/listings",
       "source_file": "apps/vendor/app/[locale]/listings/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/onboarding",
+      "route": "/[locale]/onboarding",
       "source_file": "apps/vendor/app/[locale]/onboarding/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/onboarding/status",
+      "route": "/[locale]/onboarding/status",
       "source_file": "apps/vendor/app/[locale]/onboarding/status/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/orders/[id]",
+      "route": "/[locale]/orders/[id]",
       "source_file": "apps/vendor/app/[locale]/orders/[id]/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/orders",
+      "route": "/[locale]/orders",
       "source_file": "apps/vendor/app/[locale]/orders/page.tsx",
       "rendering": "server"
     },
@@ -519,163 +519,163 @@
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/payouts/method",
+      "route": "/[locale]/payouts/method",
       "source_file": "apps/vendor/app/[locale]/payouts/method/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/payouts",
+      "route": "/[locale]/payouts",
       "source_file": "apps/vendor/app/[locale]/payouts/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/profile",
+      "route": "/[locale]/profile",
       "source_file": "apps/vendor/app/[locale]/profile/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/returns",
+      "route": "/[locale]/returns",
       "source_file": "apps/vendor/app/[locale]/returns/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/reviews",
+      "route": "/[locale]/reviews",
       "source_file": "apps/vendor/app/[locale]/reviews/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/scan",
+      "route": "/[locale]/scan",
       "source_file": "apps/vendor/app/[locale]/scan/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/services/[id]/edit",
+      "route": "/[locale]/services/[id]/edit",
       "source_file": "apps/vendor/app/[locale]/services/[id]/edit/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/services/new",
+      "route": "/[locale]/services/new",
       "source_file": "apps/vendor/app/[locale]/services/new/page.tsx",
       "rendering": "server"
     },
     {
       "application": "vendor",
-      "route": "/[locale]/[locale]/services",
+      "route": "/[locale]/services",
       "source_file": "apps/vendor/app/[locale]/services/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/login",
+      "route": "/[locale]/login",
       "source_file": "apps/admin/app/[locale]/(auth)/login/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/business",
+      "route": "/[locale]/business",
       "source_file": "apps/admin/app/[locale]/business/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/config/categories",
+      "route": "/[locale]/config/categories",
       "source_file": "apps/admin/app/[locale]/config/categories/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/config/commissions",
+      "route": "/[locale]/config/commissions",
       "source_file": "apps/admin/app/[locale]/config/commissions/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/config/delivery-zones",
+      "route": "/[locale]/config/delivery-zones",
       "source_file": "apps/admin/app/[locale]/config/delivery-zones/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/config/flags",
+      "route": "/[locale]/config/flags",
       "source_file": "apps/admin/app/[locale]/config/flags/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/config",
+      "route": "/[locale]/config",
       "source_file": "apps/admin/app/[locale]/config/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/config/platform",
+      "route": "/[locale]/config/platform",
       "source_file": "apps/admin/app/[locale]/config/platform/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/disputes/[id]",
+      "route": "/[locale]/disputes/[id]",
       "source_file": "apps/admin/app/[locale]/disputes/[id]/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/disputes",
+      "route": "/[locale]/disputes",
       "source_file": "apps/admin/app/[locale]/disputes/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/kyc/[id]",
+      "route": "/[locale]/kyc/[id]",
       "source_file": "apps/admin/app/[locale]/kyc/[id]/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/kyc",
+      "route": "/[locale]/kyc",
       "source_file": "apps/admin/app/[locale]/kyc/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/merch",
+      "route": "/[locale]/merch",
       "source_file": "apps/admin/app/[locale]/merch/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/moderation/flags",
+      "route": "/[locale]/moderation/flags",
       "source_file": "apps/admin/app/[locale]/moderation/flags/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/moderation",
+      "route": "/[locale]/moderation",
       "source_file": "apps/admin/app/[locale]/moderation/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/moderation/products",
+      "route": "/[locale]/moderation/products",
       "source_file": "apps/admin/app/[locale]/moderation/products/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/orders/[id]",
+      "route": "/[locale]/orders/[id]",
       "source_file": "apps/admin/app/[locale]/orders/[id]/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/orders",
+      "route": "/[locale]/orders",
       "source_file": "apps/admin/app/[locale]/orders/page.tsx",
       "rendering": "server"
     },
@@ -687,19 +687,19 @@
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/support",
+      "route": "/[locale]/support",
       "source_file": "apps/admin/app/[locale]/support/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/theme",
+      "route": "/[locale]/theme",
       "source_file": "apps/admin/app/[locale]/theme/page.tsx",
       "rendering": "server"
     },
     {
       "application": "admin",
-      "route": "/[locale]/[locale]/translations",
+      "route": "/[locale]/translations",
       "source_file": "apps/admin/app/[locale]/translations/page.tsx",
       "rendering": "server"
     }

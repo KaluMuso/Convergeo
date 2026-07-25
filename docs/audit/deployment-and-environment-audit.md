@@ -92,6 +92,7 @@ Admin additionally uses `NEXT_PUBLIC_VERGEO_API_URL` (see `apps/admin/lib/api-ba
 | `e2e.yml`            | PR                        | Playwright             |
 | `api-image.yml`      | Push                      | OCI container registry |
 | `deploy-staging.yml` | Manual / `staging` branch | Staging env            |
+| `deploy-production.yml` | Manual                  | API + vendor/admin production |
 | `restore-drill.yml`  | Scheduled                 | Backup verification    |
 
 ### Required CI checks (from README)
@@ -149,4 +150,4 @@ Admin additionally uses `NEXT_PUBLIC_VERGEO_API_URL` (see `apps/admin/lib/api-ba
 1. **Customer production build** may lack `NEXT_PUBLIC_API_BASE_URL` (R-001)
 2. **Migration 0071** in prod but not repo (R-003)
 3. **Database backup workflow** inactive (R-015)
-4. **No confirmed production deployment SHA** aliased to custom domains
+4. **No confirmed customer production deployment SHA** aliased to its custom domains
