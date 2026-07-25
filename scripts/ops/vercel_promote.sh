@@ -8,11 +8,11 @@
 #
 # Usage:
 #   VERCEL_TOKEN=... bash scripts/ops/vercel_promote.sh
-#   VERCEL_TOKEN=... bash scripts/ops/vercel_promote.sh --dry-run
+#   bash scripts/ops/vercel_promote.sh --dry-run
 #   VERCEL_TOKEN=... bash scripts/ops/vercel_promote.sh --project customer
 #
 # Environment:
-#   VERCEL_TOKEN              Required (never log)
+#   VERCEL_TOKEN              Required for live promotion; not needed for --dry-run (never log)
 #   VERCEL_TEAM_ID            Default team_I2OEqmMjTwN2k5g7ACbQW705 (vergeo-projects)
 #   VERCEL_API                Default https://api.vercel.com
 #   MASTER_GIT_SHA            Expected tip (default: git rev-parse HEAD)
