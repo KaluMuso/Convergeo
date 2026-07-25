@@ -25,10 +25,8 @@ type StatCardProps = {
 
 function StatCard({ label, value, sparklineLabel, series }: StatCardProps) {
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4">
-      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </span>
+    <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</span>
       <span className="font-mono text-lg font-semibold">{value}</span>
       <Sparkline label={sparklineLabel} values={series} />
     </div>
@@ -99,9 +97,9 @@ export function AnalyticsView() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-1">
-        <p className="text-sm text-muted-foreground">{t("analytics.eyebrow")}</p>
+        <p className="text-sm text-muted">{t("analytics.eyebrow")}</p>
         <h1 className="font-display text-2xl font-semibold">{t("analytics.title")}</h1>
-        <p className="text-sm text-muted-foreground">{t("analytics.intro")}</p>
+        <p className="text-sm text-muted">{t("analytics.intro")}</p>
       </header>
 
       <div
@@ -115,7 +113,7 @@ export function AnalyticsView() {
             <button
               aria-pressed={active}
               className={`min-h-11 rounded-md px-4 text-sm font-medium ${
-                active ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                active ? "bg-primary text-[var(--primary-btn-fg)]" : "text-muted"
               }`}
               key={value}
               onClick={() => setWindow(value)}
@@ -176,8 +174,8 @@ export function AnalyticsView() {
             />
           </section>
 
-          <section className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <section className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
               {t("analytics.conversion.heading")}
             </h2>
             {data.conversion_hint.views_total > 0 ? (
@@ -187,7 +185,7 @@ export function AnalyticsView() {
                     pct: data.conversion_hint.conversion_pct,
                   })}
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted">
                   {t("analytics.conversion.summary", {
                     orders: data.conversion_hint.orders_total,
                     views: data.conversion_hint.views_total,
@@ -195,16 +193,16 @@ export function AnalyticsView() {
                 </p>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">{t("analytics.conversion.empty")}</p>
+              <p className="text-sm text-muted">{t("analytics.conversion.empty")}</p>
             )}
           </section>
 
           <section className="flex flex-col gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
               {t("analytics.top.heading")}
             </h2>
             {data.top_listings.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("analytics.top.empty")}</p>
+              <p className="text-sm text-muted">{t("analytics.top.empty")}</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {data.top_listings.map((listing) => (
@@ -216,7 +214,7 @@ export function AnalyticsView() {
                       <p className="truncate text-sm font-medium">
                         {listing.title || t("analytics.top.untitled")}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted">
                         {t("analytics.top.units", { count: listing.units })}
                       </p>
                     </div>

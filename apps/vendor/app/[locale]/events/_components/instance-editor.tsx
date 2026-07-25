@@ -74,7 +74,7 @@ export function InstanceEditor({ instances, onChange, disabled = false }: Instan
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-foreground">{t("events.instances.heading")}</h2>
+        <h2 className="text-sm font-semibold text-text">{t("events.instances.heading")}</h2>
         <Button
           type="button"
           variant="secondary"
@@ -91,13 +91,13 @@ export function InstanceEditor({ instances, onChange, disabled = false }: Instan
         {instances.map((instance, index) => (
           <li key={instance.key} className="space-y-2 rounded-lg border p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-medium text-muted-foreground">
+              <p className="text-xs font-medium text-muted">
                 {t("events.instances.label", { index: index + 1 })}
               </p>
               {instances.length > 1 ? (
                 <button
                   type="button"
-                  className="text-xs text-destructive"
+                  className="text-xs text-danger"
                   onClick={() => removeAt(index)}
                   disabled={disabled || (instance.ticketsSold ?? 0) > 0}
                 >
@@ -139,7 +139,7 @@ export function InstanceEditor({ instances, onChange, disabled = false }: Instan
             </FormField>
 
             {(instance.ticketsSold ?? 0) > 0 ? (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted">
                 {t("events.instances.sold", { count: instance.ticketsSold ?? 0 })}
               </p>
             ) : null}

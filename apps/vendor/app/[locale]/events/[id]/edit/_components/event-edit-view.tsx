@@ -67,7 +67,7 @@ export function EventEditView({ locale, eventId }: EventEditViewProps) {
   }
 
   if (error) {
-    return <p className="text-sm text-destructive">{error}</p>;
+    return <p className="text-sm text-danger">{error}</p>;
   }
 
   if (!event) {

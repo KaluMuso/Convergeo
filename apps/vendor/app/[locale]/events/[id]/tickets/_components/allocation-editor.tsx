@@ -125,12 +125,12 @@ export function AllocationEditor({ locale, ticketTypeId, ticketsClient }: Alloca
   }
 
   return (
-    <div className="mt-3 flex flex-col gap-3 rounded-md bg-muted/40 p-3">
+    <div className="mt-3 flex flex-col gap-3 rounded-md bg-bg-2/40 p-3">
       <p className="text-sm font-medium">{t("tickets.allocation.heading")}</p>
-      <p className="text-xs text-muted-foreground">{t("tickets.allocation.help")}</p>
+      <p className="text-xs text-muted">{t("tickets.allocation.help")}</p>
 
       {error ? (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+        <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
           {error}
         </p>
       ) : null}
@@ -141,7 +141,7 @@ export function AllocationEditor({ locale, ticketTypeId, ticketsClient }: Alloca
       ) : null}
 
       {rows.length === 0 ? (
-        <p className="text-xs text-muted-foreground">{t("tickets.allocation.noInstances")}</p>
+        <p className="text-xs text-muted">{t("tickets.allocation.noInstances")}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {rows.map((row) => (

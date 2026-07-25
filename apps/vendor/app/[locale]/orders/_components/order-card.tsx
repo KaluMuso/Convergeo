@@ -11,7 +11,15 @@ import { getApiBaseUrl } from "../../../../lib/api-base-url";
 import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { isAuditableApproved } from "../../_lib/kyc-integrity";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
-import { Badge, Button, FormField, Input, PriceBlock, Spinner } from "../../listings/new/_lib/ui";
+import {
+  Button,
+  FormField,
+  Input,
+  orderStatusTone,
+  PriceBlock,
+  Spinner,
+  StatusChip,
+} from "../../listings/new/_lib/ui";
 import { createKycClient } from "../../onboarding/_lib/kyc-client";
 
 import type { OrderActionResponse, VendorActionName } from "./action-bar";
@@ -221,7 +229,7 @@ export function OrderCard({ locale, order, onUpdated, onError }: OrderCardProps)
         <Link className="min-w-0 flex-1" href={`/${locale}/orders/${order.id}`}>
           <div className="flex items-center gap-2">
             <p className="truncate text-sm font-semibold text-text">{order.preview_title}</p>
-            <Badge variant="public" label={statusLabel} />
+            <StatusChip tone={orderStatusTone(order.status)} label={statusLabel} />
           </div>
           <p className="mt-1 text-xs text-text-3">
             {t("queue.card.items", { count: order.item_count })}

@@ -128,7 +128,7 @@ export function DisputeQueue({ locale }: DisputeQueueProps) {
               </thead>
               <tbody>
                 {items.map((item) => (
-                  <tr key={item.id} className="border-b border-border">
+                  <tr key={item.id} className="border-b border-border hover:bg-bg-2">
                     <td className="px-2 py-3 font-mono text-xs text-text">
                       {t("orderIdShort", { id: item.order_id.slice(0, 8) })}
                     </td>

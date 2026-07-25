@@ -71,6 +71,7 @@ def _listing(
     stock_qty: int = 5,
     created_at: str = "2026-01-01T00:00:00Z",
     wholesale: bool = False,
+    compare_at_ngwee: int | None = None,
 ) -> dict[str, Any]:
     return {
         "id": listing_id,
@@ -82,6 +83,7 @@ def _listing(
         "created_at": created_at,
         "status": "active",
         "wholesale": wholesale,
+        "compare_at_ngwee": compare_at_ngwee,
     }
 
 
@@ -137,6 +139,7 @@ SEED_STORE: dict[str, list[dict[str, Any]]] = {
             vendor_id=SHOP_B_ID,
             product_id=CHITENGE_PRODUCT_ID,
             created_at="2026-03-01T00:00:00Z",
+            compare_at_ngwee=120_000,
         ),
         _listing(
             DEMO_LISTING_ID,
@@ -425,6 +428,20 @@ def test_listing_logistics_fields_exposed(fake_client: FakeSupabaseClient) -> No
     assert phone.below_median is False
     assert chitenge.delivery_available is True
     assert chitenge.pickup_available is True
+
+
+def test_compare_at_ngwee_exposed(fake_client: FakeSupabaseClient) -> None:
+    response = list_catalog(
+        fake_client,
+        PlpFilterState(limit=10),
+    )
+    chitenge = next(item for item in response.items if item.id == CHITENGE_LISTING_ID)
+    phone = next(item for item in response.items if item.id == PHONE_LISTING_ID)
+    # Chitenge seeds a compare-at (was) price → surfaces as compare_at_ngwee
+    # (the customer serialises it to oldNgwee and renders a struck price).
+    assert chitenge.compare_at_ngwee == 120_000
+    # A listing with no compare-at stays None (no discount shown).
+    assert phone.compare_at_ngwee is None
 
 
 def test_filter_combinations_compose(fake_client: FakeSupabaseClient) -> None:

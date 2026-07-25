@@ -89,14 +89,14 @@ export function RosterView({ locale, eventId }: RosterViewProps) {
   }
 
   if (!session) {
-    return <p className="text-sm text-muted-foreground">{t("eventRoster.errors.unauthorized")}</p>;
+    return <p className="text-sm text-muted">{t("eventRoster.errors.unauthorized")}</p>;
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <h1 className="font-display text-xl font-semibold">{t("eventRoster.heading")}</h1>
-        <p className="text-sm text-muted-foreground">{t("eventRoster.subheading")}</p>
+        <p className="text-sm text-muted">{t("eventRoster.subheading")}</p>
       </div>
 
       <Link
@@ -107,15 +107,15 @@ export function RosterView({ locale, eventId }: RosterViewProps) {
       </Link>
 
       {error ? (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+        <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
           {error}
         </p>
       ) : null}
 
       {roster ? (
         <>
-          <section className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 shadow-sm">
-            <p className="text-sm text-muted-foreground">
+          <section className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3 shadow-sm">
+            <p className="text-sm text-muted">
               {t("eventRoster.summary", {
                 checkedIn: roster.checked_in,
                 total: roster.total,
@@ -137,13 +137,13 @@ export function RosterView({ locale, eventId }: RosterViewProps) {
           </section>
 
           {roster.truncated ? (
-            <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+            <p className="rounded-md bg-bg-2 px-3 py-2 text-xs text-muted">
               {t("eventRoster.truncated", { count: roster.attendees.length })}
             </p>
           ) : null}
 
           {roster.total === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("eventRoster.empty")}</p>
+            <p className="text-sm text-muted">{t("eventRoster.empty")}</p>
           ) : (
             <div className="flex flex-col gap-4">
               {groups.map((group) => (
@@ -152,7 +152,7 @@ export function RosterView({ locale, eventId }: RosterViewProps) {
                     <h2 className="text-sm font-semibold">
                       {formatInstanceDate(group.startsAt, locale)}
                     </h2>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted">
                       {t("eventRoster.dateCount", { count: group.attendees.length })}
                     </span>
                   </div>
@@ -160,25 +160,21 @@ export function RosterView({ locale, eventId }: RosterViewProps) {
                     {group.attendees.map((attendee) => (
                       <li
                         key={attendee.ticket_id}
-                        className="flex items-center justify-between gap-2 rounded-lg border border-border bg-card p-3 shadow-sm"
+                        className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface p-3 shadow-sm"
                       >
                         <div className="min-w-0">
                           <p className="truncate font-medium">
                             {attendee.holder_name ?? (
-                              <span className="italic text-muted-foreground">
-                                {t("eventRoster.noName")}
-                              </span>
+                              <span className="italic text-muted">{t("eventRoster.noName")}</span>
                             )}
                           </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {attendee.ticket_type_name}
-                          </p>
+                          <p className="truncate text-xs text-muted">{attendee.ticket_type_name}</p>
                         </div>
                         <span
                           className={
                             attendee.status === "checked_in"
                               ? "shrink-0 text-xs font-medium text-primary"
-                              : "shrink-0 text-xs text-muted-foreground"
+                              : "shrink-0 text-xs text-muted"
                           }
                         >
                           {attendee.status === "checked_in"

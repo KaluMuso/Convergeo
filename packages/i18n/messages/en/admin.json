@@ -803,7 +803,9 @@
         "checkout_completed": "Checkouts completed",
         "orders_placed": "Orders placed",
         "orders_completed": "Orders completed"
-      }
+      },
+      "conversion": "{pct}%",
+      "conversionAria": "{pct}% of checkouts started"
     }
   },
   "disputes": {
