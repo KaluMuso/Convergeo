@@ -52,4 +52,34 @@ describe("FormField", () => {
     expect(input).toHaveAttribute("aria-describedby", "phone-help");
     expect(input).not.toHaveAttribute("aria-invalid", "true");
   });
+
+  it("labels a group child via aria-labelledby and never puts aria-required on it (asGroup)", () => {
+    render(
+      <FormField
+        id="phone"
+        label="field.phone.label"
+        helpText="field.phone.help"
+        required
+        requiredMarker="*"
+        asGroup
+      >
+        <div>
+          <Input aria-label="field.phone.country" value="+260" readOnly />
+          <Input aria-label="field.phone.number" aria-required />
+        </div>
+      </FormField>,
+    );
+
+    const group = screen.getByRole("group");
+    const label = screen.getByText("field.phone.label");
+
+    expect(label).toHaveAttribute("id", "phone-label");
+    expect(label).not.toHaveAttribute("for");
+    expect(group).toHaveAttribute("aria-labelledby", "phone-label");
+    expect(group).toHaveAttribute("aria-describedby", "phone-help");
+    // aria-required is not an allowed attribute on role="group" (axe aria-allowed-attr);
+    // it must live on the required control inside the group, never on the group itself.
+    expect(group).not.toHaveAttribute("aria-required");
+    expect(screen.getByLabelText("field.phone.number")).toHaveAttribute("aria-required", "true");
+  });
 });
