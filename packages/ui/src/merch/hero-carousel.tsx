@@ -10,6 +10,8 @@ import {
   type ReactNode,
 } from "react";
 
+import { usePrefersReducedData } from "../use-prefers-reduced-data";
+
 const DEFAULT_AUTO_ADVANCE_MS = 5000;
 const CONTROL_MIN_SIZE_PX = 44;
 
@@ -47,34 +49,6 @@ function usePrefersReducedMotion(): boolean {
     }
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => setReduced(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-
-  return reduced;
-}
-
-function usePrefersReducedData(): boolean {
-  const [reduced, setReduced] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-    if (conn?.saveData) {
-      setReduced(true);
-      return;
-    }
-
-    if (typeof window.matchMedia !== "function") {
-      return;
-    }
-
-    const mq = window.matchMedia("(prefers-reduced-data: reduce)");
-    const update = () => setReduced(mq.matches || Boolean(conn?.saveData));
     update();
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
