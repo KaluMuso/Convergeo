@@ -54,10 +54,26 @@ https://api.vergeo5.com/internal/<path> -H 'X-Internal-Token: wrong'` → **401*
 4. Import the workflow, point its HTTP node(s) at that credential, toggle **Active**,
    and confirm the first execution is `success`.
 
-## Activation status (2026-07-21)
+## Activation status (2026-07-23)
 
-Live: `notification-dispatch`, `reconciliation` bundle, **+ Wave A: `reservation-sweeper`,
-`embeddings-cron`, `admin-digest`, `analytics-retention`** (created via MCP,
-credential-bound, published, each verified green). Held: `operational-nudges` (draft),
-all Wave B, `abandoned-cart`/`funnel-abandon`. Record activation date + operator per
-workflow in `docs/production-readiness/2026-07-19/vision-audit/evidence/` as they go live.
+Live Wave A (production):
+
+| Workflow                     | ID                 | Active                                                           |
+| ---------------------------- | ------------------ | ---------------------------------------------------------------- |
+| notification dispatch        | `sevKtX1AmimQCWsG` | yes                                                              |
+| payment reconciliation crons | `C1MpTNjrfLACMG3f` | yes (published 2026-07-23)                                       |
+| reservation sweeper          | `F25zEWiPoIveARys` | yes                                                              |
+| embeddings cron              | `oqjfSdMXClfsf3qd` | yes                                                              |
+| admin digest                 | `rb5d4LHlXAOqkfPX` | yes                                                              |
+| analytics retention          | `8drZTFO79pwMPfZy` | yes                                                              |
+| operational nudges           | `zkIe2zW72qp5fcli` | yes (held per policy until real vendors — consider unpublishing) |
+
+Held (credentials / policy):
+
+| Workflow                                             | ID                 | Reason                               |
+| ---------------------------------------------------- | ------------------ | ------------------------------------ |
+| shared error alert                                   | `LVuHqWgT1tqjYOtc` | No WhatsApp output node bound        |
+| database backup                                      | `OAdOD4kmIbSNehkJ` | Needs SSH + OCI Object Storage creds |
+| Wave B (release, tickets, order-jobs, event-release) | —                  | F4 + F9b sandbox                     |
+
+Record activation date + operator per workflow in `docs/production-readiness/2026-07-19/vision-audit/evidence/` as they go live.
