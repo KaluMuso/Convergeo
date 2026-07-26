@@ -369,6 +369,7 @@ export function StepPayment({
             errorMessage={errorMessage ?? undefined}
             required
             requiredMarker="*"
+            asGroup
           >
             <div className="flex gap-2">
               <Input
@@ -386,6 +387,7 @@ export function StepPayment({
                 autoComplete="tel-national"
                 placeholder={labels.payerPlaceholder}
                 aria-label={labels.nationalNumber}
+                aria-required
                 value={nationalNumber}
                 error={Boolean(errorMessage)}
                 onChange={(event) => {
