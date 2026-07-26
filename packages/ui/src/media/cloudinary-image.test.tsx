@@ -86,6 +86,39 @@ describe("CloudinaryImage", () => {
     expect(screen.getByTestId("cloudinary-image-fallback")).toHaveTextContent("No images yet");
   });
 
+  it("renders a visible, non-crashing fallback when the Cloudinary cloud name is missing", () => {
+    // Models the production ops gap: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME never set on
+    // the Vercel customer project. cldUrl() soft-fails to "" and the card must show
+    // a labelled fallback — never throw, never emit a broken <img> that 404s/hangs.
+    const previous = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    try {
+      expect(() =>
+        render(
+          <CloudinaryImage
+            publicId="catalog/phone.jpg"
+            alt="Smartphone on display"
+            fallbackLabel="Image unavailable"
+          />,
+        ),
+      ).not.toThrow();
+
+      const fallback = screen.getByTestId("cloudinary-image-fallback");
+      expect(fallback).toHaveTextContent("Image unavailable");
+      // Still exposed to AT as an image, but with no real <img> element.
+      expect(fallback).toHaveAttribute("role", "img");
+      expect(fallback).toHaveAttribute("aria-label", "Image unavailable");
+      expect(screen.queryByRole("img", { name: "Smartphone on display" })).not.toBeInTheDocument();
+      expect(document.querySelector("img")).toBeNull();
+    } finally {
+      if (previous === undefined) {
+        delete process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+      } else {
+        process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME = previous;
+      }
+    }
+  });
+
   it("requires alt at the type level", () => {
     // @ts-expect-error alt is required
     render(<CloudinaryImage publicId="x.jpg" cloudName="test-cloud" />);
