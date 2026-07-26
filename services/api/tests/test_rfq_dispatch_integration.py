@@ -42,12 +42,14 @@ import httpx
 import pytest
 from app.services.notifications.adapters.base import FailureKind, NoopAdapter, OutboxMessage
 from app.services.notifications.adapters.whatsapp import WhatsAppAdapter
+from app.services.notifications.dedupe import enqueue_outbox_row
 from app.services.notifications.dispatcher import NotificationDispatcher
 from app.services.notifications.templates.whatsapp import (
     TemplateRenderError,
     render_whatsapp_template,
 )
 from app.services.rfq import broadcast as broadcast_service
+from app.services.rfq.engagement import ACCEPT_OUTBOX_EVENT, OUTBOX_CHANNEL
 
 CUSTOMER_ID = "11111111-1111-1111-1111-111111111111"
 VENDOR_A_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
@@ -58,9 +60,9 @@ JOB_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd"
 PHONE_A = "+260971234567"
 PHONE_B = "+260979876543"
 
-# An unregistered WhatsApp template id — used to prove missing templates fail
-# deterministically without any network call.
-UNREGISTERED_TEMPLATE = "service_quote_accepted"
+# A genuinely-unregistered WhatsApp template id — used to prove missing templates
+# fail deterministically without any network call.
+UNREGISTERED_TEMPLATE = "totally_unregistered_template"
 
 
 # --------------------------------------------------------------------------- #
@@ -463,7 +465,67 @@ async def test_provider_privacy_one_row_each_no_customer_pii() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# 4. Opt-out / STOP preserved: a WhatsApp-disabled provider is not WhatsApp'd. #
+# 4. Accepted-quote provider notification (service_quote_accepted) is a         #
+#    dispatchable outbox contract — closes the same templateless dead-letter    #
+#    gap on the quote-acceptance path. accept_quote() runs against a real DB     #
+#    (SUPABASE_DB_URL), so this drives the exact outbox row it enqueues through  #
+#    the real dispatcher + adapter with no HTTP call.                            #
+# --------------------------------------------------------------------------- #
+@pytest.mark.asyncio
+async def test_service_quote_accepted_outbox_is_dispatchable() -> None:
+    fake = _FakeSupabase()
+    # The provider (vendor owner) is the recipient of the accepted-quote notice.
+    fake.table("profiles").rows.append(
+        {"id": OWNER_A_ID, "phone": PHONE_A, "locale": "en", "notif_prefs": {}}
+    )
+
+    # The exact outbox contract accept_quote() commits (template id == event id, the
+    # provider owner as recipient_id, deposit/total ngwee), via the shared enqueue
+    # path the money-spine SQL insert mirrors.
+    row = enqueue_outbox_row(
+        fake,
+        event_type=ACCEPT_OUTBOX_EVENT,
+        entity_id=f"{JOB_ID}:quote-1",
+        channel=OUTBOX_CHANNEL,
+        template=ACCEPT_OUTBOX_EVENT,
+        payload={
+            "job_id": JOB_ID,
+            "quote_id": "quote-1",
+            "vendor_id": VENDOR_A_ID,
+            "order_id": "order-1",
+            "deposit_ngwee": 125_000,
+            "total_job_ngwee": 250_000,
+            "recipient_id": OWNER_A_ID,
+        },
+    )
+    assert row is not None
+    assert row["template"] == "service_quote_accepted"
+    assert "to" not in row["payload"]  # dispatcher must still resolve the destination
+
+    capture = _CapturingTransport()
+    adapter = _whatsapp_adapter(capture)
+    dispatcher = NotificationDispatcher(
+        fake,
+        {"whatsapp": adapter},
+        channel_pace_seconds={"whatsapp": 0.0},
+    )
+    try:
+        stats = await dispatcher.run_batch()
+    finally:
+        await adapter.client.aclose()  # type: ignore[union-attr]
+
+    assert stats.sent == 1
+    assert len(capture.requests) == 1
+    body = capture.requests[0]["body"]
+    assert body["to"] == PHONE_A
+    assert body["template"]["name"] == "service_quote_accepted"
+    params = [p["text"] for p in body["template"]["components"][0]["parameters"]]
+    assert params == ["K1,250.00", "K2,500.00"]  # deposit, total (ngwee → formatK)
+    assert fake.table("notification_outbox").rows[0]["status"] == "sent"
+
+
+# --------------------------------------------------------------------------- #
+# 5. Opt-out / STOP preserved: a WhatsApp-disabled provider is not WhatsApp'd. #
 # --------------------------------------------------------------------------- #
 @pytest.mark.asyncio
 async def test_whatsapp_opt_out_routes_past_whatsapp() -> None:

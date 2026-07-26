@@ -17,6 +17,7 @@ WhatsAppTemplateId = Literal[
     "vendor_new_order",
     "otp_login",
     "rfq_job_broadcast",
+    "service_quote_accepted",
     "compliance_confirmation",
     "event_cancelled",
     "event_schedule_changed",
@@ -190,6 +191,16 @@ def _map_rfq_job_broadcast(payload: Mapping[str, Any]) -> tuple[str, ...]:
     return (category, area_str, preview_str)
 
 
+def _map_service_quote_accepted(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    # Provider-facing: their quote was accepted. Body params are the deposit secured
+    # in Vergeo5 escrow and the total job value — both integer ngwee (no float), so a
+    # malformed/absent amount raises TemplateRenderError and the send fails
+    # deterministically rather than sending a wrong figure.
+    deposit = format_k(_require_int(payload, "deposit_ngwee"))
+    total = format_k(_require_int(payload, "total_job_ngwee"))
+    return (deposit, total)
+
+
 def _map_compliance_confirmation(payload: Mapping[str, Any]) -> tuple[str, ...]:
     return (_require_str(payload, "confirmation_body"),)
 
@@ -261,6 +272,11 @@ WHATSAPP_TEMPLATES: dict[WhatsAppTemplateId, WhatsAppTemplateDefinition] = {
         template_id="rfq_job_broadcast",
         meta_template_name="rfq_job_broadcast",
         map_variables=_map_rfq_job_broadcast,
+    ),
+    "service_quote_accepted": WhatsAppTemplateDefinition(
+        template_id="service_quote_accepted",
+        meta_template_name="service_quote_accepted",
+        map_variables=_map_service_quote_accepted,
     ),
     "compliance_confirmation": WhatsAppTemplateDefinition(
         template_id="compliance_confirmation",
