@@ -2737,3 +2737,105 @@ def test_forged_admin_without_db_role_denied(db: PgConn) -> None:
     )
     assert result.ok
     assert result.rows[0] == "0"
+
+
+# ---------------------------------------------------------------------------
+# Admin-read / service-write internal tables: row-level isolation.
+#
+# The parametrized matrix asserts only that a non-admin SELECT raises no
+# permission error on these tables — it never proves the admin-only USING policy
+# actually *hides the rows*. These two tests seed a real row through the
+# service_role (the sole write path), then assert the row is visible to an admin
+# yet returns zero rows for the customer, the vendor owner, and an unrelated
+# vendor — the positive/negative isolation the matrix leaves implicit — and that
+# no non-admin client may write. No policy is changed by these tests.
+# ---------------------------------------------------------------------------
+
+
+def test_embedding_jobs_rows_admin_only_visible(
+    as_customer: RoleSession,
+    as_vendor: RoleSession,
+    as_other_vendor: RoleSession,
+    as_admin: RoleSession,
+    db: PgConn,
+) -> None:
+    """embedding_jobs (0022) — admin-read, service-write queue.
+
+    A queued job is visible to admin but hidden from customer / vendor-owner /
+    rival-vendor, and no non-admin client may enqueue (no client INSERT grant).
+    """
+    probe_entity = "e0000000-0000-4000-8000-0000000000e1"
+    # Service-role seed = the only write path: inserting a public search_document
+    # fires the 0022 enqueue trigger, creating exactly one queued job for the
+    # probe entity. Idempotent on the (entity_kind, entity_id) unique key.
+    seed = db.run(
+        "BEGIN; SET LOCAL role service_role; "
+        "SET LOCAL \"request.jwt.claims\" = '{\"role\":\"service_role\"}'; "
+        "INSERT INTO public.search_documents (entity_kind, entity_id, title, is_public) "
+        f"VALUES ('product', '{probe_entity}', 'RLS isolation probe', true) "
+        "ON CONFLICT (entity_kind, entity_id) DO NOTHING; "
+        "COMMIT;"
+    )
+    assert seed.ok, seed.error
+    where = f"WHERE entity_kind = 'product' AND entity_id = '{probe_entity}'"
+
+    admin = as_admin.execute(f"SELECT count(*)::int FROM public.embedding_jobs {where}")
+    assert admin.ok, admin.error
+    assert admin.rows[0] == "1"  # positive: admin sees the queued job
+
+    for label, session in (
+        ("customer", as_customer),
+        ("vendor_owner", as_vendor),
+        ("rival_vendor", as_other_vendor),
+    ):
+        read = session.execute(f"SELECT count(*)::int FROM public.embedding_jobs {where}")
+        assert read.ok, f"{label}: {read.error}"  # SELECT permitted (no perm error)
+        assert read.rows[0] == "0", label  # negative: the row is invisible
+
+    # negative: a non-admin cannot enqueue — embedding_jobs grants no client write.
+    assert _is_permission_denied(_probe_insert(as_customer, "embedding_jobs"))
+
+
+def test_reconciliation_reports_rows_admin_only_visible(
+    as_customer: RoleSession,
+    as_vendor: RoleSession,
+    as_other_vendor: RoleSession,
+    as_admin: RoleSession,
+    db: PgConn,
+) -> None:
+    """reconciliation_reports (0018) — admin-read, service-write.
+
+    A seeded report is visible to admin but hidden from every non-admin persona,
+    and a non-admin INSERT is rejected: the authenticated grant has no matching
+    WITH CHECK policy under FORCE RLS, so the write trips row-level security.
+    """
+    probe_date = "1999-12-31"
+    seed = db.run(
+        "BEGIN; SET LOCAL role service_role; "
+        "SET LOCAL \"request.jwt.claims\" = '{\"role\":\"service_role\"}'; "
+        "INSERT INTO public.reconciliation_reports (report_date) "
+        f"VALUES ('{probe_date}') ON CONFLICT (report_date) DO NOTHING; "
+        "COMMIT;"
+    )
+    assert seed.ok, seed.error
+    where = f"WHERE report_date = '{probe_date}'"
+
+    admin = as_admin.execute(
+        f"SELECT count(*)::int FROM public.reconciliation_reports {where}"
+    )
+    assert admin.ok, admin.error
+    assert admin.rows[0] == "1"  # positive: admin sees the report
+
+    for label, session in (
+        ("customer", as_customer),
+        ("vendor_owner", as_vendor),
+        ("rival_vendor", as_other_vendor),
+    ):
+        read = session.execute(
+            f"SELECT count(*)::int FROM public.reconciliation_reports {where}"
+        )
+        assert read.ok, f"{label}: {read.error}"
+        assert read.rows[0] == "0", label  # negative: the report is invisible
+
+    # negative: authenticated holds the grant but no WITH CHECK policy exists.
+    assert _is_permission_denied(_probe_insert(as_customer, "reconciliation_reports"))
