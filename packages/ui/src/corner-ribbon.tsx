@@ -48,7 +48,9 @@ export function CornerRibbon({ trust, trustLabel, tier, tierLabel, className }: 
             fontWeight: 600,
             backgroundColor: `${trustColors[trust]}1A`,
             border: `1px solid ${trustColors[trust]}33`,
-            color: trustColors[trust],
+            // Dark label (not the accent) so the text meets 4.5:1 AA on the tint;
+            // the accent identifies the badge via its border + background.
+            color: "var(--text)",
           }}
         >
           {trustLabel}
@@ -67,7 +69,9 @@ export function CornerRibbon({ trust, trustLabel, tier, tierLabel, className }: 
             fontWeight: 600,
             backgroundColor: `${tierColors[tier]}1A`,
             border: `1px solid ${tierColors[tier]}33`,
-            color: tierColors[tier],
+            // Dark label (not the tier accent) so the text meets 4.5:1 AA on the
+            // tint (bronze #A67C52 was 3.35); the accent stays on border + bg.
+            color: "var(--text)",
           }}
         >
           {tierLabel}
