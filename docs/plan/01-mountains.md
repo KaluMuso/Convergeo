@@ -103,6 +103,28 @@
 
 ---
 
+# Post-launch mountains (added 2026-07-26 — NOT part of the 141-pebble launch build-out)
+
+> M01–M16 above are the launch build-out. The two mountains below were chartered after it and are **gated**: neither may be dispatched on the launch critical path. They are numbered to continue the sequence but they do **not** change the 141-pebble reconciliation in `03-waves.md`.
+
+## M17 — Vergeo Clips (shoppable short-video feed) — **P2, beta/post-launch**
+**Scope:** vertical snap-scrolling feed of short vendor videos where a viewer can watch, like, comment, share to WhatsApp, and **buy** without leaving the feed; vendors record on their phones and upload from the vendor app; pre-publish moderation before anything is publicly visible. Full spec: **`docs/plan/m17-video-feed.md`** (binding — D-V1–D-V9). Prompts: `prompts/M17-P01…P08`.
+**Why it exists:** engagement lever + regional-expansion differentiator (founder request, 2026-07-12).
+**Prime directive:** subordinate to the 3G / data-cost mandate — poster-first, data-saver ON by default, zero cellular autoplay, one recycled `<video>`, progressive MP4 (no HLS), hard monthly cost kill-switch.
+**Success criteria:** S1 10-clip default-profile session ≤5 MB and route ≤150 KB gz · S2 clip→cart→checkout closes with `clip_id` attribution · S3 nothing publicly visible before automated screen + human approval, report→takedown ≤24h · S4 monthly cost kill-switch holds inside the $50/mo ceiling · S5 counters race-safe.
+**Dependencies:** M03, M05, M07, M12, M13 (all merged). **Gate:** public-launch stable **or** an agreed isolated beta, **plus** founder gates F-V1–F-V4.
+**Risk:** M-H — biggest: video delivery cost and the 3G mandate → poster-first means we pay only for intentional plays; the kill-switch degrades to poster-only rather than breaking the page. **Pebbles:** 8 (4 waves).
+
+## M18 — Direct Vendor WhatsApp Product Intake — **P2, pilot-gated**
+**Scope:** a verified vendor sends product image(s) and details in a **private, one-to-one** WhatsApp chat; the result enters the **normal reviewed listing flow**. Isolated inbound-only WAHA connector, flag-gated default-off, human-approved throughout. Full spec: **`docs/plan/02-pebbles/M18-vendor-whatsapp-intake.md`** + **`docs/ops/waha-vendor-intake.md`** (Part A normative). Prompts: `prompts/M18-P00…P08`.
+**Why it exists:** Zambian vendors already run their shops from WhatsApp; re-typing a catalogue into a web form is the single biggest onboarding drop-off (**D35**, narrowly amending **D15**).
+**Hard boundary:** the official Meta Cloud API (Lane 1) remains the **only** customer/provider notification channel. Lane 2 may never send customer transactions, replace opt-in/STOP compliance, accept groups, auto-create users, auto-publish listings, handle payments, or hold a service-role key. An LLM may suggest fields; it is never the approver.
+**Success criteria:** an enrolled vendor's direct-chat photo becomes a reviewed draft; duplicate delivery harmless; group / unknown number / invalid signature / disabled flag / prohibited category / media failure **cannot publish**; one kill switch stops intake without harming drafts or Lane 1.
+**Dependencies:** M03, M12, M13, M14 (all merged). **Gate:** founder-recorded Stage-1 pilot approval (`waha-vendor-intake.md` §10) + F-W1–F-W4. Buildable feature-disabled before that; **no WAHA production connection without M18-P08 evidence and operator sign-off.**
+**Risk:** M-H — biggest: a WhatsApp ban on the intake number → strict lane separation (own number, own host, own secrets) bounds the blast radius to vendor intake; Lane 1 is untouched by design. **Pebbles:** 9 (8 waves, mostly sequential).
+
+---
+
 ## Coverage checklist → mountain map
 foundations/repo **M01** · design system **M02** · auth **M04** · catalog & media/galleries **M03/M05** · search & discovery **M05** · AI search/assistant (products+services+events+inventory) **M06** · cart & checkout **M07** · payments (MoMo+card+COD) **M08** · orders & fulfilment **M09** · vendor portal & onboarding **M12** · admin dashboard **M13** · admin-swappable merchandising **M13** · notifications WhatsApp/SMS/email **M14** · reviews & trust **M15** · i18n/l10n **M02/M03 scaffold + M16 enforcement** · content/marketing pages **M16** (vendor pitch **M12**) · SEO **M05 + M16** · performance & PWA **M16** · security & compliance incl. ZRA **M15** (payment security **M08**) · analytics **M16** · testing/QA strategy **M01 setup + per-mountain tests + M16 E2E** · CI/CD, DevOps & backups **M01 + M15 drill** · observability **M16** · legal pages **M15** · customer support tooling **M13** · events/ticketing **M10** · services/RFQ **M11** · supplies/B2B-lite + directory **M05/M12** (schema **M03**).
 
