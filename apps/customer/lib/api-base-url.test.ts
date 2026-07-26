@@ -51,3 +51,40 @@ describe("absoluteApiUrl", () => {
     ).toBeNull();
   });
 });
+
+// Acceptance guard: a production browser build must never silently call localhost.
+//
+// `NEXT_PUBLIC_API_BASE_URL` and `NODE_ENV` are inlined at `next build`, and a
+// Vercel production build always compiles with `NODE_ENV=production`. Every one
+// of these bags models that build with the var absent/blank in some way; the
+// resolver must fail closed (never a loopback origin) so the shipped bundle
+// cannot bake `http://localhost:8000` into cart / search / PDP / checkout fetches.
+describe("localhost is impossible in a production browser build", () => {
+  type ApiEnvBag = { NEXT_PUBLIC_API_BASE_URL?: string; NODE_ENV?: string };
+
+  const productionCases: Array<[string, ApiEnvBag]> = [
+    ["var entirely absent", { NODE_ENV: "production" }],
+    ["var undefined", { NEXT_PUBLIC_API_BASE_URL: undefined, NODE_ENV: "production" }],
+    ["var empty string", { NEXT_PUBLIC_API_BASE_URL: "", NODE_ENV: "production" }],
+    ["var whitespace only", { NEXT_PUBLIC_API_BASE_URL: "   ", NODE_ENV: "production" }],
+  ];
+
+  for (const [label, bag] of productionCases) {
+    it(`fails closed and never yields localhost — ${label}`, () => {
+      // resolveApiBaseUrl -> null; getApiBaseUrl -> "" (relative, same-origin);
+      // absoluteApiUrl -> null so callers skip the fetch instead of hitting a loopback.
+      expect(resolveApiBaseUrl(bag)).toBeNull();
+      expect(getApiBaseUrl(bag)).toBe("");
+      expect(getApiBaseUrl(bag)).not.toMatch(/localhost|127\.0\.0\.1/);
+      expect(absoluteApiUrl("/cart", bag)).toBeNull();
+      expect(absoluteApiUrl("/cart", bag) ?? "").not.toMatch(/localhost|127\.0\.0\.1/);
+    });
+  }
+
+  it("only emits the loopback default outside a production build", () => {
+    // The single audited dev convenience — reachable ONLY when NODE_ENV !== production,
+    // which `next build` never produces.
+    expect(resolveApiBaseUrl({ NODE_ENV: "development" })).toBe("http://localhost:8000");
+    expect(resolveApiBaseUrl({ NODE_ENV: "test" })).toBe("http://localhost:8000");
+  });
+});
