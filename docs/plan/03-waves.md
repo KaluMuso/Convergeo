@@ -90,6 +90,47 @@ M15-P09 (restore drill/DR) · M16-P02 (PWA — consolidates M10 SW fragments) ·
 ## Pebble count reconciliation
 M01:7 M02:8 M03:10 M04:7 M05:11 M06:6 M07:8 M08:12 M09:10 M10:9 M11:6 M12:11 M13:11 M14:7 M15:9 M16:9 = **141** · Waves: 7+4+7+5+6+5+8+8+10+6+8+8+9+8+9+9+9+8+7 = **141** ✓
 
+---
+
+# Post-launch tracks (added 2026-07-26)
+
+> **Not part of the 141.** W0–W18 above are the launch build-out and their reconciliation is unchanged. The two tracks below are separately gated and run on their own wave letters so they never renumber a launch wave. Same rules apply: a wave dispatches only after every prior wave's PR is merged, and within a wave each pebble owns its files exclusively.
+
+## Track I — M18 vendor WhatsApp intake · 9 pebbles, 8 waves
+
+**⛔ Gate:** buildable **feature-disabled**; **no WAHA production connection, group capability, or public-listing automation** without M18-P08 evidence and founder Stage-1 sign-off (`docs/ops/waha-vendor-intake.md` §10). The sequence is **mandatory** — each pebble hardens the boundary the next one relies on.
+
+| Wave | Pebbles |
+| --- | --- |
+| **I1** | M18-P00 (pre-flight: kill-switch flag, allowlist key, fail-closed config seam) |
+| **I2** | M18-P01 (intake state model, provenance, FORCE RLS) |
+| **I3** | M18-P02 (isolated WAHA webhook + normaliser) |
+| **I4** | M18-P03 (safe media quarantine) |
+| **I5** | M18-P04 (guided, constrained draft extraction) |
+| **I6** | M18-P05 (vendor review + listing handoff) **∥** M18-P06 (admin review + publication control) |
+| **I7** | M18-P07 (n8n operations + 1:1 reminders) |
+| **I8** | M18-P08 (private-pilot proof + kill switch) |
+
+*Rationale/Edges:* I1–I5 are strictly sequential because the fail-closed chain (flag → auth → 1:1 → verified sender → content) is only safe if each layer exists before the next reads it. **I6 is the only parallel pair** — P05 owns `vendor.json` + `apps/vendor`, P06 owns `admin.json` + `apps/admin`; both read M18-P01's tables, neither edits the other's namespace. Migrations: P00 `0072`, P01 `0073`, P03 `0074` (verify next-free at branch time). ⚙ P02 must leave `routers/webhooks_whatsapp.py` (Lane 1) byte-identical — asserted by a `git diff --exit-code` in its own tests.
+
+## Track V — M17 Vergeo Clips · 8 pebbles, 4 waves
+
+**⛔ Gate:** **beta / post-launch only** — public-launch stable or an agreed isolated beta, **plus** founder gates F-V1–F-V4. Binding spec: `docs/plan/m17-video-feed.md` (D-V1–D-V9). Matches the spec's W-A/W-B/W-C with W-A's internal arrow split out.
+
+| Wave | Pebbles |
+| --- | --- |
+| **V1** | M17-P01 (clip lifecycle: migration, state machine, FORCE RLS) |
+| **V2** | M17-P02 (signed video upload, transcode callback, automated screen) **∥** M17-P03 (feed + engagement APIs) |
+| **V3** | M17-P04 (customer feed, 3G-safe playback) **∥** M17-P06 (vendor studio) **∥** M17-P07 (admin moderation) |
+| **V4** | M17-P05 (shoppable overlay) **∥** M17-P08 (cost guard, share page, beta proof) |
+
+*Rationale/Edges:* P01 is alone because both V2 pebbles build on its schema. **V2:** P02 owns the write/callback side, P03 the read side — the schema is the contract, so no coordination beyond honouring it. **V3 is namespace-partitioned:** P04 owns `clips.json` + `apps/customer` (and **seeds** the `overlay.*`/`share.*`/`cost.*` sections V4 needs), P06 owns `vendor.json` + `apps/vendor`, P07 owns `admin.json` + `apps/admin`. **V4:** P05 mounts into the marked slot P04 left in the clips route; P08 owns the separate SSR share page and the admin dashboard — **both consume `clips.json`, neither edits it** (missing keys go under QUESTIONS). Migrations: P01 and P08 each take one; verify next-free at branch time (Track I reserves `0072`–`0074` if it merges first). ⚙ P07 must merge before any clip can publish — approve is the only publish path in the system.
+
+## Founder-gate overlay (post-launch tracks)
+- **F-W1–F-W4** (dedicated `+260` number with NB-7 three-way separation proven · NB-8 isolated host · vendor opt-in copy approved · named time-boxed pilot allowlist) gate **enabling** M18 — not building it. M18-P00–P08 may all merge with the flag off.
+- **F-V4** (Cloudinary video eager-transcode + credit headroom) gates **M17-P02** specifically — it is the pebble that starts spending video credits.
+- **F-V1** (placement/name) gates M17-P04; **F-V2** (comments on/off at launch) gates M17-P03's comment endpoints; **F-V3** (creator scope v2) is not needed for v1 (D-V7 locks vendors-only).
+
 ## Founder-gate overlay (from `00-decisions.md`)
 - **F9a–f (Lenco answers)** wanted before Wave 10 dispatch (Lenco client); sandbox base URL/token (F9b) is hard-blocking for M08-P02 tests.
 - **F5 (Meta/WhatsApp)** wanted before Wave 10 (M14-P02) for test-number E2E; mocks keep the pebble mergeable without it.
