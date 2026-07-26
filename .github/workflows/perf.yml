@@ -230,22 +230,20 @@ jobs:
           npm install --no-package-lock
           npx playwright install --with-deps chromium
 
-      - name: a11y smoke (axe critical/serious — report-only, H10 burn-down)
+      - name: a11y smoke (axe critical/serious — blocking, H10)
         # Full axe wcag2a/wcag2aa critical+serious sweep over /, /cart, /checkout
         # against the already-running production server — the stricter engine
         # behind LHCI's a11y score (audit H10 / §10.1). Portable spec (also runs
         # nightly against staging).
         #
-        # OBSERVE-MODE (continue-on-error). Burn-down status:
-        #   FIXED: FormField `asGroup` keeps aria-required off the phone/OTP group
-        #     divs (contact + payment steps); "Send code" buttons use shared Button.
-        #   OPEN: corner-ribbon tier badges (packages/ui) use the tier ACCENT as
-        #     text on a 10% tint — bronze #A67C52 on surface = 3.35:1 (< 4.5),
-        #     silver/gold similar; shows on every vendor card (home /). Needs an
-        #     accessible tier-colour decision before this gate can enforce.
-        # Flip to blocking (drop continue-on-error) once the tier badges pass — do
-        # NOT weaken it for any other violation.
-        continue-on-error: true
+        # BLOCKING. All introduction-era violations are now fixed on master:
+        #   - FormField `asGroup` keeps aria-required off the phone/OTP group divs
+        #     (contact + payment steps); "Send code" buttons use the shared Button.
+        #   - corner-ribbon tier/trust badges use a dark label (accent stays on the
+        #     border + background tint), so bronze/silver/gold clear 4.5:1.
+        # Keep it blocking — fix any NEW violation rather than re-adding
+        # continue-on-error (that lever is ONLY for Playwright/Chromium being
+        # unavailable, never for a real failure).
         working-directory: e2e
         env:
           E2E_BASE_URL: http://localhost:3000
