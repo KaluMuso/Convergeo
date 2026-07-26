@@ -177,23 +177,30 @@ LIMIT 1;
     return parts[0], parts[1]
 
 
-def _load_quote(quote_id: str) -> tuple[str, str, int, str] | None:
-    """Return (job_id, provider_vendor_id, amount_ngwee, status) or None if missing."""
+def _load_quote(quote_id: str) -> tuple[str, str, int, str, str] | None:
+    """Return (job_id, provider_vendor_id, amount_ngwee, status, provider_owner_user_id).
+
+    ``provider_owner_user_id`` is the accepted-quote notification recipient (the
+    provider being told their quote was accepted); ``''`` when the vendor row or its
+    owner is unresolved. Returns ``None`` if the quote is missing.
+    """
     quote_sql = sql_uuid(quote_id, "quote_id")
     script = f"""
-SELECT job_id::text || '|' || provider_vendor_id::text
-       || '|' || amount_ngwee::text || '|' || status
-FROM public.job_quotes
-WHERE id = {quote_sql}
+SELECT q.job_id::text || '|' || q.provider_vendor_id::text
+       || '|' || q.amount_ngwee::text || '|' || q.status
+       || '|' || COALESCE(v.owner_user_id::text, '')
+FROM public.job_quotes q
+LEFT JOIN public.vendors v ON v.id = q.provider_vendor_id
+WHERE q.id = {quote_sql}
 LIMIT 1;
 """
     result = run_sql_script(script)
     if not result.ok or not result.rows:
         return None
-    parts = result.rows[0].split("|", 3)
-    if len(parts) != 4 or not parts[2].isdigit():
+    parts = result.rows[0].split("|", 4)
+    if len(parts) != 5 or not parts[2].isdigit():
         return None
-    return parts[0], parts[1], int(parts[2]), parts[3]
+    return parts[0], parts[1], int(parts[2]), parts[3], parts[4]
 
 
 def _parse_snapshot(raw: str) -> dict[str, Any]:
@@ -301,7 +308,7 @@ def accept_quote(
     quote = _load_quote(quote_id)
     if quote is None:
         raise AppError(code="not_found", message="Quote not found", http_status=404)
-    quote_job_id, provider_vendor_id, total_job_ngwee, quote_status = quote
+    quote_job_id, provider_vendor_id, total_job_ngwee, quote_status, provider_owner_user_id = quote
     if quote_job_id != job_id:
         raise AppError(
             code="validation_error",
@@ -353,6 +360,11 @@ def accept_quote(
         "order_id": order_id,
         "deposit_ngwee": deposit_ngwee,
         "total_job_ngwee": total_job_ngwee,
+        # Recipient of the accepted-quote notification = the provider (vendor owner).
+        # The dispatcher resolves their phone/`to` + locale from this before the
+        # WhatsApp adapter renders `service_quote_accepted` (registered on all three
+        # channels), so the row is dispatchable rather than a templateless dead-letter.
+        "recipient_id": provider_owner_user_id,
     }
 
     script = f"""

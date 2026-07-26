@@ -183,6 +183,20 @@ EMAIL_TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             ),
         },
     },
+    "service_quote_accepted": {
+        "en": {
+            "subject_key": "notifications.email.service_quote_accepted.subject",
+            "subject": "Your Vergeo5 quote was accepted",
+            "body_key": "notifications.email.service_quote_accepted.body",
+            "body": (
+                "<p>Good news — a customer accepted your quote.</p>"
+                "<p><strong>Deposit secured:</strong> K{deposit}</p>"
+                "<p><strong>Job total:</strong> K{total}</p>"
+                "<p>The deposit is held safely by Vergeo5 escrow. "
+                "Open Vergeo5 to start the job.</p>"
+            ),
+        },
+    },
 }
 
 
@@ -195,6 +209,12 @@ def _format_amount(payload: dict[str, Any]) -> str:
     if amount is not None:
         return str(amount)
     return "0.00"
+
+
+def _ngwee_field(payload: dict[str, Any], key: str) -> str:
+    """Integer-ngwee payload field → major-unit string, or '0.00' when absent."""
+    value = payload.get(key)
+    return ngwee_to_major_str(value) if isinstance(value, int) else "0.00"
 
 
 def render_email_html(
@@ -231,6 +251,8 @@ def render_email_html(
         "description_preview": html.escape(str(payload.get("description_preview") or "")),
         "track_url": html.escape(str(payload.get("track_url") or "")),
         "review_url": html.escape(str(payload.get("review_url") or "")),
+        "deposit": html.escape(_ngwee_field(payload, "deposit_ngwee")),
+        "total": html.escape(_ngwee_field(payload, "total_job_ngwee")),
     }
     subject = strings["subject"].format(**vars_map)
     body = strings["body"].format(**vars_map)

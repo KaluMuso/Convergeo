@@ -695,3 +695,26 @@ def test_email_renders_lifecycle_templates_with_order_reference() -> None:
     assert "catering" in rfq_subject
     assert "Ndola" in rfq_body
     assert "Wedding for 100" in rfq_body
+
+
+def test_service_quote_accepted_renders_on_sms_and_email_fallback() -> None:
+    """The accepted-quote provider notice must render on every fallback channel."""
+    from app.services.notifications.templates.sms import render_sms_body
+
+    payload = {"deposit_ngwee": 125_000, "total_job_ngwee": 250_000}
+
+    # SMS/email use ngwee_to_major_str (no thousands grouping); WhatsApp uses formatK.
+    sms_body = render_sms_body("service_quote_accepted", payload)
+    assert sms_body is not None
+    assert sms_body.startswith("Vergeo5")
+    assert "K1250.00" in sms_body  # deposit
+    assert "K2500.00" in sms_body  # total
+
+    subject, html_body, _sk, _bk = render_email_html(
+        "service_quote_accepted",
+        locale="en",
+        payload=payload,
+    )
+    assert "accepted" in subject.lower()
+    assert "K1250.00" in html_body
+    assert "K2500.00" in html_body
