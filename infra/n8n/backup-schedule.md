@@ -50,7 +50,9 @@ fixed value, so the manual-drill URL above is the authoritative one.
    - `Vergeo5 OCI Host SSH` (SSH Private Key) → the 3 SSH nodes. Holds the OCI VM key.
    - `Vergeo5 WhatsApp Cloud API` (Header Auth) → the 3 WhatsApp HTTP Request nodes.
 2. **n8n instance env:** `WHATSAPP_CLOUD_API_URL`, `WHATSAPP_CLOUD_API_TOKEN`,
-   `FOUNDER_WHATSAPP_TO`, `BACKUP_WEBHOOK_SECRET`, optional `BACKUP_MIN_BYTES` (default 10240).
+   `FOUNDER_WHATSAPP_TO`, `BACKUP_WEBHOOK_SECRET`, optional `BACKUP_MIN_BYTES` (default 10240),
+   optional `BACKUP_ALERT_DEDUPE_MINUTES` (default 360 — cooldown that collapses repeated
+   failure pages of the same signature; see `docs/ops/n8n-backup-and-alerts.md`).
 3. **OCI VM env** (`infra/.env`, see table below): `SUPABASE_DB_URL`, `OCI_NAMESPACE`,
    `OCI_BUCKET_NAME`, `OCI_CLI_PROFILE` (or instance principal), `BACKUP_RETENTION_DAYS`.
 4. **Two settings the SDK import cannot set — set them in the workflow Settings panel before activating:**
@@ -97,10 +99,16 @@ Full name inventory: `docs/ops/backup-runbook.md`.
 
 On non-zero exit from dump or watchdog:
 
-1. IF branch → Code node (redact) → HTTP WhatsApp to `$env.FOUNDER_WHATSAPP_TO`.
+1. IF branch → `Build Alert Payload` (redact) → **`Dedupe Ops Alert` → `IF Ops Alert Fresh`** →
+   HTTP WhatsApp to `$env.FOUNDER_WHATSAPP_TO` (`retryOnFail` 2×/60s).
 2. Message includes status, reasons, env_id, dump name, size, sha256 prefix, migration tip —
    **no** connection strings or secrets.
-3. Log retention: n8n execution history ≥ 7 days for post-mortem.
+3. **Dedupe:** repeats of the same `status|reasons` signature within
+   `$env.BACKUP_ALERT_DEDUPE_MINUTES` (default 360) are suppressed, so the 02:00 dump + 04:00
+   watchdog + consecutive-night failures page **once**, not every run. State is workflow-scoped
+   n8n static data (`$getWorkflowStaticData`) — no external store, no secrets. The manual-drill
+   path is **not** deduped (a human ran it and wants the result).
+4. Log retention: n8n execution history ≥ 7 days for post-mortem.
 
 ## Manual run (break-glass)
 
@@ -132,6 +140,7 @@ oci os object list \
 ## Related
 
 - `infra/n8n/backup.json` — importable workflow
+- `docs/ops/n8n-backup-and-alerts.md` — review card + **unchecked founder activation checklist**
 - `infra/scripts/db-dump.sh` · `db-backup-watchdog.sh` · `db-restore.sh`
 - `docs/ops/backup-runbook.md` · `docs/ops/backup-restore-drill.md`
 - `infra/ROLLBACK.md` — restore + app rollback

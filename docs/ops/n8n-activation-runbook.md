@@ -70,10 +70,14 @@ Live Wave A (production):
 
 Held (credentials / policy):
 
-| Workflow                                             | ID                 | Reason                               |
-| ---------------------------------------------------- | ------------------ | ------------------------------------ |
-| shared error alert                                   | `LVuHqWgT1tqjYOtc` | No WhatsApp output node bound        |
-| database backup                                      | `OAdOD4kmIbSNehkJ` | Needs SSH + OCI Object Storage creds |
-| Wave B (release, tickets, order-jobs, event-release) | —                  | F4 + F9b sandbox                     |
+| Workflow                                             | ID                 | Reason                                                                                                             |
+| ---------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| shared failure alert (deduplicated)                  | `LVuHqWgT1tqjYOtc` | Live scaffold has no WhatsApp node; **re-import the committed `money-workflow-error-alert.json`** (WA node + dedupe present) |
+| database backup                                      | `OAdOD4kmIbSNehkJ` | Needs SSH + OCI Object Storage creds; dedupe env `BACKUP_ALERT_DEDUPE_MINUTES` optional (default 360)              |
+| Wave B (release, tickets, order-jobs, event-release) | —                  | F4 + F9b sandbox                                                                                                  |
+
+> **Backup + shared alert reconciliation & unchecked founder activation checklist:**
+> `docs/ops/n8n-backup-and-alerts.md`. Both ship `active: false`; failed runs page the founder on a
+> **deduplicated** route (§4 of that doc). Do not activate here.
 
 Record activation date + operator per workflow in `docs/production-readiness/2026-07-19/vision-audit/evidence/` as they go live.
