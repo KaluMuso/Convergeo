@@ -247,6 +247,46 @@
     },
     {
       "parameters": {
+        "jsCode": "// Deduplicate repeated backup failure alerts within a cooldown window.\n// State lives in workflow-scoped n8n static data — no external store, no secrets.\n// Nightly + watchdog + repeat-night failures of the same signature collapse to one page.\nconst store = $getWorkflowStaticData('global');\nconst windowMin = Number($env.BACKUP_ALERT_DEDUPE_MINUTES || 360);\nconst ttlMs = Math.max(1, windowMin) * 60 * 1000;\nconst now = Date.now();\nconst sent = (store.backupAlertsSent && typeof store.backupAlertsSent === 'object') ? store.backupAlertsSent : {};\n// prune expired keys so the map cannot grow unbounded\nfor (const k of Object.keys(sent)) { if (now - Number(sent[k] || 0) > ttlMs) delete sent[k]; }\nconst out = [];\nfor (const item of $input.all()) {\n  const j = item.json || {};\n  const reasons = Array.isArray(j.reasons) ? [...j.reasons].sort() : [];\n  const key = `${j.status || 'unknown'}|${reasons.join(',') || 'unspecified'}`;\n  const last = Number(sent[key] || 0);\n  const suppress = last > 0 && (now - last) < ttlMs;\n  if (!suppress) sent[key] = now;\n  out.push({ json: { ...j, dedupe_key: key, suppress, dedupe_window_minutes: windowMin } });\n}\nstore.backupAlertsSent = sent;\nreturn out;"
+      },
+      "id": "dedupe-ops-alert",
+      "name": "Dedupe Ops Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 240]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "not-suppressed",
+              "leftValue": "={{ $json.suppress }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-ops-alert-fresh",
+      "name": "IF Ops Alert Fresh",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1320, 300]
+    },
+    {
+      "parameters": {
         "jsCode": "const items = $input.all();\nconst out = [];\nfor (const item of items) {\n  const j = item.json || {};\n  const stdout = String(j.stdout || '');\n  const stderr = String(j.stderr || j.error?.message || j.message || '');\n  const code = j.code !== undefined ? Number(j.code) : 1;\n  let manifest = null;\n  const m = stdout.match(/BACKUP_MANIFEST_JSON=(\\{.*\\})\\s*$/m)\n    || stdout.match(/BACKUP_MANIFEST_JSON=(\\{.*\\})/);\n  if (m) {\n    try { manifest = JSON.parse(m[1]); } catch (_) { manifest = null; }\n  }\n  const redact = (s) => String(s || '')\n    .replace(/postgres(?:ql)?:\\/\\/[^\\s'\"]+/gi, 'postgres://***')\n    .replace(/(password|passwd|pwd)\\s*[:=]\\s*\\S+/gi, '$1=***')\n    .replace(/service[_-]?role[_-]?key\\s*[:=]\\s*\\S+/gi, 'service_role_key=***')\n    .replace(/Bearer\\s+[A-Za-z0-9._\\-]+/gi, 'Bearer ***');\n  const redactedOut = redact(stdout).slice(-2000);\n  const redactedErr = redact(stderr).slice(-1500);\n  const status = manifest?.status || (code === 0 ? 'ok' : 'failed');\n  const size = manifest?.size_bytes;\n  const minBytes = Number($env.BACKUP_MIN_BYTES || 10240);\n  const reasons = [];\n  if (code !== 0 || status === 'failure' || status === 'failed') reasons.push('backup_or_watchdog_failed');\n  if (size !== undefined && size !== null && Number(size) < minBytes) reasons.push('backup_too_small');\n  if (String(manifest?.error || '').includes('checksum') || String(manifest?.error || '').includes('gzip_integrity')) {\n    reasons.push('checksum_failure');\n  }\n  if (/oci os object|oci_upload_failed|destination/i.test(redactedErr + redactedOut + String(manifest?.error || ''))) {\n    reasons.push('destination_failure');\n  }\n  if (/BACKUP_WATCHDOG_STATUS=(missing|stale)/.test(stdout)) reasons.push('missed_schedule');\n  const ts = manifest?.timestamp_utc || manifest?.timestamp || new Date().toISOString();\n  const message = [\n    'Vergeo5 DB backup ALERT',\n    `status=${status}`,\n    `exit_code=${code}`,\n    `reasons=${reasons.join(',') || 'unspecified'}`,\n    `env=${manifest?.env_id || 'n/a'}`,\n    `dump=${manifest?.dump_name || 'n/a'}`,\n    `size_bytes=${size ?? 'n/a'}`,\n    `sha256=${manifest?.sha256 ? String(manifest.sha256).slice(0, 12) + '\u2026' : 'n/a'}`,\n    `migration_tip=${manifest?.migration_tip || 'n/a'}`,\n    `ts=${ts}`,\n    'stderr_tail:',\n    redactedErr || '(empty)',\n  ].join('\\n');\n  out.push({ json: { message, status, code, reasons, manifest, stdout_tail: redactedOut } });\n}\nreturn out;"
       },
       "id": "code-alert-manual",
@@ -292,7 +332,10 @@
           "name": "Vergeo5 WhatsApp Cloud API"
         }
       },
-      "continueOnFail": true
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 60000
     },
     {
       "parameters": {
@@ -564,11 +607,34 @@
       "main": [
         [
           {
-            "node": "WhatsApp Ops Alert",
+            "node": "Dedupe Ops Alert",
             "type": "main",
             "index": 0
           }
         ]
+      ]
+    },
+    "Dedupe Ops Alert": {
+      "main": [
+        [
+          {
+            "node": "IF Ops Alert Fresh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Ops Alert Fresh": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Ops Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     },
     "Build Alert Payload Manual": {

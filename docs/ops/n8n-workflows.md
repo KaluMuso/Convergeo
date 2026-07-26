@@ -27,8 +27,12 @@ and delivers directly to the founder's WhatsApp.
   (constant-time compare in workflow Code node). See `infra/uptimerobot.md`.
 - Money ticks (`release-job`, `reconciliation`, `payment-sweeper`,
   `payout-failure-alert`) retry HTTP 3×/5s and page the founder on workflow error
-  with metadata only (no payment refs / PII). Optional shared handler:
-  `money-workflow-error-alert.json`.
+  with metadata only (no payment refs / PII). Shared, **deduplicated** handler:
+  `money-workflow-error-alert.json` — link it as each workflow's `settings.errorWorkflow`.
+  It collapses repeats of the same failure to one page per `ALERT_DEDUPE_WINDOW_MINUTES`
+  (default 15); `backup.json` dedupes its own alerts via `BACKUP_ALERT_DEDUPE_MINUTES`
+  (default 360). Both use n8n `$getWorkflowStaticData` — no external store, no secrets.
+  Full review: `docs/ops/n8n-backup-and-alerts.md`.
 
 ## Registry
 
@@ -41,7 +45,7 @@ activate per environment after credentials + F5 WhatsApp are live):
 | `notification-dispatch.json`      | Every 1m                                                     | `POST /internal/dispatch/tick`                        | Drain `notification_outbox` → WhatsApp → SMS → email                                                   | M14-P01          |
 | `kyc-nudge.json`                  | Every 6h                                                     | `POST /internal/n8n/kyc-stalled/tick`                 | Nudge vendor applicants stalled 48h+ in pending KYC                                                    | M14-P06          |
 | `payout-failure-alert.json`       | Every 1h                                                     | `POST /internal/n8n/payout-failures/tick`             | Alert founder of failed payouts (+ retry + error-page on tick failure)                                 | M14-P06 / VD-P06 |
-| `money-workflow-error-alert.json` | Error Trigger                                                | WhatsApp Cloud API (direct)                           | Shared metadata-only founder page for money-workflow failures (optional errorWorkflow target)          | VD-P06           |
+| `money-workflow-error-alert.json` | Error Trigger                                                | WhatsApp Cloud API (direct)                           | Shared, **deduplicated** metadata-only founder failure page — `errorWorkflow` target for money ticks + backup. See `docs/ops/n8n-backup-and-alerts.md` | VD-P06           |
 | `low-stock-alert.json`            | Daily 07:00 UTC                                              | `POST /internal/n8n/low-stock/tick`                   | Alert vendor owners of low-stock listings                                                              | M14-P06          |
 | `review-request.json`             | Every 4h                                                     | `POST /internal/n8n/review-requests/tick`             | Request customer reviews +24h post-completion                                                          | M14-P06          |
 | `abandoned-cart.json`             | Every 2h                                                     | `POST /internal/n8n/abandoned-carts/tick`             | Nudge customers with abandoned carts (flag-gated)                                                      | M14-P06          |
@@ -58,11 +62,13 @@ activate per environment after credentials + F5 WhatsApp are live):
 | `tickets-issue.json`              | Every 60s                                                    | `POST /internal/tickets/issue-tick`                   | Issue tickets for paid ticket orders                                                                   | M10              |
 | `tickets-release.json`            | Every 2m                                                     | `POST /internal/tickets/release-tick`                 | Release stale ticket holds                                                                             | M10              |
 | `uptime-alert.json`               | Webhook (UptimeRobot)                                        | WhatsApp Cloud API (direct)                           | Page founder on downtime; requires `X-Uptime-Secret` / `$env.UPTIME_WEBHOOK_SECRET`                    | M16-P06 / VD-P05 |
-| `backup.json`                     | Daily 02:00 Africa/Lusaka (+ 04:00 watchdog; manual webhook) | SSH → `infra/scripts/db-dump.sh` (OCI Object Storage) | Independent nightly logical DB dump + missed-schedule watchdog + failure alerts; manual `backup-manual` **dump** webhook (there is no restore webhook — restores are run by hand per the DR runbook) | VD-P04           |
+| `backup.json`                     | Daily 02:00 Africa/Lusaka (+ 04:00 watchdog; manual webhook) | SSH → `infra/scripts/db-dump.sh` (OCI Object Storage) | Independent nightly logical DB dump + missed-schedule watchdog + **deduplicated** failure alerts; manual `backup-manual` **dump** webhook (there is no restore webhook — restores are run by hand per the DR runbook). Review card: `docs/ops/n8n-backup-and-alerts.md` | VD-P04           |
 
 > **Backup status:** repo artifact is **CODE_COMPLETE** (`active: false`). **G7 PASS** still
 > requires a real dated OCI dump + timed restore evidence — see `docs/ops/backup-runbook.md`
 > and `docs/ops/backup-restore-drill.md`. Supabase dashboard backups alone are insufficient.
+> Consolidated review + **unchecked founder activation checklist** for backup **and** the shared
+> failure alert: `docs/ops/n8n-backup-and-alerts.md`.
 
 ### Founder digest aggregates (`admin-digest.json`)
 

@@ -1,10 +1,10 @@
 {
-  "name": "Money Workflow Error Founder Alert",
+  "name": "Vergeo5 — Shared Workflow Failure Alert (deduplicated)",
   "nodes": [
     {
       "parameters": {},
       "id": "error-trigger",
-      "name": "Money Workflow Error Trigger",
+      "name": "Workflow Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
       "position": [260, 300]
@@ -13,13 +13,55 @@
       "parameters": {
         "mode": "runOnceForAllItems",
         "language": "javaScript",
-        "jsCode": "// Metadata-only alert — never forward payment refs, tokens, or PII.\nconst src = items[0].json || {};\nconst exec = src.execution || {};\nconst wf = src.workflow || {};\nconst name = String(wf.name || src.workflowName || 'unknown-money-workflow').slice(0, 80);\nconst status = String(exec.status || src.status || 'error').slice(0, 40);\nconst ts = String(exec.lastNodeExecuted || src.lastNodeExecuted || 'n/a').slice(0, 60);\nconst when = new Date().toISOString();\nconst message = [\n  'Vergeo5 money workflow failure',\n  `workflow: ${name}`,\n  `status: ${status}`,\n  `lastNode: ${ts}`,\n  `at: ${when}`,\n].join('\\n');\nreturn [{ json: { message, workflowName: name, status, at: when } }];"
+        "jsCode": "// Metadata-only alert — never forward payment refs, tokens, PII, or DB/service-role keys.\nconst src = items[0].json || {};\nconst exec = src.execution || {};\nconst wf = src.workflow || {};\nconst name = String(wf.name || src.workflowName || 'unknown-workflow').slice(0, 80);\nconst status = String(exec.status || src.status || 'error').slice(0, 40);\nconst lastNode = String(exec.lastNodeExecuted || src.lastNodeExecuted || 'n/a').slice(0, 60);\nconst when = new Date().toISOString();\nconst message = [\n  'Vergeo5 workflow failure',\n  `workflow: ${name}`,\n  `status: ${status}`,\n  `lastNode: ${lastNode}`,\n  `at: ${when}`,\n].join('\\n');\nreturn [{ json: { message, workflowName: name, status, lastNode, at: when } }];"
       },
       "id": "sanitize-error-payload",
       "name": "Sanitize Error Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// Deduplicate repeated failure pages within a cooldown window (shared alert route).\n// State lives in workflow-scoped n8n static data — no external store, metadata only.\n// A workflow that errors on every tick pages the founder once per window, not per run.\nconst store = $getWorkflowStaticData('global');\nconst windowMin = Number($env.ALERT_DEDUPE_WINDOW_MINUTES || 15);\nconst ttlMs = Math.max(1, windowMin) * 60 * 1000;\nconst now = Date.now();\nconst sent = (store.failureAlertsSent && typeof store.failureAlertsSent === 'object') ? store.failureAlertsSent : {};\n// prune expired keys so the map cannot grow unbounded\nfor (const k of Object.keys(sent)) { if (now - Number(sent[k] || 0) > ttlMs) delete sent[k]; }\nconst src = ($input.first() && $input.first().json) || {};\nconst key = [src.workflowName || 'unknown', src.status || 'error', src.lastNode || 'n/a'].join('|');\nconst last = Number(sent[key] || 0);\nconst suppress = last > 0 && (now - last) < ttlMs;\nif (!suppress) sent[key] = now;\nstore.failureAlertsSent = sent;\nreturn [{ json: { ...src, dedupe_key: key, suppress, dedupe_window_minutes: windowMin } }];"
+      },
+      "id": "dedupe-alert",
+      "name": "Deduplicate Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "not-suppressed",
+              "leftValue": "={{ $json.suppress }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-alert-fresh",
+      "name": "IF Alert Fresh",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1040, 300]
     },
     {
       "parameters": {
@@ -45,15 +87,19 @@
           "timeout": 30000
         }
       },
-      "id": "page-founder-money-error",
-      "name": "Page Founder Money Error",
+      "id": "page-founder-error",
+      "name": "Page Founder On Failure",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [780, 300]
+      "position": [1300, 300],
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 60000
     }
   ],
   "connections": {
-    "Money Workflow Error Trigger": {
+    "Workflow Error Trigger": {
       "main": [
         [
           {
@@ -68,11 +114,34 @@
       "main": [
         [
           {
-            "node": "Page Founder Money Error",
+            "node": "Deduplicate Alert",
             "type": "main",
             "index": 0
           }
         ]
+      ]
+    },
+    "Deduplicate Alert": {
+      "main": [
+        [
+          {
+            "node": "IF Alert Fresh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Alert Fresh": {
+      "main": [
+        [
+          {
+            "node": "Page Founder On Failure",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     }
   },
@@ -80,11 +149,22 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "vd-p06-money-workflow-error-alert",
+  "versionId": "vd-p06-shared-workflow-failure-alert",
   "meta": {
-    "templateCredsSetupCompleted": false
+    "templateCredsSetupCompleted": false,
+    "description": "Shared, deduplicated founder failure page. Link as settings.errorWorkflow from money ticks (release-job, reconciliation, payment-sweeper, payout-failure-alert) and the database backup workflow. Metadata-only — never forwards payment references, tokens, PII, or Supabase service-role keys. Dedupe collapses repeated identical failures (workflow|status|lastNode) to one page per ALERT_DEDUPE_WINDOW_MINUTES (default 15). STATUS: active:false — founder-gated activation only."
   },
   "tags": [
+    {
+      "name": "ops",
+      "createdAt": "2026-07-20T00:00:00.000Z",
+      "updatedAt": "2026-07-20T00:00:00.000Z"
+    },
+    {
+      "name": "alert",
+      "createdAt": "2026-07-20T00:00:00.000Z",
+      "updatedAt": "2026-07-20T00:00:00.000Z"
+    },
     {
       "name": "VD-P06",
       "createdAt": "2026-07-20T00:00:00.000Z",
