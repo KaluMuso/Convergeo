@@ -115,6 +115,16 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/cart/items/{listing_id}/save-for-later"),
         ("POST", "/cart/revalidate"),
         ("GET", "/catalog/listings"),
+        # M17-P03 Vergeo Clips read surface. Public by design — the feed is a
+        # discovery surface and its detail page is shareable/OG-rendered — and
+        # published-only in every branch, so an anonymous reader sees exactly what
+        # a logged-in one does. The ranking path returns the score breakdown for
+        # an already-public clip: the formula is deliberately not a secret.
+        # Every clip WRITE (upload, like, comment, report, view) is guarded.
+        ("GET", "/clips/feed"),
+        ("GET", "/clips/{clip_id}"),
+        ("GET", "/clips/{clip_id}/comments"),
+        ("GET", "/clips/{clip_id}/ranking"),
         ("GET", "/directory"),
         ("GET", "/directory/{slug}"),
         ("GET", "/events"),
