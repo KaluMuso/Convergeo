@@ -988,5 +988,82 @@
     "errors": {
       "rateLimited": "Too many support messages — try again shortly."
     }
+  },
+  "intake": {
+    "meta": {
+      "title": "WhatsApp intake — Vergeo5 Admin",
+      "description": "Review vendor product drafts submitted through the WhatsApp intake lane."
+    },
+    "title": "WhatsApp intake",
+    "intro": "Drafts vendors submitted from WhatsApp. Nothing here is live until you approve it.",
+    "loading": "Loading…",
+    "empty": {
+      "title": "Nothing waiting",
+      "body": "Submitted WhatsApp drafts appear here for review."
+    },
+    "error": {
+      "title": "Could not load the intake queue",
+      "retry": "Try again"
+    },
+    "queue": {
+      "vendor": "Vendor",
+      "product": "Product",
+      "price": "Price",
+      "tier": "KYC tier",
+      "submitted": "Submitted",
+      "open": "Open",
+      "permissionDenied": "You do not have permission to review WhatsApp intake.",
+      "error": "Could not load the intake queue.",
+      "success": "Done."
+    },
+    "detail": {
+      "title": "Review draft",
+      "back": "Back to queue",
+      "vendor": "Vendor",
+      "draft": "Draft fields",
+      "provenance": "Field provenance",
+      "photos": "Photos",
+      "photoAlt": "Draft photo {position}",
+      "noPhotos": "No photos attached.",
+      "warnings": "Warnings",
+      "candidates": "Canonical matches",
+      "candidateScore": "{score}% match",
+      "diff": "Proposed listing",
+      "diffDraft": "Draft says",
+      "diffListing": "Listing says",
+      "notes": "Reviewer notes"
+    },
+    "source": {
+      "vendor_typed": "Vendor typed",
+      "rule": "Rule-extracted",
+      "model": "Model-suggested"
+    },
+    "actions": {
+      "approve": "Approve and publish",
+      "approving": "Approving…",
+      "reject": "Reject",
+      "rejecting": "Rejecting…",
+      "requestChanges": "Request changes",
+      "requestingChanges": "Sending…",
+      "attachCanonical": "Attach product",
+      "attaching": "Attaching…",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Tell the vendor what to fix",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
+    "warnings": {
+      "prohibited": "Title matches a prohibited term.",
+      "missingTitle": "The draft has no product name.",
+      "missingPrice": "The draft has no price.",
+      "usedCondition": "Condition is 'used', which cannot be listed.",
+      "vendorNotActive": "This vendor is not active."
+    },
+    "errors": {
+      "loadFailed": "Could not load this draft.",
+      "actionFailed": "That action did not complete.",
+      "conflict": "Someone else changed this draft. Reload and try again.",
+      "reasonRequired": "A reason is required."
+    }
   }
 }

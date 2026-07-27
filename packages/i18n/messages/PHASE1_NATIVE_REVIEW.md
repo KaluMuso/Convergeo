@@ -14,6 +14,8 @@ Record each review session in the table. One row per reviewer × locale batch (o
 
 **Namespaces in scope for Phase-1 money/trust copy:** `catalog`, `checkout`, `orders`, `account`, `search`, `common`, `notifications`, `marketing` (present today). **`legal`** — sign off only when bem/nya `legal.json` exists (CCP-03d); until then, criterion 3 blocks SEO flip for vernacular legal pages.
 
+**M18-P05 vendor intake (2026-07-27):** `vendor.intake.*` was added to bem/nya for key parity (CCP-03f). It is **almost entirely EN passthrough** — only the screen title was localised, because the copy is operational instructions to a vendor and a wrong guess there costs them a listing. Treat the whole `vendor.intake` subtree as untranslated until a native reviewer signs it off. The surface is behind `waha_vendor_intake` (default off), so nothing ships to a vendor before then.
+
 **CCP-03e verticals (2026-07-20):** `services`, `events`, `directory`, `supplies` exist for bem/nya with key parity to EN (best-effort vernacular; **pending native-speaker review** — not a SEO-flip blocker by themselves, but do not claim native-complete).
 
 ## Noindex removal criteria (authoritative)

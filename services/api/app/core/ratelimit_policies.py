@@ -53,6 +53,16 @@ ADMIN_WRITE = RateLimitPolicy(scope="write_admin", limit=120, window=timedelta(m
 # Internal cron/n8n ticks are called by trusted schedulers on a shared secret;
 # they get a generous machine-to-machine ceiling rather than a human one.
 INTERNAL_CRON = RateLimitPolicy(scope="internal_cron", limit=240, window=timedelta(minutes=1))
+# WAHA vendor intake (D35 Lane 2). Deliberately NOT added to EXEMPT_ROUTE_IDS:
+# the two exemptions there exist to tolerate retries from EXTERNAL providers we
+# do not control (Lenco, Meta). Lane 2 posts from our own isolated host, so
+# rate-limiting it costs us nothing and bounds the damage if that host is ever
+# compromised or misconfigured into a loop. Sized for a human vendor's messages,
+# not machine traffic.
+WAHA_INTAKE_WEBHOOK = RateLimitPolicy(
+    scope="webhook_waha_intake", limit=60, window=timedelta(minutes=1)
+)
+
 # Public, unauthenticated telemetry beacon (navigator.sendBeacon). Higher ceiling than
 # human writes — a batch fires ~once per page-session — and enforcement is fail-open, so a
 # limiter outage never drops analytics. Enforced in routers/analytics_collect.py.
@@ -100,6 +110,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "PATCH /merch/slots/{slot_id}": ADMIN_WRITE,
     "PATCH /organiser/events/{event_id}": STANDARD_WRITE,
     "PATCH /organiser/ticket-types/{ticket_type_id}": STANDARD_WRITE,
+    "PATCH /vendor/intake/sessions/{session_id}/draft": STANDARD_WRITE,
     "PATCH /vendor/listings/{listing_id}": STANDARD_WRITE,
     "PATCH /vendor/listings/{listing_id}/images/reorder": STANDARD_WRITE,
     "PATCH /vendor/listings/{listing_id}/stock": STANDARD_WRITE,
@@ -143,6 +154,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /flags/{flag_id}/remove": ADMIN_WRITE,
     "POST /flags/{flag_id}/unpublish": ADMIN_WRITE,
     "POST /flags/{flag_id}/warn-vendor": ADMIN_WRITE,
+    "POST /webhooks/waha-intake": WAHA_INTAKE_WEBHOOK,
     "POST /internal/analytics/retention-tick": INTERNAL_CRON,
     "POST /internal/digest": INTERNAL_CRON,
     "POST /internal/dispatch/tick": INTERNAL_CRON,
@@ -178,6 +190,14 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /jobs/{job_id}/confirm": STANDARD_WRITE,
     "POST /jobs/{job_id}/quotes": STANDARD_WRITE,
     "POST /jobs/{job_id}/quotes/{quote_id}/accept": STANDARD_WRITE,
+    # M18-P06 admin intake review. Keyed un-prefixed like the other /admin
+    # sub-routers (see /flags, /kyc): the coverage walker sees a mounted
+    # sub-router's own paths. One session per call by design — there is no bulk
+    # variant to rate-limit because there is no bulk variant at all.
+    "POST /intake/{session_id}/approve": ADMIN_WRITE,
+    "POST /intake/{session_id}/attach-canonical": ADMIN_WRITE,
+    "POST /intake/{session_id}/reject": ADMIN_WRITE,
+    "POST /intake/{session_id}/request-changes": ADMIN_WRITE,
     "POST /kyc/bootstrap": SENSITIVE_WRITE,
     "PATCH /kyc/draft": STANDARD_WRITE,
     "POST /kyc/resubmit": SENSITIVE_WRITE,
@@ -230,6 +250,13 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /tickets/verify": SENSITIVE_WRITE,
     "POST /tickets/verify/batch": SENSITIVE_WRITE,
     "POST /tickets/{ticket_id}/transfer": STANDARD_WRITE,
+    # M18-P05 intake review. Link mint/redeem are SENSITIVE: a link is a
+    # single-use credential-adjacent artefact, so minting is deliberately cheap
+    # to police and expensive to farm. Submission is SENSITIVE because it is the
+    # one act that creates a listing from the WhatsApp lane.
+    "POST /vendor/intake/links/redeem": SENSITIVE_WRITE,
+    "POST /vendor/intake/sessions/{session_id}/link": SENSITIVE_WRITE,
+    "POST /vendor/intake/sessions/{session_id}/submit": SENSITIVE_WRITE,
     "POST /vendor/listings": STANDARD_WRITE,
     "POST /vendor/listings/{listing_id}/images": STANDARD_WRITE,
     "POST /vendor/listings/{listing_id}/pause": STANDARD_WRITE,

@@ -901,6 +901,410 @@ export type Database = {
           },
         ]
       }
+      intake_deep_links: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          redeemed_at: string | null
+          session_id: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          redeemed_at?: string | null
+          session_id: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          redeemed_at?: string | null
+          session_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_deep_links_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "intake_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_draft_fields: {
+        Row: {
+          category_id: string | null
+          condition: string | null
+          created_at: string
+          description: string | null
+          price_ngwee: number | null
+          pricing_mode: string | null
+          quantity: number | null
+          sale_unit: string | null
+          session_id: string
+          specifications: Json
+          stock_mode: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          condition?: string | null
+          created_at?: string
+          description?: string | null
+          price_ngwee?: number | null
+          pricing_mode?: string | null
+          quantity?: number | null
+          sale_unit?: string | null
+          session_id: string
+          specifications?: Json
+          stock_mode?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          condition?: string | null
+          created_at?: string
+          description?: string | null
+          price_ngwee?: number | null
+          pricing_mode?: string | null
+          quantity?: number | null
+          sale_unit?: string | null
+          session_id?: string
+          specifications?: Json
+          stock_mode?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_draft_fields_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_draft_fields_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "intake_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_events: {
+        Row: {
+          detail: Json
+          disposition: string | null
+          from_status: string | null
+          id: string
+          kind: string
+          message_kind: string | null
+          occurred_at: string
+          provider_event_id: string | null
+          session_id: string | null
+          to_status: string | null
+          vendor_id: string | null
+        }
+        Insert: {
+          detail?: Json
+          disposition?: string | null
+          from_status?: string | null
+          id?: string
+          kind: string
+          message_kind?: string | null
+          occurred_at?: string
+          provider_event_id?: string | null
+          session_id?: string | null
+          to_status?: string | null
+          vendor_id?: string | null
+        }
+        Update: {
+          detail?: Json
+          disposition?: string | null
+          from_status?: string | null
+          id?: string
+          kind?: string
+          message_kind?: string | null
+          occurred_at?: string
+          provider_event_id?: string | null
+          session_id?: string | null
+          to_status?: string | null
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "intake_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_events_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "intake_events_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_field_provenance: {
+        Row: {
+          confidence: number | null
+          field_name: string
+          model_ref: string | null
+          recorded_at: string
+          session_id: string
+          source: string
+        }
+        Insert: {
+          confidence?: number | null
+          field_name: string
+          model_ref?: string | null
+          recorded_at?: string
+          session_id: string
+          source: string
+        }
+        Update: {
+          confidence?: number | null
+          field_name?: string
+          model_ref?: string | null
+          recorded_at?: string
+          session_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_field_provenance_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "intake_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_media: {
+        Row: {
+          byte_size: number
+          content_hash: string
+          fetched_at: string
+          height_px: number | null
+          id: string
+          mime_type: string
+          session_id: string
+          storage_path: string
+          width_px: number | null
+        }
+        Insert: {
+          byte_size: number
+          content_hash: string
+          fetched_at?: string
+          height_px?: number | null
+          id?: string
+          mime_type: string
+          session_id: string
+          storage_path: string
+          width_px?: number | null
+        }
+        Update: {
+          byte_size?: number
+          content_hash?: string
+          fetched_at?: string
+          height_px?: number | null
+          id?: string
+          mime_type?: string
+          session_id?: string
+          storage_path?: string
+          width_px?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_media_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "intake_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_messages: {
+        Row: {
+          id: string
+          kind: string
+          provider_message_id: string
+          purge_after: string
+          raw_excerpt: string | null
+          received_at: string
+          session_id: string
+        }
+        Insert: {
+          id?: string
+          kind: string
+          provider_message_id: string
+          purge_after?: string
+          raw_excerpt?: string | null
+          received_at?: string
+          session_id: string
+        }
+        Update: {
+          id?: string
+          kind?: string
+          provider_message_id?: string
+          purge_after?: string
+          raw_excerpt?: string | null
+          received_at?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "intake_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_sessions: {
+        Row: {
+          admin_notes: string | null
+          binding_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          last_activity_at: string
+          listing_id: string | null
+          pending_requests: Json
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          binding_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_activity_at?: string
+          listing_id?: string | null
+          pending_requests?: Json
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          binding_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_activity_at?: string
+          listing_id?: string | null
+          pending_requests?: Json
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_sessions_binding_id_fkey"
+            columns: ["binding_id"]
+            isOneToOne: false
+            referencedRelation: "intake_vendor_bindings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_sessions_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_sessions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "intake_sessions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_vendor_bindings: {
+        Row: {
+          consent_source: string
+          created_at: string
+          id: string
+          msisdn: string
+          opted_in_at: string
+          opted_out_at: string | null
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          consent_source: string
+          created_at?: string
+          id?: string
+          msisdn: string
+          opted_in_at?: string
+          opted_out_at?: string | null
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          consent_source?: string
+          created_at?: string
+          id?: string
+          msisdn?: string
+          opted_in_at?: string
+          opted_out_at?: string | null
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_vendor_bindings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "intake_vendor_bindings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_counters: {
         Row: {
           next_no: number

@@ -56,6 +56,7 @@ verify the next free number at branch time and record any change under DEVIATION
 ## Pebbles
 
 ### M18-P00 — Isolation pre-flight, kill-switch flag & config seam `S`
+
 **Deps:** none (`D35` locked) · **Files:** `supabase/migrations/0072_waha_intake_flag.sql` (insert
 `feature_flags.waha_vendor_intake` default `false`; `platform_config` key `waha_intake_vendor_allowlist`
 default `[]`) · `services/api/app/services/intake/__init__.py` · `services/api/app/services/intake/config.py`
@@ -76,6 +77,7 @@ in the repo; `WAHA_INTAKE_*` names distinct from `WHATSAPP_*` and `LENCO_*`; exi
 allowlisted; env unset ⇒ `configuration_error` (never a silent default); `config_audit` fires on flip.
 
 ### M18-P01 — Intake state model, provenance & RLS `M`
+
 **Deps:** P00 · **Files:** `supabase/migrations/0073_waha_intake_model.sql` ·
 `services/api/app/services/intake/state_machine.py` · `services/api/app/services/intake/sessions.py` ·
 `services/api/tests/test_intake_state_machine.py` · `services/api/tests/rls/` matrix rows
@@ -96,6 +98,7 @@ reversible; no account disclosure for an unknown number.
 cannot read B's session/draft/media); enrollment + disenrollment; retention column set on ingest.
 
 ### M18-P02 — Isolated WAHA inbound webhook & normaliser `M`
+
 **Deps:** P01 · **Files:** `services/api/app/routers/webhooks_waha_intake.py` ·
 `services/api/app/services/intake/normalise.py` · `services/api/app/core/ratelimit_policies.py`
 (register the new route) · `services/api/tests/test_webhooks_waha_intake.py`
@@ -119,6 +122,7 @@ flag off ⇒ `dropped_flag_off`; malformed JSON; non-E.164 sender; `git diff` pr
 untouched.
 
 ### M18-P03 — Safe media quarantine `M`
+
 **Deps:** P02 · **Files:** `supabase/migrations/0074_intake_media_bucket.sql` (private
 `vendor-intake-media` bucket + policies) · `services/api/app/services/intake/media.py` ·
 `services/api/tests/test_intake_media.py`
@@ -135,6 +139,7 @@ identical media ⇒ single stored object; expired provider URL; fetch timeout; c
 access denied.
 
 ### M18-P04 — Guided, constrained draft extraction `M`
+
 **Deps:** P03 · **Files:** `services/api/app/services/intake/orchestrator.py` ·
 `services/api/app/services/intake/extract.py` · `services/api/app/services/intake/schemas.py` ·
 `services/api/tests/test_intake_extraction.py`
@@ -152,7 +157,8 @@ blocked with a reason, no draft advance; every field carries a source label.
 **Tests:** ambiguous input; multilingual (EN/Bemba/Nyanja); **prompt injection** in caption and in image
 text; incomplete ⇒ follow-up asked; duplicate submission; unsupported product class; contradictory price.
 
-### M18-P05 — Vendor review & normal listing handoff `M` *(∥ P06)*
+### M18-P05 — Vendor review & normal listing handoff `M` _(∥ P06)_
+
 **Deps:** P04 · **Files:** `apps/vendor/app/[locale]/intake/page.tsx` · `intake/[sessionId]/page.tsx` ·
 `intake/_components/*` · `services/api/app/routers/vendor_intake.py` ·
 `packages/i18n/messages/en/vendor.json` (nested `intake` section) ·
@@ -169,7 +175,8 @@ duplicate submission is idempotent; interrupted session resumes; provenance surv
 **Tests:** 360px mobile; i18n + a11y (AA, ≥44px targets); interrupted/resumed session; ownership 403;
 duplicate submit; cap exceeded ⇒ blocked with reason; submitted listing status asserted `draft`.
 
-### M18-P06 — Admin review & publication control `M` *(∥ P05)*
+### M18-P06 — Admin review & publication control `M` _(∥ P05)_
+
 **Deps:** P04 · **Files:** `apps/admin/app/[locale]/intake/page.tsx` · `intake/[id]/page.tsx` ·
 `intake/_components/*` · `services/api/app/routers/admin_intake.py` (mounted on `admin_base`) ·
 `packages/i18n/messages/en/admin.json` (nested `intake` section) ·
@@ -188,7 +195,37 @@ other; no cross-vendor leakage in queue or detail.
 **Tests:** RBAC negative; cross-vendor leakage; idempotent re-approve; concurrent approve conflict;
 signed media URL TTL; reject-with-reason notifies the vendor via the **Lane 1** outbox (never WAHA).
 
+---
+
+## As-built notes for P05 ∥ P06 (2026-07-27)
+
+Recorded because the implementation made calls the spec left open, and a reviewer should see them
+without reading the diff:
+
+- **The listing seam is shared, not re-implemented.** `vendor_listings.create_listing` was refactored to
+  expose `create_listing_for_vendor(service_client, vendor=…, body=…)`; the HTTP route and the intake
+  handoff both call it. An intake-born listing therefore runs the identical prohibited-content screen,
+  wholesale-tier check, price-tier validation and status resolution. An intake-specific insert would
+  have been simpler and would have drifted the first time either path changed.
+- **Migration `0075_intake_handoff.sql`** adds `intake_sessions.listing_id | submitted_at | admin_notes`
+  and the `intake_deep_links` table. `listing_id` is `on delete set null`, never cascade: deleting a
+  listing must not erase the record of how it came to exist.
+- **The deep link is not the authorisation.** Only `sha256(token)` is stored; redemption additionally
+  requires an authenticated vendor who owns the session, so a forwarded link 403s. Unknown, expired and
+  already-redeemed all return the same 404 so the endpoint is not an enumeration oracle. Delivery is
+  **Lane 1 / in-app only** — the WAHA lane is strictly inbound-only and never carries it.
+- **Refusals over coercion.** `services/intake/handoff.py` refuses a `used` condition rather than
+  relabelling it `refurbished` (that would misdescribe a product to a buyer), refuses a non-integer
+  price, and refuses `tracked` stock with no quantity.
+- **The RLS FK guard was narrowed, not deleted.** `test_intake_force_rls.py` still asserts that no intake
+  table references `vendor_listings`, with `intake_sessions` as the single documented exception, whose
+  nullability and `SET NULL` delete rule are pinned by their own test.
+- **`vendor.intake.*` in bem/nya is EN passthrough** pending native-speaker review — recorded in
+  `packages/i18n/messages/PHASE1_NATIVE_REVIEW.md`. The surface is flag-gated, so nothing reaches a
+  vendor before that review.
+
 ### M18-P07 — n8n operations & one-to-one reminders `S`
+
 **Deps:** P05, P06 · **Files:** `infra/n8n/workflows/waha-intake-*.json` (importable definitions) ·
 `docs/ops/n8n-workflows.md` (registry entries) · `services/api/app/routers/internal_intake.py`
 (scoped internal endpoints) · `services/api/tests/test_internal_intake.py`
@@ -208,6 +245,7 @@ the ≤30-day window.
 metric counters increment per disposition.
 
 ### M18-P08 — Private-pilot proof & kill switch `M`
+
 **Deps:** P07 · **Files:** `services/api/tests/e2e/test_intake_pilot.py` (or `tests/e2e/intake.spec.ts`
 per the M16-P07 harness) · `docs/ops/waha-vendor-intake.md` (Part B evidence + Stage-2 exit criteria) ·
 `docs/plan/launch/intake-pilot-checklist.md`
