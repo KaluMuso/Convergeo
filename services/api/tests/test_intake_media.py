@@ -292,14 +292,14 @@ def _env(monkeypatch: pytest.MonkeyPatch) -> None:
 async def _ingest(
     store: Wrapper, data: bytes | None = None, *, error: Exception | None = None
 ) -> Any:
-    async def fake_fetch(_url: str) -> bytes:
+    async def fake_fetch(url: str) -> bytes:
         if error is not None:
             raise error
         assert data is not None
         return data
 
     original = media._fetch
-    media._fetch = fake_fetch  # type: ignore[assignment]
+    media._fetch = fake_fetch
     try:
         return await media.ingest_one(
             store,
@@ -308,7 +308,7 @@ async def _ingest(
             media_ref={"url": "https://waha.internal/media/1", "declared_mimetype": "image/jpeg"},
         )
     finally:
-        media._fetch = original  # type: ignore[assignment]
+        media._fetch = original
 
 
 @pytest.mark.asyncio
@@ -424,11 +424,11 @@ async def test_stored_hash_is_of_the_cleaned_bytes(store: Wrapper) -> None:
 async def test_failure_lands_in_recoverable_needs_details(store: Wrapper) -> None:
     """A rejection must leave a resumable session, not a half-attached draft."""
 
-    async def fake_fetch(_url: str) -> bytes:
+    async def fake_fetch(url: str) -> bytes:
         return b"not-an-image"
 
     original = media._fetch
-    media._fetch = fake_fetch  # type: ignore[assignment]
+    media._fetch = fake_fetch
     try:
         stored = await media.ingest_session_media(
             store,
@@ -437,7 +437,7 @@ async def test_failure_lands_in_recoverable_needs_details(store: Wrapper) -> Non
             media_refs=[{"url": "https://waha.internal/media/1"}],
         )
     finally:
-        media._fetch = original  # type: ignore[assignment]
+        media._fetch = original
 
     assert stored == []
     assert store.rows("intake_sessions")[0]["status"] == state_machine.NEEDS_DETAILS
