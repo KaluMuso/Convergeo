@@ -30,7 +30,7 @@ from typing import Annotated, Any, Final, Protocol
 
 from app.deps import get_supabase_client
 from app.media.cloudinary_signing import MAX_CLIP_DURATION_S
-from app.services.clips import screen, state_machine
+from app.services.clips import screen, spend, state_machine
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends, Request, Response
 
@@ -241,6 +241,19 @@ async def receive_cloudinary_callback(
         patch["duration_s"] = int(reported_duration)
 
     service_client.client.table(CLIPS_TABLE).update(patch).eq("id", clip_id).execute()
+
+    # The transcode happened, so it cost money — record it whether or not the
+    # screen goes on to reject the clip. A rejected clip still burned the credit,
+    # and a cost guard that only counted successes would under-report exactly the
+    # spend that most needs bounding.
+    try:
+        spend.record_spend(
+            service_client,
+            usd_micros=spend.transcode_cost_micros(service_client, clips=1),
+            clips=1,
+        )
+    except Exception:
+        logger.warning("clip spend accounting failed", extra={"clip_id": clip_id})
 
     # --- Automated screen decides the next state (never `published`) --------
     screen.apply_screen(

@@ -588,6 +588,47 @@ EXPECTATIONS: TableExpectations = {
             "delete": "deny",
         },
     },
+    "clip_spend_monthly": {
+        # M17-P08 cost accounting. Admin-readable so the dashboard works; NO
+        # client write grant at all — the only write path is the SECURITY
+        # DEFINER clip_record_spend function, executable by service_role only.
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.VENDOR: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+    },
     "categories": {
         Persona.ANON: {
             "select": "permit",

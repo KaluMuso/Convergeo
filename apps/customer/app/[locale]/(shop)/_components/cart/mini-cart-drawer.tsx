@@ -203,10 +203,19 @@ export async function refreshCart(): Promise<CartResponse | null> {
   }
 }
 
-export async function addCartItem(listingId: string, qty: number): Promise<CartResponse> {
+/**
+ * Add to cart. `clipId` (M17-P05) is optional attribution, not a second cart:
+ * the same endpoint, the same payload plus one field, and the server validates
+ * the clip before crediting anything — the client cannot mint credit.
+ */
+export async function addCartItem(
+  listingId: string,
+  qty: number,
+  clipId?: string,
+): Promise<CartResponse> {
   const cart = await cartRequest<CartResponse>("/cart/items", {
     method: "POST",
-    body: JSON.stringify({ listing_id: listingId, qty }),
+    body: JSON.stringify({ listing_id: listingId, qty, ...(clipId ? { clip_id: clipId } : {}) }),
   });
   const notices = cart.notices ?? (await fetchRevalidateNotices());
   setStoreState({ cart, notices });

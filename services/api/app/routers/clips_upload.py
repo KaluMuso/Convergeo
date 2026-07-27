@@ -28,7 +28,7 @@ from app.media.cloudinary_signing import (
     build_signed_clip_params,
 )
 from app.schemas.base import StrictModel
-from app.services.clips import screen, state_machine
+from app.services.clips import quota, screen, spend, state_machine
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
 from pydantic import Field
@@ -77,6 +77,23 @@ def _rows(response: Any) -> list[dict[str, Any]]:
     if isinstance(data, dict):
         return [data]
     return []
+
+
+def _vendor_tier(service_client: ServiceRoleClient, vendor_id: str) -> int:
+    """The vendor's KYC tier, defaulting to the most restrictive on any doubt."""
+    rows = _rows(
+        service_client.client.table("vendors")
+        .select("kyc_tier")
+        .eq("id", vendor_id)
+        .maybe_single()
+        .execute()
+    )
+    if not rows:
+        return 1
+    try:
+        return max(1, int(rows[0].get("kyc_tier") or 1))
+    except (TypeError, ValueError):
+        return 1
 
 
 def _category_name(service_client: ServiceRoleClient, category_id: str | None) -> str | None:
@@ -135,6 +152,22 @@ async def create_clip(
             http_status=400,
             details={"max_duration_s": MAX_CLIP_DURATION_S, "duration_s": body.duration_s},
         )
+
+    # M17-P08 cost guard. Checked at the upload seam and NOWHERE on the read
+    # path: when the month's video budget is spent, uploads pause but the feed
+    # keeps serving posters, prices and add-to-cart. A cost guard that took the
+    # shoppable surface down would turn a billing event into an outage.
+    spend.raise_if_killed(service_client)
+
+    # D9 tier allowance (M17-P06). Enforced here rather than in the studio UI
+    # because this is the route that mints a signed upload slot — a client-side
+    # check is a courtesy, this is the gate. Read from platform_config, so the
+    # founder can widen or narrow it without a deploy.
+    quota.enforce_clip_weekly_cap(
+        service_client,
+        vendor_id=scope.vendor_id,
+        tier=_vendor_tier(service_client, scope.vendor_id),
+    )
 
     category_name = _category_name(service_client, body.category_id)
 

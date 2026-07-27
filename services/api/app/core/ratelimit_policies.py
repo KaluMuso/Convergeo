@@ -282,6 +282,20 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /clips/{clip_id}/like": STANDARD_WRITE,
     "POST /clips/{clip_id}/report": SENSITIVE_WRITE,
     "POST /clips/{clip_id}/view": STANDARD_WRITE,
+    # M17-P06 vendor studio. Link management only — the upload itself is
+    # "POST /clips" above.
+    "DELETE /vendor/clips/{clip_id}/listings/{listing_id}": STANDARD_WRITE,
+    "POST /vendor/clips/{clip_id}/listings": STANDARD_WRITE,
+    # M17-P07 moderation, on the admin sub-router (keys are un-prefixed, matching
+    # the existing /flags and /kyc entries).
+    "POST /clips/reports/{report_id}/dismiss": ADMIN_WRITE,
+    "POST /clips/reports/{report_id}/uphold": ADMIN_WRITE,
+    "POST /clips/{clip_id}/approve": ADMIN_WRITE,
+    "POST /clips/{clip_id}/reject": ADMIN_WRITE,
+    "POST /clips/{clip_id}/takedown": ADMIN_WRITE,
+    # M17-P08 cost guard reversal. ADMIN_WRITE like the rest of the admin plane;
+    # the action is audited, so the ceiling here bounds volume, not accountability.
+    "POST /clip-analytics/reset-kill-switch": ADMIN_WRITE,
     "POST /vendor/intake/links/redeem": SENSITIVE_WRITE,
     "POST /vendor/intake/sessions/{session_id}/link": SENSITIVE_WRITE,
     "POST /vendor/intake/sessions/{session_id}/submit": SENSITIVE_WRITE,

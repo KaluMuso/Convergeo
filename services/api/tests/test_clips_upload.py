@@ -49,6 +49,7 @@ class FakeQuery:
     def __init__(self, parent: FakeTable) -> None:
         self._parent = parent
         self._filters: list[tuple[str, Any]] = []
+        self._gte: list[tuple[str, Any]] = []
         self._maybe_single = False
         self._op: str | None = None
         self._payload: dict[str, Any] | None = None
@@ -58,6 +59,13 @@ class FakeQuery:
 
     def eq(self, column: str, value: Any) -> FakeQuery:
         self._filters.append((column, value))
+        return self
+
+    def gte(self, column: str, value: Any) -> FakeQuery:
+        # The weekly-cap read filters on created_at; the fake seeds no clips, so
+        # matching everything is correct here and keeps the fake honest about
+        # what it does NOT model (time windows are covered in test_vendor_clips).
+        self._gte.append((column, value))
         return self
 
     def maybe_single(self) -> FakeQuery:
@@ -75,7 +83,9 @@ class FakeQuery:
         return self
 
     def _match(self, row: dict[str, Any]) -> bool:
-        return all(row.get(column) == value for column, value in self._filters)
+        if not all(row.get(column) == value for column, value in self._filters):
+            return False
+        return all(str(row.get(column) or "") >= str(value) for column, value in self._gte)
 
     def execute(self) -> MagicMock:
         if self._op == "insert":

@@ -77,6 +77,7 @@
       "common": "All apps — shared UI, navigation, theme",
       "auth": "All apps — sign in and sign up",
       "catalog": "Customer — product listings, detail, comparison",
+      "clips": "Customer — Vergeo Clips feed, playback and shoppable overlay",
       "search": "Customer — search and suggestions",
       "checkout": "Customer — cart and checkout",
       "orders": "Customer & vendor — order history and queue",
@@ -1064,6 +1065,111 @@
       "actionFailed": "That action did not complete.",
       "conflict": "Someone else changed this draft. Reload and try again.",
       "reasonRequired": "A reason is required."
+    }
+  },
+  "clips": {
+    "meta": {
+      "title": "Clip review — Vergeo5 Admin",
+      "description": "Review vendor clips before they appear in the customer feed."
+    },
+    "title": "Clip review",
+    "intro": "Clips awaiting a human decision. Nothing reaches the feed until you approve it.",
+    "loading": "Loading…",
+    "empty": {
+      "title": "Queue is clear",
+      "body": "No clips are waiting for review."
+    },
+    "error": {
+      "title": "Could not load the queue",
+      "retry": "Try again"
+    },
+    "queue": {
+      "age": "Waiting {hours}h",
+      "slaBreached": "Over the 24h review target",
+      "repeatOffender": "{count, plural, =0 {No prior takedowns} one {# prior takedown} other {# prior takedowns}}",
+      "mediaNotReady": "Video not finished processing",
+      "vendor": "Vendor",
+      "open": "Review",
+      "permissionDenied": "You do not have permission to review clips.",
+      "error": "The clip queue could not be loaded."
+    },
+    "detail": {
+      "title": "Review clip",
+      "preview": "Preview",
+      "previewExpiry": "Preview links expire in {minutes} minutes.",
+      "caption": "Caption",
+      "category": "Category",
+      "duration": "Duration",
+      "linkedProducts": "Linked products",
+      "screenVerdict": "Automated screen",
+      "screenPassed": "Passed the automated screen",
+      "vendorTier": "KYC tier {tier}",
+      "vendorStatus": "Vendor status: {status}",
+      "reportCount": "{count, plural, =0 {No reports} one {# report} other {# reports}}",
+      "mediaProblems": "This clip cannot be published yet: {problems}",
+      "back": "Back to queue"
+    },
+    "actions": {
+      "approve": "Approve and publish",
+      "approving": "Publishing…",
+      "reject": "Reject",
+      "rejecting": "Rejecting…",
+      "takedown": "Take down",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Tell the vendor what to fix",
+      "reasonRequired": "A reason is required.",
+      "confirmTakedown": "Take this clip down now?",
+      "approved": "Published",
+      "rejected": "Rejected",
+      "takenDown": "Taken down",
+      "conflict": "Someone else acted on this clip first. Reload to see the current state.",
+      "mediaNotReady": "This clip's video is not fully processed, so it cannot be published.",
+      "failed": "That action did not go through."
+    },
+    "reports": {
+      "title": "Reported clips",
+      "intro": "Reports from shoppers. Target: triaged within 24 hours.",
+      "empty": {
+        "title": "No open reports",
+        "body": "Nothing has been reported."
+      },
+      "reason": "Reported reason",
+      "age": "Reported {hours}h ago",
+      "slaBreached": "Over the 24h triage target",
+      "dismiss": "Dismiss",
+      "uphold": "Uphold and take down",
+      "noteLabel": "Note (optional)",
+      "dismissed": "Dismissed",
+      "upheld": "Upheld — clip taken down",
+      "permissionDenied": "You do not have permission to triage clip reports.",
+      "error": "The report queue could not be loaded."
+    },
+    "escalation": {
+      "suspended": "This vendor has been suspended and all their clips are hidden.",
+      "policy": "Three upheld takedowns in 90 days suspends the vendor."
+    },
+    "analytics": {
+      "title": "Clip costs & conversion",
+      "intro": "Video spend for the month, and whether clips are actually selling anything.",
+      "costTitle": "This month's video spend",
+      "spendOfCap": "{spend} of {cap}",
+      "headroom": "{amount} left",
+      "percentUsed": "{percent}% of the cap used",
+      "uploadsActive": "Uploads are running normally.",
+      "paused": "Uploads are paused — the monthly video budget is spent.",
+      "pausedBody": "The feed is still up and still shoppable: posters, prices and add-to-cart all work. Only new uploads are paused.",
+      "reset": "Resume uploads",
+      "resetFailed": "Uploads could not be resumed.",
+      "funnelTitle": "Clip funnel",
+      "published": "Live clips",
+      "pendingReview": "Awaiting review",
+      "views": "Views",
+      "likes": "Likes",
+      "addToCarts": "Added to cart",
+      "attributedOrders": "Attributed orders",
+      "attributionNote": "Attribution is validated server-side: a clip only earns credit for a product it actually links.",
+      "permissionDenied": "You do not have permission to view clip analytics.",
+      "error": "Clip analytics could not be loaded."
     }
   }
 }
