@@ -754,3 +754,53 @@ def test_pending_requests_are_rendered_as_keys_not_copy(
 
     body = client.get(f"/vendor/intake/sessions/{SESSION_ID}", headers=_headers()).json()
     assert body["pending_requests"][0]["key"] == "intake.question.price_missing"
+
+
+# --- Request-DTO contract ---------------------------------------------------
+def test_patch_literals_match_the_intake_enums() -> None:
+    """The strict request DTO and the internal enums must not drift apart.
+
+    ``DraftPatchRequest`` is a ``StrictModel`` (``strict=True``), which will not
+    coerce a JSON string into a ``StrEnum`` member — a field declared with the
+    enum type is silently unsettable by any real client (caught by the M18-P08
+    pilot chain). The Literals therefore restate the values, and this test is
+    what stops the two lists diverging.
+    """
+    from typing import get_args
+
+    from app.routers import vendor_intake
+    from app.services.intake.schemas import Condition, PricingMode, StockMode
+
+    assert set(get_args(vendor_intake.ConditionLiteral)) == {c.value for c in Condition}
+    assert set(get_args(vendor_intake.PricingModeLiteral)) == {p.value for p in PricingMode}
+    assert set(get_args(vendor_intake.StockModeLiteral)) == {s.value for s in StockMode}
+
+
+@pytest.mark.parametrize("condition", ["new", "refurbished", "used"])
+def test_patch_accepts_every_condition_as_a_json_string(
+    client: TestClient, fake: FakeSupabaseClient, monkeypatch: pytest.MonkeyPatch, condition: str
+) -> None:
+    """A vendor app sends JSON strings, not Python enums. All must be accepted."""
+    _seed(fake)
+    _auth(monkeypatch)
+    response = client.patch(
+        f"/vendor/intake/sessions/{SESSION_ID}/draft",
+        headers=_headers(),
+        json={"condition": condition},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["draft"]["condition"] == condition
+
+
+def test_patch_still_rejects_an_unknown_condition(
+    client: TestClient, fake: FakeSupabaseClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Widening to Literals must not have widened to 'any string'."""
+    _seed(fake)
+    _auth(monkeypatch)
+    response = client.patch(
+        f"/vendor/intake/sessions/{SESSION_ID}/draft",
+        headers=_headers(),
+        json={"condition": "haunted"},
+    )
+    assert response.status_code == 422

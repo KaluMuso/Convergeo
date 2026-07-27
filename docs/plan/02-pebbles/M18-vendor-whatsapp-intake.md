@@ -274,3 +274,34 @@ retention/deletion check; trace redaction assertion (no raw body, no full MSISDN
 Stage 2 (production) additionally requires: no ban/quality event on the intake number; audit-verified
 absence of any group/customer/payment/support message; acceptable draft quality; and one rehearsed
 kill-switch/incident drill.
+
+## As-built notes for P07 → P08 (2026-07-27)
+
+- **Workflows live at `infra/n8n/*.json`, not `infra/n8n/workflows/`.** The spec named a `workflows/`
+  subdirectory that does not exist; the repo keeps 22 workflow files flat, and
+  `services/api/tests/test_n8n_registry.py` globs `infra/n8n/*.json`. Following the spec would have
+  put the two new files outside the completeness gate — exactly the drift that test exists to catch.
+  Same reasoning put the checklist at `docs/plan/intake-pilot-checklist.md` rather than
+  `docs/plan/launch/`.
+- **Three sweep endpoints, not one tick.** `/expire-sessions`, `/purge-messages` and `/purge-links`
+  are separate so an operator can disable retention purging without also disabling session expiry,
+  and a failure in one does not stall the others.
+- **Expiry uses the guarded transition, not a bulk UPDATE.** A bulk `UPDATE ... WHERE expires_at < now()`
+  would be one query instead of N, but would write no `intake_events` rows — the expiry would be
+  invisible in the audit trail. Losing a transition race is counted as `skipped`, not an error.
+- **Retention minimises, never deletes.** Only `raw_excerpt` is nulled; the row, its
+  `provider_message_id` and its disposition survive. Deleting the row would silently re-open that
+  message to reprocessing, because replay-dedupe keys on exactly that id.
+- **A redeemed deep link is kept; an expired unredeemed one is deleted.** The former is evidence a
+  vendor opened the session and matters in an incident review; the latter is a hash recording nothing.
+- **P08 found a real P05 defect.** `DraftPatchRequest` declared `condition`/`pricing_mode`/`stock_mode`
+  with the `StrEnum` types from `services/intake/schemas.py`, but request DTOs subclass `StrictModel`
+  (`strict=True`), which will not coerce a JSON string into an enum member — so those three fields
+  were **unsettable by any real client**. Every per-pebble test passed because they exercised the
+  model, not a JSON request. Fixed to `Literal` (the repo's convention), with
+  `test_patch_literals_match_the_intake_enums` pinning the two lists together. This is the argument
+  for the pilot suite existing at all: the pieces agreed with their own mocks while disagreeing with
+  each other.
+- **The pilot suite shares one Supabase double across the whole chain**, so the session the webhook
+  creates is the same row the vendor router reads and the admin router approves — a per-pebble stub
+  cannot catch a contract mismatch between them.

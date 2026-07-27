@@ -36,21 +36,21 @@ All of `D15`'s guarantees for every other channel are unchanged.
 
 ### 3. The two lanes (authoritative table)
 
-|                                      | **Lane 1 — Cloud API (official)**                       | **Lane 2 — WAHA vendor-intake**                                        |
-| ------------------------------------ | ------------------------------------------------------- | ---------------------------------------------------------------------- |
-| **Provider**                         | Meta WhatsApp Business Cloud API                        | Self-hosted WAHA gateway                                               |
-| **Governed by**                      | `D15` (unchanged)                                       | `D35` (this doc)                                                       |
-| **Direction**                        | Outbound transactional + inbound STOP/START             | **Inbound** vendor product messages only                               |
-| **Audience**                         | Customers, vendors, founder alerts                      | **Verified vendors only** (KYC ≥ T1, `vendors.status='active'`)        |
-| **Message shape**                    | Approved Meta templates + 24h service window            | Free-form 1:1 chat from the vendor                                     |
-| **Purpose**                          | Order/payment/shipping/OTP/KYC/RFQ notifications        | Private intake/staging **only**                                        |
-| **Number**                           | Dedicated Cloud API number (`WHATSAPP_PHONE_NUMBER_ID`) | **Separate** dedicated `+260` intake number                            |
-| **Sends customer messages?**         | Yes (its whole job)                                     | **Never**                                                              |
-| **Handles OTP / payment / support?** | OTP yes; payment/support via app                        | **Never — forbidden**                                                  |
-| **Groups / broadcast?**              | N/A                                                     | **Forbidden — dropped at ingestion**                                   |
-| **Can publish / approve anything?**  | No                                                      | **No — drafts only, human approves**                                   |
-| **Ban blast radius**                 | Notifications (mitigated by SMS/email fallback)         | **Vendor intake only** — Lane 1 untouched by design                    |
-| **Kill switch**                      | (channel is core)                                       | `feature_flags.waha_vendor_intake = false`                             |
+|                                      | **Lane 1 — Cloud API (official)**                       | **Lane 2 — WAHA vendor-intake**                                 |
+| ------------------------------------ | ------------------------------------------------------- | --------------------------------------------------------------- |
+| **Provider**                         | Meta WhatsApp Business Cloud API                        | Self-hosted WAHA gateway                                        |
+| **Governed by**                      | `D15` (unchanged)                                       | `D35` (this doc)                                                |
+| **Direction**                        | Outbound transactional + inbound STOP/START             | **Inbound** vendor product messages only                        |
+| **Audience**                         | Customers, vendors, founder alerts                      | **Verified vendors only** (KYC ≥ T1, `vendors.status='active'`) |
+| **Message shape**                    | Approved Meta templates + 24h service window            | Free-form 1:1 chat from the vendor                              |
+| **Purpose**                          | Order/payment/shipping/OTP/KYC/RFQ notifications        | Private intake/staging **only**                                 |
+| **Number**                           | Dedicated Cloud API number (`WHATSAPP_PHONE_NUMBER_ID`) | **Separate** dedicated `+260` intake number                     |
+| **Sends customer messages?**         | Yes (its whole job)                                     | **Never**                                                       |
+| **Handles OTP / payment / support?** | OTP yes; payment/support via app                        | **Never — forbidden**                                           |
+| **Groups / broadcast?**              | N/A                                                     | **Forbidden — dropped at ingestion**                            |
+| **Can publish / approve anything?**  | No                                                      | **No — drafts only, human approves**                            |
+| **Ban blast radius**                 | Notifications (mitigated by SMS/email fallback)         | **Vendor intake only** — Lane 1 untouched by design             |
+| **Kill switch**                      | (channel is core)                                       | `feature_flags.waha_vendor_intake = false`                      |
 
 **The invariant:** a failure, ban, or compromise in Lane 2 must leave Lane 1 fully operational. Lane separation is what makes re-admitting WAHA acceptable under the NB-7/NB-8 risks.
 
@@ -88,14 +88,14 @@ The intake identity is the vendor's **already-verified** WhatsApp MSISDN capture
 
 ### 6. Provider & account ownership (NB-7 / NB-9)
 
-| Asset                       | Owner / authority                                                          | Separation requirement                                                                                                                                              |
-| --------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Intake `+260` number**    | Vergeo5 legal entity (PACRA), controlled under `convergeozambia@gmail.com` | **Distinct** number from the Cloud API sender **and** from any `waha.vergeo.company` / ZedApply / agency WAHA sender. It is paired only through a founder-controlled intake-device/session procedure; it is never shared or reused by those accounts. |
-| **Cloud API sender number** | Vergeo5 (Meta WABA)                                                        | Never shared with WAHA. NB-7 number-separation must be **proven and recorded** before the pilot (§10).                                                              |
-| **WAHA instance**           | Vergeo5, on an **isolated** host/compartment                               | Not co-tenant with the Cloud API path, the customer/vendor/admin apps, or ZedApply `zedcv-backend` (NB-8). Own network egress.                                      |
-| **Intake secrets**          | Vergeo5 backend secret store                                               | Names in §8; never in repo; rotated independently of Lenco/Cloud API.                                                                                               |
-| **Private intake data/media** | The submitting vendor (RLS-scoped)                                       | Private intake/staging records and media references are vendor-scoped; admin can review after the later M18 handoff.                                                     |
-| **Approval authority**      | **Founder only**                                                           | The single human approver for pilot→prod (§10). No AI, no automation, no non-owner grants WAHA scope.                                                               |
+| Asset                         | Owner / authority                                                          | Separation requirement                                                                                                                                                                                                                                |
+| ----------------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Intake `+260` number**      | Vergeo5 legal entity (PACRA), controlled under `convergeozambia@gmail.com` | **Distinct** number from the Cloud API sender **and** from any `waha.vergeo.company` / ZedApply / agency WAHA sender. It is paired only through a founder-controlled intake-device/session procedure; it is never shared or reused by those accounts. |
+| **Cloud API sender number**   | Vergeo5 (Meta WABA)                                                        | Never shared with WAHA. NB-7 number-separation must be **proven and recorded** before the pilot (§10).                                                                                                                                                |
+| **WAHA instance**             | Vergeo5, on an **isolated** host/compartment                               | Not co-tenant with the Cloud API path, the customer/vendor/admin apps, or ZedApply `zedcv-backend` (NB-8). Own network egress.                                                                                                                        |
+| **Intake secrets**            | Vergeo5 backend secret store                                               | Names in §8; never in repo; rotated independently of Lenco/Cloud API.                                                                                                                                                                                 |
+| **Private intake data/media** | The submitting vendor (RLS-scoped)                                         | Private intake/staging records and media references are vendor-scoped; admin can review after the later M18 handoff.                                                                                                                                  |
+| **Approval authority**        | **Founder only**                                                           | The single human approver for pilot→prod (§10). No AI, no automation, no non-owner grants WAHA scope.                                                                                                                                                 |
 
 "Convergeo the automation agency" and Vergeo5 the marketplace are **different concerns**; the agency's WAHA usage is out of scope and must stay off Vergeo5's number/host.
 
@@ -116,10 +116,10 @@ Added to `infra/.env.example` **by the future implementation pebble**, not now. 
 
 | Name                         | Purpose                                                                                                                                   |
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `WAHA_INTAKE_BASE_URL`       | Internal URL of the isolated WAHA instance for the future server-side intake/media-retrieval seam (host/routing, not a secret).          |
-| `WAHA_INTAKE_API_KEY`        | API key the future server-side intake/media-retrieval seam presents to WAHA. It must never authorise customer or outbound messaging.     |
+| `WAHA_INTAKE_BASE_URL`       | Internal URL of the isolated WAHA instance for the future server-side intake/media-retrieval seam (host/routing, not a secret).           |
+| `WAHA_INTAKE_API_KEY`        | API key the future server-side intake/media-retrieval seam presents to WAHA. It must never authorise customer or outbound messaging.      |
 | `WAHA_INTAKE_SESSION`        | WAHA session name bound to the dedicated intake number.                                                                                   |
-| `WAHA_INTAKE_WEBHOOK_SECRET` | Shared secret for WAHA `2026.5.1` inbound raw-body HMAC-SHA512 (`openssl rand -hex 32`).                                                   |
+| `WAHA_INTAKE_WEBHOOK_SECRET` | Shared secret for WAHA `2026.5.1` inbound raw-body HMAC-SHA512 (`openssl rand -hex 32`).                                                  |
 | `WAHA_INTAKE_ALLOWED_IPS`    | Space-separated CIDR allowlist for the Caddy `remote_ip` matcher on the intake route (quoted).                                            |
 | `WAHA_INTAKE_SENDER_E164`    | The dedicated `+260` intake number — recorded to **assert it differs** from the Cloud API sender and any agency WAHA sender (NB-7 check). |
 
@@ -172,6 +172,17 @@ Every inbound intake event is recorded to an **append-only** audit trail (mirror
 
 Operational steps for the **founder/operator**. **Do not run any of this until §10 Stage 1 is founder-approved.** Until then the lane stays design-only, flag off, nothing installed.
 
+> **Evidence lives in `docs/plan/intake-pilot-checklist.md` (M18-P08).** That file is the recordable
+> half of this runbook: the drill table for R2/R4, the enrolment/consent boxes, the retention checks,
+> and the Stage-1 / Stage-2 sign-off rows. **A pilot is not live because the code is merged and CI is
+> green** — it is live when a human has ticked those boxes and recorded the decision.
+>
+> The automated half is `services/api/tests/e2e/test_intake_pilot.py`, which proves in CI that the
+> full chain reaches `active` **only** after a human approves, and that six negative paths — group
+> message, unknown number, invalid signature, flag off, prohibited class, media failure — cannot
+> publish. It also proves the R4 property that makes the switch usable: flipping the flag off stops
+> ingestion **without** destroying in-flight vendor drafts and **without** touching Lane 1.
+
 ### R1. Pre-flight checklist (before enabling anything)
 
 - [ ] `D35` present in `00-decisions.md`; this doc reviewed.
@@ -211,7 +222,7 @@ Operational steps for the **founder/operator**. **Do not run any of this until �
 | Trigger                                                            | Immediate action                                                                                        | Follow-up                                                                                                                                                                           |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Intake number **banned/flagged** by WhatsApp                       | Kill switch (R4).                                                                                       | Because the lane is isolated + inbound-only, **Lane 1 is untouched** — confirm notifications still flow. Assess number replacement; do **not** move intake to the Cloud API number. |
-| Number/session **compromised**                                     | Kill switch; revoke `WAHA_INTAKE_SESSION`; rotate `WAHA_INTAKE_API_KEY` + `WAHA_INTAKE_WEBHOOK_SECRET`. | Re-provision on the isolated host; review audit for private intake records created while compromised (none can have reached a listing through this lane).                         |
+| Number/session **compromised**                                     | Kill switch; revoke `WAHA_INTAKE_SESSION`; rotate `WAHA_INTAKE_API_KEY` + `WAHA_INTAKE_WEBHOOK_SECRET`. | Re-provision on the isolated host; review audit for private intake records created while compromised (none can have reached a listing through this lane).                           |
 | **Secret leak** (`WAHA_INTAKE_*`)                                  | Kill switch; rotate the leaked secret(s) immediately.                                                   | Rotation does **not** affect Lenco/Cloud API secrets (separate). Confirm `.env` never entered the repo.                                                                             |
 | **Group / customer / payment / support** message observed in audit | Kill switch.                                                                                            | Root-cause the enforcement gap (§4/§5) before re-enabling; this is a scope breach, treat as high severity.                                                                          |
 | Webhook **auth-failure** spike                                     | Verify `WAHA_INTAKE_ALLOWED_IPS` + secret; the route is fail-closed so no bad data is processed.        | If it is probing, keep the flag off until the source is understood.                                                                                                                 |
@@ -227,6 +238,10 @@ WAHA intake is fully reversible: set `waha_vendor_intake = false`, stop the WAHA
 
 ## Related
 
+- `docs/plan/intake-pilot-checklist.md` — **M18-P08 pilot checklist + Stage-1/Stage-2 sign-off rows.**
+- `services/api/tests/e2e/test_intake_pilot.py` — the automated non-publishing / kill-switch proof.
+- `docs/ops/n8n-workflows.md` — `waha-intake-sweeps.json` (expiry + §12 retention) and
+  `waha-intake-digest.json` (reviewer-queue digest); both ship **inactive**.
 - `docs/plan/00-decisions.md` — **D15** (Cloud-API-only, WAHA ban) and **D35** (this narrow amendment).
 - `docs/ops/whatsapp-cloud-api-setup.md` — Lane 1 official Cloud API (unchanged).
 - WAHA [`2026.5.1` Events contract](https://waha.devlike.pro/docs/how-to/events/) — pinned `X-Webhook-Hmac` / `sha512`, request-ID, and timestamp behaviour for the future implementation.
