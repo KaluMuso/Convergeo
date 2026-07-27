@@ -5,6 +5,26 @@
 **Supersedes:** earlier readiness % claims where this report cites newer live probes  
 **Companions:** `current-implementation-board.md`, `release-gates.md`, programme evidence on PRs #376–#380 (not all merged to master at audit tip)
 
+> ### ⏳ DATED SNAPSHOT — live rows have drifted (annotated 2026-07-27, RC-P01)
+>
+> This report is a **point-in-time audit**. Its gate reasoning and its **NO_GO** recommendation still
+> stand — the current recommendation is also **NO_GO** — but several §1 *live* rows are no longer true.
+> Nothing below has been edited or re-scored; the drift is recorded here instead, because rewriting a
+> dated audit in place would destroy the record of what was actually observed on 2026-07-20.
+>
+> | §1 row                | As recorded 2026-07-20        | Later observation                                                                       |
+> | --------------------- | ----------------------------- | --------------------------------------------------------------------------------------- |
+> | Master SHA `d9839db`  | audit tip                     | **stale** — master has advanced many times since; read it with `git rev-parse origin/master` |
+> | API 502               | `/healthz` 502                | **200** on 2026-07-23 (`../2026-07-23/live-probe-gap-report.md`); **UNKNOWN** on 2026-07-27 (no egress) |
+> | Live migration tip `0063` | `0064`/`0065` unapplied   | `0064`+`0065` **applied**; live tip is **`0071`** on 2026-07-27, with repo at `0079`     |
+> | Frontend prod SHAs behind tip | customer/vendor/admin lag | all three Vercel production deployments **READY at master tip** on 2026-07-27           |
+> | n8n 3 live / 0 active | fail-closed                   | **9 workflows, 7 active** on 2026-07-27                                                 |
+>
+> Unchanged and re-verified on 2026-07-27: `public_launch=false`, `zamtel_collections=false`, and
+> `payments`/`orders`/`ledger_transactions`/`kyc_records` all **0**.
+>
+> **Current release truth:** `../2026-07-27/release-truth.md` · **Current summary:** `docs/plan/00-status.md`.
+
 ---
 
 ## Final recommendation

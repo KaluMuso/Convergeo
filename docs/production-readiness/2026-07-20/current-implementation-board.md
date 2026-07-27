@@ -6,7 +6,25 @@
 **Live probes (Prompt 12):** Supabase `dpadrlxukcjbewpqympu`, n8n MCP, Vercel, `api.vergeo5.com`, customer routes.  
 **Companions:** `go-no-go-report.md`, `gap-analysis-vs-docs.md`, `master-vs-docs-representation-report.md`, `docs/plan/00-status.md`, `docs/plan/launch-checklist.md`, `docs/production-readiness/2026-07-18/consolidated/release-gates.md`, programme PRs #375–#380 merged; #381 go/no-go (this PR); ops-drills on master via #379.
 
-**Do not reimplement:** `refunds.source_key` / repo file `supabase/migrations/0065_refunds_source_key_uniq.sql` (originally merged via PR #352, renumbered by RC-02). Ops must **apply** that SQL to live after `0064` FORCE RLS — not rewrite the feature.
+**Do not reimplement:** `refunds.source_key` / repo file `supabase/migrations/0065_refunds_source_key_uniq.sql` (originally merged via PR #352, renumbered by RC-02). Ops must **apply** that SQL to live after `0064` FORCE RLS — not rewrite the feature. **Closed:** `0064` and `0065` are both applied live as of the 2026-07-23 probe and re-confirmed 2026-07-27.
+
+> ### ⏳ DATED SNAPSHOT — §0 fingerprint has drifted (annotated 2026-07-27, RC-P01)
+>
+> This board records what was observed on **2026-07-20**. It has not been re-scored, because a dated
+> board that gets edited in place stops being evidence. The rows below are what changed since; the
+> current picture lives in `../2026-07-27/release-truth.md`.
+>
+> - **Migrations:** the `0063` collision is closed and `0064`/`0065` are applied. Live ledger tip is
+>   **`0071`** — but the repo is now at **`0079`**, so `0072`–`0079` (M18 intake + M17 Clips) are
+>   **unapplied**, and the M17/M18 tables and flag rows **do not exist live**.
+> - **Frontends:** all three Vercel production deployments are **READY at master tip**, not behind it.
+> - **n8n:** **9 workflows, 7 active** (not 2 active / 0 registry-active). Neither WAHA intake
+>   workflow has been imported.
+> - **API:** **UNKNOWN** as of 2026-07-27 — no egress from the auditing session. Do not read the
+>   2026-07-23 `200` as current.
+> - **New, not in this board:** the scheduled **restore drill has failed 4/4 runs** (RG-5).
+>
+> Unchanged: money/KYC rows all `0`; `public_launch=false`; recommendation **NO_GO**.
 
 ---
 
