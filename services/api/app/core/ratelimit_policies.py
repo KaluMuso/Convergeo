@@ -53,6 +53,16 @@ ADMIN_WRITE = RateLimitPolicy(scope="write_admin", limit=120, window=timedelta(m
 # Internal cron/n8n ticks are called by trusted schedulers on a shared secret;
 # they get a generous machine-to-machine ceiling rather than a human one.
 INTERNAL_CRON = RateLimitPolicy(scope="internal_cron", limit=240, window=timedelta(minutes=1))
+# WAHA vendor intake (D35 Lane 2). Deliberately NOT added to EXEMPT_ROUTE_IDS:
+# the two exemptions there exist to tolerate retries from EXTERNAL providers we
+# do not control (Lenco, Meta). Lane 2 posts from our own isolated host, so
+# rate-limiting it costs us nothing and bounds the damage if that host is ever
+# compromised or misconfigured into a loop. Sized for a human vendor's messages,
+# not machine traffic.
+WAHA_INTAKE_WEBHOOK = RateLimitPolicy(
+    scope="webhook_waha_intake", limit=60, window=timedelta(minutes=1)
+)
+
 # Public, unauthenticated telemetry beacon (navigator.sendBeacon). Higher ceiling than
 # human writes — a batch fires ~once per page-session — and enforcement is fail-open, so a
 # limiter outage never drops analytics. Enforced in routers/analytics_collect.py.
@@ -143,6 +153,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /flags/{flag_id}/remove": ADMIN_WRITE,
     "POST /flags/{flag_id}/unpublish": ADMIN_WRITE,
     "POST /flags/{flag_id}/warn-vendor": ADMIN_WRITE,
+    "POST /webhooks/waha-intake": WAHA_INTAKE_WEBHOOK,
     "POST /internal/analytics/retention-tick": INTERNAL_CRON,
     "POST /internal/digest": INTERNAL_CRON,
     "POST /internal/dispatch/tick": INTERNAL_CRON,
