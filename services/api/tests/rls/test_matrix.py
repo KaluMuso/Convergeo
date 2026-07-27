@@ -2427,6 +2427,9 @@ EXPECTATIONS: TableExpectations = {
     "intake_draft_fields": client_invisible(),
     "intake_field_provenance": client_invisible(),
     "intake_events": client_invisible(),
+    # M18-P05 (0075). Same posture: a review link is minted and redeemed through
+    # the API, never read directly by a client.
+    "intake_deep_links": client_invisible(),
     "webhook_events": {
         Persona.ANON: {
             "select": "deny",

@@ -901,6 +901,41 @@ export type Database = {
           },
         ]
       }
+      intake_deep_links: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          redeemed_at: string | null
+          session_id: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          redeemed_at?: string | null
+          session_id: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          redeemed_at?: string | null
+          session_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_deep_links_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "intake_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intake_draft_fields: {
         Row: {
           category_id: string | null
@@ -1147,38 +1182,47 @@ export type Database = {
       }
       intake_sessions: {
         Row: {
+          admin_notes: string | null
           binding_id: string
           created_at: string
           expires_at: string
           id: string
           last_activity_at: string
+          listing_id: string | null
           pending_requests: Json
           rejection_reason: string | null
           status: string
+          submitted_at: string | null
           updated_at: string
           vendor_id: string
         }
         Insert: {
+          admin_notes?: string | null
           binding_id: string
           created_at?: string
           expires_at?: string
           id?: string
           last_activity_at?: string
+          listing_id?: string | null
           pending_requests?: Json
           rejection_reason?: string | null
           status?: string
+          submitted_at?: string | null
           updated_at?: string
           vendor_id: string
         }
         Update: {
+          admin_notes?: string | null
           binding_id?: string
           created_at?: string
           expires_at?: string
           id?: string
           last_activity_at?: string
+          listing_id?: string | null
           pending_requests?: Json
           rejection_reason?: string | null
           status?: string
+          submitted_at?: string | null
           updated_at?: string
           vendor_id?: string
         }
@@ -1188,6 +1232,13 @@ export type Database = {
             columns: ["binding_id"]
             isOneToOne: false
             referencedRelation: "intake_vendor_bindings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_sessions_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_listings"
             referencedColumns: ["id"]
           },
           {

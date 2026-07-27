@@ -1472,5 +1472,90 @@
       "orders": "Ama-order",
       "profile": "Profile"
     }
+  },
+  "intake": {
+    "meta": {
+      "title": "Ama-draft ya WhatsApp — Vergeo5 Vendor",
+      "description": "Review product drafts created from your WhatsApp messages before they go live."
+    },
+    "title": "Ama-draft ya WhatsApp",
+    "intro": "Products you sent by WhatsApp. Nothing is listed until you check it and submit.",
+    "loading": "Loading…",
+    "empty": {
+      "title": "No drafts yet",
+      "body": "Send a photo and a price to the Vergeo5 vendor number and it will appear here."
+    },
+    "error": {
+      "title": "Could not load your drafts",
+      "retry": "Try again"
+    },
+    "status": {
+      "collecting": "Collecting",
+      "needs_details": "Needs details",
+      "ready_for_vendor_review": "Ready to review",
+      "submitted": "Submitted",
+      "pending_admin_review": "With Vergeo5",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "expired": "Expired"
+    },
+    "detail": {
+      "title": "Check this draft",
+      "intro": "Correct anything that is wrong. It only goes live after Vergeo5 approves it.",
+      "photos": "Photos",
+      "photoAlt": "Draft photo {position}",
+      "noPhotos": "No photos yet.",
+      "provenance": "Where this came from",
+      "missing": "Still needed",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "submit": "Submit for review",
+      "submitting": "Submitting…",
+      "submitted": "Submitted for review. Vergeo5 will check it shortly.",
+      "back": "Back to drafts"
+    },
+    "fields": {
+      "title": "Product name",
+      "price_ngwee": "Price",
+      "condition": "Condition",
+      "quantity": "Quantity",
+      "stock_mode": "Stock",
+      "sale_unit": "Sold per",
+      "description": "Description",
+      "category_slug": "Category",
+      "category_id": "Category",
+      "pricing_mode": "Pricing"
+    },
+    "source": {
+      "label": "Source",
+      "vendor_typed": "You typed this",
+      "rule": "Read from your message",
+      "model": "Suggested — please check"
+    },
+    "question": {
+      "title_missing": "What is this product called?",
+      "category_missing": "Which category does it belong to?",
+      "price_missing": "What is the price in kwacha?",
+      "condition_missing": "Is it new or refurbished?",
+      "possible_duplicate": "This looks like an earlier draft. Check before submitting.",
+      "prohibited_class": "This product class cannot be listed on Vergeo5.",
+      "media_failed": "A photo could not be saved. Please send it again."
+    },
+    "errors": {
+      "loadFailed": "Could not load this draft.",
+      "saveFailed": "Could not save your changes.",
+      "submitFailed": "Could not submit this draft.",
+      "notYours": "This draft is not yours.",
+      "notEditable": "This draft can no longer be edited.",
+      "notReady": "This draft is not ready to submit yet.",
+      "linkInvalid": "This link has expired or has already been used.",
+      "rateLimited": "Too many requests. Please wait a moment.",
+      "incomplete_draft": "Some details are still missing.",
+      "invalid_price": "The price is not valid.",
+      "missing_quantity": "Add how many you have in stock.",
+      "unsupported_condition": "Used items cannot be listed. Choose new or refurbished.",
+      "unsupported_stock_mode": "That stock option is not supported."
+    }
   }
 }

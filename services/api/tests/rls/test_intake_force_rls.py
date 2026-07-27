@@ -22,7 +22,14 @@ INTAKE_TABLES: tuple[str, ...] = (
     "intake_draft_fields",
     "intake_field_provenance",
     "intake_events",
+    "intake_deep_links",
 )
+
+# M18-P05 opened exactly one path from the intake model into the catalogue:
+# ``intake_sessions.listing_id``, written only by the vendor's explicit,
+# ownership-checked submission. Every other intake table must still have no
+# route into vendor_listings at all.
+LISTING_LINK_TABLE = "intake_sessions"
 
 
 def _as_bool(value: str) -> bool:
@@ -117,12 +124,16 @@ def test_one_active_binding_per_msisdn(db: PgConn) -> None:
 
 
 def test_intake_tables_do_not_reference_vendor_listings(db: PgConn) -> None:
-    """Under the corrected D35, only M18-P05 may reach the listing flow.
+    """Under the corrected D35, only M18-P05's handoff may reach the listing flow.
 
     A foreign key from any intake table to vendor_listings would mean the model
-    itself had grown a path into the catalogue.
+    itself had grown a path into the catalogue. ``intake_sessions.listing_id`` is
+    the single, deliberate exception added by M18-P05 (asserted separately below,
+    including that it is nullable and does not cascade); every other table must
+    still have no route there.
     """
-    quoted = ",".join(f"'{t}'" for t in INTAKE_TABLES)
+    tables = tuple(t for t in INTAKE_TABLES if t != LISTING_LINK_TABLE)
+    quoted = ",".join(f"'{t}'" for t in tables)
     result = db.run(
         f"""
         SELECT tc.table_name || '->' || ccu.table_name
@@ -137,3 +148,64 @@ def test_intake_tables_do_not_reference_vendor_listings(db: PgConn) -> None:
     )
     assert result.ok, result.error
     assert result.rows == [], f"intake model must not reference vendor_listings: {result.rows}"
+
+
+def test_session_listing_link_is_nullable_and_does_not_cascade(db: PgConn) -> None:
+    """M18-P05's one link into the catalogue, pinned to its intended shape.
+
+    ``on delete set null`` (not cascade) is the point: removing a listing must
+    never delete the intake session that records how it came to exist. Nullable
+    is the other half — a session with no listing yet is the normal state.
+    """
+    result = db.run(
+        """
+        SELECT rc.delete_rule || '|' || c.is_nullable
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.referential_constraints rc
+          ON rc.constraint_name = tc.constraint_name
+        JOIN information_schema.key_column_usage kcu
+          ON kcu.constraint_name = tc.constraint_name
+        JOIN information_schema.columns c
+          ON c.table_schema = tc.table_schema
+         AND c.table_name = tc.table_name
+         AND c.column_name = kcu.column_name
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+          AND tc.table_schema = 'public'
+          AND tc.table_name = 'intake_sessions'
+          AND kcu.column_name = 'listing_id'
+        """
+    )
+    assert result.ok, result.error
+    assert result.rows == ["SET NULL|YES"], result.rows
+
+
+def test_deep_links_store_no_plaintext_token(db: PgConn) -> None:
+    """Only a hash column exists — a database read cannot rebuild a usable link."""
+    result = db.run(
+        """
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'intake_deep_links'
+        ORDER BY column_name
+        """
+    )
+    assert result.ok, result.error
+    assert "token_hash" in result.rows
+    assert "token" not in result.rows
+
+
+def test_deep_link_hash_is_unique(db: PgConn) -> None:
+    """Single-use enforcement leans on this: one row per token, ever."""
+    result = db.run(
+        """
+        SELECT indexdef
+        FROM pg_indexes
+        WHERE schemaname = 'public'
+          AND tablename = 'intake_deep_links'
+          AND indexdef ILIKE '%unique%'
+          AND indexdef ILIKE '%token_hash%'
+        """
+    )
+    assert result.ok, result.error
+    assert result.rows, "expected a unique index on intake_deep_links.token_hash"

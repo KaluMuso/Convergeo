@@ -385,6 +385,26 @@ async def create_listing(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ListingCreateResponse:
     vendor = _load_vendor_for_owner(service_client, current_user.id)
+    return create_listing_for_vendor(service_client, vendor=vendor, body=body)
+
+
+def create_listing_for_vendor(
+    service_client: ServiceRoleClient,
+    *,
+    vendor: dict[str, Any],
+    body: ListingCreateRequest,
+) -> ListingCreateResponse:
+    """The listing-creation seam, callable without an HTTP request.
+
+    This is the single implementation behind ``POST /vendor/listings``. M18-P05's
+    WhatsApp-intake handoff calls it directly so an intake-born listing goes
+    through *exactly* the same prohibited-content screen, wholesale-tier check,
+    price-tier validation and status resolution as one typed into the vendor
+    app — rather than an intake-specific insert that could drift from them.
+
+    Callers are responsible for the KYC listing cap (the route does it via
+    ``require_listing_cap``; M18-P05 calls ``enforce_listing_cap`` explicitly).
+    """
     vendor_id = str(vendor["id"])
 
     # Resolve the vendor-supplied category up front so the moderation screen's
