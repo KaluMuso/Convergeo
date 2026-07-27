@@ -355,13 +355,18 @@ def test_ineligible_outcomes_are_indistinguishable(
     business on Vergeo5, and what is its status" — answerable by anyone who can
     send a WhatsApp message.
     """
+    # Each entry is the vendor-row state that makes the KNOWN number ineligible
+    # for a different reason. The empty patch leaves the vendor eligible, so
+    # only the unknown-number arm contributes on that pass.
+    vendor_states: list[dict[str, Any]] = [
+        {},
+        {"status": "suspended"},
+        {"status": "active", "kyc_tier": 0},
+    ]
+
     messages: list[list[str]] = []
-    for mutate in (
-        lambda: None,
-        lambda: client.rows("vendors")[0].update({"status": "suspended"}),
-        lambda: client.rows("vendors")[0].update({"status": "active", "kyc_tier": 0}),
-    ):
-        mutate()
+    for patch_ in vendor_states:
+        client.rows("vendors")[0].update(patch_)
         caplog.clear()
         with caplog.at_level("INFO"):
             unknown = sessions.resolve_verified_sender(client, "260979999999")
