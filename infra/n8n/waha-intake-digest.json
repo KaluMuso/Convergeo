@@ -1,0 +1,158 @@
+{
+  "name": "WAHA Intake Reviewer Digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily At 07:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.API_URL}}/internal/intake/metrics",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Token",
+              "value": "={{$env.INTERNAL_INTAKE_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "fetch-intake-metrics",
+      "name": "Fetch Intake Metrics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 Internal Intake"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "assignments": {
+          "assignments": [
+            {
+              "id": "intake-digest-text",
+              "name": "message",
+              "type": "string",
+              "value": "=Vergeo5 WhatsApp intake digest\nAwaiting admin review: {{ $json.session_statuses.pending_admin_review }}\nWith vendor: {{ $json.session_statuses.ready_for_vendor_review }}\nNeeds details: {{ $json.session_statuses.needs_details }}\nApproved: {{ $json.session_statuses.approved }} | Rejected: {{ $json.session_statuses.rejected }}\nListings created: {{ $json.listings_created }}\nDropped (group/unverified/flag-off): {{ $json.dispositions.dropped_group }}/{{ $json.dispositions.dropped_unverified }}/{{ $json.dispositions.dropped_flag_off }}\nAuth rejects: {{ $json.dispositions.rejected_auth }} | Errors: {{ $json.dispositions.error }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-intake-digest",
+      "name": "Format Intake Digest",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [780, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.WHATSAPP_CLOUD_API_URL}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.WHATSAPP_CLOUD_API_TOKEN}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{$env.FOUNDER_WHATSAPP_TO}}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": {{ JSON.stringify($json.message) }} }\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "send-intake-digest",
+      "name": "Send Intake Digest WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1040, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 WhatsApp Cloud API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily At 07:00 UTC": {
+      "main": [
+        [
+          {
+            "node": "Fetch Intake Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Intake Metrics": {
+      "main": [
+        [
+          {
+            "node": "Format Intake Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Intake Digest": {
+      "main": [
+        [
+          {
+            "node": "Send Intake Digest WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "m18-p07-waha-intake-digest",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "M18",
+      "createdAt": "2026-07-27T00:00:00.000Z",
+      "updatedAt": "2026-07-27T00:00:00.000Z"
+    }
+  ]
+}

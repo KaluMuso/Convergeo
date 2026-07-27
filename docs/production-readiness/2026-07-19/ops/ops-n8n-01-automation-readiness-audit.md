@@ -144,8 +144,12 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `money-workflow-error-alert.json` | Money / ops error paging    | no                      | DORMANT (VD-P06 shared Error Trigger template) |
 | `backup.json`                     | DB/OCI backup               | no                      | DORMANT (CODE_COMPLETE in repo; G7 NOT PASS)   |
 | `backup-schedule.md`              | DB/OCI backup contract      | n/a                     | Contract for `backup.json`                     |
+| `waha-intake-sweeps.json`         | WhatsApp intake ops (D35)   | no                      | DORMANT†                                       |
+| `waha-intake-digest.json`         | WhatsApp intake ops (D35)   | no                      | DORMANT†                                       |
 
 \*Live workflow is a manual/MCP-built sibling of the committed export, not a clean import of `notification-dispatch.json`.
+
+†**Added after this audit (M18-P07, 2026-07-27) — not observed live on 2026-07-19.** Both ship `active: false` and are gated behind `feature_flags.waha_vendor_intake` (default `false`); they cannot run until the founder records Stage-1 pilot approval per `docs/ops/waha-vendor-intake.md` §10. Listed here to keep the completeness matrix exhaustive (enforced by `tests/test_ops_n8n_01_audit.py`), **not** because they were audited on the date above.
 
 ---
 

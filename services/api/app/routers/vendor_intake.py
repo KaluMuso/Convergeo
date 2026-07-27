@@ -27,7 +27,7 @@ Boundaries this router keeps:
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Annotated, Any, Final
+from typing import Annotated, Any, Final, Literal
 
 from app.core.auth import CurrentUser, require_role
 from app.core.ratelimit import bump_rate_counter, raise_rate_limited
@@ -36,7 +36,6 @@ from app.errors import AppError
 from app.routers.vendor_listings import create_listing_for_vendor
 from app.schemas.base import StrictModel
 from app.services.intake import deeplink, handoff, state_machine
-from app.services.intake.schemas import Condition, PricingMode, StockMode
 from app.services.kyc.caps import enforce_listing_cap, load_vendor_cap_limits_by_id
 from app.services.kyc.state_machine import ServiceRoleClient
 from fastapi import APIRouter, Depends
@@ -116,17 +115,27 @@ class IntakeSessionDetail(StrictModel):
     listing_id: str | None
 
 
+# Request DTOs are StrictModel (strict=True), which refuses to coerce a JSON
+# string into a StrEnum member — so these must be Literals, matching how the rest
+# of the API declares closed value sets (vendor_listings.ListingCondition &c).
+# `test_patch_literals_match_the_intake_enums` pins them against the StrEnums in
+# services/intake/schemas.py so the two cannot drift apart silently.
+PricingModeLiteral = Literal["fixed", "negotiable", "tiered"]
+StockModeLiteral = Literal["tracked", "made_to_order", "always"]
+ConditionLiteral = Literal["new", "refurbished", "used"]
+
+
 class DraftPatchRequest(StrictModel):
     """Vendor corrections. Every supplied field flips provenance to vendor_typed."""
 
     title: str | None = Field(default=None, max_length=MAX_TITLE_LEN)
     category_id: str | None = None
     price_ngwee: int | None = Field(default=None, ge=0)
-    pricing_mode: PricingMode | None = None
+    pricing_mode: PricingModeLiteral | None = None
     quantity: int | None = Field(default=None, ge=0)
-    stock_mode: StockMode | None = None
+    stock_mode: StockModeLiteral | None = None
     sale_unit: str | None = Field(default=None, max_length=40)
-    condition: Condition | None = None
+    condition: ConditionLiteral | None = None
     description: str | None = Field(default=None, max_length=MAX_DESCRIPTION_LEN)
 
 

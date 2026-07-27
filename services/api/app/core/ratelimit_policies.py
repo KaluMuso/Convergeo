@@ -161,6 +161,12 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/embeddings/tick": INTERNAL_CRON,
     "POST /internal/event-release/tick": INTERNAL_CRON,
     "POST /internal/funnel/abandon-tick": INTERNAL_CRON,
+    # M18-P07 WAHA intake operations. Three separate sweeps rather than one
+    # "tick": an operator can disable retention purging without also disabling
+    # session expiry, and a failure in one does not stall the others.
+    "POST /internal/intake/expire-sessions": INTERNAL_CRON,
+    "POST /internal/intake/purge-links": INTERNAL_CRON,
+    "POST /internal/intake/purge-messages": INTERNAL_CRON,
     "POST /internal/job-completion/auto-confirm": INTERNAL_CRON,
     "POST /internal/jobs/expire-tick": INTERNAL_CRON,
     "POST /internal/n8n/abandoned-carts/tick": INTERNAL_CRON,
