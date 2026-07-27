@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 
 import { SizeChip } from "./size-chip";
@@ -52,15 +53,21 @@ export function ClipCard({
           Cards beyond viewport +/-1 render no <img> at all, so scrolling past
           fifty clips does not queue fifty poster requests. */}
       {nearby && clip.poster_url ? (
-        // Plain <img>, not next/image: Cloudinary already serves f_auto/q_auto
-        // WebP at a fixed poster size, so next/image would add a second optimiser
-        // hop and client JS to a route with a 150 KB gz budget.
-        <img
+        // `next/image` rather than a raw <img>: the repo's image lint forbids raw
+        // <img> in the customer app, and the optimiser is what keeps a poster
+        // inside the 25 KB the D-V1 poster-first budget assumes. `sizes` is 100vw
+        // because the card fills the viewport — anything else would fetch a
+        // wider source than a 360px phone can use.
+        <Image
           src={clip.poster_url}
           alt={t("a11y.posterAlt", { vendor: vendorName })}
           data-testid="clip-poster"
-          loading={index === 0 ? "eager" : "lazy"}
-          decoding="async"
+          fill
+          sizes="100vw"
+          // Only the first card is eager: the rest are below the fold by
+          // construction, and eager-loading them would spend data on posters the
+          // visitor may never scroll to.
+          priority={index === 0}
           className="absolute inset-0 h-full w-full object-cover"
         />
       ) : (
