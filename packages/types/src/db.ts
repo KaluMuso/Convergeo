@@ -3997,7 +3997,10 @@ export type Database = {
         Args: { p_month_key?: string }
         Returns: boolean
       }
-      reset_clip_kill_switch: { Args: { p_month_key: string }; Returns: boolean }
+      reset_clip_kill_switch: {
+        Args: { p_month_key: string }
+        Returns: boolean
+      }
       review_bayes_value: {
         Args: { p_rating_count: number; p_rating_sum: number }
         Returns: number
