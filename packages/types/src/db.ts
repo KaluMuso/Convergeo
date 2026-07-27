@@ -3890,6 +3890,10 @@ export type Database = {
         }[]
       }
       cleanup_expired_rate_counters: { Args: never; Returns: number }
+      clip_bump_counter: {
+        Args: { p_clip_id: string; p_column: string; p_delta: number }
+        Returns: number
+      }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       embedding_enqueue_document: {
         Args: {
