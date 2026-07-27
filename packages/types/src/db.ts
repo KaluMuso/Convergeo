@@ -3929,11 +3929,11 @@ export type Database = {
       }
       clip_record_spend: {
         Args: {
+          p_bytes: number
           p_cap_usd_micros: number
           p_clips: number
           p_month_key: string
           p_usd_micros: number
-          p_bytes: number
         }
         Returns: number
       }
@@ -3995,9 +3995,9 @@ export type Database = {
       }
       reset_ask_kill_switch: {
         Args: { p_month_key?: string }
-      reset_clip_kill_switch: { Args: { p_month_key: string }; Returns: boolean }
         Returns: boolean
       }
+      reset_clip_kill_switch: { Args: { p_month_key: string }; Returns: boolean }
       review_bayes_value: {
         Args: { p_rating_count: number; p_rating_sum: number }
         Returns: number
