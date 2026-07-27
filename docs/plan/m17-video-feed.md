@@ -170,6 +170,19 @@ Assumptions: 200 published clips, avg 25s/480p (~2.5 MB) + 720p (~5 MB) renditio
 | **M17-P08** | Cost guard + analytics: Cloudinary spend tracker + kill-switch, clip conversion dashboards, share/OG public clip page       | Ask-Vergeo quota pattern; S4                                                            |
 
 Waves: **W-A** P01→(P02∥P03) · **W-B** P04∥P06∥P07 · **W-C** P05∥P08.
+
+**✅ Built 2026-07-27 (all eight pebbles).** Migration numbers differ from the
+table above: P01 took **`0076`** (the spec's `0033` was stale by the time it was
+implemented), and the mountain also carries **`0077`** (the `clips` and
+`clips_comments` flags, both off), **`0078`** (`clip_weekly_caps`) and **`0079`**
+(`clip_spend_monthly` + the atomic spend guard) — P08's cost accounting needed a
+table the table above did not anticipate. Two other deltas worth recording:
+`clip_views` was added to P01's table list (the §3 dedupe rule names the
+behaviour but not the table that holds the key), and the per-tier upload
+allowance lives in `services/clips/quota.py` — built with P06 rather than P08,
+since P06's studio is what surfaces it, with P08 consuming the same config keys
+rather than duplicating the cap logic. Runbooks:
+`docs/ops/clip-moderation-policy.md` and `docs/ops/clip-cost-runbook.md`.
 Cold-start ops (founder, not code): seed the first ~50 clips with 10–15 anchor vendors
 (WhatsApp collection drive is fine; upload via vendor studio) before opening the feed tab.
 

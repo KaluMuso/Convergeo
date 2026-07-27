@@ -8,6 +8,7 @@ from typing import Annotated, Any
 import jwt
 from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
+from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.business.access import fetch_business_buyer
 from app.services.cart.events import emit_cart_add
@@ -22,6 +23,7 @@ from app.services.cart.store import (
     service_db_client,
 )
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
+from app.services.clips.attribution import validate_clip_attribution
 from app.services.stock.revalidate import CartLineSnapshot, revalidate_lines
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends, Request, Response
@@ -46,6 +48,11 @@ class CartOwner:
 class CartItemInput(BaseModel):
     listing_id: str
     qty: int = Field(ge=1)
+    #: M17-P05 attribution. A CLAIM, not a credit: validated server-side against
+    #: a published clip that actually links this listing, and silently dropped
+    #: otherwise. Refusing the cart action on a bad clip id would let a forged
+    #: value DENY someone their add-to-cart, which is the worse bug.
+    clip_id: str | None = None
 
 
 class CartItemUpdate(BaseModel):
@@ -391,6 +398,10 @@ async def add_cart_item(
     body: CartItemInput,
     owner: Annotated[CartOwner, Depends(_resolve_cart_owner)],
     settings: Annotated[Settings, Depends(get_settings)],
+    # Attribution validation only (M17-P05). Provided by the dependency rather
+    # than imported, so the service-role client stays greppable to the allowlist
+    # in tests/test_service_role_import_guard.py.
+    service_client: Annotated[Any, Depends(get_supabase_client)],
     request: Request,
 ) -> CartResponse:
     listing = fetch_listing(body.listing_id)
@@ -440,10 +451,18 @@ async def add_cart_item(
 
     # Fire-and-forget funnel event (cart_add); server operational, consent-independent.
     # snapshot.lines carries the listing so vendor analytics can attribute the view.
+    line: dict[str, Any] = {"listing_id": body.listing_id, "qty": body.qty}
+    attributed_clip = validate_clip_attribution(
+        service_client,
+        clip_id=body.clip_id,
+        listing_id=body.listing_id,
+    )
+    if attributed_clip:
+        line["clip_id"] = attributed_clip
     emit_cart_add(
         checkout_group_id=None,
         customer_id=owner.user_id,
-        snapshot={"lines": [{"listing_id": body.listing_id, "qty": body.qty}]},
+        snapshot={"lines": [line]},
     )
 
     items = _fetch_cart_items(client, cart_id)

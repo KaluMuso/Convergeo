@@ -632,6 +632,39 @@ export type Database = {
           },
         ]
       }
+      clip_spend_monthly: {
+        Row: {
+          admin_reset_at: string | null
+          bytes_served: number
+          clips_transcoded: number
+          created_at: string
+          killed_at: string | null
+          month_key: string
+          total_usd_micros: number
+          updated_at: string
+        }
+        Insert: {
+          admin_reset_at?: string | null
+          bytes_served?: number
+          clips_transcoded?: number
+          created_at?: string
+          killed_at?: string | null
+          month_key: string
+          total_usd_micros?: number
+          updated_at?: string
+        }
+        Update: {
+          admin_reset_at?: string | null
+          bytes_served?: number
+          clips_transcoded?: number
+          created_at?: string
+          killed_at?: string | null
+          month_key?: string
+          total_usd_micros?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clip_views: {
         Row: {
           clip_id: string
@@ -3894,6 +3927,16 @@ export type Database = {
         Args: { p_clip_id: string; p_column: string; p_delta: number }
         Returns: number
       }
+      clip_record_spend: {
+        Args: {
+          p_bytes: number
+          p_cap_usd_micros: number
+          p_clips: number
+          p_month_key: string
+          p_usd_micros: number
+        }
+        Returns: number
+      }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       embedding_enqueue_document: {
         Args: {
@@ -3952,6 +3995,10 @@ export type Database = {
       }
       reset_ask_kill_switch: {
         Args: { p_month_key?: string }
+        Returns: boolean
+      }
+      reset_clip_kill_switch: {
+        Args: { p_month_key: string }
         Returns: boolean
       }
       review_bayes_value: {

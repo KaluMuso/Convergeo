@@ -1557,5 +1557,95 @@
       "unsupported_condition": "Used items cannot be listed. Choose new or refurbished.",
       "unsupported_stock_mode": "That stock option is not supported."
     }
+  },
+  "clips": {
+    "meta": {
+      "title": "Clips — Vergeo5 Vendor",
+      "description": "Record short product videos and track how they perform."
+    },
+    "title": "My clips",
+    "intro": "Short videos of your products. Every clip is checked by our team before it goes live.",
+    "loading": "Loading…",
+    "empty": {
+      "title": "No clips yet",
+      "body": "Record a short video of a product to get started."
+    },
+    "error": {
+      "title": "Could not load your clips",
+      "retry": "Try again"
+    },
+    "new": "New clip",
+    "quota": {
+      "label": "{remaining} of {cap} clips left this week",
+      "exhausted": "You've used all {cap} clips for this week. You can post again as clips older than {days} days drop off.",
+      "window": "Counted over the last {days} days."
+    },
+    "status": {
+      "draft": "Not uploaded",
+      "screening": "Checking",
+      "pending_review": "Awaiting review",
+      "published": "Live",
+      "rejected": "Not approved",
+      "taken_down": "Removed"
+    },
+    "statusHelp": {
+      "draft": "The video hasn't finished uploading yet.",
+      "screening": "We're processing the video. This usually takes a minute.",
+      "pending_review": "Our team is checking this clip. It is not visible to shoppers yet.",
+      "published": "Shoppers can see this clip in the feed.",
+      "rejected": "This clip was not approved. See the reason below.",
+      "taken_down": "This clip was removed and is no longer visible."
+    },
+    "rejectionReason": "Reason: {reason}",
+    "stats": {
+      "views": "{count, plural, one {# view} other {# views}}",
+      "likes": "{count, plural, one {# like} other {# likes}}",
+      "orders": "{count, plural, one {# order} other {# orders}}",
+      "title": "Performance"
+    },
+    "compose": {
+      "title": "New clip",
+      "chooseFile": "Choose a video",
+      "record": "Record a video",
+      "selected": "Selected: {name} ({size})",
+      "captionLabel": "Caption",
+      "captionPlaceholder": "Say what the product is and why it's good",
+      "categoryLabel": "Category",
+      "productsLabel": "Link up to 3 of your products",
+      "productsHelp": "Shoppers can add these straight to their cart from the clip.",
+      "addProduct": "Add product",
+      "removeProduct": "Remove",
+      "submit": "Upload clip",
+      "uploading": "Uploading… {percent}%",
+      "retry": "Retry upload",
+      "cancel": "Cancel",
+      "done": "Uploaded — we'll review it shortly"
+    },
+    "limits": {
+      "title": "Before you record",
+      "duration": "Up to 60 seconds",
+      "size": "Up to 80 MB",
+      "dataCost": "Uploading uses your own data. A 60-second clip is usually 20–80 MB, so use Wi-Fi where you can.",
+      "orientation": "Hold your phone upright — the feed is vertical."
+    },
+    "camera": {
+      "denied": "We can't reach your camera",
+      "deniedBody": "Your browser blocked camera access. You can allow it in your browser settings, or choose a video you've already recorded.",
+      "unavailable": "This device has no camera we can use — choose a video file instead.",
+      "usePicker": "Choose a video file"
+    },
+    "errors": {
+      "tooLong": "That video is longer than 60 seconds. Trim it and try again.",
+      "tooLarge": "That file is {size}, over the 80 MB limit. Record a shorter clip or lower the quality.",
+      "notVideo": "That file isn't a video.",
+      "weeklyCap": "You've reached your clip limit for this week.",
+      "rateLimited": "Too many requests. Please wait a moment.",
+      "uploadFailed": "The upload didn't finish. Your clip is saved — tap retry to send it again without picking the file twice.",
+      "notVerified": "Clips are for verified sellers. Finish your verification to start posting.",
+      "linkNotOwned": "You can only link your own products.",
+      "linkLimit": "A clip can link at most 3 products.",
+      "linkNotActive": "Only an active product can be linked."
+    },
+    "durationSeconds": "{seconds}s"
   }
 }

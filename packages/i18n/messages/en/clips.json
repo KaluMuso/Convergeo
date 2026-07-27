@@ -1,0 +1,111 @@
+{
+  "feed": {
+    "title": "Clips",
+    "subtitle": "Short product videos from Zambian sellers",
+    "loading": "Loading clips…",
+    "empty": {
+      "title": "No clips yet",
+      "body": "Sellers are still filming. Check back soon."
+    },
+    "error": {
+      "title": "Clips could not load",
+      "body": "Check your connection and try again.",
+      "retry": "Try again"
+    },
+    "endOfFeed": "That's every clip for now",
+    "loadMore": "Load more clips",
+    "byVendor": "By {vendor}",
+    "viewCount": "{count, plural, one {# view} other {# views}}",
+    "likeCount": "{count, plural, one {# like} other {# likes}}",
+    "commentCount": "{count, plural, one {# comment} other {# comments}}"
+  },
+  "player": {
+    "tapToPlay": "Tap to play",
+    "play": "Play clip",
+    "pause": "Pause clip",
+    "replay": "Replay clip",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "muted": "Muted",
+    "loading": "Loading video…",
+    "duration": "{seconds}s",
+    "failed": {
+      "title": "This clip could not play",
+      "body": "The rest of the feed still works.",
+      "retry": "Try this clip again"
+    }
+  },
+  "saver": {
+    "label": "Data saver",
+    "on": "Data saver on",
+    "off": "Data saver off",
+    "toggle": "Toggle data saver",
+    "description": "Plays only when you tap, at the smaller size. On by default to protect your bundle.",
+    "onHint": "Videos load only when you tap them.",
+    "offHint": "Clips may play automatically on Wi-Fi.",
+    "cellularNotice": "You're on mobile data — nothing plays until you tap."
+  },
+  "size": {
+    "chip": "~{size}",
+    "megabytes": "{value} MB",
+    "kilobytes": "{value} KB",
+    "label": "This clip is about {size} of data",
+    "unknown": "Size unknown"
+  },
+  "overlay": {
+    "shopThisClip": "Shop this clip",
+    "title": "In this clip",
+    "close": "Close",
+    "addToCart": "Add to cart",
+    "added": "Added to cart",
+    "adding": "Adding…",
+    "viewProduct": "View product",
+    "outOfStock": "Out of stock",
+    "priceLabel": "Price",
+    "empty": "No products linked to this clip yet",
+    "failed": "Could not add to cart. Try again."
+  },
+  "share": {
+    "action": "Share",
+    "copyLink": "Copy link",
+    "copied": "Link copied",
+    "failed": "Could not copy the link",
+    "title": "{vendor} on Vergeo5",
+    "description": "Watch this clip and shop the products in it.",
+    "watchOnVergeo": "Watch on Vergeo5"
+  },
+  "engagement": {
+    "like": "Like",
+    "unlike": "Remove like",
+    "liked": "Liked",
+    "comment": "Comment",
+    "comments": "Comments",
+    "commentPlaceholder": "Add a comment",
+    "commentSubmit": "Post",
+    "commentsOff": "Comments are off for now",
+    "report": "Report clip",
+    "reportReason": "Tell us what's wrong",
+    "reportSubmit": "Send report",
+    "reported": "Thanks — our team will look at this",
+    "signInRequired": "Sign in to do that"
+  },
+  "cost": {
+    "sessionUsage": "About {size} used in this session",
+    "budgetWarning": "You've used a lot of data on clips today",
+    "paused": "Clips are paused right now",
+    "pausedBody": "We pause clips when video costs run high, so the rest of Vergeo5 stays fast. Everything else still works.",
+    "savedByDataSaver": "Data saver has saved you about {size}"
+  },
+  "a11y": {
+    "feedLabel": "Clips feed",
+    "clipLabel": "Clip by {vendor}",
+    "posterAlt": "Preview image for a clip by {vendor}",
+    "captionLabel": "Clip caption",
+    "playerLabel": "Clip video player",
+    "controlsLabel": "Clip controls",
+    "productsLabel": "Products in this clip",
+    "sizeChipLabel": "Approximate data size",
+    "saverToggleLabel": "Data saver setting",
+    "skipToContent": "Skip the clips feed"
+  }
+}

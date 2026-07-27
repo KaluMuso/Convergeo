@@ -57,6 +57,25 @@ All money = integer ngwee. See `packages/analytics/src/events.ts` for the typed 
 | `payment_start`  | `checkout_group_id`, `method`, `total_ngwee`      |
 | `order_placed`   | `checkout_group_id`, `order_count`, `total_ngwee` |
 
+### Clip events (M17)
+
+Written to `analytics_events` with `entity_type = 'video_clip'` and `entity_id`
+= the clip id. They sit **outside** the canonical funnel above on purpose: a clip
+view is not a product view, and folding it in would inflate the top of the
+funnel with impressions that never had a product attached.
+
+| Event              | Props / carrier                                                 |
+| ------------------ | --------------------------------------------------------------- |
+| `clip_view`        | counted at ≥3 s watched, deduped per user per day               |
+| `clip_like`        | one per `(clip_id, user_id)` — idempotent by primary key        |
+| `clip_add_to_cart` | rides the existing `cart_add` funnel event as `lines[].clip_id` |
+
+**`clip_id` attribution is validated server-side** (`services/clips/attribution.py`):
+the clip must exist, be `published`, and actually link the listing being added.
+A forged or mismatched id produces **no attribution while the cart still
+succeeds** — the client can never mint credit for a vendor, and can never deny a
+customer their purchase either.
+
 ## Notes for operators
 
 - The GA4 script (`googletagmanager.com/gtag/js`) is allowlisted in the customer
