@@ -2414,6 +2414,19 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    # ---------------------------------------------------------------------
+    # M18 WAHA vendor intake (0073). service_role ONLY — no client GRANT, so
+    # every client persona is denied by privilege before RLS is even consulted.
+    # The owner/admin policies in the migration are defence-in-depth for the day
+    # a client grant is added; they are not reachable from these personas today.
+    # ---------------------------------------------------------------------
+    "intake_vendor_bindings": client_invisible(),
+    "intake_sessions": client_invisible(),
+    "intake_messages": client_invisible(),
+    "intake_media": client_invisible(),
+    "intake_draft_fields": client_invisible(),
+    "intake_field_provenance": client_invisible(),
+    "intake_events": client_invisible(),
     "webhook_events": {
         Persona.ANON: {
             "select": "deny",
