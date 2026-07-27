@@ -256,9 +256,10 @@ def test_valid_event_is_accepted(api: TestClient, store: Wrapper) -> None:
 # Gate 1 — the kill switch
 # ---------------------------------------------------------------------------
 def test_flag_off_drops_everything(api: TestClient, store: Wrapper) -> None:
+    """A validly-signed event is still dropped when the lane is disabled."""
     store.rows("feature_flags")[0]["enabled"] = False
     resp = post(api, body())
-    assert resp.status_code == 200, "a disabled lane must not advertise itself"
+    assert resp.status_code == 200, "an authenticated caller should not retry"
     assert store.dispositions() == ["dropped_flag_off"]
     assert_not_processed(store)
 
@@ -270,13 +271,32 @@ def test_flag_row_missing_drops_everything(api: TestClient, store: Wrapper) -> N
     assert_not_processed(store)
 
 
-def test_flag_checked_before_signature(api: TestClient, store: Wrapper) -> None:
-    """The kill switch must not require a valid signature to take effect."""
+def test_unsigned_request_is_403_even_when_the_flag_is_off(
+    api: TestClient, store: Wrapper
+) -> None:
+    """Signature is checked BEFORE the flag, so unsigned is never a 200.
+
+    A webhook endpoint must never return success to an unverified caller,
+    whatever the lane's enabled state — the platform-wide invariant asserted by
+    tests/test_authz_matrix.py::test_webhook_endpoints_reject_unsigned.
+    """
     store.rows("feature_flags")[0]["enabled"] = False
     raw = body()
     resp = api.post(URL, content=raw, headers={"X-Webhook-Hmac": "garbage"})
-    assert resp.status_code == 200
-    assert store.dispositions() == ["dropped_flag_off"]
+    assert resp.status_code == 403
+    assert store.dispositions() == ["rejected_auth"]
+    assert_not_processed(store)
+
+
+def test_unsigned_request_is_rejected_with_no_config_at_all(
+    api: TestClient, store: Wrapper, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Even with the secret unset and the flag missing, unsigned ⇒ 403."""
+    monkeypatch.delenv(intake_config.ENV_WEBHOOK_SECRET, raising=False)
+    store.rows("feature_flags").clear()
+    resp = api.post(URL, content=body(), headers={})
+    assert resp.status_code >= 400
+    assert_not_processed(store)
 
 
 # ---------------------------------------------------------------------------

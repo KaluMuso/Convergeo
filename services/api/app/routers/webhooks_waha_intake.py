@@ -10,8 +10,8 @@ would let a signature valid for one lane authenticate the other.
 Ten gates, in order, all fail-closed. Any failure drops the event, audits the
 disposition, and returns without touching the domain::
 
-    1. flag          — the kill switch, checked before anything is parsed
-    2. HMAC          — sha512 over raw bytes, constant-time
+    1. HMAC          — sha512 over raw bytes, constant-time
+    2. flag          — the kill switch, before anything is parsed
     3. request id + timestamp freshness
     4. source account
     5. event type    — only the session `message` event
@@ -148,22 +148,35 @@ async def receive_waha_intake(
 ) -> Response:
     """Ingest one inbound WAHA vendor-intake event. Sends nothing, ever."""
 
-    # --- Gate 1: the kill switch, before anything is parsed -----------------
-    if not intake_config.intake_enabled(service_client):
-        _audit(service_client, disposition=state_machine.DISPOSITION_DROPPED_FLAG_OFF)
-        # 200, not 403: a disabled lane must not advertise its own existence
-        # through a distinguishable status code.
-        return Response(status_code=200)
-
     raw_body = await request.body()
     if len(raw_body) > MAX_BODY_BYTES:
         _audit(service_client, disposition=state_machine.DISPOSITION_REJECTED_AUTH)
         return Response(status_code=413)
 
-    # --- Gate 2: HMAC-SHA-512 over the raw bytes, before any JSON parse -----
+    # --- Gate 1: HMAC-SHA-512 over the raw bytes, before any JSON parse -----
+    #
+    # Signature verification comes FIRST, before the flag, so an unsigned or
+    # forged request is always refused with 403 — never 200 — whatever the
+    # lane's enabled state. This upholds the platform-wide invariant that a
+    # webhook endpoint never returns success to an unverified caller
+    # (tests/test_authz_matrix.py::test_webhook_endpoints_reject_unsigned), and
+    # matches D35 §7: "missing/invalid signature ⇒ 403, nothing parsed".
+    #
+    # It costs the kill switch nothing: verification is local, constant-time,
+    # and touches no database. With the flag off, a *validly signed* event is
+    # still dropped below without any processing, which is what the switch is
+    # for. Hiding the lane's existence behind a 200 was not worth violating the
+    # invariant — the route's existence is discoverable anyway.
     if not _verify_signature(raw_body, request.headers):
         _audit(service_client, disposition=state_machine.DISPOSITION_REJECTED_AUTH)
         return Response(status_code=403)
+
+    # --- Gate 2: the kill switch, before anything is parsed -----------------
+    if not intake_config.intake_enabled(service_client):
+        _audit(service_client, disposition=state_machine.DISPOSITION_DROPPED_FLAG_OFF)
+        # 200 for an authenticated-but-disabled caller: the real WAHA host
+        # should not retry a deliberate shutdown.
+        return Response(status_code=200)
 
     # --- Gate 3: request identity + freshness --------------------------------
     if not (request.headers.get(HEADER_REQUEST_ID) or "").strip():
