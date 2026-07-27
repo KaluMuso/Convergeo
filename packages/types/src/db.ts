@@ -958,7 +958,7 @@ export type Database = {
           {
             foreignKeyName: "intake_draft_fields_session_id_fkey"
             columns: ["session_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "intake_sessions"
             referencedColumns: ["id"]
           },
@@ -1011,6 +1011,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "intake_sessions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_events_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
           },
           {
             foreignKeyName: "intake_events_vendor_id_fkey"
@@ -1187,6 +1194,13 @@ export type Database = {
             foreignKeyName: "intake_sessions_vendor_id_fkey"
             columns: ["vendor_id"]
             isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "intake_sessions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
             referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
@@ -1224,6 +1238,13 @@ export type Database = {
           vendor_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "intake_vendor_bindings_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
           {
             foreignKeyName: "intake_vendor_bindings_vendor_id_fkey"
             columns: ["vendor_id"]
