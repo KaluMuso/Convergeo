@@ -10,7 +10,7 @@
 
 - **M18-P00→P06 are merged.** Sessions expire, queues age, vendors need status updates, and failures need alerts — all of it operational automation over the existing state machine, none of it new domain logic.
 - **The n8n pattern is already established:** `services/api/app/routers/internal_n8n.py` (shared-secret authenticated internal endpoints, `_is_feature_flag_enabled` gating) + `docs/ops/n8n-workflows.md` (the workflow registry created by M14-P06 and finalized by M13-P11). **Follow both exactly.** n8n **never** touches tables directly and **never** holds a Supabase **service-role key** (`D35` §5) — it calls scoped internal API endpoints only.
-- **Vendor-facing status messages go over Lane 1** (`notification_outbox` → Cloud API/SMS/email). **Never over WAHA.** The intake lane's only outbound is M18-P04's single 1:1 receipt ack + follow-ups. **Groups are forbidden everywhere.**
+- **Vendor-facing status messages go over Lane 1** (`notification_outbox` → Cloud API/SMS/email). **Never over WAHA.** Under the corrected `D35` (PR #523) the intake lane is **strictly inbound-only and has no outbound at all** — no ack, no follow-up send. Follow-ups exist only as structured data on the intake record, rendered by M18-P05. **Groups are forbidden everywhere.**
 - **Retention (`D35` §12):** raw inbound message text/media is purged on a **≤30-day** window via an **idempotent, service-role sweep + n8n tick** — the same shape as the existing analytics-retention sweeper. P01 gave you `intake_messages.purge_after`.
 - **Founder alerts** ride the existing Cloud API founder-alert path (`FOUNDER_WHATSAPP_E164`) — **not** WAHA (`waha-vendor-intake.md` R5).
   Spec: `docs/plan/02-pebbles/M18-vendor-whatsapp-intake.md` §M18-P07.

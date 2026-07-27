@@ -18,7 +18,7 @@ mountain removes it without giving WhatsApp any authority it does not already ha
 The official Meta Cloud API (**Lane 1**) remains the **only** customer/provider notification channel.
 WAHA (**Lane 2**) is a separate, self-hosted, **inbound-only vendor-intake connector**. It **may not**:
 
-- send customer transactions, notifications, OTP, or marketing;
+- send customer transactions, notifications, OTP, or marketing — **or any outbound message at all, including an acknowledgement**;
 - replace or weaken opt-in / STOP compliance;
 - accept **groups**, broadcast lists, channels, or statuses (dropped and audited at ingestion);
 - auto-create users, auto-approve KYC, or **auto-publish listings**;
@@ -100,14 +100,17 @@ cannot read B's session/draft/media); enrollment + disenrollment; retention colu
 `services/api/app/services/intake/normalise.py` · `services/api/app/core/ratelimit_policies.py`
 (register the new route) · `services/api/tests/test_webhooks_waha_intake.py`
 
-A **new, isolated** router + provider normaliser. **Does not modify or weaken**
-`routers/webhooks_whatsapp.py` (Lane 1) — it reuses the *pattern* (`verify_hub_signature`-style
-HMAC-SHA256 over the **raw body** with `hmac.compare_digest`) in its own module. Validates, in order:
-shared secret/signature, timestamp freshness (±5 min), replay (`webhook_events` UNIQUE
-`(provider='waha', event_id)`), source account, **direct-chat type** (any `*@g.us`/broadcast/status ⇒
-`dropped_group`), E.164 sender `^260[79][0-9]{8}$`, provider message id, and JSON schema — **before**
-queueing any work. Accepted events go **only** to the P01 session service. Redacted structured logs
-(never a raw body or full MSISDN). The connector holds **no** direct database credentials.
+A **new, isolated** router + provider normaliser on the **pinned WAHA `2026.5.1`** contract. **Does not
+modify or weaken** `routers/webhooks_whatsapp.py` (Lane 1), and **must NOT reuse** Meta's
+`X-Hub-Signature-256` / `verify_hub_signature` verifier — WAHA's scheme is different. Validates, in order:
+`X-Webhook-Hmac` as **HMAC-SHA-512** over the **raw body** with `hmac.compare_digest` and
+`X-Webhook-Hmac-Algorithm` exactly `sha512`; `X-Webhook-Request-Id` + `X-Webhook-Timestamp` (ms) freshness
+(±5 min); source account; **event type** (only the session `message` event); **direct-chat type** (any
+`*@g.us`/broadcast/status ⇒ `dropped_group`); E.164 sender `^260[79][0-9]{8}$`; JSON schema; then
+**replay dedupe after auth+schema** via `webhook_events` UNIQUE `(provider='waha', event_id=<signed
+message id>)` — **before** queueing any work. Accepted events go **only** to the P01 session service.
+**Strictly inbound-only — the module sends nothing.** Redacted structured logs (never a raw body or full
+MSISDN). The connector holds **no** direct database credentials.
 **AC:** every rejection path returns safely and audits the right disposition; group events can never
 reach the session service; missing secret ⇒ fail closed (never open); Lane 1 webhook byte-identical.
 **Tests:** valid event accepted; bad/missing signature ⇒ `403` `rejected_auth`; stale timestamp;
@@ -140,7 +143,7 @@ Conversation orchestration only. Guides the direct-chat vendor to supply **title
 price/pricing mode, quantity/stock mode, sale unit, condition, description/specifications, images**.
 **Simple rules first** (regex/keyword/unit parsing); AI extraction is **optional**, **Pydantic-schema
 constrained**, **source-labelled** into P01's provenance columns, and **structurally unable to execute
-instructions found in images or captions**. Concise follow-up questions for missing/contradictory data.
+instructions found in images or captions**. Concise follow-up requests recorded **as structured data on the intake record** for M18-P05 to render — **never sent as a message** (the lane is strictly inbound-only).
 Reuses the existing product-class / pricing / **prohibited-category** rules
 (`services/moderation/prohibited.py`) — no second copy. Never infers regulated claims; never approves.
 **AC:** model output that fails the schema is discarded, not coerced; a caption containing
