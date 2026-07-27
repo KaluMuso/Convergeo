@@ -39,6 +39,17 @@ class Settings(BaseSettings):
         default="http://localhost:3000,http://localhost:3001,http://localhost:3002",
     )
     cloudinary_url: str = Field(alias="CLOUDINARY_URL", default="")
+    # M17-P02: where Cloudinary posts the async eager-transcode callback.
+    # Empty in dev/CI, which simply means no notification_url is signed — the
+    # upload still works, the clip just waits in `screening` until one is set.
+    cloudinary_notification_url: str = Field(
+        alias="CLOUDINARY_NOTIFICATION_URL", default=""
+    )
+    # Callback signing secret. Kept separate from the API secret so it can be
+    # rotated without re-issuing upload credentials.
+    cloudinary_webhook_secret: str = Field(
+        alias="CLOUDINARY_WEBHOOK_SECRET", default=""
+    )
     # Observability (M16-P06). DSN unset -> Sentry is a strict no-op (dev/CI safe);
     # never commit a DSN. release = git sha, environment defaults to `env`.
     sentry_dsn: str = Field(alias="SENTRY_DSN", default="")

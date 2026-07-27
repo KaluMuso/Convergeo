@@ -62,6 +62,15 @@ INTERNAL_CRON = RateLimitPolicy(scope="internal_cron", limit=240, window=timedel
 WAHA_INTAKE_WEBHOOK = RateLimitPolicy(
     scope="webhook_waha_intake", limit=60, window=timedelta(minutes=1)
 )
+# M17-P02 Cloudinary transcode callback. A policy rather than a third
+# EXEMPT_ROUTE_IDS entry: the exemptions exist for providers whose retries we
+# must never drop on OUR failure (Lenco money, Meta delivery). A transcode
+# notification is recoverable — the clip simply waits in `screening` and the
+# vendor can retry — so it gets a ceiling. Sized well above any real eager
+# batch so a legitimate burst is never the thing that trips it.
+CLOUDINARY_WEBHOOK = RateLimitPolicy(
+    scope="webhook_cloudinary", limit=120, window=timedelta(minutes=1)
+)
 
 # Public, unauthenticated telemetry beacon (navigator.sendBeacon). Higher ceiling than
 # human writes — a batch fires ~once per page-session — and enforcement is fail-open, so a
@@ -154,6 +163,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /flags/{flag_id}/remove": ADMIN_WRITE,
     "POST /flags/{flag_id}/unpublish": ADMIN_WRITE,
     "POST /flags/{flag_id}/warn-vendor": ADMIN_WRITE,
+    "POST /webhooks/cloudinary": CLOUDINARY_WEBHOOK,
     "POST /webhooks/waha-intake": WAHA_INTAKE_WEBHOOK,
     "POST /internal/analytics/retention-tick": INTERNAL_CRON,
     "POST /internal/digest": INTERNAL_CRON,
@@ -260,6 +270,18 @@ POLICIES: dict[str, RateLimitPolicy] = {
     # single-use credential-adjacent artefact, so minting is deliberately cheap
     # to police and expensive to farm. Submission is SENSITIVE because it is the
     # one act that creates a listing from the WhatsApp lane.
+    # M17-P02 clip upload. SENSITIVE: each call mints a signed slot for an 80 MB
+    # direct upload, so the cost of farming it is Cloudinary credits, not CPU.
+    "POST /clips": SENSITIVE_WRITE,
+    # M17-P03 engagement. Likes/views/reports are idempotent by unique key, so a
+    # flood costs one row at most — these ceilings bound request volume, not
+    # correctness. Comments are the exception: free text is the only thing here a
+    # spammer gains anything from repeating, so it gets the SENSITIVE ceiling.
+    "DELETE /clips/{clip_id}/like": STANDARD_WRITE,
+    "POST /clips/{clip_id}/comments": SENSITIVE_WRITE,
+    "POST /clips/{clip_id}/like": STANDARD_WRITE,
+    "POST /clips/{clip_id}/report": SENSITIVE_WRITE,
+    "POST /clips/{clip_id}/view": STANDARD_WRITE,
     "POST /vendor/intake/links/redeem": SENSITIVE_WRITE,
     "POST /vendor/intake/sessions/{session_id}/link": SENSITIVE_WRITE,
     "POST /vendor/intake/sessions/{session_id}/submit": SENSITIVE_WRITE,
