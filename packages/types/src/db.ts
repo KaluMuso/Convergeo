@@ -476,6 +476,201 @@ export type Database = {
         }
         Relationships: []
       }
+      clip_comments: {
+        Row: {
+          author_id: string
+          body: string
+          clip_id: string
+          created_at: string
+          id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          clip_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          clip_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clip_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clip_comments_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: false
+            referencedRelation: "video_clips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clip_likes: {
+        Row: {
+          clip_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          clip_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          clip_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clip_likes_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: false
+            referencedRelation: "video_clips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clip_likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clip_products: {
+        Row: {
+          clip_id: string
+          created_at: string
+          id: string
+          listing_id: string
+          sort_order: number
+        }
+        Insert: {
+          clip_id: string
+          created_at?: string
+          id?: string
+          listing_id: string
+          sort_order?: number
+        }
+        Update: {
+          clip_id?: string
+          created_at?: string
+          id?: string
+          listing_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clip_products_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: false
+            referencedRelation: "video_clips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clip_products_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clip_reports: {
+        Row: {
+          clip_id: string
+          created_at: string
+          id: string
+          reason: string
+          reporter_id: string
+        }
+        Insert: {
+          clip_id: string
+          created_at?: string
+          id?: string
+          reason: string
+          reporter_id: string
+        }
+        Update: {
+          clip_id?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          reporter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clip_reports_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: false
+            referencedRelation: "video_clips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clip_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clip_views: {
+        Row: {
+          clip_id: string
+          created_at: string
+          id: string
+          user_id: string
+          viewed_on: string
+        }
+        Insert: {
+          clip_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+          viewed_on?: string
+        }
+        Update: {
+          clip_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+          viewed_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clip_views_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: false
+            referencedRelation: "video_clips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clip_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_rates: {
         Row: {
           category_key: string
@@ -3491,6 +3686,88 @@ export type Database = {
           },
         ]
       }
+      video_clips: {
+        Row: {
+          caption: string | null
+          category_id: string | null
+          cloudinary_public_id: string | null
+          comment_count: number
+          created_at: string
+          duration_s: number | null
+          id: string
+          like_count: number
+          poster_url: string | null
+          published_at: string | null
+          rejection_reason: string | null
+          renditions: Json
+          status: string
+          taken_down_at: string | null
+          updated_at: string
+          vendor_id: string
+          view_count: number
+        }
+        Insert: {
+          caption?: string | null
+          category_id?: string | null
+          cloudinary_public_id?: string | null
+          comment_count?: number
+          created_at?: string
+          duration_s?: number | null
+          id?: string
+          like_count?: number
+          poster_url?: string | null
+          published_at?: string | null
+          rejection_reason?: string | null
+          renditions?: Json
+          status?: string
+          taken_down_at?: string | null
+          updated_at?: string
+          vendor_id: string
+          view_count?: number
+        }
+        Update: {
+          caption?: string | null
+          category_id?: string | null
+          cloudinary_public_id?: string | null
+          comment_count?: number
+          created_at?: string
+          duration_s?: number | null
+          id?: string
+          like_count?: number
+          poster_url?: string | null
+          published_at?: string | null
+          rejection_reason?: string | null
+          renditions?: Json
+          status?: string
+          taken_down_at?: string | null
+          updated_at?: string
+          vendor_id?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_clips_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_clips_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "video_clips_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhook_events: {
         Row: {
           created_at: string
@@ -3613,6 +3890,10 @@ export type Database = {
         }[]
       }
       cleanup_expired_rate_counters: { Args: never; Returns: number }
+      clip_bump_counter: {
+        Args: { p_clip_id: string; p_column: string; p_delta: number }
+        Returns: number
+      }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       embedding_enqueue_document: {
         Args: {

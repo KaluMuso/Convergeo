@@ -185,6 +185,32 @@ Cold-start ops (founder, not code): seed the first ~50 clips with 10–15 anchor
 - **F-V4 — Cloudinary plan check:** confirm video eager-transcode + monthly credit
   headroom on the current plan before P02.
 
+### F-V resolutions taken during implementation (2026-07-27)
+
+The founder asked for M17 to be built end to end and to "follow your intuition and best
+recommendation" on open questions. These are the calls taken, each reversible:
+
+- **F-V1 — Placement & name → "Clips", flag-gated route `/clips`.** The customer entry
+  point ships **behind the `clips` feature flag (default `false`)**, so placement can be
+  changed — or the tab withheld entirely — without a code change. Nothing appears in the
+  nav until the flag is flipped.
+- **F-V2 — Comments → built, but shipped OFF.** This follows the spec's own
+  recommendation ("likes-only for beta week 1, flip comments on via config"). Comments
+  are fully implemented, moderated and rate-limited, behind `clips_comments`
+  (default `false`). Turning them on is a config change, not a deploy.
+- **F-V3 — Creator scope → unchanged.** D-V7 locks vendors-only for v1; no decision was
+  needed now, and none was taken.
+- **F-V4 — Cloudinary plan headroom → NOT resolvable from here, and deliberately
+  safed instead.** Whether the current plan has video eager-transcode and credit
+  headroom is a fact about the account, not about the code — I cannot verify it and did
+  not guess. The mitigation is structural: the whole mountain is behind the `clips`
+  flag (default off), so **no upload can spend a credit until the founder enables it**,
+  and M17-P08's spend tracker + kill-switch lands in the same track. Confirm the plan
+  before flipping the flag, not before merging the code.
+
+**Whole-mountain posture:** M17 ships **flag-gated and dark**, mirroring M18. Merged
+code changes no customer-visible behaviour until `clips` is switched on.
+
 ---
 
 _Spec authored 2026-07-12. Grounded against: `media/cloudinary_signing.py`,
