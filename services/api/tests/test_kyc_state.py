@@ -242,6 +242,20 @@ class TestKycVendorCas:
         _seed_pending_kyc_vendor(db, vendor_id=vendor_id, kyc_id=kyc_id)
         wrapper = _ServiceWrapper(db)
 
+        # A loser can lose in one of two legitimate ways, depending purely on
+        # thread interleaving:
+        #
+        #   * it read `submitted` before the winner committed, so its CAS UPDATE
+        #     matched zero rows      -> kyc_transition_conflict
+        #   * it read `approved` after the winner committed, so the pre-flight
+        #     guard refused the move -> kyc_invalid_transition
+        #
+        # Both mean "somebody else got there first", and both leave the
+        # invariant this test exists for intact (exactly one success, vendor
+        # active). Accepting only the first made the test flaky — it failed on
+        # a correct run whenever the second interleaving happened to occur.
+        LOSER_CODES = frozenset({"kyc_transition_conflict", "kyc_invalid_transition"})
+
         def approve() -> object:
             try:
                 return transition_approve(
@@ -252,7 +266,7 @@ class TestKycVendorCas:
                     service_client=wrapper,
                 )
             except AppError as exc:
-                if exc.code == "kyc_transition_conflict":
+                if exc.code in LOSER_CODES:
                     return None
                 raise
 
