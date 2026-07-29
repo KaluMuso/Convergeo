@@ -175,12 +175,18 @@ else
   ok "docker not available — compose config skipped"
 fi
 
-# 9) Redeploy script refuses latest
+# 9) Redeploy script refuses latest and constrains the shared production host.
 if grep -q "refusing tag 'latest'" infra/staging/redeploy-api-staging.sh \
-  && grep -q 'vergeo5-api-staging' infra/staging/redeploy-api-staging.sh; then
-  ok "redeploy-api-staging refuses latest + distinct container name"
+  && grep -q 'vergeo5-api-staging' infra/staging/redeploy-api-staging.sh \
+  && grep -q -- '--memory "${STAGING_MEMORY_LIMIT}"' infra/staging/redeploy-api-staging.sh \
+  && grep -q -- '--cpus "${STAGING_CPU_LIMIT}"' infra/staging/redeploy-api-staging.sh \
+  && grep -q -- '--pids-limit "${STAGING_PIDS_LIMIT}"' infra/staging/redeploy-api-staging.sh \
+  && grep -q -- '--workers "${STAGING_WORKERS}"' infra/staging/redeploy-api-staging.sh \
+  && grep -q 'MIN_AVAILABLE_MEMORY_KIB' infra/staging/redeploy-api-staging.sh \
+  && bash -n infra/staging/redeploy-api-staging.sh; then
+  ok "redeploy-api-staging refuses latest and enforces shared-host limits"
 else
-  bad "redeploy-api-staging missing latest guard or container name"
+  bad "redeploy-api-staging missing latest or shared-host guard"
 fi
 
 # 10) Schema check scripts exist and mention RLS + security_invoker
