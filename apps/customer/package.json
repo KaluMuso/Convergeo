@@ -19,14 +19,14 @@
     "@vergeo/i18n": "workspace:*",
     "@vergeo/observability": "workspace:*",
     "@vergeo/ui": "workspace:*",
-    "next": "^15.5.21",
-    "next-intl": "^4.13.3",
+    "next": "^15.5.22",
+    "next-intl": "^4.13.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "serwist": "^9.5.11"
+    "serwist": "^9.5.12"
   },
   "devDependencies": {
-    "@serwist/next": "^9.5.11",
+    "@serwist/next": "^9.5.12",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
