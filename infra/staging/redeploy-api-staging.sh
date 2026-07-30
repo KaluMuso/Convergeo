@@ -7,6 +7,7 @@
 #   - env file:       ~/vergeo5-api-staging.env
 #   - tag:            required git SHA (never "latest")
 #   - ENV:            must be staging (enforced by API startup guards)
+#   - shared-host:     fixed resource limits and one worker protect production
 #
 # Usage:
 #   ./redeploy-api-staging.sh <git-sha>
@@ -14,17 +15,27 @@
 #
 # Overridable via env:
 #   API_ENV_FILE (default: $HOME/vergeo5-api-staging.env)
-#   API_BIND     (default: 127.0.0.1:8001:8000)
 #   DEPLOY_RECORD_DIR (default: $HOME/.vergeo5-staging)
 set -euo pipefail
 
 IMAGE="ghcr.io/kalumuso/convergeo-api"
 NAME="vergeo5-api-staging"
 ENV_FILE="${API_ENV_FILE:-$HOME/vergeo5-api-staging.env}"
-BIND="${API_BIND:-127.0.0.1:8001:8000}"
+BIND="127.0.0.1:8001:8000"
 RECORD_DIR="${DEPLOY_RECORD_DIR:-$HOME/.vergeo5-staging}"
 RECORD_FILE="${RECORD_DIR}/api-deploy-record"
 PREV_FILE="${RECORD_DIR}/api-previous-image"
+
+# This deployment runs on the same host as production. These are deliberately
+# constants rather than operator-overridable environment variables: a staging
+# deploy must not be able to claim the host's remaining capacity by accident.
+STAGING_MEMORY_LIMIT="768m"
+STAGING_MEMORY_RESERVATION="384m"
+STAGING_CPU_LIMIT="0.75"
+STAGING_PIDS_LIMIT="256"
+STAGING_WORKERS="1"
+MIN_AVAILABLE_MEMORY_KIB=$((1536 * 1024))
+MIN_AVAILABLE_DISK_KIB=$((5 * 1024 * 1024))
 
 die() { printf '✗ %s\n' "$*" >&2; exit 1; }
 
@@ -41,6 +52,22 @@ if grep -Eq 'dpadrlxukcjbewpqympu|api\.vergeo5\.com' "$ENV_FILE"; then
 fi
 if ! grep -Eq '^ENV=staging[[:space:]]*$' "$ENV_FILE"; then
   die "staging env file must contain ENV=staging"
+fi
+
+available_memory_kib="$(awk '/MemAvailable:/ { print $2; exit }' /proc/meminfo)"
+if [[ ! "$available_memory_kib" =~ ^[0-9]+$ ]]; then
+  die "could not determine host MemAvailable"
+fi
+if (( available_memory_kib < MIN_AVAILABLE_MEMORY_KIB )); then
+  die "host has insufficient available memory for a staging deploy; need at least 1536 MiB available"
+fi
+
+available_disk_kib="$(df -Pk "$RECORD_DIR" | awk 'NR == 2 { print $4 }')"
+if [[ ! "$available_disk_kib" =~ ^[0-9]+$ ]]; then
+  die "could not determine available disk space"
+fi
+if (( available_disk_kib < MIN_AVAILABLE_DISK_KIB )); then
+  die "host has insufficient free disk for a staging deploy; need at least 5 GiB free"
 fi
 
 TAG=""
@@ -75,14 +102,25 @@ printf '%s\n' "$PREV_IMAGE" >"$PREV_FILE"
 echo "→ Recreating ${NAME} (bind ${BIND}) ..."
 docker rm -f "${NAME}" >/dev/null 2>&1 || true
 docker run -d --name "${NAME}" \
+  --init \
   --env-file "${ENV_FILE}" \
   -e "ENV=staging" \
   -e "GIT_SHA=${TAG}" \
   -e "API_IMAGE_TAG=${TAG}" \
   -e "SENTRY_RELEASE=${TAG}" \
+  --memory "${STAGING_MEMORY_LIMIT}" \
+  --memory-reservation "${STAGING_MEMORY_RESERVATION}" \
+  --cpus "${STAGING_CPU_LIMIT}" \
+  --pids-limit "${STAGING_PIDS_LIMIT}" \
+  --security-opt no-new-privileges:true \
+  --log-driver local \
+  --log-opt max-size=10m \
+  --log-opt max-file=3 \
+  --stop-timeout 20 \
   --restart unless-stopped \
   -p "${BIND}" \
-  "${IMAGE}:${TAG}" >/dev/null
+  "${IMAGE}:${TAG}" \
+  uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers "${STAGING_WORKERS}" >/dev/null
 
 HEALTH_URL="http://127.0.0.1:8001/healthz"
 FINGERPRINT_URL="http://127.0.0.1:8001/fingerprint"
