@@ -83,6 +83,7 @@ export DRILL_BUYER_TOKEN=<jwt>
 export DRILL_ADMIN_TOKEN=<admin-jwt>
 export DRILL_CHECKOUT_GROUP_ID=<uuid>
 export DRILL_ORDER_ID=<uuid>
+export DRILL_MOMO_RAIL=mtn
 export DRILL_MOMO_NUMBER=0961111111
 export INTERNAL_RECONCILIATION_TOKEN=<token>
 export INTERNAL_RELEASE_JOB_TOKEN=<token>
@@ -91,6 +92,22 @@ export DRILL_ALLOW_SQL_SETUP=1   # ops only: advance order to buyer-confirmed
 
 uv run python scripts/drills/lenco_sandbox_money_drill.py --mode live
 ```
+
+### Airtel collection evidence
+
+Run the Airtel settlement as a separate checkout, not a retry of the MTN order.
+Create a new cart, pending checkout group, and order, then run the same command
+with:
+
+```bash
+export DRILL_MOMO_RAIL=airtel
+export DRILL_MOMO_NUMBER=0971111111
+export DRILL_CHECKOUT_GROUP_ID=<fresh-airtel-checkout-group-uuid>
+export DRILL_ORDER_ID=<fresh-airtel-order-uuid>
+```
+
+The report records `entities.momo_rail`. Keep both rail reports as redacted
+evidence. The drill rejects any collection rail other than `mtn` or `airtel`.
 
 Optional flags:
 
