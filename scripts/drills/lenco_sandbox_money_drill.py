@@ -49,7 +49,11 @@ from app.core.env_guards import (  # noqa: E402
 )
 from app.services.payments.settlement import prepaid_collection_idempotency_key  # noqa: E402
 
-SANDBOX_MOMO_SUCCESS = "0961111111"
+SANDBOX_MOMO_SUCCESS_BY_RAIL = {
+    "mtn": "0961111111",
+    "airtel": "0971111111",
+}
+MOMO_COLLECTION_RAILS = frozenset(SANDBOX_MOMO_SUCCESS_BY_RAIL)
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
 
 
@@ -135,6 +139,7 @@ class DrillConfig:
     recon_token: str
     release_token: str
     payouts_token: str
+    momo_rail: str
     momo_number: str
     checkout_group_id: str
     payment_id: str
@@ -146,6 +151,7 @@ class DrillConfig:
 
     @classmethod
     def from_env(cls, *, mode: RunMode, args: argparse.Namespace) -> DrillConfig:
+        momo_rail = os.environ.get("DRILL_MOMO_RAIL", "mtn").strip().lower()
         return cls(
             mode=mode,
             api_base_url=os.environ.get("DRILL_API_BASE_URL", "http://localhost:8000").rstrip("/"),
@@ -162,7 +168,11 @@ class DrillConfig:
                 "INTERNAL_RELEASE_JOB_TOKEN", "dev-internal-release-job"
             ).strip(),
             payouts_token=os.environ.get("INTERNAL_PAYOUTS_TOKEN", "dev-internal-payouts").strip(),
-            momo_number=os.environ.get("DRILL_MOMO_NUMBER", SANDBOX_MOMO_SUCCESS).strip(),
+            momo_rail=momo_rail,
+            momo_number=os.environ.get(
+                "DRILL_MOMO_NUMBER",
+                SANDBOX_MOMO_SUCCESS_BY_RAIL.get(momo_rail, ""),
+            ).strip(),
             checkout_group_id=os.environ.get("DRILL_CHECKOUT_GROUP_ID", "").strip(),
             payment_id=os.environ.get("DRILL_PAYMENT_ID", "").strip(),
             order_id=os.environ.get("DRILL_ORDER_ID", "").strip(),
@@ -184,6 +194,10 @@ class DrillConfig:
             blockers.append("SUPABASE_DB_URL missing")
         if not self.buyer_token:
             blockers.append("DRILL_BUYER_TOKEN missing")
+        if self.momo_rail not in MOMO_COLLECTION_RAILS:
+            blockers.append("DRILL_MOMO_RAIL must be 'mtn' or 'airtel'")
+        if not self.momo_number:
+            blockers.append("DRILL_MOMO_NUMBER missing")
         return len(blockers) == 0, blockers
 
 
@@ -415,7 +429,7 @@ class ApiDrillClient:
             json={
                 "checkout_group_id": checkout_group_id,
                 "payer_number": self.config.momo_number,
-                "rail": "mtn",
+                "rail": self.config.momo_rail,
             },
         )
         resp.raise_for_status()
@@ -792,7 +806,7 @@ def run_release_refund_live(
                     "lane": 1,
                     "idempotency_key": refund_key,
                     "customer_momo": config.momo_number,
-                    "rail": "mtn",
+                    "rail": config.momo_rail,
                     "reason": "drill harness refund-as-payout",
                 }
             )
@@ -1051,6 +1065,7 @@ def run_drill(config: DrillConfig) -> DrillReport:
                     "checkout_group_id": config.checkout_group_id,
                     "payment_id": config.payment_id,
                     "order_id": config.order_id,
+                    "momo_rail": config.momo_rail,
                 }
             finally:
                 api.close()

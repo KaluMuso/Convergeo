@@ -18,6 +18,8 @@ export DRILL_BUYER_TOKEN=<buyer-jwt>
 export DRILL_ADMIN_TOKEN=<admin-jwt>          # release/refund leg
 export DRILL_CHECKOUT_GROUP_ID=<uuid>         # pending checkout with cart
 export DRILL_ORDER_ID=<uuid>                  # order in that checkout group
+export DRILL_MOMO_RAIL=mtn                     # mtn | airtel
+export DRILL_MOMO_NUMBER=0961111111            # MTN sandbox success number
 export INTERNAL_RECONCILIATION_TOKEN=...
 export INTERNAL_RELEASE_JOB_TOKEN=...
 export INTERNAL_PAYOUTS_TOKEN=...
@@ -25,6 +27,11 @@ export DRILL_ALLOW_SQL_SETUP=1                # ops: advance order to completed
 
 uv run python scripts/drills/lenco_sandbox_money_drill.py --mode live
 ```
+
+Run MTN and Airtel as two separate payments: create a fresh cart, checkout group,
+and order for the Airtel leg, then set `DRILL_MOMO_RAIL=airtel` and
+`DRILL_MOMO_NUMBER=0971111111`. Reusing a completed checkout group would test an
+idempotency path rather than a second collection settlement.
 
 ### Modes
 
