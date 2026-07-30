@@ -132,8 +132,17 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           STAGING_SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+          SEND_SMS_HOOK_SECRET: ${{ secrets.SEND_SMS_HOOK_SECRET }}
         run: |
           set -euo pipefail
+          if [ -z "${SEND_SMS_HOOK_SECRET:-}" ]; then
+            echo "::error::SEND_SMS_HOOK_SECRET secret is required in the staging environment"
+            exit 1
+          fi
+          if ! printf '%s' "${SEND_SMS_HOOK_SECRET}" | grep -Eq '^v1,whsec_[A-Za-z0-9+/=_-]{32,}$'; then
+            echo "::error::SEND_SMS_HOOK_SECRET must match v1,whsec_<base64-secret>"
+            exit 1
+          fi
           # Applies repository migrations (including 0056) to the linked staging project.
           supabase db push --include-all
 
