@@ -21,7 +21,9 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -110,6 +112,38 @@ FORBIDDEN_SUBSTRINGS = (
     PROD_SUPABASE_PROJECT_REF,
     PROD_API_HOST,
 )
+
+
+@dataclass(frozen=True)
+class SqlResult:
+    ok: bool
+    rows: list[str]
+    error: str | None = None
+
+
+class StagingPgConn:
+    """Minimal psql wrapper for the guarded staging seed, independent of tests."""
+
+    def __init__(self, dsn: str) -> None:
+        self.dsn = dsn
+
+    def run(self, sql: str) -> SqlResult:
+        try:
+            proc = subprocess.run(
+                ["psql", self.dsn, "-v", "ON_ERROR_STOP=1", "-At"],
+                input=sql,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except FileNotFoundError:
+            return SqlResult(ok=False, rows=[], error="psql is required to seed staging")
+        if proc.returncode != 0:
+            return SqlResult(ok=False, rows=[], error=proc.stderr.strip())
+        return SqlResult(
+            ok=True,
+            rows=[line for line in proc.stdout.splitlines() if line],
+        )
 
 
 def _die(msg: str) -> int:
@@ -230,7 +264,17 @@ INSERT INTO public.vendors (
     return "\n".join(auth_parts) + "\n" + "\n".join(sql_parts)
 
 
-def _seed(conn: Any) -> None:
+def _require_seed_schema(conn: StagingPgConn) -> None:
+    vendors = conn.run("SELECT to_regclass('public.vendors')")
+    if not vendors.ok:
+        raise RuntimeError(vendors.error or "cannot verify the staging schema")
+    if not vendors.rows or vendors.rows[0] in {"", "null"}:
+        raise RuntimeError(
+            "staging schema is missing public.vendors; run the staging migrations before seeding"
+        )
+
+
+def _seed(conn: StagingPgConn) -> None:
     result = conn.run(_build_seed_sql())
     if not result.ok:
         raise RuntimeError(result.error or "seed SQL failed")
@@ -294,26 +338,16 @@ def main() -> int:
     if not db_url:
         return _die("SUPABASE_DB_URL is required for --apply")
 
-    from tests.rls.conftest import (  # noqa: E402
-        PgConn,
-        apply_migrations,
-        ensure_local_test_database,
-        resolve_db_url,
-    )
-
-    os.environ["SUPABASE_DB_URL"] = db_url
-    url = resolve_db_url()
-    ensure_local_test_database(url)
-    conn = PgConn(url)
+    conn = StagingPgConn(db_url)
     if not conn.run("SELECT 1").ok:
         return _die("Cannot reach staging database at guarded URL")
 
-    vendors = conn.run("SELECT to_regclass('public.vendors')")
-    if not vendors.ok or not vendors.rows or vendors.rows[0] in {"", "null"}:
-        print("Applying migrations (including 0056)…")
-        apply_migrations(conn)
+    try:
+        _require_seed_schema(conn)
+    except RuntimeError as exc:
+        return _die(str(exc))
 
-    # Prefer ledger evidence when the shim provides it.
+    # The deployment job owns migration application; seed only after ledger verification.
     ledger = conn.run(
         "SELECT count(*)::int FROM supabase_migrations.schema_migrations "
         "WHERE version LIKE '0056%'"
