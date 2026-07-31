@@ -172,6 +172,10 @@ SQL
   export BACKUP_LOCAL_DIR="${DRILL_DIR}/backups"
   export SKIP_OCI_UPLOAD=1
   export BACKUP_RETENTION_DAYS=7
+  # This disposable database deliberately contains only the marker table. Keep
+  # db-dump's production floor intact, but use its documented fixture floor here.
+  export BACKUP_MODE=drill
+  export BACKUP_MIN_BYTES=256
 
   log "Running db-dump.sh"
   bash "${SCRIPT_DIR}/db-dump.sh"
