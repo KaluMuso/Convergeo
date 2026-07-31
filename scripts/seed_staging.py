@@ -130,8 +130,17 @@ class StagingPgConn:
     def run(self, sql: str) -> SqlResult:
         try:
             proc = subprocess.run(
-                ["psql", self.dsn, "-v", "ON_ERROR_STOP=1", "-At"],
-                input=sql,
+                [
+                    "psql",
+                    "-X",
+                    "-v",
+                    "ON_ERROR_STOP=1",
+                    "-At",
+                    "-d",
+                    self.dsn,
+                    "-c",
+                    sql,
+                ],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -139,11 +148,25 @@ class StagingPgConn:
         except FileNotFoundError:
             return SqlResult(ok=False, rows=[], error="psql is required to seed staging")
         if proc.returncode != 0:
-            return SqlResult(ok=False, rows=[], error=proc.stderr.strip())
+            return SqlResult(
+                ok=False,
+                rows=[],
+                error=_redact_psql_error(proc.stderr, self.dsn),
+            )
         return SqlResult(
             ok=True,
             rows=[line for line in proc.stdout.splitlines() if line],
         )
+
+
+def _redact_psql_error(stderr: str, dsn: str) -> str:
+    """Keep a controlled failure diagnostic without ever emitting DB credentials."""
+    message = stderr.strip() or "psql exited without a diagnostic"
+    parsed = urlparse(dsn)
+    for secret in (dsn, parsed.password):
+        if secret:
+            message = message.replace(secret, "<redacted>")
+    return message
 
 
 def _die(msg: str) -> int:
@@ -339,8 +362,12 @@ def main() -> int:
         return _die("SUPABASE_DB_URL is required for --apply")
 
     conn = StagingPgConn(db_url)
-    if not conn.run("SELECT 1").ok:
-        return _die("Cannot reach staging database at guarded URL")
+    connection = conn.run("SELECT 1")
+    if not connection.ok:
+        return _die(
+            "Cannot reach staging database at guarded URL: "
+            f"{connection.error or 'psql failed without a diagnostic'}"
+        )
 
     try:
         _require_seed_schema(conn)
