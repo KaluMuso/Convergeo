@@ -45,13 +45,40 @@ def test_staging_seed_uses_psql_without_importing_test_harness(
     assert result.rows == ["1"]
     assert captured["args"][0] == [
         "psql",
-        "postgresql://staging.example/test",
+        "-X",
         "-v",
         "ON_ERROR_STOP=1",
         "-At",
+        "-d",
+        "postgresql://staging.example/test",
+        "-c",
+        "SELECT 1",
     ]
-    assert captured["kwargs"]["input"] == "SELECT 1"
+    assert "input" not in captured["kwargs"]
     assert "tests.rls.conftest" not in Path(seed_module.__file__).read_text()
+
+
+def test_staging_seed_redacts_dsn_from_psql_errors(
+    monkeypatch: pytest.MonkeyPatch,
+    seed_module: Any,
+) -> None:
+    dsn = "postgresql://seed_user:super-secret@staging.example/test"
+
+    def fake_run(*args: Any, **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=2,
+            stdout="",
+            stderr=f"psql: error: connection failed for {dsn}",
+        )
+
+    monkeypatch.setattr(seed_module.subprocess, "run", fake_run)
+
+    result = seed_module.StagingPgConn(dsn).run("SELECT 1")
+
+    assert not result.ok
+    assert result.error == "psql: error: connection failed for <redacted>"
+    assert "super-secret" not in result.error
 
 
 def test_staging_seed_requires_migrated_vendor_schema(seed_module: Any) -> None:
