@@ -32,8 +32,17 @@ fi
 
 echo "==> Staging schema checks (${SQL_FILE})"
 
-# Capture issue lines only (queries emit FAIL … rows).
-issues="$("${PSQL[@]}" -At -f "$SQL_FILE" | grep -E '^FAIL ' || true)"
+# Run psql on its own so a connection/query failure is distinguishable from
+# "connected fine, found no issues". Piping straight into `grep … || true`
+# swallowed psql's exit status, so an unreachable database printed the OK line
+# below and exited 0 — a false green on an RLS gate.
+if ! output="$("${PSQL[@]}" -At -f "$SQL_FILE")"; then
+  die "could not run the staging schema checks (psql failed — see its error above). A database we could not reach is NOT a pass."
+fi
+
+# Capture issue lines only (queries emit FAIL … rows). grep exits 1 when the
+# database is clean, which is the healthy case, so tolerate only that.
+issues="$(printf '%s\n' "$output" | grep -E '^FAIL ' || true)"
 if [[ -n "$issues" ]]; then
   echo "::error::staging schema isolation failures:"
   printf '%s\n' "$issues"
