@@ -11,6 +11,11 @@ This file **proposes**; it decides nothing. `docs/plan/00-status.md` and
 `docs/plan/00-decisions.md` are untouched — new decisions appear here only as **candidate
 ADRs** (§8) for the founder to accept, amend or reject.
 
+> **Founder answer received 2026-08-01 — FD-B01: `wholesale=true` means _wholesale-only_;
+> consumers get a 403.** Recorded here and carried through §1.1, §4 (G8 + new G8.1 spec, G13),
+> §5.0, §7 and §8 (ADR-R02-B6). It is **not** written into `00-decisions.md` — this pebble is
+> docs-scoped to this file, so promoting it to a locked decision is a separate founder action.
+
 ## 0. How to read this
 
 Every claim about the codebase carries a `path:line` citation. Each audited item is marked:
@@ -36,7 +41,7 @@ resolver exists, is the single eligibility source, and is applied at every consu
 surface named in D28's 2026-07-15 follow-up. Seller-side, wholesale publishing is correctly
 fenced behind auditable T2 KYC on the interactive create/update routes.
 
-**Three structural weaknesses stop it short of "enforced".**
+**Four structural weaknesses stop it short of "enforced".**
 
 1. **The gate is API-deep, not RLS-deep.** `vendor_listings` and `search_documents` both grant
    public `SELECT` over the wholesale columns, so D28's "hidden from consumers" holds only for
@@ -48,6 +53,10 @@ fenced behind auditable T2 KYC on the interactive create/update routes.
 3. **The verification lifecycle is one-way and drift-prone.** There is no suspend path despite
    `suspended` being a valid status, and a verified buyer can rewrite their own legal name and
    PACRA number while staying verified (§4, G4/G9).
+4. **The wholesale flag is enforced as a pricing rule in cart and an access rule in discovery.**
+   FD-B01 settles this as **access** — consumers get a 403 — which makes today's silent
+   retail-at-no-MOQ sale a defect (§4, G8) and turns an unrendered error key into a launch
+   blocker (§4, G13). Spec: §4 G8.1.
 
 None of these are Phase-2 features. They are launch-hardening on the slice D28 already
 authorised, and they are the whole of the proposed **Wave B0**.
@@ -58,18 +67,18 @@ pulling any financial risk forward.
 
 ### 1.1 Conformance at a glance
 
-| Requirement (source)                                                                      | Status                                                                                                 |
-| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Buyer-side `business_buyers` identity, PACRA + optional TPIN (D28)                        | **Implemented**                                                                                        |
-| `pending→verified/rejected/suspended` lifecycle, status server-controlled (D28)           | **Partial** — no suspend path; post-verification detail drift (G4, G9)                                 |
-| Single shared resolver `is_verified_business` / `business/access.py` (D28)                | **Implemented**                                                                                        |
-| Enforced identically at discovery, cart pricing, checkout (D28)                           | **Partial** — discovery yes; cart yes at write; checkout/order do not re-derive (G3)                   |
-| Wholesale hidden on _every_ consumer discovery surface (D28 follow-up)                    | **Partial** — API layer complete; DB layer open (G1, G2)                                               |
-| Consumer always sees retail (D28)                                                         | **Partial** — true for price; a wholesale-only listing is still purchasable at retail with no MOQ (G8) |
-| Supplies = `wholesale=true` + `price_tiers jsonb` + `moq` (D24)                           | **Implemented**                                                                                        |
-| Supplies discoverable in a Supplies tab (D2)                                              | **Implemented** (gated)                                                                                |
-| No credit terms, RFQ-broadcast for goods, business accounts, account managers v1 (D2, §G) | **Deferred by decision** — correctly absent                                                            |
-| Vendor archetype persisted on the vendor row (D28 follow-up)                              | **Implemented**                                                                                        |
+| Requirement (source)                                                                      | Status                                                                                                                 |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Buyer-side `business_buyers` identity, PACRA + optional TPIN (D28)                        | **Implemented**                                                                                                        |
+| `pending→verified/rejected/suspended` lifecycle, status server-controlled (D28)           | **Partial** — no suspend path; post-verification detail drift (G4, G9)                                                 |
+| Single shared resolver `is_verified_business` / `business/access.py` (D28)                | **Implemented**                                                                                                        |
+| Enforced identically at discovery, cart pricing, checkout (D28)                           | **Partial** — discovery yes; cart yes at write; checkout/order do not re-derive (G3)                                   |
+| Wholesale hidden on _every_ consumer discovery surface (D28 follow-up)                    | **Partial** — API layer complete; DB layer open (G1, G2)                                                               |
+| Consumer always sees retail (D28) — read as _wholesale-only, 403_ per FD-B01              | **Partial** — a wholesale listing is still purchasable by a consumer at retail with no MOQ (G8); 403 spec'd in §4 G8.1 |
+| Supplies = `wholesale=true` + `price_tiers jsonb` + `moq` (D24)                           | **Implemented**                                                                                                        |
+| Supplies discoverable in a Supplies tab (D2)                                              | **Implemented** (gated)                                                                                                |
+| No credit terms, RFQ-broadcast for goods, business accounts, account managers v1 (D2, §G) | **Deferred by decision** — correctly absent                                                                            |
+| Vendor archetype persisted on the vendor row (D28 follow-up)                              | **Implemented**                                                                                                        |
 
 ---
 
@@ -344,6 +353,10 @@ invisible to the vendor.
 
 ### G8 — A wholesale-only listing is purchasable by a consumer at retail — **Partial**
 
+**Founder decision (2026-08-01, FD-B01 answered): `wholesale=true` means _wholesale-only_ —
+consumers get a 403.** The retail-fallback behaviour below is therefore a defect, not an
+alternative reading. Spec consequences are in §4.1.
+
 **Evidence.** `fetch_listing` filters on `status == 'active'` and nothing else
 (`services/cart/store.py:48-77`); `wholesale` is selected but never used as a visibility
 predicate. Because `wholesale = listing.wholesale AND business_eligible` (`merge.py:139`), a
@@ -356,9 +369,53 @@ the cart response echoes `title_override` and `vendor_id` (`cart.py:311-322`). D
 always sees retail" is honoured on price but not on _access_: the listing was supposed to be
 invisible, and it just became an order.
 
-**Design question for the founder (§7, FD-B01):** is `wholesale=true` intended to mean
-"wholesale-only" or "also available retail"? The discovery layer treats it as the former; the
-cart treats it as the latter. Both behaviours are defensible; the codebase should pick one.
+### G8.1 — Spec: what "wholesale-only, 403" requires
+
+FD-B01 resolves the discovery/cart contradiction in favour of the discovery layer. It makes the
+gate an **access** rule rather than a **pricing** rule, which touches more code than the
+retail-fallback reading would have. Owned by B0-P02.
+
+1. **Entry point.** `fetch_listing` (`cart/store.py:48-77`) gains an eligibility argument and
+   raises `business.wholesale_forbidden` (403) when `listing.wholesale` is true and the caller
+   is not eligible. Reuse the existing error from `require_wholesale_access`
+   (`access.py:105-113`) rather than minting a `cart.*` code — one gate, one error contract.
+2. **Guest→user merge changes behaviour.** `merge_cart_items` currently re-prices a wholesale
+   line down to retail for a non-eligible buyer (`merge.py:75-96`). Under wholesale-only it must
+   instead emit a **conflict** and drop the line, alongside the existing
+   `cart.listing_unavailable` / `cart.listing_inactive` conflicts (`merge.py:57,68`). A new
+   conflict code (`cart.wholesale_forbidden`) is warranted here because the merge path reports
+   per-line conflicts rather than failing the request.
+3. **Revocation now blocks rather than re-prices.** A buyer who loses eligibility with wholesale
+   lines already in cart must be stopped at checkout, not silently converted at retail. This
+   folds into G3's re-derivation: the checkout/order re-check produces a 403 or a removable
+   conflict, never a repriced line.
+4. **`select_unit_price_ngwee`'s retail fallback becomes defence-in-depth**, not a live path
+   (`totals.py:29`). Keep it — it is the correct failure mode if a gate is ever missed — but it
+   should no longer be reachable through a consumer request, and a test should assert that.
+5. **`price_ngwee` on a wholesale-only listing is never charged to a consumer.** It stays
+   required (it is the ladder's base and the `min_qty=1` fallback for eligible buyers), but it
+   loses all consumer-facing meaning. Worth a schema comment so a future reader does not
+   reintroduce a retail path.
+6. **RLS alignment.** B0-P01's policy predicate and this 403 must agree. If RLS hides the row,
+   the API's own service-role read still sees it, so the 403 has to be explicit in the API —
+   the two layers are not redundant here, they cover different callers.
+
+**Interaction with G1.** Until B0-P01 lands, a consumer can still enumerate wholesale listing
+IDs via PostgREST even once the 403 is in place. The 403 closes the _purchase_ path; RLS closes
+the _discovery_ path. Both are needed, and neither substitutes for the other.
+
+### G9 — Verification drifts from the verified facts — **Partial**
+
+**Evidence.** `business_buyers_owner_update` lets an owner update their row
+(`0038:126-131`) and the guard trigger blocks only `status`, `verified_at` and `user_id`
+(`0038:63-67`). `legal_name` and `registration_no` are therefore freely editable **after**
+verification. The application-layer re-apply guard (`store.py:51-58`) does not close this: it
+governs `POST /business/apply`, not a direct PostgREST `UPDATE`.
+
+**Failure scenario.** A buyer is verified against PACRA number X, then edits the row to legal
+name Y / PACRA number Z. `is_verified_business` still returns true; the admin queue shows the
+new details as verified; nothing is audited. Any future B2B invoice built from this row
+(§5.7) would carry unverified tax identifiers.
 
 ### G9 — Verification drifts from the verified facts — **Partial**
 
@@ -399,6 +456,32 @@ subtract wholesale hits. Correct, but it is a post-filter over an already-pagina
 which means result pages can under-fill. Closing G2 by projecting `wholesale` into
 `search_documents` would remove both the extra query and the short-page artefact.
 
+### G13 — The wholesale 403's message key does not exist in any locale — **Partial**
+
+**Evidence.** `require_wholesale_access` returns
+`details.message_key = "supplies.gate.forbidden"` (`access.py:111`). No locale defines it:
+`gate` in `packages/i18n/messages/en/supplies.json:41-51` contains
+`title`, `body`, `signInBody`, `pendingTitle`, `pendingBody`, `rejectedTitle`, `rejectedBody`,
+`apply`, `signIn` — and no `forbidden`. The same holds for `bem`, `nya`, `fr` and `zh`.
+
+**Failure scenario.** A consumer hits the wholesale 403 and the client has no message to render
+for the key the API sent. The i18n runtime's EN deep-merge fallback
+(`packages/i18n/src/request.ts`, per AGENTS.md) cannot rescue this — the key is missing from EN
+too, so there is nothing to fall back _to_.
+
+**Why FD-B01 promotes this.** Under the retail-fallback reading this 403 fired only on the
+`?wholesale=true` feed — a route consumers reach rarely, and one whose page already renders its
+own gate copy from `supplies.gate.*` (`supplies/page.tsx:235-244`). Under wholesale-only it
+becomes the response for **every** consumer touch of a wholesale listing, including cart add. A
+dangling key on a rare path is cosmetic; on the primary consumer error path it is a launch
+defect, and it violates CLAUDE.md convention 2 — the corollary of "no hardcoded user-facing
+strings" being that every emitted key must resolve.
+
+**Also missing:** `gate.suspendedTitle` / `gate.suspendedBody`. `status` is echoed in the 403
+details (`access.py:109`) and the gate UI already branches on pending/rejected
+(`supplies.json:45-48`), so `suspended` needs copy the moment B0-P03 makes that status
+reachable.
+
 ---
 
 ## 5. Phased route to full B2B
@@ -417,16 +500,23 @@ Design rules applied throughout:
 
 ### 5.0 Wave B0 — harden the slice D28 already authorised (**pre-launch**)
 
-Not new scope: this is G1–G10 closed. Risk class: **safe, no founder/legal input needed** except
-FD-B01 (the wholesale-only question), which B0-P02 needs before it can choose between a 403 and
-a retail sale.
+Not new scope: this is G1–G13 closed. Risk class: **safe — no founder or legal input outstanding.**
+FD-B01 is answered (wholesale-only, 403), so B0-P02 is fully specified; see §4 G8.1.
 
-| #      | Work                                                                                                                                                                                                                                          | Closes          |
-| ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| B0-P01 | Push the wholesale predicate into RLS: split `vendor_listings_public_active_select` so wholesale rows require `is_verified_business(auth.uid())`; project `wholesale` into `search_documents` and add the same predicate to its public policy | G1, G2, G12     |
-| B0-P02 | Re-derive price and eligibility at checkout **and** order creation; add a `cart_items` column guard trigger so `unit_price_ngwee`/`wholesale` are service-role-writable only; decide wholesale-only access at `fetch_listing`                 | G3, G8          |
-| B0-P03 | Complete the buyer lifecycle: `POST /admin/business/{id}/suspend`, re-verification on `legal_name`/`registration_no` change, `business_buyer_events` audit table                                                                              | G4, G9, G10     |
-| B0-P04 | Authoring consistency: require tiers when `PATCH` sets `wholesale=true`; run CSV import through `require_wholesale_eligible`; cross-validate `moq` against `min(min_qty)`; per-user rate limit on the supplies feed                           | G5, G6, G7, G11 |
+| #      | Work                                                                                                                                                                                                                                                               | Closes          |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------- |
+| B0-P01 | Push the wholesale predicate into RLS: split `vendor_listings_public_active_select` so wholesale rows require `is_verified_business(auth.uid())`; project `wholesale` into `search_documents` and add the same predicate to its public policy                      | G1, G2, G12     |
+| B0-P02 | Re-derive price and eligibility at checkout **and** order creation; `cart_items` column guard trigger so `unit_price_ngwee`/`wholesale` are service-role-writable only; **enforce wholesale-only 403 per §4 G8.1** (entry point, merge conflict, revocation, copy) | G3, G8, G13     |
+| B0-P03 | Complete the buyer lifecycle: `POST /admin/business/{id}/suspend`, re-verification on `legal_name`/`registration_no` change, `business_buyer_events` audit table, `gate.suspended*` copy                                                                           | G4, G9, G10     |
+| B0-P04 | Authoring consistency: require tiers when `PATCH` sets `wholesale=true`; run CSV import through `require_wholesale_eligible`; cross-validate `moq` against `min(min_qty)`; per-user rate limit on the supplies feed                                                | G5, G6, G7, G11 |
+
+**Sequencing note added by FD-B01.** B0-P02 is now the widest B0 pebble: making the gate an
+access rule rather than a pricing rule pulls in `cart/store.py`, `cart/merge.py`, the checkout
+and order routes, and the i18n messages. If it needs splitting, the clean seam is
+**B0-P02a** (money-path re-derivation + column guard — G3) and **B0-P02b** (wholesale-only 403
+
+- merge conflict + copy — G8, G13); B0-P02b depends on B0-P02a, because the revocation case in
+  G8.1 §3 is implemented inside the re-derivation B0-P02a adds.
 
 ### 5.1 Wave B1 — verified business organisations and roles (**post-beta, safe**)
 
@@ -445,7 +535,7 @@ row, its user as `owner`. `is_verified_business(uid)` is rewritten to resolve th
 so **every existing call site keeps working unchanged** — this is what makes B1 additive rather
 than a rewrite.
 
-**Requires:** FD-B01, FD-B07. **Risk:** none financial. **Deferred within B1:** invitations by
+**Requires:** FD-B07. **Risk:** none financial. **Deferred within B1:** invitations by
 phone/WhatsApp, per-member spend limits (spend limits are a credit-adjacent control — B7).
 
 ### 5.2 Wave B2 — wholesale RFQ without broadcast spam (**post-beta, safe**)
@@ -658,6 +748,15 @@ Money, authz and state-machine logic each need failure-path coverage. Minimum se
 **Authz / isolation**
 
 - Guest, consumer, `pending`, `rejected`, `suspended` buyer → 403 on every wholesale surface.
+- **Cart add of a wholesale listing by each non-eligible persona → 403, not a retail line**
+  (FD-B01 / G8.1). Assert the error code is `business.wholesale_forbidden` and that no
+  `cart_items` row is written.
+- **Guest→user merge with a wholesale line, non-eligible buyer → conflict + line dropped**, never
+  a silent retail reprice (G8.1 §2).
+- **Eligibility revoked mid-session with wholesale lines in cart → checkout blocked**, not
+  converted at retail (G8.1 §3).
+- **Every `message_key` the wholesale gate emits resolves in EN** — a key-existence test, since
+  the EN deep-merge fallback cannot cover a key missing from EN itself (G13).
 - Org A member cannot read org B's quotes, contracts, members, or invoices (direct-ID attempt,
   not just list filtering).
 - A `viewer` cannot accept a quote; a `buyer` cannot manage members.
@@ -689,25 +788,45 @@ Money, authz and state-machine logic each need failure-path coverage. Minimum se
 
 ---
 
-## 7. Unresolved founder decisions
+## 7. Founder decisions
 
-Blocking-ness is stated per item; nothing here blocks Wave B0 except FD-B01.
+### 7.1 Answered
 
-| ID         | Question                                                                                                                                                                                             | Needed by     | Blocking?                                       |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ----------------------------------------------- |
-| **FD-B01** | Does `wholesale=true` mean **wholesale-only** (consumers get 403) or **also-retail** (consumers buy at `price_ngwee`)? Discovery assumes the former, cart assumes the latter (G8).                   | B0-P02        | **Yes** — B0-P02 cannot be specified without it |
-| **FD-B02** | What must a ZRA-valid B2B invoice contain under Turnover Tax? Is buyer TPIN mandatory? **Needs an accountant.**                                                                                      | B6            | Yes, for B6                                     |
-| **FD-B03** | Does platform-fronted Net-30/60 constitute lending or a payment service under Zambian law (BoZ / NPS Act 2026)? **Needs counsel** — an extension of F4, not covered by it.                           | B7b           | Yes, for B7b                                    |
-| **FD-B04** | Are contract prices confidential per buyer (audit recommends: yes, never in search or comparison)?                                                                                                   | B4            | Yes, for B4                                     |
-| **FD-B05** | Who carries default risk on Net terms — platform, vendor, or third-party financier? Determines the entire ledger design.                                                                             | B7b           | Yes, for B7b                                    |
-| **FD-B06** | Confirm the B2B-mode volume gate. Strategy says 300–500 orders/month (`strategy-bible-and-blueprint-distilled.md:103,112`); D3 uses ~300 orders/mo for paid vendor tiers. Same trigger or different? | B1 sequencing | No                                              |
-| **FD-B07** | How is PACRA verified — manual document review (today's implicit process) or a registry lookup? Affects whether re-verification (G9) is cheap or expensive.                                          | B0-P03, B1    | No — B0-P03 can ship manual-review              |
-| **FD-B08** | Re-verification cadence for verified business buyers (annual, on PACRA lapse, never)? PACRA annual returns lapse is a live founder issue (F2).                                                       | B0-P03        | No                                              |
-| **FD-B09** | Should account managers (B7a) split from credit (B7b) so the safe half ships post-beta? Audit recommends yes.                                                                                        | B7 sequencing | No                                              |
+| ID         | Answer                                                                                                                                                                                       | Date       | Consequences                                                                          |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------- |
+| **FD-B01** | `wholesale=true` means **wholesale-only — consumers get a 403.** The gate is an _access_ rule, not a pricing rule; the current retail fallback (G8) is a defect, not an alternative reading. | 2026-08-01 | Spec in §4 G8.1 · promotes G13 to launch-blocking · widens B0-P02 (§5.0) · ADR-R02-B6 |
+
+**Not yet a locked decision.** This pebble may only write to this file, so FD-B01 lives here and
+in ADR-R02-B6. Promoting it into `docs/plan/00-decisions.md` (most naturally as a dated amendment
+to D28, whose "a consumer always sees retail" phrasing is what left the ambiguity) is a separate
+founder action.
+
+### 7.2 Unresolved
+
+Blocking-ness is stated per item. **Nothing outstanding blocks Wave B0** — with FD-B01 answered,
+all four B0 pebbles are fully specified.
+
+| ID         | Question                                                                                                                                                                                             | Needed by     | Blocking?                          |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---------------------------------- |
+| **FD-B02** | What must a ZRA-valid B2B invoice contain under Turnover Tax? Is buyer TPIN mandatory? **Needs an accountant.**                                                                                      | B6            | Yes, for B6                        |
+| **FD-B03** | Does platform-fronted Net-30/60 constitute lending or a payment service under Zambian law (BoZ / NPS Act 2026)? **Needs counsel** — an extension of F4, not covered by it.                           | B7b           | Yes, for B7b                       |
+| **FD-B04** | Are contract prices confidential per buyer (audit recommends: yes, never in search or comparison)?                                                                                                   | B4            | Yes, for B4                        |
+| **FD-B05** | Who carries default risk on Net terms — platform, vendor, or third-party financier? Determines the entire ledger design.                                                                             | B7b           | Yes, for B7b                       |
+| **FD-B06** | Confirm the B2B-mode volume gate. Strategy says 300–500 orders/month (`strategy-bible-and-blueprint-distilled.md:103,112`); D3 uses ~300 orders/mo for paid vendor tiers. Same trigger or different? | B1 sequencing | No                                 |
+| **FD-B07** | How is PACRA verified — manual document review (today's implicit process) or a registry lookup? Affects whether re-verification (G9) is cheap or expensive.                                          | B0-P03, B1    | No — B0-P03 can ship manual-review |
+| **FD-B08** | Re-verification cadence for verified business buyers (annual, on PACRA lapse, never)? PACRA annual returns lapse is a live founder issue (F2).                                                       | B0-P03        | No                                 |
+| **FD-B09** | Should account managers (B7a) split from credit (B7b) so the safe half ships post-beta? Audit recommends yes.                                                                                        | B7 sequencing | No                                 |
 
 **Not auditable in this session:** live RLS behaviour (Supabase MCP unauthenticated), so G1/G2/G3
 carry a repo-derived confidence level; anything requiring legal or accounting input (FD-B02,
 FD-B03, FD-B05).
+
+**New question raised by FD-B01 — FD-B10 (non-blocking).** With wholesale-only settled, a vendor
+who wants to sell the same SKU both retail and wholesale must publish **two listings**. That is
+workable and needs no code change, but it doubles their listing count against the D3 free-tier
+cap of 30 and the T1 cap enforced at `csv_import.py:540-552`. Worth a founder answer before the
+supplies tab is promoted in vendor marketing: exempt wholesale twins from the cap, raise the cap,
+or accept it. Not a B0 concern.
 
 ---
 
@@ -740,6 +859,19 @@ mechanism and is the only form that respects the spam constraint.
 founder risk-allocation answers, and account managers (B7a) split out as separately shippable.**
 Rationale: §5.7; the safe half should not wait on the regulated half.
 
+**ADR-R02-B6 (candidate, founder-answered 2026-08-01) — `wholesale=true` means wholesale-only;
+non-eligible buyers receive 403, never a retail sale.**
+The wholesale flag is an **access** control, not a pricing modifier. A guest or non-verified
+consumer touching a wholesale listing — cart add, cart update, or any future direct route —
+receives `business.wholesale_forbidden` (403). The retail fallback in
+`select_unit_price_ngwee` (`totals.py:29`) is retained only as defence-in-depth and must not be
+reachable from a consumer request. Guest→user merge reports a conflict and drops the line rather
+than repricing it; a buyer whose eligibility is revoked is blocked at checkout rather than
+converted at retail. A vendor selling one SKU both ways publishes two listings (see FD-B10).
+Rationale: FD-B01; this is the reading the discovery layer already implements, so it makes the
+codebase self-consistent rather than adding a third behaviour. Suggested promotion: a dated
+amendment to D28, whose "a consumer always sees retail" wording is the source of the ambiguity.
+
 ---
 
 ## 9. Proposed pebble sequence
@@ -755,16 +887,22 @@ filenames.
 
 ### Wave B0 — pre-launch hardening (parallel; no cross-dependencies)
 
-| Pebble                                     | Owns (exclusive)                                                                                                                                                                                                      | Depends on |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
-| **B0-P01** RLS-level wholesale hiding      | `supabase/migrations/0080_wholesale_rls.sql`, `supabase/tests/0080_wholesale_rls.test.sql`, `services/api/tests/rls/test_matrix.py` (wholesale rows)                                                                  | —          |
-| **B0-P02** Money-path price re-derivation  | `services/api/app/routers/checkout.py`, `routers/orders_create.py`, `services/cart/store.py`, `supabase/migrations/0081_cart_line_price_guard.sql`, `services/api/tests/test_checkout.py`, `test_order_money_gate.py` | FD-B01     |
-| **B0-P03** Buyer lifecycle completion      | `services/api/app/routers/admin_business.py`, `services/business/store.py`, `supabase/migrations/0082_business_buyer_events.sql`, `apps/admin/app/[locale]/business/**`, `services/api/tests/test_business_access.py` | —          |
-| **B0-P04** Wholesale authoring consistency | `services/api/app/routers/vendor_listings_manage.py`, `services/listings/csv_import.py`, `routers/listing_import.py`, `routers/catalog.py` (rate limit), `tests/test_listing_manage.py`, `test_csv_import.py`         | —          |
+| Pebble                                                   | Owns (exclusive)                                                                                                                                                                                                                                                                                                             | Depends on          |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **B0-P01** RLS-level wholesale hiding                    | `supabase/migrations/0080_wholesale_rls.sql`, `supabase/tests/0080_wholesale_rls.test.sql`, `services/api/tests/rls/test_matrix.py` (wholesale rows)                                                                                                                                                                         | —                   |
+| **B0-P02** Money-path re-derivation + wholesale-only 403 | `services/api/app/routers/checkout.py`, `routers/orders_create.py`, `services/cart/store.py`, `services/cart/merge.py`, `routers/cart.py`, `supabase/migrations/0081_cart_line_price_guard.sql`, `packages/i18n/messages/*/supplies.json`, `services/api/tests/test_checkout.py`, `test_order_money_gate.py`, `test_cart.py` | — (FD-B01 answered) |
+| **B0-P03** Buyer lifecycle completion                    | `services/api/app/routers/admin_business.py`, `services/business/store.py`, `supabase/migrations/0082_business_buyer_events.sql`, `apps/admin/app/[locale]/business/**`, `services/api/tests/test_business_access.py`                                                                                                        | —                   |
+| **B0-P04** Wholesale authoring consistency               | `services/api/app/routers/vendor_listings_manage.py`, `services/listings/csv_import.py`, `routers/listing_import.py`, `routers/catalog.py` (rate limit), `tests/test_listing_manage.py`, `test_csv_import.py`                                                                                                                | —                   |
 
 _Contention note:_ B0-P01 and B0-P02 both touch RLS-adjacent surface but own different migration
 files and different test files — safe in one wave. B0-P02 and B0-P04 both touch pricing but on
 disjoint sides (consumption vs. authoring).
+
+_Ownership changed by FD-B01:_ B0-P02 now also owns `services/cart/merge.py`, `routers/cart.py`
+and `packages/i18n/messages/*/supplies.json`. The i18n files are the one new contention risk —
+**B0-P03 must not edit `supplies.json`** even though it needs `gate.suspended*` copy (G13).
+Either B0-P02 adds both the `forbidden` and `suspended*` keys while it is in the file, or
+B0-P03 waits for B0-P02 to merge. The former is recommended: one pebble, one copy review.
 
 ### Wave B1 — organisations (single pebble; blocks everything after)
 
