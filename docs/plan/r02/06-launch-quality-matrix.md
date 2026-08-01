@@ -76,13 +76,35 @@ The most recent consolidated pack is `docs/production-readiness/2026-07-27/relea
 | "verification is **not blocked** on standing up a separable staging stack (VE-P08 … Wave-4 item)" | `00-decisions.md` D30; `release-truth.md` §3 | **A staging plane now exists and deploys end to end.** `deploy-staging.yml` run #9 (`fafcc08`, 2026-08-01T09:28Z) succeeded across all seven jobs including **Deploy API to OCI staging**, **Vercel Preview (staging branch)** and **Staging smoke + evidence** (steps "Health + fingerprint" and "Migration status evidence" both `success`). This upgrades the _safe test environment_ column for every money row from "improvise an isolated target" to "the staging plane". |
 | "E2E (Playwright · staging) — **not run at tip**"                                                 | `release-truth.md` §2.4                      | **Runs nightly and is green:** runs #16–#21, latest #21 at `5c941e3`, 2026-08-01T05:40Z, `success`. ⚠ **This does not upgrade any money gate** — `e2e/specs/*.spec.ts` legs that need Lenco sandbox/WhatsApp/OTP credentials `test.skip()` when the env is absent (recorded at `00-status.md` Wave-18 entry), so green here is consistent with the money legs never executing.                                                                                                  |
 
-**One regression found, not previously recorded anywhere:**
+**Two defects found, neither previously recorded anywhere.** Root-caused from the job log on 2026-08-01 and fixed in this branch:
 
 | Finding                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Evidence                                                                                                                                                                                                                                                        |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | The **staging synthetic seed is failing.** `deploy-staging.yml` run #10 (`fafcc08`, 2026-08-01T10:28Z) failed at job "Supabase migrations + checks", step **"Synthetic seed (optional)"**. Every downstream job — _Deploy API to OCI staging_, _Vercel Preview_, _Staging smoke + evidence_ — was **skipped**. In run #9 the same step was `skipped` (seed not requested) and the run passed. So: staging deploys fine **without** the seed and fails **with** it. | GitHub MCP `actions_list list_workflow_jobs` for runs `30693808415` and `30695764799`. Repair attempts already in tree: `3577eea`, `f3583bf`/`6340515` "harden staging seed connection" (`scripts/seed_staging.py`, `services/api/tests/test_seed_staging.py`). |
 
-This matters for the matrix because **a seeded staging DB is a precondition for the money drills, the load run and the browser-led sweeps** — an unseeded staging plane has no catalogue to check out, no listing to load-test, no page to audit. It is tracked below as `LQ-D8` and is the first pebble in §6.
+**Root cause (job log `91358508037`):** `psql: error: connection to server at "db.***.supabase.co" (2a05:d018:...), port 5432 failed: Network is unreachable`. That address is **IPv6**, and GitHub-hosted runners have no IPv6 egress. `db.<ref>.supabase.co` is the _direct_ database host and is IPv6-only; the _session pooler_ (`aws-0-<region>.pooler.supabase.com`) is IPv4-reachable, which is exactly why `infra/ENVIRONMENTS.md` specifies it. So the `STAGING_SUPABASE_DB_URL` secret holds the direct form — **a configuration defect, not a bug in the seed logic**, and one no amount of "hardening the seed connection" could fix.
+
+**The second, more serious defect the same log exposes.** Read these two consecutive lines from the _preceding_ step:
+
+```
+psql: error: connection to server at "db.***.supabase.co" ... Network is unreachable
+OK: RLS enabled on public tables; exposed views use security_invoker (or none exposed)
+```
+
+`scripts/ci/check-staging-schema.sh` **reported OK for a database it never reached.** The pipeline `psql … | grep -E '^FAIL ' || true` used `|| true` to tolerate grep's exit-1-on-no-match (the healthy case), but that also swallowed psql's connection failure, leaving `issues` empty and falling through to the success line. This is a **false green on an RLS isolation gate** — and it runs in the main `ci.yml` too (`Schema RLS + security_invoker (post-replay)`), not just the staging deploy. Reproduced and fixed in this branch; see §2.1.
+
+This matters for the matrix because **a seeded staging DB is a precondition for the money drills, the load run and the browser-led sweeps** — an unseeded staging plane has no catalogue to check out, no listing to load-test, no page to audit. Tracked below as `LQ-D8`; the false green is `LQ-D9`.
+
+### 2.1 Fixes applied in this branch
+
+| Change                                                                                                                                                                                                                                                                                                                                                                                                                                      | File                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Run `psql` separately from `grep` so a connection/query failure is distinguishable from "connected, found nothing", and `die` instead of printing OK. Verified against all three paths: unreachable → exit 1 (no OK line); reachable+clean → exit 0 + OK; reachable+issues → exit 1 + the FAIL rows.                                                                                                                                        | `scripts/ci/check-staging-schema.sh`                                |
+| Behavioural regression test that runs the real script against an unreachable DSN and asserts exit ≠ 0 **and** absence of the `OK:` line.                                                                                                                                                                                                                                                                                                    | `scripts/ci/test-staging-guards.sh` (check 12; 15 passed, 0 failed) |
+| `_connection_hint()` — on connection failure, if the DSN is a direct `db.<ref>.supabase.co` host, append the pooler guidance naming the IPv6 cause. Guidance, **not** rewriting: the pooler hostname embeds an AWS region that is not derivable from the project ref, so guessing it would swap one confusing failure for another. Returns `None` for every other host, so a genuinely reachable direct connection is never second-guessed. | `scripts/seed_staging.py`                                           |
+| Unit coverage for the hint (fires on the direct host, never leaks the password, stays silent for pooler/local/unrelated/empty DSNs).                                                                                                                                                                                                                                                                                                        | `services/api/tests/test_seed_staging.py` (8 passed)                |
+
+**What the code fix cannot do.** The `STAGING_SUPABASE_DB_URL` secret is still wrong, and only the founder/ops can change it — see `LQ-D8`. The code change converts a silent 1-line failure into an explicit instruction, and stops a security gate lying; it does not seed anything by itself.
 
 ---
 
@@ -121,7 +143,8 @@ This matters for the matrix because **a seeded staging DB is a precondition for 
 | LQ-D5                                                                 | Search non-degraded on a deployed surface                 | Partial                          | CONFIG               | Founder/Ops     |
 | LQ-D6                                                                 | Migration ledger parity `0072`–`0079`                     | Partial (**FAIL** on production) | CONFIG               | Founder/Ops     |
 | LQ-D7                                                                 | Staging-plane isolation from production                   | Implemented                      | CODE+CONFIG          | done            |
-| LQ-D8                                                                 | Staging synthetic seed                                    | **Partial — failing**            | CODE                 | Eng             |
+| LQ-D8                                                                 | Staging synthetic seed                                    | **Partial — blocked on secret**  | CONFIG               | Founder/Ops     |
+| LQ-D9                                                                 | Staging/CI schema check must fail closed                  | Implemented (fixed here)         | CODE                 | done            |
 | **E — Backup / restore / failure alerts**                             |                                                           |                                  |                      |                 |
 | LQ-E1                                                                 | Self-contained restore drill (CI)                         | Implemented                      | CODE                 | done            |
 | LQ-E2                                                                 | Dated live OCI dump within RPO ≤ 24 h                     | Absent                           | CONFIG               | Founder/Ops     |
@@ -360,12 +383,21 @@ Each card: **Source evidence** (what exists and where) · **Safe test environmen
 - **Exact success evidence.** Met. Re-assert on each deploy via the Environment separation job.
 - **Rollback.** N/A.
 
-**LQ-D8 · Staging synthetic seed** — _Partial, currently failing · CODE_
+**LQ-D8 · Staging synthetic seed** — _Partial, blocked on a secret · CONFIG (founder/ops)_
 
-- **Source evidence.** `scripts/seed_staging.py` (+99 lines across `3577eea`, `f3583bf`, `6340515`), tests `services/api/tests/test_seed_staging.py` (+90 lines). **Failing in CI:** `deploy-staging.yml` run #10 (`fafcc08`, 2026-08-01T10:28Z) — job "Supabase migrations + checks", step "Synthetic seed (optional)" `failure`; downstream _Deploy API to OCI staging_, _Vercel Preview_, _Staging smoke + evidence_ all **skipped**. Run #9 passed with the same step `skipped`.
+- **Source evidence.** `scripts/seed_staging.py`, tests `services/api/tests/test_seed_staging.py`. **Failing in CI:** `deploy-staging.yml` run #10 (`fafcc08`, 2026-08-01T10:28Z) — job "Supabase migrations + checks", step "Synthetic seed (optional)" `failure`; downstream _Deploy API to OCI staging_, _Vercel Preview_, _Staging smoke + evidence_ all **skipped**. Run #9 passed with the same step `skipped`. **Root cause (§2):** `STAGING_SUPABASE_DB_URL` points at the IPv6-only direct host `db.<ref>.supabase.co`, unreachable from GitHub-hosted runners. The seed's own behaviour was already correct — it failed loudly and refused to proceed; it just could not say why. It now says why (§2.1).
+- **Reclassified.** This row was first graded `CODE / Eng` on the assumption the seed logic was broken. The log shows otherwise: **the remaining work is a one-line secret change owned by the founder/ops.** Three commits already in tree (`3577eea`, `f3583bf`, `6340515`, all titled "harden staging seed connection") were chasing a code bug that was never there — which is itself the argument for the diagnostic added in §2.1.
 - **Safe test environment.** CI + staging (already wired via the `seed_synthetic` workflow input).
-- **Exact success evidence.** One `deploy-staging` run with `seed_synthetic=true` completing **all seven jobs green**, with the seed producing a countable catalogue: N `stg-rv-*` listings visible via the staging search endpoint with `degraded=false`.
+- **Exact success evidence.** `STAGING_SUPABASE_DB_URL` reset to the session-pooler form `postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres` (**port 5432, not 6543**), then one `deploy-staging` run with `seed_synthetic=true` completing **all seven jobs green**, with the seed producing a countable catalogue: N `stg-rv-*` listings visible via the staging search endpoint with `degraded=false`.
 - **Rollback.** The seed writes only `stg-rv-*`-prefixed rows to the staging project; delete by prefix. Never run against production.
+
+**LQ-D9 · Staging/CI schema check must fail closed** — _Implemented (fixed in this branch) · CODE_
+
+- **Source evidence.** `scripts/ci/check-staging-schema.sh` reported `OK: RLS enabled on public tables…` and exited **0** against a database it could not reach — job log `91358508037`, 2026-08-01. The same script gates the main `ci.yml` job _Schema RLS + security_invoker (post-replay)_, so the false green was not confined to staging. Fixed and covered by `scripts/ci/test-staging-guards.sh` check 12.
+- **Why it belongs in this matrix.** It is the exact failure mode this document exists to catch — a green signal standing in for a fact nobody established. An RLS gate that passes when it cannot connect is worse than no gate, because it is quoted as evidence.
+- **Safe test environment.** CI ephemeral; the self-test runs the real script against `127.0.0.1:1`.
+- **Exact success evidence.** Met: unreachable → exit 1 with no `OK:` line; reachable+clean → exit 0 with `OK:`; reachable+issues → exit 1 listing the `FAIL` rows. All three verified locally before commit.
+- **Rollback.** Revert the script change; the pre-fix behaviour is the false green, so there is no reason to.
 
 ---
 
@@ -686,13 +718,14 @@ Small, sequenced, **exclusive file ownership per pebble** so waves can run in pa
 
 ### Wave R02-A — unblock the test environment (no dependencies)
 
-| Pebble     | Title                                              | Class | Exclusive files                                                      | Depends on          |
-| ---------- | -------------------------------------------------- | ----- | -------------------------------------------------------------------- | ------------------- |
-| **RQ-P01** | Fix the staging synthetic seed                     | CODE  | `scripts/seed_staging.py`, `services/api/tests/test_seed_staging.py` | —                   |
-| **RQ-P02** | Add `git_sha` promotion guard to the live verifier | CODE  | `scripts/ops/verify_live.sh`                                         | —                   |
-| **RQ-P03** | Split G7 into G7a/G7b in the gate register         | DOCS  | `docs/production-readiness/2026-07-18/consolidated/release-gates.md` | R02-ADR-02 accepted |
+| Pebble      | Title                                                                                                    | Class                | Exclusive files                                                                                                                                 | Depends on          |
+| ----------- | -------------------------------------------------------------------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **RQ-P01**  | ~~Fix the staging synthetic seed~~ → **DONE (code half)**: schema check fails closed + pooler diagnostic | CODE                 | `scripts/ci/check-staging-schema.sh`, `scripts/ci/test-staging-guards.sh`, `scripts/seed_staging.py`, `services/api/tests/test_seed_staging.py` | —                   |
+| **RQ-P01b** | **Reset `STAGING_SUPABASE_DB_URL` to the session-pooler form**                                           | CONFIG (founder/ops) | GitHub `staging` environment secret — no repo file                                                                                              | RQ-P01              |
+| **RQ-P02**  | Add `git_sha` promotion guard to the live verifier                                                       | CODE                 | `scripts/ops/verify_live.sh`                                                                                                                    | —                   |
+| **RQ-P03**  | Split G7 into G7a/G7b in the gate register                                                               | DOCS                 | `docs/production-readiness/2026-07-18/consolidated/release-gates.md`                                                                            | R02-ADR-02 accepted |
 
-> **RQ-P01 is the critical path.** Until staging seeds, there is no catalogue to check out, load-test or audit — it silently gates LQ-A1–A9, LQ-C1–C4, LQ-D4, LQ-F4 and all of section K.
+> **RQ-P01b is the critical path**, and it is a **secret change, not code** — one line in the GitHub `staging` environment. Until staging seeds there is no catalogue to check out, load-test or audit, so it silently gates LQ-A1–A9, LQ-C1–C4, LQ-D4, LQ-F4 and all of section K. RQ-P01 (merged here) makes the failure self-explaining but cannot seed anything on its own.
 
 ### Wave R02-B — evidence plumbing (depends on A)
 

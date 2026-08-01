@@ -205,6 +205,22 @@ else
   bad "migration 0056 missing security_invoker"
 fi
 
+# 12) Schema check FAILS (does not report OK) when the database is unreachable.
+# Regression: `psql | grep … || true` swallowed psql's exit status, so an
+# unreachable DB printed the OK line and exited 0 — observed on deploy-staging
+# run #10, 2026-08-01, where the IPv6-only direct DB host was unreachable.
+set +e
+SUPABASE_DB_URL='postgresql://nobody:nobody@127.0.0.1:1/nonexistent' \
+  bash scripts/ci/check-staging-schema.sh >/tmp/schema-unreachable.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && ! grep -q '^OK:' /tmp/schema-unreachable.txt; then
+  ok "schema check fails closed when the database is unreachable"
+else
+  bad "schema check must not report OK for a database it could not reach (rc=$rc)"
+  cat /tmp/schema-unreachable.txt || true
+fi
+
 echo
 echo "Results: ${pass} passed, ${fail} failed"
 if [[ "$fail" -gt 0 ]]; then

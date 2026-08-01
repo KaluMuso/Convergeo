@@ -169,6 +169,35 @@ def _redact_psql_error(stderr: str, dsn: str) -> str:
     return message
 
 
+DIRECT_DB_HOST_RE = re.compile(r"^db\.[a-z0-9]+\.supabase\.co$", re.IGNORECASE)
+
+
+def _connection_hint(dsn: str) -> str | None:
+    """Name the one failure mode CI actually hits, or stay quiet.
+
+    ``db.<ref>.supabase.co`` resolves to IPv6 only and GitHub-hosted runners have
+    no IPv6 egress, so a correct password still fails with "Network is
+    unreachable". The session pooler is IPv4-reachable, which is why
+    `infra/ENVIRONMENTS.md` specifies it.
+
+    This guides rather than rewrites: the pooler hostname embeds an AWS region
+    that cannot be derived from the project ref, so guessing it would swap one
+    confusing failure for another. Returns None for any other host, so a
+    genuinely reachable direct connection is never second-guessed.
+    """
+    host = (urlparse(dsn).hostname or "").strip()
+    if not DIRECT_DB_HOST_RE.match(host):
+        return None
+    return (
+        f"'{host}' is the direct database host, which resolves to IPv6 only; "
+        "GitHub-hosted runners have no IPv6 egress, so this fails even when the "
+        "credentials are right. Point STAGING_SUPABASE_DB_URL at the session "
+        "pooler instead: postgresql://postgres.<project-ref>:<password>"
+        "@aws-0-<region>.pooler.supabase.com:5432/postgres — port 5432, not 6543 "
+        "(see infra/ENVIRONMENTS.md)."
+    )
+
+
 def _die(msg: str) -> int:
     print(f"ERROR: {msg}", file=sys.stderr)
     return 1
@@ -364,10 +393,14 @@ def main() -> int:
     conn = StagingPgConn(db_url)
     connection = conn.run("SELECT 1")
     if not connection.ok:
-        return _die(
+        message = (
             "Cannot reach staging database at guarded URL: "
             f"{connection.error or 'psql failed without a diagnostic'}"
         )
+        hint = _connection_hint(db_url)
+        if hint:
+            message = f"{message}\nHINT: {hint}"
+        return _die(message)
 
     try:
         _require_seed_schema(conn)

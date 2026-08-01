@@ -81,6 +81,35 @@ def test_staging_seed_redacts_dsn_from_psql_errors(
     assert "super-secret" not in result.error
 
 
+def test_direct_db_host_gets_the_pooler_hint(seed_module: Any) -> None:
+    """The IPv6-only direct host is the failure CI hits; say so, don't guess a region."""
+    hint = seed_module._connection_hint(
+        "postgresql://postgres:pw@db.abcdefghij1234567890.supabase.co:5432/postgres"
+    )
+
+    assert hint is not None
+    assert "IPv6" in hint
+    assert "pooler.supabase.com" in hint
+    # Guidance only — the region is not derivable from the ref, so no rewrite.
+    assert "<region>" in hint
+    # Never echo the credential back, even into a hint.
+    assert "pw" not in hint.replace("password", "")
+
+
+@pytest.mark.parametrize(
+    "dsn",
+    [
+        "postgresql://postgres.ref:pw@aws-0-eu-north-1.pooler.supabase.com:5432/postgres",
+        "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
+        "postgresql://postgres:pw@db.example.com:5432/postgres",
+        "",
+    ],
+)
+def test_non_direct_hosts_get_no_hint(seed_module: Any, dsn: str) -> None:
+    """A reachable or unrelated host must not be second-guessed with a wrong hint."""
+    assert seed_module._connection_hint(dsn) is None
+
+
 def test_staging_seed_requires_migrated_vendor_schema(seed_module: Any) -> None:
     class MissingVendors:
         def run(self, _sql: str) -> Any:
