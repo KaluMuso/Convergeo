@@ -63,8 +63,8 @@ FIXTURES: list[dict[str, Any]] = [
         "vendor_id": "b1000000-0000-4000-8000-000000000002",
         "slug": f"{SEED_PREFIX}-vend-unv",
         "user_role": "vendor",
-        "vendor_status": "pending",
-        "kyc_tier": 0,
+        "vendor_status": "draft",
+        "kyc_tier": None,
     },
     {
         "role": "vendor_kyc_submitted",
@@ -75,8 +75,8 @@ FIXTURES: list[dict[str, Any]] = [
         "vendor_id": "b1000000-0000-4000-8000-000000000003",
         "slug": f"{SEED_PREFIX}-vend-sub",
         "user_role": "vendor",
-        "vendor_status": "pending",
-        "kyc_tier": 1,
+        "vendor_status": "pending_kyc",
+        "kyc_tier": None,
     },
     {
         "role": "vendor_approved",
@@ -88,7 +88,7 @@ FIXTURES: list[dict[str, Any]] = [
         "slug": f"{SEED_PREFIX}-vend-apr",
         "user_role": "vendor",
         "vendor_status": "active",
-        "kyc_tier": 2,
+        "kyc_tier": 1,
     },
     {
         "role": "admin_unauthorized",
@@ -107,6 +107,31 @@ FIXTURES: list[dict[str, Any]] = [
         "user_role": "admin",
     },
 ]
+
+# KYC records make the submitted and approved fixture states auditable. They
+# intentionally contain no storage paths, payment data, or real identities.
+KYC_FIXTURES: list[dict[str, Any]] = [
+    {
+        "id": "c1000000-0000-4000-8000-000000000003",
+        "vendor_id": "b1000000-0000-4000-8000-000000000003",
+        "tier": 1,
+        "status": "submitted",
+    },
+    {
+        "id": "c1000000-0000-4000-8000-000000000004",
+        "vendor_id": "b1000000-0000-4000-8000-000000000004",
+        "tier": 1,
+        "status": "approved",
+        "reviewed_by": "a1000000-0000-4000-8000-000000000006",
+        "decision_reason": "synthetic staging approval",
+    },
+]
+
+VENDOR_STATUSES = frozenset({"draft", "pending_kyc", "active", "suspended"})
+VALID_KYC_TIERS = frozenset({1, 2, 3})
+KYC_RECORD_STATUSES = frozenset(
+    {"submitted", "under_review", "approved", "rejected", "suspended", "revoked"}
+)
 
 FORBIDDEN_SUBSTRINGS = (
     PROD_SUPABASE_PROJECT_REF,
@@ -217,6 +242,8 @@ def _guard_targets(*, supabase_url: str, db_url: str, api_host: str) -> None:
 
 
 def _validate_fixtures() -> None:
+    vendor_ids: set[str] = set()
+    user_ids: set[str] = set()
     for row in FIXTURES:
         blob = " ".join(str(v) for v in row.values())
         _assert_no_production_markers(blob)
@@ -224,6 +251,36 @@ def _validate_fixtures() -> None:
             raise StagingIsolationError(
                 f"fixture handle missing seed prefix: {row['handle']}"
             )
+        user_ids.add(str(row["user_id"]))
+        if "vendor_id" not in row:
+            continue
+
+        status = row.get("vendor_status")
+        if status not in VENDOR_STATUSES:
+            raise StagingIsolationError(f"invalid synthetic vendor status: {status}")
+        tier = row.get("kyc_tier")
+        if tier is not None and (
+            not isinstance(tier, int) or tier not in VALID_KYC_TIERS
+        ):
+            raise StagingIsolationError(f"invalid synthetic vendor KYC tier: {tier}")
+        vendor_ids.add(str(row["vendor_id"]))
+
+    for record in KYC_FIXTURES:
+        if record.get("vendor_id") not in vendor_ids:
+            raise StagingIsolationError("synthetic KYC record references an unknown vendor")
+        tier = record.get("tier")
+        if not isinstance(tier, int) or tier not in VALID_KYC_TIERS:
+            raise StagingIsolationError(f"invalid synthetic KYC record tier: {tier}")
+        status = record.get("status")
+        if status not in KYC_RECORD_STATUSES:
+            raise StagingIsolationError(f"invalid synthetic KYC record status: {status}")
+        if status == "approved":
+            reviewer = record.get("reviewed_by")
+            reason = record.get("decision_reason")
+            if reviewer not in user_ids or not isinstance(reason, str) or not reason:
+                raise StagingIsolationError(
+                    "approved synthetic KYC record requires a seeded reviewer and reason"
+                )
 
 
 def _plan() -> None:
@@ -273,16 +330,35 @@ INSERT INTO auth.users (
             f"ON CONFLICT (user_id, role) DO NOTHING;"
         )
         if "vendor_id" in row:
+            tier = "NULL" if row["kyc_tier"] is None else str(row["kyc_tier"])
             sql_parts.append(
                 f"""
 INSERT INTO public.vendors (
   id, owner_user_id, slug, display_name, status, kyc_tier
 ) VALUES (
   '{row["vendor_id"]}', '{row["user_id"]}', '{row["slug"]}', '{row["handle"]}',
-  '{row["vendor_status"]}', {row["kyc_tier"]}
+  '{row["vendor_status"]}', {tier}
 ) ON CONFLICT (id) DO NOTHING;
 """
             )
+    for record in KYC_FIXTURES:
+        reviewed_by = record.get("reviewed_by")
+        reviewer_sql = f"'{reviewed_by}'" if reviewed_by else "NULL"
+        reviewed_at_sql = "timezone('utc', now())" if reviewed_by else "NULL"
+        reason = record.get("decision_reason")
+        reason_sql = f"'{reason}'" if reason else "NULL"
+        sql_parts.append(
+            f"""
+INSERT INTO public.kyc_records (
+  id, vendor_id, tier, doc_storage_paths, momo_name_match, status,
+  reviewed_by, reviewed_at, decision_reason
+) VALUES (
+  '{record["id"]}', '{record["vendor_id"]}', {record["tier"]},
+  ARRAY[]::text[], '{{"matched": true}}'::jsonb, '{record["status"]}',
+  {reviewer_sql}, {reviewed_at_sql}, {reason_sql}
+) ON CONFLICT (id) DO NOTHING;
+"""
+        )
     sql_parts.append("COMMIT;")
     return "\n".join(auth_parts) + "\n" + "\n".join(sql_parts)
 

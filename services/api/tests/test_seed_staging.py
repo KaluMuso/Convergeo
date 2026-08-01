@@ -88,3 +88,45 @@ def test_staging_seed_requires_migrated_vendor_schema(seed_module: Any) -> None:
 
     with pytest.raises(RuntimeError, match="missing public.vendors"):
         seed_module._require_seed_schema(MissingVendors())
+
+
+def test_staging_seed_uses_constraint_aligned_auditable_kyc_fixtures(
+    seed_module: Any,
+) -> None:
+    seed_module._validate_fixtures()
+    sql = seed_module._build_seed_sql()
+
+    assert "'draft', NULL" in sql
+    assert "'pending_kyc', NULL" in sql
+    assert "'active', 1" in sql
+    assert "'pending', 0" not in sql
+    assert "'pending', 1" not in sql
+    assert "'submitted'" in sql
+    assert "'approved'" in sql
+    assert "'synthetic staging approval'" in sql
+    assert "ARRAY[]::text[]" in sql
+
+
+def test_staging_seed_rejects_vendor_lifecycle_drift(
+    monkeypatch: pytest.MonkeyPatch,
+    seed_module: Any,
+) -> None:
+    bad_vendor = dict(seed_module.FIXTURES[1], vendor_status="pending", kyc_tier=0)
+    monkeypatch.setattr(seed_module, "FIXTURES", [bad_vendor])
+
+    with pytest.raises(seed_module.StagingIsolationError, match="invalid synthetic vendor status"):
+        seed_module._validate_fixtures()
+
+
+def test_staging_seed_rejects_invalid_vendor_kyc_tier(
+    monkeypatch: pytest.MonkeyPatch,
+    seed_module: Any,
+) -> None:
+    bad_vendor = dict(seed_module.FIXTURES[1], kyc_tier=0)
+    monkeypatch.setattr(seed_module, "FIXTURES", [bad_vendor])
+
+    with pytest.raises(
+        seed_module.StagingIsolationError,
+        match="invalid synthetic vendor KYC tier",
+    ):
+        seed_module._validate_fixtures()
