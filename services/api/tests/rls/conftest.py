@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import time
 from collections.abc import Callable, Generator
 from dataclasses import dataclass
 from enum import StrEnum
@@ -262,8 +263,18 @@ def ensure_local_test_database(url: str) -> None:
 
 
 def ensure_roles(conn: PgConn) -> None:
-    """Create the impersonation roles. Must run on EVERY session, migrated or not."""
+    """Create the impersonation roles. Must run on EVERY session, migrated or not.
+
+    Retries once on a lost connection: in CI the bootstrap can race a database
+    restart (run 30736920217 — "server closed the connection unexpectedly"),
+    and because this runs in a session-scoped fixture, one such blip otherwise
+    cascades into thousands of cached fixture errors. A genuine SQL failure is
+    NOT retried — same statements, same answer.
+    """
     result = conn.run(ROLE_BOOTSTRAP_SQL)
+    if not result.ok and result.error and "server closed the connection" in result.error:
+        time.sleep(3)
+        result = conn.run(ROLE_BOOTSTRAP_SQL)
     if not result.ok:
         raise PgError(f"Role bootstrap failed: {result.error}", result.sqlstate)
 
