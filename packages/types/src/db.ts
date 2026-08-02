@@ -1941,6 +1941,45 @@ export type Database = {
           },
         ]
       }
+      listing_location_stock: {
+        Row: {
+          created_at: string
+          listing_id: string
+          location_id: string
+          stock_qty: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          listing_id: string
+          location_id: string
+          stock_qty?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          listing_id?: string
+          location_id?: string
+          stock_qty?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_location_stock_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_location_stock_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       merch_slots: {
         Row: {
           active: boolean

@@ -1382,6 +1382,48 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    # R02-P08. Per-branch stock is publicly READABLE (a customer must be able to
+    # see which branch actually has the item) but never client-writable:
+    # migration 0081 revokes all and grants only SELECT, so quantities move
+    # solely through the service-role claim/release path, which audits them.
+    "listing_location_stock": {
+        Persona.ANON: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+    },
     "merch_slots": {
         Persona.ANON: {
             "select": "permit",
