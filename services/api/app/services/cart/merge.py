@@ -32,8 +32,13 @@ def merge_cart_items(
     """Merge guest + user cart lines: qty-sum duplicates, refresh prices, surface conflicts.
 
     The wholesale flag is re-derived from the listing AND ``business_eligible`` — never
-    trusted from the stored line — so a consumer merging a wholesale line always falls
-    back to retail pricing (B2B pricing/MOQ is gated to verified business buyers).
+    trusted from the stored line.
+
+    Under D36 a wholesale-only line held by a non-eligible buyer is **dropped with a
+    conflict**, not re-priced to retail: the flag is an access rule, not a discount.
+    (It did re-price before 2026-08-02, which sold wholesale stock at consumer prices
+    with no MOQ.) The retail re-derivation below therefore now only ever applies to
+    dual-mode listings and is defence-in-depth for wholesale-only ones.
     """
     merged: dict[str, dict[str, Any]] = {}
 
@@ -51,6 +56,32 @@ def merge_cart_items(
         qty = int(aggregate["qty"])
 
         if listing is None:
+            conflicts.append(
+                MergeConflict(
+                    listing_id=listing_id,
+                    code="cart.listing_unavailable",
+                    message_key="cart.listing_unavailable",
+                    details={"listing_id": listing_id, "retry": False},
+                )
+            )
+            continue
+
+        # D36 — a wholesale-only listing that the merging buyer is not eligible for
+        # is reported with the SAME conflict as a listing that does not exist, and
+        # the line is dropped. Previously it was silently re-priced down to retail,
+        # which both sold wholesale stock at consumer prices with no MOQ and
+        # confirmed the listing was real.
+        #
+        # Reusing `cart.listing_unavailable` rather than minting a
+        # `cart.wholesale_forbidden` is the point, not laziness: a distinct code
+        # would tell the client exactly what it was denied, which is the disclosure
+        # D36 exists to prevent. It also means no new i18n key — the reason the
+        # missing `supplies.gate.forbidden` copy is not on this path's critical
+        # list.
+        #
+        # Checked before the status branch for the same reason as in
+        # `store.fetch_listing`: one uniform answer, whatever the listing's status.
+        if listing.get("wholesale") and not business_eligible:
             conflicts.append(
                 MergeConflict(
                     listing_id=listing_id,

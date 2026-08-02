@@ -227,7 +227,15 @@ class TestMergeMatrix:
 
 class TestWholesaleBusinessGating:
     """Wholesale pricing/MOQ must be gated on verified-business eligibility, not the
-    listing alone — a consumer never gets B2B pricing (strategy alignment fix)."""
+    listing alone — a consumer never gets B2B pricing (strategy alignment fix).
+
+    NOTE (D36, 2026-08-02): the retail fallback these tests exercise is now
+    **defence in depth, not a live path**. `fetch_listing` refuses a wholesale-only
+    listing to a non-eligible caller before pricing is ever reached, so a consumer
+    request can no longer arrive here. The fallback is kept deliberately — it is the
+    right failure mode if a gate is ever missed — and these tests keep it honest.
+    `TestWholesaleOnlyIsOmittedFromTheCart` asserts the gate that now sits in front.
+    """
 
     def test_consumer_forced_to_retail_no_moq(self) -> None:
         # qty below the listing MOQ (10) must NOT raise for a non-business buyer,
@@ -253,9 +261,16 @@ class TestWholesaleBusinessGating:
         assert wholesale is True
         assert unit_price == 40_000
 
-    def test_merge_consumer_forces_retail_ignoring_stored_flag(self) -> None:
-        # A guest line claims wholesale=True + a wholesale price, but a non-business
-        # merge must re-derive to retail (no MOQ conflict, base price).
+    def test_merge_consumer_drops_the_line_instead_of_repricing_it(self) -> None:
+        """CHANGED BY D36 (2026-08-02). This test previously asserted the opposite:
+        that a non-business merge re-derived the wholesale line down to retail and
+        raised no conflict.
+
+        That was the pricing-rule reading of the wholesale flag. D36 makes it an
+        access rule — a wholesale-only listing is omitted from consumer surfaces
+        entirely — so the line is dropped with a conflict rather than converted
+        into a consumer-priced sale of wholesale stock at no MOQ.
+        """
         merged, conflicts = merge_cart_items(
             user_items=[],
             guest_items=[
@@ -269,10 +284,56 @@ class TestWholesaleBusinessGating:
             listings_by_id={LISTING_WHOLESALE: _wholesale_listing()},
             business_eligible=False,
         )
+        assert merged == [], "a wholesale-only line survived a consumer merge"
+        assert len(conflicts) == 1
+        assert conflicts[0].code == "cart.listing_unavailable"
+
+    def test_merge_conflict_does_not_reveal_that_the_listing_is_wholesale(self) -> None:
+        """The conflict must be byte-identical to the one for an id that does not
+        exist. A distinct `cart.wholesale_forbidden` would tell the client exactly
+        what it was denied, which is the disclosure D36 exists to prevent."""
+        wholesale_line = {
+            "listing_id": LISTING_WHOLESALE,
+            "qty": 3,
+            "unit_price_ngwee": 45_000,
+            "wholesale": True,
+        }
+        _, wholesale_conflicts = merge_cart_items(
+            user_items=[],
+            guest_items=[wholesale_line],
+            listings_by_id={LISTING_WHOLESALE: _wholesale_listing()},
+            business_eligible=False,
+        )
+        # Same id, but the listing is simply absent from the lookup.
+        _, absent_conflicts = merge_cart_items(
+            user_items=[],
+            guest_items=[wholesale_line],
+            listings_by_id={},
+            business_eligible=False,
+        )
+        assert wholesale_conflicts[0].code == absent_conflicts[0].code
+        assert wholesale_conflicts[0].message_key == absent_conflicts[0].message_key
+        assert wholesale_conflicts[0].details == absent_conflicts[0].details
+
+    def test_verified_business_still_merges_the_wholesale_line(self) -> None:
+        """The omission is scoped to non-eligible callers — D36 must not break B2B."""
+        merged, conflicts = merge_cart_items(
+            user_items=[],
+            guest_items=[
+                {
+                    "listing_id": LISTING_WHOLESALE,
+                    "qty": 60,
+                    "unit_price_ngwee": 40_000,
+                    "wholesale": True,
+                }
+            ],
+            listings_by_id={LISTING_WHOLESALE: _wholesale_listing()},
+            business_eligible=True,
+        )
         assert conflicts == []
         assert len(merged) == 1
-        assert merged[0].wholesale is False
-        assert merged[0].unit_price_ngwee == 50_000
+        assert merged[0].wholesale is True
+        assert merged[0].unit_price_ngwee == 40_000
 
 
 class TestSuspendedBusinessLosesWholesalePricing:
@@ -287,8 +348,15 @@ class TestSuspendedBusinessLosesWholesalePricing:
     cart or access tests.
     """
 
-    def test_stale_wholesale_line_reprices_to_retail_when_suspended(self) -> None:
-        # Priced at the 50-unit tier while verified.
+    def test_stale_wholesale_line_is_dropped_when_suspended(self) -> None:
+        """CHANGED BY D36 (2026-08-02). Previously asserted the line re-priced to
+        retail (50_000). Under D36 the suspended buyer loses *access*, not just the
+        discount, so the line is dropped with a conflict.
+
+        The property that actually mattered is unchanged and still asserted: the
+        stored line is never trusted. A suspended buyer must not keep the 40_000
+        tier price they were legitimately given while verified.
+        """
         stored_line = {
             "listing_id": LISTING_WHOLESALE,
             "qty": 60,
@@ -296,18 +364,15 @@ class TestSuspendedBusinessLosesWholesalePricing:
             "wholesale": True,
         }
 
-        merged, _conflicts = merge_cart_items(
+        merged, conflicts = merge_cart_items(
             user_items=[stored_line],
             guest_items=[],
             listings_by_id={LISTING_WHOLESALE: _wholesale_listing()},
             business_eligible=False,  # suspension resolved for this request
         )
 
-        assert len(merged) == 1
-        assert merged[0].wholesale is False
-        assert merged[0].unit_price_ngwee == 50_000, (
-            "a suspended buyer kept a tier price — the stored line was trusted"
-        )
+        assert merged == [], "a suspended buyer kept a wholesale line"
+        assert [c.code for c in conflicts] == ["cart.listing_unavailable"]
 
     def test_suspended_buyer_is_not_blocked_by_the_wholesale_moq(self) -> None:
         """Losing eligibility must not strand the buyer: MOQ is a B2B rule, so
@@ -325,6 +390,119 @@ class TestSuspendedBusinessLosesWholesalePricing:
             listing=_wholesale_listing(), qty=60, business_eligible=False
         )
         assert isinstance(unit_price, int)
+
+
+class TestWholesaleOnlyIsOmittedFromTheCart:
+    """R02-P05b / B2B audit G8 — the live defect this class closes.
+
+    Before this, `fetch_listing` filtered on `status == 'active'` and nothing else.
+    A consumer who obtained a wholesale-only listing id could `POST /cart/items`
+    with qty=1 and have it accepted at the base retail price with no MOQ: the
+    listing that was supposed to be invisible became an order, and wholesale stock
+    was sold at consumer prices.
+    """
+
+    @staticmethod
+    def _store_returning(row: dict[str, Any] | None) -> Any:
+        """Fake the service-role client chain `fetch_listing` walks."""
+
+        class FakeQuery:
+            def select(self, *_a: Any, **_k: Any) -> FakeQuery:
+                return self
+
+            def eq(self, *_a: Any, **_k: Any) -> FakeQuery:
+                return self
+
+            def limit(self, *_a: Any, **_k: Any) -> FakeQuery:
+                return self
+
+            def execute(self) -> MagicMock:
+                return MagicMock(data=[row] if row is not None else [])
+
+        service = MagicMock()
+        service.client.table.return_value = FakeQuery()
+        return service
+
+    def _fetch(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        row: dict[str, Any] | None,
+        *,
+        business_eligible: bool,
+    ) -> dict[str, Any]:
+        from app.services.cart import store
+
+        monkeypatch.setattr(store, "get_service_client", lambda: self._store_returning(row))
+        return store.fetch_listing(LISTING_WHOLESALE, business_eligible=business_eligible)
+
+    def test_consumer_cannot_fetch_a_wholesale_only_listing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        with pytest.raises(AppError) as excinfo:
+            self._fetch(monkeypatch, _wholesale_listing(), business_eligible=False)
+        assert excinfo.value.http_status == 404
+
+    def test_404_is_indistinguishable_from_a_listing_that_never_existed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The whole point of D36's 404-over-403 choice.
+
+        A 403 would confirm the id names a real listing, letting anyone who can
+        enumerate ids map the B2B catalogue — its size, its vendors, and by
+        inference its pricing — without ever qualifying as a buyer. Asserting
+        merely "not 200" would pass a 403 and miss exactly that.
+        """
+        with pytest.raises(AppError) as wholesale:
+            self._fetch(monkeypatch, _wholesale_listing(), business_eligible=False)
+        with pytest.raises(AppError) as absent:
+            self._fetch(monkeypatch, None, business_eligible=False)
+
+        assert wholesale.value.code == absent.value.code
+        assert wholesale.value.http_status == absent.value.http_status
+        assert wholesale.value.message == absent.value.message
+        assert wholesale.value.details == absent.value.details
+
+    def test_an_inactive_wholesale_listing_is_also_indistinguishable(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The wholesale check runs before the status check on purpose. If it ran
+        after, an inactive wholesale listing would answer `cart.listing_inactive`
+        while an inactive retail one answered the same — but a *draft* wholesale
+        listing would still be distinguishable from an absent id, reopening the
+        oracle through a side door."""
+        draft = {**_wholesale_listing(), "status": "draft"}
+        with pytest.raises(AppError) as excinfo:
+            self._fetch(monkeypatch, draft, business_eligible=False)
+        assert excinfo.value.code == "cart.listing_not_found"
+        assert excinfo.value.http_status == 404
+
+    def test_verified_business_fetches_it_normally(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        listing = self._fetch(monkeypatch, _wholesale_listing(), business_eligible=True)
+        assert listing["id"] == LISTING_WHOLESALE
+        assert listing["wholesale"] is True
+
+    def test_retail_listing_is_unaffected_for_a_consumer(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from app.services.cart import store
+
+        monkeypatch.setattr(
+            store, "get_service_client", lambda: self._store_returning(_retail_listing())
+        )
+        listing = store.fetch_listing(LISTING_RETAIL, business_eligible=False)
+        assert listing["id"] == LISTING_RETAIL
+
+    def test_eligibility_defaults_to_the_safe_value(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A caller that forgets the keyword must get the stricter behaviour. The
+        leakier default would fail open, and silently."""
+        from app.services.cart import store
+
+        monkeypatch.setattr(
+            store, "get_service_client", lambda: self._store_returning(_wholesale_listing())
+        )
+        with pytest.raises(AppError) as excinfo:
+            store.fetch_listing(LISTING_WHOLESALE)
+        assert excinfo.value.http_status == 404
 
 
 class TestGroupingAndTotals:
@@ -350,7 +528,8 @@ class TestGroupingAndTotals:
 
 class TestCartAuthz:
     def test_user_a_cannot_read_user_b_cart_via_service_filter(
-        self, monkeypatch: pytest.MonkeyPatch,
+        self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Authz: cart fetch scoped to owner user_id — stranger gets empty result."""
 
@@ -371,9 +550,7 @@ class TestCartAuthz:
 
             def execute(self) -> MagicMock:
                 if self._owner_id == USER_A:
-                    return MagicMock(
-                        data=[{"id": "cart-a", "user_id": USER_A, "status": "active"}]
-                    )
+                    return MagicMock(data=[{"id": "cart-a", "user_id": USER_A, "status": "active"}])
                 return MagicMock(data=[])
 
         fake_client = MagicMock()

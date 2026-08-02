@@ -46,9 +46,23 @@ ADRs** (§8) for the founder to accept, amend or reject.
 > all** — it emits a not-found — so the key reverts to firing only on the `?wholesale=true` feed.
 > G13 is therefore **demoted back to cosmetic**, not promoted. See the amended G13.
 >
-> **Status of the code as of this amendment:** the _read_ paths are done — product detail and price
-> comparison already 404 (`routers/products.py`, `routers/comparison.py`, R02-P05). The **cart path
-> G8 identifies is still open**, and it is the reason this amendment is not docs-only.
+> **Status of the code as of this amendment:** the _read_ paths were already done — product detail
+> and price comparison 404 (`routers/products.py`, `routers/comparison.py`, R02-P05). The **cart
+> entry points G8 identifies are now closed too** (`services/cart/store.py`, `services/cart/merge.py`,
+> `routers/cart.py`): `POST /cart/items`, `PATCH /cart/items/{id}` and the guest→user merge all
+> answer a non-eligible caller exactly as they answer an unknown id.
+>
+> **G8 is not fully closed, and the remainder is G3, not an oversight.** Two paths still reach a
+> consumer-priced wholesale line, both of which need the money-path re-derivation that B0-P02a
+> adds and neither of which is a cart _entry_ point:
+>
+> 1. **A stale line already in the cart.** `_build_cart_response` (`routers/cart.py`) and
+>    `_build_line_views` (`routers/checkout.py`) both read `unit_price_ngwee` and `wholesale`
+>    straight off the stored `cart_items` row — verified by reading them, not assumed. A buyer
+>    priced at a tier and then suspended still sees, and can check out at, the tier price. The
+>    _merge_ path re-derives and now drops the line; plain GET and checkout do not re-derive at all.
+> 2. **A direct `cart_items` write.** Permissive RLS on `cart_items` (G3) lets a user insert their
+>    own line, bypassing the API entirely. That is the column-guard trigger in B0-P02a.
 
 ## 0. How to read this
 
@@ -103,18 +117,18 @@ pulling any financial risk forward.
 
 ### 1.1 Conformance at a glance
 
-| Requirement (source)                                                                                     | Status                                                                                                                                                                                  |
-| -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Buyer-side `business_buyers` identity, PACRA + optional TPIN (D28)                                       | **Implemented**                                                                                                                                                                         |
-| `pending→verified/rejected/suspended` lifecycle, status server-controlled (D28)                          | **Partial** — no suspend path; post-verification detail drift (G4, G9)                                                                                                                  |
-| Single shared resolver `is_verified_business` / `business/access.py` (D28)                               | **Implemented**                                                                                                                                                                         |
-| Enforced identically at discovery, cart pricing, checkout (D28)                                          | **Partial** — discovery yes; cart yes at write; checkout/order do not re-derive (G3)                                                                                                    |
-| Wholesale hidden on _every_ consumer discovery surface (D28 follow-up)                                   | **Partial** — API layer complete; DB layer open (G1, G2)                                                                                                                                |
-| Consumer always sees retail (D28) — read as _wholesale-only, omitted (404)_ per FD-B01 as amended by D36 | **Partial** — read paths done (PDP + comparison 404, R02-P05); a wholesale-only listing is **still purchasable by a consumer at retail with no MOQ** via the cart (G8); spec in §4 G8.1 |
-| Supplies = `wholesale=true` + `price_tiers jsonb` + `moq` (D24)                                          | **Implemented**                                                                                                                                                                         |
-| Supplies discoverable in a Supplies tab (D2)                                                             | **Implemented** (gated)                                                                                                                                                                 |
-| No credit terms, RFQ-broadcast for goods, business accounts, account managers v1 (D2, §G)                | **Deferred by decision** — correctly absent                                                                                                                                             |
-| Vendor archetype persisted on the vendor row (D28 follow-up)                                             | **Implemented**                                                                                                                                                                         |
+| Requirement (source)                                                                                     | Status                                                                                                                                                                                                                                                |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Buyer-side `business_buyers` identity, PACRA + optional TPIN (D28)                                       | **Implemented**                                                                                                                                                                                                                                       |
+| `pending→verified/rejected/suspended` lifecycle, status server-controlled (D28)                          | **Partial** — no suspend path; post-verification detail drift (G4, G9)                                                                                                                                                                                |
+| Single shared resolver `is_verified_business` / `business/access.py` (D28)                               | **Implemented**                                                                                                                                                                                                                                       |
+| Enforced identically at discovery, cart pricing, checkout (D28)                                          | **Partial** — discovery yes; cart yes at write; checkout/order do not re-derive (G3)                                                                                                                                                                  |
+| Wholesale hidden on _every_ consumer discovery surface (D28 follow-up)                                   | **Partial** — API layer complete; DB layer open (G1, G2)                                                                                                                                                                                              |
+| Consumer always sees retail (D28) — read as _wholesale-only, omitted (404)_ per FD-B01 as amended by D36 | **Partial** — read paths done (PDP + comparison 404, R02-P05); cart entry points done (add/update/merge 404 or drop, 2026-08-02); **stale cart lines and direct `cart_items` writes still price at retail** — needs the re-derivation in B0-P02a (G3) |
+| Supplies = `wholesale=true` + `price_tiers jsonb` + `moq` (D24)                                          | **Implemented**                                                                                                                                                                                                                                       |
+| Supplies discoverable in a Supplies tab (D2)                                                             | **Implemented** (gated)                                                                                                                                                                                                                               |
+| No credit terms, RFQ-broadcast for goods, business accounts, account managers v1 (D2, §G)                | **Deferred by decision** — correctly absent                                                                                                                                                                                                           |
+| Vendor archetype persisted on the vendor row (D28 follow-up)                                             | **Implemented**                                                                                                                                                                                                                                       |
 
 ---
 
@@ -387,7 +401,7 @@ MOQ passes, no tier applies, and `select_unit_price_ngwee` falls through to base
 (`totals.py:29`). The buyer is charged the consumer price on the wholesale feed. Silent, and
 invisible to the vendor.
 
-### G8 — A wholesale-only listing is purchasable by a consumer at retail — **Partial**
+### G8 — A wholesale-only listing is purchasable by a consumer at retail — **Partial** (cart entry points closed 2026-08-02; stale-line + direct-write paths remain, see G3)
 
 **Founder decision (2026-08-01, FD-B01 answered; status code amended 2026-08-02 by D36):
 `wholesale=true` means _wholesale-only_ — a consumer is answered as though the listing does not

@@ -404,8 +404,10 @@ async def add_cart_item(
     service_client: Annotated[Any, Depends(get_supabase_client)],
     request: Request,
 ) -> CartResponse:
-    listing = fetch_listing(body.listing_id)
+    # Eligibility is resolved BEFORE the fetch: under D36 it decides whether the
+    # listing is visible at all, not merely how it is priced.
     business_eligible = _business_eligible_for_user(owner.user_id)
+    listing = fetch_listing(body.listing_id, business_eligible=business_eligible)
     unit_price, wholesale = validate_item_qty_for_listing(
         listing=listing, qty=body.qty, business_eligible=business_eligible
     )
@@ -478,8 +480,8 @@ async def update_cart_item(
     settings: Annotated[Settings, Depends(get_settings)],
     request: Request,
 ) -> CartResponse:
-    listing = fetch_listing(listing_id)
     business_eligible = _business_eligible_for_user(owner.user_id)
+    listing = fetch_listing(listing_id, business_eligible=business_eligible)
     unit_price, wholesale = validate_item_qty_for_listing(
         listing=listing, qty=body.qty, business_eligible=business_eligible
     )
@@ -645,9 +647,7 @@ async def save_cart_item_for_later(
         raw_product = row.get("products")
         if isinstance(raw_product, dict):
             product_id = str(raw_product.get("id") or "") or None
-            product_slug = (
-                str(raw_product.get("slug")).strip() if raw_product.get("slug") else None
-            )
+            product_slug = str(raw_product.get("slug")).strip() if raw_product.get("slug") else None
         elif row.get("product_id"):
             product_id = str(row["product_id"])
 
