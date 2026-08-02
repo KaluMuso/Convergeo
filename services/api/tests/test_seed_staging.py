@@ -107,6 +107,29 @@ def test_staging_seed_uses_constraint_aligned_auditable_kyc_fixtures(
     assert "ARRAY[]::text[]" in sql
 
 
+def test_staging_seed_adds_one_constraint_aligned_catalogue_fixture(
+    seed_module: Any,
+) -> None:
+    seed_module._validate_fixtures()
+    sql = seed_module._build_seed_sql()
+    fixture = seed_module.CATALOG_FIXTURE
+
+    assert "INSERT INTO public.categories" in sql
+    assert "INSERT INTO public.products" in sql
+    assert "INSERT INTO public.vendor_listings" in sql
+    assert fixture["listing_sku"] in sql
+    assert f"{fixture['price_ngwee']}" in sql
+    assert f"{fixture['stock_qty']}" in sql
+    assert "'active'" in sql
+    assert "wholesale, moq, returnable, status, sku" in sql
+    assert fixture["wholesale"] is False
+    assert fixture["moq"] == 1
+    assert fixture["returnable"] is False
+    assert "INSERT INTO public.listing_images" not in sql
+    assert "INSERT INTO public.orders" not in sql
+    assert "INSERT INTO public.payments" not in sql
+
+
 def test_staging_seed_rejects_vendor_lifecycle_drift(
     monkeypatch: pytest.MonkeyPatch,
     seed_module: Any,
@@ -128,5 +151,19 @@ def test_staging_seed_rejects_invalid_vendor_kyc_tier(
     with pytest.raises(
         seed_module.StagingIsolationError,
         match="invalid synthetic vendor KYC tier",
+    ):
+        seed_module._validate_fixtures()
+
+
+def test_staging_seed_rejects_non_positive_catalogue_price(
+    monkeypatch: pytest.MonkeyPatch,
+    seed_module: Any,
+) -> None:
+    bad_catalogue = dict(seed_module.CATALOG_FIXTURE, price_ngwee=0)
+    monkeypatch.setattr(seed_module, "CATALOG_FIXTURE", bad_catalogue)
+
+    with pytest.raises(
+        seed_module.StagingIsolationError,
+        match="price_ngwee must be a positive integer",
     ):
         seed_module._validate_fixtures()
