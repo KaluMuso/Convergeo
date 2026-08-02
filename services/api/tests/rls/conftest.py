@@ -144,10 +144,21 @@ def resolve_db_url() -> str:
     return primary
 
 
-AUTH_BOOTSTRAP_SQL = """
-CREATE SCHEMA IF NOT EXISTS auth;
-CREATE SCHEMA IF NOT EXISTS extensions;
-
+# The roles this harness impersonates. Kept SEPARATE from the schema bootstrap
+# below, and applied unconditionally, because of the defect described on the
+# `db` fixture: when the database already carries a schema (CI runs
+# `supabase db reset` first), the schema bootstrap is skipped — and if the role
+# creation rides along with it, `vergeo_rls_tester` never exists.
+#
+# When that role is missing, `SET LOCAL ROLE vergeo_rls_tester` errors, the
+# session stays `postgres` — superuser, BYPASSRLS — and every "expected deny"
+# assertion sees the query SUCCEED. The suite then reports over a thousand
+# failures rather than silently passing, which is the one mercy in it, but the
+# effect is that RLS was not actually being exercised.
+#
+# Idempotent by construction: safe to run against a bare Postgres, a
+# half-built database, or a fully migrated Supabase stack.
+ROLE_BOOTSTRAP_SQL = """
 DO $$ BEGIN
   CREATE ROLE anon NOLOGIN;
 EXCEPTION WHEN duplicate_object THEN NULL;
@@ -168,9 +179,17 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+-- NOSUPERUSER NOBYPASSRLS above is the whole point: the tester must be subject
+-- to policy. If this role is ever created with BYPASSRLS, every deny assertion
+-- in the matrix silently becomes a no-op.
 GRANT authenticated TO vergeo_rls_tester;
 GRANT anon TO vergeo_rls_tester;
 GRANT vergeo_rls_tester TO CURRENT_USER;
+"""
+
+AUTH_BOOTSTRAP_SQL = """
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE SCHEMA IF NOT EXISTS extensions;
 
 GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT USAGE ON SCHEMA auth TO postgres, anon, authenticated, service_role;
@@ -223,6 +242,40 @@ def ensure_local_test_database(url: str) -> None:
     admin.run("CREATE DATABASE vergeo5_rls_test")
 
 
+def ensure_roles(conn: PgConn) -> None:
+    """Create the impersonation roles. Must run on EVERY session, migrated or not."""
+    result = conn.run(ROLE_BOOTSTRAP_SQL)
+    if not result.ok:
+        raise PgError(f"Role bootstrap failed: {result.error}", result.sqlstate)
+
+
+def grant_tester_access(conn: PgConn) -> None:
+    """Grants the tester needs that only exist once the schema does."""
+    conn.run("GRANT USAGE ON SCHEMA auth TO vergeo_rls_tester")
+    conn.run("GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO vergeo_rls_tester")
+
+
+def assert_tester_is_rls_bound(conn: PgConn) -> None:
+    """Refuse to run the matrix against a tester that cannot be denied.
+
+    A superuser or BYPASSRLS tester turns every 'expected deny' cell into a
+    guaranteed pass. That is a false green on the only mechanism separating
+    tenants in this product, so it fails loudly instead.
+    """
+    result = conn.run(
+        "SELECT rolsuper::text || ',' || rolbypassrls::text "
+        "FROM pg_roles WHERE rolname = 'vergeo_rls_tester'"
+    )
+    if not result.ok or not result.rows:
+        raise PgError(f"vergeo_rls_tester missing after bootstrap: {result.error}")
+    if result.rows[0] != "false,false":
+        raise PgError(
+            "vergeo_rls_tester has SUPERUSER or BYPASSRLS "
+            f"(rolsuper,rolbypassrls = {result.rows[0]}) — every deny assertion "
+            "in the matrix would pass without testing anything"
+        )
+
+
 def apply_migrations(conn: PgConn) -> None:
     bootstrap = conn.run(AUTH_BOOTSTRAP_SQL)
     if not bootstrap.ok:
@@ -231,8 +284,10 @@ def apply_migrations(conn: PgConn) -> None:
         result = conn.run_file(migration)
         if not result.ok:
             raise PgError(f"Migration {migration.name} failed: {result.error}", result.sqlstate)
-    conn.run("GRANT USAGE ON SCHEMA auth TO vergeo_rls_tester")
-    conn.run("GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO vergeo_rls_tester")
+    # Tester grants now live in `grant_tester_access`, called by the `db` fixture
+    # on every path — not just this one. Kept here too so a direct caller of
+    # apply_migrations still ends up with a usable tester.
+    grant_tester_access(conn)
 
 
 def load_fixture_ids() -> dict[str, Any]:
@@ -275,7 +330,7 @@ INSERT INTO auth.users (
     sql_parts = [
         "BEGIN;",
         "SET LOCAL role service_role;",
-        "SET LOCAL \"request.jwt.claims\" = '{\"role\":\"service_role\"}';",
+        'SET LOCAL "request.jwt.claims" = \'{"role":"service_role"}\';',
     ]
 
     profiles = [
@@ -479,8 +534,24 @@ ON CONFLICT (id) DO NOTHING;
     )
 
     checkout_groups = [
-        (ids["checkout_groups"]["paid"], users["customer_a"], "seed-paid-cg", 535000, 15000, 550000, "completed"),
-        (ids["checkout_groups"]["pending"], users["customer_a"], "seed-pending-cg", 450000, 15000, 465000, "pending"),
+        (
+            ids["checkout_groups"]["paid"],
+            users["customer_a"],
+            "seed-paid-cg",
+            535000,
+            15000,
+            550000,
+            "completed",
+        ),
+        (
+            ids["checkout_groups"]["pending"],
+            users["customer_a"],
+            "seed-pending-cg",
+            450000,
+            15000,
+            465000,
+            "pending",
+        ),
     ]
     for cg_id, cust, key, sub, fee, total, status in checkout_groups:
         sql_parts.append(
@@ -621,14 +692,36 @@ def schema_ready(conn: PgConn) -> bool:
 
 @pytest.fixture(scope="session")
 def db(db_url: str) -> Generator[PgConn, None, None]:
+    """Session database, with the impersonation roles guaranteed to exist.
+
+    `ensure_roles` runs OUTSIDE the `schema_ready` branch, and that placement is
+    the fix for a defect that made this entire suite decorative in CI.
+
+    CI runs `supabase db start` + `supabase db reset` before pytest, so the
+    database arrives fully migrated and `schema_ready` is True. The branch below
+    was therefore skipped — and it used to be the only caller of the bootstrap
+    that creates `vergeo_rls_tester`. No role meant `SET LOCAL ROLE` failed,
+    sessions stayed `postgres` (superuser, BYPASSRLS), and the CI job logged
+    1125 failed / 1070 passed on master while reporting GREEN, because the step
+    carried `continue-on-error: true`.
+
+    Only the bare-Postgres path needs the schema built; every path needs roles.
+    """
     conn = PgConn(db_url)
     if not _db_reachable(db_url):
         pytest.skip(f"Postgres not reachable at {db_url}")
+    ensure_roles(conn)
     if not schema_ready(conn):
         conn.run("DROP SCHEMA IF EXISTS public CASCADE")
         conn.run("CREATE SCHEMA public")
         conn.run("DROP SCHEMA IF EXISTS auth CASCADE")
+        # Re-create the roles: dropping and rebuilding the schemas above does not
+        # drop roles, but apply_migrations' grants need them present, and this
+        # keeps the ordering obvious to the next reader.
+        ensure_roles(conn)
         apply_migrations(conn)
+    grant_tester_access(conn)
+    assert_tester_is_rls_bound(conn)
     seed_matrix_fixtures(conn)
     yield conn
 

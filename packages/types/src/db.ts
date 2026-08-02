@@ -3763,18 +3763,24 @@ export type Database = {
           compare_at_ngwee?: number | null
           condition?: string
           created_at?: string
+          defect_notes?: string | null
+          fulfilment_mode?: string
           id?: string
+          lead_time_days?: number | null
+          min_steps?: number
           moq?: number
           price_ngwee?: number
           price_tiers?: Json | null
           product_id?: string | null
           return_window_hours?: number | null
           returnable?: boolean
+          sale_unit?: string
           sku?: string | null
           status?: string
           stock_mode?: string
           stock_qty?: number | null
           title_override?: string | null
+          unit_step_milli?: number
           updated_at?: string
           vendor_id?: string
           wholesale?: boolean
@@ -4223,17 +4229,12 @@ export type Database = {
       has_role: { Args: { required_role: string }; Returns: boolean }
       is_valid_price_tiers: { Args: { tiers: Json }; Returns: boolean }
       is_verified_business: { Args: { uid: string }; Returns: boolean }
-      next_invoice_no: { Args: { p_series: string }; Returns: number }
-      recompute_all_review_aggregates: { Args: never; Returns: number }
       listing_line_total_ngwee: {
         Args: { p_price_per_step_ngwee: number; p_steps: number }
         Returns: number
       }
-      vendor_follower_count: { Args: { p_vendor_id: string }; Returns: number }
-      vendor_licence_is_valid: {
-        Args: { p_class: string; p_vendor_id: string }
-        Returns: boolean
-      }
+      next_invoice_no: { Args: { p_series: string }; Returns: number }
+      recompute_all_review_aggregates: { Args: never; Returns: number }
       recompute_review_aggregate: {
         Args: { p_entity_id: string; p_entity_kind: string }
         Returns: undefined
@@ -4335,6 +4336,11 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      vendor_follower_count: { Args: { p_vendor_id: string }; Returns: number }
+      vendor_licence_is_valid: {
+        Args: { p_class: string; p_vendor_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
