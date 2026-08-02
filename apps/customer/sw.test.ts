@@ -24,12 +24,22 @@ beforeAll(() => {
   process.env.NEXT_PUBLIC_API_BASE_URL = API_ORIGIN;
 });
 
-type MatchOpts = { origin?: string; destination?: string; sameOrigin?: boolean };
+type MatchOpts = {
+  origin?: string;
+  destination?: string;
+  method?: string;
+  sameOrigin?: boolean;
+};
 
 function matchingRules(pathname: string, opts: MatchOpts = {}) {
-  const { origin = APP_ORIGIN, destination = "", sameOrigin = origin === APP_ORIGIN } = opts;
+  const {
+    origin = APP_ORIGIN,
+    destination = "",
+    method = "GET",
+    sameOrigin = origin === APP_ORIGIN,
+  } = opts;
   const url = new URL(pathname, origin);
-  const request = { destination } as unknown as Request;
+  const request = { destination, method } as unknown as Request;
   const param = { url, request, sameOrigin } as unknown as Parameters<
     (typeof cacheRules)[number]["matcher"]
   >[0];
@@ -99,8 +109,20 @@ describe("service-worker runtime-cache rules", () => {
     expect(plugins.some((p) => p instanceof ExpirationPlugin)).toBe(true);
   });
 
-  it("our API GETs use NetworkFirst", () => {
-    expect(firstRuleName("/products", { origin: API_ORIGIN, sameOrigin: false })).toBe("api");
+  it("caches only API GETs and leaves mutations for the network", () => {
+    expect(
+      firstRuleName("/products", { origin: API_ORIGIN, method: "GET", sameOrigin: false }),
+    ).toBe("api");
+    expect(
+      firstRuleName("/cart/items", { origin: API_ORIGIN, method: "POST", sameOrigin: false }),
+    ).toBeUndefined();
+    expect(
+      firstRuleName("/account/tickets/t-1", {
+        origin: API_ORIGIN,
+        method: "POST",
+        sameOrigin: false,
+      }),
+    ).toBeUndefined();
     expect(ruleByName("api").handler).toBeInstanceOf(NetworkFirst);
   });
 
