@@ -151,7 +151,13 @@ def build_comparison(
     if not include_wholesale:
         # Wholesale-only listings are B2B supplies: excluded from the consumer
         # price comparison unless the caller is a verified business buyer.
-        listing_rows = [row for row in listing_rows if not row.get("wholesale")]
+        retail_rows = [row for row in listing_rows if not row.get("wholesale")]
+        # D36: an emptied comparison must be indistinguishable from a product
+        # that does not exist — an empty-but-200 comparison confirms the product
+        # is real and merely withheld. Same rule the demo filter applies below.
+        if listing_rows and not retail_rows:
+            raise AppError("product.not_found", "Product not found", 404)
+        listing_rows = retail_rows
 
     listing_ids = [str(row["id"]) for row in listing_rows if row.get("id")]
     demo_listing_ids = fetch_demo_listing_ids(client, listing_ids)

@@ -473,6 +473,55 @@ class TestComparisonWholesaleGating:
         assert ids == {LISTING_CHEAP, LISTING_WHOLESALE}
 
 
+class TestComparisonWholesaleOnlyIsOmitted:
+    """D36: a comparison whose every listing is wholesale-only must 404 for an
+    ineligible caller rather than return an empty-but-200 body, which would
+    confirm the product exists and is merely withheld."""
+
+    def _seed_wholesale_only(self, store: FakeSupabaseStore) -> None:
+        store.products = [_product_row()]
+        store.vendor_listings = [
+            _listing_row(
+                listing_id=LISTING_CHEAP,
+                vendor=_vendor_row(vendor_id=VENDOR_A_ID, display_name="Vendor A"),
+                price_ngwee=420_000,
+                wholesale=True,
+            ),
+            _listing_row(
+                listing_id=LISTING_WHOLESALE,
+                vendor=_vendor_row(vendor_id=VENDOR_B_ID, display_name="Vendor B"),
+                price_ngwee=300_000,
+                wholesale=True,
+            ),
+        ]
+
+    def test_endpoint_404s_for_guest(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        self._seed_wholesale_only(store)
+        response = client.get("/products/itel-a70/comparison")
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "product.not_found"
+
+    def test_verified_business_still_sees_the_comparison(
+        self, store: FakeSupabaseStore
+    ) -> None:
+        self._seed_wholesale_only(store)
+        result = build_comparison(store, "itel-a70", include_wholesale=True)
+        assert {item.id for item in result.listings} == {
+            LISTING_CHEAP,
+            LISTING_WHOLESALE,
+        }
+
+    def test_product_with_no_listings_at_all_is_unaffected(
+        self, store: FakeSupabaseStore
+    ) -> None:
+        store.products = [_product_row()]
+        store.vendor_listings = []
+        result = build_comparison(store, "itel-a70")
+        assert result.listings == []
+
+
 class TestComparisonSqlPlan:
     def test_documented_sql_uses_product_id_index(self) -> None:
         assert "vendor_listings_product_id_active_idx" in COMPARISON_LISTINGS_SQL
