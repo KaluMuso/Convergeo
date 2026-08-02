@@ -158,24 +158,43 @@ def resolve_db_url() -> str:
 #
 # Idempotent by construction: safe to run against a bare Postgres, a
 # half-built database, or a fully migrated Supabase stack.
+# Existence is checked BEFORE each CREATE, and that ordering is load-bearing.
+#
+# On a Supabase stack the connecting `postgres` role is NOT a superuser, and
+# Postgres checks privileges before it checks for a duplicate name: a plain
+# `CREATE ROLE service_role ... BYPASSRLS` therefore fails with `must be
+# superuser to create bypassrls users` even though service_role already
+# exists — a permission error, which a `duplicate_object` handler does not
+# catch (observed: CI run 30736608352, 2314 errors). Checking pg_roles first
+# means the CREATE simply never runs where the role pre-exists, which is
+# every Supabase environment; the duplicate_object guard stays only for the
+# race where two sessions bootstrap a bare Postgres at once.
 ROLE_BOOTSTRAP_SQL = """
 DO $$ BEGIN
-  CREATE ROLE anon NOLOGIN;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN
+    CREATE ROLE anon NOLOGIN;
+  END IF;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE ROLE authenticated NOLOGIN;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+    CREATE ROLE authenticated NOLOGIN;
+  END IF;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE ROLE service_role NOLOGIN BYPASSRLS;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+    CREATE ROLE service_role NOLOGIN BYPASSRLS;
+  END IF;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE ROLE vergeo_rls_tester LOGIN PASSWORD 'test' NOSUPERUSER NOBYPASSRLS;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'vergeo_rls_tester') THEN
+    CREATE ROLE vergeo_rls_tester LOGIN PASSWORD 'test' NOSUPERUSER NOBYPASSRLS;
+  END IF;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -273,6 +292,28 @@ def assert_tester_is_rls_bound(conn: PgConn) -> None:
             "vergeo_rls_tester has SUPERUSER or BYPASSRLS "
             f"(rolsuper,rolbypassrls = {result.rows[0]}) — every deny assertion "
             "in the matrix would pass without testing anything"
+        )
+
+    # Membership matters as much as the attributes: the harness impersonates
+    # via `SET LOCAL ROLE vergeo_rls_tester; SET LOCAL role anon|authenticated`,
+    # which requires membership in both. If the GRANTs failed (on PG16+ a
+    # CREATEROLE user needs ADMIN OPTION on a role to grant it), fail here with
+    # ONE targeted message instead of thousands of impersonation errors.
+    membership = conn.run(
+        "SELECT count(*) FROM pg_auth_members m "
+        "JOIN pg_roles granted ON granted.oid = m.roleid "
+        "JOIN pg_roles member ON member.oid = m.member "
+        "WHERE member.rolname = 'vergeo_rls_tester' "
+        "AND granted.rolname IN ('anon', 'authenticated')"
+    )
+    if not membership.ok or not membership.rows or int(membership.rows[0]) != 2:
+        got = membership.rows[0] if membership.ok and membership.rows else membership.error
+        raise PgError(
+            "vergeo_rls_tester is not a member of both anon and authenticated "
+            f"(memberships found: {got}). The GRANTs in ROLE_BOOTSTRAP_SQL failed — "
+            "on PG16+ the connecting role needs ADMIN OPTION on anon/authenticated "
+            "to grant them. Without membership, SET LOCAL ROLE cannot impersonate "
+            "and no policy is actually exercised."
         )
 
 
