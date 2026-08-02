@@ -158,6 +158,14 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /disputes/{dispute_id}/escalate": STANDARD_WRITE,
     "POST /disputes/{dispute_id}/resolve": STANDARD_WRITE,
     "POST /disputes/{dispute_id}/respond": STANDARD_WRITE,
+    # R02-P13b enquiry threads (D37). Thread creation is SENSITIVE — free text
+    # aimed at a vendor is the spam surface; replies/close ride STANDARD. The
+    # tighter per-user hourly ceilings (10 threads/h, 60 messages/h) are
+    # enforced in-router via bump_rate_counter; these entries declare the
+    # per-minute envelope the coverage gate requires.
+    "POST /enquiries": SENSITIVE_WRITE,
+    "POST /enquiries/{thread_id}/close": STANDARD_WRITE,
+    "POST /enquiries/{thread_id}/messages": SENSITIVE_WRITE,
     "POST /flags/{flag_id}/dismiss": ADMIN_WRITE,
     "POST /flags/{flag_id}/escalate-suspend": ADMIN_WRITE,
     "POST /flags/{flag_id}/remove": ADMIN_WRITE,
