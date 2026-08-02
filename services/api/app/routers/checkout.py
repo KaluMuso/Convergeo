@@ -10,8 +10,10 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
+from app.services.business.access import resolve_business_eligibility
 from app.services.cart.events import emit_checkout_start
 from app.services.cart.grouping import CartLineView, group_by_vendor
+from app.services.cart.merge import validate_item_qty_for_listing
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.stock.claim import claim_reservation, get_reservation_ttl_minutes
@@ -255,10 +257,7 @@ def _fetch_vendor_names(service: ServiceRoleClient, vendor_ids: list[str]) -> di
     if not vendor_ids:
         return {}
     response = (
-        service.client.table("vendors")
-        .select("id, display_name")
-        .in_("id", vendor_ids)
-        .execute()
+        service.client.table("vendors").select("id, display_name").in_("id", vendor_ids).execute()
     )
     rows = response.data if isinstance(response.data, list) else []
     return {
@@ -302,6 +301,78 @@ def _fetch_vendor_locations(
             hours=hours if isinstance(hours, dict) else {},
         )
     return locations
+
+
+def _rederive_line_prices(
+    items: list[dict[str, Any]],
+    listings_by_id: dict[str, dict[str, Any]],
+    *,
+    business_eligible: bool,
+    service: ServiceRoleClient,
+) -> list[dict[str, Any]]:
+    """B0-P02a defence-in-depth: a checkout session is never opened on stored prices.
+
+    Migration 0086 makes cart price columns writable only by the service role,
+    so stored lines are normally trustworthy — but the contract is derivation,
+    not trust. Each line's price and wholesale flag are re-derived here from
+    the LISTING and the caller's CURRENT eligibility. Divergence means the
+    world changed since the line was written (tier crossed, listing re-priced,
+    eligibility revoked, or a write path was missed), and the customer must
+    see the real number before money is reserved — never be charged an amount
+    they were not shown.
+
+    Conflicts collected, then one 409 `checkout.cart_changed`:
+      * wholesale-only listing, caller no longer eligible → the line reports
+        `cart.listing_unavailable` — the same non-disclosing code an absent
+        listing gets (D36; G8.1 §3: block, never re-price);
+      * qty below MOQ for an eligible buyer → `cart.moq_violation`;
+      * derived price != stored → `cart.price_changed`, and the stored line is
+        corrected via the service client so the cart the customer returns to
+        shows the true price.
+    """
+    conflicts: list[dict[str, Any]] = []
+    for item in items:
+        listing_id = str(item["listing_id"])
+        listing = listings_by_id.get(listing_id)
+        if listing is None or listing.get("status") != "active":
+            conflicts.append({"listing_id": listing_id, "code": "cart.listing_unavailable"})
+            continue
+        if listing.get("wholesale") and not business_eligible:
+            conflicts.append({"listing_id": listing_id, "code": "cart.listing_unavailable"})
+            continue
+        try:
+            fresh_price, fresh_wholesale = validate_item_qty_for_listing(
+                listing=listing,
+                qty=int(item["qty"]),
+                business_eligible=business_eligible,
+            )
+        except AppError as exc:
+            conflicts.append({"listing_id": listing_id, "code": exc.code})
+            continue
+        stored_price = int(item["unit_price_ngwee"])
+        if fresh_price != stored_price or bool(item.get("wholesale", False)) != fresh_wholesale:
+            service.client.table("cart_items").update(
+                {"unit_price_ngwee": fresh_price, "wholesale": fresh_wholesale}
+            ).eq("id", str(item["id"])).execute()
+            conflicts.append(
+                {
+                    "listing_id": listing_id,
+                    "code": "cart.price_changed",
+                    "previous_unit_price_ngwee": stored_price,
+                    "current_unit_price_ngwee": fresh_price,
+                }
+            )
+            continue
+        # Line verified: totals below may safely use the stored value, because
+        # it just proved equal to the derived one.
+    if conflicts:
+        raise AppError(
+            code="checkout.cart_changed",
+            message="Your cart has changed and needs review before checkout",
+            http_status=409,
+            details={"redirect_to": "cart", "conflicts": conflicts},
+        )
+    return items
 
 
 def _build_line_views(
@@ -453,6 +524,14 @@ async def create_checkout_session(
         )
 
     listings = fetch_listings_for_items(items)
+
+    # B0-P02a: prices re-derived before any money number is computed. Raises
+    # 409 checkout.cart_changed on divergence; see _rederive_line_prices.
+    access = resolve_business_eligibility(current_user.id, service)
+    items = _rederive_line_prices(
+        items, listings, business_eligible=access.eligible, service=service
+    )
+
     line_views = _build_line_views(items, listings)
     vendor_groups = group_by_vendor(
         line_views,
@@ -719,9 +798,7 @@ async def validate_fulfilment_step(
         else:
             zone_key = resolved_zone
             zone_label = (
-                str(zones[zone_key].get("label"))
-                if zone_key and zone_key in zones
-                else None
+                str(zones[zone_key].get("label")) if zone_key and zone_key in zones else None
             )
             fee = compute_group_delivery_fee_ngwee(
                 subtotal_ngwee=group_subtotal,

@@ -255,46 +255,49 @@ EXPECTATIONS: TableExpectations = {
         Persona.ADMIN: all_permit(),
     },
     "cart_items": {
-        # 0012 grants anon full DML for guest carts, scoped by the
-        # `request.cart_guest_token` GUC. The matrix harness runs anon with no
-        # guest token, so select/update/delete execute but RLS filters to zero
-        # rows (secure no-op → classified "permit"); insert is denied because
-        # the WITH CHECK guest_token match fails. Same shape as owner-scoped
-        # tables like `addresses`.
+        # 0086 (B0-P02a) revoked client INSERT and UPDATE outright: cart line
+        # prices are server-derived and service-role-writable only, so every
+        # non-admin persona now gets a hard permission denial on both verbs —
+        # not an RLS-filtered no-op. SELECT and DELETE keep 0012's posture:
+        # anon/owner rows are scoped by the guest-token GUC / ownership, so
+        # with no matching row they execute as secure no-ops ("permit").
+        # ADMIN goes through the same `authenticated` grant, so admins lose
+        # insert/update too — deliberate: support staff may remove lines, but
+        # nobody hand-writes a price.
         Persona.ANON: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
+            "update": "deny",
             "delete": "permit",
         },
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
+            "update": "deny",
             "delete": "permit",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
+            "update": "deny",
             "delete": "permit",
         },
         Persona.VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
+            "update": "deny",
             "delete": "permit",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
             "insert": "deny",
-            "update": "permit",
+            "update": "deny",
             "delete": "permit",
         },
         Persona.ADMIN: {
             "select": "permit",
-            "insert": "permit",
-            "update": "permit",
+            "insert": "deny",
+            "update": "deny",
             "delete": "permit",
         },
     },
@@ -2998,9 +3001,7 @@ def _probe_select(session: RoleSession, table: str) -> Any:
 
 def _probe_insert(session: RoleSession, table: str) -> Any:
     session.execute("SAVEPOINT rls_probe")
-    result = session.execute(
-        f"INSERT INTO public.{table} DEFAULT VALUES RETURNING 1"
-    )
+    result = session.execute(f"INSERT INTO public.{table} DEFAULT VALUES RETURNING 1")
     session.execute("ROLLBACK TO SAVEPOINT rls_probe")
     return result
 
@@ -3174,14 +3175,14 @@ def test_cross_vendor_cannot_update_rival_listing(
         f"UPDATE public.vendor_listings SET price_ngwee = 1 WHERE id = '{listing_a}'"
     )
     assert result.ok
-    after = db.run(
-        f"SELECT price_ngwee::text FROM public.vendor_listings WHERE id = '{listing_a}'"
-    )
+    after = db.run(f"SELECT price_ngwee::text FROM public.vendor_listings WHERE id = '{listing_a}'")
     assert after.rows == before.rows
     assert after.rows[0] != "1"
 
 
-def test_cross_vendor_cannot_read_rival_payout(as_other_vendor: RoleSession, fixture_ids: dict[str, Any]) -> None:
+def test_cross_vendor_cannot_read_rival_payout(
+    as_other_vendor: RoleSession, fixture_ids: dict[str, Any]
+) -> None:
     payout_a = fixture_ids["payouts"]["vendor_a"]
     result = as_other_vendor.execute(
         f"SELECT count(*)::int FROM public.payouts WHERE id = '{payout_a}'"
@@ -3190,7 +3191,9 @@ def test_cross_vendor_cannot_read_rival_payout(as_other_vendor: RoleSession, fix
     assert result.rows[0] == "0"
 
 
-def test_cross_vendor_cannot_read_rival_quote(as_vendor: RoleSession, fixture_ids: dict[str, Any]) -> None:
+def test_cross_vendor_cannot_read_rival_quote(
+    as_vendor: RoleSession, fixture_ids: dict[str, Any]
+) -> None:
     quote_b = fixture_ids["job_quotes"]["quote_b"]
     result = as_vendor.execute(
         f"SELECT count(*)::int FROM public.job_quotes WHERE id = '{quote_b}'"
@@ -3199,7 +3202,9 @@ def test_cross_vendor_cannot_read_rival_quote(as_vendor: RoleSession, fixture_id
     assert result.rows[0] == "0"
 
 
-def test_cross_customer_cannot_read_orders(as_other_customer: RoleSession, fixture_ids: dict[str, Any]) -> None:
+def test_cross_customer_cannot_read_orders(
+    as_other_customer: RoleSession, fixture_ids: dict[str, Any]
+) -> None:
     order_a = fixture_ids["orders"]["paid"]
     result = as_other_customer.execute(
         f"SELECT count(*)::int FROM public.orders WHERE id = '{order_a}'"
@@ -3208,7 +3213,9 @@ def test_cross_customer_cannot_read_orders(as_other_customer: RoleSession, fixtu
     assert result.rows[0] == "0"
 
 
-def test_cross_customer_cannot_read_payments(as_other_customer: RoleSession, fixture_ids: dict[str, Any]) -> None:
+def test_cross_customer_cannot_read_payments(
+    as_other_customer: RoleSession, fixture_ids: dict[str, Any]
+) -> None:
     payment = fixture_ids["payments"]["paid"]
     result = as_other_customer.execute(
         f"SELECT count(*)::int FROM public.payments WHERE id = '{payment}'"
@@ -3217,7 +3224,9 @@ def test_cross_customer_cannot_read_payments(as_other_customer: RoleSession, fix
     assert result.rows[0] == "0"
 
 
-def test_cross_customer_cannot_read_invoices(as_other_customer: RoleSession, fixture_ids: dict[str, Any]) -> None:
+def test_cross_customer_cannot_read_invoices(
+    as_other_customer: RoleSession, fixture_ids: dict[str, Any]
+) -> None:
     invoice = fixture_ids["invoices"]["paid"]
     result = as_other_customer.execute(
         f"SELECT count(*)::int FROM public.invoices WHERE id = '{invoice}'"
@@ -3226,7 +3235,9 @@ def test_cross_customer_cannot_read_invoices(as_other_customer: RoleSession, fix
     assert result.rows[0] == "0"
 
 
-def test_cross_customer_cannot_read_addresses(as_other_customer: RoleSession, fixture_ids: dict[str, Any]) -> None:
+def test_cross_customer_cannot_read_addresses(
+    as_other_customer: RoleSession, fixture_ids: dict[str, Any]
+) -> None:
     address = fixture_ids["addresses"]["customer_a_home"]
     result = as_other_customer.execute(
         f"SELECT count(*)::int FROM public.addresses WHERE id = '{address}'"
@@ -3292,7 +3303,7 @@ def test_embedding_jobs_rows_admin_only_visible(
     # probe entity. Idempotent on the (entity_kind, entity_id) unique key.
     seed = db.run(
         "BEGIN; SET LOCAL role service_role; "
-        "SET LOCAL \"request.jwt.claims\" = '{\"role\":\"service_role\"}'; "
+        'SET LOCAL "request.jwt.claims" = \'{"role":"service_role"}\'; '
         "INSERT INTO public.search_documents (entity_kind, entity_id, title, is_public) "
         f"VALUES ('product', '{probe_entity}', 'RLS isolation probe', true) "
         "ON CONFLICT (entity_kind, entity_id) DO NOTHING; "
@@ -3334,7 +3345,7 @@ def test_reconciliation_reports_rows_admin_only_visible(
     probe_date = "1999-12-31"
     seed = db.run(
         "BEGIN; SET LOCAL role service_role; "
-        "SET LOCAL \"request.jwt.claims\" = '{\"role\":\"service_role\"}'; "
+        'SET LOCAL "request.jwt.claims" = \'{"role":"service_role"}\'; '
         "INSERT INTO public.reconciliation_reports (report_date) "
         f"VALUES ('{probe_date}') ON CONFLICT (report_date) DO NOTHING; "
         "COMMIT;"
@@ -3342,9 +3353,7 @@ def test_reconciliation_reports_rows_admin_only_visible(
     assert seed.ok, seed.error
     where = f"WHERE report_date = '{probe_date}'"
 
-    admin = as_admin.execute(
-        f"SELECT count(*)::int FROM public.reconciliation_reports {where}"
-    )
+    admin = as_admin.execute(f"SELECT count(*)::int FROM public.reconciliation_reports {where}")
     assert admin.ok, admin.error
     assert admin.rows[0] == "1"  # positive: admin sees the report
 
@@ -3353,9 +3362,7 @@ def test_reconciliation_reports_rows_admin_only_visible(
         ("vendor_owner", as_vendor),
         ("rival_vendor", as_other_vendor),
     ):
-        read = session.execute(
-            f"SELECT count(*)::int FROM public.reconciliation_reports {where}"
-        )
+        read = session.execute(f"SELECT count(*)::int FROM public.reconciliation_reports {where}")
         assert read.ok, f"{label}: {read.error}"
         assert read.rows[0] == "0", label  # negative: the report is invisible
 

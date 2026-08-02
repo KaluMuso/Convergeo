@@ -10,8 +10,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
+from app.errors import AppError
 from app.main import create_app
 from app.routers.checkout import (
+    _rederive_line_prices,
     compute_group_delivery_fee_ngwee,
     resolve_delivery_zone,
 )
@@ -73,6 +75,7 @@ def _make_client(service_override: object | None = None) -> TestClient:
     app = create_app()
     app.dependency_overrides[get_current_user] = _current_user
     if service_override is not None:
+
         def _override_service() -> Generator[object, None, None]:
             yield service_override
 
@@ -193,6 +196,126 @@ def _reservation_count(conn: PgConn, checkout_group_id: str) -> int:
     )
     assert result.ok and result.rows
     return int(result.rows[0])
+
+
+class TestCheckoutRederivesPrices:
+    """B0-P02a — a checkout session is never opened on stored prices.
+
+    Unit tests of _rederive_line_prices with a fake service client: the DB
+    guard (migration 0086) closes the write path, and this closes the read
+    path — checkout recomputes every line from the listing and the caller's
+    CURRENT eligibility before any money number is produced.
+    """
+
+    LISTING = "20202020-2020-2020-2020-202020202020"
+
+    @staticmethod
+    def _service() -> MagicMock:
+        service = MagicMock()
+        chain = service.client.table.return_value.update.return_value
+        chain.eq.return_value.execute.return_value = MagicMock(data=[])
+        return service
+
+    @staticmethod
+    def _wholesale_listing() -> dict[str, Any]:
+        return {
+            "id": TestCheckoutRederivesPrices.LISTING,
+            "vendor_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "price_ngwee": 50_000,
+            "wholesale": True,
+            "moq": 10,
+            "price_tiers": [{"min_qty": 50, "price_ngwee": 40_000}],
+            "status": "active",
+        }
+
+    def _line(self, *, qty: int, price: int, wholesale: bool) -> dict[str, Any]:
+        return {
+            "id": "item-1",
+            "listing_id": self.LISTING,
+            "qty": qty,
+            "unit_price_ngwee": price,
+            "wholesale": wholesale,
+        }
+
+    def test_clean_cart_passes_and_writes_nothing(self) -> None:
+        service = self._service()
+        items = [self._line(qty=60, price=40_000, wholesale=True)]
+        result = _rederive_line_prices(
+            items,
+            {self.LISTING: self._wholesale_listing()},
+            business_eligible=True,
+            service=service,
+        )
+        assert result == items
+        service.client.table.assert_not_called()
+
+    def test_suspended_buyer_with_wholesale_line_is_blocked_not_repriced(self) -> None:
+        """G8.1 §3: revocation blocks; it never converts the line at retail."""
+        with pytest.raises(AppError) as excinfo:
+            _rederive_line_prices(
+                [self._line(qty=60, price=40_000, wholesale=True)],
+                {self.LISTING: self._wholesale_listing()},
+                business_eligible=False,
+                service=self._service(),
+            )
+        err = excinfo.value
+        assert err.code == "checkout.cart_changed"
+        assert err.http_status == 409
+        assert err.details["conflicts"][0]["code"] == "cart.listing_unavailable"
+
+    def test_wholesale_block_is_indistinguishable_from_absent_listing(self) -> None:
+        """D36: the conflict code must not reveal that the listing exists."""
+        with pytest.raises(AppError) as wholesale:
+            _rederive_line_prices(
+                [self._line(qty=60, price=40_000, wholesale=True)],
+                {self.LISTING: self._wholesale_listing()},
+                business_eligible=False,
+                service=self._service(),
+            )
+        with pytest.raises(AppError) as absent:
+            _rederive_line_prices(
+                [self._line(qty=60, price=40_000, wholesale=True)],
+                {},
+                business_eligible=False,
+                service=self._service(),
+            )
+        assert (
+            wholesale.value.details["conflicts"][0]["code"]
+            == absent.value.details["conflicts"][0]["code"]
+        )
+
+    def test_stale_tier_price_is_corrected_and_surfaced(self) -> None:
+        """A line stored at the 50-unit tier whose qty no longer qualifies must
+        be re-priced in storage AND reported — never silently charged."""
+        service = self._service()
+        with pytest.raises(AppError) as excinfo:
+            _rederive_line_prices(
+                # qty 20: above MOQ, below the 50-unit tier → derived price is
+                # the 50_000 base, but the stored line still says 40_000.
+                [self._line(qty=20, price=40_000, wholesale=True)],
+                {self.LISTING: self._wholesale_listing()},
+                business_eligible=True,
+                service=service,
+            )
+        conflict = excinfo.value.details["conflicts"][0]
+        assert conflict["code"] == "cart.price_changed"
+        assert conflict["previous_unit_price_ngwee"] == 40_000
+        assert conflict["current_unit_price_ngwee"] == 50_000
+        assert isinstance(conflict["current_unit_price_ngwee"], int)
+        # The stored line was corrected through the service client.
+        service.client.table.assert_called_with("cart_items")
+        update_payload = service.client.table.return_value.update.call_args[0][0]
+        assert update_payload["unit_price_ngwee"] == 50_000
+
+    def test_moq_violation_blocks_the_session(self) -> None:
+        with pytest.raises(AppError) as excinfo:
+            _rederive_line_prices(
+                [self._line(qty=5, price=50_000, wholesale=True)],
+                {self.LISTING: self._wholesale_listing()},
+                business_eligible=True,
+                service=self._service(),
+            )
+        assert excinfo.value.details["conflicts"][0]["code"] == "cart.moq_violation"
 
 
 class TestZoneResolution:
@@ -481,9 +604,7 @@ class TestReservationClaimOnSessionInit:
                     profile_chain = (
                         table.select.return_value.eq.return_value.maybe_single.return_value
                     )
-                    profile_chain.execute.return_value = MagicMock(
-                        data={"phone": "+260971000001"}
-                    )
+                    profile_chain.execute.return_value = MagicMock(data={"phone": "+260971000001"})
                 return table
 
             service.client.table.side_effect = service_table
