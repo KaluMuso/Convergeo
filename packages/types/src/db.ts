@@ -3569,32 +3569,56 @@ export type Database = {
       }
       vendor_locations: {
         Row: {
+          area: string | null
+          city: string | null
           created_at: string
           hours: Json
           id: string
+          is_primary: boolean
+          label: string | null
           landmark: string
           lat: number
           lng: number
+          phone_e164: string | null
+          province: string | null
+          status: string
+          street: string | null
           updated_at: string
           vendor_id: string
         }
         Insert: {
+          area?: string | null
+          city?: string | null
           created_at?: string
           hours?: Json
           id?: string
+          is_primary?: boolean
+          label?: string | null
           landmark: string
           lat: number
           lng: number
+          phone_e164?: string | null
+          province?: string | null
+          status?: string
+          street?: string | null
           updated_at?: string
           vendor_id: string
         }
         Update: {
+          area?: string | null
+          city?: string | null
           created_at?: string
           hours?: Json
           id?: string
+          is_primary?: boolean
+          label?: string | null
           landmark?: string
           lat?: number
           lng?: number
+          phone_e164?: string | null
+          province?: string | null
+          status?: string
+          street?: string | null
           updated_at?: string
           vendor_id?: string
         }
