@@ -2452,13 +2452,41 @@ EXPECTATIONS: TableExpectations = {
     },
     "user_recently_viewed": {
         # 0066: owner select/insert/update/delete; admin all. Same owner-scoped
-        # probe shape as `addresses` (bare insert denied by WITH CHECK).
-        Persona.ANON: deny_all(),
-        Persona.CUSTOMER: select_insert_delete_only(),
-        Persona.OTHER_CUSTOMER: select_insert_delete_only(),
-        Persona.VENDOR: select_insert_delete_only(),
-        Persona.OTHER_VENDOR: select_insert_delete_only(),
-        Persona.ADMIN: select_insert_delete_only(),
+        # probe shape as `addresses` (bare insert denied by WITH CHECK). Anon
+        # still has no table grants, but UPDATE ... WHERE false is a PostgreSQL
+        # no-op rather than an authorization proof; the effective-grant test
+        # below locks that ACL boundary down directly.
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.ADMIN: all_permit(),
     },
     "user_roles": {
         Persona.ANON: {
@@ -2860,6 +2888,50 @@ def test_matrix_cell(
     else:
         assert denied, f"{table}/{persona}/{verb}: expected deny, query succeeded"
         MATRIX_SUMMARY["deny"] += 1
+
+
+def test_recently_viewed_owner_write_and_anon_acl(
+    db: PgConn,
+    as_customer: RoleSession,
+    fixture_ids: dict[str, Any],
+) -> None:
+    """A valid owner row proves the policy; a no-op probe cannot prove grants."""
+    customer_id = fixture_ids["users"]["customer_a"]
+    product_id = fixture_ids["products"]["phone"]
+    try:
+        db.run(
+            "BEGIN; "
+            "DELETE FROM public.user_recently_viewed "
+            f"WHERE user_id = '{customer_id}' AND product_id = '{product_id}'; "
+            "COMMIT;"
+        )
+
+        inserted = as_customer.execute(
+            "INSERT INTO public.user_recently_viewed (user_id, product_id) "
+            f"VALUES ('{customer_id}', '{product_id}')"
+        )
+        assert inserted.ok, inserted.error
+
+        updated = as_customer.execute(
+            "UPDATE public.user_recently_viewed SET viewed_at = now() "
+            f"WHERE user_id = '{customer_id}' AND product_id = '{product_id}'"
+        )
+        assert updated.ok, updated.error
+
+        acl = db.run(
+            "SELECT has_table_privilege('anon', 'public.user_recently_viewed', 'UPDATE')::text "
+            "|| '|' || has_table_privilege('authenticated', "
+            "'public.user_recently_viewed', 'UPDATE')::text"
+        )
+        assert acl.ok, acl.error
+        assert acl.rows == ["false|true"], acl.rows
+    finally:
+        db.run(
+            "BEGIN; "
+            "DELETE FROM public.user_recently_viewed "
+            f"WHERE user_id = '{customer_id}' AND product_id = '{product_id}'; "
+            "COMMIT;"
+        )
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
