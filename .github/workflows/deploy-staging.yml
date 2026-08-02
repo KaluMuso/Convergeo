@@ -332,6 +332,8 @@ jobs:
     if: ${{ always() && needs.environment-separation.result == 'success' && (github.event_name == 'push' || inputs.skip_vercel != true) }}
     runs-on: ubuntu-latest
     environment: staging
+    outputs:
+      customer_preview_url: ${{ steps.deploy_customer_preview.outputs.url }}
     steps:
       - uses: actions/checkout@v7
 
@@ -378,6 +380,133 @@ jobs:
           echo "Expected Preview env NEXT_PUBLIC_API_BASE_URL=${API_BASE}"
           echo "See infra/staging/vercel-preview.env.example for full name list."
           test -f infra/staging/vercel-preview.env.example
+
+      - name: Deploy and prove customer Preview for staging SHA
+        id: deploy_customer_preview
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID_CUSTOMER: ${{ secrets.VERCEL_PROJECT_ID_CUSTOMER }}
+        run: |
+          set -euo pipefail
+          # This is intentionally a Git-source Preview deployment. Omit target:
+          # Vercel defaults it to Preview. Production promotion remains exclusively
+          # in deploy-production.yml and is never called from this workflow.
+          test "${GITHUB_REF_NAME}" = "staging"
+          case "${GITHUB_SHA}" in
+            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) ;;
+            *) echo "::error::GITHUB_SHA is not a commit SHA"; exit 1 ;;
+          esac
+          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID_CUSTOMER; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::${name} is required in the staging environment"
+              exit 1
+            fi
+          done
+
+          payload="$(python3 - <<'PY'
+          import json
+          import os
+
+          print(json.dumps({
+              "name": "convergeo-customer",
+              "gitSource": {
+                  "type": "github",
+                  "org": "KaluMuso",
+                  "repo": "Convergeo",
+                  "ref": os.environ["GITHUB_REF_NAME"],
+              },
+          }))
+          PY
+          )"
+          deployment="$(curl --fail-with-body --retry 3 --retry-all-errors \
+            --connect-timeout 15 --max-time 60 \
+            -X POST "https://api.vercel.com/v13/deployments?teamId=${VERCEL_ORG_ID}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data "${payload}")"
+
+          deployment_id="$(DEPLOYMENT_JSON="${deployment}" python3 - <<'PY'
+          import json
+          import os
+          import sys
+
+          doc = json.loads(os.environ["DEPLOYMENT_JSON"])
+          deployment_id = doc.get("id") or doc.get("uid")
+          if not deployment_id:
+              print("::error::Vercel create response did not include a deployment id", file=sys.stderr)
+              raise SystemExit(1)
+          print(deployment_id)
+          PY
+          )"
+          echo "Created customer Preview deployment ${deployment_id} for staging SHA ${GITHUB_SHA:0:12}"
+
+          for attempt in $(seq 1 60); do
+            deployment="$(curl --fail-with-body --retry 3 --retry-all-errors \
+              --connect-timeout 15 --max-time 60 \
+              -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+              "https://api.vercel.com/v13/deployments/${deployment_id}?teamId=${VERCEL_ORG_ID}")"
+            metadata="$(DEPLOYMENT_JSON="${deployment}" python3 - <<'PY'
+          import json
+          import os
+
+          doc = json.loads(os.environ["DEPLOYMENT_JSON"])
+          meta = doc.get("meta") or {}
+          values = (
+              doc.get("readyState") or doc.get("state") or "UNKNOWN",
+              doc.get("target") or "preview",
+              doc.get("projectId") or "",
+              meta.get("githubCommitSha") or meta.get("gitCommitSha") or "",
+              doc.get("url") or "",
+          )
+          print("\t".join(values))
+          PY
+            )"
+            IFS=$'\t' read -r ready_state target project_id commit_sha deployment_url <<< "${metadata}"
+            case "${target}" in
+              preview) ;;
+              *) echo "::error::staging deployment target must be preview, got ${target}"; exit 1 ;;
+            esac
+            if [ "${project_id}" != "${VERCEL_PROJECT_ID_CUSTOMER}" ]; then
+              echo "::error::deployment project does not match the customer project"
+              exit 1
+            fi
+            case "${ready_state}" in
+              READY)
+                if [ "${commit_sha}" != "${GITHUB_SHA}" ]; then
+                  echo "::error::deployment SHA mismatch: got ${commit_sha:-missing}, want ${GITHUB_SHA}"
+                  exit 1
+                fi
+                if [ -z "${deployment_url}" ]; then
+                  echo "::error::ready deployment has no URL"
+                  exit 1
+                fi
+                printf 'url=https://%s\n' "${deployment_url}" >> "${GITHUB_OUTPUT}"
+                printf 'deployment_id=%s\n' "${deployment_id}" >> "${GITHUB_OUTPUT}"
+                printf 'sha=%s\n' "${commit_sha}" >> "${GITHUB_OUTPUT}"
+                printf '%s\n' "${deployment}" > /tmp/staging-customer-preview.json
+                echo "Customer Preview READY: https://${deployment_url}"
+                exit 0
+                ;;
+              ERROR|CANCELED)
+                echo "::error::Vercel customer Preview finished ${ready_state}"
+                exit 1
+                ;;
+              *)
+                echo "Customer Preview ${ready_state} (attempt ${attempt}/60)"
+                sleep 5
+                ;;
+            esac
+          done
+
+          echo "::error::Timed out waiting for the customer Preview deployment"
+          exit 1
+
+      - name: Upload customer Preview evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: staging-customer-preview
+          path: /tmp/staging-customer-preview.json
 
   smoke:
     name: Staging smoke + evidence
