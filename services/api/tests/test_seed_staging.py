@@ -121,7 +121,10 @@ def test_staging_seed_adds_one_constraint_aligned_catalogue_fixture(
     assert f"{fixture['price_ngwee']}" in sql
     assert f"{fixture['stock_qty']}" in sql
     assert "'active'" in sql
-    assert "false, 1, false" in sql
+    assert "wholesale, moq, returnable, status, sku" in sql
+    assert fixture["wholesale"] is False
+    assert fixture["moq"] == 1
+    assert fixture["returnable"] is False
     assert "INSERT INTO public.listing_images" not in sql
     assert "INSERT INTO public.orders" not in sql
     assert "INSERT INTO public.payments" not in sql
