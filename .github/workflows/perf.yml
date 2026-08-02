@@ -60,7 +60,16 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
         with:
-          version: latest
+          # Pinned (not `latest`) so setup-cli skips the unauthenticated
+          # GitHub "resolve latest release" API call, which intermittently
+          # hits rate limits. Bump manually, in step with ci.yml and
+          # deploy-staging.yml — all four pins should move together.
+          #
+          # ci.yml was pinned for exactly this reason and this job was missed,
+          # so it kept failing the same way: run 30736407395 died 35s in with
+          # `Failed to resolve latest Supabase CLI release: rate limit
+          # exceeded`, before a single byte of the bundle was measured.
+          version: 2.109.1
 
       - name: Start local Supabase stack
         run: supabase start -x edge-runtime

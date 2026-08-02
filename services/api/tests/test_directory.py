@@ -310,9 +310,7 @@ class TestDirectoryVisibility:
         assert response.status_code == 301
         assert response.headers["location"] == "/directory/new-shop-name"
 
-    def test_unknown_slug_still_404s(
-        self, client: TestClient, store: FakeSupabaseStore
-    ) -> None:
+    def test_unknown_slug_still_404s(self, client: TestClient, store: FakeSupabaseStore) -> None:
         store.vendors = [_vendor_row(slug="real-shop")]
         response = client.get("/directory/does-not-exist", follow_redirects=False)
         assert response.status_code == 404
@@ -505,9 +503,7 @@ class TestVendorProfile:
         store.vendors[0]["cover_url"] = "https://res.cloudinary.com/demo/cover.png"
         response = client.get("/directory/tech-hub-lusaka")
         assert response.status_code == 200
-        assert (
-            response.json()["vendor"]["cover_url"] == "https://res.cloudinary.com/demo/cover.png"
-        )
+        assert response.json()["vendor"]["cover_url"] == "https://res.cloudinary.com/demo/cover.png"
 
     def test_profile_returns_all_branch_locations(
         self, client: TestClient, store: FakeSupabaseStore
@@ -614,9 +610,7 @@ class TestVendorProfileWholesaleGating:
         assert not isinstance(result, RedirectResponse)
         assert {listing.product_slug for listing in result.listings} == {"itel-a70"}
 
-    def test_build_includes_wholesale_when_eligible(
-        self, store: FakeSupabaseStore
-    ) -> None:
+    def test_build_includes_wholesale_when_eligible(self, store: FakeSupabaseStore) -> None:
         self._seed(store)
         result = directory_module.get_vendor_profile(
             store, "tech-hub-lusaka", include_wholesale=True
@@ -636,9 +630,7 @@ class TestVendorProfileWholesaleGating:
         slugs = {listing["product_slug"] for listing in response.json()["listings"]}
         assert slugs == {"itel-a70"}
 
-    def test_endpoint_verified_business_sees_wholesale(
-        self, store: FakeSupabaseStore
-    ) -> None:
+    def test_endpoint_verified_business_sees_wholesale(self, store: FakeSupabaseStore) -> None:
         self._seed(store)
         app: FastAPI = create_app()
         app.dependency_overrides[get_business_access] = lambda: BusinessAccess(
@@ -651,9 +643,7 @@ class TestVendorProfileWholesaleGating:
             def __init__(self) -> None:
                 self.client = store
 
-        with patch(
-            "app.deps.get_supabase_service_client", return_value=FakeServiceClient()
-        ):
+        with patch("app.deps.get_supabase_service_client", return_value=FakeServiceClient()):
             with TestClient(app, raise_server_exceptions=False) as test_client:
                 response = test_client.get("/directory/tech-hub-lusaka")
         app.dependency_overrides.clear()
@@ -675,3 +665,74 @@ class TestDirectoryHelpers:
 
     def test_sanitize_query_strips_wildcards(self) -> None:
         assert directory_module._sanitize_query("%hack_") == "hack"
+
+
+class TestOpenNowFilter:
+    """R02-P10 wiring. The filter is opt-in and must not disturb the default."""
+
+    def _seed_two_vendors(self, store: FakeSupabaseStore) -> None:
+        always = _vendor_row(
+            vendor_id="11111111-1111-1111-1111-111111111111",
+            slug="always-open",
+            display_name="Always Open",
+        )
+        # Open every day, all day but one minute.
+        always["vendor_locations"][0]["hours"] = {
+            day: "00:00-23:59" for day in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+        }
+        no_hours = _vendor_row(
+            vendor_id="22222222-2222-2222-2222-222222222222",
+            slug="hours-unknown",
+            display_name="Hours Unknown",
+        )
+        no_hours["vendor_locations"][0]["hours"] = {}
+        store.vendors = [always, no_hours]
+
+    def test_default_response_includes_both_vendors(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        """Without the flag, nothing changes — the filter cannot silently
+        shrink an existing result set."""
+        self._seed_two_vendors(store)
+        response = client.get("/directory")
+        assert response.status_code == 200
+        slugs = {item["slug"] for item in response.json()["items"]}
+        assert slugs == {"always-open", "hours-unknown"}
+
+    def test_open_now_excludes_a_vendor_with_no_published_hours(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        """An unknown is not a yes: `open_now=true` answers 'shops I can walk
+        into now', so a vendor whose hours nobody published is excluded rather
+        than assumed open."""
+        self._seed_two_vendors(store)
+        response = client.get("/directory?open_now=true")
+        assert response.status_code == 200
+        slugs = {item["slug"] for item in response.json()["items"]}
+        assert slugs == {"always-open"}
+
+    def test_profile_reports_open_now_and_distinguishes_unknown_from_shut(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        self._seed_two_vendors(store)
+
+        open_profile = client.get("/directory/always-open")
+        assert open_profile.status_code == 200
+        assert open_profile.json()["vendor"]["location"]["open_now"] is True
+
+        unknown_profile = client.get("/directory/hours-unknown")
+        assert unknown_profile.status_code == 200
+        # None, not False — we do not know it is shut, and claiming so would
+        # assert something the data cannot support.
+        assert unknown_profile.json()["vendor"]["location"]["open_now"] is None
+
+    def test_any_open_branch_counts(self) -> None:
+        """A vendor with a shut office and an open stall is, to a customer
+        looking for somewhere to buy, open."""
+        all_week = {day: "00:00-23:59" for day in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")}
+        row = {"vendor_locations": [{"hours": {}}, {"hours": all_week}]}
+        assert directory_module._any_branch_open_now(row) is True
+
+    def test_no_branches_is_not_open(self) -> None:
+        assert directory_module._any_branch_open_now({"vendor_locations": []}) is False
+        assert directory_module._any_branch_open_now({}) is False

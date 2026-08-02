@@ -5,6 +5,7 @@ from typing import Any
 from unittest.mock import patch
 
 import pytest
+from app.errors import AppError
 from app.main import create_app
 from app.routers import products as products_router
 from app.services.business.access import BusinessAccess, get_business_access
@@ -558,6 +559,100 @@ class TestProductDetailWholesale:
         assert response.status_code == 200
         ids = {listing["id"] for listing in response.json()["listings"]}
         assert ids == {LISTING_IN_STOCK, LISTING_QUICK}
+
+
+class TestProductDetailWholesaleOnlyIsOmitted:
+    """D36: a product whose every active listing is wholesale-only must be
+    **indistinguishable from one that does not exist** for an ineligible caller.
+
+    Rendering a listing-less page would confirm the product is real and merely
+    withheld — enough for an id enumerator to map the B2B catalogue without ever
+    qualifying as a business buyer. D28's word for this was always "hidden".
+    """
+
+    def _seed_wholesale_only(self, store: FakeSupabaseStore) -> None:
+        store.products = [_product_row()]
+        store.vendor_listings = [
+            _listing_row(
+                listing_id=LISTING_IN_STOCK,
+                price_ngwee=450_000,
+                wholesale=True,
+            ),
+            _listing_row(
+                listing_id=LISTING_QUICK,
+                price_ngwee=300_000,
+                wholesale=True,
+            ),
+        ]
+
+    def test_build_404s_for_consumer_when_every_listing_is_wholesale(
+        self, store: FakeSupabaseStore
+    ) -> None:
+        self._seed_wholesale_only(store)
+        with pytest.raises(AppError) as excinfo:
+            products_router.build_product_detail(store, "itel-a70")
+        assert excinfo.value.http_status == 404
+        assert excinfo.value.code == "product.not_found"
+
+    def test_endpoint_404s_for_guest(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        self._seed_wholesale_only(store)
+        response = client.get("/products/itel-a70")
+        assert response.status_code == 404
+
+    def test_404_is_indistinguishable_from_a_product_that_never_existed(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        """Same status, same error code, same message — no tell."""
+        self._seed_wholesale_only(store)
+        hidden = client.get("/products/itel-a70")
+
+        store.products = []
+        store.vendor_listings = []
+        absent = client.get("/products/no-such-product-at-all")
+
+        assert hidden.status_code == absent.status_code == 404
+        assert hidden.json()["error"]["code"] == absent.json()["error"]["code"]
+        assert hidden.json()["error"]["message"] == absent.json()["error"]["message"]
+
+    def test_verified_business_still_sees_the_wholesale_only_product(
+        self, store: FakeSupabaseStore
+    ) -> None:
+        self._seed_wholesale_only(store)
+        result = products_router.build_product_detail(
+            store, "itel-a70", include_wholesale=True
+        )
+        assert not isinstance(result, RedirectResponse)
+        assert result.listing_count == 2
+
+    def test_dual_mode_product_still_renders_retail_for_consumer(
+        self, store: FakeSupabaseStore
+    ) -> None:
+        """D28 unchanged: a product with both retail and wholesale listings
+        keeps showing the retail one. Only wholesale-ONLY disappears."""
+        store.products = [_product_row()]
+        store.vendor_listings = [
+            _listing_row(listing_id=LISTING_IN_STOCK, price_ngwee=450_000),
+            _listing_row(
+                listing_id=LISTING_QUICK, price_ngwee=300_000, wholesale=True
+            ),
+        ]
+        result = products_router.build_product_detail(store, "itel-a70")
+        assert not isinstance(result, RedirectResponse)
+        assert {listing.id for listing in result.listings} == {LISTING_IN_STOCK}
+
+    def test_product_with_no_listings_at_all_is_unaffected(
+        self, store: FakeSupabaseStore
+    ) -> None:
+        """The 404 must trigger on *filtering something away*, not on an
+        already-empty set — otherwise a legitimately listing-less product page
+        would start 404ing as a side effect."""
+        store.products = [_product_row()]
+        store.vendor_listings = []
+        result = products_router.build_product_detail(store, "itel-a70")
+        assert not isinstance(result, RedirectResponse)
+        assert result.listing_count == 0
 
 
 class TestProductHelpers:

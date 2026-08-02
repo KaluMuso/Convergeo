@@ -54,6 +54,35 @@ Set in Vercel project → Settings → Environment Variables:
 
 Server-only secrets (service role, Lenco tokens) **must not** be added to the Vercel customer project.
 
+### ⚠ These are baked at BUILD time, not read at runtime
+
+`NEXT_PUBLIC_*` values are inlined into the bundle when `next build` runs. The
+customer app's **middleware** throws `Missing required environment variable:
+NEXT_PUBLIC_SUPABASE_URL` when it is absent, and middleware runs on _every_
+request — so a build produced without that variable returns **HTTP 500 on every
+route**, including static pages and `/health`. The app is not degraded; it is
+completely dead.
+
+Two consequences that are easy to get wrong:
+
+1. **Adding the variable in Vercel is not enough — you must redeploy.** Setting
+   it against an existing deployment changes nothing, because that deployment's
+   bundle was already built without it. This is the same shape as the
+   2026-07-13 `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` follow-up.
+2. **A Preview environment missing the variable produces a 500-everywhere
+   preview**, which reads like an application bug and sends you hunting in the
+   wrong place.
+
+Verified locally 2026-08-01: a build without the variable 500s on `/en`,
+`/en/cart`, `/en/sell`, `/en/categories`, `/en/search`, `/en/compare`,
+`/en/clips`, `/en/supplies` and `/en/legal/privacy` — every route probed —
+while the identical source rebuilt **with** it compiles clean (46 routes, 105 kB
+shared first-load JS). Runtime env made no difference to the bad build, as
+expected.
+
+**Check before promoting:** if every route 500s, look at the build's env before
+looking at the code.
+
 ## Images
 
 Allow `res.cloudinary.com` in `next.config.ts` (already stubbed). No additional Vercel image env required for Cloudinary direct URLs.

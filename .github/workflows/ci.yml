@@ -473,6 +473,20 @@ jobs:
       - name: Reset local database (with seed)
         run: supabase db reset
 
+      # Provision the matrix's impersonation roles in ISOLATION, before any
+      # pytest process touches the database. On 2026-08-02 the same bootstrap,
+      # run from inside the session fixture, took the server down mid-statement
+      # (run 30736920217) and one failure cascaded into 2,314 fixture errors —
+      # with the actual culprit invisible. Here a crash or refusal fails this
+      # single step, and the container logs print right next to it.
+      - name: Provision RLS tester role
+        run: |
+          if ! psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f ../../scripts/ci/provision-rls-tester.sql; then
+            echo '::error::role provisioning failed — dumping database container logs'
+            docker ps --format '{{.Names}}' | grep -i 'supabase_db' | head -1 | xargs -r docker logs --tail 100
+            exit 1
+          fi
+
       - name: Seed demo data
         continue-on-error: true
         run: uv run python ../../scripts/seed.py --env local
@@ -494,8 +508,15 @@ jobs:
         run: uv run pytest tests/test_db_adapter.py tests/test_ticket_purchase.py tests/test_ticket_verify.py tests/test_ticket_wallet.py tests/test_ticket_scan_sync.py tests/test_ticket_transfer.py tests/test_event_release.py tests/test_search_analytics.py tests/test_service_escrow.py tests/test_vendor_analytics.py tests/test_review_aggregate.py tests/test_listing_below_median.py tests/test_kyc_state.py -q
 
       - name: RLS isolation matrix
-        # Wired for M03-P09 (same wave). Goes green once services/api/tests/rls lands.
-        continue-on-error: true
+        # BLOCKING since R02 (2026-08-01). The `continue-on-error: true` here
+        # dated from M03-P09, when tests/rls did not exist yet — the suite has
+        # long since landed and passes, but the escape hatch stayed. That meant
+        # a genuine RLS regression — customer data readable by another
+        # customer, a vendor reading a rival's orders — would have gone GREEN.
+        #
+        # RLS is the only thing standing between tenants in this product, so a
+        # gate that cannot fail is not a gate. If this proves flaky, the fix is
+        # to stabilise the environment, not to hide the signal again.
         run: uv run pytest tests/rls -q
 
   money-db-triggers:

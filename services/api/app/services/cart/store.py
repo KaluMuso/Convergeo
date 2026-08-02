@@ -46,28 +46,52 @@ def create_guest_cart(guest_token: str) -> dict[str, Any]:
     return {"id": cart_id, "user_id": None, "guest_token": guest_token, "status": "active"}
 
 
-def fetch_listing(listing_id: str) -> dict[str, Any]:
+def fetch_listing(listing_id: str, *, business_eligible: bool = False) -> dict[str, Any]:
+    """Load a listing for a cart mutation, applying D36's wholesale omission rule.
+
+    ``business_eligible`` defaults to False — the safe value — so a caller that
+    forgets to pass it gets the *stricter* behaviour rather than the leakier one.
+    """
     from app.errors import AppError
+
+    def _not_found() -> AppError:
+        return AppError(
+            code="cart.listing_not_found",
+            message="Listing not found",
+            http_status=404,
+            details={"listing_id": listing_id},
+        )
 
     service = get_service_client()
     response = (
         service.client.table("vendor_listings")
-        .select(
-            "id, vendor_id, title_override, price_ngwee, wholesale, moq, price_tiers, status"
-        )
+        .select("id, vendor_id, title_override, price_ngwee, wholesale, moq, price_tiers, status")
         .eq("id", listing_id)
         .limit(1)
         .execute()
     )
     rows = response.data
     if not isinstance(rows, list) or not rows or not isinstance(rows[0], dict):
-        raise AppError(
-            code="cart.listing_not_found",
-            message="Listing not found",
-            http_status=404,
-            details={"listing_id": listing_id},
-        )
+        raise _not_found()
     listing = rows[0]
+
+    # D36 — a wholesale-only listing is omitted from every consumer surface, and a
+    # direct hit is answered as though it never existed.
+    #
+    # This raises the SAME error object as an unknown id above — same code, same
+    # status, same message — and deliberately not `business.wholesale_forbidden`
+    # (403), which is what the B2B feed returns and what the B2B audit originally
+    # specified here. A 403 would confirm that the id names a real listing, which
+    # is all an id enumerator needs to map the B2B catalogue without ever
+    # qualifying as a buyer. 403 stays reserved for `?wholesale=true`, where the
+    # caller asserted business intent and refusing answers a question they asked.
+    #
+    # Checked BEFORE the status check below so a wholesale-only listing gets one
+    # uniform answer: an inactive wholesale listing must not be distinguishable
+    # from an inactive retail one by its error code either.
+    if listing.get("wholesale") and not business_eligible:
+        raise _not_found()
+
     if listing.get("status") != "active":
         raise AppError(
             code="cart.listing_inactive",

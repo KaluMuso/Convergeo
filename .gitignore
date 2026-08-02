@@ -42,3 +42,6 @@ Thumbs.db
 
 # Misc
 *.tsbuildinfo
+
+# Transient agent worktrees (parallel-session workspaces; never committed)
+.claude/worktrees/

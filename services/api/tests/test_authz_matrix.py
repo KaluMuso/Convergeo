@@ -145,6 +145,11 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/service-reviews"),
         ("GET", "/services"),
         ("GET", "/services/{slug}"),
+        # R02-P12b public derived licence badge: unauthenticated by design (storefront
+        # trust signal). Discloses a boolean only — the vendor_licence_is_valid RPC
+        # returns identical false for unknown vendors, so there is no existence oracle,
+        # and licence numbers/dates/notes never leave the owner/admin surfaces.
+        ("GET", "/vendors/{vendor_id}/licence-badge"),
     }
 )
 

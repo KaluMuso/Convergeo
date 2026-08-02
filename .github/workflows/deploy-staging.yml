@@ -189,14 +189,22 @@ jobs:
           STAGING_SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
           STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
           STAGING_SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
+          STAGING_SUPABASE_REGION: ${{ vars.STAGING_SUPABASE_REGION || 'eu-west-1' }}
         run: |
           set -euo pipefail
           if [ -n "${STAGING_SUPABASE_DB_URL}" ]; then
             export SUPABASE_DB_URL="${STAGING_SUPABASE_DB_URL}"
           else
-            # Fallback pooler form — override with STAGING_SUPABASE_DB_URL when region differs.
-            export SUPABASE_DB_URL="postgresql://postgres.${STAGING_SUPABASE_PROJECT_ID}:${STAGING_SUPABASE_DB_PASSWORD}@aws-0-eu-north-1.pooler.supabase.com:5432/postgres"
+            # Fallback: SESSION POOLER (IPv4). GitHub-hosted runners have no
+            # IPv6 egress and the direct host db.<ref>.supabase.co is IPv6-only.
+            # Region must match the project — staging (vergeo-sandbox) is
+            # eu-west-1; production is eu-north-1. Override via the repo
+            # variable STAGING_SUPABASE_REGION when it moves.
+            export SUPABASE_DB_URL="postgresql://postgres.${STAGING_SUPABASE_PROJECT_ID}:${STAGING_SUPABASE_DB_PASSWORD}@aws-0-${STAGING_SUPABASE_REGION}.pooler.supabase.com:5432/postgres"
           fi
+          # Diagnose an unreachable database in one line instead of a bare
+          # "Network is unreachable" (Deploy staging run 30695764799).
+          bash scripts/ci/check-db-reachable.sh
           bash scripts/ci/check-staging-schema.sh
 
       - name: Synthetic seed (optional)

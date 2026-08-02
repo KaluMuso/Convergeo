@@ -6,7 +6,7 @@
 
 Claude = architect/planner/prompt-writer/reviewer. Cursor Composer agents = implementers (parallel, one pebble each, exclusive file ownership per wave). Claude writes app code only for <20-line fixes or explicit Phase 5. Phases: 0 discovery → 1 mountains → 2 pebbles/waves → 3 prompts → 4 review loop. Mode: GATED. Full protocol: `.claude/commands/vergeo5.md` (invocable `/vergeo5`).
 
-**Session bootstrap order:** `docs/plan/00-status.md` (where we are) → `docs/plan/00-decisions.md` (28 locked decisions) → phase files. NEVER re-read `docs/concept/*.pdf` or `docs/ops/lenco/*.pdf` — distillations exist (`docs/plan/research/`, `docs/ops/lenco/lenco-api-distilled.md`).
+**Session bootstrap order:** `docs/plan/00-status.md` (where we are) → `docs/plan/00-decisions.md` (37 locked decisions, D1–D37) → phase files. NEVER re-read `docs/concept/*.pdf` or `docs/ops/lenco/*.pdf` — distillations exist (`docs/plan/research/`, `docs/ops/lenco/lenco-api-distilled.md`).
 
 ## Stack (LOCKED — D18–D24)
 
@@ -39,7 +39,7 @@ Claude = architect/planner/prompt-writer/reviewer. Cursor Composer agents = impl
 ## File map
 
 - `.claude/commands/vergeo5.md` — operating prompt (phases, templates, review rules)
-- `docs/plan/00-status.md` — live status/gates · `00-decisions.md` — 28 locked decisions (+founder actions F1–F9) · `00-discovery.md` — discovery + research summary · `01-mountains.md` — 16 mountains · `02-pebbles/` `03-waves.md` (Phase 2) · `research/` — distilled concept docs + verified ZM payments/compliance
+- `docs/plan/00-status.md` — live status/gates · `00-decisions.md` — 37 locked decisions, D1–D37 (+founder actions F1–F9) · `00-discovery.md` — discovery + research summary · `01-mountains.md` — 16 mountains · `02-pebbles/` `03-waves.md` (Phase 2) · `research/` — distilled concept docs + verified ZM payments/compliance
 - `docs/designs/` — committed design HTML variants + `SOURCES.md` (import status) + `SELECTION.md` (tokens/strongest elements) + `live-prototype/`
 - `docs/ops/` — `lenco/lenco-api-distilled.md` (payment contracts) · `whatsapp-cloud-api-setup.md`
 - `prompts/` — `_header.md` + per-pebble Cursor prompts + `fixes/` (Phase 3+)

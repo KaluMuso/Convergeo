@@ -133,6 +133,40 @@ class TestResolver:
         assert access.eligible is False
         assert access.status is None
 
+    def test_suspended_is_not_eligible(self) -> None:
+        """R02-P06: suspension must revoke wholesale immediately.
+
+        `suspended` is a valid business_buyers status (0038) but nothing
+        asserted it here — only `pending` and "no application" were covered, so
+        an eligibility rule written as `status != 'rejected'` would have passed
+        the suite while handing tier pricing to a suspended buyer.
+        """
+        svc = _service({"business_buyers": [{"user_id": USER, "status": "suspended"}]})
+        access = resolve_business_eligibility(USER, svc)
+        assert access.eligible is False
+        assert access.status == "suspended"
+
+    def test_rejected_is_not_eligible(self) -> None:
+        svc = _service({"business_buyers": [{"user_id": USER, "status": "rejected"}]})
+        access = resolve_business_eligibility(USER, svc)
+        assert access.eligible is False
+        assert access.status == "rejected"
+
+    def test_only_verified_of_all_valid_statuses_is_eligible(self) -> None:
+        """Pins the rule to an allowlist. If a status is ever added to 0038's
+        CHECK constraint, this fails until someone decides deliberately whether
+        it grants wholesale — the safe default being that it does not."""
+        from app.services.business.access import VALID_STATUSES
+
+        eligible = {
+            status
+            for status in VALID_STATUSES
+            if resolve_business_eligibility(
+                USER, _service({"business_buyers": [{"user_id": USER, "status": status}]})
+            ).eligible
+        }
+        assert eligible == {"verified"}
+
 
 class TestRequireWholesaleAccess:
     def test_allows_verified(self) -> None:

@@ -406,7 +406,16 @@ def build_product_detail(
         # Wholesale-only listings are B2B supplies: hidden from the consumer
         # product page (gallery, vendor comparison, count) unless the caller is
         # a verified business buyer.
-        listing_rows = [row for row in listing_rows if not row.get("wholesale")]
+        retail_rows = [row for row in listing_rows if not row.get("wholesale")]
+        # D36: when the filter empties the page, the product is wholesale-only
+        # for this caller and must be indistinguishable from one that does not
+        # exist. Rendering a listing-less page would confirm the product is
+        # real and merely withheld, which is the disclosure D36 forbids — an id
+        # enumerator could map the B2B catalogue without ever qualifying as a
+        # buyer. Same treatment the demo filter already applies below.
+        if listing_rows and not retail_rows:
+            raise AppError("product.not_found", "Product not found", 404)
+        listing_rows = retail_rows
 
     listing_ids = [str(row["id"]) for row in listing_rows if row.get("id")]
     # D25 / VC-P06: hide demo seed inventory on the public PDP. When every

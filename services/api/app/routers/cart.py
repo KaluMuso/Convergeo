@@ -404,8 +404,10 @@ async def add_cart_item(
     service_client: Annotated[Any, Depends(get_supabase_client)],
     request: Request,
 ) -> CartResponse:
-    listing = fetch_listing(body.listing_id)
+    # Eligibility is resolved BEFORE the fetch: under D36 it decides whether the
+    # listing is visible at all, not merely how it is priced.
     business_eligible = _business_eligible_for_user(owner.user_id)
+    listing = fetch_listing(body.listing_id, business_eligible=business_eligible)
     unit_price, wholesale = validate_item_qty_for_listing(
         listing=listing, qty=body.qty, business_eligible=business_eligible
     )
@@ -426,20 +428,26 @@ async def add_cart_item(
         .execute()
     )
     rows = existing.data if isinstance(existing.data, list) else []
+    # Line WRITES go through the service client: migration 0086 revoked client
+    # INSERT/UPDATE on cart_items so unit_price_ngwee/wholesale cannot be set
+    # from outside this API (B0-P02a). Ownership is already established —
+    # cart_id comes from _resolve_cart_owner (auth token or verified guest
+    # cookie), never from request input — and every write below scopes on it.
+    line_writer = service_db_client()
     if rows and isinstance(rows[0], dict):
         new_qty = int(rows[0]["qty"]) + body.qty
         unit_price, wholesale = validate_item_qty_for_listing(
             listing=listing, qty=new_qty, business_eligible=business_eligible
         )
-        client.table("cart_items").update(
+        line_writer.table("cart_items").update(
             {
                 "qty": new_qty,
                 "unit_price_ngwee": unit_price,
                 "wholesale": wholesale,
             }
-        ).eq("id", str(rows[0]["id"])).execute()
+        ).eq("id", str(rows[0]["id"])).eq("cart_id", cart_id).execute()
     else:
-        client.table("cart_items").insert(
+        line_writer.table("cart_items").insert(
             {
                 "cart_id": cart_id,
                 "listing_id": body.listing_id,
@@ -478,8 +486,8 @@ async def update_cart_item(
     settings: Annotated[Settings, Depends(get_settings)],
     request: Request,
 ) -> CartResponse:
-    listing = fetch_listing(listing_id)
     business_eligible = _business_eligible_for_user(owner.user_id)
+    listing = fetch_listing(listing_id, business_eligible=business_eligible)
     unit_price, wholesale = validate_item_qty_for_listing(
         listing=listing, qty=body.qty, business_eligible=business_eligible
     )
@@ -491,8 +499,13 @@ async def update_cart_item(
     )
     cart_id = owner.cart_id or ""
 
+    # Service client for the same reason as add_cart_item: 0086 revoked client
+    # writes on cart_items, and the price columns must come from this API's
+    # re-derivation only. cart_id is from the resolved owner, so the .eq scope
+    # is the authz.
     updated = (
-        client.table("cart_items")
+        service_db_client()
+        .table("cart_items")
         .update(
             {
                 "qty": body.qty,
@@ -645,9 +658,7 @@ async def save_cart_item_for_later(
         raw_product = row.get("products")
         if isinstance(raw_product, dict):
             product_id = str(raw_product.get("id") or "") or None
-            product_slug = (
-                str(raw_product.get("slug")).strip() if raw_product.get("slug") else None
-            )
+            product_slug = str(raw_product.get("slug")).strip() if raw_product.get("slug") else None
         elif row.get("product_id"):
             product_id = str(row["product_id"])
 
@@ -706,9 +717,12 @@ async def merge_cart_on_login(
         business_eligible=_business_eligible_for_user(current_user.id),
     )
 
+    # DELETE stays on the user client — 0086 left client DELETE granted, and
+    # exercising it here keeps the RLS delete path honest. The INSERT of the
+    # re-derived lines must be the service client (0086, B0-P02a).
     user_client.table("cart_items").delete().eq("cart_id", user_cart_id).execute()
     if merged_items:
-        user_client.table("cart_items").insert(
+        service_db_client().table("cart_items").insert(
             [
                 {
                     "cart_id": user_cart_id,
