@@ -32,17 +32,38 @@ fi
 
 echo "==> Staging schema checks (${SQL_FILE})"
 
-# Run psql on its own so a connection/query failure is distinguishable from
-# "connected fine, found no issues". Piping straight into `grep … || true`
-# swallowed psql's exit status, so an unreachable database printed the OK line
-# below and exited 0 — a false green on an RLS gate.
-if ! output="$("${PSQL[@]}" -At -f "$SQL_FILE")"; then
-  die "could not run the staging schema checks (psql failed — see its error above). A database we could not reach is NOT a pass."
+# psql's exit status is checked SEPARATELY from grep's, and this is the whole
+# point of the next few lines.
+#
+# The previous form was:
+#   issues="$("${PSQL[@]}" -At -f "$SQL_FILE" | grep -E '^FAIL ' || true)"
+# where `|| true` covers the WHOLE pipeline, so a connection failure was
+# swallowed exactly like "no FAIL rows found" and the script went on to print
+# OK and exit 0. That is not hypothetical: Deploy staging run 30695764799
+# (2026-08-01) logged `psql: error: … Network is unreachable` and then
+# `OK: RLS enabled on public tables` in consecutive lines.
+#
+# A guard that reports OK when it verified nothing is worse than no guard,
+# because every downstream readiness claim that cites it is then void.
+# `|| true` may only ever absorb grep's "no matches" (exit 1) — never a
+# connection or query failure.
+err_file="$(mktemp)"
+trap 'rm -f "$err_file"' EXIT
+
+if ! raw="$("${PSQL[@]}" -At -f "$SQL_FILE" 2>"$err_file")"; then
+  sed 's/^/  /' "$err_file" >&2
+  die "could not run the staging schema checks (psql exited non-zero) — refusing to report OK"
 fi
 
-# Capture issue lines only (queries emit FAIL … rows). grep exits 1 when the
-# database is clean, which is the healthy case, so tolerate only that.
-issues="$(printf '%s\n' "$output" | grep -E '^FAIL ' || true)"
+# The SQL emits `\echo ==> Check: …` markers for each check, so a healthy run
+# is never silent. No output means the file did not execute, which we must not
+# mistake for "found nothing wrong".
+if [[ -z "${raw//[[:space:]]/}" ]]; then
+  sed 's/^/  /' "$err_file" >&2
+  die "staging schema checks produced no output — the SQL did not run; refusing to report OK"
+fi
+
+issues="$(printf '%s\n' "$raw" | grep -E '^FAIL ' || true)"
 if [[ -n "$issues" ]]; then
   echo "::error::staging schema isolation failures:"
   printf '%s\n' "$issues"

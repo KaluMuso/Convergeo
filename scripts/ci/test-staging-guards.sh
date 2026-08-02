@@ -7,6 +7,7 @@ cd "$REPO_ROOT"
 
 pass=0
 fail=0
+skip=0
 
 ok() { echo "PASS: $*"; pass=$((pass + 1)); }
 bad() { echo "FAIL: $*"; fail=$((fail + 1)); }
@@ -198,6 +199,51 @@ else
   bad "schema security_invoker / RLS check missing from staging pipeline"
 fi
 
+# 10b) The schema check FAILS CLOSED when the database is unreachable.
+#
+# Regression guard for the defect found on 2026-08-01: the script folded psql's
+# exit status into a `grep … || true` pipeline, so a connection failure printed
+# `OK:` and exited 0 (Deploy staging run 30695764799). This case must fail
+# against the old script and pass against the fixed one.
+#
+# Port 1 on localhost refuses connections immediately — no DNS, no timeout, and
+# no chance of accidentally reaching a real database.
+if command -v psql >/dev/null 2>&1; then
+  set +e
+  SUPABASE_DB_URL='postgresql://nobody@127.0.0.1:1/does_not_exist' \
+    bash scripts/ci/check-staging-schema.sh >/tmp/schema-unreachable.txt 2>&1
+  rc=$?
+  set -e
+  if [[ "$rc" -ne 0 ]] && ! grep -q '^OK:' /tmp/schema-unreachable.txt; then
+    ok "schema check fails closed when the database is unreachable"
+  else
+    bad "schema check must FAIL and must not print OK when psql cannot connect (rc=$rc)"
+    cat /tmp/schema-unreachable.txt || true
+  fi
+else
+  # Deliberately not counted as a pass. A guard test that reports success
+  # because it never ran is the same bug this case exists to catch.
+  echo "SKIP: psql not on PATH — cannot exercise the unreachable-database case"
+  skip=$((skip + 1))
+fi
+
+# 10c) The reachability preflight fails fast and never prints the password.
+if command -v psql >/dev/null 2>&1; then
+  set +e
+  out="$(SUPABASE_DB_URL='postgresql://u:SUPERSECRET@127.0.0.1:1/x' \
+    PGCONNECT_TIMEOUT=3 bash scripts/ci/check-db-reachable.sh 2>&1)"
+  rc=$?
+  set -e
+  if [[ "$rc" -ne 0 ]] && ! printf '%s' "$out" | grep -q 'SUPERSECRET'; then
+    ok "db reachability preflight fails closed without leaking credentials"
+  else
+    bad "preflight must fail on an unreachable host and never print the password (rc=$rc)"
+  fi
+else
+  echo "SKIP: psql not on PATH — cannot exercise the reachability preflight"
+  skip=$((skip + 1))
+fi
+
 # 11) Migration 0056 content includes security_invoker (KYC view posture)
 if grep -q 'security_invoker' supabase/migrations/0056_kyc_integrity.sql; then
   ok "migration 0056 declares security_invoker on its view(s)"
@@ -205,24 +251,18 @@ else
   bad "migration 0056 missing security_invoker"
 fi
 
-# 12) Schema check FAILS (does not report OK) when the database is unreachable.
-# Regression: `psql | grep … || true` swallowed psql's exit status, so an
-# unreachable DB printed the OK line and exited 0 — observed on deploy-staging
-# run #10, 2026-08-01, where the IPv6-only direct DB host was unreachable.
-set +e
-SUPABASE_DB_URL='postgresql://nobody:nobody@127.0.0.1:1/nonexistent' \
-  bash scripts/ci/check-staging-schema.sh >/tmp/schema-unreachable.txt 2>&1
-rc=$?
-set -e
-if [[ "$rc" -ne 0 ]] && ! grep -q '^OK:' /tmp/schema-unreachable.txt; then
-  ok "schema check fails closed when the database is unreachable"
-else
-  bad "schema check must not report OK for a database it could not reach (rc=$rc)"
-  cat /tmp/schema-unreachable.txt || true
-fi
+# NOTE: an earlier case 12 asserting the same unreachable-database property was
+# removed here when two independent fixes for run 30695764799 were reconciled.
+# It duplicated 10b, and it was unsound: without `psql` on PATH the script dies
+# at the "psql not on PATH" check, giving rc!=0 and no `OK:` line — so the case
+# passed while exercising nothing. 10b guards on psql and counts a SKIP instead,
+# which is the distinction this whole file exists to preserve.
 
 echo
-echo "Results: ${pass} passed, ${fail} failed"
+echo "Results: ${pass} passed, ${fail} failed, ${skip} skipped"
+if [[ "$skip" -gt 0 ]]; then
+  echo "NOTE: ${skip} case(s) could not run — they are NOT passes. See SKIP lines above."
+fi
 if [[ "$fail" -gt 0 ]]; then
   exit 1
 fi
