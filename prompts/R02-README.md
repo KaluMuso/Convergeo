@@ -14,6 +14,18 @@
 
 Never re-read `docs/concept/*.pdf` or `docs/ops/lenco/*.pdf` — distillations exist.
 
+## Status — what is already done (do NOT redo)
+
+| Pebble | State | Evidence |
+| --- | --- | --- |
+| **R02-P01** | **DONE** (code half) | `check-staging-schema.sh` now fails closed; `check-db-reachable.sh` added; self-test **16 passed, 0 failed, 0 skipped**. **Operator half open:** `STAGING_SUPABASE_DB_URL` still holds a direct IPv6-only host — repoint it at the session pooler (`aws-0-eu-west-1.pooler.supabase.com:5432`). |
+| **R02-P05** | **DONE** | D36 implemented on PDP + comparison: an emptied page now 404s identically to an absent product. 6 + 3 tests, proven to fail without the fix. Facet counts and the vendor storefront were checked and correctly need no change — see the commit. |
+| **R02-P06** | **DONE** (proof, no new code) | Status is already server-controlled by `0038`'s guard trigger, and the cart already re-derives eligibility. The untested gap was `suspended`; failure-path tests added, verified to fail against a loosened rule. |
+| **R02-P03** | **BLOCKED — operator** | Staging is at `0001`–`0079`; production is at `0071`. Applying to production is deploy-class and needs founder authorisation plus a backup (VA-P00) first. |
+| **R02-P02** | **BLOCKED — egress** | Needs a host that can reach `api.vergeo5.com` / `*.vergeo5.com`. |
+
+Everything else is unstarted. **P07 is the next executable pebble.**
+
 ## Order and dependencies
 
 | Wave | Pebbles | Depends on | Can run in parallel? |
