@@ -1,5 +1,9 @@
 # R02 prompt pack — dispatch guide
 
+> **Superseded in part by `prompts/R02-C01-continue-after-rg6.md` (2026-08-02).** Read C01 first:
+> it carries RG-6 (the RLS matrix was never testing RLS), the D36/D37 reconciliation, the open half
+> of G8, and the current next-free migration number. Where the two disagree, C01 is newer.
+
 **Wave plan:** `docs/plan/00-status.md` → "Current release gates" · **Evidence base:** `docs/production-readiness/2026-08-01/vision-audit-rescore.md`
 **Governing decisions:** **D36** (wholesale omission, amends D28) and **D37** (social commerce, not a social network) in `docs/plan/00-decisions.md`.
 
