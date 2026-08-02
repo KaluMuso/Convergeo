@@ -473,6 +473,20 @@ jobs:
       - name: Reset local database (with seed)
         run: supabase db reset
 
+      # Provision the matrix's impersonation roles in ISOLATION, before any
+      # pytest process touches the database. On 2026-08-02 the same bootstrap,
+      # run from inside the session fixture, took the server down mid-statement
+      # (run 30736920217) and one failure cascaded into 2,314 fixture errors —
+      # with the actual culprit invisible. Here a crash or refusal fails this
+      # single step, and the container logs print right next to it.
+      - name: Provision RLS tester role
+        run: |
+          if ! psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f ../../scripts/ci/provision-rls-tester.sql; then
+            echo '::error::role provisioning failed — dumping database container logs'
+            docker ps --format '{{.Names}}' | grep -i 'supabase_db' | head -1 | xargs -r docker logs --tail 100
+            exit 1
+          fi
+
       - name: Seed demo data
         continue-on-error: true
         run: uv run python ../../scripts/seed.py --env local
