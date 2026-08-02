@@ -275,6 +275,58 @@ class TestWholesaleBusinessGating:
         assert merged[0].unit_price_ngwee == 50_000
 
 
+class TestSuspendedBusinessLosesWholesalePricing:
+    """R02-P06: suspension must take effect on a cart that was priced while the
+    buyer was still verified.
+
+    This is the money-shaped failure path. The line was legitimately stored at a
+    tier price; the buyer is then suspended. Because eligibility is re-resolved
+    per request and the flag is re-derived from listing AND eligibility — never
+    read back off the stored line — the cart must fall to retail on the very
+    next touch. Nothing had asserted it: `suspended` appeared nowhere in the
+    cart or access tests.
+    """
+
+    def test_stale_wholesale_line_reprices_to_retail_when_suspended(self) -> None:
+        # Priced at the 50-unit tier while verified.
+        stored_line = {
+            "listing_id": LISTING_WHOLESALE,
+            "qty": 60,
+            "unit_price_ngwee": 40_000,
+            "wholesale": True,
+        }
+
+        merged, _conflicts = merge_cart_items(
+            user_items=[stored_line],
+            guest_items=[],
+            listings_by_id={LISTING_WHOLESALE: _wholesale_listing()},
+            business_eligible=False,  # suspension resolved for this request
+        )
+
+        assert len(merged) == 1
+        assert merged[0].wholesale is False
+        assert merged[0].unit_price_ngwee == 50_000, (
+            "a suspended buyer kept a tier price — the stored line was trusted"
+        )
+
+    def test_suspended_buyer_is_not_blocked_by_the_wholesale_moq(self) -> None:
+        """Losing eligibility must not strand the buyer: MOQ is a B2B rule, so
+        it stops applying at the same moment tier pricing does. A suspended
+        buyer holding 3 units must be able to check out at retail, not be told
+        their cart violates a minimum they can no longer benefit from."""
+        unit_price, wholesale = validate_item_qty_for_listing(
+            listing=_wholesale_listing(), qty=3, business_eligible=False
+        )
+        assert wholesale is False
+        assert unit_price == 50_000
+
+    def test_price_is_integer_ngwee_on_the_downgrade_path(self) -> None:
+        unit_price, _ = validate_item_qty_for_listing(
+            listing=_wholesale_listing(), qty=60, business_eligible=False
+        )
+        assert isinstance(unit_price, int)
+
+
 class TestGroupingAndTotals:
     def test_group_delivery_eligible_at_threshold(self) -> None:
         line = CartLineView(
