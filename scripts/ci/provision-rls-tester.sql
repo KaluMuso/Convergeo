@@ -43,7 +43,25 @@ END $$;
 
 GRANT authenticated TO vergeo_rls_tester;
 GRANT anon TO vergeo_rls_tester;
-GRANT vergeo_rls_tester TO CURRENT_USER;
+
+-- NOT `GRANT vergeo_rls_tester TO CURRENT_USER`. That exact statement — the
+-- CURRENT_USER pseudo-role form — segfaults Supabase's Postgres: run
+-- 30737801915's container log shows "server process terminated by signal 11:
+-- Segmentation fault / Failed process was running: GRANT vergeo_rls_tester TO
+-- CURRENT_USER" immediately after the two literal-name GRANTs above succeeded.
+-- Resolving current_user to a LITERAL role name first takes the non-crashing
+-- path, and the membership check keeps it idempotent (PG16+ auto-grants the
+-- creator membership at CREATE ROLE time, so the grant is often redundant).
+DO $$
+BEGIN
+  -- Unconditional on purpose. Every membership predicate tried here was
+  -- wrong somewhere: a pg_auth_members row exists for PG16's ADMIN-only
+  -- creator auto-grant (no SET option, so SET ROLE still fails), and
+  -- pg_has_role(...,'MEMBER') counts that same unusable membership. The
+  -- grant itself is idempotent — a duplicate raises a NOTICE, never an
+  -- error — so re-running it is the only predicate-free correct form.
+  EXECUTE format('GRANT vergeo_rls_tester TO %I', current_user);
+END $$;
 
 -- Verify, loudly: attributes and memberships, in one place.
 DO $$

@@ -204,7 +204,21 @@ END $$;
 -- in the matrix silently becomes a no-op.
 GRANT authenticated TO vergeo_rls_tester;
 GRANT anon TO vergeo_rls_tester;
-GRANT vergeo_rls_tester TO CURRENT_USER;
+
+-- NOT `GRANT vergeo_rls_tester TO CURRENT_USER`: the CURRENT_USER pseudo-role
+-- form segfaults Supabase's Postgres (signal 11, CI run 30737801915 — the
+-- literal-name GRANTs directly above it succeed). Resolve current_user to a
+-- literal name and grant conditionally instead.
+DO $$
+BEGIN
+  -- Unconditional on purpose. Every membership predicate tried here was
+  -- wrong somewhere: a pg_auth_members row exists for PG16's ADMIN-only
+  -- creator auto-grant (no SET option, so SET ROLE still fails), and
+  -- pg_has_role(...,'MEMBER') counts that same unusable membership. The
+  -- grant itself is idempotent — a duplicate raises a NOTICE, never an
+  -- error — so re-running it is the only predicate-free correct form.
+  EXECUTE format('GRANT vergeo_rls_tester TO %I', current_user);
+END $$;
 """
 
 AUTH_BOOTSTRAP_SQL = """
