@@ -277,6 +277,20 @@ def assert_tester_is_rls_bound(conn: PgConn) -> None:
 
 
 def apply_migrations(conn: PgConn) -> None:
+    # Roles FIRST, and inside this function rather than only at its call sites.
+    #
+    # `apply_migrations` is a public entry point with 35+ direct callers across
+    # tests/ — most of them module-scoped `db` fixtures that never touch the
+    # `db` fixture in this file. When the role creation was split out of
+    # AUTH_BOOTSTRAP_SQL, those callers started failing on
+    # `GRANT USAGE ON SCHEMA public TO anon` with `role "anon" does not exist`,
+    # because AUTH_BOOTSTRAP_SQL grants to roles it no longer creates.
+    #
+    # Keeping this call here preserves the original contract exactly — roles
+    # were previously created by AUTH_BOOTSTRAP_SQL's opening statements — while
+    # the `db` fixture additionally calls ensure_roles on the path where
+    # apply_migrations is skipped.
+    ensure_roles(conn)
     bootstrap = conn.run(AUTH_BOOTSTRAP_SQL)
     if not bootstrap.ok:
         raise PgError(f"Auth bootstrap failed: {bootstrap.error}", bootstrap.sqlstate)
