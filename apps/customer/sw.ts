@@ -117,7 +117,7 @@ export const cacheRules: NamedRule[] = [
   {
     // 2b. Ticket-wallet API (M10) — short-lived offline horizon / detail bootstrap.
     name: "ticket-wallet-api",
-    matcher: ({ url }) => isWalletApi(url),
+    matcher: ({ url, request }) => request.method === "GET" && isWalletApi(url),
     handler: new NetworkFirst({
       cacheName: "ticket-wallet-api-v1",
       networkTimeoutSeconds: 5,
@@ -152,7 +152,8 @@ export const cacheRules: NamedRule[] = [
   {
     // 5. Our API GETs — network-first (fresh data, offline fall-back to cache).
     name: "api",
-    matcher: ({ url }) => isApiRequest(url) && !isWalletApi(url),
+    matcher: ({ url, request }) =>
+      request.method === "GET" && isApiRequest(url) && !isWalletApi(url),
     handler: new NetworkFirst({
       cacheName: "api-v1",
       networkTimeoutSeconds: 5,
