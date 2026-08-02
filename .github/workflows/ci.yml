@@ -494,8 +494,15 @@ jobs:
         run: uv run pytest tests/test_db_adapter.py tests/test_ticket_purchase.py tests/test_ticket_verify.py tests/test_ticket_wallet.py tests/test_ticket_scan_sync.py tests/test_ticket_transfer.py tests/test_event_release.py tests/test_search_analytics.py tests/test_service_escrow.py tests/test_vendor_analytics.py tests/test_review_aggregate.py tests/test_listing_below_median.py tests/test_kyc_state.py -q
 
       - name: RLS isolation matrix
-        # Wired for M03-P09 (same wave). Goes green once services/api/tests/rls lands.
-        continue-on-error: true
+        # BLOCKING since R02 (2026-08-01). The `continue-on-error: true` here
+        # dated from M03-P09, when tests/rls did not exist yet — the suite has
+        # long since landed and passes, but the escape hatch stayed. That meant
+        # a genuine RLS regression — customer data readable by another
+        # customer, a vendor reading a rival's orders — would have gone GREEN.
+        #
+        # RLS is the only thing standing between tenants in this product, so a
+        # gate that cannot fail is not a gate. If this proves flaky, the fix is
+        # to stabilise the environment, not to hide the signal again.
         run: uv run pytest tests/rls -q
 
   money-db-triggers:
