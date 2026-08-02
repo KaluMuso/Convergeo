@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import re
+from datetime import datetime
 from typing import Annotated, Any, Literal, Protocol, cast
 
 from app.deps import get_supabase_client
@@ -11,6 +12,7 @@ from app.services.listings.demo import (
     fetch_demo_listing_ids,
     fetch_demo_only_vendor_ids,
 )
+from app.services.vendors.hours import LUSAKA_TZ, is_open_at, next_open_at
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
@@ -82,6 +84,11 @@ class VendorLocationDetail(BaseModel):
     lat: float
     lng: float
     hours: dict[str, Any] = Field(default_factory=dict)
+    # R02-P10. Additive: computed server-side so the client never has to derive
+    # "open" from its own clock. `None` means the branch publishes no usable
+    # hours — distinct from `False`, which means it is genuinely shut now.
+    open_now: bool | None = None
+    next_open_at: datetime | None = None
 
 
 class DirectoryListingItem(BaseModel):
@@ -141,18 +148,16 @@ class VendorProfileResponse(BaseModel):
 
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    return (
-        EARTH_RADIUS_M
-        * math.acos(
-            min(
-                1.0,
-                max(
-                    -1.0,
-                    math.cos(math.radians(lat1)) * math.cos(math.radians(lat2))
-                    * math.cos(math.radians(lng2) - math.radians(lng1))
-                    + math.sin(math.radians(lat1)) * math.sin(math.radians(lat2)),
-                ),
-            )
+    return EARTH_RADIUS_M * math.acos(
+        min(
+            1.0,
+            max(
+                -1.0,
+                math.cos(math.radians(lat1))
+                * math.cos(math.radians(lat2))
+                * math.cos(math.radians(lng2) - math.radians(lng1))
+                + math.sin(math.radians(lat1)) * math.sin(math.radians(lat2)),
+            ),
         )
     )
 
@@ -220,15 +225,35 @@ def _parse_locations(row: dict[str, Any]) -> list[VendorLocationDetail]:
         if not isinstance(item, dict):
             continue
         hours = item.get("hours")
+        now = datetime.now(LUSAKA_TZ)
+        has_hours = isinstance(hours, dict) and bool(hours)
         parsed.append(
             VendorLocationDetail(
                 landmark=str(item.get("landmark") or ""),
                 lat=float(item.get("lat") or 0),
                 lng=float(item.get("lng") or 0),
                 hours=hours if isinstance(hours, dict) else {},
+                # A branch with no published hours reports None, not False: we
+                # do not know that it is shut, and saying so would be a claim
+                # the data cannot support.
+                open_now=is_open_at(hours, now) if has_hours else None,
+                next_open_at=next_open_at(hours, now) if has_hours else None,
             )
         )
     return parsed
+
+
+def _any_branch_open_now(row: dict[str, Any], *, now: datetime | None = None) -> bool:
+    """True when at least one of the vendor's branches is open right now.
+
+    Any branch counts: a vendor with a shut head office and an open market
+    stall is, to a customer looking for somewhere to buy, open.
+    """
+    raw = row.get("vendor_locations")
+    if not isinstance(raw, list):
+        return False
+    at = now or datetime.now(LUSAKA_TZ)
+    return any(isinstance(item, dict) and is_open_at(item.get("hours"), at) for item in raw)
 
 
 def _aggregate_vendor_ratings(
@@ -513,6 +538,7 @@ def list_directory_vendors(
     lat: float | None = None,
     lng: float | None = None,
     radius_km: float | None = None,
+    open_now: bool = False,
     page: int = 1,
     page_size: int = DEFAULT_PAGE_SIZE,
 ) -> DirectoryListResponse:
@@ -533,9 +559,7 @@ def list_directory_vendors(
     demo_only_vendor_ids = fetch_demo_only_vendor_ids(client, vendor_ids)
     if demo_only_vendor_ids:
         vendor_rows = [
-            row
-            for row in vendor_rows
-            if str(row.get("id") or "") not in demo_only_vendor_ids
+            row for row in vendor_rows if str(row.get("id") or "") not in demo_only_vendor_ids
         ]
         vendor_ids = [str(row["id"]) for row in vendor_rows if row.get("id")]
 
@@ -565,6 +589,11 @@ def list_directory_vendors(
         ):
             continue
         if not _matches_badges(row, badges or [], approved_tiers=approved_tiers):
+            continue
+        # R02-P10: opt-in only. A vendor with no usable hours is EXCLUDED from
+        # an open_now=true result set rather than assumed open — the filter
+        # answers "shops I can walk into now", and an unknown is not a yes.
+        if open_now and not _any_branch_open_now(row):
             continue
 
         rating_avg, rating_count = ratings.get(vendor_id, (None, 0))
@@ -844,6 +873,7 @@ async def list_directory(
     lat: Annotated[float | None, Query(ge=-90, le=90)] = None,
     lng: Annotated[float | None, Query(ge=-180, le=180)] = None,
     radius_km: Annotated[float | None, Query(gt=0, le=500)] = None,
+    open_now: Annotated[bool, Query()] = False,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> DirectoryListResponse:
@@ -861,6 +891,7 @@ async def list_directory(
         lat=lat,
         lng=lng,
         radius_km=radius_km,
+        open_now=open_now,
         page=page,
         page_size=page_size,
     )
