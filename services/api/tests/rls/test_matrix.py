@@ -2676,6 +2676,50 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.ADMIN: all_permit(),
     },
+    # R02-P14 (D37). A follow is a commerce subscription, not a social graph.
+    # Owners read/insert/delete their OWN rows (non-owners match zero rows →
+    # permit); anon has no grant at all (→ deny); UPDATE is granted to nobody,
+    # because a follow has nothing to amend and leaving it unreachable keeps
+    # created_at honest as the moment consent was given. A vendor learns their
+    # follower COUNT through vendor_follower_count() and never the identities.
+    "vendor_follows": {
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "permit",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "permit",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "permit",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "permit",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "permit",
+        },
+    },
     "vendor_listings": {
         Persona.ANON: {
             "select": "permit",

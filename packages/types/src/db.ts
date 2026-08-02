@@ -3607,6 +3607,39 @@ export type Database = {
           },
         ]
       }
+      vendor_follows: {
+        Row: {
+          created_at: string
+          user_id: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_follows_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "vendor_follows_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_listings: {
         Row: {
           compare_at_ngwee: number | null
@@ -4114,6 +4147,7 @@ export type Database = {
       is_verified_business: { Args: { uid: string }; Returns: boolean }
       next_invoice_no: { Args: { p_series: string }; Returns: number }
       recompute_all_review_aggregates: { Args: never; Returns: number }
+      vendor_follower_count: { Args: { p_vendor_id: string }; Returns: number }
       recompute_review_aggregate: {
         Args: { p_entity_id: string; p_entity_kind: string }
         Returns: undefined
