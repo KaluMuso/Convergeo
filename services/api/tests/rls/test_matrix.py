@@ -2720,6 +2720,54 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    # R02-P12. A licence row carries the licence NUMBER and reviewer notes,
+    # neither of which is public, so there is no anon grant at all (→ deny).
+    # authenticated has select/insert/update grants gated by owner-or-admin
+    # policies (non-owners match zero rows → permit for select/update); insert
+    # is denied because the policy pins status to 'pending' AND requires
+    # ownership; delete is granted to nobody — a licence is evidence, and
+    # evidence is revoked, not erased.
+    #
+    # The customer-facing surface is the DERIVED badge via
+    # vendor_licence_is_valid(), which discloses a boolean and nothing else.
+    "vendor_licences": {
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "deny",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "deny",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "deny",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "deny",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "deny",
+        },
+    },
     "vendor_listings": {
         Persona.ANON: {
             "select": "permit",

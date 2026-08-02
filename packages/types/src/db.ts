@@ -3640,6 +3640,72 @@ export type Database = {
           },
         ]
       }
+      vendor_licences: {
+        Row: {
+          created_at: string
+          document_path: string | null
+          expires_on: string
+          id: string
+          issued_on: string | null
+          licence_number: string
+          regulated_class: string
+          regulator: string
+          reviewer_notes: string | null
+          status: string
+          updated_at: string
+          vendor_id: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_path?: string | null
+          expires_on: string
+          id?: string
+          issued_on?: string | null
+          licence_number: string
+          regulated_class: string
+          regulator: string
+          reviewer_notes?: string | null
+          status?: string
+          updated_at?: string
+          vendor_id: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_path?: string | null
+          expires_on?: string
+          id?: string
+          issued_on?: string | null
+          licence_number?: string
+          regulated_class?: string
+          regulator?: string
+          reviewer_notes?: string | null
+          status?: string
+          updated_at?: string
+          vendor_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_licences_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "vendor_licences_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_listings: {
         Row: {
           compare_at_ngwee: number | null
@@ -4148,6 +4214,10 @@ export type Database = {
       next_invoice_no: { Args: { p_series: string }; Returns: number }
       recompute_all_review_aggregates: { Args: never; Returns: number }
       vendor_follower_count: { Args: { p_vendor_id: string }; Returns: number }
+      vendor_licence_is_valid: {
+        Args: { p_class: string; p_vendor_id: string }
+        Returns: boolean
+      }
       recompute_review_aggregate: {
         Args: { p_entity_id: string; p_entity_kind: string }
         Returns: undefined
