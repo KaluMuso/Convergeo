@@ -970,19 +970,19 @@ filenames.
 
 ### Wave B0 — pre-launch hardening (parallel; no cross-dependencies)
 
-| Pebble                                                   | Owns (exclusive)                                                                                                                                                                                                                                                                   | Depends on          |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| **B0-P01** RLS-level wholesale hiding                    | `supabase/migrations/0086_wholesale_rls.sql`, `supabase/tests/0086_wholesale_rls.test.sql`, `services/api/tests/rls/test_matrix.py` (wholesale rows)                                                                                                                               | —                   |
-| **B0-P02** Money-path re-derivation + wholesale-only 404 | `services/api/app/routers/checkout.py`, `routers/orders_create.py`, `services/cart/store.py`, `services/cart/merge.py`, `routers/cart.py`, `supabase/migrations/0087_cart_line_price_guard.sql`, `services/api/tests/test_checkout.py`, `test_order_money_gate.py`, `test_cart.py` | — (FD-B01 answered) |
-| **B0-P03** Buyer lifecycle completion                    | `services/api/app/routers/admin_business.py`, `services/business/store.py`, `supabase/migrations/0088_business_buyer_events.sql`, `apps/admin/app/[locale]/business/**`, `services/api/tests/test_business_access.py`                                                              | —                   |
-| **B0-P04** Wholesale authoring consistency               | `services/api/app/routers/vendor_listings_manage.py`, `services/listings/csv_import.py`, `routers/listing_import.py`, `routers/catalog.py` (rate limit), `tests/test_listing_manage.py`, `test_csv_import.py`                                                                      | —                   |
+| Pebble                                                   | Owns (exclusive)                                                                                                                                                                                                                                                                                                      | Depends on          |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **B0-P01** RLS-level wholesale hiding                    | `supabase/migrations/00NN_wholesale_rls.sql` (next-free number at branch time), matching `supabase/tests/` file, `services/api/tests/rls/test_matrix.py` (wholesale rows)                                                                                                                                             | —                   |
+| **B0-P02** Money-path re-derivation + wholesale-only 404 | `services/api/app/routers/checkout.py`, `routers/orders_create.py`, `services/cart/store.py`, `services/cart/merge.py`, `routers/cart.py`, `supabase/migrations/0086_cart_line_price_guard.sql` (**landed 2026-08-02** as B0-P02a), `services/api/tests/test_checkout.py`, `test_order_money_gate.py`, `test_cart.py` | — (FD-B01 answered) |
+| **B0-P03** Buyer lifecycle completion                    | `services/api/app/routers/admin_business.py`, `services/business/store.py`, `supabase/migrations/00NN_business_buyer_events.sql` (next-free number at branch time), `apps/admin/app/[locale]/business/**`, `services/api/tests/test_business_access.py`                                                               | —                   |
+| **B0-P04** Wholesale authoring consistency               | `services/api/app/routers/vendor_listings_manage.py`, `services/listings/csv_import.py`, `routers/listing_import.py`, `routers/catalog.py` (rate limit), `tests/test_listing_manage.py`, `test_csv_import.py`                                                                                                         | —                   |
 
-> **Migration numbers reassigned 2026-08-02.** This table originally claimed `0080`, `0081` and
-> `0082`. All three are now occupied on `master`-bound work (`0080_vendor_location_details`,
-> `0081_listing_location_stock`, `0082_enquiry_threads`), and `schema_migrations` keys on the
-> numeric prefix — so a duplicate prefix is a **fatal replay error**, not a merge conflict anyone
-> would notice locally. Reassigned to `0086`/`0087`/`0088`; whoever implements B0 must re-check
-> the next free number at branch time rather than trusting this table.
+> **Migration numbers reassigned twice, then made symbolic (2026-08-02).** This table originally
+> claimed `0080`–`0082` (taken), was reassigned to `0086`–`0088`, and those are now ALSO taken
+> (`0086_cart_line_price_guard` — B0-P02a, landed; `0087`/`0088` allocated to R02-P15/P17 in
+> flight). `schema_migrations` keys on the numeric prefix, so a duplicate is a fatal replay error.
+> Concrete numbers in this plan are therefore replaced with `00NN`: **the implementer takes the
+> next free number at branch time**, and no document is the allocator.
 
 _Contention note:_ B0-P01 and B0-P02 both touch RLS-adjacent surface but own different migration
 files and different test files — safe in one wave. B0-P02 and B0-P04 both touch pricing but on
@@ -1015,11 +1015,11 @@ B0-P03 waits for B0-P02 to merge. The former is recommended: one pebble, one cop
 
 | Pebble                                                                       | Owns                                                                                                                        | Depends on             |
 | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| **B4-P01** Contract schema + resolution in `select_unit_price_ngwee`         | `supabase/migrations/0086_supply_contracts.sql`, `services/api/app/services/cart/totals.py`, `services/supply/contracts.py` | B1-P01, B0-P02, FD-B04 |
+| **B4-P01** Contract schema + resolution in `select_unit_price_ngwee`         | `supabase/migrations/00NN_supply_contracts.sql`, `services/api/app/services/cart/totals.py`, `services/supply/contracts.py` | B1-P01, B0-P02, FD-B04 |
 | **B4-P02** Contract admin + vendor UI                                        | `apps/vendor/app/[locale]/contracts/**`, `apps/admin/app/[locale]/contracts/**`                                             | B4-P01                 |
-| **B5-P01** Warehouses (location only)                                        | `supabase/migrations/0087_warehouses.sql`, `services/api/app/services/inventory/**`                                         | B0-P02                 |
+| **B5-P01** Warehouses (location only)                                        | `supabase/migrations/00NN_warehouses.sql`, `services/api/app/services/inventory/**`                                         | B0-P02                 |
 | **B5-P02** Allocation into the existing reservation path                     | `services/api/app/services/stock/claim.py`, `services/inventory/allocation.py`                                              | B5-P01                 |
-| **B5b-P01** Lots/batches + FIFO + expiry _(defer until a category needs it)_ | `supabase/migrations/0088_inventory_lots.sql`                                                                               | B5-P02                 |
+| **B5b-P01** Lots/batches + FIFO + expiry _(defer until a category needs it)_ | `supabase/migrations/00NN_inventory_lots.sql`                                                                               | B5-P02                 |
 | **B6-P01** Buyer identity in the invoice snapshot                            | `services/api/app/services/invoicing/builder.py`, `invoicing/pdf.py`, `tests/test_invoicing.py`                             | B1-P01, B0-P03, FD-B02 |
 
 ### Wave B7 — split
