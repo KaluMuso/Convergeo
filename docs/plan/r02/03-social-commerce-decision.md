@@ -1,11 +1,28 @@
-# R02 — Bounded social commerce: current state, alternatives, and candidate ADR D36
+# R02 — Bounded social commerce: current state, alternatives, and candidate ADR D37
+
+> **RECONCILED 2026-08-02 — this ADR was ratified, and renumbered from D36 to D37 in the process.**
+>
+> Two sessions ran in parallel on 2026-08-01 and both reached for the next free decision number. This
+> document proposed **D36 = bounded social commerce**; branch `claude/rc-p01-release-truth-pjcysq`
+> ratified **D36 = wholesale visibility (omission, not refusal)** and **D37 = social commerce, not a
+> social network** into `00-decisions.md` on the same day. Ratification into `00-decisions.md` is what
+> makes a number binding, so **D36 belongs to wholesale visibility** and this document's ADR is **D37**.
+> Every `D36` below has been rewritten to `D37`; nothing else about the argument changed.
+>
+> The ADR is therefore **no longer a candidate** — `00-decisions.md` §K carries the locked D37, whose
+> scope fence matches §6 (sharing, saves/follows, listing-anchored enquiries IN; C2C DMs, groups,
+> public profiles, public feeds, image exchange OUT; WAHA excluded from all customer messaging). The
+> locked text adds one requirement §6 left implicit: a customer↔customer thread must be **structurally
+> unrepresentable in the schema**, not merely unreachable from the UI. Migration `0082_enquiry_threads.sql`
+> implements that. Statements below that this file "does not lock" the ADR describe its state on
+> 2026-08-01 and are preserved as written rather than back-edited.
 
 **Status:** DISCOVERY / CANDIDATE ADR — **not locked, not built.**
 **Authored:** 2026-08-01 · **Branch:** `claude/convergeo-r02-social-commerce-gzia9b` · **Repo HEAD at audit:** `7d8b3ae338a7ce198787a55bb45cd64a24ae7ffd`
 **Scope of this document:** docs only. No application code, no migration, no flag, no configuration, no deployment.
 
-This file proposes **D36** as a _candidate_. It deliberately does **not** edit `docs/plan/00-decisions.md` or
-`docs/plan/00-status.md`. D36 becomes binding only when the founder ratifies it into `00-decisions.md` §K by a
+This file proposes **D37** as a _candidate_. It deliberately does **not** edit `docs/plan/00-decisions.md` or
+`docs/plan/00-status.md`. D37 becomes binding only when the founder ratifies it into `00-decisions.md` §K by a
 dated edit. Until then every "MUST" below describes a _future contract_, not present behaviour.
 
 **D35 is preserved exactly.** Nothing in this document uses, extends, re-purposes, or reasons about WAHA for
@@ -74,17 +91,17 @@ This is the question the strategy documents leave open. The answer at HEAD is: *
 customer↔vendor messaging of any kind.** What exists is four narrow, single-shot, non-threaded fields plus one
 public comment surface that ships off.
 
-| Surface                                         | Status                       | Evidence                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Surface | Status | Evidence |
 | ----------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------- | ------ | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Conversation / thread / DM / inquiry table      | **Absent**                   | Scanned every `create table` across `supabase/migrations/*.sql` for `conversation                                                                                                                                                                                                                                                                                                                                         | thread | message | inquir | follow | dm`: the **only** hit is `intake_messages` (`0073_waha_intake_model.sql:105`) — the D35 WAHA vendor-intake lane, inbound-only, flag-off, forbidden for customer use. |
-| Provider → customer free text on an RFQ         | **Partial (one-shot)**       | `job_quotes.message text` (`0004_services_events.sql:62`). One message per (job, provider) — enforced by `job_quotes_job_id_provider_vendor_id_key unique (job_id, provider_vendor_id)`. No reply path: `quotes.py` exposes submit / list / withdraw / decline (`:513,592,632,677`) and `rfq_engagement.py:69` accept. Nothing appends a second message.                                                                  |
-| Anti-disintermediation on that text             | **Implemented**              | `services/api/app/services/moderation/contact_strip.py` — Zambian phone shapes incl. spaced/dotted/**spelled-out** evasion, `wa.me`/`whatsapp.com` links, emails → replaced with `NOTICE_TOKEN` ("[contact hidden — keep chat on Vergeo5]"); prices like `K970` deliberately survive. Called once, at `quotes.py:445`, audited as `quote.contact_stripped` (`quotes.py:31`).                                              |
-| Customer PII exposed to quoting providers       | **Implemented (minimised)**  | `public.jobs` (`0004:33`) carries `customer_id`, `category`, `description`, `preferred_date`, budget band, `status` — and **no phone, no address, no contact column at all**. The privacy posture a future inquiry thread must match already exists.                                                                                                                                                                      |
-| Vendor reply to a review                        | **Implemented (one-shot)**   | `reviews.vendor_reply` / `vendor_reply_at` (`0007_trust_ops.sql:13-14`), policy `reviews_vendor_reply_update` (`:231`), column-scoped by `BEFORE UPDATE` guard triggers in `0061_review_reply_column_guard.sql`. Mirrored for `service_reviews` (`0054:23-24,137`). Not a thread.                                                                                                                                         |
-| Dispute correspondence                          | **Partial (one field each)** | `public.disputes` (`0007:34`) — `vendor_response text`, `admin_decision text`, `evidence_paths text[]`. Single-shot fields on a state machine, not messages.                                                                                                                                                                                                                                                              |
-| Admin → customer support message                | **Implemented (one-way)**    | `admin_support.py` — `support_router = APIRouter(prefix="/support")` (`:62`), mounted on `admin_base` (`:578`), `POST /support/send` (`ratelimit_policies.py:261`, `ADMIN_WRITE`); sends via `enqueue_outbox_row` with template `admin-support-reply` (`:26`), canned template keys (`:29+`). **No inbound customer reply lands anywhere in the platform** — the reply goes to WhatsApp/SMS/email and stops there.        |
-| Public comments on a clip                       | **Implemented, shipped off** | `clip_comments` (`0076_video_clips.sql:174`, FORCE RLS `:285`, author insert/delete + public select `:459-496`), API `GET/POST /clips/{id}/comments` (`clips_engagement.py:279,315`), gated by `clips_comments` flag (`services/api/app/services/clips/flags.py`, default **false** per `0077_clip_feature_flags.sql:22+`). These are vendor-content comments, **not** customer↔vendor correspondence.                    |
-| Customer→business inquiry anchored to a listing | **Absent**                   | No route, table, or UI. The only customer→business contact path is an **off-platform** WhatsApp deep link: `apps/customer/app/[locale]/(shop)/v/[slug]/page.tsx:391-394` renders `https://wa.me/${vendor.whatsapp_msisdn}` when the vendor has published a number (`vendor_profile.py:51,81,110`). Every such conversation leaves the platform: no audit trail, no contact-stripping, no dispute evidence, no moderation. |
+| Conversation / thread / DM / inquiry table | **Absent** | Scanned every `create table` across `supabase/migrations/*.sql` for `conversation                                                                                                                                                                                                                                                                                                                                         | thread | message | inquir | follow | dm`: the **only** hit is `intake_messages` (`0073_waha_intake_model.sql:105`) — the D35 WAHA vendor-intake lane, inbound-only, flag-off, forbidden for customer use. |
+| Provider → customer free text on an RFQ | **Partial (one-shot)** | `job_quotes.message text` (`0004_services_events.sql:62`). One message per (job, provider) — enforced by `job_quotes_job_id_provider_vendor_id_key unique (job_id, provider_vendor_id)`. No reply path: `quotes.py` exposes submit / list / withdraw / decline (`:513,592,632,677`) and `rfq_engagement.py:69` accept. Nothing appends a second message. |
+| Anti-disintermediation on that text | **Implemented** | `services/api/app/services/moderation/contact_strip.py` — Zambian phone shapes incl. spaced/dotted/**spelled-out** evasion, `wa.me`/`whatsapp.com` links, emails → replaced with `NOTICE_TOKEN` ("[contact hidden — keep chat on Vergeo5]"); prices like `K970` deliberately survive. Called once, at `quotes.py:445`, audited as `quote.contact_stripped` (`quotes.py:31`). |
+| Customer PII exposed to quoting providers | **Implemented (minimised)** | `public.jobs` (`0004:33`) carries `customer_id`, `category`, `description`, `preferred_date`, budget band, `status` — and **no phone, no address, no contact column at all**. The privacy posture a future inquiry thread must match already exists. |
+| Vendor reply to a review | **Implemented (one-shot)** | `reviews.vendor_reply` / `vendor_reply_at` (`0007_trust_ops.sql:13-14`), policy `reviews_vendor_reply_update` (`:231`), column-scoped by `BEFORE UPDATE` guard triggers in `0061_review_reply_column_guard.sql`. Mirrored for `service_reviews` (`0054:23-24,137`). Not a thread. |
+| Dispute correspondence | **Partial (one field each)** | `public.disputes` (`0007:34`) — `vendor_response text`, `admin_decision text`, `evidence_paths text[]`. Single-shot fields on a state machine, not messages. |
+| Admin → customer support message | **Implemented (one-way)** | `admin_support.py` — `support_router = APIRouter(prefix="/support")` (`:62`), mounted on `admin_base` (`:578`), `POST /support/send` (`ratelimit_policies.py:261`, `ADMIN_WRITE`); sends via `enqueue_outbox_row` with template `admin-support-reply` (`:26`), canned template keys (`:29+`). **No inbound customer reply lands anywhere in the platform** — the reply goes to WhatsApp/SMS/email and stops there. |
+| Public comments on a clip | **Implemented, shipped off** | `clip_comments` (`0076_video_clips.sql:174`, FORCE RLS `:285`, author insert/delete + public select `:459-496`), API `GET/POST /clips/{id}/comments` (`clips_engagement.py:279,315`), gated by `clips_comments` flag (`services/api/app/services/clips/flags.py`, default **false** per `0077_clip_feature_flags.sql:22+`). These are vendor-content comments, **not** customer↔vendor correspondence. |
+| Customer→business inquiry anchored to a listing | **Absent** | No route, table, or UI. The only customer→business contact path is an **off-platform** WhatsApp deep link: `apps/customer/app/[locale]/(shop)/v/[slug]/page.tsx:391-394` renders `https://wa.me/${vendor.whatsapp_msisdn}` when the vendor has published a number (`vendor_profile.py:51,81,110`). Every such conversation leaves the platform: no audit trail, no contact-stripping, no dispute evidence, no moderation. |
 
 ### 2.4 Gifting
 
@@ -145,12 +162,12 @@ places, all distillations of the same source, and all as a **roadmap line item w
 Reconciliation:
 
 1. **The scope of the claim is narrow and consistent: "pre-purchase, vendor↔customer."** Not C2C, not groups, not a feed. `B.md:50` is the most specific statement the corpus contains, and it already excludes the riskiest options.
-2. **It was never elevated to a decision.** `00-decisions.md` contains 35 decisions (D1–D35) and no messaging decision. §G's OUT list names "real-time in-app notification center" as explicitly out of v1, and the IN list has no messaging entry. So messaging is **not deferred by decision** — it is simply **unspecified**. That distinction matters: D36 does not need to override anything, it needs to _originate_ the scope fence.
+2. **It was never elevated to a decision.** `00-decisions.md` contained 35 decisions (D1–D35) when this was written and no messaging decision. §G's OUT list names "real-time in-app notification center" as explicitly out of v1, and the IN list has no messaging entry. So messaging is **not deferred by decision** — it is simply **unspecified**. That distinction matters: D37 does not need to override anything, it needs to _originate_ the scope fence.
 3. **It was never charted.** `01-mountains.md` (16 launch mountains + post-launch M17/M18) has no messaging mountain; `02-pebbles/` has 17 mountain files, none messaging; `03-waves.md` has no messaging wave.
 4. **Zero of it is implemented** (§2.3). The nearest artefacts are one-shot fields, and the _only_ real customer→business channel today is an off-platform `wa.me` link (`v/[slug]/page.tsx:391-394`).
 5. **The transport it assumed is not present.** "Supabase Realtime" is nowhere in the code (§2.6), so adopting the strategy's Phase-2 line as written would mean introducing a new realtime dependency, not switching one on.
 
-**Conclusion:** the strategy's messaging line is a _direction_, not a contract. D36 should honour its narrow
+**Conclusion:** the strategy's messaging line is a _direction_, not a contract. D37 should honour its narrow
 customer↔business framing, reject its realtime assumption on 3G/cost grounds (§8.10), and add the scope fence the
 strategy never wrote.
 
@@ -167,7 +184,7 @@ Weighted by the four constraints the brief names — Zambia, 3G, marketplace tru
 | **3G and data cost.** Customer routes ≤150 KB gz (convention 7, CI-enforced via `lighthouserc.json` + `scripts/ci/bundle-guard.mjs`); M17 rejected `hls.js` at ~70 KB gz for exactly this reason (`00-status.md` M17 entry, D-V4). | No realtime client, no chat SDK, no virtualised infinite feed. A thread view must be server-rendered with a bounded page. Every kilobyte spent on social is a kilobyte not spent on shopping.                                                                                                           |
 | **Solo-founder moderation.** D33 locks a single `admin` role behind Cloudflare Access; `clip-moderation-policy.md` §5 already commits a ≤24h report triage target that one person owns.                                            | Moderation load scales with _who can address whom_. Customer↔vendor is bounded (a vendor is KYC-verified, revocable, and has a payout to lose). Customer↔customer is unbounded. This single fact decides between options C and E.                                                                       |
 | **Zambia DPA + Meta ToS.** Interpersonal message content is personal data with no tax-retention justification; marketing notifications need opt-in, quiet hours and STOP (`notification-compliance.md`).                           | Short retention with body-minimisation (the `internal_intake.py:141` pattern, not deletion) and a hard marketing/utility classification per notification type.                                                                                                                                          |
-| **Release posture.** `00-status.md`: RG-1…RG-5 aggregate **NO_GO**; `0072`–`0079` unapplied; M17/M18 shipped dark.                                                                                                                 | Whatever is chosen ships **dark behind flags** and cannot be enabled before the launch gates clear. D36 must not create a new pre-launch gate.                                                                                                                                                          |
+| **Release posture.** `00-status.md`: RG-1…RG-5 aggregate **NO_GO**; `0072`–`0079` unapplied; M17/M18 shipped dark.                                                                                                                 | Whatever is chosen ships **dark behind flags** and cannot be enabled before the launch gates clear. D37 must not create a new pre-launch gate.                                                                                                                                                          |
 | **Budget ceiling $50/mo (D6).**                                                                                                                                                                                                    | No new managed service, no realtime connection pool, no third-party chat vendor. Reuse Postgres + the outbox.                                                                                                                                                                                           |
 
 ---
@@ -223,9 +240,9 @@ Weighted by the four constraints the brief names — Zambia, 3G, marketplace tru
 
 ---
 
-## 6. Candidate ADR — D36
+## 6. Candidate ADR — D37
 
-> **D36 (CANDIDATE — bounded social commerce; originates the social scope fence; does not amend D35).**
+> **D37 (CANDIDATE — bounded social commerce; originates the social scope fence; does not amend D35).**
 >
 > Vergeo5 adopts **commerce-first social**: every social capability MUST attach to a commerce object (a
 > `vendor_listing`, `service`, `event`, `video_clip`, `vendor`, or `order`). Vergeo5 does **not** build an
@@ -247,8 +264,8 @@ Weighted by the four constraints the brief names — Zambia, 3G, marketplace tru
 > customer-facing message MUST go through `notification_outbox` on the official WhatsApp Cloud API → SMS → email
 > chain. See §11.
 >
-> **Nothing in D36 changes launch gates.** All four capabilities are post-launch, ship dark, and are enabled only by
-> a founder flag flip after the `00-status.md` release gates clear. D36 creates no new pre-launch gate.
+> **Nothing in D37 changes launch gates.** All four capabilities are post-launch, ship dark, and are enabled only by
+> a founder flag flip after the `00-status.md` release gates clear. D37 creates no new pre-launch gate.
 
 ---
 
@@ -567,7 +584,7 @@ None of these blocks writing this document; each blocks a specific implementatio
 | **F-S7** | Does an inquiry notification count as utility (inside a customer-initiated 24h window) or marketing for quiet-hours purposes?                                                                                                                            | S3 notification class                                               | **Utility.** The customer opened the thread; a reply is the thing they asked for. Pin it with test 19 so it cannot drift.                                                                                                                                        |
 
 **Cross-cutting blocker (not founder-decidable):** `00-status.md` reports RG-1…RG-5 with **aggregate NO_GO**,
-`0072`–`0079` unapplied, and M17/M18 dark. No social flag may be flipped before those gates clear. D36 adds no new
+`0072`–`0079` unapplied, and M17/M18 dark. No social flag may be flipped before those gates clear. D37 adds no new
 gate but inherits every existing one.
 
 ---
@@ -579,7 +596,7 @@ D35 is **unchanged, unamended and unreferenced-as-precedent** by this document.
 - WAHA is **not** a transport for any capability described here. Not for inquiry threads, not for reminders, not for share, not for gifting, not for support, not for OTP, not for payments. Every customer-facing message in §8.9 goes through `notification_outbox` on the **official WhatsApp Cloud API**, with SMS then email fallback.
 - The WAHA lane remains **inbound-only, 1:1, verified-vendor product intake**, flag-gated on `waha_vendor_intake` (default `false`), on a separate number, separate host and separate secrets, with **no outbound acknowledgement of any kind**. Nothing in §8 sends anything to it or reads anything from it.
 - `intake_messages` (`0073:105`) is **not** reused, extended, joined to, or generalised into a social messaging table. §8.2 proposes separate tables precisely so no future reader mistakes one lane for the other. The `test_intake_force_rls.py` guard that no intake table references `vendor_listings` (narrowed once, deliberately, for `intake_sessions.listing_id`) MUST NOT be narrowed again by any social pebble.
-- Groups, broadcast and channels remain forbidden on the WAHA lane and are **also** excluded from D36 by §6 and §9.2 — so no social requirement can be cited as a reason to re-open them.
+- Groups, broadcast and channels remain forbidden on the WAHA lane and are **also** excluded from D37 by §6 and §9.2 — so no social requirement can be cited as a reason to re-open them.
 - The "LLM may suggest, never approves" principle is carried into §8.8 verbatim.
 
 **This task produced no code and no migration.** Verified in §12.
@@ -642,7 +659,7 @@ per-file check above possible.
 | Constraint                                                            | Result                                                                                               |
 | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Docs only                                                             | **PASS** — one new markdown file                                                                     |
-| `00-status.md` / `00-decisions.md` untouched                          | **PASS** — D36 proposed here as a candidate ADR                                                      |
+| `00-status.md` / `00-decisions.md` untouched                          | **PASS** — D37 proposed here as a candidate ADR                                                      |
 | No deploy / seed / payment / WAHA / n8n / merge / GitHub state change | **PASS** — none attempted; no PR opened                                                              |
 | Unrelated changes preserved                                           | **PASS** — working tree was clean at start and is otherwise clean now                                |
 | Every codebase claim evidence-backed                                  | **PASS** — §2 carries file paths, with line numbers where a line is the claim                        |
@@ -703,7 +720,7 @@ workflow in the PR · one pebble = one branch = one PR titled `R02-S{nn}: {title
 
 ## 14. What this document does not do
 
-- Does not lock D36. §6 is a candidate; ratification is a dated founder edit to `00-decisions.md` §K.
+- Does not lock D37. §6 is a candidate; ratification is a dated founder edit to `00-decisions.md` §K.
 - Does not modify `00-status.md` or `00-decisions.md`, or any other tracked file.
 - Does not build, migrate, flag, deploy, seed, or enable anything.
 - Does not amend D35, D15, D33, or §G. It **adds** a social scope fence where none existed (§3).
