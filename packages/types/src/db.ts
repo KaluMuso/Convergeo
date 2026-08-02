@@ -876,6 +876,92 @@ export type Database = {
           },
         ]
       }
+      enquiry_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          sender_id: string
+          sender_role: string
+          thread_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          sender_id: string
+          sender_role: string
+          thread_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+          sender_role?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enquiry_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "enquiry_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enquiry_threads: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          last_message_at: string | null
+          status: string
+          subject_id: string
+          subject_kind: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          last_message_at?: string | null
+          status?: string
+          subject_id: string
+          subject_kind: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          last_message_at?: string | null
+          status?: string
+          subject_id?: string
+          subject_kind?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enquiry_threads_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "enquiry_threads_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_categories: {
         Row: {
           created_at: string

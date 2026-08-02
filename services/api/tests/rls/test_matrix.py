@@ -906,6 +906,88 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    # R02-P13 (D37). Enquiries are private correspondence between exactly two
+    # parties, so there is no public read at all: anon has no grant (→ deny even
+    # for select), authenticated has a SELECT grant plus a two-party policy
+    # (non-parties see zero rows → permit). Writes go through the service-role
+    # API, which applies the rate limit, the content screen and the audit trail,
+    # so no client write grant exists (→ deny).
+    "enquiry_messages": {
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+    },
+    "enquiry_threads": {
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+    },
     "embedding_jobs": {
         # M06-P01: admin-read / service-role-write embedding queue. authenticated
         # gets a SELECT grant + admin-only RLS policy (non-admins see zero rows →
