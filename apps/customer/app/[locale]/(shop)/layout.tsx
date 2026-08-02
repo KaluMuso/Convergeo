@@ -11,6 +11,7 @@ import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } f
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { BottomNavClient } from "./_components/bottom-nav-client";
+import InstallPrompt from "./_components/install-prompt";
 import { MobileHeaderSearch } from "./_components/mobile-header-search";
 import { ServiceInfoBar } from "./_components/service-info-bar";
 import { ShopHeader } from "./_components/shop-header";
@@ -164,6 +165,8 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         locale={locale}
         suppliesItem={suppliesItem}
       />
+      {/* Lets a returning PWA user explicitly activate a waiting worker. */}
+      <InstallPrompt />
     </NextIntlClientProvider>
   );
 }
