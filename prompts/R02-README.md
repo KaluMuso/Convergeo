@@ -23,13 +23,12 @@ Never re-read `docs/concept/*.pdf` or `docs/ops/lenco/*.pdf` — distillations e
 | **R02-P06** | **DONE** (proof, no new code) | Status is already server-controlled by `0038`'s guard trigger, and the cart already re-derives eligibility. The untested gap was `suspended`; failure-path tests added, verified to fail against a loosened rule.                                                                               |
 | **R02-P03** | **BLOCKED — operator**        | Staging is at `0001`–`0079`; production is at `0071`. Applying to production is deploy-class and needs founder authorisation plus a backup (VA-P00) first.                                                                                                                                      |
 | **R02-P02** | **BLOCKED — egress**          | Needs a host that can reach `api.vergeo5.com` / `*.vergeo5.com`.                                                                                                                                                                                                                                |
-
-| **R02-P10** | **DONE** (API) | `app/services/vendors/hours.py` + `open_now`/`next_open_at` on directory locations + opt-in `?open_now=true`. 29 + 5 tests. **Remaining:** catalog wiring, customer filter UI. |
-| **R02-P07** | **DONE** (schema) | `0080` — label, structured address, `phone_e164`, `is_primary` (partial unique index), `status`; public policy now hides closed branches. Verified on real Postgres. **Remaining:** vendor branch editor, exposing label/phone on the seven read paths. |
-| **R02-P08** | **DONE** (schema) | `0081` — `listing_location_stock`, ownership-guard trigger, backfill to the primary branch. **Oversell proven with real threads** (8 threads/1 unit → 1 winner). **Remaining:** routing cart/checkout through the per-branch claim, PDP availability. |
-| **R02-P13** | **DONE** (schema) | `0082` — enquiry threads/messages. C2C is **structurally unrepresentable**; no attachment column; two-party RLS proven (non-party sees 0). **Remaining:** routers, outbox notification, rate limits, content screen. |
-| **R02-P14** | **DONE** (schema) | `0083` — `vendor_follows` + `vendor_follower_count()`. Vendor gets a count, never identities (proven: count=2, rows=0). **Remaining:** follow router, new-listing notification, share pages. |
-| CI gate | **DONE** | `RLS isolation matrix` is now **blocking** — it previously carried `continue-on-error`, so an RLS regression would have shipped green. |
+| **R02-P10** | **DONE** (API)                | `app/services/vendors/hours.py` + `open_now`/`next_open_at` on directory locations + opt-in `?open_now=true`. 29 + 5 tests. **Remaining:** catalog wiring, customer filter UI.                                                                                                                  |
+| **R02-P07** | **DONE** (schema)             | `0080` — label, structured address, `phone_e164`, `is_primary` (partial unique index), `status`; public policy now hides closed branches. Verified on real Postgres. **Remaining:** vendor branch editor, exposing label/phone on the seven read paths.                                         |
+| **R02-P08** | **DONE** (schema)             | `0081` — `listing_location_stock`, ownership-guard trigger, backfill to the primary branch. **Oversell proven with real threads** (8 threads/1 unit → 1 winner). **Remaining:** routing cart/checkout through the per-branch claim, PDP availability.                                           |
+| **R02-P13** | **DONE** (schema)             | `0082` — enquiry threads/messages. C2C is **structurally unrepresentable**; no attachment column; two-party RLS proven (non-party sees 0). **Remaining:** routers, outbox notification, rate limits, content screen.                                                                            |
+| **R02-P14** | **DONE** (schema)             | `0083` — `vendor_follows` + `vendor_follower_count()`. Vendor gets a count, never identities (proven: count=2, rows=0). **Remaining:** follow router, new-listing notification, share pages.                                                                                                    |
+| CI gate     | **DONE**                      | `RLS isolation matrix` is now **blocking** — it previously carried `continue-on-error`, so an RLS regression would have shipped green.                                                                                                                                                          |
 
 Everything else (P02 evidence, P03 apply, P04, P09, P11, P12, P15–P20) is unstarted.
 **P12 is the next unstarted schema pebble; the highest-value work overall is wiring the P08 claim path into cart/checkout.**
@@ -58,21 +57,25 @@ Everything else (P02 evidence, P03 apply, P04, P09, P11, P12, P15–P20) is unst
 
 ## Migration numbers
 
-Repo tip is **`0079`**. Expected assignments — **every implementer must verify next-free at branch time**, because duplicate prefixes have shipped to master four times and `schema_migrations` keys on the numeric prefix, making a collision a fatal replay error:
+**Superseded by the "actually used" list above.** The original plan expected
+`0080`–`0088`; four of those numbers are now taken by different pebbles than
+planned, because P06 needed no migration (the `business_buyers` guard already
+existed in `0038`) and everything shifted down by one.
 
-| Pebble | Expected | Subject                                   |
-| ------ | -------- | ----------------------------------------- |
-| P06    | `0080`   | `business_buyers` guard (only if missing) |
-| P07    | `0081`   | vendor location details                   |
-| P08    | `0082`   | listing × location stock                  |
-| P12    | `0083`   | vendor licences                           |
-| P13    | `0084`   | enquiry threads                           |
-| P14    | `0085`   | vendor follows                            |
-| P15    | `0086`   | storefront collections                    |
-| P16    | `0087`   | product classes                           |
-| P17    | `0088`   | warehouses, lots, RFQ                     |
+**Taken:** `0080` P07 · `0081` P08 · `0082` P13 · `0083` P14.
 
-`scripts/ci/migration-replay.sh` has a fail-fast duplicate-prefix guard — run it before opening a PR.
+| Pebble | Expected next | Subject                |
+| ------ | ------------- | ---------------------- |
+| P12    | `0084`        | vendor licences        |
+| P15    | `0085`        | storefront collections |
+| P16    | `0086`        | product classes        |
+| P17    | `0087`        | warehouses, lots, RFQ  |
+
+**Every implementer must still verify next-free at branch time.** Duplicate
+prefixes have shipped to master four times and `schema_migrations` keys on the
+numeric prefix, so a collision is a fatal replay error, not a merge conflict.
+`scripts/ci/migration-replay.sh` has a fail-fast duplicate-prefix guard — run
+it before opening a PR.
 
 ## Required MCP connections by pebble type
 
