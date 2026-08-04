@@ -12,7 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@sentry/nextjs": "^10.68.0",
+    "@sentry/nextjs": "^10.69.0",
     "@vergeo/auth": "workspace:*",
     "@vergeo/config": "workspace:*",
     "@vergeo/i18n": "workspace:*",
@@ -26,8 +26,8 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
-    "@types/react": "^19.0.12",
-    "@types/react-dom": "^19.0.4",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.8.2",
     "vitest": "^3.0.9"
