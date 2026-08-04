@@ -63,8 +63,8 @@ FIXTURES: list[dict[str, Any]] = [
         "vendor_id": "b1000000-0000-4000-8000-000000000002",
         "slug": f"{SEED_PREFIX}-vend-unv",
         "user_role": "vendor",
-        "vendor_status": "pending",
-        "kyc_tier": 0,
+        "vendor_status": "draft",
+        "kyc_tier": None,
     },
     {
         "role": "vendor_kyc_submitted",
@@ -75,8 +75,8 @@ FIXTURES: list[dict[str, Any]] = [
         "vendor_id": "b1000000-0000-4000-8000-000000000003",
         "slug": f"{SEED_PREFIX}-vend-sub",
         "user_role": "vendor",
-        "vendor_status": "pending",
-        "kyc_tier": 1,
+        "vendor_status": "pending_kyc",
+        "kyc_tier": None,
     },
     {
         "role": "vendor_approved",
@@ -88,7 +88,7 @@ FIXTURES: list[dict[str, Any]] = [
         "slug": f"{SEED_PREFIX}-vend-apr",
         "user_role": "vendor",
         "vendor_status": "active",
-        "kyc_tier": 2,
+        "kyc_tier": 1,
     },
     {
         "role": "admin_unauthorized",
@@ -107,6 +107,62 @@ FIXTURES: list[dict[str, Any]] = [
         "user_role": "admin",
     },
 ]
+
+# KYC records make the submitted and approved fixture states auditable. They
+# intentionally contain no storage paths, payment data, or real identities.
+KYC_FIXTURES: list[dict[str, Any]] = [
+    {
+        "id": "c1000000-0000-4000-8000-000000000003",
+        "vendor_id": "b1000000-0000-4000-8000-000000000003",
+        "tier": 1,
+        "status": "submitted",
+    },
+    {
+        "id": "c1000000-0000-4000-8000-000000000004",
+        "vendor_id": "b1000000-0000-4000-8000-000000000004",
+        "tier": 1,
+        "status": "approved",
+        "reviewed_by": "a1000000-0000-4000-8000-000000000006",
+        "decision_reason": "synthetic staging approval",
+    },
+]
+
+# This is the sole catalogue fixture. It is deliberately active so search, cart
+# and checkout can exercise a complete staging-only product path. It has no
+# media, order, payment, payout, or credential data.
+CATALOG_FIXTURE: dict[str, Any] = {
+    "category_id": "d1000000-0000-4000-8000-000000000001",
+    "category_name": "Synthetic staging catalogue",
+    "category_slug": f"{SEED_PREFIX}-catalogue",
+    "category_path": f"/{SEED_PREFIX}-catalogue",
+    "commission_key": "default",
+    "product_id": "e1000000-0000-4000-8000-000000000001",
+    "product_name": "Synthetic staging test product",
+    "product_slug": f"{SEED_PREFIX}-product",
+    "product_alias": f"{SEED_PREFIX}-product",
+    "product_status": "active",
+    "listing_id": "f1000000-0000-4000-8000-000000000001",
+    "vendor_id": "b1000000-0000-4000-8000-000000000004",
+    "listing_sku": f"{SEED_PREFIX}-list-prd",
+    "price_ngwee": 12500,
+    "condition": "new",
+    "stock_mode": "tracked",
+    "stock_qty": 25,
+    "wholesale": False,
+    "moq": 1,
+    "returnable": False,
+    "listing_status": "active",
+}
+
+VENDOR_STATUSES = frozenset({"draft", "pending_kyc", "active", "suspended"})
+VALID_KYC_TIERS = frozenset({1, 2, 3})
+KYC_RECORD_STATUSES = frozenset(
+    {"submitted", "under_review", "approved", "rejected", "suspended", "revoked"}
+)
+PRODUCT_STATUSES = frozenset({"pending_moderation", "active", "merged"})
+LISTING_STATUSES = frozenset({"draft", "active", "paused", "removed"})
+LISTING_CONDITIONS = frozenset({"new", "refurbished"})
+STOCK_MODES = frozenset({"tracked", "always_available"})
 
 FORBIDDEN_SUBSTRINGS = (
     PROD_SUPABASE_PROJECT_REF,
@@ -246,6 +302,8 @@ def _guard_targets(*, supabase_url: str, db_url: str, api_host: str) -> None:
 
 
 def _validate_fixtures() -> None:
+    vendor_ids: set[str] = set()
+    user_ids: set[str] = set()
     for row in FIXTURES:
         blob = " ".join(str(v) for v in row.values())
         _assert_no_production_markers(blob)
@@ -253,12 +311,99 @@ def _validate_fixtures() -> None:
             raise StagingIsolationError(
                 f"fixture handle missing seed prefix: {row['handle']}"
             )
+        user_ids.add(str(row["user_id"]))
+        if "vendor_id" not in row:
+            continue
+
+        status = row.get("vendor_status")
+        if status not in VENDOR_STATUSES:
+            raise StagingIsolationError(f"invalid synthetic vendor status: {status}")
+        tier = row.get("kyc_tier")
+        if tier is not None and (
+            not isinstance(tier, int) or tier not in VALID_KYC_TIERS
+        ):
+            raise StagingIsolationError(f"invalid synthetic vendor KYC tier: {tier}")
+        vendor_ids.add(str(row["vendor_id"]))
+
+    for record in KYC_FIXTURES:
+        if record.get("vendor_id") not in vendor_ids:
+            raise StagingIsolationError("synthetic KYC record references an unknown vendor")
+        tier = record.get("tier")
+        if not isinstance(tier, int) or tier not in VALID_KYC_TIERS:
+            raise StagingIsolationError(f"invalid synthetic KYC record tier: {tier}")
+        status = record.get("status")
+        if status not in KYC_RECORD_STATUSES:
+            raise StagingIsolationError(f"invalid synthetic KYC record status: {status}")
+        if status == "approved":
+            reviewer = record.get("reviewed_by")
+            reason = record.get("decision_reason")
+            if reviewer not in user_ids or not isinstance(reason, str) or not reason:
+                raise StagingIsolationError(
+                    "approved synthetic KYC record requires a seeded reviewer and reason"
+                )
+
+    catalog_blob = " ".join(str(v) for v in CATALOG_FIXTURE.values())
+    _assert_no_production_markers(catalog_blob)
+    for field in (
+        "category_slug",
+        "category_path",
+        "product_slug",
+        "product_alias",
+        "listing_sku",
+    ):
+        if SEED_PREFIX not in str(CATALOG_FIXTURE[field]):
+            raise StagingIsolationError(
+                f"synthetic catalogue fixture field missing seed prefix: {field}"
+            )
+
+    if not str(CATALOG_FIXTURE["category_path"]).startswith(f"/{SEED_PREFIX}"):
+        raise StagingIsolationError("synthetic catalogue path must be staging-prefixed")
+    if CATALOG_FIXTURE["vendor_id"] not in vendor_ids:
+        raise StagingIsolationError("synthetic catalogue fixture references an unknown vendor")
+
+    approved_vendor = next(
+        row for row in FIXTURES if row.get("role") == "vendor_approved"
+    )
+    if (
+        CATALOG_FIXTURE["vendor_id"] != approved_vendor["vendor_id"]
+        or approved_vendor["vendor_status"] != "active"
+        or approved_vendor["kyc_tier"] not in VALID_KYC_TIERS
+    ):
+        raise StagingIsolationError(
+            "synthetic catalogue fixture must belong to the active approved vendor"
+        )
+
+    if CATALOG_FIXTURE["product_status"] != "active" or (
+        CATALOG_FIXTURE["product_status"] not in PRODUCT_STATUSES
+    ):
+        raise StagingIsolationError("synthetic catalogue product must be active")
+    if CATALOG_FIXTURE["listing_status"] != "active" or (
+        CATALOG_FIXTURE["listing_status"] not in LISTING_STATUSES
+    ):
+        raise StagingIsolationError("synthetic catalogue listing must be active")
+    if CATALOG_FIXTURE["condition"] not in LISTING_CONDITIONS:
+        raise StagingIsolationError("invalid synthetic catalogue condition")
+    if CATALOG_FIXTURE["stock_mode"] != "tracked" or (
+        CATALOG_FIXTURE["stock_mode"] not in STOCK_MODES
+    ):
+        raise StagingIsolationError("synthetic catalogue stock must be tracked")
+    for field in ("price_ngwee", "stock_qty", "moq"):
+        value = CATALOG_FIXTURE[field]
+        if not isinstance(value, int) or value < 1:
+            raise StagingIsolationError(
+                f"synthetic catalogue {field} must be a positive integer"
+            )
+    if CATALOG_FIXTURE["wholesale"] or CATALOG_FIXTURE["returnable"]:
+        raise StagingIsolationError(
+            "synthetic catalogue fixture must not enable wholesale or returns"
+        )
 
 
 def _plan() -> None:
     print(f"Synthetic staging seed plan (prefix={SEED_PREFIX})")
     print("  - auth.users + profiles for synthetic roles (no production PII)")
     print("  - vendors with stg-rv-* slugs (unverified / submitted / approved)")
+    print("  - one active stg-rv-* category/product/listing (no media, orders, or payments)")
     print("  - NO production orders, payments, KYC document blobs, or credentials")
     print("  - NO copy from production database")
     for row in FIXTURES:
@@ -302,34 +447,108 @@ INSERT INTO auth.users (
             f"ON CONFLICT (user_id, role) DO NOTHING;"
         )
         if "vendor_id" in row:
+            tier = "NULL" if row["kyc_tier"] is None else str(row["kyc_tier"])
             sql_parts.append(
                 f"""
 INSERT INTO public.vendors (
   id, owner_user_id, slug, display_name, status, kyc_tier
 ) VALUES (
   '{row["vendor_id"]}', '{row["user_id"]}', '{row["slug"]}', '{row["handle"]}',
-  '{row["vendor_status"]}', {row["kyc_tier"]}
+  '{row["vendor_status"]}', {tier}
 ) ON CONFLICT (id) DO NOTHING;
 """
             )
+    for record in KYC_FIXTURES:
+        reviewed_by = record.get("reviewed_by")
+        reviewer_sql = f"'{reviewed_by}'" if reviewed_by else "NULL"
+        reviewed_at_sql = "timezone('utc', now())" if reviewed_by else "NULL"
+        reason = record.get("decision_reason")
+        reason_sql = f"'{reason}'" if reason else "NULL"
+        sql_parts.append(
+            f"""
+INSERT INTO public.kyc_records (
+  id, vendor_id, tier, doc_storage_paths, momo_name_match, status,
+  reviewed_by, reviewed_at, decision_reason
+) VALUES (
+  '{record["id"]}', '{record["vendor_id"]}', {record["tier"]},
+  ARRAY[]::text[], '{{"matched": true}}'::jsonb, '{record["status"]}',
+  {reviewer_sql}, {reviewed_at_sql}, {reason_sql}
+) ON CONFLICT (id) DO NOTHING;
+"""
+        )
+    catalog = CATALOG_FIXTURE
+    sql_parts.append(
+        f"""
+INSERT INTO public.categories (
+  id, name, slug, path, commission_key, prohibited, position
+) VALUES (
+  '{catalog["category_id"]}', '{catalog["category_name"]}',
+  '{catalog["category_slug"]}', '{catalog["category_path"]}',
+  '{catalog["commission_key"]}', false, 9999
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.products (
+  id, name, slug, spec, category_id, aliases, status
+) VALUES (
+  '{catalog["product_id"]}', '{catalog["product_name"]}',
+  '{catalog["product_slug"]}', '{{}}'::jsonb, '{catalog["category_id"]}',
+  ARRAY['{catalog["product_alias"]}']::text[], '{catalog["product_status"]}'
+) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.vendor_listings (
+  id, vendor_id, product_id, price_ngwee, condition, stock_mode, stock_qty,
+  wholesale, moq, returnable, status, sku
+) VALUES (
+  '{catalog["listing_id"]}', '{catalog["vendor_id"]}',
+  '{catalog["product_id"]}', {catalog["price_ngwee"]}, '{catalog["condition"]}',
+  '{catalog["stock_mode"]}', {catalog["stock_qty"]}, false, {catalog["moq"]},
+  false, '{catalog["listing_status"]}', '{catalog["listing_sku"]}'
+) ON CONFLICT (id) DO NOTHING;
+"""
+    )
     sql_parts.append("COMMIT;")
     return "\n".join(auth_parts) + "\n" + "\n".join(sql_parts)
 
 
 def _require_seed_schema(conn: StagingPgConn) -> None:
-    vendors = conn.run("SELECT to_regclass('public.vendors')")
-    if not vendors.ok:
-        raise RuntimeError(vendors.error or "cannot verify the staging schema")
-    if not vendors.rows or vendors.rows[0] in {"", "null"}:
-        raise RuntimeError(
-            "staging schema is missing public.vendors; run the staging migrations before seeding"
-        )
+    for table in ("vendors", "categories", "products", "vendor_listings"):
+        result = conn.run(f"SELECT to_regclass('public.{table}')")
+        if not result.ok:
+            raise RuntimeError(result.error or "cannot verify the staging schema")
+        if not result.rows or result.rows[0] in {"", "null"}:
+            raise RuntimeError(
+                f"staging schema is missing public.{table}; "
+                "run the staging migrations before seeding"
+            )
 
 
 def _seed(conn: StagingPgConn) -> None:
     result = conn.run(_build_seed_sql())
     if not result.ok:
         raise RuntimeError(result.error or "seed SQL failed")
+
+
+def _verify_catalog_fixture(conn: StagingPgConn) -> None:
+    catalog = CATALOG_FIXTURE
+    result = conn.run(
+        "SELECT count(*)::int "
+        "FROM public.vendor_listings listing "
+        "JOIN public.products product ON product.id = listing.product_id "
+        "JOIN public.categories category ON category.id = product.category_id "
+        f"WHERE listing.id = '{catalog['listing_id']}' "
+        f"AND listing.vendor_id = '{catalog['vendor_id']}' "
+        f"AND listing.sku = '{catalog['listing_sku']}' "
+        f"AND listing.price_ngwee = {catalog['price_ngwee']} "
+        f"AND listing.stock_qty = {catalog['stock_qty']} "
+        "AND listing.status = 'active' "
+        "AND listing.wholesale = false "
+        "AND product.status = 'active' "
+        f"AND category.slug = '{catalog['category_slug']}'"
+    )
+    if not result.ok:
+        raise RuntimeError(result.error or "cannot verify the synthetic catalogue fixture")
+    if result.rows != ["1"]:
+        raise RuntimeError("synthetic catalogue fixture verification failed")
 
 
 def main() -> int:
@@ -420,10 +639,14 @@ def main() -> int:
 
     try:
         _seed(conn)
+        _verify_catalog_fixture(conn)
     except Exception as exc:  # noqa: BLE001
         return _die(f"seed apply failed: {exc}")
 
-    print(f"Seed complete (staging, prefix={SEED_PREFIX})")
+    print(
+        "Seed complete "
+        f"(staging, prefix={SEED_PREFIX}, catalogue_sku={CATALOG_FIXTURE['listing_sku']})"
+    )
     return 0
 
 

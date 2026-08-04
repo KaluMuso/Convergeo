@@ -85,7 +85,10 @@ jobs:
       - name: Run E2E suite
         if: steps.guard.outputs.skip != 'true'
         working-directory: e2e
-        run: npx playwright test
+        # Playwright has a 15-minute global timeout, but retain an independent
+        # process deadline so a stuck runner cannot consume a staging gate
+        # indefinitely if the test runner watchdog does not get to exit.
+        run: timeout --signal=TERM --kill-after=60s 18m npx playwright test
 
       - name: Upload trace/video artifacts on failure
         if: failure()
