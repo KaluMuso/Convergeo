@@ -36,6 +36,16 @@ def all_permit() -> dict[Verb, Outcome]:
     return {verb: "permit" for verb in VERBS}
 
 
+def all_but_update_denied() -> dict[Verb, Outcome]:
+    """A role may manage rows except where the table ACL withholds UPDATE."""
+    return {
+        "select": "permit",
+        "insert": "permit",
+        "update": "deny",
+        "delete": "permit",
+    }
+
+
 def malformed_write_probe() -> dict[Verb, Outcome]:
     """A table with valid-row policies but no meaningful DEFAULT VALUES insert."""
     return {"select": "permit", "insert": "deny", "update": "permit", "delete": "permit"}
@@ -2527,34 +2537,15 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "user_wishlist": {
-        # 0066: owner select/insert/delete (no owner UPDATE policy); admin all.
-        # Missing UPDATE policy → WHERE-false probes permit (0 rows).
+        # 0066: owner select/insert/delete. The policy grants admins all
+        # operations, but the table ACL deliberately withholds UPDATE from
+        # every client role. Policies cannot grant a missing table privilege.
         Persona.ANON: deny_all(),
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: all_permit(),
+        Persona.CUSTOMER: select_insert_delete_only(),
+        Persona.OTHER_CUSTOMER: select_insert_delete_only(),
+        Persona.VENDOR: select_insert_delete_only(),
+        Persona.OTHER_VENDOR: select_insert_delete_only(),
+        Persona.ADMIN: all_but_update_denied(),
     },
     "vendor_listings": {
         Persona.ANON: {
@@ -2932,6 +2923,22 @@ def test_recently_viewed_owner_write_and_anon_acl(
             f"WHERE user_id = '{customer_id}' AND product_id = '{product_id}'; "
             "COMMIT;"
         )
+
+
+def test_wishlist_update_acl_is_withheld_from_all_api_roles(db: PgConn) -> None:
+    """The admin policy is intentionally narrower than a table-level GRANT."""
+    result = db.run(
+        "WITH roles AS ("
+        "  SELECT unnest(ARRAY['anon', 'authenticated', 'service_role']) AS role_name"
+        ") "
+        "SELECT role_name FROM roles "
+        "WHERE has_table_privilege(role_name, 'public.user_wishlist', 'UPDATE') "
+        "ORDER BY role_name"
+    )
+    assert result.ok, result.error
+    assert result.rows == [], (
+        f"user_wishlist UPDATE must stay private: {result.rows}"
+    )
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
