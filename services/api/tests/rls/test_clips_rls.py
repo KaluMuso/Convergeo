@@ -302,6 +302,41 @@ def test_a_clip_cannot_link_another_vendors_listing(db: PgConn) -> None:
         _cleanup_clip(db, clip_id)
 
 
+def test_clip_product_link_writes_are_vendor_owned(
+    db: PgConn,
+    as_customer: RoleSession,
+    as_other_vendor: RoleSession,
+    as_vendor: RoleSession,
+) -> None:
+    """A well-formed link proves the policy, not merely a malformed-row error."""
+    clip_id = _seed_clip(db, vendor_id=VENDOR_A, status="draft")
+    listings = [_seed_listing(db, vendor_id=VENDOR_A) for _ in range(3)]
+    try:
+        owner = as_vendor.execute(
+            f"INSERT INTO public.clip_products (clip_id, listing_id, sort_order) "
+            f"VALUES ('{clip_id}', '{listings[0]}', 0)"
+        )
+        assert owner.ok, owner.error
+
+        for label, session, listing_id in (
+            ("customer", as_customer, listings[1]),
+            ("other_vendor", as_other_vendor, listings[2]),
+        ):
+            denied = session.execute(
+                f"INSERT INTO public.clip_products (clip_id, listing_id, sort_order) "
+                f"VALUES ('{clip_id}', '{listing_id}', 0)"
+            )
+            assert not denied.ok, f"{label} linked a vendor-owned clip"
+            assert "row-level security" in (denied.error or "").lower(), denied.error
+    finally:
+        _cleanup_clip(db, clip_id)
+        for listing_id in listings:
+            db.run(
+                f"BEGIN; DELETE FROM public.vendor_listings "
+                f"WHERE id = '{listing_id}'; COMMIT;"
+            )
+
+
 def test_the_same_listing_cannot_be_linked_twice(db: PgConn) -> None:
     clip_id = _seed_clip(db, vendor_id=VENDOR_A, status="draft")
     try:

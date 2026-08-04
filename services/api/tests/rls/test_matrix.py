@@ -36,6 +36,33 @@ def all_permit() -> dict[Verb, Outcome]:
     return {verb: "permit" for verb in VERBS}
 
 
+def all_but_update_denied() -> dict[Verb, Outcome]:
+    """A role may manage rows except where the table ACL withholds UPDATE."""
+    return {
+        "select": "permit",
+        "insert": "permit",
+        "update": "deny",
+        "delete": "permit",
+    }
+
+
+def malformed_write_probe() -> dict[Verb, Outcome]:
+    """A table with valid-row policies but no meaningful DEFAULT VALUES insert."""
+    return {"select": "permit", "insert": "deny", "update": "permit", "delete": "permit"}
+
+
+def select_insert_delete_only() -> dict[Verb, Outcome]:
+    return {"select": "permit", "insert": "deny", "update": "deny", "delete": "permit"}
+
+
+def client_invisible_noop_update() -> PersonaExpectations:
+    """No client DML grant, but `UPDATE ... WHERE false` is a no-op probe."""
+    return {
+        persona: {"select": "deny", "insert": "deny", "update": "permit", "delete": "deny"}
+        for persona in Persona
+    }
+
+
 def admin_read_orphan_write_grants() -> dict[Verb, Outcome]:
     """SELECT + all write grants to authenticated, but only an admin SELECT policy.
 
@@ -389,9 +416,10 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
-    # Links are visible with their published clip. Writes are owner-scoped by
-    # policy AND vendor-scoped by the 0076 trigger, so a cross-vendor link is
-    # refused by the database even when a policy would allow the row.
+    # Links are visible with their published clip. The generic DEFAULT VALUES
+    # probe reaches the domain trigger before RLS, so it cannot establish
+    # ownership. `test_clip_product_link_writes_are_vendor_owned` supplies a
+    # valid clip/listing pair for that policy proof.
     "clip_products": {
         Persona.ANON: {
             "select": "permit",
@@ -401,25 +429,25 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.CUSTOMER: {
             "select": "permit",
-            "insert": "deny",
+            "insert": "permit",
             "update": "permit",
             "delete": "permit",
         },
         Persona.OTHER_CUSTOMER: {
             "select": "permit",
-            "insert": "deny",
+            "insert": "permit",
             "update": "permit",
             "delete": "permit",
         },
         Persona.VENDOR: {
             "select": "permit",
-            "insert": "deny",
+            "insert": "permit",
             "update": "permit",
             "delete": "permit",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
-            "insert": "deny",
+            "insert": "permit",
             "update": "permit",
             "delete": "permit",
         },
@@ -601,36 +629,14 @@ EXPECTATIONS: TableExpectations = {
             "update": "deny",
             "delete": "deny",
         },
-        Persona.CUSTOMER: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.VENDOR: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "deny",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
-        Persona.ADMIN: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "deny",
-            "delete": "deny",
-        },
+        # `authenticated` has SELECT grant; RLS hides the row from non-admins.
+        # A zero-row SELECT is permitted, and explicit visibility tests carry
+        # the actual isolation assertion.
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
     },
     "categories": {
         Persona.ANON: {
@@ -2215,10 +2221,10 @@ EXPECTATIONS: TableExpectations = {
         # persona with INSERT grant. ANON has no grant → deny_all. Legitimate
         # insert authz is proven by 0007 pgTAP + cross-tenant tests below.
         Persona.ANON: deny_all(),
-        Persona.CUSTOMER: all_permit(),
-        Persona.OTHER_CUSTOMER: all_permit(),
-        Persona.VENDOR: all_permit(),
-        Persona.OTHER_VENDOR: all_permit(),
+        Persona.CUSTOMER: malformed_write_probe(),
+        Persona.OTHER_CUSTOMER: malformed_write_probe(),
+        Persona.VENDOR: malformed_write_probe(),
+        Persona.OTHER_VENDOR: malformed_write_probe(),
         Persona.ADMIN: all_permit(),
     },
     "search_documents": {
@@ -2317,10 +2323,10 @@ EXPECTATIONS: TableExpectations = {
         # (same convention as other trigger-gated tables). Update/delete WHERE
         # false are RLS-filtered no-ops → permit. FORCE already set in 0054.
         Persona.ANON: deny_all(),
-        Persona.CUSTOMER: all_permit(),
-        Persona.OTHER_CUSTOMER: all_permit(),
-        Persona.VENDOR: all_permit(),
-        Persona.OTHER_VENDOR: all_permit(),
+        Persona.CUSTOMER: malformed_write_probe(),
+        Persona.OTHER_CUSTOMER: malformed_write_probe(),
+        Persona.VENDOR: malformed_write_probe(),
+        Persona.OTHER_VENDOR: malformed_write_probe(),
         Persona.ADMIN: all_permit(),
     },
     "stock_reservations": {
@@ -2575,16 +2581,24 @@ EXPECTATIONS: TableExpectations = {
         # Authenticated DEFAULT VALUES insert hits a BEFORE INSERT / NOT NULL path
         # before a permission error → permit; update/delete WHERE false → permit.
         Persona.ANON: deny_all(),
-        Persona.CUSTOMER: all_permit(),
-        Persona.OTHER_CUSTOMER: all_permit(),
-        Persona.VENDOR: all_permit(),
-        Persona.OTHER_VENDOR: all_permit(),
+        Persona.CUSTOMER: malformed_write_probe(),
+        Persona.OTHER_CUSTOMER: malformed_write_probe(),
+        Persona.VENDOR: malformed_write_probe(),
+        Persona.OTHER_VENDOR: malformed_write_probe(),
         Persona.ADMIN: all_permit(),
     },
     "user_recently_viewed": {
         # 0066: owner select/insert/update/delete; admin all. Same owner-scoped
-        # probe shape as `addresses` (bare insert denied by WITH CHECK).
-        Persona.ANON: deny_all(),
+        # probe shape as `addresses` (bare insert denied by WITH CHECK). Anon
+        # still has no table grants, but UPDATE ... WHERE false is a PostgreSQL
+        # no-op rather than an authorization proof; the effective-grant test
+        # below locks that ACL boundary down directly.
+        Persona.ANON: {
+            "select": "deny",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "deny",
+        },
         Persona.CUSTOMER: {
             "select": "permit",
             "insert": "deny",
@@ -2650,34 +2664,15 @@ EXPECTATIONS: TableExpectations = {
         },
     },
     "user_wishlist": {
-        # 0066: owner select/insert/delete (no owner UPDATE policy); admin all.
-        # Missing UPDATE policy → WHERE-false probes permit (0 rows).
+        # 0066: owner select/insert/delete. The policy grants admins all
+        # operations, but the table ACL deliberately withholds UPDATE from
+        # every client role. Policies cannot grant a missing table privilege.
         Persona.ANON: deny_all(),
-        Persona.CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_CUSTOMER: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.OTHER_VENDOR: {
-            "select": "permit",
-            "insert": "deny",
-            "update": "permit",
-            "delete": "permit",
-        },
-        Persona.ADMIN: all_permit(),
+        Persona.CUSTOMER: select_insert_delete_only(),
+        Persona.OTHER_CUSTOMER: select_insert_delete_only(),
+        Persona.VENDOR: select_insert_delete_only(),
+        Persona.OTHER_VENDOR: select_insert_delete_only(),
+        Persona.ADMIN: all_but_update_denied(),
     },
     # R02-P14 (D37). A follow is a commerce subscription, not a social graph.
     # Owners read/insert/delete their OWN rows (non-owners match zero rows →
@@ -2934,7 +2929,9 @@ EXPECTATIONS: TableExpectations = {
     "intake_messages": client_invisible(),
     "intake_media": client_invisible(),
     "intake_draft_fields": client_invisible(),
-    "intake_field_provenance": client_invisible(),
+    # Direct effective-ACL assertions cover this service-role-only table. Its
+    # generic UPDATE has `WHERE false`, so a no-op is not evidence of a grant.
+    "intake_field_provenance": client_invisible_noop_update(),
     "intake_events": client_invisible(),
     # M18-P05 (0075). Same posture: a review link is minted and redeemed through
     # the API, never read directly by a client.
@@ -3099,6 +3096,66 @@ def test_matrix_cell(
     else:
         assert denied, f"{table}/{persona}/{verb}: expected deny, query succeeded"
         MATRIX_SUMMARY["deny"] += 1
+
+
+def test_recently_viewed_owner_write_and_anon_acl(
+    db: PgConn,
+    as_customer: RoleSession,
+    fixture_ids: dict[str, Any],
+) -> None:
+    """A valid owner row proves the policy; a no-op probe cannot prove grants."""
+    customer_id = fixture_ids["users"]["customer_a"]
+    product_id = fixture_ids["products"]["phone"]
+    try:
+        db.run(
+            "BEGIN; "
+            "DELETE FROM public.user_recently_viewed "
+            f"WHERE user_id = '{customer_id}' AND product_id = '{product_id}'; "
+            "COMMIT;"
+        )
+
+        inserted = as_customer.execute(
+            "INSERT INTO public.user_recently_viewed (user_id, product_id) "
+            f"VALUES ('{customer_id}', '{product_id}')"
+        )
+        assert inserted.ok, inserted.error
+
+        updated = as_customer.execute(
+            "UPDATE public.user_recently_viewed SET viewed_at = now() "
+            f"WHERE user_id = '{customer_id}' AND product_id = '{product_id}'"
+        )
+        assert updated.ok, updated.error
+
+        acl = db.run(
+            "SELECT has_table_privilege('anon', 'public.user_recently_viewed', 'UPDATE')::text "
+            "|| '|' || has_table_privilege('authenticated', "
+            "'public.user_recently_viewed', 'UPDATE')::text"
+        )
+        assert acl.ok, acl.error
+        assert acl.rows == ["false|true"], acl.rows
+    finally:
+        db.run(
+            "BEGIN; "
+            "DELETE FROM public.user_recently_viewed "
+            f"WHERE user_id = '{customer_id}' AND product_id = '{product_id}'; "
+            "COMMIT;"
+        )
+
+
+def test_wishlist_update_acl_is_withheld_from_all_api_roles(db: PgConn) -> None:
+    """The admin policy is intentionally narrower than a table-level GRANT."""
+    result = db.run(
+        "WITH roles AS ("
+        "  SELECT unnest(ARRAY['anon', 'authenticated', 'service_role']) AS role_name"
+        ") "
+        "SELECT role_name FROM roles "
+        "WHERE has_table_privilege(role_name, 'public.user_wishlist', 'UPDATE') "
+        "ORDER BY role_name"
+    )
+    assert result.ok, result.error
+    assert result.rows == [], (
+        f"user_wishlist UPDATE must stay private: {result.rows}"
+    )
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:

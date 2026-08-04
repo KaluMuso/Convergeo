@@ -76,11 +76,16 @@ def test_no_client_role_holds_intake_privileges(db: PgConn) -> None:
     quoted = ",".join(f"'{t}'" for t in INTAKE_TABLES)
     result = db.run(
         f"""
-        SELECT table_name || '|' || grantee || '|' || privilege_type
-        FROM information_schema.role_table_grants
-        WHERE table_schema = 'public'
-          AND table_name IN ({quoted})
-          AND grantee IN ('anon', 'authenticated')
+        WITH tables AS (
+          SELECT unnest(ARRAY[{quoted}]) AS table_name
+        ), roles AS (
+          SELECT unnest(ARRAY['anon', 'authenticated']) AS role_name
+        ), verbs AS (
+          SELECT unnest(ARRAY['SELECT', 'INSERT', 'UPDATE', 'DELETE']) AS verb
+        )
+        SELECT table_name || '|' || role_name || '|' || verb
+        FROM tables CROSS JOIN roles CROSS JOIN verbs
+        WHERE has_table_privilege(role_name, format('public.%I', table_name), verb)
         ORDER BY 1
         """
     )
@@ -89,14 +94,17 @@ def test_no_client_role_holds_intake_privileges(db: PgConn) -> None:
 
 
 def test_intake_events_is_append_only(db: PgConn) -> None:
-    """No UPDATE or DELETE privilege exists for any role, including service_role."""
+    """No client or service role may UPDATE or DELETE an intake event."""
     result = db.run(
         """
-        SELECT grantee || '|' || privilege_type
-        FROM information_schema.role_table_grants
-        WHERE table_schema = 'public'
-          AND table_name = 'intake_events'
-          AND privilege_type IN ('UPDATE', 'DELETE')
+        WITH roles AS (
+          SELECT unnest(ARRAY['anon', 'authenticated', 'service_role']) AS role_name
+        ), verbs AS (
+          SELECT unnest(ARRAY['UPDATE', 'DELETE']) AS verb
+        )
+        SELECT role_name || '|' || verb
+        FROM roles CROSS JOIN verbs
+        WHERE has_table_privilege(role_name, 'public.intake_events', verb)
         ORDER BY 1
         """
     )
