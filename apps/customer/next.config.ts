@@ -1,5 +1,12 @@
 import withSerwistInit from "@serwist/next";
 import createNextIntlPlugin from "next-intl/plugin";
+import {
+  buildConnectSrc,
+  buildStaticSecurityHeaders,
+  CSP_ORIGINS,
+  isDevelopmentEnv,
+  PERMISSIONS_POLICY_DEFAULT,
+} from "@vergeo/config/security-headers";
 
 import { resolveApiBaseUrl } from "./lib/api-base-url";
 
@@ -27,64 +34,45 @@ const withSerwist = withSerwistInit({
 });
 
 /**
- * Security headers & CSP — M15-P03 (customer / Vercel origin).
+ * Security headers & CSP — M15-P03 + security audit wave (customer / Vercel origin).
  *
  * CSP is NONCE-based (no `unsafe-inline` for scripts). Next.js only injects a
  * per-request nonce into its own bootstrap scripts when the nonce arrives on the
- * *request* via middleware (owned/locked elsewhere this wave). Until that wiring
- * lands, the full script/style policy ships as `Content-Security-Policy-Report-Only`
- * so violations are collected without breaking the app, while the framing/hardening
- * directives (which need no nonce) are ENFORCED immediately. The `{{CSP_NONCE}}`
- * token is the per-request substitution point.
- * Report-only → enforce runbook: docs/ops/security-headers.md.
+ * *request* via middleware. Until that wiring lands, the full script/style policy
+ * ships as `Content-Security-Policy-Report-Only` so violations are collected without
+ * breaking the app, while the framing/hardening directives (which need no nonce) are
+ * ENFORCED immediately. The `{{CSP_NONCE}}` token is the per-request substitution
+ * point. Report-only → enforce runbook: docs/ops/security-headers.md.
  */
 const NONCE = "'nonce-{{CSP_NONCE}}'";
-
-// Third-party origins allowed by policy (spec §1).
-const CLOUDINARY = "https://res.cloudinary.com";
-const SUPABASE = "https://*.supabase.co";
-const SUPABASE_WS = "wss://*.supabase.co";
-// GA4 is allowed in CSP now; M16-P05 wires the actual tag (not wired here).
-const GA4_SCRIPT = "https://*.googletagmanager.com";
-const GA4_CONNECT =
-  "https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com";
-const GA4_IMG = "https://*.google-analytics.com https://*.googletagmanager.com";
-// Lenco hosted card widget — customer checkout card route ONLY (prod + sandbox).
-const LENCO_WIDGET = "https://pay.lenco.co https://pay.sandbox.lenco.co";
-const LENCO_API = "https://api.lenco.co https://api.sandbox.lenco.co";
-// Sentry ingest (M16-P06) — browser SDK POSTs events here. Scoped to the ingest
-// subdomains only (incl. region variants), NOT a blanket sentry.io allowance.
-const SENTRY_INGEST =
-  "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
 const CSP_REPORTING = "report-uri /api/csp-report; report-to csp-endpoint";
+const isDev = isDevelopmentEnv();
 
-const HSTS = "max-age=63072000; includeSubDomains; preload";
-const PERMISSIONS_POLICY =
-  "camera=(), microphone=(), geolocation=(), browsing-topics=(), payment=(), usb=()";
-
-// Enforced now: framing/hardening directives that do NOT govern Next's inline
-// bootstrap scripts, so they are safe to enforce without a live nonce.
 const ENFORCED_CSP = [
   "base-uri 'self'",
   "object-src 'none'",
   "frame-ancestors 'self'",
   "form-action 'self'",
-  "upgrade-insecure-requests",
+  ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
 
 // Report-only (full nonce policy). `lenco` = true adds the Lenco widget origins
 // to script-src / frame-src / connect-src for the checkout card route only.
 function buildReportOnlyCsp(lenco: boolean): string {
-  const scriptExtra = lenco ? ` ${LENCO_WIDGET}` : "";
-  const frameExtra = lenco ? ` ${LENCO_WIDGET}` : "";
-  const connectExtra = lenco ? ` ${LENCO_WIDGET} ${LENCO_API}` : "";
+  const scriptExtra = lenco ? ` ${CSP_ORIGINS.lencoWidget}` : "";
+  const frameExtra = lenco ? ` ${CSP_ORIGINS.lencoWidget}` : "";
+  const connectExtra = lenco ? ` ${CSP_ORIGINS.lencoWidget} ${CSP_ORIGINS.lencoApi}` : "";
+  const connectSrc = buildConnectSrc(
+    process.env,
+    `${CSP_ORIGINS.ga4Connect} ${CSP_ORIGINS.sentryIngest}${connectExtra}`,
+  );
   return [
     "default-src 'self'",
-    `script-src 'self' 'strict-dynamic' ${NONCE} https: ${GA4_SCRIPT}${scriptExtra}`,
+    `script-src 'self' 'strict-dynamic' ${NONCE} https: ${CSP_ORIGINS.ga4Script}${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: ${CLOUDINARY} ${GA4_IMG}`,
+    `img-src 'self' data: blob: ${CSP_ORIGINS.cloudinary} ${CSP_ORIGINS.ga4Img}`,
     "font-src 'self' data:",
-    `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${GA4_CONNECT} ${SENTRY_INGEST}${connectExtra}`,
+    `connect-src ${connectSrc}`,
     `frame-src 'self'${frameExtra}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
@@ -92,21 +80,17 @@ function buildReportOnlyCsp(lenco: boolean): string {
     "base-uri 'self'",
     "object-src 'none'",
     "frame-ancestors 'self'",
-    `form-action 'self'${lenco ? ` ${LENCO_WIDGET}` : ""}`,
-    "upgrade-insecure-requests",
+    `form-action 'self'${lenco ? ` ${CSP_ORIGINS.lencoWidget}` : ""}`,
+    ...(isDev ? [] : ["upgrade-insecure-requests"]),
     CSP_REPORTING,
   ].join("; ");
 }
 
-const STATIC_SECURITY_HEADERS = [
-  { key: "Strict-Transport-Security", value: HSTS },
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "SAMEORIGIN" },
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: PERMISSIONS_POLICY },
-  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-  { key: "Content-Security-Policy", value: ENFORCED_CSP },
-];
+const STATIC_SECURITY_HEADERS = buildStaticSecurityHeaders({
+  xFrameOptions: "DENY",
+  permissionsPolicy: PERMISSIONS_POLICY_DEFAULT,
+  enforcedCsp: ENFORCED_CSP,
+});
 
 const nextConfig: NextConfig = {
   transpilePackages: [

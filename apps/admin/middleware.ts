@@ -11,6 +11,7 @@ import {
   shouldRedirectToLogin,
   updateSession,
 } from "@vergeo/auth/middleware";
+import { buildConnectSrc, CSP_ORIGINS } from "@vergeo/config/security-headers";
 import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
 import { type NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
@@ -26,20 +27,17 @@ const intlMiddleware = createMiddleware({
 });
 
 const NONCE = `'nonce-${CSP_NONCE_PLACEHOLDER}'`;
-const CLOUDINARY = "https://res.cloudinary.com";
-const SUPABASE = "https://*.supabase.co";
-const SUPABASE_WS = "wss://*.supabase.co";
-const SENTRY_INGEST =
-  "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
+
+const connectSrc = buildConnectSrc(process.env, CSP_ORIGINS.sentryIngest);
 
 const REPORT_ONLY_CSP = appendCspReporting(
   [
     "default-src 'self'",
     `script-src 'self' 'strict-dynamic' ${NONCE}`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: ${CLOUDINARY}`,
+    `img-src 'self' data: blob: ${CSP_ORIGINS.cloudinary}`,
     "font-src 'self' data:",
-    `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${SENTRY_INGEST}`,
+    `connect-src ${connectSrc}`,
     "frame-src 'none'",
     "worker-src 'self' blob:",
     "manifest-src 'self'",

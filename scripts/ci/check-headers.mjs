@@ -46,6 +46,8 @@ function read(relPath) {
   return readFileSync(join(ROOT, relPath), "utf8");
 }
 
+const SHARED_SECURITY_SRC = read("packages/config/src/security-headers.ts");
+
 // Header names every browser-facing app origin must declare.
 const REQUIRED_HEADERS = [
   "Strict-Transport-Security",
@@ -64,17 +66,34 @@ const REQUIRED_HEADERS = [
 function checkAppConfig(app, opts) {
   const relPath = `apps/${app}/next.config.ts`;
   const src = read(relPath);
+  const combined = `${src}\n${SHARED_SECURITY_SRC}`;
   const where = relative(ROOT, join(ROOT, relPath));
 
   for (const header of REQUIRED_HEADERS) {
-    assert(`${app}: declares ${header}`, src.includes(`"${header}"`), `missing in ${where}`);
+    assert(
+      `${app}: declares ${header}`,
+      combined.includes(`"${header}"`) || combined.includes(`key: "${header}"`),
+      `missing in ${where} (or shared security-headers module)`,
+    );
   }
 
-  // Transport: HSTS with a 2-year max-age + preload.
+  // Transport: HSTS with a 2-year max-age + preload (production builds only).
   assert(
     `${app}: HSTS max-age=63072000 + preload`,
-    src.includes("max-age=63072000") && src.includes("preload"),
+    combined.includes("max-age=63072000") && combined.includes("preload"),
     `weak/absent HSTS in ${where}`,
+  );
+
+  assert(
+    `${app}: X-Frame-Options DENY`,
+    combined.includes('"DENY"') || combined.includes('xFrameOptions: "DENY"'),
+    `expected X-Frame-Options DENY in ${where}`,
+  );
+
+  assert(
+    `${app}: connect-src includes API origin`,
+    combined.includes("buildConnectSrc") || combined.includes("api.vergeo5.com"),
+    `missing API connect-src wiring in ${where}`,
   );
 
   // Nonce-based CSP: strict-dynamic + a nonce, and NO unsafe-inline on script-src.
@@ -117,7 +136,7 @@ function checkAppConfig(app, opts) {
   if (opts.allowLenco) {
     assert(
       `${app}: Lenco widget allowed`,
-      src.includes("pay.lenco.co"),
+      combined.includes("pay.lenco.co"),
       `customer must allow the Lenco widget origin in ${where}`,
     );
     assert(

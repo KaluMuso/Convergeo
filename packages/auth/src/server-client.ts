@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { cookies } from "next/headers";
 
 import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
+import { mergeSecureCookieOptions } from "./cookie-security";
 
 type CookieStore = Awaited<ReturnType<typeof cookies>>;
 
@@ -15,7 +16,7 @@ export function createCookieMethods(cookieStore: CookieStore): CookieMethodsServ
     setAll(cookiesToSet: Parameters<SetAllCookies>[0]) {
       try {
         cookiesToSet.forEach(({ name, value, options }) => {
-          cookieStore.set(name, value, options);
+          cookieStore.set(name, value, mergeSecureCookieOptions(options));
         });
       } catch {
         // Server Components may call set on a read-only cookie store.

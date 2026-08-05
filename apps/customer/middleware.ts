@@ -7,22 +7,10 @@ import {
   mergeSessionCookies,
   updateSession,
 } from "@vergeo/auth/middleware";
+import { buildConnectSrc, CSP_ORIGINS } from "@vergeo/config/security-headers";
 import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
 import { type NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
-
-const NONCE = `'nonce-${CSP_NONCE_PLACEHOLDER}'`;
-const CLOUDINARY = "https://res.cloudinary.com";
-const SUPABASE = "https://*.supabase.co";
-const SUPABASE_WS = "wss://*.supabase.co";
-const GA4_SCRIPT = "https://*.googletagmanager.com";
-const GA4_CONNECT =
-  "https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com";
-const GA4_IMG = "https://*.google-analytics.com https://*.googletagmanager.com";
-const LENCO_WIDGET = "https://pay.lenco.co https://pay.sandbox.lenco.co";
-const LENCO_API = "https://api.lenco.co https://api.sandbox.lenco.co";
-const SENTRY_INGEST =
-  "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
 
 const intlMiddleware = createMiddleware({
   locales: [...LOCALES],
@@ -30,17 +18,23 @@ const intlMiddleware = createMiddleware({
   localePrefix: "always",
 });
 
+const NONCE = `'nonce-${CSP_NONCE_PLACEHOLDER}'`;
+
 function buildReportOnlyCsp(lenco: boolean): string {
-  const scriptExtra = lenco ? ` ${LENCO_WIDGET}` : "";
-  const frameExtra = lenco ? ` ${LENCO_WIDGET}` : "";
-  const connectExtra = lenco ? ` ${LENCO_WIDGET} ${LENCO_API}` : "";
+  const scriptExtra = lenco ? ` ${CSP_ORIGINS.lencoWidget}` : "";
+  const frameExtra = lenco ? ` ${CSP_ORIGINS.lencoWidget}` : "";
+  const connectExtra = lenco ? ` ${CSP_ORIGINS.lencoWidget} ${CSP_ORIGINS.lencoApi}` : "";
+  const connectSrc = buildConnectSrc(
+    process.env,
+    `${CSP_ORIGINS.ga4Connect} ${CSP_ORIGINS.sentryIngest}${connectExtra}`,
+  );
   const base = [
     "default-src 'self'",
-    `script-src 'self' 'strict-dynamic' ${NONCE} https: ${GA4_SCRIPT}${scriptExtra}`,
+    `script-src 'self' 'strict-dynamic' ${NONCE} https: ${CSP_ORIGINS.ga4Script}${scriptExtra}`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: ${CLOUDINARY} ${GA4_IMG}`,
+    `img-src 'self' data: blob: ${CSP_ORIGINS.cloudinary} ${CSP_ORIGINS.ga4Img}`,
     "font-src 'self' data:",
-    `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${GA4_CONNECT} ${SENTRY_INGEST}${connectExtra}`,
+    `connect-src ${connectSrc}`,
     `frame-src 'self'${frameExtra}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
@@ -48,7 +42,7 @@ function buildReportOnlyCsp(lenco: boolean): string {
     "base-uri 'self'",
     "object-src 'none'",
     "frame-ancestors 'self'",
-    `form-action 'self'${lenco ? ` ${LENCO_WIDGET}` : ""}`,
+    `form-action 'self'${lenco ? ` ${CSP_ORIGINS.lencoWidget}` : ""}`,
     "upgrade-insecure-requests",
   ].join("; ");
   return appendCspReporting(base);

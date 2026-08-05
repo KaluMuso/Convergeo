@@ -22,6 +22,11 @@ from app.errors import (
 )
 from app.logging import configure_logging
 from app.middleware import RequestIdMiddleware
+from app.middleware.security_headers import (
+    CORS_ALLOW_HEADERS,
+    CORS_ALLOW_METHODS,
+    SecureHeadersMiddleware,
+)
 from app.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -48,10 +53,11 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=CORS_ALLOW_METHODS,
+        allow_headers=CORS_ALLOW_HEADERS,
     )
     app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(SecureHeadersMiddleware)
 
     exception_handler = cast(
         Callable[[Request, Any], JSONResponse],
