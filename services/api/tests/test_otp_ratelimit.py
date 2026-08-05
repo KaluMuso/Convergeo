@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
+
 import pytest
 from app.core.otp_ratelimit import (
     OTP_CAP_PER_NUMBER,
@@ -16,7 +18,7 @@ from app.errors import AppError
 
 
 @pytest.fixture(autouse=True)
-def _reset_store() -> None:
+def _reset_store() -> Generator[None, None, None]:
     clear_otp_redis_store_cache()
     yield
     clear_otp_redis_store_cache()
