@@ -26,8 +26,12 @@ describe("buildSocialMetadata", () => {
 
     expect(social.openGraph?.siteName).toBe("Vergeo5");
     expect(social.openGraph?.url).toBe("https://vergeo5.com/en/p/itel-a70");
-    expect(social.twitter?.card).toBe("summary_large_image");
-    expect(social.twitter?.title).toBe("Itel A70");
+    expect(social.twitter).toEqual(
+      expect.objectContaining({
+        card: "summary_large_image",
+        title: "Itel A70",
+      }),
+    );
     expect(social.openGraph?.images).toEqual([
       { url: "https://vergeo5.com/en/opengraph-image?name=Itel+A70" },
     ]);
