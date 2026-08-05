@@ -18,8 +18,10 @@ from app.services.orders.create import (
     create_orders_atomic,
 )
 from app.services.orders.events import emit_order_placed_funnel
+from app.services.orders.n8n_payload import build_order_created_payload, load_customer_mask
+from app.services.webhooks.n8n_dispatch import schedule_n8n_webhook
 from app.settings import Settings, get_settings
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
 from supabase import Client
 
@@ -148,9 +150,35 @@ def _to_response(result: CreateOrdersResult) -> CreateOrderResponse:
     )
 
 
+def _schedule_order_created_webhooks(
+    background_tasks: BackgroundTasks,
+    *,
+    service: ServiceRoleClient,
+    result: CreateOrdersResult,
+    customer_id: str,
+    settings: Settings,
+) -> None:
+    if result.replayed:
+        return
+    customer = load_customer_mask(service.client, customer_id)
+    for order in result.orders:
+        payload = build_order_created_payload(
+            order=order,
+            checkout_group_id=result.checkout_group_id,
+            customer=customer,
+        )
+        schedule_n8n_webhook(
+            background_tasks,
+            event="order.created",
+            data=payload,
+            settings=settings,
+        )
+
+
 @router.post("", response_model=CreateOrderResponse)
 async def create_orders(
     body: CreateOrderRequest,
+    background_tasks: BackgroundTasks,
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     settings: Annotated[Settings, Depends(get_settings)],
     service: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -281,6 +309,14 @@ async def create_orders(
         checkout_group_id=body.session_id,
         customer_id=current_user.id,
         snapshot={"order_count": len(result.orders), "total_ngwee": total},
+    )
+
+    _schedule_order_created_webhooks(
+        background_tasks,
+        service=service,
+        result=result,
+        customer_id=current_user.id,
+        settings=settings,
     )
 
     return _to_response(result)

@@ -12,6 +12,7 @@ from limits.storage.base import Storage
 from slowapi import Limiter
 from supabase import Client
 
+from app.core.otp_ratelimit import check_otp_number_rate_limit
 from app.errors import AppError
 from app.supabase_client import get_supabase_service_client
 
@@ -20,7 +21,8 @@ logger = logging.getLogger(__name__)
 OTP_SCOPES = frozenset({"otp_number", "otp_ip"})
 AUTH_SCOPES = frozenset({"auth_ip", "auth_number"})
 
-DEFAULT_OTP_CAP_PER_NUMBER_HOUR = 5
+DEFAULT_OTP_CAP_PER_NUMBER_HOUR = 3
+DEFAULT_OTP_CAP_WINDOW_MINUTES = 15
 DEFAULT_OTP_CAP_PER_IP_DAY = 20
 DEFAULT_OTP_COOLDOWN_BASE_SECONDS = 30
 DEFAULT_OTP_COOLDOWN_MAX_SECONDS = 900
@@ -298,13 +300,7 @@ def check_and_increment_otp_quota(
             message="Please wait before requesting another code",
         )
 
-    number_allowed, number_retry = bump_rate_counter(
-        scope="otp_number",
-        key=phone,
-        window=timedelta(hours=1),
-        limit=cfg.otp_cap_per_number_hour,
-        client=service,
-    )
+    number_allowed, number_retry, attempt = check_otp_number_rate_limit(phone=phone)
     if not number_allowed:
         raise_rate_limited(
             retry_after=number_retry,
@@ -328,12 +324,7 @@ def check_and_increment_otp_quota(
 
     record_resend_cooldown(
         phone=phone,
-        attempt=_current_scope_count(
-            scope="otp_number",
-            key=phone,
-            window=timedelta(hours=1),
-            client=service,
-        ),
+        attempt=max(attempt, 1),
         config=cfg,
         client=service,
     )
