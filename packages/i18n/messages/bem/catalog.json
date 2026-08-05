@@ -187,6 +187,31 @@
       "preferredBadge": "Seller preferred",
       "rating": "{rating} ({count, plural, one {# review} other {# ama-reviews}})",
       "viewStore": "Loleni store"
+    },
+    "contactVendor": {
+      "cta": "Landeni umo ushitisha",
+      "dialogTitle": "Ipusheni pa cintu ici",
+      "dialogHint": "Ubutumwa bwenu bukafika ku {vendor} pa listing iyi. Ama-reply yafwile pa Vergeo5 — teshafwile ukugabana namba ya foni mu butumwa.",
+      "messageLabel": "Ifyo mulefwaya ukwisula",
+      "messagePlaceholder": "Ngacakuti: Cili mu stock? Mungatumina ku Kabulonga?",
+      "submit": "Tumeni ubutumwa",
+      "submitting": "Tuletela…",
+      "cancel": "Lekeni",
+      "done": "Cacitike",
+      "successTitle": "Ubutumwa bwatumine",
+      "successBody": "Ushitisha akasuka pano. Tukamwebelesheni akasuka.",
+      "successContinued": "Ubutumwa bwenu bwalongezye ku conversation yenu iya kale na uyu ushitisha.",
+      "signInPrompt": "Ingileni mukati ukutuma ubutumwa ku ushitisha pa listing iyi.",
+      "signInCta": "Ingileni mukati ukupitilila",
+      "errors": {
+        "empty": "Lemeni ubutumwa ushafwile ukutuma.",
+        "tooLong": "Ubutumwa bwalicilapo.",
+        "prohibited": "Teti tulefwaya ukutuma ubu butumwa. Fumyeni ifyalekelela ukutuma.",
+        "rateLimited": "Ama-messages yalicilapo. Lemeni limbi.",
+        "ownListing": "Teti mulelanda na bene pa listing yenu.",
+        "generic": "Tatwaishibe ukutuma ubutumwa. Checkeni connection no wesheni limbi.",
+        "signInRequired": "Ingileni mukati ukulandana na ushitisha."
+      }
     }
   },
   "plp": {
