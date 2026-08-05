@@ -76,7 +76,7 @@ describe("environment helpers", () => {
   it("resolves environment labels with fallbacks", () => {
     expect(resolveEnvironment(env({ NEXT_PUBLIC_SENTRY_ENVIRONMENT: "staging" }))).toBe("staging");
     expect(resolveEnvironment(env({ VERCEL_ENV: "preview" }))).toBe("preview");
-    expect(resolveEnvironment(env({}))).toBe("development");
+    expect(resolveEnvironment({} as NodeJS.ProcessEnv)).toBe("development");
   });
 
   it("disables sentry-test in production without explicit enable flag", () => {
