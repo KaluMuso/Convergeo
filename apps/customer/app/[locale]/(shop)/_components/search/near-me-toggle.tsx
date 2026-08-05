@@ -3,17 +3,22 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 
+// Lusaka CBD — privacy-safe default when geolocation is denied (matches API constant).
+const LUSAKA_LAT = -15.42;
+const LUSAKA_LNG = 28.28;
+
 export type NearMeToggleLabels = {
   enable: string;
   active: string;
   locating: string;
   denied: string;
   unsupported: string;
+  lusakaFallback: string;
   clear: string;
   hint: string;
 };
 
-type Status = "idle" | "locating" | "denied" | "unsupported";
+type Status = "idle" | "locating" | "denied" | "unsupported" | "lusaka";
 
 // ~1.1 km precision: coarse enough to respect privacy (never street-level),
 // precise enough for the ~12 km proximity decay applied server-side in run_search.
@@ -30,6 +35,10 @@ export function NearMeToggle({ locale, labels }: { locale: string; labels: NearM
   const [status, setStatus] = useState<Status>("idle");
 
   const active = searchParams.has("lat") && searchParams.has("lng");
+  const usingLusakaDefault =
+    active &&
+    searchParams.get("lat") === String(LUSAKA_LAT) &&
+    searchParams.get("lng") === String(LUSAKA_LNG);
 
   const pushParams = useCallback(
     (mutate: (params: URLSearchParams) => void) => {
@@ -39,6 +48,17 @@ export function NearMeToggle({ locale, labels }: { locale: string; labels: NearM
       router.push(`/${locale}/search?${params.toString()}`);
     },
     [locale, router, searchParams],
+  );
+
+  const applyCoords = useCallback(
+    (latitude: number, longitude: number, nextStatus: Status) => {
+      setStatus(nextStatus);
+      pushParams((params) => {
+        params.set("lat", String(roundCoord(latitude)));
+        params.set("lng", String(roundCoord(longitude)));
+      });
+    },
+    [pushParams],
   );
 
   const disable = useCallback(() => {
@@ -57,19 +77,20 @@ export function NearMeToggle({ locale, labels }: { locale: string; labels: NearM
     setStatus("locating");
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setStatus("idle");
-        pushParams((params) => {
-          params.set("lat", String(roundCoord(position.coords.latitude)));
-          params.set("lng", String(roundCoord(position.coords.longitude)));
-        });
+        applyCoords(position.coords.latitude, position.coords.longitude, "idle");
       },
-      () => setStatus("denied"),
+      () => {
+        // Permission denied — fall back to Lusaka rather than leaving proximity off.
+        applyCoords(LUSAKA_LAT, LUSAKA_LNG, "lusaka");
+      },
       { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
     );
-  }, [pushParams]);
+  }, [applyCoords]);
 
   let label = labels.enable;
-  if (active) {
+  if (active && usingLusakaDefault) {
+    label = labels.lusakaFallback;
+  } else if (active) {
     label = labels.active;
   } else if (status === "locating") {
     label = labels.locating;

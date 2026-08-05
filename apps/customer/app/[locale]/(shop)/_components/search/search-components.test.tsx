@@ -51,6 +51,8 @@ const resultsTabsLabels = {
   priceFrom: "From {price}",
   category: "In {category}",
   distanceAway: "{km} km away",
+  openNow: "Open now",
+  closedNow: "Closed",
   marketplaceListing: "Marketplace listing",
   wishlist: "Save to wishlist",
   wishlistRemove: "Remove from wishlist",

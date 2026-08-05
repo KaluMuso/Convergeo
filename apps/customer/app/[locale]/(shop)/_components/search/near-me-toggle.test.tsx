@@ -20,6 +20,7 @@ const labels = {
   locating: "Locating…",
   denied: "Location blocked",
   unsupported: "Location unavailable",
+  lusakaFallback: "Near Lusaka",
   clear: "Show all",
   hint: "Sort by closeness",
 };
@@ -67,6 +68,22 @@ describe("NearMeToggle", () => {
     const url = push.mock.calls[0]?.[0] as string;
     expect(url).not.toContain("lat=");
     expect(url).not.toContain("lng=");
+  });
+
+  it("falls back to Lusaka coords when geolocation is denied", async () => {
+    const user = userEvent.setup();
+    setGeolocation({
+      getCurrentPosition: (_success: PositionCallback, error: PositionErrorCallback) =>
+        error({ code: 1 } as GeolocationPositionError),
+    });
+
+    render(<NearMeToggle locale="en" labels={labels} />);
+    await user.click(screen.getByTestId("near-me-toggle"));
+
+    expect(push).toHaveBeenCalledTimes(1);
+    const url = push.mock.calls[0]?.[0] as string;
+    expect(url).toContain("lat=-15.42");
+    expect(url).toContain("lng=28.28");
   });
 
   it("shows an unsupported state and does not navigate without geolocation", async () => {

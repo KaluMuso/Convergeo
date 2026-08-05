@@ -360,6 +360,8 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     priceFrom: t("result.priceFrom"),
     category: t("result.category"),
     distanceAway: t("nearMe.distanceAway"),
+    openNow: t("nearMe.openNow"),
+    closedNow: t("nearMe.closedNow"),
     marketplaceListing: t("result.marketplaceListing"),
     wishlist: tCatalog("plp.card.wishlist"),
     wishlistRemove: tCatalog("plp.card.wishlistRemove"),
@@ -380,6 +382,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     locating: t("nearMe.locating"),
     denied: t("nearMe.denied"),
     unsupported: t("nearMe.unsupported"),
+    lusakaFallback: t("nearMe.lusakaFallback"),
     clear: t("nearMe.clear"),
     hint: t("nearMe.hint"),
   };
