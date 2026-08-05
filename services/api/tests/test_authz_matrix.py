@@ -141,6 +141,7 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/products/{slug}/related"),
         ("GET", "/reviews"),
         ("GET", "/search"),
+        ("GET", "/search/nearby"),
         ("GET", "/search/suggest"),
         ("GET", "/service-reviews"),
         ("GET", "/services"),

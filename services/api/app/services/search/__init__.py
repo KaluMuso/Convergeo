@@ -15,6 +15,7 @@ from app.services.search.embedding_client import (
     format_vector_for_rpc,
     get_embedding_timeout_seconds,
 )
+from app.services.search.open_now import attach_open_now
 from app.services.search.query_builder import (
     DEFAULT_PAGE,
     DEFAULT_PAGE_SIZE,
@@ -29,7 +30,6 @@ from app.services.search.search_facets import (
     compute_search_facets,
     filter_search_hits,
 )
-from app.services.search.open_now import attach_open_now
 from app.services.search.synonyms import expand_query
 from pydantic import Field
 
