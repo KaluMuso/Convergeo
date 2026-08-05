@@ -3,7 +3,7 @@ from __future__ import annotations
 import secrets
 import uuid
 from dataclasses import dataclass
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 import jwt
 from app.core.auth import CurrentUser, get_current_user
@@ -24,6 +24,7 @@ from app.services.cart.store import (
 )
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.clips.attribution import validate_clip_attribution
+from app.services.inventory.location_stock import resolve_stock_location_id
 from app.services.listings.class_rules import (
     count_listing_images,
     count_weekly_committed_qty,
@@ -54,6 +55,10 @@ class CartOwner:
 class CartItemInput(BaseModel):
     listing_id: str
     qty: int = Field(ge=1)
+    pickup_location_id: str | None = None
+    fulfilment: Literal["pickup", "delivery"] | None = None
+    delivery_lat: float | None = None
+    delivery_lng: float | None = None
     #: M17-P05 attribution. A CLAIM, not a credit: validated server-side against
     #: a published clip that actually links this listing, and silently dropped
     #: otherwise. Refusing the cart action on a bad clip id would let a forged
@@ -63,6 +68,10 @@ class CartItemInput(BaseModel):
 
 class CartItemUpdate(BaseModel):
     qty: int = Field(ge=1)
+    pickup_location_id: str | None = None
+    fulfilment: Literal["pickup", "delivery"] | None = None
+    delivery_lat: float | None = None
+    delivery_lng: float | None = None
 
 
 class CartLineResponse(BaseModel):
@@ -291,7 +300,7 @@ def _db_client_for_owner(
 def _fetch_cart_items(client: Client, cart_id: str) -> list[dict[str, Any]]:
     response = (
         client.table("cart_items")
-        .select("id, cart_id, listing_id, qty, unit_price_ngwee, wholesale")
+        .select("id, cart_id, listing_id, qty, unit_price_ngwee, wholesale, pickup_location_id")
         .eq("cart_id", cart_id)
         .execute()
     )
@@ -386,9 +395,40 @@ def _build_cart_response(
     )
 
 
+def _resolve_line_location_id(
+    listing_id: str,
+    *,
+    pickup_location_id: str | None,
+    fulfilment: Literal["pickup", "delivery"] | None,
+    delivery_lat: float | None,
+    delivery_lng: float | None,
+    existing_location_id: str | None = None,
+) -> str | None:
+    if pickup_location_id is not None:
+        return resolve_stock_location_id(
+            listing_id,
+            pickup_location_id=pickup_location_id,
+        )
+    if fulfilment == "delivery" and delivery_lat is not None and delivery_lng is not None:
+        return resolve_stock_location_id(
+            listing_id,
+            fulfilment="delivery",
+            delivery_lat=delivery_lat,
+            delivery_lng=delivery_lng,
+        )
+    if existing_location_id is not None:
+        return resolve_stock_location_id(
+            listing_id,
+            pickup_location_id=existing_location_id,
+        )
+    return resolve_stock_location_id(listing_id)
+
+
 def _enforce_listing_cart_rules(
     listing: dict[str, Any],
     qty: int,
+    *,
+    location_id: str | None = None,
 ) -> None:
     service = service_db_client()
     listing_id = str(listing["id"])
@@ -399,6 +439,7 @@ def _enforce_listing_cart_rules(
         qty=qty,
         evidence_image_count=evidence_count,
         weekly_committed_qty=weekly_committed,
+        location_id=location_id,
     )
 
 
@@ -437,7 +478,14 @@ async def add_cart_item(
     unit_price, wholesale = validate_item_qty_for_listing(
         listing=listing, qty=body.qty, business_eligible=business_eligible
     )
-    _enforce_listing_cart_rules(listing, body.qty)
+    location_id = _resolve_line_location_id(
+        body.listing_id,
+        pickup_location_id=body.pickup_location_id,
+        fulfilment=body.fulfilment,
+        delivery_lat=body.delivery_lat,
+        delivery_lng=body.delivery_lng,
+    )
+    _enforce_listing_cart_rules(listing, body.qty, location_id=location_id)
 
     client = _db_client_for_owner(
         owner,
@@ -448,7 +496,7 @@ async def add_cart_item(
 
     existing = (
         client.table("cart_items")
-        .select("id, qty")
+        .select("id, qty, pickup_location_id")
         .eq("cart_id", cart_id)
         .eq("listing_id", body.listing_id)
         .limit(1)
@@ -462,16 +510,29 @@ async def add_cart_item(
     # cookie), never from request input — and every write below scopes on it.
     line_writer = service_db_client()
     if rows and isinstance(rows[0], dict):
+        existing_location = rows[0].get("pickup_location_id")
+        existing_location_id = (
+            str(existing_location) if isinstance(existing_location, str) else None
+        )
         new_qty = int(rows[0]["qty"]) + body.qty
+        location_id = _resolve_line_location_id(
+            body.listing_id,
+            pickup_location_id=body.pickup_location_id,
+            fulfilment=body.fulfilment,
+            delivery_lat=body.delivery_lat,
+            delivery_lng=body.delivery_lng,
+            existing_location_id=existing_location_id,
+        )
         unit_price, wholesale = validate_item_qty_for_listing(
             listing=listing, qty=new_qty, business_eligible=business_eligible
         )
-        _enforce_listing_cart_rules(listing, new_qty)
+        _enforce_listing_cart_rules(listing, new_qty, location_id=location_id)
         line_writer.table("cart_items").update(
             {
                 "qty": new_qty,
                 "unit_price_ngwee": unit_price,
                 "wholesale": wholesale,
+                "pickup_location_id": location_id,
             }
         ).eq("id", str(rows[0]["id"])).eq("cart_id", cart_id).execute()
     else:
@@ -482,6 +543,7 @@ async def add_cart_item(
                 "qty": body.qty,
                 "unit_price_ngwee": unit_price,
                 "wholesale": wholesale,
+                "pickup_location_id": location_id,
             }
         ).execute()
 
@@ -516,10 +578,6 @@ async def update_cart_item(
 ) -> CartResponse:
     business_eligible = _business_eligible_for_user(owner.user_id)
     listing = fetch_listing(listing_id, business_eligible=business_eligible)
-    unit_price, wholesale = validate_item_qty_for_listing(
-        listing=listing, qty=body.qty, business_eligible=business_eligible
-    )
-    _enforce_listing_cart_rules(listing, body.qty)
 
     client = _db_client_for_owner(
         owner,
@@ -527,6 +585,34 @@ async def update_cart_item(
         user_token=_extract_bearer_token(request),
     )
     cart_id = owner.cart_id or ""
+
+    existing = (
+        client.table("cart_items")
+        .select("pickup_location_id")
+        .eq("cart_id", cart_id)
+        .eq("listing_id", listing_id)
+        .limit(1)
+        .execute()
+    )
+    existing_rows = existing.data if isinstance(existing.data, list) else []
+    existing_location_id: str | None = None
+    if existing_rows and isinstance(existing_rows[0], dict):
+        raw_location = existing_rows[0].get("pickup_location_id")
+        if isinstance(raw_location, str):
+            existing_location_id = raw_location
+
+    location_id = _resolve_line_location_id(
+        listing_id,
+        pickup_location_id=body.pickup_location_id,
+        fulfilment=body.fulfilment,
+        delivery_lat=body.delivery_lat,
+        delivery_lng=body.delivery_lng,
+        existing_location_id=existing_location_id,
+    )
+    unit_price, wholesale = validate_item_qty_for_listing(
+        listing=listing, qty=body.qty, business_eligible=business_eligible
+    )
+    _enforce_listing_cart_rules(listing, body.qty, location_id=location_id)
 
     # Service client for the same reason as add_cart_item: 0086 revoked client
     # writes on cart_items, and the price columns must come from this API's
@@ -540,6 +626,7 @@ async def update_cart_item(
                 "qty": body.qty,
                 "unit_price_ngwee": unit_price,
                 "wholesale": wholesale,
+                "pickup_location_id": location_id,
             }
         )
         .eq("cart_id", cart_id)
@@ -601,6 +688,11 @@ def _notice_responses_for_items(items: list[dict[str, Any]]) -> list[ChangeNotic
             listing_id=str(item["listing_id"]),
             qty=int(item["qty"]),
             unit_price_ngwee=int(item["unit_price_ngwee"]),
+            pickup_location_id=(
+                str(item["pickup_location_id"])
+                if isinstance(item.get("pickup_location_id"), str)
+                else None
+            ),
         )
         for item in items
     ]

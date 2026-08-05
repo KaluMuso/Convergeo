@@ -137,5 +137,13 @@ def test_the_cart_input_accepts_an_optional_clip_id_and_nothing_else_new() -> No
     from app.routers.cart import CartItemInput
 
     fields = set(CartItemInput.model_fields)
-    assert fields == {"listing_id", "qty", "clip_id"}
+    assert fields == {
+        "listing_id",
+        "qty",
+        "clip_id",
+        "pickup_location_id",
+        "fulfilment",
+        "delivery_lat",
+        "delivery_lng",
+    }
     assert CartItemInput(listing_id=LISTING_ID, qty=1).clip_id is None
