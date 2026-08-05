@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.errors import AppError
+from app.services.inventory.location_stock import validate_branch_stock_qty
 
 
 def is_made_to_order_listing(listing: dict[str, Any]) -> bool:
@@ -37,6 +38,7 @@ def validate_listing_purchasable_for_cart(
     qty: int,
     evidence_image_count: int,
     weekly_committed_qty: int = 0,
+    location_id: str | None = None,
 ) -> None:
     """Raise AppError when a listing fails class-specific cart rules."""
     if is_used_class_listing(listing):
@@ -106,22 +108,7 @@ def validate_listing_purchasable_for_cart(
             )
         return
 
-    stock_mode = str(listing.get("stock_mode") or "tracked")
-    if stock_mode == "tracked":
-        stock_qty = listing.get("stock_qty")
-        if isinstance(stock_qty, int) and qty > stock_qty:
-            raise AppError(
-                code="cart.insufficient_stock",
-                message="Requested quantity exceeds available stock",
-                http_status=400,
-                details={
-                    "message_key": "cart.insufficient_stock",
-                    "listing_id": str(listing.get("id", "")),
-                    "available_qty": max(stock_qty, 0),
-                    "requested_qty": qty,
-                    "retry": True,
-                },
-            )
+    validate_branch_stock_qty(listing, qty, location_id=location_id)
 
 
 def iso_week_start_utc() -> datetime:

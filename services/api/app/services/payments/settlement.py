@@ -1,8 +1,9 @@
-"""Prepaid Lenco collection settlement — CHARGE_RECEIVED into platform cash/escrow.
+"""Prepaid Lenco collection settlement — escrow_hold / CHARGE_RECEIVED into escrow.
 
 Accounting policy (collection vs release):
-- **At collection (this module):** post ``CHARGE_RECEIVED`` — debit ``platform_cash``,
-  credit ``escrow`` for the gross payment amount, exactly once per ``checkout_group_id``.
+- **At collection (this module):** post per-order ``escrow_hold`` (or checkout
+  ``CHARGE_RECEIVED`` when no orders exist) — debit ``platform_cash``, credit
+  ``escrow`` for the gross payment amount, exactly once per ``checkout_group_id``.
 - **At escrow release (product / service / event / COD paths):** capture commission
   from the purchase-time ``commission_snapshot`` via ``COMMISSION_CAPTURE`` *before*
   ``RELEASE_TO_VENDOR`` (net). See ``escrow/release.py``, ``escrow/event_release.py``,
@@ -10,7 +11,7 @@ Accounting policy (collection vs release):
 
 Retries create a new ``payments`` row for the same checkout. Settlement is therefore
 keyed by checkout (not payment_id) so a late SUCCESS on a prior FAILED/EXPIRED
-attempt cannot post a second ``CHARGE_RECEIVED`` after the retry already settled.
+attempt cannot post a second collection after the retry already settled.
 """
 
 from __future__ import annotations
@@ -19,12 +20,16 @@ import re
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from app.services.ledger.engine import LedgerError, post_transaction
+from app.services.ledger.engine import LedgerError
 from app.services.ledger.templates import LedgerTemplate
 from app.services.orders.audit import run_sql_script
+from app.services.payments.fulfillment import fulfill_prepaid_checkout_escrow
 
 PREPAID_COLLECTION_KEY_PREFIX = "prepaid-charge"
-_CHARGE_KIND = LedgerTemplate.CHARGE_RECEIVED.value
+_SETTLEMENT_KINDS = (
+    LedgerTemplate.CHARGE_RECEIVED.value,
+    LedgerTemplate.ESCROW_HOLD.value,
+)
 
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -43,14 +48,14 @@ class PrepaidSettlementResult:
     transaction_id: str
     amount_ngwee: int
     created: bool
-    # True when another payment already posted CHARGE_RECEIVED for this checkout.
+    # True when another payment already posted collection for this checkout.
     # Callers must not treat this payment as the settling attempt (no SUCCESS
     # transition that would imply a second collection on the books).
     skipped_sibling: bool = False
 
 
 def prepaid_collection_idempotency_key(checkout_group_id: str) -> str:
-    """Stable ledger idempotency key — one CHARGE_RECEIVED per checkout group."""
+    """Stable ledger idempotency key — one collection per checkout group."""
     return f"{PREPAID_COLLECTION_KEY_PREFIX}-checkout-{checkout_group_id}"
 
 
@@ -71,6 +76,7 @@ def _lookup_existing_charge(
     serialise before deciding whether to post.
     """
     cg_sql = _sql_uuid(checkout_group_id, "checkout_group_id")
+    kinds_sql = ", ".join(f"'{kind}'" for kind in _SETTLEMENT_KINDS)
     script = f"""
 BEGIN;
 SELECT pg_advisory_xact_lock(hashtext('checkout_prepaid:' || {cg_sql}::text));
@@ -79,7 +85,7 @@ SELECT coalesce(
     SELECT coalesce(payment_id::text, '') || '|' || id::text
     FROM public.ledger_transactions
     WHERE checkout_group_id = {cg_sql}
-      AND kind = '{_CHARGE_KIND}'
+      AND kind IN ({kinds_sql})
     ORDER BY created_at ASC
     LIMIT 1
   ),
@@ -122,7 +128,7 @@ def settle_prepaid_collection(
     checkout_group_id: str,
     amount_ngwee: int,
 ) -> PrepaidSettlementResult:
-    """Post CHARGE_RECEIVED for a prepaid Lenco collection (idempotent per checkout).
+    """Post collection into escrow for a prepaid Lenco payment (idempotent per checkout).
 
     Callers must invoke this **before** committing ``payments.status = success`` so a
     failed ledger write never leaves a successful payment without escrow backing.
@@ -133,8 +139,6 @@ def settle_prepaid_collection(
 
     Raises ``LedgerError`` on posting failure; callers must not transition to SUCCESS.
     """
-    _ = service_client
-
     existing = _lookup_existing_charge(checkout_group_id=checkout_group_id)
     if existing is not None:
         owner_payment_id, txn_id = existing
@@ -147,29 +151,22 @@ def settle_prepaid_collection(
             skipped_sibling=skipped,
         )
 
-    posted = post_transaction(
-        idempotency_key=prepaid_collection_idempotency_key(checkout_group_id),
-        template=LedgerTemplate.CHARGE_RECEIVED,
-        checkout_group_id=checkout_group_id,
+    fulfilled = fulfill_prepaid_checkout_escrow(
+        service_client,
         payment_id=payment_id,
-        gross_ngwee=amount_ngwee,
+        checkout_group_id=checkout_group_id,
+        amount_ngwee=amount_ngwee,
     )
+    txn_id = fulfilled.transaction_ids[0] if fulfilled.transaction_ids else ""
+    if not txn_id:
+        raise LedgerError("prepaid fulfillment produced no ledger transaction")
 
-    if not posted.created:
-        owner = _fetch_charge_payment_id(posted.id)
-        skipped = owner is not None and owner != payment_id
-        return PrepaidSettlementResult(
-            payment_id=payment_id,
-            transaction_id=posted.id,
-            amount_ngwee=amount_ngwee,
-            created=False,
-            skipped_sibling=skipped,
-        )
-
+    owner = _fetch_charge_payment_id(txn_id)
+    skipped = owner is not None and owner != payment_id
     return PrepaidSettlementResult(
         payment_id=payment_id,
-        transaction_id=posted.id,
+        transaction_id=txn_id,
         amount_ngwee=amount_ngwee,
-        created=True,
-        skipped_sibling=False,
+        created=fulfilled.created_count > 0,
+        skipped_sibling=skipped,
     )

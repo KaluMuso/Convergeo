@@ -249,6 +249,16 @@ def _shim_reserve_payout_row(
         yield
 
 
+@pytest.fixture(autouse=True)
+def _enable_payouts_for_execution_tests(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Generator[None, None, None]:
+    """Payout execution unit tests opt into the kill switch and skip the 48h escrow SQL guard."""
+    monkeypatch.setenv("PAYOUTS_ENABLED", "true")
+    with patch("app.services.payouts.hold.assert_escrow_minimum_hold_elapsed"):
+        yield
+
+
 @pytest.fixture
 def matched_resolve() -> AsyncMock:
     return AsyncMock(

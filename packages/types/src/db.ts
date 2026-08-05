@@ -321,6 +321,7 @@ export type Database = {
           created_at: string
           id: string
           listing_id: string
+          pickup_location_id: string | null
           qty: number
           unit_price_ngwee: number
           updated_at: string
@@ -331,6 +332,7 @@ export type Database = {
           created_at?: string
           id?: string
           listing_id: string
+          pickup_location_id?: string | null
           qty: number
           unit_price_ngwee: number
           updated_at?: string
@@ -341,6 +343,7 @@ export type Database = {
           created_at?: string
           id?: string
           listing_id?: string
+          pickup_location_id?: string | null
           qty?: number
           unit_price_ngwee?: number
           updated_at?: string
@@ -359,6 +362,13 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_pickup_location_id_fkey"
+            columns: ["pickup_location_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_locations"
             referencedColumns: ["id"]
           },
         ]
@@ -3196,6 +3206,7 @@ export type Database = {
           expires_at: string
           id: string
           listing_id: string
+          location_id: string | null
           qty: number
           updated_at: string
         }
@@ -3205,6 +3216,7 @@ export type Database = {
           expires_at: string
           id?: string
           listing_id: string
+          location_id?: string | null
           qty: number
           updated_at?: string
         }
@@ -3214,6 +3226,7 @@ export type Database = {
           expires_at?: string
           id?: string
           listing_id?: string
+          location_id?: string | null
           qty?: number
           updated_at?: string
         }
@@ -3230,6 +3243,13 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_locations"
             referencedColumns: ["id"]
           },
         ]

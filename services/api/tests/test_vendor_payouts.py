@@ -314,7 +314,9 @@ def test_balance_derivation_matches_ledger_accounts(fake_client: FakeSupabaseCli
 def test_method_change_sets_hold_and_blocks_payout(
     fake_client: FakeSupabaseClient,
     api_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("PAYOUTS_ENABLED", "true")
     hold_until = (datetime.now(UTC) + timedelta(hours=24)).isoformat()
     for row in fake_client.tables["vendors"].rows:
         if row["id"] == VENDOR_A_ID:
@@ -348,12 +350,16 @@ def test_method_change_sets_hold_and_blocks_payout(
         rail="mtn",
     )
 
-    with patch(
-        "app.services.payouts.execution.load_vendor_payout_profile",
-        return_value=profile,
-    ), patch(
-        "app.services.payouts.execution.compute_amount_and_eligibility",
-        return_value=MagicMock(amount_ngwee=10_000, deferred=False),
+    with (
+        patch("app.services.payouts.hold.assert_escrow_minimum_hold_elapsed"),
+        patch(
+            "app.services.payouts.execution.load_vendor_payout_profile",
+            return_value=profile,
+        ),
+        patch(
+            "app.services.payouts.execution.compute_amount_and_eligibility",
+            return_value=MagicMock(amount_ngwee=10_000, deferred=False),
+        ),
     ):
         with pytest.raises(AppError) as exc:
             wrapper = MagicMock()

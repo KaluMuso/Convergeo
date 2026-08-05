@@ -3,6 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from app.services.inventory.location_stock import (
+    available_qty_at_location,
+    is_branch_tracked,
+)
 from app.services.stock.claim import run_sql_script, sql_uuid
 
 ChangeNoticeKind = Literal["price_changed", "out_of_stock", "qty_reduced"]
@@ -13,6 +17,7 @@ class CartLineSnapshot:
     listing_id: str
     qty: int
     unit_price_ngwee: int
+    pickup_location_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,7 +77,11 @@ def _fetch_listings(listing_ids: list[str]) -> dict[str, dict[str, Any]]:
     return listings
 
 
-def _available_qty(listing: dict[str, Any]) -> int | None:
+def _available_qty(
+    listing: dict[str, Any],
+    *,
+    pickup_location_id: str | None = None,
+) -> int | None:
     if listing.get("status") != "active":
         return 0
     product_class = str(listing.get("product_class") or "A")
@@ -82,6 +91,13 @@ def _available_qty(listing: dict[str, Any]) -> int | None:
     stock_mode = listing.get("stock_mode")
     if stock_mode == "always_available":
         return None
+
+    listing_id = str(listing["id"])
+    if is_branch_tracked(listing_id):
+        if pickup_location_id is None:
+            return 0
+        return available_qty_at_location(listing_id, pickup_location_id)
+
     stock_qty = listing.get("stock_qty")
     if isinstance(stock_qty, int):
         return max(stock_qty, 0)
@@ -110,7 +126,7 @@ def revalidate_lines(lines: list[CartLineSnapshot]) -> RevalidateResult:
 
         current_price = listing.get("price_ngwee")
         current_price_ngwee = current_price if isinstance(current_price, int) else None
-        available = _available_qty(listing)
+        available = _available_qty(listing, pickup_location_id=line.pickup_location_id)
 
         if current_price_ngwee is not None and current_price_ngwee != line.unit_price_ngwee:
             notices.append(
