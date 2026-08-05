@@ -3,6 +3,7 @@
 import { formatK } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -15,7 +16,6 @@ import {
 import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
 import { BuyerTrustPanel } from "./buyer-trust-panel";
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
-import { ContactVendorButton, type ContactVendorLabels } from "./contact-vendor-button";
 import { PdpGallery } from "./gallery";
 import { buildOfferPriceContext } from "./offer-price-context";
 import { PdpWishlistButton } from "./pdp-wishlist-button";
@@ -23,7 +23,14 @@ import { StickyMobileAtc } from "./sticky-mobile-atc";
 import { useListingPurchase } from "./use-listing-purchase";
 import { VendorBlock } from "./vendor-block";
 
+import type { ContactVendorLabels } from "./contact-vendor-button";
 import type { PdpGalleryLabelStrings } from "./gallery-labels";
+
+/** Lazy — keeps first-load JS on /p/[slug] within the bundle regression budget. */
+const ContactVendorButton = dynamic(
+  () => import("./contact-vendor-button").then((mod) => mod.ContactVendorButton),
+  { ssr: false },
+);
 
 export const LUSAKA_CBD_LAT = -15.4167;
 export const LUSAKA_CBD_LNG = 28.2833;

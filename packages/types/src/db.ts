@@ -3581,6 +3581,27 @@ export type Database = {
           },
         ]
       }
+      user_saves: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_kind: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_kind: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_kind?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_wishlist: {
         Row: {
           created_at: string
