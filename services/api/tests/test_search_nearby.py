@@ -1,4 +1,4 @@
-"""Tests for GET /search/nearby and geo distance helpers."""
+"""Tests for GET /search/nearby and geo distance helpers (R02)."""
 
 from __future__ import annotations
 
