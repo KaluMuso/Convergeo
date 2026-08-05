@@ -1,38 +1,31 @@
 import createNextIntlPlugin from "next-intl/plugin";
+import {
+  buildConnectSrc,
+  buildStaticSecurityHeaders,
+  CSP_ORIGINS,
+  isDevelopmentEnv,
+  PERMISSIONS_POLICY_ADMIN,
+} from "@vergeo/config/security-headers";
 
 import type { NextConfig } from "next";
 
 const withNextIntl = createNextIntlPlugin("../../packages/i18n/src/request.ts");
 
 /**
- * Security headers & CSP — M15-P03 (admin origin — STRICTEST).
+ * Security headers & CSP — M15-P03 + security audit wave (admin origin — STRICTEST).
  *
  * The admin origin is hardened (D20 / M13-P01): separate origin + IP allowlist +
  * Cloudflare Access. CSP is nonce-based (no `unsafe-inline` for scripts); the nonce
- * is injected per request by middleware (owned/locked elsewhere this wave), so the
- * full script policy ships as `Content-Security-Policy-Report-Only` while the
- * framing/hardening directives are enforced now. `{{CSP_NONCE}}` = per-request
- * substitution point.
+ * is injected per request by middleware, so the full script policy ships as
+ * `Content-Security-Policy-Report-Only` while the framing/hardening directives are
+ * enforced now. `{{CSP_NONCE}}` = per-request substitution point.
  * Strictest posture vs customer/vendor: `frame-ancestors 'none'` (never framed),
  * no Lenco widget, no GA4 / no third-party script origins, all Permissions-Policy
  * features denied. Report-only → enforce runbook: docs/ops/security-headers.md.
  */
 const NONCE = "'nonce-{{CSP_NONCE}}'";
-
-const CLOUDINARY = "https://res.cloudinary.com";
-const SUPABASE = "https://*.supabase.co";
-const SUPABASE_WS = "wss://*.supabase.co";
-// Sentry ingest (M16-P06) — browser SDK POSTs events here. Scoped to the ingest
-// subdomains only (incl. region variants), NOT a blanket sentry.io allowance.
-const SENTRY_INGEST =
-  "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
 const CSP_REPORTING = "report-uri /api/csp-report; report-to csp-endpoint";
-
-const HSTS = "max-age=63072000; includeSubDomains; preload";
-// Strictest: deny every powerful feature outright.
-const PERMISSIONS_POLICY =
-  "camera=(), microphone=(), geolocation=(), browsing-topics=(), payment=(), usb=(), " +
-  "accelerometer=(), gyroscope=(), magnetometer=(), fullscreen=(self)";
+const isDev = isDevelopmentEnv();
 
 // Enforced now: framing/hardening directives (no nonce required). Admin is never
 // allowed to be framed → `frame-ancestors 'none'`.
@@ -41,17 +34,19 @@ const ENFORCED_CSP = [
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
-  "upgrade-insecure-requests",
+  ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");
+
+const connectSrc = buildConnectSrc(process.env, CSP_ORIGINS.sentryIngest);
 
 // Report-only full nonce policy — no third-party script/frame origins.
 const REPORT_ONLY_CSP = [
   "default-src 'self'",
   `script-src 'self' 'strict-dynamic' ${NONCE}`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: ${CLOUDINARY}`,
+  `img-src 'self' data: blob: ${CSP_ORIGINS.cloudinary}`,
   "font-src 'self' data:",
-  `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${SENTRY_INGEST}`,
+  `connect-src ${connectSrc}`,
   "frame-src 'none'",
   "worker-src 'self' blob:",
   "manifest-src 'self'",
@@ -60,19 +55,17 @@ const REPORT_ONLY_CSP = [
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self'",
-  "upgrade-insecure-requests",
+  ...(isDev ? [] : ["upgrade-insecure-requests"]),
   CSP_REPORTING,
 ].join("; ");
 
 const SECURITY_HEADERS = [
-  { key: "Strict-Transport-Security", value: HSTS },
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "DENY" },
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: PERMISSIONS_POLICY },
-  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  ...buildStaticSecurityHeaders({
+    xFrameOptions: "DENY",
+    permissionsPolicy: PERMISSIONS_POLICY_ADMIN,
+    enforcedCsp: ENFORCED_CSP,
+  }),
   { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
-  { key: "Content-Security-Policy", value: ENFORCED_CSP },
   { key: "Content-Security-Policy-Report-Only", value: REPORT_ONLY_CSP },
 ];
 

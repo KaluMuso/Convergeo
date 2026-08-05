@@ -73,6 +73,13 @@ class Settings(BaseSettings):
             raise ValueError("CORS_ORIGINS must include at least one origin")
         if self.env != "development" and "*" in self.cors_origin_list:
             raise ValueError("CORS_ORIGINS cannot include '*' outside development")
+        if self.env == "production":
+            for origin in self.cors_origin_list:
+                lowered = origin.lower()
+                if "localhost" in lowered or "127.0.0.1" in lowered:
+                    raise ValueError(
+                        "CORS_ORIGINS must not include localhost in production"
+                    )
         return self
 
     @model_validator(mode="after")

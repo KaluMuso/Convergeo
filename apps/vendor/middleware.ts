@@ -10,6 +10,7 @@ import {
   shouldRedirectToLogin,
   updateSession,
 } from "@vergeo/auth/middleware";
+import { buildConnectSrc, CSP_ORIGINS } from "@vergeo/config/security-headers";
 import { DEFAULT_LOCALE, LOCALES } from "@vergeo/i18n";
 import { type NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
@@ -21,24 +22,20 @@ const intlMiddleware = createMiddleware({
 });
 
 const NONCE = `'nonce-${CSP_NONCE_PLACEHOLDER}'`;
-const CLOUDINARY = "https://res.cloudinary.com";
-const SUPABASE = "https://*.supabase.co";
-const SUPABASE_WS = "wss://*.supabase.co";
-const GA4_SCRIPT = "https://*.googletagmanager.com";
-const GA4_CONNECT =
-  "https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com";
-const GA4_IMG = "https://*.google-analytics.com https://*.googletagmanager.com";
-const SENTRY_INGEST =
-  "https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io";
+
+const connectSrc = buildConnectSrc(
+  process.env,
+  `${CSP_ORIGINS.ga4Connect} ${CSP_ORIGINS.sentryIngest}`,
+);
 
 const REPORT_ONLY_CSP = appendCspReporting(
   [
     "default-src 'self'",
-    `script-src 'self' 'strict-dynamic' ${NONCE} https: ${GA4_SCRIPT}`,
+    `script-src 'self' 'strict-dynamic' ${NONCE} https: ${CSP_ORIGINS.ga4Script}`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: ${CLOUDINARY} ${GA4_IMG}`,
+    `img-src 'self' data: blob: ${CSP_ORIGINS.cloudinary} ${CSP_ORIGINS.ga4Img}`,
     "font-src 'self' data:",
-    `connect-src 'self' ${SUPABASE} ${SUPABASE_WS} ${GA4_CONNECT} ${SENTRY_INGEST}`,
+    `connect-src ${connectSrc}`,
     "frame-src 'self'",
     "worker-src 'self' blob:",
     "manifest-src 'self'",

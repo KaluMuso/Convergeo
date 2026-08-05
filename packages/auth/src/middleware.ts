@@ -4,6 +4,7 @@ import type { User } from "@supabase/supabase-js";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
+import { mergeSecureCookieOptions } from "./cookie-security";
 import { getRolesFromUser, hasRole, type AppRole } from "./roles";
 
 export type AuthGate = "none" | "vendor" | "admin";
@@ -294,7 +295,7 @@ export async function updateSession(request: NextRequest): Promise<UpdateSession
           request,
         });
         cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
+          response.cookies.set(name, value, mergeSecureCookieOptions(options));
         });
       },
     },
