@@ -61,17 +61,22 @@ describe("scrub", () => {
 });
 
 describe("environment helpers", () => {
+  const env = (partial: Record<string, string | undefined>): NodeJS.ProcessEnv => ({
+    NODE_ENV: "test",
+    ...partial,
+  });
+
   it("resolves release SHA from immutable commit env vars", () => {
-    expect(resolveReleaseSha({ GIT_SHA: "abc123" })).toBe("abc123");
-    expect(resolveReleaseSha({ VERCEL_GIT_COMMIT_SHA: "def456" })).toBe("def456");
-    expect(resolveReleaseSha({ NEXT_PUBLIC_SENTRY_RELEASE: "rel789" })).toBe("rel789");
-    expect(resolveReleaseSha({})).toBeUndefined();
+    expect(resolveReleaseSha(env({ GIT_SHA: "abc123" }))).toBe("abc123");
+    expect(resolveReleaseSha(env({ VERCEL_GIT_COMMIT_SHA: "def456" }))).toBe("def456");
+    expect(resolveReleaseSha(env({ NEXT_PUBLIC_SENTRY_RELEASE: "rel789" }))).toBe("rel789");
+    expect(resolveReleaseSha(env({}))).toBeUndefined();
   });
 
   it("resolves environment labels with fallbacks", () => {
-    expect(resolveEnvironment({ NEXT_PUBLIC_SENTRY_ENVIRONMENT: "staging" })).toBe("staging");
-    expect(resolveEnvironment({ VERCEL_ENV: "preview" })).toBe("preview");
-    expect(resolveEnvironment({})).toBe("development");
+    expect(resolveEnvironment(env({ NEXT_PUBLIC_SENTRY_ENVIRONMENT: "staging" }))).toBe("staging");
+    expect(resolveEnvironment(env({ VERCEL_ENV: "preview" }))).toBe("preview");
+    expect(resolveEnvironment(env({}))).toBe("development");
   });
 
   it("disables sentry-test in production without explicit enable flag", () => {

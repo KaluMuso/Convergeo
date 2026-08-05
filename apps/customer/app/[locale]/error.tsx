@@ -1,27 +1,41 @@
 "use client";
 
+import { useReportClientError } from "@vergeo/observability";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 
-import enMarketing from "../../../../packages/i18n/messages/en/marketing.json";
+import { getApiBaseUrl } from "../../lib/api-base-url";
+import { resolveMarketingErrorCopy } from "../../lib/marketing-error-copy";
 
 type ErrorProps = {
+  error: Error & { digest?: string };
   reset: () => void;
 };
 
 type MarketingTranslator = (key: string, values?: Record<string, string | number>) => string;
 
-export default function ErrorBoundary({ reset }: ErrorProps) {
+export default function ErrorBoundary({ error, reset }: ErrorProps) {
   const params = useParams();
   const locale = typeof params?.locale === "string" ? params.locale : "en";
+  const marketingError = resolveMarketingErrorCopy(locale);
 
-  // The root client provider only carries common + legal, so resolve the marketing
-  // namespace directly from the EN messages (the only locale shipped today).
+  useReportClientError(
+    error,
+    {
+      boundary: "route",
+      application: "customer",
+    },
+    {
+      apiBaseUrl: getApiBaseUrl(),
+      locale,
+    },
+  );
+
   const t = createTranslator({
     locale,
-    messages: { marketing: enMarketing } as AbstractIntlMessages,
+    messages: { marketing: { error: marketingError } } as AbstractIntlMessages,
     namespace: "marketing.error",
   }) as unknown as MarketingTranslator;
 

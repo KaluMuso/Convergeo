@@ -6,6 +6,12 @@
     "loading": "Loading…",
     "retry": "Try again"
   },
+  "errorPage": {
+    "code": "500",
+    "heading": "Something went wrong",
+    "body": "We hit an unexpected problem. Please try again — if it keeps happening, let us know.",
+    "retry": "Try again"
+  },
   "theme": {
     "label": "Theme",
     "light": "Light",

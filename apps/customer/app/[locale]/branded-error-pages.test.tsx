@@ -11,6 +11,10 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ locale: "en" }),
 }));
 
+vi.mock("@vergeo/observability", () => ({
+  useReportClientError: vi.fn(),
+}));
+
 import ErrorBoundary from "./error";
 import NotFound from "./not-found";
 
@@ -26,7 +30,7 @@ describe("marketing 404 / 500 messages", () => {
 
 describe("500 error boundary", () => {
   it("renders branded content with retry and recovery links", () => {
-    render(<ErrorBoundary reset={() => undefined} />);
+    render(<ErrorBoundary error={new Error("test")} reset={() => undefined} />);
     expect(screen.getByText(marketing.error.heading)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: marketing.error.retry })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: marketing.error.home })).toHaveAttribute("href", "/en");

@@ -6,6 +6,12 @@
     "loading": "Ikuyenda…",
     "retry": "Yesaninso"
   },
+  "errorPage": {
+    "code": "500",
+    "heading": "China chake chalakwika",
+    "body": "Tinakumana ndi vuto. Yesaninso — ngati zikupitirira, tidziwitseni.",
+    "retry": "Yesaninso"
+  },
   "greeting": "Moni, {name}!",
   "install": {
     "action": "Ika app",

@@ -6,6 +6,12 @@
     "loading": "Chargement…",
     "retry": "Réessayer"
   },
+  "errorPage": {
+    "code": "500",
+    "heading": "Une erreur s'est produite",
+    "body": "Un problème inattendu est survenu. Veuillez réessayer — si cela continue, contactez-nous.",
+    "retry": "Réessayer"
+  },
   "theme": {
     "label": "Thème",
     "light": "Clair",
