@@ -41,6 +41,8 @@ const labels: BuyBoxLabels = {
   singleVendorLabel: "Single vendor",
   conditionNewLabel: "New",
   conditionRefurbishedLabel: "Refurbished",
+  conditionUsedLabel: "Used",
+  conditionAuthenticityLabel: "Condition & Authenticity",
 };
 
 const listing: BuyBoxListing = {

@@ -7,7 +7,6 @@ from app.errors import AppError
 from app.services.cart.merge import validate_item_qty_for_listing
 from app.services.listings.class_rules import validate_listing_purchasable_for_cart
 
-
 LISTING_D_USED = {
     "id": "dddddddd-dddd-dddd-dddd-dddddddddddd",
     "vendor_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",

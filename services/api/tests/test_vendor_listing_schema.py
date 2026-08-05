@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from app.schemas.vendor_listing import VendorListing
+from app.schemas.vendor_listing import VendorListing, VendorListingEvidenceImage
 from pydantic import ValidationError
 
 
@@ -13,7 +13,9 @@ def test_class_d_rejects_new_condition() -> None:
             stock_mode="tracked",
             stock_qty=1,
             price_ngwee=10_000,
-            evidence_images=[{"cloudinary_public_id": "used/item-1"}],
+            evidence_images=[
+                VendorListingEvidenceImage(cloudinary_public_id="used/item-1"),
+            ],
             defect_notes="Minor scratch on corner panel",
         )
     assert "Class D listings cannot have condition new" in str(exc_info.value)
