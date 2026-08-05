@@ -68,3 +68,43 @@ export function setProductRelations(
     body: JSON.stringify({ related_product_ids: relatedProductIds }),
   });
 }
+
+export type CanonicalQueueItem = {
+  id: string;
+  name: string;
+  slug: string;
+  brand: string | null;
+  category_id: string;
+  status: string;
+  vendor_id: string | null;
+  vendor_display_name: string | null;
+  listing_id: string | null;
+  image_urls: string[];
+  updated_at: string;
+};
+
+export type CanonicalStatusResponse = {
+  product_id: string;
+  status: string;
+  listings_updated: number;
+  idempotent: boolean;
+};
+
+export function listPendingCanonicalProducts(): Promise<CanonicalQueueItem[]> {
+  return moderationApi.request<CanonicalQueueItem[]>(
+    "/admin/products/canonical?status=pending_moderation",
+  );
+}
+
+export function patchCanonicalProductStatus(
+  productId: string,
+  body: { status: "active" | "rejected"; reason?: string | null },
+): Promise<CanonicalStatusResponse> {
+  return moderationApi.request<CanonicalStatusResponse>(
+    `/admin/products/canonical/${productId}/status`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    },
+  );
+}

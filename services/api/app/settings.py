@@ -61,7 +61,8 @@ class Settings(BaseSettings):
     api_image_tag: str = Field(alias="API_IMAGE_TAG", default="")
     # Public API hostname this process believes it serves (staging isolation check).
     public_api_host: str = Field(alias="PUBLIC_API_HOST", default="")
-    # Outbound n8n webhook for domain events (order.created, etc.). Empty = no-op.
+    # Outbound n8n webhook for domain events (order.created, vendor.kyc_updated, …).
+    # Empty = no-op (dev/CI safe).
     n8n_webhook_url: str = Field(alias="N8N_WEBHOOK_URL", default="")
     # Upstash Redis REST — OTP per-number rate limiting (3 requests / 15 min).
     upstash_redis_rest_url: str = Field(alias="UPSTASH_REDIS_REST_URL", default="")

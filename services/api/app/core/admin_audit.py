@@ -7,7 +7,7 @@ from uuid import UUID
 from fastapi import Depends, Request, Response
 from fastapi.routing import APIRoute
 
-from app.core.auth import CurrentUser, require_role
+from app.core.auth import CurrentUser, require_moderator
 from app.errors import AppError
 from app.supabase_client import SupabaseServiceClient, get_supabase_service_client
 
@@ -77,7 +77,7 @@ def _normalize_entity_id(entity_id: str | UUID | None) -> str | None:
 
 async def get_admin_audit_recorder(
     request: Request,
-    current_user: Annotated[CurrentUser, Depends(require_role("admin"))],
+    current_user: Annotated[CurrentUser, Depends(require_moderator())],
 ) -> AdminAuditRecorder:
     existing = getattr(request.state, _AUDIT_RECORDER_STATE_KEY, None)
     if isinstance(existing, AdminAuditRecorder):

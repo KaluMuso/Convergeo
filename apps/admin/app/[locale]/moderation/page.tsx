@@ -27,6 +27,12 @@ export default async function ModerationHubPage({ params }: PageProps) {
       body: t("productsBody"),
     },
     {
+      key: "canonical",
+      href: `/${locale}/moderation/products#canonical`,
+      title: t("canonicalTitle"),
+      body: t("canonicalBody"),
+    },
+    {
       key: "flags",
       href: `/${locale}/moderation/flags`,
       title: t("flagsTitle"),
