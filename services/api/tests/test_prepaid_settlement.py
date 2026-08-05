@@ -128,7 +128,7 @@ def _ledger_txn_count(pg: PgConn, payment_id: str) -> int:
         SELECT count(*)::text
         FROM public.ledger_transactions
         WHERE payment_id = '{payment_id}'::uuid
-          AND kind = 'charge_received';
+          AND kind IN ('charge_received', 'escrow_hold');
         """
     )
     assert result.ok
@@ -202,7 +202,7 @@ def _checkout_charge_count(pg: PgConn, checkout_group_id: str) -> int:
         SELECT count(*)::text
         FROM public.ledger_transactions
         WHERE checkout_group_id = '{checkout_group_id}'::uuid
-          AND kind = 'charge_received';
+          AND kind IN ('charge_received', 'escrow_hold');
         """
     )
     assert result.ok
@@ -388,7 +388,7 @@ def test_ledger_failure_blocks_payment_success(
     _seed_ussd_payment(fake_service.client, payment_id=payment_id)
 
     with patch(
-        "app.services.payments.settlement.post_transaction",
+        "app.services.payments.settlement.fulfill_prepaid_checkout_escrow",
         side_effect=LedgerError("ledger post failed"),
     ):
         with pytest.raises(LedgerError):
