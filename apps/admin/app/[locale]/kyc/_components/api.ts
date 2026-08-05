@@ -86,3 +86,31 @@ export type KycDecisionResponse = {
   kyc_record_status: string;
   notification_enqueued: boolean;
 };
+
+export type VendorQueueItem = {
+  vendor_id: string;
+  kyc_record_id: string | null;
+  display_name: string;
+  slug: string;
+  vendor_status: string;
+  kyc_tier: number | null;
+  kyc_record_status: string | null;
+  tier: number | null;
+  updated_at: string;
+  sla_badge: SlaBadge | null;
+  age_hours: number | null;
+};
+
+export type VendorKycDetail = {
+  vendor_id: string;
+  kyc_record_id: string;
+  vendor_display_name: string;
+  vendor_slug: string;
+  vendor_status: string;
+  tier: number;
+  kyc_record_status: string;
+  documents: SignedDocUrl[];
+  docs_available: boolean;
+  momo_name_match: MomoNameMatch | null;
+  updated_at: string;
+};

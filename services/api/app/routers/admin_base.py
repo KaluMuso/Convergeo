@@ -16,7 +16,7 @@ router = APIRouter(
     prefix="/admin",
     tags=["admin"],
     route_class=AdminAuditedRoute,
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_role("admin", "superadmin", "moderator"))],
 )
 
 

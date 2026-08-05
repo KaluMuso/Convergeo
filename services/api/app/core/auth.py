@@ -137,6 +137,14 @@ async def get_current_user(
     return current_user
 
 
+MODERATOR_ROLES = frozenset({"superadmin", "moderator", "admin"})
+
+
+def require_moderator() -> Callable[..., Awaitable[CurrentUser]]:
+    """Admin moderation workflows (KYC + canonical product approval)."""
+    return require_role(*sorted(MODERATOR_ROLES))
+
+
 def require_role(*required_roles: str) -> Callable[..., Awaitable[CurrentUser]]:
     if not required_roles:
         raise ValueError("require_role expects at least one role")

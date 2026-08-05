@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated, Any, Protocol
+from typing import Annotated, Any, Literal, Protocol
 from uuid import UUID
 
 from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
-from app.core.auth import CurrentUser, require_role
+from app.core.auth import CurrentUser, require_moderator, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
+from app.settings import get_settings
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 DUPLICATE_SIMILARITY_THRESHOLD = 0.3
 MAX_DUPLICATE_PAIRS = 100
@@ -20,6 +21,7 @@ PRODUCT_STATUSES = frozenset({"pending_moderation", "active", "merged"})
 MERGEABLE_STATUSES = frozenset({"pending_moderation", "active"})
 
 products_router = APIRouter(prefix="/products", tags=["admin-products"])
+canonical_router = APIRouter(prefix="/products/canonical", tags=["admin-canonical-products"])
 
 
 class ServiceRoleClient(Protocol):
@@ -641,4 +643,303 @@ async def set_product_relations(
     return ProductRelationsResponse(product_id=product_id, related=related_items)
 
 
+class CanonicalQueueItem(BaseModel):
+    id: UUID
+    name: str
+    slug: str
+    brand: str | None = None
+    category_id: UUID
+    status: str
+    vendor_id: UUID | None = None
+    vendor_display_name: str | None = None
+    listing_id: UUID | None = None
+    image_urls: list[str] = Field(default_factory=list)
+    updated_at: datetime
+
+
+class CanonicalStatusPatch(BaseModel):
+    status: Literal["active", "rejected"]
+    reason: str | None = Field(default=None, max_length=2000)
+
+    @model_validator(mode="after")
+    def require_reason_on_reject(self) -> CanonicalStatusPatch:
+        if self.status == "rejected" and not (self.reason and self.reason.strip()):
+            raise ValueError("reason is required when status is rejected")
+        return self
+
+
+class CanonicalStatusResponse(BaseModel):
+    product_id: UUID
+    status: str
+    listings_updated: int
+    idempotent: bool = False
+
+
+def _cloudinary_delivery_url(public_id: str) -> str | None:
+    try:
+        settings = get_settings()
+        cloud_name = settings.cloudinary_cloud_name
+    except ValueError:
+        return None
+    normalized = public_id.strip().lstrip("/")
+    if not normalized:
+        return None
+    return (
+        f"https://res.cloudinary.com/{cloud_name}/image/upload/"
+        f"f_auto,q_auto/{normalized}"
+    )
+
+
+def _load_canonical_images(
+    service_client: ServiceRoleClient,
+    product_id: str,
+) -> list[str]:
+    listings_response = (
+        _table(service_client, "vendor_listings")
+        .select("id")
+        .eq("product_id", product_id)
+        .execute()
+    )
+    listing_ids = [
+        str(row["id"]) for row in _rows(listings_response) if row.get("id") is not None
+    ]
+    if not listing_ids:
+        return []
+
+    images_response = (
+        _table(service_client, "listing_images")
+        .select("cloudinary_public_id, position")
+        .in_("listing_id", listing_ids)
+        .order("position")
+        .execute()
+    )
+    urls: list[str] = []
+    for row in _rows(images_response):
+        public_id = row.get("cloudinary_public_id")
+        if not isinstance(public_id, str) or not public_id.strip():
+            continue
+        url = _cloudinary_delivery_url(public_id)
+        if url:
+            urls.append(url)
+    return urls
+
+
+def _load_submitter_context(
+    service_client: ServiceRoleClient,
+    product_id: str,
+) -> tuple[UUID | None, str | None, UUID | None]:
+    response = (
+        _table(service_client, "vendor_listings")
+        .select("id, vendor_id, vendors(display_name)")
+        .eq("product_id", product_id)
+        .order("created_at", desc=False)
+        .limit(1)
+        .execute()
+    )
+    rows = _rows(response)
+    if not rows:
+        return None, None, None
+    row = rows[0]
+    vendor_id = row.get("vendor_id")
+    listing_id = row.get("id")
+    vendor_name: str | None = None
+    vendors = row.get("vendors")
+    if isinstance(vendors, dict):
+        name = vendors.get("display_name")
+        vendor_name = str(name) if isinstance(name, str) else None
+    return (
+        UUID(str(vendor_id)) if vendor_id else None,
+        vendor_name,
+        UUID(str(listing_id)) if listing_id else None,
+    )
+
+
+def transition_canonical_moderation(
+    *,
+    product_id: str,
+    target_status: Literal["active", "rejected"],
+    reason: str | None,
+    service_client: ServiceRoleClient,
+) -> tuple[dict[str, Any], bool]:
+    product = _load_product(service_client, product_id)
+    current_status = str(product.get("status") or "")
+    if current_status == "merged":
+        raise AppError(
+            code="product_invalid_status",
+            message="Merged canonical products cannot be moderated",
+            http_status=409,
+            details={"status": current_status},
+        )
+    if target_status == "active" and current_status == "active":
+        return {"product_id": product_id, "status": "active", "listings_updated": 0}, True
+    if target_status == "rejected" and current_status != "pending_moderation":
+        raise AppError(
+            code="product_invalid_status",
+            message="Only pending_moderation products can be rejected",
+            http_status=409,
+            details={"status": current_status},
+        )
+    if target_status == "active" and current_status != "pending_moderation":
+        raise AppError(
+            code="product_invalid_status",
+            message="Only pending_moderation products can be approved",
+            http_status=409,
+            details={"status": current_status},
+        )
+
+    listings_updated = 0
+    if target_status == "active":
+        product_update = (
+            _table(service_client, "products")
+            .update({"status": "active"})
+            .eq("id", product_id)
+            .eq("status", "pending_moderation")
+            .execute()
+        )
+        if not _rows(product_update):
+            refreshed = _load_product(service_client, product_id)
+            if str(refreshed.get("status")) == "active":
+                return {"product_id": product_id, "status": "active", "listings_updated": 0}, True
+            raise AppError(
+                code="product_moderation_failed",
+                message="Failed to approve canonical product",
+                http_status=409,
+            )
+        listings_response = (
+            _table(service_client, "vendor_listings")
+            .update({"status": "active"})
+            .eq("product_id", product_id)
+            .eq("status", "draft")
+            .execute()
+        )
+        listings_updated = len(_rows(listings_response))
+        return {
+            "product_id": product_id,
+            "status": "active",
+            "listings_updated": listings_updated,
+        }, False
+
+    # reject: remove draft listings, delete pending canonical
+    listings_response = (
+        _table(service_client, "vendor_listings")
+        .update({"status": "removed"})
+        .eq("product_id", product_id)
+        .in_("status", ["draft", "active", "paused"])
+        .execute()
+    )
+    listings_updated = len(_rows(listings_response))
+    delete_response = (
+        _table(service_client, "products")
+        .delete()
+        .eq("id", product_id)
+        .eq("status", "pending_moderation")
+        .execute()
+    )
+    if not _rows(delete_response):
+        raise AppError(
+            code="product_moderation_failed",
+            message="Failed to reject canonical product",
+            http_status=409,
+        )
+    return {
+        "product_id": product_id,
+        "status": "rejected",
+        "listings_updated": listings_updated,
+        "reason": reason.strip() if reason else None,
+    }, False
+
+
+@canonical_router.get("", response_model=list[CanonicalQueueItem])
+async def list_pending_canonical_products(
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    status: Annotated[str, Query(min_length=1, max_length=40)] = "pending_moderation",
+) -> list[CanonicalQueueItem]:
+    if status != "pending_moderation":
+        raise AppError(
+            code="validation_error",
+            message="Only pending_moderation status is supported",
+            http_status=422,
+            details={"status": status},
+        )
+    response = (
+        _table(service_client, "products")
+        .select("id, name, slug, brand, category_id, status, updated_at")
+        .eq("status", "pending_moderation")
+        .order("updated_at", desc=False)
+        .execute()
+    )
+    items: list[CanonicalQueueItem] = []
+    for row in _rows(response):
+        product_id = str(row["id"])
+        vendor_id, vendor_name, listing_id = _load_submitter_context(service_client, product_id)
+        updated_raw = row.get("updated_at")
+        updated_at = (
+            datetime.fromisoformat(str(updated_raw).replace("Z", "+00:00"))
+            if updated_raw
+            else datetime.now(UTC)
+        )
+        if updated_at.tzinfo is None:
+            updated_at = updated_at.replace(tzinfo=UTC)
+        brand = row.get("brand")
+        items.append(
+            CanonicalQueueItem(
+                id=UUID(product_id),
+                name=str(row["name"]),
+                slug=str(row["slug"]),
+                brand=str(brand) if isinstance(brand, str) else None,
+                category_id=UUID(str(row["category_id"])),
+                status=str(row["status"]),
+                vendor_id=vendor_id,
+                vendor_display_name=vendor_name,
+                listing_id=listing_id,
+                image_urls=_load_canonical_images(service_client, product_id),
+                updated_at=updated_at,
+            )
+        )
+    return items
+
+
+@canonical_router.patch("/{product_id}/status", response_model=CanonicalStatusResponse)
+async def patch_canonical_product_status(
+    product_id: UUID,
+    body: CanonicalStatusPatch,
+    current_user: Annotated[CurrentUser, Depends(require_moderator())],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+) -> CanonicalStatusResponse:
+    product_id_str = str(product_id)
+    before_product = _load_product(service_client, product_id_str)
+    before = {
+        "status": before_product.get("status"),
+        "name": before_product.get("name"),
+        "slug": before_product.get("slug"),
+    }
+    result, idempotent = transition_canonical_moderation(
+        product_id=product_id_str,
+        target_status=body.status,
+        reason=body.reason,
+        service_client=service_client,
+    )
+    after = {
+        "status": result["status"],
+        "listings_updated": result["listings_updated"],
+        "reason": result.get("reason"),
+        "actor_id": current_user.id,
+    }
+    recorder.record(
+        action=f"admin.products.canonical.{body.status}",
+        entity_type="product",
+        entity_id=product_id_str,
+        before=before,
+        after=after,
+    )
+    return CanonicalStatusResponse(
+        product_id=product_id,
+        status=str(result["status"]),
+        listings_updated=int(result["listings_updated"]),
+        idempotent=idempotent,
+    )
+
+
 admin_router.include_router(products_router)
+admin_router.include_router(canonical_router)

@@ -24,6 +24,8 @@
       "subtitle": "Choose a moderation queue. This hub does not invent tools that are not wired to the API.",
       "productsTitle": "Duplicate products",
       "productsBody": "Review merge candidates from the live duplicates API.",
+      "canonicalTitle": "Canonical approval",
+      "canonicalBody": "Approve or reject vendor-submitted canonical products.",
       "flagsTitle": "Listing flags",
       "flagsBody": "Review customer authenticity and policy flags."
     },
@@ -244,6 +246,19 @@
         "on_track": "On track",
         "due_soon": "Due soon",
         "overdue": "Overdue"
+      },
+      "dialog": {
+        "title": "Review KYC submission",
+        "documents": "Uploaded documents",
+        "approve": "Approve",
+        "reject": "Reject",
+        "rejectReason": "Rejection reason",
+        "rejectReasonPlaceholder": "Explain why this submission was rejected",
+        "cancel": "Cancel",
+        "submitting": "Saving…",
+        "success": "Decision recorded.",
+        "failure": "Could not save decision.",
+        "noKycRecord": "No KYC record is attached to this vendor."
       }
     },
     "detail": {
@@ -341,6 +356,33 @@
       "success": "Products merged successfully.",
       "failure": "Could not merge products.",
       "idempotent": "These products were already merged — no changes made."
+    },
+    "canonical": {
+      "title": "Pending canonical products",
+      "subtitle": "Vendor-submitted products awaiting approval before they appear in the catalog.",
+      "empty": "No canonical products awaiting approval.",
+      "loading": "Loading approval queue…",
+      "error": "Could not load the approval queue.",
+      "permissionDenied": "Permission denied — moderator role required.",
+      "permissionDeniedHint": "Sign in with a superadmin or moderator account.",
+      "retry": "Retry",
+      "product": "Product",
+      "vendor": "Vendor",
+      "submitted": "Submitted",
+      "review": "Review",
+      "dialog": {
+        "title": "Review canonical product",
+        "images": "Listing images",
+        "noImages": "No images uploaded.",
+        "approve": "Approve",
+        "reject": "Reject",
+        "rejectReason": "Rejection reason",
+        "rejectReasonPlaceholder": "Explain why this product was rejected",
+        "cancel": "Cancel",
+        "submitting": "Saving…",
+        "success": "Decision recorded.",
+        "failure": "Could not save decision."
+      }
     },
     "related": {
       "title": "Curated related products",

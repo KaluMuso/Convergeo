@@ -50,6 +50,8 @@ class Persona(StrEnum):
     VENDOR = "vendor"
     OTHER_VENDOR = "other-vendor"
     ADMIN = "admin"
+    MODERATOR = "moderator"
+    SUPERADMIN = "superadmin"
 
 
 # Role set each persona authenticates with (OTHER_* differ only by owner id, which
@@ -61,6 +63,8 @@ PERSONA_ROLES: dict[Persona, frozenset[str]] = {
     Persona.VENDOR: frozenset({"vendor"}),
     Persona.OTHER_VENDOR: frozenset({"vendor"}),
     Persona.ADMIN: frozenset({"admin"}),
+    Persona.MODERATOR: frozenset({"moderator"}),
+    Persona.SUPERADMIN: frozenset({"superadmin"}),
 }
 
 PERSONA_OWNER_ID: dict[Persona, str] = {
@@ -70,6 +74,8 @@ PERSONA_OWNER_ID: dict[Persona, str] = {
     Persona.VENDOR: "00000000-0000-0000-0000-0000000e0001",
     Persona.OTHER_VENDOR: "00000000-0000-0000-0000-0000000e0002",
     Persona.ADMIN: "00000000-0000-0000-0000-0000000a0001",
+    Persona.MODERATOR: "00000000-0000-0000-0000-0000000d0001",
+    Persona.SUPERADMIN: "00000000-0000-0000-0000-0000000b0001",
 }
 
 ALL_PERSONAS = list(Persona)
@@ -477,7 +483,7 @@ def test_public_routes_have_no_auth_guard() -> None:
 
 def test_role_routes_expose_expected_role_guard() -> None:
     """Sanity: role-gated routes require only known personas' roles (allow cells valid)."""
-    known = {"customer", "vendor", "admin"}
+    known = {"customer", "vendor", "admin", "moderator", "superadmin"}
     for entry in _ROLE_ROUTES:
         assert entry.required_roles, f"{entry.key} classified ROLE but no roles detected"
         unknown = entry.required_roles - known
