@@ -338,9 +338,18 @@ importers:
 
   packages/observability:
     devDependencies:
+      '@sentry/nextjs':
+        specifier: ^10.69.0
+        version: 10.69.0(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(@opentelemetry/sdk-trace-base@2.10.0(@opentelemetry/api@1.9.1))(next@15.5.22(@opentelemetry/api@1.9.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(webpack@5.108.4(lightningcss@1.32.0))
       '@types/node':
         specifier: ^22.20.1
         version: 22.20.1
+      '@types/react':
+        specifier: ^19.2.8
+        version: 19.2.18
+      react:
+        specifier: ^19.2.8
+        version: 19.2.8
       typescript:
         specifier: ^5.8.2
         version: 5.9.3

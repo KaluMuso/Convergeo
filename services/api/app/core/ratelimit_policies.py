@@ -78,6 +78,10 @@ CLOUDINARY_WEBHOOK = RateLimitPolicy(
 PUBLIC_BEACON = RateLimitPolicy(
     scope="analytics_collect_ip", limit=120, window=timedelta(minutes=1)
 )
+# Public browser error beacon from Next.js error boundaries (navigator.sendBeacon).
+TELEMETRY_FRONTEND_ERRORS = RateLimitPolicy(
+    scope="telemetry_frontend_errors_ip", limit=60, window=timedelta(minutes=1)
+)
 
 
 # --- Exemption allowlist (EXPLICIT + documented — no silent gaps) -----------
@@ -274,6 +278,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /tickets/verify": SENSITIVE_WRITE,
     "POST /tickets/verify/batch": SENSITIVE_WRITE,
     "POST /tickets/{ticket_id}/transfer": STANDARD_WRITE,
+    "POST /telemetry/frontend-errors": TELEMETRY_FRONTEND_ERRORS,
     # M18-P05 intake review. Link mint/redeem are SENSITIVE: a link is a
     # single-use credential-adjacent artefact, so minting is deliberately cheap
     # to police and expensive to farm. Submission is SENSITIVE because it is the

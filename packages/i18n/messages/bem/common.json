@@ -6,6 +6,12 @@
     "loading": "Ilekete…",
     "retry": "Wesheni limbi"
   },
+  "errorPage": {
+    "code": "500",
+    "heading": "Icintu caciluka",
+    "body": "Twapoka icilubo. Wesheni limbi — ilyo cikonka, twishibikeni.",
+    "retry": "Wesheni limbi"
+  },
   "greeting": "Muli shani, {name}!",
   "install": {
     "action": "Instala app",

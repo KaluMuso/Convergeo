@@ -11,3 +11,11 @@ export {
   scrub,
   scrubText,
 } from "./scrub";
+export {
+  reportClientError,
+  type ClientErrorApplication,
+  type ClientErrorBoundary,
+  type ClientErrorPayload,
+  type ReportClientErrorOptions,
+} from "./report-client-error";
+export { useReportClientError } from "./use-report-client-error";
