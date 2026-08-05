@@ -5,11 +5,11 @@ import { Button } from "@vergeo/ui/src/button";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { IconChevronDown } from "@vergeo/ui/src/icons";
 import { LinkButton } from "@vergeo/ui/src/link-button";
-import { Skeleton } from "@vergeo/ui/src/skeleton";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { CartPageSkeleton } from "./cart-page-skeleton";
 import { ChangeNotices, type ChangeNoticeLabels } from "./change-notices";
 import { CartLineItem, type CartLineItemLabels } from "./line-items";
 import {
@@ -186,6 +186,7 @@ export function indexNoticesByListing(notices: ChangeNotice[]): Record<string, C
 
 export type CartPageLabels = {
   title: string;
+  loading: string;
   emptyTitle: string;
   emptyBody: string;
   emptyTrust: CartEmptyTrustLabels;
@@ -339,31 +340,7 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
   }, [cart, itemCount, notices]);
 
   if (loading && !cart) {
-    return (
-      <div data-testid="cart-loading">
-        <p className="sr-only" aria-live="polite">
-          {labels.line.updating}
-        </p>
-        <div className="flex flex-col gap-3 motion-stagger" aria-hidden="true">
-          <Skeleton shape="line" width="12rem" height="1.75rem" />
-          {[0, 1].map((groupIndex) => (
-            <section key={groupIndex} className="flex flex-col gap-3">
-              <Skeleton shape="line" width="10rem" />
-              <Skeleton height="4rem" />
-              {[0, 1].map((lineIndex) => (
-                <div key={lineIndex} className="flex gap-3">
-                  <Skeleton width="4rem" height="4rem" />
-                  <div className="flex flex-1 flex-col gap-2 py-1">
-                    <Skeleton shape="line" width="75%" />
-                    <Skeleton shape="line" width="40%" />
-                  </div>
-                </div>
-              ))}
-            </section>
-          ))}
-        </div>
-      </div>
-    );
+    return <CartPageSkeleton loadingLabel={labels.loading} />;
   }
 
   if (loadError && !cart) {

@@ -3,6 +3,7 @@ import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
+import { CartPageSkeleton } from "../_components/cart/cart-page-skeleton";
 import { CartPageView, type CartPageLabels } from "../_components/cart/vendor-groups";
 
 import type { Metadata } from "next";
@@ -29,6 +30,7 @@ export default async function CartPage({ params }: CartPageProps) {
 
   const labels: CartPageLabels = {
     title: t("cart.title"),
+    loading: t("cart.loading"),
     emptyTitle: t("cart.emptyTitle"),
     emptyBody: t("cart.emptyBody"),
     emptyTrust: {
@@ -104,7 +106,7 @@ export default async function CartPage({ params }: CartPageProps) {
 
   return (
     <div className="mx-auto w-full max-w-lg px-4 py-6 lg:max-w-5xl">
-      <Suspense fallback={null}>
+      <Suspense fallback={<CartPageSkeleton loadingLabel={labels.loading} />}>
         <CartPageView locale={locale} labels={labels} />
       </Suspense>
     </div>

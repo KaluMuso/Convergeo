@@ -261,6 +261,7 @@
       "alwaysAvailable": "Available",
       "singleVendor": "Sold by this vendor only",
       "moq": "Minimum order: {count}",
+      "ariaLabel": "Purchase options",
       "lowestPrice": "Lowest price among sellers",
       "moreThanLowest": "{diff} more than the lowest offer",
       "wishlistAdd": "Save to wishlist",
@@ -268,7 +269,8 @@
       "wishlistSaved": "Saved to wishlist"
     },
     "stickyAtc": {
-      "ariaLabel": "Quick add to cart"
+      "ariaLabel": "Quick add to cart",
+      "stockMoqSeparator": "·"
     },
     "vendor": {
       "heading": "Seller",
@@ -352,6 +354,8 @@
     "price": "Price",
     "condition": "Condition",
     "distance": "{distance} away",
+    "distanceMeters": "{value} m",
+    "distanceKilometers": "{value} km",
     "vendor": "Seller",
     "fulfillment": "Options",
     "delivery": "Delivery",

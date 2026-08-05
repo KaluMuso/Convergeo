@@ -33,6 +33,7 @@ import { NoSellersPanel } from "../../_components/pdp/no-sellers-panel";
 import { PdpDetailsTabs } from "../../_components/pdp/pdp-details-tabs";
 import { ProductViewTracker } from "../../_components/pdp/product-view-tracker";
 import { RelatedProducts } from "../../_components/pdp/related-products";
+import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
 
 import {
@@ -474,7 +475,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   const overviewParagraphs = descriptionParagraphs(product.description);
 
   const reviewsPanel = (
-    <Suspense fallback={null}>
+    <Suspense fallback={<ReviewsSkeleton />}>
       <ReviewsPanel
         locale={locale}
         productId={product.id}
@@ -604,6 +605,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           buyBoxLabels={{
             priceLabel: t("pdp.buyBox.priceLabel"),
             quantityLabel: t("pdp.buyBox.quantityLabel"),
+            buyBoxAriaLabel: t("pdp.buyBox.ariaLabel"),
             decreaseLabel: t("pdp.buyBox.decrease"),
             increaseLabel: t("pdp.buyBox.increase"),
             decreaseSymbol: t("pdp.buyBox.decreaseSymbol"),

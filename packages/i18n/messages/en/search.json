@@ -55,7 +55,8 @@
   "results": {
     "count": "{count, plural, one {# result} other {# results}}",
     "forQuery": "Results for “{query}”",
-    "degraded": "Showing keyword matches (semantic search unavailable)"
+    "degraded": "Showing keyword matches (semantic search unavailable)",
+    "productGridAria": "Product search results"
   },
   "input": {
     "ariaLabel": "Search",

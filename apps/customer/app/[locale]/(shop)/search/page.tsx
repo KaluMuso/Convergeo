@@ -29,6 +29,7 @@ import {
 import { SearchInput } from "../_components/search/search-input";
 import { searchTabKinds, type SearchKind } from "../_components/search/search-kinds";
 import { SearchMobileFilterDrawer } from "../_components/search/search-mobile-filter-drawer";
+import { SearchResultsSkeleton } from "../_components/search/search-results-skeleton";
 import { SearchUnavailablePanel } from "../_components/search/search-unavailable-panel";
 import {
   normalizeSearchQuery,
@@ -368,6 +369,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     mediaEmpty: tCatalog("plp.card.mediaEmpty"),
     noReviews: tCatalog("plp.card.noReviews"),
     reviewCount: tCatalog("plp.card.reviewCount"),
+    productGridAria: t("results.productGridAria"),
     loadMore: t("pagination.loadMore"),
     loading: t("pagination.loading"),
     moreLoaded: t("pagination.moreLoaded"),
@@ -482,7 +484,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       ) : null}
 
       {view.status === "results" ? (
-        <Suspense fallback={null}>
+        <Suspense fallback={<SearchResultsSkeleton />}>
           {showCategoryFilters ? (
             <div className="grid gap-3 lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-4 xl:grid-cols-[15rem_minmax(0,1fr)]">
               <div className="hidden lg:block">

@@ -5,6 +5,18 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, number | string>) => {
+    if (key === "comparison.distanceMeters") {
+      return `${values?.value ?? 0} m`;
+    }
+    if (key === "comparison.distanceKilometers") {
+      return `${values?.value ?? 0} km`;
+    }
+    return key;
+  },
+}));
+
 import { Comparison, type ComparisonLabels, type ComparisonListing } from "./comparison";
 
 afterEach(() => {

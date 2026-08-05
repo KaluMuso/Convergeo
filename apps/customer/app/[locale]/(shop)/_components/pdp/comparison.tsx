@@ -158,7 +158,19 @@ export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: 
   return earthRadiusM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export function formatDistanceMeters(meters: number): string {
+export function formatDistanceMeters(
+  meters: number,
+  units?: {
+    meters: (value: number) => string;
+    kilometers: (value: number) => string;
+  },
+): string {
+  if (units) {
+    if (meters < 1000) {
+      return units.meters(Math.round(meters));
+    }
+    return units.kilometers(Number((meters / 1000).toFixed(1)));
+  }
   if (meters < 1000) {
     return `${Math.round(meters)} m`;
   }
@@ -238,6 +250,7 @@ export function Comparison({
   logisticsPillLabels,
   onSelect,
 }: ComparisonProps) {
+  const t = useTranslations("catalog");
   const [sort, setSort] = useState<ComparisonSort>("price");
   const [geo, setGeo] = useState<GeoCoords | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
@@ -296,6 +309,15 @@ export function Comparison({
     return distances;
   }, [listings, userCoords]);
 
+  const formatLocalizedDistance = useCallback(
+    (meters: number) =>
+      formatDistanceMeters(meters, {
+        meters: (value) => t("comparison.distanceMeters", { value }),
+        kilometers: (value) => t("comparison.distanceKilometers", { value }),
+      }),
+    [t],
+  );
+
   if (!shouldShowComparison(listings.length)) {
     return null;
   }
@@ -341,7 +363,7 @@ export function Comparison({
           const distanceM = distanceByListingId.get(listing.id);
           const distanceLabel =
             distanceM !== undefined
-              ? labels.distance.replace("{distance}", formatDistanceMeters(distanceM))
+              ? labels.distance.replace("{distance}", formatLocalizedDistance(distanceM))
               : "—";
           const isSelected = listing.id === selectedListingId;
           const ratingLabel =
@@ -429,7 +451,7 @@ export function Comparison({
               const distanceM = distanceByListingId.get(listing.id);
               const distanceLabel =
                 distanceM !== undefined
-                  ? labels.distance.replace("{distance}", formatDistanceMeters(distanceM))
+                  ? labels.distance.replace("{distance}", formatLocalizedDistance(distanceM))
                   : "—";
               const isSelected = listing.id === selectedListingId;
               const ratingLabel =
@@ -618,7 +640,7 @@ export function PdpInteractiveBody({
     <div
       className={[
         "flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)] lg:items-start lg:gap-8",
-        stickyAtcVisible ? "pb-20 lg:pb-0" : "",
+        stickyAtcVisible ? "pb-28 lg:pb-0" : "",
       ]
         .filter(Boolean)
         .join(" ")}

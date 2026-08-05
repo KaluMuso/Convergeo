@@ -78,6 +78,7 @@ export function QtyStepper({
         className="min-w-12 text-center font-mono text-lg"
         aria-live="polite"
         aria-busy={pending}
+        aria-label={labels.value.replace("{count}", String(shownQty))}
       >
         {shownQty}
       </output>

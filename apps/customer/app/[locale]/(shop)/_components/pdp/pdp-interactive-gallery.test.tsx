@@ -100,6 +100,7 @@ function renderBody(
         buyBoxLabels={{
           priceLabel: "Price",
           quantityLabel: "Quantity",
+          buyBoxAriaLabel: "Purchase options",
           decreaseLabel: "Decrease",
           increaseLabel: "Increase",
           decreaseSymbol: "-",
