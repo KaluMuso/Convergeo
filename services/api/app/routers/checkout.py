@@ -211,7 +211,7 @@ def _fetch_active_cart_by_user(client: Client, user_id: str) -> dict[str, Any] |
 def _fetch_cart_items(client: Client, cart_id: str) -> list[dict[str, Any]]:
     response = (
         client.table("cart_items")
-        .select("id, cart_id, listing_id, qty, unit_price_ngwee, wholesale")
+        .select("id, cart_id, listing_id, qty, unit_price_ngwee, wholesale, pickup_location_id")
         .eq("cart_id", cart_id)
         .execute()
     )
@@ -558,12 +558,17 @@ async def create_checkout_session(
 
     ttl_min = get_reservation_ttl_minutes()
     reservations: list[ReservationClaimOut] = []
+    items_by_listing = {str(item["listing_id"]): item for item in items}
     for line in line_views:
+        cart_item = items_by_listing.get(line.listing_id, {})
+        raw_location = cart_item.get("pickup_location_id")
+        location_id = str(raw_location) if isinstance(raw_location, str) else None
         result = claim_reservation(
             listing_id=line.listing_id,
             checkout_group_id=session_id,
             qty=line.qty,
             ttl_minutes=ttl_min,
+            location_id=location_id,
         )
         reservations.append(
             ReservationClaimOut(
