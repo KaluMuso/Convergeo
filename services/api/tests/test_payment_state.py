@@ -66,6 +66,10 @@ class FakeQuery:
         self._filters.append(("in", column, values))
         return self
 
+    def is_(self, column: str, value: Any) -> FakeQuery:
+        self._filters.append(("is", column, value))
+        return self
+
     def lt(self, column: str, value: Any) -> FakeQuery:
         self._filters.append(("lt", column, value))
         return self
@@ -134,6 +138,12 @@ class FakeQuery:
                 return False
             if op == "in" and cell not in set(value):
                 return False
+            if op == "is":
+                if value == "null":
+                    if cell is not None:
+                        return False
+                elif cell != value:
+                    return False
             if op == "lt" and not (str(cell) < str(value)):
                 return False
         return True
