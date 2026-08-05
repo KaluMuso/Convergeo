@@ -155,6 +155,7 @@
     "unavailableRetry": "Yesaninso",
     "meta": {
       "descriptionFallback": "Gulani {name} pa Vergeo5",
+      "descriptionWithPrice": "Fananirani mitengo ya {name} kuchokera kwa {count, plural, one {# wogulitsa} other {# ogulitsa}} pa Vergeo5. Kuyambira {price}.",
       "notFoundTitle": "Chinthu sichipezeka"
     },
     "overview": {
