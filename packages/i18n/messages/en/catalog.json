@@ -277,6 +277,31 @@
       "rating": "{rating} ({count, plural, one {# review} other {# reviews}})",
       "viewStore": "View store"
     },
+    "contactVendor": {
+      "cta": "Contact seller",
+      "dialogTitle": "Ask about this item",
+      "dialogHint": "Your message goes to {vendor} about this listing. Replies stay on Vergeo5 — we never share your phone number in the message.",
+      "messageLabel": "Your question",
+      "messagePlaceholder": "e.g. Is this still available? Can you deliver to Kabulonga?",
+      "submit": "Send message",
+      "submitting": "Sending…",
+      "cancel": "Cancel",
+      "done": "Done",
+      "successTitle": "Message sent",
+      "successBody": "The seller will reply here. We'll notify you when they respond.",
+      "successContinued": "Your message was added to your existing conversation with this seller.",
+      "signInPrompt": "Sign in to message the seller about this listing.",
+      "signInCta": "Sign in to continue",
+      "errors": {
+        "empty": "Enter a message before sending.",
+        "tooLong": "Message is too long.",
+        "prohibited": "This message cannot be sent. Remove restricted content and try again.",
+        "rateLimited": "Too many messages. Please wait and try again.",
+        "ownListing": "You cannot message yourself about your own listing.",
+        "generic": "Could not send your message. Check your connection and try again.",
+        "signInRequired": "Sign in to contact the seller."
+      }
+    },
     "trust": {
       "preferredSeller": "Preferred seller — {name}",
       "seller": "Sold by {name}",
@@ -287,8 +312,11 @@
     },
     "condition": {
       "new": "New",
-      "refurbished": "Refurbished"
-    }
+      "refurbished": "Refurbished",
+      "used": "Used",
+      "authenticity": "Condition & Authenticity"
+    },
+    "leadTime": "Requires {days} days lead time"
   },
   "returnableBadge": {
     "label": "Returnable within {days} days"

@@ -3581,6 +3581,27 @@ export type Database = {
           },
         ]
       }
+      user_saves: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_kind: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_kind: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_kind?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_wishlist: {
         Row: {
           created_at: string
@@ -3719,6 +3740,7 @@ export type Database = {
           moq: number
           price_ngwee: number
           price_tiers: Json | null
+          product_class: string
           product_id: string | null
           return_window_hours: number | null
           returnable: boolean
@@ -3730,6 +3752,7 @@ export type Database = {
           title_override: string | null
           unit_step_milli: number
           updated_at: string
+          vendor_capacity_per_week: number | null
           vendor_id: string
           wholesale: boolean
         }
@@ -3745,6 +3768,7 @@ export type Database = {
           moq?: number
           price_ngwee: number
           price_tiers?: Json | null
+          product_class?: string
           product_id?: string | null
           return_window_hours?: number | null
           returnable?: boolean
@@ -3756,6 +3780,7 @@ export type Database = {
           title_override?: string | null
           unit_step_milli?: number
           updated_at?: string
+          vendor_capacity_per_week?: number | null
           vendor_id: string
           wholesale?: boolean
         }
@@ -3771,6 +3796,7 @@ export type Database = {
           moq?: number
           price_ngwee?: number
           price_tiers?: Json | null
+          product_class?: string
           product_id?: string | null
           return_window_hours?: number | null
           returnable?: boolean
@@ -3782,6 +3808,7 @@ export type Database = {
           title_override?: string | null
           unit_step_milli?: number
           updated_at?: string
+          vendor_capacity_per_week?: number | null
           vendor_id?: string
           wholesale?: boolean
         }

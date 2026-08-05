@@ -1,0 +1,174 @@
+"""Product-class guards shared by listing create and cart mutations."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+from typing import Any
+
+from app.errors import AppError
+
+
+def is_made_to_order_listing(listing: dict[str, Any]) -> bool:
+    product_class = str(listing.get("product_class") or "A")
+    if product_class == "E":
+        return True
+    return str(listing.get("fulfilment_mode") or "stocked") == "made_to_order"
+
+
+def is_used_class_listing(listing: dict[str, Any]) -> bool:
+    product_class = str(listing.get("product_class") or "A")
+    if product_class == "D":
+        return True
+    return str(listing.get("condition") or "") == "used"
+
+
+def listing_lead_time_days(listing: dict[str, Any]) -> int | None:
+    if not is_made_to_order_listing(listing):
+        return None
+    raw = listing.get("lead_time_days")
+    if isinstance(raw, int) and raw > 0:
+        return raw
+    return None
+
+
+def validate_listing_purchasable_for_cart(
+    *,
+    listing: dict[str, Any],
+    qty: int,
+    evidence_image_count: int,
+    weekly_committed_qty: int = 0,
+) -> None:
+    """Raise AppError when a listing fails class-specific cart rules."""
+    if is_used_class_listing(listing):
+        condition = str(listing.get("condition") or "")
+        if condition == "new":
+            raise AppError(
+                code="cart.class_d_invalid_condition",
+                message="Used listings cannot be sold as new",
+                http_status=400,
+                details={
+                    "message_key": "cart.class_d_invalid_condition",
+                    "listing_id": str(listing.get("id", "")),
+                    "retry": False,
+                },
+            )
+        if evidence_image_count < 1:
+            raise AppError(
+                code="cart.class_d_missing_evidence",
+                message="Used listings require photographic evidence before purchase",
+                http_status=400,
+                details={
+                    "message_key": "cart.class_d_missing_evidence",
+                    "listing_id": str(listing.get("id", "")),
+                    "retry": False,
+                },
+            )
+
+    if is_made_to_order_listing(listing):
+        capacity = listing.get("vendor_capacity_per_week")
+        if not isinstance(capacity, int) or capacity <= 0:
+            raise AppError(
+                code="cart.class_e_missing_capacity",
+                message="Made-to-order listing is missing weekly capacity",
+                http_status=400,
+                details={
+                    "message_key": "cart.class_e_missing_capacity",
+                    "listing_id": str(listing.get("id", "")),
+                    "retry": False,
+                },
+            )
+        lead_time = listing_lead_time_days(listing)
+        if lead_time is None:
+            raise AppError(
+                code="cart.class_e_missing_lead_time",
+                message="Made-to-order listing is missing lead time",
+                http_status=400,
+                details={
+                    "message_key": "cart.class_e_missing_lead_time",
+                    "listing_id": str(listing.get("id", "")),
+                    "retry": False,
+                },
+            )
+        remaining = capacity - weekly_committed_qty
+        if qty > remaining:
+            raise AppError(
+                code="cart.class_e_capacity_exceeded",
+                message="Weekly made-to-order capacity exceeded",
+                http_status=400,
+                details={
+                    "message_key": "cart.class_e_capacity_exceeded",
+                    "listing_id": str(listing.get("id", "")),
+                    "capacity_per_week": capacity,
+                    "remaining": max(remaining, 0),
+                    "requested_qty": qty,
+                    "retry": True,
+                },
+            )
+        return
+
+    stock_mode = str(listing.get("stock_mode") or "tracked")
+    if stock_mode == "tracked":
+        stock_qty = listing.get("stock_qty")
+        if isinstance(stock_qty, int) and qty > stock_qty:
+            raise AppError(
+                code="cart.insufficient_stock",
+                message="Requested quantity exceeds available stock",
+                http_status=400,
+                details={
+                    "message_key": "cart.insufficient_stock",
+                    "listing_id": str(listing.get("id", "")),
+                    "available_qty": max(stock_qty, 0),
+                    "requested_qty": qty,
+                    "retry": True,
+                },
+            )
+
+
+def iso_week_start_utc() -> datetime:
+    now = datetime.now(UTC)
+    week_start = now - timedelta(days=now.weekday())
+    return week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def count_weekly_committed_qty(client: Any, listing_id: str) -> int:
+    """Sum qty for this listing on non-cancelled orders placed since ISO week start."""
+    week_start = iso_week_start_utc().isoformat()
+    order_items = (
+        client.table("order_items")
+        .select("qty, orders!inner(status, created_at)")
+        .eq("listing_id", listing_id)
+        .gte("orders.created_at", week_start)
+        .execute()
+    )
+    rows = order_items.data if isinstance(order_items.data, list) else []
+    cancelled = frozenset({"cancelled", "refunded"})
+    total = 0
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        order = row.get("orders")
+        if isinstance(order, list):
+            order = order[0] if order else None
+        if not isinstance(order, dict):
+            continue
+        status = str(order.get("status") or "")
+        if status in cancelled:
+            continue
+        qty = row.get("qty")
+        if isinstance(qty, int):
+            total += qty
+    return total
+
+
+def count_listing_images(client: Any, listing_id: str) -> int:
+    response = (
+        client.table("listing_images")
+        .select("id", count="exact")
+        .eq("listing_id", listing_id)
+        .execute()
+    )
+    count = getattr(response, "count", None)
+    if isinstance(count, int):
+        return count
+    rows = response.data if isinstance(response.data, list) else []
+    return len(rows)

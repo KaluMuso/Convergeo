@@ -137,8 +137,11 @@
     },
     "condition": {
       "new": "Yatsopano",
-      "refurbished": "Yokonzedwanso"
+      "refurbished": "Yokonzedwanso",
+      "used": "Yosale",
+      "authenticity": "Makhalidwe ndi Chitsimikizo"
     },
+    "leadTime": "Ifunika masiku {days} ogwira ntchito",
     "gallery": {
       "empty": "Palibe zithunzi",
       "indicator": "Chithunzi {current} cha {total}",
@@ -187,6 +190,31 @@
       "preferredBadge": "Wogulitsa preferred",
       "rating": "{rating} ({count, plural, one {# review} other {# ma-reviews}})",
       "viewStore": "Onani store"
+    },
+    "contactVendor": {
+      "cta": "Lankhulani ndi wogulitsa",
+      "dialogTitle": "Funsani za chinthu ichi",
+      "dialogHint": "Uthenga wanu ukapita kwa {vendor} pa listing iyi. Mayankho akhalabe pa Vergeo5 — sitigawana nambala ya foni mu uthenga.",
+      "messageLabel": "Funso lanu",
+      "messagePlaceholder": "Mwachitsanzo: Chilipo mu stock? Mungathe kutumiza ku Kabulonga?",
+      "submit": "Tumizani uthenga",
+      "submitting": "Ikutumiza…",
+      "cancel": "Lekani",
+      "done": "Zatheka",
+      "successTitle": "Uthenga watumizidwa",
+      "successBody": "Wogulitsa adzayankha pano. Tidzakudziwitsani akayankha.",
+      "successContinued": "Uthenga wanu wawonjezedwa ku zokambirana zanu zomwe zinalipo ndi wogulitsa uyu.",
+      "signInPrompt": "Lowani kuti mutumize uthenga kwa wogulitsa pa listing iyi.",
+      "signInCta": "Lowani kuti mupitilire",
+      "errors": {
+        "empty": "Lembani uthenga musanatumize.",
+        "tooLong": "Uthenga ndi wautali kwambiri.",
+        "prohibited": "Sitingathe kutumiza uthenga uwu. Chotsani zoletsedwa ndi yesaninso.",
+        "rateLimited": "Ma-messages ambiri. Dikirani ndi yesaninso.",
+        "ownListing": "Simungathe kudzitumizira uthenga pa listing yanu.",
+        "generic": "Sitinathe kutumiza uthenga. Onani connection ndi yesaninso.",
+        "signInRequired": "Lowani kuti mulankhule ndi wogulitsa."
+      }
     }
   },
   "plp": {

@@ -264,10 +264,13 @@ function toProductListings(product: ProductDetail, alt: string): ProductListing[
     title: listing.title,
     priceNgwee: listing.price_ngwee,
     condition: listing.condition,
+    productClass: listing.product_class ?? "A",
     stockMode: listing.stock_mode,
     stockQty: listing.stock_qty,
     moq: listing.moq,
     inStock: listing.in_stock,
+    leadTimeDays: listing.lead_time_days ?? null,
+    vendorCapacityPerWeek: listing.vendor_capacity_per_week ?? null,
     vendor: {
       slug: listing.vendor.slug,
       displayName: listing.vendor.display_name,
@@ -614,6 +617,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             singleVendorLabel: t("pdp.buyBox.singleVendor"),
             conditionNewLabel: t("pdp.condition.new"),
             conditionRefurbishedLabel: t("pdp.condition.refurbished"),
+            conditionUsedLabel: t("pdp.condition.used"),
+            conditionAuthenticityLabel: t("pdp.condition.authenticity"),
           }}
           comparisonLabels={{
             heading: t("comparison.heading"),
@@ -654,6 +659,31 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             add: t("pdp.buyBox.wishlistAdd"),
             remove: t("pdp.buyBox.wishlistRemove"),
             saved: t("pdp.buyBox.wishlistSaved"),
+          }}
+          contactVendorLabels={{
+            cta: t("pdp.contactVendor.cta"),
+            dialogTitle: t("pdp.contactVendor.dialogTitle"),
+            dialogHint: t("pdp.contactVendor.dialogHint"),
+            messageLabel: t("pdp.contactVendor.messageLabel"),
+            messagePlaceholder: t("pdp.contactVendor.messagePlaceholder"),
+            submit: t("pdp.contactVendor.submit"),
+            submitting: t("pdp.contactVendor.submitting"),
+            cancel: t("pdp.contactVendor.cancel"),
+            done: t("pdp.contactVendor.done"),
+            successTitle: t("pdp.contactVendor.successTitle"),
+            successBody: t("pdp.contactVendor.successBody"),
+            successContinued: t("pdp.contactVendor.successContinued"),
+            signInPrompt: t("pdp.contactVendor.signInPrompt"),
+            signInCta: t("pdp.contactVendor.signInCta"),
+            errors: {
+              empty: t("pdp.contactVendor.errors.empty"),
+              tooLong: t("pdp.contactVendor.errors.tooLong"),
+              prohibited: t("pdp.contactVendor.errors.prohibited"),
+              rateLimited: t("pdp.contactVendor.errors.rateLimited"),
+              ownListing: t("pdp.contactVendor.errors.ownListing"),
+              generic: t("pdp.contactVendor.errors.generic"),
+              signInRequired: t("pdp.contactVendor.errors.signInRequired"),
+            },
           }}
           comparePageLabel={t("comparePage.entryCta")}
         />

@@ -1,6 +1,7 @@
 "use client";
 
 import { formatK } from "@vergeo/i18n";
+import { Badge } from "@vergeo/ui/src/badge";
 import { Button } from "@vergeo/ui/src/button";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
 import { PriceBlock } from "@vergeo/ui/src/price-block";
@@ -19,10 +20,13 @@ export type BuyBoxListing = {
   title: string;
   priceNgwee: number;
   condition: ListingCondition;
+  productClass?: string;
   stockMode: "tracked" | "always_available";
   stockQty: number | null;
   moq: number;
   inStock: boolean;
+  leadTimeDays?: number | null;
+  vendorCapacityPerWeek?: number | null;
 };
 
 export type BuyBoxSellerSummary = {
@@ -49,6 +53,8 @@ export type BuyBoxLabels = {
   singleVendorLabel: string;
   conditionNewLabel: string;
   conditionRefurbishedLabel: string;
+  conditionUsedLabel: string;
+  conditionAuthenticityLabel: string;
 };
 
 export type BuyBoxProps = {
@@ -72,6 +78,13 @@ export type BuyBoxProps = {
 export function getMaxQuantity(listing: BuyBoxListing): number | null {
   if (!listing.inStock) {
     return listing.moq;
+  }
+  if (listing.productClass === "E" || listing.leadTimeDays != null) {
+    const capacity = listing.vendorCapacityPerWeek;
+    if (typeof capacity === "number" && capacity > 0) {
+      return Math.max(listing.moq, capacity);
+    }
+    return 99;
   }
   if (listing.stockMode === "always_available") {
     return 99;
@@ -99,6 +112,9 @@ export function getStockLabel(
 ): string {
   if (!listing.inStock) {
     return labels.outOfStockLabel;
+  }
+  if (listing.productClass === "E" || (listing.leadTimeDays != null && listing.leadTimeDays > 0)) {
+    return labels.alwaysAvailableLabel;
   }
   if (listing.stockMode === "always_available") {
     return labels.alwaysAvailableLabel;
@@ -139,7 +155,14 @@ export function BuyBox({
     [listing, labels, t],
   );
   const conditionLabel =
-    listing.condition === "new" ? labels.conditionNewLabel : labels.conditionRefurbishedLabel;
+    listing.condition === "new"
+      ? labels.conditionNewLabel
+      : listing.condition === "used"
+        ? labels.conditionUsedLabel
+        : labels.conditionRefurbishedLabel;
+  const showAuthenticityBadge = listing.productClass === "D" || listing.condition === "used";
+  const leadTimeDays =
+    listing.leadTimeDays != null && listing.leadTimeDays > 0 ? listing.leadTimeDays : null;
 
   const decrease = useCallback(() => {
     setQuantity((current) => clampQuantity(current - 1, listing));
@@ -200,6 +223,9 @@ export function BuyBox({
     >
       <div className="flex flex-wrap items-center gap-2">
         <ConditionBadge condition={listing.condition} label={conditionLabel} />
+        {showAuthenticityBadge ? (
+          <Badge variant="featured" label={labels.conditionAuthenticityLabel} className="text-xs" />
+        ) : null}
         {singleVendor ? (
           <p className="text-sm text-text-2" data-testid="pdp-single-vendor">
             {labels.singleVendorLabel}
@@ -239,6 +265,12 @@ export function BuyBox({
       >
         {stockLabel}
       </p>
+
+      {leadTimeDays != null ? (
+        <p className="text-sm font-medium text-text-2" data-testid="pdp-lead-time">
+          {t("pdp.leadTime", { days: leadTimeDays })}
+        </p>
+      ) : null}
 
       {listing.moq > 1 ? (
         <p className="text-sm text-text-2" data-testid="pdp-moq">

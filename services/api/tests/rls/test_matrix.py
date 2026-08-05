@@ -2674,6 +2674,16 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: select_insert_delete_only(),
         Persona.ADMIN: all_but_update_denied(),
     },
+    # R02 (D37). Polymorphic saves for products and events. Same posture as
+    # user_wishlist: owner select/insert/delete; no UPDATE grant on the table.
+    "user_saves": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_insert_delete_only(),
+        Persona.OTHER_CUSTOMER: select_insert_delete_only(),
+        Persona.VENDOR: select_insert_delete_only(),
+        Persona.OTHER_VENDOR: select_insert_delete_only(),
+        Persona.ADMIN: all_but_update_denied(),
+    },
     # R02-P14 (D37). A follow is a commerce subscription, not a social graph.
     # Owners read/insert/delete their OWN rows (non-owners match zero rows →
     # permit); anon has no grant at all (→ deny); UPDATE is granted to nobody,

@@ -284,8 +284,11 @@
     },
     "condition": {
       "new": "全新",
-      "refurbished": "翻新"
-    }
+      "refurbished": "翻新",
+      "used": "二手",
+      "authenticity": "成色与真实性"
+    },
+    "leadTime": "需要 {days} 天备货期"
   },
   "returnableBadge": {
     "label": "{days} 天内可退货"

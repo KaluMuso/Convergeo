@@ -10,10 +10,9 @@ overrides:
   eslint>minimatch: 10.2.5
   minimatch@10.2.5>brace-expansion: 5.0.9
   minimatch@10.2.6>brace-expansion: 5.0.9
-  brace-expansion@<5.0.9: 5.0.9
-  brace-expansion@<1.1.18: 1.1.18
-  fast-uri@>=3.0.0 <3.1.5: 3.1.5
-  ip-address@<10.3.1: 10.3.1
+  minimatch@3.1.5>brace-expansion: 1.1.18
+  fast-uri: 3.1.5
+  ip-address: 10.4.0
   postcss@>=8.0.0 <8.5.18: 8.5.18
   sharp@<0.35.0: 0.35.0
 
@@ -3208,8 +3207,8 @@ packages:
   intl-messageformat@11.2.12:
     resolution: {integrity: sha512-KW70Xxfcvy7vV3qODfvShWkFDPMqKDAa4N+hSyVBWGNtVhTUFYaqlD/l88DaYPKiVcPP4rPQ3qnH7i5K82Mg7g==}
 
-  ip-address@10.3.1:
-    resolution: {integrity: sha512-1e9d3kb97NHJTIJDZW9rKqW2h6+dFa50Dy0fpPSMQp2ADje5gvKsXmdiK6dwY5t76TaTt5+P5N1Y/LoToIxP6g==}
+  ip-address@10.4.0:
+    resolution: {integrity: sha512-oSK96Grm3aP6OrS263xVxbNDGVL7rzBtYdpGqlDG8iQdoenDoTs/nkki+DflYbAEE8Xl6o5YxhxlrKvI3nqKXQ==}
     engines: {node: '>= 12'}
 
   ipaddr.js@1.9.1:
@@ -8029,7 +8028,7 @@ snapshots:
       '@formatjs/fast-memoize': 3.1.7
       '@formatjs/icu-messageformat-parser': 3.5.15
 
-  ip-address@10.3.1: {}
+  ip-address@10.4.0: {}
 
   ipaddr.js@1.9.1: {}
 
@@ -9285,7 +9284,7 @@ snapshots:
 
   socks@2.8.9:
     dependencies:
-      ip-address: 10.3.1
+      ip-address: 10.4.0
       smart-buffer: 4.2.0
 
   source-map-js@1.2.1: {}

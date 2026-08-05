@@ -65,7 +65,11 @@ def fetch_listing(listing_id: str, *, business_eligible: bool = False) -> dict[s
     service = get_service_client()
     response = (
         service.client.table("vendor_listings")
-        .select("id, vendor_id, title_override, price_ngwee, wholesale, moq, price_tiers, status")
+        .select(
+            "id, vendor_id, title_override, price_ngwee, wholesale, moq, price_tiers, status, "
+            "product_class, condition, fulfilment_mode, lead_time_days, vendor_capacity_per_week, "
+            "stock_mode, stock_qty"
+        )
         .eq("id", listing_id)
         .limit(1)
         .execute()
@@ -109,7 +113,11 @@ def fetch_listings_for_items(items: list[dict[str, Any]]) -> dict[str, dict[str,
     service = get_service_client()
     response = (
         service.client.table("vendor_listings")
-        .select("id, vendor_id, title_override, price_ngwee, wholesale, moq, price_tiers, status")
+        .select(
+            "id, vendor_id, title_override, price_ngwee, wholesale, moq, price_tiers, status, "
+            "product_class, condition, fulfilment_mode, lead_time_days, vendor_capacity_per_week, "
+            "stock_mode, stock_qty"
+        )
         .in_("id", listing_ids)
         .execute()
     )

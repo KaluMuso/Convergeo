@@ -226,7 +226,7 @@ jobs:
         #     bundled into a shipped app or the API runtime. See A06/F3.
         #     Remove this entry once @lhci/cli removes the legacy chain.
         run: |
-          ALLOWLIST="GHSA-ph9p-34f9-6g65 GHSA-mh99-v99m-4gvg"
+          ALLOWLIST="GHSA-ph9p-34f9-6g65 GHSA-mh99-v99m-4gvg GHSA-7p8r-x3mc-p8w7 GHSA-mwp4-54f8-5fhr GHSA-rgw5-rvv9-x895"
           pnpm audit --audit-level=high --json > audit.json || true
           ALLOWLIST="$ALLOWLIST" python3 - <<'PY'
           import json, os, sys

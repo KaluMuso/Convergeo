@@ -3,6 +3,7 @@
 import { formatK } from "@vergeo/i18n";
 import { Badge } from "@vergeo/ui/src/badge";
 import { CornerRibbon } from "@vergeo/ui/src/corner-ribbon";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -22,7 +23,14 @@ import { StickyMobileAtc } from "./sticky-mobile-atc";
 import { useListingPurchase } from "./use-listing-purchase";
 import { VendorBlock } from "./vendor-block";
 
+import type { ContactVendorLabels } from "./contact-vendor-button";
 import type { PdpGalleryLabelStrings } from "./gallery-labels";
+
+/** Lazy — keeps first-load JS on /p/[slug] within the bundle regression budget. */
+const ContactVendorButton = dynamic(
+  () => import("./contact-vendor-button").then((mod) => mod.ContactVendorButton),
+  { ssr: false },
+);
 
 export const LUSAKA_CBD_LAT = -15.4167;
 export const LUSAKA_CBD_LNG = 28.2833;
@@ -83,10 +91,13 @@ export type ProductListing = {
   title: string;
   priceNgwee: number;
   condition: ListingCondition;
+  productClass: string;
   stockMode: "tracked" | "always_available";
   stockQty: number | null;
   moq: number;
   inStock: boolean;
+  leadTimeDays: number | null;
+  vendorCapacityPerWeek: number | null;
   vendor: {
     slug: string;
     displayName: string;
@@ -129,6 +140,7 @@ export type PdpInteractiveBodyProps = {
     remove: string;
     saved: string;
   };
+  contactVendorLabels: ContactVendorLabels;
   comparePageLabel: string;
 };
 
@@ -509,6 +521,7 @@ export function PdpInteractiveBody({
   vendorLabels,
   trustLabels,
   wishlistLabels,
+  contactVendorLabels,
   comparePageLabel,
 }: PdpInteractiveBodyProps) {
   const t = useTranslations("catalog");
@@ -545,10 +558,13 @@ export function PdpInteractiveBody({
       title: selectedListing.title,
       priceNgwee: selectedListing.priceNgwee,
       condition: selectedListing.condition,
+      productClass: selectedListing.productClass,
       stockMode: selectedListing.stockMode,
       stockQty: selectedListing.stockQty,
       moq: selectedListing.moq,
       inStock: selectedListing.inStock,
+      leadTimeDays: selectedListing.leadTimeDays,
+      vendorCapacityPerWeek: selectedListing.vendorCapacityPerWeek,
     };
   }, [selectedListing]);
 
@@ -699,6 +715,12 @@ export function PdpInteractiveBody({
                 : vendorLabels.noReviews
             }
             viewStoreLabel={vendorLabels.viewStore}
+          />
+          <ContactVendorButton
+            locale={locale}
+            listingId={selectedListing.id}
+            vendorName={selectedListing.vendor.displayName}
+            labels={contactVendorLabels}
           />
         </div>
       ) : null}

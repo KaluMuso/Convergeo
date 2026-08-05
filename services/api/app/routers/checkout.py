@@ -16,6 +16,7 @@ from app.services.cart.grouping import CartLineView, group_by_vendor
 from app.services.cart.merge import validate_item_qty_for_listing
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
+from app.services.listings.class_rules import listing_lead_time_days
 from app.services.stock.claim import claim_reservation, get_reservation_ttl_minutes
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
@@ -47,6 +48,7 @@ class CartLineOut(BaseModel):
     unit_price_ngwee: int
     line_total_ngwee: int
     title_override: str | None = None
+    lead_time_days: int | None = None
 
 
 class PickupLocationOut(BaseModel):
@@ -396,6 +398,7 @@ def _build_line_views(
                 title_override=listing.get("title_override")
                 if isinstance(listing.get("title_override"), str)
                 else None,
+                lead_time_days=listing_lead_time_days(listing),
             )
         )
     return line_views
@@ -629,6 +632,7 @@ async def create_checkout_session(
                         unit_price_ngwee=item.unit_price_ngwee,
                         line_total_ngwee=item.line_total_ngwee,
                         title_override=item.title_override,
+                        lead_time_days=item.lead_time_days,
                     )
                     for item in group.items
                 ],
