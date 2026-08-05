@@ -37,7 +37,7 @@ class FakeTable:
     def __init__(self, handler: Any) -> None:
         self._handler = handler
         self._name = ""
-        self._filters: list[tuple[str, Any]] = []
+        self._filters: list[tuple[Any, ...]] = []
         self._select_cols = ""
 
     def select(self, cols: str) -> FakeTable:
