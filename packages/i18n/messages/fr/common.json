@@ -2,6 +2,9 @@
   "app": {
     "name": "Vergeo5"
   },
+  "meta": {
+    "defaultDescription": "Achetez des produits, réservez des services et trouvez des événements en Zambie sur Vergeo5."
+  },
   "common": {
     "loading": "Chargement…",
     "retry": "Réessayer"

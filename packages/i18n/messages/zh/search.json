@@ -1,5 +1,9 @@
 {
   "title": "搜索",
+  "meta": {
+    "description": "在 Vergeo5 搜索赞比亚的商品、服务、活动和卖家。",
+    "descriptionWithQuery": "Vergeo5 上“{query}”的搜索结果。"
+  },
   "placeholder": "搜索 Vergeo5",
   "submit": "搜索",
   "recent": {

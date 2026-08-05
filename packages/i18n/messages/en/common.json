@@ -2,6 +2,9 @@
   "app": {
     "name": "Vergeo5"
   },
+  "meta": {
+    "defaultDescription": "Shop products, book services, and find events across Zambia on Vergeo5."
+  },
   "common": {
     "loading": "Loading…",
     "retry": "Try again"

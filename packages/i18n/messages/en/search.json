@@ -1,5 +1,9 @@
 {
   "title": "Search",
+  "meta": {
+    "description": "Search products, services, events, and vendors across Zambia on Vergeo5.",
+    "descriptionWithQuery": "Search results for “{query}” on Vergeo5."
+  },
   "placeholder": "Search Vergeo5",
   "submit": "Search",
   "recent": {

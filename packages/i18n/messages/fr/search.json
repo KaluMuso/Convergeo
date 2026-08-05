@@ -1,5 +1,9 @@
 {
   "title": "Recherche",
+  "meta": {
+    "description": "Recherchez des produits, services, événements et vendeurs en Zambie sur Vergeo5.",
+    "descriptionWithQuery": "Résultats de recherche pour « {query} » sur Vergeo5."
+  },
   "placeholder": "Rechercher sur Vergeo5",
   "submit": "Rechercher",
   "recent": {

@@ -4,6 +4,9 @@
   "catalog.compare": "Compare {count} items",
   "plp": {
     "title": "Browse {category}",
+    "meta": {
+      "description": "Browse {category} on Vergeo5 — compare sellers, prices, and availability across Zambia."
+    },
     "defaultCategory": "All products",
     "breadcrumbAria": "Breadcrumb",
     "results": "{count, plural, one {# listing} other {# listings}}",
@@ -216,7 +219,8 @@
     },
     "meta": {
       "notFoundTitle": "Product not found",
-      "descriptionFallback": "Shop {name} on Vergeo5"
+      "descriptionFallback": "Shop {name} on Vergeo5",
+      "descriptionWithPrice": "Compare prices for {name} from {count, plural, one {# seller} other {# sellers}} on Vergeo5. From {price}."
     },
     "tabs": {
       "ariaLabel": "Product details",

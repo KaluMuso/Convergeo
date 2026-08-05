@@ -2,6 +2,7 @@ import { createApiClient } from "@vergeo/config";
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
+import { buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
@@ -160,17 +161,22 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     namespace: "search",
   }) as (key: string, values?: Record<string, string | number>) => string;
 
+  const title = trimmed ? `${t("title")} — ${trimmed}` : t("title");
+  const description = trimmed
+    ? t("meta.descriptionWithQuery", { query: trimmed })
+    : t("meta.description");
+  const canonicalPath = buildLocaleCanonical(locale, "search");
+
   return {
-    title: trimmed ? `${t("title")} — ${trimmed}` : t("title"),
-    description: t("placeholder"),
+    title,
+    description,
     alternates: buildCanonicalAlternates(locale, "search"),
-    openGraph: {
-      title: trimmed ? `${t("title")} — ${trimmed}` : t("title"),
-      description: t("placeholder"),
-      type: "website",
+    ...buildSocialMetadata({
+      title,
+      description,
       locale,
-      url: buildLocaleCanonical(locale, "search"),
-    },
+      url: canonicalPath,
+    }),
     // Parameterised search results must not enter the organic index.
     robots: {
       index: false,
