@@ -101,8 +101,11 @@
     "locating": "Locating…",
     "denied": "Location blocked",
     "unsupported": "Location unavailable",
+    "lusakaFallback": "Near Lusaka",
     "clear": "Show all",
     "hint": "Sort results by how close they are to you",
-    "distanceAway": "{km} km away"
+    "distanceAway": "{km} km away",
+    "openNow": "Open now",
+    "closedNow": "Closed"
   }
 }

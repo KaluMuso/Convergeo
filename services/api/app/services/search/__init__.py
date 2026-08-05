@@ -29,6 +29,7 @@ from app.services.search.search_facets import (
     compute_search_facets,
     filter_search_hits,
 )
+from app.services.search.open_now import attach_open_now
 from app.services.search.synonyms import expand_query
 from pydantic import Field
 
@@ -59,6 +60,9 @@ class SearchHit(StrictModel):
     # Great-circle km from the searcher when a user location is supplied and the
     # hit has coordinates; null otherwise (never dropped for missing geo).
     distance_km: float | None = None
+    # Whether any branch of the resolved vendor is open now (Africa/Lusaka clock).
+    # ``None`` when hours are not published — never treated as closed.
+    is_open_now: bool | None = None
 
 
 class SearchResponse(StrictModel):
@@ -445,6 +449,7 @@ async def run_search(
     # paginating. Ranking is byte-identical when no location is supplied.
     if user_lat is not None and user_lng is not None:
         display_hits = _geo_rerank(display_hits, user_lat=user_lat, user_lng=user_lng)
+    display_hits = attach_open_now(client, display_hits)
     page_items, total = paginate(display_hits, page=page, page_size=page_size)
     page_items = attach_route_slugs(client, page_items)
 

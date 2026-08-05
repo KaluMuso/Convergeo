@@ -45,6 +45,8 @@ export type SearchHit = {
   slug?: string | null;
   /** Great-circle km from the searcher when a location is supplied; null otherwise. */
   distance_km?: number | null;
+  /** Whether any branch of the vendor is open now; null when hours unknown. */
+  is_open_now?: boolean | null;
 };
 
 export type SearchFacetBucket = {
@@ -84,6 +86,8 @@ export type ResultsTabsLabels = ProgressiveLoadControlsLabels & {
   category: string;
   /** "{km} km away" — shown only when the searcher shared a location. */
   distanceAway: string;
+  openNow: string;
+  closedNow: string;
   /** Honest fallback when search hits omit vendor (never invent a shop name). */
   marketplaceListing: string;
   wishlist: string;
@@ -154,6 +158,16 @@ function distanceLabel(hit: SearchHit, labels: ResultsTabsLabels): string | null
   return labels.distanceAway.replace("{km}", value);
 }
 
+function openNowLabel(hit: SearchHit, labels: ResultsTabsLabels): string | null {
+  if (hit.is_open_now === true) {
+    return labels.openNow;
+  }
+  if (hit.is_open_now === false) {
+    return labels.closedNow;
+  }
+  return null;
+}
+
 function SearchResultRow({
   hit,
   locale,
@@ -168,6 +182,7 @@ function SearchResultRow({
   const category = formatCategoryLabel(hit.category_path);
   const priceNgwee = hit.price_min_ngwee ?? hit.price_max_ngwee;
   const distance = distanceLabel(hit, labels);
+  const openStatus = openNowLabel(hit, labels);
 
   return (
     <article
@@ -213,6 +228,11 @@ function SearchResultRow({
             {distance}
           </p>
         ) : null}
+        {openStatus ? (
+          <p className="mt-1 text-xs text-text-3" data-testid="search-result-open-now">
+            {openStatus}
+          </p>
+        ) : null}
       </div>
     </article>
   );
@@ -232,6 +252,7 @@ function SearchProductCard({
   const priceNgwee = hit.price_min_ngwee ?? hit.price_max_ngwee ?? 0;
   const category = formatCategoryLabel(hit.category_path);
   const distance = distanceLabel(hit, labels);
+  const openStatus = openNowLabel(hit, labels);
   const slug = typeof hit.slug === "string" && hit.slug.trim() ? hit.slug : null;
   const { isWishlisted, toggleWishlist, enabled } = useLocalWishlist(slug);
   const wishlistLabel = isWishlisted ? labels.wishlistRemove : labels.wishlist;
@@ -287,6 +308,14 @@ function SearchProductCard({
           data-testid="search-result-distance"
         >
           {distance}
+        </span>
+      ) : null}
+      {openStatus ? (
+        <span
+          className="pointer-events-none absolute right-1.5 top-1.5 z-[2] rounded-full bg-panel/85 px-2 py-0.5 text-[0.7rem] font-medium text-panel-text"
+          data-testid="search-result-open-now"
+        >
+          {openStatus}
         </span>
       ) : null}
       <Link
