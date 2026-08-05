@@ -21,7 +21,7 @@ VALID_TOKEN = "valid.jwt.token"
 
 
 class FakeQuery:
-    def __init__(self, parent: "FakeTable", filters: list[tuple[str, str, Any]]) -> None:
+    def __init__(self, parent: FakeTable, filters: list[tuple[str, str, Any]]) -> None:
         self._parent = parent
         self._filters = filters
         self._order: tuple[str, bool] | None = None

@@ -18,7 +18,7 @@ VALID_TOKEN = "valid.jwt.token"
 
 
 class FakeQuery:
-    def __init__(self, parent: "FakeTable", filters: list[tuple[str, str, Any]]) -> None:
+    def __init__(self, parent: FakeTable, filters: list[tuple[str, str, Any]]) -> None:
         self._parent = parent
         self._filters = filters
         self._order: tuple[str, bool] | None = None
@@ -302,7 +302,9 @@ def test_vendor_endpoints_forbid_customer(
     _mock_auth(monkeypatch, frozenset({"customer"}))
     _seed_vendor_queue(fake_client)
 
-    assert api_client.get("/admin/vendors?status=pending", headers=_auth_headers()).status_code == 403
+    assert (
+        api_client.get("/admin/vendors?status=pending", headers=_auth_headers()).status_code == 403
+    )
     assert (
         api_client.patch(
             f"/admin/vendors/{VENDOR_ID}/status",
