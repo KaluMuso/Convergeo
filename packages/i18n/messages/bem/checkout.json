@@ -18,6 +18,7 @@
     "freeDeliveryProgress": "{amount} ya {threshold} ku free Lusaka delivery",
     "freeDeliveryUnlocked": "Subtotal ya vendor iyi yaisuminisha free Lusaka delivery",
     "itemCount": "{count, plural, one {# item} other {# ama-items}}",
+    "loading": "Ileleleta cart yenu…",
     "lineTotal": "Total ya line: {amount}",
     "miniCartClose": "Isaleni cart",
     "miniCartTitle": "Summary ya cart",

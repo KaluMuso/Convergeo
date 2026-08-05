@@ -122,6 +122,7 @@
       "increaseSymbol": "+",
       "lowStock": "Hashala {count} fye",
       "moq": "Order iyacalamba: {count}",
+      "ariaLabel": "Malo ya kushita",
       "outOfStock": "Takwaba mu stock",
       "priceLabel": "Mutengo",
       "quantityLabel": "Ubunji",
@@ -133,7 +134,8 @@
       "wishlistSaved": "Yasungilwe ku wishlist"
     },
     "stickyAtc": {
-      "ariaLabel": "Longeni bwangu mu cart"
+      "ariaLabel": "Longeni bwangu mu cart",
+      "stockMoqSeparator": "na"
     },
     "condition": {
       "new": "Cipya",

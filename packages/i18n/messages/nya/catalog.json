@@ -122,6 +122,7 @@
       "increaseSymbol": "+",
       "lowStock": "Zatsala {count} zokha",
       "moq": "Order yocheperako: {count}",
+      "ariaLabel": "Malo ogula",
       "outOfStock": "Palibe mu stock",
       "priceLabel": "Mtengo",
       "quantityLabel": "Chiwerengero",
@@ -133,7 +134,8 @@
       "wishlistSaved": "Zasungidwa ku wishlist"
     },
     "stickyAtc": {
-      "ariaLabel": "Onjezani mwachangu ku cart"
+      "ariaLabel": "Onjezani mwachangu ku cart",
+      "stockMoqSeparator": "ndi"
     },
     "condition": {
       "new": "Yatsopano",
