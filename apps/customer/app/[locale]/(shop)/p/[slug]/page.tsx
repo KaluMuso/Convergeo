@@ -264,10 +264,13 @@ function toProductListings(product: ProductDetail, alt: string): ProductListing[
     title: listing.title,
     priceNgwee: listing.price_ngwee,
     condition: listing.condition,
+    productClass: listing.product_class ?? "A",
     stockMode: listing.stock_mode,
     stockQty: listing.stock_qty,
     moq: listing.moq,
     inStock: listing.in_stock,
+    leadTimeDays: listing.lead_time_days ?? null,
+    vendorCapacityPerWeek: listing.vendor_capacity_per_week ?? null,
     vendor: {
       slug: listing.vendor.slug,
       displayName: listing.vendor.display_name,
@@ -614,6 +617,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             singleVendorLabel: t("pdp.buyBox.singleVendor"),
             conditionNewLabel: t("pdp.condition.new"),
             conditionRefurbishedLabel: t("pdp.condition.refurbished"),
+            conditionUsedLabel: t("pdp.condition.used"),
+            conditionAuthenticityLabel: t("pdp.condition.authenticity"),
           }}
           comparisonLabels={{
             heading: t("comparison.heading"),

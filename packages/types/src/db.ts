@@ -3740,6 +3740,7 @@ export type Database = {
           moq: number
           price_ngwee: number
           price_tiers: Json | null
+          product_class: string
           product_id: string | null
           return_window_hours: number | null
           returnable: boolean
@@ -3751,6 +3752,7 @@ export type Database = {
           title_override: string | null
           unit_step_milli: number
           updated_at: string
+          vendor_capacity_per_week: number | null
           vendor_id: string
           wholesale: boolean
         }
@@ -3766,6 +3768,7 @@ export type Database = {
           moq?: number
           price_ngwee: number
           price_tiers?: Json | null
+          product_class?: string
           product_id?: string | null
           return_window_hours?: number | null
           returnable?: boolean
@@ -3777,6 +3780,7 @@ export type Database = {
           title_override?: string | null
           unit_step_milli?: number
           updated_at?: string
+          vendor_capacity_per_week?: number | null
           vendor_id: string
           wholesale?: boolean
         }
@@ -3792,6 +3796,7 @@ export type Database = {
           moq?: number
           price_ngwee?: number
           price_tiers?: Json | null
+          product_class?: string
           product_id?: string | null
           return_window_hours?: number | null
           returnable?: boolean
@@ -3803,6 +3808,7 @@ export type Database = {
           title_override?: string | null
           unit_step_milli?: number
           updated_at?: string
+          vendor_capacity_per_week?: number | null
           vendor_id?: string
           wholesale?: boolean
         }

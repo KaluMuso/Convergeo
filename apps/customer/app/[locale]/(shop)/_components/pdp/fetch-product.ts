@@ -34,11 +34,15 @@ export type Listing = {
   title: string;
   price_ngwee: number;
   condition: ListingCondition;
+  product_class?: string;
   stock_mode: "tracked" | "always_available";
   stock_qty: number | null;
   moq: number;
   wholesale: boolean;
   in_stock: boolean;
+  fulfilment_mode?: string;
+  lead_time_days?: number | null;
+  vendor_capacity_per_week?: number | null;
   vendor: VendorSummary;
   images: ProductImage[];
 };

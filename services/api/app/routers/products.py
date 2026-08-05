@@ -60,11 +60,15 @@ class ListingResponse(BaseModel):
     title: str
     price_ngwee: int
     condition: str
+    product_class: str = "A"
     stock_mode: str
     stock_qty: int | None = None
     moq: int = 1
     wholesale: bool = False
     in_stock: bool
+    fulfilment_mode: str = "stocked"
+    lead_time_days: int | None = None
+    vendor_capacity_per_week: int | None = None
     vendor: VendorSummaryResponse
     images: list[ProductImageResponse] = Field(default_factory=list)
 
@@ -110,7 +114,15 @@ def _listing_title(row: dict[str, Any], product_name: str) -> str:
     return product_name
 
 
-def _is_in_stock(stock_mode: str, stock_qty: int | None) -> bool:
+def _is_in_stock(
+    stock_mode: str,
+    stock_qty: int | None,
+    *,
+    product_class: str = "A",
+    fulfilment_mode: str = "stocked",
+) -> bool:
+    if product_class == "E" or fulfilment_mode == "made_to_order":
+        return True
     if stock_mode == "always_available":
         return True
     if stock_mode == "tracked":
@@ -388,8 +400,8 @@ def build_product_detail(
     listings_response = (
         client.table("vendor_listings")
         .select(
-            "id, title_override, price_ngwee, condition, stock_mode, stock_qty, "
-            "moq, wholesale, status, "
+            "id, title_override, price_ngwee, condition, product_class, stock_mode, stock_qty, "
+            "moq, wholesale, status, fulfilment_mode, lead_time_days, vendor_capacity_per_week, "
             "vendors!inner("
             "id, slug, display_name, preferred_badge, status, "
             "vendor_locations(landmark, lat, lng)"
@@ -473,6 +485,12 @@ def build_product_detail(
         stock_mode = str(row.get("stock_mode") or "tracked")
         stock_qty = row.get("stock_qty")
         parsed_stock_qty = int(stock_qty) if stock_qty is not None else None
+        product_class = str(row.get("product_class") or "A")
+        fulfilment_mode = str(row.get("fulfilment_mode") or "stocked")
+        lead_time_days = row.get("lead_time_days")
+        parsed_lead_time = int(lead_time_days) if lead_time_days is not None else None
+        capacity = row.get("vendor_capacity_per_week")
+        parsed_capacity = int(capacity) if capacity is not None else None
 
         listing_images = [
             ProductImageResponse(
@@ -493,11 +511,20 @@ def build_product_detail(
                 title=_listing_title(row, product_name),
                 price_ngwee=int(row["price_ngwee"]),
                 condition=str(row.get("condition") or "new"),
+                product_class=product_class,
                 stock_mode=stock_mode,
                 stock_qty=parsed_stock_qty,
                 moq=int(row.get("moq") or 1),
                 wholesale=bool(row.get("wholesale")),
-                in_stock=_is_in_stock(stock_mode, parsed_stock_qty),
+                in_stock=_is_in_stock(
+                    stock_mode,
+                    parsed_stock_qty,
+                    product_class=product_class,
+                    fulfilment_mode=fulfilment_mode,
+                ),
+                fulfilment_mode=fulfilment_mode,
+                lead_time_days=parsed_lead_time,
+                vendor_capacity_per_week=parsed_capacity,
                 vendor=_parse_vendor_row(
                     vendor_raw,
                     rating_avg=rating_avg,

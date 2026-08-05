@@ -44,10 +44,13 @@ const listing: ProductListing = {
   title: "Tecno Spark 20",
   priceNgwee: 1_944_065,
   condition: "new",
+  productClass: "A",
   stockMode: "tracked",
   stockQty: 5,
   moq: 1,
   inStock: true,
+  leadTimeDays: null,
+  vendorCapacityPerWeek: null,
   images: [{ publicId: "demo/categories/mobile-phones", alt: "Tecno Spark 20" }],
   vendor: {
     slug: "demo-vendor",
@@ -110,6 +113,8 @@ function renderBody(
           singleVendorLabel: "Single vendor",
           conditionNewLabel: "New",
           conditionRefurbishedLabel: "Refurbished",
+          conditionUsedLabel: "Used",
+          conditionAuthenticityLabel: "Condition & Authenticity",
         }}
         comparisonLabels={{
           heading: "Compare",

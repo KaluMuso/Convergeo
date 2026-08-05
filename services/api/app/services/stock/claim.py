@@ -64,14 +64,20 @@ def get_reservation_ttl_minutes() -> int:
     return _DEFAULT_TTL_MIN
 
 
-def _fetch_listing_mode(listing_id: str) -> str | None:
+def _fetch_listing_stock_mode(listing_id: str) -> tuple[str | None, bool]:
     listing_sql = sql_uuid(listing_id, "listing_id")
     result = run_sql_script(
-        f"SELECT stock_mode FROM public.vendor_listings WHERE id = {listing_sql};"
+        f"SELECT stock_mode, product_class, fulfilment_mode "
+        f"FROM public.vendor_listings WHERE id = {listing_sql};"
     )
     if not result.ok or not result.rows:
-        return None
-    return result.rows[0]
+        return None, False
+    parts = result.rows[0].split("|")
+    if len(parts) != 3:
+        return None, False
+    stock_mode, product_class, fulfilment_mode = parts
+    made_to_order = product_class == "E" or fulfilment_mode == "made_to_order"
+    return stock_mode, made_to_order
 
 
 def claim_reservation(
@@ -86,7 +92,7 @@ def claim_reservation(
     if qty <= 0:
         raise ValueError("qty must be positive")
 
-    stock_mode = _fetch_listing_mode(listing_id)
+    stock_mode, made_to_order = _fetch_listing_stock_mode(listing_id)
     if stock_mode is None:
         return ClaimResult(
             claimed=False,
@@ -94,7 +100,7 @@ def claim_reservation(
             checkout_group_id=checkout_group_id,
             qty=qty,
         )
-    if stock_mode == "always_available":
+    if stock_mode == "always_available" or made_to_order:
         return ClaimResult(
             claimed=True,
             listing_id=listing_id,

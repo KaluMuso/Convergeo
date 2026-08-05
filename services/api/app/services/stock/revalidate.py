@@ -38,7 +38,8 @@ def _fetch_listings(listing_ids: list[str]) -> dict[str, dict[str, Any]]:
     id_literals = ", ".join(sql_uuid(listing_id, "listing_id") for listing_id in listing_ids)
     result = run_sql_script(
         f"""
-        SELECT id::text, price_ngwee::text, stock_mode, stock_qty::text, status
+        SELECT id::text, price_ngwee::text, stock_mode, stock_qty::text, status,
+               product_class, fulfilment_mode
         FROM public.vendor_listings
         WHERE id IN ({id_literals});
         """
@@ -49,9 +50,11 @@ def _fetch_listings(listing_ids: list[str]) -> dict[str, dict[str, Any]]:
     listings: dict[str, dict[str, Any]] = {}
     for row in result.rows:
         parts = row.split("|")
-        if len(parts) != 5:
+        if len(parts) != 7:
             continue
-        listing_id, price_raw, stock_mode, stock_qty_raw, status = parts
+        listing_id, price_raw, stock_mode, stock_qty_raw, status, product_class, fulfilment_mode = (
+            parts
+        )
         stock_qty: int | None
         if stock_qty_raw == "":
             stock_qty = None
@@ -63,6 +66,8 @@ def _fetch_listings(listing_ids: list[str]) -> dict[str, dict[str, Any]]:
             "stock_mode": stock_mode,
             "stock_qty": stock_qty,
             "status": status,
+            "product_class": product_class,
+            "fulfilment_mode": fulfilment_mode,
         }
     return listings
 
@@ -70,6 +75,10 @@ def _fetch_listings(listing_ids: list[str]) -> dict[str, dict[str, Any]]:
 def _available_qty(listing: dict[str, Any]) -> int | None:
     if listing.get("status") != "active":
         return 0
+    product_class = str(listing.get("product_class") or "A")
+    fulfilment_mode = str(listing.get("fulfilment_mode") or "stocked")
+    if product_class == "E" or fulfilment_mode == "made_to_order":
+        return None
     stock_mode = listing.get("stock_mode")
     if stock_mode == "always_available":
         return None
