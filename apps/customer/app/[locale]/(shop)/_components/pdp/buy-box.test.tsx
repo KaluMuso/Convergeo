@@ -19,6 +19,9 @@ vi.mock("next-intl", () => ({
     if (key === "pdp.buyBox.moq") {
       return `MOQ ${values?.count ?? 0}`;
     }
+    if (key === "pdp.leadTime") {
+      return `Requires ${values?.days ?? 0} days lead time`;
+    }
     return key;
   },
 }));
@@ -55,6 +58,8 @@ const labels: BuyBoxLabels = {
   singleVendorLabel: "Single vendor",
   conditionNewLabel: "New",
   conditionRefurbishedLabel: "Refurbished",
+  conditionUsedLabel: "Used",
+  conditionAuthenticityLabel: "Condition & Authenticity",
 };
 
 const inStockListing: BuyBoxListing = {
@@ -98,6 +103,17 @@ describe("buy-box helpers", () => {
   it("caps max quantity for tracked stock", () => {
     expect(getMaxQuantity(inStockListing)).toBe(5);
     expect(getMaxQuantity(outOfStockListing)).toBe(1);
+  });
+
+  it("uses weekly capacity for made-to-order listings", () => {
+    const mtoListing: BuyBoxListing = {
+      ...inStockListing,
+      productClass: "E",
+      stockQty: 0,
+      leadTimeDays: 14,
+      vendorCapacityPerWeek: 3,
+    };
+    expect(getMaxQuantity(mtoListing)).toBe(3);
   });
 });
 

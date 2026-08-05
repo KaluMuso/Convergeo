@@ -83,10 +83,13 @@ export type ProductListing = {
   title: string;
   priceNgwee: number;
   condition: ListingCondition;
+  productClass: string;
   stockMode: "tracked" | "always_available";
   stockQty: number | null;
   moq: number;
   inStock: boolean;
+  leadTimeDays: number | null;
+  vendorCapacityPerWeek: number | null;
   vendor: {
     slug: string;
     displayName: string;
@@ -545,10 +548,13 @@ export function PdpInteractiveBody({
       title: selectedListing.title,
       priceNgwee: selectedListing.priceNgwee,
       condition: selectedListing.condition,
+      productClass: selectedListing.productClass,
       stockMode: selectedListing.stockMode,
       stockQty: selectedListing.stockQty,
       moq: selectedListing.moq,
       inStock: selectedListing.inStock,
+      leadTimeDays: selectedListing.leadTimeDays,
+      vendorCapacityPerWeek: selectedListing.vendorCapacityPerWeek,
     };
   }, [selectedListing]);
 

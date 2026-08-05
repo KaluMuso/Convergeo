@@ -1,6 +1,6 @@
 import { Badge } from "@vergeo/ui/src/badge";
 
-export type ListingCondition = "new" | "refurbished";
+export type ListingCondition = "new" | "refurbished" | "used";
 
 export type ConditionBadgeProps = {
   condition: ListingCondition;

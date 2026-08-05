@@ -24,6 +24,12 @@ from app.services.cart.store import (
 )
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.clips.attribution import validate_clip_attribution
+from app.services.listings.class_rules import (
+    count_listing_images,
+    count_weekly_committed_qty,
+    listing_lead_time_days,
+    validate_listing_purchasable_for_cart,
+)
 from app.services.stock.revalidate import CartLineSnapshot, revalidate_lines
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends, Request, Response
@@ -68,6 +74,7 @@ class CartLineResponse(BaseModel):
     wholesale: bool
     line_total_ngwee: int
     title_override: str | None = None
+    lead_time_days: int | None = None
 
 
 class VendorGroupResponse(BaseModel):
@@ -319,6 +326,7 @@ def _build_cart_response(
                 title_override=listing.get("title_override")
                 if isinstance(listing.get("title_override"), str)
                 else None,
+                lead_time_days=listing_lead_time_days(listing),
             )
         )
 
@@ -339,6 +347,7 @@ def _build_cart_response(
                 wholesale=line.wholesale,
                 line_total_ngwee=line.line_total_ngwee,
                 title_override=line.title_override,
+                lead_time_days=line.lead_time_days,
             )
             for line in line_views
         ],
@@ -355,6 +364,7 @@ def _build_cart_response(
                         wholesale=item.wholesale,
                         line_total_ngwee=item.line_total_ngwee,
                         title_override=item.title_override,
+                        lead_time_days=item.lead_time_days,
                     )
                     for item in group.items
                 ],
@@ -373,6 +383,22 @@ def _build_cart_response(
             )
             for conflict in (conflicts or [])
         ],
+    )
+
+
+def _enforce_listing_cart_rules(
+    listing: dict[str, Any],
+    qty: int,
+) -> None:
+    service = service_db_client()
+    listing_id = str(listing["id"])
+    evidence_count = count_listing_images(service, listing_id)
+    weekly_committed = count_weekly_committed_qty(service, listing_id)
+    validate_listing_purchasable_for_cart(
+        listing=listing,
+        qty=qty,
+        evidence_image_count=evidence_count,
+        weekly_committed_qty=weekly_committed,
     )
 
 
@@ -411,6 +437,7 @@ async def add_cart_item(
     unit_price, wholesale = validate_item_qty_for_listing(
         listing=listing, qty=body.qty, business_eligible=business_eligible
     )
+    _enforce_listing_cart_rules(listing, body.qty)
 
     client = _db_client_for_owner(
         owner,
@@ -439,6 +466,7 @@ async def add_cart_item(
         unit_price, wholesale = validate_item_qty_for_listing(
             listing=listing, qty=new_qty, business_eligible=business_eligible
         )
+        _enforce_listing_cart_rules(listing, new_qty)
         line_writer.table("cart_items").update(
             {
                 "qty": new_qty,
@@ -491,6 +519,7 @@ async def update_cart_item(
     unit_price, wholesale = validate_item_qty_for_listing(
         listing=listing, qty=body.qty, business_eligible=business_eligible
     )
+    _enforce_listing_cart_rules(listing, body.qty)
 
     client = _db_client_for_owner(
         owner,

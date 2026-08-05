@@ -16,6 +16,7 @@ class CartLineView:
     wholesale: bool
     line_total_ngwee: int
     title_override: str | None
+    lead_time_days: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

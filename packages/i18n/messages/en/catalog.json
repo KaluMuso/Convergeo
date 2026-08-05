@@ -287,8 +287,11 @@
     },
     "condition": {
       "new": "New",
-      "refurbished": "Refurbished"
-    }
+      "refurbished": "Refurbished",
+      "used": "Used",
+      "authenticity": "Condition & Authenticity"
+    },
+    "leadTime": "Requires {days} days lead time"
   },
   "returnableBadge": {
     "label": "Returnable within {days} days"
