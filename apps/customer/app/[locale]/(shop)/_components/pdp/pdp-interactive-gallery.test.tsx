@@ -10,6 +10,7 @@ import frCatalog from "../../../../../../../packages/i18n/messages/fr/catalog.js
 import zhCatalog from "../../../../../../../packages/i18n/messages/zh/catalog.json";
 
 import { PdpInteractiveBody, type ProductListing } from "./comparison";
+import { type ContactVendorLabels } from "./contact-vendor-button";
 import { assertRscSafeGalleryLabels } from "./gallery-labels";
 
 vi.mock("../cart/mini-cart-drawer", () => ({
@@ -150,6 +151,7 @@ function renderBody(
           remove: "Remove from wishlist",
           saved: "Saved to wishlist",
         }}
+        contactVendorLabels={catalogMessages.pdp.contactVendor as ContactVendorLabels}
         comparePageLabel="Compare sellers"
       />
     </NextIntlClientProvider>,

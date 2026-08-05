@@ -15,6 +15,7 @@ import {
 import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
 import { BuyerTrustPanel } from "./buyer-trust-panel";
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
+import { ContactVendorButton, type ContactVendorLabels } from "./contact-vendor-button";
 import { PdpGallery } from "./gallery";
 import { buildOfferPriceContext } from "./offer-price-context";
 import { PdpWishlistButton } from "./pdp-wishlist-button";
@@ -129,6 +130,7 @@ export type PdpInteractiveBodyProps = {
     remove: string;
     saved: string;
   };
+  contactVendorLabels: ContactVendorLabels;
   comparePageLabel: string;
 };
 
@@ -509,6 +511,7 @@ export function PdpInteractiveBody({
   vendorLabels,
   trustLabels,
   wishlistLabels,
+  contactVendorLabels,
   comparePageLabel,
 }: PdpInteractiveBodyProps) {
   const t = useTranslations("catalog");
@@ -699,6 +702,12 @@ export function PdpInteractiveBody({
                 : vendorLabels.noReviews
             }
             viewStoreLabel={vendorLabels.viewStore}
+          />
+          <ContactVendorButton
+            locale={locale}
+            listingId={selectedListing.id}
+            vendorName={selectedListing.vendor.displayName}
+            labels={contactVendorLabels}
           />
         </div>
       ) : null}
