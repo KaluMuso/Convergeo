@@ -34,6 +34,7 @@ export function StickyMobileAtc({
   const [buyBoxOutOfView, setBuyBoxOutOfView] = useState(false);
   const visible = buyBoxOutOfView && listing.inStock;
   const moqLabel = listing.moq > 1 ? t("pdp.buyBox.moq", { count: listing.moq }) : null;
+  const stockMoqSeparator = t("pdp.stickyAtc.stockMoqSeparator");
 
   useEffect(() => {
     const target = observeRef.current;
@@ -91,7 +92,12 @@ export function StickyMobileAtc({
             data-testid="pdp-sticky-stock"
           >
             {purchase.stockLabel}
-            {moqLabel ? <span className="font-normal text-text-2"> · {moqLabel}</span> : null}
+            {moqLabel ? (
+              <span className="font-normal text-text-2">
+                {" "}
+                {stockMoqSeparator} {moqLabel}
+              </span>
+            ) : null}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -109,6 +115,7 @@ export function StickyMobileAtc({
             data-testid="pdp-sticky-qty-value"
             className="min-w-8 text-center font-mono text-base"
             aria-live="polite"
+            aria-label={labels.quantityLabel}
           >
             {purchase.quantity}
           </output>

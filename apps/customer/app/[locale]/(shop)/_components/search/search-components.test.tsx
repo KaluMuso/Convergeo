@@ -59,6 +59,7 @@ const resultsTabsLabels = {
   mediaEmpty: "No product image",
   noReviews: "No reviews yet",
   reviewCount: "({count})",
+  productGridAria: "Product search results",
   loadMore: "Load more",
   loading: "Loading more…",
   moreLoaded: "{count} more results loaded.",

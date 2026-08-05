@@ -11,6 +11,9 @@ vi.mock("next-intl", () => ({
     if (key === "pdp.buyBox.moq") {
       return `Minimum order: ${values?.count ?? 0}`;
     }
+    if (key === "pdp.stickyAtc.stockMoqSeparator") {
+      return "·";
+    }
     return key;
   },
 }));
@@ -28,6 +31,7 @@ afterEach(() => {
 const labels: BuyBoxLabels = {
   priceLabel: "Price",
   quantityLabel: "Quantity",
+  buyBoxAriaLabel: "Purchase options",
   decreaseLabel: "Decrease",
   increaseLabel: "Increase",
   decreaseSymbol: "-",

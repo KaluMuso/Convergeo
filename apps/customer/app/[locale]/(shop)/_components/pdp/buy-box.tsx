@@ -38,6 +38,7 @@ export type BuyBoxSellerSummary = {
 export type BuyBoxLabels = {
   priceLabel: string;
   quantityLabel: string;
+  buyBoxAriaLabel: string;
   decreaseLabel: string;
   increaseLabel: string;
   decreaseSymbol: string;
@@ -218,6 +219,7 @@ export function BuyBox({
       ref={buyBoxRef}
       data-testid="pdp-buy-box"
       data-in-stock={listing.inStock ? "true" : "false"}
+      aria-label={labels.buyBoxAriaLabel}
       className="flex flex-col gap-4 rounded border border-border bg-surface p-4"
       style={{ borderRadius: "var(--r)" }}
     >
@@ -295,6 +297,7 @@ export function BuyBox({
             data-testid="pdp-qty-value"
             className="min-w-12 text-center font-mono text-lg"
             aria-live="polite"
+            aria-label={labels.quantityLabel}
           >
             {qty}
           </output>

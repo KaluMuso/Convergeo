@@ -90,6 +90,7 @@ export type ResultsTabsLabels = ProgressiveLoadControlsLabels & {
   closedNow: string;
   /** Honest fallback when search hits omit vendor (never invent a shop name). */
   marketplaceListing: string;
+  productGridAria: string;
   wishlist: string;
   wishlistRemove: string;
   mediaEmpty: string;
@@ -192,6 +193,7 @@ function SearchResultRow({
       {imagePublicId ? (
         <Link
           href={href}
+          aria-label={hit.title}
           className="relative block h-[4.5rem] w-[4.5rem] shrink-0 overflow-hidden rounded-md sm:h-20 sm:w-20"
         >
           <CloudinaryImageStatic
@@ -350,14 +352,17 @@ function ResultsList({
   return (
     <div className="space-y-3" data-testid="search-results-list">
       {showProductGrid && productHits.length > 0 ? (
-        <div
-          className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+        <ul
+          className="grid list-none grid-cols-2 gap-2 p-0 sm:gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
           data-testid="search-product-grid"
+          aria-label={labels.productGridAria}
         >
           {productHits.map((hit) => (
-            <SearchProductCard key={hit.id} hit={hit} locale={locale} labels={labels} />
+            <li key={hit.id} className="min-w-0">
+              <SearchProductCard hit={hit} locale={locale} labels={labels} />
+            </li>
           ))}
-        </div>
+        </ul>
       ) : null}
 
       {otherHits.length > 0 || (!showProductGrid && hits.length > 0) ? (
