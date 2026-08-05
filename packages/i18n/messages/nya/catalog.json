@@ -137,8 +137,11 @@
     },
     "condition": {
       "new": "Yatsopano",
-      "refurbished": "Yokonzedwanso"
+      "refurbished": "Yokonzedwanso",
+      "used": "Yosale",
+      "authenticity": "Makhalidwe ndi Chitsimikizo"
     },
+    "leadTime": "Ifunika masiku {days} ogwira ntchito",
     "gallery": {
       "empty": "Palibe zithunzi",
       "indicator": "Chithunzi {current} cha {total}",

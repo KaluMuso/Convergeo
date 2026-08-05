@@ -137,8 +137,11 @@
     },
     "condition": {
       "new": "Cipya",
-      "refurbished": "Cilukilwe"
+      "refurbished": "Cilukilwe",
+      "used": "Yakale",
+      "authenticity": "Ubulumbulwe ne Buffer"
     },
+    "leadTime": "Ifwile {days} masiku ya kulanga",
     "gallery": {
       "empty": "Takwaba amapictures",
       "indicator": "Picture {current} ya {total}",

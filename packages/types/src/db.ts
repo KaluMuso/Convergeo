@@ -3719,7 +3719,6 @@ export type Database = {
           moq: number
           price_ngwee: number
           price_tiers: Json | null
-          product_class: string
           product_id: string | null
           return_window_hours: number | null
           returnable: boolean
@@ -3732,8 +3731,9 @@ export type Database = {
           unit_step_milli: number
           updated_at: string
           vendor_id: string
-          vendor_capacity_per_week: number | null
           wholesale: boolean
+          product_class: string
+          vendor_capacity_per_week: number | null
         }
         Insert: {
           compare_at_ngwee?: number | null
@@ -3747,7 +3747,6 @@ export type Database = {
           moq?: number
           price_ngwee: number
           price_tiers?: Json | null
-          product_class?: string
           product_id?: string | null
           return_window_hours?: number | null
           returnable?: boolean
@@ -3760,8 +3759,9 @@ export type Database = {
           unit_step_milli?: number
           updated_at?: string
           vendor_id: string
-          vendor_capacity_per_week?: number | null
           wholesale?: boolean
+          product_class?: string
+          vendor_capacity_per_week?: number | null
         }
         Update: {
           compare_at_ngwee?: number | null
@@ -3775,7 +3775,6 @@ export type Database = {
           moq?: number
           price_ngwee?: number
           price_tiers?: Json | null
-          product_class?: string
           product_id?: string | null
           return_window_hours?: number | null
           returnable?: boolean
@@ -3788,8 +3787,9 @@ export type Database = {
           unit_step_milli?: number
           updated_at?: string
           vendor_id?: string
-          vendor_capacity_per_week?: number | null
           wholesale?: boolean
+          product_class?: string
+          vendor_capacity_per_week?: number | null
         }
         Relationships: [
           {
