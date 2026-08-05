@@ -1,6 +1,6 @@
 # Vergeo5 — Project Status
 
-**Updated:** 2026-08-02 (RG-6 added: the RLS gate was never testing RLS) · **Mode:** GATED · **Recommendation:** **NO_GO** for sandbox-transaction beta, controlled real-money beta and public launch.
+**Updated:** 2026-08-05 (D28/D37 strategic-conflict doc reconciliation) · **Mode:** GATED · **Recommendation:** **NO_GO** for sandbox-transaction beta, controlled real-money beta and public launch.
 
 **Master tip:** deliberately **not pinned here** — read it with `git rev-parse origin/master`. A fixed SHA in this top block is exactly what went stale between 2026-07-20 and 2026-07-27; per-date SHAs belong in the dated entries below and in the evidence packs, where they are labelled with the date they were observed. (Enforced by `services/api/tests/test_status_doc_truth.py`.)
 
@@ -45,6 +45,12 @@ WAHA is **inbound-only** — there is **no WAHA outbound acknowledgement** of an
 ## History — dated entries, newest first
 
 Each entry below was true on its date. **None of them is a statement about today**; for current state read the two sections above.
+
+### 2026-08-05 — B2B visibility + social-commerce strategic conflicts resolved (docs only)
+
+- **D28 amended.** Removed the contradictory blanket rule _"a consumer always sees retail"_. **Dual-mode** listings still show retail to consumers; **wholesale-only** listings **MUST return `404` (non-disclosing)** to retail consumers on every touch — not retail pricing. Rationale now explicit in the decision record: closes the **cart logic hole** (wholesale-only lines admitted to `POST /cart/items` priced at retail with no MOQ) and prevents **B2B data leakage** (any visible price or `403` confirms a real wholesale listing to id enumerators). D36 updated to reference the amended D28 text and to include cart entry points in the omission list.
+- **D37 formalized as "Social commerce, not WeChat".** **APPROVED for v1:** listing-anchored C2B enquiries + vendor replies, saves/follows, external sharing of product/event/clip links. **EXPLICITLY BANNED FOR v1:** general C2C DMs, WeChat-style public user profiles, public user feeds, arbitrary user-to-user image exchange, groups. Reason: moderation, privacy, and fraud risk under the solo-founder + **$50/mo** constraint. §G scope fence updated to match.
+- **No application code, migrations, flags, or deploy changes** — decision-record and status-doc reconciliation only.
 
 ### 2026-08-02 — parallel-session reconciliation, and a gate that could not fail
 
