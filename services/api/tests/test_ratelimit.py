@@ -6,6 +6,9 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from app.core.otp_ratelimit import (
+    clear_otp_redis_store_cache,
+)
 from app.core.ratelimit import (
     RateLimitConfig,
     bump_rate_counter,
@@ -180,6 +183,13 @@ class FakeSupabaseClient:
         return [{"allowed": True, "retry_after_seconds": 0}]
 
 
+@pytest.fixture(autouse=True)
+def reset_otp_store() -> Generator[None, None, None]:
+    clear_otp_redis_store_cache()
+    yield
+    clear_otp_redis_store_cache()
+
+
 @pytest.fixture
 def fake_client() -> FakeSupabaseClient:
     clear_rate_limit_config_cache()
@@ -207,10 +217,14 @@ def guard_client(
         yield client
 
 
-def test_cap_breach_raises_429_with_retry_after(fake_client: FakeSupabaseClient) -> None:
-    fake_client.rpc_results["otp_number|+260971234567|3600 seconds|5"] = [
-        {"allowed": False, "retry_after_seconds": 42}
-    ]
+def test_cap_breach_raises_429_with_retry_after(
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "app.core.ratelimit.check_otp_number_rate_limit",
+        lambda **kwargs: (False, 42, 4),
+    )
 
     with pytest.raises(AppError) as exc:
         check_and_increment_otp_quota(
@@ -218,7 +232,7 @@ def test_cap_breach_raises_429_with_retry_after(fake_client: FakeSupabaseClient)
             ip="203.0.113.1",
             client=fake_client,
             config=RateLimitConfig(
-                otp_cap_per_number_hour=5,
+                otp_cap_per_number_hour=3,
                 otp_cap_per_ip_day=20,
                 otp_resend_cooldown_base_seconds=30,
                 otp_resend_cooldown_max_seconds=900,
@@ -235,10 +249,12 @@ def test_cap_breach_raises_429_with_retry_after(fake_client: FakeSupabaseClient)
 def test_endpoint_returns_429_envelope(
     guard_client: TestClient,
     fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    fake_client.rpc_results["otp_number|+260971234567|3600 seconds|5"] = [
-        {"allowed": False, "retry_after_seconds": 17}
-    ]
+    monkeypatch.setattr(
+        "app.core.ratelimit.check_otp_number_rate_limit",
+        lambda **kwargs: (False, 17, 4),
+    )
 
     response = guard_client.post(
         "/auth/guard/otp-quota",
@@ -250,20 +266,30 @@ def test_endpoint_returns_429_envelope(
     body = response.json()
     assert body["error"]["code"] == "rate_limited"
     assert body["error"]["details"]["retry_after"] == 17
+    assert body["error"]["details"]["message_key"] == "auth.errors.otp_number_limit"
 
 
-def test_per_number_and_per_ip_independence(fake_client: FakeSupabaseClient) -> None:
+def test_per_number_and_per_ip_independence(
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     calls: list[tuple[str, str]] = []
     original_bump = fake_client._bump
     fake_client.rpc_results.clear()
 
     def custom_bump(params: dict[str, Any]) -> list[dict[str, Any]]:
         calls.append((params["p_scope"], params["p_key"]))
-        if params["p_scope"] == "otp_number" and params["p_key"] == "+260971111111":
-            return [{"allowed": False, "retry_after_seconds": 30}]
         return original_bump(params)
 
     fake_client._bump = custom_bump  # type: ignore[method-assign]
+
+    def redis_limit(**kwargs: Any) -> tuple[bool, int, int]:
+        phone = kwargs.get("phone")
+        if phone == "+260971111111":
+            return False, 30, 4
+        return True, 0, 1
+
+    monkeypatch.setattr("app.core.ratelimit.check_otp_number_rate_limit", redis_limit)
 
     with pytest.raises(AppError) as exc:
         check_and_increment_otp_quota(
@@ -271,7 +297,7 @@ def test_per_number_and_per_ip_independence(fake_client: FakeSupabaseClient) -> 
             ip="198.51.100.9",
             client=fake_client,
             config=RateLimitConfig(
-                otp_cap_per_number_hour=1,
+                otp_cap_per_number_hour=3,
                 otp_cap_per_ip_day=20,
                 otp_resend_cooldown_base_seconds=30,
                 otp_resend_cooldown_max_seconds=900,
@@ -280,7 +306,6 @@ def test_per_number_and_per_ip_independence(fake_client: FakeSupabaseClient) -> 
         )
 
     assert exc.value.details["message_key"] == "auth.errors.otp_number_limit"
-    assert calls[0] == ("otp_number", "+260971111111")
 
     calls.clear()
     check_and_increment_otp_quota(
@@ -288,14 +313,13 @@ def test_per_number_and_per_ip_independence(fake_client: FakeSupabaseClient) -> 
         ip="198.51.100.9",
         client=fake_client,
         config=RateLimitConfig(
-            otp_cap_per_number_hour=1,
+            otp_cap_per_number_hour=3,
             otp_cap_per_ip_day=1,
             otp_resend_cooldown_base_seconds=30,
             otp_resend_cooldown_max_seconds=900,
             auth_endpoint_cap_per_ip_minute=60,
         ),
     )
-    assert ("otp_number", "+260972222222") in calls
     assert ("otp_ip", "198.51.100.9") in calls
 
 
