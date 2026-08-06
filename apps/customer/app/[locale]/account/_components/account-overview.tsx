@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useLocalWishlistSlugs } from "../../(shop)/_components/plp/use-local-wishlist";
 import { useRecentlyViewed } from "../../(shop)/_components/recently-viewed/use-recently-viewed";
 
+import { VendorPortalHubCard } from "./vendor-portal-hub-card";
+
 export type AccountOverviewLabels = {
   title: string;
   description: string;
@@ -28,6 +30,9 @@ export type AccountOverviewLabels = {
   helpBody: string;
   helpCta: string;
   deviceNote: string;
+  vendorPortalTitle: string;
+  vendorPortalBody: string;
+  vendorPortalCta: string;
 };
 
 type Props = {
@@ -93,6 +98,14 @@ export function AccountOverview({ locale, labels }: Props) {
       </header>
 
       <div className="grid gap-3 sm:grid-cols-2">
+        <VendorPortalHubCard
+          locale={locale}
+          labels={{
+            title: labels.vendorPortalTitle,
+            body: labels.vendorPortalBody,
+            cta: labels.vendorPortalCta,
+          }}
+        />
         <HubCard
           testId="account-hub-orders"
           title={labels.ordersTitle}

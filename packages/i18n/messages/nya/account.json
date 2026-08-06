@@ -49,7 +49,10 @@
     "helpTitle": "Thandizo",
     "helpBody": "Malangizo pa ma-order, payment, ndi account.",
     "helpCta": "Pitani ku help centre",
-    "deviceNote": "Zosungidwa ndi recently viewed zimasungidwa pa device iyi. Sizotsekera stock kapena mtengo."
+    "deviceNote": "Zosungidwa ndi recently viewed zimasungidwa pa device iyi. Sizotsekera stock kapena mtengo.",
+    "vendorPortalTitle": "Seller tools",
+    "vendorPortalBody": "Yang'anani listings, orders, ndi payouts mu vendor portal.",
+    "vendorPortalCta": "Tsegulani vendor portal"
   },
   "saved": {
     "title": "Zosungidwa",

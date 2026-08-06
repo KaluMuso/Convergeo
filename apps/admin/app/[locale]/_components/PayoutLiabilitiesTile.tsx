@@ -10,14 +10,24 @@ import { TileShell } from "./TileShell";
 type PayoutLiabilitiesTileProps = {
   liabilities: PayoutLiabilities;
   locale: string;
+  className?: string;
 };
 
-export function PayoutLiabilitiesTile({ liabilities, locale }: PayoutLiabilitiesTileProps) {
+export function PayoutLiabilitiesTile({
+  liabilities,
+  locale,
+  className,
+}: PayoutLiabilitiesTileProps) {
   const t = useTranslations("admin.dashboard.payoutLiabilities");
   const empty = isPayoutLiabilitiesEmpty(liabilities);
 
   return (
-    <TileShell title={t("title")} subtitle={t("subtitle")}>
+    <TileShell
+      title={t("title")}
+      subtitle={t("subtitle")}
+      status={empty ? undefined : "warning"}
+      className={className}
+    >
       <dl className="space-y-2 text-sm">
         <div className="flex items-center justify-between gap-2">
           <dt className="text-muted">{t("escrowHeld")}</dt>

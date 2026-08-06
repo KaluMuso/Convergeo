@@ -10,13 +10,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 vi.mock("./vendor-app", () => ({
   VENDOR_ONBOARDING_PATH: "/onboarding",
   getVendorSignupUrl: vi.fn(),
+  getVendorPortalUrl: vi.fn(),
 }));
 
 import { Cta } from "./cta";
 import { Hero } from "./hero";
-import { getVendorSignupUrl } from "./vendor-app";
+import { getVendorPortalUrl, getVendorSignupUrl } from "./vendor-app";
 
 const mockedGetVendorSignupUrl = vi.mocked(getVendorSignupUrl);
+const mockedGetVendorPortalUrl = vi.mocked(getVendorPortalUrl);
 
 // Identity translator: returns the key so assertions stay locale-agnostic.
 const t = (key: string): string => key;
@@ -24,6 +26,7 @@ const t = (key: string): string => key;
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  mockedGetVendorPortalUrl.mockReturnValue(null);
 });
 
 const SIGNUP_URL = "https://vendor.vergeo5.com/en/onboarding";

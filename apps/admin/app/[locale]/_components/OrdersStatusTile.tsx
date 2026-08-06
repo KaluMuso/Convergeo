@@ -19,14 +19,16 @@ const STATUS_KEYS = [
 
 type OrdersStatusTileProps = {
   ordersByStatus: OrdersByStatus;
+  locale: string;
+  className?: string;
 };
 
-export function OrdersStatusTile({ ordersByStatus }: OrdersStatusTileProps) {
+export function OrdersStatusTile({ ordersByStatus, locale, className }: OrdersStatusTileProps) {
   const t = useTranslations("admin.dashboard.orders");
   const empty = isOrdersPipelineEmpty(ordersByStatus);
 
   return (
-    <TileShell title={t("title")} subtitle={t("subtitle")}>
+    <TileShell title={t("title")} subtitle={t("subtitle")} className={className}>
       {empty ? (
         <p className="mb-2 text-xs text-muted" data-testid="orders-empty">
           {t("empty")}
@@ -43,6 +45,14 @@ export function OrdersStatusTile({ ordersByStatus }: OrdersStatusTileProps) {
           </li>
         ))}
       </ul>
+      {!empty ? (
+        <a
+          href={`/${locale}/orders`}
+          className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
+        >
+          {t("openQueue")}
+        </a>
+      ) : null}
     </TileShell>
   );
 }

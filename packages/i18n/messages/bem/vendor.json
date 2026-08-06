@@ -1504,12 +1504,35 @@
     }
   },
   "shell": {
+    "groups": {
+      "operate": "Operate",
+      "sell": "Sell & grow",
+      "business": "Business"
+    },
+    "moreMenu": {
+      "title": "Vendor tools yonse",
+      "close": "Close"
+    },
     "nav": {
       "ariaLabel": "Vendor navigation",
+      "desktopAriaLabel": "Vendor sidebar",
       "home": "Home",
       "listings": "Listings",
       "orders": "Ama-order",
-      "profile": "Profile"
+      "profile": "Profile",
+      "more": "More",
+      "scan": "Scan & verify",
+      "returns": "Returns",
+      "analytics": "Analytics",
+      "services": "Services",
+      "events": "Events",
+      "rfq": "Quote requests",
+      "jobs": "Jobs",
+      "clips": "Clips",
+      "reviews": "Reviews",
+      "payouts": "Payouts",
+      "disputes": "Disputes",
+      "intake": "WhatsApp drafts"
     }
   },
   "intake": {

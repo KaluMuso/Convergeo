@@ -197,7 +197,10 @@
     "helpTitle": "Help",
     "helpBody": "Guides for orders, payments, and account questions.",
     "helpCta": "Visit help centre",
-    "deviceNote": "Saved items and recently viewed stay on this device unless you clear them. They are not a stock or price hold."
+    "deviceNote": "Saved items and recently viewed stay on this device unless you clear them. They are not a stock or price hold.",
+    "vendorPortalTitle": "Seller tools",
+    "vendorPortalBody": "Manage listings, orders, and payouts in the vendor portal.",
+    "vendorPortalCta": "Open vendor portal"
   },
   "saved": {
     "title": "Saved items",

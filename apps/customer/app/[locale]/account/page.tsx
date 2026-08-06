@@ -57,6 +57,9 @@ export default async function AccountOverviewPage({ params }: PageProps) {
         helpBody: t("hub.helpBody"),
         helpCta: t("hub.helpCta"),
         deviceNote: t("hub.deviceNote"),
+        vendorPortalTitle: t("hub.vendorPortalTitle"),
+        vendorPortalBody: t("hub.vendorPortalBody"),
+        vendorPortalCta: t("hub.vendorPortalCta"),
       }}
     />
   );

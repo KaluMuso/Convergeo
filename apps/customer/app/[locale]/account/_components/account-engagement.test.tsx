@@ -5,6 +5,10 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@vergeo/auth/use-session", () => ({
+  useSession: () => ({ user: null, session: null, loading: false }),
+}));
+
 import accountMessages from "../../../../../../packages/i18n/messages/en/account.json";
 
 import { AccountNav } from "./account-nav";
@@ -107,6 +111,9 @@ describe("AccountOverview", () => {
           helpBody: accountMessages.hub.helpBody,
           helpCta: accountMessages.hub.helpCta,
           deviceNote: accountMessages.hub.deviceNote,
+          vendorPortalTitle: accountMessages.hub.vendorPortalTitle,
+          vendorPortalBody: accountMessages.hub.vendorPortalBody,
+          vendorPortalCta: accountMessages.hub.vendorPortalCta,
         }}
       />,
     );
