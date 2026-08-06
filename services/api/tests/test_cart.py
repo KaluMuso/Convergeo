@@ -8,6 +8,7 @@ from app.errors import AppError
 from app.main import create_app
 from app.services.cart.grouping import FREE_DELIVERY_THRESHOLD_NGEWEE, CartLineView, group_by_vendor
 from app.services.cart.merge import merge_cart_items, validate_item_qty_for_listing
+from app.services.cart.read_path import prepare_cart_items_for_read
 from app.services.cart.totals import (
     cart_subtotal_ngwee,
     select_unit_price_ngwee,
@@ -503,6 +504,135 @@ class TestWholesaleOnlyIsOmittedFromTheCart:
         with pytest.raises(AppError) as excinfo:
             store.fetch_listing(LISTING_WHOLESALE)
         assert excinfo.value.http_status == 404
+
+
+class TestCartReadPathWholesaleVisibility:
+    """BATCH 1B — GET /cart must re-derive wholesale access (CAN-CAT-003).
+
+    Closes the gap where a retail line that later became wholesale-only still
+    appeared in cart responses with stale tier pricing until checkout blocked it.
+    """
+
+    @staticmethod
+    def _stored_line(
+        *,
+        listing_id: str = LISTING_WHOLESALE,
+        qty: int = 60,
+        price: int = 40_000,
+        wholesale: bool = True,
+        rfq_thread_id: str | None = None,
+    ) -> dict[str, Any]:
+        line: dict[str, Any] = {
+            "id": "line-1",
+            "listing_id": listing_id,
+            "qty": qty,
+            "unit_price_ngwee": price,
+            "wholesale": wholesale,
+        }
+        if rfq_thread_id is not None:
+            line["rfq_thread_id"] = rfq_thread_id
+        return line
+
+    def test_retail_user_stale_wholesale_line_is_omitted_with_generic_conflict(self) -> None:
+        """Listing transitioned retail → wholesale after cart insert."""
+        prepared = prepare_cart_items_for_read(
+            [self._stored_line()],
+            {LISTING_WHOLESALE: _wholesale_listing()},
+            business_eligible=False,
+        )
+        assert prepared.items == []
+        assert len(prepared.conflicts) == 1
+        assert prepared.conflicts[0].code == "cart.listing_unavailable"
+
+    def test_wholesale_conflict_is_indistinguishable_from_absent_listing(self) -> None:
+        line = self._stored_line()
+        wholesale_prep = prepare_cart_items_for_read(
+            [line],
+            {LISTING_WHOLESALE: _wholesale_listing()},
+            business_eligible=False,
+        )
+        absent_prep = prepare_cart_items_for_read([line], {}, business_eligible=False)
+        assert wholesale_prep.conflicts[0].code == absent_prep.conflicts[0].code
+        assert wholesale_prep.conflicts[0].message_key == absent_prep.conflicts[0].message_key
+        assert wholesale_prep.conflicts[0].details == absent_prep.conflicts[0].details
+
+    def test_verified_business_still_sees_wholesale_line_with_derived_tier(self) -> None:
+        prepared = prepare_cart_items_for_read(
+            [self._stored_line()],
+            {LISTING_WHOLESALE: _wholesale_listing()},
+            business_eligible=True,
+        )
+        assert len(prepared.items) == 1
+        assert prepared.conflicts == []
+        assert prepared.items[0]["unit_price_ngwee"] == 40_000
+        assert prepared.items[0]["wholesale"] is True
+
+    def test_guest_cannot_see_wholesale_only_line(self) -> None:
+        prepared = prepare_cart_items_for_read(
+            [self._stored_line()],
+            {LISTING_WHOLESALE: _wholesale_listing()},
+            business_eligible=False,
+        )
+        assert prepared.items == []
+
+    def test_retail_cart_line_unaffected_when_listing_stays_retail(self) -> None:
+        retail_line = {
+            "id": "line-retail",
+            "listing_id": LISTING_RETAIL,
+            "qty": 2,
+            "unit_price_ngwee": 10_000,
+            "wholesale": False,
+        }
+        prepared = prepare_cart_items_for_read(
+            [retail_line],
+            {LISTING_RETAIL: _retail_listing()},
+            business_eligible=False,
+        )
+        assert len(prepared.items) == 1
+        assert prepared.items[0]["unit_price_ngwee"] == 10_000
+        assert prepared.conflicts == []
+
+    def test_stale_tier_price_is_rederived_on_read_for_eligible_buyer(self) -> None:
+        """Stored 50-unit tier price with qty 20 must present the 10-unit tier."""
+        prepared = prepare_cart_items_for_read(
+            [self._stored_line(qty=20, price=40_000)],
+            {LISTING_WHOLESALE: _wholesale_listing()},
+            business_eligible=True,
+        )
+        assert len(prepared.items) == 1
+        assert prepared.items[0]["unit_price_ngwee"] == 45_000
+        assert prepared.items[0]["wholesale"] is True
+
+    def test_rfq_pinned_line_keeps_quote_price_and_survives_wholesale_transition(self) -> None:
+        rfq_line = self._stored_line(
+            qty=5,
+            price=33_000,
+            wholesale=False,
+            rfq_thread_id="rfq-thread-1",
+        )
+        prepared = prepare_cart_items_for_read(
+            [rfq_line],
+            {LISTING_WHOLESALE: _wholesale_listing()},
+            business_eligible=False,
+        )
+        assert prepared.conflicts == []
+        assert len(prepared.items) == 1
+        assert prepared.items[0]["unit_price_ngwee"] == 33_000
+        assert prepared.items[0]["wholesale"] is False
+
+    def test_response_does_not_expose_wholesale_title_for_blocked_line(self) -> None:
+        """Blocked lines never reach _build_cart_response item list."""
+        from app.routers.cart import _cart_response
+
+        cart = _cart_response(
+            cart_id="cart-1",
+            items=[self._stored_line()],
+            listings_by_id={LISTING_WHOLESALE: _wholesale_listing()},
+            business_eligible=False,
+        )
+        assert cart.items == []
+        assert cart.subtotal_ngwee == 0
+        assert cart.conflicts[0].code == "cart.listing_unavailable"
 
 
 class TestGroupingAndTotals:

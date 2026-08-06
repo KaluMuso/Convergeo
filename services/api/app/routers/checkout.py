@@ -14,6 +14,7 @@ from app.services.business.access import resolve_business_eligibility
 from app.services.cart.events import emit_checkout_start
 from app.services.cart.grouping import CartLineView, group_by_vendor
 from app.services.cart.merge import validate_item_qty_for_listing
+from app.services.cart.read_path import listing_cart_access_conflict
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.listings.class_rules import listing_lead_time_days
@@ -336,10 +337,19 @@ def _rederive_line_prices(
     for item in items:
         listing_id = str(item["listing_id"])
         listing = listings_by_id.get(listing_id)
-        if listing is None or listing.get("status") != "active":
-            conflicts.append({"listing_id": listing_id, "code": "cart.listing_unavailable"})
+        access_conflict = listing_cart_access_conflict(
+            listing_id,
+            listing,
+            business_eligible=business_eligible,
+        )
+        if access_conflict is not None:
+            # Checkout sessions surface inactive lines as unavailable (same as absent).
+            code = access_conflict.code
+            if code == "cart.listing_inactive":
+                code = "cart.listing_unavailable"
+            conflicts.append({"listing_id": listing_id, "code": code})
             continue
-        if listing.get("wholesale") and not business_eligible:
+        if listing is None:
             conflicts.append({"listing_id": listing_id, "code": "cart.listing_unavailable"})
             continue
         try:

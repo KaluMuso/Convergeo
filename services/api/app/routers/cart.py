@@ -14,6 +14,7 @@ from app.services.business.access import fetch_business_buyer
 from app.services.cart.events import emit_cart_add
 from app.services.cart.grouping import CartLineView, group_by_vendor
 from app.services.cart.merge import MergeConflict, merge_cart_items, validate_item_qty_for_listing
+from app.services.cart.read_path import prepare_cart_items_for_read
 from app.services.cart.store import (
     create_guest_cart,
     fetch_active_cart_by_guest,
@@ -321,6 +322,29 @@ def _fetch_cart_items(client: Client, cart_id: str) -> list[dict[str, Any]]:
     return [row for row in rows if isinstance(row, dict)]
 
 
+def _cart_response(
+    *,
+    cart_id: str,
+    items: list[dict[str, Any]],
+    listings_by_id: dict[str, dict[str, Any]],
+    business_eligible: bool,
+    conflicts: list[MergeConflict] | None = None,
+) -> CartResponse:
+    """Build a cart response after read-path access filtering and price derivation."""
+    prepared = prepare_cart_items_for_read(
+        items,
+        listings_by_id,
+        business_eligible=business_eligible,
+    )
+    merged_conflicts = list(conflicts or []) + prepared.conflicts
+    return _build_cart_response(
+        cart_id=cart_id,
+        items=prepared.items,
+        listings_by_id=listings_by_id,
+        conflicts=merged_conflicts or None,
+    )
+
+
 def _build_cart_response(
     *,
     cart_id: str,
@@ -468,7 +492,12 @@ async def get_cart(
     cart_id = owner.cart_id or ""
     items = _fetch_cart_items(client, cart_id)
     listings = fetch_listings_for_items(items)
-    return _build_cart_response(cart_id=cart_id, items=items, listings_by_id=listings)
+    return _cart_response(
+        cart_id=cart_id,
+        items=items,
+        listings_by_id=listings,
+        business_eligible=_business_eligible_for_user(owner.user_id),
+    )
 
 
 @router.post("/items", response_model=CartResponse)
@@ -576,7 +605,12 @@ async def add_cart_item(
 
     items = _fetch_cart_items(client, cart_id)
     listings = fetch_listings_for_items(items)
-    return _build_cart_response(cart_id=cart_id, items=items, listings_by_id=listings)
+    return _cart_response(
+        cart_id=cart_id,
+        items=items,
+        listings_by_id=listings,
+        business_eligible=business_eligible,
+    )
 
 
 @router.patch("/items/{listing_id}", response_model=CartResponse)
@@ -669,7 +703,12 @@ async def update_cart_item(
 
     items = _fetch_cart_items(client, cart_id)
     listings = fetch_listings_for_items(items)
-    return _build_cart_response(cart_id=cart_id, items=items, listings_by_id=listings)
+    return _cart_response(
+        cart_id=cart_id,
+        items=items,
+        listings_by_id=listings,
+        business_eligible=business_eligible,
+    )
 
 
 @router.delete("/items/{listing_id}", response_model=CartResponse)
@@ -704,7 +743,12 @@ async def remove_cart_item(
 
     items = _fetch_cart_items(client, cart_id)
     listings = fetch_listings_for_items(items)
-    return _build_cart_response(cart_id=cart_id, items=items, listings_by_id=listings)
+    return _cart_response(
+        cart_id=cart_id,
+        items=items,
+        listings_by_id=listings,
+        business_eligible=_business_eligible_for_user(owner.user_id),
+    )
 
 
 def _notice_responses_for_items(items: list[dict[str, Any]]) -> list[ChangeNoticeResponse]:
@@ -819,7 +863,12 @@ async def save_cart_item_for_later(
 
     items = _fetch_cart_items(client, cart_id)
     listings = fetch_listings_for_items(items)
-    cart = _build_cart_response(cart_id=cart_id, items=items, listings_by_id=listings)
+    cart = _cart_response(
+        cart_id=cart_id,
+        items=items,
+        listings_by_id=listings,
+        business_eligible=_business_eligible_for_user(owner.user_id),
+    )
     return SaveForLaterResponse(
         listing_id=listing_id,
         product_id=product_id,
@@ -887,10 +936,11 @@ async def merge_cart_on_login(
     _clear_guest_cookie(response)
 
     final_items = _fetch_cart_items(user_client, user_cart_id)
-    return _build_cart_response(
+    return _cart_response(
         cart_id=user_cart_id,
         items=final_items,
         listings_by_id=listings,
+        business_eligible=_business_eligible_for_user(current_user.id),
         conflicts=conflicts,
     )
 
@@ -977,4 +1027,9 @@ async def accept_rfq_into_cart(
 
     items = _fetch_cart_items(client, cart_id)
     listings = fetch_listings_for_items(items)
-    return _build_cart_response(cart_id=cart_id, items=items, listings_by_id=listings)
+    return _cart_response(
+        cart_id=cart_id,
+        items=items,
+        listings_by_id=listings,
+        business_eligible=business_eligible,
+    )
