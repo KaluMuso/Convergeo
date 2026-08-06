@@ -4,6 +4,9 @@
   "catalog.compare": "对比 {count} 件商品",
   "plp": {
     "title": "浏览 {category}",
+    "meta": {
+      "description": "在 Vergeo5 浏览 {category} — 比较赞比亚卖家、价格与库存。"
+    },
     "defaultCategory": "全部商品",
     "breadcrumbAria": "面包屑导航",
     "results": "{count, plural, one {# 个商品} other {# 个商品}}",
@@ -213,7 +216,8 @@
     },
     "meta": {
       "notFoundTitle": "未找到该商品",
-      "descriptionFallback": "在 Vergeo5 上选购 {name}"
+      "descriptionFallback": "在 Vergeo5 上选购 {name}",
+      "descriptionWithPrice": "在 Vergeo5 比较 {name} 的 {count, plural, one {# 个卖家} other {# 个卖家}} 价格。起价 {price}。"
     },
     "tabs": {
       "ariaLabel": "商品详情",

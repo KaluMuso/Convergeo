@@ -7,6 +7,7 @@ import {
   buildLocaleCanonical,
   JsonLdScript,
 } from "@vergeo/ui/src/seo/json-ld";
+import { buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -181,18 +182,19 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
 
   const canonicalPath = buildLocaleCanonical(locale, "c", ...slug);
   const hasFilters = Object.keys(resolvedSearch).some((key) => !["lat", "lng"].includes(key));
+  const title = t("plp.title", { category: categoryName });
+  const description = t("plp.meta.description", { category: categoryName });
 
   return {
-    title: t("plp.title", { category: categoryName }),
-    description: t("plp.results", { count: 0 }).replace("0", categoryName),
+    title,
+    description,
     alternates: buildCanonicalAlternates(locale, "c", ...slug),
-    openGraph: {
-      title: t("plp.title", { category: categoryName }),
-      description: t("plp.results", { count: 0 }).replace("0", categoryName),
-      type: "website",
+    ...buildSocialMetadata({
+      title,
+      description,
       locale,
       url: canonicalPath,
-    },
+    }),
     robots: {
       index: !hasFilters,
       follow: true,

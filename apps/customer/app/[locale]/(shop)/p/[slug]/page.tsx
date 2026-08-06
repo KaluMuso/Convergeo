@@ -11,6 +11,7 @@ import {
   JsonLdScript,
   resolveCloudinaryImageUrls,
 } from "@vergeo/ui/src/seo/json-ld";
+import { buildOgImageUrl, buildSocialMetadata } from "@vergeo/ui/src/seo/metadata";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -369,14 +370,23 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const product = result.data;
-  const description = t("pdp.meta.descriptionFallback", { name: product.name });
-  const canonicalPath = buildLocaleCanonical(locale, "p", product.slug);
+  const trimmedDescription = product.description?.trim();
   const minPrice = lowestListingPriceNgwee(product.listings);
-  const ogParams = new URLSearchParams({ name: product.name });
-  if (minPrice !== null) {
-    ogParams.set("price", formatK(minPrice));
-  }
-  const ogImagePath = `${buildLocaleCanonical(locale)}/opengraph-image?${ogParams.toString()}`;
+  const description =
+    trimmedDescription && trimmedDescription.length > 0
+      ? trimmedDescription
+      : minPrice !== null
+        ? t("pdp.meta.descriptionWithPrice", {
+            name: product.name,
+            count: product.listing_count,
+            price: formatK(minPrice),
+          })
+        : t("pdp.meta.descriptionFallback", { name: product.name });
+  const canonicalPath = buildLocaleCanonical(locale, "p", product.slug);
+  const ogImageUrl = buildOgImageUrl(locale, {
+    name: product.name,
+    ...(minPrice !== null ? { price: formatK(minPrice) } : {}),
+  });
 
   const indexable = product.listings.length > 0;
 
@@ -384,14 +394,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: product.name,
     description,
     alternates: buildCanonicalAlternates(locale, "p", product.slug),
-    openGraph: {
+    ...buildSocialMetadata({
       title: product.name,
       description,
-      type: "website",
       locale,
       url: canonicalPath,
-      images: [{ url: ogImagePath }],
-    },
+      imageUrl: ogImageUrl,
+    }),
     robots: {
       index: indexable,
       follow: indexable,

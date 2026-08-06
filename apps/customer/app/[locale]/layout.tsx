@@ -9,13 +9,14 @@ import {
 import { fontVariables } from "@vergeo/ui/fonts";
 import { Footer } from "@vergeo/ui/src/footer";
 import { SeasonalThemeStyle } from "@vergeo/ui/src/seasonal-theme";
+import { getMetadataBase } from "@vergeo/ui/src/seo/metadata";
 import { ThemeProvider } from "@vergeo/ui/src/theme-provider";
 import { ThemeScript } from "@vergeo/ui/src/theme-script";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages, setRequestLocale } from "next-intl/server";
+import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 
 import { SentryInit } from "../sentry-init";
 
@@ -52,12 +53,29 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "common" });
+  const appName = t("app.name");
+  const description = t("meta.defaultDescription");
+
   const base: Metadata = {
+    metadataBase: getMetadataBase(),
     title: {
-      template: "%s | Vergeo5",
-      default: "Vergeo5",
+      template: `%s | ${appName}`,
+      default: appName,
     },
-    description: "Discover products, services, and events across Zambia.",
+    description,
+    openGraph: {
+      siteName: appName,
+      type: "website",
+      locale,
+      title: appName,
+      description,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: appName,
+      description,
+    },
   };
 
   if (!isSeoIndexableLocale(locale)) {

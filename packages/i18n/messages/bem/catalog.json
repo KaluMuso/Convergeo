@@ -155,6 +155,7 @@
     "unavailableRetry": "Wesheni limbi",
     "meta": {
       "descriptionFallback": "Shiteni {name} pa Vergeo5",
+      "descriptionWithPrice": "Fisankisheni ama-price a {name} kuli {count, plural, one {# ushitisha} other {# abashitisha}} pa Vergeo5. Ukutula {price}.",
       "notFoundTitle": "Icintu tacisangwa"
     },
     "overview": {

@@ -19,6 +19,7 @@
     "./styles/base.css": "./src/styles/base.css",
     "./styles/theme.css": "./src/styles/theme.css",
     "./src/theme-presets": "./src/theme-presets.ts",
+    "./src/seo/metadata": "./src/seo/metadata.ts",
     "./src/*": "./src/*.tsx"
   },
   "dependencies": {

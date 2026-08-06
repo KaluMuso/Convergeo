@@ -4,6 +4,9 @@
   "catalog.compare": "Comparer {count} articles",
   "plp": {
     "title": "Parcourir {category}",
+    "meta": {
+      "description": "Parcourez {category} sur Vergeo5 — comparez vendeurs, prix et disponibilité en Zambie."
+    },
     "defaultCategory": "Tous les produits",
     "breadcrumbAria": "Fil d'Ariane",
     "results": "{count, plural, one {# annonce} other {# annonces}}",
@@ -213,7 +216,8 @@
     },
     "meta": {
       "notFoundTitle": "Produit introuvable",
-      "descriptionFallback": "Achetez {name} sur Vergeo5"
+      "descriptionFallback": "Achetez {name} sur Vergeo5",
+      "descriptionWithPrice": "Comparez les prix de {name} chez {count, plural, one {# vendeur} other {# vendeurs}} sur Vergeo5. À partir de {price}."
     },
     "tabs": {
       "ariaLabel": "Détails du produit",
