@@ -1,47 +1,51 @@
 # Implementation & Audit Queue
 
-**Updated:** 2026-08-06 (Batch 0 complete)
+**Updated:** 2026-08-06 (Batch 0.5 complete)
 
 ---
 
 ## Completed
 
-| Batch       | Title                                    | Outcome                                                                   |
-| ----------- | ---------------------------------------- | ------------------------------------------------------------------------- |
-| **Batch 0** | Repository truth & architecture baseline | ARCHITECTURE_BASELINE.md + programme docs; DEC-001…004 resolved from code |
+| Batch         | Title                                                | Outcome                                                                                                           |
+| ------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Batch 0**   | Repository truth & architecture baseline             | ARCHITECTURE_BASELINE.md; DEC-001…004 resolved from code                                                          |
+| **Batch 0.5** | Runtime truth, migration truth & requirements ingest | Live probes; migration tips; registry ingest; [runtime-truth-evidence.md](./2026-08-06/runtime-truth-evidence.md) |
 
 ---
 
 ## Recommended next batch (do not execute until approved)
 
-### Batch 1 — Live environment verification & migration truth
+### Batch 1 — Cart, checkout derivation & B2B visibility integrity
 
-**Rationale:** Git proves a large, mature codebase, but **deployment and runtime state are the largest unknowns**. Status doc (2026-08-01) already documents prod/staging migration skew, unknown API health, partial n8n import, and RLS CI false-green (RG-6). No feature work should proceed until this batch closes.
+**Rationale:** Batch 0.5 established the highest **actionable code-level security gap** without requiring production migration apply or money activation: **CAN-CAT-003** and **CAN-ORD-003** are **PARTIAL** — wholesale eligibility is enforced at cart add and checkout session creation, but **not** on `GET /cart` read. This violates the B2B invisibility invariant for stale cart rows and is directly traceable in code (BLK-101). Migration skew (BLK-001/002) blocks production verification of `0086` cart RLS (CAN-ORD-002) but does not block a read-only code audit and fix design.
 
-**Scope (read-only / evidence only):**
+**Scope (audit-first; implementation only if trivial doc fix is insufficient):**
 
-1. **Supabase migration tip** — compare `supabase_migrations.schema_migrations` on production and staging vs Git filenames (through `0095` and timestamp migration).
-2. **API live probe** — `GET https://api.vergeo5.com/healthz`, `/readyz?checks=search`, `/fingerprint` (no secrets).
-3. **Vercel production SHA** — customer/vendor/admin `/{locale}/health` `buildId` vs `git rev-parse master`.
-4. **n8n inventory** — list active workflows on production host vs `infra/n8n/*.json` registry.
-5. **Feature flags & money gates** — read `feature_flags` table and document `PAYMENTS_ENABLED` / `PAYOUTS_ENABLED` **names only** from runtime config (not values).
-6. **RLS CI validity** — confirm whether RG-6 fix is merged; if not, record as BLOCKER.
-7. **Ingest Canonical Requirements Registry** into MASTER_REQUIREMENTS.md + full traceability matrix.
+1. Trace full cart → checkout → order path for wholesale/retail visibility and price re-derivation.
+2. Map gaps to CAN-CAT-003, CAN-ORD-002, CAN-ORD-003 acceptance criteria.
+3. Propose minimal fix (cart read filter vs checkout-only) with test cases.
+4. Cross-check listing visibility changes post-add (retail → wholesale-only scenario).
+5. Document interaction with D36 business-buyer gate.
 
-**Deliverables:** Update AUDIT_LEDGER deployment/runtime columns; BLOCKERS.md; dated evidence file under `docs/production-readiness/2026-08-06/`.
+**Canonical IDs:** CAN-CAT-003, CAN-ORD-002, CAN-ORD-003
 
-**Explicitly out of scope:** Payment activation, payouts, schema changes, demo seeding.
+**Deliverables:** Updated AUDIT_LEDGER rows; fix PR or implementation-queue entry; no production migration apply.
+
+**Explicitly out of scope:** Lenco money drills, production migration apply, n8n activation, payout enablement.
+
+**Why not migration batch first:** Migration apply is **ops execution** (BLK-001/002) requiring founder-approved maintenance window — not a bounded audit. Cart/B2B gap is a confirmed invariant violation in deployed code paths today.
 
 ---
 
-## Deferred batches (outline only)
+## Deferred batches (outline)
 
-| Batch   | Title                                       | Depends on                        |
-| ------- | ------------------------------------------- | --------------------------------- |
-| Batch 2 | Canonical requirement audit (CAN-* vs code) | Batch 1 + registry ingest         |
-| Batch 3 | Financial path end-to-end (sandbox drill)   | Batch 1 + F9b Lenco sandbox creds |
-| Batch 4 | AuthZ & RLS penetration audit               | Batch 1 + RG-6 fix merged         |
-| Batch 5 | n8n fleet activation & error-handler wiring | Batch 1 n8n inventory             |
+| Batch   | Title                                                  | Depends on                      |
+| ------- | ------------------------------------------------------ | ------------------------------- |
+| Batch 2 | Staging migration apply + schema verification          | Founder ops window; BLK-001/002 |
+| Batch 3 | Money representation & webhook safety (sandbox drill)  | Batch 2 + F9b creds             |
+| Batch 4 | AuthZ & RLS penetration (live DB at current tip)       | Batch 2                         |
+| Batch 5 | n8n fleet completion (release-job, order-jobs, backup) | Batch 2                         |
+| Batch 6 | Backup/recovery proof                                  | EXT-004 dashboard access        |
 
 ---
 

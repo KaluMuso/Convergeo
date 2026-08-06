@@ -1,60 +1,182 @@
-# Blockers — Evidence-Backed (Batch 0)
+# Blockers — Evidence-Backed (Batch 0.5)
 
 **Date:** 2026-08-06  
-**Aggregate launch posture:** **NO_GO** (consistent with `docs/plan/00-status.md`)
+**Repository SHA:** `fcf2b1918256bd3d8680741b17cf928cde8576c5`  
+**Aggregate launch posture:** **NO_GO**
 
-Blockers are **not repaired in Batch 0** — recorded for programme visibility.
-
----
-
-## P0 — Blocks trustworthy audit or launch
-
-| ID          | Blocker                                                                          | Evidence                                                            | Owner     |
-| ----------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------- | --------- |
-| **BLK-001** | Production DB migration tip unknown vs Git (`0093+`, clips/intake `0072`–`0079`) | 96 migrations in Git; status doc cites prod at `0071` (2026-08-01)  | Ops/DB    |
-| **BLK-002** | API production health unverified this programme session                          | No egress probe; dated docs mixed (502 resolved then unknown)       | Ops       |
-| **BLK-003** | RLS CI matrix may be false-green (RG-6)                                          | `00-status.md` 2026-08-02: 1125 failures, `continue-on-error: true` | Eng       |
-| **BLK-004** | Canonical Requirements Registry not in repository                                | Grep found no CAN-* / registry file                                 | Programme |
-| **BLK-005** | Zero money rows exercised on any environment                                     | status doc: payments/orders/ledger all 0 (verified 2026-08-01)      | Ops + F9b |
-| **BLK-006** | n8n money/backup workflows partially imported                                    | status doc: 15/24 never imported; backup inactive                   | Ops       |
-| **BLK-007** | F4 legal counsel sign-off absent                                                 | Pre real-money gate per D14                                         | Founder   |
+Evidence pack: [2026-08-06/runtime-truth-evidence.md](./2026-08-06/runtime-truth-evidence.md)
 
 ---
 
-## P1 — Significant risk, not sole launch blockers
+## P0 blockers
 
-| ID              | Blocker                                                                                 | Evidence                                                            |
-| --------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| **BLK-101**     | B2B cart read-path may not re-derive wholesale eligibility                              | `00-status.md` G3: `_build_cart_response` reads stored `cart_items` |
-| **BLK-102**     | Sentry projects may not exist for all apps                                              | `observability-live-evidence.md` 2026-07-20                         |
-| ~~**BLK-103**~~ | ~~Triple `0093_*` migration prefix~~ — **resolved** `0093`–`0095` renumber (2026-08-06) | Was blocking CI migration replay / RLS / perf                       |
-| **BLK-104**     | Custom access token hook disabled                                                       | `0051` SQL vs commented hook in `config.toml`                       |
-| **BLK-105**     | `supabase/config.toml` Postgres 15 vs cloud 16                                          | Version mismatch in config                                          |
+### BLK-001 — Production DB migrations substantially behind Git
+
+| Field                  | Value                                                                                                                                                                                                                                         |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Category**           | `DATA_MIGRATION_BLOCKER`                                                                                                                                                                                                                      |
+| **Description**        | Production Supabase (`dpadrlxukcjbewpqympu`) last applied migration is `0071_vendor_listing_compare_at`. Git tip includes `0072`–`0095` plus `20260802153539_rls_policy_contract_remediation.sql` — **24+ migrations missing** on production. |
+| **Evidence**           | Supabase MCP `list_migrations` (2026-08-06); [runtime-truth-evidence.md](./2026-08-06/runtime-truth-evidence.md)                                                                                                                              |
+| **Affected canonical** | CAN-ORD-002, CAN-CAT-005, CAN-OPS-001, CAN-SOC-001/002, CAN-FIN-004/005 (schema/features in unmigrated band)                                                                                                                                  |
+| **Launch scope**       | PLATFORM                                                                                                                                                                                                                                      |
+| **Next action**        | Plan staged migration apply on staging first; reconcile `schema_migrations` ordering; never apply blindly to production.                                                                                                                      |
+
+### BLK-002 — Staging DB migrations behind Git
+
+| Field                  | Value                                                                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **Category**           | `DATA_MIGRATION_BLOCKER`                                                                                                             |
+| **Description**        | Staging (`iyasmrmbcrvlfxpzescb`) last applied `0079_clip_cost_guard`. Missing `0080`–`0095` and timestamp RLS remediation migration. |
+| **Evidence**           | Supabase MCP (2026-08-06)                                                                                                            |
+| **Affected canonical** | CAN-OPS-001, CAN-CAT-003, CAN-ORD-002/003                                                                                            |
+| **Launch scope**       | PLATFORM                                                                                                                             |
+| **Next action**        | Apply missing migrations on staging; run RLS matrix + smoke tests before production promotion.                                       |
+
+### BLK-003 — API production deploy behind master
+
+| Field                  | Value                                                                                                 |
+| ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Category**           | `DEPLOYMENT_REQUIRED`                                                                                 |
+| **Description**        | Production API `/fingerprint` reports `git_sha=e4a7bb79` — ancestor of current `master` (`fcf2b191`). |
+| **Evidence**           | Live GET probes 2026-08-06                                                                            |
+| **Affected canonical** | CAN-OPS-006                                                                                           |
+| **Launch scope**       | PLATFORM                                                                                              |
+| **Next action**        | Trigger API image build/deploy workflow after migration plan approved.                                |
+
+### BLK-004 — Zero money exercised on production
+
+| Field                  | Value                                                                                                                   |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **Category**           | `FINANCIAL_BLOCKER`                                                                                                     |
+| **Description**        | `ledger_transactions` count = 0 on production; no sandbox money drill evidence in programme.                            |
+| **Evidence**           | Supabase SQL count; `docs/plan/00-status.md`                                                                            |
+| **Affected canonical** | CAN-FIN-001, CAN-FIN-002, CAN-FIN-003, CAN-FIN-004                                                                      |
+| **Launch scope**       | PAYMENTS                                                                                                                |
+| **Next action**        | Complete money drill prerequisite matrix; obtain F9b Lenco sandbox creds; run staging drill only after financial audit. |
+
+### BLK-005 — Escrow automation workflows not confirmed active
+
+| Field                  | Value                                                                                                                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Category**           | `DEPLOYMENT_REQUIRED`                                                                                                                                                          |
+| **Description**        | n8n MCP shows payment reconciliation + reservation sweeper ACTIVE, but `release-job.json`, `order-jobs.json`, `event-release.json` are **IN_GIT_ONLY** / import state unknown. |
+| **Evidence**           | n8n MCP inventory 2026-08-06; `infra/n8n/` (25 JSON files)                                                                                                                     |
+| **Affected canonical** | CAN-FIN-005, CAN-FIN-004, CAN-EVT-003                                                                                                                                          |
+| **Launch scope**       | PLATFORM, VENDOR                                                                                                                                                               |
+| **Next action**        | Read-only n8n fleet audit; import + wire error handler before enabling escrow timers.                                                                                          |
+
+### BLK-006 — Database backup workflow inactive
+
+| Field                  | Value                                                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Category**           | `RECOVERY_BLOCKER`                                                                                                              |
+| **Description**        | n8n `Database Backup` workflow (`backup.json`) is **IMPORTED_INACTIVE**. Supabase PITR configuration not verified this session. |
+| **Evidence**           | n8n MCP 2026-08-06                                                                                                              |
+| **Affected canonical** | CAN-OPS-005                                                                                                                     |
+| **Launch scope**       | PLATFORM                                                                                                                        |
+| **Next action**        | Verify Supabase backup/PITR in dashboard; activate or replace n8n backup workflow; document restore procedure.                  |
+
+### BLK-007 — F4 legal counsel sign-off absent
+
+| Field                  | Value                                                                      |
+| ---------------------- | -------------------------------------------------------------------------- |
+| **Category**           | `FINANCIAL_BLOCKER`                                                        |
+| **Description**        | Pre real-money gate per D14 — no counsel sign-off on escrow/payment flows. |
+| **Evidence**           | `docs/plan/00-decisions.md` F4                                             |
+| **Affected canonical** | CAN-FIN-004, CAN-FIN-002                                                   |
+| **Launch scope**       | PAYMENTS                                                                   |
+| **Next action**        | Founder legal review before `PAYMENTS_ALLOW_PRODUCTION`.                   |
+
+### BLK-008 — OCI money gate env vars unverified
+
+| Field                  | Value                                                                                                                                                                |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Category**           | `EXTERNAL_ACCESS_REQUIRED`                                                                                                                                           |
+| **Description**        | `PAYMENTS_ENABLED`, `PAYMENTS_ALLOW_PRODUCTION`, `PAYOUTS_ENABLED`, `STAGING_ALLOW_PAYOUTS` effective values not readable from this session (no OCI SSH/env access). |
+| **Evidence**           | BLOCKED_EXTERNAL in runtime-truth-evidence                                                                                                                           |
+| **Affected canonical** | CAN-FIN-002, CAN-FIN-003                                                                                                                                             |
+| **Launch scope**       | PAYMENTS                                                                                                                                                             |
+| **Next action**        | Ops read-only env audit on OCI VM; confirm all gates false before drills.                                                                                            |
+
+---
+
+## P1 blockers
+
+### BLK-101 — B2B cart read-path does not re-derive wholesale eligibility
+
+| Field                  | Value                                                                                                                                                                                                                                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Category**           | `CODE_DEFECT`                                                                                                                                                                                                                                                                                    |
+| **Description**        | `GET /cart` / `_build_cart_response` uses stored `cart_items` without re-checking wholesale visibility. Checkout session creation **does** re-derive (`_rederive_line_prices` → 409). A retail user who added a listing before it became wholesale-only may see stale cart lines until checkout. |
+| **Evidence**           | `services/api/app/routers/cart.py`, `services/api/app/services/cart/store.py`, `services/api/app/routers/checkout.py`; runtime-truth-evidence B2B trace                                                                                                                                          |
+| **Affected canonical** | CAN-CAT-003, CAN-ORD-003                                                                                                                                                                                                                                                                         |
+| **Launch scope**       | B2B, PLATFORM                                                                                                                                                                                                                                                                                    |
+| **Next action**        | Bounded audit/fix in Batch 1 (cart & checkout derivation).                                                                                                                                                                                                                                       |
+
+### BLK-102 — Vendor/admin production SHA unknown
+
+| Field                  | Value                                                                                                                       |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **Category**           | `EXTERNAL_ACCESS_REQUIRED`                                                                                                  |
+| **Description**        | Customer `buildId=fcf2b191` matches master. Vendor health returns HTML shell (no JSON SHA). Admin behind Cloudflare Access. |
+| **Evidence**           | Live probes 2026-08-06                                                                                                      |
+| **Affected canonical** | CAN-OPS-006                                                                                                                 |
+| **Launch scope**       | PLATFORM                                                                                                                    |
+| **Next action**        | Probe vendor JSON health endpoint or Vercel deployment metadata; CF Access session for admin.                               |
+
+### BLK-103 — Registry traceability 2-row supply gap
+
+| Field                  | Value                                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Category**           | `PRODUCT_DECISION`                                                                                     |
+| **Description**        | Registry header claims 225 source rows; supplied matrix contains 223 (S1 header 53 vs 51 matrix rows). |
+| **Evidence**           | [REQUIREMENT_TRACEABILITY.md](./REQUIREMENT_TRACEABILITY.md); DECISIONS.md REG-001                     |
+| **Affected canonical** | (traceability completeness)                                                                            |
+| **Launch scope**       | PLATFORM                                                                                               |
+| **Next action**        | Operator supplies missing S1 source IDs.                                                               |
+
+### BLK-104 — Custom access token hook disabled
+
+| Field                  | Value                                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------------------------ |
+| **Category**           | `ENVIRONMENT_REQUIRED`                                                                           |
+| **Description**        | Migration `0051` SQL exists; `custom_access_token_hook` commented out in `supabase/config.toml`. |
+| **Evidence**           | Batch 0 architecture baseline                                                                    |
+| **Affected canonical** | CAN-ID-002, CAN-OPS-001                                                                          |
+| **Launch scope**       | PLATFORM                                                                                         |
+| **Next action**        | Product decision FD-03 before enabling.                                                          |
+
+---
+
+## Resolved (Batch 0.5)
+
+| ID                                          | Resolution                                                                                |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| ~~BLK-003 (Batch 0) RLS CI false-green~~    | **Resolved** — `vergeo_rls_tester` + blocking RLS step on `master`; PR #583 CI green      |
+| ~~BLK-103 (Batch 0) triple 0093 collision~~ | **Resolved** — renumbered to `0093`/`0094`/`0095` (PR #583)                               |
+| ~~BLK-004 (Batch 0) Registry not in repo~~  | **Resolved** — MASTER_REQUIREMENTS + traceability ingested (223 rows + REG-001 gap noted) |
 
 ---
 
 ## Safety gates (must remain enforced)
 
-| Gate               | Mechanism                                       | Default                   |
-| ------------------ | ----------------------------------------------- | ------------------------- |
-| Online payments    | `PAYMENTS_ENABLED`, `PAYMENTS_ALLOW_PRODUCTION` | OFF                       |
-| Payouts            | `PAYOUTS_ENABLED`, `STAGING_ALLOW_PAYOUTS`      | OFF                       |
-| Public marketplace | `public_launch` feature flag                    | false                     |
-| WAHA intake        | `waha_vendor_intake` flag                       | false                     |
-| Clips              | `clips`, `clips_comments` flags                 | false / unapplied on prod |
+| Gate               | DB flag / env             | Observed state (2026-08-06)             |
+| ------------------ | ------------------------- | --------------------------------------- |
+| Public marketplace | `public_launch`           | **false** (prod + staging)              |
+| Online payments    | `PAYMENTS_ENABLED` etc.   | **UNKNOWN** (OCI); code defaults OFF    |
+| Payouts            | `PAYOUTS_ENABLED`         | **UNKNOWN** (OCI); code defaults OFF    |
+| WAHA intake        | `waha_vendor_intake`      | **false** (staging); row absent on prod |
+| Clips              | `clips`, `clips_comments` | **false** (staging); absent on prod     |
 
-**Do not activate** these in audit sessions without explicit founder approval.
+**Do not activate** in audit sessions without explicit founder approval.
 
 ---
 
 ## External dependencies
 
-| ID          | Dependency                                | Blocks                               |
-| ----------- | ----------------------------------------- | ------------------------------------ |
-| **EXT-001** | Lenco sandbox credentials (F9b)           | RG-4 money drill                     |
-| **EXT-002** | Zamtel collections decision (FD-01)       | Checkout rail honesty                |
-| **EXT-003** | Meta WhatsApp Cloud production setup (F5) | Transactional notifications at scale |
-
----
-
-_Re-evaluate after Batch 1 live verification._
+| ID      | Dependency                              | Category                 | Blocks                             |
+| ------- | --------------------------------------- | ------------------------ | ---------------------------------- |
+| EXT-001 | Lenco sandbox credentials (F9b)         | EXTERNAL_ACCESS_REQUIRED | CAN-FIN-002 money drills           |
+| EXT-002 | Zamtel collections decision (FD-01)     | PRODUCT_DECISION         | CAN-FIN-002 checkout honesty       |
+| EXT-003 | Meta WhatsApp Cloud production (F5)     | EXTERNAL_ACCESS_REQUIRED | CAN-OPS-004 notifications at scale |
+| EXT-004 | Supabase PITR / backup dashboard access | EXTERNAL_ACCESS_REQUIRED | CAN-OPS-005 recovery proof         |
