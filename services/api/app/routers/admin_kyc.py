@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
@@ -9,6 +9,7 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
+from app.routers.vendor_licences import REGULATED_CLASSES
 from app.services.kyc.state_machine import (
     ServiceRoleClient,
     transition_approve,
@@ -30,6 +31,24 @@ SIGNED_URL_TTL_SECONDS = 300
 
 SLA_ON_TRACK_HOURS = 24
 SLA_DUE_SOON_HOURS = 72
+
+LICENSE_BODIES = frozenset(
+    {
+        "PACRA",
+        "ZAMRA",
+        "HPCZ",
+        "ZIEA",
+        "RTSA",
+        "ZEMA",
+        "ERB",
+        "WARMA",
+        "TCZ",
+        "OTHER",
+    }
+)
+LicenseBody = Literal[
+    "PACRA", "ZAMRA", "HPCZ", "ZIEA", "RTSA", "ZEMA", "ERB", "WARMA", "TCZ", "OTHER"
+]
 
 SlaBadge = Literal["on_track", "due_soon", "overdue"]
 RejectReasonTemplate = Literal[
@@ -96,6 +115,28 @@ class KycDetailOut(BaseModel):
 
 class ApproveKycRequest(BaseModel):
     reviewer_notes: str | None = Field(default=None, max_length=2000)
+    expiry_date: date | None = None
+    license_body: LicenseBody | None = None
+    regulated_class: str | None = Field(default=None, max_length=64)
+    licence_number: str | None = Field(default=None, min_length=3, max_length=120)
+
+    @model_validator(mode="after")
+    def validate_tier2_license_fields(self) -> ApproveKycRequest:
+        # Tier is validated against the KYC record in the endpoint; this validator
+        # only enforces field pairing when any licence field is supplied.
+        licence_fields = (
+            self.expiry_date,
+            self.license_body,
+            self.regulated_class,
+            self.licence_number,
+        )
+        if any(field is not None for field in licence_fields) and self.expiry_date is None:
+            raise ValueError("expiry_date is required when recording a regulator licence")
+        if self.license_body is not None and self.license_body not in LICENSE_BODIES:
+            raise ValueError("license_body must be a known regulator enum value")
+        if self.regulated_class is not None and self.regulated_class not in REGULATED_CLASSES:
+            raise ValueError("regulated_class must be a known regulated category")
+        return self
 
 
 class StartReviewRequest(BaseModel):
@@ -432,6 +473,75 @@ def _snapshot_before_decision(
     }
 
 
+def _require_tier2_license_fields(*, tier: int, body: ApproveKycRequest) -> None:
+    if tier < 2:
+        return
+    missing: list[str] = []
+    if body.expiry_date is None:
+        missing.append("expiry_date")
+    if body.license_body is None:
+        missing.append("license_body")
+    if not body.regulated_class:
+        missing.append("regulated_class")
+    if not body.licence_number:
+        missing.append("licence_number")
+    if missing:
+        raise AppError(
+            code="validation_error",
+            message="Tier 2/3 KYC approval requires regulator licence details",
+            http_status=422,
+            details={"required": missing, "tier": tier},
+        )
+
+
+def _upsert_verified_licence_on_approve(
+    service_client: ServiceRoleClient,
+    *,
+    vendor_id: str,
+    actor_id: str,
+    body: ApproveKycRequest,
+) -> None:
+    if body.expiry_date is None or body.license_body is None:
+        return
+    regulated_class = body.regulated_class
+    licence_number = body.licence_number
+    if not regulated_class or not licence_number:
+        return
+
+    now_iso = datetime.now(UTC).isoformat()
+    existing = (
+        _table(service_client, "vendor_licences")
+        .select("id, status")
+        .eq("vendor_id", vendor_id)
+        .eq("regulated_class", regulated_class)
+        .in_("status", ["pending", "verified"])
+        .maybe_single()
+        .execute()
+    )
+    row = existing.data if isinstance(existing.data, dict) else None
+    payload = {
+        "vendor_id": vendor_id,
+        "regulated_class": regulated_class,
+        "regulator": body.license_body,
+        "license_body": body.license_body,
+        "licence_number": licence_number,
+        "expires_on": body.expiry_date.isoformat(),
+        "status": "verified",
+        "verified_by": actor_id,
+        "verified_at": now_iso,
+        "reviewer_notes": body.reviewer_notes,
+    }
+    if row is not None:
+        (
+            _table(service_client, "vendor_licences")
+            .update(payload)
+            .eq("id", row["id"])
+            .execute()
+        )
+    else:
+        _table(service_client, "vendor_licences").insert(payload).execute()
+
+
 @kyc_router.get("/orphaned-tiers", response_model=list[OrphanedTierItem])
 async def list_orphaned_kyc_tiers(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
@@ -594,6 +704,7 @@ async def approve_kyc(
     row = _load_kyc_record_row(service_client, record_id)
     vendor_id = str(row["vendor_id"])
     tier = int(row["tier"])
+    _require_tier2_license_fields(tier=tier, body=body)
     before = _snapshot_before_decision(service_client, vendor_id=vendor_id, kyc_row=row)
     result = transition_approve(
         actor_id=current_user.id,
@@ -602,6 +713,12 @@ async def approve_kyc(
         tier=tier,
         reviewer_notes=body.reviewer_notes,
         service_client=service_client,
+    )
+    _upsert_verified_licence_on_approve(
+        service_client,
+        vendor_id=vendor_id,
+        actor_id=current_user.id,
+        body=body,
     )
     vendor = _load_vendor_row(service_client, vendor_id)
     return _handle_kyc_decision(

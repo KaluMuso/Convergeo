@@ -3733,9 +3733,11 @@ export type Database = {
           created_at: string
           document_path: string | null
           expires_on: string
+          expiry_date: string | null
           id: string
           issued_on: string | null
           licence_number: string
+          license_body: Database["public"]["Enums"]["license_body"] | null
           regulated_class: string
           regulator: string
           reviewer_notes: string | null
@@ -3749,9 +3751,11 @@ export type Database = {
           created_at?: string
           document_path?: string | null
           expires_on: string
+          expiry_date?: string | null
           id?: string
           issued_on?: string | null
           licence_number: string
+          license_body?: Database["public"]["Enums"]["license_body"] | null
           regulated_class: string
           regulator: string
           reviewer_notes?: string | null
@@ -3765,9 +3769,11 @@ export type Database = {
           created_at?: string
           document_path?: string | null
           expires_on?: string
+          expiry_date?: string | null
           id?: string
           issued_on?: string | null
           licence_number?: string
+          license_body?: Database["public"]["Enums"]["license_body"] | null
           regulated_class?: string
           regulator?: string
           reviewer_notes?: string | null
@@ -4437,7 +4443,17 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      license_body:
+        | "PACRA"
+        | "ZAMRA"
+        | "HPCZ"
+        | "ZIEA"
+        | "RTSA"
+        | "ZEMA"
+        | "ERB"
+        | "WARMA"
+        | "TCZ"
+        | "OTHER"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4567,7 +4583,20 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      license_body: [
+        "PACRA",
+        "ZAMRA",
+        "HPCZ",
+        "ZIEA",
+        "RTSA",
+        "ZEMA",
+        "ERB",
+        "WARMA",
+        "TCZ",
+        "OTHER",
+      ],
+    },
   },
 } as const
 

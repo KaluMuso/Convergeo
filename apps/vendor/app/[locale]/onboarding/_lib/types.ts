@@ -14,7 +14,8 @@ export type KycStatus =
   | "suspended"
   | "revoked";
 
-export type VendorStatus = "draft" | "pending_kyc" | "active" | "suspended";
+export type VendorStatus =
+  "draft" | "pending_kyc" | "active" | "suspended" | "suspended_compliance";
 
 export type KycApplication = {
   vendor_id: string;

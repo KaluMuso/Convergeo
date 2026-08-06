@@ -1,4 +1,4 @@
-"""Tests for automated background sweepers (escrow, cart, daily summary)."""
+"""Tests for automated background sweepers (escrow, cart, daily summary, licences)."""
 
 from __future__ import annotations
 
@@ -16,11 +16,16 @@ from app.services.ledger.templates import LedgerTemplate, commission_ngwee_from_
 from app.services.orders.state import SYSTEM_ACTOR_ID
 from app.services.payments.fulfillment import escrow_hold_idempotency_key
 from app.services.stock.claim import claim_reservation
+from app.services.vendors.license_enforcement import (
+    ExpiredLicenceTarget,
+    LicenseEnforcementResult,
+)
 from app.settings import Settings
 from app.tasks.sweepers import (
     dispatch_daily_summary,
     sweep_expired_cart_reservations,
     sweep_expired_escrows,
+    sweep_expired_licenses,
 )
 from fastapi.testclient import TestClient
 from tests.rls.conftest import (
@@ -79,6 +84,23 @@ def ensure_idempotency_column(conn: PgConn) -> None:
     )
     if result.ok and result.rows and result.rows[0] == "0":
         migration = MIGRATIONS_DIR / "0015_ledger_idempotency.sql"
+        applied = conn.run_file(migration)
+        if not applied.ok:
+            raise RuntimeError(f"failed to apply {migration.name}: {applied.error}")
+
+
+def ensure_license_enforcement_schema(conn: PgConn) -> None:
+    result = conn.run(
+        """
+        SELECT count(*)::text
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'vendor_licences'
+          AND column_name = 'license_body';
+        """
+    )
+    if result.ok and result.rows and result.rows[0] == "0":
+        migration = MIGRATIONS_DIR / "0093_license_expiry_enforcement.sql"
         applied = conn.run_file(migration)
         if not applied.ok:
             raise RuntimeError(f"failed to apply {migration.name}: {applied.error}")
@@ -255,6 +277,7 @@ def db() -> Generator[PgConn, None, None]:
         seed_matrix_fixtures(conn)
     else:
         ensure_idempotency_column(conn)
+        ensure_license_enforcement_schema(conn)
         seed_matrix_fixtures(conn)
     seed_ledger_accounts(conn)
     yield conn
@@ -468,3 +491,121 @@ class TestInternalSweepersRouter:
         body = response.json()
         assert body["scanned"] == 2
         assert body["released"] == 1
+
+
+class TestExpiredLicenceSweep:
+    def test_sweep_expired_licenses_enforces_yesterday_expiry(
+        self,
+    ) -> None:
+        target = ExpiredLicenceTarget(
+            vendor_id="vendor-a",
+            licence_id="licence-1",
+            regulated_class="pharmacy",
+            expiry_date="2026-08-05",
+            license_body="HPCZ",
+        )
+        enforcement = LicenseEnforcementResult(
+            vendor_id="vendor-a",
+            licence_id="licence-1",
+            vendor_suspended=True,
+            listings_removed=3,
+            audited=True,
+        )
+
+        with (
+            patch(
+                "app.tasks.sweepers.list_expired_licence_targets",
+                return_value=[target],
+            ),
+            patch(
+                "app.tasks.sweepers.enforce_expired_licence",
+                return_value=enforcement,
+            ) as enforce_mock,
+        ):
+            result = sweep_expired_licenses(_SERVICE, today=date(2026, 8, 6))
+
+        enforce_mock.assert_called_once_with(target, today=date(2026, 8, 6))
+        assert result.scanned == 1
+        assert result.vendors_suspended == 1
+        assert result.listings_removed == 3
+        assert result.audit_rows == 1
+
+    @pytest.mark.skipif(
+        __import__("shutil").which("psql") is None,
+        reason="psql required for integration DB tests",
+    )
+    def test_yesterday_expiry_suspends_vendor_and_hides_listings(
+        self,
+        db: PgConn,
+        db_url_env: None,
+    ) -> None:
+        today = date(2026, 8, 6)
+        yesterday = today - timedelta(days=1)
+        listing_id = str(uuid.uuid4())
+        licence_id = str(uuid.uuid4())
+        ids_fixture = json.loads(
+            (Path(__file__).resolve().parent / "fixtures" / "demo" / "ids.json").read_text()
+        )
+        category_id = ids_fixture["category_id"]
+
+        db.run(
+            f"""
+            UPDATE public.vendors
+            SET status = 'active', kyc_tier = 2
+            WHERE id = '{VENDOR_A}'::uuid;
+            """
+        )
+        db.run(
+            f"""
+            INSERT INTO public.vendor_listings (
+              id, vendor_id, category_id, title, slug, stock_mode, stock_qty, status
+            ) VALUES (
+              '{listing_id}', '{VENDOR_A}', '{category_id}',
+              'Regulated listing', 'regulated-{listing_id[:8]}',
+              'tracked', 3, 'active'
+            );
+            """
+        )
+        db.run(
+            f"""
+            INSERT INTO public.vendor_licences (
+              id, vendor_id, regulated_class, regulator, license_body,
+              licence_number, expires_on, status, verified_at
+            ) VALUES (
+              '{licence_id}', '{VENDOR_A}', 'pharmacy', 'HPCZ', 'HPCZ',
+              'HPCZ-TEST-001', '{yesterday.isoformat()}', 'verified',
+              timezone('utc', now())
+            );
+            """
+        )
+
+        result = sweep_expired_licenses(_SERVICE, today=today)
+
+        assert result.scanned >= 1
+        assert result.vendors_suspended >= 1
+        assert result.listings_removed >= 1
+        assert result.audit_rows >= 1
+
+        vendor = db.run(
+            f"SELECT status FROM public.vendors WHERE id = '{VENDOR_A}'::uuid;"
+        )
+        assert vendor.ok and vendor.rows
+        assert vendor.rows[0] == "suspended_compliance"
+
+        listing = db.run(
+            f"SELECT status FROM public.vendor_listings WHERE id = '{listing_id}'::uuid;"
+        )
+        assert listing.ok and listing.rows
+        assert listing.rows[0] == "removed"
+
+        audit = db.run(
+            f"""
+            SELECT action
+            FROM public.audit_log
+            WHERE entity_type = 'vendor'
+              AND entity_id = '{VENDOR_A}'::uuid
+              AND action = 'compliance.license_expired_suspend';
+            """
+        )
+        assert audit.ok and audit.rows
+        assert len(audit.rows) >= 1

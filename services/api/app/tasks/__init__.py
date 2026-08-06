@@ -4,16 +4,20 @@ from app.tasks.sweepers import (
     CartReservationSweepResult,
     DailySummaryResult,
     EscrowSweepResult,
+    ExpiredLicenceSweepResult,
     dispatch_daily_summary,
     sweep_expired_cart_reservations,
     sweep_expired_escrows,
+    sweep_expired_licenses,
 )
 
 __all__ = [
     "CartReservationSweepResult",
     "DailySummaryResult",
     "EscrowSweepResult",
+    "ExpiredLicenceSweepResult",
     "dispatch_daily_summary",
     "sweep_expired_cart_reservations",
     "sweep_expired_escrows",
+    "sweep_expired_licenses",
 ]

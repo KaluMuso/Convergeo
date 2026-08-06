@@ -14,9 +14,11 @@ from app.tasks.sweepers import (
     CartReservationSweepResult,
     DailySummaryResult,
     EscrowSweepResult,
+    ExpiredLicenceSweepResult,
     dispatch_daily_summary,
     sweep_expired_cart_reservations,
     sweep_expired_escrows,
+    sweep_expired_licenses,
 )
 from fastapi import APIRouter, Depends, Request
 
@@ -120,4 +122,20 @@ async def daily_summary_tick() -> dict[str, int | str | bool]:
         "total_orders": result.total_orders,
         "new_users": result.new_users,
         "dispatched": result.dispatched,
+    }
+
+
+@router.post(
+    "/expired-licences",
+    dependencies=[Depends(require_internal_sweepers_token)],
+)
+async def expired_licences_sweeper_tick() -> dict[str, int]:
+    """Suspend vendors with expired regulator licences and hide their listings."""
+    service = next(get_supabase_client())
+    stats: ExpiredLicenceSweepResult = sweep_expired_licenses(service)
+    return {
+        "scanned": stats.scanned,
+        "vendors_suspended": stats.vendors_suspended,
+        "listings_removed": stats.listings_removed,
+        "audit_rows": stats.audit_rows,
     }
