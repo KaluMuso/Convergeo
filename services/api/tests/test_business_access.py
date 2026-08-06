@@ -34,8 +34,10 @@ class _Query:
         self._single = False
         self._mode = "select"
         self._payload: Any = None
+        self._select = "*"
 
-    def select(self, *_a: Any, **_k: Any) -> _Query:
+    def select(self, columns: str = "*", **_k: Any) -> _Query:
+        self._select = columns
         return self
 
     def eq(self, column: str, value: Any) -> _Query:
@@ -68,13 +70,30 @@ class _Query:
         return self
 
     def _apply(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        plain_filters = [item for item in self._filters if "." not in item[1]]
+        dotted_filters = [item for item in self._filters if "." in item[1]]
+
         out = rows
-        for op, col, val in self._filters:
+        for op, col, val in plain_filters:
             if op == "eq":
                 out = [r for r in out if r.get(col) == val]
             elif op == "in":
                 allowed = set(val)
                 out = [r for r in out if r.get(col) in allowed]
+
+        if self._table == "vendor_listings" and "vendors!" in self._select:
+            out = [_enrich_listing_row(row, self._store) for row in out]
+
+        for _op, col, val in dotted_filters:
+            parent, child = col.split(".", 1)
+            filtered: list[dict[str, Any]] = []
+            for row in out:
+                nested = row.get(parent)
+                if isinstance(nested, list):
+                    nested = nested[0] if nested else None
+                if isinstance(nested, dict) and nested.get(child) == val:
+                    filtered.append(row)
+            out = filtered
         return out
 
     def execute(self) -> _Result:
@@ -112,6 +131,35 @@ class FakeService:
 
 def _service(store: dict[str, list[dict[str, Any]]]) -> FakeService:
     return FakeService(FakeClient(store))
+
+
+def _enrich_listing_row(
+    listing: dict[str, Any],
+    store: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any]:
+    vendor_id = listing.get("vendor_id")
+    product_id = listing.get("product_id")
+    listing_id = listing.get("id")
+    vendors = [
+        row
+        for row in store.get("vendors", [])
+        if row.get("id") == vendor_id and row.get("status") == "active"
+    ]
+    vendor = vendors[0] if vendors else None
+    products = [
+        row
+        for row in store.get("products", [])
+        if row.get("id") == product_id and row.get("status") == "active"
+    ]
+    images = [
+        row for row in store.get("listing_images", []) if row.get("listing_id") == listing_id
+    ]
+    return {
+        **listing,
+        "vendors": vendor,
+        "products": products[0] if products else None,
+        "listing_images": images,
+    }
 
 
 # --- Resolver ---------------------------------------------------------------
