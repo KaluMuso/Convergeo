@@ -121,6 +121,9 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # Guest-cookie + optional bearer cart owner resolution (same as other /cart/*).
         ("POST", "/cart/items/{listing_id}/save-for-later"),
         ("POST", "/cart/revalidate"),
+        # Guest-cookie owner resolution at the dependency; handler rejects guests
+        # (401) because accepting a quoted RFQ requires a signed-in customer.
+        ("POST", "/cart/rfq/{rfq_id}/accept"),
         ("GET", "/catalog/listings"),
         ("GET", "/categories"),
         # M17-P03 Vergeo Clips read surface. Public by design — the feed is a

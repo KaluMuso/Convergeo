@@ -1,7 +1,8 @@
 "use client";
 
-import type { RequestQuoteLabels } from "../../../_components/pdp/request-quote-button";
 import { RequestQuoteButton } from "../../../_components/pdp/request-quote-button";
+
+import type { RequestQuoteLabels } from "../../../_components/pdp/request-quote-button";
 
 type ServiceQuoteCtaProps = {
   locale: string;

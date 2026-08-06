@@ -408,29 +408,39 @@ def _insert_message(
     return payload
 
 
+def _notification_payload(thread: dict[str, Any]) -> dict[str, Any]:
+    """Outbox payload for RFQ events — no message body off-platform."""
+    return {
+        "thread_id": str(thread.get("id")),
+        "vendor_id": str(thread.get("vendor_id")),
+        "customer_id": str(thread.get("customer_id")),
+        "listing_id": thread.get("listing_id"),
+        "service_id": thread.get("service_id"),
+    }
+
+
 def _notify_counterparty(
     service_client: _ServiceRoleClient,
     *,
     thread: dict[str, Any],
     party: Party,
     template: str,
+    message_id: str | None = None,
 ) -> None:
-    if party == "customer":
-        recipient_user_id = _vendor_owner_user_id(service_client, str(thread["vendor_id"]))
+    entity_suffix = message_id or str(thread.get("id"))
+    if template == RFQ_OPENED_TEMPLATE:
+        event_type = "rfq-opened"
+    elif template == RFQ_QUOTED_TEMPLATE:
+        event_type = "rfq-quoted"
     else:
-        recipient_user_id = str(thread["customer_id"])
-    if not recipient_user_id:
-        return
+        event_type = "rfq-replied"
     enqueue_outbox_row(
         service_client.client,
+        event_type=event_type,
+        entity_id=f"{thread.get('id')}:{entity_suffix}",
+        channel="whatsapp",
         template=template,
-        recipient_user_id=recipient_user_id,
-        payload={
-            "thread_id": str(thread["id"]),
-            "listing_id": thread.get("listing_id"),
-            "service_id": thread.get("service_id"),
-        },
-        dedupe_key=f"{template}:{thread['id']}:{_now_iso()[:16]}",
+        payload=_notification_payload(thread),
     )
 
 
@@ -539,6 +549,7 @@ async def create_rfq(
             thread=thread_row,
             party="customer",
             template=RFQ_OPENED_TEMPLATE,
+            message_id=message_row["id"],
         )
 
     refreshed = (
@@ -661,6 +672,7 @@ async def post_rfq_message(
         thread=thread,
         party=party,
         template=RFQ_REPLY_TEMPLATE,
+        message_id=message_row["id"],
     )
     return _message_to_response(message_row)
 

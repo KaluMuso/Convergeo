@@ -1351,6 +1351,7 @@
       "open": "Send quote",
       "close": "Cancel",
       "amountLabel": "Quote price (ZMW)",
+      "amountPlaceholder": "e.g. 1,500.00",
       "validityLabel": "Valid for (days)",
       "messageLabel": "Message (optional)",
       "submit": "Submit quote",

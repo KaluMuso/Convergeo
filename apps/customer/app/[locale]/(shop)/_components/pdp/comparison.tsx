@@ -24,8 +24,8 @@ import { useListingPurchase } from "./use-listing-purchase";
 import { VendorBlock } from "./vendor-block";
 
 import type { ContactVendorLabels } from "./contact-vendor-button";
-import type { RequestQuoteLabels } from "./request-quote-button";
 import type { PdpGalleryLabelStrings } from "./gallery-labels";
+import type { RequestQuoteLabels } from "./request-quote-button";
 
 /** Lazy — keeps first-load JS on /p/[slug] within the bundle regression budget. */
 const ContactVendorButton = dynamic(

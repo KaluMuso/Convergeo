@@ -32,7 +32,7 @@ def _allow_rate_limits(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class FakeQuery:
-    def __init__(self, parent: "FakeTable") -> None:
+    def __init__(self, parent: FakeTable) -> None:
         self._parent = parent
         self._eq: list[tuple[str, Any]] = []
         self._neq: list[tuple[str, Any]] = []

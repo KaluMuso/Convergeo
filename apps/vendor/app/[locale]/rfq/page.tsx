@@ -232,7 +232,7 @@ export default function VendorRfqPage({ params }: PageProps) {
                     <Input
                       name="amount"
                       inputMode="decimal"
-                      placeholder="0.00"
+                      placeholder={t("quoteForm.amountPlaceholder")}
                       value={amount}
                       onChange={(event) => setAmount(event.target.value)}
                     />
