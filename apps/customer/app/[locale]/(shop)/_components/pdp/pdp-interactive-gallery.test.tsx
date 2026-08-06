@@ -158,6 +158,9 @@ function renderBody(
           saved: "Saved to wishlist",
         }}
         contactVendorLabels={catalogMessages.pdp.contactVendor as ContactVendorLabels}
+        requestQuoteLabels={
+          catalogMessages.pdp.requestQuote as import("./request-quote-button").RequestQuoteLabels
+        }
         comparePageLabel="Compare sellers"
       />
     </NextIntlClientProvider>,

@@ -1332,6 +1332,35 @@
       "actionFailed": "Action failed. Try again."
     }
   },
+  "rfq": {
+    "title": "Quote requests",
+    "intro": "Direct quote requests from customers on your made-to-order listings and quote-based services.",
+    "loading": "Loading quote requests…",
+    "empty": "No quote requests yet.",
+    "loadFailed": "Could not load quote requests.",
+    "rejectFailed": "Could not decline this request.",
+    "reject": "Decline",
+    "yourQuote": "Your quote: {amount}",
+    "status": {
+      "pending": "Awaiting your quote",
+      "quoted": "Quote sent",
+      "accepted": "Accepted",
+      "rejected": "Declined"
+    },
+    "quoteForm": {
+      "open": "Send quote",
+      "close": "Cancel",
+      "amountLabel": "Quote price (ZMW)",
+      "validityLabel": "Valid for (days)",
+      "messageLabel": "Message (optional)",
+      "submit": "Submit quote",
+      "submitting": "Submitting…",
+      "invalidAmount": "Enter a valid price.",
+      "invalidValidity": "Enter valid days (1–30).",
+      "invalidStatus": "This request can no longer be quoted.",
+      "submitFailed": "Could not submit quote. Try again."
+    }
+  },
   "jobs": {
     "eyebrow": "RFQ inbox",
     "title": "Matched jobs",
