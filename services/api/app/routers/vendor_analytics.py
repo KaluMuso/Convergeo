@@ -61,6 +61,17 @@ class VendorAnalyticsResponse(StrictModel):
     conversion_hint: ConversionHint
 
 
+class VendorAnalyticsSummary(StrictModel):
+    """Trailing 30-day headline metrics for the vendor dashboard overview."""
+
+    window_days: int = 30
+    total_views: int
+    total_orders: int
+    gmv_ngwee: int
+    impressions: int
+    pdp_views: int
+
+
 def _validate_window(window: int) -> int:
     if window not in ALLOWED_WINDOWS:
         raise AppError(
@@ -226,6 +237,42 @@ LIMIT {TOP_LISTINGS_LIMIT};
     return listings
 
 
+def _listing_views_totals(vendor_sql: str, window: int) -> tuple[int, int]:
+    start = _window_start_sql(window)
+    script = f"""
+SELECT coalesce(sum(la.impressions), 0)::text,
+       coalesce(sum(la.pdp_views), 0)::text
+FROM public.listing_analytics la
+JOIN public.vendor_listings vl ON vl.id = la.listing_id
+WHERE vl.vendor_id = '{vendor_sql}'::uuid
+  AND la.day >= ({start})::date;
+"""
+    rows = _run(script, what="listing views")
+    if not rows:
+        return 0, 0
+    parts = rows[0].split("|")
+    if len(parts) < 2:
+        return 0, 0
+    return int(parts[0]), int(parts[1])
+
+
+def compute_vendor_analytics_summary(vendor_id: str) -> VendorAnalyticsSummary:
+    """Aggregate views, orders, and GMV over the trailing 30 days."""
+    window = 30
+    vendor_sql = _safe_vendor_uuid(vendor_id)
+    _, sales, orders = _sales_orders_by_day(vendor_sql, window)
+    impressions, pdp_views = _listing_views_totals(vendor_sql, window)
+    total_views = impressions + pdp_views
+    return VendorAnalyticsSummary(
+        window_days=window,
+        total_views=total_views,
+        total_orders=sum(orders),
+        gmv_ngwee=sum(sales),
+        impressions=impressions,
+        pdp_views=pdp_views,
+    )
+
+
 def compute_vendor_analytics(vendor_id: str, window: int) -> VendorAnalyticsResponse:
     """Assemble vendor-scoped analytics; empty history yields zero-filled series."""
     vendor_sql = _safe_vendor_uuid(vendor_id)
@@ -254,6 +301,15 @@ def compute_vendor_analytics(vendor_id: str, window: int) -> VendorAnalyticsResp
     )
 
 
+@router.get("/summary", response_model=VendorAnalyticsSummary)
+def get_vendor_analytics_summary(
+    current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
+    service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
+) -> VendorAnalyticsSummary:
+    vendor = _load_vendor_for_owner(service_client, current_user.id)
+    return compute_vendor_analytics_summary(str(vendor["id"]))
+
+
 @router.get("", response_model=VendorAnalyticsResponse)
 def get_vendor_analytics(
     current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
@@ -270,5 +326,7 @@ __all__ = [
     "ConversionHint",
     "TopListing",
     "VendorAnalyticsResponse",
+    "VendorAnalyticsSummary",
     "compute_vendor_analytics",
+    "compute_vendor_analytics_summary",
 ]

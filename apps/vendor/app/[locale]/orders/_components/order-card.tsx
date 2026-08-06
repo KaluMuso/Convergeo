@@ -21,6 +21,10 @@ import {
   StatusChip,
 } from "../../listings/new/_lib/ui";
 import { createKycClient } from "../../onboarding/_lib/kyc-client";
+import {
+  createAnalyticsClient,
+  type VendorAnalyticsSummary,
+} from "../../analytics/_lib/analytics-client";
 
 import type { OrderActionResponse, VendorActionName } from "./action-bar";
 import type { KycApplication } from "../../onboarding/_lib/types";
@@ -542,6 +546,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
   const tCommon = useTranslations("common");
   const { session, loading: sessionLoading } = useSession();
   const [dashboard, setDashboard] = useState<VendorDashboard | null>(null);
+  const [analyticsSummary, setAnalyticsSummary] = useState<VendorAnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
@@ -551,6 +556,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
   const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
   const queueClient = useMemo(() => createOrdersQueueClient(getToken), [getToken]);
   const kycClient = useMemo(() => createKycClient(getToken), [getToken]);
+  const analyticsClient = useMemo(() => createAnalyticsClient(getToken), [getToken]);
 
   const load = useCallback(async () => {
     if (!session) {
@@ -559,12 +565,14 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
     setLoading(true);
     setErrorKey(null);
     try {
-      const [data, kyc] = await Promise.all([
+      const [data, kyc, summary] = await Promise.all([
         queueClient.getDashboard(),
         kycClient.getApplication().catch(() => null),
+        analyticsClient.getSummary().catch(() => null),
       ]);
       setDashboard(data);
       setKycApp(kyc);
+      setAnalyticsSummary(summary);
       setError(null);
       setOffline(false);
       writeQueueCache({
@@ -586,7 +594,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
     } finally {
       setLoading(false);
     }
-  }, [kycClient, queueClient, session]);
+  }, [analyticsClient, kycClient, queueClient, session]);
 
   useEffect(() => {
     const cached = readQueueCache();
@@ -720,6 +728,35 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
             : t("home.takings.caption", { date: dashboard?.takings_date ?? "—" })}
         </p>
       </section>
+
+      {analyticsSummary ? (
+        <section
+          className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-surface p-3"
+          aria-label={t("home.analytics.ariaLabel")}
+        >
+          <div className="space-y-1 px-1">
+            <p className="text-xs text-muted">{t("home.analytics.views")}</p>
+            <p className="font-mono text-lg font-semibold text-text">
+              {analyticsSummary.total_views.toLocaleString()}
+            </p>
+            <p className="text-[10px] text-muted">{t("home.analytics.viewsCaption")}</p>
+          </div>
+          <div className="space-y-1 px-1">
+            <p className="text-xs text-muted">{t("home.analytics.orders")}</p>
+            <p className="font-mono text-lg font-semibold text-text">
+              {analyticsSummary.total_orders.toLocaleString()}
+            </p>
+            <p className="text-[10px] text-muted">{t("home.analytics.ordersCaption")}</p>
+          </div>
+          <div className="space-y-1 px-1">
+            <p className="text-xs text-muted">{t("home.analytics.gmv")}</p>
+            <p className="font-mono text-lg font-semibold text-text">
+              {formatK(analyticsSummary.gmv_ngwee)}
+            </p>
+            <p className="text-[10px] text-muted">{t("home.analytics.gmvCaption")}</p>
+          </div>
+        </section>
+      ) : null}
 
       {businessType ? (
         <section className="rounded-2xl border border-border bg-surface p-4">

@@ -27,12 +27,24 @@ export type VendorAnalytics = {
   conversion_hint: ConversionHint;
 };
 
+export type VendorAnalyticsSummary = {
+  window_days: number;
+  total_views: number;
+  total_orders: number;
+  gmv_ngwee: number;
+  impressions: number;
+  pdp_views: number;
+};
+
 export function createAnalyticsClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
 
   return {
     get(window: AnalyticsWindow): Promise<VendorAnalytics> {
       return client.request<VendorAnalytics>(`/vendor/analytics?window=${window}`);
+    },
+    getSummary(): Promise<VendorAnalyticsSummary> {
+      return client.request<VendorAnalyticsSummary>("/vendor/analytics/summary");
     },
   };
 }
