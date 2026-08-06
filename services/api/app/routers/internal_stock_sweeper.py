@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
 from app.errors import AppError
-from app.services.stock.sweep import SweepResult, sweep_expired_reservations
+from app.tasks.sweepers import CartReservationSweepResult, sweep_expired_cart_reservations
 from fastapi import APIRouter, Depends, Request
 
 router = APIRouter(prefix="/internal/stock-sweeper", tags=["internal-stock-sweeper"])
@@ -42,7 +42,7 @@ async def require_internal_stock_sweeper_token(request: Request) -> None:
     dependencies=[Depends(require_internal_stock_sweeper_token)],
 )
 async def stock_sweeper_tick() -> dict[str, int]:
-    stats: SweepResult = sweep_expired_reservations()
+    stats: CartReservationSweepResult = sweep_expired_cart_reservations()
     return {
         "scanned": stats.scanned,
         "released": stats.released,

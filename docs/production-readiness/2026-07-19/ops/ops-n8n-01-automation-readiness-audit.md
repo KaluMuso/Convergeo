@@ -131,6 +131,7 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `tickets-release.json`            | Ticket hold release         | no                      | DORMANT                                        |
 | `reservation-sweeper.json`        | Reservation sweeper         | no                      | DORMANT                                        |
 | `admin-digest.json`               | Notifications (founder)     | no                      | DORMANT                                        |
+| `daily-summary.json`              | Reporting (n8n webhook)     | no                      | DORMANT                                        |
 | `kyc-nudge.json`                  | Notifications               | no                      | DORMANT                                        |
 | `payout-failure-alert.json`       | Notifications               | no                      | DORMANT                                        |
 | `low-stock-alert.json`            | Notifications               | no                      | DORMANT                                        |
