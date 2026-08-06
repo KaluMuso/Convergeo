@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from app.core.internal_token import InternalTokenMisconfigured, resolve_internal_token
 from app.errors import AppError
-from app.services.escrow.release import ReleaseSweepResult, sweep_escrow_releases
+from app.tasks.sweepers import EscrowSweepResult, sweep_expired_escrows
 from fastapi import APIRouter, Depends, Request
 
 router = APIRouter(prefix="/internal/release-job", tags=["internal-release-job"])
@@ -45,11 +45,12 @@ async def release_job_tick() -> dict[str, int]:
     from app.deps import get_supabase_client
 
     service = next(get_supabase_client())
-    stats: ReleaseSweepResult = sweep_escrow_releases(service)
+    stats: EscrowSweepResult = sweep_expired_escrows(service)
     return {
         "scanned": stats.scanned,
         "released": stats.released,
         "held": stats.held,
         "already_released": stats.already_released,
         "not_eligible": stats.not_eligible,
+        "payout_vendors_queued": stats.payout_vendors_queued,
     }

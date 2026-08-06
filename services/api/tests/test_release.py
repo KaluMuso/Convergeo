@@ -615,7 +615,7 @@ class TestInternalReleaseRouter:
             assert denied.status_code == 401
 
             with patch(
-                "app.routers.internal_release_job.sweep_escrow_releases",
+                "app.routers.internal_release_job.sweep_expired_escrows",
                 return_value=type(
                     "S",
                     (),
