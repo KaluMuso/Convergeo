@@ -213,6 +213,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/sweepers/cart-reservations": INTERNAL_CRON,
     "POST /internal/sweepers/daily-summary": INTERNAL_CRON,
     "POST /internal/sweepers/escrow": INTERNAL_CRON,
+    "POST /internal/sweepers/expired-licences": INTERNAL_CRON,
     "POST /internal/tickets/issue-tick": INTERNAL_CRON,
     "POST /internal/tickets/release-tick": INTERNAL_CRON,
     "POST /jobs": STANDARD_WRITE,

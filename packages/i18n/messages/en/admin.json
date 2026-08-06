@@ -309,6 +309,25 @@
       "licenseBody": "Regulator (license body)",
       "regulatedClass": "Regulated category",
       "licenceNumber": "Licence number",
+      "licenseBodies": {
+        "PACRA": "PACRA",
+        "ZAMRA": "ZAMRA",
+        "HPCZ": "HPCZ",
+        "ZIEA": "ZIEA",
+        "RTSA": "RTSA",
+        "ZEMA": "ZEMA",
+        "ERB": "ERB",
+        "WARMA": "WARMA",
+        "TCZ": "TCZ",
+        "OTHER": "Other"
+      },
+      "regulatedClasses": {
+        "pharmacy": "Pharmacy",
+        "agrochemicals": "Agrochemicals",
+        "alcohol": "Alcohol",
+        "food": "Food",
+        "financial_services": "Financial services"
+      },
       "confirmReject": "Reject this application?",
       "confirmResubmit": "Ask the vendor to resubmit documents?",
       "confirmStartReview": "Mark this submission as under review?",

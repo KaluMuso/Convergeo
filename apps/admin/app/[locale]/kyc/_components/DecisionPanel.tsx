@@ -20,6 +20,27 @@ const REASON_TEMPLATES: RejectReasonTemplate[] = [
   "other",
 ];
 
+const LICENSE_BODIES = [
+  "PACRA",
+  "ZAMRA",
+  "HPCZ",
+  "ZIEA",
+  "RTSA",
+  "ZEMA",
+  "ERB",
+  "WARMA",
+  "TCZ",
+  "OTHER",
+] as const;
+
+const REGULATED_CLASSES = [
+  "pharmacy",
+  "agrochemicals",
+  "alcohol",
+  "food",
+  "financial_services",
+] as const;
+
 export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
   const td = useTranslations("admin.kyc.detail");
   const tr = useTranslations("admin.kyc.reasons");
@@ -210,22 +231,9 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
                   value={licenseBody}
                   onChange={(event) => setLicenseBody(event.target.value as typeof licenseBody)}
                 >
-                  {(
-                    [
-                      "PACRA",
-                      "ZAMRA",
-                      "HPCZ",
-                      "ZIEA",
-                      "RTSA",
-                      "ZEMA",
-                      "ERB",
-                      "WARMA",
-                      "TCZ",
-                      "OTHER",
-                    ] as const
-                  ).map((body) => (
+                  {LICENSE_BODIES.map((body) => (
                     <option key={body} value={body}>
-                      {body}
+                      {td(`licenseBodies.${body}`)}
                     </option>
                   ))}
                 </select>
@@ -239,11 +247,11 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
                     setRegulatedClass(event.target.value as typeof regulatedClass)
                   }
                 >
-                  <option value="pharmacy">pharmacy</option>
-                  <option value="agrochemicals">agrochemicals</option>
-                  <option value="alcohol">alcohol</option>
-                  <option value="food">food</option>
-                  <option value="financial_services">financial_services</option>
+                  {REGULATED_CLASSES.map((regulatedClassKey) => (
+                    <option key={regulatedClassKey} value={regulatedClassKey}>
+                      {td(`regulatedClasses.${regulatedClassKey}`)}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="block space-y-1 text-sm">
