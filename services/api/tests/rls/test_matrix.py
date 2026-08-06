@@ -2237,6 +2237,23 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: malformed_write_probe(),
         Persona.ADMIN: all_permit(),
     },
+    # Listing/service RFQ — same two-party read / API-only write posture as enquiries.
+    "rfq_messages": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
+    "rfq_threads": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "search_documents": {
         Persona.ANON: {
             "select": "permit",
