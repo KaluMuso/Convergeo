@@ -1,22 +1,24 @@
-# Production Migration Catch-Up Plan — Batch 1A
+# Production Migration Catch-Up Plan — Batch 1A + 1A.1
 
 **Date:** 2026-08-06  
-**Repository SHA:** `e7555b8d80e4cf6ca1a5f240a913ef8dc9381306` (`cursor/batch1a-migration-catchup-plan-9b44`)  
+**Repository SHA:** `475824c6559915f8cac5bd0ed1bf31c19acdedc1` (`master`, post PR #585)  
 **Mode:** READ-ONLY analysis — **no migrations applied, no deploys executed**
+
+> **Batch 1A.1 update (this document):** Batch 1A logical waves are retained for feature/dependency understanding only. **Executable deployment waves** must be contiguous and match Supabase CLI semantics (see §16).
 
 ---
 
 ## 1. Verified baseline (reconfirmed 2026-08-06)
 
-| Layer              | Tip / identity                                                                | Evidence                                                |
-| ------------------ | ----------------------------------------------------------------------------- | ------------------------------------------------------- |
-| **Production DB**  | `0071_vendor_listing_compare_at`                                              | Supabase MCP `list_migrations` (`dpadrlxukcjbewpqympu`) |
-| **Staging DB**     | `0079_clip_cost_guard`                                                        | Supabase MCP (`iyasmrmbcrvlfxpzescb`)                   |
-| **Git migrations** | `0095_rfq_threads.sql` + `20260802153539_rls_policy_contract_remediation.sql` | `supabase/migrations/` (96 `00*.sql` + 1 timestamp)     |
-| **Production API** | `git_sha=e4a7bb79`                                                            | `GET https://api.vergeo5.com/fingerprint`               |
-| **Customer FE**    | `buildId=fcf2b191` (matches `master`)                                         | `GET https://vergeo5.com/en/health`                     |
-| **RLS CI**         | TRUSTWORTHY                                                                   | Batch 0.5; `vergeo_rls_tester` + blocking step          |
-| **Triple 0093**    | Remediated (`0093`/`0094`/`0095`)                                             | PR #583                                                 |
+| Layer              | Tip / identity                                                                | Evidence                                                       |
+| ------------------ | ----------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **Production DB**  | `0071_vendor_listing_compare_at`                                              | Supabase MCP `list_migrations` (`dpadrlxukcjbewpqympu`)        |
+| **Staging DB**     | `0079_clip_cost_guard`                                                        | Supabase MCP (`iyasmrmbcrvlfxpzescb`)                          |
+| **Git migrations** | `0095_rfq_threads.sql` + `20260802153539_rls_policy_contract_remediation.sql` | `supabase/migrations/` (96 files: `0001`–`0095` + 1 timestamp) |
+| **Production API** | `git_sha=e4a7bb79`                                                            | `GET https://api.vergeo5.com/fingerprint`                      |
+| **Customer FE**    | `buildId=fcf2b191` (matches `master`)                                         | `GET https://vergeo5.com/en/health`                            |
+| **RLS CI**         | TRUSTWORTHY                                                                   | Batch 0.5; `vergeo_rls_tester` + blocking step                 |
+| **Triple 0093**    | Remediated (`0093`/`0094`/`0095`)                                             | PR #583                                                        |
 
 **Production data snapshot (read-only):**
 
@@ -153,18 +155,125 @@ RFQ `quote_price_ngwee` is schema-only until quotes are sent; zero orders/carts 
 
 ## 8. Migration replay verification
 
-| Environment                            | Result                          | Notes                                                      |
-| -------------------------------------- | ------------------------------- | ---------------------------------------------------------- |
-| CI `migration-replay.sh`               | **Reliable for `00*.sql` only** | `.github/workflows/ci.yml` job `migrations`; PR #583 green |
-| Timestamp migration `20260802153539_*` | **NOT in replay script**        | `find … -name '00*.sql'` excludes it — **gap**             |
-| Local Docker replay                    | **BLOCKED_EXTERNAL**            | `docker: command not found` in Cloud Agent VM              |
-| `supabase db reset` (full)             | **Expected OK**                 | RLS job runs full reset + `tests/rls`                      |
+| Environment                            | Result                                                       | Notes                                         |
+| -------------------------------------- | ------------------------------------------------------------ | --------------------------------------------- |
+| CI `migration-replay.sh`               | **FIXED (Batch 1A.1)** — replays all `*.sql` in sorted order | `.github/workflows/ci.yml` job `migrations`   |
+| Timestamp migration `20260802153539_*` | **Included in replay** (same sort order as `db push`)        | `find … -name '*.sql' \| sort`                |
+| Local Docker replay                    | **BLOCKED_EXTERNAL**                                         | `docker: command not found` in Cloud Agent VM |
+| `supabase db reset` (full)             | **Expected OK**                                              | RLS job runs full reset + `tests/rls`         |
 
 **Defect:** Fast replay does not apply timestamp migration — classify as **migration tooling gap** (see BLK-201).
 
 ---
 
-## 9. Proposed migration waves
+## 9. Logical feature groups (Batch 1A — planning only)
+
+> **Not executable deployment waves.** Supabase `db push` / `migration up` cannot apply a non-contiguous subset of pending files. These groups explain feature ownership and API coordination only.
+
+| Group                       | Migrations                           | Purpose                                                                |
+| --------------------------- | ------------------------------------ | ---------------------------------------------------------------------- |
+| **A — Clips/intake**        | `0072`–`0079`                        | WAHA intake + video clips schema; flags OFF                            |
+| **B — Branches/stock**      | `0080`, `0081`, `0089`, `0090`       | Vendor locations, per-branch stock, geo index, reservation location FK |
+| **C — Social**              | `0082`, `0083`, `0088`               | Enquiries, follows, saves                                              |
+| **D — Compliance/taxonomy** | `0084`–`0087`, `0091`–`0093`, `0092` | Licences, product classes, admin roles, service categories             |
+| **E — Cart security**       | `0086`                               | Revoke client INSERT/UPDATE on `cart_items`                            |
+| **F — B2B RFQ + analytics** | `0094`, `0095`                       | Storefront collections, RFQ threads                                    |
+| **G — RLS remediation**     | `20260802153539_*`                   | Review-reply guard contract fix                                        |
+
+---
+
+## 10. Executable migration waves (Batch 1A.1 — operator truth)
+
+Supabase CLI **2.111.0** behaviour (verified from installed CLI help + official docs):
+
+| Question                                                                         | Classification                                                                                                                                                        |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| How does `db push` select migrations?                                            | Compares local `supabase/migrations/*.sql` against `supabase_migrations.schema_migrations`; applies every file not yet recorded, sorted by filename (version prefix). |
+| Can CLI stop at `0081` mid-queue?                                                | **NOT_SUPPORTED** — no `--limit`, `--to`, or `--stop-at` flag on `db push` or `migration up`.                                                                         |
+| Can CLI apply `0080`,`0081`,`0089`,`0090` while leaving `0082`–`0088` unapplied? | **NOT_SUPPORTED** without history manipulation — pending migrations are applied **contiguously in sort order**.                                                       |
+| Supported "up to migration X" on remote?                                         | **NOT_SUPPORTED** on linked/remote push. (`db reset --version` exists for **local** reset only.)                                                                      |
+| `migration repair` to skip pending files?                                        | **POSSIBLE_BUT_UNSAFE** — updates ledger only; does not run SQL; misrepresents true schema state; forbidden by programme safety rules.                                |
+| Manual SQL outside ledger tracking?                                              | **POSSIBLE_BUT_UNSAFE** — later `db push` may fail (object exists) or attempt re-apply (duplicate errors); history drift requires `repair` (also unsafe).             |
+
+### Staging (`0079` tip) — single executable wave
+
+| Wave              | From   | To               | Migrations (contiguous)             | Mechanism                       |
+| ----------------- | ------ | ---------------- | ----------------------------------- | ------------------------------- |
+| **S0 (current)**  | —      | `0079`           | (already applied)                   | —                               |
+| **S1 (catch-up)** | `0080` | `20260802153539` | **17 files** — see dry-run list §16 | One `supabase db push --linked` |
+
+**Pending order (deterministic — matches CLI sort):**
+
+```
+0080_vendor_location_details
+0081_listing_location_stock
+0082_enquiry_threads
+0083_vendor_follows
+0084_vendor_licences
+0085_product_classes
+0086_cart_line_price_guard
+0087_product_class_enum
+0088_user_saves
+0089_vendor_locations_geo_index
+0090_stock_reservation_location
+0091_admin_moderator_roles
+0092_service_categories
+0093_license_expiry_enforcement
+0094_vendor_storefront_collections_listing_analytics
+0095_rfq_threads
+20260802153539_rls_policy_contract_remediation
+```
+
+### Production (`0071` tip) — two executable waves
+
+| Wave   | From   | To               | Count | Notes                                   |
+| ------ | ------ | ---------------- | ----- | --------------------------------------- |
+| **P1** | `0072` | `0079`           | 8     | Clips/intake; already proven on staging |
+| **P2** | `0080` | `20260802153539` | 17    | Same contiguous block as staging S1     |
+
+Production cannot skip to P2 without either applying P1 first or running one push that includes both (24 migrations total from `0072`).
+
+**Never instruct operators to apply Batch 1A logical Group B alone** — that pattern is incompatible with Supabase migration mechanics.
+
+---
+
+## 11. Safe contiguous boundaries (compatibility at each tip)
+
+Because the CLI forces a single contiguous apply, boundaries below describe **schema states after a full push to that tip**, not independently selectable stop points.
+
+| Tip after push         | DB state                                   | Deployed API (`e4a7bb79`)                  | Master API                             | Customer FE | n8n          | Feature exposure                   | GO/NO-GO                                                                                                           |
+| ---------------------- | ------------------------------------------ | ------------------------------------------ | -------------------------------------- | ----------- | ------------ | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **0079** (staging now) | Clips/intake schema; flags OFF             | **COMPAT**                                 | Broken for 0082+ routes                | master      | SAFE_ON_0071 | Clips/intake gated OFF             | **GO** (baseline)                                                                                                  |
+| **0081**               | + branch columns, `listing_location_stock` | **COMPAT**                                 | Broken for 0082+                       | master      | SAFE         | No locations on prod data          | **GO** schema-only — but **not independently reachable** without also applying 0082–0081's successors in same push |
+| **0086**               | + cart grant revoke                        | **COMPAT** (API uses service_role)         | Broken for 0082+                       | master      | SAFE         | Cart empty                         | **GO** — dual-compatible                                                                                           |
+| **0088**               | + social tables                            | **PARTIAL** — tables exist, API routes 404 | Broken for enquiries/RFQ               | master      | SAFE         | Contact Vendor UI broken (BLK-202) | **GO** DB-only with flags OFF; UI/API mismatch persists                                                            |
+| **0095**               | + RFQ/licences/analytics                   | **PARTIAL** — schema ahead of API          | Broken for enquiries/RFQ               | master      | SAFE         | RFQ/enquiries 404 until API deploy | **GO** DB-only; coordinate API before enabling surfaces                                                            |
+| **0095 + TS**          | + RLS guard fix                            | **COMPAT**                                 | Broken for new routes until API deploy | master      | SAFE         | Security-only delta                | **GO** — target Git schema                                                                                         |
+
+**Conclusion:** No practical reason to stop between `0080` and `0095` on staging — partial stops are **not tooling-supported**, and intermediate schema states offer no rollback advantage (all additive, zero row risk on staging).
+
+---
+
+## 12. Full staging catch-up assessment
+
+**Classification: `FULL_STAGING_CATCHUP_SAFE_WITH_GATES`**
+
+| Criterion               | Assessment                                                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Destructive migrations  | None in `0080`–`0095` + TS band                                                                                         |
+| Breaking schema changes | None — additive columns/tables/policies only                                                                            |
+| Data backfill risk      | **LOW** — 0 vendor locations, 0 carts, 0 orders on prod; staging equivalent                                             |
+| Financial mutations     | None                                                                                                                    |
+| n8n active workflows    | **SAFE_ON_0071** — no workflow requires `0080+` tables                                                                  |
+| Feature flags           | All OFF on staging; remain OFF post-apply                                                                               |
+| API compatibility       | Deployed API `e4a7bb79` tolerates ahead-of-code schema; new routes 404 (pre-existing BLK-202)                           |
+| Gates required          | Do not enable `clips` / `waha_vendor_intake`; do not deploy master API until rehearsal passes; run RLS suite post-apply |
+
+**Why simpler than artificial waves:** One `db push` matches CI replay order, avoids `migration repair`, and exercises the exact production path.
+
+---
+
+## 13. Legacy Batch 1A wave detail (reference — §9 groups)
 
 ### Wave A — Isolated feature schema (0072–0079)
 
@@ -187,6 +296,8 @@ RFQ `quote_price_ngwee` is schema-only until quotes are sent; zero orders/carts 
 ---
 
 ### Wave B — Vendor branches & stock (0080–0081, 0089–0090)
+
+> **⚠ NOT AN EXECUTABLE WAVE (Batch 1A.1):** This non-contiguous set cannot be applied via `db push`. Retained for feature grouping only. Use executable wave **S1** (§10).
 
 | Field                 | Value                                                                                |
 | --------------------- | ------------------------------------------------------------------------------------ |
@@ -259,31 +370,29 @@ RFQ `quote_price_ngwee` is schema-only until quotes are sent; zero orders/carts 
 
 ---
 
-## 10. API deployment sequence
+## 14. API deployment sequence (revised)
 
-**Recommended order:**
+**Recommended order (executable waves):**
 
-1. **Wave A (DB)** on production — no API change required.
-2. **Wave B (DB)** on production — no API change required for current traffic.
-3. **Deploy API to `master`** (or minimum SHA **`d9f10ba1`** for RFQ, **`1d2e3b37`** for enquiries only) — **only after Waves C+F schema ready**, OR deploy in lockstep per wave.
-4. **Waves C, D, E, F (DB)** per schedule above.
-5. **Wave G (DB)** anytime after step 1.
-6. **Final API** at `master` HEAD after DB at `0095+TS`.
+1. **Staging S1:** one `db push` `0080` → `20260802153539` — validate RLS + smoke.
+2. **Production P1:** `db push` `0072`–`0079` (if not already applied).
+3. **Production P2:** `db push` `0080`–`20260802153539` (same contiguous block as staging S1).
+4. **Deploy API to `master`** after DB at `0095+TS` — unlocks `/enquiries`, `/rfq`, etc.
+5. **Customer FE** already at master — gate or accept BLK-202 until step 4.
 
 **Do not** deploy `master` API to prod **0071** without accepting 404/500 on new routes.
 
-**First API SHA per wave:**
+**Minimum API SHA after full DB catch-up:**
 
-| After DB wave | Minimum API SHA      | Capability unlocked                  |
-| ------------- | -------------------- | ------------------------------------ |
-| Wave A        | `e4a7bb79` (current) | Clips/intake schema only (flags OFF) |
-| Wave C        | `1d2e3b37`+          | `/enquiries`                         |
-| Wave F        | `d9f10ba1`+          | `/rfq`                               |
-| Full          | `fcf2b191`+ (master) | All routers                          |
+| Capability   | Minimum API SHA      |
+| ------------ | -------------------- |
+| `/enquiries` | `1d2e3b37`+          |
+| `/rfq`       | `d9f10ba1`+          |
+| Full         | `475824c6`+ (master) |
 
 ---
 
-## 11. Frontend compatibility risks
+## 15. Frontend compatibility risks
 
 | Path                            | Risk                                                                                    | Mitigation                                       |
 | ------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------ |
@@ -294,7 +403,7 @@ RFQ `quote_price_ngwee` is schema-only until quotes are sent; zero orders/carts 
 
 ---
 
-## 12. n8n schema dependencies
+## 16. n8n schema dependencies
 
 | Workflow               | Endpoint                       | Post-0071 schema needed?                       | Classification                         |
 | ---------------------- | ------------------------------ | ---------------------------------------------- | -------------------------------------- |
@@ -308,18 +417,18 @@ No ACTIVE n8n workflow requires 0072+ tables on prod today.
 
 ---
 
-## 13. Blockers (Batch 1A)
+## 17. Blockers
 
 | ID          | Category               | Description                                                                 |
 | ----------- | ---------------------- | --------------------------------------------------------------------------- |
-| BLK-201     | CODE_DEFECT            | `migration-replay.sh` skips timestamp migration `20260802153539_*`          |
+| ~~BLK-201~~ | ~~CODE_DEFECT~~        | **RESOLVED** Batch 1A.1 — replay includes timestamp migration               |
 | BLK-202     | DEPLOYMENT_REQUIRED    | Customer FE master + prod API `e4a7bb79` + prod DB `0071` triangle mismatch |
 | BLK-203     | CODE_DEFECT            | Clips public API lacks `clips_enabled()` gate before DB query               |
 | BLK-001/002 | DATA_MIGRATION_BLOCKER | (from Batch 0.5) prod/staging behind Git                                    |
 
 ---
 
-## 14. GO / NO-GO gates (production catch-up)
+## 18. GO / NO-GO gates (production catch-up)
 
 **GO for Wave A on production when:**
 
@@ -336,9 +445,17 @@ No ACTIVE n8n workflow requires 0072+ tables on prod today.
 
 ---
 
-## 15. Verification commands (read-only / post-apply)
+## 19. Verification commands (read-only / post-apply)
 
 ```bash
+# Staging dry-run (operator — requires link + SUPABASE_ACCESS_TOKEN)
+supabase link --project-ref iyasmrmbcrvlfxpzescb
+supabase db push --dry-run --linked
+
+# Migration replay inventory (CI/local — no Supabase credentials)
+bash -n scripts/ci/migration-replay.sh
+find supabase/migrations -maxdepth 1 -name '*.sql' | sort | wc -l   # expect 96
+
 # Migration tip (Supabase SQL)
 SELECT version, name FROM supabase_migrations.schema_migrations ORDER BY version DESC LIMIT 5;
 
@@ -348,13 +465,30 @@ curl -sS https://api.vergeo5.com/fingerprint | jq .git_sha
 # Customer build
 curl -sS https://vergeo5.com/en/health | jq .buildId
 
-# Feature flags (no secrets)
-# SELECT flag, enabled FROM feature_flags ORDER BY flag;
-
 # RLS suite (staging/local only — NOT production)
 cd services/api && uv run pytest tests/rls -q
 ```
 
 ---
 
-_This plan does not authorize execution. Operator approval required for each wave._
+## 20. Staging dry-run evidence (Batch 1A.1)
+
+| Field                        | Value                                                                                                                |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **CLI version**              | `2.111.0` (npx supabase)                                                                                             |
+| **Live `db push --dry-run`** | **BLOCKED_EXTERNAL** — no `SUPABASE_ACCESS_TOKEN` / DB password in agent VM; project not linked locally              |
+| **Remote tip (MCP)**         | Staging `iyasmrmbcrvlfxpzescb` @ `0079_clip_cost_guard` (79 applied rows)                                            |
+| **Derived pending list**     | **17 migrations** — identical to §10 S1 list (`0080`…`0095`, then `20260802153539_rls_policy_contract_remediation`)  |
+| **Confidence**               | **HIGH** — Supabase applies unapplied local files in filename sort order; staging ledger confirms no `0080+` applied |
+
+Operator must re-run `supabase db push --dry-run --linked` before apply to confirm no drift since this audit.
+
+---
+
+## 21. Recommended next action
+
+**B — Full staging catch-up** (`0079` → `0095` + timestamp) as **one** contiguous `supabase db push`, then RLS matrix + smoke tests. Do **not** attempt Batch 1A logical Wave B in isolation.
+
+---
+
+_This plan does not authorize execution. Operator approval required._

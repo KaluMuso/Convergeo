@@ -17,31 +17,31 @@
 
 ## Recommended next action (do not execute until approved)
 
-### Execute Wave B (0080–0081, 0089–0090) on **staging** + validate
+### **B.** Full staging schema catch-up — `0079` → `0095` + timestamp RLS remediation (one contiguous `db push`)
 
-**Rationale:** Staging already proves Wave A (0072–0079). Wave B is **low risk on production data** (0 vendor locations) but **unvalidated** on any environment. Applying Wave B on staging exercises branch-stock backfill, geo index, and reservation-location FKs before production Wave A/B. This is read-only planning's natural successor — not production apply yet.
+**Rationale:** Batch 1A.1 proved Supabase CLI applies **all** pending migrations in a single contiguous, filename-sorted pass. Batch 1A's non-contiguous "Wave B" (`0080`, `0081`, `0089`, `0090` skipping `0082`–`0088`) is **not executable** via supported tooling. Staging rehearsal is simpler and safer as one controlled contiguous apply, then RLS matrix + smoke tests.
 
 **Scope:**
 
-1. Apply migrations `0080`, `0081`, `0089`, `0090` on staging only.
-2. Run `uv run pytest tests/rls -q` against staging-connected harness OR post-apply `supabase db reset` locally.
-3. Smoke: checkout pickup paths, stock sweeper, `/search/nearby`.
-4. Document results in `docs/production-readiness/2026-08-06/`.
+1. Operator runs `supabase link` + `supabase db push --dry-run --linked` against staging (`iyasmrmbcrvlfxpzescb`) to confirm pending list.
+2. Apply with `supabase db push --linked` (single operation — 17 migrations: `0080`…`0095`, then `20260802153539_rls_policy_contract_remediation`).
+3. Run `uv run pytest tests/rls -q` against staging-connected harness or post-apply local `supabase db reset`.
+4. Smoke: `/healthz`, `/readyz?checks=search`; confirm feature flags remain OFF.
+5. Document results in `docs/production-readiness/2026-08-06/`.
 
-**Out of scope:** Production apply; API deploy; feature flag activation; payments.
+**Out of scope:** Production apply; API deploy; feature flag activation; payments; `migration repair` history manipulation.
 
-**Alternative (if staging apply blocked):** ~~C. Fix application compatibility — gate Contact Vendor UI until Wave C + API deploy (BLK-202).~~ **Done** — compat gate shipped; full CAN-SOC-001 still requires Wave C + API deploy.
+**Alternative (if staging apply blocked):** **C.** Gate Contact Vendor UI until API deploy (BLK-202) without DB change.
 
 ---
 
 ## Deferred
 
-| Item                             | Depends on                                     |
-| -------------------------------- | ---------------------------------------------- |
-| Production Wave A (0072–0079)    | Backup confirmation (EXT-004); operator window |
-| Production Wave C+               | Wave A/B; API deploy coordination              |
-| Batch 1B — Cart/B2B audit        | Catch-up plan accepted                         |
-| Fix BLK-201 migration replay gap | Engineering session                            |
+| Item                               | Depends on                                        |
+| ---------------------------------- | ------------------------------------------------- |
+| Production catch-up (0071→0095+TS) | Staging full catch-up validated; backup (EXT-004) |
+| Batch 1B — Cart/B2B audit          | Staging at Git schema tip                         |
+| API deploy to `master`             | Staging validation + coordinated window           |
 
 ---
 

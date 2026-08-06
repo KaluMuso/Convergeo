@@ -148,14 +148,15 @@ Evidence pack: [2026-08-06/runtime-truth-evidence.md](./2026-08-06/runtime-truth
 
 ### BLK-201 — Migration replay skips timestamp migration
 
-| Field                  | Value                                                                                                                                    |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **Category**           | `CODE_DEFECT`                                                                                                                            |
-| **Description**        | `scripts/ci/migration-replay.sh` applies only `00*.sql`; `20260802153539_rls_policy_contract_remediation.sql` excluded from fast replay. |
-| **Evidence**           | Batch 1A; replay script `find … -name '00*.sql'`                                                                                         |
-| **Affected canonical** | CAN-OPS-006                                                                                                                              |
-| **Launch scope**       | PLATFORM                                                                                                                                 |
-| **Next action**        | Extend replay script or document `supabase db reset` as authoritative for timestamp migrations.                                          |
+| Field                  | Value                                                                                                                                        |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Category**           | `CODE_DEFECT`                                                                                                                                |
+| **Status**             | **RESOLVED** (Batch 1A.1 — `scripts/ci/migration-replay.sh` now replays all `*.sql` in sorted order, including timestamp migrations)         |
+| **Description**        | `scripts/ci/migration-replay.sh` applied only `00*.sql`; `20260802153539_rls_policy_contract_remediation.sql` was excluded from fast replay. |
+| **Evidence**           | Batch 1A; replay script `find … -name '00*.sql'`                                                                                             |
+| **Affected canonical** | CAN-OPS-006                                                                                                                                  |
+| **Launch scope**       | PLATFORM                                                                                                                                     |
+| **Resolution**         | Replay glob widened to `*.sql`; deterministic `sort` matches Supabase CLI ordering (0001…0095, then timestamp).                              |
 
 ### BLK-202 — FE/API/DB version triangle mismatch (production)
 
