@@ -74,6 +74,14 @@ class CartItemUpdate(BaseModel):
     delivery_lng: float | None = None
 
 
+class AcceptRfqCartRequest(BaseModel):
+    qty: int = Field(default=1, ge=1)
+    pickup_location_id: str | None = None
+    fulfilment: Literal["pickup", "delivery"] | None = None
+    delivery_lat: float | None = None
+    delivery_lng: float | None = None
+
+
 class CartLineResponse(BaseModel):
     id: str
     listing_id: str
@@ -300,7 +308,10 @@ def _db_client_for_owner(
 def _fetch_cart_items(client: Client, cart_id: str) -> list[dict[str, Any]]:
     response = (
         client.table("cart_items")
-        .select("id, cart_id, listing_id, qty, unit_price_ngwee, wholesale, pickup_location_id")
+        .select(
+            "id, cart_id, listing_id, qty, unit_price_ngwee, wholesale, "
+            "pickup_location_id, rfq_thread_id"
+        )
         .eq("cart_id", cart_id)
         .execute()
     )
@@ -588,7 +599,7 @@ async def update_cart_item(
 
     existing = (
         client.table("cart_items")
-        .select("pickup_location_id")
+        .select("pickup_location_id, rfq_thread_id, unit_price_ngwee, wholesale")
         .eq("cart_id", cart_id)
         .eq("listing_id", listing_id)
         .limit(1)
@@ -596,10 +607,20 @@ async def update_cart_item(
     )
     existing_rows = existing.data if isinstance(existing.data, list) else []
     existing_location_id: str | None = None
+    rfq_thread_id: str | None = None
+    rfq_unit_price: int | None = None
+    rfq_wholesale = False
     if existing_rows and isinstance(existing_rows[0], dict):
         raw_location = existing_rows[0].get("pickup_location_id")
         if isinstance(raw_location, str):
             existing_location_id = raw_location
+        raw_rfq = existing_rows[0].get("rfq_thread_id")
+        if isinstance(raw_rfq, str):
+            rfq_thread_id = raw_rfq
+            raw_price = existing_rows[0].get("unit_price_ngwee")
+            if raw_price is not None:
+                rfq_unit_price = int(raw_price)
+            rfq_wholesale = bool(existing_rows[0].get("wholesale"))
 
     location_id = _resolve_line_location_id(
         listing_id,
@@ -609,9 +630,13 @@ async def update_cart_item(
         delivery_lng=body.delivery_lng,
         existing_location_id=existing_location_id,
     )
-    unit_price, wholesale = validate_item_qty_for_listing(
-        listing=listing, qty=body.qty, business_eligible=business_eligible
-    )
+    if rfq_thread_id is not None and rfq_unit_price is not None:
+        unit_price = rfq_unit_price
+        wholesale = rfq_wholesale
+    else:
+        unit_price, wholesale = validate_item_qty_for_listing(
+            listing=listing, qty=body.qty, business_eligible=business_eligible
+        )
     _enforce_listing_cart_rules(listing, body.qty, location_id=location_id)
 
     # Service client for the same reason as add_cart_item: 0086 revoked client
@@ -868,3 +893,88 @@ async def merge_cart_on_login(
         listings_by_id=listings,
         conflicts=conflicts,
     )
+
+
+@router.post("/rfq/{rfq_id}/accept", response_model=CartResponse)
+async def accept_rfq_into_cart(
+    rfq_id: str,
+    body: AcceptRfqCartRequest,
+    owner: Annotated[CartOwner, Depends(_resolve_cart_owner)],
+    settings: Annotated[Settings, Depends(get_settings)],
+    request: Request,
+) -> CartResponse:
+    """Convert an accepted vendor quote into a cart line at the quoted ngwee price."""
+    if owner.is_guest or owner.user_id is None:
+        raise AppError(
+            code="cart.auth_required",
+            message="Sign in to accept a quote into your cart",
+            http_status=401,
+            details={},
+        )
+
+    from app.routers.rfq import load_rfq_for_cart_accept
+
+    service = service_db_client()
+    rfq_row = load_rfq_for_cart_accept(
+        service,
+        rfq_id=rfq_id,
+        customer_id=owner.user_id,
+    )
+    listing_id = str(rfq_row["listing_id"])
+    quote_price = int(rfq_row["quote_price_ngwee"])
+
+    business_eligible = _business_eligible_for_user(owner.user_id)
+    listing = fetch_listing(listing_id, business_eligible=business_eligible)
+    location_id = _resolve_line_location_id(
+        listing_id,
+        pickup_location_id=body.pickup_location_id,
+        fulfilment=body.fulfilment,
+        delivery_lat=body.delivery_lat,
+        delivery_lng=body.delivery_lng,
+    )
+    _enforce_listing_cart_rules(listing, body.qty, location_id=location_id)
+
+    client = _db_client_for_owner(
+        owner,
+        settings=settings,
+        user_token=_extract_bearer_token(request),
+    )
+    cart_id = owner.cart_id or ""
+    line_writer = service_db_client()
+
+    existing = (
+        client.table("cart_items")
+        .select("id, qty, pickup_location_id")
+        .eq("cart_id", cart_id)
+        .eq("listing_id", listing_id)
+        .limit(1)
+        .execute()
+    )
+    rows = existing.data if isinstance(existing.data, list) else []
+
+    line_payload = {
+        "qty": body.qty,
+        "unit_price_ngwee": quote_price,
+        "wholesale": False,
+        "pickup_location_id": location_id,
+        "rfq_thread_id": rfq_id,
+    }
+
+    if rows and isinstance(rows[0], dict):
+        line_writer.table("cart_items").update(line_payload).eq(
+            "id", str(rows[0]["id"])
+        ).eq("cart_id", cart_id).execute()
+    else:
+        line_writer.table("cart_items").insert(
+            {
+                "cart_id": cart_id,
+                "listing_id": listing_id,
+                **line_payload,
+            }
+        ).execute()
+
+    service.table("rfq_threads").update({"status": "accepted"}).eq("id", rfq_id).execute()
+
+    items = _fetch_cart_items(client, cart_id)
+    listings = fetch_listings_for_items(items)
+    return _build_cart_response(cart_id=cart_id, items=items, listings_by_id=listings)

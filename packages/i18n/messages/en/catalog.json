@@ -308,6 +308,31 @@
         "signInRequired": "Sign in to contact the seller."
       }
     },
+    "requestQuote": {
+      "cta": "Request quote",
+      "dialogTitle": "Request a custom quote",
+      "dialogHint": "Describe what you need from {vendor}. They will send a formal price you can add to cart.",
+      "detailsLabel": "What do you need?",
+      "detailsPlaceholder": "e.g. Custom size, colour, quantity, delivery area, deadline…",
+      "submit": "Send request",
+      "submitting": "Sending…",
+      "cancel": "Cancel",
+      "done": "Done",
+      "successTitle": "Quote request sent",
+      "successBody": "The seller will reply with a formal quote. We'll notify you when it's ready.",
+      "successContinued": "Your details were added to your existing quote request for this item.",
+      "signInPrompt": "Sign in to request a quote from this seller.",
+      "signInCta": "Sign in to continue",
+      "errors": {
+        "empty": "Describe what you need before sending.",
+        "tooLong": "Details are too long.",
+        "prohibited": "This request cannot be sent. Remove restricted content and try again.",
+        "rateLimited": "Too many requests. Please wait and try again.",
+        "ownListing": "You cannot request a quote on your own listing.",
+        "generic": "Could not send your request. Check your connection and try again.",
+        "signInRequired": "Sign in to request a quote."
+      }
+    },
     "trust": {
       "preferredSeller": "Preferred seller — {name}",
       "seller": "Sold by {name}",

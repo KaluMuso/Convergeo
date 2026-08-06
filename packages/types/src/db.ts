@@ -323,6 +323,7 @@ export type Database = {
           listing_id: string
           pickup_location_id: string | null
           qty: number
+          rfq_thread_id: string | null
           unit_price_ngwee: number
           updated_at: string
           wholesale: boolean
@@ -334,6 +335,7 @@ export type Database = {
           listing_id: string
           pickup_location_id?: string | null
           qty: number
+          rfq_thread_id?: string | null
           unit_price_ngwee: number
           updated_at?: string
           wholesale?: boolean
@@ -345,6 +347,7 @@ export type Database = {
           listing_id?: string
           pickup_location_id?: string | null
           qty?: number
+          rfq_thread_id?: string | null
           unit_price_ngwee?: number
           updated_at?: string
           wholesale?: boolean
@@ -369,6 +372,13 @@ export type Database = {
             columns: ["pickup_location_id"]
             isOneToOne: false
             referencedRelation: "vendor_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_rfq_thread_id_fkey"
+            columns: ["rfq_thread_id"]
+            isOneToOne: false
+            referencedRelation: "rfq_threads"
             referencedColumns: ["id"]
           },
         ]
@@ -2962,6 +2972,118 @@ export type Database = {
             columns: ["order_item_id"]
             isOneToOne: true
             referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfq_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          sender_id: string
+          sender_role: string
+          thread_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          sender_id: string
+          sender_role: string
+          thread_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+          sender_role?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfq_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "rfq_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rfq_threads: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          last_message_at: string | null
+          listing_id: string | null
+          quote_price_ngwee: number | null
+          quote_valid_until: string | null
+          quoted_at: string | null
+          requested_details: string
+          service_id: string | null
+          status: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          last_message_at?: string | null
+          listing_id?: string | null
+          quote_price_ngwee?: number | null
+          quote_valid_until?: string | null
+          quoted_at?: string | null
+          requested_details: string
+          service_id?: string | null
+          status?: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          last_message_at?: string | null
+          listing_id?: string | null
+          quote_price_ngwee?: number | null
+          quote_valid_until?: string | null
+          quoted_at?: string | null
+          requested_details?: string
+          service_id?: string | null
+          status?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rfq_threads_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfq_threads_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfq_threads_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "rfq_threads_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]

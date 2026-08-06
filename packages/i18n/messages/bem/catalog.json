@@ -218,6 +218,31 @@
         "generic": "Tatwaishibe ukutuma ubutumwa. Checkeni connection no wesheni limbi.",
         "signInRequired": "Ingileni mukati ukulandana na ushitisha."
       }
+    },
+    "requestQuote": {
+      "cta": "Fwaya quote",
+      "dialogTitle": "Fwaya quote ya custom",
+      "dialogHint": "Lemeni ifyo mulefwaya ukufuma ku {vendor}. Akabomfya quote ya formal price imwe mungalonge mu cart.",
+      "detailsLabel": "Mulefwaya shani?",
+      "detailsPlaceholder": "Ngacakuti: Size, colour, quantity, delivery area, deadline…",
+      "submit": "Tumeni request",
+      "submitting": "Tuletela…",
+      "cancel": "Lekeni",
+      "done": "Cacitike",
+      "successTitle": "Quote request yatumine",
+      "successBody": "Ushitisha akabomfya quote ya formal. Tukamwebelesheni ikaba ready.",
+      "successContinued": "Details shanu balongezye pa quote request yenu iya kale pa cintu ici.",
+      "signInPrompt": "Ingileni mukati ukufwaya quote kuli uyu ushitisha.",
+      "signInCta": "Ingileni mukati ukupitilila",
+      "errors": {
+        "empty": "Lemeni ifyo mulefwaya ushafwile ukutuma.",
+        "tooLong": "Details yalicilapo.",
+        "prohibited": "Teti tulefwaya ukutuma iyi request. Fumyeni ifyalekelela ukutuma.",
+        "rateLimited": "Ama-requests yalicilapo. Lemeni limbi.",
+        "ownListing": "Teti mulefwaya quote pa listing yenu.",
+        "generic": "Tatwaishibe ukutuma request. Checkeni connection no wesheni limbi.",
+        "signInRequired": "Ingileni mukati ukufwaya quote."
+      }
     }
   },
   "plp": {

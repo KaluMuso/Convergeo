@@ -25,10 +25,16 @@ import { VendorBlock } from "./vendor-block";
 
 import type { ContactVendorLabels } from "./contact-vendor-button";
 import type { PdpGalleryLabelStrings } from "./gallery-labels";
+import type { RequestQuoteLabels } from "./request-quote-button";
 
 /** Lazy — keeps first-load JS on /p/[slug] within the bundle regression budget. */
 const ContactVendorButton = dynamic(
   () => import("./contact-vendor-button").then((mod) => mod.ContactVendorButton),
+  { ssr: false },
+);
+
+const RequestQuoteButton = dynamic(
+  () => import("./request-quote-button").then((mod) => mod.RequestQuoteButton),
   { ssr: false },
 );
 
@@ -141,6 +147,7 @@ export type PdpInteractiveBodyProps = {
     saved: string;
   };
   contactVendorLabels: ContactVendorLabels;
+  requestQuoteLabels: RequestQuoteLabels;
   comparePageLabel: string;
 };
 
@@ -544,6 +551,7 @@ export function PdpInteractiveBody({
   trustLabels,
   wishlistLabels,
   contactVendorLabels,
+  requestQuoteLabels,
   comparePageLabel,
 }: PdpInteractiveBodyProps) {
   const t = useTranslations("catalog");
@@ -684,6 +692,15 @@ export function PdpInteractiveBody({
               />
             }
           />
+          {selectedListing.productClass === "E" ? (
+            <RequestQuoteButton
+              locale={locale}
+              listingId={selectedListing.id}
+              vendorName={selectedListing.vendor.displayName}
+              labels={requestQuoteLabels}
+              className="w-full"
+            />
+          ) : null}
           <BuyerTrustPanel
             sellerStatusLabel={t(
               selectedListing.vendor.preferredBadge

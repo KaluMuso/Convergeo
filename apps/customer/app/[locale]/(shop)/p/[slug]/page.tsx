@@ -696,6 +696,31 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
               signInRequired: t("pdp.contactVendor.errors.signInRequired"),
             },
           }}
+          requestQuoteLabels={{
+            cta: t("pdp.requestQuote.cta"),
+            dialogTitle: t("pdp.requestQuote.dialogTitle"),
+            dialogHint: t("pdp.requestQuote.dialogHint"),
+            detailsLabel: t("pdp.requestQuote.detailsLabel"),
+            detailsPlaceholder: t("pdp.requestQuote.detailsPlaceholder"),
+            submit: t("pdp.requestQuote.submit"),
+            submitting: t("pdp.requestQuote.submitting"),
+            cancel: t("pdp.requestQuote.cancel"),
+            done: t("pdp.requestQuote.done"),
+            successTitle: t("pdp.requestQuote.successTitle"),
+            successBody: t("pdp.requestQuote.successBody"),
+            successContinued: t("pdp.requestQuote.successContinued"),
+            signInPrompt: t("pdp.requestQuote.signInPrompt"),
+            signInCta: t("pdp.requestQuote.signInCta"),
+            errors: {
+              empty: t("pdp.requestQuote.errors.empty"),
+              tooLong: t("pdp.requestQuote.errors.tooLong"),
+              prohibited: t("pdp.requestQuote.errors.prohibited"),
+              rateLimited: t("pdp.requestQuote.errors.rateLimited"),
+              ownListing: t("pdp.requestQuote.errors.ownListing"),
+              generic: t("pdp.requestQuote.errors.generic"),
+              signInRequired: t("pdp.requestQuote.errors.signInRequired"),
+            },
+          }}
           comparePageLabel={t("comparePage.entryCta")}
         />
       ) : (
