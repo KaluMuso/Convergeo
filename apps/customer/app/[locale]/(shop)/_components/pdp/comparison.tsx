@@ -147,6 +147,8 @@ export type PdpInteractiveBodyProps = {
     saved: string;
   };
   contactVendorLabels: ContactVendorLabels;
+  /** When false, the Contact Vendor CTA is omitted (fail-closed — BLK-202). */
+  contactVendorEnabled: boolean;
   requestQuoteLabels: RequestQuoteLabels;
   comparePageLabel: string;
 };
@@ -551,6 +553,7 @@ export function PdpInteractiveBody({
   trustLabels,
   wishlistLabels,
   contactVendorLabels,
+  contactVendorEnabled,
   requestQuoteLabels,
   comparePageLabel,
 }: PdpInteractiveBodyProps) {
@@ -755,12 +758,14 @@ export function PdpInteractiveBody({
             }
             viewStoreLabel={vendorLabels.viewStore}
           />
-          <ContactVendorButton
-            locale={locale}
-            listingId={selectedListing.id}
-            vendorName={selectedListing.vendor.displayName}
-            labels={contactVendorLabels}
-          />
+          {contactVendorEnabled ? (
+            <ContactVendorButton
+              locale={locale}
+              listingId={selectedListing.id}
+              vendorName={selectedListing.vendor.displayName}
+              labels={contactVendorLabels}
+            />
+          ) : null}
         </div>
       ) : null}
 

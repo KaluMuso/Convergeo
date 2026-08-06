@@ -19,6 +19,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
 
 import { absoluteApiUrl, getApiBaseUrl } from "../../../../../lib/api-base-url";
+import { contactVendorCapabilityAvailable } from "../../../../../lib/enquiries-capability";
 import {
   PdpInteractiveBody,
   type ComparisonListing,
@@ -419,7 +420,10 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
   setRequestLocale(locale);
   const t = await getCatalogTranslator(locale);
   const tNav = await getNavTranslator(locale);
-  const result = await fetchProduct(slug);
+  const [result, contactVendorEnabled] = await Promise.all([
+    fetchProduct(slug),
+    contactVendorCapabilityAvailable(),
+  ]);
 
   if (result.kind === "redirect") {
     redirect(`/${locale}/p/${result.slug}`);
@@ -671,6 +675,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             remove: t("pdp.buyBox.wishlistRemove"),
             saved: t("pdp.buyBox.wishlistSaved"),
           }}
+          contactVendorEnabled={contactVendorEnabled}
           contactVendorLabels={{
             cta: t("pdp.contactVendor.cta"),
             dialogTitle: t("pdp.contactVendor.dialogTitle"),

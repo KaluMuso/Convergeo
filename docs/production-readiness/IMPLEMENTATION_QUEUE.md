@@ -1,17 +1,17 @@
 # Implementation & Audit Queue
 
-**Updated:** 2026-08-06 (Batch 1A.1 complete)
+**Updated:** 2026-08-06 (Contact Vendor fail-closed compat fix)
 
 ---
 
 ## Completed
 
-| Batch          | Title                                                | Outcome                                                                                   |
-| -------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| **Batch 0**    | Repository truth & architecture baseline             | ARCHITECTURE_BASELINE.md; DEC-001…004                                                     |
-| **Batch 0.5**  | Runtime truth, migration truth & requirements ingest | Live probes; registry ingest                                                              |
-| **Batch 1A**   | Production schema compatibility & catch-up plan      | [production-migration-catchup-plan.md](./2026-08-06/production-migration-catchup-plan.md) |
-| **Batch 1A.1** | Migration executability & verification repair        | Executable-wave reclassification; BLK-201 fixed; 0086 grant test                          |
+| Batch         | Title                                                | Outcome                                                                                   |
+| ------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **Batch 0**   | Repository truth & architecture baseline             | ARCHITECTURE_BASELINE.md; DEC-001…004                                                     |
+| **Batch 0.5** | Runtime truth, migration truth & requirements ingest | Live probes; registry ingest                                                              |
+| **Batch 1A**  | Production schema compatibility & catch-up plan      | [production-migration-catchup-plan.md](./2026-08-06/production-migration-catchup-plan.md) |
+| **Compat**    | Contact Vendor fail-closed UI gate (BLK-202)         | PDP probes `GET /enquiries`; hides CTA when API unavailable; tests added                  |
 
 ---
 

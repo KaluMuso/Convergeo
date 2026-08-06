@@ -27,8 +27,8 @@ Canonical IDs below updated **only where Batch 0.5 obtained evidence**. All othe
 | **CAN-OPS-001**  | IMPLEMENTED    | DEPLOYMENT_REQUIRED | PARTIAL              | RLS in Git through 0095; prod at 0071; RLS CI trustworthy on master                      |
 | **CAN-OPS-004**  | IMPLEMENTED    | PARTIAL             | PARTIAL              | 7/9 n8n workflows ACTIVE; 16/25 Git JSONs unconfirmed                                    |
 | **CAN-OPS-005**  | IMPLEMENTED    | UNKNOWN             | BLOCKED_EXTERNAL     | n8n backup INACTIVE; Supabase PITR not verified                                          |
-| **CAN-OPS-006**  | IMPLEMENTED    | DEPLOYED            | PARTIAL              | CI green; prod FE/API/DB triangle mismatch (BLK-202)                                     |
-| **CAN-SOC-001**  | IMPLEMENTED    | DEPLOYED            | FAILED               | Contact Vendor on PDP; prod API `/enquiries` → 404 (Batch 1A)                            |
+| **CAN-OPS-006**  | IMPLEMENTED    | DEPLOYED            | PARTIAL              | CI green; prod FE/API/DB triangle mismatch (BLK-202); Contact Vendor CTA gated           |
+| **CAN-SOC-001**  | PARTIAL        | DEPLOYED            | FAILED               | Enquiries in Git; prod API `/enquiries` → 404; **UI gated** (fail-closed compat fix)     |
 | **CAN-ORD-002**  | IMPLEMENTED    | DEPLOYMENT_REQUIRED | NOT_TESTED           | `0086` cart RLS in Git; **not applied on prod** (at 0071)                                |
 | **CAN-ORD-003**  | PARTIAL        | DEPLOYED            | NOT_TESTED           | Checkout re-derives prices; cart read path gap (BLK-101)                                 |
 | **CAN-UX-001**   | IMPLEMENTED    | DEPLOYED            | VERIFIED             | Customer PWA on Vercel; `buildId=fcf2b191`                                               |
