@@ -625,6 +625,7 @@ class TestInternalReleaseRouter:
                         "held": 0,
                         "already_released": 1,
                         "not_eligible": 0,
+                        "payout_vendors_queued": 1,
                     },
                 )(),
             ):
@@ -639,4 +640,5 @@ class TestInternalReleaseRouter:
                 "held": 0,
                 "already_released": 1,
                 "not_eligible": 0,
+                "payout_vendors_queued": 1,
             }
