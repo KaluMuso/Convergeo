@@ -218,6 +218,31 @@
         "generic": "Sitinathe kutumiza uthenga. Onani connection ndi yesaninso.",
         "signInRequired": "Lowani kuti mulankhule ndi wogulitsa."
       }
+    },
+    "requestQuote": {
+      "cta": "Pemphani quote",
+      "dialogTitle": "Pemphani quote ya custom",
+      "dialogHint": "Fotokozani zomwe mukufuna kuchokera kwa {vendor}. Adzatumiza mtengo wovomerezeka womwe mungalowetsa mu cart.",
+      "detailsLabel": "Mukufuna chiyani?",
+      "detailsPlaceholder": "Mwachitsanzo: Kukula, mtundu, kuchuluka, malo a kutumizira, nthawi…",
+      "submit": "Tumizani pempho",
+      "submitting": "Ikutumiza…",
+      "cancel": "Lekani",
+      "done": "Zatheka",
+      "successTitle": "Pempho la quote latumizidwa",
+      "successBody": "Wogulitsa adzatumiza quote yovomerezeka. Tidzakudziwitsani ikakhala ready.",
+      "successContinued": "Zomwe munalemba zawonjezedwa ku pempho lanu lomwe linalipo la chinthu ichi.",
+      "signInPrompt": "Lowani kuti mupembe quote kwa wogulitsa uyu.",
+      "signInCta": "Lowani kuti mupitilire",
+      "errors": {
+        "empty": "Fotokozani zomwe mukufuna musanatumize.",
+        "tooLong": "Zolemba ndi zazitali kwambiri.",
+        "prohibited": "Sitingathe kutumiza pempho ili. Chotsani zoletsedwa ndi yesaninso.",
+        "rateLimited": "Ma-requests ambiri. Dikirani ndi yesaninso.",
+        "ownListing": "Simungapembe quote pa listing yanu.",
+        "generic": "Sitinathe kutumiza pempho. Onani connection ndi yesaninso.",
+        "signInRequired": "Lowani kuti mupembe quote."
+      }
     }
   },
   "plp": {

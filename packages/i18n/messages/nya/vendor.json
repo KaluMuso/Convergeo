@@ -1332,6 +1332,36 @@
       "actionFailed": "Action failed. Try again."
     }
   },
+  "rfq": {
+    "title": "Quote requests",
+    "intro": "Direct quote requests from customers pa made-to-order listings ndi quote-based services.",
+    "loading": "Ikuyenda quote requests…",
+    "empty": "Palibe quote requests pano.",
+    "loadFailed": "Sitinathe kuloda quote requests.",
+    "rejectFailed": "Sitinathe kukana pempho ili.",
+    "reject": "Kananani",
+    "yourQuote": "Quote yanu: {amount}",
+    "status": {
+      "pending": "Dikirani quote yanu",
+      "quoted": "Quote yatumizidwa",
+      "accepted": "Yavomerezedwa",
+      "rejected": "Yakanidwa"
+    },
+    "quoteForm": {
+      "open": "Tumizani quote",
+      "close": "Lekani",
+      "amountLabel": "Quote price (ZMW)",
+      "amountPlaceholder": "e.g. 1,500.00",
+      "validityLabel": "Valid for (masiku)",
+      "messageLabel": "Uthenga (optional)",
+      "submit": "Tumizani quote",
+      "submitting": "Ikutumiza…",
+      "invalidAmount": "Lembani mtengo wolondola.",
+      "invalidValidity": "Lembani masiku olondola (1–30).",
+      "invalidStatus": "Pempho ili silingathe kupatsidwa quote.",
+      "submitFailed": "Sitinathe kutumiza quote. Yesaninso."
+    }
+  },
   "jobs": {
     "eyebrow": "RFQ inbox",
     "title": "Matched jobs",

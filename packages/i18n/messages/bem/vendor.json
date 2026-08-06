@@ -1332,6 +1332,36 @@
       "actionFailed": "Action failed. Try again."
     }
   },
+  "rfq": {
+    "title": "Quote requests",
+    "intro": "Direct quote requests from customers pa made-to-order listings na quote-based services.",
+    "loading": "Ilelodisha quote requests…",
+    "empty": "Takwaba quote requests pano.",
+    "loadFailed": "Tatwaishibe ukuloda quote requests.",
+    "rejectFailed": "Tatwaishibe ukuleka iyi request.",
+    "reject": "Lekeni",
+    "yourQuote": "Quote yenu: {amount}",
+    "status": {
+      "pending": "Lekeni quote yenu",
+      "quoted": "Quote yatumine",
+      "accepted": "Yalandwe",
+      "rejected": "Yalekwe"
+    },
+    "quoteForm": {
+      "open": "Tumeni quote",
+      "close": "Lekeni",
+      "amountLabel": "Quote price (ZMW)",
+      "amountPlaceholder": "e.g. 1,500.00",
+      "validityLabel": "Valid for (masiku)",
+      "messageLabel": "Ubutumwa (optional)",
+      "submit": "Tumeni quote",
+      "submitting": "Tuletela…",
+      "invalidAmount": "Lemeni price iilembeka.",
+      "invalidValidity": "Lemeni masiku a valid (1–30).",
+      "invalidStatus": "Iyi request tekuti quote nshani.",
+      "submitFailed": "Tatwaishibe ukutuma quote. Esheni limbi."
+    }
+  },
   "jobs": {
     "eyebrow": "RFQ inbox",
     "title": "Matched jobs",
