@@ -2012,6 +2012,38 @@ export type Database = {
           },
         ]
       }
+      listing_analytics: {
+        Row: {
+          day: string
+          impressions: number
+          listing_id: string
+          pdp_views: number
+          updated_at: string
+        }
+        Insert: {
+          day: string
+          impressions?: number
+          listing_id: string
+          pdp_views?: number
+          updated_at?: string
+        }
+        Update: {
+          day?: string
+          impressions?: number
+          listing_id?: string
+          pdp_views?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_analytics_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listing_images: {
         Row: {
           cloudinary_public_id: string
@@ -2082,6 +2114,38 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "vendor_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_view_dedup: {
+        Row: {
+          created_at: string
+          day: string
+          listing_id: string
+          session_id: string
+          view_kind: string
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          listing_id: string
+          session_id: string
+          view_kind: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          listing_id?: string
+          session_id?: string
+          view_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_view_dedup_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_listings"
             referencedColumns: ["id"]
           },
         ]
@@ -4133,6 +4197,90 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_storefront_collection_items: {
+        Row: {
+          collection_id: string
+          created_at: string
+          listing_id: string
+          sort_order: number
+        }
+        Insert: {
+          collection_id: string
+          created_at?: string
+          listing_id: string
+          sort_order?: number
+        }
+        Update: {
+          collection_id?: string
+          created_at?: string
+          listing_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_storefront_collection_items_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_storefront_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_storefront_collection_items_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_storefront_collections: {
+        Row: {
+          created_at: string
+          id: string
+          slug: string
+          sort_order: number
+          status: string
+          title: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          slug: string
+          sort_order?: number
+          status?: string
+          title: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          slug?: string
+          sort_order?: number
+          status?: string
+          title?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_storefront_collections_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "vendor_storefront_collections_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendors: {
         Row: {
           archetype: string | null
@@ -4464,6 +4612,15 @@ export type Database = {
       recompute_review_aggregate_for_order_item: {
         Args: { p_order_item_id: string }
         Returns: undefined
+      }
+      record_listing_view: {
+        Args: {
+          p_day: string
+          p_listing_id: string
+          p_session_id: string
+          p_view_kind: string
+        }
+        Returns: number
       }
       redeem_beta_invite: {
         Args: { p_code: string }

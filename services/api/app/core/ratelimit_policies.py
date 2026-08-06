@@ -82,6 +82,10 @@ PUBLIC_BEACON = RateLimitPolicy(
 TELEMETRY_FRONTEND_ERRORS = RateLimitPolicy(
     scope="telemetry_frontend_errors_ip", limit=60, window=timedelta(minutes=1)
 )
+# Public listing impression / PDP view beacons. High ceiling; enforced fail-open.
+TELEMETRY_VIEWS = RateLimitPolicy(
+    scope="telemetry_views_ip", limit=240, window=timedelta(minutes=1)
+)
 
 
 # --- Exemption allowlist (EXPLICIT + documented — no silent gaps) -----------
@@ -289,6 +293,11 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /tickets/verify/batch": SENSITIVE_WRITE,
     "POST /tickets/{ticket_id}/transfer": STANDARD_WRITE,
     "POST /telemetry/frontend-errors": TELEMETRY_FRONTEND_ERRORS,
+    "POST /telemetry/views": TELEMETRY_VIEWS,
+    "POST /vendor/collections": STANDARD_WRITE,
+    "PATCH /vendor/collections/{collection_id}": STANDARD_WRITE,
+    "DELETE /vendor/collections/{collection_id}": STANDARD_WRITE,
+    "PUT /vendor/collections/{collection_id}/items": STANDARD_WRITE,
     # M18-P05 intake review. Link mint/redeem are SENSITIVE: a link is a
     # single-use credential-adjacent artefact, so minting is deliberately cheap
     # to police and expensive to farm. Submission is SENSITIVE because it is the

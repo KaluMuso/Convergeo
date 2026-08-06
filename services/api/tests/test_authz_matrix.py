@@ -105,6 +105,7 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # dependency guard), so the route is dependency-public.
         ("POST", "/analytics/collect"),
         ("POST", "/telemetry/frontend-errors"),
+        ("POST", "/telemetry/views"),
         ("POST", "/ask"),
         ("POST", "/auth/guard/otp-quota"),
         # M16-P09 beta gate: pre-login invite gate + feedback. redeem/gate are

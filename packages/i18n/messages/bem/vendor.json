@@ -742,6 +742,15 @@
       "caption": "⚠ Tukishishenied revenue for {date} (Lusaka time)",
       "emptyCaption": "⚠ No confirmed revenue yet today — totals come from real orders only."
     },
+    "analytics": {
+      "ariaLabel": "Last 30 days storefront performance",
+      "views": "Views",
+      "viewsCaption": "30 days",
+      "orders": "Orders",
+      "ordersCaption": "30 days",
+      "gmv": "GMV",
+      "gmvCaption": "30 days"
+    },
     "needsAction": {
       "heading": "Needs action",
       "empty": "You're all caught up — no orders waiting on you.",
