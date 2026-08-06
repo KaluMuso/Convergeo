@@ -3199,6 +3199,53 @@ export type Database = {
           },
         ]
       }
+      service_categories: {
+        Row: {
+          archetype: string | null
+          created_at: string
+          is_active: boolean
+          name: string
+          parent_slug: string | null
+          path: string
+          regulator: string | null
+          slug: string
+          sort: number
+          updated_at: string
+        }
+        Insert: {
+          archetype?: string | null
+          created_at?: string
+          is_active?: boolean
+          name: string
+          parent_slug?: string | null
+          path: string
+          regulator?: string | null
+          slug: string
+          sort?: number
+          updated_at?: string
+        }
+        Update: {
+          archetype?: string | null
+          created_at?: string
+          is_active?: boolean
+          name?: string
+          parent_slug?: string | null
+          path?: string
+          regulator?: string | null
+          slug?: string
+          sort?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_categories_parent_slug_fkey"
+            columns: ["parent_slug"]
+            isOneToOne: false
+            referencedRelation: "service_categories"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
       stock_reservations: {
         Row: {
           checkout_group_id: string

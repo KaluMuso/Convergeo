@@ -7,7 +7,7 @@ no vendors, users, or products.
 
 Usage:
   python scripts/seed_taxonomy.py
-  SUPABASE_DB_URL=postgresql://... python scripts/seed_taxonomy.py --apply
+  SUPABASE_DB_URL=postgresql://... python scripts/seed_taxonomy.py --dry-run
 """
 
 from __future__ import annotations
@@ -15,7 +15,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
-import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -23,58 +22,14 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[1]
 API_ROOT = REPO_ROOT / "services" / "api"
 sys.path.insert(0, str(API_ROOT))
-sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from app.schemas.service_categories import ServiceCategoryRow  # noqa: E402
+from app.data.service_taxonomy import flatten_taxonomy  # noqa: E402
 from psycopg import AsyncConnection  # noqa: E402
 from psycopg.rows import dict_row  # noqa: E402
-from taxonomy.convergeo_service_catalogue import CONVERGEO_SERVICE_TAXONOMY  # noqa: E402
 
 DEFAULT_DB_URL = os.environ.get(
     "SUPABASE_DB_URL", "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 )
-
-_SLUG_RE = re.compile(r"[^a-z0-9]+")
-
-
-def slugify(name: str) -> str:
-    """URL-safe slug from a display name."""
-    value = name.lower().replace("&", "and")
-    value = _SLUG_RE.sub("-", value).strip("-")
-    return value or "category"
-
-
-def flatten_taxonomy() -> list[ServiceCategoryRow]:
-    """Expand vertical → sub-category tree into flat rows with materialized paths."""
-    rows: list[ServiceCategoryRow] = []
-    for vertical_index, vertical in enumerate(CONVERGEO_SERVICE_TAXONOMY):
-        vertical_slug = slugify(vertical["name"])
-        rows.append(
-            ServiceCategoryRow(
-                slug=vertical_slug,
-                parent_slug=None,
-                name=vertical["name"],
-                path=vertical_slug,
-                sort=vertical_index,
-                is_active=True,
-            )
-        )
-        for sub_index, sub in enumerate(vertical.get("subcategories", [])):
-            sub_slug = slugify(sub["name"])
-            rows.append(
-                ServiceCategoryRow(
-                    slug=sub_slug,
-                    parent_slug=vertical_slug,
-                    name=sub["name"],
-                    path=f"{vertical_slug}/{sub_slug}",
-                    archetype=sub.get("archetype"),
-                    regulator=sub.get("regulator"),
-                    sort=sub_index,
-                    is_active=True,
-                )
-            )
-    return rows
-
 
 UPSERT_SQL = """
 insert into public.service_categories (
@@ -126,7 +81,8 @@ async def seed_taxonomy(conn: AsyncConnection[Any], *, dry_run: bool) -> dict[st
     count_row = await conn.execute(
         "select count(*)::int as total from public.service_categories"
     )
-    total_in_db = (await count_row.fetchone())["total"]  # type: ignore[index]
+    fetched = await count_row.fetchone()
+    total_in_db = int(fetched["total"]) if fetched else 0
 
     return {
         "verticals": verticals,

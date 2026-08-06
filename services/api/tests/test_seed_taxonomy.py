@@ -2,24 +2,10 @@
 
 from __future__ import annotations
 
-import importlib.util
-import sys
 from collections import Counter
-from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-SCRIPTS_DIR = REPO_ROOT / "scripts"
-sys.path.insert(0, str(SCRIPTS_DIR))
-
-_seed_path = SCRIPTS_DIR / "seed_taxonomy.py"
-_spec = importlib.util.spec_from_file_location("seed_taxonomy", _seed_path)
-assert _spec and _spec.loader
-_seed_mod = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_seed_mod)
-flatten_taxonomy = _seed_mod.flatten_taxonomy
-slugify = _seed_mod.slugify
-
-from taxonomy.convergeo_service_catalogue import CONVERGEO_SERVICE_TAXONOMY  # noqa: E402
+from app.data.convergeo_service_catalogue import CONVERGEO_SERVICE_TAXONOMY
+from app.data.service_taxonomy import flatten_taxonomy, slugify
 
 
 def test_taxonomy_has_seventeen_verticals() -> None:

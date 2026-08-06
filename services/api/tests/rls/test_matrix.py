@@ -877,6 +877,16 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: select_only(),
         Persona.ADMIN: select_only(),
     },
+    "service_categories": {
+        # 0092: same grant/RLS posture as event_categories — public read taxonomy,
+        # service_role writes; client personas cannot mutate via JWT.
+        Persona.ANON: select_only(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "event_instances": {
         Persona.ANON: {
             "select": "permit",
