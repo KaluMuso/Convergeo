@@ -1,9 +1,9 @@
 # Production Readiness Programme
 
-**Latest audit:** Batch 1A — 2026-08-06  
+**Latest audit:** Batch 1A.1 — 2026-08-06  
 **Repository:** [KaluMuso/Convergeo](https://github.com/KaluMuso/Convergeo) (product brand: **Vergeo5**)  
-**Current `master` SHA:** `fcf2b1918256bd3d8680741b17cf928cde8576c5`  
-**Batch 1A branch:** `cursor/batch1a-migration-catchup-plan-9b44`
+**Current `master` SHA:** `475824c6559915f8cac5bd0ed1bf31c19acdedc1`  
+**Batch 1A.1 branch:** `cursor/batch1a1-migration-executability-repair-eedc`
 
 This directory is the **authoritative programme context** for production-readiness work.
 
@@ -31,12 +31,13 @@ This directory is the **authoritative programme context** for production-readine
 
 ## Batch status
 
-| Batch   | Status               | Summary                                                      |
-| ------- | -------------------- | ------------------------------------------------------------ |
-| **0**   | Complete             | Repository architecture baseline @ `761733dd`                |
-| **0.5** | Complete             | Runtime/migration truth; registry ingest; live probes        |
-| **1A**  | Complete             | Migration catch-up plan; compatibility matrix; waves A–G     |
-| **1B**  | **Recommended next** | Staging Wave B (0080–0090) validate — or UI gate for BLK-202 |
+| Batch    | Status               | Summary                                                                         |
+| -------- | -------------------- | ------------------------------------------------------------------------------- |
+| **0**    | Complete             | Repository architecture baseline @ `761733dd`                                   |
+| **0.5**  | Complete             | Runtime/migration truth; registry ingest; live probes                           |
+| **1A**   | Complete             | Migration catch-up plan; compatibility matrix; waves A–G (logical groups)       |
+| **1A.1** | Complete             | Executable-wave repair; BLK-201 fix; staging dry-run semantics; 0086 grant test |
+| **1B**   | **Recommended next** | Full staging catch-up 0079→0095+TS (one `db push`) — operator approval required |
 
 ## Historical evidence packs
 

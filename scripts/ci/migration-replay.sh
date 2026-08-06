@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Fast Dockerless migration pre-flight: plain Postgres 16 + minimal Supabase shim,
-# then replay supabase/migrations/00*.sql with ON_ERROR_STOP=1.
+# then replay every supabase/migrations/*.sql file in deterministic sort order
+# (matching Supabase CLI db push / db reset) with ON_ERROR_STOP=1.
 # Catches immutability/ordering/column bugs (the 0009 class) in seconds before the
 # slower supabase db reset job. CI supplies a postgres service; override via PG* env.
 set -euo pipefail
@@ -93,9 +94,9 @@ SQL
 
 echo "==> Replaying migrations from ${MIGRATIONS_DIR}..."
 shopt -s nullglob
-mapfile -t migrations < <(find "${MIGRATIONS_DIR}" -maxdepth 1 -name '00*.sql' | sort)
+mapfile -t migrations < <(find "${MIGRATIONS_DIR}" -maxdepth 1 -name '*.sql' | sort)
 if [[ ${#migrations[@]} -eq 0 ]]; then
-  echo "ERROR: no migrations matching 00*.sql in ${MIGRATIONS_DIR}" >&2
+  echo "ERROR: no migrations matching *.sql in ${MIGRATIONS_DIR}" >&2
   exit 1
 fi
 
