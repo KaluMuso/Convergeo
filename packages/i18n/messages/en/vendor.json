@@ -64,6 +64,7 @@
       "subheadline": "Reach buyers across Zambia with products, services, events, supplies, and your business profile — all from one vendor app.",
       "primaryCta": "Continue seller invite",
       "secondaryCta": "See commissions",
+      "existingSellerCta": "Already selling? Open vendor portal",
       "freeTierNote": "Invited sellers get the free tier (up to 30 listings) after admin approval. Public signup is not open."
     },
     "valueProps": {
@@ -633,7 +634,9 @@
     },
     "actions": {
       "save": "Save profile",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "viewStorefront": "View public storefront",
+      "viewStorefrontUnavailable": "Public storefront preview is unavailable in this environment."
     },
     "success": {
       "saved": "Profile saved. Changes appear on your public page within a minute."
@@ -1504,12 +1507,35 @@
     }
   },
   "shell": {
+    "groups": {
+      "operate": "Operate",
+      "sell": "Sell & grow",
+      "business": "Business"
+    },
+    "moreMenu": {
+      "title": "All vendor tools",
+      "close": "Close"
+    },
     "nav": {
       "ariaLabel": "Vendor navigation",
+      "desktopAriaLabel": "Vendor sidebar",
       "home": "Home",
       "listings": "Listings",
       "orders": "Orders",
-      "profile": "Profile"
+      "profile": "Profile",
+      "more": "More",
+      "scan": "Scan & verify",
+      "returns": "Returns",
+      "analytics": "Analytics",
+      "services": "Services",
+      "events": "Events",
+      "rfq": "Quote requests",
+      "jobs": "Jobs",
+      "clips": "Clips",
+      "reviews": "Reviews",
+      "payouts": "Payouts",
+      "disputes": "Disputes",
+      "intake": "WhatsApp drafts"
     }
   },
   "intake": {

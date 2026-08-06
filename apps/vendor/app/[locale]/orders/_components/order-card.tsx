@@ -719,6 +719,36 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
         </section>
       ) : null}
 
+      <section className="flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-text">{t("home.needsAction.heading")}</h2>
+          {needsCount > 0 ? (
+            <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
+              {needsCount}
+            </span>
+          ) : null}
+        </div>
+
+        {!dashboard || dashboard.needs_action.length === 0 ? (
+          <VendorEmptyState
+            title={t("home.needsAction.emptyTitle")}
+            body={t("home.needsAction.empty")}
+          />
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {dashboard.needs_action.map((order) => (
+              <OrderCard
+                key={order.id}
+                locale={locale}
+                order={order}
+                onError={setError}
+                onUpdated={() => void load()}
+              />
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section className="rounded-2xl bg-panel p-4 text-panel-text">
         <p className="text-sm text-panel-muted">{t("home.takings.label")}</p>
         <p className="mt-1 font-mono text-3xl font-semibold tracking-tight">{formatK(takings)}</p>
@@ -806,36 +836,6 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
         >
           {t("home.shortcuts.profile")}
         </Link>
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-text">{t("home.needsAction.heading")}</h2>
-          {needsCount > 0 ? (
-            <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
-              {needsCount}
-            </span>
-          ) : null}
-        </div>
-
-        {!dashboard || dashboard.needs_action.length === 0 ? (
-          <VendorEmptyState
-            title={t("home.needsAction.emptyTitle")}
-            body={t("home.needsAction.empty")}
-          />
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {dashboard.needs_action.map((order) => (
-              <OrderCard
-                key={order.id}
-                locale={locale}
-                order={order}
-                onError={setError}
-                onUpdated={() => void load()}
-              />
-            ))}
-          </ul>
-        )}
       </section>
 
       <section className="grid grid-cols-1 gap-3">

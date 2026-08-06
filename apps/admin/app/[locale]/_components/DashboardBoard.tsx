@@ -90,7 +90,7 @@ export function DashboardBoard({ locale }: DashboardBoardProps) {
   const trafficEmpty = isAnalyticsTrafficEmpty(data);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <p className="text-xs text-muted">
         {t("cachedAt", { at: new Date(data.cached_at).toLocaleString(locale) })}
       </p>
@@ -104,15 +104,36 @@ export function DashboardBoard({ locale }: DashboardBoardProps) {
           <p className="text-xs text-muted">{t("emptyTrafficDependency")}</p>
         </div>
       ) : null}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <GmvTile gmvNgwee={data.gmv_ngwee} locale={locale} />
-        <PayoutLiabilitiesTile liabilities={data.payout_liabilities} locale={locale} />
-        <ReconciliationTile reconciliation={data.reconciliation} locale={locale} />
-        <OrdersStatusTile ordersByStatus={data.orders_by_status} />
-        <CatalogCountsTile counts={data.counts} />
-        <AiUsageTile aiUsage={data.ai_usage} />
-        <FunnelTile funnel={data.funnel} className="sm:col-span-2 xl:col-span-3" />
-      </div>
+
+      <section aria-labelledby="dashboard-priority-heading" className="space-y-3">
+        <header className="space-y-1">
+          <h2 id="dashboard-priority-heading" className="text-sm font-semibold text-text">
+            {t("priorityHeading")}
+          </h2>
+          <p className="text-xs text-muted">{t("priorityHint")}</p>
+        </header>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <ReconciliationTile reconciliation={data.reconciliation} locale={locale} />
+          <PayoutLiabilitiesTile liabilities={data.payout_liabilities} locale={locale} />
+          <OrdersStatusTile ordersByStatus={data.orders_by_status} locale={locale} />
+        </div>
+      </section>
+
+      <section aria-labelledby="dashboard-metrics-heading" className="space-y-3">
+        <header className="space-y-1">
+          <h2 id="dashboard-metrics-heading" className="text-sm font-semibold text-text">
+            {t("metricsHeading")}
+          </h2>
+          <p className="text-xs text-muted">{t("metricsHint")}</p>
+        </header>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <GmvTile gmvNgwee={data.gmv_ngwee} locale={locale} />
+          <CatalogCountsTile counts={data.counts} />
+          <AiUsageTile aiUsage={data.ai_usage} />
+          <FunnelTile funnel={data.funnel} className="sm:col-span-2 xl:col-span-3" />
+        </div>
+      </section>
+
       <p className="font-mono text-xs text-muted">
         {t("liabilitiesTotal", {
           amount: formatK(data.payout_liabilities.total_ngwee, { locale }),

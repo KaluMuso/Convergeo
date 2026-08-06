@@ -49,7 +49,10 @@
     "helpTitle": "Ubwafwilisho",
     "helpBody": "Amashinda pa ama-order, payment, na account.",
     "helpCta": "Enda ku help centre",
-    "deviceNote": "Ifyasungwa na recently viewed fisungwa pa device ili. Tefi stock nangu price hold."
+    "deviceNote": "Ifyasungwa na recently viewed fisungwa pa device ili. Tefi stock nangu price hold.",
+    "vendorPortalTitle": "Seller tools",
+    "vendorPortalBody": "Sungileni listings, orders, na payouts mu vendor portal.",
+    "vendorPortalCta": "Isula vendor portal"
   },
   "saved": {
     "title": "Ifyasungwa",

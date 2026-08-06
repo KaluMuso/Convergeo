@@ -2,9 +2,11 @@
 
 import { useSession } from "@vergeo/auth/use-session";
 import { ApiError } from "@vergeo/config";
+import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { getVendorStorefrontUrl } from "../../../../lib/customer-app";
 import { VendorErrorState } from "../../_components/async-state";
 import { shouldShowPreferredBadge } from "../../_lib/kyc-integrity";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
@@ -32,6 +34,8 @@ const DEFAULT_HOURS = {
 export function ProfileEditor() {
   const t = useTranslations("vendor");
   const tCommon = useTranslations("common");
+  const params = useParams<{ locale: string }>();
+  const locale = params.locale ?? "en";
   const { session, loading: sessionLoading } = useSession();
   const [profile, setProfile] = useState<VendorProfile | null>(null);
   const [displayName, setDisplayName] = useState("");
@@ -186,12 +190,25 @@ export function ProfileEditor() {
 
   // Preferred badge only from API boolean — never invent from kyc_tier (VEND-01).
   const showPreferred = shouldShowPreferredBadge(profile.preferred_badge);
+  const storefrontUrl = getVendorStorefrontUrl(locale, profile.slug);
 
   return (
     <div className="space-y-6">
       <header className="space-y-1 px-1">
         <h1 className="text-xl font-semibold text-text">{t("profile.title")}</h1>
         <p className="text-sm text-text-2">{t("profile.intro")}</p>
+        {storefrontUrl ? (
+          <a
+            href={storefrontUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-2 hover:underline"
+          >
+            {t("profile.actions.viewStorefront")}
+          </a>
+        ) : (
+          <p className="text-xs text-text-3">{t("profile.actions.viewStorefrontUnavailable")}</p>
+        )}
       </header>
 
       <div className="px-1">

@@ -79,3 +79,13 @@ export function getVendorSignupUrl(locale: string): string | null {
 
   return `${base}/${locale}${VENDOR_ONBOARDING_PATH}`;
 }
+
+/** Locale-aware vendor portal home URL for returning sellers, or `null` when unavailable. */
+export function getVendorPortalUrl(locale: string): string | null {
+  const base = getVendorAppUrl();
+  if (base === null) {
+    return null;
+  }
+
+  return `${base}/${locale}`;
+}

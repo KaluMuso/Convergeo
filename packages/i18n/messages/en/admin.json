@@ -3,9 +3,19 @@
   "shell": {
     "eyebrow": "Vergeo5 operations",
     "environment": "Hardened admin origin",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "navAriaLabel": "Admin navigation",
+    "mobileNavLabel": "Admin menu",
+    "mobileMenuTitle": "All admin tools",
+    "mobileMenuClose": "Close"
   },
   "nav": {
+    "groups": {
+      "overview": "Overview",
+      "trust": "Trust & safety",
+      "commerce": "Commerce operations",
+      "platform": "Platform"
+    },
     "home": "Dashboard",
     "kyc": "KYC queue",
     "business": "Business",
@@ -16,7 +26,9 @@
     "merch": "Merchandising",
     "theme": "Theme presets",
     "translations": "Translations",
-    "support": "Support"
+    "support": "Support",
+    "intake": "WhatsApp intake",
+    "clips": "Clips moderation"
   },
   "hubs": {
     "moderation": {
@@ -803,6 +815,10 @@
     "emptyTrafficTitle": "No order / funnel traffic yet",
     "emptyTrafficBody": "GMV, order pipeline, funnel, and ledger liabilities are all zero from the live API — these are not placeholder analytics.",
     "emptyTrafficDependency": "Missing backend dependency for non-zero tiles: real checkout/order volume plus ledger postings (MR-B01) and reconciliation reports.",
+    "priorityHeading": "Needs attention",
+    "priorityHint": "Financial risk, payout liabilities, and order pipeline status.",
+    "metricsHeading": "Platform metrics",
+    "metricsHint": "Catalog health, AI usage, and funnel snapshot.",
     "gmv": {
       "title": "GMV",
       "subtitle": "Gross merchandise value (non-cancelled orders)",
@@ -835,6 +851,7 @@
       "title": "Orders by status",
       "subtitle": "Live order pipeline counts",
       "empty": "No orders in any status — pipeline is empty.",
+      "openQueue": "Open order operations",
       "statuses": {
         "placed": "Placed",
         "confirmed": "Confirmed",

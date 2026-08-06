@@ -3,7 +3,7 @@ import { Pill } from "@vergeo/ui/src/pill";
 import { tokens } from "@vergeo/ui/tokens";
 import Link from "next/link";
 
-import { getVendorSignupUrl } from "./vendor-app";
+import { getVendorPortalUrl, getVendorSignupUrl } from "./vendor-app";
 
 type PitchTranslator = {
   (key: string, values?: Record<string, string | number>): string;
@@ -26,6 +26,7 @@ const VERTICAL_COLORS: Record<(typeof VERTICAL_KEYS)[number], string> = {
 
 export function Hero({ locale, t }: HeroProps) {
   const signupUrl = getVendorSignupUrl(locale);
+  const portalUrl = getVendorPortalUrl(locale);
 
   return (
     <section
@@ -80,6 +81,17 @@ export function Hero({ locale, t }: HeroProps) {
             {t("signupUnavailable")}
           </p>
         )}
+        {portalUrl ? (
+          <p className="text-sm text-text-2">
+            <a
+              className="font-medium text-primary underline-offset-2 hover:underline"
+              data-testid="vendor-portal-link"
+              href={portalUrl}
+            >
+              {t("hero.existingSellerCta")}
+            </a>
+          </p>
+        ) : null}
 
         <div className="space-y-4">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-text-2">
