@@ -22,6 +22,8 @@ from app.services.search.query_builder import (
     SearchKind,
     build_facet_rpc_filters,
     build_filters,
+    normalize_page,
+    normalize_page_size,
     paginate,
 )
 from app.services.search.search_facets import (
@@ -384,6 +386,8 @@ async def run_search(
 ) -> SearchResponse:
     trimmed = query.strip()
     expanded_query = expand_query(client, trimmed)
+    normalized_page = normalize_page(page)
+    normalized_page_size = normalize_page_size(page_size)
     base_filters = build_filters(kind=kind)
     display_filters = build_filters(
         kind=kind,
@@ -449,8 +453,12 @@ async def run_search(
     # paginating. Ranking is byte-identical when no location is supplied.
     if user_lat is not None and user_lng is not None:
         display_hits = _geo_rerank(display_hits, user_lat=user_lat, user_lng=user_lng)
-    display_hits = attach_open_now(client, display_hits)
-    page_items, total = paginate(display_hits, page=page, page_size=page_size)
+    page_items, total = paginate(
+        display_hits,
+        page=normalized_page,
+        page_size=normalized_page_size,
+    )
+    page_items = attach_open_now(client, page_items)
     page_items = attach_route_slugs(client, page_items)
 
     if trimmed:
@@ -469,8 +477,8 @@ async def run_search(
     return SearchResponse(
         query=trimmed,
         expanded_query=expanded_query,
-        page=page,
-        page_size=page_size,
+        page=normalized_page,
+        page_size=normalized_page_size,
         total=total,
         results=page_items,
         degraded=degraded,

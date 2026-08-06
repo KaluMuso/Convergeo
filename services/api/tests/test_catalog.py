@@ -220,13 +220,26 @@ SEED_STORE: dict[str, list[dict[str, Any]]] = {
 
 
 class FakeQuery:
-    def __init__(self, table: str, rows: list[dict[str, Any]]) -> None:
+    def __init__(
+        self,
+        table: str,
+        rows: list[dict[str, Any]],
+        store: dict[str, list[dict[str, Any]]],
+    ) -> None:
         self._table = table
         self._rows = rows
+        self._store = store
         self._filters: list[tuple[str, str, Any]] = []
         self._order: tuple[str, bool] | None = None
+        self._select = "*"
+        self._limit: int | None = None
 
-    def select(self, _columns: str) -> FakeQuery:
+    def select(self, columns: str) -> FakeQuery:
+        self._select = columns
+        return self
+
+    def limit(self, value: int) -> FakeQuery:
+        self._limit = value
         return self
 
     def eq(self, column: str, value: Any) -> FakeQuery:
@@ -255,7 +268,10 @@ class FakeQuery:
 
     def execute(self) -> Any:
         rows = list(self._rows)
-        for op, column, value in self._filters:
+        dotted_filters = [item for item in self._filters if "." in item[1]]
+        plain_filters = [item for item in self._filters if "." not in item[1]]
+
+        for op, column, value in plain_filters:
             if op == "eq":
                 rows = [row for row in rows if row.get(column) == value]
             elif op == "like":
@@ -280,10 +296,65 @@ class FakeQuery:
             elif op == "in":
                 allowed = set(value)
                 rows = [row for row in rows if row.get(column) in allowed]
+
+        if self._table == "vendor_listings" and "vendors!" in self._select:
+            rows = [_enrich_listing_row(row, self._store) for row in rows]
+
+        for _op, column, value in dotted_filters:
+            parent, child = column.split(".", 1)
+            filtered: list[dict[str, Any]] = []
+            for row in rows:
+                nested = row.get(parent)
+                if isinstance(nested, list):
+                    nested = nested[0] if nested else None
+                if isinstance(nested, dict) and nested.get(child) == value:
+                    filtered.append(row)
+            rows = filtered
+
         if self._order is not None:
             column, desc = self._order
             rows = sorted(rows, key=lambda row: str(row.get(column) or ""), reverse=desc)
+        if self._limit is not None:
+            rows = rows[: self._limit]
         return type("Result", (), {"data": rows})()
+
+
+def _enrich_listing_row(
+    listing: dict[str, Any],
+    store: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any]:
+    vendor_id = listing.get("vendor_id")
+    product_id = listing.get("product_id")
+    listing_id = listing.get("id")
+    vendors = [
+        row
+        for row in store.get("vendors", [])
+        if row.get("id") == vendor_id and row.get("status") == "active"
+    ]
+    vendor = vendors[0] if vendors else None
+    if vendor is not None:
+        locations = [
+            row
+            for row in store.get("vendor_locations", [])
+            if row.get("vendor_id") == vendor_id
+        ]
+        vendor = {**vendor, "vendor_locations": locations}
+    products = [
+        row
+        for row in store.get("products", [])
+        if row.get("id") == product_id and row.get("status") == "active"
+    ]
+    images = [
+        row
+        for row in store.get("listing_images", [])
+        if row.get("listing_id") == listing_id
+    ]
+    return {
+        **listing,
+        "vendors": vendor,
+        "products": products[0] if products else None,
+        "listing_images": images,
+    }
 
 
 class FakeSupabaseClient:
@@ -291,7 +362,7 @@ class FakeSupabaseClient:
         self._store = store
 
     def table(self, name: str) -> FakeQuery:
-        return FakeQuery(name, list(self._store.get(name, [])))
+        return FakeQuery(name, list(self._store.get(name, [])), self._store)
 
 
 @pytest.fixture

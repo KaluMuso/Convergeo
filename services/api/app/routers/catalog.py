@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 router = APIRouter(prefix="/catalog", tags=["catalog"])
 
 DEFAULT_PAGE_SIZE = 24
-MAX_PAGE_SIZE = 48
+MAX_PAGE_SIZE = 50
 EARTH_RADIUS_M = 6_371_000
 
 CatalogSort = Literal["relevance", "cheapest", "nearest", "newest"]
@@ -266,6 +266,7 @@ def decode_plp_filters(params: dict[str, str | list[str] | None]) -> PlpFilterSt
     radius_raw = _one("radius_km")
     limit_raw = _one("limit")
 
+    parsed_limit = int(limit_raw) if limit_raw is not None else DEFAULT_PAGE_SIZE
     return PlpFilterState(
         category_path=_one("category_path"),
         sort=sort_raw,  # type: ignore[arg-type]
@@ -278,7 +279,7 @@ def decode_plp_filters(params: dict[str, str | list[str] | None]) -> PlpFilterSt
         lng=float(lng_raw) if lng_raw is not None else None,
         radius_km=float(radius_raw) if radius_raw is not None else None,
         cursor=decode_plp_cursor(_one("cursor")),
-        limit=int(limit_raw) if limit_raw is not None else DEFAULT_PAGE_SIZE,
+        limit=min(max(parsed_limit, 1), MAX_PAGE_SIZE),
     )
 
 
@@ -315,84 +316,84 @@ def _fetch_search_documents(client: Any, category_path: str | None) -> list[_Sea
     return [_SearchDocRow.model_validate(row) for row in rows]
 
 
-def _fetch_listings(client: Any, listing_ids: list[str]) -> dict[str, _ListingRow]:
+def _nested_rows(value: Any) -> list[dict[str, Any]]:
+    if isinstance(value, list):
+        return [row for row in value if isinstance(row, dict)]
+    if isinstance(value, dict):
+        return [value]
+    return []
+
+
+def _first_image_public_id(images: list[dict[str, Any]]) -> str | None:
+    if not images:
+        return None
+    ordered = sorted(images, key=lambda row: int(row.get("position") or 0))
+    for row in ordered:
+        public_id = row.get("cloudinary_public_id")
+        if isinstance(public_id, str) and public_id:
+            return public_id
+    return None
+
+
+def _first_landmark(locations: list[dict[str, Any]]) -> str | None:
+    if not locations:
+        return None
+    ordered = sorted(locations, key=lambda row: str(row.get("created_at") or ""))
+    for row in ordered:
+        landmark = row.get("landmark")
+        if isinstance(landmark, str) and landmark:
+            return landmark
+    return None
+
+
+_LISTING_ENRICHED_SELECT = (
+    "id,vendor_id,product_id,condition,stock_mode,stock_qty,created_at,status,"
+    "wholesale,compare_at_ngwee,"
+    "vendors!inner(id,slug,display_name,status,vendor_locations(landmark,created_at)),"
+    "products(id,slug,name,status),"
+    "listing_images(cloudinary_public_id,position)"
+)
+
+
+def _fetch_listings_enriched(
+    client: Any,
+    listing_ids: list[str],
+) -> dict[str, dict[str, Any]]:
+    """Batch-fetch listings with vendor, product, image, and landmark data embedded."""
     if not listing_ids:
         return {}
+    unique_ids = list(dict.fromkeys(listing_ids))
     response = (
         client.table("vendor_listings")
-        .select(
-            "id,vendor_id,product_id,condition,stock_mode,stock_qty,created_at,status,"
-            "wholesale,compare_at_ngwee"
-        )
-        .in_("id", listing_ids)
+        .select(_LISTING_ENRICHED_SELECT)
+        .in_("id", unique_ids)
         .eq("status", "active")
+        .eq("vendors.status", "active")
         .execute()
     )
-    return {
-        str(row["id"]): _ListingRow.model_validate(row) for row in _response_rows(response)
-    }
-
-
-def _fetch_vendors(client: Any, vendor_ids: list[str]) -> dict[str, dict[str, Any]]:
-    if not vendor_ids:
-        return {}
-    response = (
-        client.table("vendors")
-        .select("id,slug,display_name,status")
-        .in_("id", vendor_ids)
-        .eq("status", "active")
-        .execute()
-    )
-    return {str(row["id"]): row for row in _response_rows(response)}
-
-
-def _fetch_products(client: Any, product_ids: list[str]) -> dict[str, dict[str, Any]]:
-    if not product_ids:
-        return {}
-    response = (
-        client.table("products")
-        .select("id,slug,name,status")
-        .in_("id", product_ids)
-        .eq("status", "active")
-        .execute()
-    )
-    return {str(row["id"]): row for row in _response_rows(response)}
-
-
-def _fetch_landmarks(client: Any, vendor_ids: list[str]) -> dict[str, str]:
-    if not vendor_ids:
-        return {}
-    response = (
-        client.table("vendor_locations")
-        .select("vendor_id,landmark,created_at")
-        .in_("vendor_id", vendor_ids)
-        .order("created_at")
-        .execute()
-    )
-    landmarks: dict[str, str] = {}
+    enriched: dict[str, dict[str, Any]] = {}
     for row in _response_rows(response):
-        vendor_id = str(row["vendor_id"])
-        if vendor_id not in landmarks:
-            landmarks[vendor_id] = str(row["landmark"])
-    return landmarks
-
-
-def _fetch_images(client: Any, listing_ids: list[str]) -> dict[str, str]:
-    if not listing_ids:
-        return {}
-    response = (
-        client.table("listing_images")
-        .select("listing_id,cloudinary_public_id,position")
-        .in_("listing_id", listing_ids)
-        .order("position")
-        .execute()
-    )
-    images: dict[str, str] = {}
-    for row in _response_rows(response):
-        listing_id = str(row["listing_id"])
-        if listing_id not in images:
-            images[listing_id] = str(row["cloudinary_public_id"])
-    return images
+        listing_id = row.get("id")
+        if not listing_id:
+            continue
+        vendors = _nested_rows(row.get("vendors"))
+        vendor = vendors[0] if vendors else None
+        if vendor is None:
+            continue
+        vendor_locations = _nested_rows(vendor.get("vendor_locations"))
+        products = _nested_rows(row.get("products"))
+        product = products[0] if products else None
+        if product is not None and str(product.get("status") or "") != "active":
+            product = None
+        images = _nested_rows(row.get("listing_images"))
+        enriched[str(listing_id)] = {
+            "listing": row,
+            "vendor": vendor,
+            "product": product,
+            "image_public_id": _first_image_public_id(images),
+            "landmark": _first_landmark(vendor_locations),
+        }
+    return enriched
 
 
 def _fetch_listing_ratings(client: Any, listing_ids: list[str]) -> dict[str, tuple[float, int]]:
@@ -501,26 +502,18 @@ def _build_candidates(client: Any, category_path: str | None) -> list[_CatalogCa
     if demo_listing_ids:
         search_docs = [doc for doc in search_docs if doc.entity_id not in demo_listing_ids]
         listing_ids = [doc.entity_id for doc in search_docs]
-    listings = _fetch_listings(client, listing_ids)
-    vendor_ids = sorted({listing.vendor_id for listing in listings.values()})
-    product_ids = sorted(
-        {listing.product_id for listing in listings.values() if listing.product_id is not None}
-    )
-    vendors = _fetch_vendors(client, vendor_ids)
-    products = _fetch_products(client, product_ids)
-    images = _fetch_images(client, listing_ids)
-    landmarks = _fetch_landmarks(client, vendor_ids)
+    enriched = _fetch_listings_enriched(client, listing_ids)
     ratings = _fetch_listing_ratings(client, listing_ids)
 
     candidates: list[_CatalogCandidate] = []
     for doc in search_docs:
-        listing = listings.get(doc.entity_id)
-        if listing is None:
+        bundle = enriched.get(doc.entity_id)
+        if bundle is None:
             continue
-        vendor = vendors.get(listing.vendor_id)
-        if vendor is None:
-            continue
-        product = products.get(listing.product_id) if listing.product_id else None
+        listing_row = bundle["listing"]
+        vendor = bundle["vendor"]
+        product = bundle.get("product")
+        listing = _ListingRow.model_validate(listing_row)
         rating, review_count = ratings.get(doc.entity_id, (0.0, 0))
         in_stock = _listing_in_stock(listing.stock_mode, listing.stock_qty)
         candidates.append(
@@ -529,8 +522,8 @@ def _build_candidates(client: Any, category_path: str | None) -> list[_CatalogCa
                 listing=listing,
                 vendor=vendor,
                 product=product,
-                image_public_id=images.get(doc.entity_id),
-                landmark=landmarks.get(listing.vendor_id),
+                image_public_id=bundle.get("image_public_id"),
+                landmark=bundle.get("landmark"),
                 rating=rating,
                 review_count=review_count,
                 in_stock=in_stock,
@@ -729,24 +722,22 @@ def _fetch_wholesale_listings(client: Any, limit: int) -> list[_WholesaleRow]:
 def list_wholesale_supplies(client: Any, *, limit: int) -> CatalogListResponse:
     """Wholesale/supplies feed. Callers MUST gate this behind verified-business access;
     the endpoint enforces that, this function assumes it and returns B2B pricing."""
-    listings = _fetch_wholesale_listings(client, limit)
+    capped_limit = min(max(limit, 1), MAX_PAGE_SIZE)
+    listings = _fetch_wholesale_listings(client, capped_limit)
     demo_listing_ids = fetch_demo_listing_ids(client, [row.id for row in listings])
     if demo_listing_ids:
         listings = [row for row in listings if row.id not in demo_listing_ids]
-    vendor_ids = sorted({row.vendor_id for row in listings})
-    product_ids = sorted({row.product_id for row in listings if row.product_id is not None})
-    vendors = _fetch_vendors(client, vendor_ids)
-    products = _fetch_products(client, product_ids)
-    images = _fetch_images(client, [row.id for row in listings])
+    enriched = _fetch_listings_enriched(client, [row.id for row in listings])
 
     items: list[CatalogListingItem] = []
     for row in listings:
-        vendor = vendors.get(row.vendor_id)
-        if vendor is None:
-            continue  # vendor storefront not active
-        product = products.get(row.product_id) if row.product_id else None
+        bundle = enriched.get(row.id)
+        if bundle is None:
+            continue
+        vendor = bundle["vendor"]
+        product = bundle.get("product")
         title = str(product["name"]) if product else (row.title_override or "")
-        image_public_id = images.get(row.id)
+        image_public_id = bundle.get("image_public_id")
         # Defence in depth: never surface a demo public_id even if the batch
         # probe missed an edge-case row shape.
         if is_demo_public_id(image_public_id):
