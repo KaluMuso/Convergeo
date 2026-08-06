@@ -31,6 +31,14 @@ KYC_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
 OTHER_KYC_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd"
 VALID_TOKEN = "valid.jwt.token"
 
+TIER2_APPROVE_PAYLOAD = {
+    "reviewer_notes": "PACRA docs clear",
+    "expiry_date": "2030-12-31",
+    "license_body": "PACRA",
+    "regulated_class": "pharmacy",
+    "licence_number": "PACRA-TEST-001",
+}
+
 
 class FakeQuery:
     def __init__(self, parent: FakeTable, filters: list[tuple[str, str, Any]]) -> None:
@@ -373,7 +381,7 @@ def test_approve_records_immutable_decision_evidence_and_audit(
     approve = api_client.post(
         f"/admin/kyc/{KYC_ID}/approve",
         headers={"Authorization": f"Bearer {VALID_TOKEN}"},
-        json={"reviewer_notes": "PACRA docs clear"},
+        json=TIER2_APPROVE_PAYLOAD,
     )
     assert approve.status_code == 200
     assert approve.json()["kyc_record_status"] == "approved"
@@ -387,6 +395,12 @@ def test_approve_records_immutable_decision_evidence_and_audit(
     vendor = fake_client.tables["vendors"].rows[0]
     assert vendor["status"] == "active"
     assert vendor["kyc_tier"] == 2
+
+    licences = fake_client.tables["vendor_licences"].rows
+    assert len(licences) == 1
+    assert licences[0]["license_body"] == "PACRA"
+    assert licences[0]["expires_on"] == "2030-12-31"
+    assert licences[0]["status"] == "verified"
 
     actions = {row["action"] for row in fake_client.tables["audit_log"].rows}
     assert "kyc.start_review" in actions
