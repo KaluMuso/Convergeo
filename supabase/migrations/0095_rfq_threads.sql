@@ -1,4 +1,4 @@
--- Listing/service-anchored B2B RFQ threads with financial payload (quote in ngwee).
+-- 0095 — Listing/service-anchored B2B RFQ threads with financial payload (quote in ngwee).
 --
 -- Distinct from:
 --   * enquiry_threads (0082) — pre-transaction messaging, no money columns
