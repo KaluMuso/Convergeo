@@ -324,26 +324,26 @@ def update_collection(
     if body.status is not None:
         patch["status"] = body.status
     if not patch:
-        row = _own_collection(service_client, collection_id=collection_id, vendor_id=vendor_id)
+        existing = _own_collection(service_client, collection_id=collection_id, vendor_id=vendor_id)
         return _to_collection_out(
-            row, items=_load_items(service_client, collection_id=collection_id)
+            existing, items=_load_items(service_client, collection_id=collection_id)
         )
 
-    row = _single_row(
+    updated = _single_row(
         service_client.client.table(COLLECTIONS_TABLE)
         .update(patch)
         .eq("id", collection_id)
         .eq("vendor_id", vendor_id)
         .execute()
     )
-    if row is None:
+    if updated is None:
         raise AppError(
             code="collection_update_failed",
             message="Could not update collection",
             http_status=500,
         )
     return _to_collection_out(
-        row, items=_load_items(service_client, collection_id=collection_id)
+        updated, items=_load_items(service_client, collection_id=collection_id)
     )
 
 

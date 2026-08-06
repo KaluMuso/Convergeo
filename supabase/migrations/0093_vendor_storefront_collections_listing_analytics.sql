@@ -132,6 +132,8 @@ begin
       d,
       part_end
     );
+    execute format('alter table public.%I enable row level security', part_name);
+    execute format('alter table public.%I force row level security', part_name);
     d := d + 1;
   end loop;
 end;
@@ -168,6 +170,8 @@ begin
       d,
       part_end
     );
+    execute format('alter table public.%I enable row level security', part_name);
+    execute format('alter table public.%I force row level security', part_name);
     d := d + 1;
   end loop;
 end;
@@ -193,6 +197,8 @@ begin
     p_day,
     part_end
   );
+  execute format('alter table public.%I enable row level security', part_name);
+  execute format('alter table public.%I force row level security', part_name);
   part_name := format('listing_view_dedup_%s', to_char(p_day, 'YYYY_MM_DD'));
   execute format(
     'create table if not exists public.%I partition of public.listing_view_dedup
@@ -201,6 +207,8 @@ begin
     p_day,
     part_end
   );
+  execute format('alter table public.%I enable row level security', part_name);
+  execute format('alter table public.%I force row level security', part_name);
 end;
 $$;
 

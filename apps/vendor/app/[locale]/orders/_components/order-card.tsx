@@ -12,6 +12,10 @@ import { VendorEmptyState, VendorErrorState } from "../../_components/async-stat
 import { isAuditableApproved } from "../../_lib/kyc-integrity";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import {
+  createAnalyticsClient,
+  type VendorAnalyticsSummary,
+} from "../../analytics/_lib/analytics-client";
+import {
   Button,
   FormField,
   Input,
@@ -21,10 +25,6 @@ import {
   StatusChip,
 } from "../../listings/new/_lib/ui";
 import { createKycClient } from "../../onboarding/_lib/kyc-client";
-import {
-  createAnalyticsClient,
-  type VendorAnalyticsSummary,
-} from "../../analytics/_lib/analytics-client";
 
 import type { OrderActionResponse, VendorActionName } from "./action-bar";
 import type { KycApplication } from "../../onboarding/_lib/types";
