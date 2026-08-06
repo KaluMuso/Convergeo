@@ -2,6 +2,9 @@
   "app": {
     "name": "Vergeo5"
   },
+  "meta": {
+    "defaultDescription": "Shiteni ifintu, bookeni ma-service, no sangeni ma-event mu Zambia pa Vergeo5."
+  },
   "common": {
     "loading": "Ilekete…",
     "retry": "Wesheni limbi"

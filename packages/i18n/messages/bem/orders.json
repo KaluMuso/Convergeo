@@ -4,7 +4,13 @@
     "orderId": "Order nambala {id}",
     "title": "Ifya order",
     "total": "Total ya order",
-    "vendor": "Ashitisha {vendor}"
+    "vendor": "Ashitisha {vendor}",
+    "fulfilmentPickup": "Pickup",
+    "fulfilmentDelivery": "Delivery",
+    "subtotal": "Subtotal ya ifintu",
+    "lineQty": "{title} × {qty}",
+    "deliveryFee": "Fee ya delivery",
+    "relatedTitle": "Abashitisha bambi mu checkout iyi"
   },
   "empty": {
     "body": "Ilyo mwashita ukufuma ku basellers ba Vergeo5, ama-order no tracking fyaisa apa.",
@@ -58,5 +64,25 @@
     "shipped": "Ileisa kuli imwe",
     "title": "Progress ya order"
   },
-  "title": "Ama-order yenu"
+  "title": "Ama-order yenu",
+  "pickup": {
+    "title": "Ifya pickup",
+    "qrLabel": "Longeni QR code iyi kuli vendor",
+    "pinLabel": "Nangu pepeni PIN iyi",
+    "stubBody": "QR na PIN ya pickup fikaboneka apa ilyo vendor alemarka order yikwete.",
+    "pinAria": "PIN ya pickup: {pin}"
+  },
+  "invoice": {
+    "title": "Receipt na invoice",
+    "download": "Downloadeni receipt",
+    "stubHelp": "PDF download ikaboneka posacedwa.",
+    "unavailable": "Receipt teyaisa nomba"
+  },
+  "dispatch": {
+    "title": "Updates ya delivery",
+    "courier": "Courier",
+    "tracking": "Note ya tracking",
+    "empty": "Ifya dispatch fikaboneka apa ilyo order yenu ileisa.",
+    "statusUpdates": "Updates ya status"
+  }
 }

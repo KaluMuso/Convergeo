@@ -1,0 +1,140 @@
+{
+  "$schema": "vergeo5/whatsapp-templates/v1",
+  "description": "Authoritative WhatsApp Business Cloud API template registry for the n8n/API notification dispatcher. Register each meta_template_name in WhatsApp Manager (Utility category) before go-live. Money placeholders are pre-formatted server-side as K1,234.56 (integer ngwee).",
+  "locale_codes": {
+    "en": "en",
+    "bem": "bem_ZM",
+    "nya": "nya_ZM"
+  },
+  "compliance": {
+    "stop_footer": {
+      "en": "Reply STOP to opt out.",
+      "bem": "Lemeni STOP ukuleka.",
+      "nya": "Lembani STOP kuleka."
+    }
+  },
+  "templates": {
+    "order_confirmed_buyer": {
+      "dispatch_key": "order_confirmed",
+      "meta_template_name": "order_confirmed",
+      "category": "UTILITY",
+      "audience": "customer",
+      "event": "order_confirmed",
+      "description": "Sent to the buyer when payment is verified and the order is confirmed. Reinforces escrow trust.",
+      "variables": [
+        { "position": 1, "name": "order_reference", "example": "ord-abc123" },
+        { "position": 2, "name": "total_ngwee", "format": "formatK", "example": "K1,234.56" },
+        {
+          "position": 3,
+          "name": "track_url",
+          "example": "https://vergeo5.com/bem/account/orders/ord-abc123"
+        }
+      ],
+      "bodies": {
+        "en": "✅ *Order confirmed*\n\nYour Vergeo5 order *{{1}}* is confirmed.\n\n💰 Total: *{{2}}*\n📦 Track: {{3}}\n\n🔒 Your payment is held safely by Vergeo5 until delivery.\n\nReply STOP to opt out.",
+        "bem": "✅ *Order yasuminishwa*\n\nOrder yenu ya Vergeo5 *{{1}}* yasuminishwa.\n\n💰 Total: *{{2}}*\n📦 Tebula: {{3}}\n\n🔒 Indalama yenu yikwata bwino na Vergeo5 mpaka kufika.\n\nLemeni STOP ukuleka.",
+        "nya": "✅ *Order yatsimikizidwa*\n\nOrder yanu ya Vergeo5 *{{1}}* yatsimikizidwa.\n\n💰 Total: *{{2}}*\n📦 Onani: {{3}}\n\n🔒 Ndalama zanu zikusungidwa ndi Vergeo5 mpaka kutumiza.\n\nLembani STOP kuleka."
+      },
+      "sample_payload": {
+        "to": "+260971234567",
+        "locale": "en",
+        "order_reference": "ord-abc123",
+        "total_ngwee": 123456,
+        "track_url": "https://vergeo5.com/en/account/orders/ord-abc123"
+      }
+    },
+    "new_order_vendor": {
+      "dispatch_key": "vendor_new_order",
+      "meta_template_name": "vendor_new_order",
+      "category": "UTILITY",
+      "audience": "vendor",
+      "event": "order_placed",
+      "description": "Alerts the vendor to a new paid/placed order. Prompts confirmation in the vendor app.",
+      "variables": [
+        { "position": 1, "name": "order_reference", "example": "ord-abc123" },
+        { "position": 2, "name": "product_title", "example": "Samsung A15 128GB" },
+        { "position": 3, "name": "quantity", "example": "2" }
+      ],
+      "bodies": {
+        "en": "🛒 *New order on Vergeo5*\n\nOrder *{{1}}*\n📱 {{2}} × {{3}}\n\n✅ Confirm and prepare in the vendor app.\n💬 Need help? Reply here or open Vergeo5 Vendor.",
+        "bem": "🛒 *Order yambi pa Vergeo5*\n\nOrder *{{1}}*\n📱 {{2}} × {{3}}\n\n✅ Tukishisheni no kwipanga mu vendor app.\n💬 Mufwaya ubufushi? Tubombeni pano nangu isuleni Vergeo5 Vendor.",
+        "nya": "🛒 *Order yatsopano pa Vergeo5*\n\nOrder *{{1}}*\n📱 {{2}} × {{3}}\n\n✅ Tsimikizani ndi kukonzekera mu vendor app.\n💬 Mukufuna thandizo? Tiyeni pano kapena tsegulani Vergeo5 Vendor."
+      },
+      "sample_payload": {
+        "to": "+260961234567",
+        "locale": "en",
+        "order_reference": "ord-abc123",
+        "product_title": "Samsung A15 128GB",
+        "quantity": 2
+      }
+    },
+    "order_ready_for_pickup": {
+      "dispatch_key": "order_ready_pickup",
+      "meta_template_name": "order_ready_pickup",
+      "category": "UTILITY",
+      "audience": "customer",
+      "event": "order_ready_pickup",
+      "description": "Notifies the buyer that their order is ready for collection. Includes pickup landmark and QR/PIN link.",
+      "variables": [
+        { "position": 1, "name": "order_reference", "example": "ord-abc123" },
+        {
+          "position": 2,
+          "name": "pickup_details",
+          "example": "Collect at Kamwala Trading, stand 12. QR: https://vergeo5.com/en/pickup/ord-abc123"
+        }
+      ],
+      "bodies": {
+        "en": "📍 *Ready for pickup*\n\nYour Vergeo5 order *{{1}}* is ready!\n\n🏪 {{2}}\n\n📲 Show your QR code or PIN at the vendor.\n⏰ Collect during vendor opening hours.\n\nReply STOP to opt out.",
+        "bem": "📍 *Yikwete kale ku pickup*\n\nOrder yenu *{{1}}* yikwete!\n\n🏪 {{2}}\n\n📲 Longeni QR code nangu PIN kuli vendor.\n⏰ Mutenge mu nshita sha kufungula kwa vendor.\n\nLemeni STOP ukuleka.",
+        "nya": "📍 *Yakonzeka kutengedwa*\n\nOrder yanu *{{1}}* yakonzeka!\n\n🏪 {{2}}\n\n📲 Onetsani QR code kapena PIN kwa vendor.\n⏰ Mutengeni nthawi ya kutsegula kwa vendor.\n\nLembani STOP kuleka."
+      },
+      "sample_payload": {
+        "to": "+260971234567",
+        "locale": "en",
+        "order_reference": "ord-abc123",
+        "pickup_details": "Collect at Kamwala Trading, stand 12. QR: https://vergeo5.com/en/pickup/ord-abc123"
+      }
+    },
+    "escrow_released_vendor": {
+      "dispatch_key": "escrow_released_vendor",
+      "meta_template_name": "escrow_released_vendor",
+      "category": "UTILITY",
+      "audience": "vendor",
+      "event": "order_completed",
+      "description": "Notifies the vendor that the buyer confirmed receipt and escrow funds were released. Planned for M14 dispatcher wiring — submit to Meta before enabling.",
+      "status": "pending_meta_submission",
+      "variables": [
+        { "position": 1, "name": "order_reference", "example": "ord-abc123" },
+        { "position": 2, "name": "amount_ngwee", "format": "formatK", "example": "K1,150.00" },
+        {
+          "position": 3,
+          "name": "vendor_app_url",
+          "example": "https://vendor.vergeo5.com/orders/ord-abc123"
+        }
+      ],
+      "bodies": {
+        "en": "💸 *Payment released*\n\nEscrow for order *{{1}}* is released.\n\n💰 Amount: *{{2}}*\n✅ Buyer confirmed receipt.\n\nFunds will reach your wallet shortly.\n📲 View payout: {{3}}\n\nReply STOP to opt out.",
+        "bem": "💸 *Indalama yasuminishwa*\n\nEscrow ya order *{{1}}* yasuminishwa.\n\n💰 Indalama: *{{2}}*\n✅ Buyer yasuminisha ukupokelela.\n\nIndalama shyaisa ku wallet yenu posacedwa.\n📲 Onani payout: {{3}}\n\nLemeni STOP ukuleka.",
+        "nya": "💸 *Ndalama zatulutsidwa*\n\nEscrow ya order *{{1}}* yatulutsidwa.\n\n💰 Ndalama: *{{2}}*\n✅ Buyer watsimikiza kulandira.\n\nNdalama zidzafika ku wallet yanu posachedwa.\n📲 Onani payout: {{3}}\n\nLembani STOP kuleka."
+      },
+      "sample_payload": {
+        "to": "+260961234567",
+        "locale": "en",
+        "order_reference": "ord-abc123",
+        "amount_ngwee": 115000,
+        "vendor_app_url": "https://vendor.vergeo5.com/orders/ord-abc123"
+      }
+    }
+  },
+  "api_wiring": {
+    "registry": "services/api/app/services/notifications/templates/whatsapp.py",
+    "dispatcher": "services/api/app/services/notifications/dispatcher.py",
+    "i18n_slots": "packages/i18n/messages/{locale}/notifications.json",
+    "endpoint": "POST https://graph.facebook.com/{version}/{phone-number-id}/messages",
+    "notes": [
+      "order_confirmed_buyer, new_order_vendor, and order_ready_for_pickup map to live API template IDs today.",
+      "escrow_released_vendor requires a new entry in whatsapp.py and events.py before production dispatch.",
+      "Submit emoji bodies to Meta as-is; Utility category with transactional tone only."
+    ]
+  }
+}
