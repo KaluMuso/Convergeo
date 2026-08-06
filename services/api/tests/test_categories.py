@@ -107,7 +107,6 @@ def categories_client() -> Generator[TestClient, None, None]:
     app: FastAPI = create_app()
     app.dependency_overrides[get_supabase_client] = lambda: FakeServiceClient(fake)
     with TestClient(app, raise_server_exceptions=False) as client:
-        client.fake = fake  # type: ignore[attr-defined]
         yield client
     app.dependency_overrides.clear()
 

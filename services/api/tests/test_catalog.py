@@ -220,7 +220,12 @@ SEED_STORE: dict[str, list[dict[str, Any]]] = {
 
 
 class FakeQuery:
-    def __init__(self, table: str, rows: list[dict[str, Any]], store: dict[str, list[dict[str, Any]]]) -> None:
+    def __init__(
+        self,
+        table: str,
+        rows: list[dict[str, Any]],
+        store: dict[str, list[dict[str, Any]]],
+    ) -> None:
         self._table = table
         self._rows = rows
         self._store = store
@@ -295,7 +300,7 @@ class FakeQuery:
         if self._table == "vendor_listings" and "vendors!" in self._select:
             rows = [_enrich_listing_row(row, self._store) for row in rows]
 
-        for op, column, value in dotted_filters:
+        for _op, column, value in dotted_filters:
             parent, child = column.split(".", 1)
             filtered: list[dict[str, Any]] = []
             for row in rows:
@@ -322,7 +327,9 @@ def _enrich_listing_row(
     product_id = listing.get("product_id")
     listing_id = listing.get("id")
     vendors = [
-        row for row in store.get("vendors", []) if row.get("id") == vendor_id and row.get("status") == "active"
+        row
+        for row in store.get("vendors", [])
+        if row.get("id") == vendor_id and row.get("status") == "active"
     ]
     vendor = vendors[0] if vendors else None
     if vendor is not None:
