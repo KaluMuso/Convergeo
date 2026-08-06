@@ -6,7 +6,7 @@
 - **Deployment:** `UNKNOWN` | `NOT_DEPLOYED` | `DEPLOYMENT_REQUIRED` | `DEPLOYED`
 - **Runtime Verification:** `NOT_TESTED` | `VERIFIED` | `FAILED` | `BLOCKED_EXTERNAL`
 
-**Batch 0.5 commit:** `fcf2b191` · **Batch 1A commit:** `e7555b8d` · **Date:** 2026-08-06
+**Batch 0.5 commit:** `fcf2b191` · **Batch 1A commit:** `e7555b8d` · **Batch 1A.2:** `ea80af3d` · **Date:** 2026-08-06
 
 Canonical IDs below updated **only where Batch 0.5 obtained evidence**. All others remain `NOT_AUDITED` at canonical level.
 
@@ -37,13 +37,13 @@ Canonical IDs below updated **only where Batch 0.5 obtained evidence**. All othe
 
 ## Platform core (engineering ledger — Batch 0)
 
-| ID       | Area                           | Implementation | Deployment          | Runtime Verification | Notes                                    |
-| -------- | ------------------------------ | -------------- | ------------------- | -------------------- | ---------------------------------------- |
-| CORE-001 | Monorepo (pnpm + turbo)        | IMPLEMENTED    | DEPLOYED            | VERIFIED             | lint/typecheck/test pass locally         |
-| CORE-002 | FastAPI backend                | IMPLEMENTED    | DEPLOYED            | VERIFIED             | `/healthz` 200; SHA behind master        |
-| CORE-003 | Supabase Postgres schema (Git) | IMPLEMENTED    | DEPLOYMENT_REQUIRED | VERIFIED             | Prod tip `0071`; staging `0079`          |
-| CORE-004 | Three Next.js apps             | IMPLEMENTED    | DEPLOYED            | PARTIAL              | Customer SHA match; vendor/admin unknown |
-| CORE-005 | RLS on money tables            | IMPLEMENTED    | DEPLOYMENT_REQUIRED | VERIFIED             | RLS CI trustworthy (Batch 0.5)           |
+| ID       | Area                           | Implementation | Deployment          | Runtime Verification | Notes                                           |
+| -------- | ------------------------------ | -------------- | ------------------- | -------------------- | ----------------------------------------------- |
+| CORE-001 | Monorepo (pnpm + turbo)        | IMPLEMENTED    | DEPLOYED            | VERIFIED             | lint/typecheck/test pass locally                |
+| CORE-002 | FastAPI backend                | IMPLEMENTED    | DEPLOYED            | VERIFIED             | `/healthz` 200; SHA behind master               |
+| CORE-003 | Supabase Postgres schema (Git) | IMPLEMENTED    | DEPLOYED (staging)  | VERIFIED             | Prod tip `0071`; staging at Git tip (`0095`+TS) |
+| CORE-004 | Three Next.js apps             | IMPLEMENTED    | DEPLOYED            | PARTIAL              | Customer SHA match; vendor/admin unknown        |
+| CORE-005 | RLS on money tables            | IMPLEMENTED    | DEPLOYMENT_REQUIRED | VERIFIED             | RLS CI trustworthy (Batch 0.5)                  |
 
 ## Authentication & authorization
 
