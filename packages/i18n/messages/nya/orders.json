@@ -4,7 +4,13 @@
     "orderId": "Order nambala {id}",
     "title": "Zinthu za order",
     "total": "Total ya order",
-    "vendor": "Agulitsa {vendor}"
+    "vendor": "Agulitsa {vendor}",
+    "fulfilmentPickup": "Pickup",
+    "fulfilmentDelivery": "Delivery",
+    "subtotal": "Subtotal ya zinthu",
+    "lineQty": "{title} × {qty}",
+    "deliveryFee": "Fee ya delivery",
+    "relatedTitle": "Ogulitsa ena mu checkout iyi"
   },
   "empty": {
     "body": "Mukagula kuchokera kwa ogulitsa a Vergeo5, ma-order ndi tracking zidzaonekera apa.",
@@ -58,5 +64,25 @@
     "shipped": "Ikubwera kwa inu",
     "title": "Progress ya order"
   },
-  "title": "Ma-order anu"
+  "title": "Ma-order anu",
+  "pickup": {
+    "title": "Zambiri za pickup",
+    "qrLabel": "Onetsani QR code iyi kwa vendor",
+    "pinLabel": "Kapena perekani PIN iyi",
+    "stubBody": "QR ndi PIN ya pickup zidzaonekera apa vendor akamaka order yakonzeka.",
+    "pinAria": "PIN ya pickup: {pin}"
+  },
+  "invoice": {
+    "title": "Receipt ndi invoice",
+    "download": "Tsitsani receipt",
+    "stubHelp": "PDF download idzakhala pano posachedwa.",
+    "unavailable": "Receipt silipo pano"
+  },
+  "dispatch": {
+    "title": "Zosintha za delivery",
+    "courier": "Courier",
+    "tracking": "Note ya tracking",
+    "empty": "Zambiri za dispatch zidzaonekera apa order yanu ikubwera.",
+    "statusUpdates": "Zosintha za status"
+  }
 }

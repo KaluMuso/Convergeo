@@ -2,6 +2,9 @@
   "app": {
     "name": "Vergeo5"
   },
+  "meta": {
+    "defaultDescription": "Gulani zinthu, bookani ma-service, ndi pezani ma-event mu Zambia pa Vergeo5."
+  },
   "common": {
     "loading": "Ikuyenda…",
     "retry": "Yesaninso"
