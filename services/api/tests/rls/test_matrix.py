@@ -1445,6 +1445,15 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    # R02-P15. Vendor-scoped listing view aggregates; service-role write only.
+    "listing_analytics": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "listing_images": {
         Persona.ANON: {
             "select": "permit",
@@ -1524,6 +1533,14 @@ EXPECTATIONS: TableExpectations = {
             "update": "deny",
             "delete": "deny",
         },
+    },
+    "listing_view_dedup": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: deny_all(),
+        Persona.OTHER_CUSTOMER: deny_all(),
+        Persona.VENDOR: deny_all(),
+        Persona.OTHER_VENDOR: deny_all(),
+        Persona.ADMIN: deny_all(),
     },
     "merch_slots": {
         Persona.ANON: {
@@ -2693,6 +2710,83 @@ EXPECTATIONS: TableExpectations = {
         Persona.VENDOR: select_insert_delete_only(),
         Persona.OTHER_VENDOR: select_insert_delete_only(),
         Persona.ADMIN: all_but_update_denied(),
+    },
+    # R02-P15. Vendor-curated storefront collections; public read when active.
+    "vendor_storefront_collection_items": {
+        Persona.ANON: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "permit",
+            "update": "permit",
+            "delete": "permit",
+        },
+    },
+    "vendor_storefront_collections": {
+        Persona.ANON: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "deny",
+            "delete": "deny",
+        },
+        Persona.CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_CUSTOMER: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.OTHER_VENDOR: {
+            "select": "permit",
+            "insert": "deny",
+            "update": "permit",
+            "delete": "permit",
+        },
+        Persona.ADMIN: {
+            "select": "permit",
+            "insert": "permit",
+            "update": "permit",
+            "delete": "permit",
+        },
     },
     # R02-P14 (D37). A follow is a commerce subscription, not a social graph.
     # Owners read/insert/delete their OWN rows (non-owners match zero rows →

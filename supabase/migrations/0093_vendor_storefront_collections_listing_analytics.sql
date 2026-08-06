@@ -101,7 +101,7 @@ comment on function public.storefront_collection_items_guard() is
   'DB-layer enforcement: a collection may only contain listings owned by its vendor.';
 
 -- ---------------------------------------------------------------------------
--- listing_analytics — daily aggregates, partitioned by day (UTC).
+-- listing_analytics — daily aggregates bucketed by UTC day (day column + index).
 -- ---------------------------------------------------------------------------
 create table if not exists public.listing_analytics (
   listing_id uuid not null references public.vendor_listings (id) on delete cascade,
@@ -110,34 +110,13 @@ create table if not exists public.listing_analytics (
   pdp_views bigint not null default 0 check (pdp_views >= 0),
   updated_at timestamptz not null default timezone('utc', now()),
   primary key (listing_id, day)
-) partition by range (day);
+);
+
+create index if not exists listing_analytics_day_idx
+  on public.listing_analytics (day desc);
 
 comment on table public.listing_analytics is
-  'Lightweight per-listing per-day view counters (impressions + PDP views). Partitioned by UTC day.';
-
--- Initial partitions: trailing 30 days + next 7 days (UTC).
-do $$
-declare
-  d date := (timezone('utc', now()))::date - 30;
-  part_name text;
-  part_end date;
-begin
-  while d <= (timezone('utc', now()))::date + 7 loop
-    part_end := d + 1;
-    part_name := format('listing_analytics_%s', to_char(d, 'YYYY_MM_DD'));
-    execute format(
-      'create table if not exists public.%I partition of public.listing_analytics
-         for values from (%L) to (%L)',
-      part_name,
-      d,
-      part_end
-    );
-    execute format('alter table public.%I enable row level security', part_name);
-    execute format('alter table public.%I force row level security', part_name);
-    d := d + 1;
-  end loop;
-end;
-$$;
+  'Lightweight per-listing per-day view counters (impressions + PDP views), bucketed by UTC day.';
 
 -- ---------------------------------------------------------------------------
 -- listing_view_dedup — idempotent by constraint (session, listing, day, kind).
@@ -149,71 +128,13 @@ create table if not exists public.listing_view_dedup (
   view_kind text not null check (view_kind in ('impression', 'pdp_view')),
   created_at timestamptz not null default timezone('utc', now()),
   primary key (session_id, listing_id, day, view_kind)
-) partition by range (day);
+);
+
+create index if not exists listing_view_dedup_day_idx
+  on public.listing_view_dedup (day desc);
 
 comment on table public.listing_view_dedup is
   'Dedupes listing impressions/PDP views per viewer session per UTC day.';
-
-do $$
-declare
-  d date := (timezone('utc', now()))::date - 30;
-  part_name text;
-  part_end date;
-begin
-  while d <= (timezone('utc', now()))::date + 7 loop
-    part_end := d + 1;
-    part_name := format('listing_view_dedup_%s', to_char(d, 'YYYY_MM_DD'));
-    execute format(
-      'create table if not exists public.%I partition of public.listing_view_dedup
-         for values from (%L) to (%L)',
-      part_name,
-      d,
-      part_end
-    );
-    execute format('alter table public.%I enable row level security', part_name);
-    execute format('alter table public.%I force row level security', part_name);
-    d := d + 1;
-  end loop;
-end;
-$$;
-
--- Ensure today's partition exists for late-night deploys.
-create or replace function public.ensure_listing_analytics_partition(p_day date)
-returns void
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  part_name text;
-  part_end date;
-begin
-  part_end := p_day + 1;
-  part_name := format('listing_analytics_%s', to_char(p_day, 'YYYY_MM_DD'));
-  execute format(
-    'create table if not exists public.%I partition of public.listing_analytics
-       for values from (%L) to (%L)',
-    part_name,
-    p_day,
-    part_end
-  );
-  execute format('alter table public.%I enable row level security', part_name);
-  execute format('alter table public.%I force row level security', part_name);
-  part_name := format('listing_view_dedup_%s', to_char(p_day, 'YYYY_MM_DD'));
-  execute format(
-    'create table if not exists public.%I partition of public.listing_view_dedup
-       for values from (%L) to (%L)',
-    part_name,
-    p_day,
-    part_end
-  );
-  execute format('alter table public.%I enable row level security', part_name);
-  execute format('alter table public.%I force row level security', part_name);
-end;
-$$;
-
-revoke all on function public.ensure_listing_analytics_partition(date) from public;
-grant execute on function public.ensure_listing_analytics_partition(date) to service_role;
 
 -- Atomic record: returns 1 when counted, 0 when deduped.
 create or replace function public.record_listing_view(
@@ -228,8 +149,6 @@ security definer
 set search_path = public
 as $$
 begin
-  perform public.ensure_listing_analytics_partition(p_day);
-
   insert into public.listing_view_dedup (session_id, listing_id, day, view_kind)
   values (p_session_id, p_listing_id, p_day, p_view_kind)
   on conflict do nothing;
