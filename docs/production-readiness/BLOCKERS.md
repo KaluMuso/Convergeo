@@ -21,16 +21,14 @@ Evidence pack: [2026-08-06/runtime-truth-evidence.md](./2026-08-06/runtime-truth
 | **Launch scope**       | PLATFORM                                                                                                                                                                                                                                      |
 | **Next action**        | Plan staged migration apply on staging first; reconcile `schema_migrations` ordering; never apply blindly to production.                                                                                                                      |
 
-### BLK-002 — Staging DB migrations behind Git
+### BLK-002 — ~~Staging DB migrations behind Git~~ **RESOLVED (Batch 1A.2)**
 
-| Field                  | Value                                                                                                                                |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| **Category**           | `DATA_MIGRATION_BLOCKER`                                                                                                             |
-| **Description**        | Staging (`iyasmrmbcrvlfxpzescb`) last applied `0079_clip_cost_guard`. Missing `0080`–`0095` and timestamp RLS remediation migration. |
-| **Evidence**           | Supabase MCP (2026-08-06)                                                                                                            |
-| **Affected canonical** | CAN-OPS-001, CAN-CAT-003, CAN-ORD-002/003                                                                                            |
-| **Launch scope**       | PLATFORM                                                                                                                             |
-| **Next action**        | Apply missing migrations on staging; run RLS matrix + smoke tests before production promotion.                                       |
+| Field           | Value                                                                                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Category**    | `DATA_MIGRATION_BLOCKER` → **RESOLVED**                                                                                                              |
+| **Description** | Staging (`iyasmrmbcrvlfxpzescb`) was at `0079_clip_cost_guard`. Batch 1A.2 applied `0080`–`0095` + `20260802153539_rls_policy_contract_remediation`. |
+| **Evidence**    | [staging-schema-catchup-evidence.md](./2026-08-06/staging-schema-catchup-evidence.md) (2026-08-06)                                                   |
+| **Resolution**  | Ledger at Git tip; `STAGING_SCHEMA_AT_GIT_TIP`                                                                                                       |
 
 ### BLK-003 — API production deploy behind master
 

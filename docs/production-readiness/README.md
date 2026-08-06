@@ -1,9 +1,9 @@
 # Production Readiness Programme
 
-**Latest audit:** Batch 1A.1 — 2026-08-06  
+**Latest audit:** Batch 1A.2 — 2026-08-06  
 **Repository:** [KaluMuso/Convergeo](https://github.com/KaluMuso/Convergeo) (product brand: **Vergeo5**)  
-**Current `master` SHA:** `475824c6559915f8cac5bd0ed1bf31c19acdedc1`  
-**Batch 1A.1 branch:** `cursor/batch1a1-migration-executability-repair-eedc`
+**Current `master` SHA:** `ea80af3d92497f44ad416a59115e418eea8a8aa7`  
+**Staging schema tip:** `20260802153539_rls_policy_contract_remediation` (`iyasmrmbcrvlfxpzescb`)
 
 This directory is the **authoritative programme context** for production-readiness work.
 
@@ -28,6 +28,7 @@ This directory is the **authoritative programme context** for production-readine
 | [BLOCKERS.md](./BLOCKERS.md)                                                                         | Evidence-backed launch blockers                            |
 | [2026-08-06/runtime-truth-evidence.md](./2026-08-06/runtime-truth-evidence.md)                       | Batch 0.5 live probe & migration evidence pack             |
 | [2026-08-06/production-migration-catchup-plan.md](./2026-08-06/production-migration-catchup-plan.md) | Batch 1A migration waves & deploy sequencing               |
+| [2026-08-06/staging-schema-catchup-evidence.md](./2026-08-06/staging-schema-catchup-evidence.md)     | Batch 1A.2 staging catch-up execution evidence             |
 
 ## Batch status
 
@@ -37,7 +38,8 @@ This directory is the **authoritative programme context** for production-readine
 | **0.5**  | Complete             | Runtime/migration truth; registry ingest; live probes                           |
 | **1A**   | Complete             | Migration catch-up plan; compatibility matrix; waves A–G (logical groups)       |
 | **1A.1** | Complete             | Executable-wave repair; BLK-201 fix; staging dry-run semantics; 0086 grant test |
-| **1B**   | **Recommended next** | Full staging catch-up 0079→0095+TS (one `db push`) — operator approval required |
+| **1A.2** | Complete             | Staging schema catch-up 0079→0095+TS applied; ledger at Git tip                 |
+| **1B**   | **Recommended next** | Deploy master API to staging + compatibility regression                         |
 
 ## Historical evidence packs
 
