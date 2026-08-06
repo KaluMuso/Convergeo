@@ -1,9 +1,9 @@
 # Production Readiness Programme
 
-**Latest audit:** Batch 0.5 — 2026-08-06  
+**Latest audit:** Batch 1A — 2026-08-06  
 **Repository:** [KaluMuso/Convergeo](https://github.com/KaluMuso/Convergeo) (product brand: **Vergeo5**)  
 **Current `master` SHA:** `fcf2b1918256bd3d8680741b17cf928cde8576c5`  
-**Batch 0.5 branch:** `cursor/batch0-5-runtime-truth-9b44`
+**Batch 1A branch:** `cursor/batch1a-migration-catchup-plan-9b44`
 
 This directory is the **authoritative programme context** for production-readiness work.
 
@@ -17,24 +17,26 @@ This directory is the **authoritative programme context** for production-readine
 
 ## Programme documents
 
-| File                                                                           | Purpose                                                    |
-| ------------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| [ARCHITECTURE_BASELINE.md](./ARCHITECTURE_BASELINE.md)                         | Current-state architecture (Batch 0 ground truth)          |
-| [MASTER_REQUIREMENTS.md](./MASTER_REQUIREMENTS.md)                             | **34 canonical requirements** (ingested Batch 0.5)         |
-| [REQUIREMENT_TRACEABILITY.md](./REQUIREMENT_TRACEABILITY.md)                   | **223-row** source → canonical matrix (+ REG-001 gap note) |
-| [DECISIONS.md](./DECISIONS.md)                                                 | DEC-001…004 + REG-001; repo vs product distinction         |
-| [AUDIT_LEDGER.md](./AUDIT_LEDGER.md)                                           | Implementation / deployment / runtime status               |
-| [IMPLEMENTATION_QUEUE.md](./IMPLEMENTATION_QUEUE.md)                           | Ordered audit and implementation batches                   |
-| [BLOCKERS.md](./BLOCKERS.md)                                                   | Evidence-backed launch blockers                            |
-| [2026-08-06/runtime-truth-evidence.md](./2026-08-06/runtime-truth-evidence.md) | Batch 0.5 live probe & migration evidence pack             |
+| File                                                                                                 | Purpose                                                    |
+| ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [ARCHITECTURE_BASELINE.md](./ARCHITECTURE_BASELINE.md)                                               | Current-state architecture (Batch 0 ground truth)          |
+| [MASTER_REQUIREMENTS.md](./MASTER_REQUIREMENTS.md)                                                   | **34 canonical requirements** (ingested Batch 0.5)         |
+| [REQUIREMENT_TRACEABILITY.md](./REQUIREMENT_TRACEABILITY.md)                                         | **223-row** source → canonical matrix (+ REG-001 gap note) |
+| [DECISIONS.md](./DECISIONS.md)                                                                       | DEC-001…004 + REG-001; repo vs product distinction         |
+| [AUDIT_LEDGER.md](./AUDIT_LEDGER.md)                                                                 | Implementation / deployment / runtime status               |
+| [IMPLEMENTATION_QUEUE.md](./IMPLEMENTATION_QUEUE.md)                                                 | Ordered audit and implementation batches                   |
+| [BLOCKERS.md](./BLOCKERS.md)                                                                         | Evidence-backed launch blockers                            |
+| [2026-08-06/runtime-truth-evidence.md](./2026-08-06/runtime-truth-evidence.md)                       | Batch 0.5 live probe & migration evidence pack             |
+| [2026-08-06/production-migration-catchup-plan.md](./2026-08-06/production-migration-catchup-plan.md) | Batch 1A migration waves & deploy sequencing               |
 
 ## Batch status
 
-| Batch   | Status               | Summary                                                                  |
-| ------- | -------------------- | ------------------------------------------------------------------------ |
-| **0**   | Complete             | Repository architecture baseline @ `761733dd`                            |
-| **0.5** | Complete             | Runtime/migration truth; registry ingest; live probes                    |
-| **1**   | **Recommended next** | Cart/checkout derivation & B2B visibility (CAN-CAT-003, CAN-ORD-002/003) |
+| Batch   | Status               | Summary                                                      |
+| ------- | -------------------- | ------------------------------------------------------------ |
+| **0**   | Complete             | Repository architecture baseline @ `761733dd`                |
+| **0.5** | Complete             | Runtime/migration truth; registry ingest; live probes        |
+| **1A**  | Complete             | Migration catch-up plan; compatibility matrix; waves A–G     |
+| **1B**  | **Recommended next** | Staging Wave B (0080–0090) validate — or UI gate for BLK-202 |
 
 ## Historical evidence packs
 

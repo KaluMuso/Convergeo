@@ -1,52 +1,47 @@
 # Implementation & Audit Queue
 
-**Updated:** 2026-08-06 (Batch 0.5 complete)
+**Updated:** 2026-08-06 (Batch 1A complete)
 
 ---
 
 ## Completed
 
-| Batch         | Title                                                | Outcome                                                                                                           |
-| ------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Batch 0**   | Repository truth & architecture baseline             | ARCHITECTURE_BASELINE.md; DEC-001…004 resolved from code                                                          |
-| **Batch 0.5** | Runtime truth, migration truth & requirements ingest | Live probes; migration tips; registry ingest; [runtime-truth-evidence.md](./2026-08-06/runtime-truth-evidence.md) |
+| Batch         | Title                                                | Outcome                                                                                   |
+| ------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| **Batch 0**   | Repository truth & architecture baseline             | ARCHITECTURE_BASELINE.md; DEC-001…004                                                     |
+| **Batch 0.5** | Runtime truth, migration truth & requirements ingest | Live probes; registry ingest                                                              |
+| **Batch 1A**  | Production schema compatibility & catch-up plan      | [production-migration-catchup-plan.md](./2026-08-06/production-migration-catchup-plan.md) |
 
 ---
 
-## Recommended next batch (do not execute until approved)
+## Recommended next action (do not execute until approved)
 
-### Batch 1 — Cart, checkout derivation & B2B visibility integrity
+### Execute Wave B (0080–0081, 0089–0090) on **staging** + validate
 
-**Rationale:** Batch 0.5 established the highest **actionable code-level security gap** without requiring production migration apply or money activation: **CAN-CAT-003** and **CAN-ORD-003** are **PARTIAL** — wholesale eligibility is enforced at cart add and checkout session creation, but **not** on `GET /cart` read. This violates the B2B invisibility invariant for stale cart rows and is directly traceable in code (BLK-101). Migration skew (BLK-001/002) blocks production verification of `0086` cart RLS (CAN-ORD-002) but does not block a read-only code audit and fix design.
+**Rationale:** Staging already proves Wave A (0072–0079). Wave B is **low risk on production data** (0 vendor locations) but **unvalidated** on any environment. Applying Wave B on staging exercises branch-stock backfill, geo index, and reservation-location FKs before production Wave A/B. This is read-only planning's natural successor — not production apply yet.
 
-**Scope (audit-first; implementation only if trivial doc fix is insufficient):**
+**Scope:**
 
-1. Trace full cart → checkout → order path for wholesale/retail visibility and price re-derivation.
-2. Map gaps to CAN-CAT-003, CAN-ORD-002, CAN-ORD-003 acceptance criteria.
-3. Propose minimal fix (cart read filter vs checkout-only) with test cases.
-4. Cross-check listing visibility changes post-add (retail → wholesale-only scenario).
-5. Document interaction with D36 business-buyer gate.
+1. Apply migrations `0080`, `0081`, `0089`, `0090` on staging only.
+2. Run `uv run pytest tests/rls -q` against staging-connected harness OR post-apply `supabase db reset` locally.
+3. Smoke: checkout pickup paths, stock sweeper, `/search/nearby`.
+4. Document results in `docs/production-readiness/2026-08-06/`.
 
-**Canonical IDs:** CAN-CAT-003, CAN-ORD-002, CAN-ORD-003
+**Out of scope:** Production apply; API deploy; feature flag activation; payments.
 
-**Deliverables:** Updated AUDIT_LEDGER rows; fix PR or implementation-queue entry; no production migration apply.
-
-**Explicitly out of scope:** Lenco money drills, production migration apply, n8n activation, payout enablement.
-
-**Why not migration batch first:** Migration apply is **ops execution** (BLK-001/002) requiring founder-approved maintenance window — not a bounded audit. Cart/B2B gap is a confirmed invariant violation in deployed code paths today.
+**Alternative (if staging apply blocked):** **C. Fix application compatibility** — gate Contact Vendor UI until Wave C + API deploy (BLK-202).
 
 ---
 
-## Deferred batches (outline)
+## Deferred
 
-| Batch   | Title                                                  | Depends on                      |
-| ------- | ------------------------------------------------------ | ------------------------------- |
-| Batch 2 | Staging migration apply + schema verification          | Founder ops window; BLK-001/002 |
-| Batch 3 | Money representation & webhook safety (sandbox drill)  | Batch 2 + F9b creds             |
-| Batch 4 | AuthZ & RLS penetration (live DB at current tip)       | Batch 2                         |
-| Batch 5 | n8n fleet completion (release-job, order-jobs, backup) | Batch 2                         |
-| Batch 6 | Backup/recovery proof                                  | EXT-004 dashboard access        |
+| Item                             | Depends on                                     |
+| -------------------------------- | ---------------------------------------------- |
+| Production Wave A (0072–0079)    | Backup confirmation (EXT-004); operator window |
+| Production Wave C+               | Wave A/B; API deploy coordination              |
+| Batch 1B — Cart/B2B audit        | Catch-up plan accepted                         |
+| Fix BLK-201 migration replay gap | Engineering session                            |
 
 ---
 
-_One batch at a time. No parallel feature implementation during audit programme._
+_One bounded action at a time._

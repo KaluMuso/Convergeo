@@ -1,7 +1,7 @@
 # Blockers — Evidence-Backed (Batch 0.5)
 
 **Date:** 2026-08-06  
-**Repository SHA:** `fcf2b1918256bd3d8680741b17cf928cde8576c5`  
+**Repository SHA:** `e7555b8d` (Batch 1A branch)  
 **Aggregate launch posture:** **NO_GO**
 
 Evidence pack: [2026-08-06/runtime-truth-evidence.md](./2026-08-06/runtime-truth-evidence.md)
@@ -145,6 +145,39 @@ Evidence pack: [2026-08-06/runtime-truth-evidence.md](./2026-08-06/runtime-truth
 | **Affected canonical** | CAN-ID-002, CAN-OPS-001                                                                          |
 | **Launch scope**       | PLATFORM                                                                                         |
 | **Next action**        | Product decision FD-03 before enabling.                                                          |
+
+### BLK-201 — Migration replay skips timestamp migration
+
+| Field                  | Value                                                                                                                                    |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Category**           | `CODE_DEFECT`                                                                                                                            |
+| **Description**        | `scripts/ci/migration-replay.sh` applies only `00*.sql`; `20260802153539_rls_policy_contract_remediation.sql` excluded from fast replay. |
+| **Evidence**           | Batch 1A; replay script `find … -name '00*.sql'`                                                                                         |
+| **Affected canonical** | CAN-OPS-006                                                                                                                              |
+| **Launch scope**       | PLATFORM                                                                                                                                 |
+| **Next action**        | Extend replay script or document `supabase db reset` as authoritative for timestamp migrations.                                          |
+
+### BLK-202 — FE/API/DB version triangle mismatch (production)
+
+| Field                  | Value                                                                                                                                                                 |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Category**           | `DEPLOYMENT_REQUIRED`                                                                                                                                                 |
+| **Description**        | Customer FE at `master` exposes Contact Vendor (`POST /enquiries`) but production API (`e4a7bb79`) has no enquiries router → **404**. Prod DB at `0071` lacks `0082`. |
+| **Evidence**           | Batch 1A; live probe; git ancestry (`enquiries.py` not in `e4a7bb79`)                                                                                                 |
+| **Affected canonical** | CAN-SOC-001, CAN-OPS-006                                                                                                                                              |
+| **Launch scope**       | PLATFORM, SOCIAL                                                                                                                                                      |
+| **Next action**        | Catch-up plan Wave C + coordinated API deploy; or gate Contact Vendor UI until aligned.                                                                               |
+
+### BLK-203 — Clips API missing feature-flag gate
+
+| Field                  | Value                                                                                                             |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Category**           | `CODE_DEFECT`                                                                                                     |
+| **Description**        | `clips.py` feed/detail query `video_clips` without `clips_enabled()` (comments route checks flag; feed does not). |
+| **Evidence**           | Batch 1A code review                                                                                              |
+| **Affected canonical** | CAN-UX-001                                                                                                        |
+| **Launch scope**       | PLATFORM                                                                                                          |
+| **Next action**        | Add fail-closed flag check before enabling `clips` flag.                                                          |
 
 ---
 
