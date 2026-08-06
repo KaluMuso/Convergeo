@@ -62,6 +62,11 @@ declare
   collection_vendor uuid;
   listing_vendor uuid;
 begin
+  -- Let RLS / NOT NULL handle incomplete probe rows (matrix insert tests).
+  if new.collection_id is null or new.listing_id is null then
+    return new;
+  end if;
+
   select c.vendor_id into collection_vendor
   from public.vendor_storefront_collections c
   where c.id = new.collection_id;
