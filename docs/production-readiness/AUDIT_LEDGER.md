@@ -24,7 +24,7 @@ Canonical IDs below updated **only where Batch 0.5 obtained evidence**. All othe
 | **CAN-FIN-002**  | IMPLEMENTED    | DEPLOYMENT_REQUIRED | BLOCKED_EXTERNAL     | Lenco code present; `ledger_transactions`=0; OCI gates UNKNOWN                           |
 | **CAN-FIN-004**  | IMPLEMENTED    | DEPLOYMENT_REQUIRED | NOT_TESTED           | Ledger schema in Git; `release-job` n8n not confirmed active                             |
 | **CAN-FIN-005**  | IMPLEMENTED    | DEPLOYMENT_REQUIRED | NOT_TESTED           | Code + sweeper workflows; auto-release workflow import unknown                           |
-| **CAN-OPS-001**  | IMPLEMENTED    | DEPLOYMENT_REQUIRED | PARTIAL              | RLS in Git through 0095; prod at 0071; RLS CI trustworthy on master                      |
+| **CAN-OPS-001**  | IMPLEMENTED    | DEPLOYED (staging)  | PARTIAL              | Staging at Git tip; prod at 0071; RLS CI trustworthy on master                           |
 | **CAN-OPS-004**  | IMPLEMENTED    | PARTIAL             | PARTIAL              | 7/9 n8n workflows ACTIVE; 16/25 Git JSONs unconfirmed                                    |
 | **CAN-OPS-005**  | IMPLEMENTED    | UNKNOWN             | BLOCKED_EXTERNAL     | n8n backup INACTIVE; Supabase PITR not verified                                          |
 | **CAN-OPS-006**  | IMPLEMENTED    | DEPLOYED            | PARTIAL              | CI green; prod FE/API/DB triangle mismatch (BLK-202); Contact Vendor CTA gated           |
