@@ -1,4 +1,4 @@
--- R02-P15 — Vendor storefront collections + listing impression/PDP analytics.
+-- 0094 (R02-P15) — Vendor storefront collections + listing impression/PDP analytics.
 --
 -- Collections let vendors merchandise their own storefront. Analytics are
 -- aggregated per listing per UTC day with dedupe by (session, listing, day, kind).

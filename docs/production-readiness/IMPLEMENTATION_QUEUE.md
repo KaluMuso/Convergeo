@@ -20,7 +20,7 @@
 
 **Scope (read-only / evidence only):**
 
-1. **Supabase migration tip** — compare `supabase_migrations.schema_migrations` on production and staging vs Git filenames (including triple `0093_*` and timestamp migration).
+1. **Supabase migration tip** — compare `supabase_migrations.schema_migrations` on production and staging vs Git filenames (through `0095` and timestamp migration).
 2. **API live probe** — `GET https://api.vergeo5.com/healthz`, `/readyz?checks=search`, `/fingerprint` (no secrets).
 3. **Vercel production SHA** — customer/vendor/admin `/{locale}/health` `buildId` vs `git rev-parse master`.
 4. **n8n inventory** — list active workflows on production host vs `infra/n8n/*.json` registry.

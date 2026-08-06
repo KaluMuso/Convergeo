@@ -81,19 +81,19 @@ e2e/              — Playwright (nightly, not PR gate)
 
 ## Database & Migrations
 
-| Aspect            | Truth (Git)                                                                                           |
-| ----------------- | ----------------------------------------------------------------------------------------------------- |
-| Engine            | PostgreSQL via **Supabase** (cloud)                                                                   |
-| Extensions        | `pgvector`, `pg_trgm`, FTS (`0001_extensions.sql`)                                                    |
-| Migrations in Git | **96 files** (`0001`–`0092` + **3× `0093_*`** + `20260802153539_rls_policy_contract_remediation.sql`) |
-| ORM               | None — SQL migrations + Supabase client / raw SQL                                                     |
-| RLS               | Enabled + forced on core tables; money tables service-role write only                                 |
-| Seed              | `supabase/seed.sql` (~150 products + categories); `[db.seed] enabled = false` in config.toml          |
-| Local config      | `supabase/config.toml` — Postgres **15** in config (docs reference 16 for cloud)                      |
+| Aspect            | Truth (Git)                                                                                  |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| Engine            | PostgreSQL via **Supabase** (cloud)                                                          |
+| Extensions        | `pgvector`, `pg_trgm`, FTS (`0001_extensions.sql`)                                           |
+| Migrations in Git | **96 files** (`0001`–`0095` + `20260802153539_rls_policy_contract_remediation.sql`)          |
+| ORM               | None — SQL migrations + Supabase client / raw SQL                                            |
+| RLS               | Enabled + forced on core tables; money tables service-role write only                        |
+| Seed              | `supabase/seed.sql` (~150 products + categories); `[db.seed] enabled = false` in config.toml |
+| Local config      | `supabase/config.toml` — Postgres **15** in config (docs reference 16 for cloud)             |
 
 ### Migration caveats (Git proves files exist; applied state UNKNOWN without live DB)
 
-- **Triple `0093_*` prefix** — apply order alphabetical; disjoint objects today but fragile.
+- **Renumbered 2026-08-06:** former triple `0093_*` collision split to `0093`–`0095` (CI blocker fix).
 - **Historical drift** documented in `docs/production-readiness/2026-07-20/deploy-migration-truth.md` — production may lag Git tip (e.g. status doc cites prod at `0071` vs Git `0093+` as of 2026-08-01).
 - **Custom access token hook** (`0051`) — SQL present; hook **disabled** in `config.toml`.
 

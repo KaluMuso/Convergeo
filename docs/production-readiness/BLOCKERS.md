@@ -23,13 +23,13 @@ Blockers are **not repaired in Batch 0** — recorded for programme visibility.
 
 ## P1 — Significant risk, not sole launch blockers
 
-| ID          | Blocker                                                    | Evidence                                                            |
-| ----------- | ---------------------------------------------------------- | ------------------------------------------------------------------- |
-| **BLK-101** | B2B cart read-path may not re-derive wholesale eligibility | `00-status.md` G3: `_build_cart_response` reads stored `cart_items` |
-| **BLK-102** | Sentry projects may not exist for all apps                 | `observability-live-evidence.md` 2026-07-20                         |
-| **BLK-103** | Triple `0093_*` migration prefix — ordering fragility      | Three files share prefix in Git                                     |
-| **BLK-104** | Custom access token hook disabled                          | `0051` SQL vs commented hook in `config.toml`                       |
-| **BLK-105** | `supabase/config.toml` Postgres 15 vs cloud 16             | Version mismatch in config                                          |
+| ID              | Blocker                                                                                 | Evidence                                                            |
+| --------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **BLK-101**     | B2B cart read-path may not re-derive wholesale eligibility                              | `00-status.md` G3: `_build_cart_response` reads stored `cart_items` |
+| **BLK-102**     | Sentry projects may not exist for all apps                                              | `observability-live-evidence.md` 2026-07-20                         |
+| ~~**BLK-103**~~ | ~~Triple `0093_*` migration prefix~~ — **resolved** `0093`–`0095` renumber (2026-08-06) | Was blocking CI migration replay / RLS / perf                       |
+| **BLK-104**     | Custom access token hook disabled                                                       | `0051` SQL vs commented hook in `config.toml`                       |
+| **BLK-105**     | `supabase/config.toml` Postgres 15 vs cloud 16                                          | Version mismatch in config                                          |
 
 ---
 
