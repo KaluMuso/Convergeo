@@ -87,6 +87,20 @@ export type KycDecisionResponse = {
   notification_enqueued: boolean;
 };
 
+export type LicenseBody =
+  "PACRA" | "ZAMRA" | "HPCZ" | "ZIEA" | "RTSA" | "ZEMA" | "ERB" | "WARMA" | "TCZ" | "OTHER";
+
+export type RegulatedClass =
+  "pharmacy" | "agrochemicals" | "alcohol" | "food" | "financial_services";
+
+export type ApproveKycPayload = {
+  reviewer_notes?: string | null;
+  expiry_date?: string | null;
+  license_body?: LicenseBody | null;
+  regulated_class?: RegulatedClass | null;
+  licence_number?: string | null;
+};
+
 export type VendorQueueItem = {
   vendor_id: string;
   kyc_record_id: string | null;

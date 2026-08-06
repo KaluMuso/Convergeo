@@ -17,6 +17,12 @@ from app.services.escrow.release_accounting import OPEN_DISPUTE_STATUSES
 from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.stock.release import ReleaseResult as StockReleaseResult
 from app.services.stock.release import release_reservation
+from app.services.vendors.license_enforcement import (
+    ExpiredLicenceTarget,
+    LicenseEnforcementResult,
+    enforce_expired_licence,
+    list_expired_licence_targets,
+)
 from app.services.webhooks.n8n_dispatch import build_n8n_payload, post_n8n_webhook
 from app.settings import Settings, get_settings
 
@@ -55,6 +61,14 @@ class DailySummaryResult:
     total_orders: int
     new_users: int
     dispatched: bool
+
+
+@dataclass(frozen=True, slots=True)
+class ExpiredLicenceSweepResult:
+    scanned: int
+    vendors_suspended: int
+    listings_removed: int
+    audit_rows: int
 
 
 def _open_dispute_filter_sql(*, order_alias: str = "o") -> str:
@@ -341,4 +355,55 @@ def dispatch_daily_summary(
         total_orders=total_orders,
         new_users=new_users,
         dispatched=dispatched,
+    )
+
+
+def sweep_expired_licenses(
+    service_client: ServiceRoleClient,
+    *,
+    today: date | None = None,
+) -> ExpiredLicenceSweepResult:
+    """Suspend vendors whose verified regulator licence expired before *today*.
+
+    Cascades ``removed`` to active/paused listings and writes one audit_log row
+    per suspended vendor.
+    """
+    _ = service_client
+    effective_today = today or datetime.now(UTC).date()
+    targets: list[ExpiredLicenceTarget] = list_expired_licence_targets(today=effective_today)
+
+    vendors_suspended = 0
+    listings_removed = 0
+    audit_rows = 0
+    processed_vendors: set[str] = set()
+
+    for target in targets:
+        if target.vendor_id in processed_vendors:
+            continue
+        result: LicenseEnforcementResult = enforce_expired_licence(
+            target,
+            today=effective_today,
+        )
+        processed_vendors.add(target.vendor_id)
+        if result.vendor_suspended:
+            vendors_suspended += 1
+        listings_removed += result.listings_removed
+        if result.audited:
+            audit_rows += 1
+
+    logger.info(
+        "sweep_expired_licenses complete",
+        extra={
+            "scanned": len(targets),
+            "vendors_suspended": vendors_suspended,
+            "listings_removed": listings_removed,
+            "audit_rows": audit_rows,
+        },
+    )
+
+    return ExpiredLicenceSweepResult(
+        scanned=len(targets),
+        vendors_suspended=vendors_suspended,
+        listings_removed=listings_removed,
+        audit_rows=audit_rows,
     )

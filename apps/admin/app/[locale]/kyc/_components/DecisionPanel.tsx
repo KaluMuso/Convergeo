@@ -27,6 +27,14 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
   const [reasonTemplate, setReasonTemplate] = useState<RejectReasonTemplate>("blurry_document");
   const [freeText, setFreeText] = useState("");
   const [reviewerNotes, setReviewerNotes] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+  const [licenseBody, setLicenseBody] = useState<
+    "PACRA" | "ZAMRA" | "HPCZ" | "ZIEA" | "RTSA" | "ZEMA" | "ERB" | "WARMA" | "TCZ" | "OTHER"
+  >("HPCZ");
+  const [regulatedClass, setRegulatedClass] = useState<
+    "pharmacy" | "agrochemicals" | "alcohol" | "food" | "financial_services"
+  >("pharmacy");
+  const [licenceNumber, setLicenceNumber] = useState("");
   const [lifecycleReason, setLifecycleReason] = useState("");
   const [docsRequested, setDocsRequested] = useState<Array<"nrc" | "selfie">>(["nrc", "selfie"]);
   const [submitting, setSubmitting] = useState(false);
@@ -54,9 +62,18 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
           body: JSON.stringify({ lifecycle_reason: lifecycleReason || null }),
         });
       } else if (mode === "approve") {
+        const payload: Record<string, string | null> = {
+          reviewer_notes: reviewerNotes || null,
+        };
+        if (detail.tier >= 2) {
+          payload.expiry_date = expiryDate;
+          payload.license_body = licenseBody;
+          payload.regulated_class = regulatedClass;
+          payload.licence_number = licenceNumber.trim();
+        }
         await kycApi.request(`/admin/kyc/${detail.id}/approve`, {
           method: "POST",
-          body: JSON.stringify({ reviewer_notes: reviewerNotes || null }),
+          body: JSON.stringify(payload),
         });
       } else if (mode === "reject") {
         await kycApi.request(`/admin/kyc/${detail.id}/reject`, {
@@ -173,6 +190,73 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
       {mode === "approve" ? (
         <div className="space-y-3">
           <p className="text-sm text-muted">{td("confirmApprove", { tier: detail.tier })}</p>
+          {detail.tier >= 2 ? (
+            <>
+              <p className="text-sm text-warning">{td("licenseRequired")}</p>
+              <label className="block space-y-1 text-sm">
+                <span>{td("expiryDate")}</span>
+                <input
+                  className="min-h-11 w-full rounded-md border border-border px-2"
+                  type="date"
+                  value={expiryDate}
+                  onChange={(event) => setExpiryDate(event.target.value)}
+                  required
+                />
+              </label>
+              <label className="block space-y-1 text-sm">
+                <span>{td("licenseBody")}</span>
+                <select
+                  className="min-h-11 w-full rounded-md border border-border px-2"
+                  value={licenseBody}
+                  onChange={(event) => setLicenseBody(event.target.value as typeof licenseBody)}
+                >
+                  {(
+                    [
+                      "PACRA",
+                      "ZAMRA",
+                      "HPCZ",
+                      "ZIEA",
+                      "RTSA",
+                      "ZEMA",
+                      "ERB",
+                      "WARMA",
+                      "TCZ",
+                      "OTHER",
+                    ] as const
+                  ).map((body) => (
+                    <option key={body} value={body}>
+                      {body}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block space-y-1 text-sm">
+                <span>{td("regulatedClass")}</span>
+                <select
+                  className="min-h-11 w-full rounded-md border border-border px-2"
+                  value={regulatedClass}
+                  onChange={(event) =>
+                    setRegulatedClass(event.target.value as typeof regulatedClass)
+                  }
+                >
+                  <option value="pharmacy">pharmacy</option>
+                  <option value="agrochemicals">agrochemicals</option>
+                  <option value="alcohol">alcohol</option>
+                  <option value="food">food</option>
+                  <option value="financial_services">financial_services</option>
+                </select>
+              </label>
+              <label className="block space-y-1 text-sm">
+                <span>{td("licenceNumber")}</span>
+                <input
+                  className="min-h-11 w-full rounded-md border border-border px-2"
+                  value={licenceNumber}
+                  onChange={(event) => setLicenceNumber(event.target.value)}
+                  required
+                />
+              </label>
+            </>
+          ) : null}
           <label className="block space-y-1 text-sm">
             <span>{td("reviewerNotes")}</span>
             <textarea
@@ -263,7 +347,10 @@ export function DecisionPanel({ detail, onDecided }: DecisionPanelProps) {
             type="button"
             disabled={
               submitting ||
-              ((mode === "suspend" || mode === "revoke") && lifecycleReason.trim().length < 3)
+              ((mode === "suspend" || mode === "revoke") && lifecycleReason.trim().length < 3) ||
+              (mode === "approve" &&
+                detail.tier >= 2 &&
+                (!expiryDate || licenceNumber.trim().length < 3))
             }
             className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-60"
             onClick={() => void submit()}
