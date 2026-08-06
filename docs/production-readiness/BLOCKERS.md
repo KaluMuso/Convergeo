@@ -159,14 +159,14 @@ Evidence pack: [2026-08-06/runtime-truth-evidence.md](./2026-08-06/runtime-truth
 
 ### BLK-202 — FE/API/DB version triangle mismatch (production)
 
-| Field                  | Value                                                                                                                                                                 |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Category**           | `DEPLOYMENT_REQUIRED`                                                                                                                                                 |
-| **Description**        | Customer FE at `master` exposes Contact Vendor (`POST /enquiries`) but production API (`e4a7bb79`) has no enquiries router → **404**. Prod DB at `0071` lacks `0082`. |
-| **Evidence**           | Batch 1A; live probe; git ancestry (`enquiries.py` not in `e4a7bb79`)                                                                                                 |
-| **Affected canonical** | CAN-SOC-001, CAN-OPS-006                                                                                                                                              |
-| **Launch scope**       | PLATFORM, SOCIAL                                                                                                                                                      |
-| **Next action**        | Catch-up plan Wave C + coordinated API deploy; or gate Contact Vendor UI until aligned.                                                                               |
+| Field                  | Value                                                                                                                                                                                                                                                                                               |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Category**           | `DEPLOYMENT_REQUIRED`                                                                                                                                                                                                                                                                               |
+| **Description**        | Customer FE at `master` exposed Contact Vendor (`POST /enquiries`) but production API (`e4a7bb79`) had no enquiries router → **404**. Prod DB at `0071` lacks `0082`. **Mitigation shipped:** PDP Contact Vendor CTA is server-gated via anonymous `GET /enquiries` probe (fail-closed on 404/5xx). |
+| **Evidence**           | Batch 1A; live probe; git ancestry (`enquiries.py` not in `e4a7bb79`); compat fix `contactVendorCapabilityAvailable()`                                                                                                                                                                              |
+| **Affected canonical** | CAN-SOC-001, CAN-OPS-006                                                                                                                                                                                                                                                                            |
+| **Launch scope**       | PLATFORM, SOCIAL                                                                                                                                                                                                                                                                                    |
+| **Next action**        | Catch-up plan Wave C + coordinated API deploy; re-enable CTA automatically when probe passes.                                                                                                                                                                                                       |
 
 ### BLK-203 — Clips API missing feature-flag gate
 

@@ -1,6 +1,6 @@
 # Implementation & Audit Queue
 
-**Updated:** 2026-08-06 (Batch 1A complete)
+**Updated:** 2026-08-06 (Contact Vendor fail-closed compat fix)
 
 ---
 
@@ -11,6 +11,7 @@
 | **Batch 0**   | Repository truth & architecture baseline             | ARCHITECTURE_BASELINE.md; DEC-001…004                                                     |
 | **Batch 0.5** | Runtime truth, migration truth & requirements ingest | Live probes; registry ingest                                                              |
 | **Batch 1A**  | Production schema compatibility & catch-up plan      | [production-migration-catchup-plan.md](./2026-08-06/production-migration-catchup-plan.md) |
+| **Compat**    | Contact Vendor fail-closed UI gate (BLK-202)         | PDP probes `GET /enquiries`; hides CTA when API unavailable; tests added                  |
 
 ---
 
@@ -29,7 +30,7 @@
 
 **Out of scope:** Production apply; API deploy; feature flag activation; payments.
 
-**Alternative (if staging apply blocked):** **C. Fix application compatibility** — gate Contact Vendor UI until Wave C + API deploy (BLK-202).
+**Alternative (if staging apply blocked):** ~~C. Fix application compatibility — gate Contact Vendor UI until Wave C + API deploy (BLK-202).~~ **Done** — compat gate shipped; full CAN-SOC-001 still requires Wave C + API deploy.
 
 ---
 

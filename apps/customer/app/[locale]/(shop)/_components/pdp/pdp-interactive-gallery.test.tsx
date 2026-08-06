@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -68,6 +68,7 @@ function renderBody(
     catalog?: unknown;
     productImages?: Array<{ publicId: string; alt: string }>;
     listingImages?: Array<{ publicId: string; alt: string }>;
+    contactVendorEnabled?: boolean;
   } = {},
 ) {
   const locale = options.locale ?? "en";
@@ -157,6 +158,7 @@ function renderBody(
           remove: "Remove from wishlist",
           saved: "Saved to wishlist",
         }}
+        contactVendorEnabled={options.contactVendorEnabled ?? true}
         contactVendorLabels={catalogMessages.pdp.contactVendor as ContactVendorLabels}
         requestQuoteLabels={
           catalogMessages.pdp.requestQuote as import("./request-quote-button").RequestQuoteLabels
@@ -218,5 +220,19 @@ describe("PdpInteractiveBody gallery (digest 1378788464 regression)", () => {
   it("keeps honest escrow trust copy on the buy box panel", () => {
     renderBody();
     expect(screen.getByText("Held in escrow until you confirm")).toBeInTheDocument();
+  });
+});
+
+describe("PdpInteractiveBody contact vendor gating (BLK-202)", () => {
+  it("hides Contact Vendor when capability is unavailable", () => {
+    renderBody({ contactVendorEnabled: false });
+    expect(screen.queryByTestId("pdp-contact-vendor-cta")).not.toBeInTheDocument();
+  });
+
+  it("renders Contact Vendor when capability is available", async () => {
+    renderBody({ contactVendorEnabled: true });
+    await waitFor(() => {
+      expect(screen.getByTestId("pdp-contact-vendor-cta")).toBeInTheDocument();
+    });
   });
 });
