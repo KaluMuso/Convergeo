@@ -2,6 +2,9 @@ name: Performance budgets
 
 on:
   pull_request:
+  push:
+    branches:
+      - master
 
 concurrency:
   group: perf-${{ github.workflow }}-${{ github.ref }}
