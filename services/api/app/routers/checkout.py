@@ -18,6 +18,11 @@ from app.services.cart.read_path import listing_cart_access_conflict
 from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
 from app.services.listings.class_rules import listing_lead_time_days
+from app.services.rfq.listing_cart_authority import (
+    fetch_rfq_threads_for_items,
+    is_rfq_pinned_line,
+    validate_rfq_pinned_line_authority,
+)
 from app.services.stock.claim import claim_reservation, get_reservation_ttl_minutes
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
@@ -212,7 +217,10 @@ def _fetch_active_cart_by_user(client: Client, user_id: str) -> dict[str, Any] |
 def _fetch_cart_items(client: Client, cart_id: str) -> list[dict[str, Any]]:
     response = (
         client.table("cart_items")
-        .select("id, cart_id, listing_id, qty, unit_price_ngwee, wholesale, pickup_location_id")
+        .select(
+            "id, cart_id, listing_id, qty, unit_price_ngwee, wholesale, "
+            "pickup_location_id, rfq_thread_id"
+        )
         .eq("cart_id", cart_id)
         .execute()
     )
@@ -312,6 +320,7 @@ def _rederive_line_prices(
     *,
     business_eligible: bool,
     service: ServiceRoleClient,
+    customer_id: str,
 ) -> list[dict[str, Any]]:
     """B0-P02a defence-in-depth: a checkout session is never opened on stored prices.
 
@@ -324,6 +333,9 @@ def _rederive_line_prices(
     see the real number before money is reserved — never be charged an amount
     they were not shown.
 
+    RFQ-pinned lines (accepted listing quotes) use the authoritative thread
+    quote instead of ordinary listing tier pricing.
+
     Conflicts collected, then one 409 `checkout.cart_changed`:
       * wholesale-only listing, caller no longer eligible → the line reports
         `cart.listing_unavailable` — the same non-disclosing code an absent
@@ -334,9 +346,37 @@ def _rederive_line_prices(
         shows the true price.
     """
     conflicts: list[dict[str, Any]] = []
+    rfq_threads = fetch_rfq_threads_for_items(service.client, items)
+
     for item in items:
         listing_id = str(item["listing_id"])
         listing = listings_by_id.get(listing_id)
+
+        if is_rfq_pinned_line(item):
+            if listing is None:
+                conflicts.append({"listing_id": listing_id, "code": "cart.listing_unavailable"})
+                continue
+            if listing.get("status") != "active":
+                conflicts.append({"listing_id": listing_id, "code": "cart.listing_unavailable"})
+                continue
+
+            thread_id = str(item["rfq_thread_id"]).strip()
+            stored_price = int(item["unit_price_ngwee"])
+            _, conflict_code, conflict_details = validate_rfq_pinned_line_authority(
+                rfq_thread_id=thread_id,
+                customer_id=customer_id,
+                listing_id=listing_id,
+                stored_unit_price_ngwee=stored_price,
+                thread=rfq_threads.get(thread_id),
+            )
+            if conflict_code is not None:
+                conflict: dict[str, Any] = {"listing_id": listing_id, "code": conflict_code}
+                if conflict_code == "cart.price_changed":
+                    conflict.update(conflict_details)
+                conflicts.append(conflict)
+                continue
+            continue
+
         access_conflict = listing_cart_access_conflict(
             listing_id,
             listing,
@@ -542,7 +582,11 @@ async def create_checkout_session(
     # 409 checkout.cart_changed on divergence; see _rederive_line_prices.
     access = resolve_business_eligibility(current_user.id, service)
     items = _rederive_line_prices(
-        items, listings, business_eligible=access.eligible, service=service
+        items,
+        listings,
+        business_eligible=access.eligible,
+        service=service,
+        customer_id=current_user.id,
     )
 
     line_views = _build_line_views(items, listings)
