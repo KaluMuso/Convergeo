@@ -40,6 +40,7 @@ export type CartLine = {
   wholesale: boolean;
   line_total_ngwee: number;
   title_override: string | null;
+  is_rfq_quote?: boolean;
 };
 
 export type VendorGroup = {

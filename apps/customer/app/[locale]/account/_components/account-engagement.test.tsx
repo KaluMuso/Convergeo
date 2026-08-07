@@ -42,6 +42,7 @@ const navLabels = {
   orders: accountMessages.nav.orders,
   tickets: accountMessages.nav.tickets,
   jobs: accountMessages.nav.jobs,
+  quotes: accountMessages.nav.quotes,
   saved: accountMessages.nav.saved,
   addresses: accountMessages.nav.addresses,
   preferences: accountMessages.nav.preferences,

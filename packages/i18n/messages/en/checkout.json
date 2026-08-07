@@ -49,6 +49,8 @@
     "noticeOutOfStock": "This item is now out of stock",
     "noticeQtyReduced": "Only {available} left — quantity adjusted from {requested}",
     "outOfStockLine": "Out of stock",
+    "quotedPriceBadge": "Quoted price",
+    "rfqMergeReview": "Review your cart — a negotiated quote needs your attention.",
     "loadErrorTitle": "Could not load your cart",
     "loadErrorBody": "Check your connection and try again. Your items are not lost.",
     "loadErrorRetry": "Retry",

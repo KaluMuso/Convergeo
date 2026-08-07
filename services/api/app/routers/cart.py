@@ -93,6 +93,7 @@ class CartLineResponse(BaseModel):
     line_total_ngwee: int
     title_override: str | None = None
     lead_time_days: int | None = None
+    is_rfq_quote: bool = False
 
 
 class VendorGroupResponse(BaseModel):
@@ -366,6 +367,9 @@ def _build_cart_response(
         listing = listings_by_id.get(listing_id, {})
         qty = int(item["qty"])
         unit_price = int(item["unit_price_ngwee"])
+        from app.services.rfq.listing_cart_authority import is_rfq_pinned_line
+
+        is_rfq_quote = is_rfq_pinned_line(item)
         line_views.append(
             CartLineView(
                 id=str(item["id"]),
@@ -379,6 +383,7 @@ def _build_cart_response(
                 if isinstance(listing.get("title_override"), str)
                 else None,
                 lead_time_days=listing_lead_time_days(listing),
+                is_rfq_quote=is_rfq_quote,
             )
         )
 
@@ -400,6 +405,7 @@ def _build_cart_response(
                 line_total_ngwee=line.line_total_ngwee,
                 title_override=line.title_override,
                 lead_time_days=line.lead_time_days,
+                is_rfq_quote=line.is_rfq_quote,
             )
             for line in line_views
         ],
@@ -417,6 +423,7 @@ def _build_cart_response(
                         line_total_ngwee=item.line_total_ngwee,
                         title_override=item.title_override,
                         lead_time_days=item.lead_time_days,
+                        is_rfq_quote=item.is_rfq_quote,
                     )
                     for item in group.items
                 ],
@@ -921,11 +928,16 @@ async def merge_cart_on_login(
 
     all_items = user_items + guest_items
     listings = fetch_listings_for_items(all_items)
+    from app.services.rfq.listing_cart_authority import fetch_rfq_threads_for_items
+
+    rfq_threads_by_id = fetch_rfq_threads_for_items(service_db_client(), all_items)
     merged_items, conflicts = merge_cart_items(
         user_items=user_items,
         guest_items=guest_items,
         listings_by_id=listings,
         business_eligible=_business_eligible_for_user(current_user.id),
+        customer_id=current_user.id,
+        rfq_threads_by_id=rfq_threads_by_id,
     )
 
     # DELETE stays on the user client — 0086 left client DELETE granted, and
@@ -941,6 +953,11 @@ async def merge_cart_on_login(
                     "qty": item.qty,
                     "unit_price_ngwee": item.unit_price_ngwee,
                     "wholesale": item.wholesale,
+                    **(
+                        {"rfq_thread_id": item.rfq_thread_id}
+                        if item.rfq_thread_id is not None
+                        else {}
+                    ),
                 }
                 for item in merged_items
             ]

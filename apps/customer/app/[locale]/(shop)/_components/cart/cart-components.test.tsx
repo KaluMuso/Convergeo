@@ -24,6 +24,7 @@ const lineLabels = {
   increaseSymbol: "+",
   unitPrice: checkoutMessages.cart.unitPrice,
   lineTotal: checkoutMessages.cart.lineTotal,
+  quotedPriceBadge: checkoutMessages.cart.quotedPriceBadge,
   remove: checkoutMessages.cart.remove,
   removeLabel: checkoutMessages.cart.removeLabel,
   saveForLater: checkoutMessages.cart.saveForLater,
