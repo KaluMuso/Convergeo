@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
 from app.services.cart.merge import merge_cart_items
 
 LISTING_RETAIL = "10101010-1010-1010-1010-101010101010"
