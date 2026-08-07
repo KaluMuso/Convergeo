@@ -64,6 +64,7 @@
       "subheadline": "Fikeni abakashita mu Zambia yonse with products, services, events, supplies, and your business profile — all from one vendor app.",
       "primaryCta": "Yendeni pa invite ya seller",
       "secondaryCta": "⚠ Lolesheni commissions",
+      "existingSellerCta": "Mwalishita kale? Isuleni vendor portal",
       "freeTierNote": "⚠ Invited sellers get the free tier (up to 30 listings) after admin approval. Public signup is not open."
     },
     "valueProps": {
@@ -633,7 +634,9 @@
     },
     "actions": {
       "save": "Save profile",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "viewStorefront": "Lolesheni storefront ya pa public",
+      "viewStorefrontUnavailable": "Public storefront preview is unavailable in this environment."
     },
     "success": {
       "saved": "Profile saved. Changes appear on your public page within a minute."
@@ -1505,34 +1508,34 @@
   },
   "shell": {
     "groups": {
-      "operate": "Operate",
-      "sell": "Sell & grow",
-      "business": "Business"
+      "operate": "Ukucita",
+      "sell": "Kutanda na kukula",
+      "business": "Ubushiness"
     },
     "moreMenu": {
-      "title": "Vendor tools yonse",
-      "close": "Close"
+      "title": "Ifintu fyonse fya vendor",
+      "close": "Ukwisa"
     },
     "nav": {
-      "ariaLabel": "Vendor navigation",
-      "desktopAriaLabel": "Vendor sidebar",
-      "home": "Home",
+      "ariaLabel": "Ukutampila kwa vendor",
+      "desktopAriaLabel": "Sidebar ya vendor",
+      "home": "Pamo",
       "listings": "Listings",
       "orders": "Ama-order",
       "profile": "Profile",
-      "more": "More",
+      "more": "Banji",
       "scan": "Scan & verify",
-      "returns": "Returns",
+      "returns": "Ukubwesha",
       "analytics": "Analytics",
       "services": "Services",
       "events": "Events",
-      "rfq": "Quote requests",
+      "rfq": "Ama-quote",
       "jobs": "Jobs",
       "clips": "Clips",
       "reviews": "Reviews",
       "payouts": "Payouts",
       "disputes": "Disputes",
-      "intake": "WhatsApp drafts"
+      "intake": "Ama-draft ya WhatsApp"
     }
   },
   "intake": {

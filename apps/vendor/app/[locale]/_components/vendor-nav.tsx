@@ -5,19 +5,25 @@ import { IconCategories, IconHome, IconOrders } from "@vergeo/ui/src/icons";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import {
+  buildVendorMobilePrimary,
+  buildVendorMoreMenuGroups,
+  filterVendorNavGroups,
+  flattenVendorNavItems,
   isVendorMoreMenuActive,
   resolveVendorActiveItem,
-  VENDOR_MOBILE_PRIMARY,
   VENDOR_MORE_MENU_KEY,
   VENDOR_NAV_GROUPS,
   vendorItemHref,
 } from "./vendor-nav-config";
 
+import type { VendorNavCapabilities } from "../../../lib/nav-capabilities";
+
 type VendorNavProps = {
   locale: string;
+  capabilities: VendorNavCapabilities;
 };
 
 function IconMore() {
@@ -53,16 +59,24 @@ function navLinkClass(active: boolean): string {
   ].join(" ");
 }
 
-export function VendorNav({ locale }: VendorNavProps) {
+export function VendorNav({ locale, capabilities }: VendorNavProps) {
   const pathname = usePathname();
   const t = useTranslations("vendor");
   const menuId = useId();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const navGroups = useMemo(
+    () => filterVendorNavGroups(capabilities, VENDOR_NAV_GROUPS),
+    [capabilities],
+  );
+  const moreMenuGroups = useMemo(() => buildVendorMoreMenuGroups(navGroups), [navGroups]);
+  const visibleItems = useMemo(() => flattenVendorNavItems(navGroups), [navGroups]);
+  const mobilePrimary = useMemo(() => buildVendorMobilePrimary(navGroups), [navGroups]);
+
   const rest = pathname.replace(/^\/[^/]+/, "") || "/";
-  const activeKey = resolveVendorActiveItem(rest);
-  const moreActive = isVendorMoreMenuActive(rest);
+  const activeKey = resolveVendorActiveItem(rest, visibleItems);
+  const moreActive = isVendorMoreMenuActive(rest, navGroups);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -82,7 +96,7 @@ export function VendorNav({ locale }: VendorNavProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [menuOpen]);
 
-  const mobileItems: BottomNavItem[] = VENDOR_MOBILE_PRIMARY.map((key) => {
+  const mobileItems: BottomNavItem[] = mobilePrimary.map((key) => {
     if (key === VENDOR_MORE_MENU_KEY) {
       return {
         key,
@@ -92,7 +106,7 @@ export function VendorNav({ locale }: VendorNavProps) {
         active: moreActive,
       };
     }
-    const item = VENDOR_NAV_GROUPS.flatMap((g) => g.items).find((entry) => entry.key === key)!;
+    const item = visibleItems.find((entry) => entry.key === key)!;
     return {
       key,
       icon: MOBILE_ICONS[key],
@@ -109,7 +123,7 @@ export function VendorNav({ locale }: VendorNavProps) {
         className="hidden w-56 shrink-0 border-r border-border bg-surface lg:block"
       >
         <div className="sticky top-0 max-h-dvh overflow-y-auto px-3 py-4">
-          {VENDOR_NAV_GROUPS.map((group) => (
+          {navGroups.map((group) => (
             <section key={group.key} className="mb-5 last:mb-0">
               <h2 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-text-3">
                 {t(`shell.groups.${group.key}` as "shell.groups.operate")}
@@ -136,39 +150,41 @@ export function VendorNav({ locale }: VendorNavProps) {
         </div>
       </nav>
 
-      <div className="lg:hidden">
-        <BottomNav
-          items={mobileItems}
-          ariaLabel={t("shell.nav.ariaLabel")}
-          LinkComponent={({ href, children, className, ...rest }) => {
-            if (href === "#") {
+      {mobileItems.length > 0 ? (
+        <div className="lg:hidden">
+          <BottomNav
+            items={mobileItems}
+            ariaLabel={t("shell.nav.ariaLabel")}
+            LinkComponent={({ href, children, className, ...rest }) => {
+              if (href === "#") {
+                return (
+                  <button
+                    ref={menuButtonRef}
+                    type="button"
+                    className={className}
+                    aria-expanded={menuOpen}
+                    aria-controls={menuId}
+                    onClick={() => setMenuOpen((open) => !open)}
+                    {...rest}
+                  >
+                    {children}
+                  </button>
+                );
+              }
               return (
-                <button
-                  ref={menuButtonRef}
-                  type="button"
-                  className={className}
-                  aria-expanded={menuOpen}
-                  aria-controls={menuId}
-                  onClick={() => setMenuOpen((open) => !open)}
-                  {...rest}
-                >
+                <Link href={href} className={className} {...rest}>
                   {children}
-                </button>
+                </Link>
               );
-            }
-            return (
-              <Link href={href} className={className} {...rest}>
-                {children}
-              </Link>
-            );
-          }}
-          desktopHiddenClassName="lg:hidden"
-        />
-      </div>
+            }}
+            desktopHiddenClassName="lg:hidden"
+          />
+        </div>
+      ) : null}
 
-      {menuOpen ? (
+      {menuOpen && moreMenuGroups.length > 0 ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 lg:hidden"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 motion-reduce:transition-none lg:hidden"
           role="presentation"
           onClick={() => setMenuOpen(false)}
         >
@@ -192,7 +208,7 @@ export function VendorNav({ locale }: VendorNavProps) {
                 {t("shell.moreMenu.close")}
               </button>
             </header>
-            {VENDOR_NAV_GROUPS.map((group) => (
+            {moreMenuGroups.map((group) => (
               <section key={group.key} className="mb-4 last:mb-0">
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-3">
                   {t(`shell.groups.${group.key}` as "shell.groups.operate")}

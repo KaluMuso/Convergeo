@@ -1,3 +1,5 @@
+import type { AdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
+
 export type AdminNavItemKey =
   | "home"
   | "kyc"
@@ -59,19 +61,36 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   },
 ];
 
-const ALL_ITEMS = ADMIN_NAV_GROUPS.flatMap((group) => group.items);
+export function filterAdminNavGroups(
+  capabilities: AdminNavCapabilities,
+  groups: AdminNavGroup[] = ADMIN_NAV_GROUPS,
+): AdminNavGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => capabilities[item.key]),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
+export function flattenAdminNavItems(groups: AdminNavGroup[]): AdminNavItem[] {
+  return groups.flatMap((group) => group.items);
+}
 
 export function adminItemHref(locale: string, href: string): string {
   return href ? `/${locale}/${href}` : `/${locale}`;
 }
 
-export function resolveAdminActiveItem(pathRest: string): AdminNavItemKey | undefined {
+export function resolveAdminActiveItem(
+  pathRest: string,
+  items: AdminNavItem[] = flattenAdminNavItems(ADMIN_NAV_GROUPS),
+): AdminNavItemKey | undefined {
   const rest = pathRest === "/" ? "/" : pathRest.replace(/\/+$/, "");
 
   let best: AdminNavItem | undefined;
   let bestLen = -1;
 
-  for (const item of ALL_ITEMS) {
+  for (const item of items) {
     const pattern = item.href ? `/${item.href}` : "/";
     const matches =
       pattern === "/" ? rest === "/" : rest === pattern || rest.startsWith(`${pattern}/`);
@@ -84,10 +103,13 @@ export function resolveAdminActiveItem(pathRest: string): AdminNavItemKey | unde
   return best?.key;
 }
 
-export function resolveAdminActiveGroup(pathRest: string): AdminNavGroupKey | undefined {
-  const active = resolveAdminActiveItem(pathRest);
+export function resolveAdminActiveGroup(
+  pathRest: string,
+  groups: AdminNavGroup[] = ADMIN_NAV_GROUPS,
+): AdminNavGroupKey | undefined {
+  const active = resolveAdminActiveItem(pathRest, flattenAdminNavItems(groups));
   if (!active) {
     return undefined;
   }
-  return ADMIN_NAV_GROUPS.find((group) => group.items.some((item) => item.key === active))?.key;
+  return groups.find((group) => group.items.some((item) => item.key === active))?.key;
 }

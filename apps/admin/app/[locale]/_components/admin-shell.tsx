@@ -9,13 +9,18 @@ import { useEffect, useId, useRef, useState } from "react";
 import {
   ADMIN_NAV_GROUPS,
   adminItemHref,
+  filterAdminNavGroups,
+  flattenAdminNavItems,
   resolveAdminActiveGroup,
   resolveAdminActiveItem,
 } from "./admin-nav-config";
 import { SignOutButton } from "./sign-out-button";
 
+import type { AdminNavCapabilities } from "../../../lib/admin-nav-capabilities";
+
 type AdminShellProps = {
   locale: string;
+  capabilities: AdminNavCapabilities;
   children: React.ReactNode;
 };
 
@@ -29,7 +34,7 @@ function navLinkClass(active: boolean, compact = false): string {
   ].join(" ");
 }
 
-export function AdminShell({ locale, children }: AdminShellProps) {
+export function AdminShell({ locale, capabilities, children }: AdminShellProps) {
   const pathname = usePathname();
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
@@ -42,8 +47,11 @@ export function AdminShell({ locale, children }: AdminShellProps) {
     return <>{children}</>;
   }
 
-  const activeKey = resolveAdminActiveItem(rest);
-  const activeGroup = resolveAdminActiveGroup(rest);
+  const navGroups = filterAdminNavGroups(capabilities, ADMIN_NAV_GROUPS);
+  const visibleItems = flattenAdminNavItems(navGroups);
+
+  const activeKey = resolveAdminActiveItem(rest, visibleItems);
+  const activeGroup = resolveAdminActiveGroup(rest, navGroups);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -92,7 +100,7 @@ export function AdminShell({ locale, children }: AdminShellProps) {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-4 lg:flex-row">
         <nav aria-label={t("shell.navAriaLabel")} className="hidden shrink-0 lg:block lg:w-60">
           <div className="sticky top-4 space-y-5">
-            {ADMIN_NAV_GROUPS.map((group) => (
+            {navGroups.map((group) => (
               <section key={group.key}>
                 <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-text-3">
                   {t(`nav.groups.${group.key}` as "nav.groups.overview")}
@@ -182,7 +190,7 @@ export function AdminShell({ locale, children }: AdminShellProps) {
                 {t("shell.mobileMenuClose")}
               </button>
             </header>
-            {ADMIN_NAV_GROUPS.map((group) => (
+            {navGroups.map((group) => (
               <section key={group.key} className="mb-4 last:mb-0">
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-3">
                   {t(`nav.groups.${group.key}` as "nav.groups.overview")}

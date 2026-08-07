@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { resolveVendorNavCapabilities } from "../../lib/nav-capabilities";
 import { SentryInit } from "../sentry-init";
 
 import { VendorShell } from "./_components/vendor-shell";
@@ -48,6 +49,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
     loadNamespace(locale as Locale, "vendor"),
   ]);
   const messages = { ...baseMessages, vendor: vendorMessages };
+  const navCapabilities = await resolveVendorNavCapabilities();
 
   return (
     <html lang={locale} className={fontVariables()}>
@@ -61,7 +63,9 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
             {/* Lazy Sentry loader — renders null; pulls the SDK into an async chunk. */}
             <SentryInit />
             {/* Authenticated chrome; header + nav, bare children on the login route. */}
-            <VendorShell locale={locale}>{children}</VendorShell>
+            <VendorShell locale={locale} capabilities={navCapabilities}>
+              {children}
+            </VendorShell>
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

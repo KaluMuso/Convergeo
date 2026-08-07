@@ -7,8 +7,11 @@ import { useTranslations } from "next-intl";
 
 import { VendorNav } from "./vendor-nav";
 
+import type { VendorNavCapabilities } from "../../../lib/nav-capabilities";
+
 type VendorShellProps = {
   locale: string;
+  capabilities: VendorNavCapabilities;
   children: React.ReactNode;
 };
 
@@ -16,7 +19,7 @@ type VendorShellProps = {
  * Authenticated vendor chrome. Login and onboarding routes render bare children;
  * all other routes get a responsive shell (desktop sidebar + mobile bottom nav).
  */
-export function VendorShell({ locale, children }: VendorShellProps) {
+export function VendorShell({ locale, capabilities, children }: VendorShellProps) {
   const pathname = usePathname();
   const tCommon = useTranslations("common");
 
@@ -64,7 +67,7 @@ export function VendorShell({ locale, children }: VendorShellProps) {
       </header>
 
       <div className="flex min-h-0 flex-1">
-        <VendorNav locale={locale} />
+        <VendorNav locale={locale} capabilities={capabilities} />
         <div className="min-w-0 flex-1 overflow-x-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] lg:pb-0">
           {children}
         </div>
