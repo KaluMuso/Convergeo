@@ -28,7 +28,7 @@ from app.media.cloudinary_signing import (
     build_signed_clip_params,
 )
 from app.schemas.base import StrictModel
-from app.services.clips import quota, screen, spend, state_machine
+from app.services.clips import flags, quota, screen, spend, state_machine
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
 from pydantic import Field
@@ -137,6 +137,7 @@ async def create_clip(
     owned vendor row reaches this, and the folder it signs into is derived from
     that row rather than from anything the caller sent.
     """
+    flags.require_clips_enabled(service_client)
     # D-V3, checked before anything is created or signed.
     if body.file_size_bytes is not None and body.file_size_bytes > MAX_CLIP_BYTES:
         raise AppError(

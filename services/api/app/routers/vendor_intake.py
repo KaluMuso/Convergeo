@@ -36,6 +36,7 @@ from app.errors import AppError
 from app.routers.vendor_listings import create_listing_for_vendor
 from app.schemas.base import StrictModel
 from app.services.intake import deeplink, handoff, state_machine
+from app.services.intake.config import require_lane_open_for
 from app.services.kyc.caps import enforce_listing_cap, load_vendor_cap_limits_by_id
 from app.services.kyc.state_machine import ServiceRoleClient
 from fastapi import APIRouter, Depends
@@ -366,6 +367,7 @@ async def list_intake_sessions(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> list[IntakeSessionSummary]:
     vendor = _load_vendor(service_client, current_user.id)
+    require_lane_open_for(service_client, str(vendor["id"]))
     sessions = _rows(
         service_client.client.table(SESSIONS_TABLE)
         .select("id, status, pending_requests, listing_id, last_activity_at")
@@ -401,6 +403,7 @@ async def get_intake_session(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> IntakeSessionDetail:
     vendor = _load_vendor(service_client, current_user.id)
+    require_lane_open_for(service_client, str(vendor["id"]))
     session = _load_owned_session(
         service_client, session_id=session_id, vendor_id=str(vendor["id"])
     )
@@ -419,6 +422,7 @@ async def mint_review_link(
     strictly inbound-only.
     """
     vendor = _load_vendor(service_client, current_user.id)
+    require_lane_open_for(service_client, str(vendor["id"]))
     _rate_limit(
         service_client, scope="intake_link_mint", key=str(vendor["id"]), limit=10
     )
@@ -444,6 +448,7 @@ async def redeem_review_link(
     nothing — a link forwarded to another vendor still 403s.
     """
     vendor = _load_vendor(service_client, current_user.id)
+    require_lane_open_for(service_client, str(vendor["id"]))
     _rate_limit(
         service_client, scope="intake_link_redeem", key=str(vendor["id"]), limit=20
     )
@@ -463,6 +468,7 @@ async def patch_intake_draft(
 ) -> IntakeSessionDetail:
     """Apply vendor corrections and mark every touched field ``vendor_typed``."""
     vendor = _load_vendor(service_client, current_user.id)
+    require_lane_open_for(service_client, str(vendor["id"]))
     session = _load_owned_session(
         service_client, session_id=session_id, vendor_id=str(vendor["id"])
     )
@@ -545,6 +551,7 @@ async def submit_intake_session(
     """
     vendor = _load_vendor(service_client, current_user.id)
     vendor_id = str(vendor["id"])
+    require_lane_open_for(service_client, vendor_id)
     session = _load_owned_session(
         service_client, session_id=session_id, vendor_id=vendor_id
     )

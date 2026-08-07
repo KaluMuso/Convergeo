@@ -174,6 +174,7 @@ def store() -> Store:
     )
     for name in ("video_clips", "clip_products"):
         st.rows(name)
+    st.rows("feature_flags").append({"flag": "clips", "enabled": True})
     return st
 
 

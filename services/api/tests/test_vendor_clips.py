@@ -250,6 +250,7 @@ def store() -> Store:
     st.rows("video_clips").extend([_clip(CLIP_A, VENDOR_A), _clip(CLIP_B, VENDOR_B)])
     for name in ("clip_products", "analytics_events", "platform_config"):
         st.rows(name)
+    st.rows("feature_flags").append({"flag": "clips", "enabled": True})
     return st
 
 

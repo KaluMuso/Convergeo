@@ -363,6 +363,7 @@ def api(store: Store, monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, 
     store.rows("clip_products")
     store.rows("vendor_listings")
     store.rows("audit_log")
+    store.rows("feature_flags").append({"flag": "clips", "enabled": True})
 
     with TestClient(create_app(), raise_server_exceptions=False) as client:
         yield client

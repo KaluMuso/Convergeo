@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import re
 import time
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
+from app.deps import get_supabase_client
 from app.errors import AppError
 from app.media.authz import VendorScope, require_vendor_scope
 from app.media.cloudinary_signing import (
@@ -12,6 +13,7 @@ from app.media.cloudinary_signing import (
     build_signed_clip_params,
     build_signed_params,
 )
+from app.services.clips import flags
 from app.settings import Settings, get_settings
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -138,7 +140,10 @@ async def sign_upload(
     body: SignUploadRequest,
     scope: Annotated[VendorScope, Depends(require_vendor_scope)],
     settings: Annotated[Settings, Depends(get_settings)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
 ) -> SignUploadResponse:
+    if body.resource_kind == "clip":
+        flags.require_clips_enabled(service_client)
     folder, public_id, max_bytes = _validate_request(body, scope)
     timestamp = int(time.time())
 

@@ -197,6 +197,12 @@ def _seed(
     status: str = state_machine.READY_FOR_VENDOR_REVIEW,
     draft: dict[str, Any] | None = None,
 ) -> None:
+    fake.table("feature_flags").rows.append(
+        {"flag": "waha_vendor_intake", "enabled": True}
+    )
+    fake.table("platform_config").rows.append(
+        {"key": "waha_intake_vendor_allowlist", "value": [VENDOR_ID]}
+    )
     fake.table("vendors").rows.extend(
         [
             {

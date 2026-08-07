@@ -656,6 +656,7 @@ def test_a_vendor_cannot_submit_another_vendors_session(
             "display_name": "Other Vendor",
         }
     )
+    store.rows("platform_config")[0]["value"] = [VENDOR_ID, "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"]
 
     _as(monkeypatch, ADMIN_USER_ID, frozenset({"vendor"}))
     response = api.post(f"/vendor/intake/sessions/{session_id}/submit", headers=_auth())
@@ -693,14 +694,14 @@ def test_kill_switch_stops_ingestion_without_harming_drafts(
     assert dispositions(store)[-1] == state_machine.DISPOSITION_DROPPED_FLAG_OFF
     assert len(store.rows("intake_messages")) == messages_before, "no new message stored"
 
-    # The vendor's existing draft is untouched and still readable.
+    # The vendor API is fail-closed when the flag is off (BATCH 1E), but the
+    # underlying draft rows must survive so ops can re-open the lane.
     assert store.rows("intake_draft_fields")[0] == draft_before
     assert len(store.rows("intake_sessions")) == 1
 
     _as(monkeypatch, VENDOR_USER_ID, frozenset({"vendor"}))
     response = api.get(f"/vendor/intake/sessions/{session_id}", headers=_auth())
-    assert response.status_code == 200, "the kill switch must not lock vendors out of drafts"
-    assert response.json()["draft"]["title"] is not None
+    assert response.status_code == 404, "the kill switch closes vendor API access"
 
 
 def test_kill_switch_leaves_lane_1_intact(api: TestClient, store: Store) -> None:

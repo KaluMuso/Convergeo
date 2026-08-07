@@ -26,7 +26,7 @@ from typing import Annotated, Any, Final, Protocol
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
-from app.services.clips import ranking, state_machine
+from app.services.clips import flags, ranking, state_machine
 from fastapi import APIRouter, Depends, Query
 
 router = APIRouter(prefix="/clips", tags=["clips"])
@@ -251,6 +251,7 @@ async def get_clip_feed(
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = MAX_PAGE_SIZE,
 ) -> ClipFeedResponse:
     """The ranked, cursor-paginated public feed. Published clips only."""
+    flags.require_clips_enabled(service_client)
     decoded = _decode_cursor(cursor)
     before = str(decoded.get("published_before")) if decoded else None
 
@@ -290,6 +291,7 @@ async def get_clip(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ClipOut:
     """Public clip detail, used by the share/OG page in M17-P08."""
+    flags.require_clips_enabled(service_client)
     rows = _rows(
         service_client.client.table(CLIPS_TABLE)
         .select(
@@ -334,6 +336,7 @@ async def explain_clip_ranking(
     Public and read-only: the formula is not a secret, and a vendor asking "why
     is my clip below theirs?" deserves an answer that is not "the model decided".
     """
+    flags.require_clips_enabled(service_client)
     rows = _rows(
         service_client.client.table(CLIPS_TABLE)
         .select("id, status, published_at, like_count")
