@@ -1505,34 +1505,34 @@
   },
   "shell": {
     "groups": {
-      "operate": "Operate",
-      "sell": "Sell & grow",
-      "business": "Business"
+      "operate": "Ntchito",
+      "sell": "Kugulitsa ndi kukula",
+      "business": "Bizinesi"
     },
     "moreMenu": {
-      "title": "Vendor tools onse",
-      "close": "Close"
+      "title": "Zida zonse za vendor",
+      "close": "Tseka"
     },
     "nav": {
-      "ariaLabel": "Vendor navigation",
-      "desktopAriaLabel": "Vendor sidebar",
-      "home": "Home",
+      "ariaLabel": "Kuyenda kwa vendor",
+      "desktopAriaLabel": "Sidebar ya vendor",
+      "home": "Kunyumba",
       "listings": "Listings",
       "orders": "Ma-order",
       "profile": "Profile",
-      "more": "More",
+      "more": "Zina",
       "scan": "Scan & verify",
-      "returns": "Returns",
+      "returns": "Kubwezeretsa",
       "analytics": "Analytics",
       "services": "Services",
       "events": "Events",
-      "rfq": "Quote requests",
+      "rfq": "Ma-quote",
       "jobs": "Jobs",
       "clips": "Clips",
       "reviews": "Reviews",
       "payouts": "Payouts",
       "disputes": "Disputes",
-      "intake": "WhatsApp drafts"
+      "intake": "Ma-draft a WhatsApp"
     }
   },
   "intake": {

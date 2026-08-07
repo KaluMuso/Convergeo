@@ -1,3 +1,5 @@
+import type { VendorNavCapabilities } from "../../../lib/nav-capabilities";
+
 export type VendorNavItemKey =
   | "home"
   | "orders"
@@ -33,13 +35,11 @@ export const VENDOR_MORE_MENU_KEY = "more" as const;
 
 export type VendorMobilePrimaryKey = VendorNavItemKey | typeof VENDOR_MORE_MENU_KEY;
 
-/** Primary mobile bottom-nav destinations (fourth opens the full menu). */
-export const VENDOR_MOBILE_PRIMARY: VendorMobilePrimaryKey[] = [
-  "home",
-  "orders",
-  "listings",
-  VENDOR_MORE_MENU_KEY,
-];
+/** Bottom-nav tabs that also appear in the mobile More sheet (duplicates avoided). */
+export const VENDOR_MOBILE_TAB_KEYS = new Set<VendorNavItemKey>(["home", "orders", "listings"]);
+
+/** Primary mobile bottom-nav destinations before capability filtering. */
+export const VENDOR_MOBILE_PRIMARY_TEMPLATE: VendorNavItemKey[] = ["home", "orders", "listings"];
 
 export const VENDOR_NAV_GROUPS: VendorNavGroup[] = [
   {
@@ -75,20 +75,66 @@ export const VENDOR_NAV_GROUPS: VendorNavGroup[] = [
   },
 ];
 
-const ALL_ITEMS = VENDOR_NAV_GROUPS.flatMap((group) => group.items);
+export function filterVendorNavGroups(
+  capabilities: VendorNavCapabilities,
+  groups: VendorNavGroup[] = VENDOR_NAV_GROUPS,
+): VendorNavGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => capabilities[item.key]),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
+export function flattenVendorNavItems(groups: VendorNavGroup[]): VendorNavItem[] {
+  return groups.flatMap((group) => group.items);
+}
+
+/** Items shown in the mobile More sheet (excludes primary bottom tabs). */
+export function buildVendorMoreMenuGroups(groups: VendorNavGroup[]): VendorNavGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !VENDOR_MOBILE_TAB_KEYS.has(item.key)),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
+/** Build mobile bottom-nav keys including More only when secondary items exist. */
+export function buildVendorMobilePrimary(groups: VendorNavGroup[]): VendorMobilePrimaryKey[] {
+  const visibleKeys = new Set(flattenVendorNavItems(groups).map((item) => item.key));
+  const primary: VendorMobilePrimaryKey[] = [];
+
+  for (const key of VENDOR_MOBILE_PRIMARY_TEMPLATE) {
+    if (visibleKeys.has(key)) {
+      primary.push(key);
+    }
+  }
+
+  const moreItems = buildVendorMoreMenuGroups(groups).flatMap((group) => group.items);
+  if (moreItems.length > 0) {
+    primary.push(VENDOR_MORE_MENU_KEY);
+  }
+
+  return primary;
+}
 
 export function vendorItemHref(locale: string, href: string): string {
   return href ? `/${locale}${href}` : `/${locale}`;
 }
 
-/** Longest-prefix match for active nav highlighting. */
-export function resolveVendorActiveItem(pathRest: string): VendorNavItemKey | undefined {
+/** Longest-prefix match for active nav highlighting against visible items. */
+export function resolveVendorActiveItem(
+  pathRest: string,
+  items: VendorNavItem[] = flattenVendorNavItems(VENDOR_NAV_GROUPS),
+): VendorNavItemKey | undefined {
   const rest = pathRest === "/" ? "/" : pathRest.replace(/\/+$/, "");
 
   let best: VendorNavItem | undefined;
   let bestLen = -1;
 
-  for (const item of ALL_ITEMS) {
+  for (const item of items) {
     const pattern = item.href || "/";
     const matches =
       pattern === "/" ? rest === "/" : rest === pattern || rest.startsWith(`${pattern}/`);
@@ -101,12 +147,8 @@ export function resolveVendorActiveItem(pathRest: string): VendorNavItemKey | un
   return best?.key;
 }
 
-const MOBILE_TAB_KEYS = new Set<VendorNavItemKey>(["home", "orders", "listings"]);
-
-export function isVendorMoreMenuActive(pathRest: string): boolean {
-  const active = resolveVendorActiveItem(pathRest);
-  if (!active) {
-    return false;
-  }
-  return !MOBILE_TAB_KEYS.has(active);
+export function isVendorMoreMenuActive(pathRest: string, groups: VendorNavGroup[]): boolean {
+  const moreItems = buildVendorMoreMenuGroups(groups);
+  const active = resolveVendorActiveItem(pathRest, flattenVendorNavItems(moreItems));
+  return active !== undefined;
 }
