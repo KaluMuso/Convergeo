@@ -237,8 +237,10 @@ def store() -> Store:
         "notification_outbox",
         "orders",
         "payouts",
+        "feature_flags",
     ):
         st.rows(name)
+    st.rows("feature_flags").append({"flag": "clips", "enabled": True})
     return st
 
 
