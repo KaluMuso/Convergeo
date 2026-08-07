@@ -245,6 +245,7 @@ class TestCheckoutRederivesPrices:
             {self.LISTING: self._wholesale_listing()},
             business_eligible=True,
             service=service,
+            customer_id=CUSTOMER_ID,
         )
         assert result == items
         service.client.table.assert_not_called()
@@ -257,6 +258,7 @@ class TestCheckoutRederivesPrices:
                 {self.LISTING: self._wholesale_listing()},
                 business_eligible=False,
                 service=self._service(),
+                customer_id=CUSTOMER_ID,
             )
         err = excinfo.value
         assert err.code == "checkout.cart_changed"
@@ -271,6 +273,7 @@ class TestCheckoutRederivesPrices:
                 {self.LISTING: self._wholesale_listing()},
                 business_eligible=False,
                 service=self._service(),
+                customer_id=CUSTOMER_ID,
             )
         with pytest.raises(AppError) as absent:
             _rederive_line_prices(
@@ -278,6 +281,7 @@ class TestCheckoutRederivesPrices:
                 {},
                 business_eligible=False,
                 service=self._service(),
+                customer_id=CUSTOMER_ID,
             )
         assert (
             wholesale.value.details["conflicts"][0]["code"]
@@ -296,6 +300,7 @@ class TestCheckoutRederivesPrices:
                 {self.LISTING: self._wholesale_listing()},
                 business_eligible=True,
                 service=service,
+                customer_id=CUSTOMER_ID,
             )
         conflict = excinfo.value.details["conflicts"][0]
         assert conflict["code"] == "cart.price_changed"
@@ -314,6 +319,7 @@ class TestCheckoutRederivesPrices:
                 {self.LISTING: self._wholesale_listing()},
                 business_eligible=True,
                 service=self._service(),
+                customer_id=CUSTOMER_ID,
             )
         assert excinfo.value.details["conflicts"][0]["code"] == "cart.moq_violation"
 

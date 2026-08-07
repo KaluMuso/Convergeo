@@ -7,8 +7,10 @@ from app.core.auth import CurrentUser, get_current_user
 from app.core.supabase import get_user_client
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.routers.checkout import _ensure_session_active, _extract_data
+from app.routers.checkout import _ensure_session_active, _extract_data, _rederive_line_prices
 from app.routers.checkout_payment import _load_cod_cap_ngwee, _validate_payment_method
+from app.services.business.access import resolve_business_eligibility
+from app.services.cart.store import fetch_listings_for_items
 from app.services.cart.totals import line_total_ngwee
 from app.services.kyc.caps import enforce_first_order_caps_for_vendors
 from app.services.orders.create import (
@@ -105,7 +107,9 @@ def _fetch_active_cart_by_user(client: Client, user_id: str) -> dict[str, object
 def _fetch_cart_items(client: Client, cart_id: str) -> list[dict[str, object]]:
     response = (
         client.table("cart_items")
-        .select("id, cart_id, listing_id, qty, unit_price_ngwee, wholesale")
+        .select(
+            "id, cart_id, listing_id, qty, unit_price_ngwee, wholesale, rfq_thread_id"
+        )
         .eq("cart_id", cart_id)
         .execute()
     )
@@ -231,17 +235,17 @@ async def create_orders(
             http_status=400,
         )
 
-    listing_ids = sorted({str(item["listing_id"]) for item in items})
-    listings_response = (
-        service.client.table("vendor_listings")
-        .select("id, vendor_id, title_override")
-        .in_("id", listing_ids)
-        .execute()
+    listings_by_id = fetch_listings_for_items(
+        [dict(item) for item in items if isinstance(item, dict)]
     )
-    listing_rows = listings_response.data if isinstance(listings_response.data, list) else []
-    listings_by_id = {
-        str(row["id"]): row for row in listing_rows if isinstance(row, dict) and row.get("id")
-    }
+    access = resolve_business_eligibility(current_user.id, service)
+    items = _rederive_line_prices(
+        [dict(item) for item in items if isinstance(item, dict)],
+        listings_by_id,
+        business_eligible=access.eligible,
+        service=service,
+        customer_id=current_user.id,
+    )
 
     cart_lines: list[CartLineInput] = []
     for item in items:

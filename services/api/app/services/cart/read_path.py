@@ -13,6 +13,10 @@ from typing import Any
 
 from app.errors import AppError
 from app.services.cart.merge import MergeConflict, validate_item_qty_for_listing
+from app.services.rfq.listing_cart_authority import (
+    is_rfq_pinned_line,
+    validate_rfq_pinned_line_authority,
+)
 
 
 def listing_cart_access_conflict(
@@ -55,11 +59,6 @@ def listing_cart_access_conflict(
     return None
 
 
-def _is_rfq_pinned_line(item: dict[str, Any]) -> bool:
-    rfq_thread_id = item.get("rfq_thread_id")
-    return isinstance(rfq_thread_id, str) and rfq_thread_id.strip() != ""
-
-
 @dataclass(frozen=True, slots=True)
 class PreparedCartRead:
     """Cart lines safe to present plus conflicts for omitted lines."""
@@ -73,11 +72,14 @@ def prepare_cart_items_for_read(
     listings_by_id: dict[str, dict[str, Any]],
     *,
     business_eligible: bool,
+    customer_id: str | None = None,
+    rfq_threads_by_id: dict[str, dict[str, Any]] | None = None,
 ) -> PreparedCartRead:
     """Filter inaccessible lines and derive current prices for the read path.
 
-    RFQ-pinned lines keep their stored quote price and bypass wholesale omission
-    (accepted-quote semantics). All other lines use live listing + eligibility.
+    RFQ-pinned lines keep their authoritative accepted quote price and bypass
+    wholesale omission (accepted-quote semantics). When ``customer_id`` and thread
+    rows are supplied, RFQ party ownership and accepted status are enforced.
     """
     accessible: list[dict[str, Any]] = []
     conflicts: list[MergeConflict] = []
@@ -85,7 +87,7 @@ def prepare_cart_items_for_read(
     for item in items:
         listing_id = str(item["listing_id"])
         listing = listings_by_id.get(listing_id)
-        rfq_pinned = _is_rfq_pinned_line(item)
+        rfq_pinned = is_rfq_pinned_line(item)
 
         if not rfq_pinned:
             access_conflict = listing_cart_access_conflict(
@@ -108,6 +110,40 @@ def prepare_cart_items_for_read(
                     )
                 )
                 continue
+            if listing.get("status") != "active":
+                conflicts.append(
+                    MergeConflict(
+                        listing_id=listing_id,
+                        code="cart.listing_inactive",
+                        message_key="cart.listing_inactive",
+                        details={
+                            "listing_id": listing_id,
+                            "status": listing.get("status"),
+                        },
+                    )
+                )
+                continue
+
+            if customer_id is not None and rfq_threads_by_id is not None:
+                thread_id = str(item["rfq_thread_id"]).strip()
+                _, conflict_code, conflict_details = validate_rfq_pinned_line_authority(
+                    rfq_thread_id=thread_id,
+                    customer_id=customer_id,
+                    listing_id=listing_id,
+                    stored_unit_price_ngwee=int(item["unit_price_ngwee"]),
+                    thread=rfq_threads_by_id.get(thread_id),
+                )
+                if conflict_code is not None:
+                    conflicts.append(
+                        MergeConflict(
+                            listing_id=listing_id,
+                            code=conflict_code,
+                            message_key=conflict_code,
+                            details=conflict_details,
+                        )
+                    )
+                    continue
+
             accessible.append(dict(item))
             continue
 

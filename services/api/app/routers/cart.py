@@ -329,12 +329,20 @@ def _cart_response(
     listings_by_id: dict[str, dict[str, Any]],
     business_eligible: bool,
     conflicts: list[MergeConflict] | None = None,
+    customer_id: str | None = None,
 ) -> CartResponse:
     """Build a cart response after read-path access filtering and price derivation."""
+    rfq_threads_by_id: dict[str, dict[str, Any]] | None = None
+    if customer_id is not None:
+        from app.services.rfq.listing_cart_authority import fetch_rfq_threads_for_items
+
+        rfq_threads_by_id = fetch_rfq_threads_for_items(service_db_client(), items)
     prepared = prepare_cart_items_for_read(
         items,
         listings_by_id,
         business_eligible=business_eligible,
+        customer_id=customer_id,
+        rfq_threads_by_id=rfq_threads_by_id,
     )
     merged_conflicts = list(conflicts or []) + prepared.conflicts
     return _build_cart_response(
@@ -497,6 +505,7 @@ async def get_cart(
         items=items,
         listings_by_id=listings,
         business_eligible=_business_eligible_for_user(owner.user_id),
+        customer_id=owner.user_id,
     )
 
 
@@ -610,6 +619,7 @@ async def add_cart_item(
         items=items,
         listings_by_id=listings,
         business_eligible=business_eligible,
+        customer_id=owner.user_id,
     )
 
 
@@ -708,6 +718,7 @@ async def update_cart_item(
         items=items,
         listings_by_id=listings,
         business_eligible=business_eligible,
+        customer_id=owner.user_id,
     )
 
 
@@ -748,10 +759,13 @@ async def remove_cart_item(
         items=items,
         listings_by_id=listings,
         business_eligible=_business_eligible_for_user(owner.user_id),
+        customer_id=owner.user_id,
     )
 
 
 def _notice_responses_for_items(items: list[dict[str, Any]]) -> list[ChangeNoticeResponse]:
+    from app.services.rfq.listing_cart_authority import is_rfq_pinned_line
+
     snapshots = [
         CartLineSnapshot(
             listing_id=str(item["listing_id"]),
@@ -764,6 +778,7 @@ def _notice_responses_for_items(items: list[dict[str, Any]]) -> list[ChangeNotic
             ),
         )
         for item in items
+        if not is_rfq_pinned_line(item)
     ]
     result = revalidate_lines(snapshots)
     return [
@@ -868,6 +883,7 @@ async def save_cart_item_for_later(
         items=items,
         listings_by_id=listings,
         business_eligible=_business_eligible_for_user(owner.user_id),
+        customer_id=owner.user_id,
     )
     return SaveForLaterResponse(
         listing_id=listing_id,
@@ -942,6 +958,7 @@ async def merge_cart_on_login(
         listings_by_id=listings,
         business_eligible=_business_eligible_for_user(current_user.id),
         conflicts=conflicts,
+        customer_id=current_user.id,
     )
 
 
@@ -1032,4 +1049,5 @@ async def accept_rfq_into_cart(
         items=items,
         listings_by_id=listings,
         business_eligible=business_eligible,
+        customer_id=owner.user_id,
     )
