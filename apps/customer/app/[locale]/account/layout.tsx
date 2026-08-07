@@ -138,6 +138,7 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
               orders: t("nav.orders"),
               tickets: t("nav.tickets"),
               jobs: t("nav.jobs"),
+              quotes: t("nav.quotes"),
               saved: t("nav.saved"),
               addresses: t("nav.addresses"),
               preferences: t("nav.preferences"),

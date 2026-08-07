@@ -31,6 +31,8 @@
     "noticesTitle": "Zina zasintha",
     "openCart": "Tsekulani cart",
     "outOfStockLine": "Palibe mu stock",
+    "quotedPriceBadge": "Mtengo wa quote",
+    "rfqMergeReview": "Onani cart yanu — quote yolungidwa ikufuna kuti muyang'ane.",
     "loadErrorTitle": "Sitinathe kutenga cart yanu",
     "loadErrorBody": "Onani connection ndi yesaninso. Zinthu zanu sizinatayike.",
     "loadErrorRetry": "Yesaninso",

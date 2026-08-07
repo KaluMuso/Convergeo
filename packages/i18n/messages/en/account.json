@@ -5,6 +5,7 @@
     "orders": "Orders",
     "tickets": "Tickets",
     "jobs": "Jobs",
+    "quotes": "Product quotes",
     "saved": "Saved",
     "addresses": "Addresses",
     "preferences": "Preferences",
@@ -173,6 +174,57 @@
     "nya": "Nyanja",
     "fr": "French",
     "zh": "Chinese"
+  },
+  "listingQuotes": {
+    "list": {
+      "title": "Product quote requests",
+      "intro": "Formal quotes from sellers on products you requested.",
+      "emptyTitle": "No product quotes yet",
+      "emptyBody": "Request a custom quote from a product page when you need a negotiated price.",
+      "browseCta": "Browse products",
+      "posted": "Requested {date}",
+      "status": "Status: {status}",
+      "quotedPrice": "Quoted price: {amount}",
+      "viewCta": "View quote"
+    },
+    "detail": {
+      "title": "Quote request",
+      "back": "Back to product quotes",
+      "statusLabel": "Status",
+      "requestLabel": "Your request",
+      "quotedPrice": "Quoted price: {amount}",
+      "validUntil": "Valid until {date}",
+      "pendingBody": "The seller is preparing a formal quote. We'll notify you when it's ready.",
+      "expiredBody": "This quote expired before you accepted it. Contact the seller for a new price.",
+      "acceptedBody": "You accepted this quote. It should appear in your cart at the quoted price.",
+      "rejectedBody": "This quote was declined or cancelled.",
+      "viewCart": "View cart"
+    },
+    "status": {
+      "pending": "Pending",
+      "quoted": "Quoted",
+      "quoted_expired": "Expired",
+      "accepted": "Accepted",
+      "rejected": "Declined",
+      "error": "Unavailable"
+    },
+    "accept": {
+      "title": "Accept quote",
+      "intro": "Add this negotiated price to your cart. Checkout will use the quoted amount, not the listing price.",
+      "quotedPriceLabel": "Quoted price",
+      "confirmCta": "Accept quote into cart",
+      "submitting": "Adding to cart…",
+      "successTitle": "Quote added to cart",
+      "successBody": "Your cart now includes this item at the quoted price.",
+      "viewCart": "View cart",
+      "errors": {
+        "expired": "This quote has expired. Ask the seller for a new price.",
+        "invalidStatus": "This quote can no longer be accepted.",
+        "signInRequired": "Sign in to accept this quote.",
+        "rateLimited": "Too many attempts. Please wait and try again.",
+        "generic": "Could not add the quote to your cart. Try again."
+      }
+    }
   },
   "hub": {
     "title": "Account overview",

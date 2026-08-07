@@ -4,6 +4,10 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.services.cart.totals import select_unit_price_ngwee, validate_moq
+from app.services.rfq.listing_cart_authority import (
+    is_rfq_pinned_line,
+    validate_rfq_pinned_line_authority,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +24,182 @@ class MergedCartItem:
     qty: int
     unit_price_ngwee: int
     wholesale: bool
+    rfq_thread_id: str | None = None
+
+
+def _find_item_for_listing(items: list[dict[str, Any]], listing_id: str) -> dict[str, Any] | None:
+    for item in items:
+        if str(item["listing_id"]) == listing_id:
+            return item
+    return None
+
+
+def _validate_rfq_merge_line(
+    item: dict[str, Any],
+    listing_id: str,
+    *,
+    customer_id: str | None,
+    rfq_threads_by_id: dict[str, dict[str, Any]] | None,
+) -> tuple[int, str | None, str | None, dict[str, Any]]:
+    """Return (quote_price, rfq_thread_id, conflict_code, conflict_details)."""
+    thread_id = str(item["rfq_thread_id"]).strip()
+    stored_price = int(item["unit_price_ngwee"])
+    if customer_id is None or rfq_threads_by_id is None:
+        return stored_price, thread_id, None, {}
+
+    authority, conflict_code, conflict_details = validate_rfq_pinned_line_authority(
+        rfq_thread_id=thread_id,
+        customer_id=customer_id,
+        listing_id=listing_id,
+        stored_unit_price_ngwee=stored_price,
+        thread=rfq_threads_by_id.get(thread_id),
+    )
+    if conflict_code is not None:
+        return stored_price, thread_id, conflict_code, conflict_details
+    assert authority is not None
+    return authority.quote_price_ngwee, thread_id, None, {}
+
+
+def _merge_rfq_duplicate(
+    *,
+    listing_id: str,
+    user_item: dict[str, Any],
+    guest_item: dict[str, Any],
+    customer_id: str | None,
+    rfq_threads_by_id: dict[str, dict[str, Any]] | None,
+) -> tuple[dict[str, Any] | None, MergeConflict | None]:
+    user_thread = str(user_item["rfq_thread_id"]).strip()
+    guest_thread = str(guest_item["rfq_thread_id"]).strip()
+    if user_thread != guest_thread:
+        return None, MergeConflict(
+            listing_id=listing_id,
+            code="cart.rfq_merge_conflict",
+            message_key="cart.rfq_merge_conflict",
+            details={
+                "listing_id": listing_id,
+                "user_rfq_thread_id": user_thread,
+                "guest_rfq_thread_id": guest_thread,
+                "retry": True,
+            },
+        )
+
+    qty = int(user_item["qty"]) + int(guest_item["qty"])
+    merged_item = {**user_item, "qty": qty}
+    price, thread_id, conflict_code, conflict_details = _validate_rfq_merge_line(
+        merged_item,
+        listing_id,
+        customer_id=customer_id,
+        rfq_threads_by_id=rfq_threads_by_id,
+    )
+    if conflict_code is not None:
+        return None, MergeConflict(
+            listing_id=listing_id,
+            code=conflict_code,
+            message_key=conflict_code,
+            details=conflict_details,
+        )
+    return {**merged_item, "unit_price_ngwee": price, "rfq_thread_id": thread_id}, None
+
+
+def _resolve_rfq_vs_ordinary(
+    *,
+    listing_id: str,
+    rfq_item: dict[str, Any],
+    ordinary_item: dict[str, Any],
+    customer_id: str | None,
+    rfq_threads_by_id: dict[str, dict[str, Any]] | None,
+) -> tuple[dict[str, Any] | None, list[MergeConflict]]:
+    price, thread_id, conflict_code, conflict_details = _validate_rfq_merge_line(
+        rfq_item,
+        listing_id,
+        customer_id=customer_id,
+        rfq_threads_by_id=rfq_threads_by_id,
+    )
+    if conflict_code is not None:
+        return None, [
+            MergeConflict(
+                listing_id=listing_id,
+                code=conflict_code,
+                message_key=conflict_code,
+                details=conflict_details,
+            )
+        ]
+
+    conflicts: list[MergeConflict] = []
+    if int(ordinary_item["qty"]) > 0:
+        conflicts.append(
+            MergeConflict(
+                listing_id=listing_id,
+                code="cart.rfq_merge_conflict",
+                message_key="cart.rfq_merge_conflict",
+                details={
+                    "listing_id": listing_id,
+                    "rfq_thread_id": thread_id,
+                    "ordinary_qty_dropped": int(ordinary_item["qty"]),
+                    "retry": True,
+                },
+            )
+        )
+
+    return (
+        {
+            **rfq_item,
+            "qty": int(rfq_item["qty"]),
+            "unit_price_ngwee": price,
+            "rfq_thread_id": thread_id,
+        },
+        conflicts,
+    )
+
+
+def _append_merged_rfq_item(
+    *,
+    listing_id: str,
+    listing: dict[str, Any],
+    item: dict[str, Any],
+    customer_id: str | None,
+    rfq_threads_by_id: dict[str, dict[str, Any]] | None,
+    result: list[MergedCartItem],
+    conflicts: list[MergeConflict],
+) -> None:
+    if listing.get("status") != "active":
+        conflicts.append(
+            MergeConflict(
+                listing_id=listing_id,
+                code="cart.listing_inactive",
+                message_key="cart.listing_inactive",
+                details={"listing_id": listing_id, "status": listing.get("status")},
+            )
+        )
+        return
+
+    price, thread_id, conflict_code, conflict_details = _validate_rfq_merge_line(
+        item,
+        listing_id,
+        customer_id=customer_id,
+        rfq_threads_by_id=rfq_threads_by_id,
+    )
+    if conflict_code is not None:
+        conflicts.append(
+            MergeConflict(
+                listing_id=listing_id,
+                code=conflict_code,
+                message_key=conflict_code,
+                details=conflict_details,
+            )
+        )
+        return
+
+    qty = int(item["qty"])
+    result.append(
+        MergedCartItem(
+            listing_id=listing_id,
+            qty=qty,
+            unit_price_ngwee=price,
+            wholesale=False,
+            rfq_thread_id=thread_id,
+        )
+    )
 
 
 def merge_cart_items(
@@ -28,32 +208,132 @@ def merge_cart_items(
     guest_items: list[dict[str, Any]],
     listings_by_id: dict[str, dict[str, Any]],
     business_eligible: bool = False,
+    customer_id: str | None = None,
+    rfq_threads_by_id: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[list[MergedCartItem], list[MergeConflict]]:
     """Merge guest + user cart lines: qty-sum duplicates, refresh prices, surface conflicts.
 
     The wholesale flag is re-derived from the listing AND ``business_eligible`` — never
     trusted from the stored line.
 
-    Under D36 a wholesale-only line held by a non-eligible buyer is **dropped with a
-    conflict**, not re-priced to retail: the flag is an access rule, not a discount.
-    (It did re-price before 2026-08-02, which sold wholesale stock at consumer prices
-    with no MOQ.) The retail re-derivation below therefore now only ever applies to
-    dual-mode listings and is defence-in-depth for wholesale-only ones.
+    RFQ-pinned lines keep their authoritative accepted quote price (via
+    ``listing_cart_authority``) and never silently re-price to listing tiers.
     """
-    merged: dict[str, dict[str, Any]] = {}
-
-    for source_items in (user_items, guest_items):
-        for item in source_items:
-            listing_id = str(item["listing_id"])
-            merged.setdefault(listing_id, {"qty": 0})
-            merged[listing_id]["qty"] += int(item["qty"])
+    listing_ids: set[str] = set()
+    for item in user_items + guest_items:
+        listing_ids.add(str(item["listing_id"]))
 
     result: list[MergedCartItem] = []
     conflicts: list[MergeConflict] = []
 
-    for listing_id, aggregate in merged.items():
+    for listing_id in listing_ids:
+        user_item = _find_item_for_listing(user_items, listing_id)
+        guest_item = _find_item_for_listing(guest_items, listing_id)
+        user_rfq = user_item is not None and is_rfq_pinned_line(user_item)
+        guest_rfq = guest_item is not None and is_rfq_pinned_line(guest_item)
+
+        if user_rfq and guest_rfq:
+            assert user_item is not None and guest_item is not None
+            merged_rfq, rfq_conflict = _merge_rfq_duplicate(
+                listing_id=listing_id,
+                user_item=user_item,
+                guest_item=guest_item,
+                customer_id=customer_id,
+                rfq_threads_by_id=rfq_threads_by_id,
+            )
+            if rfq_conflict is not None:
+                conflicts.append(rfq_conflict)
+                continue
+            listing = listings_by_id.get(listing_id)
+            if listing is None:
+                conflicts.append(
+                    MergeConflict(
+                        listing_id=listing_id,
+                        code="cart.listing_unavailable",
+                        message_key="cart.listing_unavailable",
+                        details={"listing_id": listing_id, "retry": False},
+                    )
+                )
+                continue
+            assert merged_rfq is not None
+            _append_merged_rfq_item(
+                listing_id=listing_id,
+                listing=listing,
+                item=merged_rfq,
+                customer_id=customer_id,
+                rfq_threads_by_id=rfq_threads_by_id,
+                result=result,
+                conflicts=conflicts,
+            )
+            continue
+
+        if user_rfq or guest_rfq:
+            rfq_item = user_item if user_rfq else guest_item
+            ordinary_item = guest_item if user_rfq else user_item
+            assert rfq_item is not None
+            if ordinary_item is not None and not is_rfq_pinned_line(ordinary_item):
+                resolved, mixed_conflicts = _resolve_rfq_vs_ordinary(
+                    listing_id=listing_id,
+                    rfq_item=rfq_item,
+                    ordinary_item=ordinary_item,
+                    customer_id=customer_id,
+                    rfq_threads_by_id=rfq_threads_by_id,
+                )
+                conflicts.extend(mixed_conflicts)
+                if resolved is None:
+                    continue
+                listing = listings_by_id.get(listing_id)
+                if listing is None:
+                    conflicts.append(
+                        MergeConflict(
+                            listing_id=listing_id,
+                            code="cart.listing_unavailable",
+                            message_key="cart.listing_unavailable",
+                            details={"listing_id": listing_id, "retry": False},
+                        )
+                    )
+                    continue
+                _append_merged_rfq_item(
+                    listing_id=listing_id,
+                    listing=listing,
+                    item=resolved,
+                    customer_id=customer_id,
+                    rfq_threads_by_id=rfq_threads_by_id,
+                    result=result,
+                    conflicts=conflicts,
+                )
+                continue
+
+            listing = listings_by_id.get(listing_id)
+            if listing is None:
+                conflicts.append(
+                    MergeConflict(
+                        listing_id=listing_id,
+                        code="cart.listing_unavailable",
+                        message_key="cart.listing_unavailable",
+                        details={"listing_id": listing_id, "retry": False},
+                    )
+                )
+                continue
+            _append_merged_rfq_item(
+                listing_id=listing_id,
+                listing=listing,
+                item=rfq_item,
+                customer_id=customer_id,
+                rfq_threads_by_id=rfq_threads_by_id,
+                result=result,
+                conflicts=conflicts,
+            )
+            continue
+
+        # Ordinary lines — aggregate qty across user + guest.
+        qty = 0
+        if user_item is not None:
+            qty += int(user_item["qty"])
+        if guest_item is not None:
+            qty += int(guest_item["qty"])
+
         listing = listings_by_id.get(listing_id)
-        qty = int(aggregate["qty"])
 
         if listing is None:
             conflicts.append(
@@ -66,21 +346,6 @@ def merge_cart_items(
             )
             continue
 
-        # D36 — a wholesale-only listing that the merging buyer is not eligible for
-        # is reported with the SAME conflict as a listing that does not exist, and
-        # the line is dropped. Previously it was silently re-priced down to retail,
-        # which both sold wholesale stock at consumer prices with no MOQ and
-        # confirmed the listing was real.
-        #
-        # Reusing `cart.listing_unavailable` rather than minting a
-        # `cart.wholesale_forbidden` is the point, not laziness: a distinct code
-        # would tell the client exactly what it was denied, which is the disclosure
-        # D36 exists to prevent. It also means no new i18n key — the reason the
-        # missing `supplies.gate.forbidden` copy is not on this path's critical
-        # list.
-        #
-        # Checked before the status branch for the same reason as in
-        # `store.fetch_listing`: one uniform answer, whatever the listing's status.
         if listing.get("wholesale") and not business_eligible:
             conflicts.append(
                 MergeConflict(
@@ -126,18 +391,14 @@ def merge_cart_items(
             price_tiers=price_tiers,
         )
 
-        old_user = next(
-            (i for i in user_items if str(i["listing_id"]) == listing_id),
-            None,
-        )
-        if old_user is not None and int(old_user.get("unit_price_ngwee", 0)) != unit_price:
+        if user_item is not None and int(user_item.get("unit_price_ngwee", 0)) != unit_price:
             conflicts.append(
                 MergeConflict(
                     listing_id=listing_id,
                     code="cart.price_changed",
                     message_key="cart.price_changed",
                     details={
-                        "previous_unit_price_ngwee": int(old_user["unit_price_ngwee"]),
+                        "previous_unit_price_ngwee": int(user_item["unit_price_ngwee"]),
                         "current_unit_price_ngwee": unit_price,
                     },
                 )

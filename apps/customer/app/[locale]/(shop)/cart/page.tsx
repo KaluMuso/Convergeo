@@ -76,6 +76,7 @@ export default async function CartPage({ params }: CartPageProps) {
       increaseSymbol: t("cart.qtyIncreaseSymbol"),
       unitPrice: t("cart.unitPrice"),
       lineTotal: t("cart.lineTotal"),
+      quotedPriceBadge: t("cart.quotedPriceBadge"),
       remove: t("cart.remove"),
       removeLabel: t("cart.removeLabel"),
       saveForLater: t("cart.saveForLater"),

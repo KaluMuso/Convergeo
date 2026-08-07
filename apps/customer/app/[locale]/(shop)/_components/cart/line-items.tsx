@@ -9,6 +9,7 @@ import type { CartLine, ChangeNotice } from "./mini-cart-drawer";
 export type CartLineItemLabels = QtyStepperLabels & {
   unitPrice: string;
   lineTotal: string;
+  quotedPriceBadge: string;
   remove: string;
   removeLabel: string;
   saveForLater: string;
@@ -52,6 +53,11 @@ export function CartLineItem({
           <p className="text-sm text-text-2">
             {labels.unitPrice.replace("{amount}", formatK(item.unit_price_ngwee))}
           </p>
+          {item.is_rfq_quote ? (
+            <p className="text-xs font-medium text-primary" data-testid="cart-line-rfq-badge">
+              {labels.quotedPriceBadge}
+            </p>
+          ) : null}
           {outOfStock ? (
             <p className="text-sm font-medium text-danger" data-testid="cart-line-oos">
               {labels.outOfStockLine}

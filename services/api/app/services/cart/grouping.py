@@ -17,6 +17,7 @@ class CartLineView:
     line_total_ngwee: int
     title_override: str | None
     lead_time_days: int | None = None
+    is_rfq_quote: bool = False
 
 
 @dataclass(frozen=True, slots=True)
