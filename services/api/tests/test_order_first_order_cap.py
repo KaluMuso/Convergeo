@@ -11,6 +11,7 @@ import pytest
 from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.main import create_app
+from app.services.business.access import BusinessAccess
 from app.services.kyc.caps import VendorCapLimits, VendorQuota, clear_vendor_cap_cache
 from app.services.orders.create import (
     CreatedOrder,
@@ -140,6 +141,45 @@ def _mock_user_client(*, unit_price_ngwee: int) -> MagicMock:
     return user_client
 
 
+def _listing_row(unit_price_ngwee: int) -> dict[str, Any]:
+    return {
+        "id": LISTING_ID,
+        "vendor_id": VENDOR_ID,
+        "title_override": "Test item",
+        "price_ngwee": unit_price_ngwee,
+        "wholesale": False,
+        "moq": 1,
+        "price_tiers": None,
+        "status": "active",
+        "product_class": "A",
+        "condition": "new",
+        "fulfilment_mode": "stocked",
+        "lead_time_days": None,
+        "vendor_capacity_per_week": None,
+        "stock_mode": "tracked",
+        "stock_qty": 100,
+    }
+
+
+def _patch_order_create_price_context(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    unit_price_ngwee: int,
+) -> None:
+    """Orders create now re-derives cart lines before atomic insert (B0-P02a)."""
+    listing = _listing_row(unit_price_ngwee)
+    monkeypatch.setattr(
+        "app.routers.orders_create.fetch_listings_for_items",
+        lambda items: {LISTING_ID: listing},
+    )
+    monkeypatch.setattr(
+        "app.routers.orders_create.resolve_business_eligibility",
+        lambda *_a, **_k: BusinessAccess(
+            user_id=CUSTOMER_ID, status=None, eligible=False
+        ),
+    )
+
+
 def _fake_create_result(*, total_ngwee: int) -> CreateOrdersResult:
     order_id = str(uuid.uuid4())
     return CreateOrdersResult(
@@ -231,6 +271,7 @@ class TestFirstOrderCapOnOrderCreate:
             "app.routers.orders_create.get_user_client",
             lambda *_a, **_k: _mock_user_client(unit_price_ngwee=total),
         )
+        _patch_order_create_price_context(monkeypatch, unit_price_ngwee=total)
         monkeypatch.setattr(
             "app.services.kyc.caps.load_vendor_cap_limits_by_id",
             lambda _sc, _vid, **_kw: _t1_limits(order_count=0),
@@ -263,6 +304,7 @@ class TestFirstOrderCapOnOrderCreate:
             "app.routers.orders_create.get_user_client",
             lambda *_a, **_k: _mock_user_client(unit_price_ngwee=total),
         )
+        _patch_order_create_price_context(monkeypatch, unit_price_ngwee=total)
         monkeypatch.setattr(
             "app.services.kyc.caps.load_vendor_cap_limits_by_id",
             lambda _sc, _vid, **_kw: _t1_limits(order_count=0),
@@ -293,6 +335,7 @@ class TestFirstOrderCapOnOrderCreate:
             "app.routers.orders_create.get_user_client",
             lambda *_a, **_k: _mock_user_client(unit_price_ngwee=total),
         )
+        _patch_order_create_price_context(monkeypatch, unit_price_ngwee=total)
         monkeypatch.setattr(
             "app.services.kyc.caps.load_vendor_cap_limits_by_id",
             lambda _sc, _vid, **_kw: _t2_limits(),
