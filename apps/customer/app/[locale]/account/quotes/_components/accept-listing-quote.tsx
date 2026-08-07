@@ -9,7 +9,6 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 
-import { refreshCart } from "../../../(shop)/_components/cart/mini-cart-drawer";
 import { createRfqApiClient } from "../../../../../lib/rfq-api";
 
 import type { RfqThread } from "../../../../../lib/rfq-api";
@@ -38,6 +37,7 @@ export function AcceptListingQuote({ locale, thread }: AcceptListingQuoteProps) 
     setError(null);
     try {
       await rfqClient.acceptQuoteIntoCart(thread.id, 1);
+      const { refreshCart } = await import("../../../(shop)/_components/cart/mini-cart-drawer");
       await refreshCart();
       setSuccess(true);
       router.refresh();
