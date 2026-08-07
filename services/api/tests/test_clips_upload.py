@@ -183,6 +183,7 @@ def store(monkeypatch: pytest.MonkeyPatch) -> Store:
     )
     for name in ("video_clips", "audit_log", "webhook_events"):
         st.rows(name)
+    st.rows("feature_flags").append({"flag": "clips", "enabled": True})
     return st
 
 

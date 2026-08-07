@@ -31,7 +31,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.media.authz import VendorScope, require_vendor_scope
 from app.schemas.base import StrictModel
-from app.services.clips import quota
+from app.services.clips import flags, quota
 from fastapi import APIRouter, Depends
 from pydantic import Field
 
@@ -260,6 +260,7 @@ async def list_my_clips(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> VendorClipListResponse:
     """Every clip this vendor owns, in every state, with the live quota."""
+    flags.require_clips_enabled(service_client)
     clips = _rows(
         service_client.client.table(CLIPS_TABLE)
         .select("*")
@@ -288,6 +289,7 @@ async def get_my_clip(
     scope: Annotated[VendorScope, Depends(require_vendor_scope)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> VendorClipOut:
+    flags.require_clips_enabled(service_client)
     clip = _own_clip(service_client, clip_id=clip_id, vendor_id=scope.vendor_id)
     links = _links_for(service_client, [clip_id])
     return _to_out(clip, links.get(clip_id, []))
@@ -300,6 +302,7 @@ async def get_my_clip_stats(
     scope: Annotated[VendorScope, Depends(require_vendor_scope)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> ClipStatsOut:
+    flags.require_clips_enabled(service_client)
     clip = _own_clip(service_client, clip_id=clip_id, vendor_id=scope.vendor_id)
     return ClipStatsOut(
         clip_id=clip_id,
@@ -320,6 +323,7 @@ async def link_listing(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> LinkListingResponse:
     """Link one of the vendor's **own** active listings to their own clip."""
+    flags.require_clips_enabled(service_client)
     _own_clip(service_client, clip_id=clip_id, vendor_id=scope.vendor_id)
     _rate_limit(service_client, scope="clip_link", key=current_user.id)
 
@@ -386,6 +390,7 @@ async def unlink_listing(
     scope: Annotated[VendorScope, Depends(require_vendor_scope)],
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> LinkListingResponse:
+    flags.require_clips_enabled(service_client)
     _own_clip(service_client, clip_id=clip_id, vendor_id=scope.vendor_id)
     _rate_limit(service_client, scope="clip_link", key=current_user.id)
 

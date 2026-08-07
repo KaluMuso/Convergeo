@@ -1,4 +1,6 @@
+import { createServerClient } from "@vergeo/auth/server-client";
 import { LOCALES, formatK, loadNamespace, type Locale } from "@vergeo/i18n";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
@@ -34,6 +36,21 @@ export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
 }
 
+async function clipsEnabled(): Promise<boolean> {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(cookieStore);
+    const { data } = await supabase
+      .from("feature_flags")
+      .select("enabled")
+      .eq("flag", "clips")
+      .maybeSingle();
+    return Boolean(data?.enabled);
+  } catch {
+    return false;
+  }
+}
+
 async function loadClip(id: string): Promise<Clip | null> {
   const url = absoluteApiUrl(`/clips/${encodeURIComponent(id)}`);
   if (!url) {
@@ -48,6 +65,9 @@ async function loadClip(id: string): Promise<Clip | null> {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, id } = await params;
+  if (!(await clipsEnabled())) {
+    return { robots: { index: false, follow: false } };
+  }
   const clip = await loadClip(id);
   const messages = (await loadNamespace(locale as Locale, "clips")) as {
     share: { title: string; description: string };
@@ -84,6 +104,10 @@ export default async function SharedClipPage({ params }: PageProps) {
     return null;
   }
   setRequestLocale(locale);
+
+  if (!(await clipsEnabled())) {
+    notFound();
+  }
 
   const clip = await loadClip(id);
   if (!clip) {

@@ -1,6 +1,8 @@
 import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 
+import { isClipsRouteAccessible } from "../../../../lib/route-capabilities";
 import { ClipComposer } from "../_components/clip-composer";
 
 import type { Metadata } from "next";
@@ -30,6 +32,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function NewClipPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
+
+  if (!(await isClipsRouteAccessible())) {
+    notFound();
+  }
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col p-0 sm:p-4">

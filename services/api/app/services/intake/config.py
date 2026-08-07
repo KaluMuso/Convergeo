@@ -144,6 +144,19 @@ def lane_open_for(service_client: ServiceRoleClient, vendor_id: str) -> bool:
     return intake_enabled(service_client) and vendor_allowlisted(service_client, vendor_id)
 
 
+def require_lane_open_for(service_client: ServiceRoleClient, vendor_id: str) -> None:
+    """Fail closed unless the pilot lane is open for this vendor.
+
+    404 (not 403) so a disabled lane does not confirm its existence to probes.
+    """
+    if not lane_open_for(service_client, vendor_id):
+        raise AppError(
+            code="not_found",
+            message="Not found",
+            http_status=404,
+        )
+
+
 def _required_env(name: str) -> str:
     """Read a required ``WAHA_INTAKE_*`` value or fail closed.
 

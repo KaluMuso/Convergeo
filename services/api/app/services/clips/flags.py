@@ -19,6 +19,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Final, Protocol
 
+from app.errors import AppError
+
 logger = logging.getLogger(__name__)
 
 #: Master gate (F-V1). OFF until the founder confirms placement and — per F-V4 —
@@ -66,3 +68,16 @@ def clips_enabled(service_client: ServiceRoleClient) -> bool:
 def comments_enabled(service_client: ServiceRoleClient) -> bool:
     """Whether the comment surface is live (F-V2)."""
     return _flag_enabled(service_client, CLIPS_COMMENTS_FLAG)
+
+
+def require_clips_enabled(service_client: ServiceRoleClient) -> None:
+    """Fail closed when the master Clips gate is off.
+
+    404 (not 403) so a disabled feature does not confirm its existence to probes.
+    """
+    if not clips_enabled(service_client):
+        raise AppError(
+            code="not_found",
+            message="Not found",
+            http_status=404,
+        )

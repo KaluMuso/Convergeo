@@ -208,6 +208,7 @@ async def like_clip(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> LikeResponse:
     """Like a clip. Liking twice is a success that changes nothing."""
+    flags.require_clips_enabled(service_client)
     clip = _load_published_clip(service_client, clip_id)
     _rate_limit(
         service_client,
@@ -239,6 +240,7 @@ async def unlike_clip(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> LikeResponse:
     """Remove a like. Removing a like that is not there is also a success."""
+    flags.require_clips_enabled(service_client)
     clip = _load_published_clip(service_client, clip_id)
     _rate_limit(
         service_client,
@@ -268,6 +270,7 @@ async def unlike_clip(
 # --- Comments ---------------------------------------------------------------
 def _require_comments_enabled(service_client: ServiceRoleClient) -> None:
     """F-V2 gate. Built, but OFF until the founder flips ``clips_comments``."""
+    flags.require_clips_enabled(service_client)
     if not flags.comments_enabled(service_client):
         raise AppError(
             code="clip_comments_disabled",
@@ -395,6 +398,7 @@ async def report_clip(
     clip is still up should not be told off, and the moderation queue should not
     show one clip ten times because one person was persistent.
     """
+    flags.require_clips_enabled(service_client)
     _load_published_clip(service_client, clip_id)
     _rate_limit(
         service_client,
@@ -432,6 +436,7 @@ async def record_clip_view(
     "stable non-PII key" — is a counter increment the client controls, and D-V5's
     honesty about numbers is worth more than a bigger view count.
     """
+    flags.require_clips_enabled(service_client)
     clip = _load_published_clip(service_client, clip_id)
     _rate_limit(
         service_client,
