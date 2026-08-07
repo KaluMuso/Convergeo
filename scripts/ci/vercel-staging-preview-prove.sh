@@ -334,7 +334,7 @@ case "${api_env_verdict}" in
     die "Vercel Preview env ${API_ENV_VAR} host ${got_host} != expected ${EXPECTED_API_HOST}"
     ;;
   BLOCKED_EXTERNAL)
-    log "API env wiring: BLOCKED_EXTERNAL (could not read Vercel project env)"
+    die "Vercel Preview env ${API_ENV_VAR} BLOCKED_EXTERNAL — cannot verify staging API wiring"
     ;;
   *)
     die "unexpected API env verdict: ${api_env_verdict}"

@@ -22,11 +22,12 @@ else
   bad "forbidden identifiers file incomplete"
 fi
 
-# 2) Migration 0056 present
-if ls supabase/migrations/0056_*.sql >/dev/null 2>&1; then
-  ok "migration 0056 present on disk"
+# 2) Migration tip files present (repository ledger, not a stale hard-coded number)
+if ls supabase/migrations/0095_*.sql >/dev/null 2>&1 \
+  && ls supabase/migrations/20260802153539_*.sql >/dev/null 2>&1; then
+  ok "repository migration tip files present (0095 + 20260802153539)"
 else
-  bad "migration 0056 missing"
+  bad "repository migration tip files missing"
 fi
 
 # 3) Separation script rejects production Supabase ref
@@ -140,6 +141,8 @@ except Exception:
     assert "vercel-staging-preview-prove.sh" in text
     assert "prove-vercel-preview" in text
     assert "staging-sha-proof" in text
+    assert "reconcile-staging-migrations.sh" in text
+    assert "validate_staging_proof" in text or "staging-evidence-bundle.sh" in text
     print("yaml module absent — structural workflow checks OK")
     sys.exit(0)
 for path in (
@@ -256,10 +259,13 @@ fi
 
 # 12) Three-portal Vercel Preview prove helper exists and passes shellcheck-lite
 if bash -n scripts/ci/vercel-staging-preview-prove.sh \
-  && bash -n scripts/ci/staging-evidence-bundle.sh; then
-  ok "vercel-staging-preview-prove + staging-evidence-bundle shell syntax"
+  && bash -n scripts/ci/staging-evidence-bundle.sh \
+  && bash -n scripts/ci/reconcile-staging-migrations.sh \
+  && python3 -m py_compile scripts/ci/validate_staging_proof.py \
+  && python3 -m py_compile scripts/ci/reconcile_staging_migrations.py; then
+  ok "preview prove + evidence bundle + migration reconcile syntax"
 else
-  bad "preview prove / evidence bundle shell syntax invalid"
+  bad "preview prove / evidence bundle / migration reconcile syntax invalid"
 fi
 
 # 13) deploy-staging wires explicit Preview proof for all three portals
@@ -268,7 +274,8 @@ if grep -q 'prove-vercel-preview' .github/workflows/deploy-staging.yml \
   && grep -q 'portal: \[customer, vendor, admin\]' .github/workflows/deploy-staging.yml \
   && grep -q 'vercel-staging-preview-prove.sh' .github/workflows/deploy-staging.yml \
   && grep -q 'staging-sha-proof' .github/workflows/deploy-staging.yml \
-  && grep -q 'staging-evidence-bundle.sh' .github/workflows/deploy-staging.yml; then
+  && grep -q 'staging-evidence-bundle.sh' .github/workflows/deploy-staging.yml \
+  && grep -q 'reconcile-staging-migrations.sh' .github/workflows/deploy-staging.yml; then
   ok "deploy-staging proves customer/vendor/admin Preview at same SHA"
 else
   bad "deploy-staging missing three-portal Preview proof wiring"
@@ -291,31 +298,186 @@ else
   cat /tmp/preview-dry.txt || true
 fi
 
-# 15) Evidence bundle merges three portal JSON files
+# 15) Evidence bundle merges three portal JSON files (valid proof succeeds)
+GOOD_SHA=deadbeefcafebabe0123456789abcdef01234567
+STAGING_REF=abcdefghij1234567890
 mkdir -p /tmp/evidence-bundle-test/{customer,vendor,admin}
 for portal in customer vendor admin; do
-  printf '{"portal":"%s","deployment_url":"https://%s.example","deployment_id":"dpl_%s","github_commit_sha":"abc"}' \
-    "$portal" "$portal" "$portal" >"/tmp/evidence-bundle-test/${portal}/evidence.json"
+  health_verdict="ok"
+  health_http="200"
+  if [ "$portal" = "admin" ]; then
+    health_verdict="cf_access_gate"
+    health_http="403"
+  fi
+  python3 - <<PY
+import json, pathlib
+portal = "${portal}"
+doc = {
+    "portal": portal,
+    "deployment_url": f"https://{portal}.example.vercel.app",
+    "deployment_id": f"dpl_{portal}",
+    "github_commit_sha": "${GOOD_SHA}",
+    "target": "preview",
+    "api_env_verdict": "verified",
+    "health_verdict": "${health_verdict}",
+    "health_http": "${health_http}",
+}
+pathlib.Path("/tmp/evidence-bundle-test", portal, "evidence.json").write_text(
+    json.dumps(doc) + "\n", encoding="utf-8"
+)
+PY
 done
-printf '{"env":"staging","git_sha":"abc"}\n' >/tmp/fingerprint-test.json
+printf '{"env":"staging","git_sha":"%s","image_tag":"%s","supabase_project_ref":"%s"}\n' \
+  "${GOOD_SHA}" "${GOOD_SHA}" "${STAGING_REF}" >/tmp/fingerprint-test.json
 set +e
 bash scripts/ci/staging-evidence-bundle.sh \
-  --candidate-sha abc \
+  --candidate-sha "${GOOD_SHA}" \
   --preview-dir /tmp/evidence-bundle-test \
   --fingerprint /tmp/fingerprint-test.json \
+  --staging-supabase-project-id "${STAGING_REF}" \
   --migrate-result success \
   --output /tmp/staging-sha-proof-test.json >/tmp/bundle-out.txt 2>&1
 rc=$?
 set -e
 if [[ "$rc" -eq 0 ]] \
-  && grep -q '"candidate_sha": "abc"' /tmp/staging-sha-proof-test.json \
+  && grep -q '"candidate_sha": "deadbeefcafebabe0123456789abcdef01234567"' /tmp/staging-sha-proof-test.json \
   && grep -q '"customer"' /tmp/staging-sha-proof-test.json \
   && grep -q '"vendor"' /tmp/staging-sha-proof-test.json \
   && grep -q '"admin"' /tmp/staging-sha-proof-test.json; then
-  ok "staging-evidence-bundle merges three portal proofs"
+  ok "staging-evidence-bundle merges three portal proofs (valid case)"
 else
-  bad "staging-evidence-bundle failed (rc=$rc)"
+  bad "staging-evidence-bundle valid case failed (rc=$rc)"
   cat /tmp/bundle-out.txt || true
+fi
+
+# 16) validate_staging_proof negative + positive regression cases
+python3 - <<'PY'
+import json
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+GOOD_SHA = "deadbeefcafebabe0123456789abcdef01234567"
+STAGING_REF = "abcdefghij1234567890"
+PROD_REF = "dpadrlxukcjbewpqympu"
+REPO = Path("scripts/ci")
+
+def portal_doc(portal: str, *, sha: str = GOOD_SHA, api_env: str = "verified", health: str = "ok", http: str = "200"):
+    if portal == "admin" and health == "cf_access_gate":
+        http = "403"
+    return {
+        "portal": portal,
+        "deployment_url": f"https://{portal}.example.vercel.app",
+        "deployment_id": f"dpl_{portal}",
+        "github_commit_sha": sha,
+        "target": "preview",
+        "api_env_verdict": api_env,
+        "health_verdict": health,
+        "health_http": http,
+    }
+
+def fingerprint(*, sha: str = GOOD_SHA, ref: str = STAGING_REF, env: str = "staging", image: str = GOOD_SHA):
+    return {"env": env, "git_sha": sha, "image_tag": image, "supabase_project_ref": ref}
+
+def run_validate(tmp: Path, fp: dict, previews: dict[str, dict], expect_ok: bool) -> bool:
+    preview_dir = tmp / "previews"
+    for portal, doc in previews.items():
+        d = preview_dir / portal
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "evidence.json").write_text(json.dumps(doc) + "\n", encoding="utf-8")
+    fp_path = tmp / "fingerprint.json"
+    fp_path.write_text(json.dumps(fp) + "\n", encoding="utf-8")
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "validate_staging_proof.py"),
+            "--candidate-sha",
+            GOOD_SHA,
+            "--staging-supabase-project-id",
+            STAGING_REF,
+            "--preview-dir",
+            str(preview_dir),
+            "--fingerprint",
+            str(fp_path),
+            "--migrate-result",
+            "success",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    ok = proc.returncode == 0
+    return ok if expect_ok else (not ok)
+
+previews_ok = {p: portal_doc(p) for p in ("customer", "vendor", "admin")}
+previews_ok["admin"] = portal_doc("admin", health="cf_access_gate")
+
+cases = [
+    ("correct proof succeeds", lambda t: run_validate(t, fingerprint(), previews_ok, True)),
+    ("wrong API git SHA fails", lambda t: run_validate(t, fingerprint(sha="0000000000000000000000000000000000000001"), previews_ok, False)),
+    ("wrong staging Supabase ref fails", lambda t: run_validate(t, fingerprint(ref="wrongref123456789012345"), previews_ok, False)),
+    ("production Supabase ref fails", lambda t: run_validate(t, fingerprint(ref=PROD_REF), previews_ok, False)),
+    ("BLOCKED_EXTERNAL Vercel env proof fails", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "customer": portal_doc("customer", api_env="BLOCKED_EXTERNAL")}, False)),
+    ("wrong portal SHA fails", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "vendor": portal_doc("vendor", sha="cafe" * 10)}, False)),
+    ("valid admin CF Access 403 remains accepted", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "admin": portal_doc("admin", health="cf_access_gate")}, True)),
+]
+
+failed = []
+with tempfile.TemporaryDirectory() as td:
+    tmp = Path(td)
+    for name, fn in cases:
+        if not fn(tmp):
+            failed.append(name)
+
+if failed:
+    print("FAIL: validate_staging_proof cases:", ", ".join(failed))
+    sys.exit(1)
+print("PASS: validate_staging_proof regression cases")
+PY
+if [[ "$?" -eq 0 ]]; then
+  ok "validate_staging_proof negative/positive regression cases"
+else
+  bad "validate_staging_proof regression cases failed"
+fi
+
+# 17) Migration reconcile: matching remote succeeds; missing remote fails
+REPO_VERSIONS="$(python3 - <<'PY'
+from pathlib import Path
+import re
+versions = []
+for path in sorted(Path("supabase/migrations").glob("*.sql")):
+    versions.append(re.match(r"^(.+?)_.+\.sql$", path.name).group(1))
+print("\n".join(versions))
+PY
+)"
+printf '%s\n' "${REPO_VERSIONS}" >/tmp/repo-migrations.txt
+set +e
+python3 scripts/ci/reconcile_staging_migrations.py \
+  --migrations-dir supabase/migrations \
+  --remote-versions-file /tmp/repo-migrations.txt >/tmp/reconcile-ok.txt 2>&1
+rc_ok=$?
+head -1 /tmp/repo-migrations.txt | while read -r first; do break; done
+printf '%s\n' "${REPO_VERSIONS}" | grep -v '^0095$' >/tmp/repo-migrations-missing.txt
+python3 scripts/ci/reconcile_staging_migrations.py \
+  --migrations-dir supabase/migrations \
+  --remote-versions-file /tmp/repo-migrations-missing.txt >/tmp/reconcile-bad.txt 2>&1
+rc_bad=$?
+set -e
+if [[ "$rc_ok" -eq 0 ]] && [[ "$rc_bad" -ne 0 ]]; then
+  ok "migration reconcile matches repository tip; missing remote fails"
+else
+  bad "migration reconcile regression failed (ok=$rc_ok bad=$rc_bad)"
+  cat /tmp/reconcile-ok.txt /tmp/reconcile-bad.txt || true
+fi
+
+# 18) vercel-staging-preview-prove rejects BLOCKED_EXTERNAL at source
+if grep -q 'BLOCKED_EXTERNAL.*die\|die.*BLOCKED_EXTERNAL' scripts/ci/vercel-staging-preview-prove.sh; then
+  ok "vercel-staging-preview-prove fails closed on BLOCKED_EXTERNAL"
+else
+  bad "vercel-staging-preview-prove must die on BLOCKED_EXTERNAL"
 fi
 
 echo "Results: ${pass} passed, ${fail} failed, ${skip} skipped"
