@@ -137,6 +137,9 @@ except Exception:
     assert "check-staging-separation.sh" in text
     assert "never-promote" in text or "never-promote-production" in text
     assert "latest" in text  # mentioned as refused
+    assert "vercel-staging-preview-prove.sh" in text
+    assert "prove-vercel-preview" in text
+    assert "staging-sha-proof" in text
     print("yaml module absent — structural workflow checks OK")
     sys.exit(0)
 for path in (
@@ -251,14 +254,70 @@ else
   bad "migration 0056 missing security_invoker"
 fi
 
-# NOTE: an earlier case 12 asserting the same unreachable-database property was
-# removed here when two independent fixes for run 30695764799 were reconciled.
-# It duplicated 10b, and it was unsound: without `psql` on PATH the script dies
-# at the "psql not on PATH" check, giving rc!=0 and no `OK:` line — so the case
-# passed while exercising nothing. 10b guards on psql and counts a SKIP instead,
-# which is the distinction this whole file exists to preserve.
+# 12) Three-portal Vercel Preview prove helper exists and passes shellcheck-lite
+if bash -n scripts/ci/vercel-staging-preview-prove.sh \
+  && bash -n scripts/ci/staging-evidence-bundle.sh; then
+  ok "vercel-staging-preview-prove + staging-evidence-bundle shell syntax"
+else
+  bad "preview prove / evidence bundle shell syntax invalid"
+fi
 
-echo
+# 13) deploy-staging wires explicit Preview proof for all three portals
+if grep -q 'prove-vercel-preview' .github/workflows/deploy-staging.yml \
+  && grep -q 'matrix:' .github/workflows/deploy-staging.yml \
+  && grep -q 'portal: \[customer, vendor, admin\]' .github/workflows/deploy-staging.yml \
+  && grep -q 'vercel-staging-preview-prove.sh' .github/workflows/deploy-staging.yml \
+  && grep -q 'staging-sha-proof' .github/workflows/deploy-staging.yml \
+  && grep -q 'staging-evidence-bundle.sh' .github/workflows/deploy-staging.yml; then
+  ok "deploy-staging proves customer/vendor/admin Preview at same SHA"
+else
+  bad "deploy-staging missing three-portal Preview proof wiring"
+fi
+
+# 14) Preview prove dry-run validates portal mapping without Vercel calls
+set +e
+GITHUB_SHA=deadbeefcafebabe0123456789abcdef01234567 \
+GITHUB_REF_NAME=staging \
+VERCEL_TOKEN=x VERCEL_ORG_ID=team_x \
+VERCEL_PROJECT_ID_CUSTOMER=prj_c VERCEL_PROJECT_ID_VENDOR=prj_v VERCEL_PROJECT_ID_ADMIN=prj_a \
+STAGING_API_BASE_URL=https://api.staging.vergeo5.com \
+  bash scripts/ci/vercel-staging-preview-prove.sh --portal vendor --dry-run >/tmp/preview-dry.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]] && grep -q 'dry-run OK portal=vendor' /tmp/preview-dry.txt; then
+  ok "vercel-staging-preview-prove dry-run"
+else
+  bad "vercel-staging-preview-prove dry-run failed (rc=$rc)"
+  cat /tmp/preview-dry.txt || true
+fi
+
+# 15) Evidence bundle merges three portal JSON files
+mkdir -p /tmp/evidence-bundle-test/{customer,vendor,admin}
+for portal in customer vendor admin; do
+  printf '{"portal":"%s","deployment_url":"https://%s.example","deployment_id":"dpl_%s","github_commit_sha":"abc"}' \
+    "$portal" "$portal" "$portal" >"/tmp/evidence-bundle-test/${portal}/evidence.json"
+done
+printf '{"env":"staging","git_sha":"abc"}\n' >/tmp/fingerprint-test.json
+set +e
+bash scripts/ci/staging-evidence-bundle.sh \
+  --candidate-sha abc \
+  --preview-dir /tmp/evidence-bundle-test \
+  --fingerprint /tmp/fingerprint-test.json \
+  --migrate-result success \
+  --output /tmp/staging-sha-proof-test.json >/tmp/bundle-out.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]] \
+  && grep -q '"candidate_sha": "abc"' /tmp/staging-sha-proof-test.json \
+  && grep -q '"customer"' /tmp/staging-sha-proof-test.json \
+  && grep -q '"vendor"' /tmp/staging-sha-proof-test.json \
+  && grep -q '"admin"' /tmp/staging-sha-proof-test.json; then
+  ok "staging-evidence-bundle merges three portal proofs"
+else
+  bad "staging-evidence-bundle failed (rc=$rc)"
+  cat /tmp/bundle-out.txt || true
+fi
+
 echo "Results: ${pass} passed, ${fail} failed, ${skip} skipped"
 if [[ "$skip" -gt 0 ]]; then
   echo "NOTE: ${skip} case(s) could not run — they are NOT passes. See SKIP lines above."

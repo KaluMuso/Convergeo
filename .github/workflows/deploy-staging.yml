@@ -334,14 +334,16 @@ jobs:
           name: staging-api-deploy-record
           path: /tmp/staging-evidence/api-deploy.txt
 
-  configure-vercel-preview:
-    name: Vercel Preview (staging branch)
+  prove-vercel-preview:
+    name: Vercel Preview proof (${{ matrix.portal }})
     needs: [environment-separation, deploy-api-oci]
-    if: ${{ always() && needs.environment-separation.result == 'success' && (github.event_name == 'push' || inputs.skip_vercel != true) }}
+    if: ${{ always() && needs.environment-separation.result == 'success' && needs.deploy-api-oci.result == 'success' && (github.event_name == 'push' || inputs.skip_vercel != true) }}
     runs-on: ubuntu-latest
     environment: staging
-    outputs:
-      customer_preview_url: ${{ steps.deploy_customer_preview.outputs.url }}
+    strategy:
+      fail-fast: false
+      matrix:
+        portal: [customer, vendor, admin]
     steps:
       - uses: actions/checkout@v7
 
@@ -357,11 +359,10 @@ jobs:
             *localhost*) echo "::error::Preview must not use localhost"; exit 1 ;;
           esac
           echo "Preview API base OK (host secret only)"
+          test -f infra/staging/vercel-preview.env.example
 
-      - name: Install Vercel CLI
-        run: npm install -g vercel@39
-
-      - name: Trigger / await Preview for staging branch
+      - name: Deploy and prove Preview for staging SHA
+        id: prove_preview
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -372,158 +373,73 @@ jobs:
           STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
         run: |
           set -euo pipefail
-          API_BASE="${STAGING_API_BASE_URL:-https://${STAGING_API_HOST}}"
-          # Branch-scoped Preview: push already creates Previews when the staging
-          # branch is connected. Here we pull deployment URLs for evidence and
-          # verify env wiring documentation is present.
-          for name in CUSTOMER VENDOR ADMIN; do
-            var="VERCEL_PROJECT_ID_${name}"
-            pid="${!var:-}"
-            if [ -z "$pid" ]; then
-              echo "::warning::${var} unset — skip ${name} Preview probe"
-              continue
-            fi
-            echo "Project ${name}: configured (id redacted length=${#pid})"
-          done
-          echo "Expected Preview env NEXT_PUBLIC_API_BASE_URL=${API_BASE}"
-          echo "See infra/staging/vercel-preview.env.example for full name list."
-          test -f infra/staging/vercel-preview.env.example
+          # Git-source Preview deployment (target defaults to preview).
+          # Production promotion remains exclusively in deploy-production.yml.
+          bash scripts/ci/vercel-staging-preview-prove.sh \
+            --portal "${{ matrix.portal }}" \
+            --output-dir "/tmp/staging-preview-${{ matrix.portal }}"
 
-      - name: Deploy and prove customer Preview for staging SHA
-        id: deploy_customer_preview
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID_CUSTOMER: ${{ secrets.VERCEL_PROJECT_ID_CUSTOMER }}
-        run: |
-          set -euo pipefail
-          # This is intentionally a Git-source Preview deployment. Omit target:
-          # Vercel defaults it to Preview. Production promotion remains exclusively
-          # in deploy-production.yml and is never called from this workflow.
-          test "${GITHUB_REF_NAME}" = "staging"
-          case "${GITHUB_SHA}" in
-            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) ;;
-            *) echo "::error::GITHUB_SHA is not a commit SHA"; exit 1 ;;
-          esac
-          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID_CUSTOMER; do
-            if [ -z "${!name:-}" ]; then
-              echo "::error::${name} is required in the staging environment"
-              exit 1
-            fi
-          done
-
-          payload="$(python3 - <<'PY'
-          import json
-          import os
-
-          print(json.dumps({
-              "name": "convergeo-customer",
-              "gitSource": {
-                  "type": "github",
-                  "org": "KaluMuso",
-                  "repo": "Convergeo",
-                  "ref": os.environ["GITHUB_REF_NAME"],
-              },
-          }))
-          PY
-          )"
-          deployment="$(curl --fail-with-body --retry 3 --retry-all-errors \
-            --connect-timeout 15 --max-time 60 \
-            -X POST "https://api.vercel.com/v13/deployments?teamId=${VERCEL_ORG_ID}" \
-            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
-            -H "Content-Type: application/json" \
-            --data "${payload}")"
-
-          deployment_id="$(DEPLOYMENT_JSON="${deployment}" python3 - <<'PY'
-          import json
-          import os
-          import sys
-
-          doc = json.loads(os.environ["DEPLOYMENT_JSON"])
-          deployment_id = doc.get("id") or doc.get("uid")
-          if not deployment_id:
-              print("::error::Vercel create response did not include a deployment id", file=sys.stderr)
-              raise SystemExit(1)
-          print(deployment_id)
-          PY
-          )"
-          echo "Created customer Preview deployment ${deployment_id} for staging SHA ${GITHUB_SHA:0:12}"
-
-          for attempt in $(seq 1 60); do
-            deployment="$(curl --fail-with-body --retry 3 --retry-all-errors \
-              --connect-timeout 15 --max-time 60 \
-              -H "Authorization: Bearer ${VERCEL_TOKEN}" \
-              "https://api.vercel.com/v13/deployments/${deployment_id}?teamId=${VERCEL_ORG_ID}")"
-            metadata="$(DEPLOYMENT_JSON="${deployment}" python3 - <<'PY'
-          import json
-          import os
-
-          doc = json.loads(os.environ["DEPLOYMENT_JSON"])
-          meta = doc.get("meta") or {}
-          values = (
-              doc.get("readyState") or doc.get("state") or "UNKNOWN",
-              doc.get("target") or "preview",
-              doc.get("projectId") or "",
-              meta.get("githubCommitSha") or meta.get("gitCommitSha") or "",
-              doc.get("url") or "",
-          )
-          print("\t".join(values))
-          PY
-            )"
-            IFS=$'\t' read -r ready_state target project_id commit_sha deployment_url <<< "${metadata}"
-            case "${target}" in
-              preview) ;;
-              *) echo "::error::staging deployment target must be preview, got ${target}"; exit 1 ;;
-            esac
-            if [ "${project_id}" != "${VERCEL_PROJECT_ID_CUSTOMER}" ]; then
-              echo "::error::deployment project does not match the customer project"
-              exit 1
-            fi
-            case "${ready_state}" in
-              READY)
-                if [ "${commit_sha}" != "${GITHUB_SHA}" ]; then
-                  echo "::error::deployment SHA mismatch: got ${commit_sha:-missing}, want ${GITHUB_SHA}"
-                  exit 1
-                fi
-                if [ -z "${deployment_url}" ]; then
-                  echo "::error::ready deployment has no URL"
-                  exit 1
-                fi
-                printf 'url=https://%s\n' "${deployment_url}" >> "${GITHUB_OUTPUT}"
-                printf 'deployment_id=%s\n' "${deployment_id}" >> "${GITHUB_OUTPUT}"
-                printf 'sha=%s\n' "${commit_sha}" >> "${GITHUB_OUTPUT}"
-                printf '%s\n' "${deployment}" > /tmp/staging-customer-preview.json
-                echo "Customer Preview READY: https://${deployment_url}"
-                exit 0
-                ;;
-              ERROR|CANCELED)
-                echo "::error::Vercel customer Preview finished ${ready_state}"
-                exit 1
-                ;;
-              *)
-                echo "Customer Preview ${ready_state} (attempt ${attempt}/60)"
-                sleep 5
-                ;;
-            esac
-          done
-
-          echo "::error::Timed out waiting for the customer Preview deployment"
-          exit 1
-
-      - name: Upload customer Preview evidence
+      - name: Upload Preview evidence (${{ matrix.portal }})
         uses: actions/upload-artifact@v7
         with:
-          name: staging-customer-preview
-          path: /tmp/staging-customer-preview.json
+          name: staging-preview-evidence-${{ matrix.portal }}
+          path: |
+            /tmp/staging-preview-${{ matrix.portal }}/evidence.json
+            /tmp/staging-preview-${{ matrix.portal }}/deployment.json
 
   smoke:
     name: Staging smoke + evidence
-    needs: [deploy-api-oci, migrate-supabase, configure-vercel-preview]
+    needs: [deploy-api-oci, migrate-supabase, prove-vercel-preview]
     if: ${{ always() && needs.deploy-api-oci.result == 'success' }}
     runs-on: ubuntu-latest
     environment: staging
     steps:
       - uses: actions/checkout@v7
+
+      - name: Require all three Preview proofs
+        if: ${{ needs.prove-vercel-preview.result != 'skipped' }}
+        run: |
+          set -euo pipefail
+          if [ "${{ needs.prove-vercel-preview.result }}" != "success" ]; then
+            echo "::error::one or more Vercel Preview proofs failed — staging frontend proof blocked"
+            exit 1
+          fi
+
+      - name: Download Preview evidence artifacts
+        if: ${{ needs.prove-vercel-preview.result == 'success' }}
+        uses: actions/download-artifact@v6
+        with:
+          pattern: staging-preview-evidence-*
+          merge-multiple: true
+          path: /tmp/preview-evidence-raw
+
+      - name: Normalize Preview evidence paths
+        if: ${{ needs.prove-vercel-preview.result == 'success' }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/preview-evidence
+          for portal in customer vendor admin; do
+            src="/tmp/preview-evidence-raw/staging-preview-evidence-${portal}/evidence.json"
+            if [ ! -f "${src}" ]; then
+              # download-artifact merge-multiple may flatten paths
+              alt="/tmp/preview-evidence-raw/${portal}/evidence.json"
+              if [ -f "${alt}" ]; then
+                src="${alt}"
+              else
+                found="$(find /tmp/preview-evidence-raw -path "*/${portal}/evidence.json" -print -quit 2>/dev/null || true)"
+                if [ -n "${found}" ]; then
+                  src="${found}"
+                fi
+              fi
+            fi
+            if [ ! -f "${src}" ]; then
+              echo "::error::missing evidence for ${portal}"
+              find /tmp/preview-evidence-raw -type f | sort || true
+              exit 1
+            fi
+            mkdir -p "/tmp/preview-evidence/${portal}"
+            cp "${src}" "/tmp/preview-evidence/${portal}/evidence.json"
+          done
 
       - name: Health + fingerprint
         env:
@@ -563,6 +479,18 @@ jobs:
         if: ${{ needs.migrate-supabase.result == 'success' }}
         run: echo "migrate-supabase job succeeded (0056 verified in that job)"
 
+      - name: Bundle staging SHA proof artifact
+        if: ${{ needs.prove-vercel-preview.result == 'success' }}
+        run: |
+          set -euo pipefail
+          migrate_result="${{ needs.migrate-supabase.result }}"
+          bash scripts/ci/staging-evidence-bundle.sh \
+            --candidate-sha "${{ github.sha }}" \
+            --preview-dir /tmp/preview-evidence \
+            --fingerprint /tmp/fingerprint.json \
+            --migrate-result "${migrate_result}" \
+            --output /tmp/staging-sha-proof.json
+
       - name: Upload smoke evidence
         uses: actions/upload-artifact@v7
         with:
@@ -571,6 +499,13 @@ jobs:
             /tmp/healthz.json
             /tmp/readyz.json
             /tmp/fingerprint.json
+
+      - name: Upload unified staging SHA proof
+        if: ${{ needs.prove-vercel-preview.result == 'success' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: staging-sha-proof
+          path: /tmp/staging-sha-proof.json
 
   # Explicit non-promotion marker — this workflow never deploys production.
   never-promote-production:
