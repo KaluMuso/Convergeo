@@ -1,21 +1,28 @@
 #!/usr/bin/env bash
 # Merge per-portal Preview evidence + API fingerprint into one staging proof artifact.
+# Fails before writing the artifact when identity proofs are inconsistent.
 #
 # Usage:
 #   bash scripts/ci/staging-evidence-bundle.sh \
 #     --candidate-sha "$GITHUB_SHA" \
 #     --preview-dir /tmp/preview-evidence \
 #     --fingerprint /tmp/fingerprint.json \
+#     --staging-supabase-project-id "$STAGING_SUPABASE_PROJECT_ID" \
 #     --migrate-result success \
 #     --output /tmp/staging-sha-proof.json
 #
 set -euo pipefail
 
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
 CANDIDATE_SHA=""
 PREVIEW_DIR=""
 FINGERPRINT_FILE=""
+STAGING_SUPABASE_PROJECT_ID=""
 MIGRATE_RESULT="skipped"
 API_DEPLOY_FILE=""
+EXPECTED_IMAGE_TAG=""
+ALLOW_MIGRATE_SKIPPED=0
 OUTPUT="/tmp/staging-sha-proof.json"
 
 while [[ $# -gt 0 ]]; do
@@ -23,11 +30,14 @@ while [[ $# -gt 0 ]]; do
     --candidate-sha) CANDIDATE_SHA="${2:-}"; shift 2 ;;
     --preview-dir) PREVIEW_DIR="${2:-}"; shift 2 ;;
     --fingerprint) FINGERPRINT_FILE="${2:-}"; shift 2 ;;
+    --staging-supabase-project-id) STAGING_SUPABASE_PROJECT_ID="${2:-}"; shift 2 ;;
     --migrate-result) MIGRATE_RESULT="${2:-}"; shift 2 ;;
     --api-deploy) API_DEPLOY_FILE="${2:-}"; shift 2 ;;
+    --expected-image-tag) EXPECTED_IMAGE_TAG="${2:-}"; shift 2 ;;
+    --allow-migrate-skipped) ALLOW_MIGRATE_SKIPPED=1; shift ;;
     --output) OUTPUT="${2:-}"; shift 2 ;;
     -h|--help)
-      sed -n '2,12p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0
       ;;
     *) echo "::error::unknown argument: $1" >&2; exit 1 ;;
@@ -38,6 +48,28 @@ if [ -z "${CANDIDATE_SHA}" ] || [ -z "${PREVIEW_DIR}" ]; then
   echo "::error::--candidate-sha and --preview-dir are required" >&2
   exit 1
 fi
+if [ -z "${STAGING_SUPABASE_PROJECT_ID}" ]; then
+  echo "::error::--staging-supabase-project-id is required" >&2
+  exit 1
+fi
+
+VALIDATE_ARGS=(
+  --candidate-sha "${CANDIDATE_SHA}"
+  --staging-supabase-project-id "${STAGING_SUPABASE_PROJECT_ID}"
+  --preview-dir "${PREVIEW_DIR}"
+  --migrate-result "${MIGRATE_RESULT}"
+)
+if [ -n "${FINGERPRINT_FILE}" ]; then
+  VALIDATE_ARGS+=(--fingerprint "${FINGERPRINT_FILE}")
+fi
+if [ -n "${EXPECTED_IMAGE_TAG}" ]; then
+  VALIDATE_ARGS+=(--expected-image-tag "${EXPECTED_IMAGE_TAG}")
+fi
+if [ "${ALLOW_MIGRATE_SKIPPED}" -eq 1 ]; then
+  VALIDATE_ARGS+=(--allow-migrate-skipped)
+fi
+
+python3 "${REPO_ROOT}/scripts/ci/validate_staging_proof.py" "${VALIDATE_ARGS[@]}"
 
 mkdir -p "$(dirname "${OUTPUT}")"
 
@@ -61,17 +93,10 @@ api_deploy_file = os.environ.get("API_DEPLOY_FILE", "")
 output = os.environ["OUTPUT"]
 
 portals = {}
-missing = []
 for portal in ("customer", "vendor", "admin"):
     path = preview_dir / portal / "evidence.json"
-    if not path.is_file():
-        missing.append(portal)
-        continue
     with path.open(encoding="utf-8") as fh:
         portals[portal] = json.load(fh)
-
-if missing:
-    raise SystemExit(f"::error::missing preview evidence for: {', '.join(missing)}")
 
 fingerprint = None
 if fingerprint_file and Path(fingerprint_file).is_file():

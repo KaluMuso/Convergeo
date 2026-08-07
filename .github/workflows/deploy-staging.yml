@@ -146,27 +146,23 @@ jobs:
           # Applies repository migrations (including 0056) to the linked staging project.
           supabase db push --include-all
 
-      - name: Verify migration 0056 present
+      - name: Reconcile repository migrations against remote ledger
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           STAGING_SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
-          SEND_SMS_HOOK_SECRET: ${{ secrets.SEND_SMS_HOOK_SECRET }}
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+          STAGING_SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
+          STAGING_SUPABASE_REGION: ${{ vars.STAGING_SUPABASE_REGION || 'eu-west-1' }}
         run: |
           set -euo pipefail
-          if [ -z "${SEND_SMS_HOOK_SECRET:-}" ]; then
-            echo "::error::SEND_SMS_HOOK_SECRET secret is required in the staging environment"
-            exit 1
+          if [ -n "${STAGING_SUPABASE_DB_URL}" ]; then
+            export SUPABASE_DB_URL="${STAGING_SUPABASE_DB_URL}"
+          else
+            export SUPABASE_DB_URL="postgresql://postgres.${STAGING_SUPABASE_PROJECT_ID}:${STAGING_SUPABASE_DB_PASSWORD}@aws-0-${STAGING_SUPABASE_REGION}.pooler.supabase.com:5432/postgres"
           fi
-          if ! printf '%s' "${SEND_SMS_HOOK_SECRET}" | grep -Eq '^v1,whsec_[A-Za-z0-9+/=_-]{32,}$'; then
-            echo "::error::SEND_SMS_HOOK_SECRET must match v1,whsec_<base64-secret>"
-            exit 1
-          fi
-          # List remote migrations and require 0056.
+          bash scripts/ci/check-db-reachable.sh
           supabase migration list | tee /tmp/migration-list.txt
-          if ! grep -E '0056' /tmp/migration-list.txt; then
-            echo "::error::migration 0056 not present on staging after push"
-            exit 1
-          fi
+          bash scripts/ci/reconcile-staging-migrations.sh
 
       - name: Generate types against staging
         env:
@@ -389,7 +385,7 @@ jobs:
 
   smoke:
     name: Staging smoke + evidence
-    needs: [deploy-api-oci, migrate-supabase, prove-vercel-preview]
+    needs: [build-api-image, deploy-api-oci, migrate-supabase, prove-vercel-preview]
     if: ${{ always() && needs.deploy-api-oci.result == 'success' }}
     runs-on: ubuntu-latest
     environment: staging
@@ -446,6 +442,9 @@ jobs:
           STAGING_API_BASE_URL: ${{ secrets.STAGING_API_BASE_URL }}
           STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
           STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+          PROD_SUPABASE_PROJECT_REF: ${{ env.PROD_SUPABASE_PROJECT_REF }}
+          CANDIDATE_SHA: ${{ github.sha }}
+          EXPECTED_IMAGE_TAG: ${{ needs.build-api-image.outputs.image_tag }}
         run: |
           set -euo pipefail
           BASE="${STAGING_API_BASE_URL:-https://${STAGING_API_HOST}}"
@@ -460,36 +459,50 @@ jobs:
           curl -fsS --max-time 30 "${BASE}/fingerprint" | tee /tmp/fingerprint.json
           python3 - <<'PY'
           import json, os, sys
+          sys.path.insert(0, "scripts/ci")
+          from validate_staging_proof import ProofValidationError, validate_api_fingerprint
+
           fp = json.load(open("/tmp/fingerprint.json"))
-          prod_ref = os.environ["PROD_SUPABASE_PROJECT_REF"]
-          if fp.get("env") != "staging":
-              print(f"::error::fingerprint env={fp.get('env')!r} want staging")
+          try:
+              validate_api_fingerprint(
+                  fp,
+                  candidate_sha=os.environ["CANDIDATE_SHA"],
+                  staging_supabase_project_id=os.environ["STAGING_SUPABASE_PROJECT_ID"],
+                  expected_image_tag=os.environ.get("EXPECTED_IMAGE_TAG") or None,
+              )
+          except ProofValidationError as exc:
+              print(f"::error::{exc}")
               sys.exit(1)
-          if fp.get("supabase_project_ref") == prod_ref:
-              print("::error::fingerprint supabase_project_ref is production")
-              sys.exit(1)
-          staging_id = os.environ.get("STAGING_SUPABASE_PROJECT_ID", "")
-          if staging_id and fp.get("supabase_project_ref") not in {staging_id, "unknown"}:
-              # unknown allowed only if URL unparseable; prefer match
-              print(f"::warning::fingerprint ref {fp.get('supabase_project_ref')} != secret project id")
-          print("OK fingerprint", {k: fp.get(k) for k in ("env", "git_sha", "image_tag", "supabase_project_ref")})
+          print(
+              "OK fingerprint",
+              {k: fp.get(k) for k in ("env", "git_sha", "image_tag", "supabase_project_ref")},
+          )
           PY
 
       - name: Migration status evidence
         if: ${{ needs.migrate-supabase.result == 'success' }}
-        run: echo "migrate-supabase job succeeded (0056 verified in that job)"
+        run: echo "migrate-supabase job succeeded (repository-vs-remote reconciliation verified in that job)"
 
       - name: Bundle staging SHA proof artifact
         if: ${{ needs.prove-vercel-preview.result == 'success' }}
+        env:
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
         run: |
           set -euo pipefail
           migrate_result="${{ needs.migrate-supabase.result }}"
-          bash scripts/ci/staging-evidence-bundle.sh \
-            --candidate-sha "${{ github.sha }}" \
-            --preview-dir /tmp/preview-evidence \
-            --fingerprint /tmp/fingerprint.json \
-            --migrate-result "${migrate_result}" \
+          bundle_args=(
+            --candidate-sha "${{ github.sha }}"
+            --preview-dir /tmp/preview-evidence
+            --fingerprint /tmp/fingerprint.json
+            --staging-supabase-project-id "${STAGING_SUPABASE_PROJECT_ID}"
+            --expected-image-tag "${{ needs.build-api-image.outputs.image_tag }}"
+            --migrate-result "${migrate_result}"
             --output /tmp/staging-sha-proof.json
+          )
+          if [ "${migrate_result}" = "skipped" ]; then
+            bundle_args+=(--allow-migrate-skipped)
+          fi
+          bash scripts/ci/staging-evidence-bundle.sh "${bundle_args[@]}"
 
       - name: Upload smoke evidence
         uses: actions/upload-artifact@v7
