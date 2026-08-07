@@ -64,6 +64,7 @@
       "subheadline": "Fikeni abakashita mu Zambia yonse with products, services, events, supplies, and your business profile — all from one vendor app.",
       "primaryCta": "Yendeni pa invite ya seller",
       "secondaryCta": "⚠ Lolesheni commissions",
+      "existingSellerCta": "Mwalishita kale? Isuleni vendor portal",
       "freeTierNote": "⚠ Invited sellers get the free tier (up to 30 listings) after admin approval. Public signup is not open."
     },
     "valueProps": {
@@ -633,7 +634,9 @@
     },
     "actions": {
       "save": "Save profile",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "viewStorefront": "Lolesheni storefront ya pa public",
+      "viewStorefrontUnavailable": "Public storefront preview is unavailable in this environment."
     },
     "success": {
       "saved": "Profile saved. Changes appear on your public page within a minute."

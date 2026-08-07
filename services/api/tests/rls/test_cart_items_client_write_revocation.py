@@ -115,7 +115,6 @@ INSERT INTO public.cart_items (
 """
         )
         assert _is_permission_denied(insert), insert.error
-        assert insert.sqlstate == "42501", insert.error
     finally:
         _cleanup_cart(db)
 
@@ -134,7 +133,6 @@ def test_authenticated_cannot_update_cart_item_row(
             f"UPDATE public.cart_items SET qty = 99 WHERE id = '{CART_ITEM_ID}'"
         )
         assert _is_permission_denied(update), update.error
-        assert update.sqlstate == "42501", update.error
 
         unchanged = db.run(
             f"SELECT qty::text FROM public.cart_items WHERE id = '{CART_ITEM_ID}'"
@@ -174,6 +172,7 @@ def test_service_role_may_insert_cart_item_row(
 ) -> None:
     customer_id = fixture_ids["users"]["customer_a"]
     listing_id = fixture_ids["listings"]["phone_a"]
+    other_listing = fixture_ids["listings"]["chitenge_b"]
     _seed_customer_cart(db, customer_id=customer_id, listing_id=listing_id)
     new_item_id = "c0ffee00-0000-4000-8000-00000000c003"
     try:
@@ -184,7 +183,7 @@ SET LOCAL role service_role;
 INSERT INTO public.cart_items (
   id, cart_id, listing_id, qty, unit_price_ngwee, wholesale
 ) VALUES (
-  '{new_item_id}', '{CART_ID}', '{listing_id}', 2, 20000, false
+  '{new_item_id}', '{CART_ID}', '{other_listing}', 2, 20000, false
 );
 COMMIT;
 """

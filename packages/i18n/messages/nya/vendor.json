@@ -64,6 +64,7 @@
       "subheadline": "Fikani ogula mu Zambia yonse with products, services, events, supplies, and your business profile — all from one vendor app.",
       "primaryCta": "Pitirizani ndi invite ya seller",
       "secondaryCta": "⚠ Onani commissions",
+      "existingSellerCta": "Mukugulitsa kale? Tsegulani vendor portal",
       "freeTierNote": "⚠ Invited sellers get the free tier (up to 30 listings) after admin approval. Public signup is not open."
     },
     "valueProps": {
@@ -633,7 +634,9 @@
     },
     "actions": {
       "save": "Save profile",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "viewStorefront": "Onani storefront ya pa public",
+      "viewStorefrontUnavailable": "Public storefront preview is unavailable in this environment."
     },
     "success": {
       "saved": "Profile saved. Changes appear on your public page within a minute."
