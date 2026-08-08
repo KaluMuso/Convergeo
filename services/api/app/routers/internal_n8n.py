@@ -621,3 +621,24 @@ async def abandoned_carts_tick(
         entity_key="cart_id",
     )
     return _tick_envelope(items, enqueued=enqueued, skipped=skipped)
+
+
+@router.post(
+    "/preferred-badge/tick",
+    dependencies=[Depends(require_internal_n8n_token)],
+)
+async def preferred_badge_tick(
+    supabase: Annotated[Any, Depends(get_supabase_client)],
+) -> dict[str, Any]:
+    """Recompute preferred-seller badges for all active vendors (D9)."""
+    from app.services.kyc.badge import PreferredBadgeJob
+
+    changes = PreferredBadgeJob(supabase).run()
+    granted = sum(1 for change in changes if change.current and not change.previous)
+    revoked = sum(1 for change in changes if not change.current and change.previous)
+    return {
+        "ok": True,
+        "evaluated": len(changes),
+        "granted": granted,
+        "revoked": revoked,
+    }

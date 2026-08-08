@@ -456,13 +456,27 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
     );
   }
 
-  const [comparison, related] = await Promise.all([fetchComparison(slug), fetchRelated(slug)]);
-
   const product = result.data;
+  const [comparison, related, reviewsForSeo] = await Promise.all([
+    fetchComparison(slug),
+    fetchRelated(slug),
+    fetchReviews(product.id),
+  ]);
   const selectedListing = selectListing(product.listings, listingId);
   const singleVendor = product.listing_count === 1;
   const specRows = specRowsFromJson(product.spec);
   const images = galleryImages(product, selectedListing, product.name);
+  const reviewAggregate =
+    reviewsForSeo && reviewsForSeo.length > 0
+      ? {
+          ratingValue: Number(
+            (
+              reviewsForSeo.reduce((sum, review) => sum + review.rating, 0) / reviewsForSeo.length
+            ).toFixed(1),
+          ),
+          reviewCount: reviewsForSeo.length,
+        }
+      : null;
   const productJsonLdInput = {
     name: product.name,
     slug: product.slug,
@@ -475,6 +489,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
       inStock: listing.in_stock,
       sellerName: listing.vendor.display_name,
     })),
+    aggregateRating: reviewAggregate,
   };
   const productJsonLd = canBuildProductJsonLd(productJsonLdInput)
     ? buildProductJsonLd(productJsonLdInput)
@@ -508,6 +523,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           starEmpty: t("reviews.starEmpty"),
           distributionHeading: t("reviews.distributionHeading"),
           distributionRowAria: t("reviews.distributionRowAria"),
+          verifiedPurchase: t("reviews.verifiedPurchase"),
           report: {
             cta: t("reviews.report.cta"),
             heading: t("reviews.report.heading"),
@@ -655,6 +671,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             rating: t("comparison.rating"),
             conditionNew: t("comparison.conditionNew"),
             conditionRefurbished: t("comparison.conditionRefurbished"),
+            conditionUsed: t("pdp.condition.used"),
             usingFallbackLocation: t("comparison.usingFallbackLocation"),
             lowestPriceBadge: t("comparison.lowestPriceBadge"),
           }}
@@ -725,6 +742,23 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
               generic: t("pdp.requestQuote.errors.generic"),
               signInRequired: t("pdp.requestQuote.errors.signInRequired"),
             },
+          }}
+          reportListingLabels={{
+            cta: t("pdp.reportListing.cta"),
+            heading: t("pdp.reportListing.heading"),
+            reasonLegend: t("pdp.reportListing.reasonLegend"),
+            submit: t("pdp.reportListing.submit"),
+            cancel: t("pdp.reportListing.cancel"),
+            success: t("pdp.reportListing.success"),
+            signedOut: t("pdp.reportListing.signedOut"),
+            error: t("pdp.reportListing.error"),
+            reasons: [
+              { value: "misleading", label: t("pdp.reportListing.reasons.misleading") },
+              { value: "prohibited", label: t("pdp.reportListing.reasons.prohibited") },
+              { value: "counterfeit", label: t("pdp.reportListing.reasons.counterfeit") },
+              { value: "spam", label: t("pdp.reportListing.reasons.spam") },
+              { value: "other", label: t("pdp.reportListing.reasons.other") },
+            ],
           }}
           comparePageLabel={t("comparePage.entryCta")}
         />

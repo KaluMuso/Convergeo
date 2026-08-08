@@ -333,6 +333,23 @@
         "signInRequired": "Sign in to request a quote."
       }
     },
+    "reportListing": {
+      "cta": "Report listing",
+      "heading": "Report this listing",
+      "reasonLegend": "What is wrong with this listing?",
+      "submit": "Submit report",
+      "cancel": "Cancel",
+      "success": "Thanks — our moderation team will review it.",
+      "signedOut": "Sign in to report a listing.",
+      "error": "Could not submit this report. Please try again.",
+      "reasons": {
+        "misleading": "Misleading or inaccurate",
+        "prohibited": "Prohibited item",
+        "counterfeit": "Suspected counterfeit",
+        "spam": "Spam or duplicate",
+        "other": "Other concern"
+      }
+    },
     "trust": {
       "preferredSeller": "Preferred seller — {name}",
       "seller": "Sold by {name}",
@@ -415,6 +432,7 @@
     "starEmpty": "☆",
     "distributionHeading": "Rating breakdown",
     "distributionRowAria": "{star}★: {count}",
+    "verifiedPurchase": "Verified purchase",
     "report": {
       "cta": "Report",
       "heading": "Report this review",

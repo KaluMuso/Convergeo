@@ -204,6 +204,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/n8n/kyc-stalled/tick": INTERNAL_CRON,
     "POST /internal/n8n/low-stock/tick": INTERNAL_CRON,
     "POST /internal/n8n/payout-failures/tick": INTERNAL_CRON,
+    "POST /internal/n8n/preferred-badge/tick": INTERNAL_CRON,
     "POST /internal/n8n/review-requests/tick": INTERNAL_CRON,
     "POST /internal/order-jobs/auto-confirm": INTERNAL_CRON,
     "POST /internal/order-jobs/auto-release": INTERNAL_CRON,

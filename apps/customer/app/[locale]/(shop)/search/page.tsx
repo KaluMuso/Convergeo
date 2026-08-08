@@ -12,9 +12,11 @@ import { BackToTop } from "../_components/back-to-top";
 import { BrowseDiscoveryChips } from "../_components/browse-discovery-chips";
 import { fetchCategoriesResult, type CategoryRow } from "../_components/merch-data";
 import { NearMeToggle } from "../_components/search/near-me-toggle";
+import { PopularSearches } from "../_components/search/popular-searches";
 import { RecentSearches } from "../_components/search/recent-searches";
 import {
   ResultsTabs,
+  type SearchKindTotals,
   type SearchResponse,
   type TabCounts,
 } from "../_components/search/results-tabs";
@@ -28,7 +30,7 @@ import {
   type SearchFilterState,
 } from "../_components/search/search-filters";
 import { SearchInput } from "../_components/search/search-input";
-import { searchTabKinds, type SearchKind } from "../_components/search/search-kinds";
+import { type SearchKind } from "../_components/search/search-kinds";
 import { SearchMobileFilterDrawer } from "../_components/search/search-mobile-filter-drawer";
 import { SearchResultsSkeleton } from "../_components/search/search-results-skeleton";
 import { SearchUnavailablePanel } from "../_components/search/search-unavailable-panel";
@@ -80,6 +82,7 @@ async function fetchSearch(params: {
   filters?: SearchFilterState;
   lat?: number | null;
   lng?: number | null;
+  includeKindTotals?: boolean;
 }): Promise<SearchResponse | null> {
   const baseUrl = resolveApiBaseUrl();
   if (!baseUrl) {
@@ -93,6 +96,9 @@ async function fetchSearch(params: {
   });
   if (params.kind) {
     searchParams.set("kind", params.kind);
+  }
+  if (params.includeKindTotals) {
+    searchParams.set("include_kind_totals", "true");
   }
   if (params.filters) {
     appendSearchFiltersToApiParams(searchParams, params.filters);
@@ -125,29 +131,14 @@ function buildCategoryLabelMap(
   return Object.fromEntries(options.map((option) => [option.path, option.label]));
 }
 
-async function fetchTabCounts(query: string): Promise<TabCounts | null> {
-  // Must use the shared (non-client) SEARCH_KINDS — see CUST-SEARCH-01 / digest 3273208722.
-  const kinds = searchTabKinds();
-  const responses = await Promise.all(
-    kinds.map(async (kind) => {
-      const response = await fetchSearch({
-        q: query,
-        kind: kind === "all" ? undefined : kind,
-        page: 1,
-        pageSize: 1,
-      });
-      if (response === null) {
-        return null;
-      }
-      return [kind, response.total] as const;
-    }),
-  );
-
-  if (responses.some((entry) => entry === null)) {
-    return null;
-  }
-
-  return Object.fromEntries(responses as Array<readonly [keyof TabCounts, number]>) as TabCounts;
+function kindTotalsToTabCounts(totals: SearchKindTotals): TabCounts {
+  return {
+    all: totals.all,
+    products: totals.products,
+    services: totals.services,
+    events: totals.events,
+    vendors: totals.vendors,
+  };
 }
 
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
@@ -242,20 +233,21 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
       : [];
   const categoryLabelMap = buildCategoryLabelMap(searchCategoryOptions);
 
-  const [searchResponse, tabCounts] =
+  const searchResponse =
     normalized.status === "ok"
-      ? await Promise.all([
-          fetchSearch({
-            q: query,
-            kind: activeKind === "all" ? undefined : activeKind,
-            page,
-            filters: showCategoryFilters ? filterState : undefined,
-            lat: userLat,
-            lng: userLng,
-          }),
-          fetchTabCounts(query),
-        ])
-      : [null, null];
+      ? await fetchSearch({
+          q: query,
+          kind: activeKind === "all" ? undefined : activeKind,
+          page,
+          filters: showCategoryFilters ? filterState : undefined,
+          lat: userLat,
+          lng: userLng,
+          includeKindTotals: page === 1,
+        })
+      : null;
+
+  const tabCounts =
+    searchResponse?.kind_totals != null ? kindTotalsToTabCounts(searchResponse.kind_totals) : null;
 
   const view = resolveSearchPageView({
     normalized,
@@ -449,6 +441,10 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
           remove: t("recent.remove"),
         }}
       />
+
+      {!query ? (
+        <PopularSearches locale={locale} className="mb-6" labels={{ title: t("popular.title") }} />
+      ) : null}
 
       {view.status === "unavailable" ? (
         <SearchUnavailablePanel

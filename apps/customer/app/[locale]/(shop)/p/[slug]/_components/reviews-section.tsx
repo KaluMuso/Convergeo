@@ -34,6 +34,7 @@ export type ReviewsSectionLabels = {
   distributionHeading: string;
   /** Per-row accessible label; `{star}` and `{count}` are interpolated. */
   distributionRowAria: string;
+  verifiedPurchase: string;
   report: ReportReviewLabels;
 };
 
@@ -189,12 +190,19 @@ export function ReviewsSection({
           <ul className="space-y-4">
             {reviews.map((review) => (
               <li key={review.id} className="space-y-3 rounded border border-border bg-surface p-4">
-                <StarRow
-                  rating={review.rating}
-                  ariaLabel={labels.starsAria.replace("{rating}", String(review.rating))}
-                  starFilled={labels.starFilled}
-                  starEmpty={labels.starEmpty}
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <StarRow
+                    rating={review.rating}
+                    ariaLabel={labels.starsAria.replace("{rating}", String(review.rating))}
+                    starFilled={labels.starFilled}
+                    starEmpty={labels.starEmpty}
+                  />
+                  {review.order_item_id ? (
+                    <span className="rounded-pill bg-bg-2 px-2 py-0.5 text-xs font-medium text-text-2">
+                      {labels.verifiedPurchase}
+                    </span>
+                  ) : null}
+                </div>
                 {review.body ? <p className="text-sm text-display-ink">{review.body}</p> : null}
                 {review.photos.length > 0 ? (
                   <div className="flex flex-wrap gap-2">

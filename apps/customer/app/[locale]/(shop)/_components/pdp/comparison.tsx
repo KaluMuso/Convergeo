@@ -25,6 +25,7 @@ import { VendorBlock } from "./vendor-block";
 
 import type { ContactVendorLabels } from "./contact-vendor-button";
 import type { PdpGalleryLabelStrings } from "./gallery-labels";
+import type { ReportListingLabels } from "./report-listing";
 import type { RequestQuoteLabels } from "./request-quote-button";
 
 /** Lazy — keeps first-load JS on /p/[slug] within the bundle regression budget. */
@@ -37,6 +38,10 @@ const RequestQuoteButton = dynamic(
   () => import("./request-quote-button").then((mod) => mod.RequestQuoteButton),
   { ssr: false },
 );
+
+const ReportListing = dynamic(() => import("./report-listing").then((mod) => mod.ReportListing), {
+  ssr: false,
+});
 
 export const LUSAKA_CBD_LAT = -15.4167;
 export const LUSAKA_CBD_LNG = 28.2833;
@@ -80,6 +85,7 @@ export type ComparisonLabels = {
   rating: string;
   conditionNew: string;
   conditionRefurbished: string;
+  conditionUsed: string;
   usingFallbackLocation: string;
   /** Shown on the cheapest offer card/row when multi-seller. */
   lowestPriceBadge: string;
@@ -150,11 +156,25 @@ export type PdpInteractiveBodyProps = {
   /** When false, the Contact Vendor CTA is omitted (fail-closed — BLK-202). */
   contactVendorEnabled: boolean;
   requestQuoteLabels: RequestQuoteLabels;
+  reportListingLabels: ReportListingLabels;
   comparePageLabel: string;
 };
 
 export function shouldShowComparison(listingCount: number): boolean {
   return listingCount > 1;
+}
+
+function conditionLabel(
+  condition: ListingCondition,
+  labels: Pick<ComparisonLabels, "conditionNew" | "conditionRefurbished" | "conditionUsed">,
+): string {
+  if (condition === "new") {
+    return labels.conditionNew;
+  }
+  if (condition === "used") {
+    return labels.conditionUsed;
+  }
+  return labels.conditionRefurbished;
 }
 
 export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -423,11 +443,7 @@ export function Comparison({
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <ConditionBadge
                     condition={listing.condition}
-                    label={
-                      listing.condition === "new"
-                        ? labels.conditionNew
-                        : labels.conditionRefurbished
-                    }
+                    label={conditionLabel(listing.condition, labels)}
                   />
                   <span className="text-xs text-text-2">{distanceLabel}</span>
                   <FulfillmentLogisticsPills
@@ -498,11 +514,7 @@ export function Comparison({
                   <td className="px-4 py-3 align-top">
                     <ConditionBadge
                       condition={listing.condition}
-                      label={
-                        listing.condition === "new"
-                          ? labels.conditionNew
-                          : labels.conditionRefurbished
-                      }
+                      label={conditionLabel(listing.condition, labels)}
                     />
                   </td>
                   <td className="px-4 py-3 align-top text-text-2">{distanceLabel}</td>
@@ -555,6 +567,7 @@ export function PdpInteractiveBody({
   contactVendorLabels,
   contactVendorEnabled,
   requestQuoteLabels,
+  reportListingLabels,
   comparePageLabel,
 }: PdpInteractiveBodyProps) {
   const t = useTranslations("catalog");
@@ -766,6 +779,7 @@ export function PdpInteractiveBody({
               labels={contactVendorLabels}
             />
           ) : null}
+          <ReportListing listingId={selectedListing.id} labels={reportListingLabels} />
         </div>
       ) : null}
 

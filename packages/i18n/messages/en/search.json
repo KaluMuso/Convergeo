@@ -11,6 +11,9 @@
     "clear": "Clear all",
     "remove": "Remove {term}"
   },
+  "popular": {
+    "title": "Popular on Vergeo"
+  },
   "tabs": {
     "ariaLabel": "Filter results by type",
     "all": "All",

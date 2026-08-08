@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useSession } from "@vergeo/auth/use-session";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -127,7 +127,9 @@ describe("ContactVendorButton", () => {
     );
 
     await user.click(screen.getByTestId("pdp-contact-vendor-cta"));
-    fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByTestId("pdp-contact-vendor-dialog")).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByTestId("pdp-contact-vendor-dialog")).not.toBeInTheDocument();
+    });
   });
 });
