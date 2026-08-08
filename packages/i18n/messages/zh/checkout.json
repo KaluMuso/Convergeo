@@ -100,6 +100,7 @@
       "landmarkLabel": "地标和区域",
       "landmarkPlaceholder": "例如：Woodlands Stage 2，教堂附近",
       "landmarkHelp": "描述您的位置——我们将匹配配送区域。",
+      "addressLabel": "结账",
       "zoneFee": "配送费：{amount}",
       "zoneFree": "免费配送",
       "zoneLabel": "区域：{zone}",

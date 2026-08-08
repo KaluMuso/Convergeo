@@ -37,16 +37,18 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
   await requireAuthenticatedAccount(locale);
 
   const baseMessages = await getMessages();
-  const [accountMessages, commonMessages, navMessages] = await Promise.all([
+  const [accountMessages, commonMessages, navMessages, ordersMessages] = await Promise.all([
     loadNamespace(locale as Locale, "account"),
     loadNamespace(locale as Locale, "common"),
     loadNamespace(locale as Locale, "nav"),
+    loadNamespace(locale as Locale, "orders"),
   ]);
   const messages = {
     ...baseMessages,
     account: accountMessages,
     common: commonMessages,
     nav: navMessages,
+    orders: ordersMessages,
   } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "account" });
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
@@ -158,7 +160,10 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
            * explicitly — otherwise every key renders as MISSING_MESSAGE. The
            * jobs/tickets subtrees add their own `services`/`events` providers.
            */}
-          <NextIntlClientProvider locale={locale} messages={{ account: accountMessages }}>
+          <NextIntlClientProvider
+            locale={locale}
+            messages={{ account: accountMessages, orders: ordersMessages, nav: navMessages }}
+          >
             {children}
           </NextIntlClientProvider>
         </main>

@@ -100,6 +100,7 @@
       "landmarkLabel": "Point de repère et quartier",
       "landmarkPlaceholder": "ex. Woodlands Stage 2, près de l'église",
       "landmarkHelp": "Décrivez où vous êtes — nous trouverons une zone de livraison.",
+      "addressLabel": "Commande",
       "zoneFee": "Frais de livraison : {amount}",
       "zoneFree": "Livraison gratuite",
       "zoneLabel": "Zone : {zone}",

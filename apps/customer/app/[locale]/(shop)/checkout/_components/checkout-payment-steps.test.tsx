@@ -238,7 +238,33 @@ describe("StepReview", () => {
     expect(onPlaceOrder).toHaveBeenCalledTimes(1);
 
     resolveOrder?.();
+    // Success keeps the control busy — navigation to payment-cod / payment-confirming
+    // owns the next truthful state (never a local "paid" claim).
+    await waitFor(() => expect(placeOrderButton).toBeDisabled());
+    expect(placeOrderButton).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("re-enables place order after a failed submission", async () => {
+    const user = userEvent.setup();
+    const onPlaceOrder = vi.fn().mockRejectedValue(new Error("network hiccup"));
+
+    render(
+      <StepReview
+        locale="en"
+        session={sampleSession}
+        totals={totalsAboveCap}
+        payment={{ method: "card", rail: null, payer_number: null }}
+        labels={reviewLabels}
+        onPlaceOrder={onPlaceOrder}
+      />,
+    );
+
+    await user.click(screen.getByRole("checkbox", { name: reviewLabels.consentLabel }));
+    const placeOrderButton = screen.getByTestId("checkout-place-order");
+    await user.click(placeOrderButton);
+
     await waitFor(() => expect(placeOrderButton).not.toBeDisabled());
+    expect(screen.getByRole("alert")).toHaveTextContent("network hiccup");
   });
 
   it("shows honest unavailable state when place-order handler is missing", () => {

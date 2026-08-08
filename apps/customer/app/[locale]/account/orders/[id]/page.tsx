@@ -22,6 +22,10 @@ import {
   extractDispatchFromEvents,
   type DispatchOrderEvent,
 } from "./_components/dispatch-timeline";
+import { ConfirmReceivedBlock } from "./_components/confirm-received";
+import { ReportProblemBlock } from "./_components/report-problem";
+import { ReviewPromptBlock } from "./_components/review-prompt";
+import { OrderPostDeliveryActions } from "./_components/order-post-delivery-actions";
 
 import type { Metadata } from "next";
 
@@ -197,6 +201,85 @@ export default async function AccountOrderDetailPage({ params }: PageProps) {
           download: t("invoice.download"),
           stubHelp: t("invoice.stubHelp"),
           unavailable: t("invoice.unavailable"),
+        }}
+      />
+
+      <ConfirmReceivedBlock
+        orderId={order.id}
+        accessToken={accessToken}
+        status={order.status}
+        labels={{
+          title: t("confirm.title"),
+          body: t("confirm.body"),
+          trust: t("confirm.trust"),
+          button: t("confirm.button"),
+          confirming: t("confirm.confirming"),
+          done: t("confirm.done"),
+          doneBody: t("confirm.doneBody"),
+          error: t("confirm.error"),
+        }}
+      />
+
+      <ReportProblemBlock
+        orderId={order.id}
+        accessToken={accessToken}
+        status={order.status}
+        labels={{
+          title: t("report.title"),
+          body: t("report.body"),
+          categoryLabel: t("report.categoryLabel"),
+          categoryFaulty: t("report.categoryFaulty"),
+          categoryWrong: t("report.categoryWrong"),
+          categoryNotDelivered: t("report.categoryNotDelivered"),
+          categoryOther: t("report.categoryOther"),
+          descriptionLabel: t("report.descriptionLabel"),
+          descriptionPlaceholder: t("report.descriptionPlaceholder"),
+          evidenceLabel: t("report.evidenceLabel"),
+          evidenceHelp: t("report.evidenceHelp"),
+          addEvidence: t("report.addEvidence"),
+          uploading: t("report.uploading"),
+          submit: t("report.submit"),
+          submitting: t("report.submitting"),
+          successLane1: t("report.successLane1"),
+          successDispute: t("report.successDispute"),
+          successSupport: t("report.successSupport"),
+          successGuidance: t("report.successGuidance"),
+          error: t("report.error"),
+          requiredDescription: t("report.requiredDescription"),
+        }}
+      />
+
+      <ReviewPromptBlock
+        orderId={order.id}
+        accessToken={accessToken}
+        status={order.status}
+        labels={{
+          title: t("reviewPrompt.title"),
+          body: t("reviewPrompt.body"),
+          itemLabel: t("reviewPrompt.itemLabel"),
+          ratingLabel: t("reviewPrompt.ratingLabel"),
+          starsAria: t("reviewPrompt.starsAria"),
+          bodyLabel: t("reviewPrompt.bodyLabel"),
+          bodyPlaceholder: t("reviewPrompt.bodyPlaceholder"),
+          submit: t("reviewPrompt.submit"),
+          submitting: t("reviewPrompt.submitting"),
+          success: t("reviewPrompt.success"),
+          error: t("reviewPrompt.error"),
+          editNotice: t("reviewPrompt.editNotice"),
+          loading: t("reviewPrompt.loading"),
+          starFilled: t("reviewPrompt.starFilled"),
+          starEmpty: t("reviewPrompt.starEmpty"),
+        }}
+      />
+
+      <OrderPostDeliveryActions
+        locale={locale}
+        orderId={order.id}
+        status={order.status}
+        labels={{
+          actionsTitle: t("detail.actionsTitle"),
+          requestReturn: t("detail.requestReturn"),
+          openDispute: t("detail.openDispute"),
         }}
       />
 

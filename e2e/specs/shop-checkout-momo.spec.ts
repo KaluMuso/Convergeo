@@ -74,9 +74,12 @@ test.describe("shop · checkout · momo", () => {
       return;
     }
 
-    // Drive the sandbox MoMo push to auto-approval → confirmation.
+    // Drive the sandbox MoMo push to auto-approval → confirming surface
+    // (payment-outcome honesty: never infer a local payment-success).
     await completeSandboxMomoPush(page);
-    await expect(page.getByTestId("payment-success")).toBeVisible();
+    await expect(
+      page.getByTestId("payment-confirming").or(page.getByTestId("ussd-wait")),
+    ).toBeVisible();
 
     // ── ENV-GATED: WhatsApp mock receipt assertion ───────────────────────────
     if (whatsappMockReady()) {

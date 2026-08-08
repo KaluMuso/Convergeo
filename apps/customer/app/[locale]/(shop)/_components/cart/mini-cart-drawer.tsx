@@ -45,10 +45,20 @@ export type CartLine = {
 
 export type VendorGroup = {
   vendor_id: string;
+  /** Present when cart API resolves seller display name (optional). */
+  vendor_name?: string | null;
   items: CartLine[];
   subtotal_ngwee: number;
   delivery_eligible: boolean;
 };
+
+/** Prefer API vendor_name; fall back to truncated vendor_id. */
+export function vendorGroupLabel(
+  group: Pick<VendorGroup, "vendor_id" | "vendor_name">,
+): string {
+  const name = group.vendor_name?.trim();
+  return name && name.length > 0 ? name : group.vendor_id.slice(0, 8);
+}
 
 export type CartResponse = {
   cart_id: string;
@@ -174,6 +184,11 @@ function emitStore() {
 function setStoreState(patch: Partial<CartStoreState>) {
   storeState = { ...storeState, ...patch };
   emitStore();
+}
+
+/** Test-only store reset/patch — not for production UI. */
+export function setStoreStateForTests(patch: Partial<CartStoreState>) {
+  setStoreState(patch);
 }
 
 function subscribeStore(listener: CartStoreListener): () => void {
@@ -483,7 +498,7 @@ type MiniCartDrawerProps = {
 };
 
 export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
-  const { cart, drawerOpen } = useCartStore();
+  const { cart, drawerOpen, lastAddedMessage } = useCartStore();
   const { closeDrawer } = useCartActions();
   const count = getCartItemCount(cart);
 
@@ -492,60 +507,76 @@ export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
   }, []);
 
   return (
-    <BottomSheet
-      open={drawerOpen}
-      onClose={closeDrawer}
-      title={labels.title}
-      data-testid="mini-cart-drawer"
-      snapHeight="70vh"
-    >
-      {cart && count > 0 ? (
-        <div className="flex flex-col gap-4 p-4">
-          <p className="text-sm text-text-2" data-testid="mini-cart-count">
-            {labels.itemCount.replace("{count}", String(count))}
-          </p>
-          <ul className="flex flex-col gap-3">
-            {cart.items.map((item) => (
-              <li key={item.id} className="flex items-start justify-between gap-3 text-sm">
-                <span className="text-text">{item.title_override ?? item.listing_id}</span>
-                <span className="shrink-0 font-mono text-text">
-                  {formatK(item.line_total_ngwee)}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <div className="flex items-center justify-between border-t border-border pt-3">
-            <span className="font-medium text-text">{labels.subtotal}</span>
-            <span className="font-mono font-semibold text-text" data-testid="mini-cart-subtotal">
-              {formatK(cart.subtotal_ngwee)}
-            </span>
-          </div>
-          <div className="flex flex-col gap-2">
-            <LinkButton
-              href={`/${locale}/checkout`}
-              variant="primary"
-              size="lg"
-              className="w-full"
-              onClick={closeDrawer}
-              LinkComponent={Link}
-            >
-              {labels.checkoutCta}
-            </LinkButton>
-            <LinkButton
-              href={`/${locale}/cart`}
-              variant="secondary"
-              className="w-full"
-              onClick={closeDrawer}
-              LinkComponent={Link}
-            >
-              {labels.viewCart}
-            </LinkButton>
-          </div>
+    <>
+      <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="mini-cart-live">
+        {lastAddedMessage ?? ""}
+      </p>
+      <BottomSheet
+        open={drawerOpen}
+        onClose={closeDrawer}
+        title={labels.title}
+        data-testid="mini-cart-drawer"
+        snapHeight="70vh"
+      >
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing motion-reduce:transition-none"
+            aria-label={labels.close}
+            data-testid="mini-cart-close"
+            onClick={closeDrawer}
+          >
+            {labels.close}
+          </button>
         </div>
-      ) : (
-        <MiniCartEmptyState locale={locale} labels={labels} onBrowse={closeDrawer} />
-      )}
-    </BottomSheet>
+        {cart && count > 0 ? (
+          <div className="flex flex-col gap-4 p-4">
+            <p className="text-sm text-text-2" data-testid="mini-cart-count" aria-live="polite">
+              {labels.itemCount.replace("{count}", String(count))}
+            </p>
+            <ul className="flex flex-col gap-3">
+              {cart.items.map((item) => (
+                <li key={item.id} className="flex items-start justify-between gap-3 text-sm">
+                  <span className="text-text">{item.title_override ?? item.listing_id}</span>
+                  <span className="shrink-0 font-mono text-text">
+                    {formatK(item.line_total_ngwee)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <div className="flex items-center justify-between border-t border-border pt-3">
+              <span className="font-medium text-text">{labels.subtotal}</span>
+              <span className="font-mono font-semibold text-text" data-testid="mini-cart-subtotal">
+                {formatK(cart.subtotal_ngwee)}
+              </span>
+            </div>
+            <div className="flex flex-col gap-2">
+              <LinkButton
+                href={`/${locale}/checkout`}
+                variant="primary"
+                size="lg"
+                className="w-full min-h-11"
+                onClick={closeDrawer}
+                LinkComponent={Link}
+              >
+                {labels.checkoutCta}
+              </LinkButton>
+              <LinkButton
+                href={`/${locale}/cart`}
+                variant="secondary"
+                className="w-full min-h-11"
+                onClick={closeDrawer}
+                LinkComponent={Link}
+              >
+                {labels.viewCart}
+              </LinkButton>
+            </div>
+          </div>
+        ) : (
+          <MiniCartEmptyState locale={locale} labels={labels} onBrowse={closeDrawer} />
+        )}
+      </BottomSheet>
+    </>
   );
 }
 

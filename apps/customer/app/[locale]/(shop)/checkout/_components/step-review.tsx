@@ -67,6 +67,7 @@ export function StepReview({
   onPlaceOrder,
 }: StepReviewProps) {
   const errorRef = useRef<HTMLParagraphElement | null>(null);
+  const submittingRef = useRef(false);
   const nextId = useId();
   const [consent, setConsent] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -112,22 +113,27 @@ export function StepReview({
       setErrorMessage(labels.placeOrderUnavailable);
       return;
     }
-    if (loading) {
+    // Sync + async guards — prevent double-submit while place-order is in flight
+    // or while navigation to a truthful pending/COD surface is starting.
+    if (loading || submittingRef.current) {
       return;
     }
     const placeOrder = onPlaceOrder;
+    submittingRef.current = true;
     setErrorMessage(null);
     setLoading(true);
     try {
       await Promise.resolve(placeOrder());
+      // Keep loading/busy on success: placeOrder navigates to payment-cod /
+      // payment-confirming (never a local "paid" claim). Re-enable only on error.
     } catch (error) {
+      submittingRef.current = false;
+      setLoading(false);
       const message =
         error instanceof Error && error.message.trim()
           ? error.message
           : labels.placeOrderUnavailable;
       setErrorMessage(message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -246,10 +252,11 @@ export function StepReview({
       <Button
         type="button"
         size="lg"
-        className="w-full"
+        className="w-full min-h-11"
         loading={loading}
         loadingLabel={labels.placingOrder}
         disabled={!consent || loading || !placeOrderAvailable}
+        aria-busy={loading}
         data-testid="checkout-place-order"
         onClick={() => {
           void handleSubmit();

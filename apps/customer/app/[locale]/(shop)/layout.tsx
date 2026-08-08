@@ -13,6 +13,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { TopUtilityBarSlot } from "../_components/top-utility-bar-slot";
 
 import { BottomNavClient } from "./_components/bottom-nav-client";
+import { CartHostSlot } from "./_components/cart/cart-host-slot";
 import InstallPrompt from "./_components/install-prompt";
 import { MobileHeaderSearch } from "./_components/mobile-header-search";
 import { ServiceInfoBar } from "./_components/service-info-bar";
@@ -28,21 +29,24 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
   setRequestLocale(locale);
 
   const baseMessages = await getMessages();
-  const [catalogMessages, searchMessages, navMessages] = await Promise.all([
+  const [catalogMessages, searchMessages, navMessages, checkoutMessages] = await Promise.all([
     loadNamespace(locale as Locale, "catalog"),
     loadNamespace(locale as Locale, "search"),
     loadNamespace(locale as Locale, "nav"),
+    loadNamespace(locale as Locale, "checkout"),
   ]);
   const messages = {
     ...baseMessages,
     catalog: catalogMessages,
     search: searchMessages,
     nav: navMessages,
+    checkout: checkoutMessages,
   } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "nav" });
   const tCatalog = createTranslator({ locale, messages, namespace: "catalog" });
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
   const tSearch = createTranslator({ locale, messages, namespace: "search" });
+  const tCheckout = createTranslator({ locale, messages, namespace: "checkout" });
   const bottomItems = [
     {
       key: "home",
@@ -126,6 +130,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           account: t("shop.account"),
           cart: t("shop.cart"),
           cartWithCount: t("shop.cartWithCount"),
+          openCart: tCheckout("cart.openCart"),
           searchInput: {
             placeholder: t("shop.searchPlaceholder"),
             submit: t("shop.searchSubmit"),
@@ -154,6 +159,27 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         ariaLabel={t("shop.bottomAriaLabel")}
         locale={locale}
         suppliesItem={suppliesItem}
+      />
+      <CartHostSlot
+        locale={locale}
+        labels={{
+          title: tCheckout("cart.miniCartTitle"),
+          close: tCheckout("cart.miniCartClose"),
+          itemCount: tCheckout("cart.itemCount"),
+          subtotal: tCheckout("cart.subtotal"),
+          total: tCheckout("cart.total"),
+          viewCart: tCheckout("cart.viewCart"),
+          checkoutCta: tCheckout("cart.checkoutCta"),
+          emptyTitle: tCheckout("cart.emptyTitle"),
+          emptyBody: tCheckout("cart.emptyBody"),
+          emptyTrust: {
+            escrow: tCheckout("cart.emptyTrustEscrow"),
+            delivery: tCheckout("cart.emptyTrustDelivery"),
+            pickup: tCheckout("cart.emptyTrustPickup"),
+          },
+          browseCta: tCheckout("cart.browseCta"),
+          openCart: tCheckout("cart.openCart"),
+        }}
       />
       {/* Lets a returning PWA user explicitly activate a waiting worker. */}
       <InstallPrompt />

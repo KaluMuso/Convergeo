@@ -56,6 +56,8 @@ export type AppHeaderProps = {
   cartHref?: string;
   cartLabel?: string;
   cartCountLabel?: string;
+  /** When set, replaces the default cart link (e.g. mini-cart trigger). */
+  cartSlot?: ReactNode;
   accountLabel?: string;
   accountHref?: string;
   /** When set, replaces the default account link (e.g. account menu dropdown). */
@@ -147,6 +149,7 @@ export function AppHeader({
   cartHref = "#",
   cartLabel = "",
   cartCountLabel,
+  cartSlot,
   accountLabel,
   accountHref = "#",
   accountMenuSlot,
@@ -210,7 +213,7 @@ export function AppHeader({
     </LinkComponent>
   );
 
-  const cartButton = features.showCart ? (
+  const defaultCartButton = (
     <LinkComponent
       href={cartHref}
       className="relative inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing lg:min-w-0"
@@ -227,7 +230,8 @@ export function AppHeader({
       ) : null}
       <span className={compact ? "sr-only lg:not-sr-only" : undefined}>{cartLabel}</span>
     </LinkComponent>
-  ) : null;
+  );
+  const cartButton = features.showCart ? (cartSlot ?? defaultCartButton) : null;
 
   const cartLiveRegion =
     features.showCart && cartStatusText ? (
