@@ -2,7 +2,7 @@
   "title": "Your orders",
   "empty": {
     "title": "No orders yet",
-    "body": "When you buy from Vergeo5 vendors, your orders and tracking will appear here.",
+    "body": "When you buy from Convergeo vendors, your orders and tracking will appear here.",
     "cta": "Start shopping"
   },
   "list": {
@@ -44,7 +44,7 @@
   "timeline": {
     "title": "Order progress",
     "placed": "Order placed",
-    "paymentHeld": "You paid — held by Vergeo5",
+    "paymentHeld": "You paid — held by Convergeo",
     "paymentCod": "Pay the vendor on delivery",
     "confirmed": "Vendor confirmed your order",
     "processing": "Vendor is preparing your order",
@@ -56,7 +56,7 @@
     "refunded": "Refund to your mobile money"
   },
   "escrow": {
-    "held": "Your payment is held safely by Vergeo5 until you receive your order.",
+    "held": "Your payment is held safely by Convergeo until you receive your order.",
     "released": "Funds were released to the vendor after fulfilment.",
     "refunded": "A refund is being returned to your mobile money wallet.",
     "cod": "Pay the vendor in cash or mobile money when you receive the order."
@@ -80,8 +80,8 @@
   },
   "confirm": {
     "title": "Received your order?",
-    "body": "Confirming releases payment from Vergeo5 escrow to the vendor. Only confirm when you have received everything.",
-    "trust": "Held by Vergeo5 → Released to vendor",
+    "body": "Confirming releases payment from Convergeo escrow to the vendor. Only confirm when you have received everything.",
+    "trust": "Held by Convergeo → Released to vendor",
     "button": "Confirm received",
     "confirming": "Confirming…",
     "done": "You confirmed receipt",
@@ -125,7 +125,7 @@
   "dispute": {
     "title": "Order dispute",
     "body": "We are holding your payment in escrow while we investigate with the vendor.",
-    "holdTrust": "Held by Vergeo5 — escrow is paused until this dispute is resolved",
+    "holdTrust": "Held by Convergeo — escrow is paused until this dispute is resolved",
     "statusLabel": "Dispute status",
     "statusDisplay": "Dispute status: {status}",
     "evidenceLabel": "Your evidence",
