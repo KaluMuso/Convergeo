@@ -18,7 +18,7 @@
     "categoriesLoading": "Ikuyenda ma-categories…",
     "categoriesEmpty": "Ma-categories salipo pano. Yesaninso posachedwa.",
     "viewAllCategories": "Onani ma-categories onse",
-    "featuredTitle": "Zatsopano pa Vergeo5",
+    "featuredTitle": "Zatsopano pa Convergeo",
     "featuredPromo": "Fananani ogulitsa ndikulipira ndi escrow pa intaneti.",
     "featuredPromoCta": "Sakani msika",
     "directory": "Malo a ogulitsa",
@@ -30,10 +30,10 @@
   },
   "marketing": {
     "ariaLabel": "Navigation ya marketing",
-    "about": "Za Vergeo5",
+    "about": "Za Convergeo",
     "contact": "Titandizireni",
     "help": "Thandizo",
-    "sell": "Gulitsani pa Vergeo5",
+    "sell": "Gulitsani pa Convergeo",
     "signIn": "Lowani"
   },
   "account": {

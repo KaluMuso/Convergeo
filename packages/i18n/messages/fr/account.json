@@ -16,7 +16,7 @@
   },
   "business": {
     "title": "Mode entreprise",
-    "description": "Vérifiez votre entreprise pour débloquer les prix de gros et les commandes en volume sur Vergeo5.",
+    "description": "Vérifiez votre entreprise pour débloquer les prix de gros et les commandes en volume sur Convergeo.",
     "statusLabel": "Statut",
     "status": {
       "none": "Non demandé",
@@ -50,7 +50,7 @@
   },
   "profile": {
     "title": "Profil",
-    "description": "Modifiez la façon dont nous vous saluons et la langue que vous préférez sur Vergeo5.",
+    "description": "Modifiez la façon dont nous vous saluons et la langue que vous préférez sur Convergeo.",
     "nameLabel": "Nom affiché",
     "namePlaceholder": "Votre nom",
     "localeLabel": "Langue",
@@ -99,7 +99,7 @@
   },
   "preferences": {
     "title": "Préférences",
-    "description": "Gérez l'affichage et la façon dont Vergeo5 vous contacte au sujet des commandes, des billets et des mises à jour du compte.",
+    "description": "Gérez l'affichage et la façon dont Convergeo vous contacte au sujet des commandes, des billets et des mises à jour du compte.",
     "themeTitle": "Affichage",
     "themeDescription": "Choisissez clair, sombre, ou suivre l'appareil. Par défaut : système.",
     "themeLight": "Clair",
@@ -134,16 +134,16 @@
     "retentionNote": "Les commandes, les paiements et les documents fiscaux sont conservés sous forme anonymisée pendant au moins sept ans, comme l'exige la loi zambienne. Les écritures comptables ne sont jamais supprimées.",
     "export": {
       "title": "Exporter mes données",
-      "description": "Téléchargez une copie des données personnelles que Vergeo5 détient à votre sujet — votre profil, vos adresses, vos commandes, vos billets et vos avis — sous forme de fichier JSON, comme le prévoit la loi zambienne sur la protection des données.",
+      "description": "Téléchargez une copie des données personnelles que Convergeo détient à votre sujet — votre profil, vos adresses, vos commandes, vos billets et vos avis — sous forme de fichier JSON, comme le prévoit la loi zambienne sur la protection des données.",
       "button": "Demander l'export des données",
       "loading": "Préparation de votre export…",
       "success": "Votre export est prêt — téléchargez-le maintenant. Le lien expire au bout d'un court instant.",
       "error": "Nous n'avons pas pu préparer votre export. Veuillez réessayer.",
-      "policyLink": "Lire la politique de confidentialité de Vergeo5"
+      "policyLink": "Lire la politique de confidentialité de Convergeo"
     },
     "delete": {
       "title": "Supprimer mon compte",
-      "description": "Fermez définitivement votre compte Vergeo5. Votre identifiant est supprimé et vos informations personnelles sont anonymisées. Pour protéger votre compte, la suppression nécessite une phrase de confirmation saisie et un code à usage unique envoyé à votre numéro vérifié.",
+      "description": "Fermez définitivement votre compte Convergeo. Votre identifiant est supprimé et vos informations personnelles sont anonymisées. Pour protéger votre compte, la suppression nécessite une phrase de confirmation saisie et un code à usage unique envoyé à votre numéro vérifié.",
       "warning": "Cette action est irréversible. Votre profil, vos adresses enregistrées et vos préférences seront définitivement supprimés, et vous perdrez l'accès à votre historique de commandes. Les commandes, les paiements et les documents fiscaux sont conservés sous forme anonymisée, comme l'exige la loi zambienne.",
       "confirmPhraseLabel": "Pour confirmer, saisissez SUPPRIMER MON COMPTE",
       "confirmPhraseHint": "SUPPRIMER MON COMPTE",
@@ -176,7 +176,7 @@
   },
   "hub": {
     "title": "Aperçu du compte",
-    "description": "Gérez commandes, produits enregistrés, livraison et l’affichage de Vergeo5.",
+    "description": "Gérez commandes, produits enregistrés, livraison et l’affichage de Convergeo.",
     "backToShop": "Retour aux achats",
     "ordersTitle": "Commandes",
     "ordersBody": "Suivez livraison, retrait et paiement pour chaque vendeur.",

@@ -36,7 +36,7 @@
   },
   "detail": {
     "metaTitle": "{title} — Services",
-    "metaDescription": "{title} mu {area}. Lolesha portfolio no kufwaya quote pa Vergeo5.",
+    "metaDescription": "{title} mu {area}. Lolesha portfolio no kufwaya quote pa Convergeo.",
     "about": "Pali iyi service",
     "whatsIncluded": "Ifyo filimo",
     "includeMarker": "✓",
@@ -167,7 +167,7 @@
     "back": "← Bwelako ku imilimo",
     "empty": "Takuli quotes sha active pano — providers basangwa ukusuka mu nsiku imo.",
     "unknownProvider": "Provider",
-    "preferredBadge": "Vergeo5 Preferred",
+    "preferredBadge": "Convergeo Preferred",
     "rating": "{rating}★ ({count, plural, one {# review} other {# reviews}})",
     "validUntil": "Valid ukufika {date}",
     "status": {
@@ -200,7 +200,7 @@
     "totalLabel": "Total value ya umulimo",
     "depositLabel": "Deposit ilefwailwa pano",
     "balanceLabel": "Balance pa completion",
-    "escrowNote": "Deposit yenu yalisungwa na Vergeo5 no kufumya ku provider fye nga umulimo wapokelwa.",
+    "escrowNote": "Deposit yenu yalisungwa na Convergeo no kufumya ku provider fye nga umulimo wapokelwa.",
     "confirmCta": "Lipila deposit ya {amount}",
     "submitting": "Ilesetup deposit yenu…",
     "cancel": "Te pano",
@@ -236,7 +236,7 @@
       "confirming": "Ilekonfirma…",
       "confirmed": "Yakonfirmwa. Provider wenu alipilwa.",
       "awaitingProvider": "Tulolesha provider wenu akamarke umulimo ugapwa.",
-      "escrowNote": "Mwalipila → Yasungwa na Vergeo5 → Yafumya ku provider nga mwakonfirma.",
+      "escrowNote": "Mwalipila → Yasungwa na Convergeo → Yafumya ku provider nga mwakonfirma.",
       "reviewUnlocked": "Natotela! Mungaleka review pa uyu provider.",
       "errors": {
         "notOwner": "Mungakonfirma imilimo yenu fye.",
@@ -279,7 +279,7 @@
     "priceLabel": "Fixed price",
     "depositLabel": "Deposit ilefwailwa pano",
     "balanceLabel": "Balance pa completion",
-    "escrowNote": "Mwalipila → Yasungwa na Vergeo5 → Yafumya ku provider nga mwakonfirma ati umulimo wapwa.",
+    "escrowNote": "Mwalipila → Yasungwa na Convergeo → Yafumya ku provider nga mwakonfirma ati umulimo wapwa.",
     "bookCta": "Booka no kulipila deposit ya {amount}",
     "submitting": "Ilebooka…",
     "errors": {

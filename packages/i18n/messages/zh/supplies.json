@@ -4,7 +4,7 @@
   "results": "{count, plural, one {#个批发商品} other {#个批发商品}}",
   "t2Notice": {
     "title": "仅限 T2 认证卖家",
-    "body": "Vergeo5 上的批发供应由 T2 认证商家发布。仅经营零售的商家无法发布阶梯价格商品。"
+    "body": "Convergeo 上的批发供应由 T2 认证商家发布。仅经营零售的商家无法发布阶梯价格商品。"
   },
   "sort": {
     "label": "排序方式",

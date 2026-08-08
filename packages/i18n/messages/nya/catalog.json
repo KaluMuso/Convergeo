@@ -17,16 +17,16 @@
       "sampleListing": "Listing ya sample"
     },
     "hero": {
-      "escrowLine": "Chitetezo cha ogula ndi escrow pamene payment ya online ilipo — ikusungidwa ndi Vergeo5 mpaka kutumiza, kenako yatsimikizidwa.",
+      "escrowLine": "Chitetezo cha ogula ndi escrow pamene payment ya online ilipo — ikusungidwa ndi Convergeo mpaka kutumiza, kenako yatsimikizidwa.",
       "escrowStep1": "Mwalipira",
-      "escrowStep2": "Ikusungidwa ndi Vergeo5",
+      "escrowStep2": "Ikusungidwa ndi Convergeo",
       "escrowStep3": "Yatsimikizidwa pa kutumiza",
       "eyebrow": "Marketplace ya Zambia",
       "fallbackSubtitle": "Fananizani ogulitsa, konzeni delivery ya Lusaka kapena pickup nationwide, ndi pezani zomwe zili pafupi.",
       "fallbackTitle": "Gulani zinthu, services, ndi events mu Zambia",
       "placeholder": {
         "subtitle": "Storefront yanu ya config idzaonekera apa pamene merchandising slots ziyamba.",
-        "title": "Takulandirani ku Vergeo5"
+        "title": "Takulandirani ku Convergeo"
       },
       "primaryCta": "Yambani kuyang'ana",
       "secondaryCta": "Phunzirani za kugulitsa",
@@ -56,7 +56,7 @@
       }
     },
     "meta": {
-      "description": "Gulani zinthu, bookani services, ndi pezani events mu Zambia pa Vergeo5.",
+      "description": "Gulani zinthu, bookani services, ndi pezani events mu Zambia pa Convergeo.",
       "title": "Pezani Zambia"
     },
     "serviceBar": {
@@ -65,7 +65,7 @@
     },
     "rails": {
       "departmentTitle": "Zatsopano mu {category}",
-      "newTitle": "Zatsopano pa Vergeo5",
+      "newTitle": "Zatsopano pa Convergeo",
       "services": {
         "fromPrice": "Kuyambira",
         "noReviews": "Provider watsopano",
@@ -92,11 +92,11 @@
     "sellCta": {
       "body": "Signup ya public sinayatsebe. Ogulitsa oitanidwa atha kupitiriza onboarding; ena atha kuphunzira momwe seller beta imagwirira ntchito.",
       "cta": "Phunzirani za kugulitsa",
-      "title": "Kugulitsa pa Vergeo5 ndi kwa invite pano"
+      "title": "Kugulitsa pa Convergeo ndi kwa invite pano"
     },
     "trust": {
-      "ariaLabel": "Chifukwa chiyeni mugule pa Vergeo5",
-      "escrow": "Pamene payment ya online ilipo, Vergeo5 imasunga ndalama yanu mpaka kutumiza",
+      "ariaLabel": "Chifukwa chiyeni mugule pa Convergeo",
+      "escrow": "Pamene payment ya online ilipo, Convergeo imasunga ndalama yanu mpaka kutumiza",
       "fulfillment": "Delivery ya Lusaka kapena pickup nationwide pamene listing imalola",
       "returns": "Malangizo a returns ndi refunds pa ma-order oyenera",
       "sellers": "Ma-profiles a ogulitsa ndi status yomwe mungaone"
@@ -154,8 +154,8 @@
     "unavailableBody": "Sitinathe kutenga chinthu ichi pano. Onani connection yanu ndiye yesaninso.",
     "unavailableRetry": "Yesaninso",
     "meta": {
-      "descriptionFallback": "Gulani {name} pa Vergeo5",
-      "descriptionWithPrice": "Fananirani mitengo ya {name} kuchokera kwa {count, plural, one {# wogulitsa} other {# ogulitsa}} pa Vergeo5. Kuyambira {price}.",
+      "descriptionFallback": "Gulani {name} pa Convergeo",
+      "descriptionWithPrice": "Fananirani mitengo ya {name} kuchokera kwa {count, plural, one {# wogulitsa} other {# ogulitsa}} pa Convergeo. Kuyambira {price}.",
       "notFoundTitle": "Chinthu sichipezeka"
     },
     "overview": {
@@ -181,7 +181,7 @@
     },
     "trust": {
       "delivery": "Delivery ilipo kwa wogulitsa uyu",
-      "escrow": "Pamene payment ya online ilipo, Vergeo5 imasunga ndalama yanu mpaka kutumiza. COD ingaperekedwe pa ma-order oyenera.",
+      "escrow": "Pamene payment ya online ilipo, Convergeo imasunga ndalama yanu mpaka kutumiza. COD ingaperekedwe pa ma-order oyenera.",
       "pickup": "Pickup ilipo kwa wogulitsa uyu",
       "preferredSeller": "Wogulitsa preferred — {name}",
       "returns": "Returns ndi refunds",
@@ -197,7 +197,7 @@
     "contactVendor": {
       "cta": "Lankhulani ndi wogulitsa",
       "dialogTitle": "Funsani za chinthu ichi",
-      "dialogHint": "Uthenga wanu ukapita kwa {vendor} pa listing iyi. Mayankho akhalabe pa Vergeo5 — sitigawana nambala ya foni mu uthenga.",
+      "dialogHint": "Uthenga wanu ukapita kwa {vendor} pa listing iyi. Mayankho akhalabe pa Convergeo — sitigawana nambala ya foni mu uthenga.",
       "messageLabel": "Funso lanu",
       "messagePlaceholder": "Mwachitsanzo: Chilipo mu stock? Mungathe kutumiza ku Kabulonga?",
       "submit": "Tumizani uthenga",

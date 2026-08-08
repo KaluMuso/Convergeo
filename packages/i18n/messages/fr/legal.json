@@ -20,19 +20,19 @@
   },
   "terms": {
     "title": "Conditions d'utilisation",
-    "description": "Comment Vergeo5 fonctionne pour les acheteurs et les vendeurs en Zambie — séquestre, paiements et règles de la plateforme.",
+    "description": "Comment Convergeo fonctionne pour les acheteurs et les vendeurs en Zambie — séquestre, paiements et règles de la plateforme.",
     "sections": {
       "introduction": {
         "heading": "Introduction",
-        "body": "Vergeo5 (vergeo5.com) est une place de marché conçue mobile d'abord, reliant acheteurs et vendeurs partout en Zambie. En utilisant notre application client, vous acceptez ces conditions. Si vous n'êtes pas d'accord, veuillez ne pas utiliser la plateforme."
+        "body": "Convergeo (vergeo5.com) est une place de marché conçue mobile d'abord, reliant acheteurs et vendeurs partout en Zambie. En utilisant notre application client, vous acceptez ces conditions. Si vous n'êtes pas d'accord, veuillez ne pas utiliser la plateforme."
       },
       "marketplace": {
         "heading": "Rôle de la place de marché",
-        "body": "Vergeo5 est une plateforme de découverte et de commerce. Les vendeurs publient eux-mêmes leurs produits, services, événements et fournitures. Nous facilitons les paiements et le séquestre, mais nous ne sommes pas le vendeur sauf mention explicite contraire."
+        "body": "Convergeo est une plateforme de découverte et de commerce. Les vendeurs publient eux-mêmes leurs produits, services, événements et fournitures. Nous facilitons les paiements et le séquestre, mais nous ne sommes pas le vendeur sauf mention explicite contraire."
       },
       "escrow": {
         "heading": "Séquestre et paiements",
-        "body": "Les paiements des clients sont collectés via Lenco et conservés sur un compte séquestre géré par Lenco jusqu'à la confirmation de la livraison ou la clôture de la fenêtre de litige. Vergeo5 tient un grand livre de plateforme faisant foi pour les versements et paiements — nous ne mutualisons pas les fonds des clients sur notre propre compte bancaire. Le mobile money (MTN, Airtel, Zamtel) et les paiements par carte sont pris en charge lorsqu'ils sont disponibles."
+        "body": "Les paiements des clients sont collectés via Lenco et conservés sur un compte séquestre géré par Lenco jusqu'à la confirmation de la livraison ou la clôture de la fenêtre de litige. Convergeo tient un grand livre de plateforme faisant foi pour les versements et paiements — nous ne mutualisons pas les fonds des clients sur notre propre compte bancaire. Le mobile money (MTN, Airtel, Zamtel) et les paiements par carte sont pris en charge lorsqu'ils sont disponibles."
       },
       "pricing": {
         "heading": "Tarification et devise",
@@ -44,15 +44,15 @@
       },
       "tax": {
         "heading": "Régime fiscal",
-        "body": "Vergeo5 démarre sous le régime de la Turnover Tax (5 %, en dessous du seuil de K5M) avec une facturation séquentielle conforme ZRA dès le premier jour. La TVA est désactivée au lancement ; factures et reçus sont conçus pour l'activation future de Smart Invoice VSDC lorsque l'immatriculation à la TVA s'appliquera."
+        "body": "Convergeo démarre sous le régime de la Turnover Tax (5 %, en dessous du seuil de K5M) avec une facturation séquentielle conforme ZRA dès le premier jour. La TVA est désactivée au lancement ; factures et reçus sont conçus pour l'activation future de Smart Invoice VSDC lorsque l'immatriculation à la TVA s'appliquera."
       },
       "prohibited": {
         "heading": "Usage interdit",
-        "body": "Vous ne pouvez pas utiliser Vergeo5 à des fins illégales, frauduleuses, de harcèlement, ni pour publier des catégories interdites (voir notre Contrat vendeur). Nous pouvons suspendre les comptes qui enfreignent ces règles."
+        "body": "Vous ne pouvez pas utiliser Convergeo à des fins illégales, frauduleuses, de harcèlement, ni pour publier des catégories interdites (voir notre Contrat vendeur). Nous pouvons suspendre les comptes qui enfreignent ces règles."
       },
       "liability": {
         "heading": "Responsabilité",
-        "body": "Dans la mesure permise par le droit zambien, Vergeo5 n'est pas responsable des pertes indirectes. Notre rôle se limite aux services de plateforme décrits ici. Les litiges entre acheteurs et vendeurs sont traités via notre processus de retours et de litiges."
+        "body": "Dans la mesure permise par le droit zambien, Convergeo n'est pas responsable des pertes indirectes. Notre rôle se limite aux services de plateforme décrits ici. Les litiges entre acheteurs et vendeurs sont traités via notre processus de retours et de litiges."
       },
       "changes": {
         "heading": "Modifications",
@@ -66,15 +66,15 @@
   },
   "privacy": {
     "title": "Politique de confidentialité",
-    "description": "Comment Vergeo5 collecte, utilise et protège vos données personnelles en vertu de la loi zambienne sur la protection des données.",
+    "description": "Comment Convergeo collecte, utilise et protège vos données personnelles en vertu de la loi zambienne sur la protection des données.",
     "sections": {
       "introduction": {
         "heading": "Introduction",
-        "body": "Vergeo5 respecte votre vie privée. Cette politique explique quelles données nous collectons, pourquoi nous les collectons, combien de temps nous les conservons, et vos droits en vertu du Data Protection Act zambien (DPA)."
+        "body": "Convergeo respecte votre vie privée. Cette politique explique quelles données nous collectons, pourquoi nous les collectons, combien de temps nous les conservons, et vos droits en vertu du Data Protection Act zambien (DPA)."
       },
       "controller": {
         "heading": "Responsable du traitement",
-        "body": "Vergeo5 exploite vergeo5.com et est le responsable du traitement des données personnelles traitées via l'application client, sous réserve du droit zambien applicable."
+        "body": "Convergeo exploite vergeo5.com et est le responsable du traitement des données personnelles traitées via l'application client, sous réserve du droit zambien applicable."
       },
       "dataCollected": {
         "heading": "Données que nous collectons",
@@ -110,7 +110,7 @@
       },
       "children": {
         "heading": "Mineurs",
-        "body": "Vergeo5 ne s'adresse pas aux enfants de moins de 16 ans. Nous ne collectons pas sciemment de données auprès d'enfants."
+        "body": "Convergeo ne s'adresse pas aux enfants de moins de 16 ans. Nous ne collectons pas sciemment de données auprès d'enfants."
       },
       "changes": {
         "heading": "Modifications",
@@ -124,15 +124,15 @@
   },
   "returns": {
     "title": "Retours et remboursements",
-    "description": "Politique de retours à deux volets pour les commandes Vergeo5 — articles défectueux et retours optionnels pour changement d'avis.",
+    "description": "Politique de retours à deux volets pour les commandes Convergeo — articles défectueux et retours optionnels pour changement d'avis.",
     "sections": {
       "introduction": {
         "heading": "Aperçu",
-        "body": "Vergeo5 protège les acheteurs avec une politique de retours claire à deux volets, alignée sur les attentes de la CCPC. Le volet 1 couvre les articles défectueux, erronés ou non conformes à la description. Le volet 2 couvre les retours pour changement d'avis lorsque le vendeur y consent par annonce."
+        "body": "Convergeo protège les acheteurs avec une politique de retours claire à deux volets, alignée sur les attentes de la CCPC. Le volet 1 couvre les articles défectueux, erronés ou non conformes à la description. Le volet 2 couvre les retours pour changement d'avis lorsque le vendeur y consent par annonce."
       },
       "lane1": {
         "heading": "Volet 1 — Défectueux, erroné ou non conforme à la description",
-        "body": "Signalez le problème dans les 48 heures suivant la livraison avec des photos à l'appui, via la page de votre commande ou le support. Vous recevez un remboursement intégral, frais de livraison inclus, depuis le séquestre. Les frais de retour sont à la charge du vendeur. En cas de désaccord entre acheteur et vendeur, l'administration Vergeo5 arbitre le litige."
+        "body": "Signalez le problème dans les 48 heures suivant la livraison avec des photos à l'appui, via la page de votre commande ou le support. Vous recevez un remboursement intégral, frais de livraison inclus, depuis le séquestre. Les frais de retour sont à la charge du vendeur. En cas de désaccord entre acheteur et vendeur, l'administration Convergeo arbitre le litige."
       },
       "lane1Steps": {
         "heading": "Volet 1 — Comment signaler",
@@ -166,15 +166,15 @@
   },
   "vendorAgreement": {
     "title": "Contrat vendeur",
-    "description": "Taux de commission, versements et règles d'annonces pour vendre sur Vergeo5 en Zambie.",
+    "description": "Taux de commission, versements et règles d'annonces pour vendre sur Convergeo en Zambie.",
     "sections": {
       "introduction": {
         "heading": "Introduction",
-        "body": "En vous inscrivant comme vendeur sur Vergeo5, vous acceptez ce Contrat vendeur ainsi que nos Conditions d'utilisation et notre Politique de confidentialité. Ce document couvre les commissions, les versements et ce que vous pouvez publier."
+        "body": "En vous inscrivant comme vendeur sur Convergeo, vous acceptez ce Contrat vendeur ainsi que nos Conditions d'utilisation et notre Politique de confidentialité. Ce document couvre les commissions, les versements et ce que vous pouvez publier."
       },
       "commissions": {
         "heading": "Taux de commission",
-        "body": "Vergeo5 facture une commission par catégorie sur les ventes réussies. Les taux sont affichés avant la publication d'une annonce. Les événements gratuits sont facturés à 0 % de commission. Les taux faisant foi figurent dans la table de configuration de la plateforme et peuvent être mis à jour trimestriellement."
+        "body": "Convergeo facture une commission par catégorie sur les ventes réussies. Les taux sont affichés avant la publication d'une annonce. Les événements gratuits sont facturés à 0 % de commission. Les taux faisant foi figurent dans la table de configuration de la plateforme et peuvent être mis à jour trimestriellement."
       },
       "payouts": {
         "heading": "Versements et règlement",

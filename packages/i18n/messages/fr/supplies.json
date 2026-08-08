@@ -4,7 +4,7 @@
   "results": "{count, plural, one {# annonce de vente en gros} other {# annonces de vente en gros}}",
   "t2Notice": {
     "title": "Vendeurs vérifiés T2 uniquement",
-    "body": "Les fournitures en gros sur Vergeo5 sont proposées par des entreprises vérifiées T2. Les vendeurs au détail uniquement ne peuvent pas publier d'annonces à prix par palier."
+    "body": "Les fournitures en gros sur Convergeo sont proposées par des entreprises vérifiées T2. Les vendeurs au détail uniquement ne peuvent pas publier d'annonces à prix par palier."
   },
   "sort": {
     "label": "Trier par",

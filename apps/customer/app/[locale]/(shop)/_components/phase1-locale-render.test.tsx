@@ -50,7 +50,7 @@ describe("Phase-1 bem/nya homepage trust + hero escrow", () => {
       "When online payment is available",
     );
     expect(messages.home.hero.escrowStep1).not.toBe("You pay");
-    expect(messages.home.hero.escrowStep2).toContain("Vergeo5");
+    expect(messages.home.hero.escrowStep2).toContain("Convergeo");
     expect(messages.home.hero.escrowStep3).not.toBe("Released on delivery");
   });
 });
@@ -70,7 +70,7 @@ describe("Phase-1 bem/nya PDP purchase copy", () => {
     expect(t("pdp.buyBox.quantityLabel")).toBe(messages.pdp.buyBox.quantityLabel);
     expect(t("pdp.vendor.heading")).toBe(messages.pdp.vendor.heading);
     expect(t("pdp.trust.returns")).toBe(messages.pdp.trust.returns);
-    expect(t("pdp.trust.escrow")).toContain("Vergeo5");
+    expect(t("pdp.trust.escrow")).toContain("Convergeo");
     expect(formatK(123456, { locale: `${locale}-ZM` })).toMatch(/^K/);
   });
 });

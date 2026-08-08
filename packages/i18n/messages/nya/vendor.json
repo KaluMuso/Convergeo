@@ -1,7 +1,7 @@
 {
   "analytics": {
     "meta": {
-      "title": "Analytics — Vergeo5 Vendor",
+      "title": "Analytics — Convergeo Vendor",
       "description": "Onani kugulitsa kwanu, orders, and cart activity over the last 7 or Masiku 30, see your top listings, and gauge cart-to-order conversion."
     },
     "eyebrow": "Storefront yanu",
@@ -51,11 +51,11 @@
   "vendor.listings.count": "{count, plural, one {# listing} other {# listings}}",
   "vendor.payout.pending": "⚠ Payout ikudikira: {amount}",
   "pitch": {
-    "signupUnavailable": "Public seller signup is not open. Seller onboarding is invite-only during the concierge beta — contact Vergeo5 if you were invited.",
+    "signupUnavailable": "Public seller signup is not open. Seller onboarding is invite-only during the concierge beta — contact Convergeo if you were invited.",
     "inviteOnlyNotice": "Invite yokha seller beta. Public self-service selling is not open yet. Invited sellers can continue onboarding with the link they received.",
     "meta": {
-      "title": "Gulitsani pa Vergeo5 — invite-only seller beta",
-      "description": "⚠ Vergeo5 seller onboarding is invite/concierge-only during beta. Learn about commissions, KYC, and mobile-money payouts — public self-service signup is not open yet."
+      "title": "Gulitsani pa Convergeo — invite-only seller beta",
+      "description": "⚠ Convergeo seller onboarding is invite/concierge-only during beta. Learn about commissions, KYC, and mobile-money payouts — public self-service signup is not open yet."
     },
     "hero": {
       "eyebrow": "Invite yokha seller beta",
@@ -150,7 +150,7 @@
           "description": "API access and banner placement eligibility for high-volume sellers."
         },
         "preferred": {
-          "badge": "Vergeo5 Preferred",
+          "badge": "Convergeo Preferred",
           "title": "Earned trust badge",
           "description": "≥20 orders, ≥4.5★ rating, <2% disputes, <5% cancellations — reviewed monthly."
         }
@@ -166,7 +166,7 @@
       "items": {
         "fees": {
           "question": "⚠ Are there monthly fees?",
-          "answer": "⚠ No. Vergeo5 is free to list at launch. You pay a commission only when you sell. The free tier includes up to 30 listings."
+          "answer": "⚠ No. Convergeo is free to list at launch. You pay a commission only when you sell. The free tier includes up to 30 listings."
         },
         "payout": {
           "question": "When do I get paid?",
@@ -183,7 +183,7 @@
       }
     },
     "cta": {
-      "heading": "Invited to sell on Vergeo5?",
+      "heading": "Invited to sell on Convergeo?",
       "body": "⚠ Seller onboarding is concierge/invite-only during beta. If you have an invite, continue below — listing and payout tools unlock only after admin approval.",
       "button": "Pitirizani ndi invite ya seller",
       "loadingLabel": "Tsegulaniing invite onboarding"
@@ -191,12 +191,12 @@
   },
   "onboarding": {
     "meta": {
-      "title": "Seller invite onboarding — Vergeo5",
+      "title": "Seller invite onboarding — Convergeo",
       "description": "⚠ Complete your invite-only seller application and T1 KYC. Listings stay locked until admin approval."
     },
     "invite": {
       "eyebrow": "Invite / concierge beta",
-      "body": "⚠ You are finishing a seller invite application. Catalogue, payouts, and the vendor dashboard stay locked until Vergeo5 approves your KYC and grants seller access."
+      "body": "⚠ You are finishing a seller invite application. Catalogue, payouts, and the vendor dashboard stay locked until Convergeo approves your KYC and grants seller access."
     },
     "steps": {
       "business": "Business",
@@ -307,7 +307,7 @@
       "saveFailed": "Could not save your business details. Try again.",
       "submitFailed": "Submission failed. Try again.",
       "authRequired": "Sign in to continue your seller invite application.",
-      "permissionDenied": "Mulibe access to this seller application. Use the account that received the invite, or contact Vergeo5.",
+      "permissionDenied": "Mulibe access to this seller application. Use the account that received the invite, or contact Convergeo.",
       "draftLocked": "Business details can no longer be edited after approval.",
       "notFound": "We could not find your vendor application.",
       "retryHint": "Onani connection yanu, then try again."
@@ -335,7 +335,7 @@
       "retry": "Yesaninso"
     },
     "meta": {
-      "title": "Create listing — Vergeo5 Vendor",
+      "title": "Create listing — Convergeo Vendor",
       "description": "Attach to the catalog, submit a new product, or quick-list a commodity."
     },
     "title": "Create listing",
@@ -356,7 +356,7 @@
       "searchPlaceholder": "Sakani catalog products",
       "searching": "Sakaniing…",
       "empty": "No matching products. Try another name or submit a new product.",
-      "hint": "Sakani the Vergeo5 catalog to attach your offer.",
+      "hint": "Sakani the Convergeo catalog to attach your offer.",
       "changeProduct": "← Change product",
       "specHeading": "Product specs",
       "publish": "Publish listing",
@@ -418,7 +418,7 @@
     },
     "import": {
       "meta": {
-        "title": "Import listings — Vergeo5 Vendor",
+        "title": "Import listings — Convergeo Vendor",
         "description": "⚠ Bulk upload vendor listings from a CSV file with row-level validation feedback."
       },
       "title": "Import listings",
@@ -473,7 +473,7 @@
     },
     "manage": {
       "meta": {
-        "title": "Your listings — Vergeo5 Vendor",
+        "title": "Your listings — Convergeo Vendor",
         "description": "⚠ View stock, pause listings, and edit prices."
       },
       "title": "Your listings",
@@ -496,7 +496,7 @@
       },
       "edit": {
         "meta": {
-          "title": "Edit listing — Vergeo5 Vendor",
+          "title": "Edit listing — Convergeo Vendor",
           "description": "⚠ Update price, stock, condition, and return policy."
         },
         "title": "Edit listing",
@@ -548,7 +548,7 @@
   },
   "profile": {
     "meta": {
-      "title": "Storefront profile — Vergeo5 Vendor",
+      "title": "Storefront profile — Convergeo Vendor",
       "description": "Edit your public storefront: logo, description, hours, location, and shop URL."
     },
     "title": "Storefront profile",
@@ -618,7 +618,7 @@
       "help": "A wide banner (about 3:1) heads your storefront. Resized before upload to save data."
     },
     "badge": {
-      "preferred": "Vergeo5 Preferred badge earned",
+      "preferred": "Convergeo Preferred badge earned",
       "hint": "Earn the Preferred badge with great service — ≥20 orders, ≥4.5★, low disputes."
     },
     "completeness": {
@@ -661,7 +661,7 @@
   },
   "orders": {
     "meta": {
-      "title": "Order detail — Vergeo5 Vendor",
+      "title": "Order detail — Convergeo Vendor",
       "description": "View order items, payment context, timeline, and fulfilment actions."
     },
     "title": "Order",
@@ -803,7 +803,7 @@
   },
   "queue": {
     "meta": {
-      "title": "Order queue — Vergeo5 Vendor",
+      "title": "Order queue — Convergeo Vendor",
       "description": "Filter and fulfil orders with one-tap actions."
     },
     "title": "Ma-order",
@@ -836,7 +836,7 @@
   },
   "payouts": {
     "meta": {
-      "title": "⚠ Payouts — Vergeo5 Vendor",
+      "title": "⚠ Payouts — Convergeo Vendor",
       "description": "⚠ View escrow-held and released balances, payout history, and download monthly statements."
     },
     "eyebrow": "Money",
@@ -873,7 +873,7 @@
     },
     "method": {
       "meta": {
-        "title": "⚠ Payout method — Vergeo5 Vendor",
+        "title": "⚠ Payout method — Convergeo Vendor",
         "description": "⚠ Change the mobile-money number where your payouts are sent."
       },
       "link": "⚠ Change payout method",
@@ -909,7 +909,7 @@
   },
   "scan": {
     "meta": {
-      "title": "Pickup scanner — Vergeo5 Vendor",
+      "title": "Pickup scanner — Convergeo Vendor",
       "description": "Scan customer pickup QR codes or enter PINs to mark orders as collected."
     },
     "eyebrow": "Pickup",
@@ -947,7 +947,7 @@
       "retry": "Try again",
       "wrongQr": {
         "title": "Not a pickup code",
-        "body": "This looks like an event ticket or another QR — not an order pickup code. Ask the customer to open their order pickup QR from WhatsApp or the Vergeo5 app."
+        "body": "This looks like an event ticket or another QR — not an order pickup code. Ask the customer to open their order pickup QR from WhatsApp or the Convergeo app."
       },
       "offline": {
         "title": "Cannot verify offline",
@@ -981,7 +981,7 @@
     },
     "eventCheckIn": {
       "meta": {
-        "title": "Event scanner — Vergeo5 Vendor",
+        "title": "Event scanner — Convergeo Vendor",
         "description": "Scan attendee ticket QR codes to check them in, online or offline."
       },
       "eyebrow": "Event check-in",
@@ -1065,7 +1065,7 @@
     "eyebrow": "Zochitika",
     "list": {
       "meta": {
-        "title": "Your events — Vergeo5 Vendor",
+        "title": "Your events — Convergeo Vendor",
         "description": "Create and manage ticketed events and free RSVPs."
       },
       "title": "Your events",
@@ -1079,11 +1079,11 @@
     },
     "form": {
       "createMeta": {
-        "title": "Create event — Vergeo5 Vendor",
+        "title": "Create event — Convergeo Vendor",
         "description": "Set up a new event with dates, venue, and photos."
       },
       "editMeta": {
-        "title": "Edit event — Vergeo5 Vendor",
+        "title": "Edit event — Convergeo Vendor",
         "description": "Update event details, instances, and publish status."
       },
       "createTitle": "Create event",
@@ -1319,7 +1319,7 @@
   },
   "returns": {
     "meta": {
-      "title": "Return requests — Vergeo5 Vendor",
+      "title": "Return requests — Convergeo Vendor",
       "description": "Accept or contest customer return requests for faulty or wrong items."
     },
     "title": "Return requests",
@@ -1422,7 +1422,7 @@
   },
   "reviews": {
     "meta": {
-      "title": "Customer reviews — Vergeo5 Vendor",
+      "title": "Customer reviews — Convergeo Vendor",
       "description": "Reply to verified-purchase reviews on your listings."
     },
     "title": "Customer reviews",
@@ -1540,7 +1540,7 @@
   },
   "intake": {
     "meta": {
-      "title": "Ma-draft a WhatsApp — Vergeo5 Vendor",
+      "title": "Ma-draft a WhatsApp — Convergeo Vendor",
       "description": "Review product drafts created from your WhatsApp messages before they go live."
     },
     "title": "Ma-draft a WhatsApp",
@@ -1548,7 +1548,7 @@
     "loading": "Loading…",
     "empty": {
       "title": "No drafts yet",
-      "body": "Send a photo and a price to the Vergeo5 vendor number and it will appear here."
+      "body": "Send a photo and a price to the Convergeo vendor number and it will appear here."
     },
     "error": {
       "title": "Could not load your drafts",
@@ -1559,14 +1559,14 @@
       "needs_details": "Needs details",
       "ready_for_vendor_review": "Ready to review",
       "submitted": "Submitted",
-      "pending_admin_review": "With Vergeo5",
+      "pending_admin_review": "With Convergeo",
       "approved": "Approved",
       "rejected": "Rejected",
       "expired": "Expired"
     },
     "detail": {
       "title": "Check this draft",
-      "intro": "Correct anything that is wrong. It only goes live after Vergeo5 approves it.",
+      "intro": "Correct anything that is wrong. It only goes live after Convergeo approves it.",
       "photos": "Photos",
       "photoAlt": "Draft photo {position}",
       "noPhotos": "No photos yet.",
@@ -1577,7 +1577,7 @@
       "saved": "Saved",
       "submit": "Submit for review",
       "submitting": "Submitting…",
-      "submitted": "Submitted for review. Vergeo5 will check it shortly.",
+      "submitted": "Submitted for review. Convergeo will check it shortly.",
       "back": "Back to drafts"
     },
     "fields": {
@@ -1604,7 +1604,7 @@
       "price_missing": "What is the price in kwacha?",
       "condition_missing": "Is it new or refurbished?",
       "possible_duplicate": "This looks like an earlier draft. Check before submitting.",
-      "prohibited_class": "This product class cannot be listed on Vergeo5.",
+      "prohibited_class": "This product class cannot be listed on Convergeo.",
       "media_failed": "A photo could not be saved. Please send it again."
     },
     "errors": {
@@ -1625,7 +1625,7 @@
   },
   "clips": {
     "meta": {
-      "title": "Clips — Vergeo5 Vendor",
+      "title": "Clips — Convergeo Vendor",
       "description": "Record short product videos and track how they perform."
     },
     "title": "Ma clip anga",

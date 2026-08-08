@@ -185,7 +185,7 @@ describe("sell page SEO metadata keys", () => {
   it("exposes title and description for generateMetadata", () => {
     const pitch = vendorMessages.pitch as Record<string, unknown>;
     const meta = pitch.meta as Record<string, unknown>;
-    expect(meta.title).toMatch(/Sell on Vergeo5/i);
+    expect(meta.title).toMatch(/Sell on Convergeo/i);
     expect(String(meta.description).length).toBeGreaterThan(40);
   });
 });

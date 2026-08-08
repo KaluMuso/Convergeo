@@ -5,7 +5,7 @@
   "plp": {
     "title": "浏览 {category}",
     "meta": {
-      "description": "在 Vergeo5 浏览 {category} — 比较赞比亚卖家、价格与库存。"
+      "description": "在 Convergeo 浏览 {category} — 比较赞比亚卖家、价格与库存。"
     },
     "defaultCategory": "全部商品",
     "breadcrumbAria": "面包屑导航",
@@ -97,12 +97,12 @@
       "primaryCta": "开始浏览",
       "secondaryCta": "了解如何开店",
       "placeholder": {
-        "title": "欢迎来到 Vergeo5",
+        "title": "欢迎来到 Convergeo",
         "subtitle": "随着营销板块上线，您的可配置店面将显示在此处。"
       },
-      "escrowLine": "在线支付可用时提供托管保护——款项由 Vergeo5 保管至送达后再放款。",
+      "escrowLine": "在线支付可用时提供托管保护——款项由 Convergeo 保管至送达后再放款。",
       "escrowStep1": "您付款",
-      "escrowStep2": "由 Vergeo5 保管",
+      "escrowStep2": "由 Convergeo 保管",
       "escrowStep3": "送达后放款",
       "carousel": {
         "previous": "上一张",
@@ -130,11 +130,11 @@
       }
     },
     "trust": {
-      "ariaLabel": "为何选择 Vergeo5",
+      "ariaLabel": "为何选择 Convergeo",
       "sellers": "可查看状态的卖家资料",
       "fulfillment": "商品支持时提供卢萨卡配送或全国自提",
       "returns": "符合条件的订单有清晰的退换与退款说明",
-      "escrow": "在线支付可用时，Vergeo5 会保管您的款项直至送达"
+      "escrow": "在线支付可用时，Convergeo 会保管您的款项直至送达"
     },
     "demo": {
       "sampleListing": "示例商品"
@@ -161,7 +161,7 @@
       "browseLabel": "浏览{category}"
     },
     "rails": {
-      "newTitle": "Vergeo5 新品",
+      "newTitle": "Convergeo 新品",
       "departmentTitle": "{category} 新品",
       "viewAll": "查看全部",
       "servicesTitle": "服务",
@@ -187,7 +187,7 @@
       "recentViewProduct": "查看 {name}"
     },
     "sellCta": {
-      "title": "目前 Vergeo5 卖家入驻仅限邀请",
+      "title": "目前 Convergeo 卖家入驻仅限邀请",
       "body": "公开自助注册尚未开放。受邀卖家可继续入驻；其他人可了解卖家内测如何运作。",
       "cta": "了解如何开店"
     },
@@ -216,8 +216,8 @@
     },
     "meta": {
       "notFoundTitle": "未找到该商品",
-      "descriptionFallback": "在 Vergeo5 上选购 {name}",
-      "descriptionWithPrice": "在 Vergeo5 比较 {name} 的 {count, plural, one {# 个卖家} other {# 个卖家}} 价格。起价 {price}。"
+      "descriptionFallback": "在 Convergeo 上选购 {name}",
+      "descriptionWithPrice": "在 Convergeo 比较 {name} 的 {count, plural, one {# 个卖家} other {# 个卖家}} 价格。起价 {price}。"
     },
     "tabs": {
       "ariaLabel": "商品详情",
@@ -284,7 +284,7 @@
       "delivery": "该卖家支持配送",
       "pickup": "该卖家支持自提",
       "returns": "退货与退款",
-      "escrow": "在线支付可用时，Vergeo5 会托管您的款项直至送达。符合条件的订单可能支持货到付款。"
+      "escrow": "在线支付可用时，Convergeo 会托管您的款项直至送达。符合条件的订单可能支持货到付款。"
     },
     "condition": {
       "new": "全新",

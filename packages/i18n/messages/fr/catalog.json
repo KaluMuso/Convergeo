@@ -5,7 +5,7 @@
   "plp": {
     "title": "Parcourir {category}",
     "meta": {
-      "description": "Parcourez {category} sur Vergeo5 — comparez vendeurs, prix et disponibilité en Zambie."
+      "description": "Parcourez {category} sur Convergeo — comparez vendeurs, prix et disponibilité en Zambie."
     },
     "defaultCategory": "Tous les produits",
     "breadcrumbAria": "Fil d'Ariane",
@@ -97,12 +97,12 @@
       "primaryCta": "Commencer à parcourir",
       "secondaryCta": "En savoir plus sur la vente",
       "placeholder": {
-        "title": "Bienvenue sur Vergeo5",
+        "title": "Bienvenue sur Convergeo",
         "subtitle": "Votre vitrine configurable apparaîtra ici au fur et à mesure de l'activation des espaces de vente."
       },
-      "escrowLine": "Protection acheteur avec séquestre lorsque le paiement en ligne est disponible — conservé par Vergeo5 jusqu'à la livraison, puis versé.",
+      "escrowLine": "Protection acheteur avec séquestre lorsque le paiement en ligne est disponible — conservé par Convergeo jusqu'à la livraison, puis versé.",
       "escrowStep1": "Vous payez",
-      "escrowStep2": "Conservé par Vergeo5",
+      "escrowStep2": "Conservé par Convergeo",
       "escrowStep3": "Versé à la livraison",
       "carousel": {
         "previous": "Diapositive précédente",
@@ -130,11 +130,11 @@
       }
     },
     "trust": {
-      "ariaLabel": "Pourquoi acheter sur Vergeo5",
+      "ariaLabel": "Pourquoi acheter sur Convergeo",
       "sellers": "Profils vendeurs avec un statut que vous pouvez consulter",
       "fulfillment": "Livraison à Lusaka ou retrait partout en Zambie lorsque l'annonce le permet",
       "returns": "Retours et remboursements expliqués pour les commandes éligibles",
-      "escrow": "Lorsque le paiement en ligne est disponible, Vergeo5 conserve votre argent jusqu'à la livraison"
+      "escrow": "Lorsque le paiement en ligne est disponible, Convergeo conserve votre argent jusqu'à la livraison"
     },
     "demo": {
       "sampleListing": "Annonce exemple"
@@ -161,7 +161,7 @@
       "browseLabel": "Parcourir {category}"
     },
     "rails": {
-      "newTitle": "Nouveau sur Vergeo5",
+      "newTitle": "Nouveau sur Convergeo",
       "departmentTitle": "Nouveautés dans {category}",
       "viewAll": "Voir tout",
       "servicesTitle": "Services",
@@ -187,7 +187,7 @@
       "recentViewProduct": "Voir {name}"
     },
     "sellCta": {
-      "title": "La vente sur Vergeo5 est sur invitation pour le moment",
+      "title": "La vente sur Convergeo est sur invitation pour le moment",
       "body": "L'inscription libre des vendeurs n'est pas encore ouverte. Les vendeurs invités peuvent poursuivre l'onboarding ; les autres peuvent découvrir le fonctionnement de la bêta vendeur.",
       "cta": "En savoir plus sur la vente"
     },
@@ -216,8 +216,8 @@
     },
     "meta": {
       "notFoundTitle": "Produit introuvable",
-      "descriptionFallback": "Achetez {name} sur Vergeo5",
-      "descriptionWithPrice": "Comparez les prix de {name} chez {count, plural, one {# vendeur} other {# vendeurs}} sur Vergeo5. À partir de {price}."
+      "descriptionFallback": "Achetez {name} sur Convergeo",
+      "descriptionWithPrice": "Comparez les prix de {name} chez {count, plural, one {# vendeur} other {# vendeurs}} sur Convergeo. À partir de {price}."
     },
     "tabs": {
       "ariaLabel": "Détails du produit",
@@ -284,7 +284,7 @@
       "delivery": "Livraison disponible pour ce vendeur",
       "pickup": "Retrait disponible pour ce vendeur",
       "returns": "Retours et remboursements",
-      "escrow": "Lorsque le paiement en ligne est disponible, Vergeo5 conserve votre argent jusqu'à la livraison. Le paiement à la livraison peut être proposé pour les commandes éligibles."
+      "escrow": "Lorsque le paiement en ligne est disponible, Convergeo conserve votre argent jusqu'à la livraison. Le paiement à la livraison peut être proposé pour les commandes éligibles."
     },
     "condition": {
       "new": "Neuf",

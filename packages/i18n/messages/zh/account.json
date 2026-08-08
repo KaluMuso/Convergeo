@@ -16,7 +16,7 @@
   },
   "business": {
     "title": "企业模式",
-    "description": "验证您的企业，即可在 Vergeo5 上解锁批发价格和批量订购。",
+    "description": "验证您的企业，即可在 Convergeo 上解锁批发价格和批量订购。",
     "statusLabel": "状态",
     "status": {
       "none": "未申请",
@@ -50,7 +50,7 @@
   },
   "profile": {
     "title": "个人资料",
-    "description": "更新我们对您的称呼以及您在 Vergeo5 上偏好的语言。",
+    "description": "更新我们对您的称呼以及您在 Convergeo 上偏好的语言。",
     "nameLabel": "显示名称",
     "namePlaceholder": "您的姓名",
     "localeLabel": "语言",
@@ -99,7 +99,7 @@
   },
   "preferences": {
     "title": "偏好设置",
-    "description": "管理显示方式，以及 Vergeo5 就订单、票券和账户更新与您联系的方式。",
+    "description": "管理显示方式，以及 Convergeo 就订单、票券和账户更新与您联系的方式。",
     "themeTitle": "显示",
     "themeDescription": "选择浅色、深色或跟随设备。默认为系统。",
     "themeLight": "浅色",
@@ -134,16 +134,16 @@
     "retentionNote": "根据赞比亚法律要求，订单、付款和税务记录将以匿名形式至少保留七年。账本记录永不删除。",
     "export": {
       "title": "导出我的数据",
-      "description": "下载 Vergeo5 持有的关于您的个人数据副本——您的个人资料、地址、订单、票券和评价——以 JSON 文件形式提供，符合《赞比亚数据保护法》的规定。",
+      "description": "下载 Convergeo 持有的关于您的个人数据副本——您的个人资料、地址、订单、票券和评价——以 JSON 文件形式提供，符合《赞比亚数据保护法》的规定。",
       "button": "请求导出数据",
       "loading": "正在准备您的导出文件…",
       "success": "您的导出文件已就绪——立即下载。该链接将在短时间后失效。",
       "error": "我们无法准备您的导出文件。请重试。",
-      "policyLink": "阅读 Vergeo5 隐私政策"
+      "policyLink": "阅读 Convergeo 隐私政策"
     },
     "delete": {
       "title": "删除我的账户",
-      "description": "永久关闭您的 Vergeo5 账户。您的登录信息将被删除，个人资料将被匿名化。为保护您的账户，删除操作需要输入确认短语以及发送至您已验证手机的一次性验证码。",
+      "description": "永久关闭您的 Convergeo 账户。您的登录信息将被删除，个人资料将被匿名化。为保护您的账户，删除操作需要输入确认短语以及发送至您已验证手机的一次性验证码。",
       "warning": "此操作无法撤销。您的个人资料、已保存的地址和偏好设置将被永久删除，您将无法访问订单历史记录。根据赞比亚法律要求，订单、付款和税务记录将以匿名形式保留。",
       "confirmPhraseLabel": "如需确认，请输入“删除我的账户”",
       "confirmPhraseHint": "删除我的账户",
@@ -176,7 +176,7 @@
   },
   "hub": {
     "title": "账户概览",
-    "description": "管理订单、收藏商品、配送信息以及 Vergeo5 的显示方式。",
+    "description": "管理订单、收藏商品、配送信息以及 Convergeo 的显示方式。",
     "backToShop": "返回购物",
     "ordersTitle": "订单",
     "ordersBody": "跟踪每位卖家的配送、自提与付款状态。",

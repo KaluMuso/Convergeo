@@ -1,7 +1,7 @@
 {
   "analytics": {
     "meta": {
-      "title": "Statistiques — Vendeur Vergeo5",
+      "title": "Statistiques — Vendeur Convergeo",
       "description": "Suivez vos ventes, commandes et activité du panier sur les 7 ou 30 derniers jours, consultez vos meilleures annonces et évaluez la conversion panier-commande."
     },
     "eyebrow": "Votre boutique",
@@ -51,11 +51,11 @@
   "vendor.listings.count": "{count, plural, one {# annonce} other {# annonces}}",
   "vendor.payout.pending": "Versement en attente : {amount}",
   "pitch": {
-    "signupUnavailable": "L'inscription publique des vendeurs n'est pas ouverte. L'onboarding vendeur est sur invitation pendant la bêta concierge — contactez Vergeo5 si vous avez été invité.",
+    "signupUnavailable": "L'inscription publique des vendeurs n'est pas ouverte. L'onboarding vendeur est sur invitation pendant la bêta concierge — contactez Convergeo si vous avez été invité.",
     "inviteOnlyNotice": "Bêta vendeur sur invitation. La vente en libre-service publique n'est pas encore ouverte. Les vendeurs invités peuvent poursuivre l'onboarding avec le lien reçu.",
     "meta": {
-      "title": "Vendez sur Vergeo5 — bêta vendeur sur invitation",
-      "description": "L'onboarding vendeur Vergeo5 est sur invitation/concierge pendant la bêta. Découvrez commissions, KYC et versements mobile money — l'inscription publique n'est pas encore ouverte."
+      "title": "Vendez sur Convergeo — bêta vendeur sur invitation",
+      "description": "L'onboarding vendeur Convergeo est sur invitation/concierge pendant la bêta. Découvrez commissions, KYC et versements mobile money — l'inscription publique n'est pas encore ouverte."
     },
     "hero": {
       "eyebrow": "Bêta vendeur sur invitation",
@@ -149,7 +149,7 @@
           "description": "Accès API et éligibilité à l'affichage de bannières pour les vendeurs à fort volume."
         },
         "preferred": {
-          "badge": "Vergeo5 Preferred",
+          "badge": "Convergeo Preferred",
           "title": "Badge de confiance mérité",
           "description": "≥20 commandes, note ≥4,5★, <2 % de litiges, <5 % d'annulations — révisé chaque mois."
         }
@@ -165,7 +165,7 @@
       "items": {
         "fees": {
           "question": "Y a-t-il des frais mensuels ?",
-          "answer": "Non. La publication sur Vergeo5 est gratuite au lancement. Vous ne payez une commission que lorsque vous vendez. L'offre gratuite comprend jusqu'à 30 annonces."
+          "answer": "Non. La publication sur Convergeo est gratuite au lancement. Vous ne payez une commission que lorsque vous vendez. L'offre gratuite comprend jusqu'à 30 annonces."
         },
         "payout": {
           "question": "Quand suis-je payé ?",
@@ -182,7 +182,7 @@
       }
     },
     "cta": {
-      "heading": "Invité à vendre sur Vergeo5 ?",
+      "heading": "Invité à vendre sur Convergeo ?",
       "body": "L'onboarding vendeur est sur invitation/concierge pendant la bêta. Si vous avez une invitation, continuez ci-dessous — catalogue et versements restent verrouillés jusqu'à l'approbation admin.",
       "button": "Continuer l'invitation vendeur",
       "loadingLabel": "Ouverture de l'onboarding invitation"
@@ -190,7 +190,7 @@
   },
   "onboarding": {
     "meta": {
-      "title": "Onboarding invitation vendeur — Vergeo5",
+      "title": "Onboarding invitation vendeur — Convergeo",
       "description": "Complétez votre candidature vendeur sur invitation et le KYC T1. Les annonces restent verrouillées jusqu'à l'approbation admin."
     },
     "invite": {
@@ -306,7 +306,7 @@
       "saveFailed": "Impossible d'enregistrer les informations de l'entreprise. Réessayez.",
       "submitFailed": "Échec de la soumission. Réessayez.",
       "authRequired": "Connectez-vous pour continuer votre candidature vendeur sur invitation.",
-      "permissionDenied": "Vous n'avez pas accès à cette candidature vendeur. Utilisez le compte invité, ou contactez Vergeo5.",
+      "permissionDenied": "Vous n'avez pas accès à cette candidature vendeur. Utilisez le compte invité, ou contactez Convergeo.",
       "draftLocked": "Les informations de l'entreprise ne peuvent plus être modifiées après approbation.",
       "notFound": "Nous n'avons pas trouvé votre demande vendeur.",
       "retryHint": "Vérifiez votre connexion, puis réessayez."
@@ -334,7 +334,7 @@
       "retry": "Réessayer"
     },
     "meta": {
-      "title": "Créer une annonce — Vendeur Vergeo5",
+      "title": "Créer une annonce — Vendeur Convergeo",
       "description": "Rattachez au catalogue, soumettez un nouveau produit ou créez une annonce rapide."
     },
     "title": "Créer une annonce",
@@ -355,7 +355,7 @@
       "searchPlaceholder": "Rechercher des produits du catalogue",
       "searching": "Recherche…",
       "empty": "Aucun produit correspondant. Essayez un autre nom ou soumettez un nouveau produit.",
-      "hint": "Recherchez dans le catalogue Vergeo5 pour rattacher votre offre.",
+      "hint": "Recherchez dans le catalogue Convergeo pour rattacher votre offre.",
       "changeProduct": "← Changer de produit",
       "specHeading": "Caractéristiques du produit",
       "publish": "Publier l'annonce",
@@ -417,7 +417,7 @@
     },
     "import": {
       "meta": {
-        "title": "Importer des annonces — Vendeur Vergeo5",
+        "title": "Importer des annonces — Vendeur Convergeo",
         "description": "Importez en masse des annonces vendeur depuis un fichier CSV avec validation ligne par ligne."
       },
       "title": "Importer des annonces",
@@ -472,7 +472,7 @@
     },
     "manage": {
       "meta": {
-        "title": "Vos annonces — Vendeur Vergeo5",
+        "title": "Vos annonces — Vendeur Convergeo",
         "description": "Consultez le stock, mettez en pause des annonces et modifiez les prix."
       },
       "title": "Vos annonces",
@@ -495,7 +495,7 @@
       },
       "edit": {
         "meta": {
-          "title": "Modifier l'annonce — Vendeur Vergeo5",
+          "title": "Modifier l'annonce — Vendeur Convergeo",
           "description": "Mettez à jour le prix, le stock, l'état et la politique de retour."
         },
         "title": "Modifier l'annonce",
@@ -543,7 +543,7 @@
   },
   "profile": {
     "meta": {
-      "title": "Profil de la vitrine — Vergeo5 Vendeur",
+      "title": "Profil de la vitrine — Convergeo Vendeur",
       "description": "Modifiez votre vitrine publique : logo, description, horaires, emplacement et URL de la boutique."
     },
     "title": "Profil de la vitrine",
@@ -613,7 +613,7 @@
       "help": "Une large bannière (environ 3:1) en tête de votre vitrine. Redimensionnée avant l'importation pour économiser les données."
     },
     "badge": {
-      "preferred": "Badge Vergeo5 Preferred obtenu",
+      "preferred": "Badge Convergeo Preferred obtenu",
       "hint": "Obtenez le badge Preferred grâce à un excellent service — ≥20 commandes, ≥4,5★, peu de litiges."
     },
     "completeness": {
@@ -654,7 +654,7 @@
   },
   "orders": {
     "meta": {
-      "title": "Détail de la commande — Vergeo5 Vendeur",
+      "title": "Détail de la commande — Convergeo Vendeur",
       "description": "Consultez les articles de la commande, le contexte de paiement, la chronologie et les actions de traitement."
     },
     "title": "Commande",
@@ -787,7 +787,7 @@
   },
   "queue": {
     "meta": {
-      "title": "File d'attente des commandes — Vendeur Vergeo5",
+      "title": "File d'attente des commandes — Vendeur Convergeo",
       "description": "Filtrez et traitez les commandes en un seul geste."
     },
     "title": "Commandes",
@@ -820,7 +820,7 @@
   },
   "payouts": {
     "meta": {
-      "title": "Versements — Vergeo5 Vendeur",
+      "title": "Versements — Convergeo Vendeur",
       "description": "Consultez les soldes sous séquestre et débloqués, l'historique des versements et téléchargez les relevés mensuels."
     },
     "eyebrow": "Argent",
@@ -857,7 +857,7 @@
     },
     "method": {
       "meta": {
-        "title": "Méthode de versement — Vergeo5 Vendeur",
+        "title": "Méthode de versement — Convergeo Vendeur",
         "description": "Modifiez le numéro mobile money vers lequel vos versements sont envoyés."
       },
       "link": "Changer de méthode de versement",
@@ -893,7 +893,7 @@
   },
   "scan": {
     "meta": {
-      "title": "Scanner de retrait — Vendeur Vergeo5",
+      "title": "Scanner de retrait — Vendeur Convergeo",
       "description": "Scannez les QR de retrait des clients ou saisissez les PIN pour marquer les commandes comme récupérées."
     },
     "eyebrow": "Retrait",
@@ -931,7 +931,7 @@
       "retry": "Réessayer",
       "wrongQr": {
         "title": "Pas un code de retrait",
-        "body": "Cela ressemble à un billet d'événement ou à un autre QR — pas à un code de retrait de commande. Demandez au client d'ouvrir le QR de retrait de sa commande depuis WhatsApp ou l'application Vergeo5."
+        "body": "Cela ressemble à un billet d'événement ou à un autre QR — pas à un code de retrait de commande. Demandez au client d'ouvrir le QR de retrait de sa commande depuis WhatsApp ou l'application Convergeo."
       },
       "offline": {
         "title": "Vérification impossible hors ligne",
@@ -965,7 +965,7 @@
     },
     "eventCheckIn": {
       "meta": {
-        "title": "Scanner d'événement — Vendeur Vergeo5",
+        "title": "Scanner d'événement — Vendeur Convergeo",
         "description": "Scannez les QR des billets des participants pour les enregistrer, en ligne ou hors ligne."
       },
       "eyebrow": "Enregistrement à l'événement",
@@ -1049,7 +1049,7 @@
     "eyebrow": "Événements",
     "list": {
       "meta": {
-        "title": "Vos événements — Vergeo5 Vendeur",
+        "title": "Vos événements — Convergeo Vendeur",
         "description": "Créez et gérez des événements avec billetterie et des inscriptions gratuites."
       },
       "title": "Vos événements",
@@ -1063,11 +1063,11 @@
     },
     "form": {
       "createMeta": {
-        "title": "Créer un événement — Vergeo5 Vendeur",
+        "title": "Créer un événement — Convergeo Vendeur",
         "description": "Configurez un nouvel événement avec dates, lieu et photos."
       },
       "editMeta": {
-        "title": "Modifier l'événement — Vergeo5 Vendeur",
+        "title": "Modifier l'événement — Convergeo Vendeur",
         "description": "Mettez à jour les détails, les séances et le statut de publication de l'événement."
       },
       "createTitle": "Créer un événement",
@@ -1303,7 +1303,7 @@
   },
   "returns": {
     "meta": {
-      "title": "Demandes de retour — Vergeo5 Vendeur",
+      "title": "Demandes de retour — Convergeo Vendeur",
       "description": "Acceptez ou contestez les demandes de retour des clients pour des articles défectueux ou incorrects."
     },
     "title": "Demandes de retour",
@@ -1376,7 +1376,7 @@
   },
   "reviews": {
     "meta": {
-      "title": "Avis clients — Vergeo5 Vendeur",
+      "title": "Avis clients — Convergeo Vendeur",
       "description": "Répondez aux avis d'achats vérifiés sur vos annonces."
     },
     "title": "Avis clients",

@@ -170,7 +170,7 @@ export const cacheRules: NamedRule[] = [
       plugins: [
         new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 60 * 5 }),
         {
-          // API down / localhost unreachable: return 503 instead of rejecting the
+          // API down / origin unreachable: return 503 instead of rejecting the
           // FetchEvent (which surfaced as `no-response` console errors).
           handlerDidError: async () =>
             new Response(JSON.stringify({ error: "unavailable" }), {

@@ -35,11 +35,11 @@
     "home": "返回首页"
   },
   "install": {
-    "title": "安装 Vergeo5",
-    "body": "将 Vergeo5 添加到主屏幕，以便更快访问并获得全屏应用体验。",
+    "title": "安装 Convergeo",
+    "body": "将 Convergeo 添加到主屏幕，以便更快访问并获得全屏应用体验。",
     "action": "安装应用",
     "dismiss": "暂不",
-    "updateBody": "Vergeo5 的新版本已就绪。",
+    "updateBody": "Convergeo 的新版本已就绪。",
     "updateAction": "重新加载以更新"
   },
   "contact": {

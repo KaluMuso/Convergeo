@@ -1,6 +1,6 @@
 {
   "askVergeo": {
-    "slotLabel": "Slot ya Ask Vergeo assistant",
+    "slotLabel": "Slot ya Ask Convergeo assistant",
     "teaser": "Simukudziwa chomwe mufuna? Funsa Vergeo kuti akuthandizeni kupeza chomwe mufuna.",
     "title": "Funsa Vergeo"
   },
@@ -52,7 +52,7 @@
     "maxPriceOnly": "Kufikira K{max}",
     "facetCount": "{label} ({count})"
   },
-  "placeholder": "Sakani pa Vergeo5",
+  "placeholder": "Sakani pa Convergeo",
   "recent": {
     "clear": "Chotsani zonse",
     "remove": "Chotsani {term}",

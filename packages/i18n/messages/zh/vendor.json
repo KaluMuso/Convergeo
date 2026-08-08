@@ -1,7 +1,7 @@
 {
   "analytics": {
     "meta": {
-      "title": "数据分析 —— Vergeo5 商家",
+      "title": "数据分析 —— Convergeo 商家",
       "description": "追踪过去 7 天或 30 天的销售额、订单和购物车活动，查看热门商品，并评估购物车到订单的转化率。"
     },
     "eyebrow": "您的店铺",
@@ -51,11 +51,11 @@
   "vendor.listings.count": "{count, plural, one {# 件商品} other {# 件商品}}",
   "vendor.payout.pending": "待处理结算：{amount}",
   "pitch": {
-    "signupUnavailable": "尚未开放公开商家注册。卖家入驻目前为邀请制（礼宾试用）；若您已获邀请，请联系 Vergeo5。",
+    "signupUnavailable": "尚未开放公开商家注册。卖家入驻目前为邀请制（礼宾试用）；若您已获邀请，请联系 Convergeo。",
     "inviteOnlyNotice": "邀请制卖家试用。公开自助开店尚未开放。受邀卖家可使用收到的链接继续入驻。",
     "meta": {
-      "title": "在 Vergeo5 上销售——邀请制卖家试用",
-      "description": "Vergeo5 卖家入驻在试用期为邀请/礼宾制。了解佣金、KYC 与移动支付结算——公开自助注册尚未开放。"
+      "title": "在 Convergeo 上销售——邀请制卖家试用",
+      "description": "Convergeo 卖家入驻在试用期为邀请/礼宾制。了解佣金、KYC 与移动支付结算——公开自助注册尚未开放。"
     },
     "hero": {
       "eyebrow": "邀请制卖家试用",
@@ -149,7 +149,7 @@
           "description": "为高销量商家提供 API 接入和横幅广告位资格。"
         },
         "preferred": {
-          "badge": "Vergeo5 优选",
+          "badge": "Convergeo 优选",
           "title": "赢得的信任徽章",
           "description": "≥20 笔订单、≥4.5★ 评分、<2% 纠纷、<5% 取消率——每月审核。"
         }
@@ -165,7 +165,7 @@
       "items": {
         "fees": {
           "question": "有月费吗？",
-          "answer": "没有。Vergeo5 上线期间免费上架。只有售出时才支付佣金。免费套餐最多包含 30 个商品。"
+          "answer": "没有。Convergeo 上线期间免费上架。只有售出时才支付佣金。免费套餐最多包含 30 个商品。"
         },
         "payout": {
           "question": "我什么时候收款？",
@@ -182,7 +182,7 @@
       }
     },
     "cta": {
-      "heading": "已获邀在 Vergeo5 开店？",
+      "heading": "已获邀在 Convergeo 开店？",
       "body": "试用期内卖家入驻为邀请/礼宾制。若您有邀请，请继续下方流程——目录与结算功能仅在管理员批准后解锁。",
       "button": "继续卖家邀请",
       "loadingLabel": "正在打开邀请入驻"
@@ -190,12 +190,12 @@
   },
   "onboarding": {
     "meta": {
-      "title": "卖家邀请入驻 — Vergeo5",
+      "title": "卖家邀请入驻 — Convergeo",
       "description": "完成邀请制卖家申请与 T1 KYC。商品上架在管理员批准前保持锁定。"
     },
     "invite": {
       "eyebrow": "邀请 / 礼宾试用",
-      "body": "您正在完成卖家邀请申请。目录、结算与商家控制台在 Vergeo5 批准 KYC 并授予卖家权限前保持锁定。"
+      "body": "您正在完成卖家邀请申请。目录、结算与商家控制台在 Convergeo 批准 KYC 并授予卖家权限前保持锁定。"
     },
     "steps": {
       "business": "商户",
@@ -306,7 +306,7 @@
       "saveFailed": "无法保存商户信息，请重试。",
       "submitFailed": "提交失败。请重试。",
       "authRequired": "请登录以继续卖家邀请申请。",
-      "permissionDenied": "您无权访问此卖家申请。请使用收到邀请的账户，或联系 Vergeo5。",
+      "permissionDenied": "您无权访问此卖家申请。请使用收到邀请的账户，或联系 Convergeo。",
       "draftLocked": "批准后无法再编辑商户信息。",
       "notFound": "未找到您的商家申请。",
       "retryHint": "请检查网络后重试。"
@@ -334,7 +334,7 @@
       "retry": "重试"
     },
     "meta": {
-      "title": "创建商品 —— Vergeo5 商家",
+      "title": "创建商品 —— Convergeo 商家",
       "description": "关联到目录、提交新产品，或快速上架商品。"
     },
     "title": "创建商品",
@@ -355,7 +355,7 @@
       "searchPlaceholder": "搜索目录产品",
       "searching": "搜索中…",
       "empty": "没有匹配的产品。请尝试其他名称或提交新产品。",
-      "hint": "搜索 Vergeo5 目录以关联您的商品。",
+      "hint": "搜索 Convergeo 目录以关联您的商品。",
       "changeProduct": "← 更换产品",
       "specHeading": "产品规格",
       "publish": "发布商品",
@@ -417,7 +417,7 @@
     },
     "import": {
       "meta": {
-        "title": "导入商品 —— Vergeo5 商家",
+        "title": "导入商品 —— Convergeo 商家",
         "description": "从 CSV 文件批量上传商家商品，并提供逐行验证反馈。"
       },
       "title": "导入商品",
@@ -472,7 +472,7 @@
     },
     "manage": {
       "meta": {
-        "title": "您的商品 —— Vergeo5 商家",
+        "title": "您的商品 —— Convergeo 商家",
         "description": "查看库存、暂停商品并编辑价格。"
       },
       "title": "您的商品",
@@ -495,7 +495,7 @@
       },
       "edit": {
         "meta": {
-          "title": "编辑商品 —— Vergeo5 商家",
+          "title": "编辑商品 —— Convergeo 商家",
           "description": "更新价格、库存、成色和退货政策。"
         },
         "title": "编辑商品",
@@ -543,7 +543,7 @@
   },
   "profile": {
     "meta": {
-      "title": "店铺资料 — Vergeo5 商家",
+      "title": "店铺资料 — Convergeo 商家",
       "description": "编辑您的公开店铺：Logo、简介、营业时间、位置和店铺网址。"
     },
     "title": "店铺资料",
@@ -613,7 +613,7 @@
       "help": "宽幅横幅（约 3:1）显示在您店铺顶部。上传前会调整尺寸以节省流量。"
     },
     "badge": {
-      "preferred": "已获得 Vergeo5 优选徽章",
+      "preferred": "已获得 Convergeo 优选徽章",
       "hint": "凭优质服务赢得优选徽章：订单 ≥20、评分 ≥4.5★、纠纷率低。"
     },
     "completeness": {
@@ -654,7 +654,7 @@
   },
   "orders": {
     "meta": {
-      "title": "订单详情 — Vergeo5 商家",
+      "title": "订单详情 — Convergeo 商家",
       "description": "查看订单商品、付款信息、时间线和履约操作。"
     },
     "title": "订单",
@@ -787,7 +787,7 @@
   },
   "queue": {
     "meta": {
-      "title": "订单队列 —— Vergeo5 商家",
+      "title": "订单队列 —— Convergeo 商家",
       "description": "通过一键操作筛选和履行订单。"
     },
     "title": "订单",
@@ -820,7 +820,7 @@
   },
   "payouts": {
     "meta": {
-      "title": "结算 — Vergeo5 商家",
+      "title": "结算 — Convergeo 商家",
       "description": "查看托管中和已释放的余额、结算记录，并下载月度对账单。"
     },
     "eyebrow": "资金",
@@ -857,7 +857,7 @@
     },
     "method": {
       "meta": {
-        "title": "结算方式 — Vergeo5 商家",
+        "title": "结算方式 — Convergeo 商家",
         "description": "更改接收结算的移动支付号码。"
       },
       "link": "更改结算方式",
@@ -893,7 +893,7 @@
   },
   "scan": {
     "meta": {
-      "title": "取货扫描器 —— Vergeo5 商家",
+      "title": "取货扫描器 —— Convergeo 商家",
       "description": "扫描客户的取货二维码或输入 PIN，将订单标记为已取货。"
     },
     "eyebrow": "取货",
@@ -931,7 +931,7 @@
       "retry": "重试",
       "wrongQr": {
         "title": "非取货码",
-        "body": "这看起来像是活动门票或其他二维码——而非订单取货码。请让客户从 WhatsApp 或 Vergeo5 应用中打开其订单取货二维码。"
+        "body": "这看起来像是活动门票或其他二维码——而非订单取货码。请让客户从 WhatsApp 或 Convergeo 应用中打开其订单取货二维码。"
       },
       "offline": {
         "title": "离线时无法验证",
@@ -965,7 +965,7 @@
     },
     "eventCheckIn": {
       "meta": {
-        "title": "活动扫描器 —— Vergeo5 商家",
+        "title": "活动扫描器 —— Convergeo 商家",
         "description": "扫描参与者的门票二维码为其检票，支持在线或离线。"
       },
       "eyebrow": "活动检票",
@@ -1049,7 +1049,7 @@
     "eyebrow": "活动",
     "list": {
       "meta": {
-        "title": "您的活动 — Vergeo5 商家",
+        "title": "您的活动 — Convergeo 商家",
         "description": "创建并管理售票活动和免费报名。"
       },
       "title": "您的活动",
@@ -1063,11 +1063,11 @@
     },
     "form": {
       "createMeta": {
-        "title": "创建活动 — Vergeo5 商家",
+        "title": "创建活动 — Convergeo 商家",
         "description": "设置日期、场地和照片，创建新活动。"
       },
       "editMeta": {
-        "title": "编辑活动 — Vergeo5 商家",
+        "title": "编辑活动 — Convergeo 商家",
         "description": "更新活动详情、场次和发布状态。"
       },
       "createTitle": "创建活动",
@@ -1303,7 +1303,7 @@
   },
   "returns": {
     "meta": {
-      "title": "退货请求 — Vergeo5 商家",
+      "title": "退货请求 — Convergeo 商家",
       "description": "接受或申诉客户对故障或错发商品的退货请求。"
     },
     "title": "退货请求",
@@ -1376,7 +1376,7 @@
   },
   "reviews": {
     "meta": {
-      "title": "客户评价 — Vergeo5 商家",
+      "title": "客户评价 — Convergeo 商家",
       "description": "回复您商品的已验证购买评价。"
     },
     "title": "客户评价",

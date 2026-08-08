@@ -198,7 +198,7 @@ describe("HomeProductRail", () => {
     const { container } = render(
       <HomeProductRail
         id="home-rail-new"
-        title="New on Vergeo5"
+        title="New on Convergeo"
         viewAllHref="/en/c/all"
         viewAllLabel="View all"
         listings={[]}
@@ -213,7 +213,7 @@ describe("HomeProductRail", () => {
     render(
       <HomeProductRail
         id="home-rail-new"
-        title="New on Vergeo5"
+        title="New on Convergeo"
         viewAllHref="/en/c/all"
         viewAllLabel="View all"
         listings={[makeListing()]}
@@ -221,7 +221,7 @@ describe("HomeProductRail", () => {
         labels={railLabels}
       />,
     );
-    expect(screen.getByRole("heading", { name: "New on Vergeo5" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "New on Convergeo" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View all" })).toHaveAttribute("href", "/en/c/all");
     expect(screen.getByTestId("product-card")).toBeInTheDocument();
   });
@@ -242,17 +242,17 @@ describe("pickHeroVisualPublicId", () => {
 
 describe("HomeHeroBand", () => {
   it("renders brand-first carousel hero with CTAs and no escrow pill row", () => {
-    renderHomeHeroBand({ locale: "en", t, brandName: "Vergeo5" });
+    renderHomeHeroBand({ locale: "en", t, brandName: "Convergeo" });
     expect(screen.getByTestId("home-hero-band")).toBeInTheDocument();
     expect(screen.getByTestId("hero-carousel")).toHaveAttribute("role", "region");
     expect(screen.getByTestId("hero-carousel")).toHaveAttribute("aria-roledescription", "carousel");
-    expect(screen.getByTestId("home-hero-brand")).toHaveTextContent("Vergeo5");
+    expect(screen.getByTestId("home-hero-brand")).toHaveTextContent("Convergeo");
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       /Shop products, services, and events/i,
     );
     expect(screen.getAllByTestId("cloudinary-image").length).toBeGreaterThan(0);
     expect(screen.queryByText("You pay")).not.toBeInTheDocument();
-    expect(screen.queryByText("Held by Vergeo5")).not.toBeInTheDocument();
+    expect(screen.queryByText("Held by Convergeo")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Start browsing" })).toHaveAttribute(
       "href",
       "/en/search",
@@ -264,7 +264,7 @@ describe("HomeHeroBand", () => {
   });
 
   it("uses curated fallback slides with priority on the first image", () => {
-    renderHomeHeroBand({ locale: "en", t, brandName: "Vergeo5" });
+    renderHomeHeroBand({ locale: "en", t, brandName: "Convergeo" });
     const images = screen.getAllByTestId("cloudinary-image");
     expect(images[0]).toHaveAttribute("data-priority", "true");
     expect(images[0]).toHaveAttribute("data-public-id", "demo/categories/mobile-phones");
@@ -277,7 +277,7 @@ describe("HomeHeroBand", () => {
     renderHomeHeroBand({
       locale: "en",
       t,
-      brandName: "Vergeo5",
+      brandName: "Convergeo",
       visualPublicId: "vendors/acme/listing-hero",
     });
     const images = screen.getAllByTestId("cloudinary-image");
@@ -290,7 +290,7 @@ describe("HomeSellCta", () => {
   it("links to the sell page with invite-only messaging", () => {
     render(<HomeSellCta locale="en" t={t} />);
     expect(
-      screen.getByRole("heading", { name: "Selling on Vergeo5 is invite-only for now" }),
+      screen.getByRole("heading", { name: "Selling on Convergeo is invite-only for now" }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Public self-service signup is not open yet/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Learn about selling" })).toHaveAttribute(

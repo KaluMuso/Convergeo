@@ -1,7 +1,7 @@
 {
   "title": "管理控制台",
   "shell": {
-    "eyebrow": "Vergeo5 运营",
+    "eyebrow": "Convergeo 运营",
     "environment": "加固管理源",
     "signOut": "退出登录"
   },
@@ -88,7 +88,7 @@
       "legal": "客户端——法律与政策页面",
       "notifications": "服务器端——WhatsApp、短信与邮件模板",
       "account": "客户端——账户与隐私",
-      "ai": "客户端——Ask Vergeo",
+      "ai": "客户端——Ask Convergeo",
       "marketing": "客户端——关于、联系、帮助、入驻"
     },
     "addLanguage": {
@@ -583,7 +583,7 @@
     },
     "dispatch": {
       "title": "人工调度",
-      "subtitle": "记录您已在 Vergeo5 外预约的快递员，并粘贴跟踪信息到客户时间线。",
+      "subtitle": "记录您已在 Convergeo 外预约的快递员，并粘贴跟踪信息到客户时间线。",
       "manualModelHint": "D16：卢萨卡配送为运营人工调度——v1 无 Yango/inDrive API 集成。",
       "courier": "所用快递员（人工预约）",
       "couriers": {
@@ -600,7 +600,7 @@
         "ship": "标记为已发货",
         "mark_delivered": "标记为已送达"
       },
-      "confirmManual": "我确认此快递员已在 Vergeo5 外人工预约，且跟踪信息准确。",
+      "confirmManual": "我确认此快递员已在 Convergeo 外人工预约，且跟踪信息准确。",
       "submit": "记录调度",
       "submitting": "保存中…",
       "success": "调度已记录至订单时间线。",
@@ -729,12 +729,12 @@
       "products": "商品"
     },
     "aiUsage": {
-      "title": "Ask Vergeo AI",
+      "title": "Ask Convergeo AI",
       "subtitle": "月度支出与平台上限对比",
       "noData": "用量计量不可用",
       "noDataHint": "无法读取 ask_spend_monthly。上限仍为每月 ${cap}——不是编造的支出数字。",
       "spendVsCap": "已用 ${spend}，月度上限 ${cap}",
-      "killed": "熔断已启用——Ask Vergeo 在重置前被阻止。"
+      "killed": "熔断已启用——Ask Convergeo 在重置前被阻止。"
     },
     "funnel": {
       "title": "转化漏斗概览",
@@ -906,23 +906,23 @@
     "templates": {
       "order_status_update": {
         "label": "订单状态更新",
-        "body": "您好，我们是 Vergeo5——正在核实您的订单情况，稍后将为您更新。"
+        "body": "您好，我们是 Convergeo——正在核实您的订单情况，稍后将为您更新。"
       },
       "delivery_eta": {
         "label": "配送预计到达时间",
-        "body": "您好，我们是 Vergeo5——您的包裹正在配送途中，快递员确认后我们会立即告知预计到达时间。"
+        "body": "您好，我们是 Convergeo——您的包裹正在配送途中，快递员确认后我们会立即告知预计到达时间。"
       },
       "payment_reminder": {
         "label": "付款提醒",
-        "body": "您好，我们是 Vergeo5——您的订单正在等待付款，请在方便时打开应用完成结账。"
+        "body": "您好，我们是 Convergeo——您的订单正在等待付款，请在方便时打开应用完成结账。"
       },
       "apology_delay": {
         "label": "延误致歉",
-        "body": "您好，我们是 Vergeo5——非常抱歉您的订单出现延误，我们的团队正在优先处理。"
+        "body": "您好，我们是 Convergeo——非常抱歉您的订单出现延误，我们的团队正在优先处理。"
       },
       "pickup_ready": {
         "label": "可取货",
-        "body": "您好，我们是 Vergeo5——您的订单已可取货，请在到店时携带订单编号。"
+        "body": "您好，我们是 Convergeo——您的订单已可取货，请在到店时携带订单编号。"
       }
     },
     "errors": {

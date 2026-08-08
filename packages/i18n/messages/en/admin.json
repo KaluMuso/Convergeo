@@ -1,7 +1,7 @@
 {
   "title": "Admin console",
   "shell": {
-    "eyebrow": "Vergeo5 operations",
+    "eyebrow": "Convergeo operations",
     "environment": "Hardened admin origin",
     "signOut": "Sign out",
     "navAriaLabel": "Admin navigation",
@@ -104,7 +104,7 @@
       "legal": "Customer — legal and policy pages",
       "notifications": "Server — WhatsApp, SMS and email templates",
       "account": "Customer — account and privacy",
-      "ai": "Customer — Ask Vergeo",
+      "ai": "Customer — Ask Convergeo",
       "marketing": "Customer — about, contact, help, sell"
     },
     "addLanguage": {
@@ -720,7 +720,7 @@
     },
     "dispatch": {
       "title": "Manual dispatch",
-      "subtitle": "Record a courier you already booked outside Vergeo5, then paste tracking for the customer timeline.",
+      "subtitle": "Record a courier you already booked outside Convergeo, then paste tracking for the customer timeline.",
       "manualModelHint": "D16: Lusaka delivery is manual ops dispatch — no Yango/inDrive API integration in v1.",
       "courier": "Courier used (booked manually)",
       "couriers": {
@@ -737,7 +737,7 @@
         "ship": "Mark shipped",
         "mark_delivered": "Mark delivered"
       },
-      "confirmManual": "I confirm this courier was booked manually outside Vergeo5 and tracking is accurate.",
+      "confirmManual": "I confirm this courier was booked manually outside Convergeo and tracking is accurate.",
       "submit": "Record dispatch",
       "submitting": "Saving…",
       "success": "Dispatch recorded on the order timeline.",
@@ -871,12 +871,12 @@
       "products": "Products"
     },
     "aiUsage": {
-      "title": "Ask Vergeo AI",
+      "title": "Ask Convergeo AI",
       "subtitle": "Monthly spend vs platform cap",
       "noData": "Usage meter unavailable",
       "noDataHint": "ask_spend_monthly could not be read. Cap remains ${cap}/mo — not a fabricated spend figure.",
       "spendVsCap": "${spend} of ${cap} monthly cap",
-      "killed": "Kill-switch active — Ask Vergeo is blocked until reset."
+      "killed": "Kill-switch active — Ask Convergeo is blocked until reset."
     },
     "funnel": {
       "title": "Funnel snapshot",
@@ -1050,23 +1050,23 @@
     "templates": {
       "order_status_update": {
         "label": "Order status update",
-        "body": "Hi from Vergeo5 support — we're checking on your order and will update you shortly."
+        "body": "Hi from Convergeo support — we're checking on your order and will update you shortly."
       },
       "delivery_eta": {
         "label": "Delivery ETA",
-        "body": "Hi from Vergeo5 — your delivery is on the way. We'll share an ETA as soon as the courier confirms."
+        "body": "Hi from Convergeo — your delivery is on the way. We'll share an ETA as soon as the courier confirms."
       },
       "payment_reminder": {
         "label": "Payment reminder",
-        "body": "Hi from Vergeo5 — your order is awaiting payment. Open the app to complete checkout when ready."
+        "body": "Hi from Convergeo — your order is awaiting payment. Open the app to complete checkout when ready."
       },
       "apology_delay": {
         "label": "Apology for delay",
-        "body": "Hi from Vergeo5 — we're sorry for the delay on your order. Our team is prioritising it now."
+        "body": "Hi from Convergeo — we're sorry for the delay on your order. Our team is prioritising it now."
       },
       "pickup_ready": {
         "label": "Pickup ready",
-        "body": "Hi from Vergeo5 — your order is ready for pickup. Bring your order reference when you arrive."
+        "body": "Hi from Convergeo — your order is ready for pickup. Bring your order reference when you arrive."
       }
     },
     "errors": {
@@ -1075,7 +1075,7 @@
   },
   "intake": {
     "meta": {
-      "title": "WhatsApp intake — Vergeo5 Admin",
+      "title": "WhatsApp intake — Convergeo Admin",
       "description": "Review vendor product drafts submitted through the WhatsApp intake lane."
     },
     "title": "WhatsApp intake",
@@ -1152,7 +1152,7 @@
   },
   "clips": {
     "meta": {
-      "title": "Clip review — Vergeo5 Admin",
+      "title": "Clip review — Convergeo Admin",
       "description": "Review vendor clips before they appear in the customer feed."
     },
     "title": "Clip review",

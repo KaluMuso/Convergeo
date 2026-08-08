@@ -23,7 +23,7 @@ describe("BuyerTrustPanel", () => {
         logisticsPillLabels={pillLabels}
         returnsLabel="Returns & refunds"
         returnsHref="/en/legal/returns"
-        escrowLabel="When online payment is available, Vergeo5 holds your money until delivery."
+        escrowLabel="When online payment is available, Convergeo holds your money until delivery."
       />,
     );
 

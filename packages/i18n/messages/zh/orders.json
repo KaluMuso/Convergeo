@@ -2,7 +2,7 @@
   "title": "您的订单",
   "empty": {
     "title": "暂无订单",
-    "body": "当您从 Vergeo5 商家购买商品后，您的订单和物流跟踪将显示在这里。",
+    "body": "当您从 Convergeo 商家购买商品后，您的订单和物流跟踪将显示在这里。",
     "cta": "开始购物"
   },
   "list": {
@@ -44,7 +44,7 @@
   "timeline": {
     "title": "订单进度",
     "placed": "订单已提交",
-    "paymentHeld": "您已付款——由 Vergeo5 保管",
+    "paymentHeld": "您已付款——由 Convergeo 保管",
     "paymentCod": "收货时向商家付款",
     "confirmed": "商家已确认您的订单",
     "processing": "商家正在备货",
@@ -56,7 +56,7 @@
     "refunded": "退款至您的移动支付账户"
   },
   "escrow": {
-    "held": "在您收到订单之前，您的款项由 Vergeo5 安全保管。",
+    "held": "在您收到订单之前，您的款项由 Convergeo 安全保管。",
     "released": "订单完成后，款项已放款给商家。",
     "refunded": "退款正在返回至您的移动支付钱包。",
     "cod": "收到订单时，用现金或移动支付向商家付款。"
@@ -80,8 +80,8 @@
   },
   "confirm": {
     "title": "已收到订单？",
-    "body": "确认后，将从 Vergeo5 保管中放款给商家。请仅在收到全部商品后确认。",
-    "trust": "由 Vergeo5 保管 → 放款给商家",
+    "body": "确认后，将从 Convergeo 保管中放款给商家。请仅在收到全部商品后确认。",
+    "trust": "由 Convergeo 保管 → 放款给商家",
     "button": "确认收货",
     "confirming": "确认中…",
     "done": "您已确认收货",
@@ -125,7 +125,7 @@
   "dispute": {
     "title": "订单纠纷",
     "body": "在我们与商家进行调查期间，您的款项将由我们保管。",
-    "holdTrust": "由 Vergeo5 保管——在此纠纷解决前暂停放款",
+    "holdTrust": "由 Convergeo 保管——在此纠纷解决前暂停放款",
     "statusLabel": "纠纷状态",
     "statusDisplay": "纠纷状态：{status}",
     "evidenceLabel": "您的证据",

@@ -2,11 +2,11 @@
 
 exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`] = `
 <header
-  class="sticky top-0 z-50 border-b border-border bg-surface"
+  class="sticky top-0 z-50 border-b border-border bg-surface/95 supports-[backdrop-filter]:bg-surface/90"
   data-compact="false"
   data-testid="shop-header"
   data-variant="shop"
-  style="box-shadow: none; transition: box-shadow var(--dur) var(--ease-std);"
+  style="box-shadow: none; transition: box-shadow var(--dur) var(--ease-std), background-color var(--dur) var(--ease-std);"
 >
   <a
     class="sr-only rounded bg-primary text-sm font-medium text-surface focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:inline-flex focus:min-h-11 focus:items-center focus:px-4 focus:shadow-focusRing"
@@ -25,10 +25,26 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
         class="min-w-0 shrink-0 [&_a]:text-lg [&_a]:leading-none"
       >
         <a
-          class="font-display text-primary"
+          aria-label="Convergeo"
+          class="inline-flex items-center transition-opacity duration-fast ease-std hover:opacity-90"
           href="/en"
         >
-          Vergeo5
+          <span
+            class="inline-flex items-center"
+            data-testid="brand-logo"
+          >
+            <img
+              alt="Convergeo"
+              class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem]"
+              data-nimg="1"
+              decoding="async"
+              height="23"
+              src="/_next/image?url=%2Fverge.png&w=384&q=75"
+              srcset="/_next/image?url=%2Fverge.png&w=256&q=75 1x, /_next/image?url=%2Fverge.png&w=384&q=75 2x"
+              style="color: transparent;"
+              width="168"
+            />
+          </span>
         </a>
       </div>
       <div
@@ -108,10 +124,26 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
       class="shrink-0 [&_a]:text-2xl [&_a]:leading-none [&_a]:transition-transform [&_a]:duration-fast [&_a]:ease-std"
     >
       <a
-        class="font-display text-primary"
+        aria-label="Convergeo"
+        class="inline-flex items-center transition-opacity duration-fast ease-std hover:opacity-90"
         href="/en"
       >
-        Vergeo5
+        <span
+          class="inline-flex items-center"
+          data-testid="brand-logo"
+        >
+          <img
+            alt="Convergeo"
+            class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem]"
+            data-nimg="1"
+            decoding="async"
+            height="23"
+            src="/_next/image?url=%2Fverge.png&w=384&q=75"
+            srcset="/_next/image?url=%2Fverge.png&w=256&q=75 1x, /_next/image?url=%2Fverge.png&w=384&q=75 2x"
+            style="color: transparent;"
+            width="168"
+          />
+        </span>
       </a>
     </div>
     <div

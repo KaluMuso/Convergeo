@@ -19,11 +19,11 @@
   "greeting": "Moni, {name}!",
   "install": {
     "action": "Ika app",
-    "body": "Onjezani Vergeo5 pa home screen kuti mufike mwachangu ndi app ya full-screen.",
+    "body": "Onjezani Convergeo pa home screen kuti mufike mwachangu ndi app ya full-screen.",
     "dismiss": "Osati pano",
-    "title": "Ikani Vergeo5",
+    "title": "Ikani Convergeo",
     "updateAction": "Reload kuti mu-update",
-    "updateBody": "Version yatsopano ya Vergeo5 yalipo."
+    "updateBody": "Version yatsopano ya Convergeo yalipo."
   },
   "offline": {
     "body": "Palibe connection pano. Mapeji omwe mwaonako kale amagwirabe ntchito — connectaninso kuti muone zonse.",

@@ -16,7 +16,7 @@ afterEach(cleanup);
 import { MobileHeaderSearch } from "./mobile-header-search";
 
 const labels = {
-  placeholder: "Search Vergeo5",
+  placeholder: "Search Convergeo",
   submit: "Search",
   ariaLabel: "Search",
   suggestionsLabel: "Suggestions",
