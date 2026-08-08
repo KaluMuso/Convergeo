@@ -1,0 +1,167 @@
+name: Release certification
+
+# Independent release-certification suite — on-demand and weekly.
+# Produces evidence under scripts/qa/evidence/<sha>/<env>/<runId>/.
+# Does NOT merge. Strict modes exit non-zero unless CERTIFIABLE_AFTER_INTEGRATION.
+on:
+  schedule:
+    # Sunday 03:00 UTC weekly baseline.
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Certification mode"
+        required: false
+        default: "ci"
+        type: choice
+        options:
+          - local-development
+          - ci
+          - integrated-staging
+          - production-readiness
+      environment:
+        description: "Target environment label"
+        required: false
+        default: "ci"
+        type: choice
+        options:
+          - ci
+          - staging
+          - local
+      skip_e2e:
+        description: "Skip browser E2E"
+        required: false
+        default: false
+        type: boolean
+      run_restore_drill:
+        description: "Execute restore-drill proof (not dry-run)"
+        required: false
+        default: false
+        type: boolean
+      planted_fail_self_test:
+        description: "Plant a critical FAIL and assert workflow turns red"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-certify-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  certify:
+    name: Release certification orchestrator
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+      E2E_SEED_RESET_URL: ${{ secrets.E2E_SEED_RESET_URL }}
+      E2E_SEED_TOKEN: ${{ secrets.E2E_SEED_TOKEN }}
+      LENCO_ENV: ${{ secrets.LENCO_ENV }}
+      LENCO_API_TOKEN: ${{ secrets.LENCO_API_TOKEN }}
+      STAGING_PROOF_DIR: ${{ secrets.STAGING_PROOF_DIR }}
+      STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+      STAGING_API_FINGERPRINT: ${{ secrets.STAGING_API_FINGERPRINT }}
+      CANDIDATE_SHA: ${{ github.sha }}
+      CERT_RUN_ID: ${{ github.run_id }}
+      CERT_RUN_RESTORE_DRILL: ${{ inputs.run_restore_drill && '1' || '0' }}
+      SEND_SMS_HOOK_SECRET: "v1,whsec_Y2ktZHVtbXktc2VuZC1zbXMtaG9vay1zZWNyZXQtMDAw"
+      SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: "ci-dummy-google-client-id"
+      SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: "ci-dummy-google-secret"
+      SUPABASE_AUTH_EXTERNAL_APPLE_SECRET: "ci-dummy-apple-secret"
+      SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+      SUPABASE_ANON_KEY: test-anon-key
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install JS dependencies (frozen)
+        run: pnpm i --frozen-lockfile
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+
+      - name: Install API dependencies
+        working-directory: services/api
+        run: uv sync --dev
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: 2.109.1
+
+      - name: QA framework self-tests
+        run: node --test scripts/qa/self-test/*.test.mjs
+
+      - name: Planted critical-failure self-test (optional)
+        if: inputs.planted_fail_self_test == true
+        run: |
+          set -euo pipefail
+          NS="scripts/qa/evidence/${{ github.sha }}/planted/${{ github.run_id }}"
+          mkdir -p "$NS"
+          printf '%s\n' '{"id":"lint","status":"FAIL","detail":"planted critical","sha":"${{ github.sha }}","environment":"planted","run_id":"${{ github.run_id }}"}' > "$NS/gate-lint.json"
+          set +e
+          node scripts/qa/collect-certificate.mjs \
+            --evidence-dir "$NS" \
+            --sha "${{ github.sha }}" \
+            --environment planted \
+            --mode ci \
+            --run-id "${{ github.run_id }}" \
+            --branch "${{ github.ref_name }}"
+          rc=$?
+          set -e
+          if [ "$rc" -eq 0 ]; then
+            echo "::error::planted FAIL must make certification red (exit non-zero)"
+            exit 1
+          fi
+          echo "planted critical failure correctly exits $rc"
+
+      - name: Install E2E deps once (npm ci, frozen lockfile)
+        if: inputs.skip_e2e != true && env.E2E_BASE_URL != ''
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run certification orchestrator
+        run: |
+          MODE="${{ inputs.mode || 'ci' }}"
+          ENV_LABEL="${{ inputs.environment || 'ci' }}"
+          ARGS=(--mode "$MODE" --environment "$ENV_LABEL" --run-id "${{ github.run_id }}")
+          if [ "${{ inputs.skip_e2e }}" = "true" ]; then
+            ARGS+=(--skip-e2e)
+          fi
+          bash scripts/qa/release-certify.sh "${ARGS[@]}"
+
+      - name: Upload release certificate
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-certificate-${{ github.run_id }}
+          path: |
+            scripts/qa/evidence/
+            e2e/results/
+            e2e/playwright-report/
+          retention-days: 30
+          if-no-files-found: ignore

@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "description": "Layer-2 API integration gates for release certification. Consumed by release-certify.sh.",
+  "domains": {
+    "authz": {
+      "label": "API health & authz",
+      "tests": ["services/api/tests/test_authz_matrix.py"],
+      "required": true
+    },
+    "cart": {
+      "label": "Cart operations",
+      "tests": ["services/api/tests/test_cart.py", "services/api/tests/test_cart_rfq_merge.py"],
+      "required": true
+    },
+    "checkout": {
+      "label": "Checkout & payment rails",
+      "tests": [
+        "services/api/tests/test_checkout.py",
+        "services/api/tests/test_checkout_payment.py",
+        "services/api/tests/test_checkout_prepaid_settle_gate.py"
+      ],
+      "required": true
+    },
+    "orders": {
+      "label": "Order state machines",
+      "tests": [
+        "services/api/tests/test_vendor_orders.py",
+        "services/api/tests/test_vendor_order_queue.py"
+      ],
+      "required": true
+    },
+    "reviews": {
+      "label": "Reviews & aggregates",
+      "tests": ["services/api/tests/test_review_aggregate.py"],
+      "required": true
+    },
+    "returns": {
+      "label": "Returns & disputes",
+      "tests": [
+        "services/api/tests/test_returns_lane1.py",
+        "services/api/tests/test_returns_lane2.py"
+      ],
+      "required": true
+    },
+    "rfq": {
+      "label": "RFQ threads & checkout integrity",
+      "tests": [
+        "services/api/tests/test_rfq.py",
+        "services/api/tests/test_rfq_threads.py",
+        "services/api/tests/test_rfq_checkout_integrity.py",
+        "services/api/tests/test_rfq_dispatch_integration.py"
+      ],
+      "required": true
+    },
+    "seller-boundaries": {
+      "label": "Vendor/seller isolation (non-RLS)",
+      "tests": [
+        "services/api/tests/test_vendor_lifecycle_guards.py",
+        "services/api/tests/test_vendor_governance.py"
+      ],
+      "required": false,
+      "note": "RLS suite is the separate rls-isolation gate"
+    }
+  }
+}

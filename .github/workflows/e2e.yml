@@ -72,10 +72,10 @@ jobs:
         with:
           node-version-file: .nvmrc
 
-      - name: Install E2E deps
+      - name: Install E2E deps (frozen lockfile)
         if: steps.guard.outputs.skip != 'true'
         working-directory: e2e
-        run: npm install --no-package-lock
+        run: npm ci
 
       - name: Install Playwright Chromium
         if: steps.guard.outputs.skip != 'true'
