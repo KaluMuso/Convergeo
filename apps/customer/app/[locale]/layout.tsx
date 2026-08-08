@@ -57,23 +57,36 @@ export async function generateMetadata({
   const appName = t("app.name");
   const description = t("meta.defaultDescription");
 
+  const defaultTitle = t("meta.defaultTitle");
+
   const base: Metadata = {
     metadataBase: getMetadataBase(),
     title: {
       template: `%s | ${appName}`,
-      default: appName,
+      default: defaultTitle,
     },
     description,
+    applicationName: appName,
+    icons: {
+      icon: [
+        { url: "/favicon.ico", sizes: "any" },
+        { url: "/Vergeo5.ico", sizes: "any" },
+        { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      ],
+      apple: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+      shortcut: "/favicon.ico",
+    },
     openGraph: {
       siteName: appName,
       type: "website",
       locale,
-      title: appName,
+      title: defaultTitle,
       description,
     },
     twitter: {
       card: "summary_large_image",
-      title: appName,
+      title: defaultTitle,
       description,
     },
   };

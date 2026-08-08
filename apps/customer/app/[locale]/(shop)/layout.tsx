@@ -10,12 +10,13 @@ import {
 import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { TopUtilityBarSlot } from "../_components/top-utility-bar-slot";
+
 import { BottomNavClient } from "./_components/bottom-nav-client";
 import InstallPrompt from "./_components/install-prompt";
 import { MobileHeaderSearch } from "./_components/mobile-header-search";
 import { ServiceInfoBar } from "./_components/service-info-bar";
 import { ShopHeader } from "./_components/shop-header";
-import { ShopLocaleSwitcher } from "./_components/shop-locale-switcher";
 
 type ShopLayoutProps = {
   children: React.ReactNode;
@@ -42,17 +43,6 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
   const tCatalog = createTranslator({ locale, messages, namespace: "catalog" });
   const tCommon = createTranslator({ locale, messages, namespace: "common" });
   const tSearch = createTranslator({ locale, messages, namespace: "search" });
-  const localeSwitcherLabels = {
-    ariaLabel: tCommon("locale.switchAria"),
-    names: {
-      en: tCommon("locale.names.en"),
-      bem: tCommon("locale.names.bem"),
-      nya: tCommon("locale.names.nya"),
-      fr: tCommon("locale.names.fr"),
-    },
-  };
-  const localeSwitcher = <ShopLocaleSwitcher locale={locale} labels={localeSwitcherLabels} />;
-
   const bottomItems = [
     {
       key: "home",
@@ -95,15 +85,9 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
-      <ServiceInfoBar
-        labels={{
-          ariaLabel: tCatalog("home.serviceBar.ariaLabel"),
-          message: tCatalog("home.serviceBar.message"),
-        }}
-      />
+      <TopUtilityBarSlot locale={locale} />
       <ShopHeader
         locale={locale}
-        localeSwitcher={localeSwitcher}
         mobileSearchSlot={
           <MobileHeaderSearch
             locale={locale}
@@ -152,10 +136,16 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           },
         }}
       />
+      <ServiceInfoBar
+        labels={{
+          ariaLabel: tCatalog("home.serviceBar.ariaLabel"),
+          message: tCatalog("home.serviceBar.message"),
+        }}
+      />
       <main
         id="shop-main"
         tabIndex={-1}
-        className="mx-auto w-full max-w-lg flex-1 px-4 pb-20 pt-4 focus-visible:outline-none lg:max-w-7xl lg:px-6 lg:pb-12 lg:pt-6"
+        className="shop-main mx-auto w-full max-w-lg flex-1 px-4 pb-20 pt-4 focus-visible:outline-none lg:max-w-7xl lg:px-6 lg:pb-12 lg:pt-6"
       >
         {children}
       </main>

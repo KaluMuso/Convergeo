@@ -2,6 +2,8 @@ import { AppHeader } from "@vergeo/ui/src/app-header";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 
+import { BrandLogo } from "../../(shop)/_components/brand-logo";
+
 export type MarketingAppHeaderLabels = {
   appName: string;
   navAriaLabel: string;
@@ -28,11 +30,15 @@ export function MarketingAppHeader({ locale, labels }: MarketingAppHeaderProps) 
   return (
     <AppHeader
       variant="marketing"
-      features={{ showSearch: false }}
+      features={{ showSearch: false, showLocale: false }}
       appName={labels.appName}
       logo={
-        <Link href={`/${locale}`} className="font-display text-primary">
-          {labels.appName}
+        <Link
+          href={`/${locale}`}
+          className="inline-flex items-center transition-opacity duration-fast ease-std hover:opacity-90"
+          aria-label={labels.appName}
+        >
+          <BrandLogo appName={labels.appName} />
         </Link>
       }
       navAriaLabel={labels.navAriaLabel}

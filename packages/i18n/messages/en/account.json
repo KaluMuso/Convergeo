@@ -17,7 +17,7 @@
   },
   "business": {
     "title": "Business mode",
-    "description": "Verify your business to unlock wholesale pricing and bulk ordering across Vergeo5.",
+    "description": "Verify your business to unlock wholesale pricing and bulk ordering across Convergeo.",
     "statusLabel": "Status",
     "status": {
       "none": "Not applied",
@@ -51,7 +51,7 @@
   },
   "profile": {
     "title": "Profile",
-    "description": "Update how we greet you and which language you prefer across Vergeo5.",
+    "description": "Update how we greet you and which language you prefer across Convergeo.",
     "nameLabel": "Display name",
     "namePlaceholder": "Your name",
     "localeLabel": "Language",
@@ -100,7 +100,7 @@
   },
   "preferences": {
     "title": "Preferences",
-    "description": "Manage display and how Vergeo5 reaches you about orders, tickets, and account updates.",
+    "description": "Manage display and how Convergeo reaches you about orders, tickets, and account updates.",
     "themeTitle": "Display",
     "themeDescription": "Choose light, dark, or match your device. Default is system.",
     "themeLight": "Light",
@@ -135,16 +135,16 @@
     "retentionNote": "Orders, payments, and tax records are retained in anonymised form for at least seven years as required by Zambian law. Ledger entries are never deleted.",
     "export": {
       "title": "Export my data",
-      "description": "Download a copy of the personal data Vergeo5 holds about you — your profile, addresses, orders, tickets, and reviews — as a JSON file, as provided for under the Zambia Data Protection Act.",
+      "description": "Download a copy of the personal data Convergeo holds about you — your profile, addresses, orders, tickets, and reviews — as a JSON file, as provided for under the Zambia Data Protection Act.",
       "button": "Request data export",
       "loading": "Preparing your export…",
       "success": "Your export is ready — download it now. The link expires after a short time.",
       "error": "We could not prepare your export. Please try again.",
-      "policyLink": "Read the Vergeo5 privacy policy"
+      "policyLink": "Read the Convergeo privacy policy"
     },
     "delete": {
       "title": "Delete my account",
-      "description": "Permanently close your Vergeo5 account. Your sign-in is removed and your personal details are anonymised. To protect your account, deletion requires a typed confirmation phrase and a one-time code sent to your verified phone.",
+      "description": "Permanently close your Convergeo account. Your sign-in is removed and your personal details are anonymised. To protect your account, deletion requires a typed confirmation phrase and a one-time code sent to your verified phone.",
       "warning": "This cannot be undone. Your profile, saved addresses, and preferences will be permanently removed, and you will lose access to your order history. Orders, payments, and tax records are retained in anonymised form as required by Zambian law.",
       "confirmPhraseLabel": "To confirm, type DELETE MY ACCOUNT",
       "confirmPhraseHint": "DELETE MY ACCOUNT",
@@ -228,7 +228,7 @@
   },
   "hub": {
     "title": "Account overview",
-    "description": "Manage orders, saved products, delivery details, and how Vergeo5 looks on your device.",
+    "description": "Manage orders, saved products, delivery details, and how Convergeo looks on your device.",
     "backToShop": "Back to shopping",
     "ordersTitle": "Orders",
     "ordersBody": "Track delivery, pickup, and payment status for each seller.",

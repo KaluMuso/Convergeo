@@ -6,7 +6,7 @@ import { ImageResponse } from "next/og";
  * Title/price come from searchParams set by product/event/vendor pages.
  */
 export const runtime = "edge";
-export const alt = "Vergeo5";
+export const alt = "Convergeo";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -27,7 +27,7 @@ type ImageProps = {
 
 export default async function OpenGraphImage({ searchParams }: ImageProps) {
   const { name, price } = await searchParams;
-  const displayName = name?.trim() || "Vergeo5";
+  const displayName = name?.trim() || "Convergeo";
   const displayPrice = price?.trim() || null;
 
   return new ImageResponse(
@@ -62,7 +62,7 @@ export default async function OpenGraphImage({ searchParams }: ImageProps) {
             background: COLORS.primary,
           }}
         />
-        Vergeo5
+        Convergeo
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 900 }}>

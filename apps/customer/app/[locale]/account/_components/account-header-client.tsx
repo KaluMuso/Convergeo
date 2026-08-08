@@ -4,6 +4,7 @@ import { AppHeader } from "@vergeo/ui/src/app-header";
 import Link from "next/link";
 import { useEffect } from "react";
 
+import { BrandLogo } from "../../(shop)/_components/brand-logo";
 import {
   getCartItemCount,
   useCartActions,
@@ -74,11 +75,15 @@ export function AccountAppHeaderClient({
   return (
     <AppHeader
       variant="account"
-      features={{ showAccount: false }}
+      features={{ showAccount: false, showLocale: false }}
       appName={labels.appName}
       logo={
-        <Link href={`/${locale}`} className="font-display text-primary">
-          {labels.appName}
+        <Link
+          href={`/${locale}`}
+          className="inline-flex items-center transition-opacity duration-fast ease-std hover:opacity-90"
+          aria-label={labels.appName}
+        >
+          <BrandLogo appName={labels.appName} />
         </Link>
       }
       navAriaLabel={labels.navAriaLabel}

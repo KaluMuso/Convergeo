@@ -306,10 +306,14 @@ export function AppHeader({
       data-testid={dataTestId ?? "app-header"}
       data-variant={variant}
       data-compact={compact ? "true" : "false"}
-      className={mergeClasses("sticky top-0 z-50 border-b border-border bg-surface", className)}
+      className={mergeClasses(
+        "sticky top-0 z-50 border-b border-border bg-surface/95 supports-[backdrop-filter]:bg-surface/90",
+        className,
+      )}
       style={{
         boxShadow: compact ? "var(--shadow-1)" : "none",
-        transition: "box-shadow var(--dur) var(--ease-std)",
+        transition:
+          "box-shadow var(--dur) var(--ease-std), background-color var(--dur) var(--ease-std)",
       }}
     >
       {skipLink}

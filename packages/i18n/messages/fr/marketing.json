@@ -1,13 +1,13 @@
 {
   "about": {
     "meta": {
-      "title": "À propos de Vergeo5",
-      "description": "Vergeo5 est la place de marché mobile de la Zambie pour les produits, services et événements — avec votre argent gardé en sécurité sous séquestre jusqu'à ce que vous receviez ce que vous avez payé."
+      "title": "À propos de Convergeo",
+      "description": "Convergeo est la place de marché mobile de la Zambie pour les produits, services et événements — avec votre argent gardé en sécurité sous séquestre jusqu'à ce que vous receviez ce que vous avez payé."
     },
     "hero": {
       "eyebrow": "À propos",
       "headline": "La place de marché de la Zambie, conçue pour la confiance",
-      "subhead": "Vergeo5 réunit produits, services et événements au même endroit — avec un séquestre qui conserve votre argent jusqu'à la confirmation de la livraison."
+      "subhead": "Convergeo réunit produits, services et événements au même endroit — avec un séquestre qui conserve votre argent jusqu'à la confirmation de la livraison."
     },
     "mission": {
       "heading": "Notre mission",
@@ -33,7 +33,7 @@
       }
     },
     "howItWorks": {
-      "heading": "Comment fonctionne Vergeo5",
+      "heading": "Comment fonctionne Convergeo",
       "step1": "Découvrez des produits, services et événements proposés par des vendeurs partout en Zambie.",
       "step2": "Payez par mobile money, carte ou à la livraison pour les commandes jusqu'à K500.",
       "step3": "Votre argent est gardé en sécurité sous séquestre jusqu'à ce que vous confirmiez la livraison.",
@@ -48,8 +48,8 @@
   },
   "contact": {
     "meta": {
-      "title": "Contacter Vergeo5",
-      "description": "Contactez l'équipe Vergeo5 sur WhatsApp pour une réponse rapide, ou envoyez-nous un message et nous vous répondrons par e-mail."
+      "title": "Contacter Convergeo",
+      "description": "Contactez l'équipe Convergeo sur WhatsApp pour une réponse rapide, ou envoyez-nous un message et nous vous répondrons par e-mail."
     },
     "hero": {
       "eyebrow": "Contact",
@@ -93,7 +93,7 @@
   "help": {
     "meta": {
       "title": "Centre d'aide",
-      "description": "Des réponses sur le séquestre, les paiements, la livraison, les retours, les billets et la vente sur Vergeo5."
+      "description": "Des réponses sur le séquestre, les paiements, la livraison, les retours, les billets et la vente sur Convergeo."
     },
     "hero": {
       "eyebrow": "Centre d'aide",
@@ -114,7 +114,7 @@
       "delivery": "Livraison et retrait",
       "returns": "Retours et remboursements",
       "events": "Événements et billets",
-      "selling": "Vendre sur Vergeo5",
+      "selling": "Vendre sur Convergeo",
       "account": "Compte et confidentialité"
     },
     "article": {
@@ -155,13 +155,13 @@
   },
   "beta": {
     "meta": {
-      "title": "Accès à la bêta de Vergeo5",
-      "description": "Vergeo5 est en bêta sur invitation uniquement. Saisissez votre code d'invitation pour accéder en avant-première à la place de marché de la Zambie."
+      "title": "Accès à la bêta de Convergeo",
+      "description": "Convergeo est en bêta sur invitation uniquement. Saisissez votre code d'invitation pour accéder en avant-première à la place de marché de la Zambie."
     },
     "hero": {
       "eyebrow": "Bêta privée",
       "headline": "Vous êtes parmi les premiers",
-      "subhead": "Vergeo5 est en bêta sur invitation uniquement. Saisissez votre code d'invitation ci-dessous pour entrer."
+      "subhead": "Convergeo est en bêta sur invitation uniquement. Saisissez votre code d'invitation ci-dessous pour entrer."
     },
     "form": {
       "codeLabel": "Code d'invitation",
@@ -172,7 +172,7 @@
     },
     "success": {
       "heading": "Vous êtes entré !",
-      "body": "Votre invitation a fonctionné. Bienvenue dans la bêta de Vergeo5.",
+      "body": "Votre invitation a fonctionné. Bienvenue dans la bêta de Convergeo.",
       "cta": "Commencer à explorer"
     },
     "errors": {

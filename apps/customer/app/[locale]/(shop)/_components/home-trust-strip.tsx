@@ -58,7 +58,7 @@ export function HomeTrustStrip({ labels }: HomeTrustStripProps) {
           <li
             key={item.key}
             data-testid={item.testId}
-            className="flex min-h-11 items-start gap-2 rounded border border-border bg-surface px-3 py-2.5 text-sm text-text-2"
+            className="card-lift flex min-h-11 items-start gap-2 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-text-2 shadow-1"
           >
             <span
               aria-hidden

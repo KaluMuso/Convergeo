@@ -2,6 +2,8 @@ import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import { TopUtilityBarSlot } from "../_components/top-utility-bar-slot";
+
 import { MarketingAppHeader } from "./_components/marketing-app-header";
 
 type MarketingLayoutProps = {
@@ -42,6 +44,7 @@ export default async function MarketingLayout({ children, params }: MarketingLay
       >
         {tNav("skipToContent")}
       </a>
+      <TopUtilityBarSlot locale={locale} />
       <MarketingAppHeader
         locale={locale}
         labels={{

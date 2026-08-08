@@ -21,9 +21,7 @@ vi.mock("@vergeo/ui/src/icons", () => ({
 
 vi.mock("next-intl", () => ({
   createTranslator: () => (key: string) => key,
-  NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
+  NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock("next-intl/server", () => ({
@@ -43,16 +41,16 @@ vi.mock("./_components/mobile-header-search", () => ({
   MobileHeaderSearch: () => <div data-testid="mobile-search" />,
 }));
 
+vi.mock("../_components/top-utility-bar-slot", () => ({
+  TopUtilityBarSlot: () => <div data-testid="top-utility-bar" />,
+}));
+
 vi.mock("./_components/service-info-bar", () => ({
   ServiceInfoBar: () => <div data-testid="service-info" />,
 }));
 
 vi.mock("./_components/shop-header", () => ({
   ShopHeader: () => <header data-testid="shop-header" />,
-}));
-
-vi.mock("./_components/shop-locale-switcher", () => ({
-  ShopLocaleSwitcher: () => <div data-testid="locale-switcher" />,
 }));
 
 afterEach(() => {

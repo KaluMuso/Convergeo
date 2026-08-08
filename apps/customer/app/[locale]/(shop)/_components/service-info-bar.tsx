@@ -1,6 +1,5 @@
 /**
- * Thin service-information strip above shop chrome (audit §5 / E05 trust relocation).
- * Factual fulfillment copy only — no active MoMo/card claims.
+ * Compact fulfillment trust line — sits under the main shop header (not the top utility strip).
  */
 
 export type ServiceInfoBarLabels = {
@@ -18,9 +17,9 @@ export function ServiceInfoBar({ labels }: ServiceInfoBarProps) {
       data-testid="service-info-bar"
       role="region"
       aria-label={labels.ariaLabel}
-      className="border-b border-border bg-bg-2 text-text-2"
+      className="border-b border-border bg-primary-tint/40 text-text-2"
     >
-      <p className="mx-auto m-0 flex min-h-9 max-w-7xl items-center justify-center px-4 py-1.5 text-center text-micro font-medium tracking-wide lg:px-6">
+      <p className="mx-auto m-0 flex min-h-8 max-w-7xl items-center justify-center px-4 py-1 text-center text-micro font-medium tracking-wide lg:px-6">
         {labels.message}
       </p>
     </div>

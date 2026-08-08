@@ -1,9 +1,10 @@
 {
   "app": {
-    "name": "Vergeo5"
+    "name": "Convergeo"
   },
   "meta": {
-    "defaultDescription": "Achetez des produits, réservez des services et trouvez des événements en Zambie sur Vergeo5."
+    "defaultDescription": "Achetez des produits, réservez des services et trouvez des événements en Zambie sur Convergeo — la place de marché multi-vendeurs.",
+    "defaultTitle": "Convergeo — Produits, services et événements en Zambie"
   },
   "common": {
     "loading": "Chargement…",
@@ -40,11 +41,28 @@
     "home": "Accueil"
   },
   "install": {
-    "title": "Installer Vergeo5",
-    "body": "Ajoutez Vergeo5 à votre écran d'accueil pour un accès plus rapide et une application en plein écran.",
+    "title": "Installer Convergeo",
+    "body": "Ajoutez Convergeo à votre écran d'accueil pour un accès plus rapide et une application en plein écran.",
     "action": "Installer l'application",
     "dismiss": "Plus tard",
-    "updateBody": "Une nouvelle version de Vergeo5 est prête.",
+    "updateBody": "Une nouvelle version de Convergeo est prête.",
     "updateAction": "Recharger pour mettre à jour"
+  },
+  "contact": {
+    "phone": "+260 97 XXX XX70",
+    "email": "Convergeozambia@gmail.com"
+  },
+  "social": {
+    "facebook": "https://www.facebook.com/",
+    "twitter": "https://twitter.com/",
+    "instagram": "https://www.instagram.com/"
+  },
+  "utilityBar": {
+    "ariaLabel": "Langue, contact et réseaux sociaux",
+    "socialAria": "Réseaux sociaux",
+    "facebookAria": "Convergeo sur Facebook",
+    "twitterAria": "Convergeo sur X",
+    "instagramAria": "Convergeo sur Instagram",
+    "emailAria": "Envoyer un e-mail à Convergeo"
   }
 }

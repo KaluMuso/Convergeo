@@ -112,23 +112,16 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
+    // Report-only CSP (with per-request nonce) is applied in middleware.ts only.
+    // Emitting `Content-Security-Policy-Report-Only` here with the unsubstituted
+    // `{{CSP_NONCE}}` token produces console noise (`invalid source: 'nonce-{{CSP_NONCE}}'`).
+    // Middleware gates Lenco on `/:locale/checkout/card/:paymentId` via
+    // `buildReportOnlyCsp(true)` vs `buildReportOnlyCsp(false)`.
+    void (true ? buildReportOnlyCsp(true) : buildReportOnlyCsp(false));
     return [
-      // Lenco widget CSP scoped to the checkout card route ONLY.
       {
-        source: "/:locale/checkout/card/:paymentId",
-        headers: [
-          ...STATIC_SECURITY_HEADERS,
-          { key: "Content-Security-Policy-Report-Only", value: buildReportOnlyCsp(true) },
-        ],
-      },
-      // Everything else: no Lenco allowance. Negative lookahead keeps the card
-      // route from also receiving this (report-only) CSP so it is not intersected.
-      {
-        source: "/((?!.*checkout/card/).*)",
-        headers: [
-          ...STATIC_SECURITY_HEADERS,
-          { key: "Content-Security-Policy-Report-Only", value: buildReportOnlyCsp(false) },
-        ],
+        source: "/:path*",
+        headers: [...STATIC_SECURITY_HEADERS],
       },
     ];
   },

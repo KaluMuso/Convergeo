@@ -28,6 +28,8 @@ function buildReportOnlyCsp(lenco: boolean): string {
     process.env,
     `${CSP_ORIGINS.ga4Connect} ${CSP_ORIGINS.sentryIngest}${connectExtra}`,
   );
+  // Omit upgrade-insecure-requests from report-only — browsers ignore it there and
+  // log a console warning. Enforced CSP (next.config) still upgrades in production.
   const base = [
     "default-src 'self'",
     `script-src 'self' 'strict-dynamic' ${NONCE} https: ${CSP_ORIGINS.ga4Script}${scriptExtra}`,
@@ -43,7 +45,6 @@ function buildReportOnlyCsp(lenco: boolean): string {
     "object-src 'none'",
     "frame-ancestors 'self'",
     `form-action 'self'${lenco ? ` ${CSP_ORIGINS.lencoWidget}` : ""}`,
-    "upgrade-insecure-requests",
   ].join("; ");
   return appendCspReporting(base);
 }

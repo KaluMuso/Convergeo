@@ -4,6 +4,7 @@ import { AppHeader } from "@vergeo/ui/src/app-header";
 import Link from "next/link";
 import { useEffect, type ReactNode } from "react";
 
+import { BrandLogo } from "./brand-logo";
 import { getCartItemCount, useCartActions, useCartStore } from "./cart/mini-cart-drawer";
 import { CategoryMegaMenu } from "./category-mega-menu";
 import { DesktopHeaderSearch } from "./desktop-header-search";
@@ -96,10 +97,15 @@ export function ShopHeader({ locale, labels, localeSwitcher, mobileSearchSlot }:
       data-testid="shop-header"
       appName={labels.appName}
       logo={
-        <MerchPreviewLink href={`/${locale}`} className="font-display text-primary">
-          {labels.appName}
+        <MerchPreviewLink
+          href={`/${locale}`}
+          className="inline-flex items-center transition-opacity duration-fast ease-std hover:opacity-90"
+          aria-label={labels.appName}
+        >
+          <BrandLogo appName={labels.appName} />
         </MerchPreviewLink>
       }
+      features={{ showLocale: false }}
       mobileSearchSlot={mobileSearchSlot}
       desktopSearchSlot={<DesktopHeaderSearch locale={locale} labels={labels.searchInput} />}
       categoriesSlot={

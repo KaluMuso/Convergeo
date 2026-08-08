@@ -1,9 +1,10 @@
 {
   "app": {
-    "name": "Vergeo5"
+    "name": "Convergeo"
   },
   "meta": {
-    "defaultDescription": "在 Vergeo5 选购商品、预订服务并发现赞比亚的活动。"
+    "defaultDescription": "在 Convergeo 上选购商品、预订服务并发现赞比亚各地活动——多商家市场平台。",
+    "defaultTitle": "Convergeo — 赞比亚购物、服务与活动"
   },
   "common": {
     "loading": "加载中…",
@@ -40,5 +41,22 @@
     "dismiss": "暂不",
     "updateBody": "Vergeo5 的新版本已就绪。",
     "updateAction": "重新加载以更新"
+  },
+  "contact": {
+    "phone": "+260 97 XXX XX70",
+    "email": "Convergeozambia@gmail.com"
+  },
+  "social": {
+    "facebook": "https://www.facebook.com/",
+    "twitter": "https://twitter.com/",
+    "instagram": "https://www.instagram.com/"
+  },
+  "utilityBar": {
+    "ariaLabel": "语言、联系方式与社交媒体",
+    "socialAria": "社交媒体",
+    "facebookAria": "Convergeo 的 Facebook",
+    "twitterAria": "Convergeo 的 X",
+    "instagramAria": "Convergeo 的 Instagram",
+    "emailAria": "发送邮件给 Convergeo"
   }
 }

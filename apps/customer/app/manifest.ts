@@ -3,34 +3,37 @@ import { tokens } from "@vergeo/ui/tokens";
 import type { MetadataRoute } from "next";
 
 /**
- * PWA web manifest — M16-P02. Colors come from the shared design tokens
- * (`packages/ui`); no ad-hoc values. `start_url` uses the default locale
- * (manifest is a single, non-localized document at `/manifest.webmanifest`).
- * Icons reference an existing authored asset in `public/` (no unverifiable
- * binaries added).
+ * PWA web manifest — Convergeo brand icons from `public/icon-*.png`
+ * (petal mark). `start_url` uses the default locale.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Vergeo5",
-    short_name: "Vergeo5",
+    name: "Convergeo",
+    short_name: "Convergeo",
     description: "Discover products, services, and events across Zambia.",
     start_url: "/en",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: tokens.colors.bg,
+    background_color: "#000000",
     theme_color: tokens.colors.primary,
     icons: [
       {
-        src: "/icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: "/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
         purpose: "any",
       },
       {
-        src: "/icon.svg",
-        sizes: "any",
-        type: "image/svg+xml",
+        src: "/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
         purpose: "maskable",
       },
     ],
