@@ -11,6 +11,8 @@
     "format": "prettier --config packages/config/prettier.config.mjs --write .",
     "format:check": "prettier --config packages/config/prettier.config.mjs --check .",
     "verify-scaffold": "node scripts/verify-scaffold.mjs",
+    "release-certify": "bash scripts/qa/release-certify.sh",
+    "release-certify:static": "bash scripts/qa/release-certify.sh --layer static",
     "prepare": "lefthook install || true"
   },
   "devDependencies": {

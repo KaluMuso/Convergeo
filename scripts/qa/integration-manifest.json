@@ -1,0 +1,73 @@
+{
+  "$schema": "./integration-manifest.schema.json",
+  "version": 1,
+  "description": "Layer-2 API integration gates for release certification. Each domain maps to pytest modules exercised by release-certify.sh.",
+  "domains": {
+    "api_health": {
+      "label": "API health & authz",
+      "tests": ["services/api/tests/test_authz_matrix.py"],
+      "required": true
+    },
+    "cart": {
+      "label": "Cart operations",
+      "tests": ["services/api/tests/test_cart.py", "services/api/tests/test_cart_rfq_merge.py"],
+      "required": true
+    },
+    "checkout": {
+      "label": "Checkout & payment rails",
+      "tests": [
+        "services/api/tests/test_checkout.py",
+        "services/api/tests/test_checkout_payment.py",
+        "services/api/tests/test_checkout_prepaid_settle_gate.py"
+      ],
+      "required": true
+    },
+    "inventory_reservations": {
+      "label": "Inventory & reservations",
+      "tests": ["services/api/tests/test_listing_below_median.py"],
+      "required": false,
+      "note": "Dedicated inventory/reservation modules pending; listing stock guards covered"
+    },
+    "order_states": {
+      "label": "Order state machines",
+      "tests": [
+        "services/api/tests/test_vendor_orders.py",
+        "services/api/tests/test_vendor_order_queue.py"
+      ],
+      "required": true
+    },
+    "reviews": {
+      "label": "Reviews & aggregates",
+      "tests": ["services/api/tests/test_review_aggregate.py"],
+      "required": true
+    },
+    "returns": {
+      "label": "Returns & disputes",
+      "tests": [
+        "services/api/tests/test_returns_lane1.py",
+        "services/api/tests/test_returns_lane2.py"
+      ],
+      "required": true
+    },
+    "rfq": {
+      "label": "RFQ threads & checkout integrity",
+      "tests": [
+        "services/api/tests/test_rfq.py",
+        "services/api/tests/test_rfq_threads.py",
+        "services/api/tests/test_rfq_checkout_integrity.py",
+        "services/api/tests/test_rfq_dispatch_integration.py"
+      ],
+      "required": true
+    },
+    "seller_boundaries": {
+      "label": "Vendor/seller isolation",
+      "tests": [
+        "services/api/tests/test_vendor_lifecycle_guards.py",
+        "services/api/tests/test_vendor_governance.py",
+        "services/api/tests/rls"
+      ],
+      "required": true,
+      "note": "RLS suite requires local Supabase — gated separately"
+    }
+  }
+}
