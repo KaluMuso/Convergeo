@@ -5,7 +5,7 @@
   "footer": {
     "legalHeading": "Legal",
     "helpHeading": "Help",
-    "sellHeading": "Sell on Vergeo5",
+    "sellHeading": "Sell on Convergeo",
     "paymentNote": "MoMo · Airtel · Zamtel · Card",
     "copyright": "© {year} {appName}. All rights reserved.",
     "links": {
@@ -20,19 +20,19 @@
   },
   "terms": {
     "title": "Terms of service",
-    "description": "How Vergeo5 works for buyers and sellers in Zambia — escrow, payments, and platform rules.",
+    "description": "How Convergeo works for buyers and sellers in Zambia — escrow, payments, and platform rules.",
     "sections": {
       "introduction": {
         "heading": "Introduction",
-        "body": "Vergeo5 (vergeo5.com) is a mobile-first marketplace connecting buyers and vendors across Zambia. By using our customer app, you agree to these terms. If you do not agree, please do not use the platform."
+        "body": "Convergeo (vergeo5.com) is a mobile-first marketplace connecting buyers and vendors across Zambia. By using our customer app, you agree to these terms. If you do not agree, please do not use the platform."
       },
       "marketplace": {
         "heading": "Marketplace role",
-        "body": "Vergeo5 is a discovery and commerce platform. Vendors list their own products, services, events, and supplies. We facilitate payments and escrow but are not the seller unless explicitly stated."
+        "body": "Convergeo is a discovery and commerce platform. Vendors list their own products, services, events, and supplies. We facilitate payments and escrow but are not the seller unless explicitly stated."
       },
       "escrow": {
         "heading": "Escrow & payments",
-        "body": "Customer payments are collected through Lenco and held in a Lenco-managed escrow account until delivery is confirmed or the dispute window closes. Vergeo5 maintains a platform ledger of record for releases and payouts — we do not pool customer funds in our own bank account. Mobile money (MTN, Airtel, Zamtel) and card payments are supported where available."
+        "body": "Customer payments are collected through Lenco and held in a Lenco-managed escrow account until delivery is confirmed or the dispute window closes. Convergeo maintains a platform ledger of record for releases and payouts — we do not pool customer funds in our own bank account. Mobile money (MTN, Airtel, Zamtel) and card payments are supported where available."
       },
       "pricing": {
         "heading": "Pricing & currency",
@@ -44,15 +44,15 @@
       },
       "tax": {
         "heading": "Tax posture",
-        "body": "Vergeo5 launches under Turnover Tax (5%, below the K5M threshold) with ZRA-ready sequential invoicing from day one. VAT is off at launch; invoices and receipts are architected for future Smart Invoice VSDC activation when VAT registration applies."
+        "body": "Convergeo launches under Turnover Tax (5%, below the K5M threshold) with ZRA-ready sequential invoicing from day one. VAT is off at launch; invoices and receipts are architected for future Smart Invoice VSDC activation when VAT registration applies."
       },
       "prohibited": {
         "heading": "Prohibited use",
-        "body": "You may not use Vergeo5 for unlawful activity, fraud, harassment, or to list prohibited categories (see our Vendor Agreement). We may suspend accounts that breach these rules."
+        "body": "You may not use Convergeo for unlawful activity, fraud, harassment, or to list prohibited categories (see our Vendor Agreement). We may suspend accounts that breach these rules."
       },
       "liability": {
         "heading": "Liability",
-        "body": "To the extent permitted by Zambian law, Vergeo5 is not liable for indirect losses. Our role is limited to platform services described here. Disputes between buyers and vendors are handled through our returns and dispute process."
+        "body": "To the extent permitted by Zambian law, Convergeo is not liable for indirect losses. Our role is limited to platform services described here. Disputes between buyers and vendors are handled through our returns and dispute process."
       },
       "changes": {
         "heading": "Changes",
@@ -66,15 +66,15 @@
   },
   "privacy": {
     "title": "Privacy policy",
-    "description": "How Vergeo5 collects, uses, and protects your personal data under the Zambia Data Protection Act.",
+    "description": "How Convergeo collects, uses, and protects your personal data under the Zambia Data Protection Act.",
     "sections": {
       "introduction": {
         "heading": "Introduction",
-        "body": "Vergeo5 respects your privacy. This policy explains what data we collect, why we collect it, how long we keep it, and your rights under the Zambia Data Protection Act (DPA)."
+        "body": "Convergeo respects your privacy. This policy explains what data we collect, why we collect it, how long we keep it, and your rights under the Zambia Data Protection Act (DPA)."
       },
       "controller": {
         "heading": "Data controller",
-        "body": "Vergeo5 operates vergeo5.com and is the data controller for personal data processed through the customer app, subject to applicable Zambian law."
+        "body": "Convergeo operates vergeo5.com and is the data controller for personal data processed through the customer app, subject to applicable Zambian law."
       },
       "dataCollected": {
         "heading": "Data we collect",
@@ -110,7 +110,7 @@
       },
       "children": {
         "heading": "Children",
-        "body": "Vergeo5 is not directed at children under 16. We do not knowingly collect data from children."
+        "body": "Convergeo is not directed at children under 16. We do not knowingly collect data from children."
       },
       "changes": {
         "heading": "Changes",
@@ -124,15 +124,15 @@
   },
   "returns": {
     "title": "Returns & refunds",
-    "description": "Two-lane returns policy for Vergeo5 orders — faulty items and optional change-of-mind returns.",
+    "description": "Two-lane returns policy for Convergeo orders — faulty items and optional change-of-mind returns.",
     "sections": {
       "introduction": {
         "heading": "Overview",
-        "body": "Vergeo5 protects buyers with a clear two-lane returns policy aligned with CCPC expectations. Lane 1 covers faulty, wrong, or not-as-described items. Lane 2 covers change-of-mind returns where the vendor opts in per listing."
+        "body": "Convergeo protects buyers with a clear two-lane returns policy aligned with CCPC expectations. Lane 1 covers faulty, wrong, or not-as-described items. Lane 2 covers change-of-mind returns where the vendor opts in per listing."
       },
       "lane1": {
         "heading": "Lane 1 — Faulty, wrong, or not as described",
-        "body": "Report the issue within 48 hours of delivery with photo evidence through your order page or support. You receive a full refund including delivery fees from escrow. Return shipping is charged to the vendor. If buyer and vendor disagree, Vergeo5 admin arbitrates the dispute."
+        "body": "Report the issue within 48 hours of delivery with photo evidence through your order page or support. You receive a full refund including delivery fees from escrow. Return shipping is charged to the vendor. If buyer and vendor disagree, Convergeo admin arbitrates the dispute."
       },
       "lane1Steps": {
         "heading": "Lane 1 — How to report",
@@ -166,15 +166,15 @@
   },
   "vendorAgreement": {
     "title": "Vendor agreement",
-    "description": "Commission rates, payouts, and listing rules for selling on Vergeo5 in Zambia.",
+    "description": "Commission rates, payouts, and listing rules for selling on Convergeo in Zambia.",
     "sections": {
       "introduction": {
         "heading": "Introduction",
-        "body": "By registering as a vendor on Vergeo5, you agree to this Vendor Agreement alongside our Terms of Service and Privacy Policy. This document covers commissions, payouts, and what you may list."
+        "body": "By registering as a vendor on Convergeo, you agree to this Vendor Agreement alongside our Terms of Service and Privacy Policy. This document covers commissions, payouts, and what you may list."
       },
       "commissions": {
         "heading": "Commission rates",
-        "body": "Vergeo5 charges a category-based commission on successful sales. Rates are shown before you publish a listing. Free events are charged 0% commission. Authoritative rates live in the platform config table and may be updated quarterly."
+        "body": "Convergeo charges a category-based commission on successful sales. Rates are shown before you publish a listing. Free events are charged 0% commission. Authoritative rates live in the platform config table and may be updated quarterly."
       },
       "payouts": {
         "heading": "Payouts & settlement",

@@ -15,7 +15,7 @@ describe("AuthHeader", () => {
     render(
       <AuthHeader
         locale="en"
-        appName="Vergeo5"
+        appName="Convergeo"
         tagline="Discover Zambia"
         skipToContent="Skip to content"
         backToShopLabel="Back to shop"
@@ -23,7 +23,7 @@ describe("AuthHeader", () => {
     );
 
     expect(screen.getByTestId("auth-header")).toBeInTheDocument();
-    expect(screen.getByTestId("app-header-wordmark")).toHaveTextContent("Vergeo5");
+    expect(screen.getByTestId("app-header-wordmark")).toHaveTextContent("Convergeo");
     expect(screen.getByText("Discover Zambia")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to shop" })).toHaveAttribute("href", "/en");
   });

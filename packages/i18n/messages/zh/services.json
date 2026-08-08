@@ -36,7 +36,7 @@
   },
   "detail": {
     "metaTitle": "{title} — 服务",
-    "metaDescription": "{area} 的 {title}。在 Vergeo5 上查看作品集并请求报价。",
+    "metaDescription": "{area} 的 {title}。在 Convergeo 上查看作品集并请求报价。",
     "about": "关于此服务",
     "whatsIncluded": "包含内容",
     "includeMarker": "✓",
@@ -162,7 +162,7 @@
     "back": "← 返回需求",
     "empty": "暂无有效报价——服务商通常在一天内响应。",
     "unknownProvider": "服务商",
-    "preferredBadge": "Vergeo5 优选",
+    "preferredBadge": "Convergeo 优选",
     "rating": "{rating}★ ({count, plural, one {# 条评价} other {# 条评价}})",
     "validUntil": "有效期至 {date}",
     "status": {
@@ -195,7 +195,7 @@
     "totalLabel": "需求总价值",
     "depositLabel": "现在应付定金",
     "balanceLabel": "完成后余款",
-    "escrowNote": "您的定金由 Vergeo5 安全保管，只有在工作确认后才会放款给服务商。",
+    "escrowNote": "您的定金由 Convergeo 安全保管，只有在工作确认后才会放款给服务商。",
     "confirmCta": "支付 {amount} 定金",
     "submitting": "正在设置您的定金…",
     "cancel": "暂不",
@@ -231,7 +231,7 @@
       "confirming": "确认中…",
       "confirmed": "已确认。已向您的服务商付款。",
       "awaitingProvider": "等待您的服务商标记需求为已完成。",
-      "escrowNote": "您已付款 → 由 Vergeo5 保管 → 确认后放款给您的服务商。",
+      "escrowNote": "您已付款 → 由 Convergeo 保管 → 确认后放款给您的服务商。",
       "reviewUnlocked": "谢谢！您现在可以为此服务商留下评价。",
       "errors": {
         "notOwner": "您只能确认自己的需求。",

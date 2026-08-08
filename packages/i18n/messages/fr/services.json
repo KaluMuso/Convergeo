@@ -36,7 +36,7 @@
   },
   "detail": {
     "metaTitle": "{title} — Services",
-    "metaDescription": "{title} à {area}. Consultez le portfolio et demandez un devis sur Vergeo5.",
+    "metaDescription": "{title} à {area}. Consultez le portfolio et demandez un devis sur Convergeo.",
     "about": "À propos de ce service",
     "whatsIncluded": "Ce qui est inclus",
     "includeMarker": "✓",
@@ -162,7 +162,7 @@
     "back": "← Retour aux missions",
     "empty": "Aucun devis actif pour l'instant — les prestataires répondent généralement sous un jour.",
     "unknownProvider": "Prestataire",
-    "preferredBadge": "Vergeo5 Recommandé",
+    "preferredBadge": "Convergeo Recommandé",
     "rating": "{rating}★ ({count, plural, one {# avis} other {# avis}})",
     "validUntil": "Valable jusqu'au {date}",
     "status": {
@@ -195,7 +195,7 @@
     "totalLabel": "Valeur totale de la mission",
     "depositLabel": "Acompte à payer maintenant",
     "balanceLabel": "Solde à la fin",
-    "escrowNote": "Votre acompte est conservé en toute sécurité par Vergeo5 et n'est versé au prestataire qu'une fois le travail confirmé.",
+    "escrowNote": "Votre acompte est conservé en toute sécurité par Convergeo et n'est versé au prestataire qu'une fois le travail confirmé.",
     "confirmCta": "Payer l'acompte de {amount}",
     "submitting": "Préparation de votre acompte…",
     "cancel": "Pas maintenant",
@@ -231,7 +231,7 @@
       "confirming": "Confirmation…",
       "confirmed": "Confirmé. Votre prestataire a été payé.",
       "awaitingProvider": "En attente que votre prestataire marque la mission comme terminée.",
-      "escrowNote": "Vous avez payé → Conservé par Vergeo5 → Versé à votre prestataire dès votre confirmation.",
+      "escrowNote": "Vous avez payé → Conservé par Convergeo → Versé à votre prestataire dès votre confirmation.",
       "reviewUnlocked": "Merci ! Vous pouvez maintenant laisser un avis sur ce prestataire.",
       "errors": {
         "notOwner": "Vous ne pouvez confirmer que vos propres missions.",

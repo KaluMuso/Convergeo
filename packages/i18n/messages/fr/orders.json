@@ -2,7 +2,7 @@
   "title": "Vos commandes",
   "empty": {
     "title": "Aucune commande pour le moment",
-    "body": "Lorsque vous achetez chez des vendeurs Vergeo5, vos commandes et leur suivi apparaîtront ici.",
+    "body": "Lorsque vous achetez chez des vendeurs Convergeo, vos commandes et leur suivi apparaîtront ici.",
     "cta": "Commencer mes achats"
   },
   "list": {
@@ -44,7 +44,7 @@
   "timeline": {
     "title": "Progression de la commande",
     "placed": "Commande passée",
-    "paymentHeld": "Vous avez payé — conservé par Vergeo5",
+    "paymentHeld": "Vous avez payé — conservé par Convergeo",
     "paymentCod": "Payez le vendeur à la livraison",
     "confirmed": "Le vendeur a confirmé votre commande",
     "processing": "Le vendeur prépare votre commande",
@@ -56,7 +56,7 @@
     "refunded": "Remboursement sur votre mobile money"
   },
   "escrow": {
-    "held": "Votre paiement est conservé en toute sécurité par Vergeo5 jusqu'à ce que vous receviez votre commande.",
+    "held": "Votre paiement est conservé en toute sécurité par Convergeo jusqu'à ce que vous receviez votre commande.",
     "released": "Les fonds ont été versés au vendeur une fois votre commande honorée.",
     "refunded": "Un remboursement est en cours vers votre portefeuille mobile money.",
     "cod": "Payez le vendeur en espèces ou par mobile money à la réception de la commande."
@@ -80,8 +80,8 @@
   },
   "confirm": {
     "title": "Commande reçue ?",
-    "body": "La confirmation libère le paiement conservé par Vergeo5 vers le vendeur. Ne confirmez que lorsque vous avez tout reçu.",
-    "trust": "Conservé par Vergeo5 → Versé au vendeur",
+    "body": "La confirmation libère le paiement conservé par Convergeo vers le vendeur. Ne confirmez que lorsque vous avez tout reçu.",
+    "trust": "Conservé par Convergeo → Versé au vendeur",
     "button": "Confirmer la réception",
     "confirming": "Confirmation…",
     "done": "Vous avez confirmé la réception",
@@ -125,7 +125,7 @@
   "dispute": {
     "title": "Litige sur la commande",
     "body": "Nous conservons votre paiement pendant que nous enquêtons avec le vendeur.",
-    "holdTrust": "Conservé par Vergeo5 — le versement est suspendu jusqu'à la résolution de ce litige",
+    "holdTrust": "Conservé par Convergeo — le versement est suspendu jusqu'à la résolution de ce litige",
     "statusLabel": "Statut du litige",
     "statusDisplay": "Statut du litige : {status}",
     "evidenceLabel": "Vos preuves",

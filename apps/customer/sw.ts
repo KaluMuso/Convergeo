@@ -121,7 +121,17 @@ export const cacheRules: NamedRule[] = [
     handler: new NetworkFirst({
       cacheName: "ticket-wallet-api-v1",
       networkTimeoutSeconds: 5,
-      plugins: [new ExpirationPlugin({ maxEntries: 48, maxAgeSeconds: 60 * 10 })],
+      plugins: [
+        new ExpirationPlugin({ maxEntries: 48, maxAgeSeconds: 60 * 10 }),
+        {
+          // Avoid uncaught `no-response` when the API is down and cache is empty.
+          handlerDidError: async () =>
+            new Response(JSON.stringify({ error: "unavailable" }), {
+              status: 503,
+              headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+            }),
+        },
+      ],
     }),
   },
   {
@@ -157,7 +167,18 @@ export const cacheRules: NamedRule[] = [
     handler: new NetworkFirst({
       cacheName: "api-v1",
       networkTimeoutSeconds: 5,
-      plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 60 * 5 })],
+      plugins: [
+        new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 60 * 5 }),
+        {
+          // API down / origin unreachable: return 503 instead of rejecting the
+          // FetchEvent (which surfaced as `no-response` console errors).
+          handlerDidError: async () =>
+            new Response(JSON.stringify({ error: "unavailable" }), {
+              status: 503,
+              headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+            }),
+        },
+      ],
     }),
   },
 ];

@@ -5,7 +5,7 @@
   "plp": {
     "title": "Browse {category}",
     "meta": {
-      "description": "Browse {category} on Vergeo5 — compare sellers, prices, and availability across Zambia."
+      "description": "Browse {category} on Convergeo — compare sellers, prices, and availability across Zambia."
     },
     "defaultCategory": "All products",
     "breadcrumbAria": "Breadcrumb",
@@ -83,8 +83,8 @@
   },
   "home": {
     "meta": {
-      "title": "Discover Zambia",
-      "description": "Shop products, book services, and find events across Zambia on Vergeo5."
+      "title": "Shop products, services & events in Zambia",
+      "description": "Compare sellers, book services, and find events across Zambia on Convergeo — mobile-money escrow, Lusaka delivery, nationwide pickup."
     },
     "serviceBar": {
       "ariaLabel": "Delivery and pickup information",
@@ -100,12 +100,12 @@
       "primaryCta": "Start browsing",
       "secondaryCta": "Learn about selling",
       "placeholder": {
-        "title": "Welcome to Vergeo5",
+        "title": "Welcome to Convergeo",
         "subtitle": "Your config-driven storefront will appear here as merchandising slots go live."
       },
-      "escrowLine": "Buyer protection with escrow when online payment is available — held by Vergeo5 until delivery, then released.",
+      "escrowLine": "Buyer protection with escrow when online payment is available — held by Convergeo until delivery, then released.",
       "escrowStep1": "You pay",
-      "escrowStep2": "Held by Vergeo5",
+      "escrowStep2": "Held by Convergeo",
       "escrowStep3": "Released on delivery",
       "carousel": {
         "previous": "Previous slide",
@@ -133,11 +133,11 @@
       }
     },
     "trust": {
-      "ariaLabel": "Why shop on Vergeo5",
+      "ariaLabel": "Why shop on Convergeo",
       "sellers": "Seller profiles with status you can review",
       "fulfillment": "Lusaka delivery or nationwide pickup when the listing supports it",
       "returns": "Clear returns and refund guidance for eligible orders",
-      "escrow": "When online payment is available, Vergeo5 holds your money until delivery"
+      "escrow": "When online payment is available, Convergeo holds your money until delivery"
     },
     "demo": {
       "sampleListing": "Sample listing"
@@ -164,7 +164,7 @@
       "browseLabel": "Browse {category}"
     },
     "rails": {
-      "newTitle": "New on Vergeo5",
+      "newTitle": "New on Convergeo",
       "departmentTitle": "New in {category}",
       "recentTitle": "Recently viewed",
       "recentView": "View",
@@ -190,7 +190,7 @@
       }
     },
     "sellCta": {
-      "title": "Selling on Vergeo5 is invite-only for now",
+      "title": "Selling on Convergeo is invite-only for now",
       "body": "Public self-service signup is not open yet. Invited sellers can continue onboarding; everyone else can learn how the seller beta works.",
       "cta": "Learn about selling"
     },
@@ -219,8 +219,8 @@
     },
     "meta": {
       "notFoundTitle": "Product not found",
-      "descriptionFallback": "Shop {name} on Vergeo5",
-      "descriptionWithPrice": "Compare prices for {name} from {count, plural, one {# seller} other {# sellers}} on Vergeo5. From {price}."
+      "descriptionFallback": "Shop {name} on Convergeo",
+      "descriptionWithPrice": "Compare prices for {name} from {count, plural, one {# seller} other {# sellers}} on Convergeo. From {price}."
     },
     "tabs": {
       "ariaLabel": "Product details",
@@ -286,7 +286,7 @@
     "contactVendor": {
       "cta": "Contact seller",
       "dialogTitle": "Ask about this item",
-      "dialogHint": "Your message goes to {vendor} about this listing. Replies stay on Vergeo5 — we never share your phone number in the message.",
+      "dialogHint": "Your message goes to {vendor} about this listing. Replies stay on Convergeo — we never share your phone number in the message.",
       "messageLabel": "Your question",
       "messagePlaceholder": "e.g. Is this still available? Can you deliver to Kabulonga?",
       "submit": "Send message",
@@ -339,7 +339,7 @@
       "delivery": "Delivery available for this seller",
       "pickup": "Pickup available for this seller",
       "returns": "Returns & refunds",
-      "escrow": "When online payment is available, Vergeo5 holds your money until delivery. Cash on delivery may be offered for eligible orders."
+      "escrow": "When online payment is available, Convergeo holds your money until delivery. Cash on delivery may be offered for eligible orders."
     },
     "condition": {
       "new": "New",

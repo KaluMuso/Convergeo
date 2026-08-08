@@ -36,7 +36,7 @@
   },
   "detail": {
     "metaTitle": "{title} — Services",
-    "metaDescription": "{title} mu {area}. Onani portfolio ndi kupempha quote pa Vergeo5.",
+    "metaDescription": "{title} mu {area}. Onani portfolio ndi kupempha quote pa Convergeo.",
     "about": "Za service iyi",
     "whatsIncluded": "Zomwe zili mkati",
     "includeMarker": "✓",
@@ -167,7 +167,7 @@
     "back": "← Bwerani ku ntchito",
     "empty": "Palibe quotes za active pano — providers nthawi zambiri amayankha mkati mwa tsiku.",
     "unknownProvider": "Provider",
-    "preferredBadge": "Vergeo5 Preferred",
+    "preferredBadge": "Convergeo Preferred",
     "rating": "{rating}★ ({count, plural, one {# review} other {# reviews}})",
     "validUntil": "Valid mpaka {date}",
     "status": {
@@ -200,7 +200,7 @@
     "totalLabel": "Total value ya ntchito",
     "depositLabel": "Deposit yofunika tsopano",
     "balanceLabel": "Balance pa completion",
-    "escrowNote": "Deposit yanu yasungidwa ndi Vergeo5 ndipo imatulutsidwa kwa provider pokhapokha ntchito yatsimikizidwa.",
+    "escrowNote": "Deposit yanu yasungidwa ndi Convergeo ndipo imatulutsidwa kwa provider pokhapokha ntchito yatsimikizidwa.",
     "confirmCta": "Lipirani deposit ya {amount}",
     "submitting": "Ikukonza deposit yanu…",
     "cancel": "Osati tsopano",
@@ -236,7 +236,7 @@
       "confirming": "Ikutsimikiza…",
       "confirmed": "Yatsimikizidwa. Provider wanu walipidwa.",
       "awaitingProvider": "Tikudikira provider wanu amarke ntchito yatha.",
-      "escrowNote": "Munalipira → Yasungidwa ndi Vergeo5 → Yatulusidwa kwa provider mukatsimikiza.",
+      "escrowNote": "Munalipira → Yasungidwa ndi Convergeo → Yatulusidwa kwa provider mukatsimikiza.",
       "reviewUnlocked": "Zikomo! Mutha kusiya review pa provider uyu.",
       "errors": {
         "notOwner": "Mutha kutsimikiza ntchito zanu zokha.",
@@ -279,7 +279,7 @@
     "priceLabel": "Fixed price",
     "depositLabel": "Deposit yofunika tsopano",
     "balanceLabel": "Balance pa completion",
-    "escrowNote": "Mulipira → Yasungidwa ndi Vergeo5 → Yatulusidwa kwa provider mukatsimikiza kuti ntchito yatha.",
+    "escrowNote": "Mulipira → Yasungidwa ndi Convergeo → Yatulusidwa kwa provider mukatsimikiza kuti ntchito yatha.",
     "bookCta": "Bookani ndi kulipira deposit ya {amount}",
     "submitting": "Ikubooka…",
     "errors": {

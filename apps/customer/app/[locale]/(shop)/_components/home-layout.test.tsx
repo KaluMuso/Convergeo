@@ -51,7 +51,7 @@ const t = createTranslator({
   namespace: "catalog",
 }) as unknown as (key: string, values?: Record<string, string | number>) => string;
 
-const OPERATIONAL_PLACEHOLDER_TITLE = "Welcome to Vergeo5";
+const OPERATIONAL_PLACEHOLDER_TITLE = "Welcome to Convergeo";
 const OPERATIONAL_PLACEHOLDER_SUBTITLE =
   "Your config-driven storefront will appear here as merchandising slots go live.";
 const BUYER_FALLBACK_TITLE = "Shop products, services, and events across Zambia";
@@ -219,7 +219,7 @@ describe("default homepage storefront rendering", () => {
         messages={{ catalog: catalogMessages }}
         onError={() => {}}
       >
-        <HomeHeroBand locale="en" t={t} brandName="Vergeo5" />
+        <HomeHeroBand locale="en" t={t} brandName="Convergeo" />
         <HomeProductRail
           id="home-rail-new"
           title={t("home.rails.newTitle")}
@@ -232,12 +232,12 @@ describe("default homepage storefront rendering", () => {
       </NextIntlClientProvider>,
     );
 
-    expect(screen.getByTestId("home-hero-brand")).toHaveTextContent("Vergeo5");
+    expect(screen.getByTestId("home-hero-brand")).toHaveTextContent("Convergeo");
     expect(
       screen.getByRole("heading", { level: 1, name: BUYER_FALLBACK_TITLE }),
     ).toBeInTheDocument();
     expect(screen.queryByText("You pay")).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "New on Vergeo5" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "New on Convergeo" })).toBeInTheDocument();
     expect(screen.getByTestId("product-card")).toBeInTheDocument();
     expect(screen.queryByText(OPERATIONAL_PLACEHOLDER_TITLE)).not.toBeInTheDocument();
     expect(screen.queryByText(OPERATIONAL_PLACEHOLDER_SUBTITLE)).not.toBeInTheDocument();

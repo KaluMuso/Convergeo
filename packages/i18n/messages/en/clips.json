@@ -70,9 +70,9 @@
     "copyLink": "Copy link",
     "copied": "Link copied",
     "failed": "Could not copy the link",
-    "title": "{vendor} on Vergeo5",
+    "title": "{vendor} on Convergeo",
     "description": "Watch this clip and shop the products in it.",
-    "watchOnVergeo": "Watch on Vergeo5"
+    "watchOnVergeo": "Watch on Convergeo"
   },
   "engagement": {
     "like": "Like",
@@ -93,7 +93,7 @@
     "sessionUsage": "About {size} used in this session",
     "budgetWarning": "You've used a lot of data on clips today",
     "paused": "Clips are paused right now",
-    "pausedBody": "We pause clips when video costs run high, so the rest of Vergeo5 stays fast. Everything else still works.",
+    "pausedBody": "We pause clips when video costs run high, so the rest of Convergeo stays fast. Everything else still works.",
     "savedByDataSaver": "Data saver has saved you about {size}"
   },
   "a11y": {

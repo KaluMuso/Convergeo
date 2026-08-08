@@ -36,7 +36,7 @@
   },
   "detail": {
     "metaTitle": "{title} — Services",
-    "metaDescription": "{title} in {area}. View portfolio and request a quote on Vergeo5.",
+    "metaDescription": "{title} in {area}. View portfolio and request a quote on Convergeo.",
     "about": "About this service",
     "whatsIncluded": "What's included",
     "includeMarker": "✓",
@@ -190,7 +190,7 @@
     "back": "← Back to jobs",
     "empty": "No active quotes yet — providers usually respond within a day.",
     "unknownProvider": "Provider",
-    "preferredBadge": "Vergeo5 Preferred",
+    "preferredBadge": "Convergeo Preferred",
     "rating": "{rating}★ ({count, plural, one {# review} other {# reviews}})",
     "validUntil": "Valid until {date}",
     "status": {
@@ -223,7 +223,7 @@
     "totalLabel": "Total job value",
     "depositLabel": "Deposit due now",
     "balanceLabel": "Balance on completion",
-    "escrowNote": "Your deposit is held safely by Vergeo5 and only released to the provider once the work is confirmed.",
+    "escrowNote": "Your deposit is held safely by Convergeo and only released to the provider once the work is confirmed.",
     "confirmCta": "Pay deposit of {amount}",
     "submitting": "Setting up your deposit…",
     "cancel": "Not now",
@@ -259,7 +259,7 @@
       "confirming": "Confirming…",
       "confirmed": "Confirmed. Your provider has been paid.",
       "awaitingProvider": "Waiting for your provider to mark the job complete.",
-      "escrowNote": "You paid → Held by Vergeo5 → Released to your provider once you confirm.",
+      "escrowNote": "You paid → Held by Convergeo → Released to your provider once you confirm.",
       "reviewUnlocked": "Thanks! You can now leave a review for this provider.",
       "errors": {
         "notOwner": "You can only confirm your own jobs.",
@@ -302,7 +302,7 @@
     "priceLabel": "Fixed price",
     "depositLabel": "Deposit due now",
     "balanceLabel": "Balance on completion",
-    "escrowNote": "You pay → Held by Vergeo5 → Released to your provider once you confirm the job is done.",
+    "escrowNote": "You pay → Held by Convergeo → Released to your provider once you confirm the job is done.",
     "bookCta": "Book & pay {amount} deposit",
     "submitting": "Booking…",
     "errors": {

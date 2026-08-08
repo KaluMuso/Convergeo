@@ -1,13 +1,13 @@
 {
   "about": {
     "meta": {
-      "title": "关于 Vergeo5",
-      "description": "Vergeo5 是赞比亚以移动端为先的商品、服务与活动交易平台——货款由第三方安全托管，直到您收到所购之物。"
+      "title": "关于 Convergeo",
+      "description": "Convergeo 是赞比亚以移动端为先的商品、服务与活动交易平台——货款由第三方安全托管，直到您收到所购之物。"
     },
     "hero": {
       "eyebrow": "关于我们",
       "headline": "赞比亚的交易平台，为信任而建",
-      "subhead": "Vergeo5 将商品、服务与活动汇聚于一处——通过第三方托管保管您的货款，直到确认收货。"
+      "subhead": "Convergeo 将商品、服务与活动汇聚于一处——通过第三方托管保管您的货款，直到确认收货。"
     },
     "mission": {
       "heading": "我们的使命",
@@ -33,7 +33,7 @@
       }
     },
     "howItWorks": {
-      "heading": "Vergeo5 如何运作",
+      "heading": "Convergeo 如何运作",
       "step1": "发现来自赞比亚各地卖家的商品、服务与活动。",
       "step2": "K500 以内的订单可通过移动支付、银行卡或货到付款结算。",
       "step3": "您的货款由第三方安全托管，直到您确认收货。",
@@ -48,8 +48,8 @@
   },
   "contact": {
     "meta": {
-      "title": "联系 Vergeo5",
-      "description": "通过 WhatsApp 联系 Vergeo5 团队可最快获得回复，或给我们留言，我们将通过电子邮件回复您。"
+      "title": "联系 Convergeo",
+      "description": "通过 WhatsApp 联系 Convergeo 团队可最快获得回复，或给我们留言，我们将通过电子邮件回复您。"
     },
     "hero": {
       "eyebrow": "联系我们",
@@ -93,7 +93,7 @@
   "help": {
     "meta": {
       "title": "帮助中心",
-      "description": "关于第三方托管、支付、配送、退货、门票以及在 Vergeo5 上销售的解答。"
+      "description": "关于第三方托管、支付、配送、退货、门票以及在 Convergeo 上销售的解答。"
     },
     "hero": {
       "eyebrow": "帮助中心",
@@ -114,7 +114,7 @@
       "delivery": "配送与自提",
       "returns": "退货与退款",
       "events": "活动与门票",
-      "selling": "在 Vergeo5 上销售",
+      "selling": "在 Convergeo 上销售",
       "account": "账户与隐私"
     },
     "article": {
@@ -155,13 +155,13 @@
   },
   "beta": {
     "meta": {
-      "title": "Vergeo5 测试版访问权限",
-      "description": "Vergeo5 处于仅限邀请的测试阶段。输入您的邀请码，即可抢先体验赞比亚的交易平台。"
+      "title": "Convergeo 测试版访问权限",
+      "description": "Convergeo 处于仅限邀请的测试阶段。输入您的邀请码，即可抢先体验赞比亚的交易平台。"
     },
     "hero": {
       "eyebrow": "私密测试版",
       "headline": "您来得很早",
-      "subhead": "Vergeo5 处于仅限邀请的测试阶段。在下方输入您的邀请码即可进入。"
+      "subhead": "Convergeo 处于仅限邀请的测试阶段。在下方输入您的邀请码即可进入。"
     },
     "form": {
       "codeLabel": "邀请码",
@@ -172,7 +172,7 @@
     },
     "success": {
       "heading": "您已进入！",
-      "body": "您的邀请码有效。欢迎加入 Vergeo5 测试版。",
+      "body": "您的邀请码有效。欢迎加入 Convergeo 测试版。",
       "cta": "开始探索"
     },
     "errors": {

@@ -92,7 +92,7 @@ describe("checkout.cart i18n", () => {
     expect(checkoutMessages.cart.title).toBeTruthy();
     expect(checkoutMessages.cart.noticePriceChanged).toContain("{oldPrice}");
     expect(checkoutMessages.cart.freeDeliveryProgress).toContain("{threshold}");
-    expect(checkoutMessages.cart.emptyTrustEscrow).toContain("Vergeo5");
+    expect(checkoutMessages.cart.emptyTrustEscrow).toContain("Convergeo");
     expect(checkoutMessages.cart.emptyTrustDelivery.toLowerCase()).toContain("lusaka");
     expect(checkoutMessages.cart.emptyTrustPickup.toLowerCase()).toContain("pickup");
   });

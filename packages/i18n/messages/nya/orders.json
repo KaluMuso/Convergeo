@@ -13,7 +13,7 @@
     "relatedTitle": "Ogulitsa ena mu checkout iyi"
   },
   "empty": {
-    "body": "Mukagula kuchokera kwa ogulitsa a Vergeo5, ma-order ndi tracking zidzaonekera apa.",
+    "body": "Mukagula kuchokera kwa ogulitsa a Convergeo, ma-order ndi tracking zidzaonekera apa.",
     "cta": "Yambani kugula",
     "title": "Palibe ma-order"
   },
@@ -23,7 +23,7 @@
   },
   "escrow": {
     "cod": "Lipirani vendor mu cash kapena mobile money mukalandira order.",
-    "held": "Payment yanu ikusungidwa ndi Vergeo5 mpaka mulandire order yanu.",
+    "held": "Payment yanu ikusungidwa ndi Convergeo mpaka mulandire order yanu.",
     "refunded": "Refund ikubwerera ku mobile money wallet yanu.",
     "released": "Ndalama zatsimikizidwa kwa vendor pambuyo pa fulfilment."
   },
@@ -56,7 +56,7 @@
     "confirmed": "Vendor yatsimikiza order yanu",
     "delivered": "Yafika",
     "paymentCod": "Lipirani vendor pa delivery",
-    "paymentHeld": "Mwalipira — ikusungidwa ndi Vergeo5",
+    "paymentHeld": "Mwalipira — ikusungidwa ndi Convergeo",
     "placed": "Order yaiyikidwa",
     "processing": "Vendor ikukonza order yanu",
     "ready": "Yakonzeka ku pickup",

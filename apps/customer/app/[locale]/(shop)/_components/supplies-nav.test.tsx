@@ -52,7 +52,7 @@ const suppliesItem = {
 };
 
 const headerLabels = {
-  appName: "Vergeo5",
+  appName: "Convergeo",
   skipToContent: "Skip to content",
   navAriaLabel: "Shop navigation",
   desktopAriaLabel: "Primary navigation",

@@ -18,11 +18,91 @@ body {
     color var(--dur) var(--ease-std);
 }
 
+/* Soft atmospheric ground — avoids flat single-color canvas without fighting tokens. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      120% 70% at 100% -10%,
+      color-mix(in srgb, var(--primary) 12%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      90% 50% at -10% 20%,
+      color-mix(in srgb, var(--accent) 10%, transparent),
+      transparent 50%
+    ),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+  opacity: 0.95;
+}
+
+[data-theme="dark"] body::before {
+  background:
+    radial-gradient(
+      100% 60% at 90% 0%,
+      color-mix(in srgb, var(--primary) 18%, transparent),
+      transparent 55%
+    ),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+}
+
 /* UI-P4 desktop layer: card content density on lg+ per SELECTION.md §5
    ("card padding 12–16 mobile / 16–20 desktop"). Consumed by the shared
    ProductCard via var(--card-pad, var(--sp-3)); mobile keeps --sp-3. */
 @media (min-width: 64rem) {
   :root {
     --card-pad: var(--sp-4);
+  }
+}
+
+/* Shop main: gentle enter + section rhythm */
+.shop-main {
+  animation: page-in var(--dur-slow) var(--ease-out) both;
+}
+
+.shop-main section + section {
+  margin-top: var(--sp-8);
+}
+
+@media (min-width: 64rem) {
+  .shop-main section + section {
+    margin-top: var(--sp-12);
+  }
+}
+
+/* Marketplace interaction polish — used by listing/vendor cards */
+.card-lift {
+  transition:
+    transform var(--dur) var(--ease-out),
+    box-shadow var(--dur) var(--ease-std),
+    border-color var(--dur) var(--ease-std);
+}
+
+.card-lift:hover,
+.card-lift:focus-within {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+}
+
+.tap:active {
+  transform: scale(0.98);
+  transition: transform var(--dur-fast) var(--ease-std);
+}
+
+/* Sticky header polish while scrolling */
+[data-testid="app-header"][data-compact="true"] {
+  backdrop-filter: blur(10px);
+  background-color: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+
+/* Utility bar social icons: slightly larger hit area on touch */
+@media (max-width: 640px) {
+  [data-testid="top-utility-bar"] a[aria-label] {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
   }
 }

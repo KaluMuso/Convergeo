@@ -5,6 +5,7 @@ import { createTranslator, NextIntlClientProvider, type AbstractIntlMessages } f
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { BottomNavClient } from "../(shop)/_components/bottom-nav-client";
+import { TopUtilityBarSlot } from "../_components/top-utility-bar-slot";
 
 import { AccountAppHeader } from "./_components/account-app-header";
 import { ACCOUNT_BOTTOM_NAV_ENABLED } from "./_components/account-feature-flags";
@@ -102,6 +103,7 @@ export default async function AccountLayout({ children, params }: AccountLayoutP
       >
         {tNav("skipToContent")}
       </a>
+      <TopUtilityBarSlot locale={locale} />
       <AccountAppHeader
         locale={locale}
         labels={{

@@ -1,13 +1,13 @@
 {
   "about": {
     "meta": {
-      "title": "About Vergeo5",
-      "description": "Vergeo5 is Zambia's mobile-first marketplace for products, services and events — with money held safely in escrow until you get what you paid for."
+      "title": "About Convergeo",
+      "description": "Convergeo is Zambia's mobile-first marketplace for products, services and events — with money held safely in escrow until you get what you paid for."
     },
     "hero": {
       "eyebrow": "About us",
       "headline": "Zambia's marketplace, built for trust",
-      "subhead": "Vergeo5 brings products, services and events into one place — with escrow that holds your money until delivery is confirmed."
+      "subhead": "Convergeo brings products, services and events into one place — with escrow that holds your money until delivery is confirmed."
     },
     "mission": {
       "heading": "Our mission",
@@ -33,7 +33,7 @@
       }
     },
     "howItWorks": {
-      "heading": "How Vergeo5 works",
+      "heading": "How Convergeo works",
       "step1": "Discover products, services and events from sellers across Zambia.",
       "step2": "Pay by mobile money, card or cash on delivery for orders up to K500.",
       "step3": "Your money is held safely in escrow until you confirm delivery.",
@@ -48,8 +48,8 @@
   },
   "contact": {
     "meta": {
-      "title": "Contact Vergeo5",
-      "description": "Reach the Vergeo5 team on WhatsApp for the fastest reply, or send us a message and we'll get back to you by email."
+      "title": "Contact Convergeo",
+      "description": "Reach the Convergeo team on WhatsApp for the fastest reply, or send us a message and we'll get back to you by email."
     },
     "hero": {
       "eyebrow": "Contact",
@@ -93,7 +93,7 @@
   "help": {
     "meta": {
       "title": "Help Centre",
-      "description": "Answers about escrow, payments, delivery, returns, tickets and selling on Vergeo5."
+      "description": "Answers about escrow, payments, delivery, returns, tickets and selling on Convergeo."
     },
     "hero": {
       "eyebrow": "Help Centre",
@@ -114,7 +114,7 @@
       "delivery": "Delivery & pickup",
       "returns": "Returns & refunds",
       "events": "Events & tickets",
-      "selling": "Selling on Vergeo5",
+      "selling": "Selling on Convergeo",
       "account": "Account & privacy"
     },
     "article": {
@@ -155,13 +155,13 @@
   },
   "beta": {
     "meta": {
-      "title": "Vergeo5 beta access",
-      "description": "Vergeo5 is in invite-only beta. Enter your invite code to get early access to Zambia's marketplace."
+      "title": "Convergeo beta access",
+      "description": "Convergeo is in invite-only beta. Enter your invite code to get early access to Zambia's marketplace."
     },
     "hero": {
       "eyebrow": "Private beta",
       "headline": "You're early",
-      "subhead": "Vergeo5 is in invite-only beta. Enter your invite code below to get in."
+      "subhead": "Convergeo is in invite-only beta. Enter your invite code below to get in."
     },
     "form": {
       "codeLabel": "Invite code",
@@ -172,7 +172,7 @@
     },
     "success": {
       "heading": "You're in!",
-      "body": "Your invite worked. Welcome to the Vergeo5 beta.",
+      "body": "Your invite worked. Welcome to the Convergeo beta.",
       "cta": "Start exploring"
     },
     "errors": {

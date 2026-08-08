@@ -1,6 +1,6 @@
 {
   "askVergeo": {
-    "slotLabel": "Slot ya Ask Vergeo assistant",
+    "slotLabel": "Slot ya Ask Convergeo assistant",
     "teaser": "Tamwishibe ico mufwaya? Ipusheni Vergeo pakuti mwafwena ico mufwaya.",
     "title": "Ipusheni Vergeo"
   },
@@ -52,7 +52,7 @@
     "maxPriceOnly": "Kufika K{max}",
     "facetCount": "{label} ({count})"
   },
-  "placeholder": "Fweni pa Vergeo5",
+  "placeholder": "Fweni pa Convergeo",
   "recent": {
     "clear": "Futeni fyonse",
     "remove": "Futeni {term}",

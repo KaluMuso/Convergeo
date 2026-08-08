@@ -29,7 +29,7 @@ describe("SearchUnavailablePanel", () => {
         retryHref="/en/search?q=phone"
         labels={labels}
         chips={chips}
-        browseAriaLabel="Browse Vergeo5"
+        browseAriaLabel="Browse Convergeo"
       />,
     );
 

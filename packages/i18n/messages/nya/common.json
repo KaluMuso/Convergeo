@@ -1,9 +1,10 @@
 {
   "app": {
-    "name": "Vergeo5"
+    "name": "Convergeo"
   },
   "meta": {
-    "defaultDescription": "Gulani zinthu, bookani ma-service, ndi pezani ma-event mu Zambia pa Vergeo5."
+    "defaultDescription": "Gulani zinthu, bookani ma-service, ndipo pezani ma-event mu Zambia pa Convergeo.",
+    "defaultTitle": "Convergeo — Zambia marketplace"
   },
   "common": {
     "loading": "Ikuyenda…",
@@ -18,11 +19,11 @@
   "greeting": "Moni, {name}!",
   "install": {
     "action": "Ika app",
-    "body": "Onjezani Vergeo5 pa home screen kuti mufike mwachangu ndi app ya full-screen.",
+    "body": "Onjezani Convergeo pa home screen kuti mufike mwachangu ndi app ya full-screen.",
     "dismiss": "Osati pano",
-    "title": "Ikani Vergeo5",
+    "title": "Ikani Convergeo",
     "updateAction": "Reload kuti mu-update",
-    "updateBody": "Version yatsopano ya Vergeo5 yalipo."
+    "updateBody": "Version yatsopano ya Convergeo yalipo."
   },
   "offline": {
     "body": "Palibe connection pano. Mapeji omwe mwaonako kale amagwirabe ntchito — connectaninso kuti muone zonse.",
@@ -46,5 +47,23 @@
       "nya": "IciNyanja",
       "fr": "Français"
     }
+  },
+  "contact": {
+    "phone": "+260 97 XXX XX70",
+    "email": "Convergeozambia@gmail.com"
+  },
+  "social": {
+    "facebook": "https://www.facebook.com/",
+    "twitter": "https://twitter.com/",
+    "instagram": "https://www.instagram.com/"
+  },
+  "utilityBar": {
+    "ariaLabel": "Chilankhulo, contact, ndi social links",
+    "socialAria": "Social media",
+    "facebookAria": "Convergeo pa Facebook",
+    "twitterAria": "Convergeo pa X",
+    "instagramAria": "Convergeo pa Instagram",
+    "emailAria": "Email Convergeo",
+    "countryCode": "ZM"
   }
 }

@@ -13,7 +13,7 @@
     "relatedTitle": "Abashitisha bambi mu checkout iyi"
   },
   "empty": {
-    "body": "Ilyo mwashita ukufuma ku basellers ba Vergeo5, ama-order no tracking fyaisa apa.",
+    "body": "Ilyo mwashita ukufuma ku basellers ba Convergeo, ama-order no tracking fyaisa apa.",
     "cta": "Tampeniko ukushita",
     "title": "Takwaba ama-order"
   },
@@ -23,7 +23,7 @@
   },
   "escrow": {
     "cod": "Lipileni vendor mu cash nangu mobile money ilyo mupoka order.",
-    "held": "Payment yenu yikwata bwino na Vergeo5 mpaka mupoke order yenu.",
+    "held": "Payment yenu yikwata bwino na Convergeo mpaka mupoke order yenu.",
     "refunded": "Refund ilebwelela ku mobile money wallet yenu.",
     "released": "Indalama shyasuminishwa ku vendor pantu fulfilment."
   },
@@ -56,7 +56,7 @@
     "confirmed": "Vendor yasuminisha order yenu",
     "delivered": "Yafika",
     "paymentCod": "Lipileni vendor pa delivery",
-    "paymentHeld": "Mwalipila — yikwata bwino na Vergeo5",
+    "paymentHeld": "Mwalipila — yikwata bwino na Convergeo",
     "placed": "Order yaiswa",
     "processing": "Vendor ilepanga order yenu",
     "ready": "Yikwete kale ku pickup",

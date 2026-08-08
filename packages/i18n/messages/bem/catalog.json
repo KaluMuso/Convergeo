@@ -17,16 +17,16 @@
       "sampleListing": "Listing ya sample"
     },
     "hero": {
-      "escrowLine": "Ukulindilila kwa buyer na escrow ilyo payment ya online yaisa — yikwata bwino na Vergeo5 mpaka kufika, elyo yasuminishwa.",
+      "escrowLine": "Ukulindilila kwa buyer na escrow ilyo payment ya online yaisa — yikwata bwino na Convergeo mpaka kufika, elyo yasuminishwa.",
       "escrowStep1": "Mwalipila",
-      "escrowStep2": "Yikwata bwino na Vergeo5",
+      "escrowStep2": "Yikwata bwino na Convergeo",
       "escrowStep3": "Yasuminishwa pa kufika",
       "eyebrow": "Marketplace ya Zambia",
       "fallbackSubtitle": "Compare basellers, arrange delivery ya Lusaka nangu pickup nationwide, no sanga ifyo fli pepi.",
       "fallbackTitle": "Shiteni ifintu, services, no events mu Zambia",
       "placeholder": {
         "subtitle": "Storefront yenu ya config ileisa apa ilyo merchandising slots fyaya live.",
-        "title": "Mwaiseni pa Vergeo5"
+        "title": "Mwaiseni pa Convergeo"
       },
       "primaryCta": "Tampeniko kutwala",
       "secondaryCta": "Sambeni ukushitisha",
@@ -56,7 +56,7 @@
       }
     },
     "meta": {
-      "description": "Shita ifintu, booka services, no sanga events mu Zambia pa Vergeo5.",
+      "description": "Shita ifintu, booka services, no sanga events mu Zambia pa Convergeo.",
       "title": "Sanga Zambia"
     },
     "serviceBar": {
@@ -65,7 +65,7 @@
     },
     "rails": {
       "departmentTitle": "Ifyapya mu {category}",
-      "newTitle": "Ifyapya pa Vergeo5",
+      "newTitle": "Ifyapya pa Convergeo",
       "services": {
         "fromPrice": "Ukufuma",
         "noReviews": "Provider umupya",
@@ -92,11 +92,11 @@
     "sellCta": {
       "body": "Signup ya public teyaisa kale. Basellers abaitwa bengakonka onboarding; bambi bengasamba ifyo seller beta ikonka.",
       "cta": "Sambeni ukushitisha",
-      "title": "Ukushitisha pa Vergeo5 kulifye kwa invite nomba"
+      "title": "Ukushitisha pa Convergeo kulifye kwa invite nomba"
     },
     "trust": {
-      "ariaLabel": "Cinshi muleshita pa Vergeo5",
-      "escrow": "Ilyo payment ya online yaisa, Vergeo5 yikwata bwino indalama yenu mpaka kufika",
+      "ariaLabel": "Cinshi muleshita pa Convergeo",
+      "escrow": "Ilyo payment ya online yaisa, Convergeo yikwata bwino indalama yenu mpaka kufika",
       "fulfillment": "Delivery ya Lusaka nangu pickup nationwide ilyo listing yaisa",
       "returns": "Amabuloshi ya returns no refunds ku ama-order ayasuminishwa",
       "sellers": "Amaprofiles ya basellers no status mwingalola"
@@ -154,8 +154,8 @@
     "unavailableBody": "Tatwaishibe ukuleta icintu ici nomba. Checkeni connection no wesheni limbi.",
     "unavailableRetry": "Wesheni limbi",
     "meta": {
-      "descriptionFallback": "Shiteni {name} pa Vergeo5",
-      "descriptionWithPrice": "Fisankisheni ama-price a {name} kuli {count, plural, one {# ushitisha} other {# abashitisha}} pa Vergeo5. Ukutula {price}.",
+      "descriptionFallback": "Shiteni {name} pa Convergeo",
+      "descriptionWithPrice": "Fisankisheni ama-price a {name} kuli {count, plural, one {# ushitisha} other {# abashitisha}} pa Convergeo. Ukutula {price}.",
       "notFoundTitle": "Icintu tacisangwa"
     },
     "overview": {
@@ -181,7 +181,7 @@
     },
     "trust": {
       "delivery": "Delivery yaisa ku seller uyu",
-      "escrow": "Ilyo payment ya online yaisa, Vergeo5 yikwata bwino indalama yenu mpaka kufika. COD yengasuminishwa ku ama-order ayasuminishwa.",
+      "escrow": "Ilyo payment ya online yaisa, Convergeo yikwata bwino indalama yenu mpaka kufika. COD yengasuminishwa ku ama-order ayasuminishwa.",
       "pickup": "Pickup yaisa ku seller uyu",
       "preferredSeller": "Seller preferred — {name}",
       "returns": "Returns no refunds",
@@ -197,7 +197,7 @@
     "contactVendor": {
       "cta": "Landeni umo ushitisha",
       "dialogTitle": "Ipusheni pa cintu ici",
-      "dialogHint": "Ubutumwa bwenu bukafika ku {vendor} pa listing iyi. Ama-reply yafwile pa Vergeo5 — teshafwile ukugabana namba ya foni mu butumwa.",
+      "dialogHint": "Ubutumwa bwenu bukafika ku {vendor} pa listing iyi. Ama-reply yafwile pa Convergeo — teshafwile ukugabana namba ya foni mu butumwa.",
       "messageLabel": "Ifyo mulefwaya ukwisula",
       "messagePlaceholder": "Ngacakuti: Cili mu stock? Mungatumina ku Kabulonga?",
       "submit": "Tumeni ubutumwa",

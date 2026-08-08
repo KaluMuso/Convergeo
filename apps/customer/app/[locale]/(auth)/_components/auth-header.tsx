@@ -1,6 +1,7 @@
 "use client";
 
 import { AppHeader } from "@vergeo/ui/src/app-header";
+import Image from "next/image";
 import Link from "next/link";
 
 type AuthHeaderProps = {
@@ -34,8 +35,16 @@ export function AuthHeader({
       secondaryLink={
         <Link
           href={`/${locale}`}
-          className="inline-flex min-h-11 items-center text-sm font-medium text-panel-muted transition-colors hover:text-panel-text focus-visible:outline-none focus-visible:shadow-focusRing"
+          className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-panel-muted transition-colors hover:text-panel-text focus-visible:outline-none focus-visible:shadow-focusRing"
         >
+          <Image
+            src="/icon-mark.png"
+            alt=""
+            width={22}
+            height={22}
+            className="h-5 w-5 object-contain"
+            aria-hidden
+          />
           {backToShopLabel}
         </Link>
       }

@@ -17,6 +17,7 @@ overrides:
   js-yaml@>=4.0.0 <4.3.1: 4.3.1
   postcss@>=8.0.0 <8.5.18: 8.5.18
   sharp@<0.35.0: 0.35.0
+  nanoid@^3.0.0: 3.3.17
 
 importers:
 
@@ -157,11 +158,11 @@ importers:
         version: 19.2.8(react@19.2.8)
       serwist:
         specifier: ^9.5.12
-        version: 9.5.12(browserslist@4.28.7)(typescript@5.9.3)
+        version: 9.5.12(browserslist@4.28.6)(typescript@5.9.3)
     devDependencies:
       '@serwist/next':
         specifier: ^9.5.12
-        version: 9.5.12(next@15.5.22(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(typescript@5.9.3)(webpack@5.108.4(lightningcss@1.32.0))
+        version: 9.5.12(next@15.5.22(@opentelemetry/api@1.9.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(typescript@5.9.3)(webpack@5.108.4(lightningcss@1.32.0))
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3
@@ -3875,8 +3876,8 @@ packages:
   mute-stream@0.0.7:
     resolution: {integrity: sha512-r65nCZhrbXXb6dXOACihYApHw2Q6pV0M3V0PSxd74N0+D8nzAdEAITq2oAjA1jVnKI+tGvEBUpqiMh0+rW6zDQ==}
 
-  nanoid@3.3.16:
-    resolution: {integrity: sha512-bzlKTyNJ7+LdGIIwy8ijFpIqEQIvafahV7eYykJ8Cvh42EdJeODoJ6gUJXpQJvej1BddH8OqTXZNE/KfbWAu8Q==}
+  nanoid@3.3.17:
+    resolution: {integrity: sha512-xQLf0A3HOMlgHq0n247/LRuAOYmB7dXJ/DvAxGvsSBij45XtBSmQycu+F8ODbHwns/XyFZagyL1+J0Offw1E0g==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
@@ -6197,7 +6198,7 @@ snapshots:
     transitivePeerDependencies:
       - browserslist
 
-  '@serwist/next@9.5.12(next@15.5.22(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(typescript@5.9.3)(webpack@5.108.4(lightningcss@1.32.0))':
+  '@serwist/next@9.5.12(next@15.5.22(@opentelemetry/api@1.9.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(typescript@5.9.3)(webpack@5.108.4(lightningcss@1.32.0))':
     dependencies:
       '@serwist/build': 9.5.12(browserslist@4.28.6)(typescript@5.9.3)
       '@serwist/utils': 9.5.12(browserslist@4.28.6)
@@ -6219,10 +6220,6 @@ snapshots:
   '@serwist/utils@9.5.12(browserslist@4.28.6)':
     optionalDependencies:
       browserslist: 4.28.6
-
-  '@serwist/utils@9.5.12(browserslist@4.28.7)':
-    optionalDependencies:
-      browserslist: 4.28.7
 
   '@serwist/webpack-plugin@9.5.12(browserslist@4.28.6)(typescript@5.9.3)(webpack@5.108.4(lightningcss@1.32.0))':
     dependencies:
@@ -8626,7 +8623,7 @@ snapshots:
 
   mute-stream@0.0.7: {}
 
-  nanoid@3.3.16: {}
+  nanoid@3.3.17: {}
 
   natural-compare@1.4.0: {}
 
@@ -8898,7 +8895,7 @@ snapshots:
 
   postcss@8.5.18:
     dependencies:
-      nanoid: 3.3.16
+      nanoid: 3.3.17
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -9172,15 +9169,6 @@ snapshots:
   serwist@9.5.12(browserslist@4.28.6)(typescript@5.9.3):
     dependencies:
       '@serwist/utils': 9.5.12(browserslist@4.28.6)
-      idb: 8.0.3
-    optionalDependencies:
-      typescript: 5.9.3
-    transitivePeerDependencies:
-      - browserslist
-
-  serwist@9.5.12(browserslist@4.28.7)(typescript@5.9.3):
-    dependencies:
-      '@serwist/utils': 9.5.12(browserslist@4.28.7)
       idb: 8.0.3
     optionalDependencies:
       typescript: 5.9.3

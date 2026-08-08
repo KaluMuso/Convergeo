@@ -18,13 +18,13 @@
     "categoriesLoading": "Loading categories…",
     "categoriesEmpty": "Categories are unavailable right now. Try again shortly.",
     "viewAllCategories": "View all categories",
-    "featuredTitle": "New on Vergeo5",
+    "featuredTitle": "New on Convergeo",
     "featuredPromo": "Compare sellers and pay with escrow when you checkout online.",
     "featuredPromoCta": "Search the marketplace",
     "directory": "Directory",
     "services": "Services",
     "events": "Events",
-    "askVergeo": "Ask Vergeo",
+    "askVergeo": "Ask Convergeo",
     "supplies": "Supplies",
     "browseChipsAria": "Browse by area"
   },
@@ -33,7 +33,7 @@
     "about": "About",
     "contact": "Contact",
     "help": "Help",
-    "sell": "Sell on Vergeo5",
+    "sell": "Sell on Convergeo",
     "signIn": "Sign in"
   },
   "account": {
