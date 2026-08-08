@@ -19,6 +19,7 @@ export async function TopUtilityBarSlot({ locale }: TopUtilityBarSlotProps) {
       locale={locale}
       labels={{
         ariaLabel: tCommon("utilityBar.ariaLabel"),
+        countryCode: tCommon("utilityBar.countryCode"),
         localeAria: tCommon("locale.switchAria"),
         localeNames: {
           en: tCommon("locale.names.en"),

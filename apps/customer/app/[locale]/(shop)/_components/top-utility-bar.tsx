@@ -7,6 +7,7 @@ import { swapLocaleInPath } from "../../../../lib/locale-path";
 
 export type TopUtilityBarLabels = {
   ariaLabel: string;
+  countryCode: string;
   localeAria: string;
   localeNames: Record<string, string>;
   phone: string;
@@ -108,7 +109,9 @@ export function TopUtilityBar({ locale, labels, links }: TopUtilityBarProps) {
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <span className="inline-flex items-center gap-1.5 font-medium tracking-wide">
             <ZambiaFlag className="h-3.5 w-5 shrink-0 rounded-[1px] shadow-sm" />
-            <span className="hidden text-panel-muted xs:inline sm:inline">ZM</span>
+            <span className="hidden text-panel-muted xs:inline sm:inline">
+              {labels.countryCode}
+            </span>
           </span>
           <label className="inline-flex items-center gap-1.5 text-panel-muted">
             <span className="sr-only">{labels.localeAria}</span>
