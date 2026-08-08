@@ -16,16 +16,16 @@ import {
 } from "../_components/orders-api";
 import { PickupCredentialsBlock } from "../_components/pickup-credentials";
 
+import { ConfirmReceivedBlock } from "./_components/confirm-received";
 import {
   buildDispatchStatusUpdates,
   DispatchTimeline,
   extractDispatchFromEvents,
   type DispatchOrderEvent,
 } from "./_components/dispatch-timeline";
-import { ConfirmReceivedBlock } from "./_components/confirm-received";
+import { OrderPostDeliveryActions } from "./_components/order-post-delivery-actions";
 import { ReportProblemBlock } from "./_components/report-problem";
 import { ReviewPromptBlock } from "./_components/review-prompt";
-import { OrderPostDeliveryActions } from "./_components/order-post-delivery-actions";
 
 import type { Metadata } from "next";
 
