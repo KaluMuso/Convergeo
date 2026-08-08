@@ -38,7 +38,7 @@ export function AuthHeader({
           className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-panel-muted transition-colors hover:text-panel-text focus-visible:outline-none focus-visible:shadow-focusRing"
         >
           <Image
-            src="/icon-mark.png"
+            src="/icon-mark.webp"
             alt=""
             width={22}
             height={22}
