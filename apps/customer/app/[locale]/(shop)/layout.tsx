@@ -179,6 +179,9 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           },
           browseCta: tCheckout("cart.browseCta"),
           openCart: tCheckout("cart.openCart"),
+          loadErrorTitle: tCheckout("cart.loadErrorTitle"),
+          loadErrorBody: tCheckout("cart.loadErrorBody"),
+          loadErrorRetry: tCheckout("cart.loadErrorRetry"),
         }}
       />
       {/* Lets a returning PWA user explicitly activate a waiting worker. */}

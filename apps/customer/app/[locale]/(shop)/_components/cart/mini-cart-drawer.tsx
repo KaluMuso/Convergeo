@@ -53,9 +53,7 @@ export type VendorGroup = {
 };
 
 /** Prefer API vendor_name; fall back to truncated vendor_id. */
-export function vendorGroupLabel(
-  group: Pick<VendorGroup, "vendor_id" | "vendor_name">,
-): string {
+export function vendorGroupLabel(group: Pick<VendorGroup, "vendor_id" | "vendor_name">): string {
   const name = group.vendor_name?.trim();
   return name && name.length > 0 ? name : group.vendor_id.slice(0, 8);
 }
@@ -364,6 +362,9 @@ export type MiniCartLabels = {
   emptyTrust: CartEmptyTrustLabels;
   browseCta: string;
   openCart: string;
+  loadErrorTitle: string;
+  loadErrorBody: string;
+  loadErrorRetry: string;
 };
 
 export type CartEmptyTrustLabels = {
@@ -498,8 +499,8 @@ type MiniCartDrawerProps = {
 };
 
 export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
-  const { cart, drawerOpen, lastAddedMessage } = useCartStore();
-  const { closeDrawer } = useCartActions();
+  const { cart, drawerOpen, lastAddedMessage, loadError, loading } = useCartStore();
+  const { closeDrawer, refresh } = useCartActions();
   const count = getCartItemCount(cart);
 
   useEffect(() => {
@@ -529,7 +530,23 @@ export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
             {labels.close}
           </button>
         </div>
-        {cart && count > 0 ? (
+        {loadError && !cart ? (
+          <div className="flex flex-col gap-3 p-4" data-testid="mini-cart-load-error" role="alert">
+            <p className="font-display text-lg font-semibold text-text">{labels.loadErrorTitle}</p>
+            <p className="text-sm text-text-2">{labels.loadErrorBody}</p>
+            <button
+              type="button"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-sm bg-primary px-4 text-sm font-medium text-surface transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:shadow-focusRing motion-reduce:transition-none disabled:opacity-60"
+              data-testid="mini-cart-load-error-retry"
+              disabled={loading}
+              onClick={() => {
+                void refresh();
+              }}
+            >
+              {labels.loadErrorRetry}
+            </button>
+          </div>
+        ) : cart && count > 0 ? (
           <div className="flex flex-col gap-4 p-4">
             <p className="text-sm text-text-2" data-testid="mini-cart-count" aria-live="polite">
               {labels.itemCount.replace("{count}", String(count))}

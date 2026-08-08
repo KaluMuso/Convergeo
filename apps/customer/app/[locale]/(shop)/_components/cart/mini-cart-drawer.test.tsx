@@ -60,6 +60,9 @@ const labels = {
   },
   browseCta: checkoutMessages.cart.browseCta,
   openCart: checkoutMessages.cart.openCart,
+  loadErrorTitle: checkoutMessages.cart.loadErrorTitle,
+  loadErrorBody: checkoutMessages.cart.loadErrorBody,
+  loadErrorRetry: checkoutMessages.cart.loadErrorRetry,
 };
 
 beforeEach(() => {
@@ -106,6 +109,21 @@ describe("MiniCartDrawer a11y", () => {
     expect(close).toHaveClass("min-h-11");
     await user.click(close);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("does not claim empty when cart load failed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("network down");
+      }),
+    );
+    openMiniCart();
+
+    render(<MiniCartDrawer locale="en" labels={labels} />);
+
+    expect(await screen.findByTestId("mini-cart-load-error")).toBeInTheDocument();
+    expect(screen.queryByTestId("mini-cart-empty")).not.toBeInTheDocument();
   });
 
   it("CartNavTrigger opens the drawer with a 44px target", async () => {

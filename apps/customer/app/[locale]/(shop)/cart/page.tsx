@@ -106,6 +106,9 @@ export default async function CartPage({ params }: CartPageProps) {
       },
       browseCta: t("cart.browseCta"),
       openCart: t("cart.openCart"),
+      loadErrorTitle: t("cart.loadErrorTitle"),
+      loadErrorBody: t("cart.loadErrorBody"),
+      loadErrorRetry: t("cart.loadErrorRetry"),
     },
   };
 
