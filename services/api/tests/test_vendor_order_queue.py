@@ -24,6 +24,9 @@ VENDOR_A_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 ORDER_PLACED_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd"
 ORDER_CONFIRMED_ID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
 ORDER_LATE_ID = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+CHECKOUT_PLACED_ID = "c1111111-1111-1111-1111-111111111111"
+CHECKOUT_CONFIRMED_ID = "c2222222-2222-2222-2222-222222222222"
+CHECKOUT_LATE_ID = "c3333333-3333-3333-3333-333333333333"
 TOKEN_A = "vendor-a-token"
 
 
@@ -116,6 +119,7 @@ class FakeSupabaseClient:
             "orders": FakeTable(),
             "order_items": FakeTable(),
             "order_events": FakeTable(),
+            "payments": FakeTable(),
         }
 
     def table(self, name: str) -> FakeTable:
@@ -149,6 +153,8 @@ def _seed_orders(fake: FakeSupabaseClient) -> None:
                 "fulfilment": "delivery",
                 "delivery_fee_ngwee": 1_000,
                 "created_at": "2026-07-10T10:00:00+00:00",
+                "cod": False,
+                "checkout_group_id": CHECKOUT_PLACED_ID,
             },
             {
                 "id": ORDER_CONFIRMED_ID,
@@ -157,6 +163,8 @@ def _seed_orders(fake: FakeSupabaseClient) -> None:
                 "fulfilment": "pickup",
                 "delivery_fee_ngwee": 0,
                 "created_at": "2026-07-10T08:00:00+00:00",
+                "cod": False,
+                "checkout_group_id": CHECKOUT_CONFIRMED_ID,
             },
             {
                 "id": ORDER_LATE_ID,
@@ -165,6 +173,28 @@ def _seed_orders(fake: FakeSupabaseClient) -> None:
                 "fulfilment": "delivery",
                 "delivery_fee_ngwee": 500,
                 "created_at": "2026-07-09T20:00:00+00:00",
+                "cod": False,
+                "checkout_group_id": CHECKOUT_LATE_ID,
+            },
+        ]
+    )
+    # PAY-01: fulfilment actions require successful prepaid payment.
+    fake.tables["payments"].rows.extend(
+        [
+            {
+                "id": str(uuid4()),
+                "checkout_group_id": CHECKOUT_PLACED_ID,
+                "status": "success",
+            },
+            {
+                "id": str(uuid4()),
+                "checkout_group_id": CHECKOUT_CONFIRMED_ID,
+                "status": "success",
+            },
+            {
+                "id": str(uuid4()),
+                "checkout_group_id": CHECKOUT_LATE_ID,
+                "status": "success",
             },
         ]
     )

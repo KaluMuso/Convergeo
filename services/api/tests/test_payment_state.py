@@ -230,6 +230,9 @@ def _seed_payment(
 LEGAL_TRANSITIONS = [
     (PaymentStatus.INITIATED, PaymentEvent.USSD_PUSHED, PaymentStatus.USSD_PUSHED),
     (PaymentStatus.INITIATED, PaymentEvent.CANCELLED, PaymentStatus.CANCELLED),
+    (PaymentStatus.INITIATED, PaymentEvent.SUCCESS, PaymentStatus.SUCCESS),
+    (PaymentStatus.INITIATED, PaymentEvent.FAILED, PaymentStatus.FAILED),
+    (PaymentStatus.INITIATED, PaymentEvent.EXPIRED, PaymentStatus.EXPIRED),
     (PaymentStatus.USSD_PUSHED, PaymentEvent.PAY_OFFLINE, PaymentStatus.PAY_OFFLINE),
     (PaymentStatus.USSD_PUSHED, PaymentEvent.SUCCESS, PaymentStatus.SUCCESS),
     (PaymentStatus.USSD_PUSHED, PaymentEvent.FAILED, PaymentStatus.FAILED),

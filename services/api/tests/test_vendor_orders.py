@@ -221,6 +221,7 @@ def orders_client(
     _mock_auth(monkeypatch, USER_A_ID)
     _seed_vendors(fake_client)
     _seed_order(fake_client, order_id=ORDER_A_ID, vendor_id=VENDOR_A_ID, status="placed")
+    _seed_payment(fake_client, status="success")
     service_wrapper = _mock_supabase(monkeypatch, fake_client)
     app = create_app()
     _apply_supabase_overrides(app, service_wrapper)
@@ -264,8 +265,29 @@ def test_get_order_returns_available_actions(orders_client: TestClient) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["status"] == "placed"
+    assert payload["paid"] is True
     assert "confirm" in payload["available_actions"]
     assert "reject" in payload["available_actions"]
+
+
+def test_unpaid_prepaid_order_hides_fulfilment_actions(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    _mock_auth(monkeypatch, USER_A_ID)
+    _seed_vendors(fake_client)
+    _seed_order(fake_client, order_id=ORDER_A_ID, vendor_id=VENDOR_A_ID, status="placed")
+    # No successful payment seeded.
+    service_wrapper = _mock_supabase(monkeypatch, fake_client)
+    app = create_app()
+    _apply_supabase_overrides(app, service_wrapper)
+    with TestClient(app, raise_server_exceptions=False) as client:
+        response = client.get(f"/vendor/orders/{ORDER_A_ID}", headers=_auth_headers())
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["paid"] is False
+        assert payload["available_actions"] == ["reject"]
+    app.dependency_overrides.clear()
 
 
 def test_vendor_b_cannot_act_on_vendor_a_order(

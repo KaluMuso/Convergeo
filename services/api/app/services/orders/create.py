@@ -25,7 +25,10 @@ Fulfilment = Literal["delivery", "pickup"]
 PaymentMethod = Literal["momo", "card", "cod"]
 DEFAULT_COMMISSION_KEY = "default"
 OUTBOX_CHANNEL = "whatsapp"
-OUTBOX_TEMPLATE = "order_placed"
+# Registry maps order_placed → vendor_new_order. Use the concrete template name so
+# the WhatsApp adapter can render. Prepaid vendor notify is deferred until payment
+# SUCCESS (fulfilment-valid); COD notifies at create (collection-at-delivery).
+OUTBOX_TEMPLATE = "vendor_new_order"
 
 
 @dataclass(frozen=True, slots=True)
@@ -664,15 +667,18 @@ VALUES ({item_sql}, {listing_sql}{product_values});
 """
             )
 
-        dedupe_key = build_dedupe_key("order.placed", order.order_id, OUTBOX_CHANNEL)
-        payload = {
-            "order_id": order.order_id,
-            "checkout_group_id": session_id,
-            "vendor_id": order.vendor_id,
-            "customer_id": customer_id,
-        }
-        statements.append(
-            f"""
+        # Prepaid: do not notify vendor until payment SUCCESS (see apply_payment_status).
+        # COD: fulfilment-valid at place — notify immediately.
+        if order.cod:
+            dedupe_key = build_dedupe_key("order.placed", order.order_id, OUTBOX_CHANNEL)
+            payload = {
+                "order_id": order.order_id,
+                "checkout_group_id": session_id,
+                "vendor_id": order.vendor_id,
+                "customer_id": customer_id,
+            }
+            statements.append(
+                f"""
 INSERT INTO public.notification_outbox (
   dedupe_key, channel, template, payload, status
 ) VALUES (
@@ -680,7 +686,7 @@ INSERT INTO public.notification_outbox (
   {_sql_json(payload)}::jsonb, 'pending'
 ) ON CONFLICT (dedupe_key) DO NOTHING;
 """
-        )
+            )
 
     for line in cart_lines:
         statements.append(

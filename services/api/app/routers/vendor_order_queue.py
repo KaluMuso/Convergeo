@@ -111,9 +111,25 @@ def _preview_title(items: list[dict[str, Any]]) -> str:
     return "Order"
 
 
-def _needs_action_for_order(*, status: str, fulfilment: str) -> bool:
-    actions = _available_vendor_actions(status=status, fulfilment=fulfilment)
+def _needs_action_for_order(
+    *,
+    status: str,
+    fulfilment: str,
+    paid: bool = True,
+    cod: bool = False,
+) -> bool:
+    actions = _available_vendor_actions(
+        status=status,
+        fulfilment=fulfilment,
+        paid=paid,
+        cod=cod,
+    )
     return bool(actions)
+
+
+def _queue_item_needs_action(item: OrderQueueItem) -> bool:
+    """Prefer persisted available_actions (already payment-gated) over recompute."""
+    return bool(item.available_actions)
 
 
 def compute_urgency(*, status: str, created_at: datetime, now: datetime) -> int:
@@ -159,12 +175,31 @@ def compute_takings_ngwee(
 def _load_vendor_orders(service_client: _ServiceRoleClient, vendor_id: str) -> list[dict[str, Any]]:
     response = (
         service_client.client.table("orders")
-        .select("id, status, fulfilment, delivery_fee_ngwee, created_at")
+        .select(
+            "id, status, fulfilment, delivery_fee_ngwee, created_at, "
+            "cod, checkout_group_id"
+        )
         .eq("vendor_id", vendor_id)
         .order("created_at", desc=True)
         .execute()
     )
     return _rows(response)
+
+
+def _paid_checkout_group_ids(
+    service_client: _ServiceRoleClient,
+    checkout_group_ids: list[str],
+) -> set[str]:
+    if not checkout_group_ids:
+        return set()
+    response = (
+        service_client.client.table("payments")
+        .select("checkout_group_id")
+        .in_("checkout_group_id", checkout_group_ids)
+        .eq("status", "success")
+        .execute()
+    )
+    return {str(row["checkout_group_id"]) for row in _rows(response)}
 
 
 def _load_items_by_order(
@@ -207,10 +242,16 @@ def _build_queue_item(
     order_row: dict[str, Any],
     items: list[dict[str, Any]],
     now: datetime,
+    paid_checkout_ids: set[str] | None = None,
 ) -> OrderQueueItem:
     order_id = str(order_row["id"])
     status = str(order_row["status"])
     fulfilment = str(order_row["fulfilment"])
+    cod = bool(order_row.get("cod"))
+    checkout_group_id = str(order_row.get("checkout_group_id") or "")
+    paid = cod or (
+        checkout_group_id in (paid_checkout_ids or set())
+    )
     return OrderQueueItem(
         id=order_id,
         status=status,
@@ -222,7 +263,12 @@ def _build_queue_item(
         item_count=len(items),
         preview_title=_preview_title(items),
         created_at=str(order_row["created_at"]),
-        available_actions=_available_vendor_actions(status=status, fulfilment=fulfilment),
+        available_actions=_available_vendor_actions(
+            status=status,
+            fulfilment=fulfilment,
+            paid=paid,
+            cod=cod,
+        ),
         urgency=compute_urgency(
             status=status,
             created_at=_parse_timestamp(str(order_row["created_at"])),
@@ -244,7 +290,7 @@ def _queue_counts(orders: list[OrderQueueItem]) -> dict[str, int]:
     for order in orders:
         if order.status in counts:
             counts[order.status] += 1
-        if _needs_action_for_order(status=order.status, fulfilment=order.fulfilment):
+        if _queue_item_needs_action(order):
             counts["needs_action"] += 1
     return counts
 
@@ -257,11 +303,7 @@ def _filter_orders(
     if status == "all":
         return orders
     if status == "needs_action":
-        return [
-            order
-            for order in orders
-            if _needs_action_for_order(status=order.status, fulfilment=order.fulfilment)
-        ]
+        return [order for order in orders if _queue_item_needs_action(order)]
     return [order for order in orders if order.status == status]
 
 
@@ -278,12 +320,17 @@ def _build_dashboard(
     order_rows = _load_vendor_orders(service_client, vendor_id)
     order_ids = [str(row["id"]) for row in order_rows]
     items_by_order = _load_items_by_order(service_client, order_ids)
+    paid_checkout_ids = _paid_checkout_group_ids(
+        service_client,
+        [str(row["checkout_group_id"]) for row in order_rows if row.get("checkout_group_id")],
+    )
 
     queue_items = [
         _build_queue_item(
             order_row=row,
             items=items_by_order.get(str(row["id"]), []),
             now=now,
+            paid_checkout_ids=paid_checkout_ids,
         )
         for row in order_rows
     ]
@@ -298,11 +345,7 @@ def _build_dashboard(
     )
 
     needs_action = sort_needs_action(
-        [
-            item
-            for item in queue_items
-            if _needs_action_for_order(status=item.status, fulfilment=item.fulfilment)
-        ]
+        [item for item in queue_items if _queue_item_needs_action(item)]
     )
 
     return VendorDashboardResponse(
@@ -337,7 +380,10 @@ def list_vendor_orders_queue(
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     all_orders_response = (
         service_client.client.table("orders")
-        .select("id, status, fulfilment, delivery_fee_ngwee, created_at")
+        .select(
+            "id, status, fulfilment, delivery_fee_ngwee, created_at, "
+            "cod, checkout_group_id"
+        )
         .eq("vendor_id", str(vendor["id"]))
         .order("created_at", desc=True)
         .execute()
@@ -345,12 +391,17 @@ def list_vendor_orders_queue(
     order_rows = _rows(all_orders_response)
     order_ids = [str(row["id"]) for row in order_rows]
     items_by_order = _load_items_by_order(service_client, order_ids)
+    paid_checkout_ids = _paid_checkout_group_ids(
+        service_client,
+        [str(row["checkout_group_id"]) for row in order_rows if row.get("checkout_group_id")],
+    )
     now = datetime.now(tz=UTC)
     queue_items = [
         _build_queue_item(
             order_row=row,
             items=items_by_order.get(str(row["id"]), []),
             now=now,
+            paid_checkout_ids=paid_checkout_ids,
         )
         for row in order_rows
     ]

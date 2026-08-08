@@ -109,12 +109,14 @@ def seed_escrow_for_order(conn: PgConn, *, suffix: str) -> None:
 
     Since M08-P08b, ``evaluate_and_release`` captures commission itself, so the test
     must NOT pre-post ``COMMISSION_CAPTURE`` — doing so would double-capture and leave
-    escrow unbalanced. The single charge leg mirrors the M08 prepaid collection.
+    escrow unbalanced. Uses production ``escrow-hold-{order_id}`` key + order_id so
+    PAY-01 release evidence gates accept the fixture.
     """
     post_transaction(
-        idempotency_key=f"charge-{suffix}",
-        template=LedgerTemplate.CHARGE_RECEIVED,
-        gross_ngwee=GROSS_NGEWEE,
+        idempotency_key=f"escrow-hold-{suffix}",
+        template=LedgerTemplate.ESCROW_HOLD,
+        order_id=suffix,
+        order_amount_ngwee=GROSS_NGEWEE,
     )
 
 
