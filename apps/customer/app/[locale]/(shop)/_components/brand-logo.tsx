@@ -8,7 +8,7 @@ type BrandLogoProps = {
 };
 
 /**
- * Convergeo wordmark — petal mark replaces the first “O” in verge.png.
+ * Convergeo wordmark — petal mark replaces the first “O” in verge.webp.
  */
 export function BrandLogo({ appName, compact = false, className }: BrandLogoProps) {
   return (
@@ -17,7 +17,7 @@ export function BrandLogo({ appName, compact = false, className }: BrandLogoProp
       data-testid="brand-logo"
     >
       <Image
-        src="/verge.png"
+        src="/verge.webp"
         alt={appName}
         width={compact ? 132 : 168}
         height={compact ? 18 : 23}

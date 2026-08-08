@@ -71,10 +71,11 @@ export async function generateMetadata({
       icon: [
         { url: "/favicon.ico", sizes: "any" },
         { url: "/Vergeo5.ico", sizes: "any" },
-        { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-        { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+        { url: "/icon.svg", type: "image/svg+xml" },
+        { url: "/icon-192.webp", sizes: "192x192", type: "image/webp" },
+        { url: "/icon-512.webp", sizes: "512x512", type: "image/webp" },
       ],
-      apple: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+      apple: [{ url: "/icon-192.webp", sizes: "192x192", type: "image/webp" }],
       shortcut: "/favicon.ico",
     },
     openGraph: {
