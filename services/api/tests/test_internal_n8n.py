@@ -570,3 +570,84 @@ class TestTickEnqueue:
         assert body["enqueued"] == 1
         assert body["skipped"] == 0
         assert len(fake_client.tables["notification_outbox"].rows) == 1
+
+
+class TestPreferredBadgeTick:
+    def test_preferred_badge_tick_idempotent_envelope(
+        self,
+        n8n_client: TestClient,
+        fake_client: FakeSupabaseClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from app.services.kyc.badge import BadgeChange, BadgeEvaluation, BadgeMetrics
+
+        _seed_common(fake_client)
+        fake_client.tables["vendors"].rows[0]["status"] = "active"
+        fake_client.tables["vendors"].rows.append(
+            {
+                "id": "99999999-9999-9999-9999-999999999999",
+                "owner_user_id": USER_ID,
+                "display_name": "Draft Vendor",
+                "slug": "draft-vendor",
+                "status": "draft",
+            }
+        )
+
+        metrics = BadgeMetrics(
+            completed_orders=20,
+            average_rating=4.8,
+            dispute_rate=0.0,
+            cancel_rate=0.0,
+        )
+        evaluation = BadgeEvaluation(
+            vendor_id=VENDOR_ID,
+            qualifies=True,
+            metrics=metrics,
+            reasons=(),
+        )
+        change = BadgeChange(
+            vendor_id=VENDOR_ID,
+            previous=False,
+            current=True,
+            evaluation=evaluation,
+        )
+
+        class _Job:
+            def __init__(self, _client: Any) -> None:
+                pass
+
+            def run(self, *, actor_id: str = "system:preferred-badge-job") -> list[Any]:
+                _ = actor_id
+                return [change]
+
+        monkeypatch.setattr("app.services.kyc.badge.PreferredBadgeJob", _Job)
+
+        response = n8n_client.post(
+            "/internal/n8n/preferred-badge/tick",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["ok"] is True
+        assert body["evaluated"] == 1
+        assert body["changed"] == 1
+        assert body["granted"] == 1
+        assert body["revoked"] == 0
+
+        class _NoopJob:
+            def __init__(self, _client: Any) -> None:
+                pass
+
+            def run(self, *, actor_id: str = "system:preferred-badge-job") -> list[Any]:
+                _ = actor_id
+                return []
+
+        monkeypatch.setattr("app.services.kyc.badge.PreferredBadgeJob", _NoopJob)
+        again = n8n_client.post(
+            "/internal/n8n/preferred-badge/tick",
+            headers={"X-Internal-Token": VALID_TOKEN},
+        )
+        assert again.status_code == 200
+        assert again.json()["changed"] == 0
+        assert again.json()["granted"] == 0
+

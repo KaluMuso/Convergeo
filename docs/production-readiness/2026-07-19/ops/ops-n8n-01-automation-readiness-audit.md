@@ -135,6 +135,7 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `kyc-nudge.json`                  | Notifications               | no                      | DORMANT                                        |
 | `payout-failure-alert.json`       | Notifications               | no                      | DORMANT                                        |
 | `low-stock-alert.json`            | Notifications               | no                      | DORMANT                                        |
+| `preferred-badge-recompute.json`  | Seller quality (D9)         | no                      | DORMANT (ships `active: false`; do not activate without founder gate) |
 | `review-request.json`             | Notifications               | no                      | DORMANT                                        |
 | `abandoned-cart.json`             | Notifications               | no                      | DORMANT                                        |
 | `funnel-abandon.json`             | Analytics                   | no                      | DORMANT                                        |

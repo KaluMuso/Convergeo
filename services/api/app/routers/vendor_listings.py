@@ -11,6 +11,7 @@ from app.schemas.base import NgweeInt, StrictModel
 from app.services.kyc.caps import VendorCapLimits, require_listing_cap
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.moderation.prohibited import screen_listing
+from app.services.moderation.prohibited_flags import record_prohibited_listing_attempt
 from fastapi import APIRouter, Depends
 from pydantic import Field, field_validator, model_validator
 
@@ -424,6 +425,14 @@ def create_listing_for_vendor(
         category=category_name,
     )
     if not guard.allowed:
+        record_prohibited_listing_attempt(
+            service_client.client,
+            vendor_id=vendor_id,
+            title=body.title_override or body.product_name,
+            reason=guard.reason or "keyword",
+            matched=guard.matched,
+            reporter_user_id=str(vendor.get("owner_user_id") or "") or None,
+        )
         raise AppError(
             code="prohibited_listing",
             message="Listing contains a prohibited category or keyword",
