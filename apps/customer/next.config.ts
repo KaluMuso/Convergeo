@@ -46,6 +46,8 @@ const withSerwist = withSerwistInit({
  */
 const NONCE = "'nonce-{{CSP_NONCE}}'";
 const CSP_REPORTING = "report-uri /api/csp-report; report-to csp-endpoint";
+/** Header name applied by middleware with a substituted nonce — not set here. */
+const CSP_REPORT_ONLY_HEADER = "Content-Security-Policy-Report-Only";
 const isDev = isDevelopmentEnv();
 
 const ENFORCED_CSP = [
@@ -117,6 +119,7 @@ const nextConfig: NextConfig = {
     // `{{CSP_NONCE}}` token produces console noise (`invalid source: 'nonce-{{CSP_NONCE}}'`).
     // Middleware gates Lenco on `/:locale/checkout/card/:paymentId` via
     // `buildReportOnlyCsp(true)` vs `buildReportOnlyCsp(false)`.
+    void CSP_REPORT_ONLY_HEADER;
     void (true ? buildReportOnlyCsp(true) : buildReportOnlyCsp(false));
     return [
       {
