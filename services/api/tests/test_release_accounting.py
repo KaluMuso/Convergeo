@@ -615,6 +615,7 @@ class TestLookupFailClosedUnit:
             order_id=order_id,
             status="delivered",
             vendor_id=VENDOR_A,
+            checkout_group_id=str(uuid.uuid4()),
             cod=False,
             commission_snapshot=_snapshot(),
             gross_ngwee=GROSS_NGEWEE,
@@ -623,6 +624,7 @@ class TestLookupFailClosedUnit:
             buyer_confirmed=True,
             delivered_at=now - timedelta(hours=1),
             shipped_at=now - timedelta(hours=2),
+            has_escrow_evidence=True,
         )
         with (
             patch(
@@ -653,6 +655,7 @@ class TestLookupFailClosedUnit:
             order_id=order_id,
             status="delivered",
             vendor_id=VENDOR_A,
+            checkout_group_id=str(uuid.uuid4()),
             cod=False,
             commission_snapshot=_snapshot(),
             gross_ngwee=GROSS_NGEWEE,
@@ -661,6 +664,7 @@ class TestLookupFailClosedUnit:
             buyer_confirmed=True,
             delivered_at=now - timedelta(hours=1),
             shipped_at=now - timedelta(hours=2),
+            has_escrow_evidence=True,
         )
         with (
             patch(
