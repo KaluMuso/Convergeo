@@ -80,6 +80,7 @@ export type ComparisonLabels = {
   rating: string;
   conditionNew: string;
   conditionRefurbished: string;
+  conditionUsed: string;
   usingFallbackLocation: string;
   /** Shown on the cheapest offer card/row when multi-seller. */
   lowestPriceBadge: string;
@@ -155,6 +156,19 @@ export type PdpInteractiveBodyProps = {
 
 export function shouldShowComparison(listingCount: number): boolean {
   return listingCount > 1;
+}
+
+function conditionLabel(
+  condition: ListingCondition,
+  labels: Pick<ComparisonLabels, "conditionNew" | "conditionRefurbished" | "conditionUsed">,
+): string {
+  if (condition === "new") {
+    return labels.conditionNew;
+  }
+  if (condition === "used") {
+    return labels.conditionUsed;
+  }
+  return labels.conditionRefurbished;
 }
 
 export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -423,11 +437,7 @@ export function Comparison({
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <ConditionBadge
                     condition={listing.condition}
-                    label={
-                      listing.condition === "new"
-                        ? labels.conditionNew
-                        : labels.conditionRefurbished
-                    }
+                    label={conditionLabel(listing.condition, labels)}
                   />
                   <span className="text-xs text-text-2">{distanceLabel}</span>
                   <FulfillmentLogisticsPills
@@ -498,11 +508,7 @@ export function Comparison({
                   <td className="px-4 py-3 align-top">
                     <ConditionBadge
                       condition={listing.condition}
-                      label={
-                        listing.condition === "new"
-                          ? labels.conditionNew
-                          : labels.conditionRefurbished
-                      }
+                      label={conditionLabel(listing.condition, labels)}
                     />
                   </td>
                   <td className="px-4 py-3 align-top text-text-2">{distanceLabel}</td>

@@ -2,10 +2,11 @@
 
 import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
+import { Modal } from "@vergeo/ui/src/modal";
 import { Textarea } from "@vergeo/ui/src/textarea";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { useRequestQuote } from "./use-request-quote";
 
@@ -54,7 +55,6 @@ export function RequestQuoteButton({
   variant = "secondary",
   className,
 }: RequestQuoteButtonProps) {
-  const dialogTitleId = useId();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [details, setDetails] = useState("");
@@ -76,19 +76,6 @@ export function RequestQuoteButton({
     setDetails("");
     reset();
   }, [reset]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        close();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [close, open]);
 
   const handleSubmit = async () => {
     const ok = await submitRequest({
@@ -122,107 +109,92 @@ export function RequestQuoteButton({
         {labels.cta}
       </Button>
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
-          role="presentation"
-          data-testid="pdp-request-quote-dialog"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              close();
-            }
-          }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={dialogTitleId}
-            className="w-full max-w-md rounded border border-border bg-bg p-4 shadow-lg"
-            style={{ borderRadius: "var(--r)" }}
-          >
-            <h3 id={dialogTitleId} className="font-display text-lg font-semibold text-text">
-              {labels.dialogTitle}
-            </h3>
-            <p className="mt-1 text-sm text-text-2">
-              {labels.dialogHint.replace("{vendor}", vendorName)}
-            </p>
+      <Modal
+        open={open}
+        onClose={close}
+        title={labels.dialogTitle}
+        data-testid="pdp-request-quote-dialog"
+        closeOnEscape={status !== "sending"}
+        closeOnScrimClick={status !== "sending"}
+      >
+        <p className="mt-1 text-sm text-text-2">
+          {labels.dialogHint.replace("{vendor}", vendorName)}
+        </p>
 
-            {!sessionReady ? (
-              <p className="mt-4 text-sm text-text-2" aria-busy="true">
-                {labels.submitting}
-              </p>
-            ) : !isSignedIn ? (
-              <div className="mt-4 space-y-3">
-                <p className="text-sm text-text-2">{labels.signInPrompt}</p>
-                <Link
-                  href={loginHref}
-                  className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
-                  data-testid="pdp-request-quote-sign-in"
-                >
-                  {labels.signInCta}
-                </Link>
-              </div>
-            ) : status === "success" ? (
-              <div className="mt-4 space-y-2" data-testid="pdp-request-quote-success">
-                <p className="font-medium text-text">{labels.successTitle}</p>
-                <p className="text-sm text-text-2">
-                  {reusedExistingThread ? labels.successContinued : labels.successBody}
-                </p>
-                <Button
-                  type="button"
-                  variant="primary"
-                  loadingLabel={labels.submitting}
-                  onClick={close}
-                >
-                  {labels.done}
-                </Button>
-              </div>
-            ) : (
-              <form
-                className="mt-4 space-y-3"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void handleSubmit();
-                }}
-              >
-                <FormField label={labels.detailsLabel} errorMessage={errorMessage ?? undefined}>
-                  <Textarea
-                    name="details"
-                    value={details}
-                    maxLength={maxDetailsChars}
-                    rows={5}
-                    placeholder={labels.detailsPlaceholder}
-                    disabled={status === "sending"}
-                    data-testid="pdp-request-quote-details"
-                    onChange={(event) => setDetails(event.target.value)}
-                  />
-                </FormField>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    loading={status === "sending"}
-                    loadingLabel={labels.submitting}
-                    disabled={status === "sending"}
-                    data-testid="pdp-request-quote-submit"
-                  >
-                    {status === "sending" ? labels.submitting : labels.submit}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    loadingLabel={labels.submitting}
-                    onClick={close}
-                    disabled={status === "sending"}
-                  >
-                    {labels.cancel}
-                  </Button>
-                </div>
-              </form>
-            )}
+        {!sessionReady ? (
+          <p className="mt-4 text-sm text-text-2" aria-busy="true">
+            {labels.submitting}
+          </p>
+        ) : !isSignedIn ? (
+          <div className="mt-4 space-y-3">
+            <p className="text-sm text-text-2">{labels.signInPrompt}</p>
+            <Link
+              href={loginHref}
+              className="inline-flex min-h-11 items-center font-medium text-primary hover:underline"
+              data-testid="pdp-request-quote-sign-in"
+            >
+              {labels.signInCta}
+            </Link>
           </div>
-        </div>
-      ) : null}
+        ) : status === "success" ? (
+          <div className="mt-4 space-y-2" data-testid="pdp-request-quote-success">
+            <p className="font-medium text-text">{labels.successTitle}</p>
+            <p className="text-sm text-text-2">
+              {reusedExistingThread ? labels.successContinued : labels.successBody}
+            </p>
+            <Button
+              type="button"
+              variant="primary"
+              loadingLabel={labels.submitting}
+              onClick={close}
+            >
+              {labels.done}
+            </Button>
+          </div>
+        ) : (
+          <form
+            className="mt-4 space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSubmit();
+            }}
+          >
+            <FormField label={labels.detailsLabel} errorMessage={errorMessage ?? undefined}>
+              <Textarea
+                name="details"
+                value={details}
+                maxLength={maxDetailsChars}
+                rows={5}
+                placeholder={labels.detailsPlaceholder}
+                disabled={status === "sending"}
+                data-testid="pdp-request-quote-details"
+                onChange={(event) => setDetails(event.target.value)}
+              />
+            </FormField>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="submit"
+                variant="primary"
+                loading={status === "sending"}
+                loadingLabel={labels.submitting}
+                disabled={status === "sending"}
+                data-testid="pdp-request-quote-submit"
+              >
+                {status === "sending" ? labels.submitting : labels.submit}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                loadingLabel={labels.submitting}
+                onClick={close}
+                disabled={status === "sending"}
+              >
+                {labels.cancel}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </>
   );
 }

@@ -339,6 +339,7 @@
     "rating": "{rating} ({count} avis)",
     "conditionNew": "Neuf",
     "conditionRefurbished": "Reconditionné",
+    "conditionUsed": "Occasion",
     "usingFallbackLocation": "Distances calculées depuis le centre-ville de Lusaka jusqu'à ce que vous partagiez votre position.",
     "lowestPriceBadge": "Prix le plus bas"
   },
@@ -358,6 +359,8 @@
     "starEmpty": "☆",
     "distributionHeading": "Répartition des notes",
     "distributionRowAria": "{star}★ : {count}",
+    "verifiedPurchase": "Achat vérifié",
+    "lightboxTitle": "Photos de l'avis",
     "report": {
       "cta": "Signaler",
       "heading": "Signaler cet avis",

@@ -43,6 +43,7 @@ const labels: ComparisonLabels = {
   rating: "{rating} ({count} reviews)",
   conditionNew: "New",
   conditionRefurbished: "Refurbished",
+  conditionUsed: "Used",
   usingFallbackLocation: "Distances from Lusaka CBD.",
   lowestPriceBadge: "Lowest price",
 };
@@ -112,6 +113,30 @@ describe("Comparison mobile cards", () => {
 
     await user.click(screen.getByTestId("comparison-card-b"));
     expect(onSelect).toHaveBeenCalledWith("b");
+  });
+
+  it("shows the Used condition label for used offers in multi-seller comparison", () => {
+    const onSelect = vi.fn();
+    render(
+      <Comparison
+        listings={[
+          listings[0]!,
+          {
+            ...listings[1]!,
+            id: "used-offer",
+            condition: "used",
+            priceNgwee: 80_000,
+          },
+        ]}
+        selectedListingId="a"
+        labels={labels}
+        logisticsPillLabels={logisticsPillLabels}
+        onSelect={onSelect}
+      />,
+    );
+
+    expect(screen.getAllByText("Used").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Refurbished").length).toBe(0);
   });
 
   it("marks the lowest-price offer without inventing comparison when only one seller", () => {

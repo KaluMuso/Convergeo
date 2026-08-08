@@ -2,6 +2,7 @@
 
 import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { ImageGallery, type GalleryImage } from "@vergeo/ui/src/media/image-gallery";
+import { Modal } from "@vergeo/ui/src/modal";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -10,6 +11,13 @@ import { ReportReview, type ReportReviewLabels } from "./report-review";
 export type ReviewRow = {
   id: string;
   order_item_id: string;
+  /**
+   * Explicit verified-purchase flag from the API when present.
+   * Authoritative DB gate: `reviews.order_item_id` is NOT NULL +
+   * `validate_review_verified_purchase` (0007_trust_ops). Prefer this field;
+   * fall back to non-empty `order_item_id` via {@link isVerifiedPurchase}.
+   */
+  verified_purchase?: boolean;
   rating: number;
   body: string | null;
   photos: string[];
@@ -17,6 +25,20 @@ export type ReviewRow = {
   vendor_reply_at: string | null;
   created_at: string;
 };
+
+/**
+ * Trust display: use explicit `verified_purchase` when the API sends it;
+ * otherwise `order_item_id` is the verified-purchase signal (NOT NULL ⇒ verified).
+ * Never invent trust from weaker client assumptions.
+ */
+export function isVerifiedPurchase(
+  review: Pick<ReviewRow, "order_item_id" | "verified_purchase">,
+): boolean {
+  if (typeof review.verified_purchase === "boolean") {
+    return review.verified_purchase;
+  }
+  return Boolean(review.order_item_id);
+}
 
 export type ReviewsSectionLabels = {
   heading: string;
@@ -34,6 +56,9 @@ export type ReviewsSectionLabels = {
   distributionHeading: string;
   /** Per-row accessible label; `{star}` and `{count}` are interpolated. */
   distributionRowAria: string;
+  verifiedPurchase: string;
+  /** Accessible title for the review-photo lightbox Modal. */
+  lightboxTitle: string;
   report: ReportReviewLabels;
 };
 
@@ -189,12 +214,22 @@ export function ReviewsSection({
           <ul className="space-y-4">
             {reviews.map((review) => (
               <li key={review.id} className="space-y-3 rounded border border-border bg-surface p-4">
-                <StarRow
-                  rating={review.rating}
-                  ariaLabel={labels.starsAria.replace("{rating}", String(review.rating))}
-                  starFilled={labels.starFilled}
-                  starEmpty={labels.starEmpty}
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <StarRow
+                    rating={review.rating}
+                    ariaLabel={labels.starsAria.replace("{rating}", String(review.rating))}
+                    starFilled={labels.starFilled}
+                    starEmpty={labels.starEmpty}
+                  />
+                  {isVerifiedPurchase(review) ? (
+                    <span
+                      data-testid={`review-verified-${review.id}`}
+                      className="rounded-pill bg-bg-2 px-2 py-0.5 text-xs font-medium text-text-2"
+                    >
+                      {labels.verifiedPurchase}
+                    </span>
+                  ) : null}
+                </div>
                 {review.body ? <p className="text-sm text-display-ink">{review.body}</p> : null}
                 {review.photos.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
@@ -203,6 +238,8 @@ export function ReviewsSection({
                         key={publicId}
                         type="button"
                         className="h-16 w-16 overflow-hidden rounded border border-border focus-visible:outline-none focus-visible:shadow-focusRing"
+                        data-testid={`review-photo-${publicId}`}
+                        aria-label={labels.photoAlt}
                         onClick={() =>
                           setLightbox(
                             review.photos.map((photoId) => ({
@@ -239,37 +276,26 @@ export function ReviewsSection({
         </>
       )}
 
-      {lightbox && lightbox.length > 0 ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setLightbox(null)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              setLightbox(null);
+      <Modal
+        open={Boolean(lightbox && lightbox.length > 0)}
+        onClose={() => setLightbox(null)}
+        title={labels.lightboxTitle}
+        data-testid="review-photo-lightbox"
+      >
+        {lightbox && lightbox.length > 0 ? (
+          <ImageGallery
+            images={lightbox}
+            cloudName={cloudName}
+            previousLabel={labels.galleryPrevious}
+            nextLabel={labels.galleryNext}
+            indicatorLabel={(current, total) =>
+              labels.galleryIndicator
+                .replace("{current}", String(current))
+                .replace("{total}", String(total))
             }
-          }}
-        >
-          <div
-            className="w-full max-w-lg"
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={(event) => event.stopPropagation()}
-          >
-            <ImageGallery
-              images={lightbox}
-              cloudName={cloudName}
-              previousLabel={labels.galleryPrevious}
-              nextLabel={labels.galleryNext}
-              indicatorLabel={(current, total) =>
-                labels.galleryIndicator
-                  .replace("{current}", String(current))
-                  .replace("{total}", String(total))
-              }
-            />
-          </div>
-        </div>
-      ) : null}
+          />
+        ) : null}
+      </Modal>
     </section>
   );
 }

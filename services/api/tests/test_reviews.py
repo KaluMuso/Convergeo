@@ -357,6 +357,7 @@ class TestVerifiedPurchaseGate:
         payload = response.json()
         assert payload["rating"] == 5
         assert payload["order_item_id"] == ORDER_ITEM_ID
+        assert payload["verified_purchase"] is True
         assert payload["status"] == "published"
         assert len(fake.tables["reviews"].rows) == 1
 
@@ -720,3 +721,60 @@ class TestReviewsRls:
         )
         assert not denied.ok
         assert "delivered" in (denied.error or "").lower()
+
+
+class TestListProductReviewsAggregate:
+    def test_returns_items_with_authoritative_aggregate(self) -> None:
+        fake = FakeSupabaseClient()
+        _seed_order_context(fake)
+        second_item = "f0000000-0000-0000-0000-000000000002"
+        fake.tables["order_item_products"].rows.append(
+            {
+                "order_item_id": second_item,
+                "listing_id": LISTING_ID,
+                "product_id": PRODUCT_ID,
+            }
+        )
+        fake.tables["reviews"].rows.extend(
+            [
+                {
+                    "id": REVIEW_ID,
+                    "order_item_id": ORDER_ITEM_ID,
+                    "rating": 5,
+                    "body": "Great",
+                    "photos": [],
+                    "status": "published",
+                    "created_at": "2026-07-20T00:00:00Z",
+                    "updated_at": "2026-07-20T00:00:00Z",
+                },
+                {
+                    "id": "a0000000-0000-0000-0000-000000000002",
+                    "order_item_id": second_item,
+                    "rating": 3,
+                    "body": "Ok",
+                    "photos": [],
+                    "status": "published",
+                    "created_at": "2026-07-21T00:00:00Z",
+                    "updated_at": "2026-07-21T00:00:00Z",
+                },
+            ]
+        )
+        client = _make_client(user_id=CUSTOMER_ID, fake=fake)
+
+        response = client.get(f"/reviews?product_id={PRODUCT_ID}")
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["rating_count"] == 2
+        assert payload["rating_avg"] == 4.0
+        assert len(payload["items"]) == 2
+        assert all(item["verified_purchase"] is True for item in payload["items"])
+
+    def test_empty_product_returns_zero_aggregate(self) -> None:
+        fake = FakeSupabaseClient()
+        client = _make_client(user_id=CUSTOMER_ID, fake=fake)
+
+        response = client.get(f"/reviews?product_id={PRODUCT_ID}")
+
+        assert response.status_code == 200
+        assert response.json() == {"items": [], "rating_avg": None, "rating_count": 0}
