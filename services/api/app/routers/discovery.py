@@ -11,15 +11,23 @@ from app.schemas.base import StrictModel
 from app.services.discovery.home import HomeFeedPayload, build_home_feed
 from app.services.discovery.popular_searches import (
     DEFAULT_LIMIT as DEFAULT_POPULAR_LIMIT,
+)
+from app.services.discovery.popular_searches import (
     DEFAULT_WINDOW_DAYS,
-    MAX_LIMIT as MAX_POPULAR_LIMIT,
     MAX_WINDOW_DAYS,
     PopularSearchItem,
     fetch_popular_searches,
 )
+from app.services.discovery.popular_searches import (
+    MAX_LIMIT as MAX_POPULAR_LIMIT,
+)
 from app.services.discovery.trending import (
     DEFAULT_LIMIT as DEFAULT_TRENDING_LIMIT,
+)
+from app.services.discovery.trending import (
     MAX_LIMIT as MAX_TRENDING_LIMIT,
+)
+from app.services.discovery.trending import (
     TrendingListing,
     fetch_trending_listings,
 )

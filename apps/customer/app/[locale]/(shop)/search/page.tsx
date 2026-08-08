@@ -12,8 +12,8 @@ import { BackToTop } from "../_components/back-to-top";
 import { BrowseDiscoveryChips } from "../_components/browse-discovery-chips";
 import { fetchCategoriesResult, type CategoryRow } from "../_components/merch-data";
 import { NearMeToggle } from "../_components/search/near-me-toggle";
-import { RecentSearches } from "../_components/search/recent-searches";
 import { PopularSearches } from "../_components/search/popular-searches";
+import { RecentSearches } from "../_components/search/recent-searches";
 import {
   ResultsTabs,
   type SearchKindTotals,
@@ -30,7 +30,6 @@ import {
   type SearchFilterState,
 } from "../_components/search/search-filters";
 import { SearchInput } from "../_components/search/search-input";
-import type { SearchKind } from "../_components/search/search-kinds";
 import { SearchMobileFilterDrawer } from "../_components/search/search-mobile-filter-drawer";
 import { SearchResultsSkeleton } from "../_components/search/search-results-skeleton";
 import { SearchUnavailablePanel } from "../_components/search/search-unavailable-panel";
@@ -42,6 +41,7 @@ import {
 } from "../_components/search/search-view";
 import { ZeroResults } from "../_components/search/zero-results";
 
+import type { SearchKind } from "../_components/search/search-kinds";
 import type { Metadata } from "next";
 
 type PageProps = {

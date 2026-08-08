@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 from app.services.search import SearchHit, run_search
 from app.services.search.kind_totals import compute_kind_totals, filter_hits_by_kind
-from app.services.search.query_builder import build_filters
+from app.services.search.query_builder import SearchKind, build_filters
 
 
 def _hit(entity_kind: str, entity_id: str = "1") -> SearchHit:
@@ -44,11 +44,13 @@ async def _no_embedding(_term: str) -> None:
     return None
 
 
-def _stub_search_side_effects(monkeypatch: pytest.MonkeyPatch, hits: list[SearchHit]) -> list[dict]:
+def _stub_search_side_effects(
+    monkeypatch: pytest.MonkeyPatch, hits: list[SearchHit]
+) -> list[dict[str, Any]]:
     """Patch RRF + post filters; return a list that records each RRF call's kwargs."""
     import app.services.search as search_mod
 
-    calls: list[dict] = []
+    calls: list[dict[str, Any]] = []
 
     def _rrf(*_args: Any, **kwargs: Any) -> list[SearchHit]:
         calls.append(kwargs)
@@ -62,7 +64,7 @@ def _stub_search_side_effects(monkeypatch: pytest.MonkeyPatch, hits: list[Search
     monkeypatch.setattr(search_mod, "attach_route_slugs", lambda _c, h: h)
     monkeypatch.setattr(search_mod, "log_search_query", lambda **_kw: None)
     monkeypatch.setattr(search_mod, "log_zero_result", lambda **_kw: None)
-    monkeypatch.setattr(search_mod, "call_search_query_facets", lambda **_kw: None)
+    monkeypatch.setattr(search_mod, "call_search_query_facets", lambda *_a, **_kw: None)
     return calls
 
 
@@ -130,12 +132,12 @@ async def test_legacy_five_kind_fanout_would_call_rrf_five_times(
     hits = [_hit("product", "p1"), _hit("service", "s1")]
     calls = _stub_search_side_effects(monkeypatch, hits)
 
-    kinds: list[str | None] = [None, "products", "services", "events", "vendors"]
+    kinds: list[SearchKind | None] = [None, "products", "services", "events", "vendors"]
     for kind in kinds:
         await run_search(
             MagicMock(),
             query="phone",
-            kind=kind,  # type: ignore[arg-type]
+            kind=kind,
             include_kind_totals=False,
             embedding_fetcher=_no_embedding,
             include_wholesale=True,
@@ -176,7 +178,7 @@ async def test_kind_totals_path_latency_not_worse_than_five_fanout(
     monkeypatch.setattr(search_mod, "attach_route_slugs", lambda _c, h: h)
     monkeypatch.setattr(search_mod, "log_search_query", lambda **_kw: None)
     monkeypatch.setattr(search_mod, "log_zero_result", lambda **_kw: None)
-    monkeypatch.setattr(search_mod, "call_search_query_facets", lambda **_kw: None)
+    monkeypatch.setattr(search_mod, "call_search_query_facets", lambda *_a, **_kw: None)
 
     t0 = time.perf_counter()
     await run_search(
@@ -190,11 +192,12 @@ async def test_kind_totals_path_latency_not_worse_than_five_fanout(
     unified_ms = (time.perf_counter() - t0) * 1000
 
     t1 = time.perf_counter()
-    for kind in (None, "products", "services", "events", "vendors"):
+    kinds2: list[SearchKind | None] = [None, "products", "services", "events", "vendors"]
+    for kind in kinds2:
         await run_search(
             MagicMock(),
             query="phone",
-            kind=kind,  # type: ignore[arg-type]
+            kind=kind,
             include_kind_totals=False,
             embedding_fetcher=_no_embedding,
             include_wholesale=True,

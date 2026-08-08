@@ -101,13 +101,13 @@ def fetch_trending_listings(
         logger.warning("trending query failed: %s", result.error)
         return []
 
-    parsed_rows: list[tuple[str, ...]] = []
+    parsed_rows: list[list[str]] = []
     listing_ids: list[str] = []
     for line in result.rows:
         parts = line.split("|")
         if len(parts) < 7:
             continue
-        parsed_rows.append(tuple(parts[:7]))
+        parsed_rows.append(list(parts[:7]))
         listing_ids.append(parts[0])
 
     if not parsed_rows:
@@ -118,7 +118,13 @@ def fetch_trending_listings(
 
     items: list[TrendingListing] = []
     for parts in parsed_rows:
-        listing_id, title, product_slug, vendor_name, price_raw, image_public_id, score_raw = parts
+        listing_id = parts[0]
+        title = parts[1]
+        product_slug = parts[2]
+        vendor_name = parts[3]
+        price_raw = parts[4]
+        image_public_id = parts[5]
+        score_raw = parts[6]
         if listing_id in demo_ids:
             continue
         try:

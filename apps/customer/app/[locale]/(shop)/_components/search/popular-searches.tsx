@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 
-import { absoluteApiUrl } from "../../../../lib/api-base-url";
-import { fetchJson } from "../../../../lib/fetch-json";
+import { absoluteApiUrl } from "../../../../../lib/api-base-url";
+import { fetchJson } from "../../../../../lib/fetch-json";
 
 type PopularSearchItem = {
   term: string;

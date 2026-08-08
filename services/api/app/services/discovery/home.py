@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
-from typing import Any
+from typing import Any, cast
 
 from app.core.ttl_cache import get_cached_json, set_cached_json
 from app.routers.catalog import CatalogListResponse, FacetCounts, PlpFilterState, list_catalog
@@ -113,7 +113,8 @@ async def build_home_feed(
     - 0–1× trending (skipped when trending_limit=0)
     All kicked off together via ``asyncio.gather`` (threadpool for sync DB).
     """
-    paths = [part.strip() for part in (department_paths or []) if part.strip()][:MAX_DEPARTMENT_PATHS]
+    raw_paths = department_paths or []
+    paths = [part.strip() for part in raw_paths if part.strip()][:MAX_DEPARTMENT_PATHS]
     cache_key = _cache_key(
         paths=paths,
         newest_limit=newest_limit,
@@ -133,7 +134,7 @@ async def build_home_feed(
     empty_catalog = _empty_catalog()
     empty_directory = _empty_directory(page_size=vendors_limit)
 
-    newest_task = _run_section(
+    newest_task: asyncio.Task[CatalogListResponse] | Any = _run_section(
         "newest",
         lambda: list_catalog(
             client,
@@ -142,12 +143,12 @@ async def build_home_feed(
         ),
         fallback=empty_catalog,
     )
-    services_task = _run_section(
+    services_task: asyncio.Task[list[ServiceBrowseItem]] | Any = _run_section(
         "services",
         lambda: build_browse_response(client).items[:services_limit],
-        fallback=[],
+        fallback=cast(list[ServiceBrowseItem], []),
     )
-    vendors_task = _run_section(
+    vendors_task: asyncio.Task[DirectoryListResponse] | Any = _run_section(
         "vendors",
         lambda: list_directory_vendors(client, page_size=vendors_limit),
         fallback=empty_directory,
@@ -166,11 +167,12 @@ async def build_home_feed(
         for path in paths
     ]
 
+    trending_task: Any
     if trending_limit > 0:
         trending_task = _run_section(
             "trending",
             lambda: fetch_trending_listings(client, limit=trending_limit),
-            fallback=[],
+            fallback=cast(list[TrendingListing], []),
         )
     else:
 

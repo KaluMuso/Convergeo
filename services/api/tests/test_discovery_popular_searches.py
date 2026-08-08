@@ -70,7 +70,7 @@ def test_fetch_popular_searches_filters_pii_and_rare(
 def test_fetch_clamps_window_to_privacy_minimum(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: dict[str, int] = {}
 
-    def _spy(*, days: int, limit: int) -> list:
+    def _spy(*, days: int, limit: int) -> list[popular_mod._RawTermCount]:
         seen["days"] = days
         seen["limit"] = limit
         return []
