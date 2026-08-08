@@ -11,6 +11,9 @@
     "clear": "全部清除",
     "remove": "移除 {term}"
   },
+  "popular": {
+    "title": "Convergeo 热门搜索"
+  },
   "tabs": {
     "ariaLabel": "按类型筛选结果",
     "all": "全部",

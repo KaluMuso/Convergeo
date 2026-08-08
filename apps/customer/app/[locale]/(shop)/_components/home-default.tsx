@@ -234,6 +234,74 @@ export function hasDefaultHomeContent(categories: CategoryRow[], data: HomeDefau
 
 export async function loadHomeDefaultData(categories: CategoryRow[]): Promise<HomeDefaultData> {
   const departments = pickRailDepartments(categories);
+  const departmentPaths = departments.map((category) => category.path).join(",");
+  const bffUrl = absoluteApiUrl(
+    `/discovery/home?newest_limit=${NEW_RAIL_LIMIT}&department_limit=${DEPARTMENT_RAIL_LIMIT}` +
+      `&services_limit=${SERVICES_RAIL_LIMIT}&vendors_limit=${VENDORS_RAIL_LIMIT}` +
+      `&trending_limit=0&department_paths=${encodeURIComponent(departmentPaths)}`,
+  );
+
+  if (bffUrl) {
+    try {
+      const data = await fetchJson<{
+        newest?: CatalogApiResponse;
+        services?: ServiceApiItem[] | { items?: ServiceApiItem[] };
+        vendors?: { items?: VendorApiItem[] };
+        department_rails?: Array<{ category_path: string; listings?: CatalogApiResponse }>;
+      }>(bffUrl, { next: { revalidate: 60 } });
+
+      const serviceItems = Array.isArray(data.services)
+        ? data.services
+        : (data.services?.items ?? []);
+
+      const departmentRails = departments.map((category) => {
+        const rail = data.department_rails?.find((entry) => entry.category_path === category.path);
+        return {
+          category,
+          listings: (rail?.listings?.items ?? []).map(mapListing),
+        };
+      });
+
+      return {
+        newest: (data.newest?.items ?? []).map(mapListing),
+        services: serviceItems.slice(0, SERVICES_RAIL_LIMIT).map((item) => ({
+          id: item.id,
+          slug: item.slug,
+          title: item.title,
+          providerName: item.provider.display_name,
+          fromNgwee: item.from_price_ngwee,
+          imagePublicId: item.portfolio_images?.[0] ?? null,
+        })),
+        topVendors: (data.vendors?.items ?? [])
+          .slice()
+          .sort(
+            (left, right) =>
+              (right.rating_avg ?? 0) - (left.rating_avg ?? 0) ||
+              right.rating_count - left.rating_count,
+          )
+          .slice(0, VENDORS_RAIL_LIMIT)
+          .map((item) => ({
+            id: item.id,
+            slug: item.slug,
+            displayName: item.display_name,
+            logoUrl: item.logo_url,
+            preferredBadge: item.preferred_badge,
+            kycTier: item.kyc_tier,
+            commercialTier: item.commercial_tier,
+            verified: item.verified,
+            landmark: item.landmark,
+            categories: item.categories,
+            ratingAvg: item.rating_avg,
+            ratingCount: item.rating_count,
+            listingCount: item.listing_count,
+          })),
+        departmentRails,
+      };
+    } catch {
+      // Fall through to legacy fan-out below.
+    }
+  }
+
   const [newest, services, topVendors, departmentListings] = await Promise.all([
     fetchRailListings(`sort=newest&limit=${NEW_RAIL_LIMIT}`),
     fetchServicesRail(SERVICES_RAIL_LIMIT),

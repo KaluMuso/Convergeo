@@ -87,6 +87,13 @@ TELEMETRY_VIEWS = RateLimitPolicy(
     scope="telemetry_views_ip", limit=240, window=timedelta(minutes=1)
 )
 
+# Public discovery reads (home BFF / popular / trending). GETs are outside the
+# mutating coverage gate — ceiling is enforced in-router (routers/discovery.py)
+# with the same scope/limit as this documented tier.
+PUBLIC_DISCOVERY_READ = RateLimitPolicy(
+    scope="discovery_read_ip", limit=60, window=timedelta(minutes=1)
+)
+
 
 # --- Exemption allowlist (EXPLICIT + documented — no silent gaps) -----------
 # Only inbound provider webhooks are exempt: they are signature-verified and
