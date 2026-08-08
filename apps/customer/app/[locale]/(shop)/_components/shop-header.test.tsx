@@ -36,7 +36,12 @@ vi.mock("./cart/mini-cart-drawer", () => ({
     cartIcon: React.ReactNode;
     className?: string;
   }) => (
-    <button type="button" aria-label={labels.openCart} className={className} data-testid="cart-nav-trigger">
+    <button
+      type="button"
+      aria-label={labels.openCart}
+      className={className}
+      data-testid="cart-nav-trigger"
+    >
       {cartIcon}
     </button>
   ),
@@ -99,7 +104,8 @@ describe("ShopHeader", () => {
       "href",
       "/en/account",
     );
-    expect(screen.getAllByRole("link", { name: "Cart" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId("cart-nav-trigger").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Open cart" }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: /browse/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /theme|dark|light/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Supplies" })).not.toBeInTheDocument();
