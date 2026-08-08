@@ -317,8 +317,9 @@ WHERE o.id = {order_sql}
         status=OrderStatus(parts[1]),
         fulfilment=parts[2],  # type: ignore[arg-type]
         checkout_group_id=parts[3],
-        cod=parts[4] == "t",
-        paid=parts[5] == "true",
+        # psql -At / ::text may render boolean as t/f or true/false.
+        cod=parts[4].lower() in {"t", "true", "1"},
+        paid=parts[5].lower() in {"t", "true", "1"},
     )
 
 
