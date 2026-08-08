@@ -105,6 +105,7 @@ export const PHASE1_CRITICAL_PREFIXES: Record<Phase1Namespace, readonly string[]
  * Compared after trim; case-sensitive for brand tokens.
  */
 export const PHASE1_ENGLISH_ALLOWLIST = new Set([
+  "Convergeo",
   "Vergeo5",
   "MTN",
   "Airtel",

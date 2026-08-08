@@ -100,6 +100,7 @@ PHASE1_CRITICAL_PREFIXES: dict[str, list[str]] = {
 }
 
 PHASE1_ENGLISH_ALLOWLIST = {
+    "Convergeo",
     "Vergeo5",
     "MTN",
     "Airtel",
