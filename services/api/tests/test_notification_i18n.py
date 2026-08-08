@@ -117,14 +117,14 @@ def test_bem_whatsapp_slots_have_local_copy() -> None:
     bem_trust = resolve_notification_message("bem", "whatsapp.payment_received.trust_narrative")
     en_trust = resolve_notification_message("en", "whatsapp.payment_received.trust_narrative")
     assert bem_trust != en_trust
-    assert "Vergeo5" in bem_trust
+    assert "Convergeo" in bem_trust
 
 
 def test_nya_whatsapp_order_confirmed_has_local_copy() -> None:
     nya_body = resolve_notification_message("nya", "whatsapp.order_confirmed.body")
     en_body = resolve_notification_message("en", "whatsapp.order_confirmed.body")
     assert nya_body != en_body
-    assert "Vergeo5" in nya_body
+    assert "Convergeo" in nya_body
 
 
 @pytest.mark.parametrize(
