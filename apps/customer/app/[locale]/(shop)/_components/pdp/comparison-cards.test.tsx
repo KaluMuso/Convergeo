@@ -136,7 +136,7 @@ describe("Comparison mobile cards", () => {
     );
 
     expect(screen.getAllByText("Used").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Refurbished").length).toBe(0);
+    expect(screen.queryAllByText("Refurbished")).toHaveLength(0);
   });
 
   it("marks the lowest-price offer without inventing comparison when only one seller", () => {
