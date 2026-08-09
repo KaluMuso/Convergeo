@@ -1,0 +1,50 @@
+{
+  "captured_at": "2026-08-09T15:10:00Z",
+  "project_ref": "iyasmrmbcrvlfxpzescb",
+  "project_name": "vergeo-sandbox",
+  "region": "eu-west-1",
+  "status": "ACTIVE_HEALTHY",
+  "counts": {
+    "vendors": 3,
+    "vendor_listings": 1,
+    "listing_location_stock": 0,
+    "vendor_locations": 0,
+    "carts": 5,
+    "checkout_groups": 0,
+    "orders": 0,
+    "payments": 0,
+    "business_buyers": 0,
+    "profiles_stg_rv": 6
+  },
+  "vendors": [
+    { "slug": "stg-rv-20260719-vend-unv", "status": "draft", "kyc_tier": null },
+    { "slug": "stg-rv-20260719-vend-sub", "status": "pending_kyc", "kyc_tier": null },
+    { "slug": "stg-rv-20260719-vend-apr", "status": "active", "kyc_tier": 1 }
+  ],
+  "listings": [
+    {
+      "product_slug": "stg-rv-20260719-product",
+      "sku": "stg-rv-20260719-list-prd",
+      "vendor_slug": "stg-rv-20260719-vend-apr",
+      "price_ngwee": 12500,
+      "stock_qty": 25,
+      "status": "active"
+    }
+  ],
+  "api_comparison_probe": {
+    "url": "https://api.staging.vergeo5.com/products/stg-rv-20260719-product/comparison",
+    "listing_count": 1,
+    "pickup_available": false,
+    "delivery_available": false,
+    "note": "Single seller only; no location stock seeded"
+  },
+  "migrations_applied": 96,
+  "migration_tip": "20260802153539_rls_policy_contract_remediation",
+  "rls_enabled": {
+    "carts": true,
+    "orders": true,
+    "vendor_listings": true,
+    "vendors": true,
+    "checkout_groups": true
+  }
+}

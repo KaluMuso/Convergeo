@@ -1,0 +1,55 @@
+{
+  "prefix": "stg-rv-20260719",
+  "tooling": "scripts/seed_staging.py",
+  "idempotent": true,
+  "staging_only_guards": [
+    "requires --env staging",
+    "rejects dpadrlxukcjbewpqympu (production ref)",
+    "rejects api.vergeo5.com host",
+    "fixture handles must include stg-rv- prefix",
+    "rejects consumer email domains"
+  ],
+  "personas_seeded": {
+    "customers": [{ "role": "customer_buyer", "handle": "stg-rv-20260719-cust-01" }],
+    "vendors": [
+      { "role": "vendor_unverified", "handle": "stg-rv-20260719-vend-unv", "status": "draft" },
+      {
+        "role": "vendor_kyc_submitted",
+        "handle": "stg-rv-20260719-vend-sub",
+        "status": "pending_kyc"
+      },
+      { "role": "vendor_approved", "handle": "stg-rv-20260719-vend-apr", "status": "active" }
+    ],
+    "admins": [
+      { "role": "admin_unauthorized", "handle": "stg-rv-20260719-adm-bad" },
+      { "role": "admin_kyc_reviewer", "handle": "stg-rv-20260719-adm-kyc" }
+    ]
+  },
+  "catalogue_seeded": {
+    "products": 1,
+    "listings": 1,
+    "product_slug": "stg-rv-20260719-product",
+    "listing_sku": "stg-rv-20260719-list-prd"
+  },
+  "explicitly_excluded": [
+    "orders",
+    "payments",
+    "vendor_locations",
+    "listing_location_stock",
+    "checkout_groups",
+    "business_buyers",
+    "wholesale listings",
+    "multi-seller canonical product"
+  ],
+  "stg_qa_03_gaps": {
+    "missing_second_customer": "cust-02 for RLS isolation",
+    "missing_business_buyer": "B2B persona",
+    "missing_second_approved_vendor": "multi-seller Product A",
+    "missing_product_b_c_d": "single-seller, OOS, wholesale-only",
+    "missing_location_stock": "checkout eligibility blocked",
+    "missing_order_state_fixtures": "9 required order states",
+    "missing_cart_checkout_states": "empty/normal/multi-vendor carts"
+  },
+  "cleanup_capable": false,
+  "cleanup_note": "No stg-rv-* cleanup script; register documents manual checklist only"
+}

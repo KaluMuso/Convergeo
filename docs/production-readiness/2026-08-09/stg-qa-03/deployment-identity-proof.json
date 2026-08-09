@@ -1,0 +1,60 @@
+{
+  "gate": "ENTRY_CONDITION",
+  "checked_at": "2026-08-09T15:10:00Z",
+  "master_sha": "c13d6692a66c4664efe9de31ba88d7e7b9066fe6",
+  "master_ref": "origin/master",
+  "staging_supabase_project_ref": "iyasmrmbcrvlfxpzescb",
+  "production_supabase_project_ref_blocked": "dpadrlxukcjbewpqympu",
+  "surfaces": {
+    "api": {
+      "url": "https://api.staging.vergeo5.com/fingerprint",
+      "git_sha": "161b58a3e1973b79abd4fc8064611c50fa0268c8",
+      "image_tag": "161b58a3e1973b79abd4fc8064611c50fa0268c8",
+      "env": "staging",
+      "supabase_project_ref": "iyasmrmbcrvlfxpzescb",
+      "matches_master": false,
+      "commits_behind_master": 237,
+      "last_deploy_merge": "161b58a3 Merge pull request #557 from KaluMuso/agent/staging-vercel-deploy-proof"
+    },
+    "customer": {
+      "source": "vercel-staging-branch",
+      "deployment_id": "dpl_Gbp6TLHo21GAbKzX1Rwr1X6Y82WE",
+      "url": "https://convergeo-customer-git-staging-vergeo-projects.vercel.app",
+      "git_sha": "c13d6692a66c4664efe9de31ba88d7e7b9066fe6",
+      "branch": "staging",
+      "matches_master": true
+    },
+    "vendor": {
+      "source": "vercel-staging-branch",
+      "deployment_id": "dpl_CmcW6KyNNBEBWHEopdbPq94NFvkF",
+      "url": "https://convergeo-vendor-git-staging-vergeo-projects.vercel.app",
+      "git_sha": "c13d6692a66c4664efe9de31ba88d7e7b9066fe6",
+      "branch": "staging",
+      "matches_master": true
+    },
+    "admin": {
+      "source": "vercel-staging-branch",
+      "deployment_id": "dpl_58QezQ5SJGq1MVpuomnWnNU3Mt3N",
+      "url": "https://convergeo-admin-git-staging-vergeo-projects.vercel.app",
+      "git_sha": "c13d6692a66c4664efe9de31ba88d7e7b9066fe6",
+      "branch": "staging",
+      "matches_master": true
+    }
+  },
+  "canonical_dns": {
+    "staging.vergeo5.com": "NXDOMAIN",
+    "vendor.staging.vergeo5.com": "NXDOMAIN",
+    "admin.staging.vergeo5.com": "NXDOMAIN"
+  },
+  "deploy_workflow": {
+    "workflow": "deploy-staging.yml",
+    "run_id": 31315246673,
+    "status": "pending",
+    "trigger": "push to staging (PR #609 merge)",
+    "started_at": "2026-08-09T13:13:19Z",
+    "url": "https://github.com/KaluMuso/Convergeo/actions/runs/31315246673",
+    "note": "Pending environment approval — API redeploy to c13d6692 not completed"
+  },
+  "verdict": "BLOCKED_DEPLOYMENT_IDENTITY",
+  "reason": "api.git_sha != master; customer/vendor/admin == master but integrated staging requires all four surfaces aligned"
+}

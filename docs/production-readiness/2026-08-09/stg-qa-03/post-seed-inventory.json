@@ -1,0 +1,15 @@
+{
+  "captured_at": "2026-08-09T15:10:00Z",
+  "seed_applied_this_run": false,
+  "reason": "BLOCKED_DEPLOYMENT_IDENTITY — no seed mutation before identity gate",
+  "counts": {
+    "vendors": 3,
+    "vendor_listings": 1,
+    "listing_location_stock": 0,
+    "vendor_locations": 0,
+    "carts": 5,
+    "checkout_groups": 0,
+    "orders": 0
+  },
+  "delta_from_pre_seed": "unchanged"
+}
