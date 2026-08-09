@@ -359,6 +359,7 @@
     "rating": "{rating} ({count} 条评价)",
     "conditionNew": "全新",
     "conditionRefurbished": "翻新",
+    "conditionUsed": "二手",
     "usingFallbackLocation": "在您共享位置之前，距离以卢萨卡市中心为基准显示。",
     "lowestPriceBadge": "最低价"
   },
@@ -378,6 +379,8 @@
     "starEmpty": "☆",
     "distributionHeading": "评分分布",
     "distributionRowAria": "{star}★：{count}",
+    "verifiedPurchase": "已验证购买",
+    "lightboxTitle": "评价照片",
     "report": {
       "cta": "举报",
       "heading": "举报此评价",

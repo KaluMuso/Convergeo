@@ -26,9 +26,12 @@ test.describe("shop · cash on delivery", () => {
     const cod = page
       .locator('[name="payment-method"][value="cod"]')
       .or(page.getByTestId("payment-cod"));
-    await cod.first().check().catch(async () => {
-      await page.getByTestId("payment-cod").first().click();
-    });
+    await cod
+      .first()
+      .check()
+      .catch(async () => {
+        await page.getByTestId("payment-cod").first().click();
+      });
 
     // Provide landmark + phone delivery contact.
     const phoneField = page.getByLabel(/phone|mobile/i).first();

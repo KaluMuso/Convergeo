@@ -96,11 +96,7 @@ export function VendorGroups({
               <p className="text-sm font-semibold text-text">
                 {labels.vendorGroup}
                 <span
-                  className={
-                    group.vendor_name?.trim()
-                      ? "text-text-2"
-                      : "font-mono text-text-2"
-                  }
+                  className={group.vendor_name?.trim() ? "text-text-2" : "font-mono text-text-2"}
                   data-testid={`cart-vendor-name-${group.vendor_id}`}
                 >
                   {" "}

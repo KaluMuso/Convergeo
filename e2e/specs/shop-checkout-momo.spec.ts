@@ -15,9 +15,7 @@ import { expectWhatsAppMessage } from "../fixtures/whatsapp";
  * payment endpoint.
  */
 test.describe("shop · checkout · momo", () => {
-  test("buyer pays a listing by MTN/Airtel MoMo and gets a WhatsApp receipt", async ({
-    page,
-  }) => {
+  test("buyer pays a listing by MTN/Airtel MoMo and gets a WhatsApp receipt", async ({ page }) => {
     // 1. Browse home.
     await page.goto(path("/"));
 
@@ -42,21 +40,25 @@ test.describe("shop · checkout · momo", () => {
     // 6. Checkout — choose MoMo as the payment method.
     await page.goto(path("/checkout"));
     const momo = page.locator('[name="payment-method"][value="momo"]');
-    await momo.first().check().catch(async () => {
-      // Fallback: some renders expose MoMo as the rail select rather than radio.
-      await page.locator('[name="momo-rail"]').first().waitFor();
-    });
+    await momo
+      .first()
+      .check()
+      .catch(async () => {
+        // Fallback: some renders expose MoMo as the rail select rather than radio.
+        await page.locator('[name="momo-rail"]').first().waitFor();
+      });
 
     // Fill the escrow/delivery contact (landmark + phone — Zambia addressing).
     const phoneField = page.getByLabel(/phone|mobile|momo/i).first();
     if (await phoneField.count()) {
-      await phoneField.fill(
-        lenco.testMomoNumber || SEED.address.phone,
-      );
+      await phoneField.fill(lenco.testMomoNumber || SEED.address.phone);
     }
 
     // 7. Initiate payment (submit checkout). This is the pay-initiation boundary.
-    await page.getByRole("button", { name: /pay|place order|checkout/i }).first().click();
+    await page
+      .getByRole("button", { name: /pay|place order|checkout/i })
+      .first()
+      .click();
 
     // ── ENV-GATED: live Lenco sandbox charge (F9b) ───────────────────────────
     if (!sandboxEnabled()) {
@@ -67,9 +69,9 @@ test.describe("shop · checkout · momo", () => {
       });
       // We still expect the app to have moved past the pay button into a
       // pending/USSD-wait or hosted-widget state (initiation succeeded).
-      await expect(
-        page.getByTestId("ussd-wait").or(page.getByTestId("payment-cod")),
-      ).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByTestId("ussd-wait").or(page.getByTestId("payment-cod"))).toBeVisible({
+        timeout: 30_000,
+      });
       test.skip(true, "Lenco sandbox pay leg is founder/staging-gated (F9b)");
       return;
     }

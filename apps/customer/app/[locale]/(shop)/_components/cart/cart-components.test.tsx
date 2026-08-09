@@ -381,9 +381,9 @@ describe("empty cart render state", () => {
 
 describe("vendorGroupLabel", () => {
   it("prefers vendor_name when the API provides one", () => {
-    expect(
-      vendorGroupLabel({ vendor_id: "abcdef12-3456", vendor_name: "Lusaka Phones" }),
-    ).toBe("Lusaka Phones");
+    expect(vendorGroupLabel({ vendor_id: "abcdef12-3456", vendor_name: "Lusaka Phones" })).toBe(
+      "Lusaka Phones",
+    );
   });
 
   it("falls back to truncated vendor_id when name is missing", () => {

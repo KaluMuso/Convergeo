@@ -34,7 +34,12 @@ vi.mock("./cart/mini-cart-drawer", () => ({
     cartIcon: React.ReactNode;
     className?: string;
   }) => (
-    <button type="button" aria-label={labels.openCart} className={className} data-testid="cart-nav-trigger">
+    <button
+      type="button"
+      aria-label={labels.openCart}
+      className={className}
+      data-testid="cart-nav-trigger"
+    >
       {cartIcon}
     </button>
   ),

@@ -39,6 +39,10 @@ import { ReviewsSkeleton } from "../../_components/pdp/reviews-skeleton";
 import { specRowsFromJson, SpecsTable } from "../../_components/pdp/specs-table";
 
 import {
+  productAggregateRatingForJsonLd,
+  type ProductReviewAggregate,
+} from "./_components/product-review-aggregate";
+import {
   ReviewsSection,
   type ReviewRow,
   type ReviewsSectionLabels,
@@ -168,7 +172,16 @@ async function fetchRelated(slug: string): Promise<RelatedProduct[]> {
   }
 }
 
-async function fetchReviews(productId: string): Promise<ReviewRow[] | null> {
+type ProductReviewsApiResponse = {
+  items: ReviewRow[];
+  rating_avg: number | null;
+  rating_count: number;
+};
+
+async function fetchProductReviews(productId: string): Promise<{
+  items: ReviewRow[];
+  aggregate: ProductReviewAggregate;
+} | null> {
   try {
     const url = absoluteApiUrl(`/reviews?product_id=${encodeURIComponent(productId)}`);
     if (!url) {
@@ -185,7 +198,22 @@ async function fetchReviews(productId: string): Promise<ReviewRow[] | null> {
       return null;
     }
 
-    return (await response.json()) as ReviewRow[];
+    const payload = (await response.json()) as ProductReviewsApiResponse | ReviewRow[];
+    // Prefer wrapped ProductReviewsResponse (rating_avg / rating_count).
+    // Tolerate a legacy bare array during rollout — never invent aggregates.
+    if (Array.isArray(payload)) {
+      return {
+        items: payload,
+        aggregate: { rating_avg: null, rating_count: 0 },
+      };
+    }
+    return {
+      items: payload.items ?? [],
+      aggregate: {
+        rating_avg: payload.rating_avg ?? null,
+        rating_count: typeof payload.rating_count === "number" ? payload.rating_count : 0,
+      },
+    };
   } catch {
     return null;
   }
@@ -209,14 +237,14 @@ async function ReviewsPanel({
   labels: ReviewsSectionLabels;
   hideHeading?: boolean;
 }) {
-  const reviews = await fetchReviews(productId);
-  if (!reviews) {
+  const payload = await fetchProductReviews(productId);
+  if (!payload) {
     return null;
   }
   return (
     <ReviewsSection
       locale={locale}
-      reviews={reviews}
+      reviews={payload.items}
       cloudName={cloudName}
       labels={labels}
       hideHeading={hideHeading}
@@ -456,13 +484,19 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
     );
   }
 
-  const [comparison, related] = await Promise.all([fetchComparison(slug), fetchRelated(slug)]);
-
   const product = result.data;
+  const [comparison, related, reviewsForSeo] = await Promise.all([
+    fetchComparison(slug),
+    fetchRelated(slug),
+    fetchProductReviews(product.id),
+  ]);
   const selectedListing = selectListing(product.listings, listingId);
   const singleVendor = product.listing_count === 1;
   const specRows = specRowsFromJson(product.spec);
   const images = galleryImages(product, selectedListing, product.name);
+  // Authoritative product aggregate from GET /reviews (rating_avg / rating_count),
+  // not a limited UI sample — same pattern as vendor LocalBusiness JSON-LD.
+  const reviewAggregate = productAggregateRatingForJsonLd(reviewsForSeo?.aggregate);
   const productJsonLdInput = {
     name: product.name,
     slug: product.slug,
@@ -475,6 +509,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
       inStock: listing.in_stock,
       sellerName: listing.vendor.display_name,
     })),
+    aggregateRating: reviewAggregate,
   };
   const productJsonLd = canBuildProductJsonLd(productJsonLdInput)
     ? buildProductJsonLd(productJsonLdInput)
@@ -508,6 +543,8 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           starEmpty: t("reviews.starEmpty"),
           distributionHeading: t("reviews.distributionHeading"),
           distributionRowAria: t("reviews.distributionRowAria"),
+          verifiedPurchase: t("reviews.verifiedPurchase"),
+          lightboxTitle: t("reviews.lightboxTitle"),
           report: {
             cta: t("reviews.report.cta"),
             heading: t("reviews.report.heading"),
@@ -655,6 +692,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             rating: t("comparison.rating"),
             conditionNew: t("comparison.conditionNew"),
             conditionRefurbished: t("comparison.conditionRefurbished"),
+            conditionUsed: t("comparison.conditionUsed"),
             usingFallbackLocation: t("comparison.usingFallbackLocation"),
             lowestPriceBadge: t("comparison.lowestPriceBadge"),
           }}

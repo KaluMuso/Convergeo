@@ -138,6 +138,7 @@ function renderBody(
           rating: "Rating",
           conditionNew: "New",
           conditionRefurbished: "Refurbished",
+          conditionUsed: "Used",
           usingFallbackLocation: "Using Lusaka CBD",
           lowestPriceBadge: "Lowest price",
         }}

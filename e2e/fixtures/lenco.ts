@@ -40,9 +40,7 @@ export async function completeSandboxMomoPush(page: Page): Promise<void> {
     });
   // Sandbox auto-approves the designated test MSISDN; poll for the honest
   // confirming surface (never a local payment-success claim).
-  await page
-    .getByTestId("payment-confirming")
-    .waitFor({ state: "visible", timeout: 90_000 });
+  await page.getByTestId("payment-confirming").waitFor({ state: "visible", timeout: 90_000 });
 }
 
 export const lencoConfig = lencoEnv;

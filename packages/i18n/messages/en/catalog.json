@@ -416,6 +416,7 @@
     "rating": "{rating} ({count} reviews)",
     "conditionNew": "New",
     "conditionRefurbished": "Refurbished",
+    "conditionUsed": "Used",
     "usingFallbackLocation": "Distances shown from Lusaka CBD until you share your location.",
     "lowestPriceBadge": "Lowest price"
   },
@@ -435,6 +436,8 @@
     "starEmpty": "☆",
     "distributionHeading": "Rating breakdown",
     "distributionRowAria": "{star}★: {count}",
+    "verifiedPurchase": "Verified purchase",
+    "lightboxTitle": "Review photos",
     "report": {
       "cta": "Report",
       "heading": "Report this review",
