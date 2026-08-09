@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib.util
 import subprocess
 import sys
+import uuid
+from collections.abc import Generator
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -16,11 +18,19 @@ from app.core.env_guards import (
     StagingIsolationError,
     assert_staging_project_target,
 )
-from app.staging.seed_sql import build_cleanup_sql, build_seed_sql, verification_queries
+from app.staging.seed_sql import (
+    IMAGE_IDS,
+    build_cleanup_sql,
+    build_seed_sql,
+    parse_verification,
+    verification_queries,
+)
 from app.staging.synthetic_contract import (
     CATALOG_FIXTURES,
     PERSONAS,
     SEED_PREFIX,
+    VENDOR_LOCATIONS,
+    all_contract_uuid_literals,
     assert_contract_valid,
     guard_seed_targets,
     persona_by_key,
@@ -32,6 +42,23 @@ from app.staging.transactional import (
     is_service_drivable,
     plan_state,
 )
+from tests.rls.conftest import PgConn, apply_migrations, resolve_db_url
+
+MIGRATION_SHIM_SQL = """
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS vector;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'supabase_admin') THEN
+    CREATE ROLE supabase_admin LOGIN SUPERUSER;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'supabase_auth_admin') THEN
+    CREATE ROLE supabase_auth_admin NOLOGIN NOINHERIT;
+  END IF;
+END $$;
+"""
 
 
 @pytest.fixture
@@ -227,3 +254,181 @@ def test_staging_seed_rejects_vendor_lifecycle_drift(
             assert_contract_valid()
     finally:
         contract.PERSONAS = original
+
+
+def test_contract_uuid_literals_are_postgres_compatible() -> None:
+    assert_contract_valid()
+    for value in all_contract_uuid_literals():
+        parsed = uuid.UUID(value)
+        assert str(parsed) == value
+
+
+def test_contract_rejects_invalid_uuid_prefix() -> None:
+    import app.staging.synthetic_contract as contract
+
+    bad = replace(
+        persona_by_key("BUSINESS_BUYER"),
+        business_buyer_id="h1000000-0000-4000-8000-000000000001",
+    )
+    original = contract.PERSONAS
+    try:
+        contract.PERSONAS = tuple(
+            bad if p.key == "BUSINESS_BUYER" else p for p in PERSONAS
+        )
+        with pytest.raises(StagingIsolationError, match="Postgres-compatible"):
+            assert_contract_valid()
+    finally:
+        contract.PERSONAS = original
+
+
+@pytest.fixture(scope="module")
+def migrated_db() -> Generator[PgConn, None, None]:
+    url = resolve_db_url()
+    conn = PgConn(url)
+    if not conn.run("SELECT 1").ok:
+        pytest.skip(f"Postgres not reachable at {url}")
+    conn.run("DROP SCHEMA IF EXISTS public CASCADE")
+    conn.run("CREATE SCHEMA public")
+    conn.run("DROP SCHEMA IF EXISTS auth CASCADE")
+    shim = conn.run(MIGRATION_SHIM_SQL)
+    if not shim.ok:
+        pytest.skip(f"migration shim unavailable: {shim.error}")
+    try:
+        apply_migrations(conn)
+    except Exception as exc:  # noqa: BLE001 — skip when extensions/migrations unavailable
+        pytest.skip(f"migrations unavailable: {exc}")
+    conn.run("ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS phone text")
+    conn.run(
+        "DO $$ BEGIN "
+        "IF NOT EXISTS (SELECT 1 FROM pg_auth_members m "
+        "JOIN pg_roles r ON r.oid = m.roleid "
+        "JOIN pg_roles u ON u.oid = m.member "
+        "WHERE r.rolname = 'service_role' AND u.rolname = current_user) THEN "
+        "EXECUTE 'GRANT service_role TO ' || quote_ident(current_user); "
+        "END IF; END $$;"
+    )
+    yield conn
+
+
+def _run_verification(conn: PgConn) -> None:
+    results: dict[str, list[str]] = {}
+    for key, sql in verification_queries().items():
+        result = conn.run(sql)
+        assert result.ok, result.error or f"verification query failed: {key}"
+        results[key] = result.rows
+    parse_verification(results)
+
+
+def _assert_contract_proof(conn: PgConn) -> None:
+    product_a = product_fixture("PRODUCT_A")
+    listing_a_ids = ", ".join(f"'{listing.listing_id}'" for listing in product_a.listings)
+    prices = conn.run(
+        "SELECT price_ngwee::text FROM public.vendor_listings "
+        f"WHERE id IN ({listing_a_ids}) ORDER BY price_ngwee"
+    )
+    assert prices.ok and prices.rows == ["12500", "14900"]
+
+    product_b_price = conn.run(
+        "SELECT price_ngwee::text FROM public.vendor_listings "
+        f"WHERE id = '{product_fixture('PRODUCT_B').listings[0].listing_id}'"
+    )
+    assert product_b_price.ok and product_b_price.rows == ["8750"]
+
+    product_c_stock = conn.run(
+        "SELECT stock_qty::text FROM public.vendor_listings "
+        f"WHERE id = '{product_fixture('PRODUCT_C').listings[0].listing_id}'"
+    )
+    assert product_c_stock.ok and product_c_stock.rows == ["0"]
+
+    product_d = conn.run(
+        "SELECT wholesale::text || ',' || moq::text FROM public.vendor_listings "
+        f"WHERE id = '{product_fixture('PRODUCT_D').listings[0].listing_id}'"
+    )
+    assert product_d.ok and product_d.rows == ["true,10"]
+
+    locations = conn.run("SELECT count(*)::text FROM public.vendor_locations")
+    assert locations.ok and locations.rows == ["2"]
+
+    location_stock = conn.run(
+        "SELECT count(*)::text FROM public.listing_location_stock "
+        f"WHERE listing_id IN ({listing_a_ids}) "
+        "OR listing_id IN ("
+        + ", ".join(
+            f"'{listing.listing_id}'"
+            for product in CATALOG_FIXTURES
+            for listing in product.listings
+        )
+        + ")"
+    )
+    assert location_stock.ok and location_stock.rows == ["5"]
+
+    business_buyer = persona_by_key("BUSINESS_BUYER")
+    buyer = conn.run(
+        "SELECT status FROM public.business_buyers "
+        f"WHERE id = '{business_buyer.business_buyer_id}'"
+    )
+    assert buyer.ok and buyer.rows == ["verified"]
+
+    zero_price = conn.run(
+        "SELECT count(*)::text FROM public.vendor_listings "
+        f"WHERE sku LIKE '{SEED_PREFIX}%' AND price_ngwee < 1"
+    )
+    assert zero_price.ok and zero_price.rows == ["0"]
+
+    for table in ("orders", "payments", "ledger_transactions"):
+        count = conn.run(f"SELECT count(*)::text FROM public.{table}")
+        assert count.ok and count.rows == ["0"], (
+            f"static seed must not create {table} rows"
+        )
+
+
+def test_seed_sql_executes_idempotently_and_cleans_up(migrated_db: PgConn) -> None:
+    assert_contract_valid()
+    seed_sql = build_seed_sql()
+
+    first = migrated_db.run_script(seed_sql)
+    assert first.ok, first.error or "initial seed failed"
+
+    _run_verification(migrated_db)
+    _assert_contract_proof(migrated_db)
+
+    second = migrated_db.run_script(seed_sql)
+    assert second.ok, second.error or "idempotent re-seed failed"
+
+    _run_verification(migrated_db)
+
+    cleanup = migrated_db.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or "cleanup failed"
+
+    for query, expected in (
+        (
+            f"SELECT count(*)::text FROM public.vendors WHERE slug LIKE '{SEED_PREFIX}%'",
+            ["0"],
+        ),
+        (
+            f"SELECT count(*)::text FROM public.products WHERE slug LIKE '{SEED_PREFIX}%'",
+            ["0"],
+        ),
+        (
+            f"SELECT count(*)::text FROM public.vendor_listings "
+            f"WHERE sku LIKE '{SEED_PREFIX}%'",
+            ["0"],
+        ),
+        ("SELECT count(*)::text FROM public.vendor_locations", ["0"]),
+        ("SELECT count(*)::text FROM public.business_buyers", ["0"]),
+        (
+            "SELECT count(*)::text FROM auth.users "
+            f"WHERE email LIKE '%{SEED_PREFIX}%'",
+            ["0"],
+        ),
+    ):
+        result = migrated_db.run(query)
+        assert result.ok and result.rows == expected, f"cleanup left rows for: {query}"
+
+    for image_id in IMAGE_IDS.values():
+        parsed = uuid.UUID(image_id)
+        assert str(parsed) == image_id
+
+    for location in VENDOR_LOCATIONS:
+        parsed = uuid.UUID(location.location_id)
+        assert str(parsed) == location.location_id

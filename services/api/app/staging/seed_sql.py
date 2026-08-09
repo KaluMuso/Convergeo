@@ -13,11 +13,11 @@ from app.staging.synthetic_contract import (
 )
 
 IMAGE_IDS: dict[str, str] = {
-    "f1000000-0000-4000-8000-000000000001": "i1000000-0000-4000-8000-000000000001",
-    "f1000000-0000-4000-8000-000000000002": "i1000000-0000-4000-8000-000000000002",
-    "f1000000-0000-4000-8000-000000000003": "i1000000-0000-4000-8000-000000000003",
-    "f1000000-0000-4000-8000-000000000004": "i1000000-0000-4000-8000-000000000004",
-    "f1000000-0000-4000-8000-000000000005": "i1000000-0000-4000-8000-000000000005",
+    "f1000000-0000-4000-8000-000000000001": "11000000-0000-4000-8000-000000000001",
+    "f1000000-0000-4000-8000-000000000002": "11000000-0000-4000-8000-000000000002",
+    "f1000000-0000-4000-8000-000000000003": "11000000-0000-4000-8000-000000000003",
+    "f1000000-0000-4000-8000-000000000004": "11000000-0000-4000-8000-000000000004",
+    "f1000000-0000-4000-8000-000000000005": "11000000-0000-4000-8000-000000000005",
 }
 
 
@@ -200,13 +200,14 @@ INSERT INTO public.vendor_locations (
 """
         )
 
+    location_stock_parts: list[str] = []
     for product in CATALOG_FIXTURES:
         for listing in product.listings:
             if listing.location_stock_qty is None:
                 continue
             vendor_key = listing.vendor_key
             location = next(loc for loc in VENDOR_LOCATIONS if loc.vendor_key == vendor_key)
-            sql_parts.append(
+            location_stock_parts.append(
                 f"""
 INSERT INTO public.listing_location_stock (listing_id, location_id, stock_qty)
 VALUES ('{listing.listing_id}', '{location.location_id}', {listing.location_stock_qty})
@@ -215,6 +216,11 @@ ON CONFLICT (listing_id, location_id) DO UPDATE SET stock_qty = EXCLUDED.stock_q
             )
 
     sql_parts.append("COMMIT;")
+    if location_stock_parts:
+        # Branch stock rows are inserted as the migration owner (postgres). service_role
+        # lacks a stable SET ROLE grant on every CI/bare-Postgres shim, while postgres
+        # must seed deterministic QA fixtures without tripping RLS (owner bypass).
+        sql_parts.extend(["BEGIN;", *location_stock_parts, "COMMIT;"])
     return _auth_users_sql() + "\n" + "\n".join(sql_parts)
 
 
@@ -237,6 +243,11 @@ def build_cleanup_sql() -> str:
     business_buyer_id = persona_by_key("BUSINESS_BUYER").business_buyer_id
 
     return f"""
+BEGIN;
+DELETE FROM public.listing_location_stock
+WHERE listing_id IN ({listing_ids});
+COMMIT;
+
 BEGIN;
 SET LOCAL role service_role;
 SET LOCAL "request.jwt.claims" = '{{"role":"service_role"}}';
@@ -262,9 +273,6 @@ WHERE checkout_group_id IN (
 );
 DELETE FROM public.checkout_groups
 WHERE idempotency_key LIKE '{SEED_PREFIX}-txn-%';
-
-DELETE FROM public.listing_location_stock
-WHERE listing_id IN ({listing_ids});
 
 DELETE FROM public.listing_images
 WHERE listing_id IN ({listing_ids})
@@ -357,6 +365,7 @@ def parse_verification(results: dict[str, list[str]]) -> None:
 
 
 __all__ = [
+    "IMAGE_IDS",
     "build_cleanup_sql",
     "build_seed_sql",
     "parse_verification",
