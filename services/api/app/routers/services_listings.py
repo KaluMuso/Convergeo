@@ -11,7 +11,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.kyc.state_machine import ServiceRoleClient
-from app.services.listings.demo import fetch_demo_service_ids, has_demo_media
+from app.services.listings.demo import fetch_demo_service_ids, has_non_genuine_media
 from app.services.moderation.prohibited import screen_listing
 from fastapi import APIRouter, Depends, Query
 from pydantic import Field, field_validator, model_validator
@@ -596,7 +596,7 @@ def get_service_detail(
         .execute()
     )
     row = _single_row(response)
-    if row is None or has_demo_media(row.get("portfolio_images")):
+    if row is None or has_non_genuine_media(row.get("portfolio_images")):
         raise AppError(
             code="not_found",
             message="Service not found",

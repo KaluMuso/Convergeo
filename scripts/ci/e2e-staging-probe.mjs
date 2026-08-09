@@ -19,6 +19,8 @@
 const EXIT = { PASS: 0, FAIL: 1, BLOCKED_EXTERNAL: 2 };
 
 const VALID_ENVS = new Set(["staging", "preview", "development"]);
+/** Accepted health `env` values for integrated-staging / pre-release certification. */
+const STRICT_CERT_ENVS = new Set(["staging", "preview"]);
 const SSO_MARKERS = [
   "vercel.com/sso-api",
   "vercel.com/login",
@@ -77,7 +79,7 @@ export function detectProtectionChallenge(response, bodyText) {
 
 /**
  * @param {unknown} body
- * @param {{ expectedApp?: string, requireEnv?: boolean }} opts
+ * @param {{ expectedApp?: string, strictEnv?: boolean }} opts
  */
 export function validateHealthPayload(body, opts = {}) {
   const expectedApp = opts.expectedApp ?? "customer";
@@ -91,12 +93,26 @@ export function validateHealthPayload(body, opts = {}) {
   if (doc.app !== expectedApp) {
     return { ok: false, reason: `health app=${String(doc.app)} want ${expectedApp}` };
   }
-  const env = String(doc.env ?? "");
-  if (opts.requireEnv !== false && env && !VALID_ENVS.has(env)) {
+  const env = String(doc.env ?? "").trim();
+  const strictEnv = opts.strictEnv ?? false;
+  if (strictEnv) {
+    if (!env) {
+      return {
+        ok: false,
+        reason: "health env missing in strict integrated-staging certification mode",
+      };
+    }
+    if (!STRICT_CERT_ENVS.has(env)) {
+      return {
+        ok: false,
+        reason: `health env=${env} not accepted for integrated-staging (want staging|preview)`,
+      };
+    }
+  } else if (env && !VALID_ENVS.has(env)) {
     return { ok: false, reason: `health env=${env} not staging/preview/development` };
   }
   const buildId = String(doc.buildId ?? "");
-  return { ok: true, buildId, env };
+  return { ok: true, buildId, env, envMissing: !env };
 }
 
 /**
@@ -231,10 +247,15 @@ export async function probeStagingAccess(env, opts = {}) {
     };
   }
 
-  const health = validateHealthPayload(json);
+  const health = validateHealthPayload(json, { strictEnv: strictSha });
   if (!health.ok) {
     return { verdict: "FAIL", detail: health.reason, host: baseParse.host };
   }
+
+  const envWarning =
+    !strictSha && health.envMissing
+      ? "health env missing — nightly probe did not certify staging identity"
+      : undefined;
 
   const sha = validateBuildSha(health.buildId ?? "", expectedSha, { strict: strictSha });
   if (!sha.ok) {
@@ -250,6 +271,7 @@ export async function probeStagingAccess(env, opts = {}) {
     shaVerified: sha.matched === true,
     shaSkipped: sha.skipped === true,
     shaWarning: sha.warning,
+    envWarning,
   };
 }
 
@@ -289,8 +311,13 @@ async function main() {
     if (result.shaWarning) {
       console.warn(`::warning::${result.shaWarning}`);
     }
-  } else if (result.shaWarning) {
-    console.warn(`::warning::${result.shaWarning}`);
+  } else {
+    if (result.envWarning) {
+      console.warn(`::warning::${result.envWarning}`);
+    }
+    if (result.shaWarning) {
+      console.warn(`::warning::${result.shaWarning}`);
+    }
   }
   process.exit(code);
 }

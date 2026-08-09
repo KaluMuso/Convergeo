@@ -12,7 +12,7 @@ from app.services.business.access import (
     get_business_access,
     require_wholesale_access,
 )
-from app.services.listings.demo import fetch_demo_listing_ids, is_demo_public_id
+from app.services.listings.demo import fetch_demo_listing_ids, is_non_genuine_public_id
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 
@@ -740,7 +740,7 @@ def list_wholesale_supplies(client: Any, *, limit: int) -> CatalogListResponse:
         image_public_id = bundle.get("image_public_id")
         # Defence in depth: never surface a demo public_id even if the batch
         # probe missed an edge-case row shape.
-        if is_demo_public_id(image_public_id):
+        if is_non_genuine_public_id(image_public_id):
             continue
         items.append(
             CatalogListingItem(
