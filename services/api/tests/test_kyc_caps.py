@@ -597,6 +597,33 @@ def test_badge_revoke_idempotent(
     assert second is None
 
 
+def test_evaluate_refuses_under_min_completed_orders(
+    fake_client: FakeSupabaseClient,
+    service_client: ServiceRoleClient,
+) -> None:
+    """D9 gate: <20 completed orders must never qualify (tiny-sample protection)."""
+    from app.services.kyc.badge import MIN_COMPLETED_ORDERS
+
+    _seed_t1_vendor(fake_client, status="active", kyc_tier=2)
+    for index in range(MIN_COMPLETED_ORDERS - 1):
+        order_id = f"order-{index:02d}"
+        fake_client.tables["orders"].rows.append(
+            {"id": order_id, "vendor_id": VENDOR_ID, "status": "completed"}
+        )
+        item_id = f"item-{index:02d}"
+        fake_client.tables["order_items"].rows.append(
+            {"id": item_id, "order_id": order_id}
+        )
+        fake_client.tables["reviews"].rows.append(
+            {"order_item_id": item_id, "rating": 5, "status": "published"}
+        )
+
+    evaluation = evaluate_preferred_badge(service_client, VENDOR_ID)
+    assert evaluation.qualifies is False
+    assert "insufficient_completed_orders" in evaluation.reasons
+    assert evaluation.metrics.completed_orders == MIN_COMPLETED_ORDERS - 1
+
+
 def test_preferred_badge_job_runs_active_vendors_only(
     fake_client: FakeSupabaseClient,
     service_client: ServiceRoleClient,

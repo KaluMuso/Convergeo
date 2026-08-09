@@ -726,6 +726,26 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
               signInRequired: t("pdp.requestQuote.errors.signInRequired"),
             },
           }}
+          reportListingLabels={{
+            cta: t("pdp.reportListing.cta"),
+            heading: t("pdp.reportListing.heading"),
+            reasonLegend: t("pdp.reportListing.reasonLegend"),
+            detailLabel: t("pdp.reportListing.detailLabel"),
+            detailPlaceholder: t("pdp.reportListing.detailPlaceholder"),
+            submit: t("pdp.reportListing.submit"),
+            cancel: t("pdp.reportListing.cancel"),
+            success: t("pdp.reportListing.success"),
+            signedOut: t("pdp.reportListing.signedOut"),
+            error: t("pdp.reportListing.error"),
+            rateLimited: t("pdp.reportListing.rateLimited"),
+            reasons: [
+              { value: "counterfeit", label: t("pdp.reportListing.reasons.counterfeit") },
+              { value: "prohibited", label: t("pdp.reportListing.reasons.prohibited") },
+              { value: "scam", label: t("pdp.reportListing.reasons.scam") },
+              { value: "misleading", label: t("pdp.reportListing.reasons.misleading") },
+              { value: "other", label: t("pdp.reportListing.reasons.other") },
+            ],
+          }}
           comparePageLabel={t("comparePage.entryCta")}
         />
       ) : (

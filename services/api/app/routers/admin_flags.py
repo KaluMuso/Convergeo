@@ -15,7 +15,9 @@ from pydantic import BaseModel, Field
 
 FLAG_STATUSES = frozenset({"open", "actioned", "dismissed"})
 ENTITY_TYPES = frozenset({"listing", "review", "prohibited"})
-LISTING_ENTITY_TYPES = frozenset({"listing", "prohibited"})
+# Unpublish/remove apply to listing rows only. ``prohibited`` flags from
+# pre-listing policy rejections store ``entity_id = vendor_id``.
+LISTING_ENTITY_TYPES = frozenset({"listing"})
 
 FlagStatus = Literal["open", "actioned", "dismissed"]
 EntityType = Literal["listing", "review", "prohibited"]
@@ -171,11 +173,16 @@ def _resolve_vendor_for_flag(
     entity_type: str,
     entity_id: str,
 ) -> tuple[str | None, str | None, str | None]:
-    if entity_type in LISTING_ENTITY_TYPES:
+    if entity_type == "listing":
         listing = _load_listing_row(service_client, entity_id)
         vendor_id = str(listing["vendor_id"])
         vendor = _load_vendor_row(service_client, vendor_id)
         return vendor_id, str(vendor["display_name"]), str(vendor["slug"])
+
+    if entity_type == "prohibited":
+        # Policy-rejection flags key on the attempting vendor (no listing row yet).
+        vendor = _load_vendor_row(service_client, entity_id)
+        return str(vendor["id"]), str(vendor["display_name"]), str(vendor["slug"])
 
     if entity_type == "review":
         review = _load_review_row(service_client, entity_id)
@@ -540,10 +547,14 @@ async def list_flags(
         entity_label: str | None = None
         entity_status: str | None = None
         try:
-            if entity_type_value in LISTING_ENTITY_TYPES:
+            if entity_type_value == "listing":
                 listing = _load_listing_row(service_client, entity_id_value)
                 entity_label = _listing_title(listing)
                 entity_status = str(listing["status"])
+            elif entity_type_value == "prohibited":
+                vendor = _load_vendor_row(service_client, entity_id_value)
+                entity_label = str(vendor.get("display_name") or "Vendor")
+                entity_status = str(vendor.get("status") or "")
             elif entity_type_value == "review":
                 review = _load_review_row(service_client, entity_id_value)
                 body = review.get("body")

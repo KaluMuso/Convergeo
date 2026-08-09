@@ -179,6 +179,9 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /rfq/{thread_id}/messages": SENSITIVE_WRITE,
     "POST /rfq/{thread_id}/quote": SENSITIVE_WRITE,
     "POST /rfq/{thread_id}/reject": STANDARD_WRITE,
+    # Customer listing-report intake (AUTH_ANY). In-router ceilings are tighter
+    # (10/user/min + 30/IP/min); this declares the coverage-gate envelope.
+    "POST /flags/report": SENSITIVE_WRITE,
     "POST /flags/{flag_id}/dismiss": ADMIN_WRITE,
     "POST /flags/{flag_id}/escalate-suspend": ADMIN_WRITE,
     "POST /flags/{flag_id}/remove": ADMIN_WRITE,
@@ -204,6 +207,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/n8n/kyc-stalled/tick": INTERNAL_CRON,
     "POST /internal/n8n/low-stock/tick": INTERNAL_CRON,
     "POST /internal/n8n/payout-failures/tick": INTERNAL_CRON,
+    "POST /internal/n8n/preferred-badge/tick": INTERNAL_CRON,
     "POST /internal/n8n/review-requests/tick": INTERNAL_CRON,
     "POST /internal/order-jobs/auto-confirm": INTERNAL_CRON,
     "POST /internal/order-jobs/auto-release": INTERNAL_CRON,
