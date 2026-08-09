@@ -6,8 +6,10 @@ import pytest
 from app.core.env_guards import (
     PROD_API_HOST,
     PROD_SUPABASE_PROJECT_REF,
+    STAGING_SUPABASE_PROJECT_REF,
     StagingIsolationError,
     assert_staging_api_host_isolated,
+    assert_staging_project_target,
     assert_staging_supabase_isolated,
     extract_supabase_project_ref,
     load_forbidden_identifiers_file,
@@ -48,6 +50,14 @@ def test_assert_staging_allows_other_supabase() -> None:
         "https://abcdefghij1234567890.supabase.co",
         env="staging",
     )
+
+
+def test_assert_staging_project_target_exact() -> None:
+    assert_staging_project_target(STAGING_SUPABASE_PROJECT_REF, require_exact=True)
+    with pytest.raises(StagingIsolationError, match="production"):
+        assert_staging_project_target(PROD_SUPABASE_PROJECT_REF, require_exact=True)
+    with pytest.raises(StagingIsolationError, match="refusing non-staging"):
+        assert_staging_project_target("abcdefghij1234567890", require_exact=True)
 
 
 def test_assert_staging_refuses_production_api_host() -> None:

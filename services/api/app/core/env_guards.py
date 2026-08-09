@@ -16,6 +16,9 @@ from urllib.parse import urlparse
 
 # Canonical forbidden production identifiers (public).
 PROD_SUPABASE_PROJECT_REF: Final = "dpadrlxukcjbewpqympu"
+# Canonical staging project (vergeo-sandbox). Seed/fixture tooling must target this
+# ref exactly — there is no generic override env var.
+STAGING_SUPABASE_PROJECT_REF: Final = "iyasmrmbcrvlfxpzescb"
 PROD_API_HOST: Final = "api.vergeo5.com"
 PROD_CUSTOMER_HOST: Final = "vergeo5.com"
 PROD_WWW_HOST: Final = "www.vergeo5.com"
@@ -85,6 +88,33 @@ def assert_staging_supabase_isolated(supabase_url: str, *, env: str) -> None:
         raise StagingIsolationError(
             "ENV=staging refuses production Supabase project ref "
             f"({PROD_SUPABASE_PROJECT_REF}). Provision a separate staging project."
+        )
+
+
+def assert_staging_project_target(
+    project_ref: str | None,
+    *,
+    require_exact: bool = False,
+) -> None:
+    """Refuse production and, when required, any non-canonical staging project ref.
+
+  Synthetic seed/cleanup must only run against ``STAGING_SUPABASE_PROJECT_REF``.
+  There is intentionally no generic ``ALLOW_*`` override environment variable.
+    """
+    if not project_ref:
+        raise StagingIsolationError(
+            "staging project ref is required for synthetic seed/cleanup"
+        )
+    normalized = project_ref.strip().lower()
+    if normalized == PROD_SUPABASE_PROJECT_REF:
+        raise StagingIsolationError(
+            "refusing production Supabase project ref "
+            f"({PROD_SUPABASE_PROJECT_REF})"
+        )
+    if require_exact and normalized != STAGING_SUPABASE_PROJECT_REF:
+        raise StagingIsolationError(
+            "refusing non-staging project ref "
+            f"({normalized}); expected {STAGING_SUPABASE_PROJECT_REF}"
         )
 
 

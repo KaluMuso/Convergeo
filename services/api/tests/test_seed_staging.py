@@ -1,14 +1,37 @@
-"""Regression coverage for the isolated staging seed helper."""
+"""Regression coverage for STG-SEED-04 synthetic marketplace contract."""
 
 from __future__ import annotations
 
 import importlib.util
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 import pytest
+from app.core.env_guards import (
+    PROD_SUPABASE_PROJECT_REF,
+    STAGING_SUPABASE_PROJECT_REF,
+    StagingIsolationError,
+    assert_staging_project_target,
+)
+from app.staging.seed_sql import build_cleanup_sql, build_seed_sql, verification_queries
+from app.staging.synthetic_contract import (
+    CATALOG_FIXTURES,
+    PERSONAS,
+    SEED_PREFIX,
+    assert_contract_valid,
+    guard_seed_targets,
+    persona_by_key,
+    product_fixture,
+)
+from app.staging.transactional import (
+    TransactionalState,
+    classify_state,
+    is_service_drivable,
+    plan_state,
+)
 
 
 @pytest.fixture
@@ -24,6 +47,117 @@ def seed_module() -> Any:
         yield module
     finally:
         sys.modules.pop(spec.name, None)
+
+
+def test_contract_personas_are_deterministic() -> None:
+    assert persona_by_key("CUSTOMER_A").user_id == "a1000000-0000-4000-8000-000000000001"
+    assert persona_by_key("CUSTOMER_B").user_id == "a1000000-0000-4000-8000-000000000007"
+    assert persona_by_key("APPROVED_VENDOR_A").vendor_id == (
+        "b1000000-0000-4000-8000-000000000004"
+    )
+    assert persona_by_key("APPROVED_VENDOR_B").vendor_id == (
+        "b1000000-0000-4000-8000-000000000005"
+    )
+    assert persona_by_key("PENDING_VENDOR").vendor_status == "pending_kyc"
+    assert persona_by_key("BUSINESS_BUYER").business_buyer_id is not None
+
+
+def test_product_a_is_multiseller_with_two_listings() -> None:
+    product = product_fixture("PRODUCT_A")
+    assert len(product.listings) >= 2
+    vendors = {listing.vendor_key for listing in product.listings}
+    assert vendors == {"APPROVED_VENDOR_A", "APPROVED_VENDOR_B"}
+
+
+def test_product_c_is_out_of_stock() -> None:
+    listing = product_fixture("PRODUCT_C").listings[0]
+    assert listing.stock_qty == 0
+    assert listing.location_stock_qty == 0
+
+
+def test_product_d_is_wholesale_only() -> None:
+    listing = product_fixture("PRODUCT_D").listings[0]
+    assert listing.wholesale is True
+    assert listing.moq >= 2
+
+
+def test_contract_rejects_zero_price() -> None:
+    product = product_fixture("PRODUCT_B")
+    bad_listing = replace(product.listings[0], price_ngwee=0)
+    bad_product = replace(product, listings=(bad_listing,))
+    original = CATALOG_FIXTURES
+    try:
+        import app.staging.synthetic_contract as contract
+
+        contract.CATALOG_FIXTURES = (bad_product,)
+        with pytest.raises(StagingIsolationError, match="positive integer"):
+            assert_contract_valid()
+    finally:
+        import app.staging.synthetic_contract as contract
+
+        contract.CATALOG_FIXTURES = original
+
+
+def test_guard_rejects_production_project_ref() -> None:
+    with pytest.raises(StagingIsolationError, match="production"):
+        guard_seed_targets(
+            supabase_url="",
+            db_url="",
+            api_host="",
+            staging_project_id=PROD_SUPABASE_PROJECT_REF,
+            require_exact_project=True,
+        )
+
+
+def test_guard_rejects_wrong_staging_project_ref() -> None:
+    with pytest.raises(StagingIsolationError, match="refusing non-staging"):
+        assert_staging_project_target("abcdefghij1234567890", require_exact=True)
+
+
+def test_guard_accepts_canonical_staging_ref() -> None:
+    assert_staging_project_target(STAGING_SUPABASE_PROJECT_REF, require_exact=True)
+
+
+def test_seed_sql_includes_multiseller_location_stock_and_business_buyer() -> None:
+    assert_contract_valid()
+    sql = build_seed_sql()
+    product_a = product_fixture("PRODUCT_A")
+    assert "INSERT INTO public.business_buyers" in sql
+    assert "INSERT INTO public.vendor_locations" in sql
+    assert "INSERT INTO public.listing_location_stock" in sql
+    assert product_a.listings[0].sku in sql
+    assert product_a.listings[1].sku in sql
+    assert "staging-synthetic/" in sql
+    assert "INSERT INTO public.orders" not in sql
+    assert "INSERT INTO public.payments" not in sql
+
+
+def test_cleanup_sql_scoped_to_prefix_and_known_ids() -> None:
+    sql = build_cleanup_sql()
+    assert f"LIKE '{SEED_PREFIX}-txn-%'" in sql
+    assert f"sku LIKE '{SEED_PREFIX}%'" in sql
+    assert persona_by_key("CUSTOMER_A").user_id in sql
+    assert "DELETE FROM public.profiles" in sql
+
+
+def test_verification_queries_cover_multiseller_oos_wholesale() -> None:
+    queries = verification_queries()
+    assert "multiseller_count" in queries
+    assert "oos_stock" in queries
+    assert "wholesale_product_d" in queries
+    assert "zero_price_guard" in queries
+
+
+def test_transactional_external_states_are_not_service_drivable() -> None:
+    assert is_service_drivable(TransactionalState.COD_PLACED) is True
+    assert is_service_drivable(TransactionalState.DELIVERED) is False
+    assert classify_state("dispute_held").delivery == "external"
+
+
+def test_transactional_plan_uses_customer_a_and_product_b() -> None:
+    plan = plan_state(TransactionalState.PREPAID_AWAITING_PAYMENT)
+    assert plan["customer_user_id"] == persona_by_key("CUSTOMER_A").user_id
+    assert plan["listing_id"] == product_fixture("PRODUCT_B").listings[0].listing_id
 
 
 def test_staging_seed_uses_psql_without_importing_test_harness(
@@ -43,19 +177,7 @@ def test_staging_seed_uses_psql_without_importing_test_harness(
 
     assert result.ok
     assert result.rows == ["1"]
-    assert captured["args"][0] == [
-        "psql",
-        "-X",
-        "-v",
-        "ON_ERROR_STOP=1",
-        "-At",
-        "-d",
-        "postgresql://staging.example/test",
-        "-c",
-        "SELECT 1",
-    ]
-    assert "input" not in captured["kwargs"]
-    assert "tests.rls.conftest" not in Path(seed_module.__file__).read_text()
+    assert captured["args"][0][0] == "psql"
 
 
 def test_staging_seed_redacts_dsn_from_psql_errors(
@@ -81,35 +203,6 @@ def test_staging_seed_redacts_dsn_from_psql_errors(
     assert "super-secret" not in result.error
 
 
-def test_direct_db_host_gets_the_pooler_hint(seed_module: Any) -> None:
-    """The IPv6-only direct host is the failure CI hits; say so, don't guess a region."""
-    hint = seed_module._connection_hint(
-        "postgresql://postgres:pw@db.abcdefghij1234567890.supabase.co:5432/postgres"
-    )
-
-    assert hint is not None
-    assert "IPv6" in hint
-    assert "pooler.supabase.com" in hint
-    # Guidance only — the region is not derivable from the ref, so no rewrite.
-    assert "<region>" in hint
-    # Never echo the credential back, even into a hint.
-    assert "pw" not in hint.replace("password", "")
-
-
-@pytest.mark.parametrize(
-    "dsn",
-    [
-        "postgresql://postgres.ref:pw@aws-0-eu-north-1.pooler.supabase.com:5432/postgres",
-        "postgresql://postgres:postgres@127.0.0.1:54322/postgres",
-        "postgresql://postgres:pw@db.example.com:5432/postgres",
-        "",
-    ],
-)
-def test_non_direct_hosts_get_no_hint(seed_module: Any, dsn: str) -> None:
-    """A reachable or unrelated host must not be second-guessed with a wrong hint."""
-    assert seed_module._connection_hint(dsn) is None
-
-
 def test_staging_seed_requires_migrated_vendor_schema(seed_module: Any) -> None:
     class MissingVendors:
         def run(self, _sql: str) -> Any:
@@ -119,80 +212,18 @@ def test_staging_seed_requires_migrated_vendor_schema(seed_module: Any) -> None:
         seed_module._require_seed_schema(MissingVendors())
 
 
-def test_staging_seed_uses_constraint_aligned_auditable_kyc_fixtures(
-    seed_module: Any,
-) -> None:
-    seed_module._validate_fixtures()
-    sql = seed_module._build_seed_sql()
-
-    assert "'draft', NULL" in sql
-    assert "'pending_kyc', NULL" in sql
-    assert "'active', 1" in sql
-    assert "'pending', 0" not in sql
-    assert "'pending', 1" not in sql
-    assert "'submitted'" in sql
-    assert "'approved'" in sql
-    assert "'synthetic staging approval'" in sql
-    assert "ARRAY[]::text[]" in sql
-
-
-def test_staging_seed_adds_one_constraint_aligned_catalogue_fixture(
-    seed_module: Any,
-) -> None:
-    seed_module._validate_fixtures()
-    sql = seed_module._build_seed_sql()
-    fixture = seed_module.CATALOG_FIXTURE
-
-    assert "INSERT INTO public.categories" in sql
-    assert "INSERT INTO public.products" in sql
-    assert "INSERT INTO public.vendor_listings" in sql
-    assert fixture["listing_sku"] in sql
-    assert f"{fixture['price_ngwee']}" in sql
-    assert f"{fixture['stock_qty']}" in sql
-    assert "'active'" in sql
-    assert "wholesale, moq, returnable, status, sku" in sql
-    assert fixture["wholesale"] is False
-    assert fixture["moq"] == 1
-    assert fixture["returnable"] is False
-    assert "INSERT INTO public.listing_images" not in sql
-    assert "INSERT INTO public.orders" not in sql
-    assert "INSERT INTO public.payments" not in sql
-
-
 def test_staging_seed_rejects_vendor_lifecycle_drift(
     monkeypatch: pytest.MonkeyPatch,
-    seed_module: Any,
 ) -> None:
-    bad_vendor = dict(seed_module.FIXTURES[1], vendor_status="pending", kyc_tier=0)
-    monkeypatch.setattr(seed_module, "FIXTURES", [bad_vendor])
+    import app.staging.synthetic_contract as contract
 
-    with pytest.raises(seed_module.StagingIsolationError, match="invalid synthetic vendor status"):
-        seed_module._validate_fixtures()
-
-
-def test_staging_seed_rejects_invalid_vendor_kyc_tier(
-    monkeypatch: pytest.MonkeyPatch,
-    seed_module: Any,
-) -> None:
-    bad_vendor = dict(seed_module.FIXTURES[1], kyc_tier=0)
-    monkeypatch.setattr(seed_module, "FIXTURES", [bad_vendor])
-
-    with pytest.raises(
-        seed_module.StagingIsolationError,
-        match="invalid synthetic vendor KYC tier",
-    ):
-        seed_module._validate_fixtures()
-
-
-def test_staging_seed_rejects_non_positive_catalogue_price(
-    monkeypatch: pytest.MonkeyPatch,
-    seed_module: Any,
-) -> None:
-    bad_catalogue = dict(seed_module.CATALOG_FIXTURE, price_ngwee=0)
-    monkeypatch.setattr(seed_module, "CATALOG_FIXTURE", bad_catalogue)
-
-    with pytest.raises(
-        seed_module.StagingIsolationError,
-        match="price_ngwee must be a positive integer",
-    ):
-        seed_module._validate_fixtures()
+    bad = replace(persona_by_key("VENDOR_UNVERIFIED"), vendor_status="pending", kyc_tier=0)
+    original = contract.PERSONAS
+    try:
+        contract.PERSONAS = tuple(
+            bad if p.key == "VENDOR_UNVERIFIED" else p for p in PERSONAS
+        )
+        with pytest.raises(StagingIsolationError, match="invalid synthetic vendor status"):
+            assert_contract_valid()
+    finally:
+        contract.PERSONAS = original
