@@ -9,6 +9,7 @@ source "${REPO_ROOT}/scripts/ops/lib/recovery-guards.sh"
 
 BACKUP_LOCAL_DIR="${BACKUP_LOCAL_DIR:-/var/backups/vergeo5}"
 OCI_OBJECT_PREFIX="${OCI_OBJECT_PREFIX:-db/}"
+FORCE_PROD=0
 DUMP_FILE=""
 
 log() {
@@ -21,7 +22,7 @@ redact_url() {
 
 usage() {
   cat <<'EOF'
-Usage: db-restore.sh [--file PATH | --latest] [--target-url URL]
+Usage: db-restore.sh [--file PATH | --latest] [--target-url URL] [--force]
 
 Env:
   SUPABASE_DB_URL / DATABASE_URL  Target DB (if --target-url omitted)
@@ -29,8 +30,9 @@ Env:
   OCI_NAMESPACE, OCI_BUCKET_NAME, OCI_CLI_PROFILE (for --latest from bucket)
 
 Guards:
-  Hard-rejects production Supabase project ref (dpadrlxukcjbewpqympu).
-  No --force-production escape hatch.
+  Refuses production Supabase targets unless --force and interactive RESTORE
+  confirmation (break-glass production DR — not for staging CI or drills).
+  Non-production targets always pass through recovery guards.
 EOF
 }
 
@@ -43,11 +45,23 @@ resolve_target_url() {
   printf '%s' "${url}"
 }
 
+confirm_production_break_glass() {
+  log "WARNING: target resolves to production Supabase (${PROD_SUPABASE_PROJECT_REF})"
+  if [[ "${FORCE_PROD}" -ne 1 ]]; then
+    log "ERROR: pass --force and type RESTORE to continue (break-glass production DR only)"
+    exit 1
+  fi
+  read -r -p "Type RESTORE to continue: " answer
+  if [[ "${answer}" != "RESTORE" ]]; then
+    log "Aborted"
+    exit 1
+  fi
+}
+
 assert_safe_restore_target() {
   local url="$1"
   if recovery_is_production_restore_target "$url"; then
-    log "ERROR: refusing production restore target (${PROD_SUPABASE_PROJECT_REF})"
-    exit 1
+    confirm_production_break_glass
   fi
 }
 
@@ -113,8 +127,8 @@ main() {
         shift 2
         ;;
       --force)
-        log "ERROR: --force is removed; production restore targets are always refused"
-        exit 1
+        FORCE_PROD=1
+        shift
         ;;
       -h | --help)
         usage
@@ -128,14 +142,14 @@ main() {
     esac
   done
 
-  require_cmd psql
-  require_cmd gunzip
-
   if [[ -z "${target_url}" ]]; then
     target_url="$(resolve_target_url)"
   fi
 
   assert_safe_restore_target "${target_url}"
+
+  require_cmd psql
+  require_cmd gunzip
 
   if [[ "${use_latest}" -eq 1 ]]; then
     DUMP_FILE="$(download_latest_dump)"
@@ -153,7 +167,7 @@ main() {
 
   log "Restoring ${DUMP_FILE} into target=$(redact_url "${target_url}")"
 
-  gunzip -c "${DUMP_FILE}" | psql "${target_url}" -v ON_ERROR_STOP=1
+  bash "${SCRIPT_DIR}/db-restore-apply.sh" "${DUMP_FILE}" "${target_url}"
 
   log "Restore completed"
 }

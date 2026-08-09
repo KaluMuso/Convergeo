@@ -38,11 +38,25 @@ recovery_extract_supabase_ref() {
   raw="${raw#postgres://}"
   raw="${raw#https://}"
   raw="${raw#http://}"
-  local host="${raw%%/*}"
+
+  local userpass="${raw%%@*}"
+  local user="${userpass%%:*}"
+  if [[ "$user" =~ ^postgres\.([a-z0-9]{20})$ ]]; then
+    printf '%s' "${BASH_REMATCH[1]}"
+    return 0
+  fi
+
+  local host="${raw#*@}"
+  host="${host%%/*}"
   host="${host%%:*}"
   host="${host%%@*}"
+  host="$(printf '%s' "$host" | tr '[:upper:]' '[:lower:]')"
   if [[ "$host" =~ ^db\.([a-z0-9]{20})\.supabase\.co$ ]]; then
     printf '%s' "${BASH_REMATCH[1]}"
+    return 0
+  fi
+  if [[ "$host" == *pooler.supabase.com ]]; then
+    printf ''
     return 0
   fi
   if [[ "$host" =~ ^([a-z0-9]{20})\.supabase\. ]]; then

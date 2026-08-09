@@ -25,9 +25,8 @@ from app.core.env_guards import (
 SEED_PREFIX: Final = "stg-rv-20260719"
 
 # Cloudinary public_id prefix for synthetic listing media. Distinct from the
-# production demo seed prefix (``demo/``) so labelling stays unambiguous while
-# discovery/trending integrity is preserved (trending is confidence-gated;
-# demo exclusion applies only to ``demo/`` media).
+# legacy demo seed prefix (``demo/``). Public discovery excludes both via
+# ``app.services.listings.demo.is_non_genuine_public_id``.
 SYNTHETIC_IMAGE_PREFIX: Final = f"staging-synthetic/{SEED_PREFIX}"
 
 PersonaKey = Literal[

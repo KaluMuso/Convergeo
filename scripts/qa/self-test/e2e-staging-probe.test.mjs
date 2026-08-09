@@ -67,6 +67,55 @@ describe("e2e-staging-probe health identity", () => {
     const r = validateHealthPayload({ status: "ok", app: "customer", env: "production" });
     assert.equal(r.ok, false);
   });
+
+  it("strict + missing env → fail", () => {
+    const r = validateHealthPayload(
+      { status: "ok", app: "customer", buildId: "abc" },
+      { strictEnv: true },
+    );
+    assert.equal(r.ok, false);
+    assert.match(r.reason, /env missing/i);
+  });
+
+  it("strict + production env → fail", () => {
+    const r = validateHealthPayload(
+      { status: "ok", app: "customer", env: "production" },
+      { strictEnv: true },
+    );
+    assert.equal(r.ok, false);
+    assert.match(r.reason, /integrated-staging/);
+  });
+
+  it("strict + development env → fail", () => {
+    const r = validateHealthPayload(
+      { status: "ok", app: "customer", env: "development" },
+      { strictEnv: true },
+    );
+    assert.equal(r.ok, false);
+    assert.match(r.reason, /integrated-staging/);
+  });
+
+  it("strict + preview env → pass", () => {
+    const r = validateHealthPayload(
+      { status: "ok", app: "customer", env: "preview", buildId: "abc" },
+      { strictEnv: true },
+    );
+    assert.equal(r.ok, true);
+  });
+
+  it("strict + staging env → pass", () => {
+    const r = validateHealthPayload(
+      { status: "ok", app: "customer", env: "staging", buildId: "abc" },
+      { strictEnv: true },
+    );
+    assert.equal(r.ok, true);
+  });
+
+  it("non-strict + missing env → pass with envMissing flag", () => {
+    const r = validateHealthPayload({ status: "ok", app: "customer", buildId: "abc" });
+    assert.equal(r.ok, true);
+    assert.equal(r.envMissing, true);
+  });
 });
 
 describe("e2e-staging-probe SHA proof", () => {
@@ -142,6 +191,41 @@ describe("e2e-staging-probe integrated fetch", () => {
       { fetchImpl },
     );
     assert.equal(r.verdict, "FAIL");
+  });
+
+  it("strict certification + missing env → FAIL", async () => {
+    const fetchImpl = async () =>
+      new Response(JSON.stringify({ status: "ok", app: "customer", buildId: "abc" }), {
+        status: 200,
+      });
+
+    const r = await probeStagingAccess(
+      {
+        E2E_BASE_URL: "https://convergeo-customer-git-staging-vergeo-projects.vercel.app",
+        CERTIFICATION_MODE: "integrated-staging",
+      },
+      { fetchImpl },
+    );
+    assert.equal(r.verdict, "FAIL");
+    assert.match(r.detail, /env missing/i);
+  });
+
+  it("strict certification + staging env → PASS", async () => {
+    const fetchImpl = async () =>
+      new Response(
+        JSON.stringify({ status: "ok", app: "customer", env: "staging", buildId: "deadbeef" }),
+        { status: 200 },
+      );
+
+    const r = await probeStagingAccess(
+      {
+        E2E_BASE_URL: "https://convergeo-customer-git-staging-vergeo-projects.vercel.app",
+        CERTIFICATION_MODE: "integrated-staging",
+        E2E_EXPECT_SHA: "deadbeefcafebabe0123456789abcdef01234567",
+      },
+      { fetchImpl },
+    );
+    assert.equal(r.verdict, "PASS");
   });
 });
 

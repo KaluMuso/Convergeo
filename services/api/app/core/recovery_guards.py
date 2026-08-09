@@ -94,6 +94,14 @@ _DB_HOST_RE = re.compile(
     r"^db\.(?P<ref>[a-z0-9]{20})\.supabase\.co$",
     re.IGNORECASE,
 )
+_POOLER_HOST_RE = re.compile(
+    r"pooler\.supabase\.com$",
+    re.IGNORECASE,
+)
+_POOLER_USER_REF_RE = re.compile(
+    r"^postgres\.(?P<ref>[a-z0-9]{20})$",
+    re.IGNORECASE,
+)
 
 
 def extract_db_host(db_url: str) -> str:
@@ -107,11 +115,20 @@ def extract_db_host(db_url: str) -> str:
 
 def extract_supabase_ref_from_db_url(db_url: str) -> str | None:
     """Return Supabase project ref from a Postgres URL or host."""
-    host = extract_db_host(db_url)
+    raw = (db_url or "").strip()
+    if not raw:
+        return None
+    parsed = urlparse(raw if "://" in raw else f"postgresql://{raw}")
+    host = (parsed.hostname or "").lower()
     if host:
         match = _DB_HOST_RE.match(host)
         if match:
             return match.group("ref").lower()
+        if _POOLER_HOST_RE.search(host):
+            username = (parsed.username or "").lower()
+            user_match = _POOLER_USER_REF_RE.match(username)
+            if user_match:
+                return user_match.group("ref").lower()
     return extract_supabase_project_ref(db_url)
 
 

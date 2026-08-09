@@ -9,7 +9,10 @@ from app.services.listings.demo import (
     fetch_demo_service_ids,
     filter_out_demo_listing_ids,
     has_demo_media,
+    has_non_genuine_media,
     is_demo_public_id,
+    is_non_genuine_public_id,
+    is_staging_synthetic_public_id,
 )
 
 __all__ = [
@@ -21,5 +24,8 @@ __all__ = [
     "fetch_demo_service_ids",
     "filter_out_demo_listing_ids",
     "has_demo_media",
+    "has_non_genuine_media",
     "is_demo_public_id",
+    "is_non_genuine_public_id",
+    "is_staging_synthetic_public_id",
 ]

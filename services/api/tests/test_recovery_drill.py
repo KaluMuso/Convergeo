@@ -8,8 +8,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from app.core.env_guards import PROD_SUPABASE_PROJECT_REF
 from app.core.recovery_guards import (
-    PROD_SUPABASE_PROJECT_REF,
     STAGING_SUPABASE_PROJECT_REF,
     RecoveryEvidence,
     RecoveryGuardError,
@@ -30,6 +30,14 @@ EVIDENCE_SCHEMA = REPO_ROOT / "scripts" / "ops" / "recovery-evidence.schema.json
 
 PROD_DB_URL = (
     f"postgresql://postgres:secret@db.{PROD_SUPABASE_PROJECT_REF}.supabase.co:5432/postgres"
+)
+PROD_TRANSACTION_POOLER_URL = (
+    f"postgresql://postgres.{PROD_SUPABASE_PROJECT_REF}:secret@"
+    "aws-0-eu-west-1.pooler.supabase.com:6543/postgres"
+)
+PROD_SESSION_POOLER_URL = (
+    f"postgresql://postgres.{PROD_SUPABASE_PROJECT_REF}:secret@"
+    "aws-0-eu-west-1.pooler.supabase.com:5432/postgres"
 )
 STAGING_DB_URL = (
     f"postgresql://postgres:secret@db.{STAGING_SUPABASE_PROJECT_REF}.supabase.co:5432/postgres"
@@ -67,7 +75,31 @@ def test_production_db_host_detection() -> None:
 
 def test_production_restore_target_rejected() -> None:
     assert is_production_restore_target(db_url=PROD_DB_URL)
+    assert is_production_restore_target(db_url=PROD_TRANSACTION_POOLER_URL)
+    assert is_production_restore_target(db_url=PROD_SESSION_POOLER_URL)
+    assert is_production_restore_target(project_ref=PROD_SUPABASE_PROJECT_REF)
     assert not is_production_restore_target(db_url=DRILL_TARGET_URL)
+
+
+def test_production_pooler_urls_rejected_as_restore_target() -> None:
+    with pytest.raises(RecoveryGuardError, match="production restore target"):
+        assert_restore_target_safe(
+            source_db_url=STAGING_DB_URL,
+            target_db_url=PROD_TRANSACTION_POOLER_URL,
+        )
+    with pytest.raises(RecoveryGuardError, match="production restore target"):
+        assert_restore_target_safe(
+            source_db_url=STAGING_DB_URL,
+            target_db_url=PROD_SESSION_POOLER_URL,
+        )
+
+
+def test_bash_guards_reject_production_pooler_target() -> None:
+    result = _run_guards_sh(
+        f'recovery_assert_restore_target_safe "{STAGING_DB_URL}" "{PROD_TRANSACTION_POOLER_URL}"'
+    )
+    assert result.returncode != 0
+    assert "production restore target" in result.stderr
 
 
 def test_assert_restore_target_refuses_production() -> None:
@@ -255,16 +287,32 @@ def test_recovery_drill_missing_target_writes_evidence() -> None:
         assert payload["verdict"] == RecoveryVerdict.RESTORE_TARGET_AUTHORIZATION_REQUIRED
 
 
-def test_db_restore_rejects_force_flag() -> None:
+def test_db_restore_rejects_production_without_break_glass() -> None:
     db_restore = REPO_ROOT / "infra" / "scripts" / "db-restore.sh"
     result = subprocess.run(
-        [str(db_restore), "--force", "--help"],
+        [str(db_restore), "--target-url", PROD_DB_URL, "--file", "/nonexistent.sql.gz"],
         capture_output=True,
         text=True,
         check=False,
     )
     assert result.returncode != 0
-    assert "--force is removed" in result.stderr
+    assert (
+        "break-glass production DR" in result.stderr
+        or "refusing production restore target" in result.stderr
+    )
+
+
+def test_db_restore_break_glass_requires_interactive_confirmation() -> None:
+    db_restore = REPO_ROOT / "infra" / "scripts" / "db-restore.sh"
+    result = subprocess.run(
+        [str(db_restore), "--force", "--target-url", PROD_DB_URL, "--file", "/nonexistent.sql.gz"],
+        capture_output=True,
+        text=True,
+        check=False,
+        input="NO\n",
+    )
+    assert result.returncode != 0
+    assert "Type RESTORE" in result.stderr or "Aborted" in result.stderr
 
 
 def test_extract_db_host() -> None:

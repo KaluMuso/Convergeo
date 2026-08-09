@@ -6,7 +6,7 @@ from typing import Annotated, Any, Protocol
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.business.access import BusinessAccess, get_business_access
-from app.services.listings.demo import fetch_demo_listing_ids, is_demo_public_id
+from app.services.listings.demo import fetch_demo_listing_ids, is_non_genuine_public_id
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
@@ -609,7 +609,7 @@ def _shoppable_related_items(
                 and listing_id not in image_by_listing
                 and isinstance(public_id, str)
                 and public_id
-                and not is_demo_public_id(public_id)
+                and not is_non_genuine_public_id(public_id)
             ):
                 image_by_listing[listing_id] = public_id
 
