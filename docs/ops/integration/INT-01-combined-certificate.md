@@ -2,8 +2,10 @@
 
 **Status:** REHEARSAL ONLY — DO NOT MERGE THIS BRANCH TO MASTER  
 **Generated:** 2026-08-09  
-**Temporary integration SHA:** `58ee10522813aab41be220b26ecb65d3d0c307f1`  
+**Stack merge tip (last serial integration commit):** `601fc6cd8efa6d49e0e8a1747a7b0c5db2aa4b71`  
 **Base master:** `a57306d9e22067866af30341bf0e86f18bde4f74` (#603)
+
+Certificate documentation commits may trail the stack merge tip on this branch.
 
 ## Merge sequence (serial)
 
@@ -24,12 +26,10 @@
 | Customer layouts (#605)                           | No cross-PR conflict                                                                 |
 | `main.py`                                         | No multi-PR conflict on this stack                                                   |
 
-## Evidence expectations
+## Local evidence on stack tip
 
-- QA self-tests ≥18/18 (local: 18/18 pass on this tip)
-- PAY-01 S1–S14 → `CODE_MONEY_SAFE_FOR_STAGING_SANDBOX`
-- Discovery: single-actor repeats cannot create popular/trending
-- Full GitHub CI + Performance budgets on this tip
+- QA self-tests: **18/18 pass**
+- Full GitHub CI + Performance budgets: see PR #610 checks on branch tip
 
 ## Stale PR classification
 
