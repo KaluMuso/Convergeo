@@ -76,20 +76,25 @@ export function ShopHeader({ locale, labels, localeSwitcher, mobileSearchSlot }:
         void refresh();
       }
     };
+    const w = window as Window &
+      typeof globalThis & {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+        cancelIdleCallback?: (id: number) => void;
+      };
     let idleId: number | undefined;
-    let timeoutId: number | undefined;
-    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-      idleId = window.requestIdleCallback(run, { timeout: 1500 });
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    if (typeof w.requestIdleCallback === "function") {
+      idleId = w.requestIdleCallback(run, { timeout: 1500 });
     } else {
-      timeoutId = window.setTimeout(run, 0);
+      timeoutId = setTimeout(run, 0);
     }
     return () => {
       cancelled = true;
-      if (idleId !== undefined && "cancelIdleCallback" in window) {
-        window.cancelIdleCallback(idleId);
+      if (idleId !== undefined && typeof w.cancelIdleCallback === "function") {
+        w.cancelIdleCallback(idleId);
       }
       if (timeoutId !== undefined) {
-        window.clearTimeout(timeoutId);
+        clearTimeout(timeoutId);
       }
     };
   }, [refresh]);
