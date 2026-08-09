@@ -34,7 +34,8 @@ jobs:
     timeout-minutes: 25
     env:
       CI: "true"
-      # Target + locale.
+      # Canonical staging customer origin — set repository secret E2E_BASE_URL to
+      # match staging environment STAGING_CUSTOMER_URL (Vercel Preview on branch staging).
       E2E_BASE_URL: ${{ inputs.base_url || secrets.E2E_BASE_URL }}
       E2E_VENDOR_BASE_URL: ${{ secrets.E2E_VENDOR_BASE_URL }}
       E2E_ADMIN_BASE_URL: ${{ secrets.E2E_ADMIN_BASE_URL }}
@@ -60,30 +61,55 @@ jobs:
 
       - name: Guard — E2E_BASE_URL must be set
         run: |
+          set -euo pipefail
           if [ -z "${E2E_BASE_URL}" ]; then
-            echo "::warning::E2E_BASE_URL not set — staging target unknown. Set the E2E_BASE_URL secret (or dispatch input). Skipping."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::error::E2E_BASE_URL not set — staging E2E blocked. Set repository secret E2E_BASE_URL to the canonical staging customer Preview URL (same value as staging environment STAGING_CUSTOMER_URL), or pass workflow_dispatch input base_url."
+            exit 1
           fi
-        id: guard
+          case "${E2E_BASE_URL}" in
+            *localhost*|*127.0.0.1*) echo "::error::E2E_BASE_URL must be the deployed staging customer surface, not localhost"; exit 1 ;;
+          esac
+          host="$(printf '%s' "${E2E_BASE_URL}" | sed -E 's#^https?://##; s#/.*##')"
+          echo "staging customer host=${host}"
+
+      - name: Probe staging customer health
+        run: |
+          set -euo pipefail
+          base="${E2E_BASE_URL%/}"
+          health_url="${base}/${E2E_LOCALE}/health"
+          host="$(printf '%s' "${base}" | sed -E 's#^https?://##; s#/.*##')"
+          echo "probing ${host}/${E2E_LOCALE}/health"
+          body="$(curl -fsS --max-time 45 "${health_url}")"
+          BODY="${body}" python3 - <<'PY'
+          import json, os, sys
+          body = json.loads(os.environ["BODY"])
+          if body.get("status") != "ok":
+              print(f"::error::health status={body.get('status')!r}", file=sys.stderr)
+              sys.exit(1)
+          if body.get("app") != "customer":
+              print(f"::error::health app={body.get('app')!r} want customer", file=sys.stderr)
+              sys.exit(1)
+          build_id = body.get("buildId") or ""
+          if not build_id or build_id == "unknown":
+              print("::warning::health buildId missing — deployment identity not embedded")
+          else:
+              print(f"health ok buildId_prefix={build_id[:12]}")
+          PY
 
       - name: Setup Node.js
-        if: steps.guard.outputs.skip != 'true'
         uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
 
       - name: Install E2E deps (frozen lockfile)
-        if: steps.guard.outputs.skip != 'true'
         working-directory: e2e
         run: npm ci
 
       - name: Install Playwright Chromium
-        if: steps.guard.outputs.skip != 'true'
         working-directory: e2e
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E suite
-        if: steps.guard.outputs.skip != 'true'
         working-directory: e2e
         # Playwright has a 15-minute global timeout, but retain an independent
         # process deadline so a stuck runner cannot consume a staging gate
