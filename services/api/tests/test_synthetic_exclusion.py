@@ -95,7 +95,10 @@ def test_synthetic_listing_with_high_views_does_not_trend(
     result.ok = True
     result.rows = [
         f"{real_listing}|Real Phone|real-phone|Tech Shop|15000|vergeo5/catalog/real|42.0",
-        f"{synthetic_listing}|Synthetic Gadget|synthetic-gadget|Synth Co|9900|staging-synthetic/stg-rv-20260719/product-a/hero|99.0",
+        (
+            f"{synthetic_listing}|Synthetic Gadget|synthetic-gadget|Synth Co|9900|"
+            "staging-synthetic/stg-rv-20260719/product-a/hero|99.0"
+        ),
     ]
     monkeypatch.setattr(trending_mod, "run_sql_script", lambda _sql: result)
     monkeypatch.setattr(
@@ -135,7 +138,9 @@ def _make_listing_images_client() -> MagicMock:
                     rows.append(
                         {
                             "listing_id": listing_id,
-                            "cloudinary_public_id": "staging-synthetic/stg-rv-20260719/product-a/hero",
+                            "cloudinary_public_id": (
+                                "staging-synthetic/stg-rv-20260719/product-a/hero"
+                            ),
                         }
                     )
                 elif listing_id == real_listing:

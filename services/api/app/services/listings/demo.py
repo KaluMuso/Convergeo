@@ -1,4 +1,6 @@
-"""Demo and staging-synthetic inventory detection for public discovery (D25 / FD-04 / G11 / VC-P06 / STG-SEED-04).
+"""Demo and staging-synthetic inventory detection for public discovery.
+
+Covers D25 / FD-04 / G11 / VC-P06 / STG-SEED-04.
 
 Canonical markers:
 - Legacy demo seed: Cloudinary ``listing_images.cloudinary_public_id`` matching ``demo/``
@@ -16,7 +18,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-# Staging synthetic media prefix — keep aligned with app.staging.synthetic_contract.SYNTHETIC_IMAGE_PREFIX
+# Staging synthetic media prefix — aligned with synthetic_contract.SYNTHETIC_IMAGE_PREFIX
 STAGING_SYNTHETIC_PREFIX: str = "staging-synthetic/"
 
 
