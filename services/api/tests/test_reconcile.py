@@ -317,11 +317,13 @@ async def test_poller_isolates_poison_pill_and_continues_batch(
     payments_table = fake_service.client.tables["payments"]
 
     poison_id = str(uuid.uuid4())
+    # PAY-01: INITIATED→SUCCESS is now a legal edge (orphan settle). Poison the
+    # batch via a Lenco re-query failure instead of an illegal SM transition.
     payments_table.rows.append(
         {
             "id": poison_id,
             "checkout_group_id": CHECKOUT_GROUP_ID,
-            "status": PaymentStatus.INITIATED.value,  # no edge to success
+            "status": PaymentStatus.USSD_PUSHED.value,
             "lenco_reference": "ord-poison-1",
             "amount_ngwee": 15_000,
             "rail": "mtn",
@@ -350,6 +352,8 @@ async def test_poller_isolates_poison_pill_and_continues_batch(
         )
 
     async def query_status(request: Any) -> QueryStatusResult:
+        if request.reference == "ord-poison-1":
+            raise RuntimeError("simulated Lenco outage for poison pill")
         return QueryStatusResult(
             reference=request.reference,
             status="successful",
@@ -369,8 +373,8 @@ async def test_poller_isolates_poison_pill_and_continues_batch(
     # Every healthy payment was reconciled to SUCCESS.
     for healthy_id in healthy_ids:
         assert by_id[healthy_id]["status"] == PaymentStatus.SUCCESS.value
-    # The poison pill was left untouched (guarded transition refused, no raw UPDATE).
-    assert by_id[poison_id]["status"] == PaymentStatus.INITIATED.value
+    # The poison pill was left untouched (Lenco re-query failed, no raw UPDATE).
+    assert by_id[poison_id]["status"] == PaymentStatus.USSD_PUSHED.value
 
     # Exactly the 3 healthy transitions were audited; the skipped one wrote none.
     audit_rows = fake_service.client.tables["audit_log"].rows
@@ -730,20 +734,20 @@ def test_webhook_drain_marks_unmatched_reference_and_is_idempotent(
 
 def test_webhook_drain_isolates_anomaly_and_continues_batch(
     fake_service: FakeServiceClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """An illegal-transition webhook is logged/skipped; healthy ones still apply.
+    """A poison webhook is logged/skipped; healthy ones still apply.
 
-    The anomaly is a collection.failed webhook for a payment still at INITIATED
-    (no INITIATED->failed edge). It must not abort the batch, its row stays
-    unprocessed (visible to the re-query poller), and the healthy success webhook
-    in the same batch still confirms its payment.
+    PAY-01 made INITIATED→FAILED legal, so the anomaly is simulated by forcing
+    ``apply_payment_status`` to raise for one reference. The batch must not abort;
+    the poison webhook stays unprocessed and the healthy SUCCESS still applies.
     """
     poison_payment = str(uuid.uuid4())
     _seed_payment(
         fake_service,
         payment_id=poison_payment,
         reference="ord-anomaly",
-        status=PaymentStatus.INITIATED,  # no edge to failed
+        status=PaymentStatus.USSD_PUSHED,
     )
     poison_webhook = _seed_webhook(
         fake_service,
@@ -770,12 +774,30 @@ def test_webhook_drain_isolates_anomaly_and_continues_batch(
         created_at="2026-07-15T10:00:01Z",
     )
 
+    from app.services.payments import state as payment_state
+    from app.services.payments.state import PaymentTransitionError
+
+    real_apply = payment_state.apply_payment_status
+
+    def _apply_with_poison(*args: Any, **kwargs: Any) -> Any:
+        payment_id = kwargs.get("payment_id") or (args[1] if len(args) > 1 else None)
+        if payment_id == poison_payment:
+            raise PaymentTransitionError(
+                "simulated illegal transition",
+                from_status="ussd_pushed",
+                event="failed",
+            )
+        return real_apply(*args, **kwargs)
+
+    # process_webhook_event lives in state and calls apply_payment_status there.
+    monkeypatch.setattr(payment_state, "apply_payment_status", _apply_with_poison)
+
     result = drain_pending_webhook_events(fake_service)
 
     assert result == DrainResult(scanned=2, applied=1, skipped=0, errors=1)
     payments = {row["id"]: row for row in fake_service.client.tables["payments"].rows}
     assert payments[healthy_payment]["status"] == PaymentStatus.SUCCESS.value
-    assert payments[poison_payment]["status"] == PaymentStatus.INITIATED.value
+    assert payments[poison_payment]["status"] == PaymentStatus.USSD_PUSHED.value
     webhooks = {row["id"]: row for row in fake_service.client.tables["webhook_events"].rows}
     # Healthy row processed; anomalous row left for the poller / admin visibility.
     assert webhooks[healthy_webhook]["processed_at"] is not None

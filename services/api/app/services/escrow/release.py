@@ -67,6 +67,7 @@ class _OrderContext:
     order_id: str
     status: str
     vendor_id: str
+    checkout_group_id: str
     cod: bool
     commission_snapshot: dict[str, Any]
     gross_ngwee: int
@@ -75,6 +76,7 @@ class _OrderContext:
     buyer_confirmed: bool
     delivered_at: datetime | None
     shipped_at: datetime | None
+    has_escrow_evidence: bool
 
 
 def release_idempotency_key(order_id: str) -> str:
@@ -127,6 +129,41 @@ LIMIT 1;
 """
     result = run_sql_script(script)
     return bool(result.ok and result.rows)
+
+
+def _has_escrow_ledger_evidence(order_id: str, checkout_group_id: str) -> bool:
+    """True when collection posted escrow hold / charge for this order or checkout.
+
+    Product release must not invent funded escrow — mirror event_release's paid gate
+    with ledger evidence (PAY-01). Prefer ledger kinds; fall back to payments.success.
+    """
+    order_sql = _sql_uuid(order_id, "order_id")
+    group_sql = _sql_uuid(checkout_group_id, "checkout_group_id")
+    hold_key = sql_literal(f"escrow-hold-{order_id}")
+    charge_key = sql_literal(f"prepaid-charge-checkout-{checkout_group_id}")
+    script = f"""
+SELECT 1
+FROM public.ledger_transactions
+WHERE kind IN ('escrow_hold', 'charge_received')
+  AND (
+    order_id = {order_sql}
+    OR checkout_group_id = {group_sql}
+    OR idempotency_key IN ({hold_key}, {charge_key})
+  )
+LIMIT 1;
+"""
+    ledger = run_sql_script(script)
+    if ledger.ok and ledger.rows:
+        return True
+    pay_script = f"""
+SELECT 1
+FROM public.payments
+WHERE checkout_group_id = {group_sql}
+  AND status = 'success'
+LIMIT 1;
+"""
+    pay = run_sql_script(pay_script)
+    return bool(pay.ok and pay.rows)
 
 
 def _order_gross_ngwee(order_id: str, delivery_fee_ngwee: int) -> int:
@@ -266,6 +303,7 @@ def _load_order_context(order_id: str) -> _OrderContext | None:
 SELECT
   status,
   vendor_id::text,
+  checkout_group_id::text,
   cod::text,
   delivery_fee_ngwee::text,
   commission_snapshot::text
@@ -277,11 +315,11 @@ LIMIT 1;
     if not result.ok or not result.rows:
         return None
 
-    parts = result.rows[0].split("|", 4)
-    if len(parts) != 5:
+    parts = result.rows[0].split("|", 5)
+    if len(parts) != 6:
         return None
 
-    status, vendor_id, cod_raw, delivery_fee_raw, snapshot_raw = parts
+    status, vendor_id, checkout_group_id, cod_raw, delivery_fee_raw, snapshot_raw = parts
     commission_snapshot: dict[str, Any]
     if snapshot_raw.strip():
         try:
@@ -295,13 +333,15 @@ LIMIT 1;
     delivery_fee_ngwee = int(delivery_fee_raw)
     events = _load_order_events(order_id)
     delivered_at, shipped_at, buyer_confirmed = _event_timestamps(events)
+    is_cod = cod_raw.lower() in {"t", "true", "1"}
 
     return _OrderContext(
         order_id=order_id,
         status=status,
         vendor_id=vendor_id,
+        checkout_group_id=checkout_group_id,
         # psql -At renders boolean::text as 'true'/'false' (not 't'/'f').
-        cod=cod_raw.lower() in {"t", "true", "1"},
+        cod=is_cod,
         commission_snapshot=commission_snapshot,
         gross_ngwee=_order_gross_ngwee(order_id, delivery_fee_ngwee),
         has_open_dispute=_has_open_dispute(order_id),
@@ -309,6 +349,11 @@ LIMIT 1;
         buyer_confirmed=buyer_confirmed,
         delivered_at=delivered_at,
         shipped_at=shipped_at,
+        has_escrow_evidence=(
+            True
+            if is_cod
+            else _has_escrow_ledger_evidence(order_id, checkout_group_id)
+        ),
     )
 
 
@@ -359,6 +404,13 @@ def evaluate_and_release(
             order_id=order_id,
             outcome="already_released",
             reason="release_already_posted",
+        )
+
+    if not context.cod and not context.has_escrow_evidence:
+        return ReleaseResult(
+            order_id=order_id,
+            outcome="not_eligible",
+            reason="unpaid",
         )
 
     blocked = release_blocked_reason(status=context.status, order_id=order_id)

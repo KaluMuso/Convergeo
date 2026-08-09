@@ -688,7 +688,7 @@ class TestCreateOrdersAtomic:
         assert persisted == snapshot
         assert persisted["rate_bps"] == 500
 
-    def test_order_placed_enqueued(
+    def test_cod_vendor_new_order_enqueued_at_create(
         self, db: PgConn, db_url_env: None, pg_service: SupabaseServiceClient
     ) -> None:
         ids = _load_ids()
@@ -721,7 +721,7 @@ class TestCreateOrdersAtomic:
             customer_id=CUSTOMER_ID,
             session_id=session_id,
             idempotency_key=f"outbox-{uuid.uuid4()}",
-            payment_method="card",
+            payment_method="cod",
             cart_lines=[
                 CartLineInput(
                     cart_item_id=str(uuid.uuid4()),
@@ -744,6 +744,63 @@ class TestCreateOrdersAtomic:
         )
         assert len(result.orders) == 1
         assert _outbox_count(db, result.orders[0].order_id) == 1
+
+    def test_prepaid_defers_vendor_notify_until_payment(
+        self, db: PgConn, db_url_env: None, pg_service: SupabaseServiceClient
+    ) -> None:
+        ids = _load_ids()
+        session_id = str(uuid.uuid4())
+        listing_id = str(uuid.uuid4())
+        price = 120_000
+
+        _insert_tracked_listing(
+            db,
+            listing_id=listing_id,
+            vendor_id=VENDOR_A,
+            product_id=ids["products"]["phone"],
+            stock_qty=2,
+            price_ngwee=price,
+        )
+        _insert_checkout_group(
+            db,
+            session_id=session_id,
+            idempotency_key=f"chk-{session_id}",
+            subtotal=price,
+            delivery_fee=0,
+            total=price,
+        )
+        claim_reservation(
+            listing_id=listing_id, checkout_group_id=session_id, qty=1, ttl_minutes=15
+        )
+
+        result = create_orders_atomic(
+            client=pg_service.client,
+            customer_id=CUSTOMER_ID,
+            session_id=session_id,
+            idempotency_key=f"outbox-prepaid-{uuid.uuid4()}",
+            payment_method="card",
+            cart_lines=[
+                CartLineInput(
+                    cart_item_id=str(uuid.uuid4()),
+                    listing_id=listing_id,
+                    vendor_id=VENDOR_A,
+                    qty=1,
+                    unit_price_ngwee=price,
+                    title_snapshot=None,
+                )
+            ],
+            vendor_groups=[
+                VendorFulfilmentInput(
+                    vendor_id=VENDOR_A,
+                    fulfilment="pickup",
+                    delivery_zone=None,
+                    delivery_fee_ngwee=0,
+                    subtotal_ngwee=price,
+                )
+            ],
+        )
+        assert len(result.orders) == 1
+        assert _outbox_count(db, result.orders[0].order_id) == 0
 
 
 def _current_user() -> CurrentUser:

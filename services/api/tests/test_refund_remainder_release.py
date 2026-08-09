@@ -161,6 +161,7 @@ def test_evaluate_and_release_caps_gross_to_remainder() -> None:
         order_id=ORDER_ID,
         status="delivered",
         vendor_id=VENDOR_ID,
+        checkout_group_id="c1000000-0000-0000-0000-000000000099",
         cod=False,
         commission_snapshot=_snapshot(),
         gross_ngwee=205_000,
@@ -169,6 +170,7 @@ def test_evaluate_and_release_caps_gross_to_remainder() -> None:
         buyer_confirmed=True,
         delivered_at=now - timedelta(hours=1),
         shipped_at=now - timedelta(hours=2),
+        has_escrow_evidence=True,
     )
     captured_gross: int | None = None
     captured_snapshot: dict[str, Any] | None = None

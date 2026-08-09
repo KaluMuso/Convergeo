@@ -10,6 +10,7 @@ from app.schemas.base import StrictModel
 from app.services.notifications.dedupe import enqueue_outbox_row
 from app.services.orders.events import emit_order_lifecycle
 from app.services.orders.state import (
+    PREPAID_PAYMENT_REQUIRED_EVENTS,
     ActorRole,
     OrderEvent,
     OrderStatus,
@@ -181,9 +182,14 @@ def _available_vendor_actions(
     *,
     status: str,
     fulfilment: str,
+    paid: bool = True,
+    cod: bool = False,
 ) -> list[VendorActionName]:
     actions: list[VendorActionName] = []
+    prepaid_unpaid = (not cod) and (not paid)
     for action_name, event in ACTION_EVENT_MAP.items():
+        if prepaid_unpaid and event in PREPAID_PAYMENT_REQUIRED_EVENTS:
+            continue
         result = resolve_transition(
             from_status=OrderStatus(status),
             event=event,
@@ -300,18 +306,24 @@ def _build_order_detail(
     status = str(order_row["status"])
     fulfilment = str(order_row["fulfilment"])
     paid = _is_paid_order(service_client, order_row)
+    cod = bool(order_row.get("cod"))
     return OrderDetailResponse(
         id=order_id,
         status=status,
         fulfilment=fulfilment,
-        cod=bool(order_row.get("cod")),
+        cod=cod,
         paid=paid,
         delivery_fee_ngwee=int(order_row.get("delivery_fee_ngwee") or 0),
         created_at=str(order_row["created_at"]),
         customer_id=str(order_row["customer_id"]),
         items=_load_order_items(service_client, order_id),
         timeline=_load_order_timeline(service_client, order_id),
-        available_actions=_available_vendor_actions(status=status, fulfilment=fulfilment),
+        available_actions=_available_vendor_actions(
+            status=status,
+            fulfilment=fulfilment,
+            paid=paid,
+            cod=cod,
+        ),
     )
 
 
@@ -330,6 +342,7 @@ def _execute_vendor_action(
     customer_id = str(order_row["customer_id"])
 
     paid = _is_paid_order(service_client, order_row)
+    cod = bool(order_row.get("cod"))
     refund_path = event == OrderEvent.REJECT and paid
 
     try:
@@ -373,6 +386,8 @@ def _execute_vendor_action(
         available_actions=_available_vendor_actions(
             status=outcome.to_status.value,
             fulfilment=fulfilment,
+            paid=paid,
+            cod=cod,
         ),
     )
 

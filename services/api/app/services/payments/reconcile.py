@@ -419,10 +419,10 @@ async def poll_non_terminal_payments(
                     updated -= 1
         except PaymentTransitionError as exc:
             # The state machine has no edge for the status Lenco reports from the
-            # payment's current status (e.g. an INITIATED row that never advanced
-            # to ussd_pushed now reporting success/failed). Not a valid guarded
-            # transition — surface it as a reconciliation anomaly for admin/alert
-            # and skip rather than raw-UPDATE around the guard.
+            # payment's current status. Not a valid guarded transition — surface
+            # it as a reconciliation anomaly for admin/alert and skip rather than
+            # raw-UPDATE around the guard. (INITIATED→SUCCESS/FAILED/EXPIRED is
+            # legal since PAY-01; poison cases are typically provider/query errors.)
             logger.warning(
                 "reconciliation anomaly: illegal transition for payment %s "
                 "(from_status=%s event=%s) — skipping",
