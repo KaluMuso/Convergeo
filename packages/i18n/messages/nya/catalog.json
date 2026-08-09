@@ -309,9 +309,14 @@
         "privateInfo": "Ikugawana zinthu za private",
         "notRelevant": "Sikugwirizana ndi product iyi"
       }
-    }
+    },
+    "verifiedPurchase": "Kugula kotsimikiziridwa",
+    "lightboxTitle": "Chithunzi cha review"
   },
   "returnableBadge": {
     "label": "Itha kubwezeredwa mkati mwa masiku {days}"
+  },
+  "comparison": {
+    "conditionUsed": "Yogwiritsa ntchito"
   }
 }
