@@ -160,30 +160,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         locale={locale}
         suppliesItem={suppliesItem}
       />
-      <LazyCartHostSlot
-        locale={locale}
-        labels={{
-          title: tCheckout("cart.miniCartTitle"),
-          close: tCheckout("cart.miniCartClose"),
-          itemCount: tCheckout("cart.itemCount"),
-          subtotal: tCheckout("cart.subtotal"),
-          total: tCheckout("cart.total"),
-          viewCart: tCheckout("cart.viewCart"),
-          checkoutCta: tCheckout("cart.checkoutCta"),
-          emptyTitle: tCheckout("cart.emptyTitle"),
-          emptyBody: tCheckout("cart.emptyBody"),
-          emptyTrust: {
-            escrow: tCheckout("cart.emptyTrustEscrow"),
-            delivery: tCheckout("cart.emptyTrustDelivery"),
-            pickup: tCheckout("cart.emptyTrustPickup"),
-          },
-          browseCta: tCheckout("cart.browseCta"),
-          openCart: tCheckout("cart.openCart"),
-          loadErrorTitle: tCheckout("cart.loadErrorTitle"),
-          loadErrorBody: tCheckout("cart.loadErrorBody"),
-          loadErrorRetry: tCheckout("cart.loadErrorRetry"),
-        }}
-      />
+      <LazyCartHostSlot locale={locale} />
       {/* Lets a returning PWA user explicitly activate a waiting worker. */}
       <InstallPrompt />
     </NextIntlClientProvider>
