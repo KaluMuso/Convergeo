@@ -141,6 +141,7 @@ function comparisonLabels(t: CatalogTranslator): ComparisonLabels {
     rating: t("comparison.rating"),
     conditionNew: t("comparison.conditionNew"),
     conditionRefurbished: t("comparison.conditionRefurbished"),
+    conditionUsed: t("comparison.conditionUsed"),
     usingFallbackLocation: t("comparison.usingFallbackLocation"),
     lowestPriceBadge: t("comparison.lowestPriceBadge"),
   };

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useSession } from "@vergeo/auth/use-session";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -115,7 +115,7 @@ describe("ContactVendorButton", () => {
     expect(screen.getByText(labels.errors.empty)).toBeInTheDocument();
   });
 
-  it("closes the dialog on Escape", async () => {
+  it("closes the dialog on Escape via shared Modal", async () => {
     const user = userEvent.setup();
     render(
       <ContactVendorButton
@@ -127,7 +127,39 @@ describe("ContactVendorButton", () => {
     );
 
     await user.click(screen.getByTestId("pdp-contact-vendor-cta"));
-    fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByTestId("pdp-contact-vendor-dialog")).not.toBeInTheDocument();
+    const dialog = screen.getByTestId("pdp-contact-vendor-dialog");
+    expect(dialog).toHaveAttribute("role", "dialog");
+    expect(dialog).toHaveAccessibleName(labels.dialogTitle);
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByTestId("pdp-contact-vendor-dialog")).not.toBeInTheDocument();
+    });
+  });
+
+  it("restores focus to the CTA after Modal close", async () => {
+    const user = userEvent.setup();
+    render(
+      <ContactVendorButton
+        locale="en"
+        listingId="listing-uuid"
+        vendorName="Demo Vendor"
+        labels={labels}
+      />,
+    );
+
+    const cta = screen.getByTestId("pdp-contact-vendor-cta");
+    await user.click(cta);
+    await waitFor(() => {
+      expect(screen.getByTestId("pdp-contact-vendor-dialog")).toBeInTheDocument();
+    });
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByTestId("pdp-contact-vendor-dialog")).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(cta);
+    });
   });
 });

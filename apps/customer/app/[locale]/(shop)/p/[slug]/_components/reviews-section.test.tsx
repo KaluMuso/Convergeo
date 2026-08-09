@@ -5,7 +5,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ReviewsSection, type ReviewsSectionLabels } from "./reviews-section";
+import { isVerifiedPurchase, ReviewsSection, type ReviewsSectionLabels } from "./reviews-section";
 
 const insertMock = vi.fn();
 const getUserMock = vi.fn();
@@ -46,6 +46,8 @@ const labels: ReviewsSectionLabels = {
   starEmpty: "☆",
   distributionHeading: "Rating breakdown",
   distributionRowAria: "{star}★: {count}",
+  verifiedPurchase: "Verified purchase",
+  lightboxTitle: "Review photos",
   report: {
     cta: "Report",
     heading: "Report this review",
@@ -62,6 +64,18 @@ const labels: ReviewsSectionLabels = {
   },
 };
 
+describe("isVerifiedPurchase", () => {
+  it("prefers the explicit verified_purchase field from the API", () => {
+    expect(isVerifiedPurchase({ order_item_id: "item-1", verified_purchase: true })).toBe(true);
+    expect(isVerifiedPurchase({ order_item_id: "item-1", verified_purchase: false })).toBe(false);
+  });
+
+  it("falls back to non-empty order_item_id as the DB verified-purchase gate", () => {
+    expect(isVerifiedPurchase({ order_item_id: "item-1" })).toBe(true);
+    expect(isVerifiedPurchase({ order_item_id: "" })).toBe(false);
+  });
+});
+
 describe("ReviewsSection report control", () => {
   it("inserts a review flag through the RLS-guarded browser client", async () => {
     const user = userEvent.setup();
@@ -76,6 +90,7 @@ describe("ReviewsSection report control", () => {
           {
             id: "review-1",
             order_item_id: "item-1",
+            verified_purchase: true,
             rating: 4,
             body: "Helpful seller.",
             photos: [],
@@ -103,10 +118,99 @@ describe("ReviewsSection report control", () => {
   });
 });
 
+describe("ReviewsSection verified purchase", () => {
+  it("shows the verified purchase badge when the authoritative signal is true", () => {
+    render(
+      <ReviewsSection
+        locale="en"
+        labels={labels}
+        reviews={[
+          {
+            id: "review-1",
+            order_item_id: "item-1",
+            verified_purchase: true,
+            rating: 5,
+            body: "Great phone.",
+            photos: [],
+            vendor_reply: null,
+            vendor_reply_at: null,
+            created_at: "2026-07-20T00:00:00Z",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId("review-verified-review-1")).toHaveTextContent("Verified purchase");
+  });
+
+  it("hides the badge when verified_purchase is explicitly false", () => {
+    render(
+      <ReviewsSection
+        locale="en"
+        labels={labels}
+        reviews={[
+          {
+            id: "review-2",
+            order_item_id: "",
+            verified_purchase: false,
+            rating: 3,
+            body: null,
+            photos: [],
+            vendor_reply: null,
+            vendor_reply_at: null,
+            created_at: "2026-07-20T00:00:00Z",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.queryByTestId("review-verified-review-2")).not.toBeInTheDocument();
+  });
+});
+
+describe("ReviewsSection photo lightbox", () => {
+  it("opens a shared Modal lightbox with accessible name and closes on Escape", async () => {
+    const user = userEvent.setup();
+    render(
+      <ReviewsSection
+        locale="en"
+        labels={labels}
+        reviews={[
+          {
+            id: "review-photo",
+            order_item_id: "item-photo",
+            verified_purchase: true,
+            rating: 5,
+            body: null,
+            photos: ["reviews/photo-1"],
+            vendor_reply: null,
+            vendor_reply_at: null,
+            created_at: "2026-07-20T00:00:00Z",
+          },
+        ]}
+      />,
+    );
+
+    const trigger = screen.getByTestId("review-photo-reviews/photo-1");
+    await user.click(trigger);
+
+    const lightbox = screen.getByTestId("review-photo-lightbox");
+    expect(lightbox).toHaveAttribute("role", "dialog");
+    expect(lightbox).toHaveAccessibleName("Review photos");
+    expect(screen.getByTestId("image-gallery")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByTestId("review-photo-lightbox")).not.toBeInTheDocument();
+    });
+  });
+});
+
 describe("ReviewsSection rating distribution", () => {
   const makeReview = (id: string, rating: number) => ({
     id,
     order_item_id: `item-${id}`,
+    verified_purchase: true,
     rating,
     body: null,
     photos: [],

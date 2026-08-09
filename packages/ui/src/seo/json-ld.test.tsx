@@ -141,6 +141,34 @@ describe("buildProductJsonLd", () => {
       }),
     ).toBe(false);
   });
+
+  it("emits AggregateRating only when genuine rating_avg / rating_count are provided", () => {
+    const withRating = buildProductJsonLd({
+      name: "Itel A70",
+      slug: "itel-a70",
+      locale: "en",
+      imageUrls: ["https://res.cloudinary.com/demo/image/upload/itel.jpg"],
+      offers: [{ priceNgwee: 100_000, inStock: true, sellerName: "Tech Hub" }],
+      aggregateRating: { ratingValue: 4.5, reviewCount: 12 },
+    });
+    expect(withRating.aggregateRating).toEqual({
+      "@type": "AggregateRating",
+      ratingValue: 4.5,
+      reviewCount: 12,
+      bestRating: 5,
+      worstRating: 1,
+    });
+
+    const withoutRating = buildProductJsonLd({
+      name: "Itel A70",
+      slug: "itel-a70",
+      locale: "en",
+      imageUrls: ["https://res.cloudinary.com/demo/image/upload/itel.jpg"],
+      offers: [{ priceNgwee: 100_000, inStock: true, sellerName: "Tech Hub" }],
+      aggregateRating: null,
+    });
+    expect(withoutRating.aggregateRating).toBeUndefined();
+  });
 });
 
 describe("buildOrganizationJsonLd / buildWebSiteJsonLd", () => {

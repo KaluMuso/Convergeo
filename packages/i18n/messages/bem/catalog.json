@@ -329,12 +329,15 @@
         "privateInfo": "Ilelanda ifya private",
         "notRelevant": "Tekwa product iyi"
       }
-    }
+    },
+    "verifiedPurchase": "Uwashtisha uwashininkishiwe",
+    "lightboxTitle": "Cilangililo ca review"
   },
   "returnableBadge": {
     "label": "Cingabwelela mu nsiku {days}"
   },
   "comparison": {
-    "preferredBadge": "Ushitisha asalwa"
+    "preferredBadge": "Ushitisha asalwa",
+    "conditionUsed": "Yakubomfya"
   }
 }

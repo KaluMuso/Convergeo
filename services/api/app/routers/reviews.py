@@ -60,6 +60,18 @@ class ReviewResponse(StrictModel):
     item_title: str | None = None
     product_id: str | None = None
     listing_id: str | None = None
+    # Authoritative verified-purchase signal: reviews.order_item_id is NOT NULL
+    # (0007_trust_ops) and inserts are gated by validate_review_verified_purchase.
+    # NOT NULL order_item_id ⇒ verified purchase (never infer from weaker client state).
+    verified_purchase: bool = False
+
+
+class ProductReviewsResponse(StrictModel):
+    """Published product reviews plus arithmetic aggregate (vendor-page pattern)."""
+
+    items: list[ReviewResponse]
+    rating_avg: float | None = None
+    rating_count: int = 0
 
 
 class OrderReviewItem(StrictModel):
@@ -230,9 +242,10 @@ def _to_review_response(row: dict[str, Any], *, item_title: str | None = None) -
     photos = row.get("photos")
     if not isinstance(photos, list):
         photos = []
+    order_item_id = str(row["order_item_id"]) if row.get("order_item_id") is not None else ""
     return ReviewResponse(
         id=str(row["id"]),
-        order_item_id=str(row["order_item_id"]),
+        order_item_id=order_item_id,
         rating=int(row["rating"]),
         body=row.get("body"),
         photos=[str(photo) for photo in photos],
@@ -246,6 +259,7 @@ def _to_review_response(row: dict[str, Any], *, item_title: str | None = None) -
         item_title=item_title,
         product_id=row.get("product_id"),
         listing_id=row.get("listing_id"),
+        verified_purchase=bool(order_item_id),
     )
 
 
@@ -353,11 +367,17 @@ def _rate_limit_reviews(
         )
 
 
-@router.get("", response_model=list[ReviewResponse])
+@router.get("", response_model=ProductReviewsResponse)
 async def list_product_reviews(
     product_id: str,
     service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
-) -> list[ReviewResponse]:
+) -> ProductReviewsResponse:
+    """List published reviews for a product with authoritative aggregate fields.
+
+    ``rating_avg`` / ``rating_count`` are the arithmetic mean and full published
+    count (same pattern as vendor ``reviews_summary`` / service-reviews). The
+    endpoint is unpaginated — count is not a page-sample size.
+    """
     links = _rows(
         service_client.client.table("order_item_products")
         .select("order_item_id")
@@ -366,7 +386,7 @@ async def list_product_reviews(
     )
     order_item_ids = [str(row["order_item_id"]) for row in links if row.get("order_item_id")]
     if not order_item_ids:
-        return []
+        return ProductReviewsResponse(items=[], rating_avg=None, rating_count=0)
 
     reviews = _rows(
         service_client.client.table("reviews")
@@ -376,7 +396,10 @@ async def list_product_reviews(
         .order("created_at", desc=True)
         .execute()
     )
-    return [_to_review_response(row) for row in reviews]
+    items = [_to_review_response(row) for row in reviews]
+    count = len(items)
+    rating_avg = round(sum(item.rating for item in items) / count, 1) if count else None
+    return ProductReviewsResponse(items=items, rating_avg=rating_avg, rating_count=count)
 
 
 @router.get("/order/{order_id}", response_model=list[OrderReviewItem])
