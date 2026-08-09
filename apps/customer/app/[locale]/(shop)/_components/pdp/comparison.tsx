@@ -25,6 +25,7 @@ import { VendorBlock } from "./vendor-block";
 
 import type { ContactVendorLabels } from "./contact-vendor-button";
 import type { PdpGalleryLabelStrings } from "./gallery-labels";
+import type { ReportListingLabels } from "./report-listing";
 import type { RequestQuoteLabels } from "./request-quote-button";
 
 /** Lazy — keeps first-load JS on /p/[slug] within the bundle regression budget. */
@@ -37,6 +38,10 @@ const RequestQuoteButton = dynamic(
   () => import("./request-quote-button").then((mod) => mod.RequestQuoteButton),
   { ssr: false },
 );
+
+const ReportListing = dynamic(() => import("./report-listing").then((mod) => mod.ReportListing), {
+  ssr: false,
+});
 
 export const LUSAKA_CBD_LAT = -15.4167;
 export const LUSAKA_CBD_LNG = 28.2833;
@@ -151,6 +156,7 @@ export type PdpInteractiveBodyProps = {
   /** When false, the Contact Vendor CTA is omitted (fail-closed — BLK-202). */
   contactVendorEnabled: boolean;
   requestQuoteLabels: RequestQuoteLabels;
+  reportListingLabels: ReportListingLabels;
   comparePageLabel: string;
 };
 
@@ -561,6 +567,7 @@ export function PdpInteractiveBody({
   contactVendorLabels,
   contactVendorEnabled,
   requestQuoteLabels,
+  reportListingLabels,
   comparePageLabel,
 }: PdpInteractiveBodyProps) {
   const t = useTranslations("catalog");
@@ -772,6 +779,7 @@ export function PdpInteractiveBody({
               labels={contactVendorLabels}
             />
           ) : null}
+          <ReportListing listingId={selectedListing.id} labels={reportListingLabels} />
         </div>
       ) : null}
 

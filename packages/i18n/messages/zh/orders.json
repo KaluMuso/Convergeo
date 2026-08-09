@@ -28,7 +28,10 @@
     "deliveryFee": "配送费",
     "total": "订单总计",
     "relatedTitle": "本次结算的其他商家",
-    "back": "返回订单列表"
+    "back": "返回订单列表",
+    "actionsTitle": "送达之后",
+    "requestReturn": "申请退货",
+    "openDispute": "发起或查看纠纷"
   },
   "status": {
     "placed": "已下单",

@@ -28,7 +28,10 @@
     "deliveryFee": "Delivery fee",
     "total": "Order total",
     "relatedTitle": "Other vendors in this checkout",
-    "back": "Back to orders"
+    "back": "Back to orders",
+    "actionsTitle": "After delivery",
+    "requestReturn": "Request a return",
+    "openDispute": "Open or view dispute"
   },
   "status": {
     "placed": "Placed",

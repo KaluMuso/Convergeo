@@ -119,34 +119,35 @@ Downstream M14 nudge workflows (`kyc-nudge`, `payout-failure-alert`, `low-stock-
 
 Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` (enforced by `services/api/tests/test_n8n_registry.py`).
 
-| Workflow file                     | Concern bucket              | Live present?           | Classification                                 |
-| --------------------------------- | --------------------------- | ----------------------- | ---------------------------------------------- |
-| `notification-dispatch.json`      | Notification dispatch       | yes (diverged)          | VERIFIED LIVE*                                 |
-| `reconciliation.json`             | Reconciliation              | yes (bundled + drifted) | PARTIAL / daily BROKEN                         |
-| `payment-sweeper.json`            | Payment sweeper             | yes (bundled, 10m≠5m)   | PARTIAL                                        |
-| `order-jobs.json`                 | Escrow auto-confirm/release | no                      | DORMANT                                        |
-| `release-job.json`                | Escrow release              | no                      | DORMANT                                        |
-| `event-release.json`              | Event escrow release        | no                      | DORMANT                                        |
-| `tickets-issue.json`              | Ticket issuance             | no                      | DORMANT                                        |
-| `tickets-release.json`            | Ticket hold release         | no                      | DORMANT                                        |
-| `reservation-sweeper.json`        | Reservation sweeper         | no                      | DORMANT                                        |
-| `admin-digest.json`               | Notifications (founder)     | no                      | DORMANT                                        |
-| `daily-summary.json`              | Reporting (n8n webhook)     | no                      | DORMANT                                        |
-| `kyc-nudge.json`                  | Notifications               | no                      | DORMANT                                        |
-| `payout-failure-alert.json`       | Notifications               | no                      | DORMANT                                        |
-| `low-stock-alert.json`            | Notifications               | no                      | DORMANT                                        |
-| `review-request.json`             | Notifications               | no                      | DORMANT                                        |
-| `abandoned-cart.json`             | Notifications               | no                      | DORMANT                                        |
-| `funnel-abandon.json`             | Analytics                   | no                      | DORMANT                                        |
-| `analytics-retention.json`        | Analytics / DPA             | no                      | DORMANT                                        |
-| `export-purge.json`               | DPA data-export purge       | no                      | DORMANT                                        |
-| `embeddings-cron.json`            | Search/AI                   | no                      | DORMANT                                        |
-| `uptime-alert.json`               | Observability               | no                      | DORMANT                                        |
-| `money-workflow-error-alert.json` | Money / ops error paging    | no                      | DORMANT (VD-P06 shared Error Trigger template) |
-| `backup.json`                     | DB/OCI backup               | no                      | DORMANT (CODE_COMPLETE in repo; G7 NOT PASS)   |
-| `backup-schedule.md`              | DB/OCI backup contract      | n/a                     | Contract for `backup.json`                     |
-| `waha-intake-sweeps.json`         | WhatsApp intake ops (D35)   | no                      | DORMANT†                                       |
-| `waha-intake-digest.json`         | WhatsApp intake ops (D35)   | no                      | DORMANT†                                       |
+| Workflow file                     | Concern bucket              | Live present?           | Classification                                                        |
+| --------------------------------- | --------------------------- | ----------------------- | --------------------------------------------------------------------- |
+| `notification-dispatch.json`      | Notification dispatch       | yes (diverged)          | VERIFIED LIVE*                                                        |
+| `reconciliation.json`             | Reconciliation              | yes (bundled + drifted) | PARTIAL / daily BROKEN                                                |
+| `payment-sweeper.json`            | Payment sweeper             | yes (bundled, 10m≠5m)   | PARTIAL                                                               |
+| `order-jobs.json`                 | Escrow auto-confirm/release | no                      | DORMANT                                                               |
+| `release-job.json`                | Escrow release              | no                      | DORMANT                                                               |
+| `event-release.json`              | Event escrow release        | no                      | DORMANT                                                               |
+| `tickets-issue.json`              | Ticket issuance             | no                      | DORMANT                                                               |
+| `tickets-release.json`            | Ticket hold release         | no                      | DORMANT                                                               |
+| `reservation-sweeper.json`        | Reservation sweeper         | no                      | DORMANT                                                               |
+| `admin-digest.json`               | Notifications (founder)     | no                      | DORMANT                                                               |
+| `daily-summary.json`              | Reporting (n8n webhook)     | no                      | DORMANT                                                               |
+| `kyc-nudge.json`                  | Notifications               | no                      | DORMANT                                                               |
+| `payout-failure-alert.json`       | Notifications               | no                      | DORMANT                                                               |
+| `low-stock-alert.json`            | Notifications               | no                      | DORMANT                                                               |
+| `preferred-badge-recompute.json`  | Seller quality (D9)         | no                      | DORMANT (ships `active: false`; do not activate without founder gate) |
+| `review-request.json`             | Notifications               | no                      | DORMANT                                                               |
+| `abandoned-cart.json`             | Notifications               | no                      | DORMANT                                                               |
+| `funnel-abandon.json`             | Analytics                   | no                      | DORMANT                                                               |
+| `analytics-retention.json`        | Analytics / DPA             | no                      | DORMANT                                                               |
+| `export-purge.json`               | DPA data-export purge       | no                      | DORMANT                                                               |
+| `embeddings-cron.json`            | Search/AI                   | no                      | DORMANT                                                               |
+| `uptime-alert.json`               | Observability               | no                      | DORMANT                                                               |
+| `money-workflow-error-alert.json` | Money / ops error paging    | no                      | DORMANT (VD-P06 shared Error Trigger template)                        |
+| `backup.json`                     | DB/OCI backup               | no                      | DORMANT (CODE_COMPLETE in repo; G7 NOT PASS)                          |
+| `backup-schedule.md`              | DB/OCI backup contract      | n/a                     | Contract for `backup.json`                                            |
+| `waha-intake-sweeps.json`         | WhatsApp intake ops (D35)   | no                      | DORMANT†                                                              |
+| `waha-intake-digest.json`         | WhatsApp intake ops (D35)   | no                      | DORMANT†                                                              |
 
 \*Live workflow is a manual/MCP-built sibling of the committed export, not a clean import of `notification-dispatch.json`.
 

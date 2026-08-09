@@ -68,6 +68,7 @@ function buildCheckoutLabels(locale: string, messages: AbstractIntlMessages): Ch
       landmarkLabel: t("checkout.fulfilment.landmarkLabel"),
       landmarkPlaceholder: t("checkout.fulfilment.landmarkPlaceholder"),
       landmarkHelp: t("checkout.fulfilment.landmarkHelp"),
+      addressLabel: t("checkout.fulfilment.addressLabel"),
       zoneFeeTemplate: t("checkout.fulfilment.zoneFee"),
       zoneFree: t("checkout.fulfilment.zoneFree"),
       zoneLabelTemplate: t("checkout.fulfilment.zoneLabel"),

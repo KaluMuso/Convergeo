@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import checkoutMessages from "../../../../../../../packages/i18n/messages/en/checkout.json";
 
 import { ChangeNotices } from "./change-notices";
-import { MiniCartEmptyState } from "./mini-cart-drawer";
+import { MiniCartEmptyState, vendorGroupLabel } from "./mini-cart-drawer";
 import { QtyStepper } from "./qty-stepper";
 import { CartEmptyState, VendorGroups, indexNoticesByListing } from "./vendor-groups";
 
@@ -376,5 +376,41 @@ describe("empty cart render state", () => {
     };
 
     expect(emptyCart.items).toHaveLength(0);
+  });
+});
+
+describe("vendorGroupLabel", () => {
+  it("prefers vendor_name when the API provides one", () => {
+    expect(vendorGroupLabel({ vendor_id: "abcdef12-3456", vendor_name: "Lusaka Phones" })).toBe(
+      "Lusaka Phones",
+    );
+  });
+
+  it("falls back to truncated vendor_id when name is missing", () => {
+    expect(vendorGroupLabel({ vendor_id: "abcdef12-3456", vendor_name: null })).toBe("abcdef12");
+    expect(vendorGroupLabel({ vendor_id: "abcdef12-3456" })).toBe("abcdef12");
+  });
+
+  it("renders vendor_name in cart vendor groups when present", () => {
+    render(
+      <VendorGroups
+        groups={[{ ...belowThresholdGroup, vendor_name: "Cairo Corner" }]}
+        noticesByListingId={{}}
+        labels={vendorLabels}
+        lineLabels={lineLabels}
+        onQtyChange={vi.fn().mockResolvedValue(undefined)}
+        onRemove={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(screen.getByTestId("cart-vendor-name-vendor-a")).toHaveTextContent("Cairo Corner");
+    expect(screen.queryByText("vendor-a")).not.toBeInTheDocument();
+  });
+});
+
+describe("checkout address label i18n", () => {
+  it("keeps checkout address create label in i18n (not hardcoded EN)", () => {
+    expect(checkoutMessages.checkout.fulfilment.addressLabel).toBeTruthy();
+    expect(checkoutMessages.checkout.fulfilment.addressLabel.toLowerCase()).toContain("checkout");
   });
 });

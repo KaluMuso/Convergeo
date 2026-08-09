@@ -120,6 +120,7 @@
       "landmarkLabel": "Landmark ndi area",
       "landmarkPlaceholder": "mwachitsanzo Woodlands Stage 2, pafupi ndi church",
       "landmarkHelp": "Fotokozani kumene muli — timatcha delivery zone.",
+      "addressLabel": "Checkout",
       "zoneFee": "Fee ya delivery: {amount}",
       "zoneFree": "Delivery yaulere",
       "zoneLabel": "Zone: {zone}",

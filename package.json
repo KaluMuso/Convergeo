@@ -11,7 +11,11 @@
     "format": "prettier --config packages/config/prettier.config.mjs --write .",
     "format:check": "prettier --config packages/config/prettier.config.mjs --check .",
     "verify-scaffold": "node scripts/verify-scaffold.mjs",
-    "prepare": "lefthook install || true"
+    "prepare": "lefthook install || true",
+    "release-certify": "bash scripts/qa/release-certify.sh --mode ci",
+    "release-certify:local": "bash scripts/qa/release-certify.sh --mode local-development",
+    "release-certify:static": "bash scripts/qa/release-certify.sh --mode ci --layer static --skip-e2e --skip-rls",
+    "release-certify:self-test": "node --test scripts/qa/self-test/*.test.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",

@@ -292,7 +292,27 @@
       "used": "二手",
       "authenticity": "成色与真实性"
     },
-    "leadTime": "需要 {days} 天备货期"
+    "leadTime": "需要 {days} 天备货期",
+    "reportListing": {
+      "cta": "举报商品",
+      "heading": "举报此商品",
+      "reasonLegend": "此商品有什么问题？",
+      "detailLabel": "更多详情（可选）",
+      "detailPlaceholder": "补充有助于审核的信息（请勿填写个人联系方式）。",
+      "submit": "提交举报",
+      "cancel": "取消",
+      "success": "谢谢 — 我们的审核团队将进行审查。",
+      "signedOut": "请登录后再举报商品。",
+      "error": "无法提交举报，请重试。",
+      "rateLimited": "举报次数过多，请稍后再试。",
+      "reasons": {
+        "counterfeit": "疑似假冒",
+        "prohibited": "违禁物品",
+        "scam": "诈骗或欺诈",
+        "misleading": "误导或不准确",
+        "other": "其他问题"
+      }
+    }
   },
   "returnableBadge": {
     "label": "{days} 天内可退货"
@@ -364,17 +384,17 @@
     "report": {
       "cta": "举报",
       "heading": "举报此评价",
-      "reasonLegend": "告诉我们需要核查的内容。",
+      "reasonLegend": "请告诉我们需要检查的内容。",
       "submit": "提交举报",
       "cancel": "取消",
-      "success": "谢谢——我们的审核团队会查看。",
-      "signedOut": "请登录后举报评价。",
-      "error": "无法提交此举报。请重试。",
+      "success": "谢谢 — 我们的审核团队将进行审查。",
+      "signedOut": "请登录后再举报评价。",
+      "error": "无法提交举报，请重试。",
       "reasons": {
         "spam": "垃圾信息或广告",
         "abuse": "辱骂或仇恨内容",
-        "privateInfo": "泄露私人信息",
-        "notRelevant": "与此商品无关"
+        "privateInfo": "泄露隐私信息",
+        "notRelevant": "与该商品无关"
       }
     },
     "errors": {

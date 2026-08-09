@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 import { BASE_URL } from "./fixtures/env";
+import { CERTIFICATION_VIEWPORTS } from "./fixtures/viewports";
 
 const isCI = !!process.env.CI;
 
@@ -11,6 +12,22 @@ const isCI = !!process.env.CI;
  * installed via `playwright install chromium`.
  */
 const executablePath = process.env.PW_CHROMIUM_PATH || undefined;
+
+/** Build Playwright projects from certification viewport list. */
+function viewportProjects() {
+  return CERTIFICATION_VIEWPORTS.map((vp, index) => {
+    const isPrimary = index === 0;
+    return {
+      name: isPrimary ? "mobile-fast-3g-360" : vp.name,
+      use: {
+        ...devices["Pixel 7"],
+        viewport: { width: vp.width, height: vp.height },
+        isMobile: vp.isMobile,
+        hasTouch: vp.hasTouch,
+      },
+    };
+  });
+}
 
 export default defineConfig({
   testDir: "./specs",
@@ -26,6 +43,7 @@ export default defineConfig({
     ["list"],
     ["html", { outputFolder: "playwright-report", open: "never" }],
     ["junit", { outputFile: "results/junit.xml" }],
+    ["json", { outputFile: "results/results.json" }],
   ],
   outputDir: "results/artifacts",
   use: {
@@ -37,18 +55,5 @@ export default defineConfig({
     navigationTimeout: 30_000,
     launchOptions: executablePath ? { executablePath } : {},
   },
-  projects: [
-    {
-      // Primary target: Zambian mobile-first — 360px viewport under Fast-3G.
-      // The `fast3g` auto-fixture (fixtures/test-base) applies the throttle;
-      // the project name contains "3g" so the fixture activates.
-      name: "mobile-fast-3g-360",
-      use: {
-        ...devices["Pixel 7"],
-        viewport: { width: 360, height: 780 },
-        isMobile: true,
-        hasTouch: true,
-      },
-    },
-  ],
+  projects: viewportProjects(),
 });

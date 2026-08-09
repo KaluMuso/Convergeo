@@ -28,7 +28,10 @@
     "deliveryFee": "Frais de livraison",
     "total": "Total de la commande",
     "relatedTitle": "Autres vendeurs de cet achat",
-    "back": "Retour aux commandes"
+    "back": "Retour aux commandes",
+    "actionsTitle": "Après la livraison",
+    "requestReturn": "Demander un retour",
+    "openDispute": "Ouvrir ou voir le litige"
   },
   "status": {
     "placed": "Passée",

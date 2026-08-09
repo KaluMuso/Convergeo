@@ -78,6 +78,7 @@ def test_evaluate_and_release_blocks_when_gate_refunded() -> None:
         order_id=ORDER_ID,
         status="delivered",
         vendor_id="11111111-1111-1111-1111-111111111111",
+        checkout_group_id="c1000000-0000-0000-0000-000000000098",
         cod=False,
         commission_snapshot={
             "lines": [
@@ -97,6 +98,7 @@ def test_evaluate_and_release_blocks_when_gate_refunded() -> None:
         already_released=False,
         buyer_confirmed=True,
         delivered_at=now - timedelta(hours=1),
+        has_escrow_evidence=True,
         shipped_at=now - timedelta(hours=2),
     )
     with (

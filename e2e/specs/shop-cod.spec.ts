@@ -26,9 +26,12 @@ test.describe("shop · cash on delivery", () => {
     const cod = page
       .locator('[name="payment-method"][value="cod"]')
       .or(page.getByTestId("payment-cod"));
-    await cod.first().check().catch(async () => {
-      await page.getByTestId("payment-cod").first().click();
-    });
+    await cod
+      .first()
+      .check()
+      .catch(async () => {
+        await page.getByTestId("payment-cod").first().click();
+      });
 
     // Provide landmark + phone delivery contact.
     const phoneField = page.getByLabel(/phone|mobile/i).first();
@@ -46,10 +49,12 @@ test.describe("shop · cash on delivery", () => {
       .first()
       .click();
 
-    // COD needs no gateway — confirmation should render directly.
+    // COD needs no gateway — UI shows payment-cod (honest COD confirmation),
+    // never a local payment-success claim (payment-outcome honesty).
     await expect(
       page
-        .getByTestId("payment-success")
+        .getByTestId("payment-cod")
+        .or(page.getByTestId("payment-confirming"))
         .or(page.getByTestId("cart-empty-state")),
     ).toBeVisible({ timeout: 30_000 });
   });

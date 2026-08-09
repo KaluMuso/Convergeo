@@ -164,6 +164,35 @@ function renderBody(
         requestQuoteLabels={
           catalogMessages.pdp.requestQuote as import("./request-quote-button").RequestQuoteLabels
         }
+        reportListingLabels={{
+          cta: catalogMessages.pdp.reportListing.cta,
+          heading: catalogMessages.pdp.reportListing.heading,
+          reasonLegend: catalogMessages.pdp.reportListing.reasonLegend,
+          detailLabel: catalogMessages.pdp.reportListing.detailLabel,
+          detailPlaceholder: catalogMessages.pdp.reportListing.detailPlaceholder,
+          submit: catalogMessages.pdp.reportListing.submit,
+          cancel: catalogMessages.pdp.reportListing.cancel,
+          success: catalogMessages.pdp.reportListing.success,
+          signedOut: catalogMessages.pdp.reportListing.signedOut,
+          error: catalogMessages.pdp.reportListing.error,
+          rateLimited: catalogMessages.pdp.reportListing.rateLimited,
+          reasons: [
+            {
+              value: "counterfeit",
+              label: catalogMessages.pdp.reportListing.reasons.counterfeit,
+            },
+            {
+              value: "prohibited",
+              label: catalogMessages.pdp.reportListing.reasons.prohibited,
+            },
+            { value: "scam", label: catalogMessages.pdp.reportListing.reasons.scam },
+            {
+              value: "misleading",
+              label: catalogMessages.pdp.reportListing.reasons.misleading,
+            },
+            { value: "other", label: catalogMessages.pdp.reportListing.reasons.other },
+          ],
+        }}
         comparePageLabel="Compare sellers"
       />
     </NextIntlClientProvider>,
