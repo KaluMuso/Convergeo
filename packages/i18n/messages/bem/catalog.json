@@ -243,6 +243,26 @@
         "generic": "Tatwaishibe ukutuma request. Checkeni connection no wesheni limbi.",
         "signInRequired": "Ingileni mukati ukufwaya quote."
       }
+    },
+    "reportListing": {
+      "cta": "Reporteni listing",
+      "heading": "Reporteni listing iyi",
+      "reasonLegend": "Nshi icipuba pa listing iyi?",
+      "detailLabel": "Details shimbi (tekufwaikwa)",
+      "detailPlaceholder": "Ongerezheni ifyo fingafwilisha moderation (kwabula ama contact ya personal).",
+      "submit": "Tumeni report",
+      "cancel": "Lekelelani",
+      "success": "Natotela — team ya moderation ikalola.",
+      "signedOut": "Ingileni mukati ukureporta listing.",
+      "error": "Tatwaishibe ukutuma report iyi. Wesheni limbi.",
+      "rateLimited": "Ama-reports yalicilapo. Lemeni limbi no wesheni.",
+      "reasons": {
+        "counterfeit": "Cilemona nga counterfeit",
+        "prohibited": "Cintu icalekanwa",
+        "scam": "Scam nangu ubucenjeshi",
+        "misleading": "Cilebangilisha nangu tacafyelamo",
+        "other": "Ifyo fimbi ifya kukabilisha"
+      }
     }
   },
   "plp": {
@@ -313,5 +333,8 @@
   },
   "returnableBadge": {
     "label": "Cingabwelela mu nsiku {days}"
+  },
+  "comparison": {
+    "preferredBadge": "Ushitisha asalwa"
   }
 }

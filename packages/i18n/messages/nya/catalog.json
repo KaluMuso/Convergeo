@@ -243,6 +243,26 @@
         "generic": "Sitinathe kutumiza pempho. Onani connection ndi yesaninso.",
         "signInRequired": "Lowani kuti mupembe quote."
       }
+    },
+    "reportListing": {
+      "cta": "Nenani listing",
+      "heading": "Nenani za listing iyi",
+      "reasonLegend": "Nchiyani cholakwika pa listing iyi?",
+      "detailLabel": "Zambiri (zosafunikira)",
+      "detailPlaceholder": "Onjezani nkhani zothandiza moderation (osagawana ma contact a personal).",
+      "submit": "Tumizani report",
+      "cancel": "Lekani",
+      "success": "Zikomo — team ya moderation idzaiona.",
+      "signedOut": "Lowani kuti munene za listing.",
+      "error": "Sitinathe kutumiza report iyi. Yesaninso.",
+      "rateLimited": "Ma-reports ambiri. Dikirani ndi yesaninso.",
+      "reasons": {
+        "counterfeit": "Zikuganiziridwa kuti ndi counterfeit",
+        "prohibited": "Chinthu choletsedwa",
+        "scam": "Scam kapena chinyengo",
+        "misleading": "Zosokoneza kapena zolakwika",
+        "other": "Nkhawa ina"
+      }
     }
   },
   "plp": {
@@ -313,5 +333,8 @@
   },
   "returnableBadge": {
     "label": "Itha kubwezeredwa mkati mwa masiku {days}"
+  },
+  "comparison": {
+    "preferredBadge": "Wogulitsa wosankhidwa"
   }
 }

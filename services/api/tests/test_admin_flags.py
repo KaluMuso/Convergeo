@@ -279,8 +279,9 @@ def _seed_base(fake: FakeSupabaseClient) -> None:
             {
                 "id": FLAG_PROHIBITED_ID,
                 "entity_type": "prohibited",
-                "entity_id": LISTING_ID,
-                "reason": "Prohibited category attempt",
+                # Pre-listing policy rejections key on the attempting vendor.
+                "entity_id": VENDOR_ID,
+                "reason": "prohibited_listing_attempt:keyword:weapon",
                 "reporter_user_id": USER_ID,
                 "status": "open",
                 "created_at": now,

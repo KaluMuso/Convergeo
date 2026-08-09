@@ -8,6 +8,7 @@ from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.moderation.prohibited import screen_listing
+from app.services.moderation.prohibited_flags import record_prohibited_listing_attempt
 from app.services.stock.revalidate import CartLineSnapshot, RevalidateResult, revalidate_lines
 from fastapi import APIRouter, Depends
 from pydantic import Field, field_validator, model_validator
@@ -498,6 +499,15 @@ async def update_vendor_listing(
 
     guard = screen_listing(title=_listing_title(listing))
     if not guard.allowed:
+        record_prohibited_listing_attempt(
+            service_client.client,
+            vendor_id=str(vendor["id"]),
+            title=_listing_title(listing),
+            reason=guard.reason or "keyword",
+            matched=guard.matched,
+            reporter_user_id=current_user.id,
+            listing_id=listing_id,
+        )
         raise AppError(
             code="prohibited_listing",
             message="Listing contains a prohibited category or keyword",
