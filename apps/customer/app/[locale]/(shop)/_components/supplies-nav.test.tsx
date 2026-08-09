@@ -23,8 +23,21 @@ vi.mock("./desktop-header-search", () => ({
 
 vi.mock("./cart/mini-cart-drawer", () => ({
   useCartStore: () => ({ cart: null }),
-  useCartActions: () => ({ refresh: vi.fn() }),
+  useCartActions: () => ({ refresh: vi.fn(), openDrawer: vi.fn() }),
   getCartItemCount: () => 0,
+  CartNavTrigger: ({
+    labels,
+    cartIcon,
+    className,
+  }: {
+    labels: { openCart: string };
+    cartIcon: React.ReactNode;
+    className?: string;
+  }) => (
+    <button type="button" aria-label={labels.openCart} className={className} data-testid="cart-nav-trigger">
+      {cartIcon}
+    </button>
+  ),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -74,6 +87,7 @@ const headerLabels = {
   account: "Account",
   cart: "Cart",
   cartWithCount: "Cart, {count} items",
+  openCart: "Open cart",
   searchInput: {
     placeholder: "Search",
     submit: "Search",

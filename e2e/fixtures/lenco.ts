@@ -38,9 +38,10 @@ export async function completeSandboxMomoPush(page: Page): Promise<void> {
     .catch(() => {
       /* some flows transition straight to success — tolerate a missed wait */
     });
-  // Sandbox auto-approves the designated test MSISDN; poll for confirmation.
+  // Sandbox auto-approves the designated test MSISDN; poll for the honest
+  // confirming surface (never a local payment-success claim).
   await page
-    .getByTestId("payment-success")
+    .getByTestId("payment-confirming")
     .waitFor({ state: "visible", timeout: 90_000 });
 }
 

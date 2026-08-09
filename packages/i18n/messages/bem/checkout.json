@@ -120,6 +120,7 @@
       "landmarkLabel": "Landmark na area",
       "landmarkPlaceholder": "ngakuti Woodlands Stage 2, pa pemba ya church",
       "landmarkHelp": "Lemeni uko muli — tukakonka delivery zone.",
+      "addressLabel": "Checkout",
       "zoneFee": "Fee ya delivery: {amount}",
       "zoneFree": "Delivery ya ukwaula",
       "zoneLabel": "Zone: {zone}",

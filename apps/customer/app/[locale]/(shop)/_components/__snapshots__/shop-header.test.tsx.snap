@@ -78,10 +78,11 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
             Account
           </span>
         </a>
-        <a
-          aria-label="Cart"
+        <button
+          aria-label="Open cart"
           class="relative inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing lg:min-w-0"
-          href="/en/cart"
+          data-testid="cart-nav-trigger"
+          type="button"
         >
           <svg
             aria-hidden="true"
@@ -108,10 +109,12 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
               r="1.25"
             />
           </svg>
-          <span>
+          <span
+            class="sr-only lg:not-sr-only lg:ml-1.5"
+          >
             Cart
           </span>
-        </a>
+        </button>
       </div>
     </div>
   </nav>
@@ -229,10 +232,11 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
           Account
         </span>
       </a>
-      <a
-        aria-label="Cart"
+      <button
+        aria-label="Open cart"
         class="relative inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing lg:min-w-0"
-        href="/en/cart"
+        data-testid="cart-nav-trigger"
+        type="button"
       >
         <svg
           aria-hidden="true"
@@ -259,10 +263,12 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
             r="1.25"
           />
         </svg>
-        <span>
+        <span
+          class="sr-only lg:not-sr-only lg:ml-1.5"
+        >
           Cart
         </span>
-      </a>
+      </button>
     </div>
   </nav>
 </header>

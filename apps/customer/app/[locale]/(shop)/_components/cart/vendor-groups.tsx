@@ -18,11 +18,11 @@ import {
   type CartEmptyTrustLabels,
   type VendorGroup,
   CartEmptyTrustList,
-  CartHost,
   CartProvider,
   getCartItemCount,
   useCartActions,
   useCartStore,
+  vendorGroupLabel,
   type MiniCartLabels,
 } from "./mini-cart-drawer";
 
@@ -95,7 +95,17 @@ export function VendorGroups({
               ) : null}
               <p className="text-sm font-semibold text-text">
                 {labels.vendorGroup}
-                <span className="font-mono text-text-2"> {group.vendor_id.slice(0, 8)}</span>
+                <span
+                  className={
+                    group.vendor_name?.trim()
+                      ? "text-text-2"
+                      : "font-mono text-text-2"
+                  }
+                  data-testid={`cart-vendor-name-${group.vendor_id}`}
+                >
+                  {" "}
+                  {vendorGroupLabel(group)}
+                </span>
               </p>
               <p className="font-mono text-sm text-text-2">
                 {labels.vendorSubtotal.replace("{amount}", formatK(group.subtotal_ngwee))}
@@ -487,7 +497,6 @@ export function CartPageView({ locale, labels }: CartPageViewProps) {
   return (
     <CartProvider>
       <CartPageBody locale={locale} labels={labels} />
-      <CartHost locale={locale} labels={labels.miniCart} />
     </CartProvider>
   );
 }
