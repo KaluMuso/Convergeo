@@ -242,6 +242,16 @@ class TestLegalTransitions:
             status=from_status.value,
             fulfilment=fulfilment,
         )
+        # PAY-01: fulfilment-progress events require a successful prepaid payment.
+        from app.services.orders.state import PREPAID_PAYMENT_REQUIRED_EVENTS
+
+        if event in PREPAID_PAYMENT_REQUIRED_EVENTS:
+            _insert_payment(
+                db,
+                payment_id=str(uuid.uuid4()),
+                checkout_group_id=group_id,
+                status="success",
+            )
         before_count = count_audit_events(order_id)
 
         actor_id = {

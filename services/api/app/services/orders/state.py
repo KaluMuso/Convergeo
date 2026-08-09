@@ -56,6 +56,22 @@ Fulfilment = Literal["delivery", "pickup"]
 
 CANCELLATION_EVENTS = frozenset({OrderEvent.REJECT, OrderEvent.CANCEL})
 
+# Fulfilment-progress events require a successful prepaid payment (COD exempt).
+# Sellers must never pack/ship/confirm an unpaid prepaid order (PAY-01).
+PREPAID_PAYMENT_REQUIRED_EVENTS = frozenset(
+    {
+        OrderEvent.CONFIRM,
+        OrderEvent.START_PROCESSING,
+        OrderEvent.READY_FOR_PICKUP,
+        OrderEvent.SHIP,
+        OrderEvent.VERIFY_PICKUP,
+        OrderEvent.MARK_DELIVERED,
+        OrderEvent.CONFIRM_RECEIVED,
+        OrderEvent.AUTO_CONFIRM,
+        OrderEvent.AUTO_RELEASE,
+    }
+)
+
 
 @dataclass(frozen=True, slots=True)
 class TransitionSpec:
@@ -101,12 +117,38 @@ class OrderTransitionError(AppError):
         from_status: str,
         event: str,
         actor_role: str,
+        code: str = "order_invalid_transition",
+        http_status: int = 409,
+        extra_details: dict[str, Any] | None = None,
     ) -> None:
+        details: dict[str, Any] = {
+            "from_status": from_status,
+            "event": event,
+            "actor_role": actor_role,
+            "message_key": "vendor.orders.errors.invalidTransition",
+        }
+        if extra_details:
+            details.update(extra_details)
         super().__init__(
-            code="order_invalid_transition",
+            code=code,
             message=message,
+            http_status=http_status,
+            details=details,
+        )
+
+
+class PrepaidPaymentRequiredError(OrderTransitionError):
+    """Raised when fulfilment is attempted on an unpaid prepaid order."""
+
+    def __init__(self, *, from_status: str, event: str, actor_role: str) -> None:
+        super().__init__(
+            "Prepaid order requires successful payment before fulfilment",
+            from_status=from_status,
+            event=event,
+            actor_role=actor_role,
+            code="order_payment_required",
             http_status=409,
-            details={"from_status": from_status, "event": event, "actor_role": actor_role},
+            extra_details={"message_key": "vendor.orders.errors.paymentRequired"},
         )
 
 
@@ -275,8 +317,9 @@ WHERE o.id = {order_sql}
         status=OrderStatus(parts[1]),
         fulfilment=parts[2],  # type: ignore[arg-type]
         checkout_group_id=parts[3],
-        cod=parts[4] == "t",
-        paid=parts[5] == "true",
+        # psql -At / ::text may render boolean as t/f or true/false.
+        cod=parts[4].lower() in {"t", "true", "1"},
+        paid=parts[5].lower() in {"t", "true", "1"},
     )
 
 
@@ -385,6 +428,17 @@ def transition_order(
 
     if event in CANCELLATION_EVENTS and is_order_paid(snapshot) and not refund_path:
         raise RefundPathRequiredError()
+
+    if (
+        event in PREPAID_PAYMENT_REQUIRED_EVENTS
+        and not snapshot.cod
+        and not snapshot.paid
+    ):
+        raise PrepaidPaymentRequiredError(
+            from_status=snapshot.status.value,
+            event=event.value,
+            actor_role=actor_role.value,
+        )
 
     order_sql = sql_uuid(order_id, "order_id")
     to_status = resolved.to_status.value

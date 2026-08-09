@@ -115,6 +115,11 @@ class PaymentTransitionError(AppError):
 TRANSITION_TABLE: tuple[TransitionSpec, ...] = (
     TransitionSpec(PaymentStatus.INITIATED, PaymentEvent.USSD_PUSHED, PaymentStatus.USSD_PUSHED),
     TransitionSpec(PaymentStatus.INITIATED, PaymentEvent.CANCELLED, PaymentStatus.CANCELLED),
+    # Crash between insert and USSD_PUSHED: poll/webhook SUCCESS/FAILED/EXPIRED must
+    # still settle (PAY-01 INITIATED orphan fix).
+    TransitionSpec(PaymentStatus.INITIATED, PaymentEvent.SUCCESS, PaymentStatus.SUCCESS),
+    TransitionSpec(PaymentStatus.INITIATED, PaymentEvent.FAILED, PaymentStatus.FAILED),
+    TransitionSpec(PaymentStatus.INITIATED, PaymentEvent.EXPIRED, PaymentStatus.EXPIRED),
     TransitionSpec(PaymentStatus.USSD_PUSHED, PaymentEvent.PAY_OFFLINE, PaymentStatus.PAY_OFFLINE),
     TransitionSpec(PaymentStatus.USSD_PUSHED, PaymentEvent.SUCCESS, PaymentStatus.SUCCESS),
     TransitionSpec(PaymentStatus.USSD_PUSHED, PaymentEvent.FAILED, PaymentStatus.FAILED),
@@ -420,13 +425,70 @@ def apply_payment_status(
                 ),
             )
             return None
-    return transition_payment(
+    outcome = transition_payment(
         service_client,
         payment_id=payment_id,
         event=event,
         actor_id=actor_id,
         note=note,
     )
+    if outcome.to_status == PaymentStatus.SUCCESS:
+        _emit_payment_success_notifications(
+            service_client,
+            payment_id=payment_id,
+            checkout_group_id=snapshot.checkout_group_id,
+            amount_ngwee=snapshot.amount_ngwee,
+            lenco_reference=snapshot.lenco_reference,
+        )
+    return outcome
+
+
+def _emit_payment_success_notifications(
+    service_client: ServiceRoleClient,
+    *,
+    payment_id: str,
+    checkout_group_id: str,
+    amount_ngwee: int,
+    lenco_reference: str,
+) -> None:
+    """Customer payment_received + deferred vendor_new_order (prepaid fulfilment gate).
+
+    Best-effort: settlement already committed; notification failures must not roll back
+    money state. Never sends live WhatsApp from tests — only outbox rows.
+    """
+    try:
+        from app.services.orders.events import emit_order_lifecycle
+        from app.services.payments.events import emit_payment_lifecycle
+
+        payment_row = {
+            "id": payment_id,
+            "checkout_group_id": checkout_group_id,
+            "amount_ngwee": amount_ngwee,
+            "reference": lenco_reference,
+        }
+        emit_payment_lifecycle(
+            service_client.client,
+            event="payment_received",
+            payment_row=payment_row,
+        )
+        orders_response = (
+            service_client.client.table("orders")
+            .select("id, checkout_group_id, vendor_id, customer_id, cod, status")
+            .eq("checkout_group_id", checkout_group_id)
+            .neq("status", "cancelled")
+            .execute()
+        )
+        for order_row in _rows(orders_response):
+            if bool(order_row.get("cod")):
+                continue
+            emit_order_lifecycle(
+                service_client.client,
+                event="order_placed",
+                order_row=order_row,
+            )
+    except Exception:
+        # Money path already committed; ops can redrive outbox.
+        return
 
 
 def release_checkout_for_retry(
