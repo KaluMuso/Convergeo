@@ -61,9 +61,11 @@ secrets above.
 ## Run on staging (CI)
 
 `.github/workflows/e2e.yml` runs **nightly** (`schedule`) and on demand
-(`workflow_dispatch`, with a `pre_release` input) against the `E2E_BASE_URL`
-secret. It installs Chromium, runs the suite, and uploads trace/video artifacts
-on failure. It is **not** a required per-PR gate (staging-dependent).
+(`workflow_dispatch`, with a `pre_release` input) against `E2E_BASE_URL`
+(staging environment `STAGING_CUSTOMER_URL` mirrored in repository secret
+`E2E_BASE_URL`). Missing URL **fails the workflow** (never a vacuous green skip).
+It installs Chromium, runs the suite, and uploads trace/video artifacts on
+failure. It is **not** a required per-PR gate (staging-dependent).
 
 ## Founder / staging gate (F9b)
 

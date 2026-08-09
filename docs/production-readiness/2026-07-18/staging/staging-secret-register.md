@@ -50,6 +50,12 @@ Optional OCI names (if using API key auth instead of SSH in a future iteration):
 | `STAGING_VENDOR_URL`         | Staging/preview vendor base URL                      |
 | `STAGING_ADMIN_URL`          | Staging/preview admin base URL                       |
 
+Repository secret (or mirror `STAGING_CUSTOMER_URL` here for workflows outside the `staging` environment):
+
+| Secret name    | Purpose                                                                                                                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `E2E_BASE_URL` | Canonical staging customer origin for `.github/workflows/e2e.yml` nightly/dispatch runs (e.g. `https://convergeo-customer-git-staging-vergeo-projects.vercel.app`). Must not be localhost. |
+
 ### Application keys (staging-only)
 
 Set on the **OCI staging env file** (and only the subset required by the API).
