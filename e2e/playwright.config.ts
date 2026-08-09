@@ -5,6 +5,14 @@ import { CERTIFICATION_VIEWPORTS } from "./fixtures/viewports";
 
 const isCI = !!process.env.CI;
 
+/** Vercel Deployment Protection bypass for automation (header only — never in URLs). */
+const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim() ?? "";
+const protectionHeaders: Record<string, string> = {};
+if (bypassSecret) {
+  protectionHeaders["x-vercel-protection-bypass"] = bypassSecret;
+  protectionHeaders["x-vercel-set-bypass-cookie"] = "true";
+}
+
 /**
  * Use the pre-installed Chromium when `PW_CHROMIUM_PATH` is exported (this build
  * env pins it at /opt/pw-browsers/chromium so no browser download is triggered).
@@ -48,6 +56,7 @@ export default defineConfig({
   outputDir: "results/artifacts",
   use: {
     baseURL: BASE_URL,
+    extraHTTPHeaders: protectionHeaders,
     trace: "on-first-retry",
     video: "retain-on-failure",
     screenshot: "only-on-failure",

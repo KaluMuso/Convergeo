@@ -52,9 +52,10 @@ Optional OCI names (if using API key auth instead of SSH in a future iteration):
 
 Repository secret (or mirror `STAGING_CUSTOMER_URL` here for workflows outside the `staging` environment):
 
-| Secret name    | Purpose                                                                                                                                                                                    |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `E2E_BASE_URL` | Canonical staging customer origin for `.github/workflows/e2e.yml` nightly/dispatch runs (e.g. `https://convergeo-customer-git-staging-vergeo-projects.vercel.app`). Must not be localhost. |
+| Secret name                       | Purpose                                                                                                                                                                                                                             |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `E2E_BASE_URL`                    | Canonical staging customer origin for `.github/workflows/e2e.yml` nightly/dispatch runs (e.g. `https://convergeo-customer-git-staging-vergeo-projects.vercel.app`). Must not be localhost.                                          |
+| `VERCEL_AUTOMATION_BYPASS_SECRET` | Vercel **Protection Bypass for Automation** secret — sent as `x-vercel-protection-bypass` header (never in URLs/logs). Required when Preview URLs are SSO-gated. Generate per project in Vercel → Settings → Deployment Protection. |
 
 ### Application keys (staging-only)
 
