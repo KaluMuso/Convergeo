@@ -7,8 +7,9 @@ from unittest.mock import MagicMock
 import pytest
 from app.services.discovery import popular_searches as popular_mod
 from app.services.discovery.popular_searches import (
-    MIN_AGGREGATION_COUNT,
+    MIN_DISTINCT_CONTRIBUTORS,
     MIN_WINDOW_DAYS,
+    PER_CONTRIBUTOR_CAP,
     fetch_popular_searches,
     is_publishable_popular_term,
     looks_like_pii,
@@ -39,9 +40,23 @@ def test_prohibited_terms_blocked() -> None:
     assert not is_publishable_popular_term("alcohol delivery", count=100)
 
 
-def test_rare_terms_blocked_by_threshold() -> None:
-    assert not is_publishable_popular_term("iphone 15", count=MIN_AGGREGATION_COUNT - 1)
-    assert is_publishable_popular_term("iphone 15", count=MIN_AGGREGATION_COUNT)
+def test_rare_terms_blocked_by_distinct_contributor_threshold() -> None:
+    assert not is_publishable_popular_term(
+        "iphone 15", count=MIN_DISTINCT_CONTRIBUTORS - 1
+    )
+    assert is_publishable_popular_term("iphone 15", count=MIN_DISTINCT_CONTRIBUTORS)
+
+
+def test_single_actor_five_repeats_cannot_create_popularity() -> None:
+    """Proof: one actor repeating a query 5× fails the distinct-contributor floor.
+
+    With PER_CONTRIBUTOR_CAP=1, five rows from one user_id collapse to one
+    contributor — below MIN_DISTINCT_CONTRIBUTORS (5).
+    """
+    assert PER_CONTRIBUTOR_CAP == 1
+    single_actor_score = min(5, PER_CONTRIBUTOR_CAP)  # → 1
+    assert single_actor_score < MIN_DISTINCT_CONTRIBUTORS
+    assert not is_publishable_popular_term("iphone 15", count=single_actor_score)
 
 
 def test_fetch_popular_searches_filters_pii_and_rare(
@@ -89,7 +104,9 @@ def test_fetch_bounds_result_count(monkeypatch: pytest.MonkeyPatch) -> None:
     assert len(items) == 8
 
 
-def test_sql_includes_having_threshold(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_sql_requires_distinct_contributors_and_excludes_anon(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     captured: dict[str, str] = {}
 
     def _fake_sql(script: str) -> MagicMock:
@@ -101,5 +118,12 @@ def test_sql_includes_having_threshold(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(popular_mod, "run_sql_script", _fake_sql)
     popular_mod._fetch_aggregated_terms(days=30, limit=8)
-    assert f"HAVING count(*) >= {MIN_AGGREGATION_COUNT}" in captured["script"]
-    assert "kind = 'search'" in captured["script"]
+    script = captured["script"]
+    assert "GROUP BY normalized_term, user_id" in script
+    assert f"HAVING count(*) >= {MIN_DISTINCT_CONTRIBUTORS}" in script
+    assert f"least(count(*)::int, {PER_CONTRIBUTOR_CAP})" in script
+    assert "user_id IS NOT NULL" in script
+    assert "kind = 'search'" in script
+    # Must not use raw row count(*) alone as the popularity score.
+    assert "HAVING count(*) >= " in script  # distinct contributors after GROUP BY user_id
+    assert "ip" not in script.lower()

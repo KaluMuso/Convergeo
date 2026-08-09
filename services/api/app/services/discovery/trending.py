@@ -73,6 +73,11 @@ LEFT JOIN public.search_documents sd
 WHERE vl.status = 'active'
   AND v.status = 'active'
   AND coalesce(vl.wholesale, false) = false
+  -- OOS listings must not surface as "trending" merch.
+  AND (
+    vl.stock_mode = 'always_available'
+    OR coalesce(vl.stock_qty, 0) > 0
+  )
 ORDER BY scored.trend_score DESC, vl.updated_at DESC
 LIMIT %s;
 """

@@ -25,6 +25,8 @@ def test_trending_sql_requires_raised_unique_view_floor() -> None:
     assert "vl.status = 'active'" in sql
     assert "v.status = 'active'" in sql
     assert "coalesce(vl.wholesale, false) = false" in sql
+    assert "vl.stock_mode = 'always_available'" in sql
+    assert "coalesce(vl.stock_qty, 0) > 0" in sql
 
 
 def test_fetch_trending_returns_empty_on_query_failure(
