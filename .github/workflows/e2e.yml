@@ -14,8 +14,12 @@ on:
         description: "Override E2E_BASE_URL (else uses the E2E_BASE_URL secret)"
         required: false
         type: string
+      expect_sha:
+        description: "Release-candidate SHA for strict buildId proof (default GITHUB_SHA)"
+        required: false
+        type: string
       pre_release:
-        description: "Pre-release gate run"
+        description: "Pre-release gate run (enables strict SHA verification)"
         required: false
         default: false
         type: boolean
@@ -40,6 +44,11 @@ jobs:
       E2E_VENDOR_BASE_URL: ${{ secrets.E2E_VENDOR_BASE_URL }}
       E2E_ADMIN_BASE_URL: ${{ secrets.E2E_ADMIN_BASE_URL }}
       E2E_LOCALE: en
+      # Vercel Deployment Protection bypass for automation (header — never in URLs).
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      E2E_EXPECT_SHA: ${{ inputs.expect_sha || github.sha }}
+      E2E_STRICT_SHA: ${{ inputs.pre_release && 'true' || '' }}
+      CERTIFICATION_MODE: ${{ inputs.pre_release && 'integrated-staging' || '' }}
       # Deterministic seed reset (staging-only, token-guarded).
       E2E_SEED_RESET_URL: ${{ secrets.E2E_SEED_RESET_URL }}
       E2E_SEED_TOKEN: ${{ secrets.E2E_SEED_TOKEN }}
@@ -72,29 +81,8 @@ jobs:
           host="$(printf '%s' "${E2E_BASE_URL}" | sed -E 's#^https?://##; s#/.*##')"
           echo "staging customer host=${host}"
 
-      - name: Probe staging customer health
-        run: |
-          set -euo pipefail
-          base="${E2E_BASE_URL%/}"
-          health_url="${base}/${E2E_LOCALE}/health"
-          host="$(printf '%s' "${base}" | sed -E 's#^https?://##; s#/.*##')"
-          echo "probing ${host}/${E2E_LOCALE}/health"
-          body="$(curl -fsS --max-time 45 "${health_url}")"
-          BODY="${body}" python3 - <<'PY'
-          import json, os, sys
-          body = json.loads(os.environ["BODY"])
-          if body.get("status") != "ok":
-              print(f"::error::health status={body.get('status')!r}", file=sys.stderr)
-              sys.exit(1)
-          if body.get("app") != "customer":
-              print(f"::error::health app={body.get('app')!r} want customer", file=sys.stderr)
-              sys.exit(1)
-          build_id = body.get("buildId") or ""
-          if not build_id or build_id == "unknown":
-              print("::warning::health buildId missing — deployment identity not embedded")
-          else:
-              print(f"health ok buildId_prefix={build_id[:12]}")
-          PY
+      - name: Probe staging customer (identity + protection)
+        run: node scripts/ci/e2e-staging-probe.mjs
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
@@ -115,6 +103,10 @@ jobs:
         # process deadline so a stuck runner cannot consume a staging gate
         # indefinitely if the test runner watchdog does not get to exit.
         run: timeout --signal=TERM --kill-after=60s 18m npx playwright test
+
+      - name: Guard — browser tests must have executed
+        if: success()
+        run: node scripts/ci/verify-e2e-executed.mjs e2e/results/results.json
 
       - name: Upload trace/video artifacts on failure
         if: failure()
