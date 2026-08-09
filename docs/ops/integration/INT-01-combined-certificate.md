@@ -2,7 +2,7 @@
 
 **Status:** REHEARSAL ONLY — DO NOT MERGE THIS BRANCH TO MASTER  
 **Generated:** 2026-08-09  
-**Temporary integration SHA:** `589e74d7cab882c36f161b1bff39e9ac42a48f8f`  
+**Temporary integration SHA:** `58ee10522813aab41be220b26ecb65d3d0c307f1`  
 **Base master:** `a57306d9e22067866af30341bf0e86f18bde4f74` (#603)
 
 ## Merge sequence (serial)
