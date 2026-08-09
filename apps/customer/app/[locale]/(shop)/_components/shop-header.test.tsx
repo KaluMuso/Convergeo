@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
+import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ShopHeader } from "./shop-header";
@@ -24,8 +25,26 @@ vi.mock("./desktop-header-search", () => ({
 
 vi.mock("./cart/mini-cart-drawer", () => ({
   useCartStore: () => ({ cart: null }),
-  useCartActions: () => ({ refresh: vi.fn() }),
+  useCartActions: () => ({ refresh: vi.fn(), openDrawer: vi.fn() }),
   getCartItemCount: () => 0,
+  CartNavTrigger: ({
+    labels,
+    cartIcon,
+    className,
+  }: {
+    labels: { openCart: string };
+    cartIcon: React.ReactNode;
+    className?: string;
+  }) => (
+    <button
+      type="button"
+      aria-label={labels.openCart}
+      className={className}
+      data-testid="cart-nav-trigger"
+    >
+      {cartIcon}
+    </button>
+  ),
 }));
 
 afterEach(() => {
@@ -56,6 +75,7 @@ const labels = {
   account: "Account",
   cart: "Cart",
   cartWithCount: "Cart, {count} items",
+  openCart: "Open cart",
   searchInput: {
     placeholder: "Search products, services, events…",
     submit: "Search",
@@ -84,7 +104,8 @@ describe("ShopHeader", () => {
       "href",
       "/en/account",
     );
-    expect(screen.getAllByRole("link", { name: "Cart" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId("cart-nav-trigger").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Open cart" }).length).toBeGreaterThan(0);
     expect(screen.queryByRole("link", { name: /browse/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /theme|dark|light/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Supplies" })).not.toBeInTheDocument();

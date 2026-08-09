@@ -1,11 +1,17 @@
 "use client";
 
 import { AppHeader } from "@vergeo/ui/src/app-header";
+import { IconCart } from "@vergeo/ui/src/icons";
 import Link from "next/link";
 import { useEffect, type ReactNode } from "react";
 
 import { BrandLogo } from "./brand-logo";
-import { getCartItemCount, useCartActions, useCartStore } from "./cart/mini-cart-drawer";
+import {
+  CartNavTrigger,
+  getCartItemCount,
+  useCartActions,
+  useCartStore,
+} from "./cart/mini-cart-drawer";
 import { CategoryMegaMenu } from "./category-mega-menu";
 import { DesktopHeaderSearch } from "./desktop-header-search";
 import { MerchPreviewLink, useMerchPreviewToken, withMerchPreviewParam } from "./merch-preview-nav";
@@ -36,6 +42,7 @@ export type ShopHeaderLabels = {
   account: string;
   cart: string;
   cartWithCount: string;
+  openCart: string;
   searchInput: SearchInputLabels;
 };
 
@@ -61,7 +68,35 @@ export function ShopHeader({ locale, labels, localeSwitcher, mobileSearchSlot }:
   const eligibleForSupplies = useBusinessEligibility();
 
   useEffect(() => {
-    void refresh();
+    // Defer cart hydration until after first paint so header mount does not
+    // contend with LCP on home/checkout under Fast-3G CI budgets.
+    let cancelled = false;
+    const run = () => {
+      if (!cancelled) {
+        void refresh();
+      }
+    };
+    const w = window as Window &
+      typeof globalThis & {
+        requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+        cancelIdleCallback?: (id: number) => void;
+      };
+    let idleId: number | undefined;
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    if (typeof w.requestIdleCallback === "function") {
+      idleId = w.requestIdleCallback(run, { timeout: 1500 });
+    } else {
+      timeoutId = setTimeout(run, 0);
+    }
+    return () => {
+      cancelled = true;
+      if (idleId !== undefined && typeof w.cancelIdleCallback === "function") {
+        w.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [refresh]);
 
   const cartCount = getCartItemCount(cart);
@@ -131,6 +166,18 @@ export function ShopHeader({ locale, labels, localeSwitcher, mobileSearchSlot }:
       cartHref={withMerchPreviewParam(`/${locale}/cart`, previewToken)}
       cartLabel={labels.cart}
       cartCountLabel={cartCountLabel}
+      cartSlot={
+        <CartNavTrigger
+          labels={{ openCart: cartCountLabel ?? labels.openCart }}
+          cartIcon={
+            <>
+              <IconCart aria-hidden />
+              <span className="sr-only lg:not-sr-only lg:ml-1.5">{labels.cart}</span>
+            </>
+          }
+          className="relative inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-sm px-3 text-sm font-medium text-text-2 transition-colors hover:bg-bg-2 hover:text-text focus-visible:outline-none focus-visible:shadow-focusRing lg:min-w-0"
+        />
+      }
       accountLabel={labels.account}
       accountHref={withMerchPreviewParam(`/${locale}/account`, previewToken)}
       skipLinkTargetId="shop-main"

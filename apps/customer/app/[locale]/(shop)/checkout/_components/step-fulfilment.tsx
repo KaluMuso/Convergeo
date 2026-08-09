@@ -66,6 +66,7 @@ export type FulfilmentStepLabels = {
   landmarkLabel: string;
   landmarkPlaceholder: string;
   landmarkHelp: string;
+  addressLabel: string;
   zoneFee: (amount: string) => string;
   zoneFree: string;
   zoneLabel: (zone: string) => string;
@@ -187,7 +188,7 @@ export function StepFulfilment({
           method: "POST",
           body: JSON.stringify({
             landmark: landmark.trim(),
-            label: "Checkout",
+            label: labels.addressLabel,
           }),
         });
         addressId = address.id;
@@ -489,6 +490,7 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       landmarkLabel: messages.fulfilment.landmarkLabel,
       landmarkPlaceholder: messages.fulfilment.landmarkPlaceholder,
       landmarkHelp: messages.fulfilment.landmarkHelp,
+      addressLabel: messages.fulfilment.addressLabel,
       zoneFee: (amount) => fillTemplate(messages.fulfilment.zoneFeeTemplate, { amount }),
       zoneFree: messages.fulfilment.zoneFree,
       zoneLabel: (zone) => fillTemplate(messages.fulfilment.zoneLabelTemplate, { zone }),

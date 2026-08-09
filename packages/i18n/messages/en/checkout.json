@@ -103,6 +103,7 @@
       "landmarkLabel": "Landmark & area",
       "landmarkPlaceholder": "e.g. Woodlands Stage 2, near the church",
       "landmarkHelp": "Describe where you are — we'll match a delivery zone.",
+      "addressLabel": "Checkout",
       "zoneFee": "Delivery fee: {amount}",
       "zoneFree": "Free delivery",
       "zoneLabel": "Zone: {zone}",

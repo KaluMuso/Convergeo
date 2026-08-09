@@ -46,10 +46,12 @@ test.describe("shop · cash on delivery", () => {
       .first()
       .click();
 
-    // COD needs no gateway — confirmation should render directly.
+    // COD needs no gateway — UI shows payment-cod (honest COD confirmation),
+    // never a local payment-success claim (payment-outcome honesty).
     await expect(
       page
-        .getByTestId("payment-success")
+        .getByTestId("payment-cod")
+        .or(page.getByTestId("payment-confirming"))
         .or(page.getByTestId("cart-empty-state")),
     ).toBeVisible({ timeout: 30_000 });
   });

@@ -53,6 +53,10 @@ vi.mock("./_components/shop-header", () => ({
   ShopHeader: () => <header data-testid="shop-header" />,
 }));
 
+vi.mock("./_components/cart/lazy-cart-host-slot", () => ({
+  LazyCartHostSlot: () => <div data-testid="cart-host-slot" />,
+}));
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -68,6 +72,7 @@ describe("ShopLayout PWA updates", () => {
     );
 
     expect(screen.getByTestId("pwa-update-prompt")).toBeInTheDocument();
+    expect(screen.getByTestId("cart-host-slot")).toBeInTheDocument();
     expect(screen.getByText("Shop content")).toBeInTheDocument();
   });
 });
