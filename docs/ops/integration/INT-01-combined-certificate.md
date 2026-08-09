@@ -3,9 +3,8 @@
 **Status:** REHEARSAL ONLY — DO NOT MERGE THIS BRANCH TO MASTER  
 **Generated:** 2026-08-09  
 **Stack merge tip (last serial integration commit):** `601fc6cd8efa6d49e0e8a1747a7b0c5db2aa4b71`  
+**Branch tip (includes this certificate):** see `cursor/int-rehearsal-stack-e9c5`  
 **Base master:** `a57306d9e22067866af30341bf0e86f18bde4f74` (#603)
-
-Certificate documentation commits may trail the stack merge tip on this branch.
 
 ## Merge sequence (serial)
 
@@ -26,10 +25,18 @@ Certificate documentation commits may trail the stack merge tip on this branch.
 | Customer layouts (#605)                           | No cross-PR conflict                                                                 |
 | `main.py`                                         | No multi-PR conflict on this stack                                                   |
 
-## Local evidence on stack tip
+## Evidence
+
+### Local (stack tip)
 
 - QA self-tests: **18/18 pass**
-- Full GitHub CI + Performance budgets: see PR #610 checks on branch tip
+- PAY-01 + discovery privacy/trending/kind-totals + listing reports: **52 passed**
+- Money verdict: `CODE_MONEY_SAFE_FOR_STAGING_SANDBOX`
+
+### GitHub required gates on branch tip `d004cc95` (PR #610)
+
+All required workflow checks **SUCCESS** (JS/TS, Python API, RLS, authz, migration replay, typegen, money DB, COD smoke, dependency audit, secret scan, i18n, Performance budgets).  
+Vercel preview deployments are rate-limited (`upgradeToPro=build-rate-limit`) — **BLOCKED_EXTERNAL**, non-blocking for code merge gates.
 
 ## Stale PR classification
 
