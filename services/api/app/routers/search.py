@@ -58,6 +58,7 @@ async def search(
     page_size: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
     lat: Annotated[float | None, Query(ge=-90, le=90)] = None,
     lng: Annotated[float | None, Query(ge=-180, le=180)] = None,
+    include_kind_totals: Annotated[bool, Query()] = False,
 ) -> SearchResponse:
     if lat is not None and lng is not None:
         _rate_limit_geo_read(request, supabase)
@@ -75,6 +76,7 @@ async def search(
         # Only a complete lat/lng pair drives proximity ranking; a lone coord is ignored.
         user_lat=lat if lng is not None else None,
         user_lng=lng if lat is not None else None,
+        include_kind_totals=include_kind_totals,
     )
 
 
