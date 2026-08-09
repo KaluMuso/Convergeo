@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "description": "Required gates by certification mode. Missing / malformed / NOT_RUN / UNKNOWN / BLOCKED_EXTERNAL / MEASUREMENT_UNSTABLE never count as PASS.",
+  "modes": {
+    "local-development": {
+      "label": "Local development report (not a release certificate)",
+      "report_only": true,
+      "certificate_title": "Vergeo5 Local Development Report",
+      "required_gates": ["lint", "typecheck", "unit-js", "i18n-parity"]
+    },
+    "ci": {
+      "label": "CI certification baseline",
+      "report_only": false,
+      "certificate_title": "Vergeo5 CI Release Certificate",
+      "required_gates": [
+        "lint",
+        "typecheck",
+        "unit-js",
+        "unit-api",
+        "i18n-parity",
+        "deps-audit",
+        "migration-replay",
+        "rls-isolation",
+        "int-cart",
+        "int-checkout",
+        "int-rfq",
+        "int-returns",
+        "int-orders",
+        "int-reviews",
+        "int-authz",
+        "backup-script-dry-run"
+      ]
+    },
+    "integrated-staging": {
+      "label": "Integrated staging (strict promotion)",
+      "report_only": false,
+      "certificate_title": "Vergeo5 Staging Release Certificate",
+      "required_gates": [
+        "lint",
+        "typecheck",
+        "unit-js",
+        "unit-api",
+        "i18n-parity",
+        "deps-audit",
+        "migration-replay",
+        "rls-isolation",
+        "int-cart",
+        "int-checkout",
+        "int-rfq",
+        "int-returns",
+        "int-orders",
+        "int-reviews",
+        "int-authz",
+        "deploy-identity",
+        "e2e-browse-journey",
+        "e2e-mobile-layout",
+        "e2e-data-quality",
+        "e2e-ux-surfaces",
+        "a11y-axe-smoke",
+        "perf-web-vitals-smoke",
+        "perf-bundle-budgets",
+        "payment-sandbox",
+        "backup-script-dry-run",
+        "restore-drill-proof"
+      ]
+    },
+    "production-readiness": {
+      "label": "Production readiness (strictest)",
+      "report_only": false,
+      "certificate_title": "Vergeo5 Production-Readiness Certificate",
+      "required_gates": [
+        "lint",
+        "typecheck",
+        "unit-js",
+        "unit-api",
+        "i18n-parity",
+        "deps-audit",
+        "migration-replay",
+        "rls-isolation",
+        "int-cart",
+        "int-checkout",
+        "int-rfq",
+        "int-returns",
+        "int-orders",
+        "int-reviews",
+        "int-authz",
+        "deploy-identity",
+        "e2e-browse-journey",
+        "e2e-mobile-layout",
+        "e2e-data-quality",
+        "e2e-ux-surfaces",
+        "a11y-axe-smoke",
+        "perf-web-vitals-smoke",
+        "perf-bundle-budgets",
+        "payment-sandbox",
+        "backup-script-dry-run",
+        "restore-drill-proof"
+      ]
+    }
+  }
+}

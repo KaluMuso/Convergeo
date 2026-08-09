@@ -47,7 +47,7 @@ describe("DesktopHeaderSearch", () => {
     const user = userEvent.setup();
     render(<DesktopHeaderSearch locale="en" labels={labels} />);
 
-    await user.type(screen.getByRole("searchbox"), "phone");
+    await user.type(screen.getByRole("combobox"), "phone");
 
     await waitFor(() => {
       expect(screen.getByRole("listbox", { name: "Search suggestions" })).toBeInTheDocument();

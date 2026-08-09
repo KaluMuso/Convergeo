@@ -108,3 +108,32 @@ export function path(p: string): string {
   const clean = p.startsWith("/") ? p : `/${p}`;
   return `/${LOCALE}${clean === "/" ? "" : clean}`;
 }
+
+/**
+ * Certification mode from the release-certify orchestrator.
+ * Strict staging/production modes require synthetic fixtures — skipped
+ * assertions must never count as PASS.
+ */
+export type CertificationMode =
+  "local-development" | "ci" | "integrated-staging" | "production-readiness";
+
+export function certificationMode(): CertificationMode {
+  const raw = str("CERTIFICATION_MODE", "local-development").toLowerCase();
+  if (
+    raw === "ci" ||
+    raw === "integrated-staging" ||
+    raw === "production-readiness" ||
+    raw === "local-development"
+  ) {
+    return raw;
+  }
+  if (raw === "staging") return "integrated-staging";
+  if (raw === "local" || raw === "report-only") return "local-development";
+  return "local-development";
+}
+
+/** True when absent seed/fixtures must FAIL (not soft-skip). */
+export function strictSyntheticRequired(): boolean {
+  const mode = certificationMode();
+  return mode === "integrated-staging" || mode === "production-readiness";
+}

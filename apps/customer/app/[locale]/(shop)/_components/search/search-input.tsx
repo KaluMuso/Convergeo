@@ -247,6 +247,7 @@ export function SearchInput({
     >
       <div className="relative">
         <Input
+          role="combobox"
           type="search"
           name="q"
           value={value}

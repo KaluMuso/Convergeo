@@ -136,7 +136,7 @@ describe("SearchInput autocomplete", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<SearchInput locale="en" labels={searchInputLabels} />);
 
-    const input = screen.getByRole("searchbox");
+    const input = screen.getByRole("combobox");
     await user.type(input, "ite");
 
     expect(request).not.toHaveBeenCalled();
@@ -161,7 +161,7 @@ describe("SearchInput autocomplete", () => {
     const user = userEvent.setup();
     render(<SearchInput locale="en" labels={searchInputLabels} />);
 
-    const input = screen.getByRole("searchbox");
+    const input = screen.getByRole("combobox");
     await user.click(input);
 
     expect(screen.getByRole("listbox", { name: "Recent searches" })).toBeInTheDocument();
