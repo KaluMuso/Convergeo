@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vergeo5.com/schemas/recovery-evidence/v1.json",
+  "title": "Vergeo5 Recovery Drill Evidence",
+  "description": "Machine-readable recovery drill evidence (STG-REC-04 / QA-02 compatible). No secrets.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "source_project_ref",
+    "backup_identifier",
+    "restore_target_ref",
+    "started_at",
+    "finished_at",
+    "duration_seconds",
+    "verdict"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1" },
+    "source_project_ref": {
+      "type": "string",
+      "description": "Supabase project ref of the backup source (never a connection string)"
+    },
+    "source_migration_tip": {
+      "type": "string",
+      "description": "Latest supabase_migrations.schema_migrations version at backup time"
+    },
+    "backup_identifier": {
+      "type": "string",
+      "description": "Dump filename or OCI object key (no path secrets)"
+    },
+    "backup_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "backup_size_bytes": { "type": "integer", "minimum": 0 },
+    "restore_target_ref": {
+      "type": "string",
+      "description": "Supabase project ref or 'local-ephemeral' for disposable test infra"
+    },
+    "restore_target_kind": {
+      "type": "string",
+      "enum": [
+        "dedicated-drill-project",
+        "supabase-branch",
+        "local-ephemeral",
+        "scratch-database",
+        "unknown"
+      ]
+    },
+    "started_at": { "type": "string", "format": "date-time" },
+    "finished_at": { "type": "string", "format": "date-time" },
+    "duration_seconds": { "type": "number", "minimum": 0 },
+    "marker_recorded": {
+      "type": "boolean",
+      "description": "Whether a pre-backup drill marker row was recorded in source"
+    },
+    "schema_verification": {
+      "type": "object",
+      "properties": {
+        "status": { "type": "string", "enum": ["PASS", "FAIL", "SKIP"] },
+        "core_tables_checked": { "type": "integer" },
+        "migration_tip_matches_repo": { "type": "boolean" },
+        "detail": { "type": "string" }
+      }
+    },
+    "data_verification": {
+      "type": "object",
+      "properties": {
+        "status": { "type": "string", "enum": ["PASS", "FAIL", "SKIP"] },
+        "seed_tables_non_empty": { "type": "boolean" },
+        "detail": { "type": "string" }
+      }
+    },
+    "rls_verification": {
+      "type": "object",
+      "properties": {
+        "status": { "type": "string", "enum": ["PASS", "FAIL", "SKIP"] },
+        "critical_tables_checked": { "type": "integer" },
+        "detail": { "type": "string" }
+      }
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "BACKUP_CONFIGURATION_VALID",
+        "RESTORE_TARGET_AUTHORIZATION_REQUIRED",
+        "RESTORE_FAILED",
+        "RESTORE_VERIFICATION_FAILED",
+        "RESTORE_DRILL_PROVEN"
+      ]
+    },
+    "detail": { "type": "string" }
+  },
+  "additionalProperties": false
+}

@@ -2,9 +2,13 @@
 # Restore a Vergeo5 logical dump into a target Postgres database.
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+# shellcheck source=../../scripts/ops/lib/recovery-guards.sh
+source "${REPO_ROOT}/scripts/ops/lib/recovery-guards.sh"
+
 BACKUP_LOCAL_DIR="${BACKUP_LOCAL_DIR:-/var/backups/vergeo5}"
 OCI_OBJECT_PREFIX="${OCI_OBJECT_PREFIX:-db/}"
-FORCE_PROD=0
 DUMP_FILE=""
 
 log() {
@@ -17,7 +21,7 @@ redact_url() {
 
 usage() {
   cat <<'EOF'
-Usage: db-restore.sh [--file PATH | --latest] [--target-url URL] [--force]
+Usage: db-restore.sh [--file PATH | --latest] [--target-url URL]
 
 Env:
   SUPABASE_DB_URL / DATABASE_URL  Target DB (if --target-url omitted)
@@ -25,21 +29,9 @@ Env:
   OCI_NAMESPACE, OCI_BUCKET_NAME, OCI_CLI_PROFILE (for --latest from bucket)
 
 Guards:
-  Refuses prod-looking URLs unless --force and interactive confirmation.
+  Hard-rejects production Supabase project ref (dpadrlxukcjbewpqympu).
+  No --force-production escape hatch.
 EOF
-}
-
-is_prod_url() {
-  local url="$1"
-  if [[ "${ENV:-}" == "production" ]]; then
-    return 0
-  fi
-  case "${url}" in
-    *prod* | *production* | *supabase.co*db.*prod* )
-      return 0
-      ;;
-  esac
-  return 1
 }
 
 resolve_target_url() {
@@ -51,15 +43,10 @@ resolve_target_url() {
   printf '%s' "${url}"
 }
 
-confirm_prod_restore() {
-  log "WARNING: target appears to be production"
-  if [[ "${FORCE_PROD}" -ne 1 ]]; then
-    log "ERROR: pass --force and type RESTORE to continue"
-    exit 1
-  fi
-  read -r -p "Type RESTORE to continue: " answer
-  if [[ "${answer}" != "RESTORE" ]]; then
-    log "Aborted"
+assert_safe_restore_target() {
+  local url="$1"
+  if recovery_is_production_restore_target "$url"; then
+    log "ERROR: refusing production restore target (${PROD_SUPABASE_PROJECT_REF})"
     exit 1
   fi
 }
@@ -126,8 +113,8 @@ main() {
         shift 2
         ;;
       --force)
-        FORCE_PROD=1
-        shift
+        log "ERROR: --force is removed; production restore targets are always refused"
+        exit 1
         ;;
       -h | --help)
         usage
@@ -148,9 +135,7 @@ main() {
     target_url="$(resolve_target_url)"
   fi
 
-  if is_prod_url "${target_url}"; then
-    confirm_prod_restore
-  fi
+  assert_safe_restore_target "${target_url}"
 
   if [[ "${use_latest}" -eq 1 ]]; then
     DUMP_FILE="$(download_latest_dump)"
