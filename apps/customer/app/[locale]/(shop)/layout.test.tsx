@@ -53,8 +53,8 @@ vi.mock("./_components/shop-header", () => ({
   ShopHeader: () => <header data-testid="shop-header" />,
 }));
 
-vi.mock("./_components/cart/cart-host-slot", () => ({
-  CartHostSlot: () => <div data-testid="cart-host-slot" />,
+vi.mock("./_components/cart/lazy-cart-host-slot", () => ({
+  LazyCartHostSlot: () => <div data-testid="cart-host-slot" />,
 }));
 
 afterEach(() => {

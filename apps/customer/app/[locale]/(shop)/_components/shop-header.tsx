@@ -68,7 +68,30 @@ export function ShopHeader({ locale, labels, localeSwitcher, mobileSearchSlot }:
   const eligibleForSupplies = useBusinessEligibility();
 
   useEffect(() => {
-    void refresh();
+    // Defer cart hydration until after first paint so header mount does not
+    // contend with LCP on home/checkout under Fast-3G CI budgets.
+    let cancelled = false;
+    const run = () => {
+      if (!cancelled) {
+        void refresh();
+      }
+    };
+    let idleId: number | undefined;
+    let timeoutId: number | undefined;
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(run, { timeout: 1500 });
+    } else {
+      timeoutId = window.setTimeout(run, 0);
+    }
+    return () => {
+      cancelled = true;
+      if (idleId !== undefined && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleId);
+      }
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
+    };
   }, [refresh]);
 
   const cartCount = getCartItemCount(cart);

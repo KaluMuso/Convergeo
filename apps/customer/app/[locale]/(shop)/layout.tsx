@@ -13,7 +13,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { TopUtilityBarSlot } from "../_components/top-utility-bar-slot";
 
 import { BottomNavClient } from "./_components/bottom-nav-client";
-import { CartHostSlot } from "./_components/cart/cart-host-slot";
+import { LazyCartHostSlot } from "./_components/cart/lazy-cart-host-slot";
 import InstallPrompt from "./_components/install-prompt";
 import { MobileHeaderSearch } from "./_components/mobile-header-search";
 import { ServiceInfoBar } from "./_components/service-info-bar";
@@ -160,7 +160,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
         locale={locale}
         suppliesItem={suppliesItem}
       />
-      <CartHostSlot
+      <LazyCartHostSlot
         locale={locale}
         labels={{
           title: tCheckout("cart.miniCartTitle"),
