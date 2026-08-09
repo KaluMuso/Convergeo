@@ -7,7 +7,9 @@ possible; DB-backed cases reuse existing fixtures without production money.
 
 from __future__ import annotations
 
+import os
 import uuid
+from collections.abc import Generator
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
@@ -30,6 +32,20 @@ from app.services.payments.state import (
     resolve_transition as resolve_payment_transition,
 )
 from app.services.payouts.gate import PayoutsDisabledError, assert_payouts_enabled
+from tests.rls.conftest import PgConn
+
+
+@pytest.fixture
+def db_url_env(db: PgConn) -> Generator[None, None, None]:
+    """Point SUPABASE_DB_URL at the live test DB for service-layer DB access."""
+    previous = os.environ.get("SUPABASE_DB_URL")
+    os.environ["SUPABASE_DB_URL"] = db.dsn
+    yield
+    if previous is None:
+        os.environ.pop("SUPABASE_DB_URL", None)
+    else:
+        os.environ["SUPABASE_DB_URL"] = previous
+
 
 # ---------------------------------------------------------------------------
 # S1–S14 matrix documentation (asserted by focused cases below)
