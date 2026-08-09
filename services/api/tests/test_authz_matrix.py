@@ -139,6 +139,10 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/clips/{clip_id}/ranking"),
         ("GET", "/directory"),
         ("GET", "/directory/{slug}"),
+        # Public discovery BFF + anonymized aggregates (IP rate-limited).
+        ("GET", "/discovery/home"),
+        ("GET", "/discovery/popular-searches"),
+        ("GET", "/discovery/trending"),
         ("GET", "/events"),
         ("GET", "/events/{slug}"),
         ("GET", "/events/{slug}/calendar.ics"),

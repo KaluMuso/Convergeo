@@ -59,6 +59,14 @@ export type SearchFacets = {
   price: SearchFacetBucket[];
 };
 
+export type SearchKindTotals = {
+  all: number;
+  products: number;
+  services: number;
+  events: number;
+  vendors: number;
+};
+
 export type SearchResponse = {
   query: string;
   expanded_query: string;
@@ -68,6 +76,7 @@ export type SearchResponse = {
   results: SearchHit[];
   degraded: boolean;
   facets?: SearchFacets | null;
+  kind_totals?: SearchKindTotals | null;
 };
 
 export type TabCounts = Record<SearchKindFilter, number>;

@@ -11,6 +11,9 @@
     "clear": "Tout effacer",
     "remove": "Supprimer {term}"
   },
+  "popular": {
+    "title": "Populaire sur Convergeo"
+  },
   "tabs": {
     "ariaLabel": "Filtrer les résultats par type",
     "all": "Tous",

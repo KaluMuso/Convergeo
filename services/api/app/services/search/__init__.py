@@ -15,6 +15,7 @@ from app.services.search.embedding_client import (
     format_vector_for_rpc,
     get_embedding_timeout_seconds,
 )
+from app.services.search.kind_totals import compute_kind_totals, filter_hits_by_kind
 from app.services.search.open_now import attach_open_now
 from app.services.search.query_builder import (
     DEFAULT_PAGE,
@@ -67,6 +68,16 @@ class SearchHit(StrictModel):
     is_open_now: bool | None = None
 
 
+class SearchKindTotals(StrictModel):
+    """Per-tab result counts from a single unkinded search candidate set."""
+
+    all: int
+    products: int
+    services: int
+    events: int
+    vendors: int
+
+
 class SearchResponse(StrictModel):
     query: str
     expanded_query: str
@@ -76,6 +87,7 @@ class SearchResponse(StrictModel):
     results: list[SearchHit]
     degraded: bool = False
     facets: SearchFacets | None = None
+    kind_totals: SearchKindTotals | None = None
 
 
 class SuggestItem(StrictModel):
@@ -383,12 +395,16 @@ async def run_search(
     user_id: str | None = None,
     user_lat: float | None = None,
     user_lng: float | None = None,
+    include_kind_totals: bool = False,
 ) -> SearchResponse:
     trimmed = query.strip()
     expanded_query = expand_query(client, trimmed)
     normalized_page = normalize_page(page)
     normalized_page_size = normalize_page_size(page_size)
-    base_filters = build_filters(kind=kind)
+    # When tab totals are requested, fetch all kinds once and filter in-process
+    # instead of fanning out five extra /search calls from the customer app.
+    rpc_kind = None if include_kind_totals else kind
+    base_filters = build_filters(kind=rpc_kind)
     display_filters = build_filters(
         kind=kind,
         category_path=category_path,
@@ -417,6 +433,12 @@ async def run_search(
         hits = drop_wholesale_listing_hits(client, hits)
     # D25 / VC-P06: demo seed inventory never appears in public discovery.
     hits = drop_demo_listing_hits(client, hits)
+
+    kind_totals: SearchKindTotals | None = None
+    if include_kind_totals and trimmed:
+        totals = compute_kind_totals(hits)
+        kind_totals = SearchKindTotals.model_validate(totals)
+        hits = filter_hits_by_kind(hits, kind)
 
     facets: SearchFacets | None = None
     if trimmed and kind in _FACET_TAB_KINDS:
@@ -483,6 +505,7 @@ async def run_search(
         results=page_items,
         degraded=degraded,
         facets=facets,
+        kind_totals=kind_totals,
     )
 
 
