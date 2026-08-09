@@ -46,6 +46,8 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MIGRATIONS_DIR="${REPO_ROOT}/supabase/migrations"
 SMOKE_SQL="${REPO_ROOT}/scripts/ops/restore-smoke.sql"
+# shellcheck source=lib/recovery-guards.sh
+source "${REPO_ROOT}/scripts/ops/lib/recovery-guards.sh"
 
 DRY_RUN=0
 DUMP_FILE=""
@@ -134,8 +136,11 @@ case "$TARGET_DB" in
   postgres|template0|template1|"")
     die "refusing to use '${TARGET_DB}' as a restore target — point at a scratch DB" ;;
 esac
-if [[ -n "$SOURCE_URL" && "$SOURCE_URL" == "$TARGET_URL" ]]; then
-  die "SOURCE_DB_URL and target are identical — refusing to clobber the source"
+if recovery_is_production_restore_target "$TARGET_URL"; then
+  die "refusing production restore target (${PROD_SUPABASE_PROJECT_REF})"
+fi
+if [[ -n "$SOURCE_URL" ]]; then
+  recovery_assert_restore_target_safe "$SOURCE_URL" "$TARGET_URL"
 fi
 
 # --- Temp dump handling ------------------------------------------------------------

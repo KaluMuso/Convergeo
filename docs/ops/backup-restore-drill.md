@@ -100,6 +100,7 @@ Append an entry to `docs/ops/drill-log.md` using the template there:
 
 ## Related
 
+- `docs/ops/stg-rec-04-recovery-drill.md` — STG-REC-04 drill orchestrator + evidence schema
 - `docs/ops/backup-runbook.md` — schedule, credentials (names), alerts
 - `infra/n8n/backup-schedule.md` — cron contract
 - `docs/ops/runbook-disaster-recovery.md` — production incident restore
