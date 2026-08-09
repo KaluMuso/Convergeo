@@ -292,7 +292,27 @@
       "used": "Occasion",
       "authenticity": "État et authenticité"
     },
-    "leadTime": "Nécessite {days} jours de délai"
+    "leadTime": "Nécessite {days} jours de délai",
+    "reportListing": {
+      "cta": "Signaler l'annonce",
+      "heading": "Signaler cette annonce",
+      "reasonLegend": "Quel est le problème avec cette annonce ?",
+      "detailLabel": "Plus de détails (facultatif)",
+      "detailPlaceholder": "Ajoutez tout contexte utile à la modération (sans coordonnées personnelles).",
+      "submit": "Envoyer le signalement",
+      "cancel": "Annuler",
+      "success": "Merci — notre équipe de modération l'examinera.",
+      "signedOut": "Connectez-vous pour signaler une annonce.",
+      "error": "Impossible d'envoyer ce signalement. Veuillez réessayer.",
+      "rateLimited": "Trop de signalements. Veuillez patienter et réessayer.",
+      "reasons": {
+        "counterfeit": "Contrefaçon suspectée",
+        "prohibited": "Article interdit",
+        "scam": "Arnaque ou fraude",
+        "misleading": "Trompeur ou inexact",
+        "other": "Autre préoccupation"
+      }
+    }
   },
   "returnableBadge": {
     "label": "Retournable sous {days} jours"
@@ -361,10 +381,10 @@
     "report": {
       "cta": "Signaler",
       "heading": "Signaler cet avis",
-      "reasonLegend": "Dites-nous ce qu'il faut vérifier.",
+      "reasonLegend": "Dites-nous ce qui doit être vérifié.",
       "submit": "Envoyer le signalement",
       "cancel": "Annuler",
-      "success": "Merci — notre équipe de modération va l'examiner.",
+      "success": "Merci — notre équipe de modération l'examinera.",
       "signedOut": "Connectez-vous pour signaler un avis.",
       "error": "Impossible d'envoyer ce signalement. Veuillez réessayer.",
       "reasons": {
