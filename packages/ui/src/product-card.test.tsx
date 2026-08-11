@@ -28,7 +28,7 @@ describe("ProductCard", () => {
 
   it("renders required fields", () => {
     render(<ProductCard {...baseProps} />);
-    expect(screen.getByTestId("product-card")).toBeInTheDocument();
+    expect(screen.getByTestId("product-card")).toHaveClass("v-card");
     expect(screen.getByText("Wireless Earbuds")).toBeInTheDocument();
     expect(screen.getByText("TechHub Lusaka")).toBeInTheDocument();
     expect(screen.getByText("K2,500.00")).toBeInTheDocument();
@@ -100,6 +100,7 @@ describe("ProductCard", () => {
 
     await user.click(screen.getByTestId("product-card-quick-add"));
     await user.click(screen.getByTestId("product-card-wishlist"));
+    expect(screen.getByTestId("product-card-quick-add")).toHaveClass("v-card__reveal");
     expect(onQuickAdd).toHaveBeenCalledTimes(1);
     expect(onWishlistToggle).toHaveBeenCalledTimes(1);
   });

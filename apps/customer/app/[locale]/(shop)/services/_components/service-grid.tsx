@@ -45,7 +45,7 @@ function badgeVariant(tier: ServiceBrowseItem["provider"]["response_time_tier"])
 
 export function ServiceGrid({ items, locale, labels }: ServiceGridProps) {
   return (
-    <ul className="grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2">
+    <ul className="grid list-none grid-cols-1 gap-5 p-0 sm:grid-cols-2 xl:grid-cols-3">
       {items.map((item) => {
         const hero = item.portfolio_images[0];
         const tier = item.provider.response_time_tier;
@@ -53,7 +53,7 @@ export function ServiceGrid({ items, locale, labels }: ServiceGridProps) {
           <li key={item.id}>
             <Link
               href={`/${locale}/s/${item.slug}`}
-              className="tap flex h-full flex-col overflow-hidden rounded-lg border border-border bg-surface transition-shadow duration-fast ease-std hover:shadow-2"
+              className="group tap flex h-full flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-1 transition-[transform,box-shadow,border-color] duration-[250ms] ease-std hover:-translate-y-1 hover:border-primary/30 hover:shadow-2 focus-visible:outline-none focus-visible:shadow-focusRing motion-reduce:transform-none"
             >
               {hero ? (
                 <CloudinaryImageStatic
@@ -61,7 +61,8 @@ export function ServiceGrid({ items, locale, labels }: ServiceGridProps) {
                   alt={item.title}
                   width={480}
                   ratio="4/3"
-                  className="w-full"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1100px) 50vw, 33vw"
+                  className="w-full rounded-none transition-transform duration-slow ease-std group-hover:scale-[1.03] motion-reduce:transform-none"
                 />
               ) : (
                 <div className="aspect-[4/3] w-full bg-bg-2" />
@@ -75,7 +76,7 @@ export function ServiceGrid({ items, locale, labels }: ServiceGridProps) {
                     <Badge variant="public" label={labels.preferredBadge} />
                   ) : null}
                 </div>
-                <h2 className="font-display text-h3 text-display-ink">{item.title}</h2>
+                <h3 className="font-display text-h3 text-display-ink">{item.title}</h3>
                 <p className="text-sm text-text-2">{item.provider.display_name}</p>
                 {item.service_area ? (
                   <p className="text-xs text-text-3">{item.service_area}</p>
