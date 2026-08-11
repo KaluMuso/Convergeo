@@ -27,13 +27,15 @@ export type VendorCardProps = {
 };
 
 const cardBaseStyle: React.CSSProperties = {
-  backgroundColor: "var(--surface)",
+  background:
+    "linear-gradient(145deg, color-mix(in srgb, var(--surface) 97%, var(--primary-tint)), var(--surface) 48%)",
   borderRadius: "var(--r-lg)",
   border: "1px solid var(--border)",
   overflow: "hidden",
   display: "flex",
   flexDirection: "column",
   minWidth: 0,
+  position: "relative",
 };
 
 const shimmerBlock: React.CSSProperties = {
@@ -99,7 +101,13 @@ export function VendorCard({
     >
       <div
         className="v-card__media"
-        style={{ position: "relative", height: 96, backgroundColor: "var(--bg-2)" }}
+        style={{
+          position: "relative",
+          height: 104,
+          overflow: "hidden",
+          background:
+            "linear-gradient(120deg, color-mix(in srgb, var(--primary) 88%, var(--panel)), color-mix(in srgb, var(--accent) 46%, var(--primary)))",
+        }}
       >
         {cover}
         {avatar ? (
@@ -166,6 +174,9 @@ export function VendorCard({
             display: "grid",
             gridTemplateColumns: `repeat(${Math.min(stats.length, 3)}, minmax(0, 1fr))`,
             gap: "var(--sp-2)",
+            marginTop: "var(--sp-1)",
+            paddingTop: "var(--sp-3)",
+            borderTop: "1px solid color-mix(in srgb, var(--border) 76%, transparent)",
           }}
         >
           {stats.map((stat) => (
