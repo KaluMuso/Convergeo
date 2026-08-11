@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _WORKFLOW_PATH = _REPO_ROOT / "infra" / "n8n" / "payouts.json"
@@ -13,7 +13,10 @@ _STAGING_ENV_EXAMPLE = _REPO_ROOT / "infra" / "staging" / ".env.staging.example"
 
 
 def _workflow() -> dict[str, Any]:
-    return json.loads(_WORKFLOW_PATH.read_text(encoding="utf-8"))
+    return cast(
+        dict[str, Any],
+        json.loads(_WORKFLOW_PATH.read_text(encoding="utf-8")),
+    )
 
 
 def _nodes_by_name(workflow: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -50,7 +53,7 @@ def test_payout_http_nodes_are_single_attempt_and_credential_bound() -> None:
         node = nodes[name]
         params = node["parameters"]
         assert params["method"] == "POST"
-        assert params["url"] == f"={{$env.API_URL}}{path}"
+        assert params["url"] == "={{$env.API_URL}}" + path
         assert params["authentication"] == "genericCredentialType"
         assert params["genericAuthType"] == "httpHeaderAuth"
         assert params["options"]["timeout"] == 240000
