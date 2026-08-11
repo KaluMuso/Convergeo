@@ -321,20 +321,10 @@ async def execute_vendor_payout(
     skip_velocity: bool = False,
 ) -> PayoutExecutionResult:
     """Full payout pipeline: eligibility → resolve → send → ledger."""
-    from app.core.env_guards import payouts_suppressed
-    from app.services.payouts.gate import assert_payouts_enabled
+    from app.services.payouts.gate import assert_payouts_execution_allowed
     from app.services.payouts.hold import assert_escrow_minimum_hold_elapsed
 
-    assert_payouts_enabled()
-    if payouts_suppressed():
-        raise AppError(
-            code="payouts_suppressed_on_staging",
-            message=(
-                "Payouts are suppressed on staging. "
-                "Set STAGING_ALLOW_PAYOUTS=true only for sandbox drills."
-            ),
-            http_status=503,
-        )
+    assert_payouts_execution_allowed()
     assert_escrow_minimum_hold_elapsed(vendor_id)
     assert_payout_method_not_held(service_client, vendor_id)
     method_fields = _vendor_payout_method_fields(service_client, vendor_id)

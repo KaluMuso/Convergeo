@@ -9,6 +9,7 @@ from app.services.payments.lenco.client import LencoStrategy
 from app.services.payments.registry import get as get_payment_strategy
 from app.services.payouts.batching import run_payout_batch
 from app.services.payouts.execution import execute_vendor_payout
+from app.services.payouts.gate import assert_payouts_execution_allowed
 from app.services.payouts.retry import retry_pending_payouts
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
@@ -60,7 +61,10 @@ def _lenco_adapters() -> tuple[LencoStrategy, Any]:
 
 @router.post(
     "/tick",
-    dependencies=[Depends(require_internal_payouts_token)],
+    dependencies=[
+        Depends(require_internal_payouts_token),
+        Depends(assert_payouts_execution_allowed),
+    ],
 )
 async def payouts_batch_tick(
     supabase: Annotated[Any, Depends(get_supabase_client)],
@@ -88,7 +92,10 @@ async def payouts_batch_tick(
 
 @router.post(
     "/retry",
-    dependencies=[Depends(require_internal_payouts_token)],
+    dependencies=[
+        Depends(require_internal_payouts_token),
+        Depends(assert_payouts_execution_allowed),
+    ],
 )
 async def payouts_retry_tick(
     supabase: Annotated[Any, Depends(get_supabase_client)],

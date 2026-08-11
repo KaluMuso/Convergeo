@@ -6,7 +6,7 @@ customer-refund-aware via the ``kind: customer_refund`` tag on ``resolve_snapsho
 (sends to the customer momo, and skips the vendor ``payout_executed`` ledger post since
 the refund legs were already posted by ``execute_refund``). The row is created
 ``pending`` (never sent inline — the refund callers are sync); the existing dispatch
-job ``POST /internal/payouts/retry-tick`` → ``retry_pending_payouts`` scans
+job ``POST /internal/payouts/retry`` → ``retry_pending_payouts`` scans
 ``pending``/``processing`` payouts and drives the sweeper. Live delivery is F9b-gated
 (needs Lenco creds for the payout adapters)."""
 

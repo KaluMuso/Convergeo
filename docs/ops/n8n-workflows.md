@@ -25,9 +25,13 @@ and delivers directly to the founder's WhatsApp.
   `WHATSAPP_CLOUD_API_URL`, `WHATSAPP_CLOUD_API_TOKEN`) — never in workflow JSON.
 - Uptime webhook auth uses `$env.UPTIME_WEBHOOK_SECRET` + header `X-Uptime-Secret`
   (constant-time compare in workflow Code node). See `infra/uptimerobot.md`.
-- Money ticks (`release-job`, `reconciliation`, `payment-sweeper`,
-  `payout-failure-alert`) retry HTTP 3×/5s and page the founder on workflow error
-  with metadata only (no payment refs / PII). Shared, **deduplicated** handler:
+- Money ticks page the founder on workflow error with metadata only (no payment
+  refs / PII). `payouts.json` deliberately makes each money-moving HTTP request
+  **once**: an automatic n8n replay after an ambiguous timeout could duplicate a
+  provider transfer, while `/internal/payouts/retry` already re-queries provider
+  status and applies application-level backoff before any re-send. Other existing
+  status/idempotent money ticks retain their documented 3×/5s transport retry.
+  Shared, **deduplicated** handler:
   `money-workflow-error-alert.json` — link it as each workflow's `settings.errorWorkflow`.
   It collapses repeats of the same failure to one page per `ALERT_DEDUPE_WINDOW_MINUTES`
   (default 15); `backup.json` dedupes its own alerts via `BACKUP_ALERT_DEDUPE_MINUTES`
@@ -53,6 +57,7 @@ activate per environment after credentials + F5 WhatsApp are live):
 | `abandoned-cart.json`             | Every 2h                                                     | `POST /internal/n8n/abandoned-carts/tick`                            | Nudge customers with abandoned carts (flag-gated)                                                                                                                                                                                                                       | M14-P06          |
 | `order-jobs.json`                 | Every 1h                                                     | `POST /internal/order-jobs/{auto-confirm,auto-release}`              | Auto-confirm delivered orders + auto-release escrow                                                                                                                                                                                                                     | M09-P10          |
 | `payment-sweeper.json`            | Every 5m                                                     | `POST /internal/payment-sweeper/tick`                                | Reconcile in-flight Lenco payment statuses (+ retry + error-page)                                                                                                                                                                                                       | M08-P04 / VD-P06 |
+| `payouts.json`                    | Every 15m                                                    | `POST /internal/payouts/{retry,tick}`                                | Re-query pending payouts before batching newly eligible vendors; no automatic HTTP replay; non-zero dead-letter/failure counts deliberately fail the workflow for the shared metadata-only error page. Inactive until F4 + F9b sandbox proof                            | M08 / VD-P06     |
 | `release-job.json`                | Every 1h                                                     | `POST /internal/release-job/tick`                                    | Sweep escrow holds older than 48h with no open dispute (+ payout queue + error-page)                                                                                                                                                                                    | M08-P08 / VD-P06 |
 | `reconciliation.json`             | Every 30m + daily 05:00                                      | `POST /internal/reconciliation/{poll-tick,daily-report}`             | Poll Lenco + emit daily reconciliation report (+ retry + error-page)                                                                                                                                                                                                    | M08-P07 / VD-P06 |
 | `reservation-sweeper.json`        | Every 2m                                                     | `POST /internal/stock-sweeper/tick`                                  | Expire stale stock reservations                                                                                                                                                                                                                                         | M07-P02          |

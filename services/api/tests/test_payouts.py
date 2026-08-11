@@ -528,11 +528,12 @@ async def test_retry_pending_batch_dispatches_customer_refund_to_customer(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """End-to-end wiring: the batch dispatch (retry_pending_payouts, driven by
-    POST /internal/payouts/retry-tick) selects a `pending` customer-refund row and
+    POST /internal/payouts/retry) selects a `pending` customer-refund row and
     sends it to the customer momo — no separate dispatch job needed."""
     from app.services.payouts.retry import retry_pending_payouts
 
     monkeypatch.setenv("LENCO_ACCOUNT_ID", "lenco-acct-1")
+    monkeypatch.setenv("PAYOUTS_ENABLED", "true")
     customer_momo = "260955550000"
     fake_client.tables["payouts"].rows.append(
         {
@@ -577,6 +578,25 @@ async def test_retry_pending_batch_dispatches_customer_refund_to_customer(
     assert momo_payout.await_args.args[0].phone == customer_momo
     ledger_mock.assert_not_called()
     assert fake_client.tables["payouts"].rows[0]["status"] == "paid"
+
+
+@pytest.mark.asyncio
+async def test_retry_pending_batch_fails_closed_before_database_query(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.services.payouts.gate import PayoutsDisabledError
+    from app.services.payouts.retry import retry_pending_payouts
+
+    monkeypatch.delenv("PAYOUTS_ENABLED", raising=False)
+    service_client = MagicMock()
+    with pytest.raises(PayoutsDisabledError):
+        await retry_pending_payouts(
+            service_client,
+            query_transfer_status=MagicMock(),
+            initiate_momo_payout=AsyncMock(),
+            initiate_bank_payout=AsyncMock(),
+        )
+    service_client.client.table.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -815,3 +835,35 @@ def test_internal_payouts_execute_requires_token(internal_client: TestClient) ->
         json={"vendor_id": VENDOR_ID, "amount_ngwee": 1000},
     )
     assert response.status_code == 401
+
+
+@pytest.mark.parametrize("endpoint", ["tick", "retry"])
+def test_scheduled_payout_routes_fail_closed_when_disabled(
+    internal_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    endpoint: str,
+) -> None:
+    monkeypatch.delenv("PAYOUTS_ENABLED", raising=False)
+    response = internal_client.post(
+        f"/internal/payouts/{endpoint}",
+        headers={"X-Internal-Token": "test-payouts-token"},
+    )
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "payouts_disabled"
+
+
+@pytest.mark.parametrize("endpoint", ["tick", "retry"])
+def test_scheduled_payout_routes_respect_staging_suppression(
+    internal_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    endpoint: str,
+) -> None:
+    monkeypatch.setenv("PAYOUTS_ENABLED", "true")
+    monkeypatch.setenv("ENV", "staging")
+    monkeypatch.delenv("STAGING_ALLOW_PAYOUTS", raising=False)
+    response = internal_client.post(
+        f"/internal/payouts/{endpoint}",
+        headers={"X-Internal-Token": "test-payouts-token"},
+    )
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "payouts_suppressed_on_staging"
