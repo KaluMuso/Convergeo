@@ -28,7 +28,8 @@ export type ServiceCardProps = {
 };
 
 const cardBaseStyle: React.CSSProperties = {
-  backgroundColor: "var(--surface)",
+  background:
+    "linear-gradient(145deg, color-mix(in srgb, var(--surface) 97%, var(--primary-tint)), var(--surface) 46%)",
   borderRadius: "var(--r-lg)",
   boxShadow: "var(--shadow-1)",
   border: "1px solid var(--border)",
@@ -36,6 +37,7 @@ const cardBaseStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   minWidth: 0,
+  position: "relative",
 };
 
 const shimmerBlock: React.CSSProperties = {
@@ -95,7 +97,16 @@ export function ServiceCard({
       data-testid="service-card"
       style={cardBaseStyle}
     >
-      <div style={{ aspectRatio: "3 / 2", backgroundColor: "var(--bg-2)" }}>{media}</div>
+      <div
+        style={{
+          aspectRatio: "3 / 2",
+          backgroundColor: "var(--bg-2)",
+          overflow: "hidden",
+          borderBottom: "1px solid color-mix(in srgb, var(--border) 70%, transparent)",
+        }}
+      >
+        {media}
+      </div>
       <div
         style={{
           padding: "var(--sp-3)",

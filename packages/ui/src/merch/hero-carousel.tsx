@@ -225,6 +225,8 @@ export function HeroCarousel({
         position: "relative",
         overflow: "hidden",
         color: "var(--panel-text)",
+        isolation: "isolate",
+        boxShadow: "0 18px 52px color-mix(in srgb, var(--panel) 28%, transparent)",
       }}
     >
       <div
@@ -256,7 +258,7 @@ export function HeroCarousel({
                 position: "relative",
                 flex: "0 0 100%",
                 scrollSnapAlign: "start",
-                minHeight: "clamp(18rem, 52vw, 28rem)",
+                minHeight: "clamp(20rem, 52vw, 31rem)",
                 display: "grid",
                 alignItems: "end",
               }}
@@ -275,14 +277,14 @@ export function HeroCarousel({
                     position: "absolute",
                     inset: 0,
                     background:
-                      "linear-gradient(105deg, color-mix(in srgb, var(--panel) 88%, transparent) 0%, color-mix(in srgb, var(--panel) 55%, transparent) 38%, transparent 72%)",
+                      "radial-gradient(90% 100% at 96% 0%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 55%), linear-gradient(105deg, color-mix(in srgb, var(--panel) 94%, transparent) 0%, color-mix(in srgb, var(--panel) 68%, transparent) 42%, color-mix(in srgb, var(--panel) 16%, transparent) 76%, transparent 100%)",
                   }}
                 />
               </div>
 
               {(slide.eyebrow || slide.title || slide.subtitle || slide.cta) && (
                 <div
-                  className="relative mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-10 sm:px-6 sm:py-12 lg:px-6 lg:py-16"
+                  className="relative mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-12 sm:px-6 sm:py-14 lg:px-6 lg:py-20"
                   style={{ zIndex: 1 }}
                 >
                   {slide.eyebrow ? (
@@ -291,7 +293,7 @@ export function HeroCarousel({
                       className="font-display"
                       style={{
                         margin: 0,
-                        fontSize: "var(--fs-hero)",
+                        fontSize: "clamp(2.5rem, 6vw, 4.6rem)",
                         lineHeight: 1,
                         letterSpacing: "-0.02em",
                         color: "var(--panel-text)",
@@ -307,7 +309,7 @@ export function HeroCarousel({
                         className="font-display"
                         style={{
                           margin: 0,
-                          fontSize: "var(--fs-h1)",
+                        fontSize: "clamp(1.8rem, 3.4vw, 2.65rem)",
                           lineHeight: 1.15,
                           color: "var(--panel-text)",
                         }}
@@ -332,9 +334,10 @@ export function HeroCarousel({
                     <p
                       style={{
                         margin: 0,
-                        maxWidth: "36rem",
+                        maxWidth: "34rem",
                         fontSize: "var(--fs-body)",
                         color: "var(--panel-muted)",
+                        lineHeight: 1.65,
                       }}
                     >
                       {slide.subtitle}
@@ -390,8 +393,9 @@ export function HeroCarousel({
                 minHeight: `${CONTROL_MIN_SIZE_PX}px`,
                 minWidth: `${CONTROL_MIN_SIZE_PX}px`,
                 borderRadius: "999px",
-                border: "1px solid color-mix(in srgb, var(--panel-text) 25%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--panel-text) 32%, transparent)",
                 background: "color-mix(in srgb, var(--panel) 72%, transparent)",
+                boxShadow: "0 6px 18px color-mix(in srgb, var(--panel) 35%, transparent)",
                 color: "var(--panel-text)",
                 fontSize: "1.5rem",
                 lineHeight: 1,
@@ -410,8 +414,9 @@ export function HeroCarousel({
                 minHeight: `${CONTROL_MIN_SIZE_PX}px`,
                 minWidth: `${CONTROL_MIN_SIZE_PX}px`,
                 borderRadius: "999px",
-                border: "1px solid color-mix(in srgb, var(--panel-text) 25%, transparent)",
+                border: "1px solid color-mix(in srgb, var(--panel-text) 32%, transparent)",
                 background: "color-mix(in srgb, var(--panel) 72%, transparent)",
+                boxShadow: "0 6px 18px color-mix(in srgb, var(--panel) 35%, transparent)",
                 color: "var(--panel-text)",
                 fontSize: "1.5rem",
                 lineHeight: 1,

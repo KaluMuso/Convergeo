@@ -407,7 +407,7 @@ export function HomeProductRail({
     <section
       aria-labelledby={id}
       className={[
-        "flex flex-col gap-3 lg:gap-4",
+        "home-rail flex flex-col gap-3 lg:gap-4",
         id === "home-rail-new" ? "motion-rise" : "motion-fade",
       ].join(" ")}
     >
@@ -490,7 +490,7 @@ export function HomeServicesRail({
   }
 
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-3 lg:gap-4">
+    <section aria-labelledby={id} className="home-rail flex flex-col gap-3 lg:gap-4">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id={id} className="font-display text-h2 text-display-ink">
           {title}
@@ -592,7 +592,7 @@ export function HomeVendorsRail({
   }
 
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-3 lg:gap-4">
+    <section aria-labelledby={id} className="home-rail flex flex-col gap-3 lg:gap-4">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id={id} className="font-display text-h2 text-display-ink">
           {title}
