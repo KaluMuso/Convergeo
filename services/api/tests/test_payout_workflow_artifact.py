@@ -6,7 +6,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _WORKFLOW_PATH = _REPO_ROOT / "infra" / "n8n" / "payouts.json"
 _PRODUCTION_ENV_EXAMPLE = _REPO_ROOT / "infra" / ".env.example"
