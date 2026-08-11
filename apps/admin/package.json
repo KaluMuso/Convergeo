@@ -19,8 +19,8 @@
     "@vergeo/observability": "workspace:*",
     "@vergeo/ui": "workspace:*",
     "jose": "^5.10.0",
-    "next": "^15.5.22",
-    "next-intl": "^4.13.4",
+    "next": "^15.5.23",
+    "next-intl": "^4.13.5",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
