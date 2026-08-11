@@ -207,11 +207,13 @@
     "doneIndicator": "✓",
     "business": {
       "heading": "Business basics",
-      "intro": "Tell buyers who you are. You can edit this later in your profile.",
+      "intro": "Tell us what you sell and how your business operates so we can tailor your setup.",
       "nameLabel": "Business or shop name",
       "namePlaceholder": "e.g. Lusaka Electronics",
       "categoryLabel": "Main category",
       "categoryPlaceholder": "Select a category",
+      "archetypeLabel": "How does your business operate?",
+      "archetypePlaceholder": "Select a business type",
       "categories": {
         "electronics": "Electronics",
         "home": "Home & living",
@@ -219,6 +221,14 @@
         "services": "Services",
         "groceries": "Groceries",
         "other": "Other"
+      },
+      "archetypes": {
+        "market_trader": "Market trader",
+        "registered_retailer": "Registered retailer",
+        "service_professional": "Service professional",
+        "manufacturer": "Manufacturer",
+        "importer_wholesaler": "Importer or wholesaler",
+        "event_organiser": "Event organiser"
       },
       "continue": "Continue",
       "saving": "Saving…"
@@ -257,6 +267,9 @@
       "heading": "Review and submit",
       "intro": "Check your details. After submission, our team reviews within one business day.",
       "businessSection": "Business",
+      "businessNameLabel": "Business name",
+      "businessCategoryLabel": "Main category",
+      "businessArchetypeLabel": "Business type",
       "docsSection": "Documents",
       "momoSection": "Mobile money",
       "nrcUploaded": "NRC photo uploaded",
@@ -774,7 +787,20 @@
         "heading": "Grow your services",
         "body": "Publish your services and reply to customer quote requests.",
         "cta": "Manage your services"
+      },
+      "events": {
+        "heading": "Run your events",
+        "body": "Create events, manage ticket types, and prepare your scan team.",
+        "cta": "Manage your events"
       }
+    },
+    "businessArchetypes": {
+      "market_trader": "market trader",
+      "registered_retailer": "registered retail",
+      "service_professional": "professional services",
+      "manufacturer": "manufacturing",
+      "importer_wholesaler": "import or wholesale",
+      "event_organiser": "events"
     },
     "businessTypes": {
       "electronics": "electronics",

@@ -6,7 +6,10 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorErrorState } from "../../_components/async-state";
-import { classifyVendorError, vendorErrorMessageKey } from "../../_lib/vendor-errors";
+import {
+  classifyVendorError,
+  vendorErrorMessageKey,
+} from "../../_lib/vendor-errors";
 import {
   createKycClient,
   isResubmitStatus,
@@ -31,7 +34,12 @@ import { KycDocsStep } from "./kyc-docs-step";
 import { ReviewStep } from "./review-step";
 import { StepProgress } from "./step-progress";
 
-import type { BusinessCategory, KycApplication, OnboardingDraft } from "../_lib/types";
+import type {
+  BusinessArchetype,
+  BusinessCategory,
+  KycApplication,
+  OnboardingDraft,
+} from "../_lib/types";
 
 type OnboardingFlowProps = {
   locale: string;
@@ -54,10 +62,16 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
   const [resubmitMode, setResubmitMode] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const getToken = useCallback(
+    () => session?.access_token ?? null,
+    [session?.access_token],
+  );
 
   const kycClient = useMemo(() => createKycClient(getToken), [getToken]);
-  const storageClient = useMemo(() => createStorageClient(getToken), [getToken]);
+  const storageClient = useMemo(
+    () => createStorageClient(getToken),
+    [getToken],
+  );
 
   const categoryLabels = useMemo(
     () => ({
@@ -67,6 +81,24 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
       services: t("onboarding.business.categories.services"),
       groceries: t("onboarding.business.categories.groceries"),
       other: t("onboarding.business.categories.other"),
+    }),
+    [t],
+  );
+
+  const archetypeLabels = useMemo(
+    () => ({
+      market_trader: t("onboarding.business.archetypes.market_trader"),
+      registered_retailer: t(
+        "onboarding.business.archetypes.registered_retailer",
+      ),
+      service_professional: t(
+        "onboarding.business.archetypes.service_professional",
+      ),
+      manufacturer: t("onboarding.business.archetypes.manufacturer"),
+      importer_wholesaler: t(
+        "onboarding.business.archetypes.importer_wholesaler",
+      ),
+      event_organiser: t("onboarding.business.archetypes.event_organiser"),
     }),
     [t],
   );
@@ -144,6 +176,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
             step: 0,
             businessName: "",
             businessCategory: "",
+            businessArchetype: "",
             legalName: "",
             momoPhone: "",
             nrcPath: null,
@@ -193,6 +226,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
       const app = await kycClient.saveDraft({
         business_name: draft.businessName.trim(),
         archetype: draft.businessCategory.trim() || null,
+        business_archetype: draft.businessArchetype.trim() || null,
       });
       setApplication(app);
       goToStep(stepIndexFromKey("kyc"));
@@ -239,8 +273,8 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
     if (!draft) {
       return;
     }
-    const docPaths = [draft.nrcPath, draft.selfiePath].filter((path): path is string =>
-      Boolean(path),
+    const docPaths = [draft.nrcPath, draft.selfiePath].filter(
+      (path): path is string => Boolean(path),
     );
     if (docPaths.length === 0 || draft.legalName.trim().length < 2) {
       setError(t("onboarding.errors.submitFailed"));
@@ -256,6 +290,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         momo_operator: null,
         legal_name: draft.legalName.trim(),
         archetype: draft.businessCategory.trim() || null,
+        business_archetype: draft.businessArchetype.trim() || null,
         business_name: draft.businessName.trim() || null,
       };
 
@@ -315,7 +350,11 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
 
   const stepKey = stepKeyFromIndex(currentStep);
   const categoryLabel =
-    categoryLabels[draft.businessCategory as BusinessCategory] ?? draft.businessCategory;
+    categoryLabels[draft.businessCategory as BusinessCategory] ??
+    draft.businessCategory;
+  const archetypeLabel =
+    archetypeLabels[draft.businessArchetype as BusinessArchetype] ??
+    draft.businessArchetype;
 
   return (
     <div className="flex flex-col gap-4">
@@ -323,7 +362,9 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         className="rounded border border-border bg-bg-2 px-3 py-2"
         data-testid="onboarding-invite-banner"
       >
-        <p className="text-sm font-medium text-display-ink">{t("onboarding.invite.eyebrow")}</p>
+        <p className="text-sm font-medium text-display-ink">
+          {t("onboarding.invite.eyebrow")}
+        </p>
         <p className="text-sm text-text-2">{t("onboarding.invite.body")}</p>
       </div>
 
@@ -337,11 +378,16 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
           doneIndicator={t("onboarding.doneIndicator")}
         />
       ) : (
-        <p className="text-sm font-medium text-primary">{t("onboarding.status.resubmit.title")}</p>
+        <p className="text-sm font-medium text-primary">
+          {t("onboarding.status.resubmit.title")}
+        </p>
       )}
 
       {error ? (
-        <div className="flex flex-col gap-2 rounded bg-danger/10 px-3 py-2" role="alert">
+        <div
+          className="flex flex-col gap-2 rounded bg-danger/10 px-3 py-2"
+          role="alert"
+        >
           <p className="text-sm text-danger">{error}</p>
           <button
             type="button"
@@ -357,8 +403,14 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         <BusinessBasicsStep
           businessName={draft.businessName}
           businessCategory={draft.businessCategory}
+          businessArchetype={draft.businessArchetype}
           onBusinessNameChange={(value) => updateDraft({ businessName: value })}
-          onBusinessCategoryChange={(value) => updateDraft({ businessCategory: value })}
+          onBusinessCategoryChange={(value) =>
+            updateDraft({ businessCategory: value })
+          }
+          onBusinessArchetypeChange={(value) =>
+            updateDraft({ businessArchetype: value })
+          }
           onContinue={() => {
             void handleBusinessContinue();
           }}
@@ -371,6 +423,9 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
             categoryLabel: t("onboarding.business.categoryLabel"),
             categoryPlaceholder: t("onboarding.business.categoryPlaceholder"),
             categories: categoryLabels,
+            archetypeLabel: t("onboarding.business.archetypeLabel"),
+            archetypePlaceholder: t("onboarding.business.archetypePlaceholder"),
+            archetypes: archetypeLabels,
             continue: t("onboarding.business.continue"),
             saving: t("onboarding.business.saving"),
             required: t("onboarding.errors.required"),
@@ -401,7 +456,9 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
             heading: resubmitMode
               ? t("onboarding.status.resubmit.title")
               : t("onboarding.kyc.heading"),
-            intro: resubmitMode ? t("onboarding.status.resubmit.body") : t("onboarding.kyc.intro"),
+            intro: resubmitMode
+              ? t("onboarding.status.resubmit.body")
+              : t("onboarding.kyc.intro"),
             nrcLabel: t("onboarding.kyc.nrcLabel"),
             nrcHelp: t("onboarding.kyc.nrcHelp"),
             selfieLabel: t("onboarding.kyc.selfieLabel"),
@@ -441,6 +498,8 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
           businessName={draft.businessName}
           businessCategory={draft.businessCategory}
           businessCategoryLabel={categoryLabel}
+          businessArchetype={draft.businessArchetype}
+          businessArchetypeLabel={archetypeLabel}
           momoPhone={draft.momoPhone}
           nrcUploaded={Boolean(draft.nrcPath)}
           selfieUploaded={Boolean(draft.selfiePath)}
@@ -452,6 +511,11 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
             heading: t("onboarding.review.heading"),
             intro: t("onboarding.review.intro"),
             businessSection: t("onboarding.review.businessSection"),
+            businessNameLabel: t("onboarding.review.businessNameLabel"),
+            businessCategoryLabel: t("onboarding.review.businessCategoryLabel"),
+            businessArchetypeLabel: t(
+              "onboarding.review.businessArchetypeLabel",
+            ),
             docsSection: t("onboarding.review.docsSection"),
             momoSection: t("onboarding.review.momoSection"),
             nrcUploaded: t("onboarding.review.nrcUploaded"),

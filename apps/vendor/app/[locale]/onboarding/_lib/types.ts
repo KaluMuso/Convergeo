@@ -29,6 +29,7 @@ export type KycApplication = {
   kyc_record_status: string | null;
   business_name: string | null;
   business_category: string | null;
+  business_archetype: string | null;
   momo_phone: string | null;
   nrc_path: string | null;
   selfie_path: string | null;
@@ -41,6 +42,7 @@ export type OnboardingDraft = {
   step: number;
   businessName: string;
   businessCategory: string;
+  businessArchetype: string;
   legalName: string;
   momoPhone: string;
   nrcPath: string | null;
@@ -57,6 +59,17 @@ export const BUSINESS_CATEGORIES = [
 ] as const;
 
 export type BusinessCategory = (typeof BUSINESS_CATEGORIES)[number];
+
+export const BUSINESS_ARCHETYPES = [
+  "market_trader",
+  "registered_retailer",
+  "service_professional",
+  "manufacturer",
+  "importer_wholesaler",
+  "event_organiser",
+] as const;
+
+export type BusinessArchetype = (typeof BUSINESS_ARCHETYPES)[number];
 
 export const LOCAL_STORAGE_KEY = "vergeo5-vendor-onboarding";
 
