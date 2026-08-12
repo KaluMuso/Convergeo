@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from datetime import datetime
 from typing import Any
 from unittest.mock import patch
 
@@ -8,6 +9,7 @@ import pytest
 from app.main import create_app
 from app.routers import directory as directory_module
 from app.services.business.access import BusinessAccess, get_business_access
+from app.services.vendors.hours import LUSAKA_TZ
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.testclient import TestClient
@@ -670,15 +672,33 @@ class TestDirectoryHelpers:
 class TestOpenNowFilter:
     """R02-P10 wiring. The filter is opt-in and must not disturb the default."""
 
+    # Monday noon Lusaka — stable reference clock for time-dependent assertions.
+    _FIXED_NOW = datetime(2026, 8, 3, 12, 0, tzinfo=LUSAKA_TZ)
+
+    @pytest.fixture(autouse=True)
+    def _freeze_open_now_clock(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Directory open_now uses server clock; freeze it so CI never hits the
+        23:59 close boundary of the all-day test hours."""
+        fixed_now = self._FIXED_NOW
+
+        class _FixedDatetime(datetime):
+            @classmethod
+            def now(cls, tz: Any = None) -> datetime:  # type: ignore[override]
+                if tz is not None:
+                    return fixed_now.astimezone(tz)
+                return fixed_now.replace(tzinfo=None)
+
+        monkeypatch.setattr(directory_module, "datetime", _FixedDatetime)
+
     def _seed_two_vendors(self, store: FakeSupabaseStore) -> None:
         always = _vendor_row(
             vendor_id="11111111-1111-1111-1111-111111111111",
             slug="always-open",
             display_name="Always Open",
         )
-        # Open every day, all day but one minute.
+        # 24:00 closes at end-of-day per hours parser (23:59:59).
         always["vendor_locations"][0]["hours"] = {
-            day: "00:00-23:59" for day in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+            day: "00:00-24:00" for day in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
         }
         no_hours = _vendor_row(
             vendor_id="22222222-2222-2222-2222-222222222222",
@@ -729,9 +749,9 @@ class TestOpenNowFilter:
     def test_any_open_branch_counts(self) -> None:
         """A vendor with a shut office and an open stall is, to a customer
         looking for somewhere to buy, open."""
-        all_week = {day: "00:00-23:59" for day in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")}
+        all_week = {day: "00:00-24:00" for day in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")}
         row = {"vendor_locations": [{"hours": {}}, {"hours": all_week}]}
-        assert directory_module._any_branch_open_now(row) is True
+        assert directory_module._any_branch_open_now(row, now=self._FIXED_NOW) is True
 
     def test_no_branches_is_not_open(self) -> None:
         assert directory_module._any_branch_open_now({"vendor_locations": []}) is False
