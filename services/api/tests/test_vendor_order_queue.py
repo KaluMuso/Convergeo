@@ -132,7 +132,12 @@ def _magic(**kwargs: Any) -> Any:
     return MagicMock(**kwargs)
 
 
-def _seed_vendor(fake: FakeSupabaseClient, *, archetype: str | None = None) -> None:
+def _seed_vendor(
+    fake: FakeSupabaseClient,
+    *,
+    archetype: str | None = None,
+    business_archetype: str | None = None,
+) -> None:
     row: dict[str, Any] = {
         "id": VENDOR_A_ID,
         "owner_user_id": USER_A_ID,
@@ -140,6 +145,8 @@ def _seed_vendor(fake: FakeSupabaseClient, *, archetype: str | None = None) -> N
     }
     if archetype is not None:
         row["archetype"] = archetype
+    if business_archetype is not None:
+        row["business_archetype"] = business_archetype
     fake.tables["vendors"].rows.append(row)
 
 
@@ -236,9 +243,10 @@ def _build_queue_app(
     monkeypatch: pytest.MonkeyPatch,
     *,
     archetype: str | None = None,
+    business_archetype: str | None = None,
 ) -> Any:
     fake = FakeSupabaseClient()
-    _seed_vendor(fake, archetype=archetype)
+    _seed_vendor(fake, archetype=archetype, business_archetype=business_archetype)
     _seed_orders(fake)
 
     monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
@@ -274,7 +282,11 @@ def queue_client(monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None,
 def queue_client_electronics(
     monkeypatch: pytest.MonkeyPatch,
 ) -> Generator[TestClient, None, None]:
-    app = _build_queue_app(monkeypatch, archetype="electronics")
+    app = _build_queue_app(
+        monkeypatch,
+        archetype="electronics",
+        business_archetype="registered_retailer",
+    )
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
@@ -394,6 +406,7 @@ def test_dashboard_returns_persisted_archetype(
     )
     assert response.status_code == 200
     assert response.json()["archetype"] == "electronics"
+    assert response.json()["business_archetype"] == "registered_retailer"
 
 
 def test_queue_filter_status(queue_client: TestClient) -> None:

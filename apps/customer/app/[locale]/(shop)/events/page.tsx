@@ -1,6 +1,7 @@
-import { loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { formatK, loadNamespace, LOCALES, type Locale } from "@vergeo/i18n";
+import { Badge } from "@vergeo/ui/src/badge";
 import { EmptyState } from "@vergeo/ui/src/empty-state";
-import { PanelHero } from "@vergeo/ui/src/panel-hero";
+import { CloudinaryImage } from "@vergeo/ui/src/media/cloudinary-image";
 import { buildCanonicalAlternates, buildLocaleCanonical } from "@vergeo/ui/src/seo/json-ld";
 import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
@@ -55,6 +56,20 @@ function parseCategory(value: string | undefined): EventCategory | null {
     return value as EventCategory;
   }
   return null;
+}
+
+function formatFeaturedEventDate(iso: string | null, locale: string): string | null {
+  if (!iso) {
+    return null;
+  }
+  return new Intl.DateTimeFormat(locale, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Africa/Lusaka",
+  }).format(new Date(iso));
 }
 
 async function getEventsTranslator(locale: string): Promise<EventsTranslator> {
@@ -143,6 +158,8 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
   const data = await fetchEvents({ dateWindow, category });
   const items = data?.items ?? [];
   const calendarDates = data?.calendar_dates ?? [];
+  const featuredEvent = items[0];
+  const remainingEvents = items.slice(1);
 
   const filterLabels = {
     tonight: t("filters.tonight"),
@@ -162,45 +179,125 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6 lg:mx-auto lg:w-full lg:max-w-5xl">
-      <PanelHero
-        title={t("browse.title")}
-        subtitle={t("browse.subtitle")}
-        cta={{
-          href: `/${locale}/sell`,
-          label: t("browse.hostCta"),
-          pitch: t("browse.hostPitch"),
-          LinkComponent: Link,
-        }}
-      />
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10 pb-8">
+      <header className="overflow-hidden rounded-lg bg-panel text-panel-text shadow-2">
+        <div className="grid min-h-[24rem] lg:grid-cols-[minmax(0,0.95fr)_minmax(24rem,1.05fr)]">
+          <div className="flex flex-col justify-center gap-5 p-6 md:p-10 lg:p-12">
+            <div className="space-y-2">
+              <h1 className="font-display text-h2 text-panel-text">{t("browse.title")}</h1>
+              {featuredEvent ? (
+                <>
+                  <h2 className="font-display text-hero text-panel-text">{featuredEvent.title}</h2>
+                  <div className="space-y-1 text-sm text-panel-muted">
+                    {formatFeaturedEventDate(featuredEvent.next_starts_at, locale) ? (
+                      <p>{formatFeaturedEventDate(featuredEvent.next_starts_at, locale)}</p>
+                    ) : null}
+                    <p>{featuredEvent.venue ?? featuredEvent.organiser.display_name}</p>
+                  </div>
+                </>
+              ) : (
+                <p className="max-w-xl text-body leading-relaxed text-panel-muted">
+                  {t("browse.subtitle")}
+                </p>
+              )}
+            </div>
 
-      <Suspense fallback={null}>
-        <DateFilterChips
-          labels={filterLabels}
-          calendarDates={calendarDates}
-          activeDateWindow={dateWindow}
-          activeCategory={category}
-        />
-      </Suspense>
+            {featuredEvent ? (
+              <div className="flex flex-wrap items-center gap-4">
+                {featuredEvent.is_sold_out ? (
+                  <Badge variant="sold_out" label={t("browse.soldOut")} />
+                ) : featuredEvent.is_free ? (
+                  <Badge variant="free" label={t("browse.free")} />
+                ) : featuredEvent.min_price_ngwee ? (
+                  <p className="text-lg font-semibold text-panel-text">
+                    {t("detail.fromPrice", { price: formatK(featuredEvent.min_price_ngwee) })}
+                  </p>
+                ) : null}
+                <Link
+                  href={`/${locale}/e/${featuredEvent.slug}`}
+                  className="inline-flex min-h-11 items-center justify-center rounded bg-primary px-6 text-sm font-semibold text-[var(--primary-btn-fg)] transition-colors duration-fast hover:bg-primary-deep focus-visible:outline-none focus-visible:shadow-focusRing"
+                >
+                  {t("browse.viewEvent")}
+                </Link>
+              </div>
+            ) : null}
+          </div>
 
-      {items.length === 0 ? (
-        <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
-      ) : (
-        <>
-          <EventGrid
-            items={items}
-            locale={locale}
-            labels={{
-              free: t("browse.free"),
-              soldOut: t("browse.soldOut"),
-              viewEvent: t("browse.viewEvent"),
-              capacityTemplate: t("detail.spots", { sold: "{sold}", total: "{total}" }),
-              verified: t("browse.verified"),
-            }}
-          />
-          <BackToTop label={tCatalog("plp.backToTop")} />
-        </>
-      )}
+          {featuredEvent?.images[0] ? (
+            <CloudinaryImage
+              publicId={featuredEvent.images[0]}
+              alt={featuredEvent.title}
+              width={1200}
+              sizes="(max-width: 1024px) 100vw, 52vw"
+              ratio="16/9"
+              priority
+              className="h-full rounded-none"
+            />
+          ) : (
+            <div
+              className="min-h-64 bg-gradient-to-br from-primary/30 via-panel-2 to-panel"
+              aria-hidden="true"
+            />
+          )}
+        </div>
+      </header>
+
+      <section className="flex flex-col gap-6" aria-labelledby="events-results-heading">
+        <div className="space-y-1">
+          <h2 id="events-results-heading" className="font-display text-h2 text-display-ink">
+            {t("browse.title")}
+          </h2>
+          <p className="text-sm text-text-2">{t("browse.subtitle")}</p>
+        </div>
+
+        <div className="rounded-lg border border-border bg-surface p-4 shadow-1 md:p-6">
+          <Suspense fallback={null}>
+            <DateFilterChips
+              labels={filterLabels}
+              calendarDates={calendarDates}
+              activeDateWindow={dateWindow}
+              activeCategory={category}
+            />
+          </Suspense>
+        </div>
+
+        {items.length === 0 ? (
+          <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
+        ) : remainingEvents.length > 0 ? (
+          <>
+            <EventGrid
+              items={remainingEvents}
+              locale={locale}
+              labels={{
+                free: t("browse.free"),
+                soldOut: t("browse.soldOut"),
+                viewEvent: t("browse.viewEvent"),
+                capacityTemplate: t("detail.spots", { sold: "{sold}", total: "{total}" }),
+                verified: t("browse.verified"),
+              }}
+            />
+            <BackToTop label={tCatalog("plp.backToTop")} />
+          </>
+        ) : null}
+      </section>
+
+      <section
+        className="flex flex-col gap-5 rounded-lg border border-border bg-primary-tint px-6 py-8 md:flex-row md:items-center md:justify-between md:px-10"
+        aria-labelledby="events-host-cta"
+      >
+        <div className="max-w-2xl space-y-2">
+          <h2 id="events-host-cta" className="font-display text-h2 text-display-ink">
+            {t("browse.hostCta")}
+          </h2>
+          <p className="text-sm leading-relaxed text-text-2">{t("browse.hostPitch")}</p>
+        </div>
+        <Link
+          href={`/${locale}/sell`}
+          className="inline-flex min-h-11 shrink-0 items-center justify-center rounded bg-primary px-6 text-sm font-semibold text-[var(--primary-btn-fg)] transition-colors duration-fast hover:bg-primary-deep focus-visible:outline-none focus-visible:shadow-focusRing"
+        >
+          {t("browse.hostCta")}
+        </Link>
+      </section>
     </div>
   );
 }

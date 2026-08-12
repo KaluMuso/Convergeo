@@ -207,11 +207,13 @@
     "doneIndicator": "✓",
     "business": {
       "heading": "Business basics",
-      "intro": "Tell buyers who you are. You can edit this later in your profile.",
+      "intro": "Mutwebele ifyo mushitisha na umo ubushitishi bwenu bubombela ukuti tumipangile bwino ukutendeka.",
       "nameLabel": "Business or shop name",
       "namePlaceholder": "e.g. Lusaka Electronics",
       "categoryLabel": "Main category",
       "categoryPlaceholder": "Select a category",
+      "archetypeLabel": "Ubushitishi bwenu bubombela shani?",
+      "archetypePlaceholder": "Saleni umusango wa bushitishi",
       "categories": {
         "electronics": "Electronics",
         "home": "Home & living",
@@ -219,6 +221,14 @@
         "services": "Imilimo",
         "groceries": "Groceries",
         "other": "Other"
+      },
+      "archetypes": {
+        "market_trader": "Umushitishi wa pa musika",
+        "registered_retailer": "Ishitolo ilembeshiwe",
+        "service_professional": "Uwapela imilimo ya bucindami",
+        "manufacturer": "Uwapanga ifintu",
+        "importer_wholesaler": "Uwingisha nangu uwashitisha ifintu ifingi",
+        "event_organiser": "Uwapanga imipikilo"
       },
       "continue": "Continue",
       "saving": "Saving…"
@@ -257,6 +267,9 @@
       "heading": "Review and submit",
       "intro": "Check your details. After submission, our team reviews within one business day.",
       "businessSection": "Business",
+      "businessNameLabel": "Ishina lya bushitishi",
+      "businessCategoryLabel": "Umulundu ukalamba",
+      "businessArchetypeLabel": "Umusango wa bushitishi",
       "docsSection": "Documents",
       "momoSection": "Mobile money",
       "nrcUploaded": "NRC photo uploaded",
@@ -774,7 +787,20 @@
         "heading": "Grow your services",
         "body": "Publish your services and reply to customer quote requests.",
         "cta": "Manage your services"
+      },
+      "events": {
+        "heading": "Longeni imipikilo yenu",
+        "body": "Pangeni imipikilo, langululeni imisango ya matikiti, no kupekanya abakafwailisha matikiti.",
+        "cta": "Longeni imipikilo yenu"
       }
+    },
+    "businessArchetypes": {
+      "market_trader": "ukushitisha pa musika",
+      "registered_retailer": "ukushitisha mu ishitolo ilembeshiwe",
+      "service_professional": "ukupela imilimo ya bucindami",
+      "manufacturer": "ukupanga ifintu",
+      "importer_wholesaler": "ukwingisha nangu ukushitisha ifintu ifingi",
+      "event_organiser": "imipikilo"
     },
     "businessTypes": {
       "electronics": "electronics",

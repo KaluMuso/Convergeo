@@ -194,6 +194,8 @@ describe("Footer", () => {
     expect(screen.getByText("Help centre")).toBeInTheDocument();
     expect(screen.getByText("MoMo")).toBeInTheDocument();
     expect(screen.getByTestId("link-/en/legal/terms")).toHaveAttribute("href", "/en/legal/terms");
+    expect(screen.getByTestId("link-/en/legal/terms")).toHaveClass("v-footer__link");
+    expect(screen.getByText("App").closest("footer")).toHaveClass("v-footer");
   });
 
   it("does not embed hardcoded user-facing link labels", () => {

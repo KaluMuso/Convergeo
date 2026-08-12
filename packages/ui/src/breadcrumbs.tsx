@@ -98,7 +98,7 @@ export function Breadcrumbs({
               ) : (
                 <LinkComponent
                   href={entry.href!}
-                  className="truncate text-primary hover:underline focus-visible:outline-none"
+                  className="truncate rounded-sm text-primary hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
                 >
                   {entry.label}
                 </LinkComponent>

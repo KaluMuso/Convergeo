@@ -21,10 +21,23 @@ from pydantic import BaseModel, Field, field_validator
 
 router = APIRouter(prefix="/kyc", tags=["kyc"])
 
-# Business archetypes persisted onto the vendor (must match vendors_archetype_check
-# in migration 0037 and BUSINESS_CATEGORIES in the vendor onboarding UI).
+# Merchandise categories persisted onto the vendor (legacy API field name:
+# archetype). These must match vendors_archetype_check in migration 0037.
 VENDOR_ARCHETYPES = frozenset(
     {"electronics", "home", "fashion_beauty", "services", "groceries", "other"}
+)
+
+# Seller operating models from the business-pipelines strategy. Kept separate
+# from the merchandise category above so both dimensions remain actionable.
+VENDOR_BUSINESS_ARCHETYPES = frozenset(
+    {
+        "market_trader",
+        "registered_retailer",
+        "service_professional",
+        "manufacturer",
+        "importer_wholesaler",
+        "event_organiser",
+    }
 )
 
 # Draft/onboarding sellers may edit business basics before admin approval.
@@ -42,6 +55,17 @@ def _validate_optional_archetype(value: str | None) -> str | None:
         return None
     if cleaned not in VENDOR_ARCHETYPES:
         raise ValueError("Unsupported vendor archetype")
+    return cleaned
+
+
+def _validate_optional_business_archetype(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+    if cleaned not in VENDOR_BUSINESS_ARCHETYPES:
+        raise ValueError("Unsupported vendor business archetype")
     return cleaned
 
 
@@ -63,6 +87,7 @@ class KycSubmitRequest(BaseModel):
     momo_operator: MomoOperator | None = None
     legal_name: str = Field(min_length=2, max_length=200)
     archetype: str | None = Field(default=None, max_length=40)
+    business_archetype: str | None = Field(default=None, max_length=40)
     business_name: str | None = Field(default=None, max_length=200)
 
     @field_validator("doc_storage_paths")
@@ -78,6 +103,11 @@ class KycSubmitRequest(BaseModel):
     def validate_archetype(cls, value: str | None) -> str | None:
         return _validate_optional_archetype(value)
 
+    @field_validator("business_archetype")
+    @classmethod
+    def validate_business_archetype(cls, value: str | None) -> str | None:
+        return _validate_optional_business_archetype(value)
+
     @field_validator("business_name")
     @classmethod
     def validate_business_name(cls, value: str | None) -> str | None:
@@ -89,11 +119,17 @@ class KycBootstrapRequest(BaseModel):
 
     business_name: str | None = Field(default=None, max_length=200)
     archetype: str | None = Field(default=None, max_length=40)
+    business_archetype: str | None = Field(default=None, max_length=40)
 
     @field_validator("archetype")
     @classmethod
     def validate_archetype(cls, value: str | None) -> str | None:
         return _validate_optional_archetype(value)
+
+    @field_validator("business_archetype")
+    @classmethod
+    def validate_business_archetype(cls, value: str | None) -> str | None:
+        return _validate_optional_business_archetype(value)
 
     @field_validator("business_name")
     @classmethod
@@ -104,11 +140,17 @@ class KycBootstrapRequest(BaseModel):
 class KycDraftUpdateRequest(BaseModel):
     business_name: str | None = Field(default=None, max_length=200)
     archetype: str | None = Field(default=None, max_length=40)
+    business_archetype: str | None = Field(default=None, max_length=40)
 
     @field_validator("archetype")
     @classmethod
     def validate_archetype(cls, value: str | None) -> str | None:
         return _validate_optional_archetype(value)
+
+    @field_validator("business_archetype")
+    @classmethod
+    def validate_business_archetype(cls, value: str | None) -> str | None:
+        return _validate_optional_business_archetype(value)
 
     @field_validator("business_name")
     @classmethod
@@ -143,6 +185,7 @@ class KycStatusResponse(BaseModel):
     momo_name_match: MomoNameMatchResponse | None
     reviewer_notes: str | None
     archetype: str | None = None
+    business_archetype: str | None = None
     business_name: str | None = None
     is_auditable_approved: bool = False
     orphaned_tier: bool = False
@@ -186,7 +229,8 @@ def _find_vendor_for_owner(
     response = (
         service_client.client.table("vendors")
         .select(
-            "id, owner_user_id, status, kyc_tier, preferred_badge, archetype, display_name, slug"
+            "id, owner_user_id, status, kyc_tier, preferred_badge, archetype, "
+            "business_archetype, display_name, slug"
         )
         .eq("owner_user_id", owner_user_id)
         .maybe_single()
@@ -234,6 +278,7 @@ def _persist_vendor_basics(
     *,
     business_name: str | None = None,
     archetype: str | None = None,
+    business_archetype: str | None = None,
 ) -> dict[str, Any] | None:
     """Persist onboarding business basics onto the owned vendor row."""
     patch: dict[str, Any] = {}
@@ -241,6 +286,8 @@ def _persist_vendor_basics(
         patch["display_name"] = business_name
     if archetype:
         patch["archetype"] = archetype
+    if business_archetype:
+        patch["business_archetype"] = business_archetype
     if not patch:
         return None
     response = (
@@ -272,6 +319,7 @@ def _create_draft_vendor(
     owner_user_id: str,
     business_name: str | None,
     archetype: str | None,
+    business_archetype: str | None,
 ) -> dict[str, Any]:
     """Insert one draft vendors row for the owner. Never assigns user_roles.vendor."""
     display_name = business_name or _DEFAULT_DRAFT_DISPLAY_NAME
@@ -284,6 +332,8 @@ def _create_draft_vendor(
     }
     if archetype:
         payload["archetype"] = archetype
+    if business_archetype:
+        payload["business_archetype"] = business_archetype
 
     try:
         response = service_client.client.table("vendors").insert(payload).execute()
@@ -352,6 +402,7 @@ def _build_status_response(
 
     momo = _serialize_momo_match(kyc_record.momo_name_match if kyc_record else None)
     archetype = vendor.get("archetype")
+    business_archetype = vendor.get("business_archetype")
     business_name = vendor.get("display_name")
     eligibility = resolve_vendor_eligibility(
         service_client,
@@ -376,6 +427,11 @@ def _build_status_response(
         momo_name_match=momo,
         reviewer_notes=kyc_record.reviewer_notes if kyc_record else None,
         archetype=str(archetype) if isinstance(archetype, str) and archetype else None,
+        business_archetype=(
+            str(business_archetype)
+            if isinstance(business_archetype, str) and business_archetype
+            else None
+        ),
         business_name=(
             str(business_name)
             if isinstance(business_name, str)
@@ -421,17 +477,19 @@ async def bootstrap_kyc_application(
             owner_user_id=current_user.id,
             business_name=payload.business_name,
             archetype=payload.archetype,
+            business_archetype=payload.business_archetype,
         )
         created = True
     else:
         vendor = existing
-        if payload.business_name or payload.archetype:
+        if payload.business_name or payload.archetype or payload.business_archetype:
             _assert_draft_editable(vendor)
             updated = _persist_vendor_basics(
                 service_client,
                 str(vendor["id"]),
                 business_name=payload.business_name,
                 archetype=payload.archetype,
+                business_archetype=payload.business_archetype,
             )
             if updated is not None:
                 vendor = {**vendor, **updated}
@@ -454,10 +512,16 @@ async def update_kyc_draft(
     service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
 ) -> KycStatusResponse:
     """Persist business basics for the caller's draft/pending application."""
-    if body.business_name is None and body.archetype is None:
+    if (
+        body.business_name is None
+        and body.archetype is None
+        and body.business_archetype is None
+    ):
         raise AppError(
             code="validation_error",
-            message="At least one of business_name or archetype is required",
+            message=(
+                "At least one of business_name, archetype, or business_archetype is required"
+            ),
             http_status=422,
         )
     vendor = _load_vendor_for_owner(service_client, current_user.id)
@@ -467,6 +531,7 @@ async def update_kyc_draft(
         str(vendor["id"]),
         business_name=body.business_name,
         archetype=body.archetype,
+        business_archetype=body.business_archetype,
     )
     if updated is not None:
         vendor = {**vendor, **updated}
@@ -498,6 +563,7 @@ async def submit_kyc(
         str(vendor["id"]),
         business_name=body.business_name,
         archetype=body.archetype,
+        business_archetype=body.business_archetype,
     )
     kyc_record_id = str(result["kyc_record"]["id"])
     return KycSubmitResponse(
@@ -552,6 +618,7 @@ async def resubmit_kyc(
         str(vendor["id"]),
         business_name=body.business_name,
         archetype=body.archetype,
+        business_archetype=body.business_archetype,
     )
     return KycSubmitResponse(
         application_status=KycApplicationStatus.SUBMITTED,

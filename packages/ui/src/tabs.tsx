@@ -147,7 +147,8 @@ export function Tabs({
               disabled={item.disabled}
               onClick={() => setActiveKey(item.key)}
               className={mergeClasses(
-                "min-h-11 shrink-0 px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:shadow-focusRing",
+                "min-h-11 shrink-0 rounded-t-sm px-4 py-2 text-sm font-medium transition-colors",
+                "focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:shadow-focusRing",
                 selected ? "border-b-2 border-primary text-primary" : "text-text-2 hover:text-text",
                 item.disabled && "cursor-not-allowed opacity-50",
               )}
@@ -172,7 +173,7 @@ export function Tabs({
             hidden={!selected}
             tabIndex={0}
             className={mergeClasses(
-              "py-4 focus-visible:outline-none focus-visible:shadow-focusRing",
+              "rounded py-4 focus-visible:outline-none focus-visible:shadow-focusRing",
               panelClassName,
             )}
           >

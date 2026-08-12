@@ -54,7 +54,7 @@ function ProductCardSkeleton({ className }: { className?: string }) {
   return (
     <article
       className={cx(
-        "flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-1",
+        "v-card v-card--static flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-1",
         className,
       )}
       data-testid="product-card-skeleton"
@@ -112,9 +112,7 @@ export function ProductCard({
   return (
     <Component
       className={cx(
-        "card-lift",
-        "tap",
-        "group flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-1",
+        "v-card group flex min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-1",
         unavailable && "opacity-80",
         className,
       )}
@@ -129,7 +127,7 @@ export function ProductCard({
           : undefined
       }
     >
-      <div className="relative aspect-[4/3] bg-bg-2">
+      <div className="v-card__media relative aspect-[4/3] bg-bg-2">
         {media ?? (
           <div
             className="flex h-full w-full items-center justify-center bg-gradient-to-br from-bg-2 to-border/40"
@@ -170,7 +168,7 @@ export function ProductCard({
               onWishlistToggle();
             }}
             data-testid="product-card-wishlist"
-            className="absolute right-2 top-2 z-[1] inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-border bg-surface text-text-2 shadow-1 transition-colors hover:text-primary focus-visible:outline-none focus-visible:shadow-focusRing"
+            className="v-card__action v-card__action--icon v-card__reveal absolute right-2 top-2 z-[1] inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-text-2 shadow-1 hover:text-primary"
           >
             <IconHeart
               filled={isWishlisted}
@@ -199,11 +197,8 @@ export function ProductCard({
             aria-label={quickAddLabel}
             data-testid="product-card-quick-add"
             className={cx(
-              "absolute bottom-2 right-2 z-[1] inline-flex min-h-11 items-center rounded-pill bg-primary px-3 text-sm font-semibold text-[var(--primary-btn-fg)] shadow-1",
-              "transition-opacity duration-fast ease-std motion-reduce:transition-none",
-              "focus-visible:outline-none focus-visible:shadow-focusRing",
-              // Always visible on coarse pointers; reveal on hover/focus for fine pointers.
-              "max-md:opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100",
+              "v-card__action v-card__action--primary v-card__reveal",
+              "absolute bottom-2 right-2 z-[1] inline-flex min-h-11 items-center rounded-pill px-3 text-sm font-semibold shadow-1",
             )}
           >
             {quickAddLabel}

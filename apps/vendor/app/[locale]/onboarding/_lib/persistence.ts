@@ -9,6 +9,7 @@ export const DEFAULT_DRAFT: OnboardingDraft = {
   step: 0,
   businessName: "",
   businessCategory: "",
+  businessArchetype: "",
   legalName: "",
   momoPhone: "",
   nrcPath: null,
@@ -65,6 +66,7 @@ export function mergeDraftWithServer(
   server: {
     business_name: string | null;
     business_category: string | null;
+    business_archetype: string | null;
     momo_phone: string | null;
     nrc_path: string | null;
     selfie_path: string | null;
@@ -75,6 +77,8 @@ export function mergeDraftWithServer(
     step: base.step,
     businessName: base.businessName || server.business_name || "",
     businessCategory: base.businessCategory || server.business_category || "",
+    businessArchetype:
+      base.businessArchetype || server.business_archetype || "",
     // legal_name is collected + persisted client-side only (no server field).
     legalName: base.legalName || "",
     momoPhone: base.momoPhone || server.momo_phone || "",
@@ -91,11 +95,20 @@ export function resolveResumeStep(
     return stepIndexFromKey("kyc");
   }
 
-  if (!draft.businessName.trim() || !draft.businessCategory.trim()) {
+  if (
+    !draft.businessName.trim() ||
+    !draft.businessCategory.trim() ||
+    !draft.businessArchetype.trim()
+  ) {
     return stepIndexFromKey("business");
   }
 
-  if (!draft.nrcPath || !draft.selfiePath || !draft.momoPhone.trim() || !draft.legalName.trim()) {
+  if (
+    !draft.nrcPath ||
+    !draft.selfiePath ||
+    !draft.momoPhone.trim() ||
+    !draft.legalName.trim()
+  ) {
     return stepIndexFromKey("kyc");
   }
 

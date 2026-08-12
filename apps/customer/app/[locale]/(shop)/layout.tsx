@@ -150,7 +150,7 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
       <main
         id="shop-main"
         tabIndex={-1}
-        className="shop-main mx-auto w-full max-w-lg flex-1 px-4 pb-20 pt-4 focus-visible:outline-none lg:max-w-7xl lg:px-6 lg:pb-12 lg:pt-6"
+        className="shop-main mx-auto w-full max-w-lg flex-1 px-4 pb-20 pt-4 focus-visible:outline-none lg:max-w-[1400px] lg:px-7 lg:pb-12 lg:pt-6"
       >
         {children}
       </main>
