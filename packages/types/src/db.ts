@@ -1027,7 +1027,7 @@ export type Database = {
         Insert: {
           capacity: number
           created_at?: string
-          ends_at?: string
+          ends_at: string
           event_id: string
           id?: string
           starts_at: string

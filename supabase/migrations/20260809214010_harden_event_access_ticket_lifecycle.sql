@@ -267,6 +267,12 @@ begin
     return new;
   end if;
 
+  -- Malformed client probes (e.g. RLS matrix DEFAULT VALUES) omit required FKs.
+  -- Defer to NOT NULL / RLS so deny cells still surface as permission errors.
+  if new.instance_id is null then
+    return new;
+  end if;
+
   select e.status
   into v_event_status
   from public.event_instances ei
