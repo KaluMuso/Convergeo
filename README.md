@@ -4,7 +4,7 @@ Mobile-first, multi-vendor commerce-powered discovery platform for Zambia.
 
 ## Prerequisites
 
-- Node.js 20 (see `.nvmrc` / `.node-version`)
+- Node.js 22 (see `.nvmrc` / `.node-version`)
 - [pnpm](https://pnpm.io/) 9 (`corepack enable`)
 
 ## Quick start

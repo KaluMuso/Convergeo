@@ -5,12 +5,16 @@ import { ProductCard } from "@vergeo/ui/src/product-card";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
+import { queueListingImpression } from "../../../../../lib/listing-view-telemetry";
 import { isDemoListingPublicId, shouldShowSampleListingBadge } from "../demo-listing";
 
 import { ListingLogisticsPills, type LogisticsPillLabels } from "./logistics-pills";
 import { useLocalWishlist } from "./use-local-wishlist";
 
 import type { CatalogListing } from "./listing-grid";
+
+const IMPRESSION_VISIBILITY_THRESHOLD = 0.5;
+const IMPRESSION_MIN_VISIBLE_MS = 1_000;
 
 /**
  * Dynamic import keeps `mini-cart-drawer` off the PLP/home *page* graph.
@@ -81,6 +85,7 @@ export function ListingCard({
   const [wishlistStatusAnnouncement, setWishlistStatusAnnouncement] = useState("");
   const [quickAdding, setQuickAdding] = useState(false);
   const [quickAddAnnouncement, setQuickAddAnnouncement] = useState("");
+  const cardRef = useRef<HTMLDivElement>(null);
   const wishlistMountedRef = useRef(false);
   const isDemo = isDemoListingPublicId(listing.imagePublicId);
   const sampleLabel = labels.sampleListing;
@@ -115,6 +120,51 @@ export function ListingCard({
     }
     setWishlistStatusAnnouncement(wishlistLabel);
   }, [isWishlisted, wishlistLabel]);
+
+  useEffect(() => {
+    const cardElement = cardRef.current;
+    if (!cardElement || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+
+    let eligibleTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearEligibilityTimer = (): void => {
+      if (eligibleTimer !== null) {
+        clearTimeout(eligibleTimer);
+        eligibleTimer = null;
+      }
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries.find((candidate) => candidate.target === cardElement);
+        const isEligible =
+          entry?.isIntersecting === true &&
+          entry.intersectionRatio >= IMPRESSION_VISIBILITY_THRESHOLD;
+
+        if (!isEligible) {
+          clearEligibilityTimer();
+          return;
+        }
+        if (eligibleTimer !== null) {
+          return;
+        }
+
+        eligibleTimer = setTimeout(() => {
+          eligibleTimer = null;
+          queueListingImpression(listing.id);
+          observer.disconnect();
+        }, IMPRESSION_MIN_VISIBLE_MS);
+      },
+      { threshold: [0, IMPRESSION_VISIBILITY_THRESHOLD] },
+    );
+
+    observer.observe(cardElement);
+    return () => {
+      clearEligibilityTimer();
+      observer.disconnect();
+    };
+  }, [listing.id]);
 
   const onQuickAdd = useCallback(() => {
     if (!listing.inStock || quickAdding) {
@@ -180,14 +230,19 @@ export function ListingCard({
 
   if (!listing.productSlug) {
     return (
-      <div className="min-w-0" data-testid="listing-card-no-slug" aria-label={listing.title}>
+      <div
+        ref={cardRef}
+        className="min-w-0"
+        data-testid="listing-card-no-slug"
+        aria-label={listing.title}
+      >
         {card}
       </div>
     );
   }
 
   return (
-    <div className="relative min-w-0" data-testid="listing-card">
+    <div ref={cardRef} className="relative min-w-0" data-testid="listing-card">
       {card}
       <Link
         href={`/${locale}/p/${listing.productSlug}`}

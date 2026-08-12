@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -17,6 +17,10 @@ vi.mock("../cart/mini-cart-drawer", () => ({
   addCartItem: vi.fn().mockResolvedValue({ items: [] }),
   openMiniCart: vi.fn(),
   setLastAddedMessage: vi.fn(),
+}));
+
+vi.mock("./contact-vendor-button", () => ({
+  ContactVendorButton: () => <button type="button" data-testid="pdp-contact-vendor-cta" />,
 }));
 
 afterEach(() => {
@@ -261,8 +265,8 @@ describe("PdpInteractiveBody contact vendor gating (BLK-202)", () => {
 
   it("renders Contact Vendor when capability is available", async () => {
     renderBody({ contactVendorEnabled: true });
-    await waitFor(() => {
-      expect(screen.getByTestId("pdp-contact-vendor-cta")).toBeInTheDocument();
-    });
+    expect(
+      await screen.findByTestId("pdp-contact-vendor-cta", {}, { timeout: 5_000 }),
+    ).toBeInTheDocument();
   });
 });

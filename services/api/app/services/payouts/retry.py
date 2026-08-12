@@ -342,6 +342,9 @@ async def retry_pending_payouts(
     limit: int = 50,
     now: datetime | None = None,
 ) -> RetryStats:
+    from app.services.payouts.gate import assert_payouts_execution_allowed
+
+    assert_payouts_execution_allowed()
     response = (
         service_client.client.table("payouts")
         .select("id, vendor_id, amount_ngwee, rail, lenco_reference, status, resolve_snapshot")
