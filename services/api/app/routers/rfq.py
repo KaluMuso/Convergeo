@@ -408,15 +408,43 @@ def _insert_message(
     return payload
 
 
-def _notification_payload(thread: dict[str, Any]) -> dict[str, Any]:
+def _notification_payload(
+    thread: dict[str, Any],
+    *,
+    recipient_id: str,
+) -> dict[str, Any]:
     """Outbox payload for RFQ events — no message body off-platform."""
-    return {
+    payload = {
         "thread_id": str(thread.get("id")),
         "vendor_id": str(thread.get("vendor_id")),
         "customer_id": str(thread.get("customer_id")),
         "listing_id": thread.get("listing_id"),
         "service_id": thread.get("service_id"),
+        "recipient_id": recipient_id,
     }
+    quote_price = thread.get("quote_price_ngwee")
+    if quote_price is not None:
+        payload["quote_price_ngwee"] = quote_price
+    return payload
+
+
+def _counterparty_recipient_id(
+    service_client: _ServiceRoleClient,
+    *,
+    thread: dict[str, Any],
+    party: Party,
+) -> str | None:
+    """Resolve the recipient opposite the authenticated sender party."""
+    if party == "customer":
+        vendor_id = thread.get("vendor_id")
+        if not isinstance(vendor_id, str) or not vendor_id:
+            return None
+        return _vendor_owner_user_id(service_client, vendor_id)
+
+    customer_id = thread.get("customer_id")
+    if not isinstance(customer_id, str) or not customer_id:
+        return None
+    return customer_id
 
 
 def _notify_counterparty(
@@ -427,6 +455,14 @@ def _notify_counterparty(
     template: str,
     message_id: str | None = None,
 ) -> None:
+    recipient_id = _counterparty_recipient_id(
+        service_client,
+        thread=thread,
+        party=party,
+    )
+    if recipient_id is None:
+        return
+
     entity_suffix = message_id or str(thread.get("id"))
     if template == RFQ_OPENED_TEMPLATE:
         event_type = "rfq-opened"
@@ -440,7 +476,7 @@ def _notify_counterparty(
         entity_id=f"{thread.get('id')}:{entity_suffix}",
         channel="whatsapp",
         template=template,
-        payload=_notification_payload(thread),
+        payload=_notification_payload(thread, recipient_id=recipient_id),
     )
 
 

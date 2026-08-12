@@ -135,7 +135,56 @@ Ready for founder action **F5** (Meta Business / WhatsApp Manager). Create each 
 
 ---
 
-## 9. `event_cancelled` (Utility — ticket holders)
+## 9. `rfq_opened` (Utility — vendor RFQ inbox; proposed / Meta approval pending)
+
+**Variables:** none
+
+> No customer message text or contact detail is sent to WhatsApp. The provider opens
+> the authenticated vendor app to read the request. Submit this exact static body to
+> Meta under founder gate F5 before activating RFQ-thread WhatsApp delivery.
+
+| Locale     | Body                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------- |
+| **en**     | A customer opened a Vergeo5 quote request. Open the vendor app to respond. Reply STOP to opt out. |
+| **bem_ZM** | _(add translation — F5 language variant; keep vernacular human-reviewed per D27)_                 |
+| **nya_ZM** | _(add translation — F5 language variant; keep vernacular human-reviewed per D27)_                 |
+
+---
+
+## 10. `rfq_reply` (Utility — RFQ conversation update; proposed / Meta approval pending)
+
+**Variables:** none
+
+> The same template serves either party and contains no free-text message body. The
+> dispatcher addresses only the counterparty recorded by the authenticated RFQ route.
+> Submit this exact static body to Meta under founder gate F5 before activation.
+
+| Locale     | Body                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------- |
+| **en**     | You have a new reply to a Vergeo5 quote request. Open the app. Reply STOP to opt out. |
+| **bem_ZM** | _(add translation — F5 language variant; keep vernacular human-reviewed per D27)_     |
+| **nya_ZM** | _(add translation — F5 language variant; keep vernacular human-reviewed per D27)_     |
+
+---
+
+## 11. `rfq_quoted` (Utility — customer quote update; proposed / Meta approval pending)
+
+**Variables:** `{{1}}` quoted price (K-formatted)
+
+> Submit this exact body and one-variable ordering to Meta under founder gate F5
+> before activation. No thread id, message text, or customer/vendor contact is sent.
+
+| Locale     | Body                                                                                                |
+| ---------- | --------------------------------------------------------------------------------------------------- |
+| **en**     | Your Vergeo5 quote request has a quote for {{1}}. Open the app to review it. Reply STOP to opt out. |
+| **bem_ZM** | _(add translation — F5 language variant; keep vernacular human-reviewed per D27)_                   |
+| **nya_ZM** | _(add translation — F5 language variant; keep vernacular human-reviewed per D27)_                   |
+
+**Sample values:** `K2,500.00`
+
+---
+
+## 12. `event_cancelled` (Utility — ticket holders)
 
 **Variables:** `{{1}}` event title · `{{2}}` event date/time · `{{3}}` refund detail line
 
@@ -153,7 +202,7 @@ Ready for founder action **F5** (Meta Business / WhatsApp Manager). Create each 
 
 ---
 
-## 10. `event_schedule_changed` (Utility — ticket holders)
+## 13. `event_schedule_changed` (Utility — ticket holders)
 
 **Variables:** `{{1}}` event title · `{{2}}` new date/time · `{{3}}` venue / location
 
@@ -167,7 +216,7 @@ Ready for founder action **F5** (Meta Business / WhatsApp Manager). Create each 
 
 ---
 
-## 11. `ops_uptime_alert` (Utility — founder paging)
+## 14. `ops_uptime_alert` (Utility — founder paging)
 
 **Variables:** `{{1}}` monitor name · `{{2}}` alert details · `{{3}}` alert timestamp (UTC)
 

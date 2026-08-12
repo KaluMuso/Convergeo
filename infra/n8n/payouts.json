@@ -1,0 +1,160 @@
+{
+  "name": "Vendor Payout Batch and Retry",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every Fifteen Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/internal/payouts/retry",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "id": "retry-pending-payouts",
+      "name": "Retry Pending Payouts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300],
+      "retryOnFail": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 Internal Payouts"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const src = ($input.first() && $input.first().json) || {};\nconst deadLettered = Number(src.dead_lettered || 0);\nif (!Number.isFinite(deadLettered) || deadLettered < 0) {\n  throw new Error('Payout retry returned invalid counters');\n}\nif (deadLettered > 0) {\n  throw new Error(`Payout retry dead-lettered ${deadLettered} item(s)`);\n}\nreturn $input.all();"
+      },
+      "id": "assert-retry-healthy",
+      "name": "Assert Retry Healthy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/internal/payouts/tick",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "id": "batch-new-payouts",
+      "name": "Batch Newly Eligible Payouts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1040, 300],
+      "retryOnFail": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 Internal Payouts"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const src = ($input.first() && $input.first().json) || {};\nconst failed = Number(src.failed || 0);\nif (!Number.isFinite(failed) || failed < 0) {\n  throw new Error('Payout batch returned invalid counters');\n}\nif (failed > 0) {\n  throw new Error(`Payout batch reported ${failed} failed item(s)`);\n}\nreturn $input.all();"
+      },
+      "id": "assert-batch-healthy",
+      "name": "Assert Batch Healthy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 300]
+    }
+  ],
+  "connections": {
+    "Every Fifteen Minutes": {
+      "main": [
+        [
+          {
+            "node": "Retry Pending Payouts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Pending Payouts": {
+      "main": [
+        [
+          {
+            "node": "Assert Retry Healthy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assert Retry Healthy": {
+      "main": [
+        [
+          {
+            "node": "Batch Newly Eligible Payouts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Newly Eligible Payouts": {
+      "main": [
+        [
+          {
+            "node": "Assert Batch Healthy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 540
+  },
+  "versionId": "strategy-audit-payouts-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Inactive founder-gated payout automation. Retry runs before batch so newly reserved payouts are not immediately re-sent. Money-moving HTTP calls intentionally have no automatic node retry. After import, bind the Vergeo5 Internal Payouts Header Auth credential and link the environment-local Shared Workflow Failure Alert as settings.errorWorkflow before sandbox validation and activation."
+  },
+  "tags": [
+    {
+      "name": "M08",
+      "createdAt": "2026-08-09T00:00:00.000Z",
+      "updatedAt": "2026-08-09T00:00:00.000Z"
+    },
+    {
+      "name": "strategy-audit",
+      "createdAt": "2026-08-09T00:00:00.000Z",
+      "updatedAt": "2026-08-09T00:00:00.000Z"
+    }
+  ]
+}
