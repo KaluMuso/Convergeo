@@ -331,8 +331,8 @@ function scanFormatKBypass(file, src) {
 // Pseudo-locale smoke (en-XA) — CI runner
 // ---------------------------------------------------------------------------
 
-// MIRROR of packages/i18n/pseudo.ts (CI pins Node 20 via .nvmrc and cannot
-// execute TypeScript directly, so the transform is duplicated here for the
+// MIRROR of packages/i18n/pseudo.ts (CI invokes this standalone script without
+// a TypeScript compilation step, so the transform is duplicated here for the
 // blocking smoke). Keep the two in sync.
 const PSEUDO_OPEN = "[!!";
 const PSEUDO_CLOSE = "!!]";

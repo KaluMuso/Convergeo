@@ -11,9 +11,9 @@
 // build/CI time from the EN namespace files.
 //
 // The transform below is intentionally tiny and pure. It is MIRRORED in
-// `scripts/ci/i18n-lint.mjs --pseudo-smoke`, which is the CI runner (CI pins
-// Node 20 via .nvmrc and cannot execute TypeScript directly). Keep the two in
-// sync — both are covered by the smoke's determinism assertions.
+// `scripts/ci/i18n-lint.mjs --pseudo-smoke`, which is the standalone CI runner
+// and does not require a TypeScript compilation step. Keep the two in sync —
+// both are covered by the smoke's determinism assertions.
 
 export const PSEUDO_LOCALE = "en-XA";
 

@@ -17,6 +17,9 @@ WhatsAppTemplateId = Literal[
     "vendor_new_order",
     "otp_login",
     "rfq_job_broadcast",
+    "rfq_opened",
+    "rfq_reply",
+    "rfq_quoted",
     "service_quote_accepted",
     "compliance_confirmation",
     "event_cancelled",
@@ -191,6 +194,17 @@ def _map_rfq_job_broadcast(payload: Mapping[str, Any]) -> tuple[str, ...]:
     return (category, area_str, preview_str)
 
 
+def _map_rfq_thread(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    # Thread notifications deliberately keep free-text messages off WhatsApp.
+    # Opened/reply templates are static: the app is the authenticated place to
+    # identify and read a conversation, so no opaque ids or contacts leave it.
+    return ()
+
+
+def _map_rfq_quoted(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    return (format_k(_require_int(payload, "quote_price_ngwee")),)
+
+
 def _map_service_quote_accepted(payload: Mapping[str, Any]) -> tuple[str, ...]:
     # Provider-facing: their quote was accepted. Body params are the deposit secured
     # in Vergeo5 escrow and the total job value — both integer ngwee (no float), so a
@@ -273,6 +287,21 @@ WHATSAPP_TEMPLATES: dict[WhatsAppTemplateId, WhatsAppTemplateDefinition] = {
         meta_template_name="rfq_job_broadcast",
         map_variables=_map_rfq_job_broadcast,
     ),
+    "rfq_opened": WhatsAppTemplateDefinition(
+        template_id="rfq_opened",
+        meta_template_name="rfq_opened",
+        map_variables=_map_rfq_thread,
+    ),
+    "rfq_reply": WhatsAppTemplateDefinition(
+        template_id="rfq_reply",
+        meta_template_name="rfq_reply",
+        map_variables=_map_rfq_thread,
+    ),
+    "rfq_quoted": WhatsAppTemplateDefinition(
+        template_id="rfq_quoted",
+        meta_template_name="rfq_quoted",
+        map_variables=_map_rfq_quoted,
+    ),
     "service_quote_accepted": WhatsAppTemplateDefinition(
         template_id="service_quote_accepted",
         meta_template_name="service_quote_accepted",
@@ -336,12 +365,16 @@ def render_whatsapp_template(
 
 def build_cloud_api_template(rendered: RenderedWhatsAppTemplate) -> CloudApiTemplatePayload:
     """Build the WhatsApp Cloud API ``messages`` POST body for a template send."""
-    components: list[dict[str, Any]] = [
-        {
-            "type": "body",
-            "parameters": [{"type": "text", "text": value} for value in rendered.body_parameters],
-        }
-    ]
+    components: list[dict[str, Any]] = []
+    if rendered.body_parameters:
+        components.append(
+            {
+                "type": "body",
+                "parameters": [
+                    {"type": "text", "text": value} for value in rendered.body_parameters
+                ],
+            }
+        )
     if rendered.button_parameters:
         components.append(
             {
@@ -354,13 +387,16 @@ def build_cloud_api_template(rendered: RenderedWhatsAppTemplate) -> CloudApiTemp
             }
         )
 
+    template: dict[str, Any] = {
+        "name": rendered.meta_template_name,
+        "language": {"code": rendered.language_code},
+    }
+    if components:
+        template["components"] = components
+
     return {
         "messaging_product": "whatsapp",
         "to": rendered.to_e164,
         "type": "template",
-        "template": {
-            "name": rendered.meta_template_name,
-            "language": {"code": rendered.language_code},
-            "components": components,
-        },
+        "template": template,
     }

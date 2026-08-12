@@ -4,6 +4,7 @@ import { track } from "@vergeo/analytics";
 import { useEffect } from "react";
 
 import { recordRecentlyViewedOnServer } from "../../../../../lib/engagement-api";
+import { recordListingPdpView } from "../../../../../lib/listing-view-telemetry";
 import { recordRecentlyViewed } from "../recently-viewed/use-recently-viewed";
 
 type Props = {
@@ -30,6 +31,9 @@ export function ProductViewTracker({ productId, listingId, recent }: Props): nul
       "product_view",
       listingId ? { product_id: productId, listing_id: listingId } : { product_id: productId },
     );
+    if (listingId) {
+      recordListingPdpView(listingId);
+    }
     if (recentSlug && recentName) {
       recordRecentlyViewed(recentSlug, recentName);
     }

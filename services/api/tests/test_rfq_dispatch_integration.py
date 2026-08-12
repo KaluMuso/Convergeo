@@ -40,6 +40,7 @@ from uuid import uuid4
 
 import httpx
 import pytest
+from app.routers import rfq as rfq_router
 from app.services.notifications.adapters.base import FailureKind, NoopAdapter, OutboxMessage
 from app.services.notifications.adapters.whatsapp import WhatsAppAdapter
 from app.services.notifications.dedupe import enqueue_outbox_row
@@ -57,8 +58,10 @@ VENDOR_B_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 OWNER_A_ID = "33333333-3333-3333-3333-333333333333"
 OWNER_B_ID = "44444444-4444-4444-4444-444444444444"
 JOB_ID = "dddddddd-dddd-dddd-dddd-dddddddddddd"
+THREAD_ID = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
 PHONE_A = "+260971234567"
 PHONE_B = "+260979876543"
+CUSTOMER_PHONE = "+260955555555"
 
 # A genuinely-unregistered WhatsApp template id — used to prove missing templates
 # fail deterministically without any network call.
@@ -341,7 +344,105 @@ async def test_matched_provider_renders_and_sends_via_whatsapp_adapter(
 
 
 # --------------------------------------------------------------------------- #
-# 2. Missing/unregistered template fails deterministically with no HTTP call.  #
+# 2. Thread events resolve the counterparty and dispatch every template.       #
+# --------------------------------------------------------------------------- #
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("template", "sender_party", "expected_recipient", "expected_phone", "expected_params"),
+    [
+        (rfq_router.RFQ_OPENED_TEMPLATE, "customer", OWNER_A_ID, PHONE_A, []),
+        (rfq_router.RFQ_REPLY_TEMPLATE, "vendor", CUSTOMER_ID, CUSTOMER_PHONE, []),
+        (
+            rfq_router.RFQ_QUOTED_TEMPLATE,
+            "vendor",
+            CUSTOMER_ID,
+            CUSTOMER_PHONE,
+            ["K2,500.00"],
+        ),
+    ],
+)
+async def test_rfq_thread_notification_dispatches_to_counterparty(
+    template: str,
+    sender_party: rfq_router.Party,
+    expected_recipient: str,
+    expected_phone: str,
+    expected_params: list[str],
+) -> None:
+    fake = _FakeSupabase()
+    _seed_provider(
+        fake,
+        vendor_id=VENDOR_A_ID,
+        owner_user_id=OWNER_A_ID,
+        display_name="Alpha Plumbing",
+        category="home_services",
+        service_area="Lusaka",
+        phone=PHONE_A,
+    )
+    fake.table("profiles").rows.append(
+        {
+            "id": CUSTOMER_ID,
+            "phone": CUSTOMER_PHONE,
+            "locale": "en",
+            "notif_prefs": {},
+        }
+    )
+    thread = {
+        "id": THREAD_ID,
+        "customer_id": CUSTOMER_ID,
+        "vendor_id": VENDOR_A_ID,
+        "listing_id": "listing-1",
+        "service_id": None,
+        "quote_price_ngwee": 250_000,
+    }
+
+    rfq_router._notify_counterparty(
+        fake,
+        thread=thread,
+        party=sender_party,
+        template=template,
+        message_id=f"message-{template}",
+    )
+
+    outbox_rows = fake.table("notification_outbox").rows
+    assert len(outbox_rows) == 1
+    row = outbox_rows[0]
+    assert row["template"] == template
+    assert row["payload"]["recipient_id"] == expected_recipient
+    assert "to" not in row["payload"]
+
+    capture = _CapturingTransport()
+    adapter = _whatsapp_adapter(capture)
+    dispatcher = NotificationDispatcher(
+        fake,
+        {"whatsapp": adapter},
+        channel_pace_seconds={"whatsapp": 0.0},
+    )
+    try:
+        stats = await dispatcher.run_batch()
+    finally:
+        await adapter.client.aclose()  # type: ignore[union-attr]
+
+    assert stats.sent == 1
+    assert len(capture.requests) == 1
+    body = capture.requests[0]["body"]
+    assert body["to"] == expected_phone
+    assert body["template"]["name"] == template
+    components = body["template"].get("components", [])
+    if expected_params:
+        assert components
+    else:
+        assert "components" not in body["template"]
+    params = [p["text"] for p in components[0]["parameters"]] if components else []
+    assert params == expected_params
+    outbound = json.dumps(body)
+    assert THREAD_ID not in outbound
+    assert CUSTOMER_ID not in outbound
+    assert VENDOR_A_ID not in outbound
+    assert row["status"] == "sent"
+
+
+# --------------------------------------------------------------------------- #
+# 3. Missing/unregistered template fails deterministically with no HTTP call.  #
 # --------------------------------------------------------------------------- #
 def test_unregistered_template_render_raises_deterministically() -> None:
     with pytest.raises(TemplateRenderError):

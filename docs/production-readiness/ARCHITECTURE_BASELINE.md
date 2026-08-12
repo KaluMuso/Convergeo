@@ -10,16 +10,16 @@ Evidence hierarchy: **code in Git** > dated ops docs > planning docs. Deployment
 
 ## Repository Identity
 
-| Field            | Value                                                            |
-| ---------------- | ---------------------------------------------------------------- |
-| Remote           | `https://github.com/KaluMuso/Convergeo`                          |
-| Product brand    | Vergeo5 (`vergeo5.com`)                                          |
-| Branch audited   | `master` @ `761733dd982a9400a0e0c7427046ecbaf0aac11c`            |
-| Working tree     | Clean at audit start                                             |
-| Monorepo manager | **pnpm 9.15.4** + **Turborepo 2.x**                              |
-| Lockfiles        | `pnpm-lock.yaml`, `services/api/uv.lock`                         |
-| Python           | 3.12 (`services/api/.python-version`)                            |
-| Node             | `.nvmrc` pins 20; VM shim may report 22 (harmless per AGENTS.md) |
+| Field            | Value                                                                       |
+| ---------------- | --------------------------------------------------------------------------- |
+| Remote           | `https://github.com/KaluMuso/Convergeo`                                     |
+| Product brand    | Vergeo5 (`vergeo5.com`)                                                     |
+| Branch audited   | `master` @ `761733dd982a9400a0e0c7427046ecbaf0aac11c`                       |
+| Working tree     | Clean at audit start                                                        |
+| Monorepo manager | **pnpm 9.15.4** + **Turborepo 2.x**                                         |
+| Lockfiles        | `pnpm-lock.yaml`, `services/api/uv.lock`                                    |
+| Python           | 3.12 (`services/api/.python-version`)                                       |
+| Node             | 22 (`.nvmrc` / `.node-version`; required by the current Supabase JS client) |
 
 ### Workspace layout
 

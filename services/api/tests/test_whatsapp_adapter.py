@@ -24,6 +24,7 @@ FIXTURE_ORDER = "ord-abc123"
 FIXTURE_TRACK = "https://vergeo5.com/en/orders/ord-abc123"
 MONEY_NGEWEE = 123_456
 MONEY_FORMATTED = "K1,234.56"
+STATIC_BODY_TEMPLATES = frozenset({"rfq_opened", "rfq_reply"})
 
 
 @pytest.fixture
@@ -51,7 +52,10 @@ def test_each_template_renders_with_fixture_vars(
     assert rendered.template_id == template_id
     assert rendered.to_e164 == FIXTURE_TO
     assert rendered.language_code == "en"
-    assert len(rendered.body_parameters) >= 1
+    if template_id in STATIC_BODY_TEMPLATES:
+        assert rendered.body_parameters == ()
+    else:
+        assert len(rendered.body_parameters) >= 1
 
     if template_id == "order_confirmed":
         assert rendered.body_parameters[1] == MONEY_FORMATTED
@@ -86,6 +90,8 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
         payload["category"] = "home_services"
         payload["service_area"] = "Lusaka"
         payload["description_preview"] = "Fix kitchen sink"
+    elif template_id == "rfq_quoted":
+        payload["quote_price_ngwee"] = MONEY_NGEWEE
     elif template_id == "service_quote_accepted":
         payload["deposit_ngwee"] = MONEY_NGEWEE
         payload["total_job_ngwee"] = MONEY_NGEWEE * 2
