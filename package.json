@@ -29,9 +29,9 @@
     "lefthook": "^1.11.3",
     "lint-staged": "^15.5.0",
     "prettier": "^3.9.6",
-    "turbo": "^2.10.8",
+    "turbo": "^2.10.9",
     "typescript": "^5.8.2",
-    "typescript-eslint": "^8.65.0"
+    "typescript-eslint": "^8.66.0"
   },
   "lint-staged": {
     "*": "prettier --config packages/config/prettier.config.mjs --write --ignore-unknown"
