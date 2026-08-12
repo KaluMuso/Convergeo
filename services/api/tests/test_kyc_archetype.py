@@ -25,6 +25,18 @@ class TestArchetypeValidation:
         req = KycSubmitRequest.model_validate(_base_payload(archetype="electronics"))
         assert req.archetype == "electronics"
 
+    def test_accepts_strategy_business_archetype(self) -> None:
+        req = KycSubmitRequest.model_validate(
+            _base_payload(business_archetype="market_trader")
+        )
+        assert req.business_archetype == "market_trader"
+
+    def test_rejects_unknown_business_archetype(self) -> None:
+        with pytest.raises(ValidationError):
+            KycSubmitRequest.model_validate(
+                _base_payload(business_archetype="online_only")
+            )
+
     def test_blank_archetype_normalises_to_none(self) -> None:
         req = KycSubmitRequest.model_validate(_base_payload(archetype="  "))
         assert req.archetype is None
@@ -99,6 +111,19 @@ class TestPersistVendorBasics:
             "archetype": "groceries",
         }
         assert service.sink["executed"] is True
+
+    def test_persists_category_and_business_archetype_separately(self) -> None:
+        service = _RecordingService()
+        _persist_vendor_basics(
+            service,
+            VENDOR,
+            archetype="groceries",
+            business_archetype="market_trader",
+        )
+        assert service.sink["update"] == {
+            "archetype": "groceries",
+            "business_archetype": "market_trader",
+        }
 
     def test_noop_when_none(self) -> None:
         service = _RecordingService()
