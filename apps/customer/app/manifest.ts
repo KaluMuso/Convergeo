@@ -4,7 +4,7 @@ import type { MetadataRoute } from "next";
 
 /**
  * PWA web manifest — Convergeo brand icons from `public/icon-*.webp`
- * (petal mark). `start_url` uses the default locale.
+ * (elemental petal mark). `start_url` uses the default locale.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
