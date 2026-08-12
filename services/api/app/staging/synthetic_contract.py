@@ -7,6 +7,7 @@ reference production hosts, project refs, or consumer email domains.
 from __future__ import annotations
 
 import re
+import uuid
 from dataclasses import dataclass, fields
 from typing import Any, Final, Literal
 
@@ -208,7 +209,7 @@ PERSONAS: tuple[PersonaFixture, ...] = (
         phone="+260970000009",
         user_id="a1000000-0000-4000-8000-000000000009",
         user_role="customer",
-        business_buyer_id="h1000000-0000-4000-8000-000000000001",
+        business_buyer_id="13000000-0000-4000-8000-000000000001",
         business_legal_name=f"{SEED_PREFIX} synthetic PACRA buyer",
         business_registration_no=f"{SEED_PREFIX}-PACRA-0001",
     ),
@@ -267,7 +268,7 @@ CATEGORY_FIXTURE: dict[str, Any] = {
 
 VENDOR_LOCATIONS: tuple[VendorLocationFixture, ...] = (
     VendorLocationFixture(
-        location_id="g1000000-0000-4000-8000-000000000004",
+        location_id="12000000-0000-4000-8000-000000000004",
         vendor_key="APPROVED_VENDOR_A",
         lat=-15.4167,
         lng=28.2833,
@@ -280,7 +281,7 @@ VENDOR_LOCATIONS: tuple[VendorLocationFixture, ...] = (
         is_primary=True,
     ),
     VendorLocationFixture(
-        location_id="g1000000-0000-4000-8000-000000000005",
+        location_id="12000000-0000-4000-8000-000000000005",
         vendor_key="APPROVED_VENDOR_B",
         lat=-15.3920,
         lng=28.3220,
@@ -496,6 +497,46 @@ def all_synthetic_listing_ids() -> frozenset[str]:
     return frozenset(ids)
 
 
+def all_synthetic_location_ids() -> frozenset[str]:
+    return frozenset(loc.location_id for loc in VENDOR_LOCATIONS)
+
+
+def all_contract_uuid_literals() -> frozenset[str]:
+    """Every deterministic identifier destined for a PostgreSQL uuid column."""
+    ids: set[str] = set()
+    for persona in PERSONAS:
+        ids.add(persona.user_id)
+        if persona.vendor_id is not None:
+            ids.add(persona.vendor_id)
+        if persona.business_buyer_id is not None:
+            ids.add(persona.business_buyer_id)
+    for record in KYC_FIXTURES:
+        ids.add(record.id)
+        if record.reviewed_by is not None:
+            ids.add(record.reviewed_by)
+    ids.add(str(CATEGORY_FIXTURE["category_id"]))
+    for product in CATALOG_FIXTURES:
+        ids.add(product.category_id)
+        ids.add(product.product_id)
+        for listing in product.listings:
+            ids.add(listing.listing_id)
+    ids.update(all_synthetic_location_ids())
+    from app.staging.seed_sql import IMAGE_IDS
+
+    ids.update(IMAGE_IDS.values())
+    return frozenset(ids)
+
+
+def _assert_valid_uuid_literals() -> None:
+    for value in sorted(all_contract_uuid_literals()):
+        try:
+            uuid.UUID(value)
+        except ValueError as exc:
+            raise StagingIsolationError(
+                f"synthetic fixture UUID is not Postgres-compatible: {value}"
+            ) from exc
+
+
 def _assert_no_production_markers(payload: str) -> None:
     lower = payload.lower()
     for marker in FORBIDDEN_SUBSTRINGS:
@@ -509,6 +550,7 @@ def _assert_no_production_markers(payload: str) -> None:
 
 def assert_contract_valid() -> None:
     """Validate fixture purity and schema-aligned field values."""
+    _assert_valid_uuid_literals()
     vendor_ids = all_synthetic_vendor_ids()
     user_ids = all_synthetic_user_ids()
 
@@ -656,7 +698,9 @@ __all__ = [
     "STAGING_SUPABASE_PROJECT_REF",
     "SYNTHETIC_IMAGE_PREFIX",
     "VENDOR_LOCATIONS",
+    "all_contract_uuid_literals",
     "all_synthetic_listing_ids",
+    "all_synthetic_location_ids",
     "all_synthetic_user_ids",
     "all_synthetic_vendor_ids",
     "assert_contract_valid",
