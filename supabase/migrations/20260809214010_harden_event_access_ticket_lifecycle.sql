@@ -197,6 +197,54 @@ comment on policy ticket_type_price_tiers_public_published_select
 -- Any issued credential must belong to a currently published event. Locking the
 -- parent event row closes the issue-vs-cancel race: either issuance finishes and
 -- the cancellation trigger voids it, or issuance observes the cancelled state.
+create or replace function public.guard_ticket_client_mutation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  jwt_role text := coalesce(auth.jwt() ->> 'role', '');
+begin
+  if session_user in ('postgres', 'supabase_admin') then
+    if tg_op = 'DELETE' then
+      return old;
+    end if;
+    return new;
+  end if;
+
+  if jwt_role = 'service_role' or public.has_role('admin') then
+    if tg_op = 'DELETE' then
+      return old;
+    end if;
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' then
+    raise exception using
+      errcode = '42501',
+      message = 'permission denied for table tickets';
+  end if;
+
+  if tg_op = 'UPDATE' then
+    if new.status is distinct from old.status
+      or new.checked_in_at is distinct from old.checked_in_at
+      or new.qr_secret is distinct from old.qr_secret
+      or new.pin_hash is distinct from old.pin_hash
+      or new.holder_user_id is distinct from old.holder_user_id
+      or new.order_item_id is distinct from old.order_item_id then
+      raise exception 'ticket status and secrets are server-controlled';
+    end if;
+  end if;
+
+  if tg_op = 'DELETE' then
+    raise exception 'tickets cannot be deleted by clients';
+  end if;
+
+  return new;
+end;
+$$;
+
 create or replace function public.require_published_event_for_issued_ticket()
 returns trigger
 language plpgsql
@@ -206,6 +254,15 @@ as $$
 declare
   v_event_status text;
 begin
+  if tg_op = 'INSERT'
+     and coalesce(auth.jwt() ->> 'role', '') <> 'service_role'
+     and not public.has_role('admin')
+     and session_user not in ('postgres', 'supabase_admin') then
+    raise exception using
+      errcode = '42501',
+      message = 'permission denied for table tickets';
+  end if;
+
   if new.status <> 'issued' then
     return new;
   end if;
