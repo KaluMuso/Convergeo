@@ -24,7 +24,9 @@ describe("LoadMorePagination", () => {
     );
 
     expect(screen.getByText("12 remaining")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Load more" }));
+    const button = screen.getByRole("button", { name: "Load more" });
+    expect(button).toHaveClass("focus-visible:shadow-focusRing");
+    await user.click(button);
     expect(onLoadMore).toHaveBeenCalledTimes(1);
   });
 

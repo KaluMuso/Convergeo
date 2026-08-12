@@ -150,7 +150,7 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
   };
 
   return (
-    <div className="flex flex-col gap-6 lg:mx-auto lg:w-full lg:max-w-5xl">
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-10 pb-8">
       <PanelHero
         title={t("browse.title")}
         subtitle={t("browse.subtitle")}
@@ -162,38 +162,67 @@ export default async function ServicesPage({ params, searchParams }: PageProps) 
         }}
       />
 
-      <Suspense fallback={null}>
-        <VerticalFilterChips
-          locale={locale}
-          labels={filterLabels}
-          activeCategory={category}
-          activeArea={area}
-          verticals={verticals}
-        />
-      </Suspense>
+      <section className="flex flex-col gap-6" aria-labelledby="services-results-heading">
+        <div className="space-y-1">
+          <h2 id="services-results-heading" className="font-display text-h2 text-display-ink">
+            {t("browse.title")}
+          </h2>
+          <p className="text-sm text-text-2">{t("browse.subtitle")}</p>
+        </div>
 
-      {items.length === 0 ? (
-        <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
-      ) : (
-        <>
-          <ServiceGrid
-            items={items}
-            locale={locale}
-            labels={{
-              viewService: t("browse.viewService"),
-              fromPrice: t("browse.fromPrice"),
-              askForQuote: t("browse.askForQuote"),
-              badges: {
-                fast: t("badges.fast"),
-                same_day: t("badges.same_day"),
-                slow: t("badges.slow"),
-              },
-              preferredBadge: t("browse.preferredBadge"),
-            }}
-          />
-          <BackToTop label={tCatalog("plp.backToTop")} />
-        </>
-      )}
+        <div className="rounded-lg border border-border bg-surface p-4 shadow-1 md:p-6">
+          <Suspense fallback={null}>
+            <VerticalFilterChips
+              locale={locale}
+              labels={filterLabels}
+              activeCategory={category}
+              activeArea={area}
+              verticals={verticals}
+            />
+          </Suspense>
+        </div>
+
+        {items.length === 0 ? (
+          <EmptyState title={t("browse.emptyTitle")} body={t("browse.emptyBody")} />
+        ) : (
+          <>
+            <ServiceGrid
+              items={items}
+              locale={locale}
+              labels={{
+                viewService: t("browse.viewService"),
+                fromPrice: t("browse.fromPrice"),
+                askForQuote: t("browse.askForQuote"),
+                badges: {
+                  fast: t("badges.fast"),
+                  same_day: t("badges.same_day"),
+                  slow: t("badges.slow"),
+                },
+                preferredBadge: t("browse.preferredBadge"),
+              }}
+            />
+            <BackToTop label={tCatalog("plp.backToTop")} />
+          </>
+        )}
+      </section>
+
+      <section
+        className="flex flex-col gap-5 rounded-lg bg-panel px-6 py-8 text-panel-text shadow-2 md:flex-row md:items-center md:justify-between md:px-10"
+        aria-labelledby="services-provider-cta"
+      >
+        <div className="max-w-2xl space-y-2">
+          <h2 id="services-provider-cta" className="font-display text-h2 text-panel-text">
+            {t("browse.providerCta")}
+          </h2>
+          <p className="text-sm leading-relaxed text-panel-muted">{t("browse.providerPitch")}</p>
+        </div>
+        <Link
+          href={`/${locale}/sell`}
+          className="inline-flex min-h-11 shrink-0 items-center justify-center rounded bg-primary px-6 text-sm font-semibold text-[var(--primary-btn-fg)] transition-colors duration-fast hover:bg-primary-deep focus-visible:outline-none focus-visible:shadow-focusRing"
+        >
+          {t("browse.providerCta")}
+        </Link>
+      </section>
     </div>
   );
 }

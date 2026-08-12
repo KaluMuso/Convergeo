@@ -169,62 +169,85 @@ export default async function ServiceDetailPage({ params }: PageProps) {
   const tier = service.provider.response_time_tier;
   const isQuoteBased = service.from_price_ngwee === null;
   const quoteHref = `/${locale}/services/post-job?category=${encodeURIComponent(service.category)}`;
+  const heroImage = service.portfolio_images[0];
 
   return (
-    <article className="flex flex-col gap-6 pb-8 lg:mx-auto lg:w-full lg:max-w-5xl">
-      {/* Themed overlay hero — dark aubergine gradient (no per-category theme data yet). */}
-      <header className="relative overflow-hidden rounded-lg">
-        {service.portfolio_images[0] ? (
-          <CloudinaryImageStatic
-            publicId={service.portfolio_images[0]}
-            alt={service.title}
-            width={1280}
-            ratio="16/9"
-            priority
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div
-            className="aspect-[16/9] w-full bg-gradient-to-br from-panel to-panel-2"
-            aria-hidden
-          />
-        )}
-        <div
-          className="absolute inset-0 bg-gradient-to-t from-panel via-panel/40 to-transparent"
-          aria-hidden
-        />
-        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 p-4 sm:p-6">
-          <div className="flex flex-wrap items-center gap-2">
-            {tier ? (
-              <Badge variant={badgeVariant(tier)} label={t(`badges.${tier}` as "badges.fast")} />
-            ) : null}
-            {service.provider.preferred_badge ? (
-              <Badge variant="public" label={t("browse.preferredBadge")} />
-            ) : null}
+    <article className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 pb-10">
+      <Link
+        href={`/${locale}/services`}
+        className="w-fit text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+      >
+        {t("browse.title")}
+      </Link>
+
+      <header className="overflow-hidden rounded-lg border border-border bg-primary-tint shadow-2">
+        <div className="grid min-h-[22rem] lg:grid-cols-[minmax(0,1fr)_minmax(24rem,0.9fr)]">
+          <div className="flex flex-col justify-center gap-5 p-6 md:p-10 lg:p-12">
+            <div className="flex flex-wrap items-center gap-2">
+              {tier ? (
+                <Badge variant={badgeVariant(tier)} label={t(`badges.${tier}` as "badges.fast")} />
+              ) : null}
+              {service.provider.preferred_badge ? (
+                <Badge variant="public" label={t("browse.preferredBadge")} />
+              ) : null}
+            </div>
+            <div className="space-y-3">
+              <h1 className="font-display text-hero text-display-ink">{service.title}</h1>
+              {service.service_area ? (
+                <p className="text-sm text-text-2">{service.service_area}</p>
+              ) : null}
+              <p className="text-lg font-semibold text-text">
+                {service.from_price_ngwee !== null
+                  ? t("detail.fromPrice", { price: formatK(service.from_price_ngwee) })
+                  : t("detail.askForQuote")}
+              </p>
+            </div>
           </div>
-          <h1 className="font-display text-h1 text-panel-text">{service.title}</h1>
-          {service.service_area ? (
-            <p className="text-sm text-panel-muted">{service.service_area}</p>
-          ) : null}
+
+          {heroImage ? (
+            <CloudinaryImageStatic
+              publicId={heroImage}
+              alt={service.title}
+              width={960}
+              sizes="(max-width: 1024px) 100vw, 45vw"
+              ratio="4/3"
+              priority
+              className="h-full rounded-none"
+            />
+          ) : (
+            <div
+              className="min-h-64 bg-gradient-to-br from-primary/15 via-surface to-primary/5"
+              aria-hidden="true"
+            />
+          )}
         </div>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="flex flex-col gap-6">
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(19rem,23rem)] lg:gap-12">
+        <div className="flex min-w-0 flex-col gap-8">
           {service.description ? (
-            <section className="flex flex-col gap-2">
-              <h2 className="font-display text-h3 text-display-ink">{t("detail.about")}</h2>
-              <p className="text-sm leading-relaxed text-text-2">{service.description}</p>
+            <section className="flex flex-col gap-3" aria-labelledby="service-about-heading">
+              <h2 id="service-about-heading" className="font-display text-h2 text-display-ink">
+                {t("detail.about")}
+              </h2>
+              <p className="max-w-3xl text-body leading-relaxed text-text-2">
+                {service.description}
+              </p>
             </section>
           ) : null}
 
           {service.includes.length > 0 ? (
-            <section className="flex flex-col gap-2">
-              <h2 className="font-display text-h3 text-display-ink">{t("detail.whatsIncluded")}</h2>
-              <ul className="flex list-none flex-col gap-2 p-0">
+            <section className="flex flex-col gap-3" aria-labelledby="service-included-heading">
+              <h2 id="service-included-heading" className="font-display text-h2 text-display-ink">
+                {t("detail.whatsIncluded")}
+              </h2>
+              <ul className="grid list-none gap-2 p-0 sm:grid-cols-2">
                 {service.includes.map((item) => (
-                  <li key={item} className="flex items-start gap-2 text-sm text-text-2">
-                    <span aria-hidden className="mt-0.5 text-success">
+                  <li
+                    key={item}
+                    className="flex items-start gap-2 rounded-md border border-border bg-surface px-4 py-3 text-sm text-text-2"
+                  >
+                    <span aria-hidden="true" className="mt-0.5 text-success">
                       {t("detail.includeMarker")}
                     </span>
                     <span>{item}</span>
@@ -235,15 +258,18 @@ export default async function ServiceDetailPage({ params }: PageProps) {
           ) : null}
 
           {service.portfolio_images.length > 1 ? (
-            <section className="flex flex-col gap-3">
-              <h2 className="font-display text-h3 text-display-ink">{t("detail.portfolio")}</h2>
-              <ul className="grid list-none grid-cols-2 gap-2 p-0">
+            <section className="flex flex-col gap-4" aria-labelledby="service-portfolio-heading">
+              <h2 id="service-portfolio-heading" className="font-display text-h2 text-display-ink">
+                {t("detail.portfolio")}
+              </h2>
+              <ul className="grid list-none grid-cols-2 gap-3 p-0 md:grid-cols-3">
                 {service.portfolio_images.slice(1).map((publicId, index) => (
                   <li key={publicId} className="overflow-hidden rounded-lg border border-border">
                     <CloudinaryImageStatic
                       publicId={publicId}
                       alt={t("detail.imageAlt", { position: index + 2 })}
                       width={480}
+                      sizes="(max-width: 640px) 50vw, 33vw"
                       ratio="4/3"
                     />
                   </li>
@@ -253,9 +279,14 @@ export default async function ServiceDetailPage({ params }: PageProps) {
           ) : null}
 
           {service.service_area ? (
-            <section className="flex flex-col gap-2">
-              <h2 className="font-display text-h3 text-display-ink">{t("detail.serviceArea")}</h2>
-              <p className="text-sm text-text-2">{service.service_area}</p>
+            <section
+              className="rounded-lg border border-border bg-bg-2 p-5"
+              aria-labelledby="service-area-heading"
+            >
+              <h2 id="service-area-heading" className="font-display text-h3 text-display-ink">
+                {t("detail.serviceArea")}
+              </h2>
+              <p className="mt-2 text-sm text-text-2">{service.service_area}</p>
             </section>
           ) : null}
 
@@ -274,8 +305,7 @@ export default async function ServiceDetailPage({ params }: PageProps) {
           />
         </div>
 
-        {/* Sticky sidebar — direct booking (when bookable) alongside the RFQ handoff. */}
-        <aside className="space-y-4 lg:sticky lg:top-20 lg:h-fit">
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-24 lg:h-fit">
           {service.bookable && service.booking_price_ngwee ? (
             <BookService
               locale={locale}
@@ -283,12 +313,19 @@ export default async function ServiceDetailPage({ params }: PageProps) {
               priceNgwee={service.booking_price_ngwee}
             />
           ) : null}
-          <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 shadow-1">
-            <p className="text-lg font-semibold text-text">
-              {service.from_price_ngwee
-                ? t("detail.fromPrice", { price: formatK(service.from_price_ngwee) })
-                : t("detail.askForQuote")}
-            </p>
+
+          <section className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-5 shadow-2">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-3">
+                {t("detail.askForQuote")}
+              </p>
+              <p className="font-display text-h2 text-display-ink">
+                {service.from_price_ngwee !== null
+                  ? t("detail.fromPrice", { price: formatK(service.from_price_ngwee) })
+                  : t("detail.askForQuote")}
+              </p>
+            </div>
+
             {isQuoteBased ? (
               <ServiceQuoteCta
                 locale={locale}
@@ -336,21 +373,22 @@ export default async function ServiceDetailPage({ params }: PageProps) {
                 <p className="text-center text-xs text-text-3">{t("detail.requestQuoteHint")}</p>
               </>
             )}
+
             <div className="border-t border-border pt-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-text-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-3">
                 {t("detail.provider")}
               </p>
               <p className="mt-1 font-semibold text-text">{service.provider.display_name}</p>
               {service.provider.slug ? (
                 <Link
                   href={`/${locale}/v/${service.provider.slug}`}
-                  className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
+                  className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
                 >
                   {t("detail.providerCta")}
                 </Link>
               ) : null}
             </div>
-          </div>
+          </section>
         </aside>
       </div>
     </article>

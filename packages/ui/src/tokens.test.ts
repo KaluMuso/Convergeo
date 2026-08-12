@@ -39,6 +39,22 @@ function contrastRatio(foreground: string, background: string): number {
 }
 
 describe("tokens", () => {
+  it("matches the audited reference identity", () => {
+    expect(tokens.colors).toMatchObject({
+      bg: "#FAF7F2",
+      panel: "#1C1308",
+      text: "#2A1F0E",
+      primary: "#4C5470",
+      primaryDeep: "#363C52",
+      primaryTint: "#D0D4E8",
+      accent: "#2D4A7A",
+    });
+    expect(tokens.fonts.display).toContain("Cormorant Garamond");
+    expect(tokens.fontSize.hero).toBe("clamp(2.4rem, 4vw, 3.9rem)");
+    expect(tokens.fontSize.h2).toBe("clamp(1.5rem, 2.4vw, 2.1rem)");
+    expect(tokens.transitionDuration.page).toBe("300ms");
+  });
+
   it("tagTint applies alpha suffix recipe", () => {
     expect(tagTint("#C8861A")).toEqual({
       bg: "#C8861A1A",

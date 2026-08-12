@@ -34,30 +34,7 @@ function mergeClasses(...classes: Array<string | false | undefined>): string {
   return classes.filter(Boolean).join(" ");
 }
 
-const linkStyle: CSSProperties = {
-  color: "var(--panel-muted)",
-  textDecoration: "none",
-  display: "inline-flex",
-  minHeight: "44px",
-  alignItems: "center",
-  fontSize: "var(--fs-sm)",
-  transition: "color var(--dur) var(--ease-out)",
-};
-
-const headingStyle: CSSProperties = {
-  margin: 0,
-  marginBottom: "var(--sp-3)",
-  fontSize: "var(--fs-sm)",
-  fontWeight: 600,
-  letterSpacing: "0.06em",
-  textTransform: "uppercase",
-  color: "var(--panel-text)",
-};
-
-/**
- * Site footer — uses CSS variables for panel chrome so theme remaps apply
- * (no frozen JS hex from tokens.ts).
- */
+/** Site footer. CSS variables keep seasonal and dark palette remaps live. */
 export function Footer({
   appName,
   copyright,
@@ -68,45 +45,20 @@ export function Footer({
   trailing,
 }: FooterProps) {
   return (
-    <footer
-      className={mergeClasses("w-full", className)}
-      style={{
-        backgroundColor: "var(--panel)",
-        color: "var(--panel-text)",
-        borderTop: "1px solid var(--panel-border)",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "var(--container-max)",
-          margin: "0 auto",
-          padding: "var(--sp-8) var(--container-gutter)",
-        }}
-      >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-            gap: "var(--sp-6)",
-            marginBottom: "var(--sp-8)",
-          }}
-        >
+    <footer className={mergeClasses("v-footer", className)}>
+      <div className="v-footer__inner">
+        <div className="v-footer__grid">
+          <div className="v-footer__brand">
+            <p className="v-footer__app-name">{appName}</p>
+          </div>
+
           {columns.map((column) => (
-            <div key={column.key}>
-              <h2 style={headingStyle}>{column.heading}</h2>
-              <ul
-                style={{
-                  listStyle: "none",
-                  margin: 0,
-                  padding: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "var(--sp-1)",
-                }}
-              >
+            <div key={column.key} className="v-footer__column">
+              <h2 className="v-footer__heading">{column.heading}</h2>
+              <ul className="v-footer__links">
                 {column.links.map((link) => (
                   <li key={link.key}>
-                    <LinkComponent href={link.href} style={linkStyle}>
+                    <LinkComponent href={link.href} className="v-footer__link">
                       {link.label}
                     </LinkComponent>
                   </li>
@@ -114,55 +66,14 @@ export function Footer({
               </ul>
             </div>
           ))}
-        </div>
 
-        <div
-          style={{
-            borderTop: "1px solid var(--panel-border)",
-            paddingTop: "var(--sp-6)",
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--sp-3)",
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              fontSize: "var(--fs-sm)",
-              color: "var(--panel-muted)",
-            }}
-          >
-            {paymentNote}
-          </p>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--sp-2)",
-            }}
-          >
-            <p
-              style={{
-                margin: 0,
-                fontFamily: "var(--font-display)",
-                fontSize: "var(--fs-h3)",
-                color: "var(--panel-text)",
-              }}
-            >
-              {appName}
-            </p>
-            <p
-              style={{
-                margin: 0,
-                fontSize: "var(--fs-micro)",
-                color: "var(--panel-muted)",
-              }}
-            >
-              {copyright}
-            </p>
+          <div className="v-footer__payment">
+            <p className="v-footer__meta">{paymentNote}</p>
             {trailing}
           </div>
         </div>
+
+        <p className="v-footer__copyright">{copyright}</p>
       </div>
     </footer>
   );
