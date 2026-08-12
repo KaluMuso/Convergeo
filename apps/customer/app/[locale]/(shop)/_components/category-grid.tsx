@@ -120,12 +120,15 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
   const imageMap = readCategoryImageMap(slot?.payload);
 
   return (
-    <section aria-labelledby="home-categories-heading" className="flex flex-col gap-3">
+    <section aria-labelledby="home-categories-heading" className="motion-rise flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id="home-categories-heading" className="font-display text-h2 text-display-ink">
           {t("home.categories.title")}
         </h2>
-        <Link href={`/${locale}/categories`} className="shrink-0 text-sm font-medium text-primary">
+        <Link
+          href={`/${locale}/categories`}
+          className="shrink-0 rounded-sm px-2 py-1 text-sm font-medium text-primary hover:underline focus-visible:outline-none focus-visible:shadow-focusRing"
+        >
           {t("home.categories.viewAll")}
         </Link>
       </div>
@@ -148,7 +151,7 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
               <Link
                 href={`/${locale}/c/${category.slug}`}
                 aria-label={t("home.categories.browseLabel", { category: category.name })}
-                className="relative flex min-h-11 flex-col justify-end overflow-hidden rounded-[var(--r-lg)] p-3 text-text shadow-1 focus-visible:outline-none focus-visible:shadow-focusRing"
+                className="group relative flex min-h-11 flex-col justify-end overflow-hidden rounded-[var(--r-lg)] p-3 text-text shadow-1 transition-[transform,box-shadow] duration-[250ms] ease-std hover:-translate-y-1 hover:shadow-2 focus-visible:outline-none focus-visible:shadow-focusRing motion-reduce:transform-none motion-reduce:transition-none"
                 style={{
                   backgroundColor: fill,
                   minHeight: isWide ? "5.5rem" : "4.5rem",
@@ -163,7 +166,7 @@ export function CategoryGrid({ slot, categories, locale, t }: CategoryGridProps)
                       width={480}
                       ratio="4/3"
                       sizes="(max-width: 768px) 42vw, 25vw"
-                      className="h-full w-full object-cover opacity-90"
+                      className="h-full w-full object-cover opacity-90 transition-transform duration-slow ease-std group-hover:scale-105 motion-reduce:transition-none"
                     />
                     <span
                       aria-hidden

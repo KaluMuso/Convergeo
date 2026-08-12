@@ -76,7 +76,8 @@ function PageButton({ page, current, onClick, label }: PageButtonProps) {
       aria-current={current ? "page" : undefined}
       aria-label={typeof label === "string" ? label : undefined}
       className={mergeClasses(
-        "inline-flex min-h-11 min-w-11 items-center justify-center rounded text-sm font-medium transition-colors focus-visible:outline-none focus-visible:shadow-focusRing",
+        "inline-flex min-h-11 min-w-11 items-center justify-center rounded text-sm font-medium transition-colors",
+        "focus-visible:outline-none focus-visible:shadow-focusRing",
         current ? "bg-primary text-surface" : "text-primary hover:bg-primary-tint",
       )}
       style={{ transitionTimingFunction: "var(--ease-std)" }}
@@ -109,7 +110,7 @@ export function NumberedPagination({
         onClick={() => onPageChange(page - 1)}
         disabled={!canGoPrev}
         className={mergeClasses(
-          "inline-flex min-h-11 items-center justify-center rounded px-3 text-sm font-medium text-primary",
+          "inline-flex min-h-11 items-center justify-center rounded px-3 text-sm font-medium text-primary transition-colors",
           "hover:bg-primary-tint focus-visible:outline-none focus-visible:shadow-focusRing disabled:cursor-not-allowed disabled:opacity-50",
         )}
         style={{ transitionTimingFunction: "var(--ease-std)" }}
@@ -132,7 +133,7 @@ export function NumberedPagination({
         onClick={() => onPageChange(page + 1)}
         disabled={!canGoNext}
         className={mergeClasses(
-          "inline-flex min-h-11 items-center justify-center rounded px-3 text-sm font-medium text-primary",
+          "inline-flex min-h-11 items-center justify-center rounded px-3 text-sm font-medium text-primary transition-colors",
           "hover:bg-primary-tint focus-visible:outline-none focus-visible:shadow-focusRing disabled:cursor-not-allowed disabled:opacity-50",
         )}
         style={{ transitionTimingFunction: "var(--ease-std)" }}

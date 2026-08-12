@@ -326,7 +326,7 @@ export function AppHeader({
       {/* Mobile / tablet (< lg) */}
       <nav
         aria-label={navAriaLabel}
-        className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 lg:hidden"
+        className="mx-auto flex w-full max-w-container flex-col gap-3 px-4 py-3 lg:hidden"
       >
         <div className="flex w-full items-center justify-between gap-3">
           <div className="min-w-0 shrink-0 [&_a]:text-lg [&_a]:leading-none">{wordmark}</div>
@@ -345,7 +345,7 @@ export function AppHeader({
       {/* Desktop (lg+) */}
       <nav
         aria-label={desktopNavAriaLabel ?? navAriaLabel}
-        className="mx-auto hidden w-full max-w-7xl items-center gap-4 px-6 transition-[height] duration-fast ease-std motion-reduce:transition-none lg:flex"
+        className="mx-auto hidden w-full max-w-container items-center gap-4 px-7 transition-[height] duration-fast ease-std motion-reduce:transition-none lg:flex"
         style={{ height: compact ? "3.5rem" : "4rem" }}
       >
         <div className="shrink-0 [&_a]:text-2xl [&_a]:leading-none [&_a]:transition-transform [&_a]:duration-fast [&_a]:ease-std">
