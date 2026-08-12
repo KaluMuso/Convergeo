@@ -768,19 +768,19 @@ WHERE oi.order_id = {order_sql}
     total_issued = 0
     any_work = False
 
-    for order_item_id, qty_raw, instance_id, ticket_type_id in item_rows:
+    for order_item_id, qty, instance_id, ticket_type_id in item_rows:
         existing = _count_issued_for_item(order_item_id)
-        if existing >= qty_raw:
+        if existing >= qty:
             continue
 
         any_work = True
-        needed = qty_raw - existing
+        needed = qty - existing
 
         linked = 0
         if claim_ids:
             linked = _link_claimed_tickets(order_item_id, claim_ids)
             existing += linked
-            needed = max(0, qty_raw - existing)
+            needed = max(0, qty - existing)
 
         if needed > 0:
             inserted = _insert_issued_tickets(

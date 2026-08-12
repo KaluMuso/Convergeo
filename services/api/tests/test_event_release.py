@@ -28,6 +28,7 @@ from app.services.escrow.event_release import (
 )
 from app.services.escrow.release import release_idempotency_key
 from app.services.escrow.release_accounting import summarize_order_release_ledger
+from app.services.events.timing import DEFAULT_EVENT_DURATION, instance_settlement_end
 from app.services.ledger.engine import (
     account_balance_ngwee,
     post_transaction,
@@ -165,15 +166,34 @@ def _insert_event(
     )
 
 
+def _default_instance_end(starts_at: datetime) -> datetime:
+    """Mirror the DB trigger: omitted ends_at becomes starts_at + 2h."""
+    return starts_at + DEFAULT_EVENT_DURATION
+
+
+def _full_release_due(starts_at: datetime, *, ends_at: datetime | None = None) -> datetime:
+    settlement_end = instance_settlement_end(starts_at, ends_at or _default_instance_end(starts_at))
+    return settlement_end + timedelta(hours=FULL_RELEASE_DELAY_HOURS)
+
+
+def _phase2_due(starts_at: datetime, *, ends_at: datetime | None = None) -> datetime:
+    settlement_end = instance_settlement_end(starts_at, ends_at or _default_instance_end(starts_at))
+    return settlement_end + timedelta(days=PHASE2_DELAY_DAYS)
+
+
 def _insert_instance(
     conn: PgConn, *, instance_id: str, event_id: str, starts_at: datetime, capacity: int = 100
 ) -> None:
-    ts = starts_at.astimezone(UTC).isoformat()
+    ends_at = _default_instance_end(starts_at)
+    starts_ts = starts_at.astimezone(UTC).isoformat()
+    ends_ts = ends_at.astimezone(UTC).isoformat()
     conn.run(
         f"""
-        INSERT INTO public.event_instances (id, event_id, starts_at, capacity)
-        VALUES ('{instance_id}', '{event_id}', '{ts}'::timestamptz, {capacity})
-        ON CONFLICT (id) DO UPDATE SET starts_at = EXCLUDED.starts_at;
+        INSERT INTO public.event_instances (id, event_id, starts_at, ends_at, capacity)
+        VALUES ('{instance_id}', '{event_id}', '{starts_ts}'::timestamptz,
+                '{ends_ts}'::timestamptz, {capacity})
+        ON CONFLICT (id) DO UPDATE
+        SET starts_at = EXCLUDED.starts_at, ends_at = EXCLUDED.ends_at;
         """
     )
 
@@ -419,7 +439,7 @@ class TestFullReleaseBranch:
         assert too_early.reason == "timers_not_met"
         assert _txn_count(db, full_release_key(order_id)) == 0
 
-        due = starts_at + timedelta(hours=24)
+        due = _full_release_due(starts_at)
         result = evaluate_event_release(_SERVICE, order_id, now=due)
         assert result.outcome == "released"
         assert result.branch == "full"
@@ -465,8 +485,8 @@ class TestFullReleaseBranch:
         assert early.outcome == "not_eligible"
         assert _txn_count(db, phase1_release_key(order_id)) == 0
 
-        # Full release lands at end+24h (no ends_at -> settlement_end == starts_at).
-        due = starts_at + timedelta(hours=24)
+        # Full release lands at settlement_end + 24h (DB default end = starts_at + 2h).
+        due = _full_release_due(starts_at)
         result = evaluate_event_release(_SERVICE, order_id, now=due)
         assert result.outcome == "released"
         assert result.branch == "full"
@@ -513,7 +533,7 @@ class TestPhasedReleaseBranch:
         assert mid.outcome == "not_eligible"
         assert mid.reason == "timers_not_met"
 
-        phase2_due = starts_at + timedelta(days=1)
+        phase2_due = _phase2_due(starts_at)
         phase2_result = evaluate_event_release(_SERVICE, order_id, now=phase2_due)
         assert phase2_result.outcome == "released"
         assert phase2_result.phases_posted == ("phase2",)
@@ -590,7 +610,7 @@ class TestDisputeHold:
         )
         _insert_dispute(db, order_id=order_id, status="open")
 
-        due = starts_at + timedelta(hours=24)
+        due = _full_release_due(starts_at)
         result = evaluate_event_release(_SERVICE, order_id, now=due)
         assert result.outcome == "held"
         assert result.reason == "dispute_open"
@@ -620,7 +640,7 @@ class TestUnpaidAndNonTicketOrders:
             paid=False,
         )
 
-        due = starts_at + timedelta(hours=24)
+        due = _full_release_due(starts_at)
         result = evaluate_event_release(_SERVICE, order_id, now=due)
         assert result.outcome == "not_eligible"
         assert result.reason == "unpaid"
@@ -655,7 +675,7 @@ class TestSweepEventReleases:
             created_at=purchased_at,
         )
 
-        due = starts_at + timedelta(hours=24)
+        due = _full_release_due(starts_at)
         sweep_result, _next_cursor = sweep_event_releases(_SERVICE, now=due)
         assert sweep_result.released >= 1
         assert _txn_count(db, full_release_key(order_id)) == 1
@@ -720,7 +740,7 @@ class TestOrganiserStats:
 
         # Release only the first order in full.
         release_result = evaluate_event_release(
-            _SERVICE, order_ids[0], now=starts_at + timedelta(hours=24)
+            _SERVICE, order_ids[0], now=_full_release_due(starts_at)
         )
         assert release_result.outcome == "released"
 
@@ -859,7 +879,7 @@ class TestEventCommissionCapture:
             gross_ngwee=UNIT_PRICE_NGWEE,
         )
 
-        due = starts_at + timedelta(hours=24)
+        due = _full_release_due(starts_at)
         result = evaluate_event_release(_SERVICE, order_id, now=due)
         assert result.outcome == "released"
         assert result.net_ngwee == NET_NGEWEE
@@ -940,7 +960,7 @@ class TestEventCommissionCapture:
         )
         assert after_phase1 == 1
 
-        phase2_due = starts_at + timedelta(days=1)
+        phase2_due = _phase2_due(starts_at)
         phase2 = evaluate_event_release(_SERVICE, order_id, now=phase2_due)
         assert phase2.outcome == "released"
         assert phase2.phases_posted == ("phase2",)
