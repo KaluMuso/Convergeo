@@ -5,6 +5,8 @@ import {
   ngweeToZmwDecimal,
 } from "@vergeo/ui/src/seo/json-ld";
 
+import { effectiveInstanceEndMs } from "../_lib/instance-time";
+
 /**
  * Events SEO — schema.org/Event JSON-LD + indexing policy (M10-P09).
  *
@@ -12,9 +14,6 @@ import {
  * `buildLocaleCanonical`) and builds the Event object locally so this component
  * owns the events discovery shape. No client JS — emitted as inline ld+json.
  */
-
-/** Fallback duration for `endDate` when an instance carries no explicit end. */
-const EVENT_DURATION_MS = 2 * 60 * 60 * 1000;
 
 /** A past event stays indexable for this grace window after its last instance. */
 export const EVENT_NOINDEX_GRACE_DAYS = 30;
@@ -27,13 +26,10 @@ export type EventJsonLdInstance = {
 
 /** Effective end millis: explicit endsAt, else startsAt + the default duration. */
 function instanceEndMs(instance: EventJsonLdInstance): number {
-  if (instance.endsAt) {
-    const end = new Date(instance.endsAt).getTime();
-    if (Number.isFinite(end)) {
-      return end;
-    }
-  }
-  return new Date(instance.startsAt).getTime() + EVENT_DURATION_MS;
+  return effectiveInstanceEndMs({
+    starts_at: instance.startsAt,
+    ends_at: instance.endsAt,
+  });
 }
 
 export type EventJsonLdTicket = {

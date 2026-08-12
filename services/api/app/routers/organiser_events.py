@@ -867,6 +867,11 @@ async def update_organiser_event(
         updates["event_type"] = body.event_type
     if body.visibility is not None:
         updates["visibility"] = body.visibility
+        if body.visibility != "private":
+            # A code digest has no purpose once an event is no longer private.
+            # Clear it in the same write so the database invariant cannot retain
+            # a stale credential after private -> public/unlisted transitions.
+            updates["access_code_hash"] = None
     if body.refund_policy_key is not None:
         updates["refund_policy_key"] = body.refund_policy_key.strip() or None
     if body.age_restriction is not None:

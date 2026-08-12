@@ -15,6 +15,66 @@ export type InstanceDraft = {
   ticketsSold?: number;
 };
 
+const DEFAULT_INSTANCE_DURATION_MS = 2 * 60 * 60 * 1000;
+
+function localDateTimeMs(value: string): number {
+  if (!value) {
+    return Number.NaN;
+  }
+  return new Date(`${value}Z`).getTime();
+}
+
+export function defaultEndsAtForStart(startsAt: string): string {
+  const startsAtMs = localDateTimeMs(startsAt);
+  if (!Number.isFinite(startsAtMs)) {
+    return "";
+  }
+  return new Date(startsAtMs + DEFAULT_INSTANCE_DURATION_MS).toISOString().slice(0, 16);
+}
+
+export function endsAtAfterStartChange(
+  previousStartsAt: string,
+  previousEndsAt: string,
+  nextStartsAt: string,
+): string {
+  if (!nextStartsAt) {
+    return "";
+  }
+
+  const previousDefault = defaultEndsAtForStart(previousStartsAt);
+  const nextStartsAtMs = localDateTimeMs(nextStartsAt);
+  const previousEndsAtMs = localDateTimeMs(previousEndsAt);
+  const shouldUseDefault =
+    !previousEndsAt ||
+    previousEndsAt === previousDefault ||
+    !Number.isFinite(previousEndsAtMs) ||
+    previousEndsAtMs <= nextStartsAtMs;
+
+  return shouldUseDefault ? defaultEndsAtForStart(nextStartsAt) : previousEndsAt;
+}
+
+export type InstanceDraftValidationError = "required" | "ends_before_starts";
+
+export function validateInstanceDrafts(
+  drafts: InstanceDraft[],
+): InstanceDraftValidationError | null {
+  for (const draft of drafts) {
+    if (!draft.startsAt || !draft.endsAt) {
+      return "required";
+    }
+
+    const startsAtMs = localDateTimeMs(draft.startsAt);
+    const endsAtMs = localDateTimeMs(draft.endsAt);
+    if (!Number.isFinite(startsAtMs) || !Number.isFinite(endsAtMs)) {
+      return "required";
+    }
+    if (endsAtMs <= startsAtMs) {
+      return "ends_before_starts";
+    }
+  }
+  return null;
+}
+
 export function toInstanceDraft(
   instance?: {
     id: string;
@@ -26,7 +86,9 @@ export function toInstanceDraft(
   key?: string,
 ): InstanceDraft {
   const startsAt = instance?.starts_at ? instance.starts_at.slice(0, 16) : "";
-  const endsAt = instance?.ends_at ? instance.ends_at.slice(0, 16) : "";
+  const endsAt = instance?.ends_at
+    ? instance.ends_at.slice(0, 16)
+    : defaultEndsAtForStart(startsAt);
   return {
     key: key ?? instance?.id ?? `new-${Math.random().toString(36).slice(2)}`,
     id: instance?.id,
@@ -41,8 +103,8 @@ export function draftToPayload(drafts: InstanceDraft[]): EventInstanceInput[] {
   return drafts.map((draft) => ({
     id: draft.id,
     starts_at: new Date(draft.startsAt).toISOString(),
-    // Optional — null when left blank (backend defaults / preserves).
-    ends_at: draft.endsAt ? new Date(draft.endsAt).toISOString() : null,
+    // The editor validates this before serializing, so the API always receives an end.
+    ends_at: new Date(draft.endsAt).toISOString(),
     capacity: Number.parseInt(draft.capacity, 10) || 0,
   }));
 }
@@ -110,7 +172,13 @@ export function InstanceEditor({ instances, onChange, disabled = false }: Instan
               <Input
                 type="datetime-local"
                 value={instance.startsAt}
-                onChange={(event) => updateAt(index, { startsAt: event.target.value })}
+                onChange={(event) => {
+                  const startsAt = event.target.value;
+                  updateAt(index, {
+                    startsAt,
+                    endsAt: endsAtAfterStartChange(instance.startsAt, instance.endsAt, startsAt),
+                  });
+                }}
                 disabled={disabled}
                 required
               />
@@ -123,6 +191,7 @@ export function InstanceEditor({ instances, onChange, disabled = false }: Instan
                 min={instance.startsAt || undefined}
                 onChange={(event) => updateAt(index, { endsAt: event.target.value })}
                 disabled={disabled}
+                required
               />
             </FormField>
 

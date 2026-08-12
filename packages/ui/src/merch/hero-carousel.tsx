@@ -309,7 +309,7 @@ export function HeroCarousel({
                         className="font-display"
                         style={{
                           margin: 0,
-                        fontSize: "clamp(1.8rem, 3.4vw, 2.65rem)",
+                          fontSize: "clamp(1.8rem, 3.4vw, 2.65rem)",
                           lineHeight: 1.15,
                           color: "var(--panel-text)",
                         }}

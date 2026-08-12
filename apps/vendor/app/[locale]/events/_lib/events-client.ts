@@ -53,7 +53,7 @@ export type EventDetail = {
 export type EventInstanceInput = {
   id?: string;
   starts_at: string;
-  ends_at?: string | null;
+  ends_at: string;
   capacity: number;
 };
 

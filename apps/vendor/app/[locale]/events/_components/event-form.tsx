@@ -21,6 +21,7 @@ import {
   InstanceEditor,
   toInstanceDraft,
   type InstanceDraft,
+  validateInstanceDrafts,
 } from "./instance-editor";
 
 const CATEGORIES: EventCategory[] = [
@@ -100,6 +101,12 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
   const handleSave = async () => {
     if (!title.trim()) {
       setError(t("events.errors.required"));
+      return;
+    }
+
+    const instanceError = validateInstanceDrafts(instances);
+    if (instanceError) {
+      setError(t(`events.errors.${instanceError}`));
       return;
     }
 

@@ -231,7 +231,7 @@ def test_event_cancelled_payload_renders_via_whatsapp_template() -> None:
         payload={
             "event_title": "Jazz Night",
             "event_date": "15 Aug 2026, 18:00 UTC",
-            "refund_detail": "Your payment refund is being processed by Vergeo5.",
+            "refund_detail": "Your refund has been queued for review; no payout has been sent yet.",
             "recipient_id": CUSTOMER_ID,
         },
     )

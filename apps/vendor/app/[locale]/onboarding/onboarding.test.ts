@@ -2,10 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import vendorMessages from "../../../../../packages/i18n/messages/en/vendor.json";
 
-import {
-  resolveHonestStatusVariant,
-  resolveStatusVariant,
-} from "./_components/status-screen";
+import { resolveHonestStatusVariant, resolveStatusVariant } from "./_components/status-screen";
 import {
   docsRequiredForResubmit,
   isResubmitStatus,
@@ -20,11 +17,7 @@ import {
   stepIndexFromKey,
   writeLocalDraft,
 } from "./_lib/persistence";
-import {
-  assertPrivateKycPath,
-  isPrivateKycPath,
-  type KycSignUploadResponse,
-} from "./_lib/storage";
+import { assertPrivateKycPath, isPrivateKycPath, type KycSignUploadResponse } from "./_lib/storage";
 import { PRIVATE_KYC_BUCKET } from "./_lib/types";
 
 function createLocalStorageMock(): Storage {
@@ -110,18 +103,14 @@ describe("step persistence", () => {
 
 describe("upload authz", () => {
   it("accepts private kyc paths under kyc/ prefix", () => {
-    expect(
-      isPrivateKycPath("kyc/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/nrc.jpg"),
-    ).toBe(true);
+    expect(isPrivateKycPath("kyc/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/nrc.jpg")).toBe(true);
     expect(assertPrivateKycPath("kyc/vendor/nrc.jpg")).toBeUndefined();
   });
 
   it("rejects public or traversal paths", () => {
     expect(isPrivateKycPath("public/listings/foo.jpg")).toBe(false);
     expect(isPrivateKycPath("kyc/../secrets.jpg")).toBe(false);
-    expect(() => assertPrivateKycPath("listings/foo.jpg")).toThrow(
-      /private bucket/i,
-    );
+    expect(() => assertPrivateKycPath("listings/foo.jpg")).toThrow(/private bucket/i);
   });
 
   it("requires private bucket in signed upload response", async () => {
@@ -129,8 +118,7 @@ describe("upload authz", () => {
       bucket: "public",
       path: "kyc/vendor/nrc.jpg",
       token: "tok",
-      signed_url:
-        "https://example.supabase.co/storage/v1/upload/sign/private/kyc/vendor/nrc.jpg",
+      signed_url: "https://example.supabase.co/storage/v1/upload/sign/private/kyc/vendor/nrc.jpg",
     };
 
     expect(signed.bucket).not.toBe(PRIVATE_KYC_BUCKET);

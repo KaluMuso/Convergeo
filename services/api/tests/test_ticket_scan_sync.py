@@ -111,8 +111,11 @@ def _seed_event(
     vendor_id: str = VENDOR_A_ID,
     instance_id: str = INSTANCE_A_ID,
     starts_at: str | None = None,
+    status: str = "published",
 ) -> None:
-    fake.tables["events"].rows.append({"id": event_id, "organiser_vendor_id": vendor_id})
+    fake.tables["events"].rows.append(
+        {"id": event_id, "organiser_vendor_id": vendor_id, "status": status}
+    )
     fake.tables["event_instances"].rows.append(
         {
             "id": instance_id,
@@ -137,6 +140,8 @@ def _seed_tickets(
                 "order_item_id": ORDER_ITEM_1_ID,
                 "qr_secret": "secret-one",
                 "pin_hash": "pinhash-one",
+                "holder_name": "Chanda Mwansa",
+                "ticket_types": {"name": "General Admission"},
             },
             {
                 "id": TICKET_2_ID,
@@ -145,6 +150,8 @@ def _seed_tickets(
                 "order_item_id": ORDER_ITEM_2_ID,
                 "qr_secret": "secret-two",
                 "pin_hash": None,
+                "holder_name": "Mutale Phiri",
+                "ticket_types": {"name": "VIP"},
             },
             # not issued/paid -- must never appear in the sync payload
             {
@@ -245,6 +252,8 @@ class TestScanSyncPayload:
         assert set(tickets.keys()) == {TICKET_1_ID, TICKET_2_ID}
         assert tickets[TICKET_1_ID]["pin_hash_present"] is True
         assert tickets[TICKET_2_ID]["pin_hash_present"] is False
+        assert tickets[TICKET_1_ID]["holder_name"] == "Chanda Mwansa"
+        assert tickets[TICKET_1_ID]["ticket_type_name"] == "General Admission"
         assert len(tickets[TICKET_1_ID]["window_sigs"]) > 0
 
     def test_sync_sig_parity_with_verify_window_sig(
@@ -291,6 +300,17 @@ class TestScanSyncPayload:
 
 
 class TestScanSyncOrganiserScope:
+    def test_non_published_event_returns_409(
+        self, organiser_client: TestClient, fake_client: FakeSupabaseClient
+    ) -> None:
+        _seed_event(fake_client, status="draft")
+        _seed_tickets(fake_client)
+
+        response = organiser_client.get(_sync_url(), headers=_auth_headers(TOKEN_A))
+
+        assert response.status_code == 409
+        assert response.json()["error"]["code"] == "tickets.event_not_published"
+
     def test_cross_organiser_returns_403(
         self, organiser_client: TestClient, fake_client: FakeSupabaseClient
     ) -> None:

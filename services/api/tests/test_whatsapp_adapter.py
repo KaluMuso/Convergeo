@@ -102,7 +102,9 @@ def _fixture_payload_for(template_id: str, base: dict[str, Any]) -> dict[str, An
     elif template_id == "event_cancelled":
         payload["event_title"] = "Jazz Night"
         payload["event_date"] = "15 Aug 2026, 18:00 UTC"
-        payload["refund_detail"] = "Your payment refund is being processed by Vergeo5."
+        payload["refund_detail"] = (
+            "Your refund has been queued for review; no payout has been sent yet."
+        )
     elif template_id == "event_schedule_changed":
         payload["event_title"] = "Jazz Night"
         payload["event_date"] = "20 Aug 2026, 18:00 UTC"

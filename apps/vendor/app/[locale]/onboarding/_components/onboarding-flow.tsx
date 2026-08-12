@@ -6,10 +6,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorErrorState } from "../../_components/async-state";
-import {
-  classifyVendorError,
-  vendorErrorMessageKey,
-} from "../../_lib/vendor-errors";
+import { classifyVendorError, vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import {
   createKycClient,
   isResubmitStatus,
@@ -62,16 +59,10 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
   const [resubmitMode, setResubmitMode] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const getToken = useCallback(
-    () => session?.access_token ?? null,
-    [session?.access_token],
-  );
+  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
 
   const kycClient = useMemo(() => createKycClient(getToken), [getToken]);
-  const storageClient = useMemo(
-    () => createStorageClient(getToken),
-    [getToken],
-  );
+  const storageClient = useMemo(() => createStorageClient(getToken), [getToken]);
 
   const categoryLabels = useMemo(
     () => ({
@@ -88,16 +79,10 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
   const archetypeLabels = useMemo(
     () => ({
       market_trader: t("onboarding.business.archetypes.market_trader"),
-      registered_retailer: t(
-        "onboarding.business.archetypes.registered_retailer",
-      ),
-      service_professional: t(
-        "onboarding.business.archetypes.service_professional",
-      ),
+      registered_retailer: t("onboarding.business.archetypes.registered_retailer"),
+      service_professional: t("onboarding.business.archetypes.service_professional"),
       manufacturer: t("onboarding.business.archetypes.manufacturer"),
-      importer_wholesaler: t(
-        "onboarding.business.archetypes.importer_wholesaler",
-      ),
+      importer_wholesaler: t("onboarding.business.archetypes.importer_wholesaler"),
       event_organiser: t("onboarding.business.archetypes.event_organiser"),
     }),
     [t],
@@ -273,8 +258,8 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
     if (!draft) {
       return;
     }
-    const docPaths = [draft.nrcPath, draft.selfiePath].filter(
-      (path): path is string => Boolean(path),
+    const docPaths = [draft.nrcPath, draft.selfiePath].filter((path): path is string =>
+      Boolean(path),
     );
     if (docPaths.length === 0 || draft.legalName.trim().length < 2) {
       setError(t("onboarding.errors.submitFailed"));
@@ -350,11 +335,9 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
 
   const stepKey = stepKeyFromIndex(currentStep);
   const categoryLabel =
-    categoryLabels[draft.businessCategory as BusinessCategory] ??
-    draft.businessCategory;
+    categoryLabels[draft.businessCategory as BusinessCategory] ?? draft.businessCategory;
   const archetypeLabel =
-    archetypeLabels[draft.businessArchetype as BusinessArchetype] ??
-    draft.businessArchetype;
+    archetypeLabels[draft.businessArchetype as BusinessArchetype] ?? draft.businessArchetype;
 
   return (
     <div className="flex flex-col gap-4">
@@ -362,9 +345,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         className="rounded border border-border bg-bg-2 px-3 py-2"
         data-testid="onboarding-invite-banner"
       >
-        <p className="text-sm font-medium text-display-ink">
-          {t("onboarding.invite.eyebrow")}
-        </p>
+        <p className="text-sm font-medium text-display-ink">{t("onboarding.invite.eyebrow")}</p>
         <p className="text-sm text-text-2">{t("onboarding.invite.body")}</p>
       </div>
 
@@ -378,16 +359,11 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
           doneIndicator={t("onboarding.doneIndicator")}
         />
       ) : (
-        <p className="text-sm font-medium text-primary">
-          {t("onboarding.status.resubmit.title")}
-        </p>
+        <p className="text-sm font-medium text-primary">{t("onboarding.status.resubmit.title")}</p>
       )}
 
       {error ? (
-        <div
-          className="flex flex-col gap-2 rounded bg-danger/10 px-3 py-2"
-          role="alert"
-        >
+        <div className="flex flex-col gap-2 rounded bg-danger/10 px-3 py-2" role="alert">
           <p className="text-sm text-danger">{error}</p>
           <button
             type="button"
@@ -405,12 +381,8 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
           businessCategory={draft.businessCategory}
           businessArchetype={draft.businessArchetype}
           onBusinessNameChange={(value) => updateDraft({ businessName: value })}
-          onBusinessCategoryChange={(value) =>
-            updateDraft({ businessCategory: value })
-          }
-          onBusinessArchetypeChange={(value) =>
-            updateDraft({ businessArchetype: value })
-          }
+          onBusinessCategoryChange={(value) => updateDraft({ businessCategory: value })}
+          onBusinessArchetypeChange={(value) => updateDraft({ businessArchetype: value })}
           onContinue={() => {
             void handleBusinessContinue();
           }}
@@ -456,9 +428,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
             heading: resubmitMode
               ? t("onboarding.status.resubmit.title")
               : t("onboarding.kyc.heading"),
-            intro: resubmitMode
-              ? t("onboarding.status.resubmit.body")
-              : t("onboarding.kyc.intro"),
+            intro: resubmitMode ? t("onboarding.status.resubmit.body") : t("onboarding.kyc.intro"),
             nrcLabel: t("onboarding.kyc.nrcLabel"),
             nrcHelp: t("onboarding.kyc.nrcHelp"),
             selfieLabel: t("onboarding.kyc.selfieLabel"),
@@ -513,9 +483,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
             businessSection: t("onboarding.review.businessSection"),
             businessNameLabel: t("onboarding.review.businessNameLabel"),
             businessCategoryLabel: t("onboarding.review.businessCategoryLabel"),
-            businessArchetypeLabel: t(
-              "onboarding.review.businessArchetypeLabel",
-            ),
+            businessArchetypeLabel: t("onboarding.review.businessArchetypeLabel"),
             docsSection: t("onboarding.review.docsSection"),
             momoSection: t("onboarding.review.momoSection"),
             nrcUploaded: t("onboarding.review.nrcUploaded"),

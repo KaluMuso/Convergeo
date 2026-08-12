@@ -13,12 +13,7 @@ import { createApiClient } from "@vergeo/config";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
-import type {
-  KycApplication,
-  KycDocType,
-  KycStatus,
-  VendorStatus,
-} from "./types";
+import type { KycApplication, KycDocType, KycStatus, VendorStatus } from "./types";
 
 export type MomoOperator = "mtn" | "airtel" | "zamtel";
 
@@ -95,15 +90,11 @@ export {
   shouldShowPreferredBadge,
 } from "../../_lib/kyc-integrity";
 
-export function createKycClient(
-  getToken: () => string | null | Promise<string | null>,
-) {
+export function createKycClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
 
   return {
-    async bootstrapApplication(
-      payload: KycDraftPayload = {},
-    ): Promise<KycApplication> {
+    async bootstrapApplication(payload: KycDraftPayload = {}): Promise<KycApplication> {
       const status = await client.request<KycStatusResponse>("/kyc/bootstrap", {
         method: "POST",
         body: JSON.stringify(payload),
@@ -140,9 +131,7 @@ export function createKycClient(
   };
 }
 
-export function isTerminalStatus(
-  status: KycApplication["kyc_status"],
-): boolean {
+export function isTerminalStatus(status: KycApplication["kyc_status"]): boolean {
   return (
     status === "submitted" ||
     status === "under_review" ||
@@ -152,15 +141,11 @@ export function isTerminalStatus(
   );
 }
 
-export function isResubmitStatus(
-  status: KycApplication["kyc_status"],
-): boolean {
+export function isResubmitStatus(status: KycApplication["kyc_status"]): boolean {
   return status === "rejected" || status === "resubmit";
 }
 
-export function docsRequiredForResubmit(
-  rejectedDocs: KycDocType[] | null,
-): KycDocType[] {
+export function docsRequiredForResubmit(rejectedDocs: KycDocType[] | null): KycDocType[] {
   if (!rejectedDocs || rejectedDocs.length === 0) {
     return ["nrc", "selfie"];
   }

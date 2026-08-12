@@ -77,8 +77,7 @@ export function mergeDraftWithServer(
     step: base.step,
     businessName: base.businessName || server.business_name || "",
     businessCategory: base.businessCategory || server.business_category || "",
-    businessArchetype:
-      base.businessArchetype || server.business_archetype || "",
+    businessArchetype: base.businessArchetype || server.business_archetype || "",
     // legal_name is collected + persisted client-side only (no server field).
     legalName: base.legalName || "",
     momoPhone: base.momoPhone || server.momo_phone || "",
@@ -103,12 +102,7 @@ export function resolveResumeStep(
     return stepIndexFromKey("business");
   }
 
-  if (
-    !draft.nrcPath ||
-    !draft.selfiePath ||
-    !draft.momoPhone.trim() ||
-    !draft.legalName.trim()
-  ) {
+  if (!draft.nrcPath || !draft.selfiePath || !draft.momoPhone.trim() || !draft.legalName.trim()) {
     return stepIndexFromKey("kyc");
   }
 

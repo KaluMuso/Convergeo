@@ -1018,7 +1018,7 @@ export type Database = {
         Row: {
           capacity: number
           created_at: string
-          ends_at: string | null
+          ends_at: string
           event_id: string
           id: string
           starts_at: string
@@ -1027,7 +1027,7 @@ export type Database = {
         Insert: {
           capacity: number
           created_at?: string
-          ends_at?: string | null
+          ends_at: string
           event_id: string
           id?: string
           starts_at: string
@@ -1036,7 +1036,7 @@ export type Database = {
         Update: {
           capacity?: number
           created_at?: string
-          ends_at?: string | null
+          ends_at?: string
           event_id?: string
           id?: string
           starts_at?: string

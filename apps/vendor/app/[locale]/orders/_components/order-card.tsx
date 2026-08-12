@@ -8,10 +8,7 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
-import {
-  VendorEmptyState,
-  VendorErrorState,
-} from "../../_components/async-state";
+import { VendorEmptyState, VendorErrorState } from "../../_components/async-state";
 import { isAuditableApproved } from "../../_lib/kyc-integrity";
 import { vendorErrorMessageKey } from "../../_lib/vendor-errors";
 import {
@@ -54,12 +51,7 @@ export type VendorDashboard = {
 };
 
 const CACHE_KEY = "vergeo5.vendor.orders.queue.v1";
-const CARD_ACTIONS: VendorActionName[] = [
-  "confirm",
-  "pack",
-  "ship",
-  "ready_for_pickup",
-];
+const CARD_ACTIONS: VendorActionName[] = ["confirm", "pack", "ship", "ready_for_pickup"];
 
 type QueueCache = {
   saved_at: string;
@@ -67,9 +59,7 @@ type QueueCache = {
   queue: OrderQueueItem[] | null;
 };
 
-export function createOrdersQueueClient(
-  getToken: () => string | null | Promise<string | null>,
-) {
+export function createOrdersQueueClient(getToken: () => string | null | Promise<string | null>) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
 
   return {
@@ -78,42 +68,28 @@ export function createOrdersQueueClient(
     },
     listQueue(status: string): Promise<OrderQueueItem[]> {
       const query = new URLSearchParams({ status });
-      return client.request<OrderQueueItem[]>(
-        `/vendor/orders/queue?${query.toString()}`,
-      );
+      return client.request<OrderQueueItem[]>(`/vendor/orders/queue?${query.toString()}`);
     },
     confirm(orderId: string): Promise<OrderActionResponse> {
-      return client.request<OrderActionResponse>(
-        `/vendor/orders/${orderId}/confirm`,
-        {
-          method: "POST",
-        },
-      );
+      return client.request<OrderActionResponse>(`/vendor/orders/${orderId}/confirm`, {
+        method: "POST",
+      });
     },
     pack(orderId: string): Promise<OrderActionResponse> {
-      return client.request<OrderActionResponse>(
-        `/vendor/orders/${orderId}/pack`,
-        {
-          method: "POST",
-        },
-      );
+      return client.request<OrderActionResponse>(`/vendor/orders/${orderId}/pack`, {
+        method: "POST",
+      });
     },
     ship(orderId: string, trackingNote: string): Promise<OrderActionResponse> {
-      return client.request<OrderActionResponse>(
-        `/vendor/orders/${orderId}/ship`,
-        {
-          method: "POST",
-          body: JSON.stringify({ tracking_note: trackingNote }),
-        },
-      );
+      return client.request<OrderActionResponse>(`/vendor/orders/${orderId}/ship`, {
+        method: "POST",
+        body: JSON.stringify({ tracking_note: trackingNote }),
+      });
     },
     readyForPickup(orderId: string): Promise<OrderActionResponse> {
-      return client.request<OrderActionResponse>(
-        `/vendor/orders/${orderId}/ready-for-pickup`,
-        {
-          method: "POST",
-        },
-      );
+      return client.request<OrderActionResponse>(`/vendor/orders/${orderId}/ready-for-pickup`, {
+        method: "POST",
+      });
     },
   };
 }
@@ -144,9 +120,7 @@ export function writeQueueCache(payload: QueueCache): void {
   }
 }
 
-function primaryCardAction(
-  actions: VendorActionName[],
-): VendorActionName | null {
+function primaryCardAction(actions: VendorActionName[]): VendorActionName | null {
   for (const action of CARD_ACTIONS) {
     if (actions.includes(action)) {
       return action;
@@ -178,26 +152,15 @@ type OrderCardProps = {
   onError: (message: string) => void;
 };
 
-export function OrderCard({
-  locale,
-  order,
-  onUpdated,
-  onError,
-}: OrderCardProps) {
+export function OrderCard({ locale, order, onUpdated, onError }: OrderCardProps) {
   const t = useTranslations("vendor");
   const { session } = useSession();
   const [pending, setPending] = useState(false);
   const [sheetAction, setSheetAction] = useState<VendorActionName | null>(null);
   const [trackingNote, setTrackingNote] = useState("");
 
-  const getToken = useCallback(
-    () => session?.access_token ?? null,
-    [session?.access_token],
-  );
-  const queueClient = useMemo(
-    () => createOrdersQueueClient(getToken),
-    [getToken],
-  );
+  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const queueClient = useMemo(() => createOrdersQueueClient(getToken), [getToken]);
 
   const action = primaryCardAction(order.available_actions);
 
@@ -270,13 +233,8 @@ export function OrderCard({
       <div className="flex items-start gap-3">
         <Link className="min-w-0 flex-1" href={`/${locale}/orders/${order.id}`}>
           <div className="flex items-center gap-2">
-            <p className="truncate text-sm font-semibold text-text">
-              {order.preview_title}
-            </p>
-            <StatusChip
-              tone={orderStatusTone(order.status)}
-              label={statusLabel}
-            />
+            <p className="truncate text-sm font-semibold text-text">{order.preview_title}</p>
+            <StatusChip tone={orderStatusTone(order.status)} label={statusLabel} />
           </div>
           <p className="mt-1 text-xs text-text-3">
             {t("queue.card.items", { count: order.item_count })}
@@ -316,10 +274,7 @@ export function OrderCard({
             aria-labelledby={`order-sheet-${order.id}`}
             onClick={(event) => event.stopPropagation()}
           >
-            <h3
-              id={`order-sheet-${order.id}`}
-              className="text-base font-semibold text-text"
-            >
+            <h3 id={`order-sheet-${order.id}`} className="text-base font-semibold text-text">
               {t("queue.sheet.title", {
                 action: t(ACTION_LABEL_KEYS[sheetAction]),
               })}
@@ -333,10 +288,7 @@ export function OrderCard({
 
             {sheetAction === "ship" ? (
               <div className="mt-3">
-                <FormField
-                  label={t("orders.actions.shipLabel")}
-                  id={`tracking-${order.id}`}
-                >
+                <FormField label={t("orders.actions.shipLabel")} id={`tracking-${order.id}`}>
                   <Input
                     value={trackingNote}
                     onChange={(event) => setTrackingNote(event.target.value)}
@@ -380,11 +332,7 @@ type PullToRefreshListProps = {
   label: string;
 };
 
-export function PullToRefreshList({
-  children,
-  onRefresh,
-  label,
-}: PullToRefreshListProps) {
+export function PullToRefreshList({ children, onRefresh, label }: PullToRefreshListProps) {
   const [pulling, setPulling] = useState(false);
   const startY = useRef(0);
 
@@ -413,9 +361,7 @@ export function PullToRefreshList({
         setPulling(false);
       }}
     >
-      {pulling ? (
-        <p className="py-2 text-center text-xs text-text-3">{label}</p>
-      ) : null}
+      {pulling ? <p className="py-2 text-center text-xs text-text-3">{label}</p> : null}
       {children}
     </div>
   );
@@ -426,10 +372,7 @@ type OrdersQueueViewProps = {
   initialStatus?: string;
 };
 
-export function OrdersQueueView({
-  locale,
-  initialStatus = "needs_action",
-}: OrdersQueueViewProps) {
+export function OrdersQueueView({ locale, initialStatus = "needs_action" }: OrdersQueueViewProps) {
   const t = useTranslations("vendor");
   const { session, loading: sessionLoading } = useSession();
   const [statusFilter, setStatusFilter] = useState(initialStatus);
@@ -440,14 +383,8 @@ export function OrdersQueueView({
   const [error, setError] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
 
-  const getToken = useCallback(
-    () => session?.access_token ?? null,
-    [session?.access_token],
-  );
-  const queueClient = useMemo(
-    () => createOrdersQueueClient(getToken),
-    [getToken],
-  );
+  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const queueClient = useMemo(() => createOrdersQueueClient(getToken), [getToken]);
 
   const load = useCallback(
     async (opts?: { background?: boolean }) => {
@@ -541,9 +478,7 @@ export function OrdersQueueView({
     >
       <div className="flex flex-col gap-4 pb-8">
         <header className="space-y-1">
-          <h1 className="text-xl font-semibold text-text">
-            {t("queue.title")}
-          </h1>
+          <h1 className="text-xl font-semibold text-text">{t("queue.title")}</h1>
           <p className="text-sm text-text-2">{t("queue.intro")}</p>
         </header>
 
@@ -553,9 +488,7 @@ export function OrdersQueueView({
           </p>
         ) : null}
         {error ? <p className="text-sm text-danger">{error}</p> : null}
-        {refreshing ? (
-          <p className="text-xs text-text-3">{t("queue.refreshing")}</p>
-        ) : null}
+        {refreshing ? <p className="text-xs text-text-3">{t("queue.refreshing")}</p> : null}
 
         <div className="flex gap-2 overflow-x-auto pb-1">
           {filters.map((filter) => {
@@ -616,27 +549,17 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
   const tCommon = useTranslations("common");
   const { session, loading: sessionLoading } = useSession();
   const [dashboard, setDashboard] = useState<VendorDashboard | null>(null);
-  const [analyticsSummary, setAnalyticsSummary] =
-    useState<VendorAnalyticsSummary | null>(null);
+  const [analyticsSummary, setAnalyticsSummary] = useState<VendorAnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
   const [kycApp, setKycApp] = useState<KycApplication | null>(null);
 
-  const getToken = useCallback(
-    () => session?.access_token ?? null,
-    [session?.access_token],
-  );
-  const queueClient = useMemo(
-    () => createOrdersQueueClient(getToken),
-    [getToken],
-  );
+  const getToken = useCallback(() => session?.access_token ?? null, [session?.access_token]);
+  const queueClient = useMemo(() => createOrdersQueueClient(getToken), [getToken]);
   const kycClient = useMemo(() => createKycClient(getToken), [getToken]);
-  const analyticsClient = useMemo(
-    () => createAnalyticsClient(getToken),
-    [getToken],
-  );
+  const analyticsClient = useMemo(() => createAnalyticsClient(getToken), [getToken]);
 
   const load = useCallback(async () => {
     if (!session) {
@@ -798,10 +721,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
       </header>
 
       {offline ? (
-        <p
-          className="rounded-md bg-warning/10 px-3 py-2 text-sm text-text"
-          role="status"
-        >
+        <p className="rounded-md bg-warning/10 px-3 py-2 text-sm text-text" role="status">
           {t("home.offlineNotice")}
         </p>
       ) : null}
@@ -829,9 +749,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-text">
-            {t("home.needsAction.heading")}
-          </h2>
+          <h2 className="text-sm font-semibold text-text">{t("home.needsAction.heading")}</h2>
           {needsCount > 0 ? (
             <span className="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-medium text-danger">
               {needsCount}
@@ -861,9 +779,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
 
       <section className="rounded-2xl bg-panel p-4 text-panel-text">
         <p className="text-sm text-panel-muted">{t("home.takings.label")}</p>
-        <p className="mt-1 font-mono text-3xl font-semibold tracking-tight">
-          {formatK(takings)}
-        </p>
+        <p className="mt-1 font-mono text-3xl font-semibold tracking-tight">{formatK(takings)}</p>
         <p className="mt-1 text-xs text-panel-muted">
           {takings === 0
             ? t("home.takings.emptyCaption")
@@ -883,27 +799,21 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
             <p className="font-mono text-lg font-semibold text-text">
               {analyticsSummary.total_views.toLocaleString()}
             </p>
-            <p className="text-[10px] text-muted">
-              {t("home.analytics.viewsCaption")}
-            </p>
+            <p className="text-[10px] text-muted">{t("home.analytics.viewsCaption")}</p>
           </div>
           <div className="space-y-1 px-1">
             <p className="text-xs text-muted">{t("home.analytics.orders")}</p>
             <p className="font-mono text-lg font-semibold text-text">
               {analyticsSummary.total_orders.toLocaleString()}
             </p>
-            <p className="text-[10px] text-muted">
-              {t("home.analytics.ordersCaption")}
-            </p>
+            <p className="text-[10px] text-muted">{t("home.analytics.ordersCaption")}</p>
           </div>
           <div className="space-y-1 px-1">
             <p className="text-xs text-muted">{t("home.analytics.gmv")}</p>
             <p className="font-mono text-lg font-semibold text-text">
               {formatK(analyticsSummary.gmv_ngwee)}
             </p>
-            <p className="text-[10px] text-muted">
-              {t("home.analytics.gmvCaption")}
-            </p>
+            <p className="text-[10px] text-muted">{t("home.analytics.gmvCaption")}</p>
           </div>
         </section>
       ) : null}
@@ -918,9 +828,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
               <h2 className="mt-1 text-sm font-semibold text-text">
                 {t("home.quickStart.services.heading")}
               </h2>
-              <p className="mt-1 text-sm text-text-2">
-                {t("home.quickStart.services.body")}
-              </p>
+              <p className="mt-1 text-sm text-text-2">{t("home.quickStart.services.body")}</p>
               <Link
                 className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-[var(--primary-btn-fg)]"
                 href={`/${locale}/services`}
@@ -933,9 +841,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
               <h2 className="mt-1 text-sm font-semibold text-text">
                 {t("home.quickStart.events.heading")}
               </h2>
-              <p className="mt-1 text-sm text-text-2">
-                {t("home.quickStart.events.body")}
-              </p>
+              <p className="mt-1 text-sm text-text-2">{t("home.quickStart.events.body")}</p>
               <Link
                 className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-[var(--primary-btn-fg)]"
                 href={`/${locale}/events`}
@@ -948,9 +854,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
               <h2 className="mt-1 text-sm font-semibold text-text">
                 {t("home.quickStart.products.heading")}
               </h2>
-              <p className="mt-1 text-sm text-text-2">
-                {t("home.quickStart.products.body")}
-              </p>
+              <p className="mt-1 text-sm text-text-2">{t("home.quickStart.products.body")}</p>
               <Link
                 className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-[var(--primary-btn-fg)]"
                 href={`/${locale}/listings`}
@@ -962,10 +866,7 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
         </section>
       ) : null}
 
-      <section
-        className="grid grid-cols-2 gap-2 px-1"
-        aria-label={t("home.shortcuts.ariaLabel")}
-      >
+      <section className="grid grid-cols-2 gap-2 px-1" aria-label={t("home.shortcuts.ariaLabel")}>
         <Link
           className="inline-flex min-h-12 items-center justify-center rounded-xl border border-border px-3 text-sm font-medium text-text"
           href={`/${locale}/listings`}

@@ -26,7 +26,10 @@ from app.services.notifications.events import emit_event
 from app.services.orders.state import SYSTEM_ACTOR_ID
 
 EVENT_CANCELLED_EVENT = "event_cancelled"
-_SOLD_TICKET_STATUSES = frozenset({"issued", "checked_in"})
+# The database cancellation trigger turns active credentials into ``void`` in
+# the same transaction as the status change. Include those rows so transferred
+# holders are still notified when this best-effort side-effect runs afterward.
+_SOLD_TICKET_STATUSES = frozenset({"issued", "checked_in", "void"})
 
 
 class ServiceRoleClient(Protocol):
@@ -81,8 +84,8 @@ def _earliest_event_date(client: Any, instance_ids: list[str]) -> str:
 
 
 def _refund_detail(refund_status: str) -> str:
-    if refund_status == "pending":
-        return "Your payment refund is being processed by Vergeo5."
+    if refund_status == "review_required":
+        return "Your refund has been queued for review; no payout has been sent yet."
     return "No payment was found on your account for this event."
 
 
@@ -217,7 +220,7 @@ def process_event_cancellation(
     recipients = {customer_id for _, customer_id in orders if customer_id}
     recipients |= _holder_ids(client, instance_ids)
     for recipient_id in sorted(recipients):
-        refund_status = "pending" if recipient_id in paid_buyers else "none"
+        refund_status = "review_required" if recipient_id in paid_buyers else "none"
         _notify(
             client,
             event_id=event_id,

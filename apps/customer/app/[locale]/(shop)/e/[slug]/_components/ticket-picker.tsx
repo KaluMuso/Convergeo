@@ -10,11 +10,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 import { attendeeNamesComplete, cleanedAttendeeNames, resizeNames } from "../_lib/attendee-names";
+import { isPastEventInstance } from "../_lib/instance-time";
 import { isEarlyBirdActive, nextTierUpsell, resolveUnitPriceNgwee } from "../_lib/resolve-price";
 
 export type TicketPickerInstance = {
   id: string;
   starts_at: string;
+  ends_at?: string | null;
   capacity: number;
   spots_sold: number;
   spots_remaining: number;
@@ -61,10 +63,6 @@ function formatInstanceDate(iso: string, locale: string): string {
   }).format(new Date(iso));
 }
 
-function isPastInstance(iso: string): boolean {
-  return new Date(iso).getTime() < Date.now();
-}
-
 function formatEarlyBirdUntil(iso: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, {
     day: "numeric",
@@ -90,7 +88,7 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
   const tEvents = useTranslations("events");
   const locale = useLocale();
   const [selectedInstanceId, setSelectedInstanceId] = useState(
-    () => instances.find((instance) => !isPastInstance(instance.starts_at))?.id ?? "",
+    () => instances.find((instance) => !isPastEventInstance(instance))?.id ?? "",
   );
   const [selectedTypeId, setSelectedTypeId] = useState(() => ticketTypes[0]?.id ?? "");
   const [qty, setQty] = useState(1);
@@ -101,7 +99,7 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
 
   const upcomingInstances = useMemo(
-    () => instances.filter((instance) => !isPastInstance(instance.starts_at)),
+    () => instances.filter((instance) => !isPastEventInstance(instance)),
     [instances],
   );
 

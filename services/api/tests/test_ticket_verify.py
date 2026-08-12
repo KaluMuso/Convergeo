@@ -46,6 +46,7 @@ SHOP_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 SHOP_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 TOKEN_B = "vendor-b-token"
 FESTIVAL_INSTANCE = "e1000000-0000-0000-0000-000000000001"
+FESTIVAL_EVENT = "e0000000-0000-0000-0000-000000000001"
 GA_TICKET_TYPE = "e2000000-0000-0000-0000-000000000001"
 
 
@@ -103,6 +104,7 @@ def _insert_ticket(
     qr_secret: str = "ticket-secret-abc",
     pin: str = "123456",
     order_item_id: str | None = None,
+    holder_name: str = "Chanda Mwansa",
 ) -> str:
     item_id = order_item_id or str(uuid.uuid4())
     if order_item_id is None:
@@ -138,18 +140,19 @@ def _insert_ticket(
         f"""
         INSERT INTO public.tickets (
           id, instance_id, ticket_type_id, holder_user_id, status,
-          qr_secret, pin_hash, checked_in_at, order_item_id
+          qr_secret, pin_hash, checked_in_at, order_item_id, holder_name
         ) VALUES (
           '{ticket_id}', '{instance_id}', '{ticket_type_id}', '{holder_user_id}',
           '{status}', {_sql_literal(qr_secret)}, {_sql_literal(pin_hash)}, {checked_sql},
-          '{item_id}'
+          '{item_id}', {_sql_literal(holder_name)}
         )
         ON CONFLICT (id) DO UPDATE
           SET status = EXCLUDED.status,
               qr_secret = EXCLUDED.qr_secret,
               pin_hash = EXCLUDED.pin_hash,
               checked_in_at = EXCLUDED.checked_in_at,
-              order_item_id = EXCLUDED.order_item_id;
+              order_item_id = EXCLUDED.order_item_id,
+              holder_name = EXCLUDED.holder_name;
         """
     )
     return ticket_id
@@ -295,11 +298,17 @@ class TestTicketVerifyBatch:
             ],
             vendor_id=SHOP_B,
             now=now,
+            expected_event_id=FESTIVAL_EVENT,
+            expected_instance_id=FESTIVAL_INSTANCE,
         )
 
         assert results[0].outcome == "duplicate"
         assert results[0].error_code == "ticket_duplicate_scan"
         assert results[1].outcome == "checked_in"
+        assert results[1].event_id == FESTIVAL_EVENT
+        assert results[1].instance_id == FESTIVAL_INSTANCE
+        assert results[1].holder_name == "Chanda Mwansa"
+        assert results[1].ticket_type_name
         assert _ticket_status(db, ticket_id) == "checked_in"
 
     def test_batch_replay_is_idempotent(self, db: PgConn) -> None:
@@ -337,6 +346,90 @@ class TestTicketVerifyBatch:
 
 @pytest.mark.usefixtures("db", "db_url_env")
 class TestTicketVerifyAuthzAndStatus:
+    def test_wrong_event_and_instance_are_rejected(self, db: PgConn) -> None:
+        ticket_id = str(uuid.uuid4())
+        secret = "wrong-event-secret"
+        _insert_ticket(db, ticket_id=ticket_id, qr_secret=secret)
+        now = datetime(2026, 7, 10, 12, 0, 0, tzinfo=UTC)
+        code = build_qr_code(
+            ticket_id=ticket_id,
+            ticket_secret=secret,
+            window=current_window(now),
+        )
+
+        with pytest.raises(AppError) as event_exc:
+            verify_and_check_in_ticket(
+                ticket_id=ticket_id,
+                vendor_id=SHOP_B,
+                code=code,
+                now=now,
+                expected_event_id=str(uuid.uuid4()),
+            )
+        assert event_exc.value.code == "ticket_wrong_event"
+
+        with pytest.raises(AppError) as instance_exc:
+            verify_and_check_in_ticket(
+                ticket_id=ticket_id,
+                vendor_id=SHOP_B,
+                code=code,
+                now=now,
+                expected_event_id=FESTIVAL_EVENT,
+                expected_instance_id=str(uuid.uuid4()),
+            )
+        assert instance_exc.value.code == "ticket_wrong_instance"
+        assert _ticket_status(db, ticket_id) == "issued"
+
+    def test_event_unpublished_between_validation_and_claim_is_rejected(
+        self,
+        db: PgConn,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from app.routers import ticket_verify as ticket_verify_router
+
+        fixture = _insert_event_with_ticket_type(db)
+        ticket_id = str(uuid.uuid4())
+        secret = "publish-race-secret"
+        _insert_ticket(
+            db,
+            ticket_id=ticket_id,
+            instance_id=fixture["instance_id"],
+            ticket_type_id=fixture["ticket_type_id"],
+            qr_secret=secret,
+        )
+        now = datetime(2026, 7, 10, 12, 0, 0, tzinfo=UTC)
+        code = build_qr_code(
+            ticket_id=ticket_id,
+            ticket_secret=secret,
+            window=current_window(now),
+        )
+        original_validate = ticket_verify_router._validate_qr_credentials
+
+        def validate_then_unpublish(**kwargs: Any) -> None:
+            original_validate(**kwargs)
+            result = db.run(
+                "UPDATE public.events SET status = 'draft' "
+                f"WHERE id = '{fixture['event_id']}';"
+            )
+            assert result.ok
+
+        monkeypatch.setattr(
+            ticket_verify_router,
+            "_validate_qr_credentials",
+            validate_then_unpublish,
+        )
+
+        with pytest.raises(AppError) as exc:
+            verify_and_check_in_ticket(
+                ticket_id=ticket_id,
+                vendor_id=SHOP_B,
+                code=code,
+                now=now,
+                expected_event_id=fixture["event_id"],
+                expected_instance_id=fixture["instance_id"],
+            )
+        assert exc.value.code == "tickets.event_not_published"
+        assert _ticket_status(db, ticket_id) == "issued"
+
     def test_cross_organiser_denied(self, db: PgConn) -> None:
         ticket_id = str(uuid.uuid4())
         secret = "authz-secret"
@@ -436,13 +529,24 @@ class TestTicketVerifyHttp:
             response = client.post(
                 "/tickets/verify",
                 headers={"Authorization": f"Bearer {TOKEN_B}"},
-                json={"ticket_id": ticket_id, "code": code},
+                json={
+                    "ticket_id": ticket_id,
+                    "event_id": FESTIVAL_EVENT,
+                    "instance_id": FESTIVAL_INSTANCE,
+                    "code": code,
+                },
             )
 
         assert response.status_code == 200
         payload = response.json()
         assert payload["ticket_id"] == ticket_id
         assert payload["to_status"] == "checked_in"
+        assert payload["event_id"] == FESTIVAL_EVENT
+        assert payload["instance_id"] == FESTIVAL_INSTANCE
+        assert payload["holder_name"] == "Chanda Mwansa"
+        assert payload["ticket_type_name"]
+        assert "qr_secret" not in payload
+        assert "pin_hash" not in payload
         assert _ticket_status(db, ticket_id) == "checked_in"
 
 
@@ -475,7 +579,7 @@ class _VendorLookupQuery:
         )
 
 
-def _insert_event_with_ticket_type(db: PgConn) -> dict[str, str]:
+def _insert_event_with_ticket_type(db: PgConn, *, status: str = "published") -> dict[str, str]:
     event_id = str(uuid.uuid4())
     instance_id = str(uuid.uuid4())
     ticket_type_id = str(uuid.uuid4())
@@ -486,7 +590,7 @@ def _insert_event_with_ticket_type(db: PgConn) -> dict[str, str]:
           id, organiser_vendor_id, title, slug, venue, lat, lng, status
         ) VALUES (
           '{event_id}', '{SHOP_B}', 'Verify Event', '{slug}',
-          'Lusaka Showgrounds', -15.4167, 28.2833, 'published'
+          'Lusaka Showgrounds', -15.4167, 28.2833, '{status}'
         );
         INSERT INTO public.event_instances (id, event_id, starts_at, capacity)
         VALUES ('{instance_id}', '{event_id}', '2026-12-01T18:00:00Z', 10);
@@ -496,6 +600,7 @@ def _insert_event_with_ticket_type(db: PgConn) -> dict[str, str]:
         """
     )
     return {
+        "event_id": event_id,
         "instance_id": instance_id,
         "ticket_type_id": ticket_type_id,
     }

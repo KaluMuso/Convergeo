@@ -77,7 +77,11 @@ body::before {
   border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   border-radius: calc(var(--r-lg) + 4px);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--surface) 98%, var(--primary-tint)) 0%, var(--surface) 42%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--surface) 98%, var(--primary-tint)) 0%,
+      var(--surface) 42%
+    ),
     var(--surface);
   box-shadow: var(--shadow-1);
 }
@@ -90,7 +94,11 @@ body::before {
   width: 3.5rem;
   height: 2px;
   border-radius: var(--r-pill);
-  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 18%, transparent));
+  background: linear-gradient(
+    90deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 18%, transparent)
+  );
 }
 
 .home-rail > :first-child {
@@ -99,7 +107,11 @@ body::before {
 
 [data-theme="dark"] .home-rail {
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--surface-elevated) 96%, var(--primary)) 0%, var(--surface) 48%),
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--surface-elevated) 96%, var(--primary)) 0%,
+      var(--surface) 48%
+    ),
     var(--surface);
 }
 

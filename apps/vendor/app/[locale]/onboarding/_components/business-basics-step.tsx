@@ -49,9 +49,7 @@ export function BusinessBasicsStep({
 }: BusinessBasicsStepProps) {
   const nameError = !businessName.trim() ? labels.required : undefined;
   const categoryError = !businessCategory.trim() ? labels.required : undefined;
-  const archetypeError = !businessArchetype.trim()
-    ? labels.required
-    : undefined;
+  const archetypeError = !businessArchetype.trim() ? labels.required : undefined;
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -64,18 +62,11 @@ export function BusinessBasicsStep({
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
       <header className="space-y-1">
-        <h1 className="font-display text-h3 text-display-ink">
-          {labels.heading}
-        </h1>
+        <h1 className="font-display text-h3 text-display-ink">{labels.heading}</h1>
         <p className="text-sm text-text-2">{labels.intro}</p>
       </header>
 
-      <FormField
-        label={labels.nameLabel}
-        required
-        requiredMarker="*"
-        errorMessage={nameError}
-      >
+      <FormField label={labels.nameLabel} required requiredMarker="*" errorMessage={nameError}>
         <Input
           value={businessName}
           onChange={(event: ChangeEvent<HTMLInputElement>) =>

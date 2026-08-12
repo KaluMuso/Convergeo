@@ -53,17 +53,13 @@ export function ReviewStep({
   return (
     <div className="flex flex-col gap-4">
       <header className="space-y-1">
-        <h1 className="font-display text-h3 text-display-ink">
-          {labels.heading}
-        </h1>
+        <h1 className="font-display text-h3 text-display-ink">{labels.heading}</h1>
         <p className="text-sm text-text-2">{labels.intro}</p>
       </header>
 
       <section className="rounded border border-border p-4">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-text">
-            {labels.businessSection}
-          </h2>
+          <h2 className="text-sm font-semibold text-text">{labels.businessSection}</h2>
           <button
             type="button"
             className="text-sm font-medium text-primary underline-offset-2 hover:underline"
@@ -79,24 +75,18 @@ export function ReviewStep({
           </div>
           <div>
             <dt className="text-text-3">{labels.businessCategoryLabel}</dt>
-            <dd className="text-text">
-              {businessCategoryLabel || businessCategory}
-            </dd>
+            <dd className="text-text">{businessCategoryLabel || businessCategory}</dd>
           </div>
           <div>
             <dt className="text-text-3">{labels.businessArchetypeLabel}</dt>
-            <dd className="text-text">
-              {businessArchetypeLabel || businessArchetype}
-            </dd>
+            <dd className="text-text">{businessArchetypeLabel || businessArchetype}</dd>
           </div>
         </dl>
       </section>
 
       <section className="rounded border border-border p-4">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-text">
-            {labels.docsSection}
-          </h2>
+          <h2 className="text-sm font-semibold text-text">{labels.docsSection}</h2>
           <button
             type="button"
             className="text-sm font-medium text-primary underline-offset-2 hover:underline"
@@ -116,15 +106,11 @@ export function ReviewStep({
       </section>
 
       <section className="rounded border border-border p-4">
-        <h2 className="mb-1 text-sm font-semibold text-text">
-          {labels.momoSection}
-        </h2>
+        <h2 className="mb-1 text-sm font-semibold text-text">{labels.momoSection}</h2>
         <p className="m-0 text-sm text-text">{momoPhone}</p>
       </section>
 
-      <p className="rounded bg-primary-tint px-3 py-2 text-sm text-primary">
-        {labels.gateNotice}
-      </p>
+      <p className="rounded bg-primary-tint px-3 py-2 text-sm text-primary">{labels.gateNotice}</p>
 
       <Button
         type="button"

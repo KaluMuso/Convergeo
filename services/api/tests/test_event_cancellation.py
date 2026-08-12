@@ -162,13 +162,27 @@ def test_cancellation_flags_paid_order_and_notifies_buyer_and_holder() -> None:
     buyer_row = next(row for row in outbox if row["payload"]["recipient_id"] == BUYER_ID)
     assert buyer_row["payload"]["event_title"] == "Jazz"
     assert buyer_row["payload"]["event_date"] == "15 Aug 2026, 18:00 UTC"
-    assert buyer_row["payload"]["refund_status"] == "pending"
+    assert buyer_row["payload"]["refund_status"] == "review_required"
     assert "refund" in buyer_row["payload"]["refund_detail"].lower()
+    assert "no payout" in buyer_row["payload"]["refund_detail"].lower()
 
     holder_row = next(row for row in outbox if row["payload"]["recipient_id"] == HOLDER_ID)
     assert holder_row["payload"]["refund_status"] == "none"
 
     assert result.orders_flagged == 1
+    assert result.recipients_notified == 2
+
+
+def test_voided_holder_is_still_notified_after_database_cancellation() -> None:
+    client = _seeded()
+    client.tables["tickets"].rows[0]["status"] = "void"
+
+    result = process_event_cancellation(_Service(client), event_id=EVENT_ID, event_title="Jazz")
+
+    recipients = {
+        row["payload"]["recipient_id"] for row in _rows(client, "notification_outbox")
+    }
+    assert recipients == {BUYER_ID, HOLDER_ID}
     assert result.recipients_notified == 2
 
 

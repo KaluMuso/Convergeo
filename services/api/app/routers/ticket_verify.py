@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import os
 import re
 from collections import defaultdict
@@ -150,6 +151,11 @@ class TicketRow:
     pin_hash: str | None
     checked_in_at: str | None
     organiser_vendor_id: str
+    event_id: str
+    instance_id: str
+    event_status: str
+    holder_name: str | None
+    ticket_type_name: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -158,6 +164,10 @@ class CheckInResult:
     from_status: str
     to_status: str
     checked_in_at: datetime
+    event_id: str
+    instance_id: str
+    holder_name: str | None
+    ticket_type_name: str
 
 
 def _single_row(response: Any) -> dict[str, Any] | None:
@@ -194,17 +204,24 @@ def _load_vendor_for_owner(
 def _fetch_ticket_row(ticket_id: str) -> TicketRow:
     ticket_sql = sql_uuid(ticket_id, "ticket_id")
     script = f"""
-SELECT
-  t.id::text,
-  t.status,
-  t.order_item_id::text,
-  t.qr_secret,
-  t.pin_hash,
-  coalesce(t.checked_in_at::text, ''),
-  e.organiser_vendor_id::text
+SELECT json_build_object(
+  'ticket_id', t.id,
+  'status', t.status,
+  'order_item_id', t.order_item_id,
+  'qr_secret', t.qr_secret,
+  'pin_hash', t.pin_hash,
+  'checked_in_at', t.checked_in_at,
+  'organiser_vendor_id', e.organiser_vendor_id,
+  'event_id', e.id,
+  'instance_id', ei.id,
+  'event_status', e.status,
+  'holder_name', t.holder_name,
+  'ticket_type_name', tt.name
+)::text
 FROM public.tickets t
 JOIN public.event_instances ei ON ei.id = t.instance_id
 JOIN public.events e ON e.id = ei.event_id
+JOIN public.ticket_types tt ON tt.id = t.ticket_type_id
 WHERE t.id = {ticket_sql};
 """
     result = run_sql_script(script)
@@ -218,20 +235,42 @@ WHERE t.id = {ticket_sql};
             details={"ticket_id": ticket_id},
         )
 
-    parts = result.rows[0].split("|")
-    if len(parts) != 7:
+    try:
+        row = json.loads(result.rows[0])
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("unexpected ticket verify lookup shape") from exc
+    if not isinstance(row, dict):
         raise RuntimeError("unexpected ticket verify lookup shape")
 
-    order_item_raw = parts[2].strip()
+    order_item_raw = row.get("order_item_id")
+    holder_name_raw = row.get("holder_name")
     return TicketRow(
-        ticket_id=parts[0],
-        status=parts[1],
-        order_item_id=order_item_raw or None,
-        qr_secret=parts[3] or None,
-        pin_hash=parts[4] or None,
-        checked_in_at=parts[5] or None,
-        organiser_vendor_id=parts[6],
+        ticket_id=str(row["ticket_id"]),
+        status=str(row["status"]),
+        order_item_id=str(order_item_raw) if order_item_raw is not None else None,
+        qr_secret=str(row["qr_secret"]) if row.get("qr_secret") is not None else None,
+        pin_hash=str(row["pin_hash"]) if row.get("pin_hash") is not None else None,
+        checked_in_at=(
+            str(row["checked_in_at"]) if row.get("checked_in_at") is not None else None
+        ),
+        organiser_vendor_id=str(row["organiser_vendor_id"]),
+        event_id=str(row["event_id"]),
+        instance_id=str(row["instance_id"]),
+        event_status=str(row["event_status"]),
+        holder_name=str(holder_name_raw) if holder_name_raw is not None else None,
+        ticket_type_name=str(row.get("ticket_type_name") or ""),
     )
+
+
+def _safe_ticket_details(ticket: TicketRow) -> dict[str, str | None]:
+    return {
+        "ticket_id": ticket.ticket_id,
+        "event_id": ticket.event_id,
+        "instance_id": ticket.instance_id,
+        "holder_name": ticket.holder_name,
+        "ticket_type_name": ticket.ticket_type_name,
+        "checked_in_at": ticket.checked_in_at,
+    }
 
 
 def _assert_organiser_scope(*, ticket: TicketRow, vendor_id: str) -> None:
@@ -241,6 +280,42 @@ def _assert_organiser_scope(*, ticket: TicketRow, vendor_id: str) -> None:
             message="Organiser may only verify tickets for their own events",
             http_status=403,
             details={"ticket_id": ticket.ticket_id},
+        )
+
+
+def _assert_event_published(ticket: TicketRow) -> None:
+    if ticket.event_status != "published":
+        raise AppError(
+            code="tickets.event_not_published",
+            message="Tickets can only be checked in for published events",
+            http_status=409,
+            details={"event_id": ticket.event_id},
+        )
+
+
+def _assert_expected_scope(
+    ticket: TicketRow,
+    *,
+    expected_event_id: str | None,
+    expected_instance_id: str | None,
+) -> None:
+    if expected_event_id is not None and ticket.event_id != expected_event_id:
+        raise AppError(
+            code="ticket_wrong_event",
+            message="Ticket belongs to a different event",
+            http_status=409,
+            details={"ticket_id": ticket.ticket_id, "expected_event_id": expected_event_id},
+        )
+    if expected_instance_id is not None and ticket.instance_id != expected_instance_id:
+        raise AppError(
+            code="ticket_wrong_instance",
+            message="Ticket belongs to a different event instance",
+            http_status=409,
+            details={
+                "ticket_id": ticket.ticket_id,
+                "expected_event_id": expected_event_id,
+                "expected_instance_id": expected_instance_id,
+            },
         )
 
 
@@ -260,7 +335,7 @@ def _assert_checkinable_status(ticket: TicketRow) -> None:
             code="ticket_already_checked_in",
             message="Ticket has already been checked in",
             http_status=409,
-            details={"ticket_id": ticket.ticket_id},
+            details=_safe_ticket_details(ticket),
         )
     if ticket.status == "void":
         raise AppError(
@@ -285,21 +360,46 @@ def _assert_checkinable_status(ticket: TicketRow) -> None:
         )
 
 
-def _atomic_check_in(*, ticket_id: str, vendor_id: str) -> CheckInResult | None:
+def _atomic_check_in(
+    *,
+    ticket: TicketRow,
+    vendor_id: str,
+    expected_event_id: str | None,
+    expected_instance_id: str | None,
+) -> CheckInResult | None:
     """Single-use claim: exactly one concurrent caller may transition issued → checked_in."""
-    ticket_sql = sql_uuid(ticket_id, "ticket_id")
+    ticket_sql = sql_uuid(ticket.ticket_id, "ticket_id")
     vendor_sql = sql_uuid(vendor_id, "vendor_id")
+    event_clause = ""
+    if expected_event_id is not None:
+        event_clause = f"AND e.id = {sql_uuid(expected_event_id, 'expected_event_id')}"
+    instance_clause = ""
+    if expected_instance_id is not None:
+        instance_clause = (
+            f"AND ei.id = {sql_uuid(expected_instance_id, 'expected_instance_id')}"
+        )
     script = f"""
 BEGIN;
-WITH locked AS (
-  SELECT t.id
+WITH event_lock AS MATERIALIZED (
+  SELECT e.id
   FROM public.tickets t
   JOIN public.event_instances ei ON ei.id = t.instance_id
   JOIN public.events e ON e.id = ei.event_id
   WHERE t.id = {ticket_sql}
     AND e.organiser_vendor_id = {vendor_sql}
+    AND e.status = 'published'
+    {event_clause}
+    {instance_clause}
+  FOR SHARE OF e
+),
+locked AS (
+  SELECT t.id
+  FROM public.tickets t
+  JOIN public.event_instances ei ON ei.id = t.instance_id
+  JOIN event_lock e ON e.id = ei.event_id
+  WHERE t.id = {ticket_sql}
     AND t.status = 'issued'
-  FOR UPDATE
+  FOR UPDATE OF t
 )
 UPDATE public.tickets t
 SET
@@ -326,6 +426,10 @@ COMMIT;
         from_status=parts[1],
         to_status=parts[2],
         checked_in_at=checked_in_at,
+        event_id=ticket.event_id,
+        instance_id=ticket.instance_id,
+        holder_name=ticket.holder_name,
+        ticket_type_name=ticket.ticket_type_name,
     )
 
 
@@ -367,9 +471,17 @@ def verify_and_check_in_ticket(
     code: str | None = None,
     pin: str | None = None,
     now: datetime | None = None,
+    expected_event_id: str | None = None,
+    expected_instance_id: str | None = None,
 ) -> CheckInResult:
     ticket = _fetch_ticket_row(ticket_id)
     _assert_organiser_scope(ticket=ticket, vendor_id=vendor_id)
+    _assert_event_published(ticket)
+    _assert_expected_scope(
+        ticket,
+        expected_event_id=expected_event_id,
+        expected_instance_id=expected_instance_id,
+    )
     _assert_paid_ticket(ticket)
     _assert_checkinable_status(ticket)
 
@@ -384,15 +496,27 @@ def verify_and_check_in_ticket(
             http_status=422,
         )
 
-    claimed = _atomic_check_in(ticket_id=ticket_id, vendor_id=vendor_id)
+    claimed = _atomic_check_in(
+        ticket=ticket,
+        vendor_id=vendor_id,
+        expected_event_id=expected_event_id,
+        expected_instance_id=expected_instance_id,
+    )
     if claimed is None:
         refreshed = _fetch_ticket_row(ticket_id)
+        _assert_organiser_scope(ticket=refreshed, vendor_id=vendor_id)
+        _assert_event_published(refreshed)
+        _assert_expected_scope(
+            refreshed,
+            expected_event_id=expected_event_id,
+            expected_instance_id=expected_instance_id,
+        )
         if refreshed.status == "checked_in":
             raise AppError(
                 code="ticket_already_checked_in",
                 message="Ticket has already been checked in",
                 http_status=409,
-                details={"ticket_id": ticket_id},
+                details=_safe_ticket_details(refreshed),
             )
         _assert_checkinable_status(refreshed)
         raise AppError(
@@ -442,6 +566,8 @@ def _rate_limit_verify(
 
 class VerifyTicketRequest(StrictModel):
     ticket_id: str
+    event_id: str
+    instance_id: str | None = None
     code: str | None = Field(default=None, min_length=1)
     pin: str | None = Field(default=None, min_length=6, max_length=6)
 
@@ -459,6 +585,10 @@ class VerifyTicketResponse(StrictModel):
     from_status: str
     to_status: str
     checked_in_at: datetime
+    event_id: str
+    instance_id: str
+    holder_name: str | None
+    ticket_type_name: str
 
 
 class BatchScanItem(StrictModel):
@@ -484,6 +614,8 @@ class BatchScanItem(StrictModel):
 
 
 class BatchVerifyRequest(StrictModel):
+    event_id: str
+    instance_id: str
     scans: list[BatchScanItem] = Field(min_length=1, max_length=500)
 
 
@@ -497,6 +629,10 @@ class BatchScanResult(StrictModel):
     from_status: str | None = None
     checked_in_at: datetime | None = None
     error_code: str | None = None
+    event_id: str | None = None
+    instance_id: str | None = None
+    holder_name: str | None = None
+    ticket_type_name: str | None = None
 
 
 class BatchVerifyResponse(StrictModel):
@@ -509,6 +645,8 @@ def _process_batch_scan(
     vendor_id: str,
     is_primary: bool,
     now: datetime | None = None,
+    expected_event_id: str | None = None,
+    expected_instance_id: str | None = None,
 ) -> BatchScanResult:
     if not is_primary:
         return BatchScanResult(
@@ -521,6 +659,22 @@ def _process_batch_scan(
     ticket = _fetch_ticket_row(item.ticket_id)
     _assert_organiser_scope(ticket=ticket, vendor_id=vendor_id)
 
+    try:
+        _assert_event_published(ticket)
+        _assert_expected_scope(
+            ticket,
+            expected_event_id=expected_event_id,
+            expected_instance_id=expected_instance_id,
+        )
+    except AppError as exc:
+        return BatchScanResult(
+            ticket_id=item.ticket_id,
+            scanned_at=item.scanned_at,
+            outcome="rejected",
+            from_status=ticket.status,
+            error_code=exc.code,
+        )
+
     if ticket.status == "checked_in":
         checked_in_at = None
         if ticket.checked_in_at:
@@ -531,6 +685,10 @@ def _process_batch_scan(
             outcome="already_checked_in",
             from_status="checked_in",
             checked_in_at=checked_in_at,
+            event_id=ticket.event_id,
+            instance_id=ticket.instance_id,
+            holder_name=ticket.holder_name,
+            ticket_type_name=ticket.ticket_type_name,
         )
 
     try:
@@ -550,9 +708,30 @@ def _process_batch_scan(
             error_code=exc.code,
         )
 
-    claimed = _atomic_check_in(ticket_id=item.ticket_id, vendor_id=vendor_id)
+    claimed = _atomic_check_in(
+        ticket=ticket,
+        vendor_id=vendor_id,
+        expected_event_id=expected_event_id,
+        expected_instance_id=expected_instance_id,
+    )
     if claimed is None:
         refreshed = _fetch_ticket_row(item.ticket_id)
+        _assert_organiser_scope(ticket=refreshed, vendor_id=vendor_id)
+        try:
+            _assert_event_published(refreshed)
+            _assert_expected_scope(
+                refreshed,
+                expected_event_id=expected_event_id,
+                expected_instance_id=expected_instance_id,
+            )
+        except AppError as exc:
+            return BatchScanResult(
+                ticket_id=item.ticket_id,
+                scanned_at=item.scanned_at,
+                outcome="rejected",
+                from_status=refreshed.status,
+                error_code=exc.code,
+            )
         if refreshed.status == "checked_in":
             checked_in_at = None
             if refreshed.checked_in_at:
@@ -565,6 +744,10 @@ def _process_batch_scan(
                 outcome="already_checked_in",
                 from_status="checked_in",
                 checked_in_at=checked_in_at,
+                event_id=refreshed.event_id,
+                instance_id=refreshed.instance_id,
+                holder_name=refreshed.holder_name,
+                ticket_type_name=refreshed.ticket_type_name,
             )
         return BatchScanResult(
             ticket_id=item.ticket_id,
@@ -580,6 +763,10 @@ def _process_batch_scan(
         outcome="checked_in",
         from_status=claimed.from_status,
         checked_in_at=claimed.checked_in_at,
+        event_id=claimed.event_id,
+        instance_id=claimed.instance_id,
+        holder_name=claimed.holder_name,
+        ticket_type_name=claimed.ticket_type_name,
     )
 
 
@@ -588,6 +775,8 @@ def verify_batch_scans(
     scans: list[BatchScanItem],
     vendor_id: str,
     now: datetime | None = None,
+    expected_event_id: str | None = None,
+    expected_instance_id: str | None = None,
 ) -> list[BatchScanResult]:
     grouped: dict[str, list[tuple[int, BatchScanItem]]] = defaultdict(list)
     for index, item in enumerate(scans):
@@ -605,6 +794,8 @@ def verify_batch_scans(
             vendor_id=vendor_id,
             is_primary=index in primary_indexes,
             now=now,
+            expected_event_id=expected_event_id,
+            expected_instance_id=expected_instance_id,
         )
     return [result for result in results if result is not None]
 
@@ -625,12 +816,18 @@ def verify_ticket(
         vendor_id=vendor_id,
         code=body.code.strip() if body.code else None,
         pin=body.pin.strip() if body.pin else None,
+        expected_event_id=body.event_id.strip(),
+        expected_instance_id=body.instance_id.strip() if body.instance_id else None,
     )
     return VerifyTicketResponse(
         ticket_id=result.ticket_id,
         from_status=result.from_status,
         to_status=result.to_status,
         checked_in_at=result.checked_in_at,
+        event_id=result.event_id,
+        instance_id=result.instance_id,
+        holder_name=result.holder_name,
+        ticket_type_name=result.ticket_type_name,
     )
 
 
@@ -645,5 +842,10 @@ def verify_ticket_batch(
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     vendor_id = str(vendor["id"])
 
-    results = verify_batch_scans(scans=body.scans, vendor_id=vendor_id)
+    results = verify_batch_scans(
+        scans=body.scans,
+        vendor_id=vendor_id,
+        expected_event_id=body.event_id.strip(),
+        expected_instance_id=body.instance_id.strip(),
+    )
     return BatchVerifyResponse(results=results)

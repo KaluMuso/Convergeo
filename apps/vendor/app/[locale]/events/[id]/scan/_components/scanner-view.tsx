@@ -150,11 +150,13 @@ export function ScannerView({ eventId }: ScannerViewProps) {
   }, [storeReady, instanceId]);
 
   const attemptReconcile = useCallback(async () => {
-    if (!online) {
+    if (!online || !instanceId) {
       return;
     }
     try {
-      const summary = await store.reconcile((scans) => scanSyncClient.verifyBatch(scans));
+      const summary = await store.reconcile((scans) =>
+        scanSyncClient.verifyBatch(eventId, instanceId, scans),
+      );
       if (summary.synced > 0 || summary.conflict > 0 || summary.rejected > 0) {
         setCheckedInCount(store.syncedCount);
         setPendingCount(store.pendingCount);
@@ -180,7 +182,7 @@ export function ScannerView({ eventId }: ScannerViewProps) {
       // Reconcile failures just leave items pending; they retry next time
       // the device is online (e.g. next successful scan or manual sync).
     }
-  }, [online, scanSyncClient, store]);
+  }, [eventId, instanceId, online, scanSyncClient, store]);
 
   // Fires once when connectivity is (re)gained -- `attemptReconcile` is
   // intentionally omitted from the deps array since it is deliberately not

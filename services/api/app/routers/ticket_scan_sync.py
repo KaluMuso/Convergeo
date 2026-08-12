@@ -42,6 +42,8 @@ _ISSUED_STATUSES = frozenset({"issued", "transferred"})
 
 class ScanSyncTicket(StrictModel):
     ticket_id: str
+    holder_name: str | None = None
+    ticket_type_name: str
     # Positional: window_sigs[i] corresponds to window (horizon_start_window + i).
     # Keeps the payload compact -- no need to repeat the window number per sig.
     window_sigs: list[str]
@@ -117,7 +119,7 @@ def _load_event_for_vendor(
 ) -> dict[str, Any]:
     response = (
         client.table("events")
-        .select("id, organiser_vendor_id")
+        .select("id, organiser_vendor_id, status")
         .eq("id", event_id)
         .maybe_single()
         .execute()
@@ -136,6 +138,13 @@ def _load_event_for_vendor(
             message="Organiser may only sync scan data for their own events",
             http_status=403,
             details={"message_key": "vendor.scan.errors.forbidden", "event_id": event_id},
+        )
+    if row.get("status") != "published":
+        raise AppError(
+            code="tickets.event_not_published",
+            message="Scan data is only available for published events",
+            http_status=409,
+            details={"message_key": "vendor.scan.errors.event_not_published"},
         )
     return row
 
@@ -167,12 +176,24 @@ def _load_instance_for_event(
 def _load_issued_tickets(client: Any, instance_id: str) -> list[dict[str, Any]]:
     response = (
         client.table("tickets")
-        .select("id, status, order_item_id, qr_secret, pin_hash")
+        .select(
+            "id, status, order_item_id, qr_secret, pin_hash, holder_name, "
+            "ticket_types(name)"
+        )
         .eq("instance_id", instance_id)
         .in_("status", list(_ISSUED_STATUSES))
         .execute()
     )
     return [row for row in _rows(response) if row.get("order_item_id")]
+
+
+def _ticket_type_name(row: dict[str, Any]) -> str:
+    related = row.get("ticket_types")
+    if isinstance(related, dict):
+        return str(related.get("name") or "")
+    if isinstance(related, list) and related and isinstance(related[0], dict):
+        return str(related[0].get("name") or "")
+    return str(row.get("ticket_type_name") or "")
 
 
 def compute_horizon_windows(starts_at: datetime) -> tuple[int, int]:
@@ -202,6 +223,10 @@ def build_scan_sync_response(
         ticket_payloads.append(
             ScanSyncTicket(
                 ticket_id=str(row["id"]),
+                holder_name=(
+                    str(row["holder_name"]) if row.get("holder_name") is not None else None
+                ),
+                ticket_type_name=_ticket_type_name(row),
                 window_sigs=sigs,
                 pin_hash_present=bool(row.get("pin_hash")),
             )

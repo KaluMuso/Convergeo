@@ -456,6 +456,27 @@ def test_update_event_visibility_and_policy_fields(
     assert body["terms"] == "No re-entry."
 
 
+def test_leaving_private_visibility_clears_access_code_hash(
+    organiser_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    _seed_event(fake_client, event_id=EVENT_A_ID, vendor_id=VENDOR_A_ID)
+    stored = fake_client.tables["events"].rows[-1]
+    stored["visibility"] = "private"
+    stored["access_code_hash"] = "stale-private-digest"
+
+    response = organiser_client.patch(
+        f"/organiser/events/{EVENT_A_ID}",
+        headers=_auth_headers(),
+        json={"visibility": "public"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["event"]["visibility"] == "public"
+    assert response.json()["event"]["has_access_code"] is False
+    assert stored["access_code_hash"] is None
+
+
 def test_create_event_rejects_ends_at_before_starts_at(organiser_client: TestClient) -> None:
     payload = _create_payload(starts_at="2026-09-01T18:00:00+02:00")
     payload["instances"][0]["ends_at"] = "2026-09-01T17:00:00+02:00"  # before start
