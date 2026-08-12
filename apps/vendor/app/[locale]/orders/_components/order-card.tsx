@@ -47,6 +47,7 @@ export type VendorDashboard = {
   needs_action: OrderQueueItem[];
   queue_counts: Record<string, number>;
   archetype?: string | null;
+  business_archetype?: string | null;
 };
 
 const CACHE_KEY = "vergeo5.vendor.orders.queue.v1";
@@ -274,7 +275,9 @@ export function OrderCard({ locale, order, onUpdated, onError }: OrderCardProps)
             onClick={(event) => event.stopPropagation()}
           >
             <h3 id={`order-sheet-${order.id}`} className="text-base font-semibold text-text">
-              {t("queue.sheet.title", { action: t(ACTION_LABEL_KEYS[sheetAction]) })}
+              {t("queue.sheet.title", {
+                action: t(ACTION_LABEL_KEYS[sheetAction]),
+              })}
             </h3>
             <p className="mt-2 text-sm text-text-2">
               {t("queue.sheet.body", {
@@ -654,33 +657,58 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
       })
     : false;
 
-  // Archetype-driven guidance: the persisted onboarding business type (migration
-  // 0038) tailors the vendor's primary workflow — service providers manage
-  // services + quote requests; product sellers manage catalogue listings.
-  const archetype = dashboard?.archetype ?? null;
-  const isServicesVendor = archetype === "services";
+  // Prefer the strategy operating archetype. Fall back to the legacy merchandise
+  // category for vendors onboarded before that dimension was collected.
+  const businessArchetype = dashboard?.business_archetype ?? null;
+  const category = dashboard?.archetype ?? null;
+  const isServicesVendor =
+    businessArchetype === "service_professional" ||
+    (businessArchetype === null && category === "services");
+  const isEventOrganiser = businessArchetype === "event_organiser";
   let businessType: string | null = null;
-  switch (archetype) {
-    case "electronics":
-      businessType = t("home.businessTypes.electronics");
+  switch (businessArchetype) {
+    case "market_trader":
+      businessType = t("home.businessArchetypes.market_trader");
       break;
-    case "home":
-      businessType = t("home.businessTypes.home");
+    case "registered_retailer":
+      businessType = t("home.businessArchetypes.registered_retailer");
       break;
-    case "fashion_beauty":
-      businessType = t("home.businessTypes.fashion_beauty");
+    case "service_professional":
+      businessType = t("home.businessArchetypes.service_professional");
       break;
-    case "services":
-      businessType = t("home.businessTypes.services");
+    case "manufacturer":
+      businessType = t("home.businessArchetypes.manufacturer");
       break;
-    case "groceries":
-      businessType = t("home.businessTypes.groceries");
+    case "importer_wholesaler":
+      businessType = t("home.businessArchetypes.importer_wholesaler");
       break;
-    case "other":
-      businessType = t("home.businessTypes.other");
+    case "event_organiser":
+      businessType = t("home.businessArchetypes.event_organiser");
       break;
-    default:
-      businessType = null;
+  }
+  if (businessType === null) {
+    switch (category) {
+      case "electronics":
+        businessType = t("home.businessTypes.electronics");
+        break;
+      case "home":
+        businessType = t("home.businessTypes.home");
+        break;
+      case "fashion_beauty":
+        businessType = t("home.businessTypes.fashion_beauty");
+        break;
+      case "services":
+        businessType = t("home.businessTypes.services");
+        break;
+      case "groceries":
+        businessType = t("home.businessTypes.groceries");
+        break;
+      case "other":
+        businessType = t("home.businessTypes.other");
+        break;
+      default:
+        businessType = null;
+    }
   }
 
   return (
@@ -755,7 +783,9 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
         <p className="mt-1 text-xs text-panel-muted">
           {takings === 0
             ? t("home.takings.emptyCaption")
-            : t("home.takings.caption", { date: dashboard?.takings_date ?? "—" })}
+            : t("home.takings.caption", {
+                date: dashboard?.takings_date ?? "—",
+              })}
         </p>
       </section>
 
@@ -804,6 +834,19 @@ export function VendorHomeView({ locale }: VendorHomeViewProps) {
                 href={`/${locale}/services`}
               >
                 {t("home.quickStart.services.cta")}
+              </Link>
+            </>
+          ) : isEventOrganiser ? (
+            <>
+              <h2 className="mt-1 text-sm font-semibold text-text">
+                {t("home.quickStart.events.heading")}
+              </h2>
+              <p className="mt-1 text-sm text-text-2">{t("home.quickStart.events.body")}</p>
+              <Link
+                className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-4 text-sm font-semibold text-[var(--primary-btn-fg)]"
+                href={`/${locale}/events`}
+              >
+                {t("home.quickStart.events.cta")}
               </Link>
             </>
           ) : (

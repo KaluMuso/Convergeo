@@ -37,7 +37,7 @@ body::before {
       transparent 50%
     ),
     linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
-  opacity: 0.95;
+  opacity: 0.98;
 }
 
 [data-theme="dark"] body::before {
@@ -66,6 +66,53 @@ body::before {
 
 .shop-main section + section {
   margin-top: var(--sp-8);
+}
+
+/* Homepage rails are quiet editorial surfaces instead of a long, flat feed.
+   The warm paper ground and fine brass rule echo the reference direction while
+   keeping the catalogue itself as the visual focus. */
+.home-rail {
+  position: relative;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  border-radius: calc(var(--r-lg) + 4px);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--surface) 98%, var(--primary-tint)) 0%,
+      var(--surface) 42%
+    ),
+    var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.home-rail::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: clamp(1rem, 2vw, 1.5rem);
+  width: 3.5rem;
+  height: 2px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(
+    90deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 18%, transparent)
+  );
+}
+
+.home-rail > :first-child {
+  padding-top: var(--sp-1);
+}
+
+[data-theme="dark"] .home-rail {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--surface-elevated) 96%, var(--primary)) 0%,
+      var(--surface) 48%
+    ),
+    var(--surface);
 }
 
 @media (min-width: 64rem) {

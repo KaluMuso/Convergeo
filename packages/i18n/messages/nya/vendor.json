@@ -207,11 +207,13 @@
     "doneIndicator": "✓",
     "business": {
       "heading": "Business basics",
-      "intro": "Tell buyers who you are. You can edit this later in your profile.",
+      "intro": "Tiuzeni zomwe mumagulitsa ndi momwe bizinesi yanu imagwirira ntchito kuti tikukonzereni poyambira.",
       "nameLabel": "Business or shop name",
       "namePlaceholder": "e.g. Lusaka Electronics",
       "categoryLabel": "Main category",
       "categoryPlaceholder": "Select a category",
+      "archetypeLabel": "Kodi bizinesi yanu imagwira ntchito bwanji?",
+      "archetypePlaceholder": "Sankhani mtundu wa bizinesi",
       "categories": {
         "electronics": "Electronics",
         "home": "Home & living",
@@ -219,6 +221,14 @@
         "services": "Ntchito",
         "groceries": "Groceries",
         "other": "Other"
+      },
+      "archetypes": {
+        "market_trader": "Wogulitsa pamsika",
+        "registered_retailer": "Sitolo yolembetsedwa",
+        "service_professional": "Katswiri wopereka ntchito",
+        "manufacturer": "Wopanga katundu",
+        "importer_wholesaler": "Wolowetsa kapena wogulitsa katundu wambiri",
+        "event_organiser": "Wokonza zochitika"
       },
       "continue": "Continue",
       "saving": "Saving…"
@@ -257,6 +267,9 @@
       "heading": "Review and submit",
       "intro": "Check your details. After submission, our team reviews within one business day.",
       "businessSection": "Business",
+      "businessNameLabel": "Dzina la bizinesi",
+      "businessCategoryLabel": "Gulu lalikulu",
+      "businessArchetypeLabel": "Mtundu wa bizinesi",
       "docsSection": "Documents",
       "momoSection": "Mobile money",
       "nrcUploaded": "NRC photo uploaded",
@@ -774,7 +787,20 @@
         "heading": "Grow your services",
         "body": "Publish your services and reply to customer quote requests.",
         "cta": "Manage your services"
+      },
+      "events": {
+        "heading": "Konzani zochitika zanu",
+        "body": "Pangani zochitika, sinthani mitundu ya matikiti, ndipo konzekerani gulu lanu loyang'ana matikiti.",
+        "cta": "Yang'anirani zochitika zanu"
       }
+    },
+    "businessArchetypes": {
+      "market_trader": "wogulitsa pamsika",
+      "registered_retailer": "sitolo yolembetsedwa",
+      "service_professional": "ntchito za akatswiri",
+      "manufacturer": "kupanga katundu",
+      "importer_wholesaler": "kulowetsa kapena kugulitsa katundu wambiri",
+      "event_organiser": "zochitika"
     },
     "businessTypes": {
       "electronics": "electronics",

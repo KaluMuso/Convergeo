@@ -54,7 +54,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-import { BottomNavClient } from "./bottom-nav-client";
+import { BottomNavClient, isShopBottomNavItemActive } from "./bottom-nav-client";
 import { ShopHeader } from "./shop-header";
 
 const baseItems = [
@@ -133,5 +133,26 @@ describe("BottomNavClient supplies gating (mobile)", () => {
     );
     expect(screen.queryByRole("link", { name: /Supplies/ })).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Browse/ })).toBeInTheDocument();
+  });
+});
+
+describe("shop bottom navigation route families", () => {
+  it.each(["/en/search", "/en/categories", "/en/c/phones", "/en/p/phone", "/en/compare"])(
+    "maps %s to Browse",
+    (pathname) => {
+      expect(isShopBottomNavItemActive("browse", pathname, "en")).toBe(true);
+    },
+  );
+
+  it("keeps Orders distinct from the Account tab", () => {
+    expect(isShopBottomNavItemActive("orders", "/en/account/orders/123", "en")).toBe(true);
+    expect(isShopBottomNavItemActive("account", "/en/account/orders/123", "en")).toBe(false);
+    expect(isShopBottomNavItemActive("account", "/en/account/preferences", "en")).toBe(true);
+  });
+
+  it("supports locale roots and the gated Supplies overlap", () => {
+    expect(isShopBottomNavItemActive("home", "/bem", "bem")).toBe(true);
+    expect(isShopBottomNavItemActive("browse", "/bem/supplies", "bem")).toBe(true);
+    expect(isShopBottomNavItemActive("supplies", "/bem/supplies", "bem")).toBe(true);
   });
 });

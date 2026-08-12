@@ -31,7 +31,12 @@ import { KycDocsStep } from "./kyc-docs-step";
 import { ReviewStep } from "./review-step";
 import { StepProgress } from "./step-progress";
 
-import type { BusinessCategory, KycApplication, OnboardingDraft } from "../_lib/types";
+import type {
+  BusinessArchetype,
+  BusinessCategory,
+  KycApplication,
+  OnboardingDraft,
+} from "../_lib/types";
 
 type OnboardingFlowProps = {
   locale: string;
@@ -67,6 +72,18 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
       services: t("onboarding.business.categories.services"),
       groceries: t("onboarding.business.categories.groceries"),
       other: t("onboarding.business.categories.other"),
+    }),
+    [t],
+  );
+
+  const archetypeLabels = useMemo(
+    () => ({
+      market_trader: t("onboarding.business.archetypes.market_trader"),
+      registered_retailer: t("onboarding.business.archetypes.registered_retailer"),
+      service_professional: t("onboarding.business.archetypes.service_professional"),
+      manufacturer: t("onboarding.business.archetypes.manufacturer"),
+      importer_wholesaler: t("onboarding.business.archetypes.importer_wholesaler"),
+      event_organiser: t("onboarding.business.archetypes.event_organiser"),
     }),
     [t],
   );
@@ -144,6 +161,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
             step: 0,
             businessName: "",
             businessCategory: "",
+            businessArchetype: "",
             legalName: "",
             momoPhone: "",
             nrcPath: null,
@@ -193,6 +211,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
       const app = await kycClient.saveDraft({
         business_name: draft.businessName.trim(),
         archetype: draft.businessCategory.trim() || null,
+        business_archetype: draft.businessArchetype.trim() || null,
       });
       setApplication(app);
       goToStep(stepIndexFromKey("kyc"));
@@ -256,6 +275,7 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         momo_operator: null,
         legal_name: draft.legalName.trim(),
         archetype: draft.businessCategory.trim() || null,
+        business_archetype: draft.businessArchetype.trim() || null,
         business_name: draft.businessName.trim() || null,
       };
 
@@ -316,6 +336,8 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
   const stepKey = stepKeyFromIndex(currentStep);
   const categoryLabel =
     categoryLabels[draft.businessCategory as BusinessCategory] ?? draft.businessCategory;
+  const archetypeLabel =
+    archetypeLabels[draft.businessArchetype as BusinessArchetype] ?? draft.businessArchetype;
 
   return (
     <div className="flex flex-col gap-4">
@@ -357,8 +379,10 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
         <BusinessBasicsStep
           businessName={draft.businessName}
           businessCategory={draft.businessCategory}
+          businessArchetype={draft.businessArchetype}
           onBusinessNameChange={(value) => updateDraft({ businessName: value })}
           onBusinessCategoryChange={(value) => updateDraft({ businessCategory: value })}
+          onBusinessArchetypeChange={(value) => updateDraft({ businessArchetype: value })}
           onContinue={() => {
             void handleBusinessContinue();
           }}
@@ -371,6 +395,9 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
             categoryLabel: t("onboarding.business.categoryLabel"),
             categoryPlaceholder: t("onboarding.business.categoryPlaceholder"),
             categories: categoryLabels,
+            archetypeLabel: t("onboarding.business.archetypeLabel"),
+            archetypePlaceholder: t("onboarding.business.archetypePlaceholder"),
+            archetypes: archetypeLabels,
             continue: t("onboarding.business.continue"),
             saving: t("onboarding.business.saving"),
             required: t("onboarding.errors.required"),
@@ -441,6 +468,8 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
           businessName={draft.businessName}
           businessCategory={draft.businessCategory}
           businessCategoryLabel={categoryLabel}
+          businessArchetype={draft.businessArchetype}
+          businessArchetypeLabel={archetypeLabel}
           momoPhone={draft.momoPhone}
           nrcUploaded={Boolean(draft.nrcPath)}
           selfieUploaded={Boolean(draft.selfiePath)}
@@ -452,6 +481,9 @@ export function OnboardingFlow({ locale }: OnboardingFlowProps) {
             heading: t("onboarding.review.heading"),
             intro: t("onboarding.review.intro"),
             businessSection: t("onboarding.review.businessSection"),
+            businessNameLabel: t("onboarding.review.businessNameLabel"),
+            businessCategoryLabel: t("onboarding.review.businessCategoryLabel"),
+            businessArchetypeLabel: t("onboarding.review.businessArchetypeLabel"),
             docsSection: t("onboarding.review.docsSection"),
             momoSection: t("onboarding.review.momoSection"),
             nrcUploaded: t("onboarding.review.nrcUploaded"),

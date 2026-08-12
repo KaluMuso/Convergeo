@@ -6,6 +6,8 @@ type ReviewStepProps = {
   businessName: string;
   businessCategory: string;
   businessCategoryLabel: string;
+  businessArchetype: string;
+  businessArchetypeLabel: string;
   momoPhone: string;
   nrcUploaded: boolean;
   selfieUploaded: boolean;
@@ -16,6 +18,9 @@ type ReviewStepProps = {
     heading: string;
     intro: string;
     businessSection: string;
+    businessNameLabel: string;
+    businessCategoryLabel: string;
+    businessArchetypeLabel: string;
     docsSection: string;
     momoSection: string;
     nrcUploaded: string;
@@ -34,6 +39,8 @@ export function ReviewStep({
   businessName,
   businessCategory,
   businessCategoryLabel,
+  businessArchetype,
+  businessArchetypeLabel,
   momoPhone,
   nrcUploaded,
   selfieUploaded,
@@ -63,12 +70,16 @@ export function ReviewStep({
         </div>
         <dl className="m-0 space-y-1 text-sm">
           <div>
-            <dt className="text-text-3">{labels.businessSection}</dt>
+            <dt className="text-text-3">{labels.businessNameLabel}</dt>
             <dd className="font-medium text-text">{businessName}</dd>
           </div>
           <div>
-            <dt className="text-text-3">{labels.businessSection}</dt>
+            <dt className="text-text-3">{labels.businessCategoryLabel}</dt>
             <dd className="text-text">{businessCategoryLabel || businessCategory}</dd>
+          </div>
+          <div>
+            <dt className="text-text-3">{labels.businessArchetypeLabel}</dt>
+            <dd className="text-text">{businessArchetypeLabel || businessArchetype}</dd>
           </div>
         </dl>
       </section>

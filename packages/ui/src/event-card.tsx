@@ -25,7 +25,6 @@ export type EventCardProps = {
 const cardBaseStyle: React.CSSProperties = {
   backgroundColor: "var(--surface)",
   borderRadius: "var(--r-lg)",
-  boxShadow: "var(--shadow-1)",
   border: "1px solid var(--border)",
   overflow: "hidden",
   display: "flex",
@@ -39,10 +38,14 @@ const shimmerBlock: React.CSSProperties = {
   animation: "shimmer 1.4s ease-in-out infinite",
 };
 
+function mergeClasses(...classes: Array<string | false | undefined>): string {
+  return classes.filter(Boolean).join(" ");
+}
+
 function EventCardSkeleton({ className }: { className?: string }) {
   return (
     <article
-      className={className}
+      className={mergeClasses("v-card v-card--static", className)}
       data-testid="event-card-skeleton"
       aria-busy="true"
       style={cardBaseStyle}
@@ -92,11 +95,14 @@ export function EventCard({
 
   return (
     <Component
-      className={["card-lift", className].filter(Boolean).join(" ")}
+      className={mergeClasses("v-card", className)}
       data-testid="event-card"
       style={cardBaseStyle}
     >
-      <div style={{ position: "relative", aspectRatio: "16 / 9", backgroundColor: "var(--bg-2)" }}>
+      <div
+        className="v-card__media"
+        style={{ position: "relative", aspectRatio: "16 / 9", backgroundColor: "var(--bg-2)" }}
+      >
         {media}
         {badge ? (
           <div style={{ position: "absolute", top: "var(--sp-2)", left: "var(--sp-2)" }}>
@@ -189,15 +195,13 @@ export function EventCard({
           {onCtaClick ? (
             <button
               type="button"
+              className="v-card__action v-card__action--primary"
               onClick={onCtaClick}
               data-testid="event-card-cta"
               style={{
                 minHeight: 44,
                 padding: "0 var(--sp-4)",
-                borderRadius: "var(--r-pill)",
-                border: "none",
-                backgroundColor: "var(--primary)",
-                color: "var(--surface)",
+                borderRadius: "var(--r)",
                 fontWeight: 600,
                 cursor: "pointer",
                 flexShrink: 0,

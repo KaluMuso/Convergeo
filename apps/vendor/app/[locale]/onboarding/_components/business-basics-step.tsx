@@ -1,6 +1,11 @@
 "use client";
 
-import { BUSINESS_CATEGORIES, type BusinessCategory } from "../_lib/types";
+import {
+  BUSINESS_ARCHETYPES,
+  BUSINESS_CATEGORIES,
+  type BusinessArchetype,
+  type BusinessCategory,
+} from "../_lib/types";
 import { Button, FormField, Input, Select } from "../_lib/ui";
 
 import type { ChangeEvent, FormEvent } from "react";
@@ -8,8 +13,10 @@ import type { ChangeEvent, FormEvent } from "react";
 type BusinessBasicsStepProps = {
   businessName: string;
   businessCategory: string;
+  businessArchetype: string;
   onBusinessNameChange: (value: string) => void;
   onBusinessCategoryChange: (value: string) => void;
+  onBusinessArchetypeChange: (value: string) => void;
   onContinue: () => void;
   labels: {
     heading: string;
@@ -19,6 +26,9 @@ type BusinessBasicsStepProps = {
     categoryLabel: string;
     categoryPlaceholder: string;
     categories: Record<BusinessCategory, string>;
+    archetypeLabel: string;
+    archetypePlaceholder: string;
+    archetypes: Record<BusinessArchetype, string>;
     continue: string;
     saving: string;
     required: string;
@@ -29,18 +39,21 @@ type BusinessBasicsStepProps = {
 export function BusinessBasicsStep({
   businessName,
   businessCategory,
+  businessArchetype,
   onBusinessNameChange,
   onBusinessCategoryChange,
+  onBusinessArchetypeChange,
   onContinue,
   labels,
   saving = false,
 }: BusinessBasicsStepProps) {
   const nameError = !businessName.trim() ? labels.required : undefined;
   const categoryError = !businessCategory.trim() ? labels.required : undefined;
+  const archetypeError = !businessArchetype.trim() ? labels.required : undefined;
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (nameError || categoryError) {
+    if (nameError || categoryError || archetypeError) {
       return;
     }
     onContinue();
@@ -63,6 +76,28 @@ export function BusinessBasicsStep({
           autoComplete="organization"
           error={Boolean(nameError)}
         />
+      </FormField>
+
+      <FormField
+        label={labels.archetypeLabel}
+        required
+        requiredMarker="*"
+        errorMessage={archetypeError}
+      >
+        <Select
+          value={businessArchetype}
+          onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+            onBusinessArchetypeChange(event.target.value)
+          }
+          error={Boolean(archetypeError)}
+        >
+          <option value="">{labels.archetypePlaceholder}</option>
+          {BUSINESS_ARCHETYPES.map((key) => (
+            <option key={key} value={key}>
+              {labels.archetypes[key]}
+            </option>
+          ))}
+        </Select>
       </FormField>
 
       <FormField
@@ -92,7 +127,7 @@ export function BusinessBasicsStep({
         className="w-full"
         loading={saving}
         loadingLabel={labels.saving}
-        disabled={Boolean(nameError || categoryError)}
+        disabled={Boolean(nameError || categoryError || archetypeError)}
       >
         {labels.continue}
       </Button>

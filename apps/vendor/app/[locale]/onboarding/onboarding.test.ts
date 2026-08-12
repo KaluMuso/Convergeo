@@ -56,6 +56,7 @@ describe("step persistence", () => {
       step: stepIndexFromKey("kyc"),
       businessName: "Lusaka Tech",
       businessCategory: "electronics",
+      businessArchetype: "registered_retailer",
     });
 
     const restored = readLocalDraft();
@@ -65,12 +66,16 @@ describe("step persistence", () => {
     const merged = mergeDraftWithServer(restored, {
       business_name: null,
       business_category: null,
+      business_archetype: null,
       momo_phone: null,
       nrc_path: null,
       selfie_path: null,
     });
 
-    const resumeStep = resolveResumeStep(merged, { resubmitMode: false, rejectedDocs: null });
+    const resumeStep = resolveResumeStep(merged, {
+      resubmitMode: false,
+      rejectedDocs: null,
+    });
     expect(resumeStep).toBe(stepIndexFromKey("kyc"));
   });
 
@@ -79,6 +84,7 @@ describe("step persistence", () => {
     const merged = mergeDraftWithServer(readLocalDraft(), {
       business_name: "Server Shop",
       business_category: "home",
+      business_archetype: "registered_retailer",
       momo_phone: "0977123456",
       nrc_path: "kyc/vendor-a/nrc.jpg",
       selfie_path: "kyc/vendor-a/selfie.jpg",
@@ -164,6 +170,7 @@ describe("resubmit flow", () => {
       step: stepIndexFromKey("review"),
       businessName: "Existing Shop",
       businessCategory: "electronics",
+      businessArchetype: "registered_retailer",
       nrcPath: "kyc/v/nrc-old.jpg",
       selfiePath: "kyc/v/selfie-old.jpg",
       momoPhone: "0977123456",
@@ -234,6 +241,7 @@ const REQUIRED_ONBOARDING_KEYS = [
   "meta.title",
   "steps.business",
   "business.heading",
+  "business.archetypes.market_trader",
   "kyc.heading",
   "kyc.capture",
   "quality.heading",
