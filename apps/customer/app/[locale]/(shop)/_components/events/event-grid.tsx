@@ -62,7 +62,7 @@ export function EventGrid({ items, locale, labels }: EventGridProps) {
   }
 
   return (
-    <ul className="grid list-none gap-4 p-0">
+    <ul className="grid list-none gap-5 p-0 md:grid-cols-2 xl:grid-cols-3">
       {items.map((item) => {
         const dateLabel = formatEventDate(item.next_starts_at, locale);
         const venueLabel = item.venue ?? item.organiser.display_name;
@@ -70,8 +70,12 @@ export function EventGrid({ items, locale, labels }: EventGridProps) {
 
         return (
           <li key={item.id}>
-            <Link href={`/${locale}/e/${item.slug}`} className="tap block">
+            <Link
+              href={`/${locale}/e/${item.slug}`}
+              className="tap block h-full rounded-lg focus-visible:outline-none focus-visible:shadow-focusRing"
+            >
               <EventCard
+                className="h-full"
                 title={item.title}
                 dateLabel={dateLabel}
                 venueLabel={venueLabel}

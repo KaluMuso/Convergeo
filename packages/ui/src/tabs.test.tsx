@@ -21,6 +21,7 @@ describe("Tabs", () => {
     const tabs = screen.getAllByRole("tab");
     expect(tabs[0]).toHaveAttribute("aria-selected", "true");
     expect(tabs[1]).toHaveAttribute("aria-selected", "false");
+    expect(tabs[0]).toHaveClass("focus-visible:shadow-focusRing");
   });
 
   it("supports arrow-key roving focus and selection", async () => {

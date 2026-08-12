@@ -28,14 +28,15 @@ export type ServiceCardProps = {
 };
 
 const cardBaseStyle: React.CSSProperties = {
-  backgroundColor: "var(--surface)",
+  background:
+    "linear-gradient(145deg, color-mix(in srgb, var(--surface) 97%, var(--primary-tint)), var(--surface) 46%)",
   borderRadius: "var(--r-lg)",
-  boxShadow: "var(--shadow-1)",
   border: "1px solid var(--border)",
   overflow: "hidden",
   display: "flex",
   flexDirection: "column",
   minWidth: 0,
+  position: "relative",
 };
 
 const shimmerBlock: React.CSSProperties = {
@@ -44,10 +45,14 @@ const shimmerBlock: React.CSSProperties = {
   animation: "shimmer 1.4s ease-in-out infinite",
 };
 
+function mergeClasses(...classes: Array<string | false | undefined>): string {
+  return classes.filter(Boolean).join(" ");
+}
+
 function ServiceCardSkeleton({ className }: { className?: string }) {
   return (
     <article
-      className={className}
+      className={mergeClasses("v-card v-card--static", className)}
       data-testid="service-card-skeleton"
       aria-busy="true"
       style={cardBaseStyle}
@@ -91,11 +96,21 @@ export function ServiceCard({
 
   return (
     <Component
-      className={["card-lift", className].filter(Boolean).join(" ")}
+      className={mergeClasses("v-card", className)}
       data-testid="service-card"
       style={cardBaseStyle}
     >
-      <div style={{ aspectRatio: "3 / 2", backgroundColor: "var(--bg-2)" }}>{media}</div>
+      <div
+        className="v-card__media"
+        style={{
+          aspectRatio: "3 / 2",
+          backgroundColor: "var(--bg-2)",
+          overflow: "hidden",
+          borderBottom: "1px solid color-mix(in srgb, var(--border) 70%, transparent)",
+        }}
+      >
+        {media}
+      </div>
       <div
         style={{
           padding: "var(--sp-3)",
@@ -154,15 +169,13 @@ export function ServiceCard({
         {onCtaClick ? (
           <button
             type="button"
+            className="v-card__action v-card__action--outline"
             onClick={onCtaClick}
             data-testid="service-card-cta"
             style={{
               minHeight: 44,
               marginTop: "var(--sp-2)",
-              borderRadius: "var(--r-pill)",
-              border: "1px solid var(--primary)",
-              backgroundColor: "transparent",
-              color: "var(--primary)",
+              borderRadius: "var(--r)",
               fontWeight: 600,
               cursor: "pointer",
             }}
