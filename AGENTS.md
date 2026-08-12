@@ -14,7 +14,7 @@ Environment refresh (nvm node + pnpm, uv + API deps) is handled by the startup u
 
 ### Toolchain / PATH gotchas
 
-- The VM enforces its own `node` shim at `/exec-daemon/node` (currently v22), which sits ahead of nvm on `PATH`. So `node -v` reports v22 even though `.nvmrc` pins 20; this is expected and harmless — the toolchain (build/tests/dev) works on it. `pnpm`/`corepack` come from the nvm-managed Node 20 install.
+- The VM enforces its own `node` shim at `/exec-daemon/node`, which sits ahead of nvm on `PATH`. The repository and nvm both target Node 22; a newer compatible shim may still appear first. `pnpm`/`corepack` come from the nvm-managed Node 22 install.
 - Interactive login shells (`bash -l`) already source nvm and `~/.local/bin/env` via `~/.bashrc`, so `pnpm` and `uv` are on `PATH`. For non-login shells, prepend: `export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; export PATH="$HOME/.local/bin:$PATH"`.
 
 ### Services (all run in dev mode)

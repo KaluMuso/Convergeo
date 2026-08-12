@@ -134,6 +134,7 @@ Source of truth for filenames: `docs/ops/n8n-workflows.md` + `infra/n8n/*.json` 
 | `daily-summary.json`              | Reporting (n8n webhook)     | no                      | DORMANT                                                               |
 | `kyc-nudge.json`                  | Notifications               | no                      | DORMANT                                                               |
 | `payout-failure-alert.json`       | Notifications               | no                      | DORMANT                                                               |
+| `payouts.json`                    | Vendor payout batch/retry   | no                      | DORMANT (inactive until F4 + F9b sandbox proof; no HTTP retry)        |
 | `low-stock-alert.json`            | Notifications               | no                      | DORMANT                                                               |
 | `preferred-badge-recompute.json`  | Seller quality (D9)         | no                      | DORMANT (ships `active: false`; do not activate without founder gate) |
 | `review-request.json`             | Notifications               | no                      | DORMANT                                                               |

@@ -5,8 +5,8 @@
 and §5 (no live shared Error Workflow) —
 `docs/production-readiness/2026-07-19/ops/ops-n8n-01-automation-readiness-audit.md`.
 
-This is the single review surface for the two workflows the audit flagged as *inactive or
-unpublished*: an operator can import and review both from here without guessing, and the
+This is the single review surface for the two workflows the audit flagged as _inactive or
+unpublished_: an operator can import and review both from here without guessing, and the
 **founder-owned activation tasks are explicit and left unchecked** in §8. Nothing in this
 change activates anything — both JSON exports ship `active: false`.
 
@@ -18,10 +18,10 @@ change activates anything — both JSON exports ship `active: false`.
 
 ## 1. Inventory (committed ↔ live)
 
-| Workflow file (importable)               | JSON `name`                                             | Live ID (inactive)  | Trigger(s)                                                            | Money? | Owner  |
-| ---------------------------------------- | ------------------------------------------------------- | ------------------- | -------------------------------------------------------------------- | ------ | ------ |
-| `infra/n8n/backup.json`                  | Vergeo5 — Database Backup                               | `OAdOD4kmIbSNehkJ`  | Cron `0 2 * * *` + watchdog `0 4 * * *` (Africa/Lusaka) + manual webhook | No (ops) | VD-P04 |
-| `infra/n8n/money-workflow-error-alert.json` | Vergeo5 — Shared Workflow Failure Alert (deduplicated) | `LVuHqWgT1tqjYOtc`* | Error Trigger (fires on a linked workflow's failed run)              | No (alert) | VD-P06 |
+| Workflow file (importable)                  | JSON `name`                                            | Live ID (inactive)  | Trigger(s)                                                               | Money?     | Owner  |
+| ------------------------------------------- | ------------------------------------------------------ | ------------------- | ------------------------------------------------------------------------ | ---------- | ------ |
+| `infra/n8n/backup.json`                     | Vergeo5 — Database Backup                              | `OAdOD4kmIbSNehkJ`  | Cron `0 2 * * *` + watchdog `0 4 * * *` (Africa/Lusaka) + manual webhook | No (ops)   | VD-P04 |
+| `infra/n8n/money-workflow-error-alert.json` | Vergeo5 — Shared Workflow Failure Alert (deduplicated) | `LVuHqWgT1tqjYOtc`* | Error Trigger (fires on a linked workflow's failed run)                  | No (alert) | VD-P06 |
 
 \* The live `LVuHqWgT1tqjYOtc` scaffold was created WhatsApp-less (audit / fleet-import doc). The
 committed JSON is the authoritative version — it **includes** the WhatsApp delivery node and the
@@ -35,19 +35,19 @@ Both are already registered in `docs/ops/n8n-workflows.md` (drift-tested by
 
 ## 2. Review card — `backup.json` (database backup)
 
-| Control                 | Detail                                                                                                                                                                                     |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Schedule**            | Nightly dump cron `0 2 * * *`; missed-schedule watchdog `0 4 * * *`; both `settings.timezone = Africa/Lusaka`. Manual break-glass drill via `POST /webhook/backup-manual`.                 |
-| **Ownership**           | VD-P04. Activation is founder-only (§8). Alerts page `$env.FOUNDER_WHATSAPP_TO`.                                                                                                          |
-| **Credential names**    | `Vergeo5 OCI Host SSH` (SSH Private Key → 3 SSH nodes); `Vergeo5 WhatsApp Cloud API` (Header Auth → 3 WhatsApp nodes). IDs ship as `REPLACE_WITH_CREDENTIAL_ID` — **names only, no values**. |
-| **Idempotency**         | Dump artifact key is timestamped (`db/vergeo5-<ts>.sql.gz`) — re-runs never overwrite. SSH nodes `retryOnFail` 2×/5s; a re-run just writes a new dated object. Alerting is deduped (below). |
-| **Retention**           | 14 days (`BACKUP_RETENTION_DAYS`, D21) — OCI prune + local prune in `db-dump.sh`. n8n execution history kept ≥ 7 days for post-mortem.                                                    |
-| **Encryption**          | At rest: OCI Object Storage bucket (server-side encryption, no public access, deploy-user + founder only). In transit: HTTPS upload + Postgres `sslmode=require`. Credentials at rest: n8n `N8N_ENCRYPTION_KEY`. |
-| **Restore verification**| `infra/scripts/db-restore.sh` + `infra/scripts/restore-drill.sh`; runbook `docs/ops/backup-restore-drill.md`; evidence logged in `docs/ops/drill-log.md`. **G7 PASS requires a real dated dump + timed restore (RTO ≤ 30m)** — importing the workflow does not satisfy G7. |
-| **Failure routing**     | Soft failure (non-zero exit; SSH nodes use `continueOnFail`) → `IF … OK` false branch → `Build Alert Payload` (redact) → **`Dedupe Ops Alert` → `IF Ops Alert Fresh`** → `WhatsApp Ops Alert`. Hard crash → internal `Error Trigger` → `Build Workflow Error Alert` → WhatsApp. May **also** be linked to the shared handler (§8). |
-| **Dedupe**              | `Dedupe Ops Alert` keys on `status\|reasons` in workflow-scoped static data; repeats within `$env.BACKUP_ALERT_DEDUPE_MINUTES` (default **360** = 6 h) are suppressed, so the 02:00 dump + 04:00 watchdog + consecutive-night failures collapse to **one** page per signature. Manual-drill path is intentionally **not** deduped (a human ran it and wants the result). |
-| **Rollback**            | Unpublish (MCP `unpublish_workflow` / UI → inactive); re-import last-good `backup.json` at its git SHA (scrub credential IDs); rotate the SSH / WhatsApp credentials if compromised (never log values). DB data rollback is out-of-band via `infra/ROLLBACK.md` + restore drill. |
-| **Operator alerts**     | Founder WhatsApp, metadata only: status, reasons, `env_id`, dump name, size, sha256 **prefix**, migration tip, redacted stderr tail. Never connection strings, Bearer tokens, or service-role keys. |
+| Control                  | Detail                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Schedule**             | Nightly dump cron `0 2 * * *`; missed-schedule watchdog `0 4 * * *`; both `settings.timezone = Africa/Lusaka`. Manual break-glass drill via `POST /webhook/backup-manual`.                                                                                                                                                                                               |
+| **Ownership**            | VD-P04. Activation is founder-only (§8). Alerts page `$env.FOUNDER_WHATSAPP_TO`.                                                                                                                                                                                                                                                                                         |
+| **Credential names**     | `Vergeo5 OCI Host SSH` (SSH Private Key → 3 SSH nodes); `Vergeo5 WhatsApp Cloud API` (Header Auth → 3 WhatsApp nodes). IDs ship as `REPLACE_WITH_CREDENTIAL_ID` — **names only, no values**.                                                                                                                                                                             |
+| **Idempotency**          | Dump artifact key is timestamped (`db/vergeo5-<ts>.sql.gz`) — re-runs never overwrite. SSH nodes `retryOnFail` 2×/5s; a re-run just writes a new dated object. Alerting is deduped (below).                                                                                                                                                                              |
+| **Retention**            | 14 days (`BACKUP_RETENTION_DAYS`, D21) — OCI prune + local prune in `db-dump.sh`. n8n execution history kept ≥ 7 days for post-mortem.                                                                                                                                                                                                                                   |
+| **Encryption**           | At rest: OCI Object Storage bucket (server-side encryption, no public access, deploy-user + founder only). In transit: HTTPS upload + Postgres `sslmode=require`. Credentials at rest: n8n `N8N_ENCRYPTION_KEY`.                                                                                                                                                         |
+| **Restore verification** | `infra/scripts/db-restore.sh` + `infra/scripts/restore-drill.sh`; runbook `docs/ops/backup-restore-drill.md`; evidence logged in `docs/ops/drill-log.md`. **G7 PASS requires a real dated dump + timed restore (RTO ≤ 30m)** — importing the workflow does not satisfy G7.                                                                                               |
+| **Failure routing**      | Soft failure (non-zero exit; SSH nodes use `continueOnFail`) → `IF … OK` false branch → `Build Alert Payload` (redact) → **`Dedupe Ops Alert` → `IF Ops Alert Fresh`** → `WhatsApp Ops Alert`. Hard crash → internal `Error Trigger` → `Build Workflow Error Alert` → WhatsApp. May **also** be linked to the shared handler (§8).                                       |
+| **Dedupe**               | `Dedupe Ops Alert` keys on `status\|reasons` in workflow-scoped static data; repeats within `$env.BACKUP_ALERT_DEDUPE_MINUTES` (default **360** = 6 h) are suppressed, so the 02:00 dump + 04:00 watchdog + consecutive-night failures collapse to **one** page per signature. Manual-drill path is intentionally **not** deduped (a human ran it and wants the result). |
+| **Rollback**             | Unpublish (MCP `unpublish_workflow` / UI → inactive); re-import last-good `backup.json` at its git SHA (scrub credential IDs); rotate the SSH / WhatsApp credentials if compromised (never log values). DB data rollback is out-of-band via `infra/ROLLBACK.md` + restore drill.                                                                                         |
+| **Operator alerts**      | Founder WhatsApp, metadata only: status, reasons, `env_id`, dump name, size, sha256 **prefix**, migration tip, redacted stderr tail. Never connection strings, Bearer tokens, or service-role keys.                                                                                                                                                                      |
 
 **n8n `$env` (instance):** `WHATSAPP_CLOUD_API_URL`, `WHATSAPP_CLOUD_API_TOKEN`,
 `FOUNDER_WHATSAPP_TO`, `BACKUP_WEBHOOK_SECRET`, optional `BACKUP_MIN_BYTES` (default 10240),
@@ -60,19 +60,19 @@ optional `BACKUP_ALERT_DEDUPE_MINUTES` (default 360).
 
 ## 3. Review card — `money-workflow-error-alert.json` (shared failure alert)
 
-| Control                 | Detail                                                                                                                                                                     |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Schedule**            | None — event-driven. An `Error Trigger` fires when a **linked** workflow's run ends in error (linked via each workflow's `settings.errorWorkflow`).                        |
-| **Ownership**           | VD-P06. Shared handler for money ticks (`release-job`, `reconciliation`, `payment-sweeper`, `payout-failure-alert`) and `backup.json`. Pages `$env.FOUNDER_WHATSAPP_TO`.  |
-| **Credential names**    | WhatsApp Cloud API via `$env` Bearer (no bound credential needed). No SSH, no internal token — it never calls our API.                                                    |
-| **Idempotency**         | Alert delivery only; no state mutation. `Page Founder On Failure` uses `retryOnFail` 2×/60s + `continueOnFail` so a transient WhatsApp 5xx retries without erroring the handler itself. |
-| **Retention**           | n8n execution history ≥ 7 days. Dedupe state is pruned each run (see below).                                                                                              |
-| **Encryption**          | Outbound HTTPS to Graph API. Credentials at rest via `N8N_ENCRYPTION_KEY`. No dump/PII involved.                                                                          |
-| **Restore verification**| N/A (no data path).                                                                                                                                                       |
-| **Failure routing**     | `Error Trigger` → `Sanitize Error Payload` (metadata only) → **`Deduplicate Alert` → `IF Alert Fresh`** → `Page Founder On Failure`.                                       |
-| **Dedupe**              | `Deduplicate Alert` keys on `workflow\|status\|lastNode` in workflow-scoped static data; repeats within `$env.ALERT_DEDUPE_WINDOW_MINUTES` (default **15**) are suppressed. A workflow that errors every tick (e.g. the audit's "dispatch erroring every ~1m" or the 3-day daily-report failures) pages the founder **once per window**, not per run. |
-| **Rollback**            | Unpublish; unlink from `settings.errorWorkflow` on downstream workflows; re-import last-good JSON at its git SHA.                                                          |
-| **Operator alerts**     | Founder WhatsApp, metadata only: workflow name, status, last node, timestamp. **Never** payment references, tokens, PII, or DB/service-role keys.                          |
+| Control                  | Detail                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Schedule**             | None — event-driven. An `Error Trigger` fires when a **linked** workflow's run ends in error (linked via each workflow's `settings.errorWorkflow`).                                                                                                                                                                                                   |
+| **Ownership**            | VD-P06. Shared handler for money ticks (`payouts`, `release-job`, `reconciliation`, `payment-sweeper`, `payout-failure-alert`) and `backup.json`. Pages `$env.FOUNDER_WHATSAPP_TO`.                                                                                                                                                                   |
+| **Credential names**     | WhatsApp Cloud API via `$env` Bearer (no bound credential needed). No SSH, no internal token — it never calls our API.                                                                                                                                                                                                                                |
+| **Idempotency**          | Alert delivery only; no state mutation. `Page Founder On Failure` uses `retryOnFail` 2×/60s + `continueOnFail` so a transient WhatsApp 5xx retries without erroring the handler itself.                                                                                                                                                               |
+| **Retention**            | n8n execution history ≥ 7 days. Dedupe state is pruned each run (see below).                                                                                                                                                                                                                                                                          |
+| **Encryption**           | Outbound HTTPS to Graph API. Credentials at rest via `N8N_ENCRYPTION_KEY`. No dump/PII involved.                                                                                                                                                                                                                                                      |
+| **Restore verification** | N/A (no data path).                                                                                                                                                                                                                                                                                                                                   |
+| **Failure routing**      | `Error Trigger` → `Sanitize Error Payload` (metadata only) → **`Deduplicate Alert` → `IF Alert Fresh`** → `Page Founder On Failure`.                                                                                                                                                                                                                  |
+| **Dedupe**               | `Deduplicate Alert` keys on `workflow\|status\|lastNode` in workflow-scoped static data; repeats within `$env.ALERT_DEDUPE_WINDOW_MINUTES` (default **15**) are suppressed. A workflow that errors every tick (e.g. the audit's "dispatch erroring every ~1m" or the 3-day daily-report failures) pages the founder **once per window**, not per run. |
+| **Rollback**             | Unpublish; unlink from `settings.errorWorkflow` on downstream workflows; re-import last-good JSON at its git SHA.                                                                                                                                                                                                                                     |
+| **Operator alerts**      | Founder WhatsApp, metadata only: workflow name, status, last node, timestamp. **Never** payment references, tokens, PII, or DB/service-role keys.                                                                                                                                                                                                     |
 
 **n8n `$env` (instance):** `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_CLOUD_API_TOKEN`,
 `FOUNDER_WHATSAPP_TO`, optional `ALERT_DEDUPE_WINDOW_MINUTES` (default 15).
@@ -97,7 +97,7 @@ Both workflows send failure pages through the same shape:
   `BACKUP_ALERT_DEDUPE_MINUTES` (backup, default 360). Tune per environment; both fail safe to
   the defaults if unset.
 - **Signatures:** shared = `workflow|status|lastNode`; backup = `status|reasons`. Distinct
-  *failure modes* still page independently — dedupe only collapses **repeats of the same failure**.
+  _failure modes_ still page independently — dedupe only collapses **repeats of the same failure**.
 
 Net effect (the audit's acceptance point): **failed runs have a deduplicated alert route** — an
 error storm becomes one actionable page, not hundreds.
@@ -157,7 +157,7 @@ error storm becomes one actionable page, not hundreds.
 - [ ] Set instance `$env`: `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_CLOUD_API_TOKEN`, `FOUNDER_WHATSAPP_TO`, (optional) `ALERT_DEDUPE_WINDOW_MINUTES`.
 - [ ] Import the committed JSON (supersede the WA-less live scaffold `LVuHqWgT1tqjYOtc`); leave inactive.
 - [ ] Force one error on a throwaway test workflow → confirm exactly **one** founder page, and a repeat within the window is suppressed.
-- [ ] Activate the shared handler, then link it as `settings.errorWorkflow` on the money ticks and on `backup.json`.
+- [ ] Activate the shared handler, then link it as `settings.errorWorkflow` on the money ticks (including `payouts.json`) and on `backup.json`.
 
 **Database backup (`backup.json`)**
 

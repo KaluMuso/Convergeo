@@ -247,7 +247,7 @@ Each card: **Source evidence** (what exists and where) · **Safe test environmen
 
 **LQ-A8 · Vendor payout transfer leg** — _Partial · FOUNDER/EXTERNAL_
 
-- **Source evidence.** `money-drill-runbook.md` §6 (`POST /internal/payouts/retry-tick`); `services/api/tests/test_payouts.py` (per-vendor lock, reserved `processing` rows, name-mismatch → held, retry re-queries before re-send); fixtures `scripts/ops/staging-money-drill-fixtures.sql` prepare `payout_msisdn`/`payout_rail`.
+- **Source evidence.** `money-drill-runbook.md` §6 (`POST /internal/payouts/retry`); `services/api/tests/test_payouts.py` (per-vendor lock, reserved `processing` rows, name-mismatch → held, retry re-queries before re-send); fixtures `scripts/ops/staging-money-drill-fixtures.sql` prepare `payout_msisdn`/`payout_rail`.
 - **Safe test environment.** Staging plane, sandbox `LENCO_ACCOUNT_ID`.
 - **Exact success evidence.** A `payouts` row traversing `pending → processing → success` against the sandbox transfer; `GET /vendor/payouts` balances reflect the release; **integer ngwee end to end, no float anywhere** in the recorded amounts; a `/resolve` name mismatch produces **held, never sent**.
 - **Rollback.** Sandbox transfer — no real money. Set `PAYMENTS_ENABLED=false` to stop the sweeper.

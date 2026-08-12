@@ -65,8 +65,8 @@ next-intl shows as bare, un-bracketed ASCII — an instant visual coverage gap.
 (`packages/i18n/src/locales.ts`) and never ships as a production locale.
 
 The CI smoke is `node scripts/ci/i18n-lint.mjs --pseudo-smoke` (mirrors the
-transform in plain JS because CI pins Node 20 via `.nvmrc` and cannot execute
-TypeScript directly). It pseudo-localizes all EN namespaces, asserts **every
+transform in plain JS so CI can run it directly without a TypeScript compilation
+step). It pseudo-localizes all EN namespaces, asserts **every
 leaf is bracketed**, renders a sample screen, and includes a control assertion
 that a raw EN string is **not** classified as pseudo.
 

@@ -403,7 +403,7 @@ jobs:
 
       - name: Download Preview evidence artifacts
         if: ${{ needs.prove-vercel-preview.result == 'success' }}
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           pattern: staging-preview-evidence-*
           merge-multiple: true

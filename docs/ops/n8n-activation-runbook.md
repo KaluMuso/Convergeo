@@ -17,8 +17,8 @@ degraded=true`). Fix that first; see `infra/.env.example`.
 ## Founder decisions
 
 - **Wave A — activate now.** No money movement.
-- **Wave B — HELD** (`release-job`, `order-jobs`, `event-release`, `tickets-issue`,
-  `tickets-release`) until the Lenco **sandbox** money path is proven (VB-P01…P06)
+- **Wave B — HELD** (`payouts`, `release-job`, `order-jobs`, `event-release`,
+  `tickets-issue`, `tickets-release`) until the Lenco **sandbox** money path is proven (VB-P01…P06)
   **and** legal **F4** (NPS-Act escrow) clears. Do not activate before both are green.
 - **operational-nudges — HELD** until real vendors onboard (it enqueues outward SMS/
   email that the live dispatch workflow delivers; keeping it off avoids messaging the
@@ -37,6 +37,7 @@ degraded=true`). Fix that first; see `infra/.env.example`.
 | `kyc-nudge` / `low-stock-alert` / `review-request` / `payout-failure-alert` | `/internal/n8n/*/tick`                                                 | `INTERNAL_N8N_TOKEN`                                               | Wave A (nudges — HELD) |
 | `uptime-alert.json`                                                         | inbound webhook                                                        | `UPTIME_WEBHOOK_SECRET` (n8n only)                                 | Wave A                 |
 | `release-job.json`                                                          | `/internal/release-job/tick`                                           | `INTERNAL_RELEASE_JOB_TOKEN`                                       | Wave B                 |
+| `payouts.json`                                                              | `/internal/payouts/{retry,tick}`                                       | `INTERNAL_PAYOUTS_TOKEN`                                           | Wave B                 |
 | `order-jobs.json`                                                           | `/internal/order-jobs/{auto-confirm,auto-release}`                     | `INTERNAL_ORDER_JOBS_TOKEN`                                        | Wave B                 |
 | `event-release.json`                                                        | `/internal/event-release/tick`                                         | `INTERNAL_EVENT_RELEASE_TOKEN`                                     | Wave B                 |
 | `tickets-issue.json` / `tickets-release.json`                               | `/internal/tickets/{issue,release}-tick`                               | `INTERNAL_TICKETS_ISSUE_TOKEN`                                     | Wave B                 |
@@ -70,14 +71,24 @@ Live Wave A (production):
 
 Held (credentials / policy):
 
-| Workflow                                             | ID                 | Reason                                                                                                             |
-| ---------------------------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| shared failure alert (deduplicated)                  | `LVuHqWgT1tqjYOtc` | Live scaffold has no WhatsApp node; **re-import the committed `money-workflow-error-alert.json`** (WA node + dedupe present) |
-| database backup                                      | `OAdOD4kmIbSNehkJ` | Needs SSH + OCI Object Storage creds; dedupe env `BACKUP_ALERT_DEDUPE_MINUTES` optional (default 360)              |
-| Wave B (release, tickets, order-jobs, event-release) | —                  | F4 + F9b sandbox                                                                                                  |
+| Workflow                                                      | ID                 | Reason                                                                                                                       |
+| ------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| shared failure alert (deduplicated)                           | `LVuHqWgT1tqjYOtc` | Live scaffold has no WhatsApp node; **re-import the committed `money-workflow-error-alert.json`** (WA node + dedupe present) |
+| database backup                                               | `OAdOD4kmIbSNehkJ` | Needs SSH + OCI Object Storage creds; dedupe env `BACKUP_ALERT_DEDUPE_MINUTES` optional (default 360)                        |
+| Wave B (payouts, release, tickets, order-jobs, event-release) | —                  | F4 + F9b sandbox; payout workflow also needs the shared error workflow linked and a non-overlap timing check                 |
 
 > **Backup + shared alert reconciliation & unchecked founder activation checklist:**
 > `docs/ops/n8n-backup-and-alerts.md`. Both ship `active: false`; failed runs page the founder on a
 > **deduplicated** route (§4 of that doc). Do not activate here.
+
+For `payouts.json`, create one Header Auth credential named `Vergeo5 Internal Payouts`
+whose header is `X-Internal-Token` and whose value matches the API host's
+`INTERNAL_PAYOUTS_TOKEN`. Link the environment-local shared failure-alert workflow in
+Workflow Settings (do not paste a workflow ID into the portable JSON). In staging,
+force a non-zero `failed` result and confirm one deduplicated page, then confirm a full
+retry→batch execution finishes before the next 15-minute trigger. Leave it inactive
+during the drill unless `PAYOUTS_ENABLED=true` and `STAGING_ALLOW_PAYOUTS=true`. A
+production activation requires `PAYOUTS_ENABLED=true`, F4, and F9b to be green; the
+staging-only override is not used in production.
 
 Record activation date + operator per workflow in `docs/production-readiness/2026-07-19/vision-audit/evidence/` as they go live.

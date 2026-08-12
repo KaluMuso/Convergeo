@@ -61,3 +61,19 @@ def assert_payouts_enabled() -> None:
             },
         )
         raise PayoutsDisabledError()
+
+
+def assert_payouts_execution_allowed() -> None:
+    """Enforce both payout kill switches before any provider-facing work."""
+    from app.core.env_guards import payouts_suppressed
+
+    assert_payouts_enabled()
+    if payouts_suppressed():
+        raise AppError(
+            code="payouts_suppressed_on_staging",
+            message=(
+                "Payouts are suppressed on staging. "
+                "Set STAGING_ALLOW_PAYOUTS=true only for sandbox drills."
+            ),
+            http_status=503,
+        )
