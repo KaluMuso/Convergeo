@@ -225,8 +225,11 @@ jobs:
         #     @lhci/cli release still ships this chain; it is CI-only and never
         #     bundled into a shipped app or the API runtime. See A06/F3.
         #     Remove this entry once @lhci/cli removes the legacy chain.
+        #   GHSA-jmr9-qjv8-65gv — extract-zip<3.0.0 symlink path traversal via
+        #     @lhci/cli → lighthouse → puppeteer-core → @puppeteer/browsers.
+        #     CI/dev-only; no production exposure. See A06/F7.
         run: |
-          ALLOWLIST="GHSA-ph9p-34f9-6g65 GHSA-mh99-v99m-4gvg GHSA-7p8r-x3mc-p8w7 GHSA-mwp4-54f8-5fhr GHSA-rgw5-rvv9-x895"
+          ALLOWLIST="GHSA-ph9p-34f9-6g65 GHSA-mh99-v99m-4gvg GHSA-7p8r-x3mc-p8w7 GHSA-mwp4-54f8-5fhr GHSA-rgw5-rvv9-x895 GHSA-jmr9-qjv8-65gv"
           pnpm audit --audit-level=high --json > audit.json || true
           ALLOWLIST="$ALLOWLIST" python3 - <<'PY'
           import json, os, sys
