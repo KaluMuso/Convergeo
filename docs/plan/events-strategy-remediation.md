@@ -1,5 +1,11 @@
 # Events Strategy — Remediation Plan & Status
 
+> **Historical plan:** this file records the first remediation wave and is no longer a
+> complete statement of strategy compliance. See
+> `docs/plan/events-strategy-audit-2026-08.md` for the current audit, residual launch
+> blockers, and safe implementation order. Cancellation still uses a manual
+> refund-review flag; automatic refunds are not complete.
+
 **Branch:** `claude/convergeo-strategy-gaps-06qyby`
 **Source report:** the Codex "Events Strategy" audit (traceability matrix + branch inventory)
 **Baseline at start:** `master` with migrations through `0034`. This work added `0035`,
@@ -134,8 +140,10 @@ it. The refund row is therefore still born at admin execution time.
 Tests: paid-order flag + buyer/holder notification, idempotency, unpaid-order skip, and the
 end-to-end cancel endpoint wiring.
 
-**Upgrade path to (a):** when desired, call `execute_refund` per flagged order automatically
-(full auto-refund) instead of leaving it to the admin — no schema change needed.
+**Automatic-refund follow-up:** do not call `execute_refund` synchronously per flagged
+order. A safe implementation needs a durable per-order job, verified payout destination,
+provider-paid reconciliation, unique payout idempotency, crash-resume behavior, and an
+exact ledger path for partially released event funds. See the August 2026 audit.
 
 ### 5.1 Verified-organiser badge (DONE — #201)
 

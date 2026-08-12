@@ -15,6 +15,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 
 import { EventJsonLd, isEventIndexable, type EventJsonLdInput } from "./_components/event-jsonld";
+import { isPastEventInstance } from "./_lib/instance-time";
 
 import type { Metadata } from "next";
 
@@ -35,7 +36,7 @@ const TicketPicker = dynamic(
 type EventInstance = {
   id: string;
   starts_at: string;
-  ends_at: string;
+  ends_at: string | null;
   capacity: number;
   spots_sold: number;
   spots_remaining: number;
@@ -137,10 +138,6 @@ function formatInstanceDate(iso: string, locale: string): string {
     minute: "2-digit",
     timeZone: "Africa/Lusaka",
   }).format(new Date(iso));
-}
-
-function isPastInstance(iso: string): boolean {
-  return new Date(iso).getTime() < Date.now();
 }
 
 function mapsUrl(lat: number, lng: number): string {
@@ -318,7 +315,7 @@ export default async function EventDetailPage({ params }: PageProps) {
             <h2 className="font-display text-h3 text-display-ink">{t("detail.dates")}</h2>
             <ul className="flex list-none flex-col gap-2 p-0">
               {event.instances.map((instance) => {
-                const past = isPastInstance(instance.starts_at);
+                const past = isPastEventInstance(instance);
                 return (
                   <li
                     key={instance.id}

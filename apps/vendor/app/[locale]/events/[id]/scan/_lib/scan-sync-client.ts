@@ -24,10 +24,14 @@ export function createScanSyncClient(getToken: () => string | null | Promise<str
      * verify flow uses. Reused verbatim to reconcile the offline queue so
      * first-scan-wins resolution always happens server-side.
      */
-    async verifyBatch(scans: BatchSubmitScan[]): Promise<BatchScanResult[]> {
+    async verifyBatch(
+      eventId: string,
+      instanceId: string,
+      scans: BatchSubmitScan[],
+    ): Promise<BatchScanResult[]> {
       const response = await client.request<BatchVerifyResponse>("/tickets/verify/batch", {
         method: "POST",
-        body: JSON.stringify({ scans }),
+        body: JSON.stringify({ event_id: eventId, instance_id: instanceId, scans }),
       });
       return response.results;
     },

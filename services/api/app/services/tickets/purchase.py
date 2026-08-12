@@ -227,6 +227,7 @@ SELECT
   e.organiser_vendor_id::text,
   e.title,
   e.status,
+  e.visibility,
   tt.attendee_named::text,
   coalesce(tt.early_bird_price_ngwee::text, ''),
   coalesce(tt.early_bird_until::text, ''),
@@ -249,7 +250,7 @@ WHERE tt.id = {type_sql};
         )
 
     parts = result.rows[0].split("|")
-    if len(parts) != 15:
+    if len(parts) != 16:
         raise RuntimeError("unexpected ticket context row shape")
 
     if parts[6] != parts[1]:
@@ -266,7 +267,18 @@ WHERE tt.id = {type_sql};
             http_status=409,
             details={"event_id": parts[1]},
         )
-    if parts[14] != "active":
+    # Private detail pages can currently validate an access code, but the
+    # purchase request carries only instance/type ids and therefore cannot
+    # prove that validation. Fail closed until a signed access proof is part of
+    # the checkout contract. Unlisted events remain purchasable by direct link.
+    if parts[11] == "private":
+        raise AppError(
+            code="tickets.private_access_required",
+            message="Private event ticket purchase requires verified access",
+            http_status=403,
+            details={"event_id": parts[1]},
+        )
+    if parts[15] != "active":
         raise AppError(
             code="tickets.organiser_not_active",
             message="Event organiser is not available for purchase",
@@ -281,9 +293,9 @@ WHERE tt.id = {type_sql};
             "kind": parts[2],
             "name": parts[3],
             "price_ngwee": int(parts[4]),
-            "attendee_named": parts[11] == "true",
-            "early_bird_price_ngwee": int(parts[12]) if parts[12].strip() else None,
-            "early_bird_until": _parse_dt(parts[13]),
+            "attendee_named": parts[12] == "true",
+            "early_bird_price_ngwee": int(parts[13]) if parts[13].strip() else None,
+            "early_bird_until": _parse_dt(parts[14]),
         },
         "instance": {
             "id": parts[5],
@@ -680,9 +692,33 @@ WHERE id = {order_sql};
             http_status=404,
             details={"order_id": order_id},
         )
-    order_parts = order_result.rows[0].split("|")
+    order_parts = order_result.rows[0].split("|", 2)
+    if len(order_parts) != 3:
+        raise RuntimeError("unexpected ticket order row shape")
     customer_id = order_parts[0]
+    checkout_group_id = order_parts[1]
     snapshot = json.loads(order_parts[2]) if order_parts[2] else {}
+
+    group_sql = sql_uuid(checkout_group_id, "checkout_group_id")
+    payment_result = run_sql_script(
+        f"""
+SELECT EXISTS (
+  SELECT 1
+  FROM public.payments p
+  WHERE p.checkout_group_id = {group_sql}
+    AND p.status = 'success'
+)::text;
+"""
+    )
+    if not payment_result.ok or not payment_result.rows:
+        raise RuntimeError(f"load ticket payment state failed: {payment_result.error}")
+    if payment_result.rows[0].strip().lower() not in {"t", "true", "1"}:
+        raise AppError(
+            code="tickets.payment_not_successful",
+            message="Tickets can only be issued after successful payment",
+            http_status=409,
+            details={"order_id": order_id},
+        )
 
     items_result = run_sql_script(
         f"""
@@ -690,9 +726,13 @@ SELECT
   oi.id::text,
   oi.qty::text,
   oit.instance_id::text,
-  oit.ticket_type_id::text
+  oit.ticket_type_id::text,
+  e.id::text,
+  e.status
 FROM public.order_items oi
 INNER JOIN public.order_item_tickets oit ON oit.order_item_id = oi.id
+INNER JOIN public.event_instances ei ON ei.id = oit.instance_id
+INNER JOIN public.events e ON e.id = ei.event_id
 WHERE oi.order_id = {order_sql}
   AND oi.item_kind = 'ticket';
 """
@@ -702,6 +742,24 @@ WHERE oi.order_id = {order_sql}
     if not items_result.rows:
         return IssueTicketsResult(order_id=order_id, issued_count=0, skipped=True)
 
+    # Validate the whole order before linking or inserting any ticket. This is
+    # intentionally a separate pass so a mixed/malformed order cannot partly
+    # issue before a later cancelled event is discovered.
+    item_rows: list[tuple[str, int, str, str]] = []
+    for row in items_result.rows:
+        parts = row.split("|")
+        if len(parts) != 6:
+            raise RuntimeError("unexpected ticket order item row shape")
+        order_item_id, qty_raw, instance_id, ticket_type_id, event_id, event_status = parts
+        if event_status != "published":
+            raise AppError(
+                code="tickets.event_not_published",
+                message="Tickets cannot be issued for an unavailable event",
+                http_status=409,
+                details={"order_id": order_id, "event_id": event_id},
+            )
+        item_rows.append((order_item_id, int(qty_raw), instance_id, ticket_type_id))
+
     claim_ids: tuple[str, ...] = ()
     raw_claims = snapshot.get("ticket_claim_ids")
     if isinstance(raw_claims, list):
@@ -710,16 +768,7 @@ WHERE oi.order_id = {order_sql}
     total_issued = 0
     any_work = False
 
-    for row in items_result.rows:
-        parts = row.split("|")
-        if len(parts) != 4:
-            continue
-        order_item_id, qty_raw, instance_id, ticket_type_id = (
-            parts[0],
-            int(parts[1]),
-            parts[2],
-            parts[3],
-        )
+    for order_item_id, qty_raw, instance_id, ticket_type_id in item_rows:
         existing = _count_issued_for_item(order_item_id)
         if existing >= qty_raw:
             continue
@@ -907,11 +956,20 @@ def release_stale_ticket_claims(
         raise ValueError("ttl_minutes must be positive")
     script = f"""
 WITH stale AS (
-  SELECT id
-  FROM public.tickets
-  WHERE order_item_id IS NULL
-    AND status = 'issued'
-    AND created_at < timezone('utc', now()) - interval '{ttl} minutes'
+  SELECT t.id
+  FROM public.tickets t
+  WHERE t.order_item_id IS NULL
+    AND t.status = 'issued'
+    AND t.created_at < timezone('utc', now()) - interval '{ttl} minutes'
+    AND NOT EXISTS (
+      SELECT 1
+      FROM public.orders o
+      JOIN public.payments p
+        ON p.checkout_group_id = o.checkout_group_id
+       AND p.status = 'success'
+      WHERE jsonb_typeof(o.commission_snapshot -> 'ticket_claim_ids') = 'array'
+        AND (o.commission_snapshot -> 'ticket_claim_ids') ? t.id::text
+    )
 ),
 voided AS (
   UPDATE public.tickets t
@@ -937,12 +995,27 @@ FROM public.orders o
 INNER JOIN public.checkout_groups cg ON cg.id = o.checkout_group_id
 INNER JOIN public.payments p ON p.checkout_group_id = cg.id AND p.status = 'success'
 INNER JOIN public.order_items oi ON oi.order_id = o.id AND oi.item_kind = 'ticket'
+INNER JOIN public.order_item_tickets oit ON oit.order_item_id = oi.id
+INNER JOIN public.event_instances ei ON ei.id = oit.instance_id
+INNER JOIN public.events e ON e.id = ei.event_id
 LEFT JOIN LATERAL (
   SELECT count(*)::int AS issued
   FROM public.tickets t
   WHERE t.order_item_id = oi.id AND t.status <> 'void'
 ) counts ON true
 WHERE coalesce(counts.issued, 0) < oi.qty
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.order_items blocked_oi
+    JOIN public.order_item_tickets blocked_oit
+      ON blocked_oit.order_item_id = blocked_oi.id
+    JOIN public.event_instances blocked_ei
+      ON blocked_ei.id = blocked_oit.instance_id
+    JOIN public.events blocked_e ON blocked_e.id = blocked_ei.event_id
+    WHERE blocked_oi.order_id = o.id
+      AND blocked_oi.item_kind = 'ticket'
+      AND blocked_e.status <> 'published'
+  )
 GROUP BY o.id
 ORDER BY o.id;
 """

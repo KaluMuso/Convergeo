@@ -16,6 +16,7 @@ from app.services.tickets.purchase import (
     EVENT_TICKETS_RATE_BPS,
     _link_claimed_tickets,
     add_ticket_to_checkout,
+    find_orders_pending_ticket_issue,
     issue_tickets_for_paid_order,
     release_stale_ticket_claims,
     release_ticket_claim,
@@ -88,17 +89,20 @@ def _insert_event_with_instance(
     organiser_vendor_id: str = SHOP_B,
     capacity: int = 10,
     status: str = "published",
+    visibility: str = "public",
 ) -> str:
     slug = f"evt-{event_id[:8]}"
     conn.run(
         f"""
         INSERT INTO public.events (
-          id, organiser_vendor_id, title, slug, venue, lat, lng, status
+          id, organiser_vendor_id, title, slug, venue, lat, lng, status, visibility
         ) VALUES (
           '{event_id}', '{organiser_vendor_id}', 'Purchase Event', '{slug}',
-          'Lusaka Showgrounds', -15.4167, 28.2833, '{status}'
+          'Lusaka Showgrounds', -15.4167, 28.2833, '{status}', '{visibility}'
         )
-        ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status;
+        ON CONFLICT (id) DO UPDATE
+          SET status = EXCLUDED.status,
+              visibility = EXCLUDED.visibility;
         """
     )
     conn.run(
@@ -338,6 +342,122 @@ def test_idempotent_issuance_on_webhook_replay(db: PgConn, service: _ServiceWrap
     )
 
 
+def test_direct_issue_rejects_order_without_successful_payment(
+    db: PgConn, service: _ServiceWrapper
+) -> None:
+    fixture = _paid_checkout_fixture(db)
+    checkout = add_ticket_to_checkout(
+        service,
+        customer_id=CUSTOMER_A,
+        instance_id=fixture["instance_id"],
+        ticket_type_id=fixture["ticket_type_id"],
+        qty=1,
+    )
+
+    with pytest.raises(AppError) as exc:
+        issue_tickets_for_paid_order(service, checkout.order_id)
+
+    assert exc.value.code == "tickets.payment_not_successful"
+    assert exc.value.http_status == 409
+    # The capacity claim remains unlinked; no paid ticket was fabricated.
+    assert _ticket_count(
+        db,
+        instance_id=fixture["instance_id"],
+        order_item_id=checkout.order_item_id,
+    ) == 0
+    assert _ticket_count(db, instance_id=fixture["instance_id"]) == 1
+
+
+def test_cancelled_event_order_is_not_pending_and_direct_issue_is_blocked(
+    db: PgConn, service: _ServiceWrapper
+) -> None:
+    fixture = _paid_checkout_fixture(db)
+    checkout = add_ticket_to_checkout(
+        service,
+        customer_id=CUSTOMER_A,
+        instance_id=fixture["instance_id"],
+        ticket_type_id=fixture["ticket_type_id"],
+        qty=1,
+    )
+    _insert_success_payment(
+        db,
+        checkout_group_id=checkout.checkout_group_id,
+        amount_ngwee=checkout.subtotal_ngwee,
+    )
+    assert checkout.order_id in find_orders_pending_ticket_issue(service)
+
+    db.run(f"UPDATE public.events SET status = 'cancelled' WHERE id = '{fixture['event_id']}';")
+
+    assert checkout.order_id not in find_orders_pending_ticket_issue(service)
+    with pytest.raises(AppError) as exc:
+        issue_tickets_for_paid_order(service, checkout.order_id)
+    assert exc.value.code == "tickets.event_not_published"
+    assert exc.value.http_status == 409
+    assert _ticket_count(
+        db,
+        instance_id=fixture["instance_id"],
+        order_item_id=checkout.order_item_id,
+    ) == 0
+
+
+def test_issue_validates_every_ticket_item_before_linking_any_claim(
+    db: PgConn, service: _ServiceWrapper
+) -> None:
+    fixture = _paid_checkout_fixture(db)
+    checkout = add_ticket_to_checkout(
+        service,
+        customer_id=CUSTOMER_A,
+        instance_id=fixture["instance_id"],
+        ticket_type_id=fixture["ticket_type_id"],
+        qty=1,
+    )
+    _insert_success_payment(
+        db,
+        checkout_group_id=checkout.checkout_group_id,
+        amount_ngwee=checkout.subtotal_ngwee,
+    )
+
+    blocked_event_id = str(uuid.uuid4())
+    blocked_instance_id = str(uuid.uuid4())
+    blocked_type_id = str(uuid.uuid4())
+    blocked_item_id = str(uuid.uuid4())
+    _insert_event_with_instance(
+        db,
+        event_id=blocked_event_id,
+        instance_id=blocked_instance_id,
+        status="cancelled",
+    )
+    _insert_ticket_type(db, ticket_type_id=blocked_type_id, event_id=blocked_event_id)
+    db.run(
+        f"""
+        INSERT INTO public.order_items (
+          id, order_id, item_kind, qty, unit_price_ngwee, title_snapshot
+        ) VALUES (
+          '{blocked_item_id}', '{checkout.order_id}', 'ticket', 1, 20000, 'Blocked ticket'
+        );
+        INSERT INTO public.order_item_tickets (order_item_id, ticket_type_id, instance_id)
+        VALUES ('{blocked_item_id}', '{blocked_type_id}', '{blocked_instance_id}');
+        """
+    )
+
+    with pytest.raises(AppError) as exc:
+        issue_tickets_for_paid_order(service, checkout.order_id)
+
+    assert exc.value.code == "tickets.event_not_published"
+    # Validation is all-or-nothing: even the published item's existing claim is
+    # still unlinked when another item belongs to a cancelled event.
+    assert _ticket_count(
+        db,
+        instance_id=fixture["instance_id"],
+        order_item_id=checkout.order_item_id,
+    ) == 0
+    assert _ticket_count(
+        db,
+        instance_id=blocked_instance_id,
+        order_item_id=blocked_item_id,
+    ) == 0
+
+
 def test_commission_snapshot_paid_five_percent(db: PgConn, service: _ServiceWrapper) -> None:
     fixture = _paid_checkout_fixture(db)
     checkout = add_ticket_to_checkout(
@@ -572,20 +692,83 @@ def test_release_stale_claims_skips_paid_ticket(db: PgConn, service: _ServiceWra
         qty=1,
     )
     _insert_success_payment(db, checkout_group_id=checkout.checkout_group_id, amount_ngwee=20_000)
-    issue_tickets_for_paid_order(service, checkout.order_id)
+    claim_id = checkout.claimed_ticket_ids[0]
     db.run(
         f"""
         UPDATE public.tickets
         SET created_at = timezone('utc', now()) - interval '20 minutes'
-        WHERE order_item_id = '{checkout.order_item_id}';
+        WHERE id = '{claim_id}';
         """
     )
     released = release_stale_ticket_claims(service, ttl_minutes=15)
     assert released.voided_count == 0
+    # The paid claim is still unlinked while it waits for the issue worker, but
+    # remains live and keeps its original capacity reservation.
+    assert _ticket_count(
+        db,
+        instance_id=fixture["instance_id"],
+        order_item_id=checkout.order_item_id,
+    ) == 0
+    assert _ticket_count(db, instance_id=fixture["instance_id"]) == 1
+
+    issue_tickets_for_paid_order(service, checkout.order_id)
     assert (
         _ticket_count(db, instance_id=fixture["instance_id"], order_item_id=checkout.order_item_id)
         == 1
     )
+
+
+def test_unlisted_event_is_purchasable_by_direct_link(
+    db: PgConn, service: _ServiceWrapper
+) -> None:
+    event_id = str(uuid.uuid4())
+    instance_id = str(uuid.uuid4())
+    ticket_type_id = str(uuid.uuid4())
+    _insert_event_with_instance(
+        db,
+        event_id=event_id,
+        instance_id=instance_id,
+        visibility="unlisted",
+    )
+    _insert_ticket_type(db, ticket_type_id=ticket_type_id, event_id=event_id)
+
+    checkout = add_ticket_to_checkout(
+        service,
+        customer_id=CUSTOMER_A,
+        instance_id=instance_id,
+        ticket_type_id=ticket_type_id,
+        qty=1,
+    )
+
+    assert len(checkout.claimed_ticket_ids) == 1
+
+
+def test_private_event_purchase_fails_closed_without_access_proof(
+    db: PgConn, service: _ServiceWrapper
+) -> None:
+    event_id = str(uuid.uuid4())
+    instance_id = str(uuid.uuid4())
+    ticket_type_id = str(uuid.uuid4())
+    _insert_event_with_instance(
+        db,
+        event_id=event_id,
+        instance_id=instance_id,
+        visibility="private",
+    )
+    _insert_ticket_type(db, ticket_type_id=ticket_type_id, event_id=event_id)
+
+    with pytest.raises(AppError) as exc:
+        add_ticket_to_checkout(
+            service,
+            customer_id=CUSTOMER_A,
+            instance_id=instance_id,
+            ticket_type_id=ticket_type_id,
+            qty=1,
+        )
+
+    assert exc.value.code == "tickets.private_access_required"
+    assert exc.value.http_status == 403
+    assert _ticket_count(db, instance_id=instance_id) == 0
 
 
 def test_issue_tick_http_issues_paid_order(
