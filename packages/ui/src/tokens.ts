@@ -1,6 +1,6 @@
 /**
- * Vergeo5 design tokens — source of truth: docs/design/vergeo5-ui-ux-audit.md §6
- * (supersedes aubergine dark panels from docs/designs/SELECTION.md §5).
+ * Vergeo5 design tokens. The light identity follows the audited offline reference;
+ * the concrete dark palette follows the newer neutral-charcoal accessibility audit.
  */
 
 export const tokens = {
@@ -10,21 +10,21 @@ export const tokens = {
     surface: "#FFFFFF",
     surfaceElevated: "#FFFFFF",
     border: "#E8DFD0",
-    /** Marketing chrome (footer/heroes) — warm charcoal, not page-ground alias. */
-    panel: "#1A1816",
-    panel2: "#242220",
-    panelText: "#F2EDE6",
-    panelMuted: "#A39E96",
-    panelBorder: "rgba(255,255,255,0.08)",
-    text: "#2A2118",
+    panel: "#1C1308",
+    panel2: "#231C10",
+    panelText: "#F5EDD8",
+    panelMuted: "#B8A88A",
+    panelBorder: "rgba(255,255,255,0.12)",
+    text: "#2A1F0E",
     text2: "#6B5A3E",
-    /** Raised for AA on cream (~4.5:1); decorative use only if lowered again. */
+    // The reference's #9C8A72 is retained for decorative details only; this
+    // darker reference neutral meets AA for normal text on the warm ground.
     text3: "#7A6A52",
-    displayInk: "#23324E",
-    primary: "#2D4A7A",
-    primaryDeep: "#1F3557",
-    primaryTint: "#E8F0FA",
-    accent: "#C8861A",
+    displayInk: "#1C1308",
+    primary: "#4C5470",
+    primaryDeep: "#363C52",
+    primaryTint: "#D0D4E8",
+    accent: "#2D4A7A",
     success: "#3A7A4A",
     danger: "#C0392B",
     warning: "#D4A020",
@@ -63,15 +63,15 @@ export const tokens = {
     primaryBtnHover: "#8BB0DC",
   },
   fonts: {
-    display: "'DM Serif Display', Georgia, serif",
-    displayAlt: "'Cormorant Garamond', Georgia, serif",
+    display: "'Cormorant Garamond', Georgia, serif",
+    displayAlt: "'DM Serif Display', Georgia, serif",
     body: "'DM Sans', system-ui, sans-serif",
     mono: "'JetBrains Mono', monospace",
   },
   fontSize: {
-    hero: "clamp(2rem, 6vw, 3.9rem)",
-    h1: "1.75rem",
-    h2: "clamp(1.35rem, 2.4vw, 2.1rem)",
+    hero: "clamp(2.4rem, 4vw, 3.9rem)",
+    h1: "clamp(1.8rem, 3vw, 2.6rem)",
+    h2: "clamp(1.5rem, 2.4vw, 2.1rem)",
     h3: "1.0625rem",
     body: "0.9375rem",
     sm: "0.8125rem",
@@ -79,36 +79,46 @@ export const tokens = {
     price: "1.02rem",
   },
   spacing: {
+    0: "0px",
     1: "4px",
     2: "8px",
     3: "12px",
     4: "16px",
     5: "20px",
     6: "24px",
+    7: "28px",
     8: "32px",
+    9: "36px",
+    10: "40px",
+    11: "44px",
     12: "48px",
+    13: "52px",
+    14: "56px",
+    15: "60px",
     16: "64px",
+    18: "72px",
   },
   container: {
-    max: "80rem",
+    max: "87.5rem",
     gutter: "16px",
-    gutterLg: "24px",
+    gutterLg: "28px",
   },
   borderRadius: {
     sm: "8px",
     DEFAULT: "12px",
-    lg: "16px",
+    lg: "18px",
     pill: "999px",
   },
   boxShadow: {
-    1: "0 1px 4px rgba(28,19,8,0.05)",
-    2: "0 4px 24px rgba(28,19,8,0.07)",
+    1: "0 4px 24px rgba(28,19,8,0.07)",
+    2: "0 8px 32px rgba(28,19,8,0.14)",
     3: "0 12px 48px rgba(28,19,8,0.13)",
-    focusRing: "0 0 0 3px rgba(45,74,122,0.18)",
+    focusRing: "0 0 0 3px rgba(76,84,112,0.24)",
   },
   transitionDuration: {
     fast: "150ms",
     DEFAULT: "250ms",
+    page: "300ms",
     slow: "400ms",
   },
   transitionTimingFunction: {
@@ -169,6 +179,16 @@ export const contrastPairs = [
     name: "primary-on-surface",
     foreground: tokens.colors.primary,
     background: tokens.colors.surface,
+  },
+  {
+    name: "primary-button-text",
+    foreground: tokens.colors.surface,
+    background: tokens.colors.primary,
+  },
+  {
+    name: "accent-on-ground",
+    foreground: tokens.colors.accent,
+    background: tokens.colors.bg,
   },
   {
     name: "panel-text-on-panel",

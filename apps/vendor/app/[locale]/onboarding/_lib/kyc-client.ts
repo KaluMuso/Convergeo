@@ -13,7 +13,12 @@ import { createApiClient } from "@vergeo/config";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
-import type { KycApplication, KycDocType, KycStatus, VendorStatus } from "./types";
+import type {
+  KycApplication,
+  KycDocType,
+  KycStatus,
+  VendorStatus,
+} from "./types";
 
 export type MomoOperator = "mtn" | "airtel" | "zamtel";
 
@@ -24,14 +29,16 @@ export type KycSubmitPayload = {
   momo_phone: string;
   momo_operator?: MomoOperator | null;
   legal_name: string;
-  // Vendor business archetype selected at onboarding — persisted onto the vendor.
+  // Legacy API name for the seller's merchandise category.
   archetype?: string | null;
+  business_archetype?: string | null;
   business_name?: string | null;
 };
 
 export type KycDraftPayload = {
   business_name?: string | null;
   archetype?: string | null;
+  business_archetype?: string | null;
 };
 
 /** Raw GET /kyc/status (and bootstrap/draft) response (backend `KycStatusResponse`). */
@@ -46,6 +53,7 @@ type KycStatusResponse = {
   momo_name_match: unknown;
   reviewer_notes: string | null;
   archetype: string | null;
+  business_archetype: string | null;
   business_name: string | null;
   created?: boolean;
   vendor_id?: string;
@@ -68,6 +76,7 @@ function mapStatusToApplication(status: KycStatusResponse): KycApplication {
     // the onboarding business category (see migration 0034 + /kyc/status).
     business_name: status.business_name ?? null,
     business_category: status.archetype ?? null,
+    business_archetype: status.business_archetype ?? null,
     momo_phone: null,
     nrc_path: nrcPath,
     selfie_path: selfiePath,
@@ -86,11 +95,15 @@ export {
   shouldShowPreferredBadge,
 } from "../../_lib/kyc-integrity";
 
-export function createKycClient(getToken: () => string | null | Promise<string | null>) {
+export function createKycClient(
+  getToken: () => string | null | Promise<string | null>,
+) {
   const client = createApiClient({ baseUrl: getApiBaseUrl(), getToken });
 
   return {
-    async bootstrapApplication(payload: KycDraftPayload = {}): Promise<KycApplication> {
+    async bootstrapApplication(
+      payload: KycDraftPayload = {},
+    ): Promise<KycApplication> {
       const status = await client.request<KycStatusResponse>("/kyc/bootstrap", {
         method: "POST",
         body: JSON.stringify(payload),
@@ -127,7 +140,9 @@ export function createKycClient(getToken: () => string | null | Promise<string |
   };
 }
 
-export function isTerminalStatus(status: KycApplication["kyc_status"]): boolean {
+export function isTerminalStatus(
+  status: KycApplication["kyc_status"],
+): boolean {
   return (
     status === "submitted" ||
     status === "under_review" ||
@@ -137,11 +152,15 @@ export function isTerminalStatus(status: KycApplication["kyc_status"]): boolean 
   );
 }
 
-export function isResubmitStatus(status: KycApplication["kyc_status"]): boolean {
+export function isResubmitStatus(
+  status: KycApplication["kyc_status"],
+): boolean {
   return status === "rejected" || status === "resubmit";
 }
 
-export function docsRequiredForResubmit(rejectedDocs: KycDocType[] | null): KycDocType[] {
+export function docsRequiredForResubmit(
+  rejectedDocs: KycDocType[] | null,
+): KycDocType[] {
   if (!rejectedDocs || rejectedDocs.length === 0) {
     return ["nrc", "selfie"];
   }
