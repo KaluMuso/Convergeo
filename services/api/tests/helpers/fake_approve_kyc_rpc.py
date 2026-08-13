@@ -30,6 +30,15 @@ def _upsert_vendor_role(store: dict[str, Any], owner: str) -> str:
     return "granted"
 
 
+def _block_role_grant(client: _TableStore) -> bool:
+    if bool(getattr(client, "_block_vendor_role_grant", False)):
+        return True
+    store = getattr(client, "_store", None)
+    if isinstance(store, dict):
+        return bool(store.get("_block_vendor_role_grant"))
+    return False
+
+
 def fake_approve_kyc_vendor(
     client: _TableStore,
     params: dict[str, Any],
@@ -112,19 +121,16 @@ def fake_approve_kyc_vendor(
             http_status=409,
         )
 
-    role_store: dict[str, Any] = {
-        "user_roles": _store_rows(client, "user_roles"),
-        "_block_vendor_role_grant": bool(
-            getattr(client, "_block_vendor_role_grant", False)
-            or getattr(client, "_store", {}).get("_block_vendor_role_grant", False)  # type: ignore[attr-defined]
-        ),
-    }
-    if role_store.get("_block_vendor_role_grant"):
+    if _block_role_grant(client):
         raise AppError(
             code="vendor_role_grant_failed",
             message="forced role grant failure",
             http_status=500,
         )
+
+    role_store: dict[str, Any] = {
+        "user_roles": _store_rows(client, "user_roles"),
+    }
 
     kyc["status"] = "approved"
     kyc["reviewed_by"] = actor_id
