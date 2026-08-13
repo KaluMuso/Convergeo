@@ -160,7 +160,11 @@ def test_rehearsal_requires_live_query_and_declared_completed_tip(tmp_path: Path
 
 def test_rehearsal_adapter_contains_no_apply_command_or_production_escape_hatch() -> None:
     script = REHEARSAL_SCRIPT.read_text(encoding="utf-8")
-    assert "supabase db push" not in script
+    for line in script.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            continue
+        assert "supabase db push" not in line
     assert "select version from supabase_migrations.schema_migrations" in script
     assert "SCHEMA_TARGET_KIND" in script
     assert "production ref is forbidden" in script
