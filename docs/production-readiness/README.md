@@ -29,6 +29,7 @@ This directory is the **authoritative programme context** for production-readine
 | [2026-08-06/runtime-truth-evidence.md](./2026-08-06/runtime-truth-evidence.md)                       | Batch 0.5 live probe & migration evidence pack             |
 | [2026-08-06/production-migration-catchup-plan.md](./2026-08-06/production-migration-catchup-plan.md) | Batch 1A migration waves & deploy sequencing               |
 | [2026-08-06/staging-schema-catchup-evidence.md](./2026-08-06/staging-schema-catchup-evidence.md)     | Batch 1A.2 staging catch-up execution evidence             |
+| [2026-08-13/schema-convergence-control.md](./2026-08-13/schema-convergence-control.md)               | Fail-closed sandbox ledger verification and production-window contract |
 
 ## Batch status
 
