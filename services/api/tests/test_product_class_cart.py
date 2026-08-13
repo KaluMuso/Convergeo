@@ -10,7 +10,7 @@ from app.services.listings.class_rules import (
     validate_listing_purchasable_for_cart,
 )
 
-LISTING_D_USED = {
+LISTING_D_USED: dict[str, Any] = {
     "id": "dddddddd-dddd-dddd-dddd-dddddddddddd",
     "vendor_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
     "product_class": "D",
@@ -24,7 +24,7 @@ LISTING_D_USED = {
     "stock_qty": 1,
 }
 
-LISTING_E_MTO = {
+LISTING_E_MTO: dict[str, Any] = {
     "id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
     "vendor_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
     "product_class": "E",
@@ -155,7 +155,7 @@ class _CommittedQtyQuery:
 
 
 def test_weekly_capacity_reads_listing_link_table_and_excludes_cancelled() -> None:
-    rows = [
+    rows: list[dict[str, Any]] = [
         {"order_items": {"qty": 2, "orders": {"status": "paid"}}},
         {"order_items": [{"qty": 1, "orders": {"status": "delivered"}}]},
         {"order_items": {"qty": 8, "orders": {"status": "cancelled"}}},

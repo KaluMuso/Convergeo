@@ -90,10 +90,10 @@ def _add_listing(
             f"""
             INSERT INTO public.vendor_listings (
               id, vendor_id, product_id, category_id, title_override, price_ngwee,
-              condition, product_class, description, stock_mode, stock_qty, status
+              condition, condition_detail, product_class, description, stock_mode, stock_qty, status
             ) VALUES (
               '{lid}', '{VENDOR_SHOP_A}', NULL, '{cat}', 'L{price}', {price},
-              'used', 'D', 'Standalone listing for below-median peer-set test.',
+              'used', 'used_good', 'D', 'Standalone listing for below-median peer-set test.',
               'tracked', {stock_qty}, 'draft'
             );
             """

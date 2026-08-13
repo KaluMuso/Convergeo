@@ -540,7 +540,11 @@ def _enforce_listing_cart_rules(
             .maybe_single()
             .execute()
         )
-        row = response.data if isinstance(response.data, dict) else None
+        row = (
+            response.data
+            if response is not None and isinstance(response.data, dict)
+            else None
+        )
         # A missing flag must not make a pre-release product class purchasable.
         if row is None or row.get("enabled") is not True:
             customer_released = False
