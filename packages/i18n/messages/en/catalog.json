@@ -31,6 +31,7 @@
       "condition": "Condition",
       "conditionNew": "New",
       "conditionRefurbished": "Refurbished",
+      "conditionUsed": "Used",
       "availability": "Availability",
       "inStock": "In stock",
       "outOfStock": "Out of stock",
@@ -66,6 +67,7 @@
       "discount": "−{percent}%",
       "conditionNew": "New",
       "conditionRefurbished": "Refurbished",
+      "conditionUsed": "Used",
       "pill": {
         "nearest": "{distance} away",
         "belowMedian": "Below median",
@@ -212,6 +214,24 @@
     "unavailableRetry": "Try again",
     "breadcrumbAria": "Breadcrumb",
     "sellerCount": "{count, plural, one {# seller} other {# sellers}}",
+    "standalone": {
+      "detailsHeading": "Listing details",
+      "soldBy": "Sold by {vendor}.",
+      "classLabel": "Product class",
+      "classValue": "Class {class}",
+      "conditionLabel": "Condition",
+      "incrementLabel": "Sold in increments of",
+      "minimumLabel": "Minimum order",
+      "fulfilmentLabel": "Fulfilment",
+      "fulfilmentStocked": "Ready from stock",
+      "fulfilmentMadeToOrder": "Made to order",
+      "leadTimeLabel": "Lead time",
+      "leadTimeDays": "{days} days",
+      "capacityLabel": "Weekly capacity",
+      "capacityPerWeek": "{quantity} per week",
+      "locationLabel": "Seller location",
+      "defectsHeading": "Condition and defect notes"
+    },
     "noSellers": {
       "title": "No sellers available",
       "body": "This product has no active offers right now. Browse other products, or check back later.",
@@ -251,6 +271,17 @@
     },
     "buyBox": {
       "priceLabel": "Price",
+      "pricePerIncrement": "Price per {quantity}",
+      "minimumOrderQuantity": "Minimum order: {quantity}",
+      "lowStockQuantity": "Only {quantity} left",
+      "units": {
+        "each": "item",
+        "metre": "m",
+        "kg": "kg",
+        "litre": "L",
+        "bag": "bag",
+        "sqm": "m²"
+      },
       "quantityLabel": "Quantity",
       "decrease": "Decrease quantity",
       "increase": "Increase quantity",

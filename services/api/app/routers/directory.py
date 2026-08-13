@@ -8,6 +8,7 @@ from typing import Annotated, Any, Literal, Protocol, cast
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.business.access import BusinessAccess, get_business_access
+from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import (
     fetch_demo_listing_ids,
     fetch_demo_only_vendor_ids,
@@ -97,6 +98,12 @@ class DirectoryListingItem(BaseModel):
     product_slug: str | None = None
     price_ngwee: int
     condition: str
+    product_class: str = "A"
+    sale_unit: str = "each"
+    unit_step_milli: int = Field(default=1000, ge=1)
+    min_steps: int = Field(default=1, ge=1)
+    fulfilment_mode: str = "stocked"
+    lead_time_days: int | None = None
     in_stock: bool
     image_public_id: str | None = None
 
@@ -643,14 +650,6 @@ def _listing_title(row: dict[str, Any], product_name: str) -> str:
     return product_name
 
 
-def _is_in_stock(stock_mode: str, stock_qty: int | None) -> bool:
-    if stock_mode == "always_available":
-        return True
-    if stock_mode == "tracked":
-        return stock_qty is not None and stock_qty > 0
-    return False
-
-
 def _resolve_previous_slug(client: Any, slug: str) -> str | None:
     """A vendor may change its slug once (M12-P09), which records the old slug in
     ``caps_snapshot.previous_slug``. Map an old slug to the vendor's current slug so
@@ -766,7 +765,9 @@ def get_vendor_profile(
     listings_response = (
         client.table("vendor_listings")
         .select(
-            "id, title_override, price_ngwee, condition, stock_mode, stock_qty, "
+            "id, product_id, title_override, price_ngwee, condition, product_class, "
+            "sale_unit, unit_step_milli, min_steps, fulfilment_mode, lead_time_days, "
+            "vendor_capacity_per_week, stock_mode, stock_qty, moq, "
             "status, wholesale, "
             "products(name, slug, status)"
         )
@@ -807,12 +808,20 @@ def get_vendor_profile(
     listings: list[DirectoryListingItem] = []
     for listing_row in listing_rows:
         product = listing_row.get("products")
-        if not isinstance(product, dict):
-            continue
-        if str(product.get("status") or "") != "active":
-            continue
-        product_name = str(product.get("name") or "Listing")
-        product_slug = product.get("slug")
+        if listing_row.get("product_id") is not None:
+            # Canonical listings never fall back to the standalone detail URL.
+            # Omit them if their product relation is missing or inactive.
+            if not isinstance(product, dict):
+                continue
+            if str(product.get("status") or "") != "active":
+                continue
+        product_name = (
+            str(product.get("name") or "Listing")
+            if isinstance(product, dict)
+            else "Listing"
+        )
+        product_slug = product.get("slug") if isinstance(product, dict) else None
+        fulfilment_mode = str(listing_row.get("fulfilment_mode") or "stocked")
         listings.append(
             DirectoryListingItem(
                 id=str(listing_row["id"]),
@@ -820,9 +829,28 @@ def get_vendor_profile(
                 product_slug=str(product_slug) if product_slug else None,
                 price_ngwee=int(listing_row.get("price_ngwee") or 0),
                 condition=str(listing_row.get("condition") or "new"),
-                in_stock=_is_in_stock(
+                product_class=str(listing_row.get("product_class") or "A"),
+                sale_unit=str(listing_row.get("sale_unit") or "each"),
+                unit_step_milli=int(listing_row.get("unit_step_milli") or 1000),
+                min_steps=int(listing_row.get("min_steps") or 1),
+                fulfilment_mode=fulfilment_mode,
+                lead_time_days=(
+                    int(listing_row["lead_time_days"])
+                    if listing_row.get("lead_time_days") is not None
+                    else None
+                ),
+                in_stock=is_listing_available(
                     str(listing_row.get("stock_mode") or ""),
                     listing_row.get("stock_qty"),
+                    min_steps=int(listing_row.get("min_steps") or 1),
+                    moq=int(listing_row.get("moq") or 1),
+                    product_class=str(listing_row.get("product_class") or "A"),
+                    fulfilment_mode=fulfilment_mode,
+                    vendor_capacity_per_week=(
+                        int(listing_row["vendor_capacity_per_week"])
+                        if listing_row.get("vendor_capacity_per_week") is not None
+                        else None
+                    ),
                 ),
                 image_public_id=images_by_listing.get(str(listing_row["id"])),
             )

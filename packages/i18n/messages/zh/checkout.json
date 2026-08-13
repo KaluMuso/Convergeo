@@ -17,6 +17,16 @@
     "vendorSubtotal": "商家小计：{amount}",
     "lineTotal": "此行合计：{amount}",
     "unitPrice": "每件 {amount}",
+    "unitPriceMeasured": "每 {quantity} {amount}",
+    "madeToOrderLeadTime": "按订单制作 · {days} 天内备妥",
+    "saleUnits": {
+      "each": "件",
+      "metre": "米",
+      "kg": "千克",
+      "litre": "升",
+      "bag": "袋",
+      "sqm": "平方米"
+    },
     "remove": "移除",
     "removeLabel": "从购物车中移除 {title}",
     "saveForLater": "稍后再买",

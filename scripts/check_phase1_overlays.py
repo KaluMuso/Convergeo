@@ -114,6 +114,11 @@ PHASE1_ENGLISH_ALLOWLIST = {
     "USSD",
     "MoMo",
     "Offline",
+    # SI unit symbols are locale-neutral and intentionally identical.
+    "m",
+    "kg",
+    "L",
+    "m²",
     "404",
     "500",
     "✓",

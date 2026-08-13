@@ -96,6 +96,7 @@ def _listing_row(
     return {
         "id": listing_id,
         "vendor_id": vendor_id,
+        "product_id": product["id"],
         "title_override": None,
         "price_ngwee": price_ngwee,
         "condition": "new",
@@ -444,6 +445,84 @@ class TestVendorProfile:
         assert [loc["landmark"] for loc in payload["vendor"]["locations"]] == [
             "East Park Mall, Lusaka"
         ]
+
+    def test_profile_includes_standalone_made_to_order_listing(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        standalone_id = "33333333-3333-3333-3333-333333333333"
+        store.vendor_listings.append(
+            {
+                "id": standalone_id,
+                "vendor_id": ACTIVE_VENDOR_ID,
+                "title_override": "Custom chitenge curtains",
+                "price_ngwee": 320_000,
+                "condition": "new",
+                "product_class": "E",
+                "sale_unit": "metre",
+                "unit_step_milli": 500,
+                "min_steps": 4,
+                "fulfilment_mode": "made_to_order",
+                "lead_time_days": 7,
+                "vendor_capacity_per_week": 8,
+                "stock_mode": "tracked",
+                "stock_qty": 0,
+                "moq": 1,
+                "status": "active",
+                "wholesale": False,
+                "products": None,
+            }
+        )
+        store.listing_images.append(
+            {
+                "listing_id": standalone_id,
+                "cloudinary_public_id": "vergeo5/listings/custom-curtains",
+                "position": 1,
+            }
+        )
+
+        response = client.get("/directory/tech-hub-lusaka")
+
+        assert response.status_code == 200
+        listing = next(
+            item for item in response.json()["listings"] if item["id"] == standalone_id
+        )
+        assert listing["title"] == "Custom chitenge curtains"
+        assert listing["product_slug"] is None
+        assert listing["product_class"] == "E"
+        assert listing["sale_unit"] == "metre"
+        assert listing["unit_step_milli"] == 500
+        assert listing["min_steps"] == 4
+        assert listing["lead_time_days"] == 7
+        assert listing["in_stock"] is True
+
+    def test_profile_marks_stock_below_minimum_purchase_out_of_stock(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.vendor_listings[0].update(
+            {
+                "min_steps": 6,
+                "moq": 1,
+                "stock_qty": 5,
+            }
+        )
+
+        response = client.get("/directory/tech-hub-lusaka")
+
+        assert response.status_code == 200
+        assert response.json()["listings"][0]["in_stock"] is False
+
+    def test_profile_omits_canonical_listing_with_missing_product_relation(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        seed_active_vendor(store)
+        store.vendor_listings[0]["products"] = None
+
+        response = client.get("/directory/tech-hub-lusaka")
+
+        assert response.status_code == 200
+        assert response.json()["listings"] == []
 
     def test_profile_exposes_commercial_tier(
         self, client: TestClient, store: FakeSupabaseStore

@@ -323,6 +323,130 @@ def test_quick_list_creation_path(listing_client: TestClient) -> None:
     assert body["product_id"] is None
 
 
+def test_per_measure_fields_are_persisted(
+    listing_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="quick_list",
+            product_id=None,
+            title_override="Fabric sold by half metre",
+            sale_unit="metre",
+            unit_step_milli=500,
+            min_steps=2,
+        ),
+    )
+
+    assert response.status_code == 200
+    created = fake_client.tables["vendor_listings"].rows[-1]
+    assert created["sale_unit"] == "metre"
+    assert created["unit_step_milli"] == 500
+    assert created["min_steps"] == 2
+
+
+def test_class_d_draft_persists_used_disclosure(
+    listing_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="quick_list",
+            product_id=None,
+            title_override="Pre-owned carved chair",
+            product_class="D",
+            condition="used",
+            defect_notes="Visible scratch along the left arm",
+            publish=False,
+        ),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "draft"
+    assert response.json()["requires_evidence"] is True
+    created = fake_client.tables["vendor_listings"].rows[-1]
+    assert created["product_id"] is None
+    assert created["product_class"] == "D"
+    assert created["condition"] == "used"
+    assert created["defect_notes"] == "Visible scratch along the left arm"
+
+
+def test_class_d_cannot_publish_before_evidence_upload(listing_client: TestClient) -> None:
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="quick_list",
+            product_id=None,
+            title_override="Pre-owned carved chair",
+            product_class="D",
+            condition="used",
+            defect_notes="Visible scratch along the left arm",
+            publish=True,
+        ),
+    )
+
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize("product_class", ["D", "E"])
+def test_class_d_and_e_reject_canonical_attachment(
+    listing_client: TestClient,
+    product_class: str,
+) -> None:
+    strategy_fields: dict[str, Any]
+    if product_class == "D":
+        strategy_fields = {
+            "condition": "used",
+            "defect_notes": "Visible scratch along the left arm",
+        }
+    else:
+        strategy_fields = {
+            "fulfilment_mode": "made_to_order",
+            "lead_time_days": 14,
+            "vendor_capacity_per_week": 5,
+        }
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(product_class=product_class, publish=False, **strategy_fields),
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "standalone_product_class_required"
+
+
+def test_class_e_quick_list_persists_made_to_order_fields(
+    listing_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    response = listing_client.post(
+        "/vendor/listings",
+        headers=_auth_headers(),
+        json=_base_payload(
+            mode="quick_list",
+            product_id=None,
+            title_override="Custom dining table",
+            product_class="E",
+            fulfilment_mode="made_to_order",
+            lead_time_days=21,
+            vendor_capacity_per_week=3,
+        ),
+    )
+
+    assert response.status_code == 200
+    created = fake_client.tables["vendor_listings"].rows[-1]
+    assert created["product_id"] is None
+    assert created["product_class"] == "E"
+    assert created["fulfilment_mode"] == "made_to_order"
+    assert created["lead_time_days"] == 21
+    assert created["vendor_capacity_per_week"] == 3
+
+
 def test_t1_wholesale_denied(listing_client: TestClient) -> None:
     response = listing_client.post(
         "/vendor/listings",

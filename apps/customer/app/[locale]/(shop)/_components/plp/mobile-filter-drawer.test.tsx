@@ -25,6 +25,7 @@ const labels = {
   condition: "Condition",
   conditionNew: "New",
   conditionRefurbished: "Refurbished",
+  conditionUsed: "Used",
   availability: "Availability",
   inStock: "In stock",
   outOfStock: "Out of stock",
@@ -45,7 +46,11 @@ describe("MobileFilterDrawer", () => {
     render(
       <MobileFilterDrawer
         labels={labels}
-        facets={{ condition: [], availability: [], rating: [] }}
+        facets={{
+          condition: [{ value: "used", count: 3 }],
+          availability: [],
+          rating: [],
+        }}
         initialState={{ condition: [], availability: [] }}
       />,
     );
@@ -54,6 +59,7 @@ describe("MobileFilterDrawer", () => {
     await user.click(screen.getByTestId("plp-open-filters"));
     expect(screen.getByTestId("plp-filter-drawer")).toBeInTheDocument();
     expect(screen.getByTestId("plp-facet-panel")).toBeInTheDocument();
+    expect(screen.getByText("Used (3)")).toBeInTheDocument();
   });
 
   it("shows active label when filters are applied", () => {

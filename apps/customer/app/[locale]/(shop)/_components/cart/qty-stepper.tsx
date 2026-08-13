@@ -18,6 +18,7 @@ type QtyStepperProps = {
   disabled?: boolean;
   labels: QtyStepperLabels;
   onChange: (nextQty: number) => Promise<void>;
+  formatValue?: (qty: number) => string;
   "data-testid"?: string;
 };
 
@@ -28,6 +29,7 @@ export function QtyStepper({
   disabled = false,
   labels,
   onChange,
+  formatValue = String,
   "data-testid": dataTestId = "cart-qty-stepper",
 }: QtyStepperProps) {
   const [pending, setPending] = useState(false);
@@ -35,6 +37,7 @@ export function QtyStepper({
 
   const syncValue = value;
   const shownQty = pending ? displayQty : syncValue;
+  const shownValue = formatValue(shownQty);
 
   const atMin = shownQty <= min;
   const atMax = max !== null && shownQty >= max;
@@ -78,9 +81,9 @@ export function QtyStepper({
         className="min-w-12 text-center font-mono text-lg"
         aria-live="polite"
         aria-busy={pending}
-        aria-label={labels.value.replace("{count}", String(shownQty))}
+        aria-label={labels.value.replace("{count}", shownValue)}
       >
-        {shownQty}
+        {shownValue}
       </output>
       <button
         type="button"

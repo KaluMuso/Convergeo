@@ -198,7 +198,15 @@ def _seed_base(fake: FakeSupabaseClient) -> None:
                 "title_override": None,
                 "price_ngwee": 100_000,
                 "compare_at_ngwee": None,
+                "product_class": "A",
                 "condition": "new",
+                "sale_unit": "each",
+                "unit_step_milli": 1000,
+                "min_steps": 1,
+                "fulfilment_mode": "stocked",
+                "lead_time_days": None,
+                "vendor_capacity_per_week": None,
+                "defect_notes": None,
                 "stock_mode": "tracked",
                 "stock_qty": 5,
                 "wholesale": False,
@@ -208,6 +216,7 @@ def _seed_base(fake: FakeSupabaseClient) -> None:
                 "return_window_hours": None,
                 "status": "active",
                 "products": {"name": "Demo Phone"},
+                "listing_images": [],
                 "updated_at": "2026-07-09T10:00:00Z",
             },
             {
@@ -217,7 +226,15 @@ def _seed_base(fake: FakeSupabaseClient) -> None:
                 "title_override": "Vendor B listing",
                 "price_ngwee": 50_000,
                 "compare_at_ngwee": None,
+                "product_class": "A",
                 "condition": "new",
+                "sale_unit": "each",
+                "unit_step_milli": 1000,
+                "min_steps": 1,
+                "fulfilment_mode": "stocked",
+                "lead_time_days": None,
+                "vendor_capacity_per_week": None,
+                "defect_notes": None,
                 "stock_mode": "tracked",
                 "stock_qty": 2,
                 "wholesale": False,
@@ -227,6 +244,7 @@ def _seed_base(fake: FakeSupabaseClient) -> None:
                 "return_window_hours": None,
                 "status": "active",
                 "products": {"name": "Demo Phone"},
+                "listing_images": [],
                 "updated_at": "2026-07-09T09:00:00Z",
             },
         ]
@@ -513,3 +531,109 @@ def test_stock_adjust_updates_qty(manage_client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json()["listing"]["stock_qty"] == 4
+
+
+def test_manage_persists_per_measure_fields(
+    manage_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"sale_unit": "kg", "unit_step_milli": 250, "min_steps": 4},
+    )
+
+    assert response.status_code == 200
+    listing = response.json()["listing"]
+    assert listing["sale_unit"] == "kg"
+    assert listing["unit_step_milli"] == 250
+    assert listing["min_steps"] == 4
+    stored = fake_client.tables["vendor_listings"].rows[0]
+    assert stored["sale_unit"] == "kg"
+    assert stored["unit_step_milli"] == 250
+
+
+def test_canonical_listing_cannot_be_changed_to_class_d(
+    manage_client: TestClient,
+) -> None:
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={
+            "product_class": "D",
+            "condition": "used",
+            "defect_notes": "Visible scratch along the left arm",
+            "status": "draft",
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "standalone_product_class_required"
+
+
+def test_used_listing_cannot_activate_without_evidence(
+    manage_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    listing = fake_client.tables["vendor_listings"].rows[0]
+    listing.update(
+        {
+            "product_id": None,
+            "product_class": "D",
+            "condition": "used",
+            "defect_notes": "Visible scratch along the left arm",
+            "status": "draft",
+            "listing_images": [],
+        }
+    )
+
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"status": "active"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "listing_strategy_invalid"
+    assert listing["status"] == "draft"
+
+
+def test_used_listing_activates_with_ordered_evidence_images(
+    manage_client: TestClient,
+    fake_client: FakeSupabaseClient,
+) -> None:
+    listing = fake_client.tables["vendor_listings"].rows[0]
+    listing.update(
+        {
+            "product_id": None,
+            "product_class": "D",
+            "condition": "used",
+            "defect_notes": "Visible scratch along the left arm",
+            "status": "draft",
+            "listing_images": [
+                {
+                    "id": "image-2",
+                    "listing_id": LISTING_A_ID,
+                    "cloudinary_public_id": "used/back",
+                    "position": 2,
+                },
+                {
+                    "id": "image-1",
+                    "listing_id": LISTING_A_ID,
+                    "cloudinary_public_id": "used/front",
+                    "position": 1,
+                },
+            ],
+        }
+    )
+
+    response = manage_client.patch(
+        f"/vendor/listings/{LISTING_A_ID}",
+        headers=_auth_headers(),
+        json={"status": "active"},
+    )
+
+    assert response.status_code == 200
+    result = response.json()["listing"]
+    assert result["status"] == "active"
+    assert [image["position"] for image in result["images"]] == [1, 2]

@@ -9,6 +9,7 @@ from app.errors import AppError
 from app.main import create_app
 from app.routers import products as products_router
 from app.services.business.access import BusinessAccess, get_business_access
+from app.services.listings.availability import is_listing_available
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 from fastapi.testclient import TestClient
@@ -76,6 +77,14 @@ def _listing_row(
         "title_override": title_override,
         "price_ngwee": price_ngwee,
         "condition": "new",
+        "product_class": "A",
+        "sale_unit": "each",
+        "unit_step_milli": 1000,
+        "min_steps": 1,
+        "fulfilment_mode": "stocked",
+        "lead_time_days": None,
+        "vendor_capacity_per_week": None,
+        "defect_notes": None,
         "stock_mode": stock_mode,
         "stock_qty": stock_qty,
         "moq": 1,
@@ -243,6 +252,34 @@ class TestProductDetailStates:
         # Trimmed, non-empty description flows to the PDP Overview tab.
         assert response.json()["description"] == "A durable smartphone built for Zambia."
 
+    def test_listing_strategy_fields_are_returned(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        store.products = [_product_row()]
+        listing = _listing_row(listing_id=LISTING_IN_STOCK)
+        listing.update(
+            {
+                "product_class": "C",
+                "condition": "used",
+                "sale_unit": "kg",
+                "unit_step_milli": 250,
+                "min_steps": 4,
+                "defect_notes": "Surface marks visible on the package",
+            }
+        )
+        store.vendor_listings = [listing]
+
+        response = client.get("/products/itel-a70")
+
+        assert response.status_code == 200
+        result = response.json()["listings"][0]
+        assert result["product_class"] == "C"
+        assert result["condition"] == "used"
+        assert result["sale_unit"] == "kg"
+        assert result["unit_step_milli"] == 250
+        assert result["min_steps"] == 4
+        assert result["defect_notes"] == "Surface marks visible on the package"
+
     def test_blank_description_normalized_to_null(
         self, client: TestClient, store: FakeSupabaseStore
     ) -> None:
@@ -264,6 +301,40 @@ class TestProductDetailStates:
         listing = response.json()["listings"][0]
         assert listing["in_stock"] is False
         assert listing["stock_qty"] == 0
+
+    def test_stock_below_minimum_purchase_is_not_available(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        store.products = [_product_row()]
+        listing = _listing_row(listing_id=LISTING_IN_STOCK, stock_qty=3)
+        listing["min_steps"] = 4
+        store.vendor_listings = [listing]
+
+        response = client.get("/products/itel-a70")
+
+        assert response.status_code == 200
+        assert response.json()["listings"][0]["in_stock"] is False
+
+    def test_made_to_order_capacity_below_minimum_is_not_available(
+        self, client: TestClient, store: FakeSupabaseStore
+    ) -> None:
+        store.products = [_product_row()]
+        listing = _listing_row(listing_id=LISTING_IN_STOCK, stock_qty=0)
+        listing.update(
+            {
+                "product_class": "E",
+                "fulfilment_mode": "made_to_order",
+                "lead_time_days": 14,
+                "vendor_capacity_per_week": 3,
+                "min_steps": 4,
+            }
+        )
+        store.vendor_listings = [listing]
+
+        response = client.get("/products/itel-a70")
+
+        assert response.status_code == 200
+        assert response.json()["listings"][0]["in_stock"] is False
 
     def test_no_reviews_vendor_rating(self, client: TestClient, store: FakeSupabaseStore) -> None:
         store.products = [_product_row()]
@@ -657,9 +728,21 @@ class TestProductDetailWholesaleOnlyIsOmitted:
 
 class TestProductHelpers:
     def test_is_in_stock_matrix(self) -> None:
-        assert products_router._is_in_stock("always_available", None) is True
-        assert products_router._is_in_stock("tracked", 3) is True
-        assert products_router._is_in_stock("tracked", 0) is False
+        assert is_listing_available("always_available", None) is True
+        assert is_listing_available("tracked", 3) is True
+        assert is_listing_available("tracked", 0) is False
+        assert is_listing_available("tracked", 3, min_steps=4) is False
+        assert (
+            is_listing_available(
+                "tracked",
+                0,
+                product_class="E",
+                fulfilment_mode="made_to_order",
+                vendor_capacity_per_week=5,
+                min_steps=4,
+            )
+            is True
+        )
 
     def test_collect_images_caps_at_eight(self) -> None:
         listing_id = LISTING_IN_STOCK

@@ -74,6 +74,38 @@ def _new_product(conn: PgConn, scratch: Scratch) -> None:
     assert result.ok, result.error
 
 
+def _enable_class_d_release(conn: PgConn) -> None:
+    result = conn.run(
+        """
+        UPDATE public.feature_flags
+        SET enabled = true
+        WHERE flag IN (
+          'product_class_d_customer_release',
+          'product_class_d_operations_approved'
+        );
+        """
+    )
+    assert result.ok, result.error
+
+
+def _seed_listing_image(conn: PgConn, listing_id: str) -> None:
+    image_id = str(uuid.uuid4())
+    result = conn.run(
+        f"""
+        INSERT INTO public.listing_images (id, listing_id, cloudinary_public_id, position)
+        VALUES ('{image_id}', '{listing_id}', 'vergeo5/test/below-median', 1);
+        """
+    )
+    assert result.ok, result.error
+
+
+def _activate_listing(conn: PgConn, listing_id: str) -> None:
+    result = conn.run(
+        f"UPDATE public.vendor_listings SET status = 'active' WHERE id = '{listing_id}'"
+    )
+    assert result.ok, result.error
+
+
 def _add_listing(
     conn: PgConn,
     scratch: Scratch,
@@ -84,18 +116,34 @@ def _add_listing(
 ) -> str:
     """Add an active listing; attaches to the scratch product unless standalone."""
     lid = str(uuid.uuid4())
-    prod = "NULL" if standalone else f"'{scratch.product_id}'"
-    result = conn.run(
-        f"""
-        INSERT INTO public.vendor_listings (
-          id, vendor_id, product_id, title_override, price_ngwee,
-          condition, stock_mode, stock_qty, status
-        ) VALUES (
-          '{lid}', '{VENDOR_SHOP_A}', {prod}, 'L{price}', {price},
-          'new', 'tracked', {stock_qty}, 'active'
-        );
-        """
-    )
+    if standalone:
+        cat = _category_id(conn)
+        result = conn.run(
+            f"""
+            INSERT INTO public.vendor_listings (
+              id, vendor_id, product_id, category_id, title_override, price_ngwee,
+              condition, condition_detail, product_class, description, defect_notes,
+              stock_mode, stock_qty, status
+            ) VALUES (
+              '{lid}', '{VENDOR_SHOP_A}', NULL, '{cat}', 'L{price}', {price},
+              'used', 'used_good', 'D', 'Standalone listing for below-median peer-set test.',
+              'Minor wear consistent with used-good condition for test seeding.',
+              'tracked', {stock_qty}, 'draft'
+            );
+            """
+        )
+    else:
+        result = conn.run(
+            f"""
+            INSERT INTO public.vendor_listings (
+              id, vendor_id, product_id, title_override, price_ngwee,
+              condition, stock_mode, stock_qty, status
+            ) VALUES (
+              '{lid}', '{VENDOR_SHOP_A}', '{scratch.product_id}', 'L{price}', {price},
+              'new', 'tracked', {stock_qty}, 'active'
+            );
+            """
+        )
     assert result.ok, result.error
     scratch.listing_ids.append(lid)
     return lid
@@ -215,6 +263,9 @@ def test_standalone_listing_has_no_below_median(db: PgConn) -> None:
     try:
         _new_product(db, scratch)  # created but unused by the standalone listing
         standalone = _add_listing(db, scratch, price=1, standalone=True)
+        _enable_class_d_release(db)
+        _seed_listing_image(db, standalone)
+        _activate_listing(db, standalone)
         _project(db, standalone)
         assert _signal(db, standalone, "below_median") == "false"
     finally:

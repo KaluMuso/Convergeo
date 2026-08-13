@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import math
 from typing import Annotated, Any, Literal, cast
+from uuid import UUID
 
 from app.deps import get_supabase_client
 from app.errors import AppError
@@ -12,6 +13,7 @@ from app.services.business.access import (
     get_business_access,
     require_wholesale_access,
 )
+from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import fetch_demo_listing_ids, is_non_genuine_public_id
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
@@ -23,8 +25,13 @@ MAX_PAGE_SIZE = 50
 EARTH_RADIUS_M = 6_371_000
 
 CatalogSort = Literal["relevance", "cheapest", "nearest", "newest"]
-ConditionFilter = Literal["new", "refurbished"]
+ConditionFilter = Literal["new", "refurbished", "used"]
 AvailabilityFilter = Literal["in_stock", "out_of_stock"]
+ProductClass = Literal["A", "B", "C", "D", "E"]
+ListingCondition = Literal["new", "refurbished", "used"]
+SaleUnit = Literal["each", "metre", "kg", "litre", "bag", "sqm"]
+FulfilmentMode = Literal["stocked", "made_to_order"]
+StockMode = Literal["tracked", "always_available"]
 
 
 class FacetBucket(BaseModel):
@@ -48,6 +55,12 @@ class CatalogListingItem(BaseModel):
     price_ngwee: int
     compare_at_ngwee: int | None = None
     condition: str
+    product_class: ProductClass = "A"
+    sale_unit: SaleUnit = "each"
+    unit_step_milli: int = Field(default=1000, ge=1)
+    min_steps: int = Field(default=1, ge=1)
+    fulfilment_mode: FulfilmentMode = "stocked"
+    lead_time_days: int | None = None
     in_stock: bool
     image_public_id: str | None = None
     rating: float = 0.0
@@ -72,6 +85,49 @@ class CatalogListResponse(BaseModel):
     next_cursor: str | None = None
 
 
+class StandaloneListingVendor(BaseModel):
+    id: str
+    name: str
+    slug: str | None = None
+
+
+class StandaloneListingLocation(BaseModel):
+    landmark: str | None = None
+    lat: float | None = None
+    lng: float | None = None
+
+
+class StandaloneListingImage(BaseModel):
+    cloudinary_public_id: str
+    position: int = Field(ge=1, le=8)
+
+
+class StandaloneListingResponse(BaseModel):
+    """Public detail contract for a listing without a canonical product."""
+
+    id: str
+    title: str
+    product_class: ProductClass
+    condition: ListingCondition
+    defect_notes: str | None = None
+    price_ngwee: int
+    compare_at_ngwee: int | None = None
+    sale_unit: SaleUnit
+    unit_step_milli: int = Field(ge=1)
+    min_steps: int = Field(ge=1)
+    fulfilment_mode: FulfilmentMode
+    lead_time_days: int | None = None
+    vendor_capacity_per_week: int | None = None
+    stock_mode: StockMode
+    stock_qty: int | None = Field(default=None, ge=0)
+    moq: int = Field(default=1, ge=1)
+    wholesale: bool = False
+    in_stock: bool
+    vendor: StandaloneListingVendor
+    location: StandaloneListingLocation | None = None
+    images: list[StandaloneListingImage] = Field(default_factory=list)
+
+
 class PlpFilterState(BaseModel):
     category_path: str | None = None
     sort: CatalogSort = "relevance"
@@ -93,7 +149,12 @@ WITH scoped AS (
   SELECT sd.entity_id,
          vl.condition,
          CASE
-           WHEN vl.stock_mode = 'always_available' OR coalesce(vl.stock_qty, 0) > 0 THEN 'in_stock'
+           WHEN (vl.product_class = 'E' OR vl.fulfilment_mode = 'made_to_order')
+                AND coalesce(vl.vendor_capacity_per_week, 0) >= greatest(vl.min_steps, vl.moq)
+             THEN 'in_stock'
+           WHEN vl.stock_mode = 'always_available' THEN 'in_stock'
+           WHEN coalesce(vl.stock_qty, 0) >= greatest(vl.min_steps, vl.moq)
+             THEN 'in_stock'
            ELSE 'out_of_stock'
          END AS availability,
          coalesce(vr.avg_rating, 0) AS avg_rating,
@@ -156,8 +217,16 @@ class _ListingRow(BaseModel):
     vendor_id: str
     product_id: str | None = None
     condition: str
+    product_class: ProductClass = "A"
+    sale_unit: SaleUnit = "each"
+    unit_step_milli: int = Field(default=1000, ge=1)
+    min_steps: int = Field(default=1, ge=1)
+    fulfilment_mode: FulfilmentMode = "stocked"
+    lead_time_days: int | None = None
+    vendor_capacity_per_week: int | None = None
     stock_mode: str
     stock_qty: int | None = None
+    moq: int = Field(default=1, ge=1)
     created_at: str | None = None
     wholesale: bool = False
     compare_at_ngwee: int | None = None
@@ -244,7 +313,7 @@ def decode_plp_filters(params: dict[str, str | list[str] | None]) -> PlpFilterSt
     if condition_raw:
         for part in condition_raw.split(","):
             token = part.strip()
-            if token in ("new", "refurbished"):
+            if token in ("new", "refurbished", "used"):
                 condition.append(token)  # type: ignore[arg-type]
 
     availability: list[AvailabilityFilter] = []
@@ -281,10 +350,6 @@ def decode_plp_filters(params: dict[str, str | list[str] | None]) -> PlpFilterSt
         cursor=decode_plp_cursor(_one("cursor")),
         limit=min(max(parsed_limit, 1), MAX_PAGE_SIZE),
     )
-
-
-def _listing_in_stock(stock_mode: str, stock_qty: int | None) -> bool:
-    return stock_mode == "always_available" or (stock_qty is not None and stock_qty > 0)
 
 
 def _relevance_score(boost: dict[str, Any], updated_at: str | None) -> tuple[int, int, str]:
@@ -346,13 +411,217 @@ def _first_landmark(locations: list[dict[str, Any]]) -> str | None:
     return None
 
 
+_STANDALONE_LISTING_SELECT = (
+    "id,product_id,title_override,price_ngwee,compare_at_ngwee,condition,product_class,"
+    "sale_unit,unit_step_milli,min_steps,fulfilment_mode,lead_time_days,"
+    "vendor_capacity_per_week,defect_notes,stock_mode,stock_qty,moq,wholesale,status,"
+    "vendors!inner("
+    "id,slug,display_name,status,vendor_locations(landmark,lat,lng,created_at)"
+    "),"
+    "listing_images(cloudinary_public_id,position)"
+)
+
+
+def _standalone_listing_not_found() -> AppError:
+    # One response for absent and deliberately hidden records prevents callers
+    # from enumerating canonical, wholesale-only, demo, or inactive inventory.
+    return AppError("listing.not_found", "Listing not found", 404)
+
+
+def _standalone_listing_in_stock(row: dict[str, Any]) -> bool:
+    stock_qty_raw = row.get("stock_qty")
+    stock_qty = int(stock_qty_raw) if stock_qty_raw is not None else None
+    capacity_raw = row.get("vendor_capacity_per_week")
+    capacity = int(capacity_raw) if capacity_raw is not None else None
+    return is_listing_available(
+        str(row.get("stock_mode") or "tracked"),
+        stock_qty,
+        min_steps=int(row.get("min_steps") or 1),
+        moq=int(row.get("moq") or 1),
+        product_class=str(row.get("product_class") or "A"),
+        fulfilment_mode=str(row.get("fulfilment_mode") or "stocked"),
+        vendor_capacity_per_week=capacity,
+    )
+
+
+def _standalone_listing_location(
+    vendor: dict[str, Any],
+) -> StandaloneListingLocation | None:
+    locations = sorted(
+        _nested_rows(vendor.get("vendor_locations")),
+        key=lambda row: str(row.get("created_at") or ""),
+    )
+    if not locations:
+        return None
+
+    location = locations[0]
+    lat_raw = location.get("lat")
+    lng_raw = location.get("lng")
+    landmark_raw = location.get("landmark")
+    return StandaloneListingLocation(
+        landmark=(
+            str(landmark_raw).strip()
+            if isinstance(landmark_raw, str) and landmark_raw.strip()
+            else None
+        ),
+        lat=float(lat_raw) if lat_raw is not None else None,
+        lng=float(lng_raw) if lng_raw is not None else None,
+    )
+
+
+def get_standalone_listing(
+    client: Any,
+    listing_id: str,
+    *,
+    include_wholesale: bool = False,
+) -> StandaloneListingResponse:
+    """Fetch one public standalone listing through the server-only client.
+
+    The service-role client bypasses RLS, so every public visibility predicate
+    is repeated here and only an explicit allowlist of public columns is selected.
+    """
+    response = (
+        client.table("vendor_listings")
+        .select(_STANDALONE_LISTING_SELECT)
+        .eq("id", listing_id)
+        .eq("status", "active")
+        .eq("vendors.status", "active")
+        .limit(1)
+        .execute()
+    )
+    rows = _response_rows(response)
+    if not rows:
+        raise _standalone_listing_not_found()
+
+    row = rows[0]
+    # Canonical-attached inventory belongs on /products/{slug}; keeping this
+    # endpoint standalone-only avoids duplicate public detail URLs.
+    if row.get("product_id") is not None:
+        raise _standalone_listing_not_found()
+    if str(row.get("product_class") or "A") not in _customer_released_product_classes(client):
+        raise _standalone_listing_not_found()
+    if bool(row.get("wholesale")) and not include_wholesale:
+        raise _standalone_listing_not_found()
+    if listing_id in fetch_demo_listing_ids(client, [listing_id]):
+        raise _standalone_listing_not_found()
+
+    vendors = _nested_rows(row.get("vendors"))
+    vendor = vendors[0] if vendors else None
+    title_raw = row.get("title_override")
+    title = title_raw.strip() if isinstance(title_raw, str) else ""
+    vendor_name_raw = vendor.get("display_name") if vendor is not None else None
+    vendor_name = (
+        vendor_name_raw.strip() if isinstance(vendor_name_raw, str) else ""
+    )
+    if vendor is None or not title or not vendor_name:
+        raise _standalone_listing_not_found()
+
+    images: list[StandaloneListingImage] = []
+    for image_row in sorted(
+        _nested_rows(row.get("listing_images")),
+        key=lambda item: int(item.get("position") or 0),
+    ):
+        public_id = image_row.get("cloudinary_public_id")
+        if not isinstance(public_id, str) or not public_id.strip():
+            continue
+        images.append(
+            StandaloneListingImage(
+                cloudinary_public_id=public_id.strip(),
+                position=int(image_row.get("position") or 1),
+            )
+        )
+
+    stock_qty_raw = row.get("stock_qty")
+    compare_at_raw = row.get("compare_at_ngwee")
+    lead_time_raw = row.get("lead_time_days")
+    capacity_raw = row.get("vendor_capacity_per_week")
+    defect_notes_raw = row.get("defect_notes")
+    vendor_slug_raw = vendor.get("slug")
+    return StandaloneListingResponse(
+        id=str(row["id"]),
+        title=title,
+        product_class=str(row.get("product_class") or "A"),  # type: ignore[arg-type]
+        condition=str(row.get("condition") or "new"),  # type: ignore[arg-type]
+        defect_notes=(
+            defect_notes_raw.strip()
+            if isinstance(defect_notes_raw, str) and defect_notes_raw.strip()
+            else None
+        ),
+        price_ngwee=int(row["price_ngwee"]),
+        compare_at_ngwee=int(compare_at_raw) if compare_at_raw is not None else None,
+        sale_unit=str(row.get("sale_unit") or "each"),  # type: ignore[arg-type]
+        unit_step_milli=int(row.get("unit_step_milli") or 1000),
+        min_steps=int(row.get("min_steps") or 1),
+        fulfilment_mode=str(  # type: ignore[arg-type]
+            row.get("fulfilment_mode") or "stocked"
+        ),
+        lead_time_days=int(lead_time_raw) if lead_time_raw is not None else None,
+        vendor_capacity_per_week=(
+            int(capacity_raw) if capacity_raw is not None else None
+        ),
+        stock_mode=str(row.get("stock_mode") or "tracked"),  # type: ignore[arg-type]
+        stock_qty=int(stock_qty_raw) if stock_qty_raw is not None else None,
+        moq=int(row.get("moq") or 1),
+        wholesale=bool(row.get("wholesale")),
+        in_stock=_standalone_listing_in_stock(row),
+        vendor=StandaloneListingVendor(
+            id=str(vendor["id"]),
+            name=vendor_name,
+            slug=(
+                str(vendor_slug_raw).strip()
+                if isinstance(vendor_slug_raw, str) and vendor_slug_raw.strip()
+                else None
+            ),
+        ),
+        location=_standalone_listing_location(vendor),
+        images=images,
+    )
+
+
 _LISTING_ENRICHED_SELECT = (
-    "id,vendor_id,product_id,condition,stock_mode,stock_qty,created_at,status,"
-    "wholesale,compare_at_ngwee,"
+    "id,vendor_id,product_id,condition,product_class,sale_unit,unit_step_milli,min_steps,"
+    "fulfilment_mode,lead_time_days,vendor_capacity_per_week,stock_mode,stock_qty,moq,"
+    "created_at,status,wholesale,compare_at_ngwee,"
     "vendors!inner(id,slug,display_name,status,vendor_locations(landmark,created_at)),"
     "products(id,slug,name,status),"
     "listing_images(cloudinary_public_id,position)"
 )
+
+
+def _customer_released_product_classes(client: Any) -> set[str]:
+    """Return classes intentionally released to customer discovery.
+
+    A failed/missing flag query is not a reason to expose a partially launched
+    class.  A and B are the launch contract; C/D/E are opt-in release gates.
+    """
+    flags = {
+        "product_class_c_customer_release",
+        "product_class_d_customer_release",
+        "product_class_d_operations_approved",
+        "product_class_e_customer_release",
+    }
+    try:
+        response = (
+            client.table("feature_flags")
+            .select("flag,enabled")
+            .in_("flag", list(flags))
+            .execute()
+        )
+        rows = _response_rows(response)
+    except Exception:  # pragma: no cover - defensive fail-closed boundary
+        return {"A", "B"}
+    enabled = {str(row.get("flag")) for row in rows if row.get("enabled") is True}
+    released = {"A", "B"}
+    if "product_class_c_customer_release" in enabled:
+        released.add("C")
+    if {
+        "product_class_d_customer_release",
+        "product_class_d_operations_approved",
+    } <= enabled:
+        released.add("D")
+    if "product_class_e_customer_release" in enabled:
+        released.add("E")
+    return released
 
 
 def _fetch_listings_enriched(
@@ -383,8 +652,16 @@ def _fetch_listings_enriched(
         vendor_locations = _nested_rows(vendor.get("vendor_locations"))
         products = _nested_rows(row.get("products"))
         product = products[0] if products else None
-        if product is not None and str(product.get("status") or "") != "active":
-            product = None
+        # A canonical-attached listing must never fall through to the
+        # standalone `/l/{id}` route. If its canonical product is absent or no
+        # longer active, omit the listing; only product_id=NULL is standalone.
+        if row.get("product_id") is not None:
+            if product is None or str(product.get("status") or "") != "active":
+                continue
+        else:
+            title_override = row.get("title_override")
+            if not isinstance(title_override, str) or not title_override.strip():
+                continue
         images = _nested_rows(row.get("listing_images"))
         enriched[str(listing_id)] = {
             "listing": row,
@@ -504,6 +781,7 @@ def _build_candidates(client: Any, category_path: str | None) -> list[_CatalogCa
         listing_ids = [doc.entity_id for doc in search_docs]
     enriched = _fetch_listings_enriched(client, listing_ids)
     ratings = _fetch_listing_ratings(client, listing_ids)
+    released_classes = _customer_released_product_classes(client)
 
     candidates: list[_CatalogCandidate] = []
     for doc in search_docs:
@@ -514,8 +792,18 @@ def _build_candidates(client: Any, category_path: str | None) -> list[_CatalogCa
         vendor = bundle["vendor"]
         product = bundle.get("product")
         listing = _ListingRow.model_validate(listing_row)
+        if listing.product_class not in released_classes:
+            continue
         rating, review_count = ratings.get(doc.entity_id, (0.0, 0))
-        in_stock = _listing_in_stock(listing.stock_mode, listing.stock_qty)
+        in_stock = is_listing_available(
+            listing.stock_mode,
+            listing.stock_qty,
+            min_steps=listing.min_steps,
+            moq=listing.moq,
+            product_class=listing.product_class,
+            fulfilment_mode=listing.fulfilment_mode,
+            vendor_capacity_per_week=listing.vendor_capacity_per_week,
+        )
         candidates.append(
             _CatalogCandidate(
                 search_doc=doc,
@@ -536,7 +824,7 @@ def compute_facet_counts(
     candidates: list[_CatalogCandidate],
     filters: PlpFilterState,
 ) -> FacetCounts:
-    condition_counts: dict[str, int] = {"new": 0, "refurbished": 0}
+    condition_counts: dict[str, int] = {"new": 0, "refurbished": 0, "used": 0}
     availability_counts: dict[str, int] = {"in_stock": 0, "out_of_stock": 0}
     rating_counts: dict[str, int] = {
         "4_plus": 0,
@@ -698,6 +986,15 @@ class _WholesaleRow(BaseModel):
     product_id: str | None = None
     title_override: str | None = None
     condition: str = "new"
+    product_class: ProductClass = "A"
+    sale_unit: SaleUnit = "each"
+    unit_step_milli: int = Field(default=1000, ge=1)
+    min_steps: int = Field(default=1, ge=1)
+    fulfilment_mode: FulfilmentMode = "stocked"
+    lead_time_days: int | None = None
+    vendor_capacity_per_week: int | None = None
+    stock_mode: StockMode = "tracked"
+    stock_qty: int | None = None
     price_ngwee: int
     moq: int = 1
     price_tiers: list[dict[str, Any]] | None = None
@@ -707,8 +1004,10 @@ def _fetch_wholesale_listings(client: Any, limit: int) -> list[_WholesaleRow]:
     response = (
         client.table("vendor_listings")
         .select(
-            "id, vendor_id, product_id, title_override, condition, "
-            "price_ngwee, moq, price_tiers, status, wholesale"
+            "id, vendor_id, product_id, title_override, condition, product_class, "
+            "sale_unit, unit_step_milli, min_steps, fulfilment_mode, lead_time_days, "
+            "vendor_capacity_per_week, stock_mode, stock_qty, price_ngwee, moq, "
+            "price_tiers, status, wholesale"
         )
         .eq("status", "active")
         .eq("wholesale", True)
@@ -751,7 +1050,21 @@ def list_wholesale_supplies(client: Any, *, limit: int) -> CatalogListResponse:
                 vendor_slug=str(vendor.get("slug")) if vendor.get("slug") else None,
                 price_ngwee=row.price_ngwee,
                 condition=row.condition,
-                in_stock=True,
+                product_class=row.product_class,
+                sale_unit=row.sale_unit,
+                unit_step_milli=row.unit_step_milli,
+                min_steps=row.min_steps,
+                fulfilment_mode=row.fulfilment_mode,
+                lead_time_days=row.lead_time_days,
+                in_stock=is_listing_available(
+                    row.stock_mode,
+                    row.stock_qty,
+                    min_steps=row.min_steps,
+                    moq=row.moq,
+                    product_class=row.product_class,
+                    fulfilment_mode=row.fulfilment_mode,
+                    vendor_capacity_per_week=row.vendor_capacity_per_week,
+                ),
                 image_public_id=image_public_id,
                 wholesale=True,
                 moq=row.moq,
@@ -810,6 +1123,12 @@ def list_catalog(
                 price_ngwee=row.search_doc.price_min_ngwee or 0,
                 compare_at_ngwee=row.listing.compare_at_ngwee,
                 condition=row.listing.condition,
+                product_class=row.listing.product_class,
+                sale_unit=row.listing.sale_unit,
+                unit_step_milli=row.listing.unit_step_milli,
+                min_steps=row.listing.min_steps,
+                fulfilment_mode=row.listing.fulfilment_mode,
+                lead_time_days=row.listing.lead_time_days,
                 in_stock=row.in_stock,
                 image_public_id=row.image_public_id,
                 rating=row.rating,
@@ -867,3 +1186,16 @@ async def catalog_listings(
     }
     filters = decode_plp_filters(raw_params)
     return list_catalog(supabase.client, filters, include_wholesale=access.eligible)
+
+
+@router.get("/listings/{listing_id}", response_model=StandaloneListingResponse)
+async def catalog_listing_detail(
+    listing_id: UUID,
+    supabase: Annotated[Any, Depends(get_supabase_client)],
+    access: Annotated[BusinessAccess, Depends(get_business_access)],
+) -> StandaloneListingResponse:
+    return get_standalone_listing(
+        supabase.client,
+        str(listing_id),
+        include_wholesale=access.eligible,
+    )

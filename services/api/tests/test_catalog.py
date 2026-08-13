@@ -27,6 +27,11 @@ PHONE_LISTING_ID = "b1000000-0000-0000-0000-000000000001"
 CHITENGE_LISTING_ID = "b1000000-0000-0000-0000-000000000002"
 DEMO_LISTING_ID = "b1000000-0000-0000-0000-000000000003"
 WHOLESALE_LISTING_ID = "b1000000-0000-0000-0000-000000000004"
+STANDALONE_LISTING_ID = "b1000000-0000-0000-0000-000000000005"
+INACTIVE_STANDALONE_LISTING_ID = "b1000000-0000-0000-0000-000000000006"
+DEMO_STANDALONE_LISTING_ID = "b1000000-0000-0000-0000-000000000007"
+WHOLESALE_STANDALONE_LISTING_ID = "b1000000-0000-0000-0000-000000000008"
+MADE_TO_ORDER_STANDALONE_LISTING_ID = "b1000000-0000-0000-0000-000000000009"
 SHOP_A_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 SHOP_B_ID = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 PHONE_PRODUCT_ID = "b0000000-0000-0000-0000-000000000001"
@@ -85,6 +90,54 @@ def _listing(
         "wholesale": wholesale,
         "compare_at_ngwee": compare_at_ngwee,
     }
+
+
+def _standalone_listing(
+    listing_id: str,
+    *,
+    status: str = "active",
+    wholesale: bool = False,
+) -> dict[str, Any]:
+    return {
+        "id": listing_id,
+        "vendor_id": SHOP_B_ID,
+        "product_id": None,
+        "title_override": "Vintage teak writing desk",
+        "price_ngwee": 725_000,
+        "compare_at_ngwee": 800_000,
+        "condition": "used",
+        "product_class": "D",
+        "sale_unit": "each",
+        "unit_step_milli": 1000,
+        "min_steps": 1,
+        "fulfilment_mode": "stocked",
+        "lead_time_days": None,
+        "vendor_capacity_per_week": None,
+        "defect_notes": "Small repaired scratch on the rear corner.",
+        "stock_mode": "tracked",
+        "stock_qty": 1,
+        "moq": 1,
+        "wholesale": wholesale,
+        "status": status,
+        "created_at": "2026-05-01T00:00:00Z",
+    }
+
+
+def _made_to_order_listing() -> dict[str, Any]:
+    row = _standalone_listing(MADE_TO_ORDER_STANDALONE_LISTING_ID)
+    row.update(
+        {
+            "title_override": "Made-to-order dining table",
+            "condition": "new",
+            "product_class": "E",
+            "defect_notes": None,
+            "fulfilment_mode": "made_to_order",
+            "lead_time_days": 21,
+            "vendor_capacity_per_week": 3,
+            "stock_qty": 0,
+        }
+    )
+    return row
 
 
 SEED_STORE: dict[str, list[dict[str, Any]]] = {
@@ -155,6 +208,11 @@ SEED_STORE: dict[str, list[dict[str, Any]]] = {
             created_at="2026-04-01T00:00:00Z",
             wholesale=True,
         ),
+        _standalone_listing(STANDALONE_LISTING_ID),
+        _standalone_listing(INACTIVE_STANDALONE_LISTING_ID, status="paused"),
+        _standalone_listing(DEMO_STANDALONE_LISTING_ID),
+        _standalone_listing(WHOLESALE_STANDALONE_LISTING_ID, wholesale=True),
+        _made_to_order_listing(),
     ],
     "vendors": [
         {
@@ -213,9 +271,39 @@ SEED_STORE: dict[str, list[dict[str, Any]]] = {
             "cloudinary_public_id": "vergeo5/catalog/chitenge-b",
             "position": 1,
         },
+        {
+            "listing_id": STANDALONE_LISTING_ID,
+            "cloudinary_public_id": "vergeo5/catalog/desk-detail",
+            "position": 2,
+        },
+        {
+            "listing_id": STANDALONE_LISTING_ID,
+            "cloudinary_public_id": "vergeo5/catalog/desk-cover",
+            "position": 1,
+        },
+        {
+            "listing_id": DEMO_STANDALONE_LISTING_ID,
+            "cloudinary_public_id": "staging-synthetic/catalog/demo-desk",
+            "position": 1,
+        },
+        {
+            "listing_id": WHOLESALE_STANDALONE_LISTING_ID,
+            "cloudinary_public_id": "vergeo5/catalog/wholesale-desk",
+            "position": 1,
+        },
+        {
+            "listing_id": MADE_TO_ORDER_STANDALONE_LISTING_ID,
+            "cloudinary_public_id": "vergeo5/catalog/made-to-order-table",
+            "position": 1,
+        },
     ],
     "order_item_products": [],
     "reviews": [],
+    "feature_flags": [
+        {"flag": "product_class_d_customer_release", "enabled": True},
+        {"flag": "product_class_d_operations_approved", "enabled": True},
+        {"flag": "product_class_e_customer_release", "enabled": True},
+    ],
 }
 
 
@@ -416,6 +504,12 @@ def test_url_filter_state_roundtrip() -> None:
     assert restored.limit == state.limit
 
 
+def test_decode_filters_accepts_used_condition() -> None:
+    filters = decode_plp_filters({"condition": "used"})
+
+    assert filters.condition == ["used"]
+
+
 def test_facet_counts_on_seed(fake_client: FakeSupabaseClient) -> None:
     response = list_catalog(
         fake_client,
@@ -424,6 +518,7 @@ def test_facet_counts_on_seed(fake_client: FakeSupabaseClient) -> None:
     assert response.total == 2
     condition = {bucket.value: bucket.count for bucket in response.facets.condition}
     assert condition["new"] == 2
+    assert condition["used"] == 0
     availability = {bucket.value: bucket.count for bucket in response.facets.availability}
     assert availability["in_stock"] == 2
 
@@ -436,6 +531,68 @@ def test_facet_counts_empty_category(fake_client: FakeSupabaseClient) -> None:
     assert response.total == 0
     assert all(bucket.count == 0 for bucket in response.facets.condition)
     assert all(bucket.count == 0 for bucket in response.facets.availability)
+
+
+def test_plp_marks_stock_below_minimum_purchase_out_of_stock(
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    listing = next(
+        row
+        for row in SEED_STORE["vendor_listings"]
+        if row["id"] == PHONE_LISTING_ID
+    )
+    monkeypatch.setitem(listing, "stock_qty", 3)
+    monkeypatch.setitem(listing, "min_steps", 4)
+
+    response = list_catalog(
+        fake_client,
+        PlpFilterState(category_path="electronics"),
+    )
+
+    phone = next(item for item in response.items if item.id == PHONE_LISTING_ID)
+    assert phone.in_stock is False
+
+
+def test_plp_omits_canonical_listing_when_product_is_inactive(
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    product = next(
+        row
+        for row in SEED_STORE["products"]
+        if row["id"] == PHONE_PRODUCT_ID
+    )
+    monkeypatch.setitem(product, "status", "pending_moderation")
+
+    response = list_catalog(
+        fake_client,
+        PlpFilterState(category_path="electronics"),
+    )
+
+    assert all(item.id != PHONE_LISTING_ID for item in response.items)
+
+
+@pytest.mark.parametrize("title_override", [None, "", "   "])
+def test_enrichment_omits_untitled_orphan_listing(
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+    title_override: str | None,
+) -> None:
+    listing = next(
+        row
+        for row in SEED_STORE["vendor_listings"]
+        if row["id"] == STANDALONE_LISTING_ID
+    )
+    monkeypatch.setitem(listing, "product_class", "A")
+    monkeypatch.setitem(listing, "title_override", title_override)
+
+    result = catalog_module._fetch_listings_enriched(
+        fake_client,
+        [STANDALONE_LISTING_ID],
+    )
+
+    assert STANDALONE_LISTING_ID not in result
 
 
 def test_cheapest_sort_orders_by_price(fake_client: FakeSupabaseClient) -> None:
@@ -571,6 +728,148 @@ def test_catalog_endpoint_distance_sort(catalog_client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["items"][0]["id"] == CHITENGE_LISTING_ID
+
+
+def test_standalone_listing_endpoint_returns_public_strategy_contract(
+    catalog_client: TestClient,
+) -> None:
+    response = catalog_client.get(f"/catalog/listings/{STANDALONE_LISTING_ID}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body == {
+        "id": STANDALONE_LISTING_ID,
+        "title": "Vintage teak writing desk",
+        "product_class": "D",
+        "condition": "used",
+        "defect_notes": "Small repaired scratch on the rear corner.",
+        "price_ngwee": 725_000,
+        "compare_at_ngwee": 800_000,
+        "sale_unit": "each",
+        "unit_step_milli": 1000,
+        "min_steps": 1,
+        "fulfilment_mode": "stocked",
+        "lead_time_days": None,
+        "vendor_capacity_per_week": None,
+        "stock_mode": "tracked",
+        "stock_qty": 1,
+        "moq": 1,
+        "wholesale": False,
+        "in_stock": True,
+        "vendor": {
+            "id": SHOP_B_ID,
+            "name": "Zed Fashion House",
+            "slug": "zed-fashion",
+        },
+        "location": {
+            "landmark": "Kabulonga, Lusaka",
+            "lat": None,
+            "lng": None,
+        },
+        "images": [
+            {
+                "cloudinary_public_id": "vergeo5/catalog/desk-cover",
+                "position": 1,
+            },
+            {
+                "cloudinary_public_id": "vergeo5/catalog/desk-detail",
+                "position": 2,
+            },
+        ],
+    }
+
+
+def test_standalone_made_to_order_listing_is_available_without_stock(
+    catalog_client: TestClient,
+) -> None:
+    response = catalog_client.get(
+        f"/catalog/listings/{MADE_TO_ORDER_STANDALONE_LISTING_ID}"
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["product_class"] == "E"
+    assert body["fulfilment_mode"] == "made_to_order"
+    assert body["lead_time_days"] == 21
+    assert body["vendor_capacity_per_week"] == 3
+    assert body["stock_qty"] == 0
+    assert body["in_stock"] is True
+
+
+def test_standalone_made_to_order_capacity_below_minimum_is_unavailable(
+    fake_client: FakeSupabaseClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    listing = next(
+        row
+        for row in SEED_STORE["vendor_listings"]
+        if row["id"] == MADE_TO_ORDER_STANDALONE_LISTING_ID
+    )
+    monkeypatch.setitem(listing, "min_steps", 4)
+
+    result = catalog_module.get_standalone_listing(
+        fake_client,
+        MADE_TO_ORDER_STANDALONE_LISTING_ID,
+    )
+
+    assert result.in_stock is False
+
+
+@pytest.mark.parametrize(
+    "listing_id",
+    [
+        PHONE_LISTING_ID,
+        INACTIVE_STANDALONE_LISTING_ID,
+        DEMO_STANDALONE_LISTING_ID,
+    ],
+)
+def test_standalone_listing_endpoint_hides_non_public_records(
+    catalog_client: TestClient,
+    listing_id: str,
+) -> None:
+    response = catalog_client.get(f"/catalog/listings/{listing_id}")
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "listing.not_found"
+
+
+def test_standalone_listing_endpoint_hides_wholesale_from_guests(
+    catalog_client: TestClient,
+) -> None:
+    response = catalog_client.get(
+        f"/catalog/listings/{WHOLESALE_STANDALONE_LISTING_ID}"
+    )
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "listing.not_found"
+
+
+def test_standalone_listing_endpoint_allows_wholesale_for_verified_business(
+    fake_client: FakeSupabaseClient,
+) -> None:
+    from app.deps import get_supabase_client
+
+    class FakeServiceClient:
+        def __init__(self, client: FakeSupabaseClient) -> None:
+            self.client = client
+
+    app: FastAPI = create_app()
+    app.dependency_overrides[get_supabase_client] = lambda: FakeServiceClient(fake_client)
+    app.dependency_overrides[get_business_access] = lambda: BusinessAccess(
+        user_id="11111111-1111-1111-1111-111111111111",
+        status="verified",
+        eligible=True,
+    )
+    try:
+        with TestClient(app, raise_server_exceptions=False) as client:
+            response = client.get(
+                f"/catalog/listings/{WHOLESALE_STANDALONE_LISTING_ID}"
+            )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["wholesale"] is True
 
 
 def test_list_catalog_hides_wholesale_by_default(fake_client: FakeSupabaseClient) -> None:

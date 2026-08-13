@@ -237,14 +237,44 @@ def drop_wholesale_listing_hits(client: Any, hits: list[SearchHit]) -> list[Sear
     ]
 
 
-def _nested_slug(value: Any) -> str | None:
+def _nested_row(value: Any) -> dict[str, Any] | None:
     if isinstance(value, list):
         value = value[0] if value else None
     if isinstance(value, dict):
-        slug = value.get("slug")
-        if isinstance(slug, str) and slug.strip():
-            return slug.strip()
+        return value
     return None
+
+
+def _customer_released_listing_classes(client: Any) -> set[str]:
+    """Resolve the public discovery gates, failing closed for phased classes."""
+    required = {
+        "product_class_c_customer_release",
+        "product_class_d_customer_release",
+        "product_class_d_operations_approved",
+        "product_class_e_customer_release",
+    }
+    try:
+        response = (
+            client.table("feature_flags")
+            .select("flag,enabled")
+            .in_("flag", list(required))
+            .execute()
+        )
+        rows = _rows(response)
+    except Exception:  # pragma: no cover - an unavailable gate cannot expose inventory
+        return {"A", "B"}
+    enabled = {str(row.get("flag")) for row in rows if row.get("enabled") is True}
+    released = {"A", "B"}
+    if "product_class_c_customer_release" in enabled:
+        released.add("C")
+    if {
+        "product_class_d_customer_release",
+        "product_class_d_operations_approved",
+    } <= enabled:
+        released.add("D")
+    if "product_class_e_customer_release" in enabled:
+        released.add("E")
+    return released
 
 
 def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
@@ -264,6 +294,7 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
 
     product_slugs: dict[str, str] = {}
     listing_slugs: dict[str, str] = {}
+    routable_listing_ids: set[str] = set()
     vendor_slugs: dict[str, str] = {}
     event_slugs: dict[str, str] = {}
 
@@ -278,17 +309,41 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
                 product_slugs[str(entity_id)] = row_slug.strip()
 
     if listing_ids:
+        released_listing_classes = _customer_released_listing_classes(client)
         response = (
             client.table("vendor_listings")
-            .select("id, products!inner(slug)")
+            .select(
+                "id, product_id, product_class, title_override, status, "
+                "vendors!inner(status), products(slug, status)"
+            )
             .in_("id", listing_ids)
+            .eq("status", "active")
+            .eq("vendors.status", "active")
             .execute()
         )
         for row in _rows(response):
             entity_id = row.get("id")
-            row_slug = _nested_slug(row.get("products"))
-            if entity_id and row_slug:
-                listing_slugs[str(entity_id)] = row_slug
+            if not entity_id:
+                continue
+            if str(row.get("product_class") or "A") not in released_listing_classes:
+                continue
+            listing_id = str(entity_id)
+            if row.get("product_id") is None:
+                # A true standalone listing deliberately has no canonical slug;
+                # the customer routes it by listing UUID at /l/{id}. The
+                # standalone detail endpoint requires a nonblank title.
+                title_override = row.get("title_override")
+                if isinstance(title_override, str) and title_override.strip():
+                    routable_listing_ids.add(listing_id)
+                continue
+
+            product = _nested_row(row.get("products"))
+            if product is None or str(product.get("status") or "") != "active":
+                continue
+            row_slug = product.get("slug")
+            if isinstance(row_slug, str) and row_slug.strip():
+                routable_listing_ids.add(listing_id)
+                listing_slugs[listing_id] = row_slug.strip()
 
     if vendor_ids:
         response = (
@@ -312,6 +367,10 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
 
     enriched: list[SearchHit] = []
     for hit in hits:
+        if hit.entity_kind == "listing" and hit.entity_id not in routable_listing_ids:
+            # Stale search documents must not produce a canonical-looking hit
+            # that falls through to the standalone route and then 404s.
+            continue
         route_slug: str | None
         if hit.entity_kind == "product":
             route_slug = product_slugs.get(hit.entity_id)
@@ -433,6 +492,9 @@ async def run_search(
         hits = drop_wholesale_listing_hits(client, hits)
     # D25 / VC-P06: demo seed inventory never appears in public discovery.
     hits = drop_demo_listing_hits(client, hits)
+    # Resolve/filter before totals and pagination so stale listing documents do
+    # not inflate counts or leave a short page after enrichment.
+    hits = attach_route_slugs(client, hits)
 
     kind_totals: SearchKindTotals | None = None
     if include_kind_totals and trimmed:
@@ -481,7 +543,6 @@ async def run_search(
         page_size=normalized_page_size,
     )
     page_items = attach_open_now(client, page_items)
-    page_items = attach_route_slugs(client, page_items)
 
     if trimmed:
         # Fire-and-forget analytics: server operational log, written regardless of

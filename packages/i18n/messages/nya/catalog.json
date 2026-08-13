@@ -105,6 +105,24 @@
   "pdp": {
     "breadcrumbAria": "Njira ya peji",
     "sellerCount": "{count, plural, one {# wogulitsa} other {# ogulitsa}}",
+    "standalone": {
+      "detailsHeading": "Zambiri za listing",
+      "soldBy": "Akugulitsa ndi {vendor}.",
+      "classLabel": "Kalasi ya product",
+      "classValue": "Kalasi {class}",
+      "conditionLabel": "Mmene chilili",
+      "incrementLabel": "Chimagulitsidwa mu miyeso ya",
+      "minimumLabel": "Order yocheperako",
+      "fulfilmentLabel": "Kukonzekera order",
+      "fulfilmentStocked": "Chili mu stock",
+      "fulfilmentMadeToOrder": "Chimapangidwa pa order",
+      "leadTimeLabel": "Nthawi yokonzekera",
+      "leadTimeDays": "Masiku {days}",
+      "capacityLabel": "Zomwe zingapangidwe pa sabata",
+      "capacityPerWeek": "{quantity} pa sabata",
+      "locationLabel": "Malo a wogulitsa",
+      "defectsHeading": "Zambiri za mmene chilili ndi zolakwika"
+    },
     "noSellers": {
       "title": "Palibe ogulitsa",
       "body": "Chinthu ichi chilibe ma-offers ogwira ntchito pano. Fufuzani zinthu zina, kapena bwerani pambuyo pake.",
@@ -125,6 +143,17 @@
       "ariaLabel": "Malo ogula",
       "outOfStock": "Palibe mu stock",
       "priceLabel": "Mtengo",
+      "pricePerIncrement": "Mtengo pa {quantity}",
+      "minimumOrderQuantity": "Order yocheperako: {quantity}",
+      "lowStockQuantity": "Zatsala {quantity} zokha",
+      "units": {
+        "each": "chinthu",
+        "metre": "m",
+        "kg": "kg",
+        "litre": "L",
+        "bag": "thumba",
+        "sqm": "m²"
+      },
       "quantityLabel": "Chiwerengero",
       "singleVendor": "Agulitsa vendor uyu yekha",
       "lowestPrice": "Mtengo wotsika kwambiri pakati pa ogulitsa",
@@ -281,6 +310,7 @@
       "quickAddError": "Sitinathe kuonjezera ku cart. Onani connection ndi yesaninso.",
       "conditionNew": "Chatsopano",
       "conditionRefurbished": "Chokonzedwa",
+      "conditionUsed": "Yosale",
       "pill": {
         "nearest": "{distance} kutali",
         "belowMedian": "Pansi pa median",
@@ -308,6 +338,7 @@
     "resultsUnknown": "Chiwerengero cha listings sichipezeka",
     "childCategories": "Gulani mu subcategory",
     "facets": {
+      "conditionUsed": "Yosale",
       "openFilters": "Ma-filters",
       "filtersActive": "Ma-filters (yogwira)"
     },

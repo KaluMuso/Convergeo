@@ -62,9 +62,8 @@ describe("ListingGrid", () => {
     expect(screen.getByTestId("product-card")).toHaveAttribute("data-density", "compact");
   });
 
-  it("does not invent a /c/all href when productSlug is null", () => {
+  it("links standalone listings by listing id when productSlug is null", () => {
     render(<ListingGrid locale="en" listings={[listing({ productSlug: null })]} labels={labels} />);
-    expect(screen.queryByRole("link")).not.toBeInTheDocument();
-    expect(screen.getByTestId("listing-card-no-slug")).toBeInTheDocument();
+    expect(screen.getByRole("link")).toHaveAttribute("href", "/en/l/listing-1");
   });
 });

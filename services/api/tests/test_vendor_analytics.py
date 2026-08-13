@@ -34,6 +34,9 @@ VENDOR_EMPTY = "a9e00000-0000-0000-0000-00000000000e"
 LISTING_A = "a9100000-0000-0000-0000-00000000000a"
 LISTING_B = "a9100000-0000-0000-0000-00000000000b"
 LISTING_EMPTY = "a9100000-0000-0000-0000-00000000000e"
+PRODUCT_A = "a9000000-0000-0000-0000-00000000000a"
+PRODUCT_B = "a9000000-0000-0000-0000-00000000000b"
+PRODUCT_EMPTY = "a9000000-0000-0000-0000-00000000000e"
 
 CHECKOUT_GROUP = "a9c00000-0000-0000-0000-0000000000cc"
 
@@ -97,15 +100,19 @@ VALUES ('{vid}', '{owner}', '{slug}', '{name}', 'active', 1)
 ON CONFLICT (id) DO NOTHING;
 """
     listings = [
-        (LISTING_A, VENDOR_A, "Analytics Phone A"),
-        (LISTING_B, VENDOR_B, "Analytics Chitenge B"),
-        (LISTING_EMPTY, VENDOR_EMPTY, "Analytics Idle Listing"),
+        (LISTING_A, VENDOR_A, PRODUCT_A, "Analytics Phone A"),
+        (LISTING_B, VENDOR_B, PRODUCT_B, "Analytics Chitenge B"),
+        (LISTING_EMPTY, VENDOR_EMPTY, PRODUCT_EMPTY, "Analytics Idle Listing"),
     ]
-    for lid, vid, title in listings:
+    for lid, vid, pid, title in listings:
         script += f"""
+INSERT INTO public.products (id, name, slug, category_id, status)
+SELECT '{pid}', '{title} Product', 'analytics-prod-{lid[-1]}',
+       (SELECT id FROM public.categories ORDER BY created_at LIMIT 1), 'active'
+WHERE NOT EXISTS (SELECT 1 FROM public.products WHERE id = '{pid}');
 INSERT INTO public.vendor_listings (
-  id, vendor_id, title_override, price_ngwee, condition, stock_mode, status
-) VALUES ('{lid}', '{vid}', '{title}', 50000, 'new', 'always_available', 'active')
+  id, vendor_id, product_id, title_override, price_ngwee, condition, stock_mode, status
+) VALUES ('{lid}', '{vid}', '{pid}', '{title}', 50000, 'new', 'always_available', 'active')
 ON CONFLICT (id) DO NOTHING;
 """
 

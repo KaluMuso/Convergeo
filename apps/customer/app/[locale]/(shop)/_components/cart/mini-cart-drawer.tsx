@@ -17,6 +17,13 @@ import {
 } from "react";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import {
+  formatMadeToOrderLeadTime,
+  formatListingQuantity,
+  type FulfilmentMode,
+  type SaleUnit,
+  type SaleUnitLabels,
+} from "../sale-quantity";
 
 export const FREE_DELIVERY_THRESHOLD_NGEWEE = 20_000;
 
@@ -40,6 +47,11 @@ export type CartLine = {
   wholesale: boolean;
   line_total_ngwee: number;
   title_override: string | null;
+  sale_unit?: SaleUnit;
+  unit_step_milli?: number;
+  min_steps?: number;
+  fulfilment_mode?: FulfilmentMode;
+  lead_time_days?: number | null;
   is_rfq_quote?: boolean;
 };
 
@@ -202,7 +214,9 @@ export function getCartItemCount(cart: CartResponse | null): number {
   if (!cart) {
     return 0;
   }
-  return cart.items.reduce((sum, item) => sum + item.qty, 0);
+  // Quantities can represent incompatible measures (for example kg and metres),
+  // so the cart badge counts distinct lines instead of adding unlike units.
+  return cart.items.length;
 }
 
 export async function refreshCart(): Promise<CartResponse | null> {
@@ -365,6 +379,9 @@ export type MiniCartLabels = {
   loadErrorTitle: string;
   loadErrorBody: string;
   loadErrorRetry: string;
+  quantityValue: string;
+  saleUnits: SaleUnitLabels;
+  madeToOrderLeadTime: string;
 };
 
 export type CartEmptyTrustLabels = {
@@ -552,14 +569,46 @@ export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
               {labels.itemCount.replace("{count}", String(count))}
             </p>
             <ul className="flex flex-col gap-3">
-              {cart.items.map((item) => (
-                <li key={item.id} className="flex items-start justify-between gap-3 text-sm">
-                  <span className="text-text">{item.title_override ?? item.listing_id}</span>
-                  <span className="shrink-0 font-mono text-text">
-                    {formatK(item.line_total_ngwee)}
-                  </span>
-                </li>
-              ))}
+              {cart.items.map((item) => {
+                const leadTimeLabel = formatMadeToOrderLeadTime(
+                  item.fulfilment_mode,
+                  item.lead_time_days,
+                  labels.madeToOrderLeadTime,
+                );
+
+                return (
+                  <li key={item.id} className="flex items-start justify-between gap-3 text-sm">
+                    <span className="min-w-0 text-text">
+                      <span className="block truncate">
+                        {item.title_override ?? item.listing_id}
+                      </span>
+                      <span className="block text-xs text-text-2">
+                        {labels.quantityValue.replace(
+                          "{count}",
+                          formatListingQuantity(
+                            item.qty,
+                            item.sale_unit,
+                            item.unit_step_milli,
+                            locale,
+                            labels.saleUnits,
+                          ),
+                        )}
+                      </span>
+                      {leadTimeLabel ? (
+                        <span
+                          className="block text-xs font-medium text-text-2"
+                          data-testid={`mini-cart-lead-time-${item.listing_id}`}
+                        >
+                          {leadTimeLabel}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="shrink-0 font-mono text-text">
+                      {formatK(item.line_total_ngwee)}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
             <div className="flex items-center justify-between border-t border-border pt-3">
               <span className="font-medium text-text">{labels.subtotal}</span>

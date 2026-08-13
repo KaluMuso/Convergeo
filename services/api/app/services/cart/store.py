@@ -68,7 +68,8 @@ def fetch_listing(listing_id: str, *, business_eligible: bool = False) -> dict[s
         .select(
             "id, vendor_id, title_override, price_ngwee, wholesale, moq, price_tiers, status, "
             "product_class, condition, fulfilment_mode, lead_time_days, vendor_capacity_per_week, "
-            "stock_mode, stock_qty"
+            "defect_notes, "
+            "sale_unit, unit_step_milli, min_steps, stock_mode, stock_qty"
         )
         .eq("id", listing_id)
         .limit(1)
@@ -116,7 +117,8 @@ def fetch_listings_for_items(items: list[dict[str, Any]]) -> dict[str, dict[str,
         .select(
             "id, vendor_id, title_override, price_ngwee, wholesale, moq, price_tiers, status, "
             "product_class, condition, fulfilment_mode, lead_time_days, vendor_capacity_per_week, "
-            "stock_mode, stock_qty"
+            "defect_notes, "
+            "sale_unit, unit_step_milli, min_steps, stock_mode, stock_qty"
         )
         .in_("id", listing_ids)
         .execute()

@@ -33,18 +33,45 @@ const labels = {
   },
   conditionNew: "New",
   conditionRefurbished: "Refurbished",
+  conditionUsed: "Used",
 };
 
 describe("listingConditionLabel", () => {
   it("maps known conditions and omits unknown values", () => {
     expect(listingConditionLabel("new", labels)).toBe("New");
     expect(listingConditionLabel("refurbished", labels)).toBe("Refurbished");
-    expect(listingConditionLabel("used", labels)).toBeUndefined();
+    expect(listingConditionLabel("used", labels)).toBe("Used");
     expect(listingConditionLabel("new", {})).toBeUndefined();
   });
 });
 
 describe("ListingCard condition meta", () => {
+  it("shows used condition in the meta slot", () => {
+    render(
+      <ListingCard
+        locale="en"
+        labels={labels}
+        listing={{
+          id: "listing-used",
+          title: "Pre-owned phone",
+          productSlug: null,
+          vendorName: "Alpha",
+          priceNgwee: 100_000,
+          condition: "used",
+          inStock: true,
+          imagePublicId: null,
+          rating: 0,
+          reviewCount: 0,
+          distanceM: null,
+          belowMedian: false,
+          deliveryAvailable: false,
+          pickupAvailable: false,
+        }}
+      />,
+    );
+    expect(screen.getByTestId("listing-card-condition")).toHaveTextContent("Used");
+  });
+
   it("shows refurbished condition in the meta slot", () => {
     render(
       <ListingCard

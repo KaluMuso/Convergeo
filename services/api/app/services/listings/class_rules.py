@@ -39,8 +39,23 @@ def validate_listing_purchasable_for_cart(
     evidence_image_count: int,
     weekly_committed_qty: int = 0,
     location_id: str | None = None,
+    customer_released: bool = True,
 ) -> None:
     """Raise AppError when a listing fails class-specific cart rules."""
+    product_class = str(listing.get("product_class") or "A")
+    if product_class in {"C", "D", "E"} and not customer_released:
+        raise AppError(
+            code="cart.product_class_release_gated",
+            message=f"Product Class {product_class} is not available to customers yet",
+            http_status=403,
+            details={
+                "message_key": "cart.product_class_release_gated",
+                "listing_id": str(listing.get("id", "")),
+                "product_class": product_class,
+                "retry": False,
+            },
+        )
+
     if is_used_class_listing(listing):
         condition = str(listing.get("condition") or "")
         if condition == "new":
@@ -67,18 +82,6 @@ def validate_listing_purchasable_for_cart(
             )
 
     if is_made_to_order_listing(listing):
-        capacity = listing.get("vendor_capacity_per_week")
-        if not isinstance(capacity, int) or capacity <= 0:
-            raise AppError(
-                code="cart.class_e_missing_capacity",
-                message="Made-to-order listing is missing weekly capacity",
-                http_status=400,
-                details={
-                    "message_key": "cart.class_e_missing_capacity",
-                    "listing_id": str(listing.get("id", "")),
-                    "retry": False,
-                },
-            )
         lead_time = listing_lead_time_days(listing)
         if lead_time is None:
             raise AppError(
@@ -91,21 +94,34 @@ def validate_listing_purchasable_for_cart(
                     "retry": False,
                 },
             )
-        remaining = capacity - weekly_committed_qty
-        if qty > remaining:
-            raise AppError(
-                code="cart.class_e_capacity_exceeded",
-                message="Weekly made-to-order capacity exceeded",
-                http_status=400,
-                details={
-                    "message_key": "cart.class_e_capacity_exceeded",
-                    "listing_id": str(listing.get("id", "")),
-                    "capacity_per_week": capacity,
-                    "remaining": max(remaining, 0),
-                    "requested_qty": qty,
-                    "retry": True,
-                },
-            )
+        if str(listing.get("product_class") or "A") == "E":
+            capacity = listing.get("vendor_capacity_per_week")
+            if not isinstance(capacity, int) or capacity <= 0:
+                raise AppError(
+                    code="cart.class_e_missing_capacity",
+                    message="Made-to-order listing is missing weekly capacity",
+                    http_status=400,
+                    details={
+                        "message_key": "cart.class_e_missing_capacity",
+                        "listing_id": str(listing.get("id", "")),
+                        "retry": False,
+                    },
+                )
+            remaining = capacity - weekly_committed_qty
+            if qty > remaining:
+                raise AppError(
+                    code="cart.class_e_capacity_exceeded",
+                    message="Weekly made-to-order capacity exceeded",
+                    http_status=400,
+                    details={
+                        "message_key": "cart.class_e_capacity_exceeded",
+                        "listing_id": str(listing.get("id", "")),
+                        "capacity_per_week": capacity,
+                        "remaining": max(remaining, 0),
+                        "requested_qty": qty,
+                        "retry": True,
+                    },
+                )
         return
 
     validate_branch_stock_qty(listing, qty, location_id=location_id)
@@ -121,10 +137,10 @@ def count_weekly_committed_qty(client: Any, listing_id: str) -> int:
     """Sum qty for this listing on non-cancelled orders placed since ISO week start."""
     week_start = iso_week_start_utc().isoformat()
     order_items = (
-        client.table("order_items")
-        .select("qty, orders!inner(status, created_at)")
+        client.table("order_item_products")
+        .select("order_items!inner(qty, orders!inner(status, created_at))")
         .eq("listing_id", listing_id)
-        .gte("orders.created_at", week_start)
+        .gte("order_items.orders.created_at", week_start)
         .execute()
     )
     rows = order_items.data if isinstance(order_items.data, list) else []
@@ -133,7 +149,12 @@ def count_weekly_committed_qty(client: Any, listing_id: str) -> int:
     for row in rows:
         if not isinstance(row, dict):
             continue
-        order = row.get("orders")
+        order_item = row.get("order_items")
+        if isinstance(order_item, list):
+            order_item = order_item[0] if order_item else None
+        if not isinstance(order_item, dict):
+            continue
+        order = order_item.get("orders")
         if isinstance(order, list):
             order = order[0] if order else None
         if not isinstance(order, dict):
@@ -141,7 +162,7 @@ def count_weekly_committed_qty(client: Any, listing_id: str) -> int:
         status = str(order.get("status") or "")
         if status in cancelled:
             continue
-        qty = row.get("qty")
+        qty = order_item.get("qty")
         if isinstance(qty, int):
             total += qty
     return total

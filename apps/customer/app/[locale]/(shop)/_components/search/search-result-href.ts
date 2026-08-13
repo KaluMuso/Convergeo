@@ -27,7 +27,7 @@ export function searchResultHref(locale: string, hit: SearchResultHrefHit): stri
     }
     case "listing": {
       if (!slug) {
-        return searchFallback;
+        return `/${locale}/l/${encodeURIComponent(hit.entity_id)}`;
       }
       const params = new URLSearchParams({ listing: hit.entity_id });
       return `/${locale}/p/${encodeURIComponent(slug)}?${params.toString()}`;

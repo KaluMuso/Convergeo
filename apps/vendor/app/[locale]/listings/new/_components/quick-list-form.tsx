@@ -2,32 +2,34 @@
 
 import { useState } from "react";
 
+import { listingCreateErrorMessage } from "../_lib/listing-errors";
 import { Button, FormField, Input } from "../_lib/ui";
 
 import {
+  DEFAULT_LISTING_FIELDS,
   ListingFields,
   parseListingFieldValues,
+  requiresListingEvidence,
   validateListingFields,
   type ListingFieldValues,
 } from "./listing-fields";
 
 import type { createListingClient } from "../_lib/listing-client";
+import type { ListingCreateResponse } from "../_lib/types";
 
 type ListingClient = ReturnType<typeof createListingClient>;
 
 const DEFAULT_FIELDS: ListingFieldValues = {
-  priceZmw: "",
-  condition: "new",
+  ...DEFAULT_LISTING_FIELDS,
+  productClass: "C",
   stockMode: "always_available",
   stockQty: "",
-  wholesale: false,
-  moq: "10",
 };
 
 type QuickListFormProps = {
   client: ListingClient;
   wholesaleEnabled: boolean;
-  onSuccess: (listingId: string) => void;
+  onSuccess: (response: ListingCreateResponse, requiresEvidence: boolean) => void;
   onError: (message: string) => void;
   labels: {
     heading: string;
@@ -38,6 +40,7 @@ type QuickListFormProps = {
     publishing: string;
     fields: Parameters<typeof ListingFields>[0]["labels"];
     submitError: string;
+    standaloneRequired: string;
     required: string;
   };
 };
@@ -67,20 +70,34 @@ export function QuickListForm({
     setSubmitting(true);
     try {
       const parsed = parseListingFieldValues(fields);
+      const requiresEvidence = requiresListingEvidence(fields);
       const response = await client.createListing({
         mode: "quick_list",
         title_override: title.trim(),
         price_ngwee: parsed.priceNgwee,
+        product_class: fields.productClass,
+        sale_unit: fields.saleUnit,
+        unit_step_milli: parsed.unitStepMilli,
+        min_steps: parsed.minSteps,
         condition: fields.condition,
+        defect_notes: parsed.defectNotes,
+        fulfilment_mode: fields.fulfilmentMode,
+        lead_time_days: parsed.leadTimeDays,
+        vendor_capacity_per_week: parsed.vendorCapacityPerWeek,
         stock_mode: fields.stockMode,
         stock_qty: parsed.stockQty,
         wholesale: fields.wholesale,
         moq: parsed.moq,
-        publish: true,
+        publish: !requiresEvidence,
       });
-      onSuccess(response.listing_id);
-    } catch {
-      onError(labels.submitError);
+      onSuccess(response, response.requires_evidence ?? requiresEvidence);
+    } catch (caught: unknown) {
+      onError(
+        listingCreateErrorMessage(caught, {
+          standaloneRequired: labels.standaloneRequired,
+          fallback: labels.submitError,
+        }),
+      );
     } finally {
       setSubmitting(false);
     }
@@ -106,6 +123,7 @@ export function QuickListForm({
         onChange={(patch) => setFields((current) => ({ ...current, ...patch }))}
         wholesaleEnabled={wholesaleEnabled}
         labels={labels.fields}
+        allowStandaloneClasses
       />
 
       <Button
@@ -113,10 +131,12 @@ export function QuickListForm({
         size="lg"
         className="w-full"
         loading={submitting}
-        loadingLabel={labels.publishing}
+        loadingLabel={
+          requiresListingEvidence(fields) ? labels.fields.savingDraft : labels.publishing
+        }
         onClick={() => void handlePublish()}
       >
-        {labels.publish}
+        {requiresListingEvidence(fields) ? labels.fields.saveDraft : labels.publish}
       </Button>
     </div>
   );

@@ -105,6 +105,24 @@
   "pdp": {
     "breadcrumbAria": "Inshila ya peji",
     "sellerCount": "{count, plural, one {# ushitisha} other {# abashitisha}}",
+    "standalone": {
+      "detailsHeading": "Ifya listing",
+      "soldBy": "Ashitisha {vendor}.",
+      "classLabel": "Kalasi ya product",
+      "classValue": "Kalasi {class}",
+      "conditionLabel": "Ubumi bwa cintu",
+      "incrementLabel": "Cishitishiwa mu bipimo fya",
+      "minimumLabel": "Order iyacepesha",
+      "fulfilmentLabel": "Ukupanga order",
+      "fulfilmentStocked": "Ili mu stock",
+      "fulfilmentMadeToOrder": "Cipangwa pa order",
+      "leadTimeLabel": "Inshita ya kupanga",
+      "leadTimeDays": "{days} masiku",
+      "capacityLabel": "Ifingapangilwa pa mulungu",
+      "capacityPerWeek": "{quantity} pa mulungu",
+      "locationLabel": "Apo ushitisha ali",
+      "defectsHeading": "Ifya ubumi ne filema"
+    },
     "noSellers": {
       "title": "Takwaba abashitisha",
       "body": "Ici cintu takwata ama-offers ayabomba nomba. Twaleni ifintu fimbi, nangu bweleleni limbi.",
@@ -125,6 +143,17 @@
       "ariaLabel": "Malo ya kushita",
       "outOfStock": "Takwaba mu stock",
       "priceLabel": "Mutengo",
+      "pricePerIncrement": "Umutengo pa {quantity}",
+      "minimumOrderQuantity": "Order iyacalamba: {quantity}",
+      "lowStockQuantity": "Hashala {quantity} fye",
+      "units": {
+        "each": "cintu",
+        "metre": "m",
+        "kg": "kg",
+        "litre": "L",
+        "bag": "saka",
+        "sqm": "m²"
+      },
       "quantityLabel": "Ubunji",
       "singleVendor": "Ashitisha vendor uyu fye",
       "lowestPrice": "Mutengo uucepa pakati ka abashitisha",
@@ -281,6 +310,7 @@
       "quickAddError": "Tatwaishibe ukulenga mu cart. Checkeni connection no wesheni limbi.",
       "conditionNew": "Cipya",
       "conditionRefurbished": "Yakonzedwa",
+      "conditionUsed": "Yakale",
       "pill": {
         "nearest": "{distance} ukutali",
         "belowMedian": "Pansi pa median",
@@ -308,6 +338,7 @@
     "resultsUnknown": "Ubunji bwa listings tabwaisa",
     "childCategories": "Shiteni mu subcategory",
     "facets": {
+      "conditionUsed": "Yakale",
       "openFilters": "Ama-filters",
       "filtersActive": "Ama-filters (yakonka)"
     },

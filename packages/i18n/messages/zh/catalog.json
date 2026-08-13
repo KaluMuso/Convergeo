@@ -29,6 +29,7 @@
       "condition": "成色",
       "conditionNew": "全新",
       "conditionRefurbished": "翻新",
+      "conditionUsed": "二手",
       "availability": "库存状态",
       "inStock": "有货",
       "outOfStock": "缺货",
@@ -64,6 +65,7 @@
       "quickAddError": "无法加入购物车。请检查网络后重试。",
       "conditionNew": "全新",
       "conditionRefurbished": "翻新",
+      "conditionUsed": "二手",
       "pill": {
         "nearest": "相距 {distance}",
         "belowMedian": "低于中位价",
@@ -209,6 +211,24 @@
     "unavailableRetry": "重试",
     "breadcrumbAria": "面包屑导航",
     "sellerCount": "{count, plural, one {# 位卖家} other {# 位卖家}}",
+    "standalone": {
+      "detailsHeading": "商品详情",
+      "soldBy": "由 {vendor} 销售。",
+      "classLabel": "商品类别",
+      "classValue": "{class} 类",
+      "conditionLabel": "成色",
+      "incrementLabel": "销售增量",
+      "minimumLabel": "最低购买量",
+      "fulfilmentLabel": "备货方式",
+      "fulfilmentStocked": "现货",
+      "fulfilmentMadeToOrder": "按订单制作",
+      "leadTimeLabel": "备货期",
+      "leadTimeDays": "{days} 天",
+      "capacityLabel": "每周产能",
+      "capacityPerWeek": "每周 {quantity}",
+      "locationLabel": "卖家位置",
+      "defectsHeading": "成色与瑕疵说明"
+    },
     "noSellers": {
       "title": "暂无卖家",
       "body": "该商品目前没有有效报价。请浏览其他商品，或稍后再来查看。",
@@ -248,6 +268,17 @@
     },
     "buyBox": {
       "priceLabel": "价格",
+      "pricePerIncrement": "每 {quantity} 的价格",
+      "minimumOrderQuantity": "最低购买量：{quantity}",
+      "lowStockQuantity": "仅剩 {quantity}",
+      "units": {
+        "each": "件",
+        "metre": "米",
+        "kg": "千克",
+        "litre": "升",
+        "bag": "袋",
+        "sqm": "平方米"
+      },
       "quantityLabel": "数量",
       "decrease": "减少数量",
       "increase": "增加数量",

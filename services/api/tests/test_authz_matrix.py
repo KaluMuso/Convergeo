@@ -126,6 +126,7 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # (401) because accepting a quoted RFQ requires a signed-in customer.
         ("POST", "/cart/rfq/{rfq_id}/accept"),
         ("GET", "/catalog/listings"),
+        ("GET", "/catalog/listings/{listing_id}"),
         ("GET", "/categories"),
         # M17-P03 Vergeo Clips read surface. Public by design — the feed is a
         # discovery surface and its detail page is shareable/OG-rendered — and

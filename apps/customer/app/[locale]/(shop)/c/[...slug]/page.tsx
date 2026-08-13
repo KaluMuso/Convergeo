@@ -47,6 +47,9 @@ type CatalogApiResponse = {
     below_median?: boolean;
     delivery_available?: boolean;
     pickup_available?: boolean;
+    sale_unit?: string;
+    unit_step_milli?: number;
+    min_steps?: number;
   }>;
   facets: FacetCounts;
   total: number;
@@ -162,6 +165,9 @@ function mapListing(item: CatalogApiResponse["items"][number]): CatalogListing {
     belowMedian: item.below_median ?? false,
     deliveryAvailable: item.delivery_available ?? false,
     pickupAvailable: item.pickup_available ?? false,
+    saleUnit: item.sale_unit,
+    unitStepMilli: item.unit_step_milli,
+    minSteps: item.min_steps,
   };
 }
 
@@ -253,6 +259,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
     condition: t("plp.facets.condition"),
     conditionNew: t("plp.facets.conditionNew"),
     conditionRefurbished: t("plp.facets.conditionRefurbished"),
+    conditionUsed: t("plp.facets.conditionUsed"),
     availability: t("plp.facets.availability"),
     inStock: t("plp.facets.inStock"),
     outOfStock: t("plp.facets.outOfStock"),
@@ -279,6 +286,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
     mediaEmpty: t("plp.card.mediaEmpty"),
     conditionNew: t("plp.card.conditionNew"),
     conditionRefurbished: t("plp.card.conditionRefurbished"),
+    conditionUsed: t("plp.card.conditionUsed"),
     logistics: {
       nearest: t("plp.card.pill.nearest"),
       belowMedian: t("plp.card.pill.belowMedian"),
@@ -369,6 +377,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
               maxPriceOnly: t("plp.filters.maxPriceOnly", { max: "{max}" }),
               conditionNew: t("plp.facets.conditionNew"),
               conditionRefurbished: t("plp.facets.conditionRefurbished"),
+              conditionUsed: t("plp.facets.conditionUsed"),
               inStock: t("plp.facets.inStock"),
               outOfStock: t("plp.facets.outOfStock"),
               rating4Plus: t("plp.facets.rating4Plus"),

@@ -17,6 +17,16 @@
     "vendorSubtotal": "Sous-total du vendeur : {amount}",
     "lineTotal": "Total de la ligne : {amount}",
     "unitPrice": "{amount} l'unité",
+    "unitPriceMeasured": "{amount} par {quantity}",
+    "madeToOrderLeadTime": "Fabriqué sur commande · prêt sous {days} jours",
+    "saleUnits": {
+      "each": "article",
+      "metre": "m",
+      "kg": "kg",
+      "litre": "L",
+      "bag": "sac",
+      "sqm": "m²"
+    },
     "remove": "Retirer",
     "removeLabel": "Retirer {title} du panier",
     "saveForLater": "Enregistrer pour plus tard",

@@ -196,6 +196,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
     mediaEmpty: t("plp.card.mediaEmpty"),
     conditionNew: t("plp.card.conditionNew"),
     conditionRefurbished: t("plp.card.conditionRefurbished"),
+    conditionUsed: t("plp.card.conditionUsed"),
     logistics: {
       nearest: t("plp.card.pill.nearest"),
       belowMedian: t("plp.card.pill.belowMedian"),

@@ -17,6 +17,7 @@ import {
   MAX_LISTING_IMAGES,
   uploadToCloudinaryWithProgress,
   uploadWithRetry,
+  wouldDropBelowImageMinimum,
   wouldExceedImageCap,
 } from "./image-manager";
 
@@ -26,6 +27,14 @@ describe("wouldExceedImageCap", () => {
     expect(wouldExceedImageCap(7, 2)).toBe(true);
     expect(wouldExceedImageCap(7, 1)).toBe(false);
     expect(MAX_LISTING_IMAGES).toBe(8);
+  });
+});
+
+describe("wouldDropBelowImageMinimum", () => {
+  it("keeps the last required evidence image attached", () => {
+    expect(wouldDropBelowImageMinimum(1, 1, 1)).toBe(true);
+    expect(wouldDropBelowImageMinimum(2, 1, 1)).toBe(false);
+    expect(wouldDropBelowImageMinimum(1, 1, 0)).toBe(false);
   });
 });
 

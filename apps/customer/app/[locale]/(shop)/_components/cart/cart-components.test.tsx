@@ -23,6 +23,9 @@ const lineLabels = {
   decreaseSymbol: "-",
   increaseSymbol: "+",
   unitPrice: checkoutMessages.cart.unitPrice,
+  unitPriceMeasured: checkoutMessages.cart.unitPriceMeasured,
+  saleUnits: checkoutMessages.cart.saleUnits,
+  madeToOrderLeadTime: checkoutMessages.cart.madeToOrderLeadTime,
   lineTotal: checkoutMessages.cart.lineTotal,
   quotedPriceBadge: checkoutMessages.cart.quotedPriceBadge,
   remove: checkoutMessages.cart.remove,
@@ -223,6 +226,34 @@ describe("VendorGroups", () => {
 
     expect(screen.getByTestId("cart-line-oos")).toHaveTextContent(
       checkoutMessages.cart.outOfStockLine,
+    );
+  });
+
+  it("shows made-to-order lead time on the affected line", () => {
+    const madeToOrderGroup: VendorGroup = {
+      ...belowThresholdGroup,
+      items: [
+        {
+          ...sampleLine,
+          fulfilment_mode: "made_to_order",
+          lead_time_days: 7,
+        },
+      ],
+    };
+
+    render(
+      <VendorGroups
+        groups={[madeToOrderGroup]}
+        noticesByListingId={{}}
+        labels={vendorLabels}
+        lineLabels={lineLabels}
+        onQtyChange={vi.fn().mockResolvedValue(undefined)}
+        onRemove={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+
+    expect(screen.getByTestId("cart-line-lead-time-listing-1")).toHaveTextContent(
+      "Made to order · ready in 7 days",
     );
   });
 

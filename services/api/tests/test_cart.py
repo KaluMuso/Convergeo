@@ -106,6 +106,37 @@ class TestMoq:
             )
         assert exc_info.value.code == "cart.moq_violation"
 
+    def test_validate_item_qty_enforces_minimum_sale_steps(self) -> None:
+        listing = {
+            **_retail_listing(),
+            "sale_unit": "metre",
+            "unit_step_milli": 500,
+            "min_steps": 3,
+        }
+        with pytest.raises(AppError) as exc_info:
+            validate_item_qty_for_listing(
+                listing=listing,
+                qty=2,
+                business_eligible=False,
+            )
+        assert exc_info.value.code == "cart.min_steps_violation"
+        assert exc_info.value.details["min_steps"] == 3
+
+    def test_validate_item_qty_allows_minimum_sale_steps(self) -> None:
+        listing = {
+            **_retail_listing(),
+            "sale_unit": "metre",
+            "unit_step_milli": 500,
+            "min_steps": 3,
+        }
+        unit_price, wholesale = validate_item_qty_for_listing(
+            listing=listing,
+            qty=3,
+            business_eligible=False,
+        )
+        assert unit_price == 10_000
+        assert wholesale is False
+
 
 class TestMergeMatrix:
     def test_guest_only_items_preserved(self) -> None:
@@ -654,6 +685,41 @@ class TestGroupingAndTotals:
 
     def test_cart_subtotal_integer_ngwee(self) -> None:
         assert cart_subtotal_ngwee([(2, 10_000), (3, 5_000)]) == 35_000
+
+    def test_cart_response_includes_sale_increment_metadata(self) -> None:
+        from app.routers.cart import _build_cart_response
+
+        listing = {
+            **_retail_listing(),
+            "product_class": "C",
+            "condition": "used",
+            "sale_unit": "kg",
+            "unit_step_milli": 250,
+            "min_steps": 4,
+            "fulfilment_mode": "stocked",
+            "defect_notes": "Surface marks visible on the package",
+        }
+        response = _build_cart_response(
+            cart_id="cart-1",
+            items=[
+                {
+                    "id": "line-1",
+                    "listing_id": LISTING_RETAIL,
+                    "qty": 4,
+                    "unit_price_ngwee": 10_000,
+                    "wholesale": False,
+                }
+            ],
+            listings_by_id={LISTING_RETAIL: listing},
+        )
+
+        line = response.items[0]
+        assert line.product_class == "C"
+        assert line.condition == "used"
+        assert line.sale_unit == "kg"
+        assert line.unit_step_milli == 250
+        assert line.min_steps == 4
+        assert line.defect_notes == "Surface marks visible on the package"
 
 
 class TestCartAuthz:

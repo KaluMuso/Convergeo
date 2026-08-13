@@ -17,6 +17,7 @@ const labels = {
   maxPriceOnly: "Up to K{max}",
   conditionNew: "New",
   conditionRefurbished: "Refurbished",
+  conditionUsed: "Used",
   inStock: "In stock",
   outOfStock: "Out of stock",
   rating4Plus: "4★ & up",
@@ -64,6 +65,22 @@ describe("AppliedFilterBar", () => {
     expect(screen.getByRole("link", { name: "Remove filter From K10" })).toHaveAttribute(
       "href",
       "/en/c/electronics?condition=new&sort=newest",
+    );
+  });
+
+  it("renders and removes a used-condition chip", () => {
+    render(
+      <AppliedFilterBar
+        pathname="/en/c/electronics"
+        searchParams={new URLSearchParams("condition=used%2Cnew")}
+        filterState={{ condition: ["used", "new"], availability: [] }}
+        labels={labels}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Remove filter Used" })).toHaveAttribute(
+      "href",
+      "/en/c/electronics?condition=new",
     );
   });
 });

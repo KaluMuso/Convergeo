@@ -25,6 +25,8 @@ import {
 } from "./step-payment";
 import { StepReview, type ReviewPayment, type ReviewStepLabels } from "./step-review";
 
+import type { FulfilmentMode, SaleUnit } from "../../_components/sale-quantity";
+
 export type PickupLocation = {
   landmark: string;
   lat: number;
@@ -43,6 +45,11 @@ export type VendorGroupSession = {
     unit_price_ngwee: number;
     line_total_ngwee: number;
     title_override: string | null;
+    sale_unit?: SaleUnit;
+    unit_step_milli?: number;
+    min_steps?: number;
+    fulfilment_mode?: FulfilmentMode;
+    lead_time_days?: number | null;
   }>;
   subtotal_ngwee: number;
   delivery_eligible: boolean;
@@ -395,6 +402,8 @@ export type CheckoutShellLabels = {
     subtitle: string;
     lineItems: string;
     qtyTemplate: string;
+    saleUnits: ReviewStepLabels["saleUnits"];
+    madeToOrderLeadTime: string;
     subtotal: string;
     deliveryFees: string;
     total: string;
@@ -541,6 +550,8 @@ function resolveLabels(messages: CheckoutShellLabels): ResolvedCheckoutLabels {
       subtitle: messages.review.subtitle,
       lineItems: messages.review.lineItems,
       qtyTemplate: messages.review.qtyTemplate,
+      saleUnits: messages.review.saleUnits,
+      madeToOrderLeadTime: messages.review.madeToOrderLeadTime,
       subtotal: messages.review.subtotal,
       deliveryFees: messages.review.deliveryFees,
       total: messages.review.total,

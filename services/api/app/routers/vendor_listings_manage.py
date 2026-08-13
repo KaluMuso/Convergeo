@@ -6,6 +6,15 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
+from app.schemas.vendor_listing import (
+    FulfilmentMode,
+    ListingCondition,
+    ProductClass,
+    SaleUnit,
+    StockMode,
+    VendorListing,
+    VendorListingEvidenceImage,
+)
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.moderation.prohibited import screen_listing
 from app.services.moderation.prohibited_flags import record_prohibited_listing_attempt
@@ -15,8 +24,6 @@ from pydantic import Field, field_validator, model_validator
 
 router = APIRouter(prefix="/vendor/listings", tags=["vendor-listings-manage"])
 
-ListingCondition = Literal["new", "refurbished"]
-StockMode = Literal["tracked", "always_available"]
 ListingStatus = Literal["draft", "active", "paused"]
 EDITABLE_LISTING_STATUSES = frozenset({"draft", "active", "paused"})
 OPEN_ORDER_STATUSES = frozenset(
@@ -29,12 +36,27 @@ class PriceTierInput(StrictModel):
     price_ngwee: NgweeInt
 
 
+class ListingImageSummary(StrictModel):
+    id: str
+    listing_id: str
+    cloudinary_public_id: str
+    position: int
+
+
 class ListingSummary(StrictModel):
     id: str
     title: str
     price_ngwee: int
     compare_at_ngwee: int | None = None
+    product_class: ProductClass
     condition: ListingCondition
+    sale_unit: SaleUnit
+    unit_step_milli: int
+    min_steps: int
+    fulfilment_mode: FulfilmentMode
+    lead_time_days: int | None
+    vendor_capacity_per_week: int | None
+    defect_notes: str | None
     stock_mode: StockMode
     stock_qty: int | None
     wholesale: bool
@@ -44,12 +66,21 @@ class ListingSummary(StrictModel):
     return_window_hours: int | None
     status: str
     product_id: str | None
+    images: list[ListingImageSummary] = Field(default_factory=list)
 
 
 class ListingUpdateRequest(StrictModel):
     price_ngwee: NgweeInt | None = None
     compare_at_ngwee: NgweeInt | None = None
+    product_class: ProductClass | None = None
     condition: ListingCondition | None = None
+    sale_unit: SaleUnit | None = None
+    unit_step_milli: int | None = Field(default=None, ge=1)
+    min_steps: int | None = Field(default=None, ge=1)
+    fulfilment_mode: FulfilmentMode | None = None
+    lead_time_days: int | None = Field(default=None, ge=1, le=365)
+    vendor_capacity_per_week: int | None = Field(default=None, ge=1, le=9999)
+    defect_notes: str | None = None
     stock_mode: StockMode | None = None
     stock_qty: int | None = Field(default=None, ge=0)
     wholesale: bool | None = None
@@ -189,6 +220,28 @@ def _listing_title(row: dict[str, Any]) -> str:
     return "Listing"
 
 
+def _listing_images(row: dict[str, Any]) -> list[ListingImageSummary]:
+    raw_images = row.get("listing_images")
+    if not isinstance(raw_images, list):
+        return []
+    images: list[ListingImageSummary] = []
+    for image in raw_images:
+        if not isinstance(image, dict):
+            continue
+        try:
+            images.append(
+                ListingImageSummary(
+                    id=str(image["id"]),
+                    listing_id=str(image["listing_id"]),
+                    cloudinary_public_id=str(image["cloudinary_public_id"]),
+                    position=int(image["position"]),
+                )
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+    return sorted(images, key=lambda image: image.position)
+
+
 def _to_listing_summary(row: dict[str, Any]) -> ListingSummary:
     return ListingSummary(
         id=str(row["id"]),
@@ -197,7 +250,21 @@ def _to_listing_summary(row: dict[str, Any]) -> ListingSummary:
         compare_at_ngwee=(
             int(row["compare_at_ngwee"]) if row.get("compare_at_ngwee") is not None else None
         ),
+        product_class=str(row.get("product_class") or "A"),  # type: ignore[arg-type]
         condition=str(row["condition"]),  # type: ignore[arg-type]
+        sale_unit=str(row.get("sale_unit") or "each"),  # type: ignore[arg-type]
+        unit_step_milli=int(row.get("unit_step_milli") or 1000),
+        min_steps=int(row.get("min_steps") or 1),
+        fulfilment_mode=str(row.get("fulfilment_mode") or "stocked"),  # type: ignore[arg-type]
+        lead_time_days=(
+            int(row["lead_time_days"]) if row.get("lead_time_days") is not None else None
+        ),
+        vendor_capacity_per_week=(
+            int(row["vendor_capacity_per_week"])
+            if row.get("vendor_capacity_per_week") is not None
+            else None
+        ),
+        defect_notes=str(row["defect_notes"]) if row.get("defect_notes") else None,
         stock_mode=str(row["stock_mode"]),  # type: ignore[arg-type]
         stock_qty=int(row["stock_qty"]) if row.get("stock_qty") is not None else None,
         wholesale=bool(row.get("wholesale")),
@@ -209,6 +276,7 @@ def _to_listing_summary(row: dict[str, Any]) -> ListingSummary:
         ),
         status=str(row["status"]),
         product_id=str(row["product_id"]) if row.get("product_id") else None,
+        images=_listing_images(row),
     )
 
 
@@ -220,8 +288,11 @@ def _load_listing(
         service_client.client.table("vendor_listings")
         .select(
             "id, vendor_id, product_id, title_override, price_ngwee, compare_at_ngwee, "
-            "condition, stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
-            "return_window_hours, status, products(name)"
+            "product_class, condition, sale_unit, unit_step_milli, min_steps, "
+            "fulfilment_mode, lead_time_days, vendor_capacity_per_week, defect_notes, "
+            "stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
+            "return_window_hours, status, products(name), "
+            "listing_images(id, listing_id, cloudinary_public_id, position)"
         )
         .eq("id", listing_id)
         .maybe_single()
@@ -334,6 +405,75 @@ def _trigger_cart_revalidation(
     )
 
 
+def _effective_update_value(
+    body: ListingUpdateRequest,
+    listing: dict[str, Any],
+    field_name: str,
+    default: Any = None,
+) -> Any:
+    if field_name in body.model_fields_set:
+        return getattr(body, field_name)
+    value = listing.get(field_name)
+    return default if value is None else value
+
+
+def _validate_strategy_listing(
+    listing: dict[str, Any],
+    body: ListingUpdateRequest,
+) -> None:
+    product_class = _effective_update_value(body, listing, "product_class", "A")
+    if product_class in {"D", "E"} and listing.get("product_id") is not None:
+        raise AppError(
+            code="standalone_product_class_required",
+            message="Class D and E listings must be standalone offers",
+            http_status=422,
+            details={
+                "message_key": "vendor.listings.errors.standalone_required",
+                "product_class": product_class,
+            },
+        )
+    try:
+        VendorListing(
+            product_class=product_class,
+            status=_effective_update_value(body, listing, "status", "draft"),
+            condition=_effective_update_value(body, listing, "condition", "new"),
+            sale_unit=_effective_update_value(body, listing, "sale_unit", "each"),
+            unit_step_milli=_effective_update_value(
+                body, listing, "unit_step_milli", 1000
+            ),
+            min_steps=_effective_update_value(body, listing, "min_steps", 1),
+            fulfilment_mode=_effective_update_value(
+                body, listing, "fulfilment_mode", "stocked"
+            ),
+            lead_time_days=_effective_update_value(body, listing, "lead_time_days"),
+            vendor_capacity_per_week=_effective_update_value(
+                body, listing, "vendor_capacity_per_week"
+            ),
+            stock_mode=_effective_update_value(body, listing, "stock_mode", "tracked"),
+            stock_qty=_effective_update_value(body, listing, "stock_qty"),
+            price_ngwee=_effective_update_value(body, listing, "price_ngwee"),
+            wholesale=_effective_update_value(body, listing, "wholesale", False),
+            moq=_effective_update_value(body, listing, "moq", 1),
+            defect_notes=_effective_update_value(body, listing, "defect_notes"),
+            evidence_images=[
+                VendorListingEvidenceImage(
+                    cloudinary_public_id=image.cloudinary_public_id
+                )
+                for image in _listing_images(listing)
+            ],
+        )
+    except ValueError as exc:
+        raise AppError(
+            code="listing_strategy_invalid",
+            message="Listing fields do not satisfy the product-class rules",
+            http_status=422,
+            details={
+                "message_key": "vendor.listings.errors.submitFailed",
+                "reason": str(exc),
+            },
+        ) from exc
+
+
 def _apply_listing_update(
     service_client: ServiceRoleClient,
     listing_id: str,
@@ -346,6 +486,8 @@ def _apply_listing_update(
 
     if body.price_tiers is not None:
         _validate_price_tiers_ordered(body.price_tiers)
+
+    _validate_strategy_listing(listing, body)
 
     wholesale = body.wholesale if body.wholesale is not None else bool(listing.get("wholesale"))
     if wholesale:
@@ -393,11 +535,29 @@ def _apply_listing_update(
     # and by the DB check constraint.
     if "compare_at_ngwee" in body.model_fields_set:
         update_payload["compare_at_ngwee"] = body.compare_at_ngwee
+    if body.product_class is not None:
+        update_payload["product_class"] = body.product_class
     if body.condition is not None:
         update_payload["condition"] = body.condition
+    if body.sale_unit is not None:
+        update_payload["sale_unit"] = body.sale_unit
+    if body.unit_step_milli is not None:
+        update_payload["unit_step_milli"] = body.unit_step_milli
+    if body.min_steps is not None:
+        update_payload["min_steps"] = body.min_steps
+    if body.fulfilment_mode is not None:
+        update_payload["fulfilment_mode"] = body.fulfilment_mode
+    if "lead_time_days" in body.model_fields_set:
+        update_payload["lead_time_days"] = body.lead_time_days
+    if "vendor_capacity_per_week" in body.model_fields_set:
+        update_payload["vendor_capacity_per_week"] = body.vendor_capacity_per_week
+    if "defect_notes" in body.model_fields_set:
+        update_payload["defect_notes"] = (
+            body.defect_notes.strip() if body.defect_notes else None
+        )
     if body.stock_mode is not None:
         update_payload["stock_mode"] = body.stock_mode
-    if body.stock_qty is not None:
+    if "stock_qty" in body.model_fields_set:
         update_payload["stock_qty"] = body.stock_qty
     if body.wholesale is not None:
         update_payload["wholesale"] = body.wholesale
@@ -462,9 +622,11 @@ async def list_vendor_listings(
         service_client.client.table("vendor_listings")
         .select(
             "id, vendor_id, product_id, title_override, price_ngwee, compare_at_ngwee, "
-            "condition, stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
-            "return_window_hours, "
-            "status, products(name)"
+            "product_class, condition, sale_unit, unit_step_milli, min_steps, "
+            "fulfilment_mode, lead_time_days, vendor_capacity_per_week, defect_notes, "
+            "stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
+            "return_window_hours, status, products(name), "
+            "listing_images(id, listing_id, cloudinary_public_id, position)"
         )
         .eq("vendor_id", vendor_id)
         .neq("status", "removed")

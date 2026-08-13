@@ -40,6 +40,7 @@ export type VendorGroupLabels = {
 };
 
 type VendorGroupsProps = {
+  locale?: string;
   groups: VendorGroup[];
   noticesByListingId: Record<string, ChangeNotice>;
   labels: VendorGroupLabels;
@@ -58,6 +59,7 @@ function remainingForFreeDelivery(subtotalNgwee: number): number {
 }
 
 export function VendorGroups({
+  locale = "en",
   groups,
   noticesByListingId,
   labels,
@@ -168,6 +170,7 @@ export function VendorGroups({
                 <CartLineItem
                   key={item.id}
                   item={item}
+                  locale={locale}
                   notice={noticesByListingId[item.listing_id]}
                   labels={lineLabels}
                   onQtyChange={onQtyChange}
@@ -420,6 +423,7 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
 
         {cart ? (
           <VendorGroups
+            locale={locale}
             groups={cart.vendor_groups}
             noticesByListingId={indexNoticesByListing(notices)}
             labels={labels.vendor}

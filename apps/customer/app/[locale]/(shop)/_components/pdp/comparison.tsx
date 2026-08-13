@@ -19,10 +19,10 @@ import { ConditionBadge, type ListingCondition } from "./condition-badge";
 import { PdpGallery } from "./gallery";
 import { buildOfferPriceContext } from "./offer-price-context";
 import { PdpWishlistButton } from "./pdp-wishlist-button";
-import { StickyMobileAtc } from "./sticky-mobile-atc";
 import { useListingPurchase } from "./use-listing-purchase";
 import { VendorBlock } from "./vendor-block";
 
+import type { SaleUnit } from "../sale-quantity";
 import type { ContactVendorLabels } from "./contact-vendor-button";
 import type { PdpGalleryLabelStrings } from "./gallery-labels";
 import type { ReportListingLabels } from "./report-listing";
@@ -42,6 +42,12 @@ const RequestQuoteButton = dynamic(
 const ReportListing = dynamic(() => import("./report-listing").then((mod) => mod.ReportListing), {
   ssr: false,
 });
+
+/** Lazy — measured-unit formatting + sticky chrome stay off the PDP first-load budget. */
+const StickyMobileAtc = dynamic(
+  () => import("./sticky-mobile-atc").then((mod) => mod.StickyMobileAtc),
+  { ssr: false },
+);
 
 export const LUSAKA_CBD_LAT = -15.4167;
 export const LUSAKA_CBD_LNG = 28.2833;
@@ -108,6 +114,9 @@ export type ProductListing = {
   stockQty: number | null;
   moq: number;
   inStock: boolean;
+  saleUnit?: SaleUnit;
+  unitStepMilli?: number;
+  minSteps?: number;
   leadTimeDays: number | null;
   vendorCapacityPerWeek: number | null;
   vendor: {
@@ -609,12 +618,15 @@ export function PdpInteractiveBody({
       stockQty: selectedListing.stockQty,
       moq: selectedListing.moq,
       inStock: selectedListing.inStock,
+      saleUnit: selectedListing.saleUnit,
+      unitStepMilli: selectedListing.unitStepMilli,
+      minSteps: selectedListing.minSteps,
       leadTimeDays: selectedListing.leadTimeDays,
       vendorCapacityPerWeek: selectedListing.vendorCapacityPerWeek,
     };
   }, [selectedListing]);
 
-  const purchase = useListingPurchase(buyBoxListing, buyBoxLabels);
+  const purchase = useListingPurchase(buyBoxListing, buyBoxLabels, locale);
 
   const priceContextLabel = useMemo(() => {
     if (!selectedListing) {
@@ -687,6 +699,7 @@ export function PdpInteractiveBody({
             listing={buyBoxListing}
             singleVendor={singleVendor}
             labels={buyBoxLabels}
+            locale={locale}
             purchase={purchase}
             buyBoxRef={buyBoxRef}
             seller={{
@@ -790,6 +803,7 @@ export function PdpInteractiveBody({
           purchase={purchase}
           observeRef={buyBoxRef}
           ariaLabel={t("pdp.stickyAtc.ariaLabel")}
+          locale={locale}
           onVisibleChange={handleStickyVisibleChange}
         />
       ) : null}

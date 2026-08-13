@@ -5,6 +5,12 @@ import { Button } from "@vergeo/ui/src/button";
 import { Checkbox } from "@vergeo/ui/src/checkbox";
 import { useEffect, useId, useRef, useState } from "react";
 
+import {
+  formatListingQuantity,
+  formatMadeToOrderLeadTime,
+  type SaleUnitLabels,
+} from "../../_components/sale-quantity";
+
 import type { CheckoutSession } from "./step-fulfilment";
 import type { PaymentMethod, MomoRail, PaymentOptions } from "./step-payment";
 
@@ -13,6 +19,8 @@ export type ReviewStepLabels = {
   subtitle: string;
   lineItems: string;
   qtyTemplate: string;
+  saleUnits: SaleUnitLabels;
+  madeToOrderLeadTime: string;
   subtotal: string;
   deliveryFees: string;
   total: string;
@@ -155,19 +163,46 @@ export function StepReview({
           >
             <p className="font-body text-sm font-semibold text-text">{group.vendor_name}</p>
             <ul className="space-y-2">
-              {group.items.map((item) => (
-                <li key={item.id} className="flex items-start justify-between gap-2 text-sm">
-                  <span className="min-w-0 break-words font-body text-text-2">
-                    {lineTitle(item)}{" "}
-                    <span className="text-text-3">
-                      {labels.qtyTemplate.replace("{qty}", String(item.qty))}
+              {group.items.map((item) => {
+                const leadTimeLabel = formatMadeToOrderLeadTime(
+                  item.fulfilment_mode,
+                  item.lead_time_days,
+                  labels.madeToOrderLeadTime,
+                );
+
+                return (
+                  <li key={item.id} className="flex items-start justify-between gap-2 text-sm">
+                    <span className="min-w-0 break-words font-body text-text-2">
+                      <span>
+                        {lineTitle(item)}{" "}
+                        <span className="text-text-3">
+                          {labels.qtyTemplate.replace(
+                            "{qty}",
+                            formatListingQuantity(
+                              item.qty,
+                              item.sale_unit,
+                              item.unit_step_milli,
+                              locale,
+                              labels.saleUnits,
+                            ),
+                          )}
+                        </span>
+                      </span>
+                      {leadTimeLabel ? (
+                        <span
+                          className="block text-xs font-medium text-text-3"
+                          data-testid={`checkout-lead-time-${item.listing_id}`}
+                        >
+                          {leadTimeLabel}
+                        </span>
+                      ) : null}
                     </span>
-                  </span>
-                  <span className="shrink-0 font-mono text-text">
-                    {formatK(item.line_total_ngwee, { locale: amountLocale })}
-                  </span>
-                </li>
-              ))}
+                    <span className="shrink-0 font-mono text-text">
+                      {formatK(item.line_total_ngwee, { locale: amountLocale })}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}

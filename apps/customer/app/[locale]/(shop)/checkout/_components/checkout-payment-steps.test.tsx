@@ -50,6 +50,8 @@ const reviewLabels = {
   subtitle: checkoutMessages.checkout.review.subtitle,
   lineItems: checkoutMessages.checkout.review.lineItems,
   qtyTemplate: checkoutMessages.checkout.review.qty,
+  saleUnits: checkoutMessages.cart.saleUnits,
+  madeToOrderLeadTime: checkoutMessages.cart.madeToOrderLeadTime,
   subtotal: checkoutMessages.checkout.review.subtotal,
   deliveryFees: checkoutMessages.checkout.review.deliveryFees,
   total: checkoutMessages.checkout.review.total,
@@ -179,6 +181,35 @@ describe("StepPayment", () => {
 });
 
 describe("StepReview", () => {
+  it("shows made-to-order lead time before order placement", () => {
+    const madeToOrderSession: CheckoutSession = {
+      ...sampleSession,
+      vendor_groups: sampleSession.vendor_groups.map((group) => ({
+        ...group,
+        items: group.items.map((item) => ({
+          ...item,
+          fulfilment_mode: "made_to_order",
+          lead_time_days: 12,
+        })),
+      })),
+    };
+
+    render(
+      <StepReview
+        locale="en"
+        session={madeToOrderSession}
+        totals={totalsAboveCap}
+        payment={{ method: "card", rail: null, payer_number: null }}
+        labels={reviewLabels}
+        onPlaceOrder={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("checkout-lead-time-listing-1")).toHaveTextContent(
+      "Made to order · ready in 12 days",
+    );
+  });
+
   it("requires consent before place order can proceed", async () => {
     const user = userEvent.setup();
     const onPlaceOrder = vi.fn();

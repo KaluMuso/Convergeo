@@ -29,6 +29,7 @@
       "condition": "État",
       "conditionNew": "Neuf",
       "conditionRefurbished": "Reconditionné",
+      "conditionUsed": "Occasion",
       "availability": "Disponibilité",
       "inStock": "En stock",
       "outOfStock": "En rupture de stock",
@@ -64,6 +65,7 @@
       "quickAddError": "Impossible d’ajouter au panier. Vérifiez votre connexion et réessayez.",
       "conditionNew": "Neuf",
       "conditionRefurbished": "Reconditionné",
+      "conditionUsed": "Occasion",
       "pill": {
         "nearest": "À {distance}",
         "belowMedian": "Sous la médiane",
@@ -209,6 +211,24 @@
     "unavailableRetry": "Réessayer",
     "breadcrumbAria": "Fil d'Ariane",
     "sellerCount": "{count, plural, one {# vendeur} other {# vendeurs}}",
+    "standalone": {
+      "detailsHeading": "Détails de l'annonce",
+      "soldBy": "Vendu par {vendor}.",
+      "classLabel": "Classe de produit",
+      "classValue": "Classe {class}",
+      "conditionLabel": "État",
+      "incrementLabel": "Vendu par unités de",
+      "minimumLabel": "Commande minimum",
+      "fulfilmentLabel": "Traitement",
+      "fulfilmentStocked": "Disponible en stock",
+      "fulfilmentMadeToOrder": "Fabriqué sur commande",
+      "leadTimeLabel": "Délai",
+      "leadTimeDays": "{days} jours",
+      "capacityLabel": "Capacité hebdomadaire",
+      "capacityPerWeek": "{quantity} par semaine",
+      "locationLabel": "Emplacement du vendeur",
+      "defectsHeading": "Notes sur l'état et les défauts"
+    },
     "noSellers": {
       "title": "Aucun vendeur disponible",
       "body": "Ce produit n'a aucune offre active pour le moment. Parcourez d'autres produits, ou revenez plus tard.",
@@ -248,6 +268,17 @@
     },
     "buyBox": {
       "priceLabel": "Prix",
+      "pricePerIncrement": "Prix par {quantity}",
+      "minimumOrderQuantity": "Commande minimum : {quantity}",
+      "lowStockQuantity": "Plus que {quantity} en stock",
+      "units": {
+        "each": "article",
+        "metre": "m",
+        "kg": "kg",
+        "litre": "L",
+        "bag": "sac",
+        "sqm": "m²"
+      },
       "quantityLabel": "Quantité",
       "decrease": "Diminuer la quantité",
       "increase": "Augmenter la quantité",

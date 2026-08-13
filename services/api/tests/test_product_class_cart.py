@@ -5,9 +5,12 @@ from typing import Any
 import pytest
 from app.errors import AppError
 from app.services.cart.merge import validate_item_qty_for_listing
-from app.services.listings.class_rules import validate_listing_purchasable_for_cart
+from app.services.listings.class_rules import (
+    count_weekly_committed_qty,
+    validate_listing_purchasable_for_cart,
+)
 
-LISTING_D_USED = {
+LISTING_D_USED: dict[str, Any] = {
     "id": "dddddddd-dddd-dddd-dddd-dddddddddddd",
     "vendor_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
     "product_class": "D",
@@ -21,7 +24,7 @@ LISTING_D_USED = {
     "stock_qty": 1,
 }
 
-LISTING_E_MTO = {
+LISTING_E_MTO: dict[str, Any] = {
     "id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
     "vendor_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
     "product_class": "E",
@@ -40,6 +43,16 @@ LISTING_E_MTO = {
 
 
 class TestClassDCartGuard:
+    def test_fails_closed_until_the_release_gate_is_open(self) -> None:
+        with pytest.raises(AppError) as exc_info:
+            validate_listing_purchasable_for_cart(
+                listing=LISTING_D_USED,
+                qty=1,
+                evidence_image_count=1,
+                customer_released=False,
+            )
+        assert exc_info.value.code == "cart.product_class_release_gated"
+
     def test_fails_without_evidence_images(self) -> None:
         with pytest.raises(AppError) as exc_info:
             validate_listing_purchasable_for_cart(
@@ -103,3 +116,64 @@ class TestClassECartGuard:
                 evidence_image_count=0,
             )
         assert exc_info.value.code == "cart.class_e_missing_lead_time"
+
+
+def test_legacy_non_class_e_made_to_order_does_not_require_capacity() -> None:
+    listing: dict[str, Any] = {
+        **LISTING_E_MTO,
+        "product_class": "A",
+        "vendor_capacity_per_week": None,
+    }
+
+    validate_listing_purchasable_for_cart(
+        listing=listing,
+        qty=2,
+        evidence_image_count=0,
+    )
+
+
+class _CommittedQtyQuery:
+    def __init__(self, rows: list[dict[str, Any]]) -> None:
+        self.rows = rows
+        self.selected = ""
+        self.filters: list[tuple[str, str, Any]] = []
+
+    def select(self, columns: str) -> _CommittedQtyQuery:
+        self.selected = columns
+        return self
+
+    def eq(self, column: str, value: Any) -> _CommittedQtyQuery:
+        self.filters.append(("eq", column, value))
+        return self
+
+    def gte(self, column: str, value: Any) -> _CommittedQtyQuery:
+        self.filters.append(("gte", column, value))
+        return self
+
+    def execute(self) -> Any:
+        return type("Response", (), {"data": self.rows})()
+
+
+def test_weekly_capacity_reads_listing_link_table_and_excludes_cancelled() -> None:
+    rows: list[dict[str, Any]] = [
+        {"order_items": {"qty": 2, "orders": {"status": "paid"}}},
+        {"order_items": [{"qty": 1, "orders": {"status": "delivered"}}]},
+        {"order_items": {"qty": 8, "orders": {"status": "cancelled"}}},
+        {"order_items": {"qty": 5, "orders": {"status": "refunded"}}},
+    ]
+    query = _CommittedQtyQuery(rows)
+
+    class Client:
+        def table(self, name: str) -> _CommittedQtyQuery:
+            assert name == "order_item_products"
+            return query
+
+    total = count_weekly_committed_qty(Client(), LISTING_E_MTO["id"])
+
+    assert total == 3
+    assert query.selected == "order_items!inner(qty, orders!inner(status, created_at))"
+    assert ("eq", "listing_id", LISTING_E_MTO["id"]) in query.filters
+    assert any(
+        operation == "gte" and column == "order_items.orders.created_at"
+        for operation, column, _value in query.filters
+    )

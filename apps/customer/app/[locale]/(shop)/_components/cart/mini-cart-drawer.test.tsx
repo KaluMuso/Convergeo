@@ -63,6 +63,9 @@ const labels = {
   loadErrorTitle: checkoutMessages.cart.loadErrorTitle,
   loadErrorBody: checkoutMessages.cart.loadErrorBody,
   loadErrorRetry: checkoutMessages.cart.loadErrorRetry,
+  quantityValue: checkoutMessages.cart.qtyValue,
+  saleUnits: checkoutMessages.cart.saleUnits,
+  madeToOrderLeadTime: checkoutMessages.cart.madeToOrderLeadTime,
 };
 
 beforeEach(() => {
@@ -139,5 +142,40 @@ describe("MiniCartDrawer a11y", () => {
     expect(trigger).toHaveClass("min-h-11");
     await user.click(trigger);
     expect(screen.getByRole("dialog", { name: labels.title })).toBeInTheDocument();
+  });
+
+  it("shows made-to-order lead time in the cart summary", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          cart_id: "cart-1",
+          items: [
+            {
+              id: "line-1",
+              listing_id: "listing-1",
+              vendor_id: "vendor-1",
+              qty: 1,
+              unit_price_ngwee: 50_000,
+              wholesale: false,
+              line_total_ngwee: 50_000,
+              title_override: "Custom table",
+              fulfilment_mode: "made_to_order",
+              lead_time_days: 10,
+            },
+          ],
+          vendor_groups: [],
+          subtotal_ngwee: 50_000,
+          conflicts: [],
+        }),
+      ),
+    );
+    openMiniCart();
+
+    render(<MiniCartDrawer locale="en" labels={labels} />);
+
+    expect(await screen.findByTestId("mini-cart-lead-time-listing-1")).toHaveTextContent(
+      "Made to order · ready in 10 days",
+    );
   });
 });

@@ -25,6 +25,7 @@ export type FacetPanelLabels = {
   condition: string;
   conditionNew: string;
   conditionRefurbished: string;
+  conditionUsed: string;
   availability: string;
   inStock: string;
   outOfStock: string;
@@ -150,6 +151,11 @@ export function FacetPanel({
           checked={state.condition.includes("refurbished")}
           onChange={() => toggleValue("condition", "refurbished")}
           label={`${labels.conditionRefurbished} (${facetCount(facets.condition, "refurbished")})`}
+        />
+        <Checkbox
+          checked={state.condition.includes("used")}
+          onChange={() => toggleValue("condition", "used")}
+          label={`${labels.conditionUsed} (${facetCount(facets.condition, "used")})`}
         />
       </fieldset>
 

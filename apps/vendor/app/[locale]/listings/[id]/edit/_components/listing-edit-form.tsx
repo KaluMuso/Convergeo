@@ -7,12 +7,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { VendorErrorState } from "../../../../_components/async-state";
 import { vendorErrorMessageKey } from "../../../../_lib/vendor-errors";
+import { ImageManager, type ListingImageRecord } from "../../../_components/image-manager";
 import {
+  ListingFields,
   parseListingFieldValues,
+  requiresListingEvidence,
   validateListingFields,
   type ListingFieldValues,
 } from "../../../new/_components/listing-fields";
-import { Badge, Button, FormField, Input, Select, Spinner, Switch } from "../../../new/_lib/ui";
+import { milliToUnitInput } from "../../../new/_lib/measure";
+import { Badge, Button, FormField, Input, Spinner, Switch } from "../../../new/_lib/ui";
 import { createManageClient, type ListingSummary, type PriceTier } from "../_lib/manage-client";
 import { isValidZmwDecimal, ngweeToZmwInput, zmwDecimalToNgwee } from "../_lib/money";
 
@@ -49,7 +53,9 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
   const [tiers, setTiers] = useState<TierDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [actionLoading, setActionLoading] = useState<"pause" | "unpause" | "delete" | null>(null);
+  const [actionLoading, setActionLoading] = useState<
+    "publish" | "pause" | "unpause" | "delete" | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [loadErrorKey, setLoadErrorKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -63,17 +69,54 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       priceLabel: t("listings.fields.priceLabel"),
       pricePlaceholder: t("listings.fields.pricePlaceholder"),
       priceHelp: t("listings.fields.priceHelp"),
+      pricePerStepHelp: t("listings.fields.pricePerStepHelp"),
       priceInvalid: t("listings.fields.priceInvalid"),
+      productClassLabel: t("listings.fields.productClassLabel"),
+      classA: t("listings.fields.classA"),
+      classB: t("listings.fields.classB"),
+      classC: t("listings.fields.classC"),
+      classD: t("listings.fields.classD"),
+      classE: t("listings.fields.classE"),
+      standaloneClassHint: t("listings.fields.standaloneClassHint"),
+      saleUnitLabel: t("listings.fields.saleUnitLabel"),
+      unitEach: t("listings.fields.unitEach"),
+      unitMetre: t("listings.fields.unitMetre"),
+      unitKg: t("listings.fields.unitKg"),
+      unitLitre: t("listings.fields.unitLitre"),
+      unitBag: t("listings.fields.unitBag"),
+      unitSqm: t("listings.fields.unitSqm"),
+      unitStepLabel: t("listings.fields.unitStepLabel"),
+      unitStepHelp: t("listings.fields.unitStepHelp"),
+      unitStepInvalid: t("listings.fields.unitStepInvalid"),
+      minStepsLabel: t("listings.fields.minStepsLabel"),
       conditionLabel: t("listings.fields.conditionLabel"),
       conditionNew: t("listings.fields.conditionNew"),
       conditionRefurbished: t("listings.fields.conditionRefurbished"),
+      conditionUsed: t("listings.fields.conditionUsed"),
+      defectNotesLabel: t("listings.fields.defectNotesLabel"),
+      defectNotesPlaceholder: t("listings.fields.defectNotesPlaceholder"),
+      defectNotesHelp: t("listings.fields.defectNotesHelp"),
+      defectNotesInvalid: t("listings.fields.defectNotesInvalid"),
+      fulfilmentLabel: t("listings.fields.fulfilmentLabel"),
+      fulfilmentStocked: t("listings.fields.fulfilmentStocked"),
+      fulfilmentMadeToOrder: t("listings.fields.fulfilmentMadeToOrder"),
+      leadTimeLabel: t("listings.fields.leadTimeLabel"),
+      leadTimeHelp: t("listings.fields.leadTimeHelp"),
+      leadTimeInvalid: t("listings.fields.leadTimeInvalid"),
+      capacityLabel: t("listings.fields.capacityLabel"),
+      capacityHelp: t("listings.fields.capacityHelp"),
+      capacityInvalid: t("listings.fields.capacityInvalid"),
       stockModeLabel: t("listings.fields.stockModeLabel"),
       stockTracked: t("listings.fields.stockTracked"),
       stockAlways: t("listings.fields.stockAlways"),
       stockQtyLabel: t("listings.fields.stockQtyLabel"),
       wholesaleLabel: t("listings.fields.wholesaleLabel"),
       wholesaleHelp: t("listings.fields.wholesaleHelp"),
+      wholesaleMeasureUnavailable: t("listings.fields.wholesaleMeasureUnavailable"),
       moqLabel: t("listings.fields.moqLabel"),
+      evidenceDraftNotice: t("listings.fields.evidenceDraftNotice"),
+      saveDraft: t("listings.fields.saveDraft"),
+      savingDraft: t("listings.fields.savingDraft"),
       required: t("listings.errors.required"),
     }),
     [t],
@@ -100,7 +143,16 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         setListing(row);
         setFieldValues({
           priceZmw: ngweeToZmwInput(row.price_ngwee),
+          productClass: row.product_class ?? "A",
+          saleUnit: row.sale_unit ?? "each",
+          unitStep: milliToUnitInput(row.unit_step_milli ?? 1_000),
+          minSteps: String(row.min_steps ?? 1),
           condition: row.condition,
+          defectNotes: row.defect_notes ?? "",
+          fulfilmentMode: row.fulfilment_mode ?? "stocked",
+          leadTimeDays: row.lead_time_days === null ? "" : String(row.lead_time_days ?? ""),
+          vendorCapacityPerWeek:
+            row.vendor_capacity_per_week === null ? "" : String(row.vendor_capacity_per_week ?? ""),
           stockMode: row.stock_mode,
           stockQty: row.stock_qty === null ? "" : String(row.stock_qty),
           wholesale: row.wholesale,
@@ -153,6 +205,14 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       setError(validationError);
       return;
     }
+    if (
+      listing?.status === "active" &&
+      requiresListingEvidence(fieldValues) &&
+      (listing.images?.length ?? 0) === 0
+    ) {
+      setError(t("listings.manage.edit.evidenceRequired"));
+      return;
+    }
     if (returnable && !returnWindowHours) {
       setError(t("listings.manage.errors.returnWindowRequired"));
       return;
@@ -176,7 +236,15 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       const response = await manageClient.updateListing(listingId, {
         price_ngwee: parsed.priceNgwee,
         compare_at_ngwee: compareAtNgwee,
+        product_class: fieldValues.productClass,
+        sale_unit: fieldValues.saleUnit,
+        unit_step_milli: parsed.unitStepMilli,
+        min_steps: parsed.minSteps,
         condition: fieldValues.condition,
+        defect_notes: parsed.defectNotes,
+        fulfilment_mode: fieldValues.fulfilmentMode,
+        lead_time_days: parsed.leadTimeDays,
+        vendor_capacity_per_week: parsed.vendorCapacityPerWeek,
         stock_mode: fieldValues.stockMode,
         stock_qty: parsed.stockQty,
         wholesale: fieldValues.wholesale,
@@ -185,7 +253,10 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         returnable,
         return_window_hours: returnable ? Number(returnWindowHours) : null,
       });
-      setListing(response.listing);
+      setListing((current) => ({
+        ...response.listing,
+        images: response.listing.images ?? current?.images,
+      }));
       setNotice(
         response.cart_revalidation?.has_changes
           ? t("listings.manage.edit.priceChangedNotice")
@@ -202,14 +273,21 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
     if (!listing) {
       return;
     }
-    setActionLoading(listing.status === "paused" ? "unpause" : "pause");
+    setActionLoading(
+      listing.status === "draft" ? "publish" : listing.status === "paused" ? "unpause" : "pause",
+    );
     setError(null);
     try {
       const response =
-        listing.status === "paused"
-          ? await manageClient.unpauseListing(listingId)
-          : await manageClient.pauseListing(listingId);
-      setListing(response.listing);
+        listing.status === "draft"
+          ? await manageClient.updateListing(listingId, { status: "active" })
+          : listing.status === "paused"
+            ? await manageClient.unpauseListing(listingId)
+            : await manageClient.pauseListing(listingId);
+      setListing((current) => ({
+        ...response.listing,
+        images: response.listing.images ?? current?.images,
+      }));
       setNotice(t("listings.manage.edit.saved"));
     } catch {
       setError(t("listings.manage.errors.saveFailed"));
@@ -275,6 +353,12 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
       : listing.status === "paused"
         ? t("listings.manage.status.paused")
         : t("listings.manage.status.draft");
+  const evidenceRequired = requiresListingEvidence(fieldValues);
+  const persistedEvidenceRequired = listing.product_class === "D" || listing.condition === "used";
+  const hasEvidence = (listing.images?.length ?? 0) > 0;
+  const minimumEvidenceImages =
+    listing.status === "active" && (persistedEvidenceRequired || evidenceRequired) ? 1 : 0;
+  const activationBlocked = listing.status !== "active" && evidenceRequired && !hasEvidence;
 
   return (
     <div className="flex flex-col gap-4">
@@ -307,18 +391,15 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         </p>
       ) : null}
 
-      <FormField label={fieldLabels.priceLabel} helpText={fieldLabels.priceHelp}>
-        <Input
-          inputMode="decimal"
-          placeholder={fieldLabels.pricePlaceholder}
-          value={fieldValues.priceZmw}
-          onChange={(event) =>
-            setFieldValues((current) =>
-              current ? { ...current, priceZmw: event.target.value } : current,
-            )
-          }
-        />
-      </FormField>
+      <ListingFields
+        values={fieldValues}
+        onChange={(patch) =>
+          setFieldValues((current) => (current ? { ...current, ...patch } : current))
+        }
+        wholesaleEnabled={fieldValues.wholesale}
+        labels={fieldLabels}
+        allowStandaloneClasses={listing.product_id === null}
+      />
 
       <FormField
         label={t("listings.manage.edit.compareAtLabel")}
@@ -331,52 +412,6 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
           onChange={(event) => setCompareAtZmw(event.target.value)}
         />
       </FormField>
-
-      <FormField label={fieldLabels.conditionLabel}>
-        <Select
-          value={fieldValues.condition}
-          onChange={(event) =>
-            setFieldValues((current) =>
-              current
-                ? { ...current, condition: event.target.value as ListingFieldValues["condition"] }
-                : current,
-            )
-          }
-        >
-          <option value="new">{fieldLabels.conditionNew}</option>
-          <option value="refurbished">{fieldLabels.conditionRefurbished}</option>
-        </Select>
-      </FormField>
-
-      <FormField label={fieldLabels.stockModeLabel}>
-        <Select
-          value={fieldValues.stockMode}
-          onChange={(event) =>
-            setFieldValues((current) =>
-              current
-                ? { ...current, stockMode: event.target.value as ListingFieldValues["stockMode"] }
-                : current,
-            )
-          }
-        >
-          <option value="tracked">{fieldLabels.stockTracked}</option>
-          <option value="always_available">{fieldLabels.stockAlways}</option>
-        </Select>
-      </FormField>
-
-      {fieldValues.stockMode === "tracked" ? (
-        <FormField label={fieldLabels.stockQtyLabel}>
-          <Input
-            inputMode="numeric"
-            value={fieldValues.stockQty}
-            onChange={(event) =>
-              setFieldValues((current) =>
-                current ? { ...current, stockQty: event.target.value } : current,
-              )
-            }
-          />
-        </FormField>
-      ) : null}
 
       <div className="space-y-3 rounded-lg border border-border p-3">
         <div className="flex items-center justify-between gap-3">
@@ -402,6 +437,25 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
           </FormField>
         ) : null}
       </div>
+
+      <ImageManager
+        listingId={listingId}
+        images={(listing.images ?? []) as ListingImageRecord[]}
+        getToken={getToken}
+        minimumImages={minimumEvidenceImages}
+        onImagesChange={(images) =>
+          setListing((current) => (current ? { ...current, images } : current))
+        }
+      />
+
+      {activationBlocked ? (
+        <p
+          className="rounded-lg border border-warning/30 bg-warning/10 p-3 text-sm text-text"
+          role="status"
+        >
+          {t("listings.manage.edit.evidenceRequired")}
+        </p>
+      ) : null}
 
       {fieldValues.wholesale ? (
         <div className="space-y-3 rounded-lg border border-border p-3">
@@ -474,22 +528,30 @@ export function ListingEditForm({ locale, listingId }: ListingEditFormProps) {
         type="button"
         variant="secondary"
         className="min-h-11 w-full"
-        disabled={actionLoading !== null}
-        loading={actionLoading === "pause" || actionLoading === "unpause"}
+        disabled={actionLoading !== null || activationBlocked}
+        loading={
+          actionLoading === "publish" || actionLoading === "pause" || actionLoading === "unpause"
+        }
         loadingLabel={
-          actionLoading === "pause"
-            ? t("listings.manage.edit.pausing")
-            : t("listings.manage.edit.unpausing")
+          actionLoading === "publish"
+            ? t("listings.manage.edit.publishingListing")
+            : actionLoading === "pause"
+              ? t("listings.manage.edit.pausing")
+              : t("listings.manage.edit.unpausing")
         }
         onClick={() => void handlePauseToggle()}
       >
-        {actionLoading === "pause"
-          ? t("listings.manage.edit.pausing")
-          : actionLoading === "unpause"
-            ? t("listings.manage.edit.unpausing")
-            : listing.status === "paused"
-              ? t("listings.manage.edit.unpause")
-              : t("listings.manage.edit.pause")}
+        {actionLoading === "publish"
+          ? t("listings.manage.edit.publishingListing")
+          : actionLoading === "pause"
+            ? t("listings.manage.edit.pausing")
+            : actionLoading === "unpause"
+              ? t("listings.manage.edit.unpausing")
+              : listing.status === "draft"
+                ? t("listings.manage.edit.publishListing")
+                : listing.status === "paused"
+                  ? t("listings.manage.edit.unpause")
+                  : t("listings.manage.edit.pause")}
       </Button>
 
       <Button

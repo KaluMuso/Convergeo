@@ -15,6 +15,7 @@ export type AppliedFilterBarLabels = {
   maxPriceOnly: string;
   conditionNew: string;
   conditionRefurbished: string;
+  conditionUsed: string;
   inStock: string;
   outOfStock: string;
   rating4Plus: string;
@@ -42,6 +43,9 @@ function chipLabel(chip: AppliedFilterChip, labels: AppliedFilterBarLabels): str
       }
       return labels.maxPriceOnly.replace("{max}", chip.max ?? "");
     case "condition":
+      if (chip.value === "used") {
+        return labels.conditionUsed;
+      }
       return chip.value === "refurbished" ? labels.conditionRefurbished : labels.conditionNew;
     case "availability":
       return chip.value === "out_of_stock" ? labels.outOfStock : labels.inStock;
