@@ -34,7 +34,7 @@ vi.mock("@vergeo/auth/middleware", async (importOriginal) => {
 // result, passes on ok, and skips verification entirely outside production.
 const { verifyCfAccessAssertionMock, resolveGatedRedirectMock } = vi.hoisted(() => ({
   verifyCfAccessAssertionMock: vi.fn(),
-  resolveGatedRedirectMock: vi.fn(() => null),
+  resolveGatedRedirectMock: vi.fn((): "login" | "onboarding" | "permission-denied" | null => null),
 }));
 
 vi.mock("./lib/cf-access", () => ({

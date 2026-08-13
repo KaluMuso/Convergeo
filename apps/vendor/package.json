@@ -7,7 +7,7 @@
     "dev": "next dev --port 3001",
     "build": "next build",
     "start": "next start --port 3001",
-    "lint": "eslint app lib middleware.ts middleware.test.ts",
+    "lint": "eslint app lib/api-base-url.ts lib/api-base-url.test.ts middleware.ts middleware.test.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },

@@ -1,7 +1,6 @@
 "use client";
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
-import type { AuthPortal } from "@vergeo/auth/portal";
 import { Button } from "@vergeo/ui/src/button";
 import { OtpField } from "@vergeo/ui/src/otp-field";
 import Link from "next/link";
@@ -11,6 +10,8 @@ import { useState } from "react";
 import { parseAuthError, parseRetryAfterFromResponse, RESEND_COOLDOWN_SECONDS } from "./auth-utils";
 import { navigateAfterPortalAuth } from "./post-auth-navigation";
 import { ResendCountdown } from "./resend-countdown";
+
+import type { AuthPortal } from "@vergeo/auth/portal";
 
 type OtpFormLabels = {
   ariaGroup: string;

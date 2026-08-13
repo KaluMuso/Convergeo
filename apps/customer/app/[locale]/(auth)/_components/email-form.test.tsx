@@ -57,8 +57,8 @@ describe("EmailForm portal post-auth", () => {
   });
 
   async function submit(user: ReturnType<typeof userEvent.setup>) {
-    await user.type(screen.getByLabelText("Email address"), "owner@example.com");
-    await user.type(screen.getByLabelText("Password"), "password1");
+    await user.type(screen.getByLabelText(/email address/i), "owner@example.com");
+    await user.type(screen.getByLabelText(/password/i), "password1");
     await user.click(screen.getByRole("button", { name: "Sign in with email" }));
   }
 

@@ -119,22 +119,14 @@ export function resolvePublicApiBaseUrl(
     }
   }
 
-  // Direct `process.env.NODE_ENV` comparison lets Next.js DCE the localhost
-  // default out of production client bundles.
+  // Direct `process.env.NODE_ENV` comparison lets Next.js DCE the else branch
+  // (including the localhost literal) out of production client bundles.
   if (process.env.NODE_ENV === "production") {
     return resolveDeployedConfigured(configured, merged.VERCEL_ENV ?? process.env.VERCEL_ENV);
-  }
-
-  if (isDeployedFrontendEnv(merged)) {
-    return resolveDeployedConfigured(configured, merged.VERCEL_ENV);
-  }
-
-  // Keep the loopback literal inside a NODE_ENV !== "production" branch so
-  // Next.js DCE can strip it from production client bundles. Do not export
-  // this string from the module — an exported const would survive minification.
-  if (process.env.NODE_ENV !== "production") {
+  } else {
+    if (isDeployedFrontendEnv(merged)) {
+      return resolveDeployedConfigured(configured, merged.VERCEL_ENV);
+    }
     return configured ?? "http://localhost:8000";
   }
-
-  return resolveDeployedConfigured(configured, merged.VERCEL_ENV);
 }

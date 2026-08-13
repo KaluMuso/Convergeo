@@ -1,7 +1,6 @@
 "use client";
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
-import type { AuthPortal } from "@vergeo/auth/portal";
 
 import { createAccountApiClient } from "../../account/_components/account-api";
 
@@ -10,6 +9,8 @@ import {
   resolveCustomerPostAuthPath,
   resolvePostAuthPath,
 } from "./auth-utils";
+
+import type { AuthPortal } from "@vergeo/auth/portal";
 
 type AuthRouter = {
   push: (path: string) => void;

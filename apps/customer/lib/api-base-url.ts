@@ -5,9 +5,10 @@ type EnvBag = ApiBaseEnvBag;
 /**
  * Resolve the public API origin for customer fetches.
  *
- * Production and Vercel Preview builds must never fall back to localhost — a
- * missing `NEXT_PUBLIC_API_BASE_URL` fails closed so checkout/payment never
- * silently talk to a developer loopback. Dev keeps the local FastAPI default.
+ * Production and Vercel Preview builds must never fall back to a loopback
+ * origin — a missing `NEXT_PUBLIC_API_BASE_URL` fails closed so checkout
+ * never silently talks to a developer machine. Local `next dev` keeps the
+ * FastAPI default from `@vergeo/config/api-base-url`.
  */
 export function resolveApiBaseUrl(env: EnvBag = {}): string | null {
   return resolvePublicApiBaseUrl(env, ["NEXT_PUBLIC_API_BASE_URL"]);

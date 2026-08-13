@@ -1,7 +1,6 @@
 "use client";
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
-import type { AuthPortal } from "@vergeo/auth/portal";
 import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
@@ -11,6 +10,8 @@ import { useState, type FormEvent } from "react";
 
 import { parseAuthError } from "./auth-utils";
 import { navigateAfterPortalAuth } from "./post-auth-navigation";
+
+import type { AuthPortal } from "@vergeo/auth/portal";
 
 type EmailFormLabels = {
   emailLabel: string;

@@ -6,7 +6,7 @@ type EnvBag = ApiBaseEnvBag;
  * Resolve the public API origin for admin fetches.
  *
  * Admin Vercel projects use `NEXT_PUBLIC_VERGEO_API_URL`. Production and
- * Preview builds must never fall back to localhost when unset.
+ * Preview builds must never fall back to a loopback origin when unset.
  */
 export function resolveApiBaseUrl(env: EnvBag = {}): string | null {
   return resolvePublicApiBaseUrl(env, ["NEXT_PUBLIC_VERGEO_API_URL"]);

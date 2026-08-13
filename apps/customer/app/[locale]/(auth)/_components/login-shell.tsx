@@ -2,7 +2,6 @@
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 import { isGoogleAuthEnabled } from "@vergeo/auth/google-auth";
-import type { AuthPortal } from "@vergeo/auth/portal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -12,6 +11,8 @@ import { EmailForm } from "./email-form";
 import { GoogleButton } from "./google-button";
 import { PhoneForm } from "./phone-form";
 import { navigateAfterPortalAuth } from "./post-auth-navigation";
+
+import type { AuthPortal } from "@vergeo/auth/portal";
 
 export type AuthAppVariant = AuthPortal;
 
