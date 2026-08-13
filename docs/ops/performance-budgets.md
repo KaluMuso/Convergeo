@@ -19,19 +19,20 @@ Wave 10 (`M16-P01`) enforces Vergeo5 performance budgets on every pull request v
 
 **CI-enforced floors** — `lighthouserc.json` → `ci.assert.assertMatrix` (`vergeo.lighthouse.ciEnforced`); a PR fails below these. All `error`-level unless noted:
 
-| Assertion                        | Floor                                              | Notes                                                          |
-| -------------------------------- | -------------------------------------------------- | -------------------------------------------------------------- |
-| First-load JS                    | **≤ 150 KB gz**                                    | Hard `bundle-guard.mjs` gate on every `*/page` route           |
-| LCP (`largest-contentful-paint`) | **≤ 6500 ms**                                      | Local-throttle floor, **not** the 2.5 s production target      |
-| `categories:performance`         | **≥ 0.50**                                         | Local under-scoring vs prod                                    |
-| `categories:accessibility`       | **≥ 0.90**                                         |                                                                |
-| `categories:best-practices`      | **≥ 0.85**                                         |                                                                |
-| `categories:seo`                 | **≥ 0.75** (catalog/PDP/search), **≥ 0.40** (home) | Checkout SEO waived to `warn` — route is `noindex` by design   |
+| Assertion                        | Floor                                              | Notes                                                        |
+| -------------------------------- | -------------------------------------------------- | ------------------------------------------------------------ |
+| First-load JS                    | **≤ 150 KB gz**                                    | Hard `bundle-guard.mjs` gate on every `*/page` route         |
+| LCP (`largest-contentful-paint`) | **≤ 6500 ms**                                      | Local-throttle floor, **not** the 2.5 s production target    |
+| `categories:performance`         | **≥ 0.50**                                         | Local under-scoring vs prod                                  |
+| `categories:accessibility`       | **≥ 0.90**                                         |                                                              |
+| `categories:best-practices`      | **≥ 0.85**                                         |                                                              |
+| `categories:seo`                 | **≥ 0.75** (catalog/PDP/search), **≥ 0.40** (home) | Checkout SEO waived to `warn` — route is `noindex` by design |
 
 ### Lighthouse profile
 
 - **Fast-3G / 360×740** mobile emulation (`lighthouserc.json` → `vergeo.lighthouse.profile`)
 - RTT **150 ms**, downlink **1.6 Mbps**, **4×** CPU slowdown
+- **3 runs per URL** with **median** aggregation on `categories:performance` and `largest-contentful-paint` (LHCI default `optimistic` on single runs was flaking at the perf≥0.50 floor; thresholds unchanged)
 - Runs against a **local production build** (`pnpm --filter customer build && start` on port 3000) with the **FastAPI dev API** on `:8000` backed by a seeded local Supabase stack (`supabase db start && db reset`) so PLP/PDP routes resolve — no Vercel preview required.
 
 ### Bundle measurement

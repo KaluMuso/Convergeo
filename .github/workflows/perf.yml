@@ -228,6 +228,26 @@ jobs:
             fi
           done
 
+      - name: Warm Lighthouse targets (reduce cold-start variance)
+        run: |
+          LIGHTHOUSE_URLS=(
+            http://localhost:3000/en
+            http://localhost:3000/en/c/electronics
+            http://localhost:3000/en/p/smartphone-x1
+            http://localhost:3000/en/search
+            http://localhost:3000/en/checkout
+          )
+          for round in 1 2; do
+            for url in "${LIGHTHOUSE_URLS[@]}"; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' "$url")
+              echo "warmup round ${round}: ${url} -> ${code}"
+              if [ "$code" != "200" ]; then
+                echo "Warmup target not ready: $url"
+                exit 1
+              fi
+            done
+          done
+
       - name: Lighthouse CI (blocking — see lighthouserc.json)
         # Blocking (G19 / VE-P06 / RC-06): assertMatrix uses error level for a11y,
         # best-practices, SEO (except checkout noindex waiver), and CI perf/LCP floors.

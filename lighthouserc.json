@@ -1,7 +1,7 @@
 {
   "ci": {
     "collect": {
-      "numberOfRuns": 1,
+      "numberOfRuns": 3,
       "url": [
         "http://localhost:3000/en",
         "http://localhost:3000/en/c/electronics",
@@ -37,8 +37,11 @@
             "categories:accessibility": ["error", { "minScore": 0.9 }],
             "categories:best-practices": ["error", { "minScore": 0.85 }],
             "categories:seo": ["warn", { "minScore": 0.4 }],
-            "categories:performance": ["error", { "minScore": 0.5 }],
-            "largest-contentful-paint": ["error", { "maxNumericValue": 7200 }]
+            "categories:performance": ["error", { "minScore": 0.5, "aggregationMethod": "median" }],
+            "largest-contentful-paint": [
+              "error",
+              { "maxNumericValue": 7200, "aggregationMethod": "median" }
+            ]
           }
         },
         {
@@ -47,8 +50,11 @@
             "categories:accessibility": ["error", { "minScore": 0.9 }],
             "categories:best-practices": ["error", { "minScore": 0.85 }],
             "categories:seo": ["error", { "minScore": 0.4 }],
-            "categories:performance": ["error", { "minScore": 0.5 }],
-            "largest-contentful-paint": ["error", { "maxNumericValue": 6500 }]
+            "categories:performance": ["error", { "minScore": 0.5, "aggregationMethod": "median" }],
+            "largest-contentful-paint": [
+              "error",
+              { "maxNumericValue": 6500, "aggregationMethod": "median" }
+            ]
           }
         },
         {
@@ -57,8 +63,11 @@
             "categories:accessibility": ["error", { "minScore": 0.9 }],
             "categories:best-practices": ["error", { "minScore": 0.85 }],
             "categories:seo": ["error", { "minScore": 0.75 }],
-            "categories:performance": ["error", { "minScore": 0.5 }],
-            "largest-contentful-paint": ["error", { "maxNumericValue": 6500 }]
+            "categories:performance": ["error", { "minScore": 0.5, "aggregationMethod": "median" }],
+            "largest-contentful-paint": [
+              "error",
+              { "maxNumericValue": 6500, "aggregationMethod": "median" }
+            ]
           }
         },
         {
@@ -67,8 +76,11 @@
             "categories:accessibility": ["error", { "minScore": 0.9 }],
             "categories:best-practices": ["error", { "minScore": 0.85 }],
             "categories:seo": ["error", { "minScore": 0.75 }],
-            "categories:performance": ["error", { "minScore": 0.5 }],
-            "largest-contentful-paint": ["error", { "maxNumericValue": 6500 }]
+            "categories:performance": ["error", { "minScore": 0.5, "aggregationMethod": "median" }],
+            "largest-contentful-paint": [
+              "error",
+              { "maxNumericValue": 6500, "aggregationMethod": "median" }
+            ]
           }
         },
         {
@@ -77,8 +89,11 @@
             "categories:accessibility": ["error", { "minScore": 0.9 }],
             "categories:best-practices": ["error", { "minScore": 0.85 }],
             "categories:seo": ["error", { "minScore": 0.75 }],
-            "categories:performance": ["error", { "minScore": 0.5 }],
-            "largest-contentful-paint": ["error", { "maxNumericValue": 6500 }]
+            "categories:performance": ["error", { "minScore": 0.5, "aggregationMethod": "median" }],
+            "largest-contentful-paint": [
+              "error",
+              { "maxNumericValue": 6500, "aggregationMethod": "median" }
+            ]
           }
         }
       ]
@@ -120,6 +135,7 @@
         "bestPractices": 0.85,
         "lcpMs": 7200,
         "baselineRun": "2026-08-12 CI cold next start (post M22 vendor archetypes + strategy audit merges): checkout LCP ~5200–6900ms under 4× CPU throttle; raised checkout ceiling to 7200ms to absorb runner variance while bundle-guard (≤150 KB gz) remains the hard JS regression gate. Home/search/catalog LCP floor stays 6500ms.",
+        "aggregationNote": "2026-08-13 PERF-MASTER-01: numberOfRuns=3 with median aggregation on perf/LCP assertions — single-run LHCI on cold `next start` was flaking at the perf≥0.50 floor (e.g. /en 0.49 on unrelated SHAs). Thresholds unchanged; measurement hardened.",
         "waiver": "Cold local `next start` under 4× CPU throttle with Cloudinary=demo under-scores vs a warm Vercel preview/CDN. Production G19 (Perf≥90 / SEO≥95 / A11y≥95 / LCP≤2.5s) remains the launch target once LHCI runs against a real preview URL."
       },
       "waivers": [
