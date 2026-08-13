@@ -35,12 +35,24 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
           >
             <img
               alt="Convergeo"
-              class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem]"
+              class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem] dark:hidden"
               data-nimg="1"
               decoding="async"
               height="23"
-              src="/_next/image?url=%2Fverge.webp&w=256&q=75"
-              srcset="/_next/image?url=%2Fverge.webp&w=128&q=75 1x, /_next/image?url=%2Fverge.webp&w=256&q=75 2x"
+              src="/_next/image?url=%2Fbrand-logo-light.webp&w=384&q=75"
+              srcset="/_next/image?url=%2Fbrand-logo-light.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand-logo-light.webp&w=384&q=75 2x"
+              style="color: transparent;"
+              width="132"
+            />
+            <img
+              alt="Convergeo"
+              class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem] hidden dark:block"
+              data-nimg="1"
+              decoding="async"
+              height="23"
+              loading="lazy"
+              src="/_next/image?url=%2Fbrand-logo-dark.webp&w=256&q=75"
+              srcset="/_next/image?url=%2Fbrand-logo-dark.webp&w=128&q=75 1x, /_next/image?url=%2Fbrand-logo-dark.webp&w=256&q=75 2x"
               style="color: transparent;"
               width="126"
             />
@@ -137,12 +149,24 @@ exports[`ShopHeader > matches the approved desktop chrome structure snapshot 1`]
         >
           <img
             alt="Convergeo"
-            class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem]"
+            class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem] dark:hidden"
             data-nimg="1"
             decoding="async"
             height="23"
-            src="/_next/image?url=%2Fverge.webp&w=256&q=75"
-            srcset="/_next/image?url=%2Fverge.webp&w=128&q=75 1x, /_next/image?url=%2Fverge.webp&w=256&q=75 2x"
+            src="/_next/image?url=%2Fbrand-logo-light.webp&w=384&q=75"
+            srcset="/_next/image?url=%2Fbrand-logo-light.webp&w=256&q=75 1x, /_next/image?url=%2Fbrand-logo-light.webp&w=384&q=75 2x"
+            style="color: transparent;"
+            width="132"
+          />
+          <img
+            alt="Convergeo"
+            class="h-6 w-auto max-w-[10rem] object-contain object-left sm:h-7 sm:max-w-[12rem] hidden dark:block"
+            data-nimg="1"
+            decoding="async"
+            height="23"
+            loading="lazy"
+            src="/_next/image?url=%2Fbrand-logo-dark.webp&w=256&q=75"
+            srcset="/_next/image?url=%2Fbrand-logo-dark.webp&w=128&q=75 1x, /_next/image?url=%2Fbrand-logo-dark.webp&w=256&q=75 2x"
             style="color: transparent;"
             width="126"
           />
