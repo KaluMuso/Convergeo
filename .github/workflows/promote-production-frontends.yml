@@ -1,0 +1,299 @@
+name: Promote production frontends
+
+# RELCTRL-01 — explicit Production frontend promotion only.
+# Fast-forwards the `production` Git branch (Vercel Production Branch target).
+# Never auto-runs on push. Does not migrate DB or deploy API.
+#
+# Required GitHub Environment: `production` (founder approval).
+# Secrets: VERCEL_TOKEN, VERCEL_TEAM_ID, PRODUCTION_READONLY_DB_URL
+#
+# Attach a validated release parity contract JSON as a workflow artifact input
+# via the repository path (committed evidence bundle) or upload before dispatch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: "40-char git SHA on master to promote (frontend only)"
+        required: true
+        type: string
+      release_evidence_path:
+        description: "Repo-relative path to release parity contract JSON"
+        required: true
+        type: string
+        default: "infra/release-evidence-contract.example.json"
+      emergency_confirm:
+        description: "Required exact phrase to enable degraded skip controls"
+        required: false
+        type: string
+        default: ""
+      skip_vercel_wait:
+        description: "EMERGENCY ONLY — skip Vercel READY wait (requires emergency_confirm)"
+        required: false
+        type: boolean
+        default: false
+      skip_live_verify:
+        description: "EMERGENCY ONLY — skip verify_live.sh (requires emergency_confirm)"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: promote-production-frontends
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: read
+  checks: read
+
+env:
+  PROD_API_HOST: api.vergeo5.com
+  PROD_SUPABASE_PROJECT_REF: dpadrlxukcjbewpqympu
+
+jobs:
+  guard:
+    name: Resolve and guard candidate
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.resolve.outputs.sha }}
+      short: ${{ steps.resolve.outputs.short }}
+      emergency_mode: ${{ steps.emergency.outputs.mode }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Guard emergency skip controls
+        id: emergency
+        run: |
+          set -euo pipefail
+          confirm="${{ github.event.inputs.emergency_confirm }}"
+          skip_vercel="${{ github.event.inputs.skip_vercel_wait }}"
+          skip_live="${{ github.event.inputs.skip_live_verify }}"
+          if [[ "$skip_vercel" == "true" || "$skip_live" == "true" ]]; then
+            if [[ "$confirm" != "I_ACCEPT_DEGRADED_PRODUCTION_EVIDENCE" ]]; then
+              echo "::error::skip_vercel_wait/skip_live_verify require emergency_confirm=I_ACCEPT_DEGRADED_PRODUCTION_EVIDENCE"
+              exit 1
+            fi
+            echo "mode=degraded" >> "$GITHUB_OUTPUT"
+            echo "::warning::EMERGENCY MODE — post-promotion proof skipped; evidence artifact will be DEGRADED"
+          else
+            echo "mode=normal" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve candidate SHA
+        id: resolve
+        run: |
+          set -euo pipefail
+          raw="${{ github.event.inputs.candidate_sha }}"
+          if [[ ! "$raw" =~ ^[0-9a-f]{7,40}$ ]]; then
+            echo "::error::candidate_sha must be 7–40 hex chars"
+            exit 1
+          fi
+          full="$(git rev-parse "$raw^{commit}")"
+          if [[ ! "$full" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::could not resolve candidate_sha to a commit"
+            exit 1
+          fi
+          echo "sha=$full" >> "$GITHUB_OUTPUT"
+          echo "short=${full:0:12}" >> "$GITHUB_OUTPUT"
+          echo "resolved candidate: $full"
+
+      - name: Require candidate is on master
+        run: |
+          set -euo pipefail
+          candidate="${{ steps.resolve.outputs.sha }}"
+          git fetch origin master
+          if ! git merge-base --is-ancestor "$candidate" origin/master; then
+            echo "::error::candidate $candidate is not contained in origin/master"
+            exit 1
+          fi
+          if [[ "$(git rev-parse origin/master)" == "$candidate" ]]; then
+            echo "candidate is master tip"
+          else
+            echo "candidate is an ancestor of master tip (allowed)"
+          fi
+
+      - name: Refuse force-update of production
+        run: |
+          set -euo pipefail
+          candidate="${{ steps.resolve.outputs.sha }}"
+          if ! git fetch origin production 2>/dev/null; then
+            echo "production branch not on remote yet — first promotion"
+            exit 0
+          fi
+          prod_tip="$(git rev-parse origin/production)"
+          if [[ "$prod_tip" == "$candidate" ]]; then
+            echo "production already at candidate — continuing for evidence re-run"
+            exit 0
+          fi
+          if ! git merge-base --is-ancestor "$prod_tip" "$candidate"; then
+            echo "::error::refusing non-fast-forward production update (prod=$prod_tip candidate=$candidate)"
+            exit 1
+          fi
+
+      - name: Validate release parity contract (fail-closed)
+        run: |
+          set -euo pipefail
+          path="${{ github.event.inputs.release_evidence_path }}"
+          if [[ ! -f "$path" ]]; then
+            echo "::error::release evidence not found at $path"
+            exit 1
+          fi
+          python3 scripts/ci/validate_release_parity.py \
+            --candidate-sha "${{ steps.resolve.outputs.sha }}" \
+            --contract "$path" \
+            --api-base-url "https://${PROD_API_HOST}"
+
+      - name: Download machine-generated Production DB evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCTION_READONLY_DB_URL: ${{ secrets.PRODUCTION_READONLY_DB_URL }}
+        run: |
+          set -euo pipefail
+          contract="${{ github.event.inputs.release_evidence_path }}"
+          run_id="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["production_db_evidence_run_id"])' "$contract")"
+          if [[ -z "$run_id" || "$run_id" == "0" ]]; then
+            echo "::error::production_db_evidence_run_id must reference capture-production-db-evidence.yml"
+            exit 1
+          fi
+          rm -rf /tmp/db-evidence
+          mkdir -p /tmp/db-evidence
+          gh run download "$run_id" \
+            --repo "${{ github.repository }}" \
+            --name production-db-migration-evidence \
+            --dir /tmp/db-evidence
+          evidence="$(find /tmp/db-evidence -name '*.json' | head -1)"
+          if [[ -z "$evidence" ]]; then
+            echo "::error::production-db-migration-evidence artifact missing from run $run_id"
+            exit 1
+          fi
+          cp "$evidence" /tmp/production-db-evidence.json
+          baseline="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["required_db_migration_baseline"])' "$contract")"
+          python3 scripts/ci/validate_production_db_evidence.py \
+            --candidate-sha "${{ steps.resolve.outputs.sha }}" \
+            --required-baseline "$baseline" \
+            --evidence /tmp/production-db-evidence.json
+
+  verify-checks:
+    name: Verify CI + Performance for SHA
+    needs: guard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assert required checks are green
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ needs.guard.outputs.sha }}
+        run: |
+          set -euo pipefail
+          repo="${{ github.repository }}"
+          json="$(gh api "repos/${repo}/commits/${CANDIDATE_SHA}/check-runs" --paginate)"
+          python3 scripts/ci/verify_required_checks.py "$json"
+
+  promote:
+    name: Fast-forward production branch
+    needs: [guard, verify-checks]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: master
+
+      - name: Fast-forward production to candidate (no force)
+        run: |
+          set -euo pipefail
+          candidate="${{ needs.guard.outputs.sha }}"
+          git fetch origin production || true
+          if git show-ref --verify --quiet refs/remotes/origin/production; then
+            prod_tip="$(git rev-parse origin/production)"
+            if [[ "$prod_tip" == "$candidate" ]]; then
+              echo "production already at $candidate"
+            else
+              if ! git merge-base --is-ancestor "$prod_tip" "$candidate"; then
+                echo "::error::non-fast-forward refused"
+                exit 1
+              fi
+              git push origin "${candidate}:refs/heads/production"
+            fi
+          else
+            git push origin "${candidate}:refs/heads/production"
+          fi
+
+  wait-vercel:
+    name: Wait for Vercel Production deployments
+    needs: [guard, promote]
+    if: ${{ github.event.inputs.skip_vercel_wait != true }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Await READY production deployments (all three)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${VERCEL_TOKEN:-}" ]]; then
+            echo "::error::VERCEL_TOKEN required in production environment"
+            exit 1
+          fi
+          bash scripts/ci/vercel-wait-production.sh \
+            --sha "${{ needs.guard.outputs.sha }}" \
+            --report /tmp/vercel-wait-production.json
+
+      - name: Prove customer health buildId
+        run: |
+          set -euo pipefail
+          candidate="${{ needs.guard.outputs.sha }}"
+          body="$(curl -fsS --max-time 30 https://www.vergeo5.com/en/health)"
+          python3 scripts/ci/verify_customer_build_id.py "$body" "$candidate"
+
+      - name: Upload Vercel wait report
+        uses: actions/upload-artifact@v7
+        with:
+          name: vercel-wait-production-${{ needs.guard.outputs.short }}
+          path: /tmp/vercel-wait-production.json
+
+  verify:
+    name: Post-deploy deployment-plane verification
+    needs: [guard, promote, wait-vercel]
+    if: >-
+      always() &&
+      needs.promote.result == 'success' &&
+      (needs.wait-vercel.result == 'success' || needs.wait-vercel.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: verify_live.sh (read-only)
+        if: ${{ github.event.inputs.skip_live_verify != true }}
+        env:
+          MASTER_GIT_SHA: ${{ needs.guard.outputs.sha }}
+          EXPECTED_ENV: production
+        run: bash scripts/ops/verify_live.sh
+
+      - name: Write production release evidence
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/release-evidence
+          verdict="pass"
+          if [[ "${{ needs.guard.outputs.emergency_mode }}" == "degraded" ]]; then
+            verdict="degraded"
+          fi
+          python3 scripts/ci/write_production_release_evidence.py \
+            /tmp/release-evidence/production-frontend-release.json \
+            "${{ needs.guard.outputs.sha }}" \
+            "${{ github.run_id }}" \
+            "${{ github.event.inputs.release_evidence_path }}" \
+            "$verdict" \
+            "${{ needs.guard.outputs.emergency_mode }}"
+
+      - name: Upload production release evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-release-evidence-${{ needs.guard.outputs.short }}
+          path: /tmp/release-evidence/

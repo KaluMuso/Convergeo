@@ -4,6 +4,18 @@ Live topology (2026-07): **customer, vendor, and admin** each have a Vercel
 project (`convergeo-customer`, `convergeo-vendor`, `convergeo-admin`). API and
 n8n remain on OCI.
 
+## Production Branch (RELCTRL-01)
+
+| Setting               | Required value                                          |
+| --------------------- | ------------------------------------------------------- |
+| **Production Branch** | `production` (release-only Git branch)                  |
+| Preview deployments   | All other branches (including `master`, `staging`, PRs) |
+
+`master` merges must **not** replace Production domains. Only fast-forwards of
+`production` (via `.github/workflows/promote-production-frontends.yml` after
+staging certification and parity evidence) may trigger Vercel Production
+deployments. See `docs/ops/production-release-control.md`.
+
 ## Staging Preview (branch `staging`)
 
 STG-01 uses **branch-scoped Preview** configuration on the existing three

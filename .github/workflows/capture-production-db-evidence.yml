@@ -1,0 +1,64 @@
+name: Capture production DB evidence
+
+# RELCTRL-01 — read-only Production migration ledger capture for promotion parity.
+# workflow_dispatch only. Never migrates. Produces a machine-signed artifact bound
+# to candidate_sha + workflow_run_id for promote-production-frontends.yml.
+#
+# Required GitHub Environment: production
+# Secret: PRODUCTION_READONLY_DB_URL (read-only Postgres; never logged)
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: "40-char frontend candidate SHA this evidence binds to"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  capture:
+    name: Capture read-only migration head
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Resolve candidate SHA
+        id: resolve
+        run: |
+          set -euo pipefail
+          raw="${{ github.event.inputs.candidate_sha }}"
+          full="$(git rev-parse "$raw^{commit}")"
+          if [[ ! "$full" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::candidate_sha must resolve to a 40-char commit"
+            exit 1
+          fi
+          echo "sha=$full" >> "$GITHUB_OUTPUT"
+
+      - name: Capture migration evidence (read-only)
+        env:
+          PRODUCTION_READONLY_DB_URL: ${{ secrets.PRODUCTION_READONLY_DB_URL }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${PRODUCTION_READONLY_DB_URL:-}" ]]; then
+            echo "::error::PRODUCTION_READONLY_DB_URL required in production environment"
+            exit 1
+          fi
+          python3 scripts/ci/capture_production_db_evidence.py \
+            --candidate-sha "${{ steps.resolve.outputs.sha }}" \
+            --workflow-run-id "${{ github.run_id }}" \
+            --output /tmp/production-db-evidence.json
+
+      - name: Upload production DB evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-db-migration-evidence
+          path: /tmp/production-db-evidence.json
+          retention-days: 90
