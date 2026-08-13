@@ -5,6 +5,7 @@ import re
 import uuid
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
@@ -12,6 +13,7 @@ from app.errors import AppError
 from app.schemas.base import StrictModel
 from app.services.events.access import hash_access_code
 from app.services.events.cancellation import process_event_cancellation
+from app.services.events.recurrence import RecurrenceError, materialize_recurrence_instances
 from app.services.events.type_policy import (
     VISIBILITIES,
     EventType,
@@ -47,6 +49,7 @@ EventCategory = Literal[
 ]
 
 EventStatus = Literal["draft", "published", "cancelled", "completed"]
+PlatformFeePayer = Literal["organiser", "buyer"]
 EDITABLE_STATUSES = frozenset({"draft", "published"})
 SOLD_TICKET_STATUSES = frozenset({"issued", "checked_in"})
 MAX_EVENT_IMAGES = 8
@@ -94,6 +97,11 @@ class EventCreateRequest(StrictModel):
     event_type: EventType = "standard"
     visibility: Visibility | None = None
     access_code: str | None = Field(default=None, max_length=64)
+    recurrence_rule: str | None = Field(default=None, max_length=1024)
+    recurrence_timezone: str | None = Field(default=None, max_length=64)
+    recurrence_until: str | None = Field(default=None, max_length=64)
+    recurrence_horizon_days: int | None = Field(default=None, ge=14, le=366)
+    platform_fee_payer: PlatformFeePayer = "organiser"
     refund_policy_key: str | None = Field(default=None, max_length=64)
     age_restriction: int | None = Field(default=None, ge=0, le=120)
     terms: str | None = Field(default=None, max_length=4000)
@@ -121,6 +129,11 @@ class EventUpdateRequest(StrictModel):
     event_type: EventType | None = None
     visibility: Visibility | None = None
     access_code: str | None = Field(default=None, max_length=64)
+    recurrence_rule: str | None = Field(default=None, max_length=1024)
+    recurrence_timezone: str | None = Field(default=None, max_length=64)
+    recurrence_until: str | None = Field(default=None, max_length=64)
+    recurrence_horizon_days: int | None = Field(default=None, ge=14, le=366)
+    platform_fee_payer: PlatformFeePayer | None = None
     refund_policy_key: str | None = Field(default=None, max_length=64)
     age_restriction: int | None = Field(default=None, ge=0, le=120)
     terms: str | None = Field(default=None, max_length=4000)
@@ -147,6 +160,10 @@ class EventSummary(StrictModel):
     category: EventCategory | None = None
     event_type: EventType = "standard"
     visibility: Visibility = "public"
+    recurrence_rule: str | None = None
+    recurrence_timezone: str | None = None
+    recurrence_until: datetime | None = None
+    platform_fee_payer: PlatformFeePayer = "organiser"
     venue: str | None = None
     landmark: str | None = None
     images: list[str] = Field(default_factory=list)
@@ -164,6 +181,11 @@ class EventDetailResponse(StrictModel):
     event_type: EventType = "standard"
     visibility: Visibility = "public"
     has_access_code: bool = False
+    recurrence_rule: str | None = None
+    recurrence_timezone: str | None = None
+    recurrence_until: datetime | None = None
+    recurrence_horizon_days: int = 90
+    platform_fee_payer: PlatformFeePayer = "organiser"
     refund_policy_key: str | None = None
     age_restriction: int | None = None
     terms: str | None = None
@@ -222,7 +244,12 @@ def _instance_ends_at(row: dict[str, Any]) -> datetime | None:
     return _parse_starts_at(raw)
 
 
-def _instance_write_payload(event_id: str, instance: EventInstanceInput) -> dict[str, Any]:
+def _instance_write_payload(
+    event_id: str,
+    instance: EventInstanceInput,
+    *,
+    recurrence_key: str | None = None,
+) -> dict[str, Any]:
     """DB payload for an instance insert/update.
 
     ends_at is included only when supplied. On update this preserves any existing
@@ -235,6 +262,8 @@ def _instance_write_payload(event_id: str, instance: EventInstanceInput) -> dict
     }
     if instance.ends_at is not None:
         payload["ends_at"] = _parse_starts_at(instance.ends_at).astimezone(UTC).isoformat()
+    if recurrence_key is not None:
+        payload["recurrence_key"] = recurrence_key
     return payload
 
 
@@ -291,12 +320,110 @@ def _optional_text(row: dict[str, Any], key: str) -> str | None:
     return None
 
 
-def _resolve_access_hash(visibility: str, access_code: str | None) -> str | None:
-    """Hash a private event's access code; None for empty codes or non-private events."""
-    code = (access_code or "").strip()
-    if not code or visibility != "private":
+def _recurrence_until_from_row(row: dict[str, Any]) -> datetime | None:
+    raw = row.get("recurrence_until")
+    if raw is None:
         return None
-    return hash_access_code(code)
+    try:
+        return _parse_starts_at(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _platform_fee_payer_from_row(row: dict[str, Any]) -> PlatformFeePayer:
+    return "buyer" if row.get("platform_fee_payer") == "buyer" else "organiser"
+
+
+def _validate_recurrence_payload(
+    *,
+    event_type: EventType,
+    recurrence_rule: str | None,
+    recurrence_timezone: str | None,
+    recurrence_until: str | None,
+) -> None:
+    """Make recurrence explicit before the database invariant is reached.
+
+    The recurrence engine parses RFC5545 in a dedicated service. Here we keep
+    malformed/partial series drafts from producing a database constraint error.
+    """
+    if event_type != "recurring":
+        if any(value is not None for value in (recurrence_rule, recurrence_timezone, recurrence_until)):
+            raise AppError(
+                code="recurrence_only_for_recurring_event",
+                message="Recurrence fields can only be used on recurring events",
+                http_status=422,
+            )
+        return
+    if not recurrence_rule or not recurrence_timezone:
+        raise AppError(
+            code="recurrence_required",
+            message="Recurring events require an RRULE and timezone",
+            http_status=422,
+            details={"fields": ["recurrence_rule", "recurrence_timezone"]},
+        )
+    if not recurrence_rule.strip().upper().startswith("FREQ="):
+        raise AppError(
+            code="invalid_recurrence_rule",
+            message="recurrence_rule must be an RFC5545 RRULE beginning with FREQ=",
+            http_status=422,
+        )
+    try:
+        ZoneInfo(recurrence_timezone)
+        if recurrence_until is not None:
+            _parse_starts_at(recurrence_until)
+    except (TypeError, ValueError, ZoneInfoNotFoundError):
+        raise AppError(
+            code="invalid_recurrence_timezone",
+            message="recurrence_timezone must be an IANA timezone",
+            http_status=422,
+        ) from None
+
+
+def _has_access_credential(client: Any, event_id: str) -> bool:
+    response = (
+        client.table("event_access_credentials")
+        .select("event_id")
+        .eq("event_id", event_id)
+        .maybe_single()
+        .execute()
+    )
+    return _single_row(response) is not None
+
+
+def _write_access_credential(
+    client: Any,
+    *,
+    event_id: str,
+    visibility: str,
+    access_code: str | None,
+    rotate: bool,
+) -> bool:
+    """Create, rotate, or clear the private credential without exposing its digest."""
+    code = (access_code or "").strip()
+    if visibility != "private" or (rotate and not code):
+        client.table("event_access_credentials").delete().eq("event_id", event_id).execute()
+        return False
+    if not rotate:
+        return _has_access_credential(client, event_id)
+    existing = (
+        client.table("event_access_credentials")
+        .select("version")
+        .eq("event_id", event_id)
+        .maybe_single()
+        .execute()
+    )
+    previous = _single_row(existing)
+    version = int(previous.get("version") or 0) + 1 if previous else 1
+    client.table("event_access_credentials").upsert(
+        {
+            "event_id": event_id,
+            "code_hash": hash_access_code(code),
+            "version": version,
+            "rotated_at": datetime.now(UTC).isoformat(),
+        },
+        on_conflict="event_id",
+    ).execute()
+    return True
 
 
 def _parse_images(value: Any) -> list[str]:
@@ -354,7 +481,8 @@ def _load_event_for_vendor(
         service_client.client.table("events")
         .select(
             "id, organiser_vendor_id, title, slug, description, venue, lat, lng, images, "
-            "status, category_slug, landmark, event_type, visibility, access_code_hash, "
+            "status, category_slug, landmark, event_type, visibility, recurrence_rule, "
+            "recurrence_timezone, recurrence_until, recurrence_horizon_days, platform_fee_payer, "
             "refund_policy_key, age_restriction, terms"
         )
         .eq("id", event_id)
@@ -369,6 +497,7 @@ def _load_event_for_vendor(
             http_status=404,
             details={"message_key": "vendor.events.errors.not_found"},
         )
+    row["_has_access_code"] = _has_access_credential(service_client.client, event_id)
     return row
 
 
@@ -433,7 +562,12 @@ def _serialize_event_detail(
         category=_category_from_row(event_row),
         event_type=normalize_event_type(event_row.get("event_type")),
         visibility=_visibility_from_row(event_row),
-        has_access_code=bool(event_row.get("access_code_hash")),
+        has_access_code=bool(event_row.get("_has_access_code")),
+        recurrence_rule=_optional_text(event_row, "recurrence_rule"),
+        recurrence_timezone=_optional_text(event_row, "recurrence_timezone"),
+        recurrence_until=_recurrence_until_from_row(event_row),
+        recurrence_horizon_days=int(event_row.get("recurrence_horizon_days") or 90),
+        platform_fee_payer=_platform_fee_payer_from_row(event_row),
         refund_policy_key=_optional_text(event_row, "refund_policy_key"),
         age_restriction=int(age_restriction) if age_restriction is not None else None,
         terms=_optional_text(event_row, "terms"),
@@ -468,6 +602,10 @@ def _serialize_event_summary(
         category=_category_from_row(event_row),
         event_type=normalize_event_type(event_row.get("event_type")),
         visibility=_visibility_from_row(event_row),
+        recurrence_rule=_optional_text(event_row, "recurrence_rule"),
+        recurrence_timezone=_optional_text(event_row, "recurrence_timezone"),
+        recurrence_until=_recurrence_until_from_row(event_row),
+        platform_fee_payer=_platform_fee_payer_from_row(event_row),
         venue=event_row.get("venue") if isinstance(event_row.get("venue"), str) else None,
         landmark=_landmark_from_row(event_row),
         images=_parse_images(event_row.get("images")),
@@ -720,7 +858,8 @@ async def list_organiser_events(
         client.table("events")
         .select(
             "id, title, slug, description, venue, images, status, category_slug, landmark, "
-            "event_type, visibility"
+            "event_type, visibility, recurrence_rule, recurrence_timezone, recurrence_until, "
+            "recurrence_horizon_days, platform_fee_payer"
         )
         .eq("organiser_vendor_id", vendor_id)
         .order("updated_at", desc=True)
@@ -745,6 +884,18 @@ async def create_organiser_event(
     vendor = _load_vendor_for_owner(service_client, current_user.id)
     _require_active_kyc_vendor(service_client, vendor)
     _validate_instance_time_order(body.instances)
+    _validate_recurrence_payload(
+        event_type=body.event_type,
+        recurrence_rule=body.recurrence_rule,
+        recurrence_timezone=body.recurrence_timezone,
+        recurrence_until=body.recurrence_until,
+    )
+    if body.event_type == "recurring" and (len(body.instances) != 1 or body.instances[0].ends_at is None):
+        raise AppError(
+            code="recurring_event_seed_required",
+            message="A recurring event needs exactly one seed instance with an end time",
+            http_status=422,
+        )
     vendor_id = str(vendor["id"])
     client = service_client.client
 
@@ -764,7 +915,15 @@ async def create_organiser_event(
         "lng": body.lng,
         "event_type": body.event_type,
         "visibility": resolved_visibility,
-        "access_code_hash": _resolve_access_hash(resolved_visibility, body.access_code),
+        "recurrence_rule": (body.recurrence_rule or "").strip() or None,
+        "recurrence_timezone": (body.recurrence_timezone or "").strip() or None,
+        "recurrence_until": (
+            _parse_starts_at(body.recurrence_until).astimezone(UTC).isoformat()
+            if body.recurrence_until
+            else None
+        ),
+        "recurrence_horizon_days": body.recurrence_horizon_days or 90,
+        "platform_fee_payer": body.platform_fee_payer,
         "refund_policy_key": (body.refund_policy_key or "").strip() or None,
         "age_restriction": body.age_restriction,
         "terms": (body.terms or "").strip() or None,
@@ -781,10 +940,40 @@ async def create_organiser_event(
         )
 
     event_id = str(event_row["id"])
-    for instance in body.instances:
-        client.table("event_instances").insert(
-            _instance_write_payload(event_id, instance)
-        ).execute()
+    event_row["_has_access_code"] = _write_access_credential(
+        client,
+        event_id=event_id,
+        visibility=resolved_visibility,
+        access_code=body.access_code,
+        rotate=body.access_code is not None,
+    )
+    if body.event_type == "recurring":
+        seed = body.instances[0]
+        try:
+            materialize_recurrence_instances(
+                client,
+                event_id=event_id,
+                seed_starts_at=_parse_starts_at(seed.starts_at),
+                seed_ends_at=_parse_starts_at(seed.ends_at or seed.starts_at),
+                capacity=seed.capacity,
+                rule=body.recurrence_rule or "",
+                timezone=body.recurrence_timezone or "",
+                horizon_days=body.recurrence_horizon_days or 90,
+                until=_parse_starts_at(body.recurrence_until) if body.recurrence_until else None,
+            )
+        except RecurrenceError as exc:
+            # The event remains a draft, but no partially materialised series is
+            # exposed. Organisers can correct it with PATCH and retry.
+            raise AppError(
+                code="invalid_recurrence_rule",
+                message=str(exc),
+                http_status=422,
+            ) from exc
+    else:
+        for instance in body.instances:
+            client.table("event_instances").insert(
+                _instance_write_payload(event_id, instance)
+            ).execute()
 
     instances = _fetch_instances(client, event_id)
     sold = _count_sold_tickets(client, [str(row["id"]) for row in instances if row.get("id")])
@@ -845,6 +1034,56 @@ async def update_organiser_event(
         _validate_instances_capacity(body.instances, sold_by_instance=sold_by_instance)
         _validate_instance_time_order(body.instances)
 
+    recurrence_fields = {
+        "recurrence_rule",
+        "recurrence_timezone",
+        "recurrence_until",
+        "recurrence_horizon_days",
+    }
+    current_event_type = normalize_event_type(event_row.get("event_type"))
+    effective_event_type = body.event_type or current_event_type
+    effective_recurrence_rule = (
+        body.recurrence_rule
+        if "recurrence_rule" in body.model_fields_set
+        else _optional_text(event_row, "recurrence_rule")
+    )
+    effective_recurrence_timezone = (
+        body.recurrence_timezone
+        if "recurrence_timezone" in body.model_fields_set
+        else _optional_text(event_row, "recurrence_timezone")
+    )
+    effective_recurrence_until = (
+        body.recurrence_until
+        if "recurrence_until" in body.model_fields_set
+        else (
+            _recurrence_until_from_row(event_row).isoformat()
+            if _recurrence_until_from_row(event_row) is not None
+            else None
+        )
+    )
+    _validate_recurrence_payload(
+        event_type=effective_event_type,
+        recurrence_rule=effective_recurrence_rule,
+        recurrence_timezone=effective_recurrence_timezone,
+        recurrence_until=effective_recurrence_until,
+    )
+    if (
+        (current_event_type == "recurring" or effective_event_type == "recurring")
+        and (body.instances is not None or recurrence_fields & body.model_fields_set)
+        and status == "published"
+    ):
+        raise AppError(
+            code="published_recurrence_locked",
+            message="Change a published recurring series by creating a new series revision",
+            http_status=422,
+        )
+    if current_event_type != "recurring" and effective_event_type == "recurring":
+        raise AppError(
+            code="recurrence_create_only",
+            message="Create a new recurring series instead of converting an existing event",
+            http_status=422,
+        )
+
     venue_before = event_row.get("venue")
     instances_before = [dict(row) for row in existing_instances]
 
@@ -865,30 +1104,36 @@ async def update_organiser_event(
         updates["lng"] = body.lng
     if body.event_type is not None:
         updates["event_type"] = body.event_type
+        if body.event_type != "recurring":
+            updates.update(
+                {
+                    "recurrence_rule": None,
+                    "recurrence_timezone": None,
+                    "recurrence_until": None,
+                }
+            )
     if body.visibility is not None:
         updates["visibility"] = body.visibility
-        if body.visibility != "private":
-            # A code digest has no purpose once an event is no longer private.
-            # Clear it in the same write so the database invariant cannot retain
-            # a stale credential after private -> public/unlisted transitions.
-            updates["access_code_hash"] = None
+    if "recurrence_rule" in body.model_fields_set:
+        updates["recurrence_rule"] = (body.recurrence_rule or "").strip() or None
+    if "recurrence_timezone" in body.model_fields_set:
+        updates["recurrence_timezone"] = (body.recurrence_timezone or "").strip() or None
+    if "recurrence_until" in body.model_fields_set:
+        updates["recurrence_until"] = (
+            _parse_starts_at(body.recurrence_until).astimezone(UTC).isoformat()
+            if body.recurrence_until
+            else None
+        )
+    if body.recurrence_horizon_days is not None:
+        updates["recurrence_horizon_days"] = body.recurrence_horizon_days
+    if body.platform_fee_payer is not None:
+        updates["platform_fee_payer"] = body.platform_fee_payer
     if body.refund_policy_key is not None:
         updates["refund_policy_key"] = body.refund_policy_key.strip() or None
     if body.age_restriction is not None:
         updates["age_restriction"] = body.age_restriction
     if body.terms is not None:
         updates["terms"] = body.terms.strip() or None
-    # Access code: (re)hash when supplied, gated on the effective visibility (the
-    # incoming one if changing, else the stored one). Empty string clears it.
-    if body.access_code is not None:
-        effective_visibility = (
-            body.visibility
-            if body.visibility is not None
-            else str(event_row.get("visibility") or "public")
-        )
-        updates["access_code_hash"] = _resolve_access_hash(
-            effective_visibility, body.access_code
-        )
     if body.images is not None:
         updates["images"] = body.images
 
@@ -903,6 +1148,16 @@ async def update_organiser_event(
         updated = _single_row(response)
         if updated is not None:
             event_row.update(updated)
+
+    effective_visibility = str(event_row.get("visibility") or "public")
+    if body.visibility is not None or body.access_code is not None:
+        event_row["_has_access_code"] = _write_access_credential(
+            client,
+            event_id=event_id,
+            visibility=effective_visibility,
+            access_code=body.access_code,
+            rotate=body.access_code is not None,
+        )
 
     if body.instances is not None:
         existing_instances = _sync_instances(
@@ -951,6 +1206,15 @@ async def publish_organiser_event(
     event_row = _load_event_for_vendor(service_client, event_id=event_id, vendor_id=vendor_id)
     instances = _fetch_instances(client, event_id)
     _assert_publishable_instances(instances, now=datetime.now(UTC))
+    if str(event_row.get("visibility") or "public") == "private" and not _has_access_credential(
+        client, event_id
+    ):
+        raise AppError(
+            code="private_event_access_code_required",
+            message="A private event needs an access code before it can be published",
+            http_status=422,
+            details={"field": "access_code"},
+        )
 
     event_row = _transition_status(
         service_client,

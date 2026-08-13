@@ -14,7 +14,7 @@ from typing import Annotated, Any, Protocol
 
 from app.deps import get_supabase_client
 from app.routers.events_public import EventDetailResponse, build_detail_response
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Header, Response
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -123,9 +123,10 @@ def build_event_ics(event: EventDetailResponse, *, now: datetime) -> str:
 def event_calendar_ics(
     slug: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
+    access_proof: Annotated[str | None, Header(alias="X-Event-Access")] = None,
 ) -> Response:
-    """Public: download an event as an ``.ics`` file (sold-out events included)."""
-    event = build_detail_response(supabase.client, slug)
+    """Download an event as an ``.ics`` file after the same private-event proof."""
+    event = build_detail_response(supabase.client, slug, access_proof=access_proof)
     body = build_event_ics(event, now=datetime.now(UTC))
     return Response(
         content=body,

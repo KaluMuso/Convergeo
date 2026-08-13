@@ -8,14 +8,16 @@ import {
 } from "@vergeo/ui/src/seo/json-ld";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { absoluteApiUrl } from "../../../../../lib/api-base-url";
+import { eventAccessCookieName } from "../../../../../lib/event-access";
 
 import { EventJsonLd, isEventIndexable, type EventJsonLdInput } from "./_components/event-jsonld";
 import { isPastEventInstance } from "./_lib/instance-time";
+import { PrivateEventAccess } from "./_components/private-event-access";
 
 import type { Metadata } from "next";
 
@@ -73,6 +75,7 @@ type EventDetail = {
   min_price_ngwee: number | null;
   is_free: boolean;
   is_sold_out: boolean;
+  visibility?: "public" | "unlisted" | "private";
   organiser: {
     id: string;
     slug: string;
@@ -107,15 +110,26 @@ async function getEventsTranslator(locale: string): Promise<EventsTranslator> {
   }) as unknown as EventsTranslator;
 }
 
-async function fetchEvent(slug: string): Promise<EventDetail | null> {
+async function eventAccessProofFor(slug: string): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get(eventAccessCookieName(slug))?.value ?? null;
+}
+
+async function fetchEvent(slug: string, accessProof?: string | null): Promise<EventDetail | null> {
   const url = absoluteApiUrl(`/events/${encodeURIComponent(slug)}`);
   if (!url) {
     return null;
   }
   try {
-    const response = await fetch(url, {
-      next: { revalidate, tags: [`event:${slug}`, "events"] },
-    });
+    const response = await fetch(
+      url,
+      accessProof
+        ? {
+            cache: "no-store",
+            headers: { "X-Event-Access": accessProof },
+          }
+        : { next: { revalidate, tags: [`event:${slug}`, "events"] } },
+    );
     if (response.status === 404) {
       return null;
     }
@@ -201,7 +215,7 @@ function toEventJsonLdInput(event: EventDetail, locale: string): EventJsonLdInpu
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, slug } = await params;
-  const event = await fetchEvent(slug);
+  const event = await fetchEvent(slug, await eventAccessProofFor(slug));
   const t = await getEventsTranslator(locale);
 
   if (!event) {
@@ -221,7 +235,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ogParams.set("price", formatK(event.min_price_ngwee));
   }
 
-  const indexable = isEventIndexable(
+  const indexable = event.visibility === "public" && isEventIndexable(
     event.instances.map((instance) => ({
       startsAt: instance.starts_at,
       endsAt: instance.ends_at,
@@ -253,10 +267,11 @@ export default async function EventDetailPage({ params }: PageProps) {
   setRequestLocale(locale);
 
   const t = await getEventsTranslator(locale);
-  const event = await fetchEvent(slug);
+  const eventAccessProof = await eventAccessProofFor(slug);
+  const event = await fetchEvent(slug, eventAccessProof);
 
   if (!event) {
-    notFound();
+    return <PrivateEventAccess slug={slug} />;
   }
 
   const heroImage = event.images[0];
@@ -397,6 +412,7 @@ export default async function EventDetailPage({ params }: PageProps) {
             instances={event.instances}
             ticketTypes={event.ticket_types}
             isSoldOut={event.is_sold_out}
+            eventAccessProof={eventAccessProof}
           />
 
           <section className="rounded-lg border border-border bg-bg-2 p-5">

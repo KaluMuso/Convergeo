@@ -12,6 +12,9 @@ import {
   type EventCategory,
   type EventCreatePayload,
   type EventDetail,
+  type EventType,
+  type EventVisibility,
+  type PlatformFeePayer,
 } from "../_lib/events-client";
 import { Button, FormField, Input, Select, Spinner } from "../_lib/ui";
 
@@ -31,6 +34,14 @@ const CATEGORIES: EventCategory[] = [
   "cultural-arts",
   "lifestyle-community",
   "free-rsvp",
+];
+
+const EVENT_TYPES: Array<{ value: EventType; label: string }> = [
+  { value: "single", label: "Single event" },
+  { value: "multi_day", label: "Multi-day event" },
+  { value: "recurring", label: "Recurring series" },
+  { value: "free_rsvp", label: "Free RSVP" },
+  { value: "private", label: "Private event" },
 ];
 
 type EventFormProps = {
@@ -54,6 +65,26 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
   const [lat, setLat] = useState(initialEvent?.lat?.toString() ?? "");
   const [lng, setLng] = useState(initialEvent?.lng?.toString() ?? "");
   const [images, setImages] = useState<string[]>(initialEvent?.images ?? []);
+  const [eventType, setEventType] = useState<EventType>(
+    initialEvent?.event_type === "standard" ? "single" : (initialEvent?.event_type ?? "single"),
+  );
+  const [visibility, setVisibility] = useState<EventVisibility>(
+    initialEvent?.visibility ?? "public",
+  );
+  const [accessCode, setAccessCode] = useState("");
+  const [recurrenceRule, setRecurrenceRule] = useState(initialEvent?.recurrence_rule ?? "");
+  const [recurrenceTimezone, setRecurrenceTimezone] = useState(
+    initialEvent?.recurrence_timezone ?? "Africa/Lusaka",
+  );
+  const [recurrenceUntil, setRecurrenceUntil] = useState(
+    initialEvent?.recurrence_until ? initialEvent.recurrence_until.slice(0, 16) : "",
+  );
+  const [recurrenceHorizonDays, setRecurrenceHorizonDays] = useState(
+    String(initialEvent?.recurrence_horizon_days ?? 90),
+  );
+  const [platformFeePayer, setPlatformFeePayer] = useState<PlatformFeePayer>(
+    initialEvent?.platform_fee_payer ?? "organiser",
+  );
   const [instances, setInstances] = useState<InstanceDraft[]>(
     initialEvent?.instances.length
       ? initialEvent.instances.map((row) => toInstanceDraft(row))
@@ -81,6 +112,14 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
     setLat(initialEvent.lat?.toString() ?? "");
     setLng(initialEvent.lng?.toString() ?? "");
     setImages(initialEvent.images);
+    setEventType(initialEvent.event_type === "standard" ? "single" : initialEvent.event_type);
+    setVisibility(initialEvent.visibility);
+    setAccessCode("");
+    setRecurrenceRule(initialEvent.recurrence_rule ?? "");
+    setRecurrenceTimezone(initialEvent.recurrence_timezone ?? "Africa/Lusaka");
+    setRecurrenceUntil(initialEvent.recurrence_until ? initialEvent.recurrence_until.slice(0, 16) : "");
+    setRecurrenceHorizonDays(String(initialEvent.recurrence_horizon_days ?? 90));
+    setPlatformFeePayer(initialEvent.platform_fee_payer ?? "organiser");
     setInstances(initialEvent.instances.map((row) => toInstanceDraft(row)));
     setStatus(initialEvent.status);
     setTicketsSold(initialEvent.tickets_sold);
@@ -95,12 +134,33 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
     lat: lat.trim() ? Number.parseFloat(lat) : null,
     lng: lng.trim() ? Number.parseFloat(lng) : null,
     images,
+    event_type: eventType,
+    visibility,
+    ...(accessCode.trim() ? { access_code: accessCode.trim() } : {}),
+    ...(eventType === "recurring"
+      ? {
+          recurrence_rule: recurrenceRule.trim() || null,
+          recurrence_timezone: recurrenceTimezone.trim() || null,
+          recurrence_until: recurrenceUntil ? new Date(recurrenceUntil).toISOString() : null,
+          recurrence_horizon_days: Number.parseInt(recurrenceHorizonDays, 10) || 90,
+        }
+      : {}),
+    platform_fee_payer: platformFeePayer,
     instances: draftToPayload(instances),
   });
 
   const handleSave = async () => {
     if (!title.trim()) {
       setError(t("events.errors.required"));
+      return;
+    }
+
+    if (eventType === "recurring" && (!recurrenceRule.trim() || !recurrenceTimezone.trim())) {
+      setError("Recurring events need an RRULE and timezone.");
+      return;
+    }
+    if (eventType === "recurring" && instances.length !== 1) {
+      setError("A recurring series needs one seed date; future dates are generated automatically.");
       return;
     }
 
@@ -221,6 +281,108 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
               {te(`categories.${value}`)}
             </option>
           ))}
+        </Select>
+      </FormField>
+
+      <FormField label="Event format" required requiredMarker="*">
+        <Select
+          value={eventType}
+          onChange={(event) => {
+            const next = event.target.value as EventType;
+            setEventType(next);
+            if (next === "private") {
+              setVisibility("private");
+            }
+          }}
+          disabled={readOnly || saving}
+        >
+          {EVENT_TYPES.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </Select>
+      </FormField>
+
+      <FormField label="Visibility" required requiredMarker="*">
+        <Select
+          value={visibility}
+          onChange={(event) => setVisibility(event.target.value as EventVisibility)}
+          disabled={readOnly || saving}
+        >
+          <option value="public">Public â€” listed in event discovery</option>
+          <option value="unlisted">Unlisted â€” available only by direct link</option>
+          <option value="private">Private â€” access code required</option>
+        </Select>
+      </FormField>
+
+      {visibility === "private" ? (
+        <FormField label={initialEvent?.has_access_code ? "New access code (optional)" : "Access code"}>
+          <Input
+            value={accessCode}
+            onChange={(event) => setAccessCode(event.target.value)}
+            placeholder={initialEvent?.has_access_code ? "Leave blank to keep the current code" : "Set an event access code"}
+            disabled={readOnly || saving}
+            autoComplete="new-password"
+          />
+        </FormField>
+      ) : null}
+
+      {eventType === "recurring" ? (
+        <section className="space-y-3 rounded-lg border border-border bg-surface p-4">
+          <div>
+            <h2 className="text-sm font-semibold text-text">Recurring schedule</h2>
+            <p className="mt-1 text-xs text-text-2">
+              Use an RFC5545 rule, for example FREQ=WEEKLY;BYDAY=SA. The next 14â€“366 days are generated on the server.
+            </p>
+          </div>
+          <FormField label="RRULE" required requiredMarker="*">
+            <Input
+              value={recurrenceRule}
+              onChange={(event) => setRecurrenceRule(event.target.value)}
+              placeholder="FREQ=WEEKLY;BYDAY=SA"
+              disabled={readOnly || saving}
+              required
+            />
+          </FormField>
+          <FormField label="Timezone" required requiredMarker="*">
+            <Input
+              value={recurrenceTimezone}
+              onChange={(event) => setRecurrenceTimezone(event.target.value)}
+              placeholder="Africa/Lusaka"
+              disabled={readOnly || saving}
+              required
+            />
+          </FormField>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="End series (optional)">
+              <Input
+                type="datetime-local"
+                value={recurrenceUntil}
+                onChange={(event) => setRecurrenceUntil(event.target.value)}
+                disabled={readOnly || saving}
+              />
+            </FormField>
+            <FormField label="Rolling horizon (days)">
+              <Input
+                type="number"
+                min="14"
+                max="366"
+                value={recurrenceHorizonDays}
+                onChange={(event) => setRecurrenceHorizonDays(event.target.value)}
+                disabled={readOnly || saving}
+              />
+            </FormField>
+          </div>
+        </section>
+      ) : null}
+
+      <FormField label="Platform fee" required requiredMarker="*">
+        <Select
+          value={platformFeePayer}
+          onChange={(event) => setPlatformFeePayer(event.target.value as PlatformFeePayer)}
+          disabled={readOnly || saving}
+        >
+          <option value="organiser">Absorb it as the organiser</option>
+          <option value="buyer">Show it as a buyer pass-through fee</option>
         </Select>
       </FormField>
 

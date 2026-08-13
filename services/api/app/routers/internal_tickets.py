@@ -30,6 +30,9 @@ class TicketPurchaseRequest(BaseModel):
     # Optional per-attendee names (Wave A/M10-P11). Required only when the ticket
     # type is attendee_named; enforced server-side in purchase._validate_attendee_names.
     attendee_names: list[str] | None = Field(default=None, max_length=20)
+    # Returned only by POST /events/{slug}/access/unlock. It is deliberately a
+    # request body value, never a query parameter that can reach access logs.
+    event_access_proof: str | None = Field(default=None, max_length=2048)
 
     @field_validator("attendee_names")
     @classmethod
@@ -103,6 +106,7 @@ async def ticket_checkout(
         ticket_type_id=body.ticket_type_id,
         qty=body.qty,
         attendee_names=body.attendee_names,
+        event_access_proof=body.event_access_proof,
     )
     return _to_checkout_response(result)
 
@@ -120,6 +124,7 @@ async def ticket_rsvp(
         ticket_type_id=body.ticket_type_id,
         qty=body.qty,
         attendee_names=body.attendee_names,
+        event_access_proof=body.event_access_proof,
     )
     return RsvpResponse(
         checkout_group_id=result.checkout_group_id,

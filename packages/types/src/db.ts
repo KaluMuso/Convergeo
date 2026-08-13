@@ -1021,7 +1021,9 @@ export type Database = {
           ends_at: string
           event_id: string
           id: string
+          recurrence_key: string | null
           starts_at: string
+          status: string
           updated_at: string
         }
         Insert: {
@@ -1030,7 +1032,9 @@ export type Database = {
           ends_at: string
           event_id: string
           id?: string
+          recurrence_key?: string | null
           starts_at: string
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -1039,7 +1043,9 @@ export type Database = {
           ends_at?: string
           event_id?: string
           id?: string
+          recurrence_key?: string | null
           starts_at?: string
+          status?: string
           updated_at?: string
         }
         Relationships: [
@@ -1056,6 +1062,9 @@ export type Database = {
         Row: {
           access_code_hash: string | null
           age_restriction: number | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancellation_reason: string | null
           category_slug: string | null
           created_at: string
           description: string | null
@@ -1066,6 +1075,11 @@ export type Database = {
           lat: number | null
           lng: number | null
           organiser_vendor_id: string
+          platform_fee_payer: string
+          recurrence_horizon_days: number
+          recurrence_rule: string | null
+          recurrence_timezone: string | null
+          recurrence_until: string | null
           refund_policy_key: string | null
           slug: string
           status: string
@@ -1078,6 +1092,9 @@ export type Database = {
         Insert: {
           access_code_hash?: string | null
           age_restriction?: number | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancellation_reason?: string | null
           category_slug?: string | null
           created_at?: string
           description?: string | null
@@ -1088,6 +1105,11 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           organiser_vendor_id: string
+          platform_fee_payer?: string
+          recurrence_horizon_days?: number
+          recurrence_rule?: string | null
+          recurrence_timezone?: string | null
+          recurrence_until?: string | null
           refund_policy_key?: string | null
           slug: string
           status?: string
@@ -1100,6 +1122,9 @@ export type Database = {
         Update: {
           access_code_hash?: string | null
           age_restriction?: number | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancellation_reason?: string | null
           category_slug?: string | null
           created_at?: string
           description?: string | null
@@ -1110,6 +1135,11 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           organiser_vendor_id?: string
+          platform_fee_payer?: string
+          recurrence_horizon_days?: number
+          recurrence_rule?: string | null
+          recurrence_timezone?: string | null
+          recurrence_until?: string | null
           refund_policy_key?: string | null
           slug?: string
           status?: string

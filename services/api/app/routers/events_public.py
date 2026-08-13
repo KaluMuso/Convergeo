@@ -4,12 +4,17 @@ from datetime import date, datetime, time, timedelta
 from typing import Annotated, Any, Literal, Protocol
 from zoneinfo import ZoneInfo
 
+from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.services.events.access import verify_access_code
+from app.services.events.access import (
+    issue_event_access_proof,
+    verify_access_code,
+    verify_event_access_proof,
+)
 from app.services.events.timing import instance_display_end
 from app.services.events.type_policy import normalize_event_type
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Header, Query, Request
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/events", tags=["events"])
@@ -125,6 +130,7 @@ class EventDetailResponse(BaseModel):
     images: list[str] = Field(default_factory=list)
     category: str | None = None
     event_type: str = "standard"
+    visibility: Literal["public", "unlisted", "private"] = "public"
     age_restriction: int | None = None
     instances: list[EventInstanceResponse] = Field(default_factory=list)
     ticket_types: list[TicketTypeResponse] = Field(default_factory=list)
@@ -132,6 +138,15 @@ class EventDetailResponse(BaseModel):
     is_free: bool = False
     is_sold_out: bool = False
     organiser: EventOrganiserResponse
+
+
+class EventAccessUnlockRequest(BaseModel):
+    code: str = Field(min_length=1, max_length=64)
+
+
+class EventAccessUnlockResponse(BaseModel):
+    access_proof: str
+    expires_at: datetime
 
 
 def parse_starts_at(value: Any) -> datetime:
@@ -450,7 +465,7 @@ def _fetch_event_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
         client.table("events")
         .select(
             "id, slug, title, description, venue, lat, lng, images, status, "
-            "category_slug, landmark, event_type, visibility, access_code_hash, "
+            "category_slug, landmark, event_type, visibility, "
             "age_restriction, "
             "organiser_vendor_id, vendors!inner("
             "id, slug, display_name, preferred_badge, logo_url, description, status, "
@@ -631,22 +646,62 @@ def build_browse_response(
     return EventBrowseResponse(items=items, total=len(items), calendar_dates=calendar_dates)
 
 
+def _load_access_credential(client: Any, event_id: str) -> tuple[str, int] | None:
+    response = (
+        client.table("event_access_credentials")
+        .select("code_hash, version")
+        .eq("event_id", event_id)
+        .maybe_single()
+        .execute()
+    )
+    row = response.data
+    if not isinstance(row, dict) or not isinstance(row.get("code_hash"), str):
+        return None
+    try:
+        version = int(row.get("version") or 0)
+    except (TypeError, ValueError):
+        return None
+    return row["code_hash"], version if version > 0 else 1
+
+
+def _require_private_access(client: Any, *, event_id: str, access_proof: str | None) -> None:
+    credential = _load_access_credential(client, event_id)
+    if credential is None or verify_event_access_proof(
+        access_proof,
+        event_id=event_id,
+        credential_version=credential[1],
+    ) is None:
+        # Keep private-event existence non-disclosing.
+        raise AppError("event.not_found", "Event not found", 404)
+
+
+def _rate_limit_access_unlock(request: Request, client: Any) -> None:
+    allowed, retry_after = bump_rate_counter(
+        scope="event_access_unlock_ip",
+        key=get_client_ip(request),
+        window=timedelta(minutes=1),
+        limit=5,
+        client=client,
+    )
+    if not allowed:
+        raise_rate_limited(
+            retry_after=retry_after,
+            message_key="events.access.errors.rateLimited",
+            message="Too many event access attempts",
+        )
+
+
 def build_detail_response(
-    client: Any, slug: str, *, access_code: str | None = None
+    client: Any, slug: str, *, access_proof: str | None = None
 ) -> EventDetailResponse:
     event = _fetch_event_by_slug(client, slug)
     if event is None:
         raise AppError("event.not_found", "Event not found", 404)
 
-    # Private events require a matching access code; without it we 404 rather
-    # than reveal the event exists (a private event with no code set is likewise
-    # unreachable, since verify_access_code returns False for a NULL hash).
+    # Detail accepts the short-lived signed proof only; a code is exchanged on
+    # a dedicated POST so plaintext never travels in URLs or calendar links.
     if str(event.get("visibility") or "public") == "private":
-        stored_hash = event.get("access_code_hash")
-        if not verify_access_code(
-            access_code, stored_hash if isinstance(stored_hash, str) else None
-        ):
-            raise AppError("event.not_found", "Event not found", 404)
+        _require_private_access(client, event_id=str(event["id"]), access_proof=access_proof)
 
     event_id = str(event["id"])
     instances = order_instances(_fetch_instances(client, [event_id]))
@@ -700,6 +755,7 @@ def build_detail_response(
         images=_parse_images(event.get("images")),
         category=category,
         event_type=normalize_event_type(event.get("event_type")),
+        visibility=str(event.get("visibility") or "public"),
         age_restriction=int(age_restriction) if age_restriction is not None else None,
         instances=instance_responses,
         ticket_types=ticket_type_responses,
@@ -730,10 +786,36 @@ def list_events(
     )
 
 
+@router.post("/{slug}/access/unlock", response_model=EventAccessUnlockResponse)
+def unlock_private_event_access(
+    slug: str,
+    body: EventAccessUnlockRequest,
+    request: Request,
+    supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
+) -> EventAccessUnlockResponse:
+    _rate_limit_access_unlock(request, supabase.client)
+    event = _fetch_event_by_slug(supabase.client, slug)
+    if event is None or str(event.get("visibility") or "public") != "private":
+        raise AppError("event.not_found", "Event not found", 404)
+    event_id = str(event["id"])
+    credential = _load_access_credential(supabase.client, event_id)
+    if credential is None or not verify_access_code(body.code, credential[0]):
+        raise AppError("event.not_found", "Event not found", 404)
+    proof = issue_event_access_proof(event_id=event_id, credential_version=credential[1])
+    verified = verify_event_access_proof(
+        proof,
+        event_id=event_id,
+        credential_version=credential[1],
+    )
+    if verified is None:  # pragma: no cover - signing invariant
+        raise RuntimeError("new private-event access proof did not verify")
+    return EventAccessUnlockResponse(access_proof=proof, expires_at=verified.expires_at)
+
+
 @router.get("/{slug}", response_model=EventDetailResponse)
 def get_event(
     slug: str,
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
-    access_code: Annotated[str | None, Query()] = None,
+    access_proof: Annotated[str | None, Header(alias="X-Event-Access")] = None,
 ) -> EventDetailResponse:
-    return build_detail_response(supabase.client, slug, access_code=access_code)
+    return build_detail_response(supabase.client, slug, access_proof=access_proof)
