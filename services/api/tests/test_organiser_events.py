@@ -155,6 +155,11 @@ class FakeTable:
     def update(self, payload: dict[str, Any]) -> FakeQuery:
         return FakeQuery(self, []).update(payload)
 
+    def upsert(
+        self, payload: dict[str, Any], *, on_conflict: str | None = None
+    ) -> FakeQuery:
+        return FakeQuery(self, []).upsert(payload, on_conflict=on_conflict)
+
     def delete(self) -> FakeQuery:
         return FakeQuery(self, []).delete()
 

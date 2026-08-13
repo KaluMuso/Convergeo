@@ -1505,8 +1505,8 @@ export type Database = {
           event_id: string
           expires_at: string
           id: string
-          invitee_phone: string
           invited_by: string
+          invitee_phone: string
           revoked_at: string | null
           role: string
           status: string
@@ -1520,8 +1520,8 @@ export type Database = {
           event_id: string
           expires_at: string
           id?: string
-          invitee_phone: string
           invited_by: string
+          invitee_phone: string
           revoked_at?: string | null
           role: string
           status?: string
@@ -1535,8 +1535,8 @@ export type Database = {
           event_id?: string
           expires_at?: string
           id?: string
-          invitee_phone?: string
           invited_by?: string
+          invitee_phone?: string
           revoked_at?: string | null
           role?: string
           status?: string
@@ -1601,9 +1601,9 @@ export type Database = {
         Row: {
           access_code_hash: string | null
           age_restriction: number | null
+          cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
-          cancellation_reason: string | null
           category_slug: string | null
           created_at: string
           description: string | null
@@ -1631,9 +1631,9 @@ export type Database = {
         Insert: {
           access_code_hash?: string | null
           age_restriction?: number | null
+          cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
-          cancellation_reason?: string | null
           category_slug?: string | null
           created_at?: string
           description?: string | null
@@ -1661,9 +1661,9 @@ export type Database = {
         Update: {
           access_code_hash?: string | null
           age_restriction?: number | null
+          cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
-          cancellation_reason?: string | null
           category_slug?: string | null
           created_at?: string
           description?: string | null
