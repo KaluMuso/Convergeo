@@ -522,6 +522,29 @@ def _enforce_listing_cart_rules(
 ) -> None:
     service = service_db_client()
     listing_id = str(listing["id"])
+    product_class = str(listing.get("product_class") or "A")
+    release_flags = {
+        "C": ("product_class_c_customer_release",),
+        "D": (
+            "product_class_d_customer_release",
+            "product_class_d_operations_approved",
+        ),
+        "E": ("product_class_e_customer_release",),
+    }
+    customer_released = True
+    for flag in release_flags.get(product_class, ()):
+        response = (
+            service.table("feature_flags")
+            .select("enabled")
+            .eq("flag", flag)
+            .maybe_single()
+            .execute()
+        )
+        row = response.data if isinstance(response.data, dict) else None
+        # A missing flag must not make a pre-release product class purchasable.
+        if row is None or row.get("enabled") is not True:
+            customer_released = False
+            break
     evidence_count = count_listing_images(service, listing_id)
     weekly_committed = count_weekly_committed_qty(service, listing_id)
     validate_listing_purchasable_for_cart(
@@ -530,6 +553,7 @@ def _enforce_listing_cart_rules(
         evidence_image_count=evidence_count,
         weekly_committed_qty=weekly_committed,
         location_id=location_id,
+        customer_released=customer_released,
     )
 
 

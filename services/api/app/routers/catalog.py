@@ -498,6 +498,8 @@ def get_standalone_listing(
     # endpoint standalone-only avoids duplicate public detail URLs.
     if row.get("product_id") is not None:
         raise _standalone_listing_not_found()
+    if str(row.get("product_class") or "A") not in _customer_released_product_classes(client):
+        raise _standalone_listing_not_found()
     if bool(row.get("wholesale")) and not include_wholesale:
         raise _standalone_listing_not_found()
     if listing_id in fetch_demo_listing_ids(client, [listing_id]):
@@ -584,6 +586,37 @@ _LISTING_ENRICHED_SELECT = (
     "products(id,slug,name,status),"
     "listing_images(cloudinary_public_id,position)"
 )
+
+
+def _customer_released_product_classes(client: Any) -> set[str]:
+    """Return classes intentionally released to customer discovery.
+
+    A failed/missing flag query is not a reason to expose a partially launched
+    class.  A and B are the launch contract; C/D/E are opt-in release gates.
+    """
+    flags = {
+        "product_class_c_customer_release",
+        "product_class_d_customer_release",
+        "product_class_d_operations_approved",
+        "product_class_e_customer_release",
+    }
+    try:
+        response = client.table("feature_flags").select("flag,enabled").in_("flag", list(flags)).execute()
+        rows = _response_rows(response)
+    except Exception:  # pragma: no cover - defensive fail-closed boundary
+        return {"A", "B"}
+    enabled = {str(row.get("flag")) for row in rows if row.get("enabled") is True}
+    released = {"A", "B"}
+    if "product_class_c_customer_release" in enabled:
+        released.add("C")
+    if {
+        "product_class_d_customer_release",
+        "product_class_d_operations_approved",
+    } <= enabled:
+        released.add("D")
+    if "product_class_e_customer_release" in enabled:
+        released.add("E")
+    return released
 
 
 def _fetch_listings_enriched(
@@ -743,6 +776,7 @@ def _build_candidates(client: Any, category_path: str | None) -> list[_CatalogCa
         listing_ids = [doc.entity_id for doc in search_docs]
     enriched = _fetch_listings_enriched(client, listing_ids)
     ratings = _fetch_listing_ratings(client, listing_ids)
+    released_classes = _customer_released_product_classes(client)
 
     candidates: list[_CatalogCandidate] = []
     for doc in search_docs:
@@ -753,6 +787,8 @@ def _build_candidates(client: Any, category_path: str | None) -> list[_CatalogCa
         vendor = bundle["vendor"]
         product = bundle.get("product")
         listing = _ListingRow.model_validate(listing_row)
+        if listing.product_class not in released_classes:
+            continue
         rating, review_count = ratings.get(doc.entity_id, (0.0, 0))
         in_stock = is_listing_available(
             listing.stock_mode,

@@ -245,6 +245,33 @@ def _nested_row(value: Any) -> dict[str, Any] | None:
     return None
 
 
+def _customer_released_listing_classes(client: Any) -> set[str]:
+    """Resolve the public discovery gates, failing closed for phased classes."""
+    required = {
+        "product_class_c_customer_release",
+        "product_class_d_customer_release",
+        "product_class_d_operations_approved",
+        "product_class_e_customer_release",
+    }
+    try:
+        response = client.table("feature_flags").select("flag,enabled").in_("flag", list(required)).execute()
+        rows = _rows(response)
+    except Exception:  # pragma: no cover - an unavailable gate cannot expose inventory
+        return {"A", "B"}
+    enabled = {str(row.get("flag")) for row in rows if row.get("enabled") is True}
+    released = {"A", "B"}
+    if "product_class_c_customer_release" in enabled:
+        released.add("C")
+    if {
+        "product_class_d_customer_release",
+        "product_class_d_operations_approved",
+    } <= enabled:
+        released.add("D")
+    if "product_class_e_customer_release" in enabled:
+        released.add("E")
+    return released
+
+
 def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
     """Enrich hits with the public slug customers need for deep-links.
 
@@ -277,10 +304,11 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
                 product_slugs[str(entity_id)] = row_slug.strip()
 
     if listing_ids:
+        released_listing_classes = _customer_released_listing_classes(client)
         response = (
             client.table("vendor_listings")
             .select(
-                "id, product_id, title_override, status, "
+                "id, product_id, product_class, title_override, status, "
                 "vendors!inner(status), products(slug, status)"
             )
             .in_("id", listing_ids)
@@ -291,6 +319,8 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
         for row in _rows(response):
             entity_id = row.get("id")
             if not entity_id:
+                continue
+            if str(row.get("product_class") or "A") not in released_listing_classes:
                 continue
             listing_id = str(entity_id)
             if row.get("product_id") is None:

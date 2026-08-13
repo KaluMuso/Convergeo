@@ -43,6 +43,16 @@ LISTING_E_MTO = {
 
 
 class TestClassDCartGuard:
+    def test_fails_closed_until_the_release_gate_is_open(self) -> None:
+        with pytest.raises(AppError) as exc_info:
+            validate_listing_purchasable_for_cart(
+                listing=LISTING_D_USED,
+                qty=1,
+                evidence_image_count=1,
+                customer_released=False,
+            )
+        assert exc_info.value.code == "cart.product_class_release_gated"
+
     def test_fails_without_evidence_images(self) -> None:
         with pytest.raises(AppError) as exc_info:
             validate_listing_purchasable_for_cart(

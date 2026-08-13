@@ -39,8 +39,23 @@ def validate_listing_purchasable_for_cart(
     evidence_image_count: int,
     weekly_committed_qty: int = 0,
     location_id: str | None = None,
+    customer_released: bool = True,
 ) -> None:
     """Raise AppError when a listing fails class-specific cart rules."""
+    product_class = str(listing.get("product_class") or "A")
+    if product_class in {"C", "D", "E"} and not customer_released:
+        raise AppError(
+            code="cart.product_class_release_gated",
+            message=f"Product Class {product_class} is not available to customers yet",
+            http_status=403,
+            details={
+                "message_key": "cart.product_class_release_gated",
+                "listing_id": str(listing.get("id", "")),
+                "product_class": product_class,
+                "retry": False,
+            },
+        )
+
     if is_used_class_listing(listing):
         condition = str(listing.get("condition") or "")
         if condition == "new":
