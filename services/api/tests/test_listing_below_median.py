@@ -84,18 +84,32 @@ def _add_listing(
 ) -> str:
     """Add an active listing; attaches to the scratch product unless standalone."""
     lid = str(uuid.uuid4())
-    prod = "NULL" if standalone else f"'{scratch.product_id}'"
-    result = conn.run(
-        f"""
-        INSERT INTO public.vendor_listings (
-          id, vendor_id, product_id, title_override, price_ngwee,
-          condition, stock_mode, stock_qty, status
-        ) VALUES (
-          '{lid}', '{VENDOR_SHOP_A}', {prod}, 'L{price}', {price},
-          'new', 'tracked', {stock_qty}, 'active'
-        );
-        """
-    )
+    if standalone:
+        cat = _category_id(conn)
+        result = conn.run(
+            f"""
+            INSERT INTO public.vendor_listings (
+              id, vendor_id, product_id, category_id, title_override, price_ngwee,
+              condition, product_class, description, stock_mode, stock_qty, status
+            ) VALUES (
+              '{lid}', '{VENDOR_SHOP_A}', NULL, '{cat}', 'L{price}', {price},
+              'used', 'D', 'Standalone listing for below-median peer-set test.',
+              'tracked', {stock_qty}, 'draft'
+            );
+            """
+        )
+    else:
+        result = conn.run(
+            f"""
+            INSERT INTO public.vendor_listings (
+              id, vendor_id, product_id, title_override, price_ngwee,
+              condition, stock_mode, stock_qty, status
+            ) VALUES (
+              '{lid}', '{VENDOR_SHOP_A}', '{scratch.product_id}', 'L{price}', {price},
+              'new', 'tracked', {stock_qty}, 'active'
+            );
+            """
+        )
     assert result.ok, result.error
     scratch.listing_ids.append(lid)
     return lid

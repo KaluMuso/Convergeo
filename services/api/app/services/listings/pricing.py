@@ -11,7 +11,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
 
-
 PricingMode = Literal["fixed", "measured", "bundle", "tiered", "range", "from", "quote_only"]
 
 
