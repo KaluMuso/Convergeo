@@ -5,14 +5,18 @@ export {
   type ApiErrorEnvelope,
 } from "./api-client";
 export {
+  DEPLOYMENT_PLANE_BUNDLE_MARKER,
   PRODUCTION_API_HOST,
   STAGING_API_HOST,
   hostnameOfOrigin,
   isDeployedFrontendEnv,
   isLoopbackApiOrigin,
   isProductionApiOrigin,
+  isStagingApiOrigin,
+  normalizeDeploymentPlane,
   resolvePublicApiBaseUrl,
   type ApiBaseEnvBag,
+  type DeploymentPlane,
   type PublicApiEnvKey,
 } from "./api-base-url";
 export { loadPublicEnv, type PublicEnv } from "./env";

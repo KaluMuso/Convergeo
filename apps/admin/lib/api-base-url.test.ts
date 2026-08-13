@@ -7,41 +7,50 @@ describe("resolveApiBaseUrl (admin)", () => {
     expect(
       resolveApiBaseUrl({
         NEXT_PUBLIC_VERGEO_API_URL: "https://api.vergeo5.com/",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
         NODE_ENV: "production",
       }),
     ).toBe("https://api.vergeo5.com");
   });
 
-  it("never falls back to localhost in production when unset", () => {
+  it("defaults to the production API on the production plane when unset", () => {
     expect(
       resolveApiBaseUrl({
         NEXT_PUBLIC_VERGEO_API_URL: "",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
         NODE_ENV: "production",
       }),
-    ).toBeNull();
-    expect(getApiBaseUrl({ NEXT_PUBLIC_VERGEO_API_URL: "", NODE_ENV: "production" })).toBe("");
+    ).toBe("https://api.vergeo5.com");
+    expect(
+      getApiBaseUrl({
+        NEXT_PUBLIC_VERGEO_API_URL: "",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
+        NODE_ENV: "production",
+      }),
+    ).toBe("https://api.vergeo5.com");
   });
 
-  it("uses the local FastAPI default in development when unset", () => {
+  it("never infers a loopback origin when the plane is missing", () => {
     expect(
       resolveApiBaseUrl({
         NEXT_PUBLIC_VERGEO_API_URL: undefined,
         NODE_ENV: "development",
       }),
-    ).toBe("http://localhost:8000");
+    ).toBeNull();
   });
 
   it("never ships a loopback or production API URL from a Preview build", () => {
     expect(
       resolveApiBaseUrl({
         NEXT_PUBLIC_VERGEO_API_URL: "http://localhost:8000",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "preview",
         NODE_ENV: "production",
       }),
     ).toBeNull();
     expect(
       resolveApiBaseUrl({
         NEXT_PUBLIC_VERGEO_API_URL: "https://api.vergeo5.com",
-        VERCEL_ENV: "preview",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "preview",
         NODE_ENV: "production",
       }),
     ).toBeNull();

@@ -34,6 +34,7 @@ describe("fetchEventSitemapSlugs", () => {
 
   it("returns published, non-stale slugs when the API base is set", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "https://api.vergeo5.com");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "production");
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({

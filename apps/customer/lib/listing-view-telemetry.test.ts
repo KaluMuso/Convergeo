@@ -41,6 +41,7 @@ describe("listing view telemetry", () => {
     vi.setSystemTime(new Date("2026-08-10T10:00:00Z"));
     capturedBodies = [];
     process.env.NEXT_PUBLIC_API_BASE_URL = API_ORIGIN;
+    process.env.NEXT_PUBLIC_DEPLOYMENT_PLANE = "production";
     localStorage.setItem("vg_session_id", SESSION_ID);
     setOnline(true);
     Object.defineProperty(navigator, "sendBeacon", {
@@ -56,6 +57,7 @@ describe("listing view telemetry", () => {
     __resetListingViewTelemetry();
     localStorage.clear();
     delete process.env.NEXT_PUBLIC_API_BASE_URL;
+    delete process.env.NEXT_PUBLIC_DEPLOYMENT_PLANE;
     vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();

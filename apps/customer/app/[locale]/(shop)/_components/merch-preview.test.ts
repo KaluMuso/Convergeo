@@ -9,6 +9,7 @@ afterEach(() => {
 describe("fetchMerchSlotsFromApi", () => {
   it("maps resolved API slots and passes preview token in the query", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "https://api.example.test");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "production");
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => [

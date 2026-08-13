@@ -7,28 +7,36 @@ describe("resolveApiBaseUrl", () => {
     expect(
       resolveApiBaseUrl({
         NEXT_PUBLIC_API_BASE_URL: "https://api.vergeo5.com/",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
         NODE_ENV: "production",
       }),
     ).toBe("https://api.vergeo5.com");
   });
 
-  it("never falls back to localhost in production when unset", () => {
+  it("defaults to the production API on the production plane when unset", () => {
     expect(
       resolveApiBaseUrl({
         NEXT_PUBLIC_API_BASE_URL: "",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
         NODE_ENV: "production",
       }),
-    ).toBeNull();
-    expect(getApiBaseUrl({ NEXT_PUBLIC_API_BASE_URL: "", NODE_ENV: "production" })).toBe("");
+    ).toBe("https://api.vergeo5.com");
+    expect(
+      getApiBaseUrl({
+        NEXT_PUBLIC_API_BASE_URL: "",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
+        NODE_ENV: "production",
+      }),
+    ).toBe("https://api.vergeo5.com");
   });
 
-  it("uses the local FastAPI default in development when unset", () => {
+  it("never infers a loopback origin when the plane is missing", () => {
     expect(
       resolveApiBaseUrl({
         NEXT_PUBLIC_API_BASE_URL: undefined,
         NODE_ENV: "development",
       }),
-    ).toBe("http://localhost:8000");
+    ).toBeNull();
   });
 });
 
@@ -37,12 +45,13 @@ describe("absoluteApiUrl", () => {
     expect(
       absoluteApiUrl("/events/zed-summer-festival", {
         NEXT_PUBLIC_API_BASE_URL: "https://api.vergeo5.com/",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
         NODE_ENV: "production",
       }),
     ).toBe("https://api.vergeo5.com/events/zed-summer-festival");
   });
 
-  it("returns null when production base is unset (SSG-safe fail-closed)", () => {
+  it("returns null when the plane is unset (SSG-safe fail-closed)", () => {
     expect(
       absoluteApiUrl("/events/zed-summer-festival", {
         NEXT_PUBLIC_API_BASE_URL: "",
@@ -52,15 +61,12 @@ describe("absoluteApiUrl", () => {
   });
 });
 
-// Acceptance guard: a production browser build must never silently call localhost.
-//
-// `NEXT_PUBLIC_API_BASE_URL` and `NODE_ENV` are inlined at `next build`, and a
-// Vercel production build always compiles with `NODE_ENV=production`. Every one
-// of these bags models that build with the var absent/blank in some way; the
-// resolver must fail closed (never a loopback origin) so the shipped bundle
-// cannot bake `http://localhost:8000` into cart / search / PDP / checkout fetches.
 describe("localhost is impossible in a production browser build", () => {
-  type ApiEnvBag = { NEXT_PUBLIC_API_BASE_URL?: string; NODE_ENV?: string };
+  type ApiEnvBag = {
+    NEXT_PUBLIC_API_BASE_URL?: string;
+    NEXT_PUBLIC_DEPLOYMENT_PLANE?: string;
+    NODE_ENV?: string;
+  };
 
   const productionCases: Array<[string, ApiEnvBag]> = [
     ["var entirely absent", { NODE_ENV: "production" }],
@@ -70,35 +76,36 @@ describe("localhost is impossible in a production browser build", () => {
   ];
 
   for (const [label, bag] of productionCases) {
-    it(`fails closed and never yields localhost — ${label}`, () => {
-      // resolveApiBaseUrl -> null; getApiBaseUrl -> "" (relative, same-origin);
-      // absoluteApiUrl -> null so callers skip the fetch instead of hitting a loopback.
+    it(`fails closed and never yields a loopback origin — ${label}`, () => {
       expect(resolveApiBaseUrl(bag)).toBeNull();
       expect(getApiBaseUrl(bag)).toBe("");
-      expect(getApiBaseUrl(bag)).not.toMatch(/localhost|127\.0\.0\.1/);
+      expect(getApiBaseUrl(bag)).not.toMatch(/127\.0\.0\.1|\[::1\]/);
       expect(absoluteApiUrl("/cart", bag)).toBeNull();
-      expect(absoluteApiUrl("/cart", bag) ?? "").not.toMatch(/localhost|127\.0\.0\.1/);
     });
   }
 
-  it("only emits the loopback default outside a production build", () => {
-    // The single audited dev convenience — reachable ONLY when NODE_ENV !== production,
-    // which `next build` never produces.
-    expect(resolveApiBaseUrl({ NODE_ENV: "development" })).toBe("http://localhost:8000");
-    expect(resolveApiBaseUrl({ NODE_ENV: "test" })).toBe("http://localhost:8000");
+  it("only emits the loopback default on an explicit development plane", () => {
+    expect(
+      resolveApiBaseUrl({
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "development",
+        NODE_ENV: "development",
+      }),
+    ).toBe("http://localhost:8000");
+    expect(resolveApiBaseUrl({ NODE_ENV: "test" })).toBeNull();
   });
 
   it("rejects loopback and production-API-on-preview even when explicitly configured", () => {
     expect(
       resolveApiBaseUrl({
         NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
         NODE_ENV: "production",
       }),
     ).toBeNull();
     expect(
       resolveApiBaseUrl({
         NEXT_PUBLIC_API_BASE_URL: "https://api.vergeo5.com",
-        VERCEL_ENV: "preview",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "preview",
         NODE_ENV: "production",
       }),
     ).toBeNull();

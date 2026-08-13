@@ -11,7 +11,8 @@ projects (no separate staging Vercel projects required):
 
 1. Project → Settings → Environment Variables → Preview → Git Branch: `staging`
 2. Apply names from `infra/staging/vercel-preview.env.example`
-3. All three apps must point `NEXT_PUBLIC_API_BASE_URL` /
+3. All three apps must set `NEXT_PUBLIC_DEPLOYMENT_PLANE=staging` (or
+   `preview`) and point `NEXT_PUBLIC_API_BASE_URL` /
    `NEXT_PUBLIC_VERGEO_API_URL` at `https://api.staging.vergeo5.com`
 4. Cross-links (e.g. `NEXT_PUBLIC_VENDOR_APP_URL`) must use staging/preview URLs
 5. No localhost fallbacks; never put secrets in `NEXT_PUBLIC_*`
@@ -46,11 +47,14 @@ Alternatively set Root Directory to `apps/customer` and enable Turborepo remote 
 
 Set in Vercel project → Settings → Environment Variables:
 
-| Name                            | Environments        | Notes                              |
-| ------------------------------- | ------------------- | ---------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Production, Preview | Public Supabase URL                |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Production, Preview | Anon key only — never service role |
-| `NEXT_PUBLIC_API_BASE_URL`      | Production, Preview | e.g. `https://api.vergeo5.com`     |
+| Name                              | Environments        | Notes                                                                                                                                                         |
+| --------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`        | Production, Preview | Public Supabase URL                                                                                                                                           |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`   | Production, Preview | Anon key only — never service role                                                                                                                            |
+| `NEXT_PUBLIC_API_BASE_URL`        | Production, Preview | Production: `https://api.vergeo5.com`. Preview/staging: `https://api.staging.vergeo5.com`                                                                     |
+| `NEXT_PUBLIC_VERGEO_API_URL`      | Production, Preview | Admin only. Same plane mapping as `NEXT_PUBLIC_API_BASE_URL`                                                                                                  |
+| `NEXT_PUBLIC_DEPLOYMENT_PLANE`    | Production, Preview | Production: `production`. Preview and staging branch: `preview` or `staging`. Required at **build** time; `VERCEL_ENV` is not available in the browser bundle |
+| `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED` | Production, Preview | Leave unset/false until the Google provider is enabled and verified                                                                                           |
 
 Server-only secrets (service role, Lenco tokens) **must not** be added to the Vercel customer project.
 

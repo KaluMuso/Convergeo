@@ -55,6 +55,7 @@ describe("contactVendorCapabilityAvailable", () => {
     await expect(
       contactVendorCapabilityAvailable({
         NEXT_PUBLIC_API_BASE_URL: "https://api.vergeo5.com",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
         NODE_ENV: "production",
       }),
     ).resolves.toBe(false);
@@ -71,6 +72,7 @@ describe("contactVendorCapabilityAvailable", () => {
     await expect(
       contactVendorCapabilityAvailable({
         NEXT_PUBLIC_API_BASE_URL: "https://api.vergeo5.com",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
         NODE_ENV: "production",
       }),
     ).resolves.toBe(true);
@@ -82,6 +84,7 @@ describe("contactVendorCapabilityAvailable", () => {
     await expect(
       contactVendorCapabilityAvailable({
         NEXT_PUBLIC_API_BASE_URL: "https://api.vergeo5.com",
+        NEXT_PUBLIC_DEPLOYMENT_PLANE: "production",
         NODE_ENV: "production",
       }),
     ).resolves.toBe(false);

@@ -22,6 +22,7 @@ const API_ORIGIN = "https://api.vergeo5.com";
 
 beforeAll(() => {
   process.env.NEXT_PUBLIC_API_BASE_URL = API_ORIGIN;
+  process.env.NEXT_PUBLIC_DEPLOYMENT_PLANE = "production";
 });
 
 type MatchOpts = {
