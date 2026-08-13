@@ -36,7 +36,9 @@ def _repo_versions() -> list[str]:
 
 
 def _manifest() -> dict[str, Any]:
-    return json.loads(COHORTS_PATH.read_text(encoding="utf-8"))
+    loaded = json.loads(COHORTS_PATH.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
 
 
 def test_v1_profile_is_d33_d34_exact_and_blocks_future_activation() -> None:
