@@ -6,22 +6,28 @@ vi.mock("next-intl/middleware", () => ({
   default: vi.fn(() => vi.fn(() => NextResponse.next())),
 }));
 
-const { shouldRedirectToLoginMock } = vi.hoisted(() => ({
-  shouldRedirectToLoginMock: vi.fn(),
+const { resolveGatedRedirectMock } = vi.hoisted(() => ({
+  resolveGatedRedirectMock: vi.fn(),
 }));
 
 vi.mock("@vergeo/auth/middleware", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@vergeo/auth/middleware")>();
   return {
     ...actual,
-    createLoginRedirect: vi.fn(
-      (request: NextRequest, locale: string, sessionResponse: NextResponse) => {
-        const redirect = NextResponse.redirect(new URL(`/${locale}/login`, request.url));
+    createPortalRedirect: vi.fn(
+      (
+        kind: "login" | "onboarding" | "permission-denied",
+        request: NextRequest,
+        locale: string,
+        sessionResponse: NextResponse,
+      ) => {
+        const path = kind === "login" ? `/${locale}/login` : `/${locale}/${kind}`;
+        const redirect = NextResponse.redirect(new URL(path, request.url));
         return actual.mergeSessionCookies(sessionResponse, redirect);
       },
     ),
     getLocaleFromPath: vi.fn(() => "en"),
-    shouldRedirectToLogin: shouldRedirectToLoginMock,
+    resolveGatedRedirect: resolveGatedRedirectMock,
     updateSession: vi.fn(async () => ({
       response: NextResponse.next(),
       user: null,
@@ -51,8 +57,8 @@ function expectNonceReportOnlyCsp(response: NextResponse): void {
 
 describe("vendor middleware CSP nonce", () => {
   beforeEach(() => {
-    shouldRedirectToLoginMock.mockReset();
-    shouldRedirectToLoginMock.mockReturnValue(false);
+    resolveGatedRedirectMock.mockReset();
+    resolveGatedRedirectMock.mockReturnValue(null);
   });
 
   it("adds a nonce-bearing report-only CSP to pass-through responses", async () => {
@@ -63,11 +69,21 @@ describe("vendor middleware CSP nonce", () => {
   });
 
   it("adds a nonce-bearing report-only CSP to login redirects", async () => {
-    shouldRedirectToLoginMock.mockReturnValue(true);
+    resolveGatedRedirectMock.mockReturnValue("login");
 
     const response = await middleware(new NextRequest("https://vendor.vergeo5.com/en/listings"));
 
     expect(response.status).toBe(307);
+    expectNonceReportOnlyCsp(response);
+  });
+
+  it("sends authenticated non-vendors to onboarding instead of granting access", async () => {
+    resolveGatedRedirectMock.mockReturnValue("onboarding");
+
+    const response = await middleware(new NextRequest("https://vendor.vergeo5.com/en/listings"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://vendor.vergeo5.com/en/onboarding");
     expectNonceReportOnlyCsp(response);
   });
 });

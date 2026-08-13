@@ -1,6 +1,8 @@
 "use client";
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
+import { isGoogleAuthEnabled } from "@vergeo/auth/google-auth";
+import { sanitizeNextPath } from "@vergeo/auth/safe-next";
 import { Button } from "@vergeo/ui/src/button";
 import { useState, type ReactNode } from "react";
 
@@ -51,11 +53,16 @@ export function GoogleButton({
 }: GoogleButtonProps) {
   const [loading, setLoading] = useState(false);
 
+  if (!isGoogleAuthEnabled()) {
+    return null;
+  }
+
   const handleClick = async () => {
     setLoading(true);
     try {
       const supabase = await getBrowserClient();
-      const redirectTo = `${window.location.origin}/${locale}/login?next=${encodeURIComponent(nextPath)}`;
+      const safeNext = sanitizeNextPath(locale, nextPath, `/${locale}`);
+      const redirectTo = `${window.location.origin}/${locale}/login?next=${encodeURIComponent(safeNext)}`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",

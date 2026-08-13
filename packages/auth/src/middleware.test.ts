@@ -9,13 +9,16 @@ import {
   appendCspReporting,
   applyReportOnlyCspNonce,
   createLoginRedirect,
+  createPortalRedirect,
   getLocaleFromPath,
   handleCspReportRequest,
   isAdminBypassActive,
+  isAdminPermissionDeniedPath,
   isAuthExemptPath,
   isCspReportRequest,
   isVendorOnboardingPath,
   mergeSessionCookies,
+  resolveGatedRedirect,
   shouldRedirectToLogin,
   updateSession,
 } from "./middleware";
@@ -197,6 +200,43 @@ describe("middleware matrix", () => {
       ]),
     ).toBe(true);
     expect(shouldRedirectToLogin("vendor", "/en/onboarding", locales, null, [])).toBe(true);
+  });
+
+  it("sends authenticated non-vendors to onboarding rather than login", () => {
+    expect(
+      resolveGatedRedirect("vendor", "/en/listings", locales, { id: "user-1" } as never, [
+        "customer",
+      ]),
+    ).toBe("onboarding");
+    expect(resolveGatedRedirect("vendor", "/en/listings", locales, null, [])).toBe("login");
+    expect(
+      resolveGatedRedirect("vendor", "/en", locales, { id: "user-1" } as never, ["vendor"]),
+    ).toBeNull();
+  });
+
+  it("does not treat authentication as admin authorization", () => {
+    expect(isAdminPermissionDeniedPath("/en/permission-denied", locales)).toBe(true);
+    expect(
+      resolveGatedRedirect("admin", "/en", locales, { id: "user-1" } as never, ["customer"]),
+    ).toBe("permission-denied");
+    expect(
+      resolveGatedRedirect("admin", "/en/permission-denied", locales, { id: "user-1" } as never, [
+        "customer",
+      ]),
+    ).toBeNull();
+    expect(resolveGatedRedirect("admin", "/en", locales, null, [])).toBe("login");
+    expect(
+      resolveGatedRedirect("admin", "/en", locales, { id: "user-1" } as never, ["admin"]),
+    ).toBeNull();
+  });
+
+  it("builds portal redirects without weakening the login next parameter", () => {
+    const request = new NextRequest("http://localhost:3001/en/listings");
+    const onboarding = createPortalRedirect("onboarding", request, "en", NextResponse.next());
+    const denied = createPortalRedirect("permission-denied", request, "en", NextResponse.next());
+
+    expect(onboarding.headers.get("location")).toBe("http://localhost:3001/en/onboarding");
+    expect(denied.headers.get("location")).toBe("http://localhost:3001/en/permission-denied");
   });
 
   it("locale routing helpers preserve locale on redirects", () => {
