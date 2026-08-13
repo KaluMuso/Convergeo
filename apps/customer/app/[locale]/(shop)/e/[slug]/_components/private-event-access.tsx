@@ -1,8 +1,8 @@
 "use client";
 
 import { Button } from "@vergeo/ui/src/button";
-import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
 
 type PrivateEventAccessProps = {

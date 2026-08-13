@@ -10,11 +10,11 @@ the wrong dates.
 from __future__ import annotations
 
 import calendar
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any, Iterator
+from typing import Any
 from zoneinfo import ZoneInfo
-
 
 _WEEKDAYS = {"MO": 0, "TU": 1, "WE": 2, "TH": 3, "FR": 4, "SA": 5, "SU": 6}
 _ALLOWED_PARTS = frozenset({"FREQ", "INTERVAL", "COUNT", "UNTIL", "BYDAY"})

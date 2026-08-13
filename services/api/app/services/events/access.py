@@ -113,8 +113,11 @@ def issue_event_access_proof(
         "s": subject_id,
         "v": credential_version,
     }
-    encoded = _b64_encode(json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8"))
-    signature = hmac.new(_proof_secret(secret), encoded.encode("ascii"), hashlib.sha256).hexdigest()
+    payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    encoded = _b64_encode(payload_json)
+    signature = hmac.new(
+        _proof_secret(secret), encoded.encode("ascii"), hashlib.sha256
+    ).hexdigest()
     return f"{encoded}.{signature}"
 
 

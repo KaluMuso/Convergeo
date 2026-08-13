@@ -347,7 +347,8 @@ def _validate_recurrence_payload(
     malformed/partial series drafts from producing a database constraint error.
     """
     if event_type != "recurring":
-        if any(value is not None for value in (recurrence_rule, recurrence_timezone, recurrence_until)):
+        recurrence_values = (recurrence_rule, recurrence_timezone, recurrence_until)
+        if any(value is not None for value in recurrence_values):
             raise AppError(
                 code="recurrence_only_for_recurring_event",
                 message="Recurrence fields can only be used on recurring events",
@@ -890,7 +891,12 @@ async def create_organiser_event(
         recurrence_timezone=body.recurrence_timezone,
         recurrence_until=body.recurrence_until,
     )
-    if body.event_type == "recurring" and (len(body.instances) != 1 or body.instances[0].ends_at is None):
+    seed = body.instances[0] if body.instances else None
+    recurring_seed_invalid = (
+        body.event_type == "recurring"
+        and (len(body.instances) != 1 or seed is None or seed.ends_at is None)
+    )
+    if recurring_seed_invalid:
         raise AppError(
             code="recurring_event_seed_required",
             message="A recurring event needs exactly one seed instance with an end time",

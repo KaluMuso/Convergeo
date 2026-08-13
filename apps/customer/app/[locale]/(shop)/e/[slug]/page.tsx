@@ -7,8 +7,8 @@ import {
   resolveCloudinaryImageUrls,
 } from "@vergeo/ui/src/seo/json-ld";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
@@ -16,8 +16,8 @@ import { absoluteApiUrl } from "../../../../../lib/api-base-url";
 import { eventAccessCookieName } from "../../../../../lib/event-access";
 
 import { EventJsonLd, isEventIndexable, type EventJsonLdInput } from "./_components/event-jsonld";
-import { isPastEventInstance } from "./_lib/instance-time";
 import { PrivateEventAccess } from "./_components/private-event-access";
+import { isPastEventInstance } from "./_lib/instance-time";
 
 import type { Metadata } from "next";
 
@@ -235,12 +235,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ogParams.set("price", formatK(event.min_price_ngwee));
   }
 
-  const indexable = event.visibility === "public" && isEventIndexable(
-    event.instances.map((instance) => ({
-      startsAt: instance.starts_at,
-      endsAt: instance.ends_at,
-    })),
-  );
+  const indexable =
+    event.visibility === "public" &&
+    isEventIndexable(
+      event.instances.map((instance) => ({
+        startsAt: instance.starts_at,
+        endsAt: instance.ends_at,
+      })),
+    );
 
   return {
     title: t("detail.metaTitle", { title: event.title }),
