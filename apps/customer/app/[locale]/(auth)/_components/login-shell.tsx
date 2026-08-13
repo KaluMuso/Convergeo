@@ -1,6 +1,8 @@
 "use client";
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
+import { isGoogleAuthEnabled } from "@vergeo/auth/google-auth";
+import type { AuthPortal } from "@vergeo/auth/portal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -9,9 +11,9 @@ import { resolvePostAuthPath } from "./auth-utils";
 import { EmailForm } from "./email-form";
 import { GoogleButton } from "./google-button";
 import { PhoneForm } from "./phone-form";
-import { navigateAfterCustomerAuth } from "./post-auth-navigation";
+import { navigateAfterPortalAuth } from "./post-auth-navigation";
 
-export type AuthAppVariant = "customer" | "vendor" | "admin";
+export type AuthAppVariant = AuthPortal;
 
 export type AuthLoginLabels = {
   title: string;
@@ -98,16 +100,17 @@ export function AuthLoginShell({
         return;
       }
 
-      await navigateAfterCustomerAuth({
+      await navigateAfterPortalAuth({
         router,
         locale,
+        portal: variant,
         nextParam,
         fallbackPath: defaultNextPath,
       });
     };
 
     void completeOAuth();
-  }, [defaultNextPath, labels.genericError, locale, nextParam, router]);
+  }, [defaultNextPath, labels.genericError, locale, nextParam, router, variant]);
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -123,6 +126,7 @@ export function AuthLoginShell({
           locale={locale}
           labels={labels.email}
           mode="login"
+          portal={variant}
           defaultNextPath={defaultNextPath}
           nextParam={nextParam}
         />
@@ -149,13 +153,15 @@ export function AuthLoginShell({
         </button>
       ) : null}
 
-      <GoogleButton
-        label={labels.google}
-        loadingLabel={labels.googleLoading}
-        locale={locale}
-        nextPath={postAuthPath}
-        onError={() => setOauthError(labels.genericError)}
-      />
+      {isGoogleAuthEnabled() ? (
+        <GoogleButton
+          label={labels.google}
+          loadingLabel={labels.googleLoading}
+          locale={locale}
+          nextPath={postAuthPath}
+          onError={() => setOauthError(labels.genericError)}
+        />
+      ) : null}
 
       {oauthError ? (
         <p role="alert" className="text-center font-body text-sm text-danger">
@@ -231,9 +237,10 @@ export function AuthSignupShell({
         return;
       }
 
-      await navigateAfterCustomerAuth({
+      await navigateAfterPortalAuth({
         router,
         locale,
+        portal: "customer",
         nextParam,
         fallbackPath: defaultNextPath,
       });
@@ -256,6 +263,7 @@ export function AuthSignupShell({
           locale={locale}
           labels={labels.email}
           mode="signup"
+          portal="customer"
           defaultNextPath={defaultNextPath}
           nextParam={nextParam}
         />
@@ -277,13 +285,15 @@ export function AuthSignupShell({
         {method === "phone" ? labels.emailToggle : labels.phoneToggle}
       </button>
 
-      <GoogleButton
-        label={labels.google}
-        loadingLabel={labels.googleLoading}
-        locale={locale}
-        nextPath={postAuthPath}
-        onError={() => setOauthError(labels.genericError)}
-      />
+      {isGoogleAuthEnabled() ? (
+        <GoogleButton
+          label={labels.google}
+          loadingLabel={labels.googleLoading}
+          locale={locale}
+          nextPath={postAuthPath}
+          onError={() => setOauthError(labels.genericError)}
+        />
+      ) : null}
 
       {oauthError ? (
         <p role="alert" className="text-center font-body text-sm text-danger">

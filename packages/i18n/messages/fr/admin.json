@@ -664,6 +664,11 @@
       "missing": "—"
     }
   },
+  "accessDenied": {
+    "title": "Accès refusé",
+    "body": "Ce compte est connecté mais n'a pas le rôle admin. Atteindre cette page n'est pas une autorisation admin.",
+    "hint": "Connectez-vous avec un compte ayant le rôle admin dans user_roles. Cloudflare Access reste obligatoire."
+  },
   "dashboard": {
     "title": "Tableau de bord des opérations",
     "subtitle": "Agrégats de la plateforme — passifs du grand livre, rapprochement et aperçu de l'entonnoir.",

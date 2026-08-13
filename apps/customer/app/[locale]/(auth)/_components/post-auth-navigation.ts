@@ -1,6 +1,7 @@
 "use client";
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
+import type { AuthPortal } from "@vergeo/auth/portal";
 
 import { createAccountApiClient } from "../../account/_components/account-api";
 
@@ -15,18 +16,36 @@ type AuthRouter = {
   refresh: () => void;
 };
 
-export async function navigateAfterCustomerAuth({
-  router,
-  locale,
-  nextParam,
-  fallbackPath,
-}: {
+export type NavigateAfterPortalAuthArgs = {
   router: AuthRouter;
   locale: string;
+  portal: AuthPortal;
   nextParam?: string | null;
   fallbackPath: string;
-}): Promise<void> {
+};
+
+/**
+ * Portal-aware post-auth navigation.
+ *
+ * Customer may call `/account/preferences` to decide welcome vs destination.
+ * Vendor and Admin must never inherit that Customer onboarding path: they
+ * navigate to a sanitized same-origin destination. Authorization (vendor
+ * ownership / admin role) remains the middleware + API layer's job.
+ */
+export async function navigateAfterPortalAuth({
+  router,
+  locale,
+  portal,
+  nextParam,
+  fallbackPath,
+}: NavigateAfterPortalAuthArgs): Promise<void> {
   const fallback = resolvePostAuthPath(locale, nextParam, fallbackPath);
+
+  if (portal !== "customer") {
+    router.push(fallback);
+    router.refresh();
+    return;
+  }
 
   try {
     const supabase = await getBrowserClient();
@@ -54,4 +73,11 @@ export async function navigateAfterCustomerAuth({
   }
 
   router.refresh();
+}
+
+/** @deprecated Use navigateAfterPortalAuth with portal: "customer" */
+export async function navigateAfterCustomerAuth(
+  args: Omit<NavigateAfterPortalAuthArgs, "portal">,
+): Promise<void> {
+  return navigateAfterPortalAuth({ ...args, portal: "customer" });
 }
