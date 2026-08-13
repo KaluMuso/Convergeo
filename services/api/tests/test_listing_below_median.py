@@ -96,7 +96,7 @@ def _add_listing(
               '{lid}', '{VENDOR_SHOP_A}', NULL, '{cat}', 'L{price}', {price},
               'used', 'used_good', 'D', 'Standalone listing for below-median peer-set test.',
               'Minor wear consistent with used-good condition for test seeding.',
-              'tracked', {stock_qty}, 'draft'
+              'tracked', {stock_qty}, 'active'
             );
             """
         )
