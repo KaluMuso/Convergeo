@@ -187,6 +187,26 @@ class _RealPgServiceClient:
     def table(self, name: str) -> _SqlTableClient:
         return _SqlTableClient(self._conn, name)
 
+    def rpc(self, fn: str, params: dict[str, Any]) -> _SqlRpc:
+        return _SqlRpc(self._conn, fn, params)
+
+
+class _SqlRpc:
+    def __init__(self, conn: PgConn, fn: str, params: dict[str, Any]) -> None:
+        self._conn = conn
+        self._fn = fn
+        self._params = params
+
+    def execute(self) -> _FakeResponse:
+        args = ", ".join(f"{key} := {_sql_value(val)}" for key, val in self._params.items())
+        sql = f"SELECT public.{self._fn}({args});"
+        with _PG_LOCK:
+            result = self._conn.run(sql)
+        assert result.ok, result.error
+        if not result.rows:
+            return _FakeResponse(None)
+        return _FakeResponse(json.loads(result.rows[0]))
+
 
 class _ServiceWrapper:
     def __init__(self, conn: PgConn) -> None:

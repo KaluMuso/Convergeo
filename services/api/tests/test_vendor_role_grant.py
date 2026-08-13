@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import patch
 
 import pytest
 from app.errors import AppError
@@ -125,6 +124,40 @@ class _FakeClient:
 
     def table(self, name: str) -> _FakeQuery:
         return _FakeQuery(self._store, name)
+
+    def rpc(self, fn: str, params: dict[str, Any]) -> _FakeRpc:
+        return _FakeRpc(self._store, fn, params)
+
+
+class _FakeRpc:
+    def __init__(
+        self, store: dict[str, list[dict[str, Any]]], fn: str, params: dict[str, Any]
+    ) -> None:
+        self._store = store
+        self._fn = fn
+        self._params = params
+        self._client = _RpcStoreAdapter(store)
+
+    def execute(self) -> _FakeResponse:
+        if self._fn == "approve_kyc_vendor":
+            from tests.helpers.fake_approve_kyc_rpc import fake_approve_kyc_vendor
+
+            return _FakeResponse(fake_approve_kyc_vendor(self._client, self._params))
+        raise NotImplementedError(f"rpc {self._fn} is not implemented in fake client")
+
+
+class _RpcStoreAdapter:
+    def __init__(self, store: dict[str, list[dict[str, Any]]]) -> None:
+        self._store = store
+        self._block_vendor_role_grant = bool(store.get("_block_vendor_role_grant"))
+
+    def table(self, name: str) -> _FakeTableAdapter:
+        return _FakeTableAdapter(self._store, name)
+
+
+class _FakeTableAdapter:
+    def __init__(self, store: dict[str, list[dict[str, Any]]], name: str) -> None:
+        self.rows = store.setdefault(name, [])
 
 
 class _Wrapper:
@@ -345,27 +378,21 @@ def test_reactivation_via_reapprove_is_idempotent() -> None:
 
 def test_grant_failure_rolls_back_active_vendor() -> None:
     wrapper = _Wrapper(_store())
+    wrapper.store["_block_vendor_role_grant"] = True
 
-    def _boom(*_args: object, **_kwargs: object) -> None:
-        raise AppError(
-            code="vendor_role_grant_failed",
-            message="forced",
-            http_status=500,
+    with pytest.raises(AppError) as exc:
+        transition_approve(
+            actor_id=ADMIN,
+            vendor_id=VENDOR_ID,
+            kyc_record_id=KYC_ID,
+            tier=2,
+            service_client=wrapper,
         )
-
-    with patch("app.services.kyc.state_machine.ensure_vendor_owner_role", side_effect=_boom):
-        with pytest.raises(AppError) as exc:
-            transition_approve(
-                actor_id=ADMIN,
-                vendor_id=VENDOR_ID,
-                kyc_record_id=KYC_ID,
-                tier=2,
-                service_client=wrapper,
-            )
     assert exc.value.code == "vendor_role_grant_failed"
     assert wrapper.store["vendors"][0]["status"] == "pending_kyc"
     assert wrapper.store["kyc_records"][0]["status"] == "submitted"
     assert "vendor" not in _roles_for(wrapper.store, OWNER)
+    assert wrapper.store["audit_log"] == []
 
 
 def test_revoke_keeps_vendor_role() -> None:

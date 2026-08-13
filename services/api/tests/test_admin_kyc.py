@@ -177,6 +177,20 @@ class FakeStorage:
         return self.bucket
 
 
+class FakeRpc:
+    def __init__(self, client: FakeSupabaseClient, fn: str, params: dict[str, Any]) -> None:
+        self._client = client
+        self._fn = fn
+        self._params = params
+
+    def execute(self) -> MagicMock:
+        if self._fn == "approve_kyc_vendor":
+            from tests.helpers.fake_approve_kyc_rpc import fake_approve_kyc_vendor
+
+            return MagicMock(data=fake_approve_kyc_vendor(self._client, self._params))
+        raise NotImplementedError(self._fn)
+
+
 class FakeSupabaseClient:
     def __init__(self) -> None:
         self.tables: dict[str, FakeTable] = {
@@ -187,9 +201,13 @@ class FakeSupabaseClient:
             "user_roles": FakeTable(),
         }
         self.storage = FakeStorage()
+        self._block_vendor_role_grant = False
 
     def table(self, name: str) -> FakeTable:
         return self.tables[name]
+
+    def rpc(self, fn: str, params: dict[str, Any]) -> FakeRpc:
+        return FakeRpc(self, fn, params)
 
 
 @pytest.fixture

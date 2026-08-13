@@ -3,10 +3,22 @@
 Auto-provisions vendor/admin roles into the JWT so login works end-to-end
 without manually editing Supabase App Metadata.
 
-**Do not enable this hook from AUTH-VENDOR-ROLE-01.** SQL function existence
+**Do not enable this hook from AUTH-VENDOR-ROLE-01/02.** SQL function existence
 is not proof that Auth is invoking it. Live Dashboard hook registration could
 not be read via MCP (`HOOK_REGISTRATION_UNVERIFIED` for staging and
 production).
+
+**Supabase projects (read-only verification):**
+
+| Environment       | Project          | Ref                    |
+| ----------------- | ---------------- | ---------------------- |
+| Staging / sandbox | `vergeo-sandbox` | `iyasmrmbcrvlfxpzescb` |
+| Production        | `Vergeo5`        | `dpadrlxukcjbewpqympu` |
+
+On both projects, `public.custom_access_token_hook` exists and
+`auth_admin_read_user_roles` is present on `public.user_roles`. Hook
+**registration** in the Auth Dashboard remains unverified — treat as
+`HOOK_REGISTRATION_UNVERIFIED` until an operator exports Dashboard evidence.
 
 ## The gap this closes
 
