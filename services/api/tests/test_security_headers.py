@@ -85,7 +85,7 @@ def test_production_cors_rejects_localhost(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "dev")
     monkeypatch.setenv("SUPABASE_ANON_KEY", "dev")
     monkeypatch.setenv("ENV", "production")
-    monkeypatch.setenv("CORS_ORIGINS", "http://localhost:3000")
+    monkeypatch.setenv("CORS_ORIGINS", "https://localhost:3000")
     from app.settings import get_settings
 
     get_settings.cache_clear()
