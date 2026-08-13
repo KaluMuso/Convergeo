@@ -19,6 +19,12 @@ function writeBundle(root, app, source) {
   writeFileSync(join(dir, "main.js"), source);
 }
 
+function writeMiddleware(root, app, source) {
+  const dir = join(root, "apps", app, ".next", "server");
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, "middleware.js"), source);
+}
+
 describe("parseCliArgs / required apps", () => {
   it("defaults to all three frontends when unscoped", () => {
     const args = parseCliArgs([], {});
@@ -133,6 +139,14 @@ describe("inspectBundleSource", () => {
     });
     assert.equal(mismatch[0]?.kind, "production_targets_staging");
   });
+
+  it("loopback-only mode ignores CSP staging/production API allowlists", () => {
+    const hits = inspectBundleSource(
+      "connect-src https://api.vergeo5.com https://api.staging.vergeo5.com",
+      { expectedPlane: "production", loopbackOnly: true },
+    );
+    assert.deepEqual(hits, []);
+  });
 });
 
 describe("evaluateGuard fixtures", () => {
@@ -154,6 +168,39 @@ describe("evaluateGuard fixtures", () => {
       const result = evaluateGuard({ root, requiredApps: ["customer"] });
       assert.equal(result.ok, false);
       assert.ok(result.failures.includes("bundle:customer"));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("fails loopback in middleware.js and allows CSP API allowlists there", () => {
+    const root = mkdtempSync(join(tmpdir(), "loopback-guard-mw-"));
+    try {
+      writeBundle(root, "customer", 'export const api="https://api.vergeo5.com"');
+      writeMiddleware(
+        root,
+        "customer",
+        'export const csp="connect-src http://localhost:8000 https://api.vergeo5.com"',
+      );
+      const loopback = evaluateGuard({
+        root,
+        requiredApps: ["customer"],
+        expectedPlane: "production",
+      });
+      assert.equal(loopback.ok, false);
+      assert.ok(loopback.failures.includes("bundle:customer"));
+
+      writeMiddleware(
+        root,
+        "customer",
+        'export const csp="connect-src https://api.vergeo5.com https://api.staging.vergeo5.com"',
+      );
+      const csp = evaluateGuard({
+        root,
+        requiredApps: ["customer"],
+        expectedPlane: "production",
+      });
+      assert.equal(csp.ok, true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

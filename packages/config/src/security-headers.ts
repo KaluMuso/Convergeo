@@ -52,8 +52,13 @@ export function resolveApiConnectOrigins(env: EnvBag = process.env): string {
     }
   }
 
-  if (isDevelopmentEnv(env)) {
-    origins.add("http://localhost:8000");
+  // Direct `process.env.NODE_ENV` comparison so production Next.js builds DCE
+  // the loopback literal out of middleware / CSP helpers. Passing `env` into
+  // `isDevelopmentEnv` is not enough for Terser to drop the string.
+  if (process.env.NODE_ENV !== "production") {
+    if (isDevelopmentEnv(env)) {
+      origins.add("http://localhost:8000");
+    }
   }
 
   return [...origins].join(" ");

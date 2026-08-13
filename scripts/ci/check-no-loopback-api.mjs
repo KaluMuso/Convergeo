@@ -124,12 +124,15 @@ export function planeApiMismatch(env = {}) {
   return null;
 }
 
-export function inspectBundleSource(source, { expectedPlane, envPlane } = {}) {
+export function inspectBundleSource(source, { expectedPlane, envPlane, loopbackOnly } = {}) {
   /** @type {{ kind: string, match: string }[]} */
   const hits = [];
   const loopback = source.match(LOOPBACK_API);
   if (loopback) {
     hits.push({ kind: "loopback", match: loopback[0] });
+  }
+  if (loopbackOnly) {
+    return hits;
   }
   const marker = source.match(PLANE_MARKER);
   const plane = expectedPlane || marker?.[1] || envPlane || "";
@@ -181,12 +184,20 @@ export function inspectApp(root, app, { required, expectedPlane, envPlane } = {}
     ...collectJsFiles(join(nextDir, "server", "chunks")),
     ...collectJsFiles(join(nextDir, "server", "app")),
   ];
+  const middleware = join(nextDir, "server", "middleware.js");
   /** @type {{ file: string, kind: string, match: string }[]} */
   const hits = [];
   for (const file of files) {
     const source = readFileSync(file, "utf8");
     for (const hit of inspectBundleSource(source, { expectedPlane, envPlane })) {
       hits.push({ file: relative(root, file), ...hit });
+    }
+  }
+  // Middleware CSP allowlists both API hosts; scan it for loopback only.
+  if (existsSync(middleware)) {
+    const source = readFileSync(middleware, "utf8");
+    for (const hit of inspectBundleSource(source, { loopbackOnly: true })) {
+      hits.push({ file: relative(root, middleware), ...hit });
     }
   }
   return {

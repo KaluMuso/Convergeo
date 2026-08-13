@@ -48,6 +48,12 @@ Preview use the production API.
 
 - Unrelated changes with no customer/vendor/admin turbo tasks: pass.
 - Affected frontend missing `.next`: fail.
-- Loopback `:8000` origin in deployable JS: fail.
+- Loopback `:8000` origin in deployable JS **including** `.next/server/middleware.js`: fail.
 - Preview/staging bundle or env targeting `https://api.vergeo5.com`: fail.
 - Production bundle or env targeting `https://api.staging.vergeo5.com`: fail.
+
+Middleware CSP may list both API hosts as a connect-src allowlist. The guard
+scans middleware for loopback only; it does not treat a CSP allowlist as the
+bundle targeting the other plane. Production middleware must not contain
+`http://localhost:8000` — `resolveApiConnectOrigins` DCE-strips that literal
+when `NODE_ENV === "production"`.
