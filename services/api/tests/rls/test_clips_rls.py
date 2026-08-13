@@ -172,13 +172,14 @@ def _seed_clip(db: PgConn, *, vendor_id: str, status: str) -> str:
 
 def _seed_listing(db: PgConn, *, vendor_id: str) -> str:
     listing_id = str(uuid.uuid4())
+    product_id = "b0000000-0000-0000-0000-000000000001"
     result = db.run(
         f"""
         BEGIN;
         INSERT INTO public.vendor_listings
-          (id, vendor_id, title_override, price_ngwee, condition, stock_mode, status)
-        VALUES ('{listing_id}', '{vendor_id}', 'Clip listing', 150000, 'new',
-                'always_available', 'active');
+          (id, vendor_id, product_id, product_class, title_override, price_ngwee, condition, stock_mode, status)
+        VALUES ('{listing_id}', '{vendor_id}', '{product_id}', 'A', 'Clip listing', 150000, 'new',
+                'always_available', 'draft');
         COMMIT;
         """
     )

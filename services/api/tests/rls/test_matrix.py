@@ -638,6 +638,16 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: select_only(),
         Persona.ADMIN: select_only(),
     },
+    "category_product_policies": {
+        # 20260813064106: public taxonomy policy read; writes are admin-policy only
+        # but authenticated has SELECT grant only (no client INSERT grant).
+        Persona.ANON: select_only(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "categories": {
         Persona.ANON: {
             "select": "permit",
@@ -1141,6 +1151,14 @@ EXPECTATIONS: TableExpectations = {
         Persona.OTHER_VENDOR: select_only(),
         Persona.ADMIN: select_only(),
     },
+    "fx_rates": {
+        Persona.ANON: select_only(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
     "invoice_counters": {
         Persona.ANON: {
             "select": "deny",
@@ -1491,6 +1509,39 @@ EXPECTATIONS: TableExpectations = {
             "update": "permit",
             "delete": "permit",
         },
+    },
+    "listing_evidence": {
+        # Private listing evidence: authenticated SELECT grant + owner/admin policies.
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
+    "listing_option_groups": {
+        Persona.ANON: select_only(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
+    "listing_option_values": {
+        Persona.ANON: select_only(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
+    "listing_specification_snapshots": {
+        Persona.ANON: deny_all(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
     },
     # R02-P08. Per-branch stock is publicly READABLE (a customer must be able to
     # see which branch actually has the item) but never client-writable:
@@ -2031,6 +2082,30 @@ EXPECTATIONS: TableExpectations = {
             "update": "deny",
             "delete": "deny",
         },
+    },
+    "product_variant_groups": {
+        Persona.ANON: select_only(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
+    "product_variant_values": {
+        Persona.ANON: select_only(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
+    },
+    "product_variants": {
+        Persona.ANON: select_only(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
     },
     "profiles": {
         Persona.ANON: {
@@ -2918,13 +2993,13 @@ EXPECTATIONS: TableExpectations = {
         },
         Persona.VENDOR: {
             "select": "permit",
-            "insert": "deny",
+            "insert": "permit",
             "update": "permit",
             "delete": "permit",
         },
         Persona.OTHER_VENDOR: {
             "select": "permit",
-            "insert": "deny",
+            "insert": "permit",
             "update": "permit",
             "delete": "permit",
         },
@@ -2934,6 +3009,14 @@ EXPECTATIONS: TableExpectations = {
             "update": "permit",
             "delete": "permit",
         },
+    },
+    "vendor_listing_variants": {
+        Persona.ANON: select_only(),
+        Persona.CUSTOMER: select_only(),
+        Persona.OTHER_CUSTOMER: select_only(),
+        Persona.VENDOR: select_only(),
+        Persona.OTHER_VENDOR: select_only(),
+        Persona.ADMIN: select_only(),
     },
     "vendor_locations": {
         Persona.ANON: {
@@ -3109,6 +3192,12 @@ EXPECTATIONS: TableExpectations = {
 
 MATRIX_SUMMARY: Counter[str] = Counter()
 
+_LISTING_PROBE_PRODUCT_ID = "b0000000-0000-0000-0000-000000000001"
+_LISTING_PROBE_VENDOR_IDS: dict[Persona, str] = {
+    Persona.VENDOR: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    Persona.OTHER_VENDOR: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+}
+
 
 def _is_permission_denied(result: Any) -> bool:
     if result.ok:
@@ -3128,8 +3217,24 @@ def _probe_select(session: RoleSession, table: str) -> Any:
 
 
 def _probe_insert(session: RoleSession, table: str) -> Any:
+    if table == "vendor_listings":
+        return _probe_vendor_listings_insert(session)
     session.execute("SAVEPOINT rls_probe")
     result = session.execute(f"INSERT INTO public.{table} DEFAULT VALUES RETURNING 1")
+    session.execute("ROLLBACK TO SAVEPOINT rls_probe")
+    return result
+
+
+def _probe_vendor_listings_insert(session: RoleSession) -> Any:
+    """Owner insert is granted; DEFAULT VALUES fails on NOT NULL instead of RLS."""
+    vendor_id = _LISTING_PROBE_VENDOR_IDS.get(session.persona, _LISTING_PROBE_VENDOR_IDS[Persona.VENDOR])
+    session.execute("SAVEPOINT rls_probe")
+    result = session.execute(
+        "INSERT INTO public.vendor_listings "
+        f"(vendor_id, product_id, product_class, price_ngwee, condition, stock_mode, status) "
+        f"VALUES ('{vendor_id}', '{_LISTING_PROBE_PRODUCT_ID}', 'A', 150000, 'new', "
+        "'always_available', 'draft') RETURNING 1"
+    )
     session.execute("ROLLBACK TO SAVEPOINT rls_probe")
     return result
 
