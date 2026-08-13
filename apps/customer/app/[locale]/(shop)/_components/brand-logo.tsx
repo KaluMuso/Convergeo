@@ -19,7 +19,7 @@ export function BrandLogo({ appName, compact = false, className }: BrandLogoProp
       <Image
         src="/verge.webp"
         alt={appName}
-        width={compact ? 132 : 168}
+        width={compact ? 99 : 126}
         height={compact ? 18 : 23}
         priority
         className={
