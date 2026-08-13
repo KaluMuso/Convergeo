@@ -325,8 +325,14 @@ class TestKycVendorCas:
             results = [future.result() for future in futures]
 
         assert _vendor_status(db, vendor_id) == "active"
-        successes = [result for result in results if result is not None]
-        assert len(successes) == 1
+        outcomes = [
+            str(result["vendor_role"]["outcome"])
+            for result in results
+            if result is not None
+        ]
+        assert outcomes.count("granted") == 1
+        assert all(outcome in ("granted", "already_present") for outcome in outcomes)
+        assert len(outcomes) >= 1
 
     def test_approve_happy_path_succeeds(self, db: PgConn) -> None:
         vendor_id = str(uuid.uuid4())

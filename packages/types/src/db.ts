@@ -5609,6 +5609,15 @@ export type Database = {
       }
     }
     Functions: {
+      approve_kyc_vendor: {
+        Args: {
+          p_actor_id: string
+          p_kyc_record_id: string
+          p_reviewer_notes?: string
+          p_tier: number
+        }
+        Returns: Json
+      }
       ask_current_month_key: { Args: never; Returns: string }
       ask_monthly_cap_usd_micros: { Args: never; Returns: number }
       ask_read_config_int: {

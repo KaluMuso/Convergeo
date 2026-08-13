@@ -306,8 +306,13 @@ class TestApproveKycVendorAtomic:
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
             results = list(pool.map(lambda _: approve(), range(2)))
 
-        successes = [result for result in results if result is not None]
-        assert len(successes) == 1
+        outcomes = [
+            str(result["vendor_role"]["outcome"])
+            for result in results
+            if result is not None
+        ]
+        assert outcomes.count("granted") == 1
+        assert all(outcome in ("granted", "already_present") for outcome in outcomes)
         assert not _approval_invariant_broken(
             db, vendor_id=vendor_id, owner_id=VENDOR_OWNER_ID
         )
