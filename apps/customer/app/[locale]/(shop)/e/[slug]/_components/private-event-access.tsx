@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@vergeo/ui/src/button";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
@@ -13,6 +14,7 @@ type PrivateEventAccessProps = {
  * an event URL, browser history, analytics query string, or the public API log.
  */
 export function PrivateEventAccess({ slug }: PrivateEventAccessProps) {
+  const t = useTranslations("events.access");
   const router = useRouter();
   const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -33,13 +35,13 @@ export function PrivateEventAccess({ slug }: PrivateEventAccessProps) {
         body: JSON.stringify({ code: code.trim() }),
       });
       if (!response.ok) {
-        setError("The event is unavailable or that access code is invalid.");
+        setError(t("errors.invalid"));
         return;
       }
       setCode("");
       router.refresh();
     } catch {
-      setError("We could not verify that code. Please try again.");
+      setError(t("errors.network"));
     } finally {
       setSubmitting(false);
     }
@@ -48,13 +50,11 @@ export function PrivateEventAccess({ slug }: PrivateEventAccessProps) {
   return (
     <main className="mx-auto flex min-h-[55vh] w-full max-w-md items-center px-4 py-12">
       <section className="w-full rounded-lg border border-border bg-surface p-6 shadow-2">
-        <h1 className="font-display text-h2 text-display-ink">Event access</h1>
-        <p className="mt-2 text-sm leading-relaxed text-text-2">
-          If you received an event access code, enter it below to continue.
-        </p>
+        <h1 className="font-display text-h2 text-display-ink">{t("title")}</h1>
+        <p className="mt-2 text-sm leading-relaxed text-text-2">{t("intro")}</p>
         <form className="mt-5 flex flex-col gap-3" onSubmit={unlock}>
           <label className="flex flex-col gap-1.5 text-sm font-medium text-text">
-            Access code
+            {t("codeLabel")}
             <input
               autoComplete="one-time-code"
               className="min-h-11 rounded-md border border-border bg-bg px-3 text-text"
@@ -66,9 +66,13 @@ export function PrivateEventAccess({ slug }: PrivateEventAccessProps) {
               value={code}
             />
           </label>
-          {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
+          {error ? (
+            <p className="text-sm text-danger" role="alert">
+              {error}
+            </p>
+          ) : null}
           <Button type="submit" disabled={submitting || !code.trim()}>
-            {submitting ? "Verifyingâ€¦" : "Continue"}
+            {submitting ? t("verifying") : t("continue")}
           </Button>
         </form>
       </section>

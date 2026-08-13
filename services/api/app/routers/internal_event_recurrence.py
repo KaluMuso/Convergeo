@@ -43,7 +43,11 @@ def _expected_internal_token() -> str:
 
 async def require_internal_event_recurrence_token(request: Request) -> None:
     if request.headers.get("X-Internal-Token") != _expected_internal_token():
-        raise AppError(code="unauthorized", message="Invalid internal recurrence token", http_status=401)
+        raise AppError(
+            code="unauthorized",
+            message="Invalid internal recurrence token",
+            http_status=401,
+        )
 
 
 def _rows(response: Any) -> list[dict[str, Any]]:
@@ -64,7 +68,9 @@ async def materialize_recurrence_tick(
     client = supabase.client
     events = _rows(
         client.table("events")
-        .select("id, recurrence_rule, recurrence_timezone, recurrence_until, recurrence_horizon_days")
+        .select(
+            "id, recurrence_rule, recurrence_timezone, recurrence_until, recurrence_horizon_days"
+        )
         .eq("event_type", "recurring")
         .in_("status", ["draft", "published"])
         .order("updated_at")

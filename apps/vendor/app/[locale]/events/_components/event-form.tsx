@@ -36,13 +36,7 @@ const CATEGORIES: EventCategory[] = [
   "free-rsvp",
 ];
 
-const EVENT_TYPES: Array<{ value: EventType; label: string }> = [
-  { value: "single", label: "Single event" },
-  { value: "multi_day", label: "Multi-day event" },
-  { value: "recurring", label: "Recurring series" },
-  { value: "free_rsvp", label: "Free RSVP" },
-  { value: "private", label: "Private event" },
-];
+const EVENT_TYPE_VALUES: EventType[] = ["single", "multi_day", "recurring", "free_rsvp", "private"];
 
 type EventFormProps = {
   locale: string;
@@ -117,7 +111,9 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
     setAccessCode("");
     setRecurrenceRule(initialEvent.recurrence_rule ?? "");
     setRecurrenceTimezone(initialEvent.recurrence_timezone ?? "Africa/Lusaka");
-    setRecurrenceUntil(initialEvent.recurrence_until ? initialEvent.recurrence_until.slice(0, 16) : "");
+    setRecurrenceUntil(
+      initialEvent.recurrence_until ? initialEvent.recurrence_until.slice(0, 16) : "",
+    );
     setRecurrenceHorizonDays(String(initialEvent.recurrence_horizon_days ?? 90));
     setPlatformFeePayer(initialEvent.platform_fee_payer ?? "organiser");
     setInstances(initialEvent.instances.map((row) => toInstanceDraft(row)));
@@ -284,7 +280,7 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
         </Select>
       </FormField>
 
-      <FormField label="Event format" required requiredMarker="*">
+      <FormField label={t("events.form.eventFormat")} required requiredMarker="*">
         <Select
           value={eventType}
           onChange={(event) => {
@@ -296,30 +292,42 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
           }}
           disabled={readOnly || saving}
         >
-          {EVENT_TYPES.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
+          {EVENT_TYPE_VALUES.map((value) => (
+            <option key={value} value={value}>
+              {t(`events.form.eventTypes.${value}`)}
+            </option>
           ))}
         </Select>
       </FormField>
 
-      <FormField label="Visibility" required requiredMarker="*">
+      <FormField label={t("events.form.visibility")} required requiredMarker="*">
         <Select
           value={visibility}
           onChange={(event) => setVisibility(event.target.value as EventVisibility)}
           disabled={readOnly || saving}
         >
-          <option value="public">Public â€” listed in event discovery</option>
-          <option value="unlisted">Unlisted â€” available only by direct link</option>
-          <option value="private">Private â€” access code required</option>
+          <option value="public">{t("events.form.visibilityOptions.public")}</option>
+          <option value="unlisted">{t("events.form.visibilityOptions.unlisted")}</option>
+          <option value="private">{t("events.form.visibilityOptions.private")}</option>
         </Select>
       </FormField>
 
       {visibility === "private" ? (
-        <FormField label={initialEvent?.has_access_code ? "New access code (optional)" : "Access code"}>
+        <FormField
+          label={
+            initialEvent?.has_access_code
+              ? t("events.form.accessCodeNewOptional")
+              : t("events.form.accessCode")
+          }
+        >
           <Input
             value={accessCode}
             onChange={(event) => setAccessCode(event.target.value)}
-            placeholder={initialEvent?.has_access_code ? "Leave blank to keep the current code" : "Set an event access code"}
+            placeholder={
+              initialEvent?.has_access_code
+                ? t("events.form.accessCodeKeepPlaceholder")
+                : t("events.form.accessCodeSetPlaceholder")
+            }
             disabled={readOnly || saving}
             autoComplete="new-password"
           />
@@ -329,31 +337,31 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
       {eventType === "recurring" ? (
         <section className="space-y-3 rounded-lg border border-border bg-surface p-4">
           <div>
-            <h2 className="text-sm font-semibold text-text">Recurring schedule</h2>
-            <p className="mt-1 text-xs text-text-2">
-              Use an RFC5545 rule, for example FREQ=WEEKLY;BYDAY=SA. The next 14â€“366 days are generated on the server.
-            </p>
+            <h2 className="text-sm font-semibold text-text">
+              {t("events.form.recurrence.heading")}
+            </h2>
+            <p className="mt-1 text-xs text-text-2">{t("events.form.recurrence.help")}</p>
           </div>
-          <FormField label="RRULE" required requiredMarker="*">
+          <FormField label={t("events.form.recurrence.rrule")} required requiredMarker="*">
             <Input
               value={recurrenceRule}
               onChange={(event) => setRecurrenceRule(event.target.value)}
-              placeholder="FREQ=WEEKLY;BYDAY=SA"
+              placeholder={t("events.form.recurrence.rrulePlaceholder")}
               disabled={readOnly || saving}
               required
             />
           </FormField>
-          <FormField label="Timezone" required requiredMarker="*">
+          <FormField label={t("events.form.recurrence.timezone")} required requiredMarker="*">
             <Input
               value={recurrenceTimezone}
               onChange={(event) => setRecurrenceTimezone(event.target.value)}
-              placeholder="Africa/Lusaka"
+              placeholder={t("events.form.recurrence.timezonePlaceholder")}
               disabled={readOnly || saving}
               required
             />
           </FormField>
           <div className="grid grid-cols-2 gap-3">
-            <FormField label="End series (optional)">
+            <FormField label={t("events.form.recurrence.endSeries")}>
               <Input
                 type="datetime-local"
                 value={recurrenceUntil}
@@ -361,7 +369,7 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
                 disabled={readOnly || saving}
               />
             </FormField>
-            <FormField label="Rolling horizon (days)">
+            <FormField label={t("events.form.recurrence.horizonDays")}>
               <Input
                 type="number"
                 min="14"
@@ -375,14 +383,14 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
         </section>
       ) : null}
 
-      <FormField label="Platform fee" required requiredMarker="*">
+      <FormField label={t("events.form.platformFee")} required requiredMarker="*">
         <Select
           value={platformFeePayer}
           onChange={(event) => setPlatformFeePayer(event.target.value as PlatformFeePayer)}
           disabled={readOnly || saving}
         >
-          <option value="organiser">Absorb it as the organiser</option>
-          <option value="buyer">Show it as a buyer pass-through fee</option>
+          <option value="organiser">{t("events.form.platformFeeOptions.organiser")}</option>
+          <option value="buyer">{t("events.form.platformFeeOptions.buyer")}</option>
         </Select>
       </FormField>
 

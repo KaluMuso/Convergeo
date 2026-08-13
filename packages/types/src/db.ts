@@ -982,6 +982,140 @@ export type Database = {
           },
         ]
       }
+      event_access_credentials: {
+        Row: {
+          code_hash: string
+          created_at: string
+          event_id: string
+          rotated_at: string
+          version: number
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          event_id: string
+          rotated_at?: string
+          version?: number
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          event_id?: string
+          rotated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_access_credentials_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_affiliates: {
+        Row: {
+          active: boolean
+          code: string
+          commission_bps: number
+          created_at: string
+          event_id: string
+          id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          commission_bps?: number
+          created_at?: string
+          event_id: string
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          commission_bps?: number
+          created_at?: string
+          event_id?: string
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_affiliates_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_affiliates_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_campaigns: {
+        Row: {
+          audience: string
+          channel: string
+          created_at: string
+          created_by: string
+          event_id: string
+          id: string
+          name: string
+          scheduled_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          audience: string
+          channel: string
+          created_at?: string
+          created_by: string
+          event_id: string
+          id?: string
+          name: string
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          channel?: string
+          created_at?: string
+          created_by?: string
+          event_id?: string
+          id?: string
+          name?: string
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_campaigns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_campaigns_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_categories: {
         Row: {
           created_at: string
@@ -1011,6 +1145,74 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "event_categories"
             referencedColumns: ["slug"]
+          },
+        ]
+      }
+      event_gmv_reservations: {
+        Row: {
+          amount_ngwee: number
+          captured_at: string | null
+          checkout_group_id: string
+          created_at: string
+          event_id: string
+          expires_at: string
+          organiser_vendor_id: string
+          released_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_ngwee: number
+          captured_at?: string | null
+          checkout_group_id: string
+          created_at?: string
+          event_id: string
+          expires_at: string
+          organiser_vendor_id: string
+          released_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_ngwee?: number
+          captured_at?: string | null
+          checkout_group_id?: string
+          created_at?: string
+          event_id?: string
+          expires_at?: string
+          organiser_vendor_id?: string
+          released_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_gmv_reservations_checkout_group_id_fkey"
+            columns: ["checkout_group_id"]
+            isOneToOne: true
+            referencedRelation: "checkout_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_gmv_reservations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_gmv_reservations_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "event_gmv_reservations_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -1054,6 +1256,399 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_promo_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          discount_kind: string
+          discount_value: number
+          ends_at: string | null
+          event_id: string
+          id: string
+          max_redemptions: number | null
+          starts_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          discount_kind: string
+          discount_value: number
+          ends_at?: string | null
+          event_id: string
+          id?: string
+          max_redemptions?: number | null
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          discount_kind?: string
+          discount_value?: number
+          ends_at?: string | null
+          event_id?: string
+          id?: string
+          max_redemptions?: number | null
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_promo_codes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_refund_jobs: {
+        Row: {
+          amount_ngwee: number
+          attempts: number
+          created_at: string
+          customer_id: string
+          event_id: string
+          id: string
+          last_error: string | null
+          locked_at: string | null
+          next_retry_at: string | null
+          order_id: string
+          payout_id: string | null
+          policy_snapshot: Json
+          refund_id: string | null
+          source: string
+          source_key: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_ngwee: number
+          attempts?: number
+          created_at?: string
+          customer_id: string
+          event_id: string
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          next_retry_at?: string | null
+          order_id: string
+          payout_id?: string | null
+          policy_snapshot: Json
+          refund_id?: string | null
+          source: string
+          source_key: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_ngwee?: number
+          attempts?: number
+          created_at?: string
+          customer_id?: string
+          event_id?: string
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          next_retry_at?: string | null
+          order_id?: string
+          payout_id?: string | null
+          policy_snapshot?: Json
+          refund_id?: string | null
+          source?: string
+          source_key?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_refund_jobs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_refund_jobs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_refund_jobs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_refund_jobs_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "payouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_refund_jobs_refund_id_fkey"
+            columns: ["refund_id"]
+            isOneToOne: false
+            referencedRelation: "refunds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_reschedules: {
+        Row: {
+          actor_user_id: string
+          announced_at: string
+          created_at: string
+          event_id: string
+          id: string
+          new_schedule: Json
+          new_venue: string | null
+          old_schedule: Json
+          old_venue: string | null
+          opt_out_deadline: string
+          reason: string
+        }
+        Insert: {
+          actor_user_id: string
+          announced_at?: string
+          created_at?: string
+          event_id: string
+          id?: string
+          new_schedule: Json
+          new_venue?: string | null
+          old_schedule: Json
+          old_venue?: string | null
+          opt_out_deadline: string
+          reason: string
+        }
+        Update: {
+          actor_user_id?: string
+          announced_at?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          new_schedule?: Json
+          new_venue?: string | null
+          old_schedule?: Json
+          old_venue?: string | null
+          opt_out_deadline?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_reschedules_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_reschedules_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_settlement_snapshots: {
+        Row: {
+          created_at: string
+          event_id: string
+          held_by_reschedule_id: string | null
+          instance_id: string
+          order_id: string
+          schedule: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          held_by_reschedule_id?: string | null
+          instance_id: string
+          order_id: string
+          schedule: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          held_by_reschedule_id?: string | null
+          instance_id?: string
+          order_id?: string
+          schedule?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_settlement_snapshots_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_settlement_snapshots_held_by_reschedule_id_fkey"
+            columns: ["held_by_reschedule_id"]
+            isOneToOne: false
+            referencedRelation: "event_reschedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_settlement_snapshots_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "event_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_settlement_snapshots_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_team_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          event_id: string
+          expires_at: string
+          id: string
+          invitee_phone: string
+          invited_by: string
+          revoked_at: string | null
+          role: string
+          status: string
+          token_digest: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          event_id: string
+          expires_at: string
+          id?: string
+          invitee_phone: string
+          invited_by: string
+          revoked_at?: string | null
+          role: string
+          status?: string
+          token_digest: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          event_id?: string
+          expires_at?: string
+          id?: string
+          invitee_phone?: string
+          invited_by?: string
+          revoked_at?: string | null
+          role?: string
+          status?: string
+          token_digest?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_team_invites_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_team_invites_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_team_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_team_members: {
+        Row: {
+          accepted_at: string
+          created_at: string
+          event_id: string
+          id: string
+          invited_by: string | null
+          revoked_at: string | null
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          created_at?: string
+          event_id: string
+          id?: string
+          invited_by?: string | null
+          revoked_at?: string | null
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          invited_by?: string | null
+          revoked_at?: string | null
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_team_members_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_team_members_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_team_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2628,6 +3223,7 @@ export type Database = {
           created_at: string
           id: string
           lenco_reference: string
+          payout_kind: string
           rail: string
           resolve_snapshot: Json
           status: string
@@ -2639,6 +3235,7 @@ export type Database = {
           created_at?: string
           id?: string
           lenco_reference: string
+          payout_kind?: string
           rail: string
           resolve_snapshot?: Json
           status?: string
@@ -2650,6 +3247,7 @@ export type Database = {
           created_at?: string
           id?: string
           lenco_reference?: string
+          payout_kind?: string
           rail?: string
           resolve_snapshot?: Json
           status?: string

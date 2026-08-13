@@ -145,6 +145,7 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/discovery/trending"),
         ("GET", "/events"),
         ("GET", "/events/{slug}"),
+        ("POST", "/events/{slug}/access/unlock"),
         ("GET", "/events/{slug}/calendar.ics"),
         ("GET", "/fingerprint"),
         ("GET", "/health"),
