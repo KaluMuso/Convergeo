@@ -31,7 +31,7 @@ export function BrandLogo({ appName, compact = false, className }: BrandLogoProp
         alt={appName}
         width={compact ? 99 : 126}
         height={compact ? 18 : 23}
-        priority
+        loading="lazy"
         className={`${imgClass} hidden dark:block`}
       />
     </span>
