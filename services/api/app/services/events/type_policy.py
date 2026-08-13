@@ -74,6 +74,14 @@ def normalize_event_type(value: str | None) -> EventType:
     return "standard"
 
 
+def normalize_visibility(value: str | None) -> Visibility:
+    """Coerce an arbitrary value to a known visibility (default public)."""
+    for candidate in VISIBILITIES:
+        if value == candidate:
+            return candidate
+    return "public"
+
+
 def policy_for(event_type: str | None) -> EventTypePolicy:
     """Return the behaviour bundle for an event_type, defaulting to ``standard``."""
     return _POLICIES.get(normalize_event_type(event_type), _DEFAULT_POLICY)

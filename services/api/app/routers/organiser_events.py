@@ -1058,12 +1058,13 @@ async def update_organiser_event(
         if "recurrence_timezone" in body.model_fields_set
         else _optional_text(event_row, "recurrence_timezone")
     )
+    recurrence_until_from_row = _recurrence_until_from_row(event_row)
     effective_recurrence_until = (
         body.recurrence_until
         if "recurrence_until" in body.model_fields_set
         else (
-            _recurrence_until_from_row(event_row).isoformat()
-            if _recurrence_until_from_row(event_row) is not None
+            recurrence_until_from_row.isoformat()
+            if recurrence_until_from_row is not None
             else None
         )
     )

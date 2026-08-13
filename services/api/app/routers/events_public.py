@@ -13,7 +13,7 @@ from app.services.events.access import (
     verify_event_access_proof,
 )
 from app.services.events.timing import instance_display_end
-from app.services.events.type_policy import normalize_event_type
+from app.services.events.type_policy import normalize_event_type, normalize_visibility
 from fastapi import APIRouter, Depends, Header, Query, Request
 from pydantic import BaseModel, Field
 
@@ -755,7 +755,9 @@ def build_detail_response(
         images=_parse_images(event.get("images")),
         category=category,
         event_type=normalize_event_type(event.get("event_type")),
-        visibility=str(event.get("visibility") or "public"),
+        visibility=normalize_visibility(
+            event.get("visibility") if isinstance(event.get("visibility"), str) else None
+        ),
         age_restriction=int(age_restriction) if age_restriction is not None else None,
         instances=instance_responses,
         ticket_types=ticket_type_responses,
