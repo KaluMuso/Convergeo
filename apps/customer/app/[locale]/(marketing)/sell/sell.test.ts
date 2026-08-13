@@ -71,6 +71,7 @@ describe("commission-rates", () => {
 
   it("fetchCommissionRates renders live endpoint values", async () => {
     vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "https://api.example.test");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "production");
 
     vi.stubGlobal(
       "fetch",

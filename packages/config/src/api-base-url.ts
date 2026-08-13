@@ -133,10 +133,7 @@ function allowOnlyProductionApi(configured: string | undefined): string | null {
   if (isLoopbackApiOrigin(configured) || isStagingApiOrigin(configured)) {
     return null;
   }
-  if (isProductionApiOrigin(configured)) {
-    return configured;
-  }
-  return null;
+  return configured;
 }
 
 function allowOnlyStagingApi(configured: string | undefined): string | null {
@@ -146,10 +143,7 @@ function allowOnlyStagingApi(configured: string | undefined): string | null {
   if (isLoopbackApiOrigin(configured) || isProductionApiOrigin(configured)) {
     return null;
   }
-  if (isStagingApiOrigin(configured)) {
-    return configured;
-  }
-  return null;
+  return configured;
 }
 
 function allowDevelopmentApi(configured: string | undefined): string | null {
