@@ -7,8 +7,8 @@ obtained in the vendor preview, cart validation, and checkout snapshot path.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Literal
 
 
