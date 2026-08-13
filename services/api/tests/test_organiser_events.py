@@ -63,6 +63,12 @@ class FakeQuery:
         self._payload = payload
         return self
 
+    def upsert(self, payload: dict[str, Any], *, on_conflict: str | None = None) -> FakeQuery:
+        _ = on_conflict
+        self._pending_op = "upsert"
+        self._payload = payload
+        return self
+
     def update(self, payload: dict[str, Any]) -> FakeQuery:
         self._pending_op = "update"
         self._payload = payload
@@ -80,6 +86,17 @@ class FakeQuery:
                 row["id"] = f"{len(self._parent.rows):08x}-fake-fake-fake-fakefakefake"
             self._parent.rows.append(row)
             return MagicMock(data=[row], count=None)
+
+        if self._pending_op == "upsert":
+            assert isinstance(self._payload, dict)
+            event_id = self._payload.get("event_id")
+            for row in self._parent.rows:
+                if event_id is not None and row.get("event_id") == event_id:
+                    row.update(self._payload)
+                    return MagicMock(data=[dict(row)], count=1)
+            row = dict(self._payload)
+            self._parent.rows.append(row)
+            return MagicMock(data=[row], count=1)
 
         if self._pending_op == "update":
             assert isinstance(self._payload, dict)
@@ -138,6 +155,11 @@ class FakeTable:
     def update(self, payload: dict[str, Any]) -> FakeQuery:
         return FakeQuery(self, []).update(payload)
 
+    def upsert(
+        self, payload: dict[str, Any], *, on_conflict: str | None = None
+    ) -> FakeQuery:
+        return FakeQuery(self, []).upsert(payload, on_conflict=on_conflict)
+
     def delete(self) -> FakeQuery:
         return FakeQuery(self, []).delete()
 
@@ -148,6 +170,7 @@ class FakeSupabaseClient:
             "vendors": FakeTable(),
             "events": FakeTable(),
             "event_instances": FakeTable(),
+            "event_access_credentials": FakeTable(),
             "tickets": FakeTable(),
             "notification_outbox": FakeTable(),
             "kyc_records": FakeTable(),
@@ -425,10 +448,11 @@ def test_create_private_event_defaults_visibility_and_hashes_code(
     # event_type=private defaults visibility to private (type_policy map).
     assert body["visibility"] == "private"
     assert body["has_access_code"] is True
-    # Plaintext code is hashed, never stored or echoed.
-    stored = fake_client.tables["events"].rows[-1]
-    assert stored["access_code_hash"]
-    assert "vip-only" not in stored["access_code_hash"]
+    # Plaintext code is hashed in the service-only credential table, never
+    # stored on the broadly selected events row or echoed in the response.
+    stored = fake_client.tables["event_access_credentials"].rows[-1]
+    assert stored["code_hash"]
+    assert "vip-only" not in stored["code_hash"]
     assert "access_code" not in body
     assert "access_code_hash" not in body
 
@@ -456,14 +480,16 @@ def test_update_event_visibility_and_policy_fields(
     assert body["terms"] == "No re-entry."
 
 
-def test_leaving_private_visibility_clears_access_code_hash(
+def test_leaving_private_visibility_clears_access_credential(
     organiser_client: TestClient,
     fake_client: FakeSupabaseClient,
 ) -> None:
     _seed_event(fake_client, event_id=EVENT_A_ID, vendor_id=VENDOR_A_ID)
     stored = fake_client.tables["events"].rows[-1]
     stored["visibility"] = "private"
-    stored["access_code_hash"] = "stale-private-digest"
+    fake_client.tables["event_access_credentials"].rows.append(
+        {"event_id": EVENT_A_ID, "code_hash": "stale-private-digest", "version": 1}
+    )
 
     response = organiser_client.patch(
         f"/organiser/events/{EVENT_A_ID}",
@@ -474,7 +500,7 @@ def test_leaving_private_visibility_clears_access_code_hash(
     assert response.status_code == 200
     assert response.json()["event"]["visibility"] == "public"
     assert response.json()["event"]["has_access_code"] is False
-    assert stored["access_code_hash"] is None
+    assert fake_client.tables["event_access_credentials"].rows == []
 
 
 def test_create_event_rejects_ends_at_before_starts_at(organiser_client: TestClient) -> None:

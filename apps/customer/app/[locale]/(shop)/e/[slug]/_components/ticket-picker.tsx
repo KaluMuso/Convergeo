@@ -40,6 +40,8 @@ export type TicketPickerType = {
 
 export type TicketPickerProps = {
   eventSlug: string;
+  /** Short-lived proof, issued only after an access-code unlock. Never a code. */
+  eventAccessProof?: string | null;
   instances: TicketPickerInstance[];
   ticketTypes: TicketPickerType[];
   isSoldOut: boolean;
@@ -83,7 +85,13 @@ function maxQtyForType(ticket: TicketPickerType, instance: TicketPickerInstance 
   return Math.min(...caps.filter((value) => value >= 0));
 }
 
-export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: TicketPickerProps) {
+export function TicketPicker({
+  eventSlug,
+  eventAccessProof,
+  instances,
+  ticketTypes,
+  isSoldOut,
+}: TicketPickerProps) {
   const t = useTranslations("events.ticketPurchase");
   const tEvents = useTranslations("events");
   const locale = useLocale();
@@ -212,6 +220,7 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
           instance_id: selectedInstance.id,
           ticket_type_id: selectedType.id,
           qty,
+          ...(eventAccessProof ? { event_access_proof: eventAccessProof } : {}),
           ...(selectedType.attendee_named
             ? { attendee_names: cleanedAttendeeNames(attendeeNames, qty) }
             : {}),
@@ -261,7 +270,7 @@ export function TicketPicker({ eventSlug, instances, ticketTypes, isSoldOut }: T
     } finally {
       setLoading(false);
     }
-  }, [attendeeNames, checkAuth, locale, qty, selectedInstance, selectedType, t]);
+  }, [attendeeNames, checkAuth, eventAccessProof, locale, qty, selectedInstance, selectedType, t]);
 
   if (ticketTypes.length === 0) {
     return null;

@@ -18,7 +18,7 @@ from app.routers.events_public import (
     tonight_window,
     weekend_window,
 )
-from app.services.events.access import hash_access_code
+from app.services.events.access import hash_access_code, issue_event_access_proof
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -137,6 +137,7 @@ class FakeSupabaseStore:
         self.ticket_types: list[dict[str, Any]] = []
         self.ticket_type_price_tiers: list[dict[str, Any]] = []
         self.tickets: list[dict[str, Any]] = []
+        self.event_access_credentials: list[dict[str, Any]] = []
 
     def table(self, name: str) -> FakeQuery:
         return FakeQuery(self, name)
@@ -666,6 +667,10 @@ def _add_event(
             "capacity": 50,
         }
     )
+    if access_code_hash:
+        store.event_access_credentials.append(
+            {"event_id": event_id, "code_hash": access_code_hash, "version": 1}
+        )
 
 
 def test_browse_excludes_unlisted_and_private(store: FakeSupabaseStore) -> None:
@@ -682,7 +687,10 @@ def test_detail_reachable_for_unlisted_by_slug(store: FakeSupabaseStore) -> None
     assert detail.slug == "secret-unlisted"
 
 
-def test_detail_private_requires_matching_access_code(store: FakeSupabaseStore) -> None:
+def test_detail_private_requires_signed_access_proof(
+    store: FakeSupabaseStore, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("EVENT_ACCESS_SIGNING_SECRET", "test-event-access-secret")
     _add_event(
         store,
         event_id="e-private",
@@ -697,16 +705,26 @@ def test_detail_private_requires_matching_access_code(store: FakeSupabaseStore) 
     assert no_code.value.code == "event.not_found"
     # Wrong code → 404.
     with pytest.raises(AppError):
-        build_detail_response(store, "secret-private", access_code="wrong")
+        build_detail_response(
+            store,
+            "secret-private",
+            access_proof=issue_event_access_proof(
+                event_id="different-event", credential_version=1
+            ),
+        )
     # Correct code → served.
-    detail = build_detail_response(store, "secret-private", access_code="let-me-in")
+    detail = build_detail_response(
+        store,
+        "secret-private",
+        access_proof=issue_event_access_proof(event_id="e-private", credential_version=1),
+    )
     assert detail.slug == "secret-private"
 
 
 def test_detail_private_without_code_set_is_unreachable(store: FakeSupabaseStore) -> None:
     _add_event(store, event_id="e-private2", slug="private-no-code", visibility="private")
     with pytest.raises(AppError):
-        build_detail_response(store, "private-no-code", access_code="anything")
+        build_detail_response(store, "private-no-code", access_proof="anything")
 
 
 def test_detail_and_browse_surface_event_type(store: FakeSupabaseStore) -> None:

@@ -151,19 +151,33 @@ def _insert_event(
     organiser_vendor_id: str,
     status: str = "published",
     event_type: str = "standard",
+    recurrence_rule: str | None = None,
+    recurrence_timezone: str | None = None,
 ) -> None:
     slug = f"evt-{event_id[:8]}"
-    conn.run(
+    if event_type == "recurring":
+        recurrence_rule = recurrence_rule or "FREQ=WEEKLY;BYDAY=SA"
+        recurrence_timezone = recurrence_timezone or "Africa/Lusaka"
+    recurrence_sql = (
+        f", recurrence_rule = '{recurrence_rule}', recurrence_timezone = '{recurrence_timezone}'"
+        if event_type == "recurring"
+        else ""
+    )
+    result = conn.run(
         f"""
-        INSERT INTO public.events (id, organiser_vendor_id, title, slug, status, event_type)
-        VALUES (
+        INSERT INTO public.events (
+          id, organiser_vendor_id, title, slug, status, event_type
+          {", recurrence_rule, recurrence_timezone" if event_type == "recurring" else ""}
+        ) VALUES (
           '{event_id}', '{organiser_vendor_id}', 'Test Event', '{slug}', '{status}',
           '{event_type}'
+          {f", '{recurrence_rule}', '{recurrence_timezone}'" if event_type == "recurring" else ""}
         )
         ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status,
-          event_type = EXCLUDED.event_type;
+          event_type = EXCLUDED.event_type{recurrence_sql};
         """
     )
+    assert result.ok, result.error
 
 
 def _default_instance_end(starts_at: datetime) -> datetime:

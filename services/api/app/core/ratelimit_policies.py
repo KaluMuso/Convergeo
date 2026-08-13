@@ -182,6 +182,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /enquiries": SENSITIVE_WRITE,
     "POST /enquiries/{thread_id}/close": STANDARD_WRITE,
     "POST /enquiries/{thread_id}/messages": SENSITIVE_WRITE,
+    "POST /events/{slug}/access/unlock": SENSITIVE_WRITE,
     "POST /rfq": SENSITIVE_WRITE,
     "POST /rfq/{thread_id}/messages": SENSITIVE_WRITE,
     "POST /rfq/{thread_id}/quote": SENSITIVE_WRITE,
@@ -201,6 +202,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/dispatch/tick": INTERNAL_CRON,
     "POST /internal/embeddings/tick": INTERNAL_CRON,
     "POST /internal/event-release/tick": INTERNAL_CRON,
+    "POST /internal/event-recurrence/tick": INTERNAL_CRON,
     "POST /internal/funnel/abandon-tick": INTERNAL_CRON,
     # M18-P07 WAHA intake operations. Three separate sweeps rather than one
     # "tick": an operator can disable retention purging without also disabling

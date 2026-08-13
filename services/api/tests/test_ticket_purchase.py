@@ -72,10 +72,37 @@ def db_url_env(db: PgConn) -> Generator[None, None, None]:
 
 @pytest.fixture
 def service(db: PgConn) -> _ServiceWrapper:
-    del db
+    class _CredentialsQuery:
+        def __init__(self, conn: PgConn) -> None:
+            self._conn = conn
+            self._event_id: str | None = None
+
+        def select(self, *_columns: str) -> _CredentialsQuery:
+            return self
+
+        def eq(self, column: str, value: str) -> _CredentialsQuery:
+            if column == "event_id":
+                self._event_id = value
+            return self
+
+        def maybe_single(self) -> _CredentialsQuery:
+            return self
+
+        def execute(self) -> Any:
+            if not self._event_id:
+                return type("Response", (), {"data": None})()
+            result = self._conn.run(
+                "SELECT version FROM public.event_access_credentials "
+                f"WHERE event_id = '{self._event_id}'"
+            )
+            if result.ok and result.rows:
+                return type("Response", (), {"data": {"version": int(result.rows[0])}})()
+            return type("Response", (), {"data": None})()
 
     class _Client:
         def table(self, name: str) -> Any:
+            if name == "event_access_credentials":
+                return _CredentialsQuery(db)
             raise RuntimeError("use SQL fixtures in this module")
 
     return _ServiceWrapper(_Client())
@@ -756,6 +783,13 @@ def test_private_event_purchase_fails_closed_without_access_proof(
         visibility="private",
     )
     _insert_ticket_type(db, ticket_type_id=ticket_type_id, event_id=event_id)
+    db.run(
+        f"""
+        INSERT INTO public.event_access_credentials (event_id, code_hash, version)
+        VALUES ('{event_id}', 'test-hash', 1)
+        ON CONFLICT (event_id) DO UPDATE SET version = EXCLUDED.version;
+        """
+    )
 
     with pytest.raises(AppError) as exc:
         add_ticket_to_checkout(
