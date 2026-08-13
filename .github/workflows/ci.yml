@@ -171,6 +171,16 @@ jobs:
       - name: Self-test separation + seed + config syntax
         run: bash scripts/ci/test-staging-guards.sh
 
+  release-control:
+    name: Release control contract (RELCTRL-01)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Self-test release-control contract
+        run: bash scripts/ci/test-release-control-contract.sh
+
   secret-scan:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
