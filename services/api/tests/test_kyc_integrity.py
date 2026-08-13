@@ -79,6 +79,16 @@ class FakeQuery:
         self._payload = payload
         return self
 
+    def upsert(
+        self,
+        payload: dict[str, Any] | list[dict[str, Any]],
+        on_conflict: str | None = None,
+    ) -> FakeQuery:
+        self._pending_op = "upsert"
+        self._payload = payload if isinstance(payload, dict) else payload[0]
+        self._on_conflict = on_conflict
+        return self
+
     def update(self, payload: dict[str, Any]) -> FakeQuery:
         self._pending_op = "update"
         self._payload = payload
@@ -92,6 +102,19 @@ class FakeQuery:
                 row["id"] = f"{len(self._parent.rows):08x}-fake-fake-fake-fakefakefake"
             if "created_at" not in row:
                 row["created_at"] = datetime.now(UTC).isoformat()
+            self._parent.rows.append(row)
+            return MagicMock(data=[row])
+
+        if self._pending_op == "upsert":
+            assert isinstance(self._payload, dict)
+            keys = [
+                part.strip()
+                for part in (getattr(self, "_on_conflict", None) or "user_id,role").split(",")
+            ]
+            for existing in self._parent.rows:
+                if all(existing.get(key) == self._payload.get(key) for key in keys):
+                    return MagicMock(data=[dict(existing)])
+            row = dict(self._payload)
             self._parent.rows.append(row)
             return MagicMock(data=[row])
 
@@ -139,8 +162,29 @@ class FakeTable:
     def insert(self, payload: dict[str, Any]) -> FakeQuery:
         return FakeQuery(self, []).insert(payload)
 
+    def upsert(
+        self,
+        payload: dict[str, Any] | list[dict[str, Any]],
+        on_conflict: str | None = None,
+    ) -> FakeQuery:
+        return FakeQuery(self, []).upsert(payload, on_conflict=on_conflict)
+
     def update(self, payload: dict[str, Any]) -> FakeQuery:
         return FakeQuery(self, []).update(payload)
+
+
+class FakeRpc:
+    def __init__(self, client: FakeSupabaseClient, fn: str, params: dict[str, Any]) -> None:
+        self._client = client
+        self._fn = fn
+        self._params = params
+
+    def execute(self) -> MagicMock:
+        if self._fn == "approve_kyc_vendor":
+            from tests.helpers.fake_approve_kyc_rpc import fake_approve_kyc_vendor
+
+            return MagicMock(data=fake_approve_kyc_vendor(self._client, self._params))
+        raise NotImplementedError(self._fn)
 
 
 class FakeSupabaseClient:
@@ -155,10 +199,15 @@ class FakeSupabaseClient:
             "platform_config": FakeTable(),
             "vendor_listings": FakeTable(),
             "orders": FakeTable(),
+            "user_roles": FakeTable(),
         }
+        self._block_vendor_role_grant = False
 
     def table(self, name: str) -> FakeTable:
         return self.tables.setdefault(name, FakeTable())
+
+    def rpc(self, fn: str, params: dict[str, Any]) -> FakeRpc:
+        return FakeRpc(self, fn, params)
 
 
 @pytest.fixture

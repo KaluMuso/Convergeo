@@ -8,6 +8,7 @@ from uuid import UUID
 
 from app.deps import get_supabase_service_client  # type: ignore[attr-defined]
 from app.errors import AppError
+from app.services.kyc.approve_atomic import approve_kyc_vendor_atomic
 
 # Canonical DB statuses after migration 0056. Legacy `pending` is still accepted
 # on read (mapped to submitted) for mixed-environment safety during rollout.
@@ -619,47 +620,12 @@ def transition_approve(
             details={"record_tier": kyc_record.tier, "requested_tier": tier},
         )
 
-    before = {
-        "vendor": {"id": vendor.id, "status": vendor.status, "kyc_tier": vendor.kyc_tier},
-        "kyc_record": _record_audit_slice(kyc_record),
-    }
-
-    decision_reason = reviewer_notes
-    reviewed_at = _utc_now_iso()
-    kyc_after = _update_kyc_record(
-        client,
-        kyc_record_id,
-        expected_status=kyc_record.db_status,
-        status="approved",
-        reviewer_notes=reviewer_notes,
-        reviewed_by=actor_id,
-        reviewed_at=reviewed_at,
-        decision_reason=decision_reason,
-    )
-    vendor_after = _update_vendor(
-        client,
-        vendor_id,
-        expected_status=vendor.status,
-        status="active",
-        kyc_tier=tier,
-    )
-
-    after = {
-        "vendor": {
-            "id": vendor_after["id"],
-            "status": vendor_after["status"],
-            "kyc_tier": vendor_after.get("kyc_tier"),
-        },
-        "kyc_record": _record_audit_slice(kyc_after),
-    }
-    write_kyc_audit_log(
+    after = approve_kyc_vendor_atomic(
         client,
         actor_id=actor_id,
-        action="kyc.approve",
-        entity_type="kyc_record",
-        entity_id=kyc_record_id,
-        before=before,
-        after=after,
+        kyc_record_id=kyc_record_id,
+        tier=tier,
+        reviewer_notes=reviewer_notes,
     )
     return after
 
