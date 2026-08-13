@@ -13,7 +13,10 @@
     "./server-client": "./src/server-client.ts",
     "./middleware": "./src/middleware.ts",
     "./use-session": "./src/use-session.ts",
-    "./roles": "./src/roles.ts"
+    "./roles": "./src/roles.ts",
+    "./portal": "./src/portal.ts",
+    "./google-auth": "./src/google-auth.ts",
+    "./safe-next": "./src/safe-next.ts"
   },
   "scripts": {
     "build": "tsc --noEmit",

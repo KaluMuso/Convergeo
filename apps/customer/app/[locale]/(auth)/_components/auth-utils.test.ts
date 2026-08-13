@@ -78,6 +78,10 @@ describe("auth-utils", () => {
     expect(resolvePostAuthPath("en", "/en/account", "/en")).toBe("/en/account");
     expect(resolvePostAuthPath("en", "https://evil.test", "/en")).toBe("/en");
     expect(resolvePostAuthPath("en", "/fr/account", "/en")).toBe("/en");
+    expect(resolvePostAuthPath("en", "//evil.example", "/en")).toBe("/en");
+    expect(resolvePostAuthPath("en", "javascript:alert(1)", "/en")).toBe("/en");
+    expect(resolvePostAuthPath("en", "%2F%2Fevil.example", "/en")).toBe("/en");
+    expect(resolvePostAuthPath("en", "/english", "/en")).toBe("/en");
   });
 
   it("routes incomplete onboarding to welcome", () => {
