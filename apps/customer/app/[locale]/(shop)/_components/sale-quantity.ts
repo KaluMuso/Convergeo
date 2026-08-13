@@ -18,6 +18,19 @@ export function resolveMinimumSteps(value: number | null | undefined): number {
   return Number.isSafeInteger(value) && (value ?? 0) > 0 ? (value as number) : 1;
 }
 
+export function catalogSaleUnitLabels(
+  t: (key: string, values?: Record<string, string | number>) => string,
+): SaleUnitLabels {
+  return {
+    each: t("pdp.buyBox.units.each"),
+    metre: t("pdp.buyBox.units.metre"),
+    kg: t("pdp.buyBox.units.kg"),
+    litre: t("pdp.buyBox.units.litre"),
+    bag: t("pdp.buyBox.units.bag"),
+    sqm: t("pdp.buyBox.units.sqm"),
+  };
+}
+
 export function formatListingQuantity(
   steps: number,
   saleUnit: string | null | undefined,

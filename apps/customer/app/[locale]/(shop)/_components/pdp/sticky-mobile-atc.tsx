@@ -6,10 +6,10 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState, type RefObject } from "react";
 
 import {
+  catalogSaleUnitLabels,
   formatListingQuantity,
   formatSaleIncrement,
   resolveSaleUnit,
-  type SaleUnitLabels,
 } from "../sale-quantity";
 
 import { getMinimumQuantity, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
@@ -43,17 +43,7 @@ export function StickyMobileAtc({
   const t = useTranslations("catalog");
   const [buyBoxOutOfView, setBuyBoxOutOfView] = useState(false);
   const visible = buyBoxOutOfView && listing.inStock;
-  const unitLabels: SaleUnitLabels = useMemo(
-    () => ({
-      each: t("pdp.buyBox.units.each"),
-      metre: t("pdp.buyBox.units.metre"),
-      kg: t("pdp.buyBox.units.kg"),
-      litre: t("pdp.buyBox.units.litre"),
-      bag: t("pdp.buyBox.units.bag"),
-      sqm: t("pdp.buyBox.units.sqm"),
-    }),
-    [t],
-  );
+  const unitLabels = useMemo(() => catalogSaleUnitLabels(t), [t]);
   const saleUnit = resolveSaleUnit(listing.saleUnit);
   const minimum = getMinimumQuantity(listing);
   const formattedMinimum = formatListingQuantity(

@@ -11,6 +11,7 @@ import { useCallback, useMemo, useState, type ReactNode, type Ref } from "react"
 
 import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
 import {
+  catalogSaleUnitLabels,
   formatListingQuantity,
   formatSaleIncrement,
   resolveMinimumSteps,
@@ -167,17 +168,7 @@ export function BuyBox({
   const [addError, setAddError] = useState<string | null>(null);
 
   const maxQuantity = useMemo(() => getMaxQuantity(listing), [listing]);
-  const unitLabels: SaleUnitLabels = useMemo(
-    () => ({
-      each: t("pdp.buyBox.units.each"),
-      metre: t("pdp.buyBox.units.metre"),
-      kg: t("pdp.buyBox.units.kg"),
-      litre: t("pdp.buyBox.units.litre"),
-      bag: t("pdp.buyBox.units.bag"),
-      sqm: t("pdp.buyBox.units.sqm"),
-    }),
-    [t],
-  );
+  const unitLabels: SaleUnitLabels = useMemo(() => catalogSaleUnitLabels(t), [t]);
   const saleUnit = resolveSaleUnit(listing.saleUnit);
   const formattedQuantity = formatListingQuantity(
     purchase?.quantity ?? quantity,

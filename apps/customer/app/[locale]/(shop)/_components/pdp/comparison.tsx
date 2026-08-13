@@ -19,7 +19,6 @@ import { ConditionBadge, type ListingCondition } from "./condition-badge";
 import { PdpGallery } from "./gallery";
 import { buildOfferPriceContext } from "./offer-price-context";
 import { PdpWishlistButton } from "./pdp-wishlist-button";
-import { StickyMobileAtc } from "./sticky-mobile-atc";
 import { useListingPurchase } from "./use-listing-purchase";
 import { VendorBlock } from "./vendor-block";
 
@@ -43,6 +42,12 @@ const RequestQuoteButton = dynamic(
 const ReportListing = dynamic(() => import("./report-listing").then((mod) => mod.ReportListing), {
   ssr: false,
 });
+
+/** Lazy — measured-unit formatting + sticky chrome stay off the PDP first-load budget. */
+const StickyMobileAtc = dynamic(
+  () => import("./sticky-mobile-atc").then((mod) => mod.StickyMobileAtc),
+  { ssr: false },
+);
 
 export const LUSAKA_CBD_LAT = -15.4167;
 export const LUSAKA_CBD_LNG = 28.2833;
