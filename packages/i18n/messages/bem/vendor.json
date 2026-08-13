@@ -1130,7 +1130,40 @@
       "saving": "Saving…",
       "saved": "Changes saved.",
       "backToList": "Bweleleni to events",
-      "ticketsSold": "{count, plural, one {# ticket sold} other {# tickets sold}}"
+      "ticketsSold": "{count, plural, one {# ticket sold} other {# tickets sold}}",
+      "eventFormat": "Event format",
+      "eventTypes": {
+        "single": "Single event",
+        "multi_day": "Multi-day event",
+        "recurring": "Recurring series",
+        "free_rsvp": "Free RSVP",
+        "private": "Private event"
+      },
+      "visibility": "Visibility",
+      "visibilityOptions": {
+        "public": "Public — listed in event discovery",
+        "unlisted": "Unlisted — available only by direct link",
+        "private": "Private — access code required"
+      },
+      "accessCode": "Access code",
+      "accessCodeNewOptional": "New access code (optional)",
+      "accessCodeKeepPlaceholder": "Leave blank to keep the current code",
+      "accessCodeSetPlaceholder": "Set an event access code",
+      "recurrence": {
+        "heading": "Recurring schedule",
+        "help": "Use an RFC5545 rule, for example FREQ=WEEKLY;BYDAY=SA. The next 14–366 days are generated on the server.",
+        "rrule": "RRULE",
+        "rrulePlaceholder": "FREQ=WEEKLY;BYDAY=SA",
+        "timezone": "Timezone",
+        "timezonePlaceholder": "Africa/Lusaka",
+        "endSeries": "End series (optional)",
+        "horizonDays": "Rolling horizon (days)"
+      },
+      "platformFee": "Platform fee",
+      "platformFeeOptions": {
+        "organiser": "Absorb it as the organiser",
+        "buyer": "Show it as a buyer pass-through fee"
+      }
     },
     "instances": {
       "heading": "Dates & capacity",

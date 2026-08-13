@@ -11,6 +11,9 @@ export type EventCategory =
   | "free-rsvp";
 
 export type EventStatus = "draft" | "published" | "cancelled" | "completed";
+export type EventType = "standard" | "single" | "multi_day" | "recurring" | "free_rsvp" | "private";
+export type EventVisibility = "public" | "unlisted" | "private";
+export type PlatformFeePayer = "organiser" | "buyer";
 
 export type EventInstance = {
   id: string;
@@ -26,6 +29,12 @@ export type EventSummary = {
   slug: string;
   status: EventStatus;
   category: EventCategory | null;
+  event_type: EventType;
+  visibility: EventVisibility;
+  recurrence_rule: string | null;
+  recurrence_timezone: string | null;
+  recurrence_until: string | null;
+  platform_fee_payer: PlatformFeePayer;
   venue: string | null;
   landmark: string | null;
   images: string[];
@@ -40,6 +49,14 @@ export type EventDetail = {
   slug: string;
   status: EventStatus;
   category: EventCategory | null;
+  event_type: EventType;
+  visibility: EventVisibility;
+  has_access_code: boolean;
+  recurrence_rule: string | null;
+  recurrence_timezone: string | null;
+  recurrence_until: string | null;
+  recurrence_horizon_days: number;
+  platform_fee_payer: PlatformFeePayer;
   description: string | null;
   venue: string | null;
   lat: number | null;
@@ -65,6 +82,14 @@ export type EventCreatePayload = {
   lat?: number | null;
   lng?: number | null;
   landmark?: string | null;
+  event_type?: EventType;
+  visibility?: EventVisibility;
+  access_code?: string;
+  recurrence_rule?: string | null;
+  recurrence_timezone?: string | null;
+  recurrence_until?: string | null;
+  recurrence_horizon_days?: number;
+  platform_fee_payer?: PlatformFeePayer;
   images: string[];
   instances: EventInstanceInput[];
 };

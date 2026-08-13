@@ -22,11 +22,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-EventType = Literal["standard", "recurring", "free_rsvp", "private"]
+EventType = Literal["standard", "single", "multi_day", "recurring", "free_rsvp", "private"]
 Visibility = Literal["public", "unlisted", "private"]
 SettlementRule = Literal["timing_default", "full_only"]
 
-EVENT_TYPES: tuple[EventType, ...] = ("standard", "recurring", "free_rsvp", "private")
+EVENT_TYPES: tuple[EventType, ...] = (
+    "standard",  # compatibility for events created before the strategy rollout
+    "single",
+    "multi_day",
+    "recurring",
+    "free_rsvp",
+    "private",
+)
 VISIBILITIES: tuple[Visibility, ...] = ("public", "unlisted", "private")
 
 
@@ -49,6 +56,8 @@ class EventTypePolicy:
 
 _POLICIES: dict[EventType, EventTypePolicy] = {
     "standard": EventTypePolicy("standard", "public", "timing_default", False, False),
+    "single": EventTypePolicy("single", "public", "timing_default", False, False),
+    "multi_day": EventTypePolicy("multi_day", "public", "timing_default", False, False),
     "recurring": EventTypePolicy("recurring", "public", "full_only", True, False),
     "free_rsvp": EventTypePolicy("free_rsvp", "public", "timing_default", False, True),
     "private": EventTypePolicy("private", "private", "timing_default", False, False),
@@ -63,6 +72,14 @@ def normalize_event_type(value: str | None) -> EventType:
         if value == candidate:
             return candidate
     return "standard"
+
+
+def normalize_visibility(value: str | None) -> Visibility:
+    """Coerce an arbitrary value to a known visibility (default public)."""
+    for candidate in VISIBILITIES:
+        if value == candidate:
+            return candidate
+    return "public"
 
 
 def policy_for(event_type: str | None) -> EventTypePolicy:
