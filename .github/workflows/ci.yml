@@ -61,6 +61,9 @@ jobs:
       - name: Build
         run: pnpm turbo run build --filter="${{ steps.turbo.outputs.filter }}"
 
+      - name: Fail if frontend bundles ship a loopback API origin
+        run: node scripts/ci/check-no-loopback-api.mjs
+
   python:
     name: Python API
     runs-on: ubuntu-latest

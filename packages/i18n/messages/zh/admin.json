@@ -664,6 +664,11 @@
       "missing": "—"
     }
   },
+  "accessDenied": {
+    "title": "拒绝访问",
+    "body": "此账户已登录，但不具有 admin 角色。到达此页面并不等于获得管理授权。",
+    "hint": "请使用在 user_roles 中具有 admin 角色的账户登录。仍需通过 Cloudflare Access。"
+  },
   "dashboard": {
     "title": "运营仪表板",
     "subtitle": "平台汇总数据——账本负债、对账及转化漏斗概览。",

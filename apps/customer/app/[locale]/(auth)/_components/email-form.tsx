@@ -9,7 +9,9 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
 import { parseAuthError } from "./auth-utils";
-import { navigateAfterCustomerAuth } from "./post-auth-navigation";
+import { navigateAfterPortalAuth } from "./post-auth-navigation";
+
+import type { AuthPortal } from "@vergeo/auth/portal";
 
 type EmailFormLabels = {
   emailLabel: string;
@@ -51,11 +53,19 @@ type EmailFormProps = {
   locale: string;
   labels: EmailFormLabels;
   mode: "login" | "signup";
+  portal: AuthPortal;
   defaultNextPath: string;
   nextParam?: string | null;
 };
 
-export function EmailForm({ locale, labels, mode, defaultNextPath, nextParam }: EmailFormProps) {
+export function EmailForm({
+  locale,
+  labels,
+  mode,
+  portal,
+  defaultNextPath,
+  nextParam,
+}: EmailFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -102,9 +112,10 @@ export function EmailForm({ locale, labels, mode, defaultNextPath, nextParam }: 
         }
       }
 
-      await navigateAfterCustomerAuth({
+      await navigateAfterPortalAuth({
         router,
         locale,
+        portal,
         nextParam,
         fallbackPath: defaultNextPath,
       });
