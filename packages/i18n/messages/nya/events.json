@@ -129,6 +129,17 @@
       "voidBanner": "Ticket iyi yavoided ndipo singagwiritsidwe ku entry."
     }
   },
+  "access": {
+    "title": "Event access",
+    "intro": "If you received an event access code, enter it below to continue.",
+    "codeLabel": "Access code",
+    "continue": "Continue",
+    "verifying": "Verifying…",
+    "errors": {
+      "invalid": "The event is unavailable or that access code is invalid.",
+      "network": "We could not verify that code. Please try again."
+    }
+  },
   "transfer": {
     "back": "Bwerani ku ticket",
     "title": "Transfer ticket",

@@ -935,6 +935,18 @@ EXPECTATIONS: TableExpectations = {
             "delete": "permit",
         },
     },
+    # Event strategy completion (20260813063754): operational tables are
+    # service_role-only — REVOKE from anon/authenticated, no client policies.
+    "event_access_credentials": client_invisible(),
+    "event_team_members": client_invisible(),
+    "event_team_invites": client_invisible(),
+    "event_reschedules": client_invisible(),
+    "event_gmv_reservations": client_invisible(),
+    "event_settlement_snapshots": client_invisible(),
+    "event_refund_jobs": client_invisible(),
+    "event_promo_codes": client_invisible(),
+    "event_affiliates": client_invisible(),
+    "event_campaigns": client_invisible(),
     # R02-P13 (D37). Enquiries are private correspondence between exactly two
     # parties, so there is no public read at all: anon has no grant (→ deny even
     # for select), authenticated has a SELECT grant plus a two-party policy

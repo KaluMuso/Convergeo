@@ -13,6 +13,7 @@ from uuid import UUID
 from app.errors import AppError
 from app.services.cart.totals import line_total_ngwee
 from app.services.commissions.engine import FREE_EVENTS_CATEGORY
+from app.services.events.access import verify_event_access_proof
 from app.services.events.gmv_cap import enforce_organiser_t1_gmv_cap
 from app.services.stock.claim import (
     get_reservation_ttl_minutes,
@@ -267,17 +268,6 @@ WHERE tt.id = {type_sql};
             http_status=409,
             details={"event_id": parts[1]},
         )
-    # Private detail pages can currently validate an access code, but the
-    # purchase request carries only instance/type ids and therefore cannot
-    # prove that validation. Fail closed until a signed access proof is part of
-    # the checkout contract. Unlisted events remain purchasable by direct link.
-    if parts[11] == "private":
-        raise AppError(
-            code="tickets.private_access_required",
-            message="Private event ticket purchase requires verified access",
-            http_status=403,
-            details={"event_id": parts[1]},
-        )
     if parts[15] != "active":
         raise AppError(
             code="tickets.organiser_not_active",
@@ -307,9 +297,45 @@ WHERE tt.id = {type_sql};
             "organiser_vendor_id": parts[8],
             "title": parts[9],
             "status": parts[10],
+            "visibility": parts[11],
         },
         "organiser_vendor_id": parts[8],
     }
+
+
+def _require_private_event_access(
+    service_client: Any,
+    *,
+    event_id: str,
+    visibility: str,
+    access_proof: str | None,
+) -> None:
+    """Require the same signed proof for private RSVP and paid checkout."""
+    if visibility != "private":
+        return
+    response = (
+        service_client.client.table("event_access_credentials")
+        .select("version")
+        .eq("event_id", event_id)
+        .maybe_single()
+        .execute()
+    )
+    row = getattr(response, "data", None)
+    try:
+        version = int(row.get("version") or 0) if isinstance(row, dict) else 0
+    except (TypeError, ValueError):
+        version = 0
+    if version < 1 or verify_event_access_proof(
+        access_proof,
+        event_id=event_id,
+        credential_version=version,
+    ) is None:
+        raise AppError(
+            code="tickets.private_access_required",
+            message="Private event ticket purchase requires verified access",
+            http_status=403,
+            details={"event_id": event_id},
+        )
 
 
 def _build_ticket_commission_snapshot(
@@ -426,6 +452,7 @@ def add_ticket_to_checkout(
     ticket_type_id: str,
     qty: int = 1,
     attendee_names: list[str] | None = None,
+    event_access_proof: str | None = None,
     now: datetime | None = None,
 ) -> TicketCheckoutResult:
     """Claim ticket capacity and create a pending checkout order for paid tickets."""
@@ -442,6 +469,12 @@ def add_ticket_to_checkout(
 
     ctx = _load_ticket_context(
         service_client, instance_id=instance_id, ticket_type_id=ticket_type_id
+    )
+    _require_private_event_access(
+        service_client,
+        event_id=str(ctx["event"]["id"]),
+        visibility=str(ctx["event"].get("visibility") or "public"),
+        access_proof=event_access_proof,
     )
     ticket_type = ctx["ticket_type"]
     kind = str(ticket_type.get("kind") or "")
@@ -854,6 +887,7 @@ def rsvp(
     ticket_type_id: str,
     qty: int = 1,
     attendee_names: list[str] | None = None,
+    event_access_proof: str | None = None,
 ) -> RsvpResult:
     """Free RSVP: claim + issue immediately with 0% commission (no payment)."""
     _validate_uuid(customer_id, "customer_id")
@@ -869,6 +903,12 @@ def rsvp(
 
     ctx = _load_ticket_context(
         service_client, instance_id=instance_id, ticket_type_id=ticket_type_id
+    )
+    _require_private_event_access(
+        service_client,
+        event_id=str(ctx["event"]["id"]),
+        visibility=str(ctx["event"].get("visibility") or "public"),
+        access_proof=event_access_proof,
     )
     ticket_type = ctx["ticket_type"]
     kind = str(ticket_type.get("kind") or "")

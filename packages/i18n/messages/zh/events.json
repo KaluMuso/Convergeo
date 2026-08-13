@@ -129,6 +129,17 @@
       "voidBanner": "此门票已作废，无法用于入场。"
     }
   },
+  "access": {
+    "title": "活动访问",
+    "intro": "如果您收到了活动访问码，请在下方输入以继续。",
+    "codeLabel": "访问码",
+    "continue": "继续",
+    "verifying": "验证中…",
+    "errors": {
+      "invalid": "活动不可用或访问码无效。",
+      "network": "无法验证该访问码，请重试。"
+    }
+  },
   "transfer": {
     "back": "返回门票",
     "title": "转让门票",

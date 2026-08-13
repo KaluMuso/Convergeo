@@ -1026,6 +1026,126 @@ export type Database = {
           },
         ]
       }
+      event_access_credentials: {
+        Row: {
+          code_hash: string
+          created_at: string
+          event_id: string
+          rotated_at: string
+          version: number
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          event_id: string
+          rotated_at?: string
+          version?: number
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          event_id?: string
+          rotated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_access_credentials_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_affiliates: {
+        Row: {
+          active: boolean
+          code: string
+          commission_bps: number
+          created_at: string
+          event_id: string
+          id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          commission_bps?: number
+          created_at?: string
+          event_id: string
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          commission_bps?: number
+          created_at?: string
+          event_id?: string
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_affiliates_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_campaigns: {
+        Row: {
+          audience: string
+          channel: string
+          created_at: string
+          created_by: string
+          event_id: string
+          id: string
+          name: string
+          scheduled_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          audience: string
+          channel: string
+          created_at?: string
+          created_by: string
+          event_id: string
+          id?: string
+          name: string
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          channel?: string
+          created_at?: string
+          created_by?: string
+          event_id?: string
+          id?: string
+          name?: string
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_campaigns_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_categories: {
         Row: {
           created_at: string
@@ -1058,6 +1178,74 @@ export type Database = {
           },
         ]
       }
+      event_gmv_reservations: {
+        Row: {
+          amount_ngwee: number
+          captured_at: string | null
+          checkout_group_id: string
+          created_at: string
+          event_id: string
+          expires_at: string
+          organiser_vendor_id: string
+          released_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_ngwee: number
+          captured_at?: string | null
+          checkout_group_id: string
+          created_at?: string
+          event_id: string
+          expires_at: string
+          organiser_vendor_id: string
+          released_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_ngwee?: number
+          captured_at?: string | null
+          checkout_group_id?: string
+          created_at?: string
+          event_id?: string
+          expires_at?: string
+          organiser_vendor_id?: string
+          released_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_gmv_reservations_checkout_group_id_fkey"
+            columns: ["checkout_group_id"]
+            isOneToOne: true
+            referencedRelation: "checkout_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_gmv_reservations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_gmv_reservations_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_orphaned_tier_report"
+            referencedColumns: ["vendor_id"]
+          },
+          {
+            foreignKeyName: "event_gmv_reservations_organiser_vendor_id_fkey"
+            columns: ["organiser_vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_instances: {
         Row: {
           capacity: number
@@ -1065,7 +1253,9 @@ export type Database = {
           ends_at: string
           event_id: string
           id: string
+          recurrence_key: string | null
           starts_at: string
+          status: string
           updated_at: string
         }
         Insert: {
@@ -1074,7 +1264,9 @@ export type Database = {
           ends_at: string
           event_id: string
           id?: string
+          recurrence_key?: string | null
           starts_at: string
+          status?: string
           updated_at?: string
         }
         Update: {
@@ -1083,7 +1275,9 @@ export type Database = {
           ends_at?: string
           event_id?: string
           id?: string
+          recurrence_key?: string | null
           starts_at?: string
+          status?: string
           updated_at?: string
         }
         Relationships: [
@@ -1096,10 +1290,364 @@ export type Database = {
           },
         ]
       }
+      event_promo_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          discount_kind: string
+          discount_value: number
+          ends_at: string | null
+          event_id: string
+          id: string
+          max_redemptions: number | null
+          starts_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          discount_kind: string
+          discount_value: number
+          ends_at?: string | null
+          event_id: string
+          id?: string
+          max_redemptions?: number | null
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          discount_kind?: string
+          discount_value?: number
+          ends_at?: string | null
+          event_id?: string
+          id?: string
+          max_redemptions?: number | null
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_promo_codes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_refund_jobs: {
+        Row: {
+          amount_ngwee: number
+          attempts: number
+          created_at: string
+          customer_id: string
+          event_id: string
+          id: string
+          last_error: string | null
+          locked_at: string | null
+          next_retry_at: string | null
+          order_id: string
+          payout_id: string | null
+          policy_snapshot: Json
+          refund_id: string | null
+          source: string
+          source_key: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_ngwee: number
+          attempts?: number
+          created_at?: string
+          customer_id: string
+          event_id: string
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          next_retry_at?: string | null
+          order_id: string
+          payout_id?: string | null
+          policy_snapshot: Json
+          refund_id?: string | null
+          source: string
+          source_key: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_ngwee?: number
+          attempts?: number
+          created_at?: string
+          customer_id?: string
+          event_id?: string
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          next_retry_at?: string | null
+          order_id?: string
+          payout_id?: string | null
+          policy_snapshot?: Json
+          refund_id?: string | null
+          source?: string
+          source_key?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_refund_jobs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_refund_jobs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_refund_jobs_payout_id_fkey"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "payouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_refund_jobs_refund_id_fkey"
+            columns: ["refund_id"]
+            isOneToOne: false
+            referencedRelation: "refunds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_reschedules: {
+        Row: {
+          actor_user_id: string
+          announced_at: string
+          created_at: string
+          event_id: string
+          id: string
+          new_schedule: Json
+          new_venue: string | null
+          old_schedule: Json
+          old_venue: string | null
+          opt_out_deadline: string
+          reason: string
+        }
+        Insert: {
+          actor_user_id: string
+          announced_at?: string
+          created_at?: string
+          event_id: string
+          id?: string
+          new_schedule: Json
+          new_venue?: string | null
+          old_schedule: Json
+          old_venue?: string | null
+          opt_out_deadline: string
+          reason: string
+        }
+        Update: {
+          actor_user_id?: string
+          announced_at?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          new_schedule?: Json
+          new_venue?: string | null
+          old_schedule?: Json
+          old_venue?: string | null
+          opt_out_deadline?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_reschedules_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_settlement_snapshots: {
+        Row: {
+          created_at: string
+          event_id: string
+          held_by_reschedule_id: string | null
+          instance_id: string
+          order_id: string
+          schedule: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          held_by_reschedule_id?: string | null
+          instance_id: string
+          order_id: string
+          schedule: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          held_by_reschedule_id?: string | null
+          instance_id?: string
+          order_id?: string
+          schedule?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_settlement_snapshots_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_settlement_snapshots_held_by_reschedule_id_fkey"
+            columns: ["held_by_reschedule_id"]
+            isOneToOne: false
+            referencedRelation: "event_reschedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_settlement_snapshots_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "event_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_settlement_snapshots_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_team_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          event_id: string
+          expires_at: string
+          id: string
+          invited_by: string
+          invitee_phone: string
+          revoked_at: string | null
+          role: string
+          status: string
+          token_digest: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          event_id: string
+          expires_at: string
+          id?: string
+          invited_by: string
+          invitee_phone: string
+          revoked_at?: string | null
+          role: string
+          status?: string
+          token_digest: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          event_id?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          invitee_phone?: string
+          revoked_at?: string | null
+          role?: string
+          status?: string
+          token_digest?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_team_invites_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_team_members: {
+        Row: {
+          accepted_at: string
+          created_at: string
+          event_id: string
+          id: string
+          invited_by: string | null
+          revoked_at: string | null
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          created_at?: string
+          event_id: string
+          id?: string
+          invited_by?: string | null
+          revoked_at?: string | null
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          invited_by?: string | null
+          revoked_at?: string | null
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_team_members_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           access_code_hash: string | null
           age_restriction: number | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           category_slug: string | null
           created_at: string
           description: string | null
@@ -1110,6 +1658,11 @@ export type Database = {
           lat: number | null
           lng: number | null
           organiser_vendor_id: string
+          platform_fee_payer: string
+          recurrence_horizon_days: number
+          recurrence_rule: string | null
+          recurrence_timezone: string | null
+          recurrence_until: string | null
           refund_policy_key: string | null
           slug: string
           status: string
@@ -1122,6 +1675,9 @@ export type Database = {
         Insert: {
           access_code_hash?: string | null
           age_restriction?: number | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           category_slug?: string | null
           created_at?: string
           description?: string | null
@@ -1132,6 +1688,11 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           organiser_vendor_id: string
+          platform_fee_payer?: string
+          recurrence_horizon_days?: number
+          recurrence_rule?: string | null
+          recurrence_timezone?: string | null
+          recurrence_until?: string | null
           refund_policy_key?: string | null
           slug: string
           status?: string
@@ -1144,6 +1705,9 @@ export type Database = {
         Update: {
           access_code_hash?: string | null
           age_restriction?: number | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           category_slug?: string | null
           created_at?: string
           description?: string | null
@@ -1154,6 +1718,11 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           organiser_vendor_id?: string
+          platform_fee_payer?: string
+          recurrence_horizon_days?: number
+          recurrence_rule?: string | null
+          recurrence_timezone?: string | null
+          recurrence_until?: string | null
           refund_policy_key?: string | null
           slug?: string
           status?: string
@@ -2873,6 +3442,7 @@ export type Database = {
           created_at: string
           id: string
           lenco_reference: string
+          payout_kind: string
           rail: string
           resolve_snapshot: Json
           status: string
@@ -2884,6 +3454,7 @@ export type Database = {
           created_at?: string
           id?: string
           lenco_reference: string
+          payout_kind?: string
           rail: string
           resolve_snapshot?: Json
           status?: string
@@ -2895,6 +3466,7 @@ export type Database = {
           created_at?: string
           id?: string
           lenco_reference?: string
+          payout_kind?: string
           rail?: string
           resolve_snapshot?: Json
           status?: string
