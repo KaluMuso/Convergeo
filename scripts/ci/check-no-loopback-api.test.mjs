@@ -140,6 +140,17 @@ describe("inspectBundleSource", () => {
     assert.equal(mismatch[0]?.kind, "production_targets_staging");
   });
 
+  it("classifies plane from the inlined bundle marker", () => {
+    const preview = inspectBundleSource(
+      'vergeo5-deployment-plane=preview; const api="https://api.vergeo5.com"',
+    );
+    assert.equal(preview[0]?.kind, "preview_or_staging_targets_production");
+    const production = inspectBundleSource(
+      'vergeo5-deployment-plane=production; const api="https://api.vergeo5.com"',
+    );
+    assert.deepEqual(production, []);
+  });
+
   it("loopback-only mode ignores CSP staging/production API allowlists", () => {
     const hits = inspectBundleSource(
       "connect-src https://api.vergeo5.com https://api.staging.vergeo5.com",

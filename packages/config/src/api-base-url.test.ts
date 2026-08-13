@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  DEPLOYMENT_PLANE_BUNDLE_MARKER,
   isDeployedFrontendEnv,
   isLoopbackApiOrigin,
   isProductionApiOrigin,
   isStagingApiOrigin,
   resolvePublicApiBaseUrl,
 } from "./api-base-url";
+
+describe("deployment plane bundle marker", () => {
+  it("emits a CI-readable plane marker", () => {
+    expect(DEPLOYMENT_PLANE_BUNDLE_MARKER.startsWith("vergeo5-deployment-plane=")).toBe(true);
+  });
+});
 
 describe("loopback and production API origin detection", () => {
   it("detects localhost, loopback, and IPv6 loopback", () => {

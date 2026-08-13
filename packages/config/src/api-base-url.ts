@@ -178,12 +178,26 @@ function resolveByPlane(
   return null;
 }
 
+/**
+ * Inlined into deployable JS. Direct `process.env.NEXT_PUBLIC_DEPLOYMENT_PLANE`
+ * read so Next.js substitutes the build-time plane; the CI guard classifies
+ * Production vs Preview from this marker without trusting `VERCEL_ENV`.
+ */
+export const DEPLOYMENT_PLANE_BUNDLE_MARKER = `vergeo5-deployment-plane=${
+  process.env.NEXT_PUBLIC_DEPLOYMENT_PLANE ?? "unset"
+}`;
+
 export function resolvePublicApiBaseUrl(
   env: ApiBaseEnvBag = {},
   keys: readonly PublicApiEnvKey[] = ["NEXT_PUBLIC_API_BASE_URL"],
 ): string | null {
   const merged = mergeEnv(env);
   const configured = pickConfigured(merged, keys);
+
+  // Keep the marker live so Terser cannot drop it from the client bundle.
+  if (configured === DEPLOYMENT_PLANE_BUNDLE_MARKER) {
+    return null;
+  }
 
   // Direct `process.env.NODE_ENV` comparison lets Next.js DCE the else branch
   // (including the loopback literal) out of production client bundles.

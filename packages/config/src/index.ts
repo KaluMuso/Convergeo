@@ -5,6 +5,7 @@ export {
   type ApiErrorEnvelope,
 } from "./api-client";
 export {
+  DEPLOYMENT_PLANE_BUNDLE_MARKER,
   PRODUCTION_API_HOST,
   STAGING_API_HOST,
   hostnameOfOrigin,
