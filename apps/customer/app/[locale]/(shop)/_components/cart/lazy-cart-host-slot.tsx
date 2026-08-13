@@ -41,6 +41,16 @@ export function LazyCartHostSlot({ locale }: LazyCartHostSlotProps) {
         loadErrorTitle: t("cart.loadErrorTitle"),
         loadErrorBody: t("cart.loadErrorBody"),
         loadErrorRetry: t("cart.loadErrorRetry"),
+        quantityValue: t("cart.qtyValue"),
+        saleUnits: {
+          each: t("cart.saleUnits.each"),
+          metre: t("cart.saleUnits.metre"),
+          kg: t("cart.saleUnits.kg"),
+          litre: t("cart.saleUnits.litre"),
+          bag: t("cart.saleUnits.bag"),
+          sqm: t("cart.saleUnits.sqm"),
+        },
+        madeToOrderLeadTime: t("cart.madeToOrderLeadTime"),
       }}
     />
   );

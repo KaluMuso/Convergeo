@@ -1,5 +1,11 @@
 # Product-Strategy Gap Audit — verdicts & dispositions
 
+> **Historical snapshot (2026-07-15).** This audit predates the merged R02-P16 product-class
+> migrations and customer purchase rules. Its original verdicts are retained for traceability,
+> but they no longer describe the current codebase. See
+> [`product-strategy-alignment-2026-08-12.md`](product-strategy-alignment-2026-08-12.md) for the
+> current implementation matrix, remaining gaps, and the unresolved D34 scope conflict.
+
 **Date:** 2026-07-15 · **Trigger:** an external (Codex) audit compared the codebase to the
 Product Strategy PDF and listed 16 "gaps." This note records the verified disposition of each
 against the **locked decisions** (`docs/plan/00-decisions.md`, the source of truth per

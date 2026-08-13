@@ -106,6 +106,17 @@ _ALREADY_COMPLETED_MARKER = "FIXA_CHECKOUT_ALREADY_COMPLETED"
 # Marker raised when a tracked hold vanished or no longer covers the ordered qty
 # between the pre-transaction check and the in-tx consumption (#4 oversell guard).
 _HOLD_INVALID_MARKER = "FIXA_HOLD_INVALID"
+# Marker raised after serializing on a Class-E listing when accepting this cart
+# would exceed the vendor's current UTC-week capacity. Its payload is intentionally
+# machine-readable so the Python boundary can return a stable customer-facing 409.
+_CLASS_E_CAPACITY_MARKER = "FIXA_CLASS_E_CAPACITY_EXCEEDED"
+_CLASS_E_CAPACITY_ERROR_RE = re.compile(
+    rf"{_CLASS_E_CAPACITY_MARKER}:"
+    r"(?P<listing_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-"
+    r"[0-9a-f]{4}-[0-9a-f]{12}):"
+    r"(?P<remaining>\d+):(?P<requested>\d+)",
+    re.IGNORECASE,
+)
 
 
 def _lock_and_recheck_sql(session_sql: str, customer_sql: str) -> str:
@@ -146,8 +157,8 @@ def _consume_reservation_conditional_sql(
     A conditional DELETE that must return a row proves the hold still existed and
     still covered the ordered qty. If a sweeper reclaimed (restocked) the hold in
     the meantime, no row matches and we abort the whole transaction — no partial
-    order, no oversell. Non-tracked listings (e.g. always_available) never hold a
-    reservation, so they are skipped.
+    order, no oversell. Non-tracked and made-to-order listings never create stock
+    holds, so they are skipped here as well.
     """
     group_sql = sql_uuid(checkout_group_id, "checkout_group_id")
     listing_sql = sql_uuid(listing_id, "listing_id")
@@ -157,12 +168,17 @@ def _consume_reservation_conditional_sql(
 DO $consume$
 DECLARE
   v_mode text;
+  v_product_class text;
+  v_fulfilment_mode text;
   v_deleted int;
 BEGIN
-  SELECT stock_mode INTO v_mode
+  SELECT stock_mode, product_class, fulfilment_mode
+  INTO v_mode, v_product_class, v_fulfilment_mode
   FROM public.vendor_listings
   WHERE id = {listing_sql};
-  IF v_mode = 'tracked' THEN
+  IF v_mode = 'tracked'
+     AND v_product_class IS DISTINCT FROM 'E'
+     AND v_fulfilment_mode IS DISTINCT FROM 'made_to_order' THEN
     DELETE FROM public.stock_reservations
     WHERE checkout_group_id = {group_sql}
       AND listing_id = {listing_sql}
@@ -174,6 +190,89 @@ BEGIN
   END IF;
 END
 $consume$;
+"""
+
+
+def _aggregate_listing_quantities(cart_lines: list[CartLineInput]) -> dict[str, int]:
+    """Return one requested quantity per listing in deterministic UUID order."""
+    quantities: dict[str, int] = {}
+    for line in cart_lines:
+        quantities[line.listing_id] = quantities.get(line.listing_id, 0) + line.qty
+    return dict(sorted(quantities.items()))
+
+
+def _lock_and_check_class_e_capacity_sql(
+    requested_by_listing: dict[str, int],
+) -> str:
+    """Serialize Class-E acceptance and enforce the current UTC-week capacity.
+
+    Every requested listing is locked in UUID order before any capacity is read.
+    That makes overlapping checkouts use one consistent lock order and ensures a
+    waiter sees order items committed by the transaction that held the lock first.
+    Only explicit Class E is capacity-governed; legacy non-E made-to-order listings
+    intentionally retain their existing uncapped behaviour.
+    """
+    if not requested_by_listing:
+        return ""
+
+    requested_values = ",\n    ".join(
+        f"({sql_uuid(listing_id, 'listing_id')}, {int(qty)})"
+        for listing_id, qty in sorted(requested_by_listing.items())
+    )
+    return f"""
+DO $capacity$
+DECLARE
+  v_listing_id uuid;
+  v_product_class text;
+  v_capacity integer;
+  v_requested integer;
+  v_committed bigint;
+  v_remaining bigint;
+  v_week_start timestamptz :=
+    date_trunc('week', timezone('UTC', now())) AT TIME ZONE 'UTC';
+BEGIN
+  -- Lock all requested listings before checking any of them. Stable UUID order
+  -- prevents deadlocks when carts overlap on more than one listing.
+  PERFORM vl.id
+  FROM public.vendor_listings AS vl
+  JOIN (VALUES
+    {requested_values}
+  ) AS requested(listing_id, qty) ON requested.listing_id = vl.id
+  ORDER BY vl.id
+  FOR UPDATE OF vl;
+
+  FOR v_listing_id, v_product_class, v_capacity, v_requested IN
+    SELECT
+      vl.id,
+      vl.product_class::text,
+      vl.vendor_capacity_per_week,
+      requested.qty
+    FROM public.vendor_listings AS vl
+    JOIN (VALUES
+      {requested_values}
+    ) AS requested(listing_id, qty) ON requested.listing_id = vl.id
+    ORDER BY vl.id
+  LOOP
+    IF v_product_class = 'E' THEN
+      SELECT coalesce(sum(oi.qty), 0)
+      INTO v_committed
+      FROM public.order_item_products AS oip
+      JOIN public.order_items AS oi ON oi.id = oip.order_item_id
+      JOIN public.orders AS o ON o.id = oi.order_id
+      WHERE oip.listing_id = v_listing_id
+        AND o.status NOT IN ('cancelled', 'refunded')
+        AND o.created_at >= v_week_start
+        AND o.created_at < v_week_start + interval '1 week';
+
+      IF v_capacity IS NULL OR v_committed + v_requested > v_capacity THEN
+        v_remaining := greatest(coalesce(v_capacity, 0) - v_committed, 0);
+        RAISE EXCEPTION '{_CLASS_E_CAPACITY_MARKER}:%:%:%',
+          v_listing_id, v_remaining, v_requested;
+      END IF;
+    END IF;
+  END LOOP;
+END
+$capacity$;
 """
 
 
@@ -199,9 +298,7 @@ def _fetch_existing_by_idempotency_key(
     return data if isinstance(data, dict) else None
 
 
-def _fetch_checkout_session(
-    client: Any, *, session_id: str, customer_id: str
-) -> dict[str, Any]:
+def _fetch_checkout_session(client: Any, *, session_id: str, customer_id: str) -> dict[str, Any]:
     response = (
         client.table("checkout_groups")
         .select("*")
@@ -385,9 +482,7 @@ ORDER BY oi.id;
     return tuple(created)
 
 
-def _result_from_group(
-    group: dict[str, Any], *, client: Any, replayed: bool
-) -> CreateOrdersResult:
+def _result_from_group(group: dict[str, Any], *, client: Any, replayed: bool) -> CreateOrdersResult:
     group_id = str(group["id"])
     orders = _load_orders_for_group(client, group_id)
     return CreateOrdersResult(
@@ -415,9 +510,7 @@ def _resolve_completed_after_race(
     idempotency_key gets the existing order set back; a distinct key hitting an
     already-completed session is a conflict.
     """
-    completed = _fetch_checkout_session(
-        client, session_id=session_id, customer_id=customer_id
-    )
+    completed = _fetch_checkout_session(client, session_id=session_id, customer_id=customer_id)
     if str(completed.get("status")) == "completed" and (
         str(completed.get("idempotency_key")) == idempotency_key
     ):
@@ -569,7 +662,8 @@ def create_orders_atomic(
     )
 
     commission_rates = _load_commission_rates(client)
-    listing_ids = sorted({line.listing_id for line in cart_lines})
+    requested_by_listing = _aggregate_listing_quantities(cart_lines)
+    listing_ids = list(requested_by_listing)
     commission_keys = _load_listing_commission_keys(client, listing_ids)
     product_ids = _load_product_ids(client, listing_ids)
 
@@ -618,13 +712,12 @@ def create_orders_atomic(
 
     statements: list[str] = ["BEGIN;"]
     statements.append(_lock_and_recheck_sql(session_sql, customer_sql))
+    statements.append(_lock_and_check_class_e_capacity_sql(requested_by_listing))
 
     for order, vendor_lines in planned_orders:
         order_sql = sql_uuid(order.order_id, "order_id")
         vendor_sql = sql_uuid(order.vendor_id, "vendor_id")
-        zone_sql = (
-            sql_literal(order.delivery_zone) if order.delivery_zone is not None else "NULL"
-        )
+        zone_sql = sql_literal(order.delivery_zone) if order.delivery_zone is not None else "NULL"
         address_sql = sql_uuid(address_id, "address_id") if address_id is not None else "NULL"
         snapshot_sql = _sql_json(order.commission_snapshot)
         statements.append(
@@ -635,16 +728,14 @@ INSERT INTO public.orders (
 ) VALUES (
   {order_sql}, {session_sql}, {vendor_sql}, {customer_sql}, '{status_placed}',
   '{order.fulfilment}', {zone_sql}, {address_sql}, {order.delivery_fee_ngwee},
-  {'true' if order.cod else 'false'}, {snapshot_sql}::jsonb
+  {"true" if order.cod else "false"}, {snapshot_sql}::jsonb
 );
 """
         )
         for item, line in zip(order.items, vendor_lines, strict=True):
             item_sql = sql_uuid(item.order_item_id, "order_item_id")
             title_sql = (
-                sql_literal(line.title_snapshot)
-                if line.title_snapshot is not None
-                else "NULL"
+                sql_literal(line.title_snapshot) if line.title_snapshot is not None else "NULL"
             )
             listing_sql = sql_uuid(line.listing_id, "listing_id")
             product_id = product_ids.get(line.listing_id)
@@ -720,6 +811,21 @@ WHERE id = {session_sql};
         error = result.error or ""
         if inject_failure == "before_commit":
             raise RuntimeError(f"order creation failed: {error}")
+        capacity_match = _CLASS_E_CAPACITY_ERROR_RE.search(error)
+        if capacity_match is not None:
+            requested_qty = int(capacity_match.group("requested"))
+            raise AppError(
+                code="cart.class_e_capacity_exceeded",
+                message="Weekly made-to-order capacity exceeded",
+                http_status=409,
+                details={
+                    "message_key": "cart.class_e_capacity_exceeded",
+                    "listing_id": capacity_match.group("listing_id"),
+                    "remaining": int(capacity_match.group("remaining")),
+                    "requested_qty": requested_qty,
+                    "retry": True,
+                },
+            )
         # A concurrent submit won the row lock and completed the group first (#2):
         # our in-tx recheck aborted. Resolve to the same idempotent result the
         # pre-transaction guard would have returned — never a second order set.
@@ -751,10 +857,7 @@ def _load_product_ids(client: Any, listing_ids: list[str]) -> dict[str, str]:
     if not listing_ids:
         return {}
     response = (
-        client.table("vendor_listings")
-        .select("id, product_id")
-        .in_("id", listing_ids)
-        .execute()
+        client.table("vendor_listings").select("id, product_id").in_("id", listing_ids).execute()
     )
     rows = response.data if isinstance(response.data, list) else []
     product_ids: dict[str, str] = {}

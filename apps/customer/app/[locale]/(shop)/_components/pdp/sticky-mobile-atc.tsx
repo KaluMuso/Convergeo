@@ -3,9 +3,17 @@
 import { formatK } from "@vergeo/i18n";
 import { Button } from "@vergeo/ui/src/button";
 import { useTranslations } from "next-intl";
-import { useEffect, useState, type RefObject } from "react";
+import { useEffect, useMemo, useState, type RefObject } from "react";
 
-import type { BuyBoxLabels, BuyBoxListing } from "./buy-box";
+import {
+  formatListingQuantity,
+  formatSaleIncrement,
+  resolveSaleUnit,
+  type SaleUnitLabels,
+} from "../sale-quantity";
+
+import { getMinimumQuantity, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
+
 import type { ListingPurchaseControls } from "./use-listing-purchase";
 
 type StickyMobileAtcProps = {
@@ -15,6 +23,7 @@ type StickyMobileAtcProps = {
   /** Element observed to decide when the sticky bar should appear. */
   observeRef: RefObject<HTMLElement | null>;
   ariaLabel: string;
+  locale?: string;
   onVisibleChange?: (visible: boolean) => void;
 };
 
@@ -28,12 +37,51 @@ export function StickyMobileAtc({
   purchase,
   observeRef,
   ariaLabel,
+  locale = "en",
   onVisibleChange,
 }: StickyMobileAtcProps) {
   const t = useTranslations("catalog");
   const [buyBoxOutOfView, setBuyBoxOutOfView] = useState(false);
   const visible = buyBoxOutOfView && listing.inStock;
-  const moqLabel = listing.moq > 1 ? t("pdp.buyBox.moq", { count: listing.moq }) : null;
+  const unitLabels: SaleUnitLabels = useMemo(
+    () => ({
+      each: t("pdp.buyBox.units.each"),
+      metre: t("pdp.buyBox.units.metre"),
+      kg: t("pdp.buyBox.units.kg"),
+      litre: t("pdp.buyBox.units.litre"),
+      bag: t("pdp.buyBox.units.bag"),
+      sqm: t("pdp.buyBox.units.sqm"),
+    }),
+    [t],
+  );
+  const saleUnit = resolveSaleUnit(listing.saleUnit);
+  const minimum = getMinimumQuantity(listing);
+  const formattedMinimum = formatListingQuantity(
+    minimum,
+    saleUnit,
+    listing.unitStepMilli,
+    locale,
+    unitLabels,
+  );
+  const formattedQuantity = formatListingQuantity(
+    purchase.quantity,
+    saleUnit,
+    listing.unitStepMilli,
+    locale,
+    unitLabels,
+  );
+  const formattedIncrement = formatSaleIncrement(
+    saleUnit,
+    listing.unitStepMilli,
+    locale,
+    unitLabels,
+  );
+  const moqLabel =
+    minimum > 1
+      ? saleUnit === "each"
+        ? t("pdp.buyBox.moq", { count: minimum })
+        : t("pdp.buyBox.minimumOrderQuantity", { quantity: formattedMinimum })
+      : null;
   const stockMoqSeparator = t("pdp.stickyAtc.stockMoqSeparator");
 
   useEffect(() => {
@@ -87,6 +135,11 @@ export function StickyMobileAtc({
           >
             {formatK(listing.priceNgwee)}
           </p>
+          {saleUnit !== "each" ? (
+            <p className="truncate text-micro text-text-2">
+              {t("pdp.buyBox.pricePerIncrement", { quantity: formattedIncrement })}
+            </p>
+          ) : null}
           <p
             className="truncate text-micro font-medium text-success"
             data-testid="pdp-sticky-stock"
@@ -115,9 +168,9 @@ export function StickyMobileAtc({
             data-testid="pdp-sticky-qty-value"
             className="min-w-8 text-center font-mono text-base"
             aria-live="polite"
-            aria-label={labels.quantityLabel}
+            aria-label={`${labels.quantityLabel}: ${formattedQuantity}`}
           >
-            {purchase.quantity}
+            {formattedQuantity}
           </output>
           <button
             type="button"

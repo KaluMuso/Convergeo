@@ -19,7 +19,7 @@ import { NewCanonicalForm } from "./new-canonical-form";
 import { QuickListForm } from "./quick-list-form";
 
 import type { KycApplication } from "../../../onboarding/_lib/types";
-import type { SuggestItem } from "../_lib/types";
+import type { ListingCreateResponse, SuggestItem } from "../_lib/types";
 
 type ListingCreateFlowProps = {
   locale: string;
@@ -68,17 +68,54 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
       priceLabel: t("listings.fields.priceLabel"),
       pricePlaceholder: t("listings.fields.pricePlaceholder"),
       priceHelp: t("listings.fields.priceHelp"),
+      pricePerStepHelp: t("listings.fields.pricePerStepHelp"),
       priceInvalid: t("listings.fields.priceInvalid"),
+      productClassLabel: t("listings.fields.productClassLabel"),
+      classA: t("listings.fields.classA"),
+      classB: t("listings.fields.classB"),
+      classC: t("listings.fields.classC"),
+      classD: t("listings.fields.classD"),
+      classE: t("listings.fields.classE"),
+      standaloneClassHint: t("listings.fields.standaloneClassHint"),
+      saleUnitLabel: t("listings.fields.saleUnitLabel"),
+      unitEach: t("listings.fields.unitEach"),
+      unitMetre: t("listings.fields.unitMetre"),
+      unitKg: t("listings.fields.unitKg"),
+      unitLitre: t("listings.fields.unitLitre"),
+      unitBag: t("listings.fields.unitBag"),
+      unitSqm: t("listings.fields.unitSqm"),
+      unitStepLabel: t("listings.fields.unitStepLabel"),
+      unitStepHelp: t("listings.fields.unitStepHelp"),
+      unitStepInvalid: t("listings.fields.unitStepInvalid"),
+      minStepsLabel: t("listings.fields.minStepsLabel"),
       conditionLabel: t("listings.fields.conditionLabel"),
       conditionNew: t("listings.fields.conditionNew"),
       conditionRefurbished: t("listings.fields.conditionRefurbished"),
+      conditionUsed: t("listings.fields.conditionUsed"),
+      defectNotesLabel: t("listings.fields.defectNotesLabel"),
+      defectNotesPlaceholder: t("listings.fields.defectNotesPlaceholder"),
+      defectNotesHelp: t("listings.fields.defectNotesHelp"),
+      defectNotesInvalid: t("listings.fields.defectNotesInvalid"),
+      fulfilmentLabel: t("listings.fields.fulfilmentLabel"),
+      fulfilmentStocked: t("listings.fields.fulfilmentStocked"),
+      fulfilmentMadeToOrder: t("listings.fields.fulfilmentMadeToOrder"),
+      leadTimeLabel: t("listings.fields.leadTimeLabel"),
+      leadTimeHelp: t("listings.fields.leadTimeHelp"),
+      leadTimeInvalid: t("listings.fields.leadTimeInvalid"),
+      capacityLabel: t("listings.fields.capacityLabel"),
+      capacityHelp: t("listings.fields.capacityHelp"),
+      capacityInvalid: t("listings.fields.capacityInvalid"),
       stockModeLabel: t("listings.fields.stockModeLabel"),
       stockTracked: t("listings.fields.stockTracked"),
       stockAlways: t("listings.fields.stockAlways"),
       stockQtyLabel: t("listings.fields.stockQtyLabel"),
       wholesaleLabel: t("listings.fields.wholesaleLabel"),
       wholesaleHelp: t("listings.fields.wholesaleHelp"),
+      wholesaleMeasureUnavailable: t("listings.fields.wholesaleMeasureUnavailable"),
       moqLabel: t("listings.fields.moqLabel"),
+      evidenceDraftNotice: t("listings.fields.evidenceDraftNotice"),
+      saveDraft: t("listings.fields.saveDraft"),
+      savingDraft: t("listings.fields.savingDraft"),
       required: t("listings.errors.required"),
     }),
     [t],
@@ -127,17 +164,26 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
     };
   }, [kycClient, reloadKey, session, sessionLoading]);
 
-  const handleSuccess = (listingId: string, mode: FlowTab) => {
-    if (mode === "new_canonical") {
+  const handleSuccess = (
+    response: ListingCreateResponse,
+    mode: FlowTab,
+    requiresEvidence: boolean,
+  ) => {
+    if (requiresEvidence) {
+      setSuccessMessage(t("listings.success.evidence"));
+    } else if (mode === "new_canonical") {
       setSuccessMessage(t("listings.success.moderation"));
     } else {
       setSuccessMessage(t("listings.success.live"));
     }
     setError(null);
     window.setTimeout(() => {
-      router.push(`/${locale}/listings`);
+      router.push(
+        requiresEvidence
+          ? `/${locale}/listings/${response.listing_id}/edit`
+          : `/${locale}/listings`,
+      );
     }, 1200);
-    void listingId;
   };
 
   if (sessionLoading || loadingTier) {
@@ -195,7 +241,9 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
                 client={listingClient}
                 productId={selectedProduct.entity_id}
                 wholesaleEnabled={wholesaleEnabled}
-                onSuccess={(listingId) => handleSuccess(listingId, "attach")}
+                onSuccess={(response, requiresEvidence) =>
+                  handleSuccess(response, "attach", requiresEvidence)
+                }
                 onError={setError}
                 labels={{
                   specHeading: t("listings.attach.specHeading"),
@@ -204,6 +252,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
                   fields: fieldLabels,
                   commission: commissionLabels,
                   submitError: t("listings.errors.submitFailed"),
+                  standaloneRequired: t("listings.errors.standalone_required"),
                 }}
               />
             </>
@@ -218,7 +267,9 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
         <NewCanonicalForm
           client={listingClient}
           wholesaleEnabled={wholesaleEnabled}
-          onSuccess={(listingId) => handleSuccess(listingId, "new_canonical")}
+          onSuccess={(response, requiresEvidence) =>
+            handleSuccess(response, "new_canonical", requiresEvidence)
+          }
           onError={setError}
           labels={{
             heading: t("listings.newCanonical.heading"),
@@ -235,6 +286,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             fields: fieldLabels,
             commission: commissionLabels,
             submitError: t("listings.errors.submitFailed"),
+            standaloneRequired: t("listings.errors.standalone_required"),
             required: t("listings.errors.required"),
           }}
         />
@@ -247,7 +299,9 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
         <QuickListForm
           client={listingClient}
           wholesaleEnabled={wholesaleEnabled}
-          onSuccess={(listingId) => handleSuccess(listingId, "quick_list")}
+          onSuccess={(response, requiresEvidence) =>
+            handleSuccess(response, "quick_list", requiresEvidence)
+          }
           onError={setError}
           labels={{
             heading: t("listings.quickList.heading"),
@@ -258,6 +312,7 @@ export function ListingCreateFlow({ locale }: ListingCreateFlowProps) {
             publishing: t("listings.quickList.publishing"),
             fields: fieldLabels,
             submitError: t("listings.errors.submitFailed"),
+            standaloneRequired: t("listings.errors.standalone_required"),
             required: t("listings.errors.required"),
           }}
         />

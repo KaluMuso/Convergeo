@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from app.errors import AppError
 from app.services.cart.totals import select_unit_price_ngwee, validate_moq
 from app.services.rfq.listing_cart_authority import (
     is_rfq_pinned_line,
@@ -429,6 +430,14 @@ def validate_item_qty_for_listing(
     listing's wholesale flag.
     """
     wholesale = bool(listing.get("wholesale", False)) and business_eligible
+    min_steps = int(listing.get("min_steps") or 1)
+    if qty < min_steps:
+        raise AppError(
+            code="cart.min_steps_violation",
+            message="Quantity is below the minimum number of sale increments",
+            http_status=400,
+            details={"min_steps": min_steps, "qty": qty, "retry": True},
+        )
     moq = int(listing.get("moq", 1))
     validate_moq(wholesale=wholesale, moq=moq, qty=qty)
 

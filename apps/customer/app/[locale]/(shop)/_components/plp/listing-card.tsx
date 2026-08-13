@@ -22,10 +22,14 @@ const IMPRESSION_MIN_VISIBLE_MS = 1_000;
  * here would also list that ~6 KB gz chunk on every ListingCard route and fail
  * the bundle-guard regression gate (layout chunks are not counted on /page).
  */
-async function quickAddListing(listingId: string, successMessage: string): Promise<void> {
+async function quickAddListing(
+  listingId: string,
+  quantity: number,
+  successMessage: string,
+): Promise<void> {
   const { addCartItem, openMiniCart, setLastAddedMessage } =
     await import("../cart/mini-cart-drawer");
-  await addCartItem(listingId, 1);
+  await addCartItem(listingId, quantity);
   setLastAddedMessage(successMessage);
   openMiniCart();
 }
@@ -46,13 +50,14 @@ export type ListingCardLabels = {
   /** Honest condition copy — only shown for known API values. */
   conditionNew?: string;
   conditionRefurbished?: string;
+  conditionUsed?: string;
   logistics?: LogisticsPillLabels;
 };
 
 /** Map listing.condition to a label; unknown values render nothing (no invention). */
 export function listingConditionLabel(
   condition: string,
-  labels: Pick<ListingCardLabels, "conditionNew" | "conditionRefurbished">,
+  labels: Pick<ListingCardLabels, "conditionNew" | "conditionRefurbished" | "conditionUsed">,
 ): string | undefined {
   if (condition === "new") {
     return labels.conditionNew;
@@ -60,7 +65,14 @@ export function listingConditionLabel(
   if (condition === "refurbished") {
     return labels.conditionRefurbished;
   }
+  if (condition === "used") {
+    return labels.conditionUsed;
+  }
   return undefined;
+}
+
+export function listingQuickAddQuantity(minSteps: number | null | undefined): number {
+  return Number.isSafeInteger(minSteps) && (minSteps ?? 0) > 0 ? (minSteps as number) : 1;
 }
 
 type ListingCardProps = {
@@ -72,6 +84,15 @@ type ListingCardProps = {
   showSampleBadge?: boolean;
   density?: "default" | "compact";
 };
+
+export function listingCardHref(
+  locale: string,
+  listing: Pick<CatalogListing, "id" | "productSlug">,
+): string {
+  return listing.productSlug
+    ? `/${locale}/p/${encodeURIComponent(listing.productSlug)}`
+    : `/${locale}/l/${encodeURIComponent(listing.id)}`;
+}
 
 export function ListingCard({
   locale,
@@ -89,6 +110,8 @@ export function ListingCard({
   const wishlistMountedRef = useRef(false);
   const isDemo = isDemoListingPublicId(listing.imagePublicId);
   const sampleLabel = labels.sampleListing;
+  const href = listingCardHref(locale, listing);
+  const quickAddQuantity = listingQuickAddQuantity(listing.minSteps);
 
   const badge = !listing.inStock ? (
     <Badge variant="sold_out" label={labels.outOfStock} />
@@ -172,7 +195,7 @@ export function ListingCard({
     }
     setQuickAdding(true);
     setQuickAddAnnouncement("");
-    void quickAddListing(listing.id, labels.quickAdd)
+    void quickAddListing(listing.id, quickAddQuantity, labels.quickAdd)
       .then(() => {
         setQuickAddAnnouncement(labels.quickAdd);
       })
@@ -182,7 +205,14 @@ export function ListingCard({
       .finally(() => {
         setQuickAdding(false);
       });
-  }, [labels.quickAdd, labels.quickAddError, listing.id, listing.inStock, quickAdding]);
+  }, [
+    labels.quickAdd,
+    labels.quickAddError,
+    listing.id,
+    listing.inStock,
+    quickAddQuantity,
+    quickAdding,
+  ]);
 
   const card = (
     <>
@@ -228,24 +258,11 @@ export function ListingCard({
     </>
   );
 
-  if (!listing.productSlug) {
-    return (
-      <div
-        ref={cardRef}
-        className="min-w-0"
-        data-testid="listing-card-no-slug"
-        aria-label={listing.title}
-      >
-        {card}
-      </div>
-    );
-  }
-
   return (
     <div ref={cardRef} className="relative min-w-0" data-testid="listing-card">
       {card}
       <Link
-        href={`/${locale}/p/${listing.productSlug}`}
+        href={href}
         className="absolute inset-0 z-[1] rounded-lg focus-visible:outline-none focus-visible:shadow-focusRing"
         aria-label={listing.title}
         data-testid="listing-card-link"

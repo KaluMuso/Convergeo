@@ -60,6 +60,12 @@ type VendorProfileApiResponse = {
     condition: string;
     in_stock: boolean;
     image_public_id: string | null;
+    product_class: string;
+    sale_unit: string;
+    unit_step_milli: number;
+    min_steps: number;
+    fulfilment_mode: string;
+    lead_time_days: number | null;
   }>;
   services: Array<{
     id: string;
@@ -97,6 +103,18 @@ async function getDirectoryTranslator(locale: string): Promise<DirectoryTranslat
     locale,
     messages,
     namespace: "directory",
+  }) as unknown as DirectoryTranslator;
+}
+
+async function getCatalogTranslator(locale: string): Promise<DirectoryTranslator> {
+  const baseMessages = await getMessages();
+  const catalogMessages = await loadNamespace(locale as Locale, "catalog");
+  const messages = { ...baseMessages, catalog: catalogMessages } as AbstractIntlMessages;
+
+  return createTranslator({
+    locale,
+    messages,
+    namespace: "catalog",
   }) as unknown as DirectoryTranslator;
 }
 
@@ -267,8 +285,11 @@ export default async function VendorProfilePage({ params }: PageProps) {
   }
 
   setRequestLocale(locale);
-  const t = await getDirectoryTranslator(locale);
-  const profile = await fetchVendorProfile(slug);
+  const [t, tCatalog, profile] = await Promise.all([
+    getDirectoryTranslator(locale),
+    getCatalogTranslator(locale),
+    fetchVendorProfile(slug),
+  ]);
 
   if (!profile) {
     notFound();
@@ -297,6 +318,12 @@ export default async function VendorProfilePage({ params }: PageProps) {
     belowMedian: false,
     deliveryAvailable: false,
     pickupAvailable: false,
+    saleUnit: listing.sale_unit,
+    unitStepMilli: listing.unit_step_milli,
+    minSteps: listing.min_steps,
+    productClass: listing.product_class,
+    fulfilmentMode: listing.fulfilment_mode,
+    leadTimeDays: listing.lead_time_days,
   }));
 
   const jsonLd = buildVendorJsonLd(vendor, reviews, locale);
@@ -321,6 +348,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
             outOfStock: t("listings.outOfStock"),
             conditionNew: t("listings.conditionNew"),
             conditionRefurbished: t("listings.conditionRefurbished"),
+            conditionUsed: tCatalog("plp.card.conditionUsed"),
           }}
         />
       ),

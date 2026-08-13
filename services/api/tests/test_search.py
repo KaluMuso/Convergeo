@@ -6,7 +6,7 @@ from uuid import UUID
 
 import pytest
 from app.main import create_app
-from app.services.search import call_search_rrf
+from app.services.search import SearchHit, attach_route_slugs, call_search_rrf
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -493,6 +493,7 @@ class _ListingTableQuery(_EmptyTableQuery):
         self._ids: set[str] | None = None
         self._wholesale_only = False
         self._status: str | None = None
+        self._vendor_status: str | None = None
         self._parent_column: str | None = None
 
     def select(self, *_a: Any, **_k: Any) -> _ListingTableQuery:
@@ -509,6 +510,8 @@ class _ListingTableQuery(_EmptyTableQuery):
             self._wholesale_only = bool(value)
         if column == "status":
             self._status = str(value)
+        if column == "vendors.status":
+            self._vendor_status = str(value)
         return self
 
     def execute(self) -> FakeRpcResponse:
@@ -525,6 +528,15 @@ class _ListingTableQuery(_EmptyTableQuery):
             rows = [row for row in rows if row.get("wholesale")]
         if self._status is not None:
             rows = [row for row in rows if str(row.get("status", "active")) == self._status]
+        if self._vendor_status is not None:
+            filtered: list[dict[str, Any]] = []
+            for row in rows:
+                vendor = row.get("vendors")
+                if isinstance(vendor, list):
+                    vendor = vendor[0] if vendor else None
+                if isinstance(vendor, dict) and str(vendor.get("status")) == self._vendor_status:
+                    filtered.append(row)
+            rows = filtered
         # Parent lookups (demo product/vendor probes) need id + parent columns.
         if self._parent_column is not None:
             return FakeRpcResponse(
@@ -537,7 +549,7 @@ class _ListingTableQuery(_EmptyTableQuery):
                     if row.get("id") is not None
                 ]
             )
-        return FakeRpcResponse([{"id": row["id"]} for row in rows])
+        return FakeRpcResponse([dict(row) for row in rows])
 
 
 class _ImageTableQuery(_EmptyTableQuery):
@@ -614,8 +626,22 @@ def _charger_client() -> FakeClientWithListings:
     return FakeClientWithListings(
         _charger_handler,
         [
-            {"id": str(RETAIL_LISTING_ID), "wholesale": False},
-            {"id": str(WHOLESALE_LISTING_ID), "wholesale": True},
+            {
+                "id": str(RETAIL_LISTING_ID),
+                "product_id": None,
+                "title_override": "Single Phone Charger",
+                "status": "active",
+                "wholesale": False,
+                "vendors": {"status": "active"},
+            },
+            {
+                "id": str(WHOLESALE_LISTING_ID),
+                "product_id": None,
+                "title_override": "Bulk Chargers",
+                "status": "active",
+                "wholesale": True,
+                "vendors": {"status": "active"},
+            },
         ],
     )
 
@@ -685,7 +711,10 @@ def test_search_attaches_public_slugs_for_product_and_listing_hits(
                 rows = [
                     {
                         "id": str(listing_id),
-                        "products": {"slug": "itel-a70"},
+                        "product_id": str(product_id),
+                        "status": "active",
+                        "vendors": {"status": "active"},
+                        "products": {"slug": "itel-a70", "status": "active"},
                     }
                     for entity_id in ids
                     if entity_id == str(listing_id)
@@ -704,6 +733,126 @@ def test_search_attaches_public_slugs_for_product_and_listing_hits(
     assert by_kind["listing"].slug == "itel-a70"
     assert by_kind["product"].entity_id == str(product_id)
     assert by_kind["listing"].entity_id == str(listing_id)
+
+
+def _search_listing_hit(listing_id: UUID) -> SearchHit:
+    return SearchHit.model_validate(
+        _hit(
+            entity_id=listing_id,
+            title="Search listing",
+            entity_kind="listing",
+        )
+    )
+
+
+def test_attach_route_slugs_retains_active_standalone_listing() -> None:
+    listing_id = UUID("00000000-0000-4000-8000-0000000004b1")
+    client = FakeClientWithListings(
+        _default_rpc_handler,
+        [
+            {
+                "id": str(listing_id),
+                "product_id": None,
+                "title_override": "Standalone search listing",
+                "status": "active",
+                "vendors": {"status": "active"},
+            }
+        ],
+    )
+
+    hits = attach_route_slugs(client, [_search_listing_hit(listing_id)])
+
+    assert len(hits) == 1
+    assert hits[0].entity_id == str(listing_id)
+    assert hits[0].slug is None
+
+
+@pytest.mark.parametrize("title_override", [None, "", "   "])
+def test_attach_route_slugs_drops_standalone_listing_without_title(
+    title_override: str | None,
+) -> None:
+    listing_id = UUID("00000000-0000-4000-8000-0000000004b3")
+    client = FakeClientWithListings(
+        _default_rpc_handler,
+        [
+            {
+                "id": str(listing_id),
+                "product_id": None,
+                "title_override": title_override,
+                "status": "active",
+                "vendors": {"status": "active"},
+            }
+        ],
+    )
+
+    hits = attach_route_slugs(client, [_search_listing_hit(listing_id)])
+
+    assert hits == []
+
+
+def test_attach_route_slugs_resolves_active_canonical_listing() -> None:
+    listing_id = UUID("00000000-0000-4000-8000-0000000004b2")
+    client = FakeClientWithListings(
+        _default_rpc_handler,
+        [
+            {
+                "id": str(listing_id),
+                "product_id": "00000000-0000-4000-8000-0000000009b2",
+                "status": "active",
+                "vendors": {"status": "active"},
+                "products": {"slug": "itel-a70", "status": "active"},
+            }
+        ],
+    )
+
+    hits = attach_route_slugs(client, [_search_listing_hit(listing_id)])
+
+    assert len(hits) == 1
+    assert hits[0].slug == "itel-a70"
+
+
+@pytest.mark.parametrize(
+    "row",
+    [
+        {
+            "product_id": "00000000-0000-4000-8000-0000000009c1",
+            "status": "paused",
+            "vendors": {"status": "active"},
+            "products": {"slug": "paused-listing", "status": "active"},
+        },
+        {
+            "product_id": "00000000-0000-4000-8000-0000000009c2",
+            "status": "active",
+            "vendors": {"status": "suspended"},
+            "products": {"slug": "inactive-vendor", "status": "active"},
+        },
+        {
+            "product_id": "00000000-0000-4000-8000-0000000009c3",
+            "status": "active",
+            "vendors": {"status": "active"},
+            "products": None,
+        },
+        {
+            "product_id": "00000000-0000-4000-8000-0000000009c4",
+            "status": "active",
+            "vendors": {"status": "active"},
+            "products": {"slug": "inactive-product", "status": "pending_moderation"},
+        },
+    ],
+    ids=["inactive-listing", "inactive-vendor", "missing-product", "inactive-product"],
+)
+def test_attach_route_slugs_drops_unroutable_canonical_listing(
+    row: dict[str, Any],
+) -> None:
+    listing_id = UUID("00000000-0000-4000-8000-0000000004c1")
+    client = FakeClientWithListings(
+        _default_rpc_handler,
+        [{"id": str(listing_id), **row}],
+    )
+
+    hits = attach_route_slugs(client, [_search_listing_hit(listing_id)])
+
+    assert hits == []
 
 
 def test_search_hides_wholesale_listings_from_consumers(

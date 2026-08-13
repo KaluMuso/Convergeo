@@ -1,8 +1,12 @@
+import { ApiError } from "@vergeo/config";
 import { describe, expect, it } from "vitest";
 
 import vendorMessages from "../../../../../../packages/i18n/messages/en/vendor.json";
 import { canUseWholesaleCapabilities } from "../../_lib/kyc-integrity";
 
+import { applyListingFieldPatch, DEFAULT_LISTING_FIELDS } from "./_components/listing-fields";
+import { listingCreateErrorMessage } from "./_lib/listing-errors";
+import { isValidUnitDecimal, unitDecimalToMilli } from "./_lib/measure";
 import { zmwDecimalToNgwee, isValidZmwDecimal } from "./_lib/money";
 
 describe("listing money conversion", () => {
@@ -25,6 +29,50 @@ describe("listings i18n", () => {
     expect(vendorMessages.listings.title).toBe("Create listing");
     expect(vendorMessages.listings.commission.rate).toBe("{rate}%");
     expect(vendorMessages.listings.attach.publish).toBe("Publish listing");
+    expect(vendorMessages.listings.fields.classA).toBe("A. Branded SKU");
+    expect(vendorMessages.listings.fields.classB).toBe("B. Branded variant");
+    expect(vendorMessages.listings.fields.classC).toBe("C. Commodity / generic");
+    expect(vendorMessages.listings.errors.standalone_required).toBeTruthy();
+  });
+});
+
+describe("listing unit-step conversion", () => {
+  it("converts three-decimal increments to integer milli-units", () => {
+    expect(unitDecimalToMilli("0.125")).toBe(125);
+    expect(unitDecimalToMilli("2.5")).toBe(2_500);
+  });
+
+  it("returns a validation error for unsafe or over-precise increments", () => {
+    expect(isValidUnitDecimal("9007199254740992")).toBe(false);
+    expect(isValidUnitDecimal("0.0001")).toBe(false);
+  });
+});
+
+describe("product-class form rules", () => {
+  it("forces Class D to used condition", () => {
+    expect(applyListingFieldPatch(DEFAULT_LISTING_FIELDS, { productClass: "D" }).condition).toBe(
+      "used",
+    );
+  });
+
+  it("forces Class E to made-to-order fulfilment", () => {
+    const fields = applyListingFieldPatch(DEFAULT_LISTING_FIELDS, { productClass: "E" });
+    expect(fields.fulfilmentMode).toBe("made_to_order");
+    expect(fields.stockMode).toBe("always_available");
+  });
+});
+
+describe("listing create errors", () => {
+  it("maps the standalone-class API error to vendor-facing copy", () => {
+    const message = listingCreateErrorMessage(
+      new ApiError("standalone_product_class_required", "Use quick list", { status: 422 }),
+      {
+        standaloneRequired: vendorMessages.listings.errors.standalone_required,
+        fallback: vendorMessages.listings.errors.submitFailed,
+      },
+    );
+
+    expect(message).toBe(vendorMessages.listings.errors.standalone_required);
   });
 });
 

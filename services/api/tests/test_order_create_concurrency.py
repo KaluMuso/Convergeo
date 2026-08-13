@@ -83,6 +83,57 @@ def _stock_qty(conn: PgConn, listing_id: str) -> int:
     return int(result.rows[0])
 
 
+def _insert_made_to_order_listing(
+    conn: PgConn,
+    *,
+    listing_id: str,
+    product_class: str,
+    capacity_per_week: int | None,
+    price_ngwee: int,
+) -> None:
+    capacity_sql = str(capacity_per_week) if capacity_per_week is not None else "NULL"
+    result = conn.run(
+        f"""
+        INSERT INTO public.vendor_listings (
+          id, vendor_id, product_id, title_override, price_ngwee, condition,
+          stock_mode, stock_qty, status, fulfilment_mode, lead_time_days,
+          product_class, vendor_capacity_per_week
+        ) VALUES (
+          '{listing_id}', '{VENDOR_A}', NULL, 'Made-to-order test item',
+          {price_ngwee}, 'new', 'tracked', 0, 'active', 'made_to_order', 7,
+          '{product_class}', {capacity_sql}
+        );
+        """
+    )
+    assert result.ok, result.error
+
+
+def _single_listing_inputs(
+    *, listing_id: str, qty: int, price_ngwee: int
+) -> tuple[list[CartLineInput], list[VendorFulfilmentInput]]:
+    return (
+        [
+            CartLineInput(
+                cart_item_id=str(uuid.uuid4()),
+                listing_id=listing_id,
+                vendor_id=VENDOR_A,
+                qty=qty,
+                unit_price_ngwee=price_ngwee,
+                title_snapshot="Made-to-order test item",
+            )
+        ],
+        [
+            VendorFulfilmentInput(
+                vendor_id=VENDOR_A,
+                fulfilment="pickup",
+                delivery_zone=None,
+                delivery_fee_ngwee=0,
+                subtotal_ngwee=qty * price_ngwee,
+            )
+        ],
+    )
+
+
 def _two_vendor_groups(
     price_a: int, delivery_a: int, price_b: int, delivery_b: int
 ) -> list[VendorFulfilmentInput]:
@@ -105,6 +156,114 @@ def _two_vendor_groups(
 
 
 class TestConcurrentSubmit:
+    def test_two_class_e_checkouts_serialize_at_weekly_capacity(
+        self, db: PgConn, db_url_env: None, pg_service: SupabaseServiceClient
+    ) -> None:
+        listing_id = str(uuid.uuid4())
+        price = 90_000
+        _insert_made_to_order_listing(
+            db,
+            listing_id=listing_id,
+            product_class="E",
+            capacity_per_week=1,
+            price_ngwee=price,
+        )
+
+        session_ids = [str(uuid.uuid4()), str(uuid.uuid4())]
+        for session_id in session_ids:
+            _insert_checkout_group(
+                db,
+                session_id=session_id,
+                idempotency_key=f"chk-{session_id}",
+                subtotal=price,
+                delivery_fee=0,
+                total=price,
+            )
+        lines, groups = _single_listing_inputs(
+            listing_id=listing_id,
+            qty=1,
+            price_ngwee=price,
+        )
+
+        def _submit(session_id: str) -> CreateOrdersResult | AppError:
+            try:
+                return create_orders_atomic(
+                    client=pg_service.client,
+                    customer_id=CUSTOMER_ID,
+                    session_id=session_id,
+                    idempotency_key=f"class-e-{session_id}",
+                    payment_method="momo",
+                    cart_lines=lines,
+                    vendor_groups=groups,
+                )
+            except AppError as exc:
+                return exc
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(_submit, session_ids))
+
+        created = [item for item in outcomes if isinstance(item, CreateOrdersResult)]
+        rejected = [item for item in outcomes if isinstance(item, AppError)]
+        assert len(created) == 1
+        assert len(rejected) == 1
+        assert rejected[0].code == "cart.class_e_capacity_exceeded"
+        assert rejected[0].http_status == 409
+        assert rejected[0].details["listing_id"] == listing_id
+        assert rejected[0].details["remaining"] == 0
+        assert rejected[0].details["requested_qty"] == 1
+
+        total_orders = db.run(
+            "SELECT count(*)::text FROM public.order_item_products "
+            f"WHERE listing_id = '{listing_id}';"
+        )
+        assert total_orders.ok and total_orders.rows == ["1"]
+        statuses = db.run(
+            "SELECT status FROM public.checkout_groups "
+            f"WHERE id IN ('{session_ids[0]}', '{session_ids[1]}') ORDER BY status;"
+        )
+        assert statuses.ok and statuses.rows == ["completed", "pending"]
+
+    def test_legacy_made_to_order_does_not_require_stock_hold_or_capacity(
+        self, db: PgConn, db_url_env: None, pg_service: SupabaseServiceClient
+    ) -> None:
+        listing_id = str(uuid.uuid4())
+        session_id = str(uuid.uuid4())
+        price = 45_000
+        _insert_made_to_order_listing(
+            db,
+            listing_id=listing_id,
+            product_class="A",
+            capacity_per_week=None,
+            price_ngwee=price,
+        )
+        _insert_checkout_group(
+            db,
+            session_id=session_id,
+            idempotency_key=f"chk-{session_id}",
+            subtotal=price,
+            delivery_fee=0,
+            total=price,
+        )
+        lines, groups = _single_listing_inputs(
+            listing_id=listing_id,
+            qty=1,
+            price_ngwee=price,
+        )
+
+        result = create_orders_atomic(
+            client=pg_service.client,
+            customer_id=CUSTOMER_ID,
+            session_id=session_id,
+            idempotency_key=f"legacy-mto-{session_id}",
+            payment_method="momo",
+            cart_lines=lines,
+            vendor_groups=groups,
+        )
+
+        assert result.replayed is False
+        assert _order_count(db, session_id) == 1
+        assert _reservation_count(db, session_id) == 0
+
     def test_two_concurrent_submits_persist_one_order_set(
         self, db: PgConn, db_url_env: None, pg_service: SupabaseServiceClient
     ) -> None:
@@ -143,12 +302,8 @@ class TestConcurrentSubmit:
             delivery_fee=delivery_a,
             total=total,
         )
-        claim_reservation(
-            listing_id=listing_a, checkout_group_id=session_id, qty=1, ttl_minutes=15
-        )
-        claim_reservation(
-            listing_id=listing_b, checkout_group_id=session_id, qty=1, ttl_minutes=15
-        )
+        claim_reservation(listing_id=listing_a, checkout_group_id=session_id, qty=1, ttl_minutes=15)
+        claim_reservation(listing_id=listing_b, checkout_group_id=session_id, qty=1, ttl_minutes=15)
 
         lines = _build_lines(listing_a, listing_b, 1, 1, price_a, price_b)
         groups = _two_vendor_groups(price_a, delivery_a, price_b, 0)
@@ -177,9 +332,7 @@ class TestConcurrentSubmit:
         assert sum(1 for r in results if r.replayed) == 1
         # Idempotent: both return the identical order set.
         assert results[0].idempotency_key == results[1].idempotency_key == idem_key
-        assert {o.order_id for o in results[0].orders} == {
-            o.order_id for o in results[1].orders
-        }
+        assert {o.order_id for o in results[0].orders} == {o.order_id for o in results[1].orders}
         # Stock consumed once (5 - 1 each), never double-decremented.
         assert _stock_qty(db, listing_a) == 4
         assert _stock_qty(db, listing_b) == 4
@@ -218,9 +371,7 @@ class TestConcurrentSubmit:
 
         # A sweeper reclaims the expired hold between pre-check and tx: the hold row
         # is removed and the stock restocked (now buyable by someone else).
-        db.run(
-            f"DELETE FROM public.stock_reservations WHERE checkout_group_id = '{session_id}';"
-        )
+        db.run(f"DELETE FROM public.stock_reservations WHERE checkout_group_id = '{session_id}';")
         db.run(
             "UPDATE public.vendor_listings SET stock_qty = stock_qty + 1 "
             f"WHERE id = '{listing_id}';"
@@ -263,9 +414,7 @@ class TestConcurrentSubmit:
         # Whole tx rolled back: no order, group still pending, stock never negative.
         assert _order_count(db, session_id) == 0
         assert _stock_qty(db, listing_id) == 1
-        status = db.run(
-            f"SELECT status FROM public.checkout_groups WHERE id = '{session_id}';"
-        )
+        status = db.run(f"SELECT status FROM public.checkout_groups WHERE id = '{session_id}';")
         assert status.ok and status.rows and status.rows[0] == "pending"
 
     def test_sequential_double_submit_is_idempotent(
@@ -306,12 +455,8 @@ class TestConcurrentSubmit:
             delivery_fee=delivery_a,
             total=total,
         )
-        claim_reservation(
-            listing_id=listing_a, checkout_group_id=session_id, qty=1, ttl_minutes=15
-        )
-        claim_reservation(
-            listing_id=listing_b, checkout_group_id=session_id, qty=1, ttl_minutes=15
-        )
+        claim_reservation(listing_id=listing_a, checkout_group_id=session_id, qty=1, ttl_minutes=15)
+        claim_reservation(listing_id=listing_b, checkout_group_id=session_id, qty=1, ttl_minutes=15)
 
         lines = _build_lines(listing_a, listing_b, 1, 1, price_a, price_b)
         groups = _two_vendor_groups(price_a, delivery_a, price_b, 0)

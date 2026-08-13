@@ -92,7 +92,15 @@ class CartLineResponse(BaseModel):
     wholesale: bool
     line_total_ngwee: int
     title_override: str | None = None
+    product_class: str = "A"
+    condition: str = "new"
+    sale_unit: str = "each"
+    unit_step_milli: int = 1000
+    min_steps: int = 1
+    fulfilment_mode: str = "stocked"
     lead_time_days: int | None = None
+    vendor_capacity_per_week: int | None = None
+    defect_notes: str | None = None
     is_rfq_quote: bool = False
 
 
@@ -382,7 +390,23 @@ def _build_cart_response(
                 title_override=listing.get("title_override")
                 if isinstance(listing.get("title_override"), str)
                 else None,
+                product_class=str(listing.get("product_class") or "A"),
+                condition=str(listing.get("condition") or "new"),
+                sale_unit=str(listing.get("sale_unit") or "each"),
+                unit_step_milli=int(listing.get("unit_step_milli") or 1000),
+                min_steps=int(listing.get("min_steps") or 1),
+                fulfilment_mode=str(listing.get("fulfilment_mode") or "stocked"),
                 lead_time_days=listing_lead_time_days(listing),
+                vendor_capacity_per_week=(
+                    int(listing["vendor_capacity_per_week"])
+                    if listing.get("vendor_capacity_per_week") is not None
+                    else None
+                ),
+                defect_notes=(
+                    str(listing["defect_notes"])
+                    if listing.get("defect_notes")
+                    else None
+                ),
                 is_rfq_quote=is_rfq_quote,
             )
         )
@@ -404,7 +428,15 @@ def _build_cart_response(
                 wholesale=line.wholesale,
                 line_total_ngwee=line.line_total_ngwee,
                 title_override=line.title_override,
+                product_class=line.product_class,
+                condition=line.condition,
+                sale_unit=line.sale_unit,
+                unit_step_milli=line.unit_step_milli,
+                min_steps=line.min_steps,
+                fulfilment_mode=line.fulfilment_mode,
                 lead_time_days=line.lead_time_days,
+                vendor_capacity_per_week=line.vendor_capacity_per_week,
+                defect_notes=line.defect_notes,
                 is_rfq_quote=line.is_rfq_quote,
             )
             for line in line_views
@@ -422,7 +454,15 @@ def _build_cart_response(
                         wholesale=item.wholesale,
                         line_total_ngwee=item.line_total_ngwee,
                         title_override=item.title_override,
+                        product_class=item.product_class,
+                        condition=item.condition,
+                        sale_unit=item.sale_unit,
+                        unit_step_milli=item.unit_step_milli,
+                        min_steps=item.min_steps,
+                        fulfilment_mode=item.fulfilment_mode,
                         lead_time_days=item.lead_time_days,
+                        vendor_capacity_per_week=item.vendor_capacity_per_week,
+                        defect_notes=item.defect_notes,
                         is_rfq_quote=item.is_rfq_quote,
                     )
                     for item in group.items

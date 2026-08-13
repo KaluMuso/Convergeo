@@ -52,6 +52,9 @@ type CatalogApiItem = {
   below_median?: boolean;
   delivery_available?: boolean;
   pickup_available?: boolean;
+  sale_unit?: string;
+  unit_step_milli?: number;
+  min_steps?: number;
 };
 
 type CatalogApiResponse = {
@@ -112,6 +115,9 @@ function mapListing(item: CatalogApiItem): CatalogListing {
     belowMedian: item.below_median ?? false,
     deliveryAvailable: item.delivery_available ?? false,
     pickupAvailable: item.pickup_available ?? false,
+    saleUnit: item.sale_unit,
+    unitStepMilli: item.unit_step_milli,
+    minSteps: item.min_steps,
   };
 }
 

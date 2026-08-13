@@ -2,6 +2,7 @@ import { createApiClient } from "@vergeo/config";
 
 import { absoluteApiUrl, getApiBaseUrl } from "../../../../../lib/api-base-url";
 
+import type { SaleUnit } from "../sale-quantity";
 import type { ListingCondition } from "./condition-badge";
 
 export const PRODUCT_REVALIDATE_SECONDS = 3600;
@@ -40,6 +41,9 @@ export type Listing = {
   moq: number;
   wholesale: boolean;
   in_stock: boolean;
+  sale_unit?: SaleUnit;
+  unit_step_milli?: number;
+  min_steps?: number;
   fulfilment_mode?: string;
   lead_time_days?: number | null;
   vendor_capacity_per_week?: number | null;

@@ -110,6 +110,21 @@ describe("wholesale-only filtering", () => {
     expect(screen.getByTestId("supply-card-listing-wholesale")).toBeInTheDocument();
     expect(screen.queryByTestId("supply-card-listing-retail")).not.toBeInTheDocument();
   });
+
+  it("links a standalone wholesale listing by listing id", () => {
+    render(
+      <TierPriceCards
+        locale="en"
+        listings={[{ ...wholesaleListing, productSlug: null }]}
+        labels={cardLabels}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "View listing" })).toHaveAttribute(
+      "href",
+      "/en/l/listing-wholesale?qty=10",
+    );
+  });
 });
 
 describe("MOQ badge and qty preview render", () => {

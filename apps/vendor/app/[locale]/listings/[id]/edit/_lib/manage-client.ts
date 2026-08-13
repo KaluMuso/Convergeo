@@ -2,7 +2,13 @@ import { createApiClient } from "@vergeo/config";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 
-export type ListingCondition = "new" | "refurbished";
+import type {
+  FulfilmentMode,
+  ListingCondition,
+  ProductClass,
+  SaleUnit,
+} from "../../../new/_lib/types";
+
 export type StockMode = "tracked" | "always_available";
 export type ListingStatus = "draft" | "active" | "paused";
 
@@ -16,7 +22,15 @@ export type ListingSummary = {
   title: string;
   price_ngwee: number;
   compare_at_ngwee: number | null;
+  product_class?: ProductClass;
+  sale_unit?: SaleUnit;
+  unit_step_milli?: number;
+  min_steps?: number;
   condition: ListingCondition;
+  defect_notes?: string | null;
+  fulfilment_mode?: FulfilmentMode;
+  lead_time_days?: number | null;
+  vendor_capacity_per_week?: number | null;
   stock_mode: StockMode;
   stock_qty: number | null;
   wholesale: boolean;
@@ -26,12 +40,25 @@ export type ListingSummary = {
   return_window_hours: number | null;
   status: ListingStatus | string;
   product_id: string | null;
+  images?: Array<{
+    id: string;
+    cloudinary_public_id: string;
+    position: number;
+  }>;
 };
 
 export type ListingUpdatePayload = {
   price_ngwee?: number;
   compare_at_ngwee?: number | null;
+  product_class?: ProductClass;
+  sale_unit?: SaleUnit;
+  unit_step_milli?: number;
+  min_steps?: number;
   condition?: ListingCondition;
+  defect_notes?: string | null;
+  fulfilment_mode?: FulfilmentMode;
+  lead_time_days?: number | null;
+  vendor_capacity_per_week?: number | null;
   stock_mode?: StockMode;
   stock_qty?: number | null;
   wholesale?: boolean;

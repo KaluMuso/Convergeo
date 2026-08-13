@@ -8,6 +8,14 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
+from app.schemas.vendor_listing import (
+    FulfilmentMode,
+    ListingCondition,
+    ProductClass,
+    SaleUnit,
+    StockMode,
+    VendorListing,
+)
 from app.services.kyc.caps import VendorCapLimits, require_listing_cap
 from app.services.kyc.state_machine import ServiceRoleClient
 from app.services.moderation.prohibited import screen_listing
@@ -18,8 +26,6 @@ from pydantic import Field, field_validator, model_validator
 router = APIRouter(prefix="/vendor/listings", tags=["vendor-listings"])
 
 ListingMode = Literal["attach", "new_canonical", "quick_list"]
-ListingCondition = Literal["new", "refurbished"]
-StockMode = Literal["tracked", "always_available"]
 ListingStatus = Literal["draft", "active"]
 
 
@@ -39,9 +45,17 @@ class ListingCreateRequest(StrictModel):
     title_override: str | None = None
     price_ngwee: NgweeInt
     compare_at_ngwee: NgweeInt | None = None
+    product_class: ProductClass = "A"
     condition: ListingCondition
+    sale_unit: SaleUnit = "each"
+    unit_step_milli: int = Field(default=1000, ge=1)
+    min_steps: int = Field(default=1, ge=1)
+    fulfilment_mode: FulfilmentMode = "stocked"
+    lead_time_days: int | None = Field(default=None, ge=1, le=365)
+    vendor_capacity_per_week: int | None = Field(default=None, ge=1, le=9999)
+    defect_notes: str | None = None
     stock_mode: StockMode
-    stock_qty: int | None = None
+    stock_qty: int | None = Field(default=None, ge=0)
     wholesale: bool = False
     price_tiers: list[PriceTierInput] | None = None
     moq: int = Field(default=1, ge=1)
@@ -69,12 +83,34 @@ class ListingCreateRequest(StrictModel):
         if self.mode == "quick_list":
             if not self.title_override or not self.title_override.strip():
                 raise ValueError("title_override is required for quick_list mode")
-        if self.stock_mode == "tracked" and self.stock_qty is None:
-            raise ValueError("stock_qty is required when stock_mode is tracked")
         if self.returnable and self.return_window_hours is None:
             raise ValueError("return_window_hours is required when returnable is true")
         if self.compare_at_ngwee is not None and self.compare_at_ngwee <= self.price_ngwee:
             raise ValueError("compare_at_ngwee must be greater than price_ngwee")
+        # Classes D/E are standalone offers and are rejected with a stable
+        # AppError in create_listing_for_vendor before any product row is written.
+        if self.product_class in {"D", "E"} and self.mode != "quick_list":
+            return self
+        status: ListingStatus = (
+            "draft" if self.mode == "new_canonical" or not self.publish else "active"
+        )
+        VendorListing(
+            product_class=self.product_class,
+            status=status,
+            condition=self.condition,
+            sale_unit=self.sale_unit,
+            unit_step_milli=self.unit_step_milli,
+            min_steps=self.min_steps,
+            fulfilment_mode=self.fulfilment_mode,
+            lead_time_days=self.lead_time_days,
+            vendor_capacity_per_week=self.vendor_capacity_per_week,
+            stock_mode=self.stock_mode,
+            stock_qty=self.stock_qty,
+            price_ngwee=self.price_ngwee,
+            wholesale=self.wholesale,
+            moq=self.moq,
+            defect_notes=self.defect_notes,
+        )
         return self
 
 
@@ -108,6 +144,7 @@ class ListingCreateResponse(StrictModel):
     product_id: str | None
     product_status: str | None
     commission: CommissionPreview | None
+    requires_evidence: bool = False
 
 
 def _single_row(response: Any) -> dict[str, Any] | None:
@@ -408,6 +445,18 @@ def create_listing_for_vendor(
     """
     vendor_id = str(vendor["id"])
 
+    if body.product_class in {"D", "E"} and body.mode != "quick_list":
+        raise AppError(
+            code="standalone_product_class_required",
+            message="Class D and E listings must be standalone offers",
+            http_status=422,
+            details={
+                "message_key": "vendor.listings.errors.standalone_required",
+                "product_class": body.product_class,
+                "required_mode": "quick_list",
+            },
+        )
+
     # Resolve the vendor-supplied category up front so the moderation screen's
     # category-block layer runs and DB-flagged prohibited categories are rejected
     # (D8) before anything is written.
@@ -508,7 +557,15 @@ def create_listing_for_vendor(
         "title_override": body.title_override.strip() if body.title_override else None,
         "price_ngwee": body.price_ngwee,
         "compare_at_ngwee": body.compare_at_ngwee,
+        "product_class": body.product_class,
         "condition": body.condition,
+        "sale_unit": body.sale_unit,
+        "unit_step_milli": body.unit_step_milli,
+        "min_steps": body.min_steps,
+        "fulfilment_mode": body.fulfilment_mode,
+        "lead_time_days": body.lead_time_days,
+        "vendor_capacity_per_week": body.vendor_capacity_per_week,
+        "defect_notes": body.defect_notes.strip() if body.defect_notes else None,
         "stock_mode": body.stock_mode,
         "stock_qty": body.stock_qty,
         "wholesale": body.wholesale,
@@ -538,4 +595,5 @@ def create_listing_for_vendor(
         product_id=product_id,
         product_status=product_status,
         commission=commission,
+        requires_evidence=body.condition == "used",
     )

@@ -79,6 +79,40 @@ describe("ListingCard quick-add", () => {
     });
   });
 
+  it("uses the listing minimum steps for measured-goods quick-add", async () => {
+    const user = userEvent.setup();
+    render(
+      <ListingCard
+        locale="en"
+        labels={labels}
+        listing={{
+          id: "listing-measured",
+          title: "Cut fabric",
+          productSlug: null,
+          vendorName: "Alpha",
+          priceNgwee: 100_000,
+          condition: "new",
+          inStock: true,
+          imagePublicId: null,
+          rating: 0,
+          reviewCount: 0,
+          distanceM: null,
+          belowMedian: false,
+          deliveryAvailable: false,
+          pickupAvailable: false,
+          saleUnit: "metre",
+          unitStepMilli: 500,
+          minSteps: 4,
+        }}
+      />,
+    );
+
+    await user.click(screen.getByTestId("product-card-quick-add"));
+    await waitFor(() => {
+      expect(addCartItem).toHaveBeenCalledWith("listing-measured", 4);
+    });
+  });
+
   it("hides quick-add when out of stock", () => {
     render(
       <ListingCard

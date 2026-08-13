@@ -80,14 +80,12 @@ function unitPriceAtQty(listing: SupplyListing, qty: number): number {
 }
 
 function listingHref(locale: string, listing: SupplyListing, qty: number): string {
-  const params = new URLSearchParams({
-    listing: listing.id,
-    qty: String(qty),
-  });
   if (listing.productSlug) {
-    return `/${locale}/p/${listing.productSlug}?${params.toString()}`;
+    const params = new URLSearchParams({ listing: listing.id, qty: String(qty) });
+    return `/${locale}/p/${encodeURIComponent(listing.productSlug)}?${params.toString()}`;
   }
-  return `/${locale}/supplies?${params.toString()}`;
+  const params = new URLSearchParams({ qty: String(qty) });
+  return `/${locale}/l/${encodeURIComponent(listing.id)}?${params.toString()}`;
 }
 
 type SupplyCardProps = {

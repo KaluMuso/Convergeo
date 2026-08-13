@@ -23,6 +23,7 @@
     "itemCount": "{count, plural, one {# item} other {# ma-items}}",
     "loading": "Ikuika cart yanu…",
     "lineTotal": "Total ya line: {amount}",
+    "madeToOrderLeadTime": "Chimapangidwa pa order · ifunika masiku {days} ogwira ntchito",
     "miniCartClose": "Tsekani cart",
     "miniCartTitle": "Summary ya cart",
     "noticeOutOfStock": "Chinthu ichi sichilipo mu stock",
@@ -54,6 +55,15 @@
     "title": "Cart yanu",
     "total": "Zonse",
     "unitPrice": "{amount} chimodzi chimodzi",
+    "unitPriceMeasured": "{amount} pa {quantity}",
+    "saleUnits": {
+      "each": "chinthu",
+      "metre": "m",
+      "kg": "kg",
+      "litre": "L",
+      "bag": "thumba",
+      "sqm": "m²"
+    },
     "updateError": "Sitinathe kusintha chiwerengero. Tabwerera ku amount yomwe inasungidwa.",
     "updating": "Ikusintha…",
     "vendorGroup": "Agulitsa vendor",

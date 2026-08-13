@@ -16,7 +16,15 @@ class CartLineView:
     wholesale: bool
     line_total_ngwee: int
     title_override: str | None
+    product_class: str = "A"
+    condition: str = "new"
+    sale_unit: str = "each"
+    unit_step_milli: int = 1000
+    min_steps: int = 1
+    fulfilment_mode: str = "stocked"
     lead_time_days: int | None = None
+    vendor_capacity_per_week: int | None = None
+    defect_notes: str | None = None
     is_rfq_quote: bool = False
 
 

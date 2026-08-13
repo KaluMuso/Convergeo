@@ -300,6 +300,9 @@ function toProductListings(product: ProductDetail, alt: string): ProductListing[
     stockQty: listing.stock_qty,
     moq: listing.moq,
     inStock: listing.in_stock,
+    saleUnit: listing.sale_unit ?? "each",
+    unitStepMilli: listing.unit_step_milli ?? 1_000,
+    minSteps: listing.min_steps ?? 1,
     leadTimeDays: listing.lead_time_days ?? null,
     vendorCapacityPerWeek: listing.vendor_capacity_per_week ?? null,
     vendor: {

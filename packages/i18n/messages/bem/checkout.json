@@ -23,6 +23,7 @@
     "itemCount": "{count, plural, one {# item} other {# ama-items}}",
     "loading": "Ileleleta cart yenu…",
     "lineTotal": "Total ya line: {amount}",
+    "madeToOrderLeadTime": "Cipangwa pa order · ifwile {days} masiku ya kulanga",
     "miniCartClose": "Isaleni cart",
     "miniCartTitle": "Summary ya cart",
     "noticeOutOfStock": "Ici cintu tacili mu stock",
@@ -54,6 +55,15 @@
     "title": "Cart yenu",
     "total": "Yonse",
     "unitPrice": "{amount} cimo cimo",
+    "unitPriceMeasured": "{amount} pa {quantity}",
+    "saleUnits": {
+      "each": "cintu",
+      "metre": "m",
+      "kg": "kg",
+      "litre": "L",
+      "bag": "saka",
+      "sqm": "m²"
+    },
     "updateError": "Tatwaishibe ukuluka ubunji. Twabwelela ku amount iyasungwa.",
     "updating": "Ileluka…",
     "vendorGroup": "Ashitisha vendor",

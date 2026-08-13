@@ -30,7 +30,7 @@ describe("searchResultHref identity → PDP lookup", () => {
     ).toBe("/en/p/itel-a70?listing=1036bd7b-f861-9ea2-b97c-0ddbf22eb2ed");
   });
 
-  it("falls back to a search query when slug enrichment is missing (no UUID PDP)", () => {
+  it("uses safe fallbacks when slug enrichment is missing", () => {
     expect(
       searchResultHref("en", {
         entity_kind: "product",
@@ -46,7 +46,7 @@ describe("searchResultHref identity → PDP lookup", () => {
         entity_id: "1036bd7b-f861-9ea2-b97c-0ddbf22eb2ed",
         title: "Itel A70 Smartphone",
       }),
-    ).toBe("/en/search?q=Itel%20A70%20Smartphone");
+    ).toBe("/en/l/1036bd7b-f861-9ea2-b97c-0ddbf22eb2ed");
   });
 
   it("uses slug for vendor/event and UUID slug for services", () => {

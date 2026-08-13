@@ -6,6 +6,7 @@ from typing import Annotated, Any, Protocol
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.business.access import BusinessAccess, get_business_access
+from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import fetch_demo_listing_ids, is_non_genuine_public_id
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
@@ -61,6 +62,9 @@ class ListingResponse(BaseModel):
     price_ngwee: int
     condition: str
     product_class: str = "A"
+    sale_unit: str = "each"
+    unit_step_milli: int = 1000
+    min_steps: int = 1
     stock_mode: str
     stock_qty: int | None = None
     moq: int = 1
@@ -69,6 +73,7 @@ class ListingResponse(BaseModel):
     fulfilment_mode: str = "stocked"
     lead_time_days: int | None = None
     vendor_capacity_per_week: int | None = None
+    defect_notes: str | None = None
     vendor: VendorSummaryResponse
     images: list[ProductImageResponse] = Field(default_factory=list)
 
@@ -112,22 +117,6 @@ def _listing_title(row: dict[str, Any], product_name: str) -> str:
     if isinstance(override, str) and override.strip():
         return override.strip()
     return product_name
-
-
-def _is_in_stock(
-    stock_mode: str,
-    stock_qty: int | None,
-    *,
-    product_class: str = "A",
-    fulfilment_mode: str = "stocked",
-) -> bool:
-    if product_class == "E" or fulfilment_mode == "made_to_order":
-        return True
-    if stock_mode == "always_available":
-        return True
-    if stock_mode == "tracked":
-        return stock_qty is not None and stock_qty > 0
-    return False
 
 
 def _parse_vendor_row(
@@ -401,7 +390,8 @@ def build_product_detail(
         client.table("vendor_listings")
         .select(
             "id, title_override, price_ngwee, condition, product_class, stock_mode, stock_qty, "
-            "moq, wholesale, status, fulfilment_mode, lead_time_days, vendor_capacity_per_week, "
+            "moq, wholesale, status, sale_unit, unit_step_milli, min_steps, "
+            "fulfilment_mode, lead_time_days, vendor_capacity_per_week, defect_notes, "
             "vendors!inner("
             "id, slug, display_name, preferred_badge, status, "
             "vendor_locations(landmark, lat, lng)"
@@ -491,6 +481,8 @@ def build_product_detail(
         parsed_lead_time = int(lead_time_days) if lead_time_days is not None else None
         capacity = row.get("vendor_capacity_per_week")
         parsed_capacity = int(capacity) if capacity is not None else None
+        min_steps = int(row.get("min_steps") or 1)
+        moq = int(row.get("moq") or 1)
 
         listing_images = [
             ProductImageResponse(
@@ -512,19 +504,28 @@ def build_product_detail(
                 price_ngwee=int(row["price_ngwee"]),
                 condition=str(row.get("condition") or "new"),
                 product_class=product_class,
+                sale_unit=str(row.get("sale_unit") or "each"),
+                unit_step_milli=int(row.get("unit_step_milli") or 1000),
+                min_steps=min_steps,
                 stock_mode=stock_mode,
                 stock_qty=parsed_stock_qty,
-                moq=int(row.get("moq") or 1),
+                moq=moq,
                 wholesale=bool(row.get("wholesale")),
-                in_stock=_is_in_stock(
+                in_stock=is_listing_available(
                     stock_mode,
                     parsed_stock_qty,
+                    min_steps=min_steps,
+                    moq=moq,
                     product_class=product_class,
                     fulfilment_mode=fulfilment_mode,
+                    vendor_capacity_per_week=parsed_capacity,
                 ),
                 fulfilment_mode=fulfilment_mode,
                 lead_time_days=parsed_lead_time,
                 vendor_capacity_per_week=parsed_capacity,
+                defect_notes=(
+                    str(row["defect_notes"]) if row.get("defect_notes") else None
+                ),
                 vendor=_parse_vendor_row(
                     vendor_raw,
                     rating_avg=rating_avg,

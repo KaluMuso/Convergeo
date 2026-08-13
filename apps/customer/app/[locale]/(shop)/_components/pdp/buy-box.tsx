@@ -10,6 +10,14 @@ import { useTranslations } from "next-intl";
 import { useCallback, useMemo, useState, type ReactNode, type Ref } from "react";
 
 import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
+import {
+  formatListingQuantity,
+  formatSaleIncrement,
+  resolveMinimumSteps,
+  resolveSaleUnit,
+  type SaleUnit,
+  type SaleUnitLabels,
+} from "../sale-quantity";
 
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
 
@@ -25,6 +33,9 @@ export type BuyBoxListing = {
   stockQty: number | null;
   moq: number;
   inStock: boolean;
+  saleUnit?: SaleUnit;
+  unitStepMilli?: number;
+  minSteps?: number;
   leadTimeDays?: number | null;
   vendorCapacityPerWeek?: number | null;
 };
@@ -74,16 +85,22 @@ export type BuyBoxProps = {
   compareHref?: string | null;
   compareLabel?: string;
   wishlistSlot?: ReactNode;
+  locale?: string;
 };
 
+export function getMinimumQuantity(listing: BuyBoxListing): number {
+  return Math.max(1, listing.moq, resolveMinimumSteps(listing.minSteps));
+}
+
 export function getMaxQuantity(listing: BuyBoxListing): number | null {
+  const minimum = getMinimumQuantity(listing);
   if (!listing.inStock) {
-    return listing.moq;
+    return minimum;
   }
   if (listing.productClass === "E" || listing.leadTimeDays != null) {
     const capacity = listing.vendorCapacityPerWeek;
     if (typeof capacity === "number" && capacity > 0) {
-      return Math.max(listing.moq, capacity);
+      return Math.max(minimum, capacity);
     }
     return 99;
   }
@@ -93,11 +110,11 @@ export function getMaxQuantity(listing: BuyBoxListing): number | null {
   if (listing.stockQty === null) {
     return 99;
   }
-  return Math.max(listing.moq, listing.stockQty);
+  return Math.max(minimum, listing.stockQty);
 }
 
 export function clampQuantity(value: number, listing: BuyBoxListing): number {
-  const min = Math.max(1, listing.moq);
+  const min = getMinimumQuantity(listing);
   const max = getMaxQuantity(listing);
   if (max === null) {
     return Math.max(min, value);
@@ -139,21 +156,67 @@ export function BuyBox({
   compareHref,
   compareLabel,
   wishlistSlot,
+  locale = "en",
 }: BuyBoxProps) {
   const t = useTranslations("catalog");
-  const [quantity, setQuantity] = useState(() => clampQuantity(listing.moq, listing));
+  const [quantity, setQuantity] = useState(() =>
+    clampQuantity(getMinimumQuantity(listing), listing),
+  );
   const [adding, setAdding] = useState(false);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
 
   const maxQuantity = useMemo(() => getMaxQuantity(listing), [listing]);
+  const unitLabels: SaleUnitLabels = useMemo(
+    () => ({
+      each: t("pdp.buyBox.units.each"),
+      metre: t("pdp.buyBox.units.metre"),
+      kg: t("pdp.buyBox.units.kg"),
+      litre: t("pdp.buyBox.units.litre"),
+      bag: t("pdp.buyBox.units.bag"),
+      sqm: t("pdp.buyBox.units.sqm"),
+    }),
+    [t],
+  );
+  const saleUnit = resolveSaleUnit(listing.saleUnit);
+  const formattedQuantity = formatListingQuantity(
+    purchase?.quantity ?? quantity,
+    saleUnit,
+    listing.unitStepMilli,
+    locale,
+    unitLabels,
+  );
+  const formattedMinimum = formatListingQuantity(
+    getMinimumQuantity(listing),
+    saleUnit,
+    listing.unitStepMilli,
+    locale,
+    unitLabels,
+  );
+  const formattedIncrement = formatSaleIncrement(
+    saleUnit,
+    listing.unitStepMilli,
+    locale,
+    unitLabels,
+  );
   const localStockLabel = useMemo(
     () =>
       getStockLabel(listing, {
         ...labels,
-        lowStockLabel: (count) => t("pdp.buyBox.lowStock", { count }),
+        lowStockLabel: (count) =>
+          saleUnit === "each"
+            ? t("pdp.buyBox.lowStock", { count })
+            : t("pdp.buyBox.lowStockQuantity", {
+                quantity: formatListingQuantity(
+                  count,
+                  saleUnit,
+                  listing.unitStepMilli,
+                  locale,
+                  unitLabels,
+                ),
+              }),
       }),
-    [listing, labels, t],
+    [listing, labels, locale, saleUnit, t, unitLabels],
   );
   const conditionLabel =
     listing.condition === "new"
@@ -203,10 +266,9 @@ export function BuyBox({
     quantity,
   ]);
 
-  const qty = purchase?.quantity ?? quantity;
   const onDecrease = purchase?.decrease ?? decrease;
   const onIncrease = purchase?.increase ?? increase;
-  const atMin = purchase?.atMin ?? quantity <= Math.max(1, listing.moq);
+  const atMin = purchase?.atMin ?? quantity <= getMinimumQuantity(listing);
   const atMax = purchase?.atMax ?? (maxQuantity !== null && quantity >= maxQuantity);
   const isAdding = purchase?.adding ?? adding;
   const errorMessage = purchase?.addError ?? addError;
@@ -236,7 +298,11 @@ export function BuyBox({
       </div>
 
       <div>
-        <p className="text-sm text-text-2">{labels.priceLabel}</p>
+        <p className="text-sm text-text-2">
+          {saleUnit === "each"
+            ? labels.priceLabel
+            : t("pdp.buyBox.pricePerIncrement", { quantity: formattedIncrement })}
+        </p>
         <PriceBlock ngwee={listing.priceNgwee} className="mt-0.5" />
         {priceContextLabel ? (
           <p className="mt-1 text-xs font-medium text-text-2" data-testid="pdp-price-context">
@@ -274,9 +340,11 @@ export function BuyBox({
         </p>
       ) : null}
 
-      {listing.moq > 1 ? (
+      {getMinimumQuantity(listing) > 1 ? (
         <p className="text-sm text-text-2" data-testid="pdp-moq">
-          {t("pdp.buyBox.moq", { count: listing.moq })}
+          {saleUnit === "each"
+            ? t("pdp.buyBox.moq", { count: getMinimumQuantity(listing) })
+            : t("pdp.buyBox.minimumOrderQuantity", { quantity: formattedMinimum })}
         </p>
       ) : null}
 
@@ -297,9 +365,9 @@ export function BuyBox({
             data-testid="pdp-qty-value"
             className="min-w-12 text-center font-mono text-lg"
             aria-live="polite"
-            aria-label={labels.quantityLabel}
+            aria-label={`${labels.quantityLabel}: ${formattedQuantity}`}
           >
-            {qty}
+            {formattedQuantity}
           </output>
           <button
             type="button"

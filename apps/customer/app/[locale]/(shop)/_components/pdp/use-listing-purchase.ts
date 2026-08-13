@@ -4,10 +4,12 @@ import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { addCartItem, openMiniCart, setLastAddedMessage } from "../cart/mini-cart-drawer";
+import { formatListingQuantity, resolveSaleUnit, type SaleUnitLabels } from "../sale-quantity";
 
 import {
   clampQuantity,
   getMaxQuantity,
+  getMinimumQuantity,
   getStockLabel,
   type BuyBoxLabels,
   type BuyBoxListing,
@@ -33,13 +35,15 @@ export type ListingPurchaseControls = {
 export function useListingPurchase(
   listing: BuyBoxListing | null,
   labels: BuyBoxLabels,
+  locale = "en",
 ): ListingPurchaseControls | null {
   const t = useTranslations("catalog");
   const listingId = listing?.id ?? null;
   const listingMoq = listing?.moq ?? 1;
+  const listingMinSteps = listing?.minSteps ?? 1;
 
   const [quantity, setQuantity] = useState(() =>
-    listing ? clampQuantity(listing.moq, listing) : 1,
+    listing ? clampQuantity(getMinimumQuantity(listing), listing) : 1,
   );
   const [adding, setAdding] = useState(false);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
@@ -54,12 +58,31 @@ export function useListingPurchase(
       return;
     }
     // Intentional identity deps (id / stock bounds) — avoid resetting on new object identity each render.
-    setQuantity(clampQuantity(listing.moq, listing));
+    setQuantity(clampQuantity(getMinimumQuantity(listing), listing));
     setAddError(null);
     setAddedMessage(null);
-  }, [listing, listingId, listingMoq, listingStockMode, listingStockQty, listingInStock]);
+  }, [
+    listing,
+    listingId,
+    listingMoq,
+    listingMinSteps,
+    listingStockMode,
+    listingStockQty,
+    listingInStock,
+  ]);
 
   const maxQuantity = useMemo(() => (listing ? getMaxQuantity(listing) : null), [listing]);
+  const unitLabels: SaleUnitLabels = useMemo(
+    () => ({
+      each: t("pdp.buyBox.units.each"),
+      metre: t("pdp.buyBox.units.metre"),
+      kg: t("pdp.buyBox.units.kg"),
+      litre: t("pdp.buyBox.units.litre"),
+      bag: t("pdp.buyBox.units.bag"),
+      sqm: t("pdp.buyBox.units.sqm"),
+    }),
+    [t],
+  );
 
   const stockLabel = useMemo(() => {
     if (!listing) {
@@ -67,9 +90,20 @@ export function useListingPurchase(
     }
     return getStockLabel(listing, {
       ...labels,
-      lowStockLabel: (count) => t("pdp.buyBox.lowStock", { count }),
+      lowStockLabel: (count) =>
+        resolveSaleUnit(listing.saleUnit) === "each"
+          ? t("pdp.buyBox.lowStock", { count })
+          : t("pdp.buyBox.lowStockQuantity", {
+              quantity: formatListingQuantity(
+                count,
+                listing.saleUnit,
+                listing.unitStepMilli,
+                locale,
+                unitLabels,
+              ),
+            }),
     });
-  }, [listing, labels, t]);
+  }, [listing, labels, locale, t, unitLabels]);
 
   const decrease = useCallback(() => {
     if (!listing) {
@@ -112,7 +146,7 @@ export function useListingPurchase(
     return null;
   }
 
-  const atMin = quantity <= Math.max(1, listing.moq);
+  const atMin = quantity <= getMinimumQuantity(listing);
   const atMax = maxQuantity !== null && quantity >= maxQuantity;
 
   return {

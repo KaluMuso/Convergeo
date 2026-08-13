@@ -18,6 +18,16 @@
     "vendorSubtotal": "Vendor subtotal: {amount}",
     "lineTotal": "Line total: {amount}",
     "unitPrice": "{amount} each",
+    "unitPriceMeasured": "{amount} per {quantity}",
+    "madeToOrderLeadTime": "Made to order · ready in {days} days",
+    "saleUnits": {
+      "each": "item",
+      "metre": "m",
+      "kg": "kg",
+      "litre": "L",
+      "bag": "bag",
+      "sqm": "m²"
+    },
     "remove": "Remove",
     "removeLabel": "Remove {title} from cart",
     "saveForLater": "Save for later",

@@ -2,7 +2,7 @@
 
 import { createApiClient } from "@vergeo/config";
 import { useTranslations } from "next-intl";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CloudinaryImage } from "../../../../../../packages/ui/src/media/cloudinary-image";
 import { UploadDropzone } from "../../../../../../packages/ui/src/media/upload-dropzone";
@@ -39,6 +39,7 @@ export type ImageManagerProps = {
   images: ListingImageRecord[];
   getToken: () => string | null | Promise<string | null>;
   onImagesChange?: (images: ListingImageRecord[]) => void;
+  minimumImages?: number;
 };
 
 type PendingUpload = {
@@ -50,6 +51,14 @@ type PendingUpload = {
 
 export function wouldExceedImageCap(currentCount: number, incomingCount: number): boolean {
   return currentCount + incomingCount > MAX_LISTING_IMAGES;
+}
+
+export function wouldDropBelowImageMinimum(
+  currentCount: number,
+  removingCount: number,
+  minimumImages: number,
+): boolean {
+  return currentCount - removingCount < minimumImages;
 }
 
 export async function downscaleImageFile(
@@ -171,7 +180,13 @@ function sortByPosition(images: ListingImageRecord[]): ListingImageRecord[] {
   return [...images].sort((left, right) => left.position - right.position);
 }
 
-export function ImageManager({ listingId, images, getToken, onImagesChange }: ImageManagerProps) {
+export function ImageManager({
+  listingId,
+  images,
+  getToken,
+  onImagesChange,
+  minimumImages = 0,
+}: ImageManagerProps) {
   const t = useTranslations("vendor");
   const [localImages, setLocalImages] = useState<ListingImageRecord[]>(() =>
     sortByPosition(images),
@@ -189,6 +204,10 @@ export function ImageManager({ listingId, images, getToken, onImagesChange }: Im
       }),
     [getToken],
   );
+
+  useEffect(() => {
+    setLocalImages(sortByPosition(images));
+  }, [images]);
 
   const totalCount = localImages.length + pendingFiles.length;
   const fileProgress = pendingUploads.map((upload) => upload.progress);
@@ -345,12 +364,16 @@ export function ImageManager({ listingId, images, getToken, onImagesChange }: Im
 
   const detachImage = useCallback(
     async (imageId: string) => {
+      if (wouldDropBelowImageMinimum(localImages.length, 1, minimumImages)) {
+        setRejectNotice(t("listings.images.minimum_required", { count: minimumImages }));
+        return;
+      }
       await apiClient.request<void>(`/vendor/listings/${listingId}/images/${imageId}`, {
         method: "DELETE",
       });
       syncImages(localImages.filter((image) => image.id !== imageId));
     },
-    [apiClient, listingId, localImages, syncImages],
+    [apiClient, listingId, localImages, minimumImages, syncImages, t],
   );
 
   const retryFailedUpload = useCallback(() => {
@@ -442,7 +465,9 @@ export function ImageManager({ listingId, images, getToken, onImagesChange }: Im
                 <button
                   type="button"
                   aria-label={t("listings.images.remove")}
-                  disabled={busy}
+                  disabled={
+                    busy || wouldDropBelowImageMinimum(localImages.length, 1, minimumImages)
+                  }
                   onClick={() => detachImage(image.id)}
                   style={{ minHeight: "44px", minWidth: "44px" }}
                 >
@@ -452,6 +477,10 @@ export function ImageManager({ listingId, images, getToken, onImagesChange }: Im
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {minimumImages > 0 && localImages.length <= minimumImages ? (
+        <p role="note">{t("listings.images.minimum_required", { count: minimumImages })}</p>
       ) : null}
 
       {totalCount < MAX_LISTING_IMAGES ? (

@@ -21,6 +21,12 @@ export type CatalogListing = {
   belowMedian: boolean;
   deliveryAvailable: boolean;
   pickupAvailable: boolean;
+  saleUnit?: string;
+  unitStepMilli?: number;
+  minSteps?: number;
+  productClass?: string;
+  fulfilmentMode?: string;
+  leadTimeDays?: number | null;
 };
 
 type ListingGridLabels = ListingCardLabels;

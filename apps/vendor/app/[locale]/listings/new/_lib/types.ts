@@ -1,6 +1,9 @@
 export type ListingMode = "attach" | "new_canonical" | "quick_list";
 
-export type ListingCondition = "new" | "refurbished";
+export type ProductClass = "A" | "B" | "C" | "D" | "E";
+export type ListingCondition = "new" | "refurbished" | "used";
+export type SaleUnit = "each" | "metre" | "kg" | "litre" | "bag" | "sqm";
+export type FulfilmentMode = "stocked" | "made_to_order";
 export type StockMode = "tracked" | "always_available";
 
 export type CommissionPreview = {
@@ -47,7 +50,15 @@ export type ListingCreatePayload = {
   aliases?: string[];
   title_override?: string;
   price_ngwee: number;
+  product_class: ProductClass;
+  sale_unit: SaleUnit;
+  unit_step_milli: number;
+  min_steps: number;
   condition: ListingCondition;
+  defect_notes?: string | null;
+  fulfilment_mode: FulfilmentMode;
+  lead_time_days?: number | null;
+  vendor_capacity_per_week?: number | null;
   stock_mode: StockMode;
   stock_qty?: number | null;
   wholesale?: boolean;
@@ -65,4 +76,6 @@ export type ListingCreateResponse = {
   product_id: string | null;
   product_status: string | null;
   commission: CommissionPreview | null;
+  requires_evidence?: boolean;
+  next_action?: string | null;
 };

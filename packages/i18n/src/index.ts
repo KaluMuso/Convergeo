@@ -1,4 +1,4 @@
-export { formatDate, formatK, formatNumber } from "./format";
+export { formatDate, formatK, formatNumber, formatSaleQuantity } from "./format";
 export { flattenMessages, loadRawNamespace, localeNamespaceKeys } from "./catalog";
 export { deepMergeMessages } from "./deep-merge";
 export { DEFAULT_LOCALE, LOCALES, PUBLIC_LOCALES, type Locale, type PublicLocale } from "./locales";

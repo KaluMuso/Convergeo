@@ -5,6 +5,7 @@ export { Input } from "../../../../../../../packages/ui/src/input";
 export { Select } from "../../../../../../../packages/ui/src/select";
 export { Spinner } from "../../../../../../../packages/ui/src/spinner";
 export { Switch } from "../../../../../../../packages/ui/src/switch";
+export { Textarea } from "../../../../../../../packages/ui/src/textarea";
 export { Tabs } from "../../../../../../../packages/ui/src/tabs";
 export { PriceBlock } from "../../../../../../../packages/ui/src/price-block";
 export { Badge } from "../../../../../../../packages/ui/src/badge";

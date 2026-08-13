@@ -54,7 +54,15 @@ class CartLineOut(BaseModel):
     unit_price_ngwee: int
     line_total_ngwee: int
     title_override: str | None = None
+    product_class: str = "A"
+    condition: str = "new"
+    sale_unit: str = "each"
+    unit_step_milli: int = 1000
+    min_steps: int = 1
+    fulfilment_mode: str = "stocked"
     lead_time_days: int | None = None
+    vendor_capacity_per_week: int | None = None
+    defect_notes: str | None = None
 
 
 class PickupLocationOut(BaseModel):
@@ -448,7 +456,21 @@ def _build_line_views(
                 title_override=listing.get("title_override")
                 if isinstance(listing.get("title_override"), str)
                 else None,
+                product_class=str(listing.get("product_class") or "A"),
+                condition=str(listing.get("condition") or "new"),
+                sale_unit=str(listing.get("sale_unit") or "each"),
+                unit_step_milli=int(listing.get("unit_step_milli") or 1000),
+                min_steps=int(listing.get("min_steps") or 1),
+                fulfilment_mode=str(listing.get("fulfilment_mode") or "stocked"),
                 lead_time_days=listing_lead_time_days(listing),
+                vendor_capacity_per_week=(
+                    int(listing["vendor_capacity_per_week"])
+                    if listing.get("vendor_capacity_per_week") is not None
+                    else None
+                ),
+                defect_notes=(
+                    str(listing["defect_notes"]) if listing.get("defect_notes") else None
+                ),
             )
         )
     return line_views
@@ -691,7 +713,15 @@ async def create_checkout_session(
                         unit_price_ngwee=item.unit_price_ngwee,
                         line_total_ngwee=item.line_total_ngwee,
                         title_override=item.title_override,
+                        product_class=item.product_class,
+                        condition=item.condition,
+                        sale_unit=item.sale_unit,
+                        unit_step_milli=item.unit_step_milli,
+                        min_steps=item.min_steps,
+                        fulfilment_mode=item.fulfilment_mode,
                         lead_time_days=item.lead_time_days,
+                        vendor_capacity_per_week=item.vendor_capacity_per_week,
+                        defect_notes=item.defect_notes,
                     )
                     for item in group.items
                 ],
