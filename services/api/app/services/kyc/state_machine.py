@@ -8,6 +8,7 @@ from uuid import UUID
 
 from app.deps import get_supabase_service_client  # type: ignore[attr-defined]
 from app.errors import AppError
+from app.services.kyc.vendor_role import ensure_vendor_owner_role
 
 # Canonical DB statuses after migration 0056. Legacy `pending` is still accepted
 # on read (mapped to submitted) for mixed-environment safety during rollout.
@@ -644,6 +645,32 @@ def transition_approve(
         kyc_tier=tier,
     )
 
+    try:
+        role_after = ensure_vendor_owner_role(
+            client,
+            owner_user_id=vendor.owner_user_id,
+            vendor_id=vendor_id,
+        )
+    except AppError as exc:
+        _compensate_approve_role_grant(
+            client,
+            vendor=vendor,
+            kyc_record=kyc_record,
+            vendor_id=vendor_id,
+            kyc_record_id=kyc_record_id,
+        )
+        raise AppError(
+            code="vendor_role_grant_failed",
+            message="KYC approval rolled back because vendor role grant failed",
+            http_status=500,
+            details={
+                "vendor_id": vendor_id,
+                "kyc_record_id": kyc_record_id,
+                "owner_user_id": vendor.owner_user_id,
+                "cause": exc.code,
+            },
+        ) from exc
+
     after = {
         "vendor": {
             "id": vendor_after["id"],
@@ -651,6 +678,7 @@ def transition_approve(
             "kyc_tier": vendor_after.get("kyc_tier"),
         },
         "kyc_record": _record_audit_slice(kyc_after),
+        "vendor_role": role_after,
     }
     write_kyc_audit_log(
         client,
@@ -662,6 +690,34 @@ def transition_approve(
         after=after,
     )
     return after
+
+
+def _compensate_approve_role_grant(
+    client: ServiceRoleClient,
+    *,
+    vendor: VendorSnapshot,
+    kyc_record: KycRecordSnapshot,
+    vendor_id: str,
+    kyc_record_id: str,
+) -> None:
+    """Best-effort revert so a failed role grant cannot leave an active Vendor."""
+    try:
+        _update_vendor(
+            client,
+            vendor_id,
+            expected_status="active",
+            status=vendor.status,
+            kyc_tier=vendor.kyc_tier,
+            clear_kyc_tier=vendor.kyc_tier is None,
+        )
+        _update_kyc_record(
+            client,
+            kyc_record_id,
+            expected_status="approved",
+            status=kyc_record.db_status,
+        )
+    except AppError:
+        return
 
 
 def transition_reject(

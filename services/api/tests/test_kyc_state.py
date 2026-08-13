@@ -20,6 +20,7 @@ from app.services.kyc.state_machine import (
     transition_reject,
     transition_start_review,
 )
+from app.services.kyc.vendor_role import ensure_vendor_owner_role
 from tests.rls.conftest import (
     PgConn,
     apply_migrations,
@@ -68,6 +69,7 @@ class _SqlTableClient:
         self._maybe_single = False
         self._mode = "select"
         self._payload: dict[str, Any] | None = None
+        self._on_conflict: str | None = None
 
     def select(self, columns: str) -> _SqlTableClient:
         self._select_cols = columns
@@ -94,6 +96,16 @@ class _SqlTableClient:
         self._payload = row
         return self
 
+    def upsert(
+        self,
+        row: dict[str, Any] | list[dict[str, Any]],
+        on_conflict: str | None = None,
+    ) -> _SqlTableClient:
+        self._mode = "upsert"
+        self._payload = row if isinstance(row, dict) else row[0]
+        self._on_conflict = on_conflict
+        return self
+
     def update(self, patch: dict[str, Any]) -> _SqlTableClient:
         self._mode = "update"
         self._payload = patch
@@ -114,6 +126,24 @@ class _SqlTableClient:
                 val_sql = ", ".join(_sql_value(self._payload[col]) for col in columns)
                 sql = (
                     f"INSERT INTO public.{self._table} ({col_sql}) VALUES ({val_sql}) "
+                    f"RETURNING to_jsonb({self._table}.*);"
+                )
+                result = self._conn.run(sql)
+                assert result.ok, result.error
+                return _FakeResponse(_json_rows(result.rows))
+
+            if self._mode == "upsert":
+                assert self._payload is not None
+                columns = list(self._payload.keys())
+                col_sql = ", ".join(columns)
+                val_sql = ", ".join(_sql_value(self._payload[col]) for col in columns)
+                conflict = ", ".join(
+                    part.strip()
+                    for part in (self._on_conflict or "user_id,role").split(",")
+                )
+                sql = (
+                    f"INSERT INTO public.{self._table} ({col_sql}) VALUES ({val_sql}) "
+                    f"ON CONFLICT ({conflict}) DO NOTHING "
                     f"RETURNING to_jsonb({self._table}.*);"
                 )
                 result = self._conn.run(sql)
@@ -349,6 +379,77 @@ class TestKycVendorCas:
         assert result.rows[0] == "rejected"
         successes = [result for result in results if result is not None]
         assert len(successes) == 1
+
+    def test_approve_grants_vendor_role_to_fresh_owner(self, db: PgConn) -> None:
+        _ensure_matrix_seed(db)
+        owner_id = str(uuid.uuid4())
+        vendor_id = str(uuid.uuid4())
+        kyc_id = str(uuid.uuid4())
+        auth = db.run(
+            f"""
+            INSERT INTO auth.users (
+              instance_id, id, aud, role, email, encrypted_password,
+              email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+              created_at, updated_at
+            ) VALUES (
+              '00000000-0000-0000-0000-000000000000', '{owner_id}',
+              'authenticated', 'authenticated',
+              'role-grant-{owner_id[:8]}@test.local', 'hash',
+              timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
+              timezone('utc', now()), timezone('utc', now())
+            );
+            """
+        )
+        assert auth.ok, auth.error
+        before = db.run(
+            f"SELECT role FROM public.user_roles WHERE user_id = '{owner_id}' ORDER BY role;"
+        )
+        assert before.ok
+        assert before.rows == ["customer"]
+
+        slug = f"kyc-role-{vendor_id[:8]}"
+        vendor_result = db.run(
+            f"""
+            INSERT INTO public.vendors (id, owner_user_id, slug, display_name, status)
+            VALUES ('{vendor_id}', '{owner_id}', '{slug}', 'Role Vendor', 'pending_kyc');
+            """
+        )
+        assert vendor_result.ok, vendor_result.error
+        kyc_result = db.run(
+            f"""
+            INSERT INTO public.kyc_records (
+              id, vendor_id, tier, doc_storage_paths, momo_name_match, status
+            ) VALUES (
+              '{kyc_id}', '{vendor_id}', 2, '{{}}', '{{"matched": true}}'::jsonb, 'submitted'
+            );
+            """
+        )
+        assert kyc_result.ok, kyc_result.error
+
+        wrapper = _ServiceWrapper(db)
+        result = transition_approve(
+            actor_id=ADMIN_ID,
+            vendor_id=vendor_id,
+            kyc_record_id=kyc_id,
+            tier=2,
+            service_client=wrapper,
+        )
+        assert result["vendor"]["status"] == "active"
+        assert result["vendor_role"]["outcome"] == "granted"
+        after = db.run(
+            f"SELECT role FROM public.user_roles WHERE user_id = '{owner_id}' ORDER BY role;"
+        )
+        assert after.ok
+        assert after.rows == ["customer", "vendor"]
+        again = ensure_vendor_owner_role(
+            wrapper, owner_user_id=owner_id, vendor_id=vendor_id
+        )
+        assert again["outcome"] == "already_present"
+        counted = db.run(
+            f"SELECT count(*)::text FROM public.user_roles "
+            f"WHERE user_id = '{owner_id}' AND role = 'vendor';"
+        )
+        assert counted.ok and counted.rows[0] == "1"
 
 
 def _seed_decided_kyc_vendor(db: PgConn, *, vendor_id: str, kyc_id: str) -> None:

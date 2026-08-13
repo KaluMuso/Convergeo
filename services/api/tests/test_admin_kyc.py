@@ -64,6 +64,16 @@ class FakeQuery:
         self._payload = payload
         return self
 
+    def upsert(
+        self,
+        payload: dict[str, Any] | list[dict[str, Any]],
+        on_conflict: str | None = None,
+    ) -> FakeQuery:
+        self._pending_op = "upsert"
+        self._payload = payload if isinstance(payload, dict) else payload[0]
+        self._on_conflict = on_conflict
+        return self
+
     def update(self, payload: dict[str, Any]) -> FakeQuery:
         self._pending_op = "update"
         self._payload = payload
@@ -75,6 +85,19 @@ class FakeQuery:
             row = dict(self._payload)
             if "id" not in row:
                 row["id"] = f"{len(self._parent.rows):08x}-fake-fake-fake-fakefakefake"
+            self._parent.rows.append(row)
+            return MagicMock(data=[row])
+
+        if self._pending_op == "upsert":
+            assert isinstance(self._payload, dict)
+            keys = [
+                part.strip()
+                for part in (getattr(self, "_on_conflict", None) or "user_id,role").split(",")
+            ]
+            for existing in self._parent.rows:
+                if all(existing.get(key) == self._payload.get(key) for key in keys):
+                    return MagicMock(data=[dict(existing)])
+            row = dict(self._payload)
             self._parent.rows.append(row)
             return MagicMock(data=[row])
 
@@ -122,6 +145,13 @@ class FakeTable:
     def insert(self, payload: dict[str, Any]) -> FakeQuery:
         return FakeQuery(self, []).insert(payload)
 
+    def upsert(
+        self,
+        payload: dict[str, Any] | list[dict[str, Any]],
+        on_conflict: str | None = None,
+    ) -> FakeQuery:
+        return FakeQuery(self, []).upsert(payload, on_conflict=on_conflict)
+
     def update(self, payload: dict[str, Any]) -> FakeQuery:
         return FakeQuery(self, []).update(payload)
 
@@ -154,6 +184,7 @@ class FakeSupabaseClient:
             "kyc_records": FakeTable(),
             "audit_log": FakeTable(),
             "notification_outbox": FakeTable(),
+            "user_roles": FakeTable(),
         }
         self.storage = FakeStorage()
 
