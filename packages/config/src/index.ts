@@ -11,8 +11,11 @@ export {
   isDeployedFrontendEnv,
   isLoopbackApiOrigin,
   isProductionApiOrigin,
+  isStagingApiOrigin,
+  normalizeDeploymentPlane,
   resolvePublicApiBaseUrl,
   type ApiBaseEnvBag,
+  type DeploymentPlane,
   type PublicApiEnvKey,
 } from "./api-base-url";
 export { loadPublicEnv, type PublicEnv } from "./env";

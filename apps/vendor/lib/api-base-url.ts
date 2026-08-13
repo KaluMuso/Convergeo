@@ -5,10 +5,10 @@ type EnvBag = ApiBaseEnvBag;
 /**
  * Resolve the public API origin for vendor fetches.
  *
- * Production and Vercel Preview builds must never fall back to a loopback
- * origin — a missing `NEXT_PUBLIC_API_BASE_URL` fails closed so vendor
- * clients never silently talk to a developer machine. Local `next dev`
- * keeps the FastAPI default from `@vergeo/config/api-base-url`.
+ * Deployed planes (`NEXT_PUBLIC_DEPLOYMENT_PLANE=production|staging|preview`)
+ * never fall back to a loopback origin. A missing plane fails closed so vendor
+ * clients never silently talk to a developer machine. Local `next dev` must
+ * set `NEXT_PUBLIC_DEPLOYMENT_PLANE=development`.
  */
 export function resolveApiBaseUrl(env: EnvBag = {}): string | null {
   return resolvePublicApiBaseUrl(env, ["NEXT_PUBLIC_API_BASE_URL"]);

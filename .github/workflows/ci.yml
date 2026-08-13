@@ -58,11 +58,14 @@ jobs:
       - name: Test
         run: pnpm turbo run test --filter="${{ steps.turbo.outputs.filter }}"
 
+      - name: Loopback / wrong-plane guard unit tests
+        run: node --test scripts/ci/check-no-loopback-api.test.mjs
+
       - name: Build
         run: pnpm turbo run build --filter="${{ steps.turbo.outputs.filter }}"
 
-      - name: Fail if frontend bundles ship a loopback API origin
-        run: node scripts/ci/check-no-loopback-api.mjs
+      - name: Fail if frontend bundles ship a loopback or wrong-plane API origin
+        run: node scripts/ci/check-no-loopback-api.mjs --require-affected --filter="${{ steps.turbo.outputs.filter }}"
 
   python:
     name: Python API
