@@ -4484,9 +4484,9 @@ export type Database = {
           title_override: string | null
           unit_step_milli: number
           updated_at: string
-          vin: string | null
           vendor_capacity_per_week: number | null
           vendor_id: string
+          vin: string | null
           wholesale: boolean
         }
         Insert: {
@@ -4525,9 +4525,9 @@ export type Database = {
           title_override?: string | null
           unit_step_milli?: number
           updated_at?: string
-          vin?: string | null
           vendor_capacity_per_week?: number | null
           vendor_id: string
+          vin?: string | null
           wholesale?: boolean
         }
         Update: {
@@ -4566,9 +4566,9 @@ export type Database = {
           title_override?: string | null
           unit_step_milli?: number
           updated_at?: string
-          vin?: string | null
           vendor_capacity_per_week?: number | null
           vendor_id?: string
+          vin?: string | null
           wholesale?: boolean
         }
         Relationships: [
