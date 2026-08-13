@@ -10,6 +10,13 @@ const cfg = JSON.parse(readFileSync("lighthouserc.json", "utf8"));
 if (!cfg.ci?.collect?.url?.length) throw new Error("missing ci.collect.url");
 if (!cfg.vergeo?.bundle?.defaultMaxKbGz) throw new Error("missing vergeo.bundle");
 
+const numberOfRuns = cfg.ci.collect?.numberOfRuns ?? 3;
+if (numberOfRuns < 3) {
+  throw new Error(
+    `ci.collect.numberOfRuns must be >= 3 (got ${numberOfRuns}) — single-run LHCI flakes at the perf≥0.50 floor`,
+  );
+}
+
 const matrix = cfg.ci.assert?.assertMatrix;
 if (!Array.isArray(matrix) || !matrix.length) {
   throw new Error("missing ci.assert.assertMatrix (blocking G19 policy)");
@@ -30,6 +37,14 @@ for (const row of matrix) {
     if (spec[0] !== "error") {
       throw new Error(`assertion ${key} on ${pattern} must be error (got ${spec[0]})`);
     }
+    if (key === "categories:performance" || key === "largest-contentful-paint") {
+      const options = spec[1] || {};
+      if (options.aggregationMethod !== "median") {
+        throw new Error(
+          `assertion ${key} on ${pattern} must use aggregationMethod=median (got ${options.aggregationMethod ?? "default"})`,
+        );
+      }
+    }
   }
 }
 
@@ -41,7 +56,9 @@ console.log(
   "URLs,",
   "assertMatrix rows",
   matrix.length,
-  ", default LCP ≤",
+  ", runs",
+  numberOfRuns,
+  "(median perf/LCP), default LCP ≤",
   lcp,
   "ms (blocking)",
 );
