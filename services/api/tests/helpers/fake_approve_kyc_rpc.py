@@ -114,7 +114,10 @@ def fake_approve_kyc_vendor(
 
     role_store: dict[str, Any] = {
         "user_roles": _store_rows(client, "user_roles"),
-        "_block_vendor_role_grant": getattr(client, "_block_vendor_role_grant", False),
+        "_block_vendor_role_grant": bool(
+            getattr(client, "_block_vendor_role_grant", False)
+            or getattr(client, "_store", {}).get("_block_vendor_role_grant", False)  # type: ignore[attr-defined]
+        ),
     }
     if role_store.get("_block_vendor_role_grant"):
         raise AppError(
