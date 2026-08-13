@@ -254,7 +254,12 @@ def _customer_released_listing_classes(client: Any) -> set[str]:
         "product_class_e_customer_release",
     }
     try:
-        response = client.table("feature_flags").select("flag,enabled").in_("flag", list(required)).execute()
+        response = (
+            client.table("feature_flags")
+            .select("flag,enabled")
+            .in_("flag", list(required))
+            .execute()
+        )
         rows = _rows(response)
     except Exception:  # pragma: no cover - an unavailable gate cannot expose inventory
         return {"A", "B"}

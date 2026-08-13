@@ -284,7 +284,7 @@ grant execute on function public.product_class_customer_released(char) to anon, 
 create or replace function public.enforce_product_strategy_listing_policy()
 returns trigger
 language plpgsql
-security invoker
+security definer
 set search_path = ''
 as $$
 declare
@@ -334,6 +334,8 @@ begin
   return new;
 end;
 $$;
+
+revoke execute on function public.enforce_product_strategy_listing_policy() from public, anon, authenticated;
 
 drop trigger if exists vendor_listings_product_strategy_policy on public.vendor_listings;
 create trigger vendor_listings_product_strategy_policy

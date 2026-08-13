@@ -601,7 +601,12 @@ def _customer_released_product_classes(client: Any) -> set[str]:
         "product_class_e_customer_release",
     }
     try:
-        response = client.table("feature_flags").select("flag,enabled").in_("flag", list(flags)).execute()
+        response = (
+            client.table("feature_flags")
+            .select("flag,enabled")
+            .in_("flag", list(flags))
+            .execute()
+        )
         rows = _response_rows(response)
     except Exception:  # pragma: no cover - defensive fail-closed boundary
         return {"A", "B"}

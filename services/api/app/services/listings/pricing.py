@@ -7,8 +7,9 @@ obtained in the vendor preview, cart validation, and checkout snapshot path.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal, Sequence
+from typing import Literal
 
 
 PricingMode = Literal["fixed", "measured", "bundle", "tiered", "range", "from", "quote_only"]
