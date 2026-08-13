@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "v1_release_profile": {
+    "allowed_product_classes": ["A"],
+    "allowed_conditions": ["new", "refurbished"],
+    "allowed_sale_units": ["each"],
+    "allowed_fulfilment_modes": ["stocked"],
+    "allowed_admin_roles": ["admin"],
+    "blocked_roles": ["superadmin", "moderator"],
+    "blocked_migration_versions": ["0085", "0087", "0091", "0095"],
+    "enforcement_contract": "A schema may contain future-compatible columns, but no v1 API, RLS grant, seed, or frontend route may make blocked values writable or discoverable. The production change window must prove this with the real-role matrix and release-profile smoke before promotion."
+  },
+  "cohorts": [
+    {
+      "id": "dark-ship-foundation",
+      "execution": "sandbox-rehearsal",
+      "through_version": "0079",
+      "required_evidence": ["migration-ledger", "feature-flags-false", "rls-matrix", "advisor-review"]
+    },
+    {
+      "id": "location-social-foundation",
+      "execution": "sandbox-rehearsal",
+      "through_version": "0084",
+      "required_evidence": ["migration-ledger", "location-stock-smoke", "enquiry-rls", "licence-badge-fail-closed"]
+    },
+    {
+      "id": "future-compatible-schema",
+      "execution": "sandbox-rehearsal",
+      "through_version": "20260812010000",
+      "required_evidence": ["migration-ledger", "generated-types", "real-role-rls-matrix", "v1-release-profile-smoke", "advisor-review"]
+    },
+    {
+      "id": "v1-activation-hold",
+      "execution": "manual-design-review",
+      "through_version": "20260812010000",
+      "required_evidence": ["dated-adr", "api-enforcement-pr", "rls-grant-review", "launch-profile-regression"]
+    }
+  ]
+}
