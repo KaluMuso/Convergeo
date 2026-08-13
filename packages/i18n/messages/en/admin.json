@@ -801,6 +801,11 @@
       "missing": "—"
     }
   },
+  "accessDenied": {
+    "title": "Access denied",
+    "body": "This account is signed in but does not have the admin role. Reaching this page is not admin authorization.",
+    "hint": "Sign in with an account that has the admin role in user_roles. Cloudflare Access remains required."
+  },
   "dashboard": {
     "title": "Operations dashboard",
     "subtitle": "Platform aggregates — ledger liabilities, reconciliation, and funnel snapshot.",

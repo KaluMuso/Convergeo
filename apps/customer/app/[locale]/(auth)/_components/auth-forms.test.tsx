@@ -9,14 +9,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const signInWithOtp = vi.fn();
 const verifyOtp = vi.fn();
 const exchangeCodeForSession = vi.fn();
+const getSession = vi.fn();
+const getPreferences = vi.fn();
 
-vi.mock("@vergeo/auth/browser-client", () => ({
-  createBrowserClient: () => ({
+vi.mock("@vergeo/auth/browser-client-lazy", () => ({
+  getBrowserClient: async () => ({
     auth: {
       signInWithOtp,
       verifyOtp,
       exchangeCodeForSession,
+      getSession,
     },
+  }),
+}));
+
+vi.mock("../../account/_components/account-api", () => ({
+  createAccountApiClient: () => ({
+    getPreferences,
   }),
 }));
 
@@ -36,6 +45,10 @@ afterEach(() => {
 beforeEach(() => {
   signInWithOtp.mockResolvedValue({ error: null });
   verifyOtp.mockResolvedValue({ error: null });
+  getSession.mockResolvedValue({ data: { session: { access_token: "tok" } } });
+  getPreferences.mockResolvedValue({
+    onboarding: { completed_at: "2026-01-01T00:00:00Z" },
+  });
 });
 
 import { OtpForm } from "./otp-form";
@@ -165,8 +178,35 @@ describe("OtpForm", () => {
         token: "123456",
         type: "sms",
       });
+      expect(getPreferences).toHaveBeenCalled();
       expect(push).toHaveBeenCalledWith("/en");
       expect(refresh).toHaveBeenCalled();
+    });
+  });
+
+  it("vendor OTP never calls customer preferences", async () => {
+    verifyOtp.mockResolvedValue({ error: null });
+    const user = userEvent.setup();
+
+    render(
+      <OtpForm
+        locale="en"
+        phone="+260971234567"
+        labels={otpLabels}
+        loginPath="/login"
+        portal="vendor"
+        defaultNextPath="/en"
+        nextParam="/en/listings"
+      />,
+    );
+
+    await fillOtp(user);
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+
+    await waitFor(() => {
+      expect(verifyOtp).toHaveBeenCalled();
+      expect(getPreferences).not.toHaveBeenCalled();
+      expect(push).toHaveBeenCalledWith("/en/listings");
     });
   });
 });

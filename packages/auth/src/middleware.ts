@@ -8,6 +8,7 @@ import { mergeSecureCookieOptions } from "./cookie-security";
 import { getRolesFromUser, hasRole, type AppRole } from "./roles";
 
 export type AuthGate = "none" | "vendor" | "admin";
+export type GatedRedirectKind = "login" | "onboarding" | "permission-denied" | null;
 
 export const CSP_NONCE_HEADER = "x-nonce";
 export const CSP_REPORT_ONLY_HEADER = "Content-Security-Policy-Report-Only";
@@ -215,6 +216,63 @@ export function isVendorOnboardingPath(pathname: string, locales: readonly strin
   return segments[1] === "onboarding";
 }
 
+export function isAdminPermissionDeniedPath(pathname: string, locales: readonly string[]): boolean {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length < 2) {
+    return false;
+  }
+
+  const locale = segments[0];
+  if (!locale || !locales.includes(locale)) {
+    return false;
+  }
+
+  return segments[1] === "permission-denied";
+}
+
+/**
+ * Fail-closed portal gate. Authentication is not authorization:
+ * - unauthenticated users go to login
+ * - authenticated users without a vendor role go to onboarding (never a fabricated vendor)
+ * - authenticated users without an admin role go to permission-denied (Cloudflare Access still applies)
+ */
+export function resolveGatedRedirect(
+  gate: AuthGate,
+  pathname: string,
+  locales: readonly string[],
+  user: User | null,
+  roles: readonly string[],
+  options?: { adminBypass?: boolean },
+): GatedRedirectKind {
+  if (gate === "none" || isAuthExemptPath(pathname, locales)) {
+    return null;
+  }
+
+  if (gate === "admin" && options?.adminBypass) {
+    return null;
+  }
+
+  if (!user) {
+    return "login";
+  }
+
+  if (gate === "vendor") {
+    if (isVendorOnboardingPath(pathname, locales)) {
+      return null;
+    }
+    return hasRole(roles, "vendor") ? null : "onboarding";
+  }
+
+  if (gate === "admin") {
+    if (isAdminPermissionDeniedPath(pathname, locales)) {
+      return null;
+    }
+    return hasRole(roles, "admin") ? null : "permission-denied";
+  }
+
+  return null;
+}
+
 export function shouldRedirectToLogin(
   gate: AuthGate,
   pathname: string,
@@ -223,31 +281,7 @@ export function shouldRedirectToLogin(
   roles: readonly string[],
   options?: { adminBypass?: boolean },
 ): boolean {
-  if (gate === "none" || isAuthExemptPath(pathname, locales)) {
-    return false;
-  }
-
-  if (gate === "admin" && options?.adminBypass) {
-    return false;
-  }
-
-  if (!user) {
-    return true;
-  }
-
-  if (gate === "vendor") {
-    // Authenticated invitees can complete onboarding before admin grants vendor.
-    if (isVendorOnboardingPath(pathname, locales)) {
-      return false;
-    }
-    return !hasRole(roles, "vendor");
-  }
-
-  if (gate === "admin") {
-    return !hasRole(roles, "admin");
-  }
-
-  return false;
+  return resolveGatedRedirect(gate, pathname, locales, user, roles, options) !== null;
 }
 
 export function createLoginRedirect(
@@ -255,9 +289,26 @@ export function createLoginRedirect(
   locale: string,
   sessionResponse: NextResponse,
 ): NextResponse {
-  const loginUrl = new URL(`/${locale}/login`, request.url);
-  loginUrl.searchParams.set("next", request.nextUrl.pathname);
-  const redirect = NextResponse.redirect(loginUrl);
+  return createPortalRedirect("login", request, locale, sessionResponse);
+}
+
+export function createPortalRedirect(
+  kind: Exclude<GatedRedirectKind, null>,
+  request: NextRequest,
+  locale: string,
+  sessionResponse: NextResponse,
+): NextResponse {
+  const path =
+    kind === "login"
+      ? `/${locale}/login`
+      : kind === "onboarding"
+        ? `/${locale}/onboarding`
+        : `/${locale}/permission-denied`;
+  const url = new URL(path, request.url);
+  if (kind === "login") {
+    url.searchParams.set("next", request.nextUrl.pathname);
+  }
+  const redirect = NextResponse.redirect(url);
 
   sessionResponse.cookies.getAll().forEach((cookie) => {
     redirect.cookies.set(cookie);
