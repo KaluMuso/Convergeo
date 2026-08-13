@@ -1211,59 +1211,6 @@ export type Database = {
         }
         Relationships: []
       }
-      fx_rates: {
-        Row: {
-          base_currency: string
-          created_at: string
-          created_by: string | null
-          effective_at: string
-          expires_at: string
-          id: string
-          quote_currency: string
-          rate_zmw_per_usd_micros: number
-          source: string
-          source_reference: string | null
-          superseded_at: string | null
-          vendor_margin_bps: number
-        }
-        Insert: {
-          base_currency?: string
-          created_at?: string
-          created_by?: string | null
-          effective_at: string
-          expires_at: string
-          id?: string
-          quote_currency?: string
-          rate_zmw_per_usd_micros: number
-          source: string
-          source_reference?: string | null
-          superseded_at?: string | null
-          vendor_margin_bps?: number
-        }
-        Update: {
-          base_currency?: string
-          created_at?: string
-          created_by?: string | null
-          effective_at?: string
-          expires_at?: string
-          id?: string
-          quote_currency?: string
-          rate_zmw_per_usd_micros?: number
-          source?: string
-          source_reference?: string | null
-          superseded_at?: string | null
-          vendor_margin_bps?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fx_rates_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       flags: {
         Row: {
           created_at: string
@@ -1331,6 +1278,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      fx_rates: {
+        Row: {
+          base_currency: string
+          created_at: string
+          created_by: string | null
+          effective_at: string
+          expires_at: string
+          id: string
+          quote_currency: string
+          rate_zmw_per_usd_micros: number
+          source: string
+          source_reference: string | null
+          superseded_at: string | null
+          vendor_margin_bps: number
+        }
+        Insert: {
+          base_currency?: string
+          created_at?: string
+          created_by?: string | null
+          effective_at: string
+          expires_at: string
+          id?: string
+          quote_currency?: string
+          rate_zmw_per_usd_micros: number
+          source: string
+          source_reference?: string | null
+          superseded_at?: string | null
+          vendor_margin_bps?: number
+        }
+        Update: {
+          base_currency?: string
+          created_at?: string
+          created_by?: string | null
+          effective_at?: string
+          expires_at?: string
+          id?: string
+          quote_currency?: string
+          rate_zmw_per_usd_micros?: number
+          source?: string
+          source_reference?: string | null
+          superseded_at?: string | null
+          vendor_margin_bps?: number
+        }
+        Relationships: []
       }
       intake_deep_links: {
         Row: {
@@ -4415,6 +4407,60 @@ export type Database = {
           },
         ]
       }
+      vendor_listing_variants: {
+        Row: {
+          compare_at_ngwee: number | null
+          created_at: string
+          id: string
+          image_public_id: string | null
+          listing_id: string
+          price_ngwee: number
+          product_variant_id: string
+          sku_override: string | null
+          stock_qty: number | null
+          updated_at: string
+        }
+        Insert: {
+          compare_at_ngwee?: number | null
+          created_at?: string
+          id?: string
+          image_public_id?: string | null
+          listing_id: string
+          price_ngwee: number
+          product_variant_id: string
+          sku_override?: string | null
+          stock_qty?: number | null
+          updated_at?: string
+        }
+        Update: {
+          compare_at_ngwee?: number | null
+          created_at?: string
+          id?: string
+          image_public_id?: string | null
+          listing_id?: string
+          price_ngwee?: number
+          product_variant_id?: string
+          sku_override?: string | null
+          stock_qty?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_listing_variants_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_listing_variants_product_variant_id_fkey"
+            columns: ["product_variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_listings: {
         Row: {
           attributes: Json
@@ -4566,60 +4612,6 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "vendors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      vendor_listing_variants: {
-        Row: {
-          compare_at_ngwee: number | null
-          created_at: string
-          id: string
-          image_public_id: string | null
-          listing_id: string
-          price_ngwee: number
-          product_variant_id: string
-          sku_override: string | null
-          stock_qty: number | null
-          updated_at: string
-        }
-        Insert: {
-          compare_at_ngwee?: number | null
-          created_at?: string
-          id?: string
-          image_public_id?: string | null
-          listing_id: string
-          price_ngwee: number
-          product_variant_id: string
-          sku_override?: string | null
-          stock_qty?: number | null
-          updated_at?: string
-        }
-        Update: {
-          compare_at_ngwee?: number | null
-          created_at?: string
-          id?: string
-          image_public_id?: string | null
-          listing_id?: string
-          price_ngwee?: number
-          product_variant_id?: string
-          sku_override?: string | null
-          stock_qty?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vendor_listing_variants_listing_id_fkey"
-            columns: ["listing_id"]
-            isOneToOne: false
-            referencedRelation: "vendor_listings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "vendor_listing_variants_product_variant_id_fkey"
-            columns: ["product_variant_id"]
-            isOneToOne: false
-            referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
         ]
