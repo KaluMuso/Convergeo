@@ -26,6 +26,14 @@ class JsonFormatter(logging.Formatter):
         if path:
             payload["path"] = path
 
+        # These are explicitly enumerated to keep logs structured while never
+        # serialising arbitrary ``extra`` data (which may contain a payload, URL,
+        # credentials, or PII). They are all low-cardinality operational fields.
+        for field in ("dependency", "failure_kind", "method", "status_code", "duration_ms"):
+            value = getattr(record, field, None)
+            if isinstance(value, (str, int, float)):
+                payload[field] = value
+
         if record.exc_info:
             payload["exc_info"] = self.formatException(record.exc_info)
 

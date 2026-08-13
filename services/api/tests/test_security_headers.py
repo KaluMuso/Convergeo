@@ -106,3 +106,44 @@ def test_production_cors_rejects_wildcard(monkeypatch: pytest.MonkeyPatch) -> No
     with pytest.raises(ValueError, match="\\*"):
         get_settings()
     get_settings.cache_clear()
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "vergeo5.com",
+        "https://vergeo5.com/",
+        "https://vergeo5.com/api",
+        "https://user:password@vergeo5.com",
+        "https://vergeo5.com?debug=true",
+    ],
+)
+def test_cors_rejects_non_origin_values(
+    monkeypatch: pytest.MonkeyPatch,
+    origin: str,
+) -> None:
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "dev")
+    monkeypatch.setenv("SUPABASE_ANON_KEY", "dev")
+    monkeypatch.setenv("ENV", "development")
+    monkeypatch.setenv("CORS_ORIGINS", origin)
+    from app.settings import get_settings
+
+    get_settings.cache_clear()
+    with pytest.raises(ValueError, match="exact http\\(s\\) origins"):
+        get_settings()
+    get_settings.cache_clear()
+
+
+def test_production_cors_requires_https(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "dev")
+    monkeypatch.setenv("SUPABASE_ANON_KEY", "dev")
+    monkeypatch.setenv("ENV", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "http://customer.vergeo5.com")
+    from app.settings import get_settings
+
+    get_settings.cache_clear()
+    with pytest.raises(ValueError, match="https"):
+        get_settings()
+    get_settings.cache_clear()
