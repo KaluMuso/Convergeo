@@ -97,7 +97,7 @@ alter table public.vendor_listings
   add column if not exists pricing_mode text not null default 'fixed',
   add column if not exists price_from_ngwee bigint,
   add column if not exists price_to_ngwee bigint,
-  add column if not exists price_per_base_unit_ngwee bigint,
+  add column if not exists price_per_base_unit_microngwee bigint,
   add column if not exists currency_code char(3) not null default 'ZMW',
   add column if not exists condition_detail text not null default 'new',
   add column if not exists serial_number text,
@@ -136,7 +136,7 @@ begin
   end if;
   if not exists (select 1 from pg_constraint where conname = 'vendor_listings_price_per_base_unit_check') then
     alter table public.vendor_listings add constraint vendor_listings_price_per_base_unit_check
-      check (price_per_base_unit_ngwee is null or price_per_base_unit_ngwee > 0);
+      check (price_per_base_unit_microngwee is null or price_per_base_unit_microngwee > 0);
   end if;
   if not exists (select 1 from pg_constraint where conname = 'vendor_listings_condition_detail_check') then
     alter table public.vendor_listings add constraint vendor_listings_condition_detail_check
