@@ -2178,13 +2178,6 @@ export type Database = {
             referencedRelation: "vendor_listings"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "listing_evidence_reviewer_id_fkey"
-            columns: ["reviewer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
       listing_images: {
@@ -2372,13 +2365,6 @@ export type Database = {
           status?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "listing_specification_snapshots_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "listing_specification_snapshots_listing_id_fkey"
             columns: ["listing_id"]

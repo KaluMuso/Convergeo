@@ -299,6 +299,11 @@ SEED_STORE: dict[str, list[dict[str, Any]]] = {
     ],
     "order_item_products": [],
     "reviews": [],
+    "feature_flags": [
+        {"flag": "product_class_d_customer_release", "enabled": True},
+        {"flag": "product_class_d_operations_approved", "enabled": True},
+        {"flag": "product_class_e_customer_release", "enabled": True},
+    ],
 }
 
 

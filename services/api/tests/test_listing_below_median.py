@@ -88,6 +88,17 @@ def _enable_class_d_release(conn: PgConn) -> None:
     assert result.ok, result.error
 
 
+def _seed_listing_image(conn: PgConn, listing_id: str) -> None:
+    image_id = str(uuid.uuid4())
+    result = conn.run(
+        f"""
+        INSERT INTO public.listing_images (id, listing_id, cloudinary_public_id, position)
+        VALUES ('{image_id}', '{listing_id}', 'vergeo5/test/below-median', 1);
+        """
+    )
+    assert result.ok, result.error
+
+
 def _activate_listing(conn: PgConn, listing_id: str) -> None:
     result = conn.run(
         f"UPDATE public.vendor_listings SET status = 'active' WHERE id = '{listing_id}'"
@@ -253,6 +264,7 @@ def test_standalone_listing_has_no_below_median(db: PgConn) -> None:
         _new_product(db, scratch)  # created but unused by the standalone listing
         standalone = _add_listing(db, scratch, price=1, standalone=True)
         _enable_class_d_release(db)
+        _seed_listing_image(db, standalone)
         _activate_listing(db, standalone)
         _project(db, standalone)
         assert _signal(db, standalone, "below_median") == "false"
