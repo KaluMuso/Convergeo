@@ -176,8 +176,10 @@ def _seed_listing(db: PgConn, *, vendor_id: str) -> str:
     result = db.run(
         f"""
         BEGIN;
-        INSERT INTO public.vendor_listings
-          (id, vendor_id, product_id, product_class, title_override, price_ngwee, condition, stock_mode, status)
+        INSERT INTO public.vendor_listings (
+          id, vendor_id, product_id, product_class, title_override,
+          price_ngwee, condition, stock_mode, status
+        )
         VALUES ('{listing_id}', '{vendor_id}', '{product_id}', 'A', 'Clip listing', 150000, 'new',
                 'always_available', 'draft');
         COMMIT;
