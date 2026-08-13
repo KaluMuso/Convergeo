@@ -2,8 +2,8 @@
 /**
  * check-release-control-contract.mjs — static RELCTRL-01 governance guard.
  *
- * Fails CI when docs/workflows regress to master-as-Production or omit required
- * release-control artifacts.
+ * Fails CI when docs/workflows regress to a separate production release branch
+ * or omit required release-control artifacts.
  */
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
@@ -15,29 +15,36 @@ const REQUIRED_FILES = [
   ".github/workflows/promote-production-frontends.yml",
   ".github/workflows/capture-production-db-evidence.yml",
   "infra/release-evidence-contract.example.json",
+  "infra/merge-release-evidence.example.json",
   "scripts/ci/validate_release_parity.py",
   "scripts/ci/validate_production_db_evidence.py",
+  "scripts/ci/validate_merge_release_evidence.py",
   "scripts/ci/capture_production_db_evidence.py",
   "scripts/ci/vercel-wait-production.sh",
 ];
 
 const FORBIDDEN_PATTERNS = [
   {
-    file: "infra/vercel.md",
-    pattern: /Production Branch[`'"]?\s*[:|]\s*[`'"]?master[`'"]?/i,
-    message: "infra/vercel.md must not document master as Vercel Production Branch",
+    file: ".github/workflows/promote-production-frontends.yml",
+    pattern: /git push|refs\/heads\/production|fast-forward production/i,
+    message: "promote-production-frontends.yml must not move Git refs (master is Production)",
   },
   {
     file: "docs/ops/production-release-control.md",
-    pattern: /master\s+(is|as)\s+the\s+production\s+branch/i,
-    message: "runbook must not claim master is the production branch",
+    pattern: /Production Branch[`'"]?\s*\|\s*[`'"]?production[`'"]? \(not `master`\)/i,
+    message: "runbook must not require a separate production Vercel branch",
+  },
+  {
+    file: "infra/vercel.md",
+    pattern: /Production Branch[`'"]?\s*\|\s*[`'"]?production[`'"]?/i,
+    message: "infra/vercel.md must document master as Vercel Production Branch",
   },
 ];
 
 const REQUIRED_SNIPPETS = [
   {
     file: "docs/ops/production-release-control.md",
-    includes: ["Production Branch", "`production`", "fail-closed"],
+    includes: ["Production Branch", "`master`", "fail-closed", "deprecated"],
   },
   {
     file: ".github/workflows/promote-production-frontends.yml",
@@ -46,13 +53,13 @@ const REQUIRED_SNIPPETS = [
       "candidate_sha",
       "validate_release_parity.py",
       "validate_production_db_evidence.py",
-      "I_ACCEPT_DEGRADED_PRODUCTION_EVIDENCE",
+      "must equal master tip",
       "environment: production",
     ],
   },
   {
     file: "infra/vercel.md",
-    includes: ["Production Branch", "`production`"],
+    includes: ["Production Branch", "`master`"],
   },
 ];
 
@@ -89,16 +96,17 @@ function main() {
     }
   }
 
-  // deploy-production.yml must remain workflow_dispatch-only (not push to master).
   const deployProd = read(".github/workflows/deploy-production.yml");
   if (/^\s*push:/m.test(deployProd) && /branches:\s*\n\s*-\s*master/m.test(deployProd)) {
     errors.push("deploy-production.yml must not auto-run on master push");
   }
 
-  // promote workflow must not run on push.
   const promote = read(".github/workflows/promote-production-frontends.yml");
   if (/^\s*push:/m.test(promote)) {
     errors.push("promote-production-frontends.yml must be workflow_dispatch only");
+  }
+  if (promote.includes("contents: write")) {
+    errors.push("promote-production-frontends.yml must be read-only (contents: read)");
   }
 
   if (errors.length) {

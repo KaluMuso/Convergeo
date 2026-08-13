@@ -1,20 +1,20 @@
-name: Promote production frontends
+name: Verify production frontends
 
-# RELCTRL-01 — explicit Production frontend promotion only.
-# Fast-forwards the `production` Git branch (Vercel Production Branch target).
-# Never auto-runs on push. Does not migrate DB or deploy API.
+# RELCTRL-01 — read-only Production frontend verification after a master release.
+# Does NOT move Git refs. master is the Vercel Production Branch; merges to master
+# are release events that trigger Vercel Production deployments.
 #
 # Required GitHub Environment: `production` (founder approval).
 # Secrets: VERCEL_TOKEN, VERCEL_TEAM_ID, PRODUCTION_READONLY_DB_URL
 #
-# Attach a validated release parity contract JSON as a workflow artifact input
-# via the repository path (committed evidence bundle) or upload before dispatch.
+# Run after merging a staging-certified SHA into master to prove live Production
+# matches the exact master tip.
 
 on:
   workflow_dispatch:
     inputs:
       candidate_sha:
-        description: "40-char git SHA on master to promote (frontend only)"
+        description: "40-char git SHA — must equal current master tip"
         required: true
         type: string
       release_evidence_path:
@@ -39,11 +39,11 @@ on:
         default: false
 
 concurrency:
-  group: promote-production-frontends
+  group: verify-production-frontends
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
   actions: read
   checks: read
 
@@ -77,7 +77,7 @@ jobs:
               exit 1
             fi
             echo "mode=degraded" >> "$GITHUB_OUTPUT"
-            echo "::warning::EMERGENCY MODE — post-promotion proof skipped; evidence artifact will be DEGRADED"
+            echo "::warning::EMERGENCY MODE — post-release proof skipped; evidence artifact will be DEGRADED"
           else
             echo "mode=normal" >> "$GITHUB_OUTPUT"
           fi
@@ -100,38 +100,17 @@ jobs:
           echo "short=${full:0:12}" >> "$GITHUB_OUTPUT"
           echo "resolved candidate: $full"
 
-      - name: Require candidate is on master
+      - name: Require candidate equals current master tip
         run: |
           set -euo pipefail
           candidate="${{ steps.resolve.outputs.sha }}"
           git fetch origin master
-          if ! git merge-base --is-ancestor "$candidate" origin/master; then
-            echo "::error::candidate $candidate is not contained in origin/master"
+          master_tip="$(git rev-parse origin/master)"
+          if [[ "$master_tip" != "$candidate" ]]; then
+            echo "::error::candidate $candidate must equal master tip $master_tip (master is Production)"
             exit 1
           fi
-          if [[ "$(git rev-parse origin/master)" == "$candidate" ]]; then
-            echo "candidate is master tip"
-          else
-            echo "candidate is an ancestor of master tip (allowed)"
-          fi
-
-      - name: Refuse force-update of production
-        run: |
-          set -euo pipefail
-          candidate="${{ steps.resolve.outputs.sha }}"
-          if ! git fetch origin production 2>/dev/null; then
-            echo "production branch not on remote yet — first promotion"
-            exit 0
-          fi
-          prod_tip="$(git rev-parse origin/production)"
-          if [[ "$prod_tip" == "$candidate" ]]; then
-            echo "production already at candidate — continuing for evidence re-run"
-            exit 0
-          fi
-          if ! git merge-base --is-ancestor "$prod_tip" "$candidate"; then
-            echo "::error::refusing non-fast-forward production update (prod=$prod_tip candidate=$candidate)"
-            exit 1
-          fi
+          echo "candidate matches master tip"
 
       - name: Validate release parity contract (fail-closed)
         run: |
@@ -181,6 +160,8 @@ jobs:
     needs: guard
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+
       - name: Assert required checks are green
         env:
           GH_TOKEN: ${{ github.token }}
@@ -191,40 +172,9 @@ jobs:
           json="$(gh api "repos/${repo}/commits/${CANDIDATE_SHA}/check-runs" --paginate)"
           python3 scripts/ci/verify_required_checks.py "$json"
 
-  promote:
-    name: Fast-forward production branch
-    needs: [guard, verify-checks]
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-          ref: master
-
-      - name: Fast-forward production to candidate (no force)
-        run: |
-          set -euo pipefail
-          candidate="${{ needs.guard.outputs.sha }}"
-          git fetch origin production || true
-          if git show-ref --verify --quiet refs/remotes/origin/production; then
-            prod_tip="$(git rev-parse origin/production)"
-            if [[ "$prod_tip" == "$candidate" ]]; then
-              echo "production already at $candidate"
-            else
-              if ! git merge-base --is-ancestor "$prod_tip" "$candidate"; then
-                echo "::error::non-fast-forward refused"
-                exit 1
-              fi
-              git push origin "${candidate}:refs/heads/production"
-            fi
-          else
-            git push origin "${candidate}:refs/heads/production"
-          fi
-
   wait-vercel:
-    name: Wait for Vercel Production deployments
-    needs: [guard, promote]
+    name: Verify Vercel Production deployments
+    needs: [guard, verify-checks]
     if: ${{ github.event.inputs.skip_vercel_wait != true }}
     runs-on: ubuntu-latest
     environment: production
@@ -259,13 +209,15 @@ jobs:
           path: /tmp/vercel-wait-production.json
 
   verify:
-    name: Post-deploy deployment-plane verification
-    needs: [guard, promote, wait-vercel]
+    name: Post-release deployment-plane verification
+    needs: [guard, verify-checks, wait-vercel]
     if: >-
       always() &&
-      needs.promote.result == 'success' &&
+      needs.guard.result == 'success' &&
+      needs.verify-checks.result == 'success' &&
       (needs.wait-vercel.result == 'success' || needs.wait-vercel.result == 'skipped')
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - uses: actions/checkout@v7
 
