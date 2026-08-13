@@ -71,8 +71,13 @@ export function PrivateEventAccess({ slug }: PrivateEventAccessProps) {
               {error}
             </p>
           ) : null}
-          <Button type="submit" disabled={submitting || !code.trim()}>
-            {submitting ? t("verifying") : t("continue")}
+          <Button
+            type="submit"
+            disabled={submitting || !code.trim()}
+            loading={submitting}
+            loadingLabel={t("verifying")}
+          >
+            {t("continue")}
           </Button>
         </form>
       </section>

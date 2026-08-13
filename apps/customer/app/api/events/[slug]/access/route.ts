@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { absoluteApiUrl } from "../../../../../../lib/api-base-url";
-import { eventAccessCookieName } from "../../../../../../lib/event-access";
+import { absoluteApiUrl } from "../../../../../lib/api-base-url";
+import { eventAccessCookieName } from "../../../../../lib/event-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
