@@ -181,6 +181,38 @@ jobs:
       - name: Self-test release-control contract
         run: bash scripts/ci/test-release-control-contract.sh
 
+  merge-release-gate:
+    name: Merge release gate (RELCTRL-01)
+    if: github.event_name == 'pull_request' && github.base_ref == 'master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Detect whether merge evidence is required
+        id: scope
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          if git diff --name-only "$base" "$head" | grep -Eq \
+            '^(apps/|services/|packages/|supabase/migrations/)'; then
+            echo "required=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "required=false" >> "$GITHUB_OUTPUT"
+            echo "governance-only PR — merge evidence not required"
+          fi
+
+      - name: Validate merge release evidence
+        if: steps.scope.outputs.required == 'true'
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/validate_merge_release_evidence.py \
+            --candidate-sha "${{ github.event.pull_request.head.sha }}" \
+            --evidence infra/merge-release-evidence.json
+
   secret-scan:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest

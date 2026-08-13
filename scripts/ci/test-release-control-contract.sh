@@ -198,6 +198,38 @@ else
   bad "vercel-wait-production.sh should fail without VERCEL_TOKEN / valid sha"
 fi
 
+# 9) verify workflow does not move Git refs
+if ! grep -Eiq 'git push|refs/heads/production|fast-forward production' .github/workflows/promote-production-frontends.yml; then
+  ok "verify workflow does not move Git refs"
+else
+  bad "promote-production-frontends.yml must not git push or fast-forward production"
+fi
+
+# 10) merge release evidence validator
+TMP_MERGE="$(mktemp)"
+cat >"$TMP_MERGE" <<JSON
+{
+  "schema_version": "1",
+  "candidate_sha": "${SHA_FRONTEND}",
+  "staging_certification": {
+    "result": "CERTIFIABLE_AFTER_INTEGRATION",
+    "candidate_sha": "${SHA_FRONTEND}",
+    "staging_frontend_sha": "${SHA_FRONTEND}",
+    "certified_at": "2026-08-13T00:00:00Z",
+    "evidence_run_id": "merge-test"
+  }
+}
+JSON
+if python3 scripts/ci/validate_merge_release_evidence.py \
+  --candidate-sha "${SHA_FRONTEND}" \
+  --evidence "$TMP_MERGE" >/tmp/merge-ok.txt 2>&1; then
+  ok "merge release evidence validator accepts aligned staging cert"
+else
+  bad "merge release evidence validator should accept aligned staging cert"
+  cat /tmp/merge-ok.txt || true
+fi
+rm -f "$TMP_MERGE"
+
 echo "==> summary: pass=$pass fail=$fail"
 if [[ "$fail" -gt 0 ]]; then
   exit 1

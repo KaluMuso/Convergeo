@@ -1,167 +1,152 @@
 # Production release control (RELCTRL-01)
 
-Canonical contract for how Vergeo5 frontends reach Production without
-`master` merges auto-promoting live customer traffic.
+Canonical contract for how Vergeo5 frontends reach Production via **protected
+`master`**. Merges into `master` are release events; Vercel Production Branch
+is `master`.
 
 ## Branch topology
 
 ```text
 feature/* / cursor/* / agent/*
         ↓
-      master          ← integration; full CI + Performance; Vercel Preview only
+   PR / integration work
         ↓
-      staging         ← exact-SHA staging candidate; staging API + Supabase proof
+      staging
         ↓
-    production        ← release-only; sole Git branch for Vercel Production deploys
+ exact-SHA staging certification
+        ↓
+      master          ← protected; Vercel Production Branch
+        ↓
+ Vercel Production (customer, vendor, admin)
 ```
 
-| Branch       | Purpose                                     | Vercel effect                                                      | API / DB                                                                |
-| ------------ | ------------------------------------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| `master`     | Integration, CI gates, Performance          | **Preview** deployments only (must not replace Production domains) | None                                                                    |
-| `staging`    | Certified staging candidate at an exact SHA | **Preview** on branch `staging` (per-project Preview env vars)     | Staging API + staging Supabase via `deploy-staging.yml`                 |
-| `production` | Certified Production frontend release       | **Production** deployments for customer, vendor, admin             | No automatic API/DB migration — parity evidence required before advance |
+| Branch    | Purpose                                     | Vercel effect                              |
+| --------- | ------------------------------------------- | ------------------------------------------ |
+| `staging` | Certified staging candidate at an exact SHA | **Preview** on branch `staging`            |
+| `master`  | Production-facing integration / release     | **Production** for customer, vendor, admin |
+
+**Deprecated:** the historical `production` Git branch may still exist on the
+remote but is **unused** for release promotion. Do not fast-forward or delete
+it in routine operations. Release truth is `master`.
+
+## Merge-to-master gate
+
+A PR must **not** merge into `master` unless the exact PR head SHA has already
+passed **staging certification** and required release gates.
+
+1. Deploy and certify on `staging` via `.github/workflows/deploy-staging.yml`.
+2. Record integrated-staging evidence (`CERTIFIABLE_AFTER_INTEGRATION` or stricter).
+3. Open the release/integration PR to `master` carrying
+   `infra/merge-release-evidence.json` binding the PR head SHA to that
+   certification (see `infra/merge-release-evidence.example.json`).
+4. CI job **Merge release gate (RELCTRL-01)** validates the evidence offline —
+   no Production DB credentials on ordinary feature PRs.
+
+Application changes (`apps/`, `services/`, `packages/`, `supabase/migrations/`)
+require valid merge evidence. Governance-only PRs (docs, CI scripts, workflow
+metadata) may skip the gate.
 
 ## Vercel Production Branch contract
 
-For each Vercel project (`convergeo-customer`, `convergeo-vendor`, `convergeo-admin`):
+For each Vercel project (`convergeo-customer`, `convergeo-vendor`,
+`convergeo-admin`):
 
 | Setting               | Required value                                                       |
 | --------------------- | -------------------------------------------------------------------- |
 | Git integration       | Enabled (Preview preserved)                                          |
-| **Production Branch** | `production` (not `master`)                                          |
+| **Production Branch** | **`master`**                                                         |
 | Production domains    | Unchanged (`vergeo5.com`, `vendor.vergeo5.com`, `admin.vergeo5.com`) |
 
-`master` pushes must create Preview deployments only. Only fast-forwards of
-`production` may replace Production domains via Git integration.
-
-Operator cutover (one-time per project): Vercel → Project → Settings → Git →
-**Production Branch** → change `master` → `production` → Save.
+Non-`master` branches (including `staging` and PR previews) create Preview
+deployments only.
 
 ## Exact-SHA staging certification
 
-Before any Production frontend promotion:
+Before merging to `master`:
 
-1. `staging` (or a pinned SHA) is deployed via `.github/workflows/deploy-staging.yml`.
+1. `staging` is deployed via `.github/workflows/deploy-staging.yml`.
 2. Staging API fingerprint, Supabase migration replay, and Vercel Preview proofs
    match the **same** `candidate_sha`.
-3. `scripts/qa/release-certify.sh --mode integrated-staging` (or equivalent
-   evidence) records `CERTIFIABLE_AFTER_INTEGRATION` or stricter pass.
-4. Evidence is captured in a **release parity contract** JSON (see
-   `infra/release-evidence-contract.example.json`).
-
-Promotion without staging certification is **fail-closed**.
+3. `scripts/qa/release-certify.sh --mode integrated-staging` records
+   `CERTIFIABLE_AFTER_INTEGRATION` or stricter pass.
+4. Evidence is captured in `infra/merge-release-evidence.json` on the PR to
+   `master`, and in the post-merge **release parity contract** for Production
+   verification (see `infra/release-evidence-contract.example.json`).
 
 ## Frontend / API / database parity
 
-Production frontend promotion does **not** deploy the API or migrate Production
-Supabase. The parity contract must therefore prove:
+Merging to `master` deploys frontends via Vercel Git integration. The **verify**
+workflow (`promote-production-frontends.yml`, read-only) proves live Production
+after merge:
 
-| Field                            | Meaning                                                        |
-| -------------------------------- | -------------------------------------------------------------- |
-| `candidate_frontend_sha`         | Git SHA to fast-forward `production` to                        |
-| `candidate_api_sha`              | API image / fingerprint SHA the frontend expects in Production |
-| `required_db_migration_baseline` | Minimum Production DB migration version (filename prefix)      |
-| `production_db_evidence_run_id`  | Run id from `capture-production-db-evidence.yml`               |
-| `staging_certification`          | Staging proof bundle referencing the same frontend SHA         |
-| `production_api_sha_observed`    | Cross-checked live against `GET /fingerprint` during promotion |
+| Field                            | Meaning                                                     |
+| -------------------------------- | ----------------------------------------------------------- |
+| `candidate_frontend_sha`         | Must equal current `master` tip                             |
+| `candidate_api_sha`              | API fingerprint SHA the frontend expects in Production      |
+| `required_db_migration_baseline` | Minimum Production DB migration version                     |
+| `production_db_evidence_run_id`  | Run id from `capture-production-db-evidence.yml`            |
+| `staging_certification`          | Staging proof bundle for the same SHA                       |
+| `production_api_sha_observed`    | Cross-checked live against `GET /fingerprint` during verify |
 
 **Production DB trust model (fail-closed):**
 
 1. Run `capture-production-db-evidence.yml` for the same `candidate_sha` using
-   `PRODUCTION_READONLY_DB_URL` (read-only). Artifact: `production-db-migration-evidence`.
-2. Promotion downloads that artifact by `production_db_evidence_run_id`, verifies
-   the GitHub run succeeded, and re-queries the live read-only DB — live
-   `max(version)` must **exactly match** artifact `migration_head`.
-3. Manual `production_db_migration_head_observed` JSON claims are **not** accepted.
+   `PRODUCTION_READONLY_DB_URL` (read-only).
+2. Verify workflow downloads that artifact, validates GitHub run provenance, and
+   re-queries the live read-only DB — live `max(version)` must **exactly match**
+   artifact `migration_head`.
+3. Manual JSON claims are **not** accepted.
 
-The promotion workflow (`promote-production-frontends.yml`) refuses when:
+## Production verification (explicit, no ref moves)
 
-- staging certification is absent or references a different SHA;
-- Production API fingerprint is behind `candidate_api_sha`;
-- DB evidence is missing, unproven, or live head diverges from artifact;
-- CI or Performance checks are not green on `candidate_frontend_sha`.
+Use **Actions → Verify production frontends**
+(`.github/workflows/promote-production-frontends.yml`):
 
-**Current certified frontend SHA (2026-08-13):** `0620de7d8a938d3cebf2ee64468113a219ff6c42`
-
-**Current Production API SHA:** `2d549bb3a5213597d3c32e497e6814b50ad7ac18`
-
-**Current Production DB head:** `0071_vendor_listing_compare_at`
-
-Frontend-at-master parity with all three Vercel Production apps does **not**
-imply coordinated full-stack release eligibility while API/DB skew remains.
-
-## Production promotion (explicit)
-
-Use **Actions → Promote production frontends** (`.github/workflows/promote-production-frontends.yml`):
-
-1. Run **Capture production DB evidence** for the same `candidate_sha`; note the run id.
-2. Input `candidate_sha` (40-char git SHA on `master`).
-3. Attach `release_evidence_path` pointing to a validated parity contract JSON
-   including `production_db_evidence_run_id`.
+1. Merge staging-certified SHA into `master` (Vercel Production deploys from Git).
+2. Run **Capture production DB evidence** for the same SHA; note the run id.
+3. Dispatch verify with `candidate_sha` equal to **current master tip**.
 4. Workflow runs in GitHub Environment `production` (founder approval).
-5. Fast-forwards `production` only (never force-push).
-6. Waits for Vercel Production READY on all three projects at the exact SHA.
-7. Runs read-only deployment-plane verification and uploads evidence artifact.
+5. **Does not** `git push` or move any branch ref.
+6. Proves Vercel Production READY on all three apps at the master SHA.
+7. Runs `verify_live.sh` and uploads evidence artifact.
 
-**Emergency / break-glass:** `skip_vercel_wait` and `skip_live_verify` are accepted
-only when `emergency_confirm` is exactly `I_ACCEPT_DEGRADED_PRODUCTION_EVIDENCE`.
-Normal releases must leave both skips **false**. Degraded runs record
-`verdict=degraded` in the release evidence artifact.
+**Emergency / break-glass:** `skip_vercel_wait` and `skip_live_verify` require
+`emergency_confirm=I_ACCEPT_DEGRADED_PRODUCTION_EVIDENCE`.
 
-Legacy `.github/workflows/deploy-production.yml` remains for coordinated API +
-manual Vercel promote; it does **not** auto-run on push.
+Legacy `.github/workflows/deploy-production.yml` remains for coordinated API
+redeploy; it does **not** auto-run on push.
 
 ## Rollback
 
-1. Identify last known-good `production` SHA (deployment evidence / health `buildId`).
-2. Re-run **Promote production frontends** with that SHA **only if** parity
-   evidence still valid; otherwise roll back API/DB first per `infra/ROLLBACK.md`.
-3. Emergency: Vercel Dashboard → Deployments → Promote previous Production
-   deployment (records operator action; restore `production` branch to match).
-
-## Emergency release path
-
-1. Fix on `master` → CI green → staging certification at exact SHA.
-2. Parity contract updated with observed Production API/DB heads.
-3. `promote-production-frontends` with founder `production` environment approval.
-4. Post-deploy `scripts/ops/verify_live.sh` + evidence artifact retained 90 days.
-
-## Who may advance `production`
-
-- GitHub Environment `production` approvers (founder / release operators).
-- The promotion workflow service account (`GITHUB_TOKEN` with `contents: write`).
-- Direct git pushes to `production` should be blocked by branch protection.
+1. Identify last known-good `master` SHA (deployment evidence / health `buildId`).
+2. Revert or forward-fix on `master` per `infra/ROLLBACK.md` with full parity
+   evidence before merge.
+3. Emergency: Vercel Dashboard → promote previous Production deployment; align
+   `master` via a controlled revert PR.
 
 ## Branch protection (operator-required)
 
-GitHub API access from automation cannot configure branch protection. Apply
-these settings in **Settings → Branches → Branch protection rules** for
-`production`:
+Apply branch protection on **`master`** (not the deprecated `production` branch):
 
-| Control               | Setting                                               |
-| --------------------- | ----------------------------------------------------- |
-| Branch name pattern   | `production`                                          |
-| Restrict pushes       | Enabled — limit to release operators / GitHub Actions |
-| Allow force pushes    | **Disabled**                                          |
-| Allow deletions       | **Disabled**                                          |
-| Require pull request  | Optional (promotion is workflow-driven fast-forward)  |
-| Require status checks | Optional — promotion workflow verifies CI externally  |
-| Require deployments   | Optional — tie to `production` environment            |
-
-The `promote-production-frontends` workflow must retain permission to fast-forward
-`production` without force-push.
+| Control               | Setting                                    |
+| --------------------- | ------------------------------------------ |
+| Require pull request  | Enabled                                    |
+| Require status checks | CI, Performance, Merge release gate        |
+| Allow force pushes    | **Disabled**                               |
+| Require approvals     | Founder / release operators for production |
 
 ## Regression prevention
 
 CI job **Release control contract (RELCTRL-01)** runs
-`scripts/ci/test-release-control-contract.sh` on every PR/push. It fails if
-docs or workflows reintroduce `master` as the Vercel Production Branch or omit
-required governance files.
+`scripts/ci/test-release-control-contract.sh`. It fails if docs or workflows
+reintroduce a separate `production` release branch or omit required governance
+files.
 
 ## Related
 
 - `infra/vercel.md` — Vercel project settings
 - `infra/ENVIRONMENTS.md` — deployment planes
-- `.github/workflows/deploy-staging.yml` — staging pipeline (no Production promotion)
-- `.github/workflows/deploy-production.yml` — legacy API + manual Vercel promote
-- `scripts/ci/validate_release_parity.py` — parity gate implementation
+- `.github/workflows/deploy-staging.yml` — staging pipeline
+- `.github/workflows/deploy-production.yml` — legacy API redeploy
+- `scripts/ci/validate_merge_release_evidence.py` — merge gate
+- `scripts/ci/validate_release_parity.py` — post-merge verify parity gate

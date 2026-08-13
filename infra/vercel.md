@@ -6,15 +6,17 @@ n8n remain on OCI.
 
 ## Production Branch (RELCTRL-01)
 
-| Setting               | Required value                                          |
-| --------------------- | ------------------------------------------------------- |
-| **Production Branch** | `production` (release-only Git branch)                  |
-| Preview deployments   | All other branches (including `master`, `staging`, PRs) |
+| Setting               | Required value                                                   |
+| --------------------- | ---------------------------------------------------------------- |
+| **Production Branch** | **`master`**                                                     |
+| Preview deployments   | Non-`master` branches (`staging`, PR branches, feature branches) |
 
-`master` merges must **not** replace Production domains. Only fast-forwards of
-`production` (via `.github/workflows/promote-production-frontends.yml` after
-staging certification and parity evidence) may trigger Vercel Production
-deployments. See `docs/ops/production-release-control.md`.
+`master` merges are Production release events. Vercel deploys customer, vendor,
+and admin to Production domains from `master`. Staging certification is required
+before merging to `master` (see `docs/ops/production-release-control.md`).
+
+The historical Git branch `production` (if present) is **deprecated and unused**
+— do not configure Vercel to use it.
 
 ## Staging Preview (branch `staging`)
 

@@ -24,14 +24,15 @@ def main() -> int:
         "gate": "RELCTRL-01",
         "verdict": sys.argv[5],
         "candidate_frontend_sha": sys.argv[2],
-        "production_branch": "production",
-        "promoted_at": datetime.now(UTC).isoformat(),
+        "production_branch": "master",
+        "verification_mode": "read_only",
+        "verified_at": datetime.now(UTC).isoformat(),
         "workflow_run_id": sys.argv[3],
         "release_evidence_path": sys.argv[4],
         "emergency_mode": emergency_mode,
         "note": (
-            "Frontend-only promotion; API/DB parity attested via release contract "
-            "and capture-production-db-evidence artifact"
+            "Post-merge Production verification; master is Vercel Production Branch. "
+            "API/DB parity attested via release contract and capture-production-db-evidence artifact"
         ),
     }
     if emergency_mode == "degraded":

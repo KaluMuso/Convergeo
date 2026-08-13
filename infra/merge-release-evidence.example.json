@@ -1,0 +1,15 @@
+{
+  "schema_version": "1",
+  "candidate_sha": "0000000000000000000000000000000000000000",
+  "staging_certification": {
+    "mode": "integrated-staging",
+    "result": "CERTIFIABLE_AFTER_INTEGRATION",
+    "candidate_sha": "0000000000000000000000000000000000000000",
+    "staging_frontend_sha": "0000000000000000000000000000000000000000",
+    "staging_api_sha": "0000000000000000000000000000000000000000",
+    "certified_at": "2026-01-01T00:00:00Z",
+    "evidence_run_id": "123456789",
+    "staging_deploy_workflow_run_id": "987654321"
+  },
+  "notes": "Copy to infra/merge-release-evidence.json in the release PR to master. candidate_sha must equal the PR head commit exactly. Obtain staging_certification from deploy-staging.yml + release-certify integrated-staging before opening the merge PR."
+}

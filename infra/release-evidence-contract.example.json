@@ -14,5 +14,5 @@
     "staging_frontend_sha": "0000000000000000000000000000000000000000",
     "staging_api_sha": "0000000000000000000000000000000000000000"
   },
-  "notes": "production_db_evidence_run_id must reference a successful capture-production-db-evidence.yml run. DB head is proven by that machine artifact plus a live read-only cross-check during promotion — not by manual JSON claims."
+  "notes": "Post-merge verify workflow only. candidate_frontend_sha must equal master tip. production_db_evidence_run_id must reference capture-production-db-evidence.yml. DB head is proven by machine artifact plus live read-only cross-check — not manual JSON claims."
 }
