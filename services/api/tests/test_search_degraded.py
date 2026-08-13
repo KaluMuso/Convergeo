@@ -254,6 +254,7 @@ def test_readyz_includes_search_subchecks(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["status"] in {"ok", "degraded"}
+    assert body["supabase"] in {"ok", "degraded"}
     assert body["search_rpc"] == "unchecked"
     assert body["search_embedding"] in {"ok", "degraded"}
 

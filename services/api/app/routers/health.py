@@ -1,17 +1,30 @@
 from __future__ import annotations
 
-import logging
 import os
+import re
 from typing import Annotated
 
 import httpx
 from app.core.env_guards import extract_supabase_project_ref
+from app.core.upstream import (
+    UpstreamFailureKind,
+    classify_httpx_error,
+    log_upstream_failure,
+)
 from app.settings import get_settings
 from fastapi import APIRouter, Query
 
-logger = logging.getLogger(__name__)
-
 router = APIRouter(tags=["health"])
+
+_READINESS_TIMEOUT = httpx.Timeout(connect=1.0, read=1.0, write=1.0, pool=1.0)
+_BUILD_IDENTIFIER_RE = re.compile(r"^(?:[0-9a-f]{7,64}|sha256:[0-9a-f]{64})$")
+
+
+def _safe_build_identifier(value: str) -> str:
+    """Expose only a deliberately non-secret, bounded build identifier."""
+
+    candidate = value.strip()
+    return candidate if _BUILD_IDENTIFIER_RE.fullmatch(candidate) else "unknown"
 
 
 @router.get("/healthz")
@@ -38,14 +51,16 @@ async def fingerprint() -> dict[str, str]:
     only to prove staging ≠ production.
     """
     settings = get_settings()
-    git_sha = settings.git_sha or settings.sentry_release or "unknown"
-    image_tag = settings.api_image_tag or git_sha
+    git_sha = _safe_build_identifier(settings.git_sha or settings.sentry_release)
+    image_tag = _safe_build_identifier(settings.api_image_tag)
+    build_id = git_sha if git_sha != "unknown" else image_tag
     project_ref = extract_supabase_project_ref(settings.supabase_url) or "unknown"
     return {
         "status": "ok",
         "env": settings.env,
         "git_sha": git_sha,
         "image_tag": image_tag,
+        "build_id": build_id,
         "supabase_project_ref": project_ref,
     }
 
@@ -53,7 +68,7 @@ async def fingerprint() -> dict[str, str]:
 async def _supabase_reachable() -> bool:
     settings = get_settings()
     try:
-        async with httpx.AsyncClient(timeout=2.0) as client:
+        async with httpx.AsyncClient(timeout=_READINESS_TIMEOUT) as client:
             response = await client.get(
                 f"{settings.supabase_url.rstrip('/')}/rest/v1/",
                 headers={
@@ -61,21 +76,33 @@ async def _supabase_reachable() -> bool:
                     "Authorization": f"Bearer {settings.supabase_anon_key}",
                 },
             )
-            return response.status_code < 500
+            if response.is_success:
+                return True
+            log_upstream_failure(
+                dependency="supabase_rest",
+                failure_kind=UpstreamFailureKind.UNEXPECTED_STATUS,
+                status_code=response.status_code,
+            )
+    except httpx.HTTPError as exc:
+        log_upstream_failure(
+            dependency="supabase_rest",
+            failure_kind=classify_httpx_error(exc),
+        )
     except Exception:
-        logger.warning("Supabase readiness check failed", exc_info=True)
-        return False
-
-
-def _search_embedding_configured() -> bool:
-    return bool(os.environ.get("OPENROUTER_API_KEY", "").strip())
+        # Do not log exception text: it may contain external details. The bounded
+        # label still proves readiness was not established.
+        log_upstream_failure(
+            dependency="supabase_rest",
+            failure_kind=UpstreamFailureKind.UNKNOWN,
+        )
+    return False
 
 
 async def _search_vector_rpc_present() -> bool:
     """Probe that ``search_rrf`` is callable (FTS + trgm + optional vector lanes)."""
     settings = get_settings()
     try:
-        async with httpx.AsyncClient(timeout=2.0) as client:
+        async with httpx.AsyncClient(timeout=_READINESS_TIMEOUT) as client:
             response = await client.post(
                 f"{settings.supabase_url.rstrip('/')}/rest/v1/rpc/search_rrf",
                 headers={
@@ -86,10 +113,29 @@ async def _search_vector_rpc_present() -> bool:
                 },
                 json={"query": "", "filters": {}},
             )
-            return response.status_code < 500
+            if response.is_success:
+                return True
+            log_upstream_failure(
+                dependency="supabase_search_rpc",
+                failure_kind=UpstreamFailureKind.UNEXPECTED_STATUS,
+                status_code=response.status_code,
+            )
+    except httpx.HTTPError as exc:
+        log_upstream_failure(
+            dependency="supabase_search_rpc",
+            failure_kind=classify_httpx_error(exc),
+        )
     except Exception:
-        logger.warning("Search vector RPC readiness check failed", exc_info=True)
+        log_upstream_failure(
+            dependency="supabase_search_rpc",
+            failure_kind=UpstreamFailureKind.UNKNOWN,
+        )
         return False
+    return False
+
+
+def _search_embedding_configured() -> bool:
+    return bool(os.environ.get("OPENROUTER_API_KEY", "").strip())
 
 
 @router.get("/readyz")
@@ -116,6 +162,7 @@ async def readyz(checks: Annotated[str | None, Query()] = None) -> dict[str, str
     overall_ok = supabase_ok
     return {
         "status": "ok" if overall_ok else "degraded",
+        "supabase": "ok" if supabase_ok else "degraded",
         "search_rpc": search_rpc_state,
         "search_embedding": "ok" if search_embedding_ok else "degraded",
     }
