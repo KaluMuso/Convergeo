@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import cached_property, lru_cache
 from typing import Literal, Self
+from urllib.parse import urlsplit
 
 from pydantic import Field, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -72,15 +73,37 @@ class Settings(BaseSettings):
     def validate_cors_origins(self) -> Self:
         if not self.cors_origin_list:
             raise ValueError("CORS_ORIGINS must include at least one origin")
-        if self.env != "development" and "*" in self.cors_origin_list:
-            raise ValueError("CORS_ORIGINS cannot include '*' outside development")
-        if self.env == "production":
-            for origin in self.cors_origin_list:
-                lowered = origin.lower()
-                if "localhost" in lowered or "127.0.0.1" in lowered:
-                    raise ValueError(
-                        "CORS_ORIGINS must not include localhost in production"
-                    )
+        origins = self.cors_origin_list
+        if "*" in origins:
+            if self.env != "development":
+                raise ValueError("CORS_ORIGINS cannot include '*' outside development")
+            if len(origins) != 1:
+                raise ValueError("CORS_ORIGINS wildcard cannot be combined with named origins")
+            return self
+
+        for origin in origins:
+            parsed = urlsplit(origin)
+            if (
+                parsed.scheme not in {"http", "https"}
+                or not parsed.netloc
+                or parsed.username is not None
+                or parsed.password is not None
+                or parsed.path
+                or parsed.query
+                or parsed.fragment
+            ):
+                raise ValueError(
+                    "CORS_ORIGINS entries must be exact http(s) origins without a path, "
+                    "query, fragment, or credentials"
+                )
+            hostname = (parsed.hostname or "").lower()
+            if not hostname:
+                raise ValueError("CORS_ORIGINS entries must include a hostname")
+            if self.env == "production":
+                if parsed.scheme != "https":
+                    raise ValueError("CORS_ORIGINS must use https in production")
+                if hostname == "localhost" or hostname in {"127.0.0.1", "::1"}:
+                    raise ValueError("CORS_ORIGINS must not include localhost in production")
         return self
 
     @model_validator(mode="after")
