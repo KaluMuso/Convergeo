@@ -134,6 +134,11 @@ export const PHASE1_ENGLISH_ALLOWLIST = new Set([
   "Nyanja",
   "Zambia",
   "Lusaka",
+  // Locale-neutral SI unit symbols used for measured quantities.
+  "m",
+  "kg",
+  "L",
+  "m²",
 ]);
 
 export function keyMatchesPhase1Prefix(key: string, prefixes: readonly string[]): boolean {

@@ -1,5 +1,4 @@
 import pytest
-
 from app.services.listings.pricing import (
     normalized_price_per_base_unit_microngwee,
     resolve_option_price_ngwee,

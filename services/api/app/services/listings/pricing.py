@@ -5,8 +5,6 @@ This module is intentionally free of floats and Decimal so the same result is
 obtained in the vendor preview, cart validation, and checkout snapshot path.
 """
 
-from __future__ import annotations
-
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
