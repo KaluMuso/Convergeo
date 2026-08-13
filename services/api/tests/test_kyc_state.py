@@ -10,7 +10,7 @@ import json
 import threading
 import uuid
 from collections.abc import Generator
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from app.errors import AppError
@@ -287,9 +287,50 @@ def _vendor_status(db: PgConn, vendor_id: str) -> str:
 @pytest.mark.usefixtures("db")
 class TestKycVendorCas:
     def test_concurrent_approve_exactly_one_wins(self, db: PgConn) -> None:
+        _ensure_matrix_seed(db)
+        owner_id = str(uuid.uuid4())
         vendor_id = str(uuid.uuid4())
         kyc_id = str(uuid.uuid4())
+        auth = db.run(
+            f"""
+            INSERT INTO auth.users (
+              instance_id, id, aud, role, email, encrypted_password,
+              email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+              created_at, updated_at
+            ) VALUES (
+              '00000000-0000-0000-0000-000000000000', '{owner_id}',
+              'authenticated', 'authenticated',
+              'concurrent-{owner_id[:8]}@test.local', 'hash',
+              timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
+              timezone('utc', now()), timezone('utc', now())
+            );
+            """
+        )
+        assert auth.ok, auth.error
+        profile = db.run(
+            f"""
+            INSERT INTO public.profiles (id, display_name)
+            VALUES ('{owner_id}', 'Concurrent Owner')
+            ON CONFLICT (id) DO NOTHING;
+            """
+        )
+        assert profile.ok, profile.error
+        customer_role = db.run(
+            f"""
+            INSERT INTO public.user_roles (user_id, role)
+            VALUES ('{owner_id}', 'customer')
+            ON CONFLICT (user_id, role) DO NOTHING;
+            """
+        )
+        assert customer_role.ok, customer_role.error
         _seed_pending_kyc_vendor(db, vendor_id=vendor_id, kyc_id=kyc_id)
+        db.run(
+            f"""
+            UPDATE public.vendors
+            SET owner_user_id = '{owner_id}'
+            WHERE id = '{vendor_id}';
+            """
+        )
         wrapper = _ServiceWrapper(db)
 
         # A loser can lose in one of two legitimate ways, depending purely on
@@ -326,7 +367,7 @@ class TestKycVendorCas:
 
         assert _vendor_status(db, vendor_id) == "active"
         outcomes = [
-            str(result["vendor_role"]["outcome"])
+            str(cast(dict[str, Any], result)["vendor_role"]["outcome"])
             for result in results
             if result is not None
         ]

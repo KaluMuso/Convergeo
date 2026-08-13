@@ -6,7 +6,7 @@ import concurrent.futures
 import json
 import uuid
 from collections.abc import Generator
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from app.errors import AppError
@@ -307,7 +307,7 @@ class TestApproveKycVendorAtomic:
             results = list(pool.map(lambda _: approve(), range(2)))
 
         outcomes = [
-            str(result["vendor_role"]["outcome"])
+            str(cast(dict[str, Any], result)["vendor_role"]["outcome"])
             for result in results
             if result is not None
         ]

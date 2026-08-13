@@ -378,7 +378,7 @@ def test_reactivation_via_reapprove_is_idempotent() -> None:
 
 def test_grant_failure_rolls_back_active_vendor() -> None:
     wrapper = _Wrapper(_store())
-    wrapper.store["_block_vendor_role_grant"] = True
+    wrapper.client._block_vendor_role_grant = True  # type: ignore[attr-defined]
 
     with pytest.raises(AppError) as exc:
         transition_approve(

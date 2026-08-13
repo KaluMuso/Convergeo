@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from app.errors import AppError
 
@@ -12,10 +12,10 @@ class _TableStore(Protocol):
 
 
 def _store_rows(client: _TableStore, table: str) -> list[dict[str, Any]]:
-    return client.table(table).rows
+    return cast(list[dict[str, Any]], client.table(table).rows)
 
 
-def _upsert_vendor_role(store: dict[str, list[dict[str, Any]]], owner: str) -> str:
+def _upsert_vendor_role(store: dict[str, Any], owner: str) -> str:
     if store.get("_block_vendor_role_grant"):
         raise AppError(
             code="vendor_role_grant_failed",
@@ -112,7 +112,7 @@ def fake_approve_kyc_vendor(
             http_status=409,
         )
 
-    role_store = {
+    role_store: dict[str, Any] = {
         "user_roles": _store_rows(client, "user_roles"),
         "_block_vendor_role_grant": getattr(client, "_block_vendor_role_grant", False),
     }
