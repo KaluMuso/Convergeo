@@ -4,6 +4,17 @@ export {
   type ApiClientOptions,
   type ApiErrorEnvelope,
 } from "./api-client";
+export {
+  PRODUCTION_API_HOST,
+  STAGING_API_HOST,
+  hostnameOfOrigin,
+  isDeployedFrontendEnv,
+  isLoopbackApiOrigin,
+  isProductionApiOrigin,
+  resolvePublicApiBaseUrl,
+  type ApiBaseEnvBag,
+  type PublicApiEnvKey,
+} from "./api-base-url";
 export { loadPublicEnv, type PublicEnv } from "./env";
 export {
   buildConnectSrc,

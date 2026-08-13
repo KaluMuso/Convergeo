@@ -1,28 +1,21 @@
-type EnvBag = {
-  NEXT_PUBLIC_API_BASE_URL?: string;
-  NODE_ENV?: string;
-};
+import { resolvePublicApiBaseUrl, type ApiBaseEnvBag } from "@vergeo/config/api-base-url";
+
+type EnvBag = ApiBaseEnvBag;
 
 /**
  * Resolve the public API origin for customer fetches.
  *
- * Production builds must never fall back to localhost — a missing
- * `NEXT_PUBLIC_API_BASE_URL` fails closed so checkout/payment never silently
- * talk to a developer loopback. Dev keeps the local FastAPI default.
+ * Production and Vercel Preview builds must never fall back to a loopback
+ * origin — a missing `NEXT_PUBLIC_API_BASE_URL` fails closed so checkout
+ * never silently talks to a developer machine. Local `next dev` keeps the
+ * FastAPI default from `@vergeo/config/api-base-url`.
  */
-export function resolveApiBaseUrl(env: EnvBag = process.env): string | null {
-  const configured = env.NEXT_PUBLIC_API_BASE_URL?.trim();
-  if (configured) {
-    return configured.replace(/\/$/, "");
-  }
-  if (env.NODE_ENV === "production") {
-    return null;
-  }
-  return "http://localhost:8000";
+export function resolveApiBaseUrl(env: EnvBag = {}): string | null {
+  return resolvePublicApiBaseUrl(env, ["NEXT_PUBLIC_API_BASE_URL"]);
 }
 
 /** Convenience for call sites that already handle empty/unreachable API. */
-export function getApiBaseUrl(env: EnvBag = process.env): string {
+export function getApiBaseUrl(env: EnvBag = {}): string {
   return resolveApiBaseUrl(env) ?? "";
 }
 
@@ -32,7 +25,7 @@ export function getApiBaseUrl(env: EnvBag = process.env): string {
  * Returns null when the base is unset so callers never `fetch("/relative…")`
  * during production builds without env (relative URLs hang Next.js SSG).
  */
-export function absoluteApiUrl(path: string, env: EnvBag = process.env): string | null {
+export function absoluteApiUrl(path: string, env: EnvBag = {}): string | null {
   const base = resolveApiBaseUrl(env);
   if (!base) {
     return null;

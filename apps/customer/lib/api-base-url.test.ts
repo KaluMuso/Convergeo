@@ -87,4 +87,20 @@ describe("localhost is impossible in a production browser build", () => {
     expect(resolveApiBaseUrl({ NODE_ENV: "development" })).toBe("http://localhost:8000");
     expect(resolveApiBaseUrl({ NODE_ENV: "test" })).toBe("http://localhost:8000");
   });
+
+  it("rejects loopback and production-API-on-preview even when explicitly configured", () => {
+    expect(
+      resolveApiBaseUrl({
+        NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000",
+        NODE_ENV: "production",
+      }),
+    ).toBeNull();
+    expect(
+      resolveApiBaseUrl({
+        NEXT_PUBLIC_API_BASE_URL: "https://api.vergeo5.com",
+        VERCEL_ENV: "preview",
+        NODE_ENV: "production",
+      }),
+    ).toBeNull();
+  });
 });

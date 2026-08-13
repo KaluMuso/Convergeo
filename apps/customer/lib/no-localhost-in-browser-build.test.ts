@@ -35,7 +35,6 @@ const LOOPBACK = /localhost|127\.0\.0\.1/i;
 
 /** The only source files permitted to contain a (NODE_ENV-guarded) loopback default. */
 const AUDITED_FAIL_CLOSED_RESOLVERS = new Set<string>([
-  "lib/api-base-url.ts",
   "app/[locale]/(marketing)/sell/_components/vendor-app.ts",
 ]);
 
@@ -98,5 +97,11 @@ describe("no localhost in the production browser build", () => {
       expect(source).toMatch(/NODE_ENV/);
       expect(source).toMatch(/"production"/);
     }
+  });
+
+  it("delegates API origin resolution to the shared fail-closed helper", () => {
+    const source = readFileSync(join(CUSTOMER_ROOT, "lib/api-base-url.ts"), "utf8");
+    expect(source).toMatch(/@vergeo\/config\/api-base-url/);
+    expect(source).not.toMatch(LOOPBACK);
   });
 });

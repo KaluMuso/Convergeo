@@ -1,3 +1,5 @@
+import { sanitizeNextPath } from "@vergeo/auth/safe-next";
+
 export const DEFAULT_COUNTRY_CODE = "+260";
 export const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -116,13 +118,7 @@ export function resolvePostAuthPath(
   nextParam: string | null | undefined,
   fallbackPath: string,
 ): string {
-  if (!nextParam || !nextParam.startsWith("/") || nextParam.startsWith("//")) {
-    return fallbackPath;
-  }
-  if (!nextParam.startsWith(`/${locale}`)) {
-    return fallbackPath;
-  }
-  return nextParam;
+  return sanitizeNextPath(locale, nextParam, fallbackPath);
 }
 
 export const ONBOARDING_INTERESTS = [

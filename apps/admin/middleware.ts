@@ -2,13 +2,13 @@ import {
   CSP_NONCE_PLACEHOLDER,
   appendCspReporting,
   applyReportOnlyCspNonce,
-  createLoginRedirect,
+  createPortalRedirect,
   getLocaleFromPath,
   handleCspReportRequest,
   isAdminBypassActive,
   isCspReportRequest,
   mergeSessionCookies,
-  shouldRedirectToLogin,
+  resolveGatedRedirect,
   updateSession,
 } from "@vergeo/auth/middleware";
 import { buildConnectSrc, CSP_ORIGINS } from "@vergeo/config/security-headers";
@@ -86,14 +86,19 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-  if (
-    shouldRedirectToLogin("admin", request.nextUrl.pathname, LOCALES, session.user, session.roles, {
-      adminBypass,
-    })
-  ) {
+  const gate = resolveGatedRedirect(
+    "admin",
+    request.nextUrl.pathname,
+    LOCALES,
+    session.user,
+    session.roles,
+    { adminBypass },
+  );
+
+  if (gate) {
     return applyReportOnlyCspNonce(
       request,
-      createLoginRedirect(request, locale, session.response),
+      createPortalRedirect(gate, request, locale, session.response),
       REPORT_ONLY_CSP,
     );
   }

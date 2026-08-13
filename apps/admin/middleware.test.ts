@@ -11,8 +11,15 @@ vi.mock("@vergeo/auth/middleware", async (importOriginal) => {
   return {
     ...actual,
     createLoginRedirect: vi.fn(),
+    createPortalRedirect: vi.fn(
+      (kind: "login" | "onboarding" | "permission-denied", request: NextRequest, locale: string) =>
+        NextResponse.redirect(
+          new URL(`/${locale}/${kind === "login" ? "login" : kind}`, request.url),
+        ),
+    ),
     getLocaleFromPath: vi.fn(() => "en"),
     mergeSessionCookies: vi.fn((_source: Response, target: Response) => target),
+    resolveGatedRedirect: resolveGatedRedirectMock,
     shouldRedirectToLogin: vi.fn(() => false),
     updateSession: vi.fn(async () => ({
       response: NextResponse.next(),
@@ -25,8 +32,9 @@ vi.mock("@vergeo/auth/middleware", async (importOriginal) => {
 // Cryptographic CF Access verification is unit-tested in ./lib/cf-access.test.ts.
 // Here we mock it to assert the middleware's wiring: prod fails closed on a non-ok
 // result, passes on ok, and skips verification entirely outside production.
-const { verifyCfAccessAssertionMock } = vi.hoisted(() => ({
+const { verifyCfAccessAssertionMock, resolveGatedRedirectMock } = vi.hoisted(() => ({
   verifyCfAccessAssertionMock: vi.fn(),
+  resolveGatedRedirectMock: vi.fn((): "login" | "onboarding" | "permission-denied" | null => null),
 }));
 
 vi.mock("./lib/cf-access", () => ({
@@ -88,6 +96,8 @@ describe("admin middleware CF Access helpers", () => {
 describe("admin middleware — CF Access enforcement", () => {
   beforeEach(() => {
     verifyCfAccessAssertionMock.mockReset();
+    resolveGatedRedirectMock.mockReset();
+    resolveGatedRedirectMock.mockReturnValue(null);
   });
 
   afterEach(() => {
@@ -141,6 +151,31 @@ describe("admin middleware — CF Access enforcement", () => {
 
     expect(response.status).toBe(200);
     expect(verifyCfAccessAssertionMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps Cloudflare Access in front of admin role checks", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    resolveGatedRedirectMock.mockReturnValue("permission-denied");
+    verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
+
+    const response = await middleware(new NextRequest("https://admin.vergeo5.com/en"));
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("does not grant admin access to an authenticated non-admin after CF Access", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    verifyCfAccessAssertionMock.mockResolvedValue({ ok: true, payload: { sub: "cf-user" } });
+    resolveGatedRedirectMock.mockReturnValue("permission-denied");
+
+    const request = new NextRequest("https://admin.vergeo5.com/en", {
+      headers: { "cf-access-jwt-assertion": "valid.jwt.value" },
+    });
+    const response = await middleware(request);
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://admin.vergeo5.com/en/permission-denied");
   });
 
   it("substitutes a report-only CSP nonce without enabling unsafe script directives", async () => {

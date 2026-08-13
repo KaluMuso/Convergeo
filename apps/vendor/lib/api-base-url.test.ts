@@ -30,4 +30,20 @@ describe("resolveApiBaseUrl (vendor)", () => {
       }),
     ).toBe("http://localhost:8000");
   });
+
+  it("never ships a loopback or production API URL from a Preview build", () => {
+    expect(
+      resolveApiBaseUrl({
+        NEXT_PUBLIC_API_BASE_URL: "http://127.0.0.1:8000",
+        NODE_ENV: "production",
+      }),
+    ).toBeNull();
+    expect(
+      resolveApiBaseUrl({
+        NEXT_PUBLIC_API_BASE_URL: "https://api.vergeo5.com",
+        VERCEL_ENV: "preview",
+        NODE_ENV: "production",
+      }),
+    ).toBeNull();
+  });
 });

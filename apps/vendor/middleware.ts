@@ -2,12 +2,12 @@ import {
   CSP_NONCE_PLACEHOLDER,
   appendCspReporting,
   applyReportOnlyCspNonce,
-  createLoginRedirect,
+  createPortalRedirect,
   getLocaleFromPath,
   handleCspReportRequest,
   isCspReportRequest,
   mergeSessionCookies,
-  shouldRedirectToLogin,
+  resolveGatedRedirect,
   updateSession,
 } from "@vergeo/auth/middleware";
 import { buildConnectSrc, CSP_ORIGINS } from "@vergeo/config/security-headers";
@@ -55,13 +55,18 @@ export default async function middleware(request: NextRequest) {
 
   const session = await updateSession(request);
   const locale = getLocaleFromPath(request.nextUrl.pathname, LOCALES, DEFAULT_LOCALE);
+  const gate = resolveGatedRedirect(
+    "vendor",
+    request.nextUrl.pathname,
+    LOCALES,
+    session.user,
+    session.roles,
+  );
 
-  if (
-    shouldRedirectToLogin("vendor", request.nextUrl.pathname, LOCALES, session.user, session.roles)
-  ) {
+  if (gate) {
     return applyReportOnlyCspNonce(
       request,
-      createLoginRedirect(request, locale, session.response),
+      createPortalRedirect(gate, request, locale, session.response),
       REPORT_ONLY_CSP,
     );
   }
