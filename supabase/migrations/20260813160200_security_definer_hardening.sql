@@ -75,5 +75,28 @@ grant execute on function public.search_query_facets(text, vector, jsonb)
 create schema if not exists extensions;
 revoke all on schema extensions from public, anon, authenticated;
 
-alter extension pg_trgm set schema extensions;
-alter extension vector set schema extensions;
+do $$
+declare
+  ext_schema text;
+begin
+  select n.nspname
+    into ext_schema
+    from pg_extension e
+    join pg_namespace n on n.oid = e.extnamespace
+   where e.extname = 'pg_trgm';
+
+  if ext_schema is not null and ext_schema <> 'extensions' then
+    alter extension pg_trgm set schema extensions;
+  end if;
+
+  select n.nspname
+    into ext_schema
+    from pg_extension e
+    join pg_namespace n on n.oid = e.extnamespace
+   where e.extname = 'vector';
+
+  if ext_schema is not null and ext_schema <> 'extensions' then
+    alter extension vector set schema extensions;
+  end if;
+end;
+$$;

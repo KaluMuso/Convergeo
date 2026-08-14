@@ -3,7 +3,9 @@
 #
 # Captures the linked sandbox ledger and physical schema state, evaluates drift
 # against the checked-in equivalence + physical parity manifests, and fails
-# closed before any ``supabase db push`` when ledger or physical repair remains.
+# closed before any ``supabase db push`` when ledger or unresolved physical
+# repair remains. Known drift attributable to pending canonical migrations is
+# allowed after ledger normalization (schema_apply_required).
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -21,6 +23,13 @@ die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 [[ "${SCHEMA_TARGET_PROJECT_REF}" == "${SANDBOX_PROJECT_REF}" ]] || die "unknown sandbox project ref"
 command -v psql >/dev/null 2>&1 || die "psql is required for the read-only ledger query"
 
+if ! git -C "${REPO_ROOT}" diff --quiet --exit-code; then
+  die "working tree must be clean before preflight validation"
+fi
+if ! git -C "${REPO_ROOT}" diff --cached --quiet --exit-code; then
+  die "index must be clean before preflight validation"
+fi
+
 ledger_file="$(mktemp)"
 physical_file="$(mktemp)"
 trap 'rm -f "${ledger_file}" "${physical_file}"' EXIT
@@ -37,8 +46,6 @@ fi
 
 expected_sha="${EXPECTED_SOURCE_SHA:-$(git -C "${REPO_ROOT}" rev-parse HEAD)}"
 
-python3 "${REPO_ROOT}/scripts/ci/bind-staging-manifest-sha.py" >/dev/null
-
 python3 "${REPO_ROOT}/scripts/ci/schema_convergence.py" \
   --migrations-dir "${REPO_ROOT}/supabase/migrations" \
   --cohorts-file "${REPO_ROOT}/scripts/ci/schema-convergence-cohorts.json" \
@@ -52,3 +59,10 @@ python3 "${REPO_ROOT}/scripts/ci/schema_convergence.py" \
   --target-project-ref "${SCHEMA_TARGET_PROJECT_REF}" \
   --ledger-file "${ledger_file}" \
   --ledger-source live-query
+
+if ! git -C "${REPO_ROOT}" diff --quiet --exit-code; then
+  die "preflight validation mutated tracked files; provenance attestation invalid"
+fi
+if ! git -C "${REPO_ROOT}" diff --cached --quiet --exit-code; then
+  die "preflight validation staged tracked files; provenance attestation invalid"
+fi

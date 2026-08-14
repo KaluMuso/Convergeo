@@ -38,7 +38,7 @@
     },
     "public.record_listing_view(p_session_id uuid, p_listing_id uuid, p_day date, p_view_kind text, p_surface text, p_viewer_user_id uuid)": {
       "security": "definer",
-      "arguments": "p_session_id uuid, p_listing_id uuid, p_day date, p_view_kind text, p_surface text, p_viewer_user_id uuid DEFAULT NULL::uuid",
+      "arguments": "p_session_id uuid, p_listing_id uuid, p_day date, p_view_kind text, p_surface text DEFAULT 'unknown'::text, p_viewer_user_id uuid DEFAULT NULL::uuid",
       "search_path": ["public", "extensions"],
       "grants": ["postgres", "service_role"]
     },
