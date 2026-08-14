@@ -1,11 +1,12 @@
 {
-  "schema_version": "3",
+  "schema_version": "4",
   "result": "PASS",
   "mode": "integrated-staging",
   "candidate_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
   "staging_branch_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
   "staging_frontend_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
   "staging_api_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "staging_supabase_project_ref": "iyasmrmbcrvlfxpzescb",
   "staging_deploy_workflow_run_id": "111111111",
   "certification_workflow_run_id": "222222222",
   "certification_run_attempt": 1,

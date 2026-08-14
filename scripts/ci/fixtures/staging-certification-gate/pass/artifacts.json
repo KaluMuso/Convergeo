@@ -4,5 +4,11 @@
     "name": "staging-certification-evidence",
     "workflow_run_id": "222222222",
     "expired": false
+  },
+  {
+    "id": 9002,
+    "name": "staging-sha-proof",
+    "workflow_run_id": "111111111",
+    "expired": false
   }
 ]

@@ -3,5 +3,7 @@
   "status": "completed",
   "conclusion": "success",
   "head_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "head_branch": "staging",
+  "event": "workflow_dispatch",
   "path": ".github/workflows/release-certify.yml"
 }

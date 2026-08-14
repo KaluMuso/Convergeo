@@ -4,9 +4,8 @@
     "status": "completed",
     "conclusion": "success",
     "head_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-    "path": ".github/workflows/release-certify.yml",
-    "inputs": {
-      "mode": "integrated-staging"
-    }
+    "head_branch": "staging",
+    "event": "workflow_dispatch",
+    "path": ".github/workflows/release-certify.yml"
   }
 ]

@@ -626,6 +626,195 @@ artifact_gate_reject "certify X then commit Y — artifact for X must not certif
     --candidate-sha "${SHA_CHILD}" \
     --artifact-file "${FIXTURE_PASS}/artifact-9001.json"
 
+# 24+) RELCTRL-04 full staging-sha-proof chain
+PROOF_FIXTURE="${FIXTURE_PASS}/staging-sha-proof-9002.json"
+
+if python3 scripts/ci/emit_staging_certification_evidence.py \
+  --candidate-sha "${SHA_CANDIDATE}" \
+  --certification-run-id "222222222" \
+  --certification-run-attempt 1 \
+  --staging-deploy-workflow-run-id "111111111" \
+  --proof-fixture-file "${PROOF_FIXTURE}" >/tmp/emit-proof.txt 2>&1; then
+  ok "emitter derives certification evidence from staging-sha-proof fixture"
+else
+  bad "emitter should derive evidence from staging-sha-proof fixture"
+  cat /tmp/emit-proof.txt || true
+fi
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+run = json.loads((root / "deploy_run.json").read_text())
+run["event"] = "workflow_dispatch"
+(root / "deploy_run.json").write_text(json.dumps(run, indent=2) + "\\n")
+runs = json.loads((root / "deploy_runs.json").read_text())
+runs[0]["event"] = "workflow_dispatch"
+(root / "deploy_runs.json").write_text(json.dumps(runs, indent=2) + "\\n")
+PY
+artifact_gate_reject "workflow_dispatch deploy-staging run rejected" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+for name in ("deploy_run.json", "certification_run.json"):
+    data = json.loads((root / name).read_text())
+    data["head_branch"] = "master"
+    (root / name).write_text(json.dumps(data, indent=2) + "\\n")
+for name in ("deploy_runs.json", "certification_runs.json"):
+    data = json.loads((root / name).read_text())
+    data[0]["head_branch"] = "master"
+    (root / name).write_text(json.dumps(data, indent=2) + "\\n")
+PY
+artifact_gate_reject "deploy branch not staging rejected" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+data = json.loads((root / "certification_run.json").read_text())
+data["head_branch"] = "cursor/feature"
+(root / "certification_run.json").write_text(json.dumps(data, indent=2) + "\\n")
+runs = json.loads((root / "certification_runs.json").read_text())
+runs[0]["head_branch"] = "cursor/feature"
+(root / "certification_runs.json").write_text(json.dumps(runs, indent=2) + "\\n")
+PY
+artifact_gate_reject "certification branch not staging rejected" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+arts = [a for a in json.loads((root / "artifacts.json").read_text()) if a.get("name") != "staging-sha-proof"]
+(root / "artifacts.json").write_text(json.dumps(arts, indent=2) + "\\n")
+PY
+artifact_gate_reject "missing staging-sha-proof artifact rejected" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+proof = json.loads((root / "staging-sha-proof-9002.json").read_text())
+proof["migrate_supabase_result"] = "skipped"
+(root / "staging-sha-proof-9002.json").write_text(json.dumps(proof, indent=2) + "\\n")
+PY
+artifact_gate_reject "migrate skipped rejected for certification" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+proof = json.loads((root / "staging-sha-proof-9002.json").read_text())
+proof["previews"]["vendor"]["github_commit_sha"] = "${SHA_OTHER}"
+(root / "staging-sha-proof-9002.json").write_text(json.dumps(proof, indent=2) + "\\n")
+PY
+artifact_gate_reject "wrong vendor preview SHA rejected" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+proof = json.loads((root / "staging-sha-proof-9002.json").read_text())
+proof["api_fingerprint"]["git_sha"] = "${SHA_OTHER}"
+(root / "staging-sha-proof-9002.json").write_text(json.dumps(proof, indent=2) + "\\n")
+PY
+artifact_gate_reject "API fingerprint SHA mismatch rejected" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+proof = json.loads((root / "staging-sha-proof-9002.json").read_text())
+proof["api_fingerprint"]["supabase_project_ref"] = "dpadrlxukcjbewpqympu"
+(root / "staging-sha-proof-9002.json").write_text(json.dumps(proof, indent=2) + "\\n")
+PY
+artifact_gate_reject "production Supabase ref rejected" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+proof = json.loads((root / "staging-sha-proof-9002.json").read_text())
+del proof["previews"]["customer"]
+(root / "staging-sha-proof-9002.json").write_text(json.dumps(proof, indent=2) + "\\n")
+PY
+artifact_gate_reject "missing customer portal proof rejected" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+art = json.loads((root / "artifact-9001.json").read_text())
+art["mode"] = "ci"
+(root / "artifact-9001.json").write_text(json.dumps(art, indent=2) + "\\n")
+PY
+artifact_gate_reject "certification artifact mode not integrated-staging rejected" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+arts = [a for a in json.loads((root / "artifacts.json").read_text()) if a.get("name") != "staging-sha-proof"]
+(root / "artifacts.json").write_text(json.dumps(arts, indent=2) + "\\n")
+PY
+artifact_gate_reject "deploy success without staging-sha-proof must not certify" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
 rm -f "$TMP_MERGE"
 
 echo "==> summary: pass=$pass fail=$fail"

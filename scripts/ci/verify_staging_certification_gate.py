@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify artifact-native staging certification for merge-to-master gate (RELCTRL-03)."""
+"""Verify artifact-native staging certification for merge-to-master gate (RELCTRL-03/04)."""
 
 from __future__ import annotations
 
@@ -13,18 +13,24 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from github_actions_provenance import (
-    DEPLOY_STAGING_WORKFLOW,
     RELEASE_CERTIFY_WORKFLOW,
     STAGING_CERTIFICATION_ARTIFACT,
     GitHubActionsClient,
     LiveGitHubActionsClient,
     extract_artifact_json,
-    verify_completed_success_run,
 )
 from staging_certification_evidence import (
     ARTIFACT_FILENAME,
     StagingCertificationError,
     validate_staging_certification_evidence,
+)
+from staging_deploy_provenance import (
+    StagingDeployProvenanceError,
+    cross_check_certification_evidence_with_proof,
+    download_staging_sha_proof,
+    validate_staging_sha_proof_for_certification,
+    verify_certifiable_deploy_run,
+    verify_certification_run_metadata,
 )
 
 
@@ -55,7 +61,7 @@ class FixtureGitHubActionsClient:
         _ = per_page
         if workflow_path == RELEASE_CERTIFY_WORKFLOW:
             payload = self._load("certification_runs.json")
-        elif workflow_path == DEPLOY_STAGING_WORKFLOW:
+        elif workflow_path.endswith("deploy-staging.yml"):
             payload = self._load("deploy_runs.json")
         else:
             return []
@@ -88,28 +94,24 @@ class FixtureGitHubActionsClient:
         return [item for item in artifacts if str(item.get("workflow_run_id")) == str(run_id)]
 
     def download_artifact_zip(self, artifact_id: int) -> bytes:
-        for suffix in (".zip", ".json"):
-            path = self.fixture_dir / f"artifact-{artifact_id}{suffix}"
-            if path.is_file():
-                if suffix == ".json":
-                    import io
-                    import zipfile
+        import io
+        import zipfile
 
-                    buffer = io.BytesIO()
-                    with zipfile.ZipFile(buffer, "w") as archive:
-                        archive.writestr(ARTIFACT_FILENAME, path.read_text(encoding="utf-8"))
-                    return buffer.getvalue()
-                return path.read_bytes()
+        for name in (
+            f"artifact-{artifact_id}.json",
+            f"staging-sha-proof-{artifact_id}.json",
+        ):
+            path = self.fixture_dir / name
+            if not path.is_file():
+                continue
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, "w") as archive:
+                if "staging-sha-proof" in name:
+                    archive.writestr("staging-sha-proof.json", path.read_text(encoding="utf-8"))
+                else:
+                    archive.writestr(ARTIFACT_FILENAME, path.read_text(encoding="utf-8"))
+            return buffer.getvalue()
         raise MergeGateError(f"fixture artifact not found: {artifact_id}")
-
-
-def _integrated_staging_run(run: dict[str, Any]) -> bool:
-    inputs = run.get("inputs") or {}
-    if isinstance(inputs, dict) and str(inputs.get("mode", "")).strip() == "integrated-staging":
-        return True
-    # Workflow runs triggered without serialized inputs still carry display title/event.
-    display = str(run.get("display_title") or "")
-    return "integrated-staging" in display
 
 
 def discover_certification_run(
@@ -126,16 +128,19 @@ def discover_certification_run(
     for run in runs:
         if str(run.get("conclusion")) != "success":
             continue
-        if not _integrated_staging_run(run):
-            continue
         try:
-            verify_completed_success_run(
-                run,
-                expected_workflow_path=RELEASE_CERTIFY_WORKFLOW,
-                expected_head_sha=candidate_sha,
-                label="release-certify",
+            verify_certification_run_metadata(run, candidate_sha=candidate_sha)
+        except StagingDeployProvenanceError:
+            continue
+        run_id = str(run["id"])
+        try:
+            evidence = download_certification_evidence(client, certification_run_id=run_id)
+            validate_staging_certification_evidence(
+                evidence,
+                candidate_sha=candidate_sha,
+                certification_run_id=run_id,
             )
-        except ValueError:
+        except (MergeGateError, StagingCertificationError, ValueError):
             continue
         return run
     raise MergeGateError(
@@ -184,15 +189,14 @@ def verify_staging_certification_gate(
 
     deploy_run_id = str(evidence["staging_deploy_workflow_run_id"])
     deploy_run = client.get_run(deploy_run_id)
-    verify_completed_success_run(
-        deploy_run,
-        expected_workflow_path=DEPLOY_STAGING_WORKFLOW,
-        expected_head_sha=candidate_sha,
-        label="deploy-staging",
-    )
+    verify_certifiable_deploy_run(deploy_run, candidate_sha=candidate_sha)
 
     if deploy_run_id == cert_run_id:
         raise MergeGateError("deploy-staging and certification runs must differ")
+
+    proof = download_staging_sha_proof(client, deploy_run_id=deploy_run_id)
+    derived = validate_staging_sha_proof_for_certification(proof, candidate_sha=candidate_sha)
+    cross_check_certification_evidence_with_proof(evidence, derived=derived)
 
     return evidence
 
@@ -254,7 +258,13 @@ def main(argv: list[str] | None = None) -> int:
                 client=client,
                 current_run_id=args.current_run_id or None,
             )
-    except (MergeGateError, StagingCertificationError, ValueError, RuntimeError) as exc:
+    except (
+        MergeGateError,
+        StagingCertificationError,
+        StagingDeployProvenanceError,
+        ValueError,
+        RuntimeError,
+    ) as exc:
         print(f"::error::{exc}", file=sys.stderr)
         return 1
 
