@@ -16,9 +16,14 @@ const REQUIRED_FILES = [
   ".github/workflows/capture-production-db-evidence.yml",
   "infra/release-evidence-contract.example.json",
   "infra/merge-release-evidence.example.json",
+  "infra/staging-certification-evidence.example.json",
   "scripts/ci/validate_release_parity.py",
   "scripts/ci/validate_production_db_evidence.py",
   "scripts/ci/validate_merge_release_evidence.py",
+  "scripts/ci/verify_staging_certification_gate.py",
+  "scripts/ci/emit_staging_certification_evidence.py",
+  "scripts/ci/staging_certification_evidence.py",
+  "scripts/ci/github_actions_provenance.py",
   "scripts/ci/detect_merge_evidence_scope.py",
   "scripts/ci/capture_production_db_evidence.py",
   "scripts/ci/vercel-wait-production.sh",
@@ -29,6 +34,12 @@ const FORBIDDEN_PATTERNS = [
     file: ".github/workflows/ci.yml",
     pattern: /bind-merge-release-evidence\.py/,
     message: "ci.yml merge gate must not invoke bind-merge-release-evidence.py (RELCTRL-02)",
+  },
+  {
+    file: ".github/workflows/ci.yml",
+    pattern: /infra\/merge-release-evidence\.json/,
+    message:
+      "ci.yml merge gate must not require checked-in infra/merge-release-evidence.json (RELCTRL-03)",
   },
   {
     file: ".github/workflows/promote-production-frontends.yml",

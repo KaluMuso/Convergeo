@@ -4,8 +4,8 @@
  * plus a human-readable Markdown summary.
  *
  * Strict promotion modes exit non-zero unless verdict is
- * CERTIFIABLE_AFTER_INTEGRATION. local-development emits
- * LOCAL_DEVELOPMENT_REPORT and must never be titled as a release certificate.
+ * PASS. local-development emits LOCAL_DEVELOPMENT_REPORT and must never be
+ * titled as a release certificate.
  *
  * Usage:
  *   node scripts/qa/collect-certificate.mjs \
@@ -213,7 +213,7 @@ function toMarkdown(cert) {
   const title = cert.identity.certificate_title || "Vergeo5 Certificate";
   const reportOnlyNote = cert.identity.report_only
     ? "_This is a **local development report**, not a release certificate._"
-    : "_Promotion certificate: only `CERTIFIABLE_AFTER_INTEGRATION` is green._";
+    : "_Promotion certificate: only `PASS` is green._";
 
   const lines = [
     `# ${title}`,

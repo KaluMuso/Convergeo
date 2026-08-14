@@ -75,7 +75,7 @@ cat >"$TMP_CONTRACT" <<JSON
   "production_api_sha_observed": "${SHA_API_LIVE}",
   "production_db_evidence_run_id": "1234567890",
   "staging_certification": {
-    "result": "CERTIFIABLE_AFTER_INTEGRATION",
+    "result": "PASS",
     "candidate_sha": "${SHA_FRONTEND}",
     "staging_frontend_sha": "${SHA_FRONTEND}",
     "certified_at": "2026-08-13T00:00:00Z",
@@ -106,7 +106,7 @@ cat >"$TMP_CONTRACT" <<JSON
   "production_api_sha_observed": "${SHA_API_LIVE}",
   "production_db_evidence_run_id": "1234567890",
   "staging_certification": {
-    "result": "CERTIFIABLE_AFTER_INTEGRATION",
+    "result": "PASS",
     "candidate_sha": "${SHA_FRONTEND}",
     "staging_frontend_sha": "${SHA_FRONTEND}",
     "certified_at": "2026-08-13T00:00:00Z",
@@ -462,12 +462,169 @@ else
   bad "scope detector must not exempt mixed runtime + governance changes"
 fi
 
+if python3 scripts/ci/detect_merge_evidence_scope.py --paths scripts/qa/gate-status.mjs \
+  | grep -qi 'governance-only'; then
+  ok "scope detector exempts scripts/qa/** changes"
+else
+  bad "scope detector should exempt scripts/qa/** changes"
+fi
+
 if python3 scripts/ci/detect_merge_evidence_scope.py --paths infra/staging/docker-compose.yml \
   | grep -qi 'merge evidence required'; then
   ok "scope detector requires evidence for infra deployment config"
 else
   bad "scope detector should require evidence for infra deployment config"
 fi
+
+# 23+) RELCTRL-03 artifact-native merge gate
+SHA_PARENT="dddddddddddddddddddddddddddddddddddddddd"
+SHA_CHILD="cccccccccccccccccccccccccccccccccccccccc"
+SHA_MASTER="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+FIXTURE_PASS="scripts/ci/fixtures/staging-certification-gate/pass"
+
+artifact_gate_reject() {
+  local label="$1"
+  shift
+  set +e
+  "$@" >/tmp/artifact-gate-reject.txt 2>&1
+  local rc=$?
+  set -e
+  if [[ "$rc" -ne 0 ]]; then
+    ok "artifact gate rejects: $label"
+  else
+    bad "artifact gate should reject: $label"
+    cat /tmp/artifact-gate-reject.txt || true
+  fi
+}
+
+artifact_gate_accept() {
+  local label="$1"
+  shift
+  if "$@" >/tmp/artifact-gate-accept.txt 2>&1; then
+    ok "artifact gate accepts: $label"
+  else
+    bad "artifact gate should accept: $label"
+    cat /tmp/artifact-gate-accept.txt || true
+  fi
+}
+
+artifact_gate_accept "exact SHA + deploy + certification fixture" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${FIXTURE_PASS}"
+
+artifact_gate_reject "child SHA after certification commit (parent artifact)" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CHILD}" \
+    --artifact-fixture-dir "${FIXTURE_PASS}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+for name in ("certification_runs.json", "certification_run.json", "deploy_runs.json", "deploy_run.json"):
+    p = root / name
+    data = json.loads(p.read_text())
+    if isinstance(data, list):
+        for item in data:
+            item["head_sha"] = "${SHA_MASTER}"
+    else:
+        data["head_sha"] = "${SHA_MASTER}"
+    p.write_text(json.dumps(data, indent=2) + "\\n")
+art = json.loads((root / "artifact-9001.json").read_text())
+art["candidate_sha"] = "${SHA_MASTER}"
+art["staging_branch_sha"] = "${SHA_MASTER}"
+art["staging_frontend_sha"] = "${SHA_MASTER}"
+art["staging_api_sha"] = "${SHA_MASTER}"
+(root / "artifact-9001.json").write_text(json.dumps(art, indent=2) + "\\n")
+PY
+artifact_gate_reject "master certification does not certify feature PR SHA" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+run = json.loads((root / "certification_run.json").read_text())
+run["path"] = ".github/workflows/ci.yml"
+(root / "certification_run.json").write_text(json.dumps(run, indent=2) + "\\n")
+runs = json.loads((root / "certification_runs.json").read_text())
+runs[0]["path"] = ".github/workflows/ci.yml"
+(root / "certification_runs.json").write_text(json.dumps(runs, indent=2) + "\\n")
+PY
+artifact_gate_reject "ordinary CI workflow path rejected as certification" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+art = json.loads((root / "artifact-9001.json").read_text())
+art["staging_deploy_workflow_run_id"] = art["certification_workflow_run_id"]
+(root / "artifact-9001.json").write_text(json.dumps(art, indent=2) + "\\n")
+PY
+artifact_gate_reject "identical deploy and certification run ids" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+python3 - <<PY
+import json, pathlib
+root = pathlib.Path("${TMP_FIXTURE}")
+art = json.loads((root / "artifact-9001.json").read_text())
+art["result"] = "CERTIFIABLE_AFTER_INTEGRATION"
+(root / "artifact-9001.json").write_text(json.dumps(art, indent=2) + "\\n")
+PY
+artifact_gate_reject "non-PASS certificate rejected" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+TMP_FIXTURE="$(mktemp -d)"
+cp -a "${FIXTURE_PASS}/." "${TMP_FIXTURE}/"
+echo '[]' > "${TMP_FIXTURE}/artifacts.json"
+artifact_gate_reject "missing certification artifact" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --artifact-fixture-dir "${TMP_FIXTURE}"
+rm -rf "${TMP_FIXTURE}"
+
+if [[ ! -f infra/merge-release-evidence.json ]]; then
+  ok "runtime PRs do not require checked-in infra/merge-release-evidence.json"
+else
+  bad "checked-in infra/merge-release-evidence.json must not be required"
+fi
+
+if ! grep -q 'verify_staging_certification_gate.py' .github/workflows/ci.yml; then
+  bad "ci.yml must invoke verify_staging_certification_gate.py"
+else
+  ok "ci.yml uses artifact-native verify_staging_certification_gate.py"
+fi
+
+if grep -q 'infra/merge-release-evidence.json' .github/workflows/ci.yml; then
+  bad "ci.yml merge gate must not require checked-in merge-release-evidence.json"
+else
+  ok "ci.yml merge gate does not require checked-in merge-release-evidence.json"
+fi
+
+# SHA self-reference: certify parent X, child commit Y must not inherit X artifact
+artifact_gate_reject "certify X then commit Y — artifact for X must not certify Y" \
+  python3 scripts/ci/verify_staging_certification_gate.py \
+    --candidate-sha "${SHA_CHILD}" \
+    --artifact-file "${FIXTURE_PASS}/artifact-9001.json"
 
 rm -f "$TMP_MERGE"
 

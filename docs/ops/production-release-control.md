@@ -31,51 +31,49 @@ it in routine operations. Release truth is `master`.
 
 ## Merge-to-master gate
 
-A PR must **not** merge into `master` unless the exact PR head SHA has already
-passed **integrated staging certification** and carries immutable evidence proving
-that certification completed **before** the merge gate runs.
+A runtime/schema PR must **not** merge into `master` unless the exact PR head SHA
+has already passed **integrated staging certification** recorded as an immutable
+GitHub Actions artifact. The candidate tree must **not** gain a post-certification
+commit (RELCTRL-03 eliminates the SHA deadlock from checked-in JSON).
 
-**Correct flow (evidence pre-exists validation):**
+**Correct flow (artifact-native — RELCTRL-03):**
 
 ```text
-candidate PR head frozen at SHA X
-  → exact SHA X placed on staging
-  → deploy-staging.yml succeeds
-  → release-certify integrated-staging succeeds with result PASS
-  → certification workflow uploads immutable artifact + digest
-  → release/integration PR carries infra/merge-release-evidence.json for SHA X
-  → merge gate validates evidence read-only (no SHA rebinding)
-  → master merge allowed
+candidate PR head frozen at SHA X (no further commits on candidate branch)
+  → staging branch points to exact SHA X
+  → deploy-staging.yml succeeds for SHA X
+  → release-certify.yml runs integrated-staging at SHA X (candidate_sha input)
+  → workflow uploads staging-certification-evidence artifact for SHA X
+  → merge gate queries GitHub Actions for completed certification at SHA X
+  → gate downloads artifact, validates contents, verifies deploy-staging run
+  → master merge allowed (candidate tree unchanged)
 ```
 
-**Forbidden flow (self-attesting — RELCTRL-02 blocks this):**
+**Forbidden flows:**
 
 ```text
-PR opens
-  → CI rewrites merge-release-evidence.json SHAs to PR head
-  → merge gate validates rewritten JSON
-  → merge allowed
-  → staging certification happens later
+PR opens → CI rewrites merge-release-evidence.json → merge allowed (RELCTRL-02 blocked)
+
+certify SHA X → commit evidence JSON on candidate → new head SHA Y invalidates X (RELCTRL-03 blocked)
+
+ordinary CI run masquerades as staging certification (blocked)
 ```
 
 Steps for runtime/schema PRs:
 
-1. Deploy and certify on `staging` via `.github/workflows/deploy-staging.yml`.
-2. Run `.github/workflows/release-certify.yml` in `integrated-staging` mode until
-   certification completes with **`result: PASS`** (not
-   `CERTIFIABLE_AFTER_INTEGRATION` or other non-terminal states).
-3. Copy the certification artifact fields into
-   `infra/merge-release-evidence.json` on the release PR to `master` (see
-   `infra/merge-release-evidence.example.json` schema version `2`).
-4. CI job **Merge release gate (RELCTRL-01/02)** validates the checked-in evidence
-   **read-only** — it never creates, rewrites, or normalizes evidence. The working
-   tree must remain unchanged across validation (`git diff --exit-code`).
+1. Deploy exact candidate SHA on `staging` via `.github/workflows/deploy-staging.yml`.
+2. Dispatch `.github/workflows/release-certify.yml` with `mode=integrated-staging`
+   and `candidate_sha=<exact PR head>` until certification verdict is **`PASS`**.
+3. Confirm artifact `staging-certification-evidence` exists on the successful
+   certification workflow run (see `infra/staging-certification-evidence.example.json`).
+4. Open/update the PR to `master` **without** adding post-certification commits.
+5. CI job **Merge release gate** calls `verify_staging_certification_gate.py`
+   (read-only; `git diff --exit-code`).
 
-Application/runtime changes require valid merge evidence. **Governance-only** PRs
-that touch only `.github/**`, `scripts/ci/**`, `docs/**`, the merge/release
-evidence **example** templates, or non-runtime tests under
-`services/api/tests/**` may skip the gate (fail-closed scope detection in
-`scripts/ci/detect_merge_evidence_scope.py`).
+Application/runtime changes require artifact certification. **Governance-only** PRs
+that touch only `.github/**`, `scripts/ci/**`, `scripts/qa/**`, `docs/**`, evidence
+**example** templates, or non-runtime tests under `services/api/tests/**` may skip
+the gate (fail-closed scope detection in `scripts/ci/detect_merge_evidence_scope.py`).
 
 ## Vercel Production Branch contract
 
@@ -98,14 +96,13 @@ Before merging to `master`:
 1. `staging` is deployed via `.github/workflows/deploy-staging.yml`.
 2. Staging API fingerprint, Supabase migration replay, and Vercel Preview proofs
    match the **same** `candidate_sha`.
-3. `scripts/qa/release-certify.sh --mode integrated-staging` must complete with
-   **`PASS`** (completed certification — not `CERTIFIABLE_AFTER_INTEGRATION`).
-4. Evidence is captured in `infra/merge-release-evidence.json` on the PR to
-   `master` before merge, including distinct staging deploy and certification run
-   ids plus artifact digest provenance (see
-   `infra/merge-release-evidence.example.json`). Post-merge **release parity
-   contract** evidence for Production verification remains separate (see
-   `infra/release-evidence-contract.example.json`).
+3. `scripts/qa/release-certify.sh --mode integrated-staging` (via
+   `.github/workflows/release-certify.yml` with explicit `candidate_sha`) must
+   complete with terminal verdict **`PASS`**.
+4. Immutable artifact `staging-certification-evidence` is uploaded by the
+   certification workflow — **not** checked into the candidate PR. Post-merge
+   **release parity contract** evidence for Production verification remains
+   separate (see `infra/release-evidence-contract.example.json`).
 
 ## Frontend / API / database parity
 
@@ -182,6 +179,8 @@ files.
 - `infra/ENVIRONMENTS.md` — deployment planes
 - `.github/workflows/deploy-staging.yml` — staging pipeline
 - `.github/workflows/deploy-production.yml` — legacy API redeploy
-- `scripts/ci/validate_merge_release_evidence.py` — merge gate (read-only, PASS-only)
+- `scripts/ci/verify_staging_certification_gate.py` — artifact-native merge gate
+- `scripts/ci/emit_staging_certification_evidence.py` — certification artifact emitter
+- `scripts/ci/validate_merge_release_evidence.py` — legacy checked-in JSON validator (regression tests only)
 - `scripts/ci/detect_merge_evidence_scope.py` — governance-only exemption detector
 - `scripts/ci/validate_release_parity.py` — post-merge verify parity gate

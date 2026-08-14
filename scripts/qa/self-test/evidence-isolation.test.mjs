@@ -133,7 +133,7 @@ describe("evidence namespace isolation", () => {
       "test",
     ]);
 
-    assert.notEqual(cert.certification, "CERTIFIABLE_AFTER_INTEGRATION");
+    assert.notEqual(cert.certification, "PASS");
     assert.equal(exitCode, 1);
     assert.equal(cert.gates.lint?.status, "NOT_RUN"); // missing after rejection
     assert.ok(cert.rejected_fragments.length >= 1);

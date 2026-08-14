@@ -1,0 +1,14 @@
+{
+  "schema_version": "3",
+  "result": "PASS",
+  "mode": "integrated-staging",
+  "candidate_sha": "0000000000000000000000000000000000000000",
+  "staging_branch_sha": "0000000000000000000000000000000000000000",
+  "staging_frontend_sha": "0000000000000000000000000000000000000000",
+  "staging_api_sha": "0000000000000000000000000000000000000000",
+  "staging_deploy_workflow_run_id": "987654321",
+  "certification_workflow_run_id": "123456789",
+  "certification_run_attempt": 1,
+  "certified_at": "2026-01-01T00:05:00Z",
+  "source_workflow": ".github/workflows/release-certify.yml"
+}

@@ -185,6 +185,9 @@ jobs:
     name: Merge release gate (RELCTRL-01)
     if: github.event_name == 'pull_request' && github.base_ref == 'master'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -200,7 +203,7 @@ jobs:
             --head "${{ github.event.pull_request.head.sha }}" \
             --github-output "$GITHUB_OUTPUT"
 
-      - name: Validate merge release evidence (read-only)
+      - name: Verify staging certification artifact (read-only)
         if: steps.scope.outputs.required == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -208,9 +211,8 @@ jobs:
         run: |
           set -euo pipefail
           git diff --exit-code
-          python3 scripts/ci/validate_merge_release_evidence.py \
+          python3 scripts/ci/verify_staging_certification_gate.py \
             --candidate-sha "${{ github.event.pull_request.head.sha }}" \
-            --evidence infra/merge-release-evidence.json \
             --current-run-id "${{ github.run_id }}"
           git diff --exit-code
 
