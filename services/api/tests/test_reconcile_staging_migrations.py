@@ -13,6 +13,11 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 MODULE_PATH = REPO_ROOT / "scripts" / "ci" / "reconcile_staging_migrations.py"
 LIVE_LEDGER = REPO_ROOT / "scripts/ci/fixtures/sandbox-live-ledger-20260813.txt"
 POST_REPAIR_LEDGER = REPO_ROOT / "scripts/ci/fixtures/sandbox-post-repair-ledger-20260813.txt"
+PENDING_REPAIR_VERSIONS = {
+    "20260812090000",
+    "20260813064106",
+    "20260813150000",
+}
 
 
 def _module():
@@ -29,6 +34,10 @@ reconcile = _module()
 
 def _repo_versions() -> list[str]:
     return reconcile.repo_migration_versions(REPO_ROOT / "supabase" / "migrations")
+
+
+def _repo_versions_applied_after_repair() -> list[str]:
+    return [version for version in _repo_versions() if version not in PENDING_REPAIR_VERSIONS]
 
 
 def test_matching_repository_remote_succeeds(tmp_path: Path) -> None:
@@ -53,23 +62,15 @@ def test_live_sandbox_ledger_with_aliases_fails(tmp_path: Path) -> None:
 
 
 def test_post_repair_canonical_prefix_passes_with_pending_tip() -> None:
-    repo_versions = _repo_versions()
     remote = reconcile.parse_remote_versions(POST_REPAIR_LEDGER.read_text(encoding="utf-8"))
-    reconcile.reconcile_versions(
-        [version for version in repo_versions if version not in {"20260812090000", "20260813064106", "20260813150000"}],
-        remote,
-    )
+    reconcile.reconcile_versions(_repo_versions_applied_after_repair(), remote)
 
 
 def test_post_repair_ledger_does_not_accept_rehearsal_rows() -> None:
-    repo_versions = _repo_versions()
     remote = reconcile.parse_remote_versions(POST_REPAIR_LEDGER.read_text(encoding="utf-8"))
     extra = remote + ["20260813072110"]
     with pytest.raises(reconcile.MigrationReconcileError, match="absent from repository"):
-        reconcile.reconcile_versions(
-            [version for version in repo_versions if version not in {"20260812090000", "20260813064106", "20260813150000"}],
-            extra,
-        )
+        reconcile.reconcile_versions(_repo_versions_applied_after_repair(), extra)
 
 
 def test_cli_live_fixture_fails() -> None:

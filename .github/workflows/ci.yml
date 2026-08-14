@@ -197,7 +197,9 @@ jobs:
           set -euo pipefail
           base="${{ github.event.pull_request.base.sha }}"
           head="${{ github.event.pull_request.head.sha }}"
-          if git diff --name-only "$base" "$head" | grep -Eq \
+          # CI/governance tests under services/api/tests/ do not ship runtime code.
+          changed="$(git diff --name-only "$base" "$head" | grep -Ev '^services/api/tests/' || true)"
+          if [ -n "$changed" ] && printf '%s\n' "$changed" | grep -Eq \
             '^(apps/|services/|packages/|supabase/migrations/)'; then
             echo "required=true" >> "$GITHUB_OUTPUT"
           else

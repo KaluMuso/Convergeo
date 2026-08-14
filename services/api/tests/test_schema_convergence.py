@@ -250,7 +250,6 @@ def test_post_repair_canonical_fixture_passes_preflight() -> None:
 
 
 def test_wrong_alias_hash_rejected(tmp_path: Path) -> None:
-    repo_versions = _repo_versions()
     manifest = _equivalence_manifest()
     bad_manifest = dict(manifest)
     bad_aliases = [dict(item) for item in manifest["exact_aliases"]]
@@ -258,7 +257,6 @@ def test_wrong_alias_hash_rejected(tmp_path: Path) -> None:
     bad_manifest["exact_aliases"] = bad_aliases
     bad_path = tmp_path / "bad-equivalence.json"
     bad_path.write_text(json.dumps(bad_manifest) + "\n", encoding="utf-8")
-    remote = schema.parse_ledger(LIVE_LEDGER.read_text(encoding="utf-8"))
     with pytest.raises(schema.SchemaConvergenceError, match="hash mismatch"):
         schema.verify_alias_hashes(
             migrations_dir=REPO_ROOT / "supabase" / "migrations",
