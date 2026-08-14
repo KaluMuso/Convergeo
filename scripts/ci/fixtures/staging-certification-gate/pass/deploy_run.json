@@ -3,5 +3,7 @@
   "status": "completed",
   "conclusion": "success",
   "head_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "head_branch": "staging",
+  "event": "push",
   "path": ".github/workflows/deploy-staging.yml"
 }

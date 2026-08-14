@@ -20,6 +20,7 @@ const REQUIRED_FILES = [
   "scripts/ci/validate_release_parity.py",
   "scripts/ci/validate_production_db_evidence.py",
   "scripts/ci/validate_merge_release_evidence.py",
+  "scripts/ci/staging_deploy_provenance.py",
   "scripts/ci/verify_staging_certification_gate.py",
   "scripts/ci/emit_staging_certification_evidence.py",
   "scripts/ci/staging_certification_evidence.py",

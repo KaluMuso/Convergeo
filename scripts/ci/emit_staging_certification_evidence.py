@@ -12,44 +12,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from github_actions_provenance import (
-    DEPLOY_STAGING_WORKFLOW,
-    LiveGitHubActionsClient,
-    verify_completed_success_run,
+from github_actions_provenance import LiveGitHubActionsClient
+from staging_certification_evidence import ARTIFACT_FILENAME, build_staging_certification_evidence
+from staging_deploy_provenance import (
+    StagingDeployProvenanceError,
+    discover_certifiable_deploy_run,
+    download_staging_sha_proof,
+    validate_staging_sha_proof_for_certification,
+    verify_certifiable_deploy_run,
 )
-from staging_certification_evidence import (
-    ARTIFACT_FILENAME,
-    build_staging_certification_evidence,
-)
-
-
-def discover_deploy_run_id(
-    *,
-    repository: str,
-    token: str,
-    candidate_sha: str,
-) -> str:
-    client = LiveGitHubActionsClient(repository=repository, token=token)
-    runs = client.get_workflow_runs(
-        workflow_path=DEPLOY_STAGING_WORKFLOW,
-        head_sha=candidate_sha,
-        status="completed",
-        per_page=20,
-    )
-    for run in runs:
-        try:
-            verify_completed_success_run(
-                run,
-                expected_workflow_path=DEPLOY_STAGING_WORKFLOW,
-                expected_head_sha=candidate_sha,
-                label="deploy-staging",
-            )
-        except ValueError:
-            continue
-        return str(run["id"])
-    raise RuntimeError(
-        f"no successful deploy-staging run found for candidate {candidate_sha[:12]}"
-    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -60,7 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--staging-deploy-workflow-run-id",
         default="",
-        help="Optional explicit deploy-staging run id (otherwise discovered via GitHub API)",
+        help="Optional explicit certifiable deploy-staging push run id",
     )
     parser.add_argument(
         "--output-dir",
@@ -71,36 +42,55 @@ def main(argv: list[str] | None = None) -> int:
         "--certified-at",
         default=datetime.now(UTC).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
     )
+    parser.add_argument(
+        "--proof-fixture-file",
+        type=Path,
+        default=None,
+        help="Offline regression mode: read staging-sha-proof JSON from file",
+    )
     args = parser.parse_args(argv)
 
     repository = os.environ.get("GITHUB_REPOSITORY", "").strip()
     token = os.environ.get("GITHUB_TOKEN", "").strip()
-    deploy_run_id = args.staging_deploy_workflow_run_id.strip()
-    if not deploy_run_id:
-        if not repository or not token:
-            print(
-                "::error::GITHUB_REPOSITORY and GITHUB_TOKEN required "
-                "to discover deploy-staging run",
-                file=sys.stderr,
-            )
-            return 1
-        try:
-            deploy_run_id = discover_deploy_run_id(
-                repository=repository,
-                token=token,
-                candidate_sha=args.candidate_sha,
-            )
-        except RuntimeError as exc:
-            print(f"::error::{exc}", file=sys.stderr)
-            return 1
 
-    evidence = build_staging_certification_evidence(
-        candidate_sha=args.candidate_sha,
-        staging_deploy_workflow_run_id=deploy_run_id,
-        certification_workflow_run_id=args.certification_run_id,
-        certification_run_attempt=args.certification_run_attempt,
-        certified_at=args.certified_at,
-    )
+    try:
+        if args.proof_fixture_file is not None:
+            proof = json.loads(args.proof_fixture_file.read_text(encoding="utf-8"))
+            deploy_run_id = args.staging_deploy_workflow_run_id.strip() or "111111111"
+        else:
+            if not repository or not token:
+                print(
+                    "::error::GITHUB_REPOSITORY and GITHUB_TOKEN required",
+                    file=sys.stderr,
+                )
+                return 1
+            client = LiveGitHubActionsClient(repository=repository, token=token)
+            if args.staging_deploy_workflow_run_id.strip():
+                deploy_run = client.get_run(args.staging_deploy_workflow_run_id.strip())
+                verify_certifiable_deploy_run(deploy_run, candidate_sha=args.candidate_sha)
+                deploy_run_id = str(deploy_run["id"])
+            else:
+                deploy_run = discover_certifiable_deploy_run(
+                    client,
+                    candidate_sha=args.candidate_sha,
+                )
+                deploy_run_id = str(deploy_run["id"])
+            proof = download_staging_sha_proof(client, deploy_run_id=deploy_run_id)
+
+        derived = validate_staging_sha_proof_for_certification(
+            proof,
+            candidate_sha=args.candidate_sha,
+        )
+        evidence = build_staging_certification_evidence(
+            derived=derived,
+            staging_deploy_workflow_run_id=deploy_run_id,
+            certification_workflow_run_id=args.certification_run_id,
+            certification_run_attempt=args.certification_run_attempt,
+            certified_at=args.certified_at,
+        )
+    except (StagingDeployProvenanceError, ValueError, RuntimeError) as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     out_path = args.output_dir / ARTIFACT_FILENAME

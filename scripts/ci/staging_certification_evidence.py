@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Schema and validation for staging certification evidence artifacts (RELCTRL-03)."""
+"""Schema and validation for staging certification evidence artifacts (RELCTRL-03/04)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from typing import Any
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 RUN_ID_RE = re.compile(r"^\d+$")
 
-SCHEMA_VERSION = "3"
+SCHEMA_VERSION = "4"
 ARTIFACT_FILENAME = "staging-certification-evidence.json"
 CERT_PASS = "PASS"
 CERT_REJECT = frozenset(
@@ -101,6 +101,10 @@ def validate_staging_certification_evidence(
         if value != candidate:
             raise StagingCertificationError(f"{field} must match candidate SHA exactly")
 
+    project_ref = str(evidence.get("staging_supabase_project_ref") or "").strip()
+    if not project_ref:
+        raise StagingCertificationError("staging_supabase_project_ref is required")
+
     deploy_run_id = _require_run_id(
         evidence.get("staging_deploy_workflow_run_id"),
         "staging_deploy_workflow_run_id",
@@ -141,21 +145,24 @@ def validate_staging_certification_evidence(
 
 def build_staging_certification_evidence(
     *,
-    candidate_sha: str,
+    derived: dict[str, str],
     staging_deploy_workflow_run_id: str,
     certification_workflow_run_id: str,
     certification_run_attempt: int,
     certified_at: str,
 ) -> dict[str, Any]:
-    candidate = _require_sha(candidate_sha, "candidate_sha")
+    candidate = _require_sha(derived["candidate_sha"], "candidate_sha")
     return {
         "schema_version": SCHEMA_VERSION,
         "result": CERT_PASS,
         "mode": "integrated-staging",
         "candidate_sha": candidate,
-        "staging_branch_sha": candidate,
-        "staging_frontend_sha": candidate,
-        "staging_api_sha": candidate,
+        "staging_branch_sha": _require_sha(derived["staging_branch_sha"], "staging_branch_sha"),
+        "staging_frontend_sha": _require_sha(
+            derived["staging_frontend_sha"], "staging_frontend_sha"
+        ),
+        "staging_api_sha": _require_sha(derived["staging_api_sha"], "staging_api_sha"),
+        "staging_supabase_project_ref": derived["staging_supabase_project_ref"],
         "staging_deploy_workflow_run_id": _require_run_id(
             staging_deploy_workflow_run_id,
             "staging_deploy_workflow_run_id",

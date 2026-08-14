@@ -1,0 +1,43 @@
+{
+  "candidate_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "proved_at": "2026-08-13T00:00:00Z",
+  "previews": {
+    "customer": {
+      "portal": "customer",
+      "deployment_url": "https://convergeo-customer-preview.example.vercel.app",
+      "deployment_id": "dpl_customer",
+      "github_commit_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "target": "preview",
+      "api_env_verdict": "verified",
+      "health_verdict": "ok",
+      "health_http": "200"
+    },
+    "vendor": {
+      "portal": "vendor",
+      "deployment_url": "https://convergeo-vendor-preview.example.vercel.app",
+      "deployment_id": "dpl_vendor",
+      "github_commit_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "target": "preview",
+      "api_env_verdict": "verified",
+      "health_verdict": "ok",
+      "health_http": "200"
+    },
+    "admin": {
+      "portal": "admin",
+      "deployment_url": "https://convergeo-admin-preview.example.vercel.app",
+      "deployment_id": "dpl_admin",
+      "github_commit_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "target": "preview",
+      "api_env_verdict": "verified",
+      "health_verdict": "ok",
+      "health_http": "200"
+    }
+  },
+  "api_fingerprint": {
+    "env": "staging",
+    "git_sha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "image_tag": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "supabase_project_ref": "iyasmrmbcrvlfxpzescb"
+  },
+  "migrate_supabase_result": "success"
+}

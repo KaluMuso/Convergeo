@@ -14,6 +14,8 @@ from typing import Any, Protocol
 DEPLOY_STAGING_WORKFLOW = ".github/workflows/deploy-staging.yml"
 RELEASE_CERTIFY_WORKFLOW = ".github/workflows/release-certify.yml"
 STAGING_CERTIFICATION_ARTIFACT = "staging-certification-evidence"
+STAGING_SHA_PROOF_ARTIFACT = "staging-sha-proof"
+STAGING_SHA_PROOF_FILENAME = "staging-sha-proof.json"
 
 
 class GitHubActionsClient(Protocol):
@@ -169,3 +171,25 @@ def extract_artifact_json(zip_bytes: bytes, filename: str) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError(f"{filename} must contain a JSON object")
     return data
+
+
+def download_named_artifact_json(
+    client: GitHubActionsClient,
+    *,
+    run_id: str,
+    artifact_name: str,
+    filename: str,
+    label: str,
+) -> dict[str, Any]:
+    artifacts = client.list_run_artifacts(run_id)
+    target = None
+    for artifact in artifacts:
+        if str(artifact.get("name")) == artifact_name:
+            target = artifact
+            break
+    if target is None:
+        raise ValueError(f"{label} run {run_id} missing artifact {artifact_name!r}")
+    if target.get("expired") is True:
+        raise ValueError(f"{label} artifact expired for run {run_id}")
+    zip_bytes = client.download_artifact_zip(int(target["id"]))
+    return extract_artifact_json(zip_bytes, filename)

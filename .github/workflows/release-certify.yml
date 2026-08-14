@@ -4,6 +4,7 @@ name: Release certification
 # Produces evidence under scripts/qa/evidence/<sha>/<env>/<runId>/.
 # integrated-staging uploads immutable staging-certification-evidence artifact.
 # Does NOT merge. Strict modes exit non-zero unless certification verdict PASS.
+run-name: release-certify ${{ inputs.mode || 'ci' }} ${{ inputs.candidate_sha || github.sha }}
 on:
   schedule:
     # Sunday 03:00 UTC weekly baseline.
@@ -104,7 +105,24 @@ jobs:
             exit 1
           fi
 
-      - name: Checkout exact candidate SHA
+      - name: Require staging branch ref for integrated-staging
+        if: steps.mode.outputs.mode == 'integrated-staging'
+        run: |
+          set -euo pipefail
+          if [ "${{ github.ref }}" != "refs/heads/staging" ]; then
+            echo "::error::integrated-staging must be workflow_dispatch from staging branch (ref=${{ github.ref }})"
+            exit 1
+          fi
+
+      - name: Checkout staging branch (integrated-staging)
+        if: steps.mode.outputs.mode == 'integrated-staging'
+        uses: actions/checkout@v7
+        with:
+          ref: staging
+          fetch-depth: 0
+
+      - name: Checkout exact candidate SHA (non-staging modes)
+        if: steps.mode.outputs.mode != 'integrated-staging'
         uses: actions/checkout@v7
         with:
           ref: ${{ inputs.candidate_sha || github.sha }}
@@ -113,7 +131,11 @@ jobs:
       - name: Verify checkout matches candidate SHA
         run: |
           set -euo pipefail
-          CAND="${{ inputs.candidate_sha || github.sha }}"
+          if [ "${{ steps.mode.outputs.mode }}" = "integrated-staging" ]; then
+            CAND="${{ inputs.candidate_sha }}"
+          else
+            CAND="${{ inputs.candidate_sha || github.sha }}"
+          fi
           HEAD="$(git rev-parse HEAD)"
           if [ "$CAND" != "$HEAD" ]; then
             echo "::error::checkout HEAD ${HEAD} != candidate ${CAND}"
