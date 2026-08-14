@@ -9,7 +9,7 @@
 
 /** @typedef {'local-development'|'ci'|'integrated-staging'|'production-readiness'} CertificationMode */
 
-/** @typedef {'CERTIFIABLE_AFTER_INTEGRATION'|'BASELINE_FAILING'|'BLOCKED_EXTERNAL'|'LOCAL_DEVELOPMENT_REPORT'|'INCOMPLETE_REQUIRED_GATES'} CertificationVerdict */
+/** @typedef {'PASS'|'BASELINE_FAILING'|'BLOCKED_EXTERNAL'|'LOCAL_DEVELOPMENT_REPORT'|'INCOMPLETE_REQUIRED_GATES'} CertificationVerdict */
 
 /** @type {readonly GateStatus[]} */
 export const GATE_STATUSES = Object.freeze([
@@ -177,12 +177,12 @@ export function deriveCertification(gates, opts = {}) {
   const optionalFail = values.some((g) => g.status === "FAIL");
   if (optionalFail) return "BASELINE_FAILING";
 
-  return "CERTIFIABLE_AFTER_INTEGRATION";
+  return "PASS";
 }
 
 /**
  * Strict exit semantics for promotion/certification modes.
- * ONLY CERTIFIABLE_AFTER_INTEGRATION may exit 0.
+ * ONLY PASS may exit 0.
  * local-development (LOCAL_DEVELOPMENT_REPORT) may exit 0 (reporting-only).
  *
  * @param {CertificationVerdict} verdict
@@ -194,7 +194,7 @@ export function exitCodeForVerdict(verdict, mode) {
   if (m === "local-development") {
     return verdict === "LOCAL_DEVELOPMENT_REPORT" ? 0 : 1;
   }
-  return verdict === "CERTIFIABLE_AFTER_INTEGRATION" ? 0 : 1;
+  return verdict === "PASS" ? 0 : 1;
 }
 
 /**

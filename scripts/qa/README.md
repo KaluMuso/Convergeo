@@ -1,67 +1,42 @@
-# Release certification (`scripts/qa`)
+# Release certification framework
 
-Independent certification framework for promotion decisions. Failures are
-undeniable — certificates cannot go green from stale evidence, missing gates,
-or misclassified external blocks.
+Independent, mode-aware release certification for Vergeo5. Produces per-gate JSON
+fragments under `scripts/qa/evidence/<sha>/<environment>/<runId>/` and aggregates
+them into machine-readable certificates.
 
 ## Modes
 
-| Mode                   | Title                                                | Exit 0 when                          |
-| ---------------------- | ---------------------------------------------------- | ------------------------------------ |
-| `local-development`    | Local Development Report (not a release certificate) | report generated                     |
-| `ci`                   | CI Release Certificate                               | `CERTIFIABLE_AFTER_INTEGRATION` only |
-| `integrated-staging`   | Staging Release Certificate                          | `CERTIFIABLE_AFTER_INTEGRATION` only |
-| `production-readiness` | Production-Readiness Certificate                     | `CERTIFIABLE_AFTER_INTEGRATION` only |
+| Mode                   | Certificate title                      | Strict exit 0 when         |
+| ---------------------- | -------------------------------------- | -------------------------- |
+| `local-development`    | Local Development Report (report-only) | `LOCAL_DEVELOPMENT_REPORT` |
+| `ci`                   | CI Release Certificate                 | `PASS` only                |
+| `integrated-staging`   | Staging Release Certificate            | `PASS` only                |
+| `production-readiness` | Production-Readiness Certificate       | `PASS` only                |
 
-Required gates per mode: [`required-gates.json`](./required-gates.json).
+Terminal successful certification verdict is **`PASS`** (all required gates PASS).
+Any `FAIL`, `BLOCKED_EXTERNAL`, `NOT_RUN`, `UNKNOWN`, `MEASUREMENT_UNSTABLE`, or
+missing required gate yields a non-`PASS` verdict and strict modes exit non-zero.
 
-## Evidence isolation
-
-Every run writes to:
-
-```text
-scripts/qa/evidence/<git-sha>/<environment>/<run-id>/gate-*.json
-```
-
-Collectors load **only** that namespace. Fragments whose embedded `sha` /
-`environment` / `run_id` disagree are rejected. Sibling namespaces cannot
-contaminate a certificate.
-
-## Status vocabulary
-
-`PASS` · `FAIL` · `BLOCKED_EXTERNAL` · `NOT_RUN` · `UNKNOWN` · `MEASUREMENT_UNSTABLE`
-
-Missing required gates are injected as `NOT_RUN` and never equal PASS.
-
-## Usage
+## Commands
 
 ```bash
-# Local report (non-blocking)
+# Local report (never a promotion certificate)
 pnpm release-certify:local
 
-# CI-mode static + self-tests (skips E2E/RLS when unavailable)
+# CI static/integration subset
 bash scripts/qa/release-certify.sh --mode ci --layer static --skip-e2e --skip-rls
 
 # Strict staging (requires seed reset, deploy identity proof, etc.)
 bash scripts/qa/release-certify.sh --mode integrated-staging --environment staging
 ```
 
+Integrated-staging certification on GitHub Actions must run via
+`.github/workflows/release-certify.yml` with explicit `candidate_sha` input matching
+the exact staging candidate commit. On success it uploads immutable artifact
+`staging-certification-evidence` consumed by the merge gate (RELCTRL-03).
+
 ## Self-tests
 
 ```bash
-node --test scripts/qa/self-test/*.test.mjs
+pnpm release-certify:self-test
 ```
-
-Includes: evidence isolation (stale SHA rejection), required-gate enforcement,
-RLS classification, command-log sanitization, planted critical FAIL → red exit.
-
-## Recovery semantics
-
-- `backup-script-dry-run` — `backup_drill.sh --dry-run` only
-- `restore-drill-proof` — real restore (`CERT_RUN_RESTORE_DRILL=1`); dry-run
-  cannot satisfy this gate
-
-## Deterministic browser deps
-
-E2E installs once via `npm ci` against committed `e2e/package-lock.json`.
-Never `npm install --no-package-lock`.

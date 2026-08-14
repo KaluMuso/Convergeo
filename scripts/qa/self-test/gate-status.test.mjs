@@ -34,8 +34,8 @@ describe("gate-status vocabulary", () => {
 });
 
 describe("strict exit semantics", () => {
-  it("only CERTIFIABLE_AFTER_INTEGRATION exits 0 in promotion modes", () => {
-    assert.equal(exitCodeForVerdict("CERTIFIABLE_AFTER_INTEGRATION", "integrated-staging"), 0);
+  it("only PASS exits 0 in promotion modes", () => {
+    assert.equal(exitCodeForVerdict("PASS", "integrated-staging"), 0);
     assert.equal(exitCodeForVerdict("BASELINE_FAILING", "integrated-staging"), 1);
     assert.equal(exitCodeForVerdict("BLOCKED_EXTERNAL", "integrated-staging"), 1);
     assert.equal(exitCodeForVerdict("INCOMPLETE_REQUIRED_GATES", "ci"), 1);
@@ -84,7 +84,7 @@ describe("required-gate manifest enforcement", () => {
       { lint: { status: "PASS" }, "rls-isolation": { status: "NOT_RUN" } },
       { mode: "ci", requiredGateIds: ["lint", "rls-isolation"] },
     );
-    assert.notEqual(v, "CERTIFIABLE_AFTER_INTEGRATION");
+    assert.notEqual(v, "PASS");
     assert.equal(exitCodeForVerdict(v, "ci"), 1);
   });
 
@@ -93,15 +93,15 @@ describe("required-gate manifest enforcement", () => {
       { "perf-web-vitals-smoke": { status: "MEASUREMENT_UNSTABLE" } },
       { mode: "integrated-staging", requiredGateIds: ["perf-web-vitals-smoke"] },
     );
-    assert.notEqual(v, "CERTIFIABLE_AFTER_INTEGRATION");
+    assert.notEqual(v, "PASS");
   });
 
-  it("all required PASS → CERTIFIABLE_AFTER_INTEGRATION", () => {
+  it("all required PASS → PASS", () => {
     const v = deriveCertification(
       { lint: { status: "PASS" }, typecheck: { status: "PASS" } },
       { mode: "ci", requiredGateIds: ["lint", "typecheck"] },
     );
-    assert.equal(v, "CERTIFIABLE_AFTER_INTEGRATION");
+    assert.equal(v, "PASS");
     assert.equal(exitCodeForVerdict(v, "ci"), 0);
   });
 });

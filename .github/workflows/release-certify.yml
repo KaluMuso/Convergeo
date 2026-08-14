@@ -2,7 +2,8 @@ name: Release certification
 
 # Independent release-certification suite — on-demand and weekly.
 # Produces evidence under scripts/qa/evidence/<sha>/<env>/<runId>/.
-# Does NOT merge. Strict modes exit non-zero unless CERTIFIABLE_AFTER_INTEGRATION.
+# integrated-staging uploads immutable staging-certification-evidence artifact.
+# Does NOT merge. Strict modes exit non-zero unless certification verdict PASS.
 on:
   schedule:
     # Sunday 03:00 UTC weekly baseline.
@@ -19,6 +20,10 @@ on:
           - ci
           - integrated-staging
           - production-readiness
+      candidate_sha:
+        description: "Exact candidate git SHA to certify (required for integrated-staging)"
+        required: false
+        type: string
       environment:
         description: "Target environment label"
         required: false
@@ -46,9 +51,10 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
-  group: release-certify-${{ github.ref }}
+  group: release-certify-${{ github.ref }}-${{ inputs.candidate_sha || github.sha }}
   cancel-in-progress: false
 
 jobs:
@@ -65,7 +71,7 @@ jobs:
       STAGING_PROOF_DIR: ${{ secrets.STAGING_PROOF_DIR }}
       STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
       STAGING_API_FINGERPRINT: ${{ secrets.STAGING_API_FINGERPRINT }}
-      CANDIDATE_SHA: ${{ github.sha }}
+      CANDIDATE_SHA: ${{ inputs.candidate_sha || github.sha }}
       CERT_RUN_ID: ${{ github.run_id }}
       CERT_RUN_RESTORE_DRILL: ${{ inputs.run_restore_drill && '1' || '0' }}
       SEND_SMS_HOOK_SECRET: "v1,whsec_Y2ktZHVtbXktc2VuZC1zbXMtaG9vay1zZWNyZXQtMDAw"
@@ -77,8 +83,46 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
       SUPABASE_ANON_KEY: test-anon-key
     steps:
-      - name: Checkout
+      - name: Resolve certification mode
+        id: mode
+        run: |
+          set -euo pipefail
+          MODE="${{ inputs.mode || 'ci' }}"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+
+      - name: Require explicit candidate SHA for integrated-staging
+        if: steps.mode.outputs.mode == 'integrated-staging'
+        run: |
+          set -euo pipefail
+          CAND="${{ inputs.candidate_sha }}"
+          if [ -z "$CAND" ]; then
+            echo "::error::integrated-staging requires workflow_dispatch input candidate_sha"
+            exit 1
+          fi
+          if ! printf '%s' "$CAND" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::candidate_sha must be a 40-char git SHA"
+            exit 1
+          fi
+
+      - name: Checkout exact candidate SHA
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.candidate_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify checkout matches candidate SHA
+        run: |
+          set -euo pipefail
+          CAND="${{ inputs.candidate_sha || github.sha }}"
+          HEAD="$(git rev-parse HEAD)"
+          if [ "$CAND" != "$HEAD" ]; then
+            echo "::error::checkout HEAD ${HEAD} != candidate ${CAND}"
+            exit 1
+          fi
+          if ! git cat-file -e "${CAND}^{commit}" 2>/dev/null; then
+            echo "::error::candidate ${CAND} is not reachable in repository history"
+            exit 1
+          fi
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -145,14 +189,36 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Run certification orchestrator
+        id: certify
         run: |
-          MODE="${{ inputs.mode || 'ci' }}"
+          MODE="${{ steps.mode.outputs.mode }}"
           ENV_LABEL="${{ inputs.environment || 'ci' }}"
           ARGS=(--mode "$MODE" --environment "$ENV_LABEL" --run-id "${{ github.run_id }}")
           if [ "${{ inputs.skip_e2e }}" = "true" ]; then
             ARGS+=(--skip-e2e)
           fi
           bash scripts/qa/release-certify.sh "${ARGS[@]}"
+
+      - name: Emit staging certification evidence artifact
+        if: success() && steps.mode.outputs.mode == 'integrated-staging'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/emit_staging_certification_evidence.py \
+            --candidate-sha "${{ inputs.candidate_sha || github.sha }}" \
+            --certification-run-id "${{ github.run_id }}" \
+            --certification-run-attempt "${{ github.run_attempt }}"
+
+      - name: Upload staging certification evidence
+        if: success() && steps.mode.outputs.mode == 'integrated-staging'
+        uses: actions/upload-artifact@v7
+        with:
+          name: staging-certification-evidence
+          path: staging-certification-evidence/staging-certification-evidence.json
+          retention-days: 90
+          if-no-files-found: error
 
       - name: Upload release certificate
         if: always()

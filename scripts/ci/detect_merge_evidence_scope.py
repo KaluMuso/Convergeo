@@ -14,6 +14,7 @@ from pathlib import Path
 GOVERNANCE_PREFIXES = (
     ".github/",
     "scripts/ci/",
+    "scripts/qa/",
     "docs/",
 )
 
@@ -21,6 +22,7 @@ GOVERNANCE_EXACT = frozenset(
     {
         "infra/merge-release-evidence.example.json",
         "infra/release-evidence-contract.example.json",
+        "infra/staging-certification-evidence.example.json",
     }
 )
 

@@ -1,5 +1,6 @@
 {
   "schema_version": "2",
+  "notes": "DEPRECATED checked-in merge evidence (RELCTRL-02). Runtime/schema PRs must NOT commit post-certification JSON. Use immutable GitHub Actions artifact staging-certification-evidence produced by release-certify.yml integrated-staging. See infra/staging-certification-evidence.example.json and docs/ops/production-release-control.md.",
   "candidate_sha": "0000000000000000000000000000000000000000",
   "staging_certification": {
     "mode": "integrated-staging",
@@ -14,11 +15,10 @@
     "evidence_run_id": "123456789"
   },
   "provenance": {
-    "source_workflow": "release-certify.yml",
+    "source_workflow": ".github/workflows/release-certify.yml",
     "source_run_id": "123456789",
     "source_run_attempt": 1,
     "artifact_name": "staging-certification-evidence",
     "artifact_digest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-  },
-  "notes": "Copy to infra/merge-release-evidence.json in the release PR to master only after deploy-staging.yml and release-certify integrated-staging complete with result PASS. candidate_sha and all staging SHAs must equal the PR head exactly. CI validates this file read-only — it never rewrites SHAs or run ids."
+  }
 }

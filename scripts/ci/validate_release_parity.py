@@ -18,11 +18,7 @@ from typing import Any
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 MIGRATION_FILE_RE = re.compile(r"^(.+?)_.+\.sql$")
 CERT_OK = {
-    "CERTIFIABLE_AFTER_INTEGRATION",
     "PASS",
-    "pass",
-    "success",
-    "SUCCESS",
 }
 
 
