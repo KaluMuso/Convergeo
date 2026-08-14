@@ -36,17 +36,31 @@ has already passed **integrated staging certification** recorded as an immutable
 GitHub Actions artifact. The candidate tree must **not** gain a post-certification
 commit (RELCTRL-03 eliminates the SHA deadlock from checked-in JSON).
 
-**Correct flow (artifact-native — RELCTRL-03):**
+**Correct flow (artifact-native — RELCTRL-03 + RELCTRL-04 full staging proof):**
 
 ```text
 candidate PR head frozen at SHA X (no further commits on candidate branch)
   → staging branch points to exact SHA X
-  → deploy-staging.yml succeeds for SHA X
-  → release-certify.yml runs integrated-staging at SHA X (candidate_sha input)
-  → workflow uploads staging-certification-evidence artifact for SHA X
+  → deploy-staging.yml push run succeeds for SHA X (NOT workflow_dispatch)
+  → deploy run uploads staging-sha-proof artifact (3 portals + API fingerprint + migrate success)
+  → release-certify.yml dispatched FROM staging ref at SHA X (candidate_sha=X)
+  → emitter downloads staging-sha-proof; derives staging-certification-evidence from proof
   → merge gate queries GitHub Actions for completed certification at SHA X
-  → gate downloads artifact, validates contents, verifies deploy-staging run
+  → gate downloads both artifacts, validates provenance chain, verifies certifiable deploy run
   → master merge allowed (candidate tree unchanged)
+```
+
+**Provenance chain (RELCTRL-04 release invariant):**
+
+```text
+PR head SHA X
+  == staging Git branch SHA X
+  == deploy-staging push head_sha X
+  == staging-sha-proof candidate X
+  == Customer / Vendor / Admin Preview SHA X
+  == staging API fingerprint git_sha X
+  == release-certify head_sha X (from staging ref)
+  == staging-certification-evidence candidate X
 ```
 
 **Forbidden flows:**
@@ -56,18 +70,26 @@ PR opens → CI rewrites merge-release-evidence.json → merge allowed (RELCTRL-
 
 certify SHA X → commit evidence JSON on candidate → new head SHA Y invalidates X (RELCTRL-03 blocked)
 
+deploy-staging workflow_dispatch with skip_vercel / skip_migrate → not certifiable (RELCTRL-04)
+
+certification emitter reconstructs portal/API SHAs from candidate alone → blocked (RELCTRL-04)
+
 ordinary CI run masquerades as staging certification (blocked)
 ```
 
 Steps for runtime/schema PRs:
 
-1. Deploy exact candidate SHA on `staging` via `.github/workflows/deploy-staging.yml`.
-2. Dispatch `.github/workflows/release-certify.yml` with `mode=integrated-staging`
-   and `candidate_sha=<exact PR head>` until certification verdict is **`PASS`**.
-3. Confirm artifact `staging-certification-evidence` exists on the successful
+1. Push exact candidate SHA to `staging` (triggers `.github/workflows/deploy-staging.yml`
+   on `push` — manual `workflow_dispatch` deploys are operational only, not certifiable).
+2. Confirm the deploy run uploaded artifact `staging-sha-proof` with all three portal
+   preview SHAs, API fingerprint, and `migrate_supabase_result=success`.
+3. Dispatch `.github/workflows/release-certify.yml` **from the `staging` branch ref**
+   with `mode=integrated-staging` and `candidate_sha=<exact PR head>` until verdict
+   is **`PASS`**.
+4. Confirm artifact `staging-certification-evidence` exists on the successful
    certification workflow run (see `infra/staging-certification-evidence.example.json`).
-4. Open/update the PR to `master` **without** adding post-certification commits.
-5. CI job **Merge release gate** calls `verify_staging_certification_gate.py`
+5. Open/update the PR to `master` **without** adding post-certification commits.
+6. CI job **Merge release gate** calls `verify_staging_certification_gate.py`
    (read-only; `git diff --exit-code`).
 
 Application/runtime changes require artifact certification. **Governance-only** PRs
@@ -93,13 +115,19 @@ deployments only.
 
 Before merging to `master`:
 
-1. `staging` is deployed via `.github/workflows/deploy-staging.yml`.
-2. Staging API fingerprint, Supabase migration replay, and Vercel Preview proofs
-   match the **same** `candidate_sha`.
+1. `staging` is deployed via `.github/workflows/deploy-staging.yml` **push** event
+   (full pipeline; no `skip_vercel` / `skip_migrate`).
+2. Deploy run must upload `staging-sha-proof` — customer, vendor, and admin preview
+   SHAs plus API fingerprint must all resolve to the **same** `candidate_sha`;
+   `migrate_supabase_result` must be **`success`** (skipped migrations are not
+   certifiable).
 3. `scripts/qa/release-certify.sh --mode integrated-staging` (via
-   `.github/workflows/release-certify.yml` with explicit `candidate_sha`) must
-   complete with terminal verdict **`PASS`**.
-4. Immutable artifact `staging-certification-evidence` is uploaded by the
+   `.github/workflows/release-certify.yml` dispatched from **`staging` ref** with
+   explicit `candidate_sha`) must complete with terminal verdict **`PASS`**.
+4. Emitter `emit_staging_certification_evidence.py` derives
+   `staging-certification-evidence` from verified `staging-sha-proof` values — never
+   from candidate identity alone.
+5. Immutable artifact `staging-certification-evidence` is uploaded by the
    certification workflow — **not** checked into the candidate PR. Post-merge
    **release parity contract** evidence for Production verification remains
    separate (see `infra/release-evidence-contract.example.json`).
@@ -180,6 +208,7 @@ files.
 - `.github/workflows/deploy-staging.yml` — staging pipeline
 - `.github/workflows/deploy-production.yml` — legacy API redeploy
 - `scripts/ci/verify_staging_certification_gate.py` — artifact-native merge gate
+- `scripts/ci/staging_deploy_provenance.py` — certifiable deploy run + staging-sha-proof
 - `scripts/ci/emit_staging_certification_evidence.py` — certification artifact emitter
 - `scripts/ci/validate_merge_release_evidence.py` — legacy checked-in JSON validator (regression tests only)
 - `scripts/ci/detect_merge_evidence_scope.py` — governance-only exemption detector
