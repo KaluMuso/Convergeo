@@ -205,29 +205,270 @@ else
   bad "promote-production-frontends.yml must not git push or fast-forward production"
 fi
 
-# 10) merge release evidence validator
-TMP_MERGE="$(mktemp)"
-cat >"$TMP_MERGE" <<JSON
+# 10+) merge release evidence validator (RELCTRL-02)
+SHA_CANDIDATE="eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+SHA_OTHER="ffffffffffffffffffffffffffffffffffffffff"
+SHA_DIGEST="abababababababababababababababababababababababababababababababab"
+INCIDENT640_HEAD="bf9cca402a4d83a0d37a0534c54398a1461ed5d7"
+
+merge_evidence_reject() {
+  local label="$1"
+  shift
+  set +e
+  "$@" >/tmp/merge-reject.txt 2>&1
+  local rc=$?
+  set -e
+  if [[ "$rc" -ne 0 ]]; then
+    ok "merge evidence rejects: $label"
+  else
+    bad "merge evidence should reject: $label"
+    cat /tmp/merge-reject.txt || true
+  fi
+}
+
+merge_evidence_accept() {
+  local label="$1"
+  shift
+  if "$@" >/tmp/merge-accept.txt 2>&1; then
+    ok "merge evidence accepts: $label"
+  else
+    bad "merge evidence should accept: $label"
+    cat /tmp/merge-accept.txt || true
+  fi
+}
+
+write_pass_evidence() {
+  local path="$1"
+  local candidate="$2"
+  local deploy_run="${3:-111111111}"
+  local cert_run="${4:-222222222}"
+  cat >"$path" <<JSON
 {
-  "schema_version": "1",
-  "candidate_sha": "${SHA_FRONTEND}",
+  "schema_version": "2",
+  "candidate_sha": "${candidate}",
   "staging_certification": {
-    "result": "CERTIFIABLE_AFTER_INTEGRATION",
-    "candidate_sha": "${SHA_FRONTEND}",
-    "staging_frontend_sha": "${SHA_FRONTEND}",
+    "mode": "integrated-staging",
+    "result": "PASS",
+    "candidate_sha": "${candidate}",
+    "staging_frontend_sha": "${candidate}",
+    "staging_api_sha": "${candidate}",
+    "staging_branch_sha": "${candidate}",
     "certified_at": "2026-08-13T00:00:00Z",
-    "evidence_run_id": "merge-test"
+    "certification_completed_at": "2026-08-13T00:05:00Z",
+    "staging_deploy_workflow_run_id": "${deploy_run}",
+    "evidence_run_id": "${cert_run}"
+  },
+  "provenance": {
+    "source_workflow": "release-certify.yml",
+    "source_run_id": "${cert_run}",
+    "source_run_attempt": 1,
+    "artifact_name": "staging-certification-evidence",
+    "artifact_digest_sha256": "${SHA_DIGEST}"
   }
 }
 JSON
-if python3 scripts/ci/validate_merge_release_evidence.py \
-  --candidate-sha "${SHA_FRONTEND}" \
-  --evidence "$TMP_MERGE" >/tmp/merge-ok.txt 2>&1; then
-  ok "merge release evidence validator accepts aligned staging cert"
+}
+
+TMP_MERGE="$(mktemp)"
+
+# 10) PR #640 incident fixture must reject
+merge_evidence_reject "PR #640 incident fixture" \
+  python3 scripts/ci/validate_merge_release_evidence.py \
+    --candidate-sha "${INCIDENT640_HEAD}" \
+    --evidence scripts/ci/fixtures/merge-evidence-incident-640.json \
+    --skip-github-provenance \
+    --current-run-id "999999999"
+
+# 11) CERTIFIABLE_AFTER_INTEGRATION must reject even when SHAs align
+write_pass_evidence "$TMP_MERGE" "${SHA_CANDIDATE}"
+python3 - <<PY
+import json, pathlib
+p = pathlib.Path("${TMP_MERGE}")
+data = json.loads(p.read_text())
+data["staging_certification"]["result"] = "CERTIFIABLE_AFTER_INTEGRATION"
+p.write_text(json.dumps(data, indent=2) + "\n")
+PY
+merge_evidence_reject "CERTIFIABLE_AFTER_INTEGRATION" \
+  python3 scripts/ci/validate_merge_release_evidence.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --evidence "$TMP_MERGE" \
+    --skip-github-provenance
+
+# 12) candidate SHA mismatch
+write_pass_evidence "$TMP_MERGE" "${SHA_CANDIDATE}"
+merge_evidence_reject "candidate SHA mismatch" \
+  python3 scripts/ci/validate_merge_release_evidence.py \
+    --candidate-sha "${SHA_OTHER}" \
+    --evidence "$TMP_MERGE" \
+    --skip-github-provenance
+
+# 13) frontend SHA mismatch
+write_pass_evidence "$TMP_MERGE" "${SHA_CANDIDATE}"
+python3 - <<PY
+import json, pathlib
+p = pathlib.Path("${TMP_MERGE}")
+data = json.loads(p.read_text())
+data["staging_certification"]["staging_frontend_sha"] = "${SHA_OTHER}"
+p.write_text(json.dumps(data, indent=2) + "\n")
+PY
+merge_evidence_reject "frontend SHA mismatch" \
+  python3 scripts/ci/validate_merge_release_evidence.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --evidence "$TMP_MERGE" \
+    --skip-github-provenance
+
+# 14) API SHA mismatch
+write_pass_evidence "$TMP_MERGE" "${SHA_CANDIDATE}"
+python3 - <<PY
+import json, pathlib
+p = pathlib.Path("${TMP_MERGE}")
+data = json.loads(p.read_text())
+data["staging_certification"]["staging_api_sha"] = "${SHA_OTHER}"
+p.write_text(json.dumps(data, indent=2) + "\n")
+PY
+merge_evidence_reject "API SHA mismatch" \
+  python3 scripts/ci/validate_merge_release_evidence.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --evidence "$TMP_MERGE" \
+    --skip-github-provenance
+
+# 15) missing staging deploy run id
+write_pass_evidence "$TMP_MERGE" "${SHA_CANDIDATE}"
+python3 - <<PY
+import json, pathlib
+p = pathlib.Path("${TMP_MERGE}")
+data = json.loads(p.read_text())
+del data["staging_certification"]["staging_deploy_workflow_run_id"]
+p.write_text(json.dumps(data, indent=2) + "\n")
+PY
+merge_evidence_reject "missing staging deploy run id" \
+  python3 scripts/ci/validate_merge_release_evidence.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --evidence "$TMP_MERGE" \
+    --skip-github-provenance
+
+# 16) missing provenance block
+write_pass_evidence "$TMP_MERGE" "${SHA_CANDIDATE}"
+python3 - <<PY
+import json, pathlib
+p = pathlib.Path("${TMP_MERGE}")
+data = json.loads(p.read_text())
+del data["provenance"]
+p.write_text(json.dumps(data, indent=2) + "\n")
+PY
+merge_evidence_reject "missing provenance" \
+  python3 scripts/ci/validate_merge_release_evidence.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --evidence "$TMP_MERGE" \
+    --skip-github-provenance
+
+# 17) identical deploy/cert run ids (ordinary CI masquerade)
+write_pass_evidence "$TMP_MERGE" "${SHA_CANDIDATE}" "31810254648" "31810254648"
+merge_evidence_reject "identical deploy and certification run ids" \
+  python3 scripts/ci/validate_merge_release_evidence.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --evidence "$TMP_MERGE" \
+    --skip-github-provenance \
+    --current-run-id "31810254648"
+
+# 18) PASS + exact SHAs + provenance accepts (offline)
+write_pass_evidence "$TMP_MERGE" "${SHA_CANDIDATE}"
+merge_evidence_accept "PASS with aligned SHAs and provenance" \
+  python3 scripts/ci/validate_merge_release_evidence.py \
+    --candidate-sha "${SHA_CANDIDATE}" \
+    --evidence "$TMP_MERGE" \
+    --skip-github-provenance
+
+# 19) validation does not mutate evidence file
+write_pass_evidence "$TMP_MERGE" "${SHA_CANDIDATE}"
+BEFORE="$(sha256sum "$TMP_MERGE" | awk '{print $1}')"
+python3 scripts/ci/validate_merge_release_evidence.py \
+  --candidate-sha "${SHA_CANDIDATE}" \
+  --evidence "$TMP_MERGE" \
+  --skip-github-provenance >/tmp/merge-immutable.txt 2>&1
+AFTER="$(sha256sum "$TMP_MERGE" | awk '{print $1}')"
+if [[ "$BEFORE" == "$AFTER" ]]; then
+  ok "merge evidence validation is read-only (sha256 unchanged)"
 else
-  bad "merge release evidence validator should accept aligned staging cert"
-  cat /tmp/merge-ok.txt || true
+  bad "merge evidence validation must not mutate evidence file"
 fi
+
+# 20) validation must not create or mutate tracked merge evidence path
+write_pass_evidence "$TMP_MERGE" "${SHA_CANDIDATE}"
+TRACKED="infra/merge-release-evidence.json"
+if [[ -f "$TRACKED" ]]; then
+  TRACKED_BEFORE="$(sha256sum "$TRACKED" | awk '{print $1}')"
+else
+  TRACKED_BEFORE=""
+fi
+python3 scripts/ci/validate_merge_release_evidence.py \
+  --candidate-sha "${SHA_CANDIDATE}" \
+  --evidence "$TMP_MERGE" \
+  --skip-github-provenance >/tmp/merge-tracked.txt 2>&1
+if [[ -f "$TRACKED" ]]; then
+  TRACKED_AFTER="$(sha256sum "$TRACKED" | awk '{print $1}')"
+  if [[ "$TRACKED_BEFORE" == "$TRACKED_AFTER" ]]; then
+    ok "validation does not mutate tracked infra/merge-release-evidence.json"
+  else
+    bad "validation must not mutate tracked infra/merge-release-evidence.json"
+  fi
+elif [[ -z "$TRACKED_BEFORE" ]]; then
+  ok "validation does not create infra/merge-release-evidence.json"
+else
+  bad "validation must not delete infra/merge-release-evidence.json"
+fi
+
+# 21) bind-merge-release-evidence.py must not exist
+if [[ ! -f scripts/ci/bind-merge-release-evidence.py ]]; then
+  ok "bind-merge-release-evidence.py removed"
+else
+  bad "bind-merge-release-evidence.py must be deleted (RELCTRL-02)"
+fi
+
+# 22) governance scope detector fail-closed cases
+if python3 scripts/ci/detect_merge_evidence_scope.py --paths docs/ops/production-release-control.md \
+  | grep -qi 'governance-only'; then
+  ok "scope detector exempts docs-only changes"
+else
+  bad "scope detector should exempt docs-only changes"
+fi
+
+if python3 scripts/ci/detect_merge_evidence_scope.py --paths apps/customer/src/page.tsx \
+  | grep -qi 'merge evidence required'; then
+  ok "scope detector requires evidence for apps/** changes"
+else
+  bad "scope detector should require evidence for apps/** changes"
+fi
+
+if python3 scripts/ci/detect_merge_evidence_scope.py --paths services/api/app/main.py \
+  | grep -qi 'merge evidence required'; then
+  ok "scope detector requires evidence for services runtime changes"
+else
+  bad "scope detector should require evidence for services runtime changes"
+fi
+
+if python3 scripts/ci/detect_merge_evidence_scope.py --paths services/api/tests/test_foo.py \
+  | grep -qi 'governance-only'; then
+  ok "scope detector exempts services/api/tests/** only changes"
+else
+  bad "scope detector should exempt services/api/tests/** only changes"
+fi
+
+if python3 scripts/ci/detect_merge_evidence_scope.py \
+  --paths docs/ops/production-release-control.md apps/customer/x.tsx \
+  | grep -qi 'merge evidence required'; then
+  ok "scope detector requires evidence when runtime paths mixed with docs"
+else
+  bad "scope detector must not exempt mixed runtime + governance changes"
+fi
+
+if python3 scripts/ci/detect_merge_evidence_scope.py --paths infra/staging/docker-compose.yml \
+  | grep -qi 'merge evidence required'; then
+  ok "scope detector requires evidence for infra deployment config"
+else
+  bad "scope detector should require evidence for infra deployment config"
+fi
+
 rm -f "$TMP_MERGE"
 
 echo "==> summary: pass=$pass fail=$fail"

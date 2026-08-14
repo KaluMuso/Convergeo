@@ -11,5 +11,5 @@
     "evidence_run_id": "31810254648",
     "staging_deploy_workflow_run_id": "31810254648"
   },
-  "notes": "STG-DRIFT-02 governance PR: physical parity canonical migrations and convergence hardening. Staging deploy certification pending post-merge integration window."
+  "notes": "Regression fixture reproducing PR #640 self-attesting merge evidence. Must REJECT."
 }

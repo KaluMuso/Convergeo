@@ -195,27 +195,24 @@ jobs:
         id: scope
         run: |
           set -euo pipefail
-          base="${{ github.event.pull_request.base.sha }}"
-          head="${{ github.event.pull_request.head.sha }}"
-          # CI/governance tests under services/api/tests/ do not ship runtime code.
-          changed="$(git diff --name-only "$base" "$head" | grep -Ev '^services/api/tests/' || true)"
-          if [ -n "$changed" ] && printf '%s\n' "$changed" | grep -Eq \
-            '^(apps/|services/|packages/|supabase/migrations/)'; then
-            echo "required=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "required=false" >> "$GITHUB_OUTPUT"
-            echo "governance-only PR — merge evidence not required"
-          fi
+          python3 scripts/ci/detect_merge_evidence_scope.py \
+            --base "${{ github.event.pull_request.base.sha }}" \
+            --head "${{ github.event.pull_request.head.sha }}" \
+            --github-output "$GITHUB_OUTPUT"
 
-      - name: Validate merge release evidence
+      - name: Validate merge release evidence (read-only)
         if: steps.scope.outputs.required == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          python3 scripts/ci/bind-merge-release-evidence.py \
-            --candidate-sha "${{ github.event.pull_request.head.sha }}"
+          git diff --exit-code
           python3 scripts/ci/validate_merge_release_evidence.py \
             --candidate-sha "${{ github.event.pull_request.head.sha }}" \
-            --evidence infra/merge-release-evidence.json
+            --evidence infra/merge-release-evidence.json \
+            --current-run-id "${{ github.run_id }}"
+          git diff --exit-code
 
   secret-scan:
     name: Secret scan (gitleaks)
