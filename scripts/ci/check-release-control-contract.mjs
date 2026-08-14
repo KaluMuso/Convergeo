@@ -19,11 +19,17 @@ const REQUIRED_FILES = [
   "scripts/ci/validate_release_parity.py",
   "scripts/ci/validate_production_db_evidence.py",
   "scripts/ci/validate_merge_release_evidence.py",
+  "scripts/ci/detect_merge_evidence_scope.py",
   "scripts/ci/capture_production_db_evidence.py",
   "scripts/ci/vercel-wait-production.sh",
 ];
 
 const FORBIDDEN_PATTERNS = [
+  {
+    file: ".github/workflows/ci.yml",
+    pattern: /bind-merge-release-evidence\.py/,
+    message: "ci.yml merge gate must not invoke bind-merge-release-evidence.py (RELCTRL-02)",
+  },
   {
     file: ".github/workflows/promote-production-frontends.yml",
     pattern: /git push|refs\/heads\/production|fast-forward production/i,
