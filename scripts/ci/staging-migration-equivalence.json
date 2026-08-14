@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "verified_source_sha": "9922486d8fa0ed5443a150a5c236fb64f1200791",
+  "schema_version": 2,
+  "verified_source_sha": "897d292a9145f0868525d2f2075a2c0c38cf814c",
   "sandbox_project_ref": "iyasmrmbcrvlfxpzescb",
   "pre_repair_ledger_digest": "3332cd5481de7c1040cd60e3f44d7aec02c8d17714d99a51e13f6ea0cc22b1bd",
   "pre_repair_ledger_row_count": 103,
@@ -13,7 +13,7 @@
       "canonical_version": "0096",
       "canonical_filename": "0096_listing_location_stock_service_role.sql",
       "canonical_normalized_sha256": "62b4888edc2e9df4883a3ce32689fb41f3d509e5cb21e3d7cbdbdf9ad61416a6",
-      "verified_source_sha": "9922486d8fa0ed5443a150a5c236fb64f1200791"
+      "verified_source_sha": "897d292a9145f0868525d2f2075a2c0c38cf814c"
     },
     {
       "remote_version": "20260813072721",
@@ -23,7 +23,7 @@
       "canonical_version": "20260809214010",
       "canonical_filename": "20260809214010_harden_event_access_ticket_lifecycle.sql",
       "canonical_normalized_sha256": "c82fff33bb1e4749f52ba92e0f4c7ee81cd87d9dcc684e185ee76abe4c8adccf",
-      "verified_source_sha": "9922486d8fa0ed5443a150a5c236fb64f1200791"
+      "verified_source_sha": "897d292a9145f0868525d2f2075a2c0c38cf814c"
     },
     {
       "remote_version": "20260813072742",
@@ -33,7 +33,7 @@
       "canonical_version": "20260812010000",
       "canonical_filename": "20260812010000_vendor_business_archetypes.sql",
       "canonical_normalized_sha256": "a7fda8e28fdcabb37f10afb29a41f09a6a57763711e92996a6e1569b59eb5386",
-      "verified_source_sha": "9922486d8fa0ed5443a150a5c236fb64f1200791"
+      "verified_source_sha": "897d292a9145f0868525d2f2075a2c0c38cf814c"
     },
     {
       "remote_version": "20260813073039",
@@ -43,7 +43,7 @@
       "canonical_version": "20260813063754",
       "canonical_filename": "20260813063754_event_strategy_completion_foundation.sql",
       "canonical_normalized_sha256": "7724e4e64db9e9d03553722e92af76e4b98582becfbbc71b1060b52d194645e2",
-      "verified_source_sha": "9922486d8fa0ed5443a150a5c236fb64f1200791"
+      "verified_source_sha": "897d292a9145f0868525d2f2075a2c0c38cf814c"
     }
   ],
   "superseded_rehearsals": [
@@ -51,6 +51,10 @@
       "remote_version": "20260813072110",
       "remote_name": "cursor_assisted_remediation_rehearsal",
       "classification": "staging_only_retained_schema",
+      "canonical_versions": [
+        "20260813160000",
+        "20260813160100"
+      ],
       "remote_normalized_sha256": "dc582edec810128cc5a613184e17ba1c3f8a2fd98402d0ecdf4d28dfd3255926",
       "schema_effects_retained": [
         "private.rate_counter_scope_manifest",
@@ -59,14 +63,18 @@
         "public.listing_view_dedup.surface column + PK",
         "public.record_listing_view(uuid,uuid,date,text,text,uuid)"
       ],
-      "repository_replay": "not_represented",
-      "provenance": "Sandbox cursor-assisted remediation applied 2026-08-13; schema retained after ledger normalization; future canonical migration required before production.",
+      "repository_replay": "20260813160000 + 20260813160100",
+      "physical_parity_required": true,
+      "provenance": "Sandbox cursor-assisted remediation; ledger row removable only after physical parity manifest passes.",
       "sandbox_project_ref": "iyasmrmbcrvlfxpzescb"
     },
     {
       "remote_version": "20260813072511",
       "remote_name": "harden_public_security_definers_rehearsal_v3",
       "classification": "staging_only_retained_schema",
+      "canonical_versions": [
+        "20260813160200"
+      ],
       "remote_normalized_sha256": "35ad97ba921a8fde28cc992e6c708f1b8274f561f19bc98fbbe7a99a8ba059f6",
       "schema_effects_retained": [
         "private.has_role + public.has_role delegator",
@@ -74,23 +82,35 @@
         "extensions schema for pg_trgm/vector",
         "revoked execute on selected SECURITY DEFINER helpers"
       ],
-      "repository_replay": "not_represented",
-      "provenance": "Sandbox security-definer hardening rehearsal v3; live sandbox matches this posture; ledger row removed during repair without DDL rollback.",
+      "repository_replay": "20260813160200",
+      "physical_parity_required": true,
+      "provenance": "Sandbox security-definer hardening rehearsal v3; ledger row removable only after physical parity manifest passes.",
       "sandbox_project_ref": "iyasmrmbcrvlfxpzescb"
     },
     {
       "remote_version": "20260813072919",
       "remote_name": "drop_legacy_listing_view_overload_rehearsal",
       "classification": "superseded_by_rehearsal_chain",
+      "canonical_versions": [
+        "20260813160100"
+      ],
       "remote_normalized_sha256": "1e2677b7fd383e1b73060c9311d3c7eec8466b3807c74b74e61e92252155ba8f",
       "superseded_by_remote": "20260813072110",
       "schema_effects_retained": [
         "public.record_listing_view(uuid,uuid,date,text) dropped; 6-arg overload remains"
       ],
-      "repository_replay": "0094 creates 4-arg overload; rehearsal chain replaces with 6-arg telemetry contract",
-      "provenance": "Dependent on 20260813072110; safe to revert ledger row only.",
+      "repository_replay": "20260813160100",
+      "physical_parity_required": true,
+      "provenance": "Dependent on 20260813072110; canonicalized in 20260813160100.",
       "sandbox_project_ref": "iyasmrmbcrvlfxpzescb"
     }
   ],
-  "truly_pending_after_repair": ["20260812090000", "20260813064106", "20260813150000"]
+  "truly_pending_after_repair": [
+    "20260812090000",
+    "20260813064106",
+    "20260813150000",
+    "20260813160000",
+    "20260813160100",
+    "20260813160200"
+  ]
 }

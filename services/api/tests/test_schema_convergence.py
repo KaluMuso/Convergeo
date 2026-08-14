@@ -15,6 +15,11 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 MODULE_PATH = REPO_ROOT / "scripts" / "ci" / "schema_convergence.py"
 COHORTS_PATH = REPO_ROOT / "scripts" / "ci" / "schema-convergence-cohorts.json"
 EQUIVALENCE_PATH = REPO_ROOT / "scripts/ci/staging-migration-equivalence.json"
+PHYSICAL_MANIFEST_PATH = REPO_ROOT / "scripts/ci/staging-physical-parity-manifest.json"
+PHYSICAL_LIVE = REPO_ROOT / "scripts/ci/fixtures/sandbox-physical-state-live-20260814.json"
+PHYSICAL_PRE_PARITY = (
+    REPO_ROOT / "scripts/ci/fixtures/repository-replay-physical-state-pre-parity-20260814.json"
+)
 REHEARSAL_SCRIPT = REPO_ROOT / "scripts" / "ci" / "rehearse-schema-convergence.sh"
 PREFLIGHT_SCRIPT = REPO_ROOT / "scripts/ci/preflight-staging-schema-convergence.sh"
 DEPLOY_STAGING_WORKFLOW = REPO_ROOT / ".github/workflows/deploy-staging.yml"
@@ -207,6 +212,18 @@ def _equivalence_manifest() -> dict[str, Any]:
     return loaded
 
 
+def _physical_manifest() -> dict[str, Any]:
+    loaded = json.loads(PHYSICAL_MANIFEST_PATH.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def _physical_state(path: Path = PHYSICAL_LIVE) -> dict[str, Any]:
+    loaded = json.loads(path.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
 def test_live_sandbox_fixture_requires_ledger_repair() -> None:
     repo_versions = _repo_versions()
     manifest = _equivalence_manifest()
@@ -216,8 +233,11 @@ def test_live_sandbox_fixture_requires_ledger_repair() -> None:
         remote_versions=remote,
         manifest=manifest,
         migrations_dir=REPO_ROOT / "supabase" / "migrations",
+        physical_manifest=_physical_manifest(),
+        physical_state=_physical_state(),
     )
     assert plan.ledger_repair_required is True
+    assert plan.schema_repair_required is True
     assert plan.unresolved_remote_versions == []
     assert len(plan.equivalent_remote_aliases) == 4
     assert len(plan.superseded_rehearsal_rows) == 3
@@ -225,10 +245,38 @@ def test_live_sandbox_fixture_requires_ledger_repair() -> None:
         "20260812090000",
         "20260813064106",
         "20260813150000",
+        "20260813160000",
+        "20260813160100",
+        "20260813160200",
     ]
 
 
-def test_post_repair_canonical_fixture_passes_preflight() -> None:
+def test_post_repair_canonical_fixture_passes_preflight_with_physical_parity() -> None:
+    repo_versions = _repo_versions()
+    manifest = _equivalence_manifest()
+    remote = schema.parse_ledger(POST_REPAIR_LEDGER.read_text(encoding="utf-8"))
+    plan = schema.evaluate_staging_preflight(
+        repository_versions=repo_versions,
+        remote_versions=remote,
+        manifest=manifest,
+        migrations_dir=REPO_ROOT / "supabase" / "migrations",
+        physical_manifest=_physical_manifest(),
+        physical_state=_physical_state(),
+    )
+    assert plan.ledger_repair_required is False
+    assert plan.schema_repair_required is False
+    assert plan.unresolved_physical_drift == []
+    assert plan.unresolved_remote_versions == []
+    assert plan.equivalent_remote_aliases == []
+    assert plan.superseded_rehearsal_rows == []
+    assert plan.truly_pending_repository_migrations == [
+        "20260812090000",
+        "20260813064106",
+        "20260813150000",
+    ]
+
+
+def test_post_repair_ledger_without_physical_evidence_still_blocked() -> None:
     repo_versions = _repo_versions()
     manifest = _equivalence_manifest()
     remote = schema.parse_ledger(POST_REPAIR_LEDGER.read_text(encoding="utf-8"))
@@ -239,14 +287,98 @@ def test_post_repair_canonical_fixture_passes_preflight() -> None:
         migrations_dir=REPO_ROOT / "supabase" / "migrations",
     )
     assert plan.ledger_repair_required is False
-    assert plan.unresolved_remote_versions == []
-    assert plan.equivalent_remote_aliases == []
-    assert plan.superseded_rehearsal_rows == []
-    assert plan.truly_pending_repository_migrations == [
-        "20260812090000",
-        "20260813064106",
-        "20260813150000",
+    assert plan.schema_repair_required is True
+    assert plan.unresolved_physical_drift == [
+        "physical state evidence required before staging deploy"
     ]
+
+
+def test_superseded_ledger_removed_but_physical_drift_still_blocks() -> None:
+    repo_versions = _repo_versions()
+    manifest = _equivalence_manifest()
+    remote = schema.parse_ledger(POST_REPAIR_LEDGER.read_text(encoding="utf-8"))
+    plan = schema.evaluate_staging_preflight(
+        repository_versions=repo_versions,
+        remote_versions=remote,
+        manifest=manifest,
+        migrations_dir=REPO_ROOT / "supabase" / "migrations",
+        physical_manifest=_physical_manifest(),
+        physical_state=_physical_state(PHYSICAL_PRE_PARITY),
+    )
+    assert plan.ledger_repair_required is False
+    assert plan.schema_repair_required is True
+    assert plan.unresolved_physical_drift
+
+
+def test_live_sandbox_physical_state_passes_canonical_manifest() -> None:
+    drift = schema.evaluate_physical_parity(
+        manifest=_physical_manifest(),
+        state=_physical_state(),
+    )
+    assert drift == []
+
+
+def test_pre_parity_replay_state_fails_canonical_manifest() -> None:
+    drift = schema.evaluate_physical_parity(
+        manifest=_physical_manifest(),
+        state=_physical_state(PHYSICAL_PRE_PARITY),
+    )
+    assert drift
+
+
+def test_wrong_record_listing_view_signature_blocks() -> None:
+    state = _physical_state()
+    six_arg = (
+        "public.record_listing_view("
+        "p_session_id uuid, p_listing_id uuid, p_day date, p_view_kind text, "
+        "p_surface text, p_viewer_user_id uuid)"
+    )
+    four_arg = (
+        "public.record_listing_view("
+        "p_session_id uuid, p_listing_id uuid, p_day date, p_view_kind text)"
+    )
+    bad = dict(state)
+    bad_functions = dict(state["functions"])
+    bad_functions.pop(six_arg)
+    bad_functions[four_arg] = {
+        "security": "definer",
+        "search_path": ["public"],
+        "grants": ["service_role"],
+    }
+    bad["functions"] = bad_functions
+    bad["absent_functions"] = []
+    drift = schema.evaluate_physical_parity(manifest=_physical_manifest(), state=bad)
+    assert any("record_listing_view" in item for item in drift)
+
+
+def test_wrong_has_role_privilege_blocks() -> None:
+    state = _physical_state()
+    bad = dict(state)
+    bad_functions = dict(state["functions"])
+    bad_functions["public.has_role(required_role text)"] = {
+        "security": "definer",
+        "search_path": ["public"],
+        "grants": ["anon", "authenticated", "postgres", "service_role"],
+    }
+    bad["functions"] = bad_functions
+    drift = schema.evaluate_physical_parity(manifest=_physical_manifest(), state=bad)
+    assert any("public_has_role_invoker" in item for item in drift)
+
+
+def test_wrong_bump_rate_counter_grants_blocks() -> None:
+    state = _physical_state()
+    bad = dict(state)
+    bad_functions = dict(state["functions"])
+    bad_functions[
+        "public.bump_rate_counter(p_scope text, p_key text, p_window interval, p_limit integer)"
+    ] = {
+        "security": "definer",
+        "search_path": ["public", "private", "extensions"],
+        "grants": ["anon", "authenticated", "postgres", "service_role"],
+    }
+    bad["functions"] = bad_functions
+    drift = schema.evaluate_physical_parity(manifest=_physical_manifest(), state=bad)
+    assert any("bump_rate_counter_grants" in item for item in drift)
 
 
 def test_wrong_alias_hash_rejected(tmp_path: Path) -> None:
@@ -301,6 +433,10 @@ def test_duplicate_remote_alias_manifest_rejected() -> None:
 
 
 def test_staging_preflight_cli_blocks_live_fixture() -> None:
+    expected_sha = subprocess.check_output(
+        ["git", "-C", str(REPO_ROOT), "rev-parse", "HEAD"],
+        text=True,
+    ).strip()
     result = subprocess.run(
         [
             sys.executable,
@@ -308,7 +444,7 @@ def test_staging_preflight_cli_blocks_live_fixture() -> None:
             "--staging-preflight",
             "--json-plan",
             "--expected-source-sha",
-            _equivalence_manifest()["verified_source_sha"],
+            expected_sha,
             "--target-kind",
             "sandbox",
             "--target-project-ref",
@@ -342,6 +478,8 @@ def test_staging_preflight_cli_accepts_post_repair_fixture() -> None:
             schema.SANDBOX_PROJECT_REF,
             "--ledger-file",
             str(POST_REPAIR_LEDGER),
+            "--physical-state-file",
+            str(PHYSICAL_LIVE),
             "--ledger-source",
             "live-query",
         ],
@@ -353,6 +491,7 @@ def test_staging_preflight_cli_accepts_post_repair_fixture() -> None:
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["ledger_repair_required"] is False
+    assert payload["schema_repair_required"] is False
 
 
 def test_deploy_staging_runs_preflight_before_db_push() -> None:
@@ -362,6 +501,7 @@ def test_deploy_staging_runs_preflight_before_db_push() -> None:
     reconcile = workflow.index("reconcile-staging-migrations.sh")
     assert preflight < push < reconcile
     assert "STAGING_LEDGER_REPAIR_REQUIRED" in workflow
+    assert "STAGING_SCHEMA_REPAIR_REQUIRED" in workflow
 
 
 def test_preflight_adapter_forbids_production_and_db_push() -> None:
@@ -373,3 +513,4 @@ def test_preflight_adapter_forbids_production_and_db_push() -> None:
         assert "supabase db push" not in line
     assert "production ref is forbidden" in script
     assert "schema_convergence.py" in script
+    assert "extract-physical-schema-state.sql" in script
