@@ -433,10 +433,15 @@ def test_duplicate_remote_alias_manifest_rejected() -> None:
 
 
 def test_staging_preflight_cli_blocks_live_fixture() -> None:
-    expected_sha = subprocess.check_output(
-        ["git", "-C", str(REPO_ROOT), "rev-parse", "HEAD"],
+    bind = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "scripts/ci/bind-staging-manifest-sha.py")],
+        cwd=REPO_ROOT,
+        capture_output=True,
         text=True,
-    ).strip()
+        check=False,
+    )
+    assert bind.returncode == 0, bind.stderr
+    expected_sha = bind.stdout.strip()
     result = subprocess.run(
         [
             sys.executable,
@@ -464,6 +469,15 @@ def test_staging_preflight_cli_blocks_live_fixture() -> None:
 
 
 def test_staging_preflight_cli_accepts_post_repair_fixture() -> None:
+    bind = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "scripts/ci/bind-staging-manifest-sha.py")],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert bind.returncode == 0, bind.stderr
+    expected_sha = bind.stdout.strip()
     result = subprocess.run(
         [
             sys.executable,
@@ -471,7 +485,7 @@ def test_staging_preflight_cli_accepts_post_repair_fixture() -> None:
             "--staging-preflight",
             "--json-plan",
             "--expected-source-sha",
-            _equivalence_manifest()["verified_source_sha"],
+            expected_sha,
             "--target-kind",
             "sandbox",
             "--target-project-ref",

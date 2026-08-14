@@ -37,6 +37,8 @@ fi
 
 expected_sha="${EXPECTED_SOURCE_SHA:-$(git -C "${REPO_ROOT}" rev-parse HEAD)}"
 
+python3 "${REPO_ROOT}/scripts/ci/bind-staging-manifest-sha.py" >/dev/null
+
 python3 "${REPO_ROOT}/scripts/ci/schema_convergence.py" \
   --migrations-dir "${REPO_ROOT}/supabase/migrations" \
   --cohorts-file "${REPO_ROOT}/scripts/ci/schema-convergence-cohorts.json" \
