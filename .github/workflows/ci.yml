@@ -211,6 +211,8 @@ jobs:
         if: steps.scope.outputs.required == 'true'
         run: |
           set -euo pipefail
+          python3 scripts/ci/bind-merge-release-evidence.py \
+            --candidate-sha "${{ github.event.pull_request.head.sha }}"
           python3 scripts/ci/validate_merge_release_evidence.py \
             --candidate-sha "${{ github.event.pull_request.head.sha }}" \
             --evidence infra/merge-release-evidence.json
