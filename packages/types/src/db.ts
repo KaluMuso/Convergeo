@@ -2949,6 +2949,7 @@ export type Database = {
           day: string
           listing_id: string
           session_id: string
+          surface: string
           view_kind: string
         }
         Insert: {
@@ -2956,6 +2957,7 @@ export type Database = {
           day: string
           listing_id: string
           session_id: string
+          surface?: string
           view_kind: string
         }
         Update: {
@@ -2963,6 +2965,7 @@ export type Database = {
           day?: string
           listing_id?: string
           session_id?: string
+          surface?: string
           view_kind?: string
         }
         Relationships: [
@@ -5689,7 +5692,6 @@ export type Database = {
       }
       has_role: { Args: { required_role: string }; Returns: boolean }
       is_valid_price_tiers: { Args: { tiers: Json }; Returns: boolean }
-      is_verified_business: { Args: { uid: string }; Returns: boolean }
       listing_line_total_ngwee: {
         Args: { p_price_per_step_ngwee: number; p_steps: number }
         Returns: number
@@ -5713,7 +5715,9 @@ export type Database = {
           p_day: string
           p_listing_id: string
           p_session_id: string
+          p_surface?: string
           p_view_kind: string
+          p_viewer_user_id?: string
         }
         Returns: number
       }
@@ -5808,8 +5812,6 @@ export type Database = {
         Args: { p_vendor_id: string }
         Returns: undefined
       }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
       vendor_follower_count: { Args: { p_vendor_id: string }; Returns: number }
       vendor_licence_is_valid: {
         Args: { p_class: string; p_vendor_id: string }

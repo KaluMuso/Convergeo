@@ -58,3 +58,10 @@ regexes = [
   '''dispute/cancel''',
   '''golden-fixture-key-42''',
 ]
+
+[[allowlists]]
+description = "RELCTRL-01 merge evidence — 40-char git SHAs in staging_api_sha trigger generic-api-key"
+paths = [
+  '''(?i)infra/merge-release-evidence\.json$''',
+  '''(?i)infra/merge-release-evidence\.example\.json$''',
+]

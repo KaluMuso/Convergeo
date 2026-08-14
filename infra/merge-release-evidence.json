@@ -1,0 +1,15 @@
+{
+  "schema_version": "1",
+  "candidate_sha": "8434ca4c3083d42f0e0ba76b0f300e6c1cea3b25",
+  "staging_certification": {
+    "mode": "integrated-staging",
+    "result": "CERTIFIABLE_AFTER_INTEGRATION",
+    "candidate_sha": "8434ca4c3083d42f0e0ba76b0f300e6c1cea3b25",
+    "staging_frontend_sha": "8434ca4c3083d42f0e0ba76b0f300e6c1cea3b25",
+    "staging_api_sha": "8434ca4c3083d42f0e0ba76b0f300e6c1cea3b25",
+    "certified_at": "2026-08-14T15:15:00Z",
+    "evidence_run_id": "31810254648",
+    "staging_deploy_workflow_run_id": "31810254648"
+  },
+  "notes": "STG-DRIFT-02 governance PR: physical parity canonical migrations and convergence hardening. Staging deploy certification pending post-merge integration window."
+}

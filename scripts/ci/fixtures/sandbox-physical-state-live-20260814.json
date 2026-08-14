@@ -1,0 +1,55 @@
+{
+  "extracted_at_utc": "2026-08-14T14:10:00+00:00",
+  "tables": {
+    "private.rate_counter_scope_manifest": true
+  },
+  "metrics": {
+    "rate_counter_scope_count": 78
+  },
+  "columns": {
+    "public.listing_view_dedup.surface": {
+      "nullable": false,
+      "default": "'unknown'::text"
+    }
+  },
+  "primary_keys": {
+    "public.listing_view_dedup": {
+      "columns": ["session_id", "listing_id", "day", "view_kind", "surface"]
+    }
+  },
+  "functions": {
+    "public.has_role(required_role text)": {
+      "security": "invoker",
+      "search_path": ["private", "public", "extensions"],
+      "grants": ["anon", "authenticated", "postgres", "service_role"]
+    },
+    "private.has_role(required_role text)": {
+      "security": "definer",
+      "search_path": ["public", "extensions"],
+      "grants": ["anon", "authenticated", "postgres", "service_role"]
+    },
+    "public.bump_rate_counter(p_scope text, p_key text, p_window interval, p_limit integer)": {
+      "security": "definer",
+      "search_path": ["public", "private", "extensions"],
+      "grants": ["postgres", "service_role"]
+    },
+    "public.record_listing_view(p_session_id uuid, p_listing_id uuid, p_day date, p_view_kind text, p_surface text, p_viewer_user_id uuid)": {
+      "security": "definer",
+      "search_path": ["public", "extensions"],
+      "grants": ["postgres", "service_role"]
+    },
+    "private.is_verified_business(uid uuid)": {
+      "security": "definer",
+      "search_path": ["public", "extensions"],
+      "grants": ["postgres", "service_role"]
+    }
+  },
+  "absent_functions": [
+    "public.is_verified_business(uid uuid)",
+    "public.record_listing_view(p_session_id uuid, p_listing_id uuid, p_day date, p_view_kind text)"
+  ],
+  "extensions": {
+    "pg_trgm": "extensions",
+    "vector": "extensions"
+  }
+}

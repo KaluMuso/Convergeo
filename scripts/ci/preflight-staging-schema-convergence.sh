@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Read-only staging deploy schema-convergence preflight.
 #
-# Captures the linked sandbox ledger once, evaluates drift against the checked-in
-# equivalence manifest, and fails closed before any ``supabase db push`` when
-# ledger normalization remains outstanding.
+# Captures the linked sandbox ledger and physical schema state, evaluates drift
+# against the checked-in equivalence + physical parity manifests, and fails
+# closed before any ``supabase db push`` when ledger or physical repair remains.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -22,19 +22,29 @@ die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 command -v psql >/dev/null 2>&1 || die "psql is required for the read-only ledger query"
 
 ledger_file="$(mktemp)"
-trap 'rm -f "${ledger_file}"' EXIT
+physical_file="$(mktemp)"
+trap 'rm -f "${ledger_file}" "${physical_file}"' EXIT
 
 if ! psql "${SUPABASE_DB_URL}" -v ON_ERROR_STOP=1 -tA -c \
   'select version from supabase_migrations.schema_migrations order by version' >"${ledger_file}"; then
   die "remote ledger query failed; no preflight evidence was produced"
 fi
 
+if ! psql "${SUPABASE_DB_URL}" -v ON_ERROR_STOP=1 -tA \
+  -f "${REPO_ROOT}/scripts/ci/extract-physical-schema-state.sql" >"${physical_file}"; then
+  die "physical schema state query failed; no preflight evidence was produced"
+fi
+
 expected_sha="${EXPECTED_SOURCE_SHA:-$(git -C "${REPO_ROOT}" rev-parse HEAD)}"
+
+python3 "${REPO_ROOT}/scripts/ci/bind-staging-manifest-sha.py" >/dev/null
 
 python3 "${REPO_ROOT}/scripts/ci/schema_convergence.py" \
   --migrations-dir "${REPO_ROOT}/supabase/migrations" \
   --cohorts-file "${REPO_ROOT}/scripts/ci/schema-convergence-cohorts.json" \
   --equivalence-manifest "${REPO_ROOT}/scripts/ci/staging-migration-equivalence.json" \
+  --physical-parity-manifest "${REPO_ROOT}/scripts/ci/staging-physical-parity-manifest.json" \
+  --physical-state-file "${physical_file}" \
   --staging-preflight \
   --json-plan \
   --expected-source-sha "${expected_sha}" \

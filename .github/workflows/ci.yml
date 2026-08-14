@@ -211,6 +211,8 @@ jobs:
         if: steps.scope.outputs.required == 'true'
         run: |
           set -euo pipefail
+          python3 scripts/ci/bind-merge-release-evidence.py \
+            --candidate-sha "${{ github.event.pull_request.head.sha }}"
           python3 scripts/ci/validate_merge_release_evidence.py \
             --candidate-sha "${{ github.event.pull_request.head.sha }}" \
             --evidence infra/merge-release-evidence.json
@@ -646,7 +648,7 @@ jobs:
           for f in test_release test_release_accounting test_reconcile; do
             echo "::group::$f"
             psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
-              -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; DROP SCHEMA IF EXISTS auth CASCADE;"
+              -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS extensions CASCADE; DROP EXTENSION IF EXISTS vector CASCADE; DROP EXTENSION IF EXISTS pg_trgm CASCADE;"
             uv run pytest "tests/$f.py" -q
             echo "::endgroup::"
           done

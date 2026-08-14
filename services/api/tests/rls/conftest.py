@@ -342,6 +342,16 @@ def assert_tester_is_rls_bound(conn: PgConn) -> None:
         )
 
 
+def reset_public_schema_for_migrations(conn: PgConn) -> None:
+    """Drop public/auth and extension objects so migrations replay from 0001."""
+    conn.run("DROP SCHEMA IF EXISTS public CASCADE")
+    conn.run("CREATE SCHEMA public")
+    conn.run("DROP SCHEMA IF EXISTS auth CASCADE")
+    conn.run("DROP SCHEMA IF EXISTS extensions CASCADE")
+    conn.run("DROP EXTENSION IF EXISTS vector CASCADE")
+    conn.run("DROP EXTENSION IF EXISTS pg_trgm CASCADE")
+
+
 def apply_migrations(conn: PgConn) -> None:
     # Roles FIRST, and inside this function rather than only at its call sites.
     #
@@ -792,9 +802,7 @@ def db(db_url: str) -> Generator[PgConn, None, None]:
         pytest.skip(f"Postgres not reachable at {db_url}")
     ensure_roles(conn)
     if not schema_ready(conn):
-        conn.run("DROP SCHEMA IF EXISTS public CASCADE")
-        conn.run("CREATE SCHEMA public")
-        conn.run("DROP SCHEMA IF EXISTS auth CASCADE")
+        reset_public_schema_for_migrations(conn)
         # Re-create the roles: dropping and rebuilding the schemas above does not
         # drop roles, but apply_migrations' grants need them present, and this
         # keeps the ordering obvious to the next reader.

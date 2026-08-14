@@ -24,6 +24,7 @@ PRODUCTION_PROJECT_REF = "dpadrlxukcjbewpqympu"
 SANDBOX_PROJECT_REF = "iyasmrmbcrvlfxpzescb"
 MIGRATION_FILE_RE = re.compile(r"^(?P<version>[0-9]+)_.+\.sql$")
 STAGING_LEDGER_REPAIR_REQUIRED = "STAGING_LEDGER_REPAIR_REQUIRED"
+STAGING_SCHEMA_REPAIR_REQUIRED = "STAGING_SCHEMA_REPAIR_REQUIRED"
 
 
 class SchemaConvergenceError(ValueError):
@@ -48,7 +49,10 @@ class ConvergencePlan:
     truly_pending_repository_migrations: list[str]
     unresolved_remote_versions: list[str]
     ledger_repair_required: bool
+    schema_repair_required: bool
+    unresolved_physical_drift: list[str]
     manifest_sha256: str
+    physical_manifest_sha256: str
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -58,7 +62,10 @@ class ConvergencePlan:
             "truly_pending_repository_migrations": self.truly_pending_repository_migrations,
             "unresolved_remote_versions": self.unresolved_remote_versions,
             "ledger_repair_required": self.ledger_repair_required,
+            "schema_repair_required": self.schema_repair_required,
+            "unresolved_physical_drift": self.unresolved_physical_drift,
             "manifest_sha256": self.manifest_sha256,
+            "physical_manifest_sha256": self.physical_manifest_sha256,
         }
 
 
@@ -191,6 +198,218 @@ def equivalence_manifest_digest(manifest: dict[str, Any]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def physical_manifest_digest(manifest: dict[str, Any]) -> str:
+    """Hash the physical parity manifest for attestation."""
+    encoded = json.dumps(manifest, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def load_physical_parity_manifest(
+    path: Path,
+    *,
+    expected_source_sha: str | None = None,
+) -> dict[str, Any]:
+    """Load the repository-bound physical parity contract."""
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise SchemaConvergenceError(f"physical parity manifest not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise SchemaConvergenceError(f"invalid physical parity manifest JSON: {exc.msg}") from exc
+
+    if not isinstance(value, dict):
+        raise SchemaConvergenceError("physical parity manifest must be a JSON object")
+    if value.get("sandbox_project_ref") != SANDBOX_PROJECT_REF:
+        raise SchemaConvergenceError("physical parity manifest sandbox_project_ref mismatch")
+    verified = value.get("verified_source_sha")
+    if not isinstance(verified, str) or not verified:
+        raise SchemaConvergenceError("physical parity manifest lacks verified_source_sha")
+    if expected_source_sha and verified != expected_source_sha:
+        raise SchemaConvergenceError(
+            "physical parity manifest verified_source_sha does not match repository HEAD"
+        )
+    checks = value.get("checks")
+    if not isinstance(checks, list) or not checks:
+        raise SchemaConvergenceError("physical parity manifest must contain checks array")
+    return value
+
+
+def load_physical_state(path: Path) -> dict[str, Any]:
+    """Load a normalized physical schema snapshot produced by the extractor."""
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise SchemaConvergenceError(f"physical state file not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise SchemaConvergenceError(f"invalid physical state JSON: {exc.msg}") from exc
+    if not isinstance(value, dict):
+        raise SchemaConvergenceError("physical state must be a JSON object")
+    for key in ("tables", "metrics", "columns", "primary_keys", "functions", "extensions"):
+        if key not in value or not isinstance(value[key], dict):
+            raise SchemaConvergenceError(f"physical state missing object field: {key}")
+    absent = value.get("absent_functions")
+    if absent is not None and not isinstance(absent, list):
+        raise SchemaConvergenceError("physical state absent_functions must be an array")
+    return value
+
+
+def _function_key(schema: str, name: str, args: str) -> str:
+    return f"{schema}.{name}({args})"
+
+
+def _function_entry(state: dict[str, Any], *, schema: str, name: str, args: str) -> dict[str, Any] | None:
+    functions = state["functions"]
+    entry = functions.get(_function_key(schema, name, args))
+    return entry if isinstance(entry, dict) else None
+
+
+def _evaluate_physical_check(check: dict[str, Any], state: dict[str, Any]) -> str | None:
+    """Return a drift message when the check fails, else None."""
+    check_id = str(check.get("id", "unknown"))
+    check_type = check.get("type")
+    if check_type == "table_exists":
+        schema = str(check.get("schema", ""))
+        name = str(check.get("name", ""))
+        tables = state["tables"]
+        if not tables.get(f"{schema}.{name}"):
+            return f"{check_id}: missing table {schema}.{name}"
+        return None
+    if check_type == "metric_equals":
+        metric = str(check.get("metric", ""))
+        expected = check.get("expected")
+        actual = state["metrics"].get(metric)
+        if actual != expected:
+            return f"{check_id}: metric {metric} expected {expected!r}, got {actual!r}"
+        return None
+    if check_type == "column":
+        schema = str(check.get("schema", ""))
+        table = str(check.get("table", ""))
+        column = str(check.get("column", ""))
+        key = f"{schema}.{table}.{column}"
+        entry = state["columns"].get(key)
+        if not isinstance(entry, dict):
+            return f"{check_id}: missing column {key}"
+        if "nullable" in check and bool(entry.get("nullable")) != bool(check["nullable"]):
+            return (
+                f"{check_id}: column {key} nullable expected {check['nullable']!r}, "
+                f"got {entry.get('nullable')!r}"
+            )
+        return None
+    if check_type == "primary_key_columns":
+        schema = str(check.get("schema", ""))
+        table = str(check.get("table", ""))
+        expected_columns = check.get("columns")
+        if not isinstance(expected_columns, list):
+            raise SchemaConvergenceError(f"check {check_id} has invalid columns list")
+        pk = state["primary_keys"].get(f"{schema}.{table}")
+        if not isinstance(pk, dict):
+            return f"{check_id}: missing primary key on {schema}.{table}"
+        actual_columns = pk.get("columns")
+        if actual_columns != expected_columns:
+            return (
+                f"{check_id}: primary key on {schema}.{table} expected "
+                f"{expected_columns!r}, got {actual_columns!r}"
+            )
+        return None
+    if check_type == "function_identity":
+        entry = _function_entry(
+            state,
+            schema=str(check.get("schema", "")),
+            name=str(check.get("name", "")),
+            args=str(check.get("args", "")),
+        )
+        if entry is None:
+            return (
+                f"{check_id}: missing function "
+                f"{check.get('schema')}.{check.get('name')}({check.get('args')})"
+            )
+        return None
+    if check_type == "function_absent":
+        signature = str(check.get("signature", ""))
+        absent = state.get("absent_functions") or []
+        if signature not in absent:
+            return f"{check_id}: function still present: {signature}"
+        return None
+    if check_type == "function_security":
+        entry = _function_entry(
+            state,
+            schema=str(check.get("schema", "")),
+            name=str(check.get("name", "")),
+            args=str(check.get("args", "")),
+        )
+        if entry is None:
+            return f"{check_id}: missing function for security check"
+        expected = str(check.get("security", ""))
+        actual = str(entry.get("security", ""))
+        if actual != expected:
+            return f"{check_id}: security expected {expected!r}, got {actual!r}"
+        return None
+    if check_type == "function_search_path":
+        entry = _function_entry(
+            state,
+            schema=str(check.get("schema", "")),
+            name=str(check.get("name", "")),
+            args=str(check.get("args", "")),
+        )
+        if entry is None:
+            return f"{check_id}: missing function for search_path check"
+        expected = check.get("search_path")
+        actual = entry.get("search_path")
+        if expected != actual:
+            return (
+                f"{check_id}: search_path expected {expected!r}, got {actual!r}"
+            )
+        return None
+    if check_type == "function_grants":
+        entry = _function_entry(
+            state,
+            schema=str(check.get("schema", "")),
+            name=str(check.get("name", "")),
+            args=str(check.get("args", "")),
+        )
+        if entry is None:
+            return f"{check_id}: missing function for grants check"
+        allowed = check.get("allowed_grantees")
+        if not isinstance(allowed, list):
+            raise SchemaConvergenceError(f"check {check_id} has invalid allowed_grantees")
+        actual = entry.get("grants")
+        if not isinstance(actual, list):
+            return f"{check_id}: function grants missing"
+        allowed_set = set(str(item) for item in allowed)
+        actual_set = set(str(item) for item in actual)
+        extra = sorted(actual_set - allowed_set)
+        if extra:
+            return f"{check_id}: unexpected execute grantees: {', '.join(extra)}"
+        return None
+    if check_type == "extension_schema":
+        name = str(check.get("name", ""))
+        expected_schema = str(check.get("schema", ""))
+        actual_schema = state["extensions"].get(name)
+        if actual_schema != expected_schema:
+            return (
+                f"{check_id}: extension {name} expected schema {expected_schema!r}, "
+                f"got {actual_schema!r}"
+            )
+        return None
+    raise SchemaConvergenceError(f"unsupported physical parity check type: {check_type!r}")
+
+
+def evaluate_physical_parity(
+    *,
+    manifest: dict[str, Any],
+    state: dict[str, Any],
+) -> list[str]:
+    """Compare live physical state against the repository parity contract."""
+    drift: list[str] = []
+    for check in manifest["checks"]:
+        if not isinstance(check, dict):
+            raise SchemaConvergenceError("physical parity check must be an object")
+        message = _evaluate_physical_check(check, state)
+        if message is not None:
+            drift.append(message)
+    return drift
+
+
 def verify_alias_hashes(
     *,
     migrations_dir: Path,
@@ -313,7 +532,10 @@ def classify_staging_ledger(
             truly_pending_repository_migrations=[],
             unresolved_remote_versions=unresolved,
             ledger_repair_required=True,
+            schema_repair_required=True,
+            unresolved_physical_drift=[],
             manifest_sha256=equivalence_manifest_digest(manifest),
+            physical_manifest_sha256="",
         )
 
     canonical_applied_set = set(canonical_applied)
@@ -325,6 +547,7 @@ def classify_staging_ledger(
     pending = [version for version in repository_versions if version not in canonical_applied_set]
     unknown_remote = [version for version in remote_versions if version not in repo_set]
     ledger_repair_required = bool(aliases or superseded or unknown_remote)
+    schema_repair_required = bool(superseded)
 
     return ConvergencePlan(
         canonical_already_applied=canonical_applied_sorted,
@@ -333,7 +556,10 @@ def classify_staging_ledger(
         truly_pending_repository_migrations=pending,
         unresolved_remote_versions=[],
         ledger_repair_required=ledger_repair_required,
+        schema_repair_required=schema_repair_required,
+        unresolved_physical_drift=[],
         manifest_sha256=equivalence_manifest_digest(manifest),
+        physical_manifest_sha256="",
     )
 
 
@@ -343,13 +569,45 @@ def evaluate_staging_preflight(
     remote_versions: list[str],
     manifest: dict[str, Any],
     migrations_dir: Path,
+    physical_manifest: dict[str, Any] | None = None,
+    physical_state: dict[str, Any] | None = None,
 ) -> ConvergencePlan:
     """Run hash verification and return a deterministic staging deploy plan."""
     verify_alias_hashes(migrations_dir=migrations_dir, manifest=manifest)
-    return classify_staging_ledger(
+    plan = classify_staging_ledger(
         repository_versions=repository_versions,
         remote_versions=remote_versions,
         manifest=manifest,
+    )
+    if physical_manifest is None or physical_state is None:
+        return ConvergencePlan(
+            canonical_already_applied=plan.canonical_already_applied,
+            equivalent_remote_aliases=plan.equivalent_remote_aliases,
+            superseded_rehearsal_rows=plan.superseded_rehearsal_rows,
+            truly_pending_repository_migrations=plan.truly_pending_repository_migrations,
+            unresolved_remote_versions=plan.unresolved_remote_versions,
+            ledger_repair_required=plan.ledger_repair_required,
+            schema_repair_required=True,
+            unresolved_physical_drift=[
+                "physical state evidence required before staging deploy"
+            ],
+            manifest_sha256=plan.manifest_sha256,
+            physical_manifest_sha256="",
+        )
+
+    drift = evaluate_physical_parity(manifest=physical_manifest, state=physical_state)
+    schema_repair_required = bool(drift) or plan.schema_repair_required
+    return ConvergencePlan(
+        canonical_already_applied=plan.canonical_already_applied,
+        equivalent_remote_aliases=plan.equivalent_remote_aliases,
+        superseded_rehearsal_rows=plan.superseded_rehearsal_rows,
+        truly_pending_repository_migrations=plan.truly_pending_repository_migrations,
+        unresolved_remote_versions=plan.unresolved_remote_versions,
+        ledger_repair_required=plan.ledger_repair_required,
+        schema_repair_required=schema_repair_required,
+        unresolved_physical_drift=drift,
+        manifest_sha256=plan.manifest_sha256,
+        physical_manifest_sha256=physical_manifest_digest(physical_manifest),
     )
 
 
@@ -443,6 +701,12 @@ def _parser() -> argparse.ArgumentParser:
         type=Path,
         default=Path("scripts/ci/staging-migration-equivalence.json"),
     )
+    parser.add_argument(
+        "--physical-parity-manifest",
+        type=Path,
+        default=Path("scripts/ci/staging-physical-parity-manifest.json"),
+    )
+    parser.add_argument("--physical-state-file", type=Path)
     parser.add_argument("--print-manifest", action="store_true")
     parser.add_argument("--staging-preflight", action="store_true")
     parser.add_argument("--expected-source-sha")
@@ -499,11 +763,21 @@ def main(argv: list[str] | None = None) -> int:
                 expected_source_sha=args.expected_source_sha,
             )
             remote_versions = parse_ledger(args.ledger_file.read_text(encoding="utf-8"))
+            physical_manifest: dict[str, Any] | None = None
+            physical_state: dict[str, Any] | None = None
+            if args.physical_state_file:
+                physical_manifest = load_physical_parity_manifest(
+                    args.physical_parity_manifest,
+                    expected_source_sha=args.expected_source_sha,
+                )
+                physical_state = load_physical_state(args.physical_state_file)
             plan = evaluate_staging_preflight(
                 repository_versions=repository_versions,
                 remote_versions=remote_versions,
                 manifest=equivalence,
                 migrations_dir=args.migrations_dir,
+                physical_manifest=physical_manifest,
+                physical_state=physical_state,
             )
             if plan.unresolved_remote_versions:
                 raise SchemaConvergenceError(
@@ -516,6 +790,15 @@ def main(argv: list[str] | None = None) -> int:
                 print(json.dumps(plan.as_dict(), sort_keys=True))
             if plan.ledger_repair_required:
                 print(f"::error::{STAGING_LEDGER_REPAIR_REQUIRED}", file=sys.stderr)
+                return 1
+            if plan.schema_repair_required:
+                print(f"::error::{STAGING_SCHEMA_REPAIR_REQUIRED}", file=sys.stderr)
+                if plan.unresolved_physical_drift:
+                    print(
+                        "unresolved physical drift: "
+                        + "; ".join(plan.unresolved_physical_drift),
+                        file=sys.stderr,
+                    )
                 return 1
             return 0
 

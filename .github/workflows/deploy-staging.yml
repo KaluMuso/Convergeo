@@ -158,7 +158,11 @@ jobs:
           bash scripts/ci/preflight-staging-schema-convergence.sh \
             | tee /tmp/staging-schema-convergence-plan.json
           if grep -q '"ledger_repair_required": true' /tmp/staging-schema-convergence-plan.json; then
-            echo "::error::STAGING_LEDGER_REPAIR_REQUIRED — sandbox migration ledger drift must be normalized before db push (see scripts/ci/staging-ledger-repair-plan.md)"
+            echo "::error::STAGING_LEDGER_REPAIR_REQUIRED — sandbox migration ledger drift must be normalized before db push (see docs/production-readiness/2026-08-13/staging-ledger-repair-plan.md)"
+            exit 1
+          fi
+          if grep -q '"schema_repair_required": true' /tmp/staging-schema-convergence-plan.json; then
+            echo "::error::STAGING_SCHEMA_REPAIR_REQUIRED — sandbox physical schema drift must be resolved before db push (see scripts/ci/staging-physical-parity-manifest.json)"
             exit 1
           fi
 

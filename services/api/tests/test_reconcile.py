@@ -24,7 +24,13 @@ from app.services.payments.reconcile import (
     run_daily_reconciliation_report,
 )
 from app.services.payments.state import SYSTEM_ACTOR_ID, PaymentStatus
-from tests.rls.conftest import PgConn, apply_migrations, resolve_db_url, schema_ready
+from tests.rls.conftest import (
+    PgConn,
+    apply_migrations,
+    reset_public_schema_for_migrations,
+    resolve_db_url,
+    schema_ready,
+)
 
 CUSTOMER_ID = "11111111-1111-1111-1111-111111111111"
 CHECKOUT_GROUP_ID = "cccccccc-cccc-cccc-cccc-cccccccccccc"
@@ -560,9 +566,7 @@ def db() -> Generator[PgConn, None, None]:
     if not conn.run("SELECT 1").ok:
         pytest.skip(f"Postgres not reachable at {url}")
     if not schema_ready(conn):
-        conn.run("DROP SCHEMA IF EXISTS public CASCADE")
-        conn.run("CREATE SCHEMA public")
-        conn.run("DROP SCHEMA IF EXISTS auth CASCADE")
+        reset_public_schema_for_migrations(conn)
         apply_migrations(conn)
     yield conn
 
