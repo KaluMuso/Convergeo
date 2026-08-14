@@ -6,6 +6,7 @@ import importlib.util
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -20,7 +21,7 @@ PENDING_REPAIR_VERSIONS = {
 }
 
 
-def _module():
+def _module() -> Any:
     spec = importlib.util.spec_from_file_location("reconcile_staging_migrations", MODULE_PATH)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -29,11 +30,12 @@ def _module():
     return module
 
 
-reconcile = _module()
+reconcile: Any = _module()
 
 
 def _repo_versions() -> list[str]:
-    return reconcile.repo_migration_versions(REPO_ROOT / "supabase" / "migrations")
+    versions: list[str] = reconcile.repo_migration_versions(REPO_ROOT / "supabase" / "migrations")
+    return versions
 
 
 def _repo_versions_applied_after_repair() -> list[str]:
