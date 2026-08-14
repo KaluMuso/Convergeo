@@ -128,6 +128,40 @@ jobs:
             --project-ref "${STAGING_SUPABASE_PROJECT_ID}" \
             --password "${STAGING_SUPABASE_DB_PASSWORD}"
 
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: READ-ONLY live ledger capture + schema-convergence preflight
+        env:
+          STAGING_SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+          STAGING_SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
+          STAGING_SUPABASE_REGION: ${{ vars.STAGING_SUPABASE_REGION || 'eu-west-1' }}
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ -n "${STAGING_SUPABASE_DB_URL}" ]; then
+            export SUPABASE_DB_URL="${STAGING_SUPABASE_DB_URL}"
+          else
+            export SUPABASE_DB_URL="postgresql://postgres.${STAGING_SUPABASE_PROJECT_ID}:${STAGING_SUPABASE_DB_PASSWORD}@aws-0-${STAGING_SUPABASE_REGION}.pooler.supabase.com:5432/postgres"
+          fi
+          bash scripts/ci/check-db-reachable.sh
+          cp /dev/null /tmp/staging-ledger-preflight.txt
+          psql "${SUPABASE_DB_URL}" -v ON_ERROR_STOP=1 -tA -c \
+            'select version from supabase_migrations.schema_migrations order by version' \
+            | tee /tmp/staging-ledger-preflight.txt
+          test -s /tmp/staging-ledger-preflight.txt
+          SCHEMA_TARGET_KIND=sandbox \
+          SCHEMA_TARGET_PROJECT_REF="${STAGING_SUPABASE_PROJECT_ID}" \
+          SUPABASE_DB_URL="${SUPABASE_DB_URL}" \
+          EXPECTED_SOURCE_SHA="${EXPECTED_SOURCE_SHA}" \
+          bash scripts/ci/preflight-staging-schema-convergence.sh \
+            | tee /tmp/staging-schema-convergence-plan.json
+          if grep -q '"ledger_repair_required": true' /tmp/staging-schema-convergence-plan.json; then
+            echo "::error::STAGING_LEDGER_REPAIR_REQUIRED — sandbox migration ledger drift must be normalized before db push (see scripts/ci/staging-ledger-repair-plan.md)"
+            exit 1
+          fi
+
       - name: Push migrations from blank/current staging DB
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -176,9 +210,6 @@ jobs:
             --schema public > /tmp/staging-db.ts
           test -s /tmp/staging-db.ts
           echo "Staging typegen produced $(wc -l < /tmp/staging-db.ts) lines"
-
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Schema / RLS + security_invoker view checks
         env:

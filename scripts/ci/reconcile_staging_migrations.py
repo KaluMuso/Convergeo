@@ -75,7 +75,12 @@ def parse_migration_list_table(raw: str) -> tuple[list[str], list[str]]:
 
 
 def reconcile_versions(repo_versions: list[str], remote_versions: list[str]) -> None:
-    """Fail when any repo migration is missing on remote or counts diverge."""
+    """Fail when any repo migration is missing on remote or counts diverge.
+
+    After a one-time ledger normalization, the remote ledger must contain only
+    canonical repository versions — rehearsal aliases are transitional evidence
+    consumed by ``schema_convergence.py`` preflight, not accepted here.
+    """
     repo_set = set(repo_versions)
     remote_set = set(remote_versions)
 
