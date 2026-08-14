@@ -6,23 +6,30 @@ This is the executable evidence contract for reconciling repository history,
 the isolated sandbox, and production. It does **not** apply a migration and it
 does not make a production database a CI target.
 
-The repository checker is `scripts/ci/schema_convergence.py`; the only adapter
-that reads a remote ledger is `scripts/ci/rehearse-schema-convergence.sh`. The
-adapter accepts only the documented sandbox project ref, performs one
-read-only `schema_migrations` query, and fails if that query did not yield a
-ledger. It never invokes `supabase db push`.
+The repository checker is `scripts/ci/schema_convergence.py`; the read-only adapters are
+`scripts/ci/rehearse-schema-convergence.sh` (cohort rehearsal evidence) and
+`scripts/ci/preflight-staging-schema-convergence.sh` (staging deploy preflight). The
+adapters accept only the documented sandbox project ref, perform one read-only
+`schema_migrations` query, and fail if that query did not yield a ledger. They never
+invoke `supabase db push` and never repair migration history automatically.
+
+Staging deploy (`deploy-staging.yml`) now runs the preflight **before** any
+`supabase db push`. When `ledger_repair_required=true` the job exits with
+`STAGING_LEDGER_REPAIR_REQUIRED` and points operators to
+`docs/production-readiness/2026-08-13/staging-ledger-repair-plan.md`.
+Equivalence evidence lives in `scripts/ci/staging-migration-equivalence.json`.
 
 ## Cohorts and v1 scope lock
 
 The checked-in [cohort manifest](../../../scripts/ci/schema-convergence-cohorts.json)
 is the machine-readable source of truth. Its cohorts are:
 
-| Cohort | Sandbox rehearsal tip | Required evidence |
-| --- | --- | --- |
-| `dark-ship-foundation` | `0079` | ledger, flags false, RLS matrix, advisor review |
-| `location-social-foundation` | `0084` | ledger, location-stock smoke, enquiry RLS, licence fail-closed check |
-| `future-compatible-schema` | `20260812010000` | ledger, generated types, real-role RLS, v1 release-profile smoke, advisors |
-| `v1-activation-hold` | no automated execution | dated ADR, API enforcement PR, RLS grant review, release-profile regression |
+| Cohort                       | Sandbox rehearsal tip  | Required evidence                                                           |
+| ---------------------------- | ---------------------- | --------------------------------------------------------------------------- |
+| `dark-ship-foundation`       | `0079`                 | ledger, flags false, RLS matrix, advisor review                             |
+| `location-social-foundation` | `0084`                 | ledger, location-stock smoke, enquiry RLS, licence fail-closed check        |
+| `future-compatible-schema`   | `20260812010000`       | ledger, generated types, real-role RLS, v1 release-profile smoke, advisors  |
+| `v1-activation-hold`         | no automated execution | dated ADR, API enforcement PR, RLS grant review, release-profile regression |
 
 `D33` and `D34` remain release constraints even when future-compatible schema
 exists: v1 accepts only product class `A`, `new`/`refurbished`, sale unit

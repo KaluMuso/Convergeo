@@ -14,9 +14,13 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[3]
 MODULE_PATH = REPO_ROOT / "scripts" / "ci" / "schema_convergence.py"
 COHORTS_PATH = REPO_ROOT / "scripts" / "ci" / "schema-convergence-cohorts.json"
+EQUIVALENCE_PATH = REPO_ROOT / "scripts/ci/staging-migration-equivalence.json"
 REHEARSAL_SCRIPT = REPO_ROOT / "scripts" / "ci" / "rehearse-schema-convergence.sh"
-PRODUCTION_DEPLOY_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "deploy-production.yml"
-
+PREFLIGHT_SCRIPT = REPO_ROOT / "scripts/ci/preflight-staging-schema-convergence.sh"
+DEPLOY_STAGING_WORKFLOW = REPO_ROOT / ".github/workflows/deploy-staging.yml"
+PRODUCTION_DEPLOY_WORKFLOW = REPO_ROOT / ".github/workflows/deploy-production.yml"
+LIVE_LEDGER = REPO_ROOT / "scripts/ci/fixtures/sandbox-live-ledger-20260813.txt"
+POST_REPAIR_LEDGER = REPO_ROOT / "scripts/ci/fixtures/sandbox-post-repair-ledger-20260813.txt"
 
 def _module() -> Any:
     spec = importlib.util.spec_from_file_location("schema_convergence", MODULE_PATH)
@@ -195,3 +199,179 @@ def test_cli_refuses_green_result_without_ledger_file() -> None:
     )
     assert result.returncode == 1
     assert "ledger-file" in result.stderr
+
+
+def _equivalence_manifest() -> dict[str, Any]:
+    loaded = json.loads(EQUIVALENCE_PATH.read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded
+
+
+def test_live_sandbox_fixture_requires_ledger_repair() -> None:
+    repo_versions = _repo_versions()
+    manifest = _equivalence_manifest()
+    remote = schema.parse_ledger(LIVE_LEDGER.read_text(encoding="utf-8"))
+    plan = schema.evaluate_staging_preflight(
+        repository_versions=repo_versions,
+        remote_versions=remote,
+        manifest=manifest,
+        migrations_dir=REPO_ROOT / "supabase" / "migrations",
+    )
+    assert plan.ledger_repair_required is True
+    assert plan.unresolved_remote_versions == []
+    assert len(plan.equivalent_remote_aliases) == 4
+    assert len(plan.superseded_rehearsal_rows) == 3
+    assert plan.truly_pending_repository_migrations == [
+        "20260812090000",
+        "20260813064106",
+        "20260813150000",
+    ]
+
+
+def test_post_repair_canonical_fixture_passes_preflight() -> None:
+    repo_versions = _repo_versions()
+    manifest = _equivalence_manifest()
+    remote = schema.parse_ledger(POST_REPAIR_LEDGER.read_text(encoding="utf-8"))
+    plan = schema.evaluate_staging_preflight(
+        repository_versions=repo_versions,
+        remote_versions=remote,
+        manifest=manifest,
+        migrations_dir=REPO_ROOT / "supabase" / "migrations",
+    )
+    assert plan.ledger_repair_required is False
+    assert plan.unresolved_remote_versions == []
+    assert plan.equivalent_remote_aliases == []
+    assert plan.superseded_rehearsal_rows == []
+    assert plan.truly_pending_repository_migrations == [
+        "20260812090000",
+        "20260813064106",
+        "20260813150000",
+    ]
+
+
+def test_wrong_alias_hash_rejected(tmp_path: Path) -> None:
+    repo_versions = _repo_versions()
+    manifest = _equivalence_manifest()
+    bad_manifest = dict(manifest)
+    bad_aliases = [dict(item) for item in manifest["exact_aliases"]]
+    bad_aliases[0]["canonical_normalized_sha256"] = "0" * 64
+    bad_manifest["exact_aliases"] = bad_aliases
+    bad_path = tmp_path / "bad-equivalence.json"
+    bad_path.write_text(json.dumps(bad_manifest) + "\n", encoding="utf-8")
+    remote = schema.parse_ledger(LIVE_LEDGER.read_text(encoding="utf-8"))
+    with pytest.raises(schema.SchemaConvergenceError, match="hash mismatch"):
+        schema.verify_alias_hashes(
+            migrations_dir=REPO_ROOT / "supabase" / "migrations",
+            manifest=bad_manifest,
+        )
+
+
+def test_unknown_remote_rehearsal_rejected(tmp_path: Path) -> None:
+    manifest = _equivalence_manifest()
+    remote = schema.parse_ledger(LIVE_LEDGER.read_text(encoding="utf-8")) + ["20991231235959"]
+    plan = schema.classify_staging_ledger(
+        repository_versions=_repo_versions(),
+        remote_versions=remote,
+        manifest=manifest,
+    )
+    assert plan.unresolved_remote_versions == ["20991231235959"]
+
+
+def test_partial_equivalence_mapping_rejected(tmp_path: Path) -> None:
+    manifest = _equivalence_manifest()
+    bad_aliases = [dict(item) for item in manifest["exact_aliases"]]
+    bad_aliases[0]["equivalence"] = "schema_equivalent"
+    bad_manifest = dict(manifest)
+    bad_manifest["exact_aliases"] = bad_aliases
+    with pytest.raises(schema.SchemaConvergenceError, match="unsupported alias equivalence"):
+        schema.verify_alias_hashes(
+            migrations_dir=REPO_ROOT / "supabase" / "migrations",
+            manifest=bad_manifest,
+        )
+
+
+def test_duplicate_remote_alias_manifest_rejected() -> None:
+    manifest = _equivalence_manifest()
+    dup = dict(manifest)
+    dup["exact_aliases"] = manifest["exact_aliases"] + [manifest["exact_aliases"][0]]
+    with pytest.raises(schema.SchemaConvergenceError, match="duplicate remote aliases"):
+        schema.classify_staging_ledger(
+            repository_versions=_repo_versions(),
+            remote_versions=schema.parse_ledger(LIVE_LEDGER.read_text(encoding="utf-8")),
+            manifest=dup,
+        )
+
+
+def test_staging_preflight_cli_blocks_live_fixture() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(MODULE_PATH),
+            "--staging-preflight",
+            "--json-plan",
+            "--expected-source-sha",
+            _equivalence_manifest()["verified_source_sha"],
+            "--target-kind",
+            "sandbox",
+            "--target-project-ref",
+            schema.SANDBOX_PROJECT_REF,
+            "--ledger-file",
+            str(LIVE_LEDGER),
+            "--ledger-source",
+            "live-query",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 1
+    assert schema.STAGING_LEDGER_REPAIR_REQUIRED in result.stderr
+
+
+def test_staging_preflight_cli_accepts_post_repair_fixture() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(MODULE_PATH),
+            "--staging-preflight",
+            "--json-plan",
+            "--expected-source-sha",
+            _equivalence_manifest()["verified_source_sha"],
+            "--target-kind",
+            "sandbox",
+            "--target-project-ref",
+            schema.SANDBOX_PROJECT_REF,
+            "--ledger-file",
+            str(POST_REPAIR_LEDGER),
+            "--ledger-source",
+            "live-query",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["ledger_repair_required"] is False
+
+
+def test_deploy_staging_runs_preflight_before_db_push() -> None:
+    workflow = DEPLOY_STAGING_WORKFLOW.read_text(encoding="utf-8")
+    preflight = workflow.index("preflight-staging-schema-convergence.sh")
+    push = workflow.index("supabase db push --include-all")
+    reconcile = workflow.index("reconcile-staging-migrations.sh")
+    assert preflight < push < reconcile
+    assert "STAGING_LEDGER_REPAIR_REQUIRED" in workflow
+
+
+def test_preflight_adapter_forbids_production_and_db_push() -> None:
+    script = PREFLIGHT_SCRIPT.read_text(encoding="utf-8")
+    for line in script.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            continue
+        assert "supabase db push" not in line
+    assert "production ref is forbidden" in script
+    assert "schema_convergence.py" in script

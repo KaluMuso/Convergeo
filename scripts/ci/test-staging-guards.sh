@@ -261,6 +261,7 @@ fi
 if bash -n scripts/ci/vercel-staging-preview-prove.sh \
   && bash -n scripts/ci/staging-evidence-bundle.sh \
   && bash -n scripts/ci/reconcile-staging-migrations.sh \
+  && bash -n scripts/ci/preflight-staging-schema-convergence.sh \
   && python3 -m py_compile scripts/ci/validate_staging_proof.py \
   && python3 -m py_compile scripts/ci/reconcile_staging_migrations.py; then
   ok "preview prove + evidence bundle + migration reconcile syntax"
@@ -279,6 +280,16 @@ if grep -q 'prove-vercel-preview' .github/workflows/deploy-staging.yml \
   ok "deploy-staging proves customer/vendor/admin Preview at same SHA"
 else
   bad "deploy-staging missing three-portal Preview proof wiring"
+fi
+
+# 13b) deploy-staging must preflight ledger drift before db push
+preflight_line="$(grep -n 'preflight-staging-schema-convergence.sh' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+push_line="$(grep -n 'supabase db push --include-all' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+if [[ -n "${preflight_line}" && -n "${push_line}" && "${preflight_line}" -lt "${push_line}" ]] \
+  && grep -q 'STAGING_LEDGER_REPAIR_REQUIRED' .github/workflows/deploy-staging.yml; then
+  ok "deploy-staging preflight blocks db push when ledger repair is required"
+else
+  bad "deploy-staging must run schema preflight before supabase db push"
 fi
 
 # 14) Preview prove dry-run validates portal mapping without Vercel calls
