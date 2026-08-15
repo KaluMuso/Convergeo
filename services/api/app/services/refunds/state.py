@@ -12,11 +12,8 @@ from typing import Any, Protocol, cast
 from app.errors import AppError
 from app.services.orders.audit import run_sql_script, sql_literal
 from app.services.payments.state import SYSTEM_ACTOR_ID
-
 from app.services.refunds.constants import (
-    ACTIVE_REFUND_STATUSES,
     AWAITING_PROVIDER_STATUSES,
-    TERMINAL_REFUND_STATUSES,
 )
 
 REFUND_AUDIT_ACTION = "refund.transition"
