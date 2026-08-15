@@ -112,7 +112,7 @@
     {
       "version": "20260813160200",
       "filename": "20260813160200_security_definer_hardening.sql",
-      "canonical_normalized_sha256": "96ab35e5790a1dbcb8a3280bcd9e2f6fca520a04af9194facef72c46018aa2b4",
+      "canonical_normalized_sha256": "4999868ee1cb915da78c95f7f0320c27f9638460f1c2ed789d4d904d28765a3d",
       "supersedes_rehearsals": ["20260813072511"]
     }
   ],

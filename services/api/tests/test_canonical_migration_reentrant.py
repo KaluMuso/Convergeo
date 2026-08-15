@@ -87,16 +87,21 @@ $$;
 
 def test_record_listing_view_four_arg_rpc_succeeds(db: PgConn) -> None:
     """API boundary uses four positional args; PostgreSQL defaults must satisfy the call."""
-    listing_id = "b9100000-0000-0000-0000-00000000000a"
-    session_id = "b9100000-0000-0000-0000-00000000000b"
-    result = db.run(
-        f"""
-SELECT public.record_listing_view(
-  '{session_id}'::uuid,
-  '{listing_id}'::uuid,
-  current_date,
-  'impression'
-)::text;
+    signature = db.run(
+        "SELECT pg_get_function_arguments(p.oid) "
+        "FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace "
+        "WHERE n.nspname = 'public' AND p.proname = 'record_listing_view';"
+    )
+    assert signature.ok and signature.rows
+    lowered = signature.rows[0].lower()
+    assert "p_surface text default 'unknown'" in lowered
+
+    prepare = db.run(
+        """
+PREPARE record_listing_view_four_arg AS
+  SELECT public.record_listing_view($1::uuid, $2::uuid, $3::date, $4::text);
 """
     )
-    assert result.ok, result.error
+    assert prepare.ok, prepare.error
+    dealloc = db.run("DEALLOCATE record_listing_view_four_arg;")
+    assert dealloc.ok, dealloc.error
