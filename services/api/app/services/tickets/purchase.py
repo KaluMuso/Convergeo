@@ -31,6 +31,7 @@ from app.services.events.gmv_reservation import (
 )
 from app.services.stock.claim import (
     get_reservation_ttl_minutes,
+    load_reservation_ttl_minutes,
     run_sql_script,
     sql_int,
     sql_uuid,
@@ -432,7 +433,7 @@ def _insert_checkout_spine(
     ):
         tier = _resolve_cap_tier(service_client, organiser_vendor_id)
         if tier < 2:
-            ttl = gmv_ttl_minutes if gmv_ttl_minutes is not None else get_reservation_ttl_minutes()
+            ttl = gmv_ttl_minutes if gmv_ttl_minutes is not None else load_reservation_ttl_minutes()
             expires_literal = _expires_literal(ttl_minutes=ttl)
             gmv_reserve_sql = build_atomic_gmv_reserve_sql(
                 checkout_group_id=checkout_group_id,
@@ -589,7 +590,7 @@ def add_ticket_to_checkout(
         attendee_names=names,
         gmv_event_id=str(ctx["event"]["id"]),
         gmv_amount_ngwee=line_total,
-        gmv_ttl_minutes=get_reservation_ttl_minutes(),
+        gmv_ttl_minutes=load_reservation_ttl_minutes(),
         service_client=service_client,
     )
 
