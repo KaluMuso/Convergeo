@@ -235,7 +235,10 @@ def enforce_organiser_t1_gmv_cap(
 
     cap_ngwee = load_organiser_t1_event_gmv_cap_ngwee()
     current_gmv_ngwee = event_paid_gmv_ngwee(event_id)
-    projected = current_gmv_ngwee + additional_ngwee
+    from app.services.events.gmv_reservation import event_active_reserved_gmv_ngwee
+
+    reserved_gmv_ngwee = event_active_reserved_gmv_ngwee(event_id)
+    projected = current_gmv_ngwee + reserved_gmv_ngwee + additional_ngwee
     if projected <= cap_ngwee:
         return
 
@@ -243,7 +246,7 @@ def enforce_organiser_t1_gmv_cap(
         service,
         organiser_vendor_id=organiser_vendor_id,
         event_id=event_id,
-        current_gmv_ngwee=current_gmv_ngwee,
+        current_gmv_ngwee=current_gmv_ngwee + reserved_gmv_ngwee,
         additional_ngwee=additional_ngwee,
         cap_ngwee=cap_ngwee,
         cap_tier=tier,
@@ -257,6 +260,7 @@ def enforce_organiser_t1_gmv_cap(
             "event_id": event_id,
             "organiser_vendor_id": organiser_vendor_id,
             "current_gmv_ngwee": current_gmv_ngwee,
+            "reserved_gmv_ngwee": reserved_gmv_ngwee,
             "additional_ngwee": additional_ngwee,
             "projected_gmv_ngwee": projected,
             "cap_ngwee": cap_ngwee,
