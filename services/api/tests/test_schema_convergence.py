@@ -251,6 +251,7 @@ def test_live_sandbox_fixture_requires_ledger_repair() -> None:
         "20260813160000",
         "20260813160100",
         "20260813160200",
+        "20260815194500",
     ]
 
 
@@ -276,6 +277,7 @@ def test_post_repair_ledger_allows_preflight_with_pending_migration_drift() -> N
         "20260813160000",
         "20260813160100",
         "20260813160200",
+        "20260815194500",
     ]
     assert any(
         "record_listing_view_defaults" in item
@@ -357,6 +359,7 @@ def test_live_sandbox_default_drift_is_pending_before_migration() -> None:
             "20260813160000",
             "20260813160100",
             "20260813160200",
+            "20260815194500",
         ],
     )
     assert any("record_listing_view_defaults" in item for item in pending)
