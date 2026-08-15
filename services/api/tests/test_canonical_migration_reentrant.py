@@ -35,6 +35,10 @@ def db() -> PgConn:
 
 def test_canonical_migrations_reentrant_on_rehearsal_listing_view(db: PgConn) -> None:
     """Rehearsal overload lacks p_surface default; 60100 must restore canonical defaults."""
+    drop_existing = """
+DROP FUNCTION IF EXISTS public.record_listing_view(uuid, uuid, date, text, text, uuid);
+DROP FUNCTION IF EXISTS public.record_listing_view(uuid, uuid, date, text);
+"""
     rehearsal_fn = """
 CREATE OR REPLACE FUNCTION public.record_listing_view(
   p_session_id uuid,
@@ -54,6 +58,7 @@ BEGIN
 END;
 $$;
 """
+    assert db.run(drop_existing).ok, db.run(drop_existing).error
     assert db.run(rehearsal_fn).ok, db.run(rehearsal_fn).error
 
     before = db.run(
@@ -83,7 +88,7 @@ $$;
 def test_record_listing_view_four_arg_rpc_succeeds(db: PgConn) -> None:
     """API boundary uses four positional args; PostgreSQL defaults must satisfy the call."""
     listing_id = "b9100000-0000-0000-0000-00000000000a"
-    session_id = "b9s00000-0000-0000-0000-00000000000a"
+    session_id = "b9100000-0000-0000-0000-00000000000b"
     result = db.run(
         f"""
 SELECT public.record_listing_view(
