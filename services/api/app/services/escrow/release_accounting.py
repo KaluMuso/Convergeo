@@ -29,6 +29,7 @@ from typing import Any
 from app.services.commissions.engine import compute_order_commission, parse_snapshot_lines
 from app.services.db import SqlResult
 from app.services.orders.audit import run_sql_script, sql_literal
+from app.services.refunds.constants import ACTIVE_REFUND_STATUSES
 
 
 def scale_commission_snapshot_for_gross(
@@ -64,8 +65,6 @@ def scale_commission_snapshot_for_gross(
         scaled.append({**line, "line_total_ngwee": new_total})
     return {"lines": scaled}
 
-
-ACTIVE_REFUND_STATUSES = frozenset({"pending", "processing", "completed"})
 
 REFUND_LEDGER_KINDS = frozenset({"refund_lane1", "refund_lane2"})
 

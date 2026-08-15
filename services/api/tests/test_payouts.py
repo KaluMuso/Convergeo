@@ -157,6 +157,7 @@ class FakeSupabaseClient:
             "payouts": FakeTable(),
             "audit_log": FakeTable(),
             "notification_outbox": FakeTable(),
+            "refunds": FakeTable(),
         }
 
     def table(self, name: str) -> FakeTable:
@@ -607,12 +608,14 @@ async def test_customer_refund_requery_paid_skips_vendor_ledger(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Requery says a customer-refund transfer already succeeded → mark paid without
-    posting the vendor ledger and without re-sending."""
+    posting the vendor ledger and without re-sending; linked refund becomes completed."""
     monkeypatch.setenv("LENCO_ACCOUNT_ID", "lenco-acct-1")
     lenco_ref = "rfd-req-1"
+    payout_id = str(uuid.uuid4())
+    refund_id = str(uuid.uuid4())
     fake_client.tables["payouts"].rows.append(
         {
-            "id": str(uuid.uuid4()),
+            "id": payout_id,
             "vendor_id": VENDOR_ID,
             "amount_ngwee": 15_000,
             "rail": "airtel",
@@ -620,10 +623,23 @@ async def test_customer_refund_requery_paid_skips_vendor_ledger(
             "status": "processing",
             "resolve_snapshot": {
                 "kind": "customer_refund",
+                "refund_id": refund_id,
                 "customer_momo": "260961112222",
                 "rail": "airtel",
                 "retry_attempts": 1,
             },
+        }
+    )
+    fake_client.tables["refunds"].rows.append(
+        {
+            "id": refund_id,
+            "order_id": str(uuid.uuid4()),
+            "source_key": "refund-test-key",
+            "lane": 1,
+            "amount_ngwee": 15_000,
+            "status": "awaiting_payout",
+            "payout_ref": payout_id,
+            "breakdown": {},
         }
     )
     query_client = MagicMock()
@@ -656,6 +672,7 @@ async def test_customer_refund_requery_paid_skips_vendor_ledger(
     momo_payout.assert_not_called()
     ledger_mock.assert_not_called()
     assert fake_client.tables["payouts"].rows[0]["status"] == "paid"
+    assert fake_client.tables["refunds"].rows[0]["status"] == "completed"
 
 
 @pytest.mark.asyncio

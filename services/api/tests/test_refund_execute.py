@@ -129,7 +129,16 @@ class FakeQuery:
 
 class FakeTable:
     #: statuses that the source_key partial unique index treats as occupying a key.
-    _ACTIVE = frozenset({"pending", "processing", "completed"})
+    _ACTIVE = frozenset(
+        {
+            "pending",
+            "processing",
+            "awaiting_payout",
+            "needs_destination",
+            "manual_review",
+            "completed",
+        }
+    )
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -201,6 +210,7 @@ class FakeSupabaseClient:
                 "payouts",
                 "ledger_transactions",
                 "platform_config",
+                "audit_log",
             )
         }
 
@@ -389,7 +399,7 @@ class TestConcurrentAndRetry:
         assert result.refund_id == winner_id
         assert ledger.created_count == 1
         assert len(fake.tables["payouts"].rows) == 1
-        assert fake.tables["refunds"].rows[0]["status"] == "completed"
+        assert fake.tables["refunds"].rows[0]["status"] == "awaiting_payout"
 
 
 class TestProcessingResume:
@@ -443,9 +453,9 @@ class TestProcessingResume:
         assert ledger.created_count == 1
         assert ledger.keys == [f"{CALLER_KEY}-ledger"]
         assert len(fake.tables["payouts"].rows) == 1
-        assert fake.tables["refunds"].rows[0]["status"] == "completed"
+        assert fake.tables["refunds"].rows[0]["status"] == "awaiting_payout"
         assert fake.tables["refunds"].rows[0]["payout_ref"] == first.payout_id
-        # Completed refund is returned as-is — no second ledger/payout.
+        # Awaiting-provider refund is returned as-is — no second ledger/payout.
         assert second.created is False
         assert second.refund_id == refund_id
         assert ledger.created_count == 1
