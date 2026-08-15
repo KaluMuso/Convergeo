@@ -45,6 +45,11 @@ from app.services.escrow.release_accounting import (
     order_has_open_dispute,
     order_is_refund_blocked,
 )
+from app.services.events.settlement_snapshot import (
+    SettlementSchedule,
+    load_settlement_schedule,
+    mark_settlement_snapshot_released,
+)
 from app.services.events.timing import instance_settlement_end
 from app.services.events.type_policy import policy_for
 from app.services.ledger.engine import post_transaction
@@ -107,6 +112,7 @@ class _EventOrderContext:
     event_type: str
     is_paid: bool
     has_open_dispute: bool | None
+    settlement_schedule: SettlementSchedule | None = None
 
 
 def full_release_key(order_id: str) -> str:
@@ -154,14 +160,11 @@ def _normalize_now(now: datetime | None) -> datetime:
 def determine_branch(
     *, purchased_at: datetime, starts_at: datetime, event_type: str | None = None
 ) -> EventReleaseBranch:
-    """Decide the ≤14d / >14d branch from purchase-time lead vs. the event's starts_at.
+    """Decide the ≤14d / >14d branch from purchase-time lead vs. instance starts_at.
 
-    There is no snapshot column recording this decision at purchase time (no migration
-    for this pebble); it is derived by comparing the order's created_at (purchase
-    timestamp) against the ticketed instance's starts_at whenever this is evaluated.
-    Both timestamps are immutable once set (orders.created_at never changes; an
-    event's starts_at can only change pre-publish per M10-P05's schedule-change
-    guard), so this derivation is stable across repeated evaluations of the same order.
+    Paid ticket orders persist this decision in ``event_settlement_snapshots`` at
+    issuance; release evaluation prefers that frozen schedule over live instance rows.
+    This helper remains for legacy orders without a snapshot and for unit tests.
 
     event_type drives this via the ``type_policy`` map (D29/P14): a ``full_only``
     settlement rule (a ``recurring`` series) forces a single full release regardless
@@ -288,6 +291,13 @@ LIMIT 1;
     else:
         commission_snapshot = {}
 
+    settlement_schedule = load_settlement_schedule(order_id)
+    if settlement_schedule is not None:
+        starts_at = settlement_schedule.starts_at
+        ends_at = settlement_schedule.ends_at
+        event_type = settlement_schedule.event_type
+        purchased_at = settlement_schedule.purchased_at
+
     return _EventOrderContext(
         order_id=order_id,
         vendor_id=vendor_id,
@@ -303,6 +313,7 @@ LIMIT 1;
         event_type=event_type,
         is_paid=_has_successful_payment(checkout_group_id),
         has_open_dispute=_has_open_dispute(order_id),
+        settlement_schedule=settlement_schedule,
     )
 
 
@@ -417,11 +428,14 @@ def evaluate_event_release(
         )
 
     effective_now = _normalize_now(now)
-    branch = determine_branch(
-        purchased_at=context.purchased_at,
-        starts_at=context.starts_at,
-        event_type=context.event_type,
-    )
+    if context.settlement_schedule is not None:
+        branch: EventReleaseBranch = context.settlement_schedule.branch
+    else:
+        branch = determine_branch(
+            purchased_at=context.purchased_at,
+            starts_at=context.starts_at,
+            event_type=context.event_type,
+        )
 
     required_keys: tuple[str, ...] = (
         (full_release_key(order_id),)
@@ -533,6 +547,10 @@ def evaluate_event_release(
         transaction_ids.append(txn_id)
         total_net += amount
 
+    posted_after = _posted_release_keys(required_keys)
+    if set(required_keys) <= posted_after:
+        mark_settlement_snapshot_released(order_id)
+
     return EventReleaseResult(
         order_id=order_id,
         outcome="released",
@@ -557,6 +575,7 @@ INNER JOIN public.order_items oi
 INNER JOIN public.order_item_tickets oit ON oit.order_item_id = oi.id
 INNER JOIN public.event_instances ei ON ei.id = oit.instance_id
 INNER JOIN public.events e ON e.id = ei.event_id
+LEFT JOIN public.event_settlement_snapshots ess ON ess.order_id = o.id
 WHERE EXISTS (
   SELECT 1 FROM public.payments p
   WHERE p.checkout_group_id = o.checkout_group_id
@@ -571,7 +590,10 @@ AND NOT EXISTS (
 )
 AND (
   e.status = 'cancelled'
-  OR {now_sql}::timestamptz >= (ei.starts_at - interval '{PHASE1_LEAD_DAYS} days')
+  OR {now_sql}::timestamptz >= (
+    coalesce((ess.schedule->>'starts_at')::timestamptz, ei.starts_at)
+    - interval '{PHASE1_LEAD_DAYS} days'
+  )
 )
 {cursor_filter}
 ORDER BY o.id::text ASC
