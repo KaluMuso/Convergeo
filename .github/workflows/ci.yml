@@ -444,6 +444,29 @@ jobs:
           PGPASSWORD: postgres
           PGDATABASE: postgres
 
+      - name: Setup uv (canonical migration re-entrant replay)
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python (canonical migration re-entrant replay)
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+
+      - name: Install API deps (canonical migration re-entrant replay)
+        working-directory: services/api
+        run: uv sync --dev
+
+      - name: Canonical migration re-entrant replay (STG-DRIFT-03)
+        working-directory: services/api
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+          SUPABASE_URL: https://example.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+          SUPABASE_ANON_KEY: test-anon-key
+        run: uv run pytest tests/test_canonical_migration_reentrant.py -v
+
       - name: Schema RLS + security_invoker (post-replay)
         # STG-01: same isolation checks the staging deploy job runs against the
         # remote staging DB — exercised here on a blank local replay including 0056.

@@ -16,15 +16,29 @@ evidence in `scripts/ci/staging-migration-equivalence.json` and
 ## Ordered procedure (must follow this sequence)
 
 ```text
-verify exact live ledger
-→ verify exact physical drift (extract-physical-schema-state.sql + preflight)
-→ canonicalize desired rehearsal effects in repository
-   OR separately clean unwanted sandbox-only effects
-→ prove fresh-replay physical parity (repository migrations only)
-→ only then perform migration ledger repair
-→ re-run schema-convergence preflight (ledger + physical)
-→ only then allow normal db push
+verify live sandbox ledger + physical state
+→ revert the seven noncanonical ledger rows
+→ mark ONLY the four exact aliases applied:
+     0096, 20260809214010, 20260812010000, 20260813063754
+→ leave six canonical migrations pending:
+     20260812090000, 20260813064106, 20260813150000,
+     20260813160000, 20260813160100, 20260813160200
+→ run convergence preflight:
+     ledger drift = clean
+     unresolved physical drift = zero
+     known pending migration drift = allowed
+     schema_apply_required = true
+→ normal supabase db push applies all six
+→ exact ledger reconciliation
+→ extract physical state again
+→ require final canonical physical parity = PASS
 ```
+
+**Do not** mark `20260813160000`, `20260813160100`, or `20260813160200` as applied
+during ledger repair. Those migrations are **not** physically identical to the
+rehearsal state (for example live `record_listing_view` lacks
+`p_surface text DEFAULT 'unknown'`). They must execute through the normal migration
+mechanism.
 
 **Do not** remove rehearsal ledger rows while unrepresented physical schema remains.
 Ledger normalization alone must not clear `staging_only_retained_schema` drift.
@@ -41,15 +55,15 @@ Ledger normalization alone must not clear `staging_only_retained_schema` drift.
 
 ## Expected pre-repair noncanonical rows
 
-| Remote version   | Disposition                                                         |
-| ---------------- | ------------------------------------------------------------------- |
-| `20260813071956` | Exact alias → `0096`                                                |
-| `20260813072721` | Exact alias → `20260809214010`                                      |
-| `20260813072742` | Exact alias → `20260812010000`                                      |
-| `20260813073039` | Exact alias → `20260813063754`                                      |
-| `20260813072110` | Superseded rehearsal → canonical `20260813160000`, `20260813160100` |
-| `20260813072511` | Superseded rehearsal → canonical `20260813160200`                   |
-| `20260813072919` | Superseded rehearsal → canonical `20260813160100`                   |
+| Remote version   | Disposition                                                                                   |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| `20260813071956` | Exact alias → `0096` (mark applied after revert)                                              |
+| `20260813072721` | Exact alias → `20260809214010`                                                                |
+| `20260813072742` | Exact alias → `20260812010000`                                                                |
+| `20260813073039` | Exact alias → `20260813063754`                                                                |
+| `20260813072110` | Superseded rehearsal → revert only; canonical via `20260813160000` + `20260813160100` db push |
+| `20260813072511` | Superseded rehearsal → revert only; canonical via `20260813160200` db push                    |
+| `20260813072919` | Superseded rehearsal → revert only; canonical via `20260813160100` db push                    |
 
 ## Step 1 — Capture before ledger and physical state
 
@@ -63,13 +77,14 @@ psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -tA \
   | tee /tmp/sandbox-physical-before.json
 ```
 
-## Step 2 — Verify physical drift against repository HEAD
+## Step 2 — Verify drift against repository HEAD
 
 ```bash
+export EXPECTED_SOURCE_SHA="$(git rev-parse HEAD)"
 python3 scripts/ci/schema_convergence.py \
   --staging-preflight \
   --json-plan \
-  --expected-source-sha "$(git rev-parse HEAD)" \
+  --expected-source-sha "${EXPECTED_SOURCE_SHA}" \
   --target-kind sandbox \
   --target-project-ref iyasmrmbcrvlfxpzescb \
   --ledger-file /tmp/sandbox-ledger-before.txt \
@@ -77,9 +92,8 @@ python3 scripts/ci/schema_convergence.py \
   --ledger-source live-query
 ```
 
-Expect `"ledger_repair_required": true` and `"schema_repair_required": true` on
-pre-canonical master. After STG-DRIFT-02 merges, live sandbox physical state must
-pass while ledger repair is still required.
+Expect `"ledger_repair_required": true`. Live sandbox physical state **must fail**
+`record_listing_view_defaults` until `20260813160100` executes via db push.
 
 ## Step 3 — Prove fresh-replay physical parity (no Production)
 
@@ -87,6 +101,11 @@ On a disposable database, apply **repository migrations only** through HEAD, ext
 physical state, and compare to `staging-physical-parity-manifest.json`. The checked-in
 fixture `scripts/ci/fixtures/repository-replay-physical-state-pre-parity-20260814.json`
 documents the pre-parity replay baseline for regression tests.
+
+Rehearsal-state replay: apply the three canonical migrations
+(`20260813160000`–`20260813160200`) on a fixture matching live rehearsal physical
+state; final schema must equal fresh canonical replay
+(`scripts/ci/fixtures/sandbox-physical-state-post-canonical-push-20260814.json`).
 
 ## Step 4 — Revert noncanonical ledger rows (no DDL)
 
@@ -104,52 +123,59 @@ supabase migration repair --status reverted 20260813073039
 
 Stop if any command reports an unexpected state.
 
-## Step 5 — Mark canonical versions as applied (schema already present)
+## Step 5 — Mark ONLY exact alias versions as applied (schema already present)
 
 ```bash
 supabase migration repair --status applied 0096
 supabase migration repair --status applied 20260809214010
 supabase migration repair --status applied 20260812010000
 supabase migration repair --status applied 20260813063754
-supabase migration repair --status applied 20260813160000
-supabase migration repair --status applied 20260813160100
-supabase migration repair --status applied 20260813160200
 ```
 
-## Step 6 — Capture after ledger and verify preflight
+**Do not** mark `20260813160000`, `20260813160100`, or `20260813160200` applied here.
 
-Expected applied prefix (103 rows): `0001` … `0096`, `20260802153539`,
-`20260809214010`, `20260812010000`, `20260813063754`, `20260813160000`,
-`20260813160100`, `20260813160200`.
+## Step 6 — Capture after ledger and verify preflight (pre-db-push)
+
+Expected applied prefix (100 rows): `0001` … `0096`, `20260802153539`,
+`20260809214010`, `20260812010000`, `20260813063754`.
 
 Expected **pending** repository migrations (applied later via normal `db push`):
 
 1. `20260812090000` — product strategy integrity constraints
 2. `20260813064106` — product strategy core contract
 3. `20260813150000` — `public.approve_kyc_vendor(...)` (verify absent before apply)
+4. `20260813160000` — rate counter scope manifest (re-entrant on rehearsal schema)
+5. `20260813160100` — listing view surface telemetry (`p_surface DEFAULT 'unknown'`)
+6. `20260813160200` — security definer hardening (guarded extension relocation)
 
 ```bash
 psql "$SUPABASE_DB_URL" -tA -c \
   "SELECT version FROM supabase_migrations.schema_migrations ORDER BY version" \
-  | tee /tmp/sandbox-ledger-after.txt
+  | tee /tmp/sandbox-ledger-after-repair.txt
 
 psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -tA \
   -f scripts/ci/extract-physical-schema-state.sql \
-  | tee /tmp/sandbox-physical-after.json
+  | tee /tmp/sandbox-physical-after-repair.json
 
+export EXPECTED_SOURCE_SHA="$(git rev-parse HEAD)"
 python3 scripts/ci/schema_convergence.py \
   --staging-preflight \
   --json-plan \
-  --expected-source-sha "$(git rev-parse HEAD)" \
+  --expected-source-sha "${EXPECTED_SOURCE_SHA}" \
   --target-kind sandbox \
   --target-project-ref iyasmrmbcrvlfxpzescb \
-  --ledger-file /tmp/sandbox-ledger-after.txt \
-  --physical-state-file /tmp/sandbox-physical-after.json \
+  --ledger-file /tmp/sandbox-ledger-after-repair.txt \
+  --physical-state-file /tmp/sandbox-physical-after-repair.json \
   --ledger-source live-query
 ```
 
-Preflight must report `"ledger_repair_required": false`, `"schema_repair_required": false`,
-and list the three pending product-strategy/KYC migrations above.
+Preflight must report:
+
+- `"ledger_repair_required": false`
+- `"unresolved_physical_drift": []`
+- `"pending_migration_physical_drift"` may include `record_listing_view_defaults`
+- `"schema_apply_required": true`
+- `"truly_pending_repository_migrations"` lists all six migrations above
 
 ## Step 7 — Apply truly pending schema (separate authorized window)
 
@@ -160,11 +186,35 @@ supabase db push --include-all
 bash scripts/ci/reconcile-staging-migrations.sh
 ```
 
+## Step 8 — Post-push reconciliation
+
+```bash
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -tA \
+  -f scripts/ci/extract-physical-schema-state.sql \
+  | tee /tmp/sandbox-physical-after-push.json
+
+export EXPECTED_SOURCE_SHA="$(git rev-parse HEAD)"
+python3 scripts/ci/schema_convergence.py \
+  --staging-preflight \
+  --json-plan \
+  --expected-source-sha "${EXPECTED_SOURCE_SHA}" \
+  --target-kind sandbox \
+  --target-project-ref iyasmrmbcrvlfxpzescb \
+  --ledger-file /tmp/sandbox-ledger-after-push.txt \
+  --physical-state-file /tmp/sandbox-physical-after-push.json \
+  --ledger-source live-query
+```
+
+Post-push preflight must report zero `unresolved_physical_drift`, zero
+`pending_migration_physical_drift`, and `"schema_apply_required": false`.
+
 ## Post-repair verification checklist
 
 - [ ] `public.approve_kyc_vendor(...)` absent before step 7; present only after `20260813150000`
-- [ ] Rehearsal schema retained and manifest-green: `private.rate_counter_scope_manifest`, 6-arg `record_listing_view`, `private.has_role`
-- [ ] Physical parity manifest passes against live extractor output
+- [ ] Rehearsal schema retained through ledger repair; canonical migrations applied only via db push
+- [ ] `record_listing_view` proves `p_surface DEFAULT 'unknown'` after `20260813160100`
+- [ ] Legacy 4-arg RPC call succeeds after `20260813160100` (PostgREST/PostgreSQL defaults)
+- [ ] Physical parity manifest passes against post-push extractor output
 - [ ] Production project ref never linked
 - [ ] Before/after ledger + physical artifacts archived with operator + timestamp
 
@@ -174,14 +224,25 @@ Ledger repair is metadata-only. If a repair step fails mid-flight, capture the
 ledger, do **not** run `db push`, and restore ledger rows using the inverse
 `supabase migration repair` operations documented above against the before artifact.
 
+## Master-as-production release order (RELCTRL-01)
+
+Do **not** merge STG-DRIFT-02 into `master` until staging certification completes at
+the exact PR-head candidate SHA. After final code review and terminal CI/Performance:
+
+1. Freeze final PR-head SHA
+2. Prove current `master` has not moved unexpectedly
+3. Advance `staging` to the exact PR-head candidate (not `master`)
+4. Expect first `deploy-staging` attempt to fail closed at ledger repair
+5. Execute the separately authorized one-time sandbox ledger repair (steps 1–6)
+6. Rerun `deploy-staging` so the six pending migrations execute normally
+7. Prove schema/RLS/typegen/API/three-portal Preview/E2E at the exact candidate SHA
+8. Create merge-release evidence for that exact SHA
+9. Only then merge into `master`
+
+Steps 3–9 are human-operated; this document does not authorize executing them from CI.
+
 ## Sandbox-only physical cleanup (not required for current rehearsals)
 
 All three superseded rehearsals are **CANONICALIZE** decisions in STG-DRIFT-02.
 No sandbox-only DDL cleanup is required when canonical migrations land in the
-repository and pass physical parity. If a future audit marks an effect
-`REVERT_FROM_SANDBOX`, document a human-operated cleanup script here that:
-
-- targets `iyasmrmbcrvlfxpzescb` only
-- captures `pg_get_*` definitions before mutation
-- fails on unexpected definitions
-- never ships in the Production migration chain
+repository and pass physical parity after db push.

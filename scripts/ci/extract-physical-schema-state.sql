@@ -53,6 +53,7 @@ select json_build_object(
       ),
       json_build_object(
         'security', case when p.prosecdef then 'definer' else 'invoker' end,
+        'arguments', pg_get_function_arguments(p.oid),
         'search_path', coalesce((
           select string_to_array(replace(setting, 'search_path=', ''), ', ')
           from unnest(coalesce(p.proconfig, array[]::text[])) as setting
