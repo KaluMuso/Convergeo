@@ -100,8 +100,7 @@ def test_record_listing_view_four_arg_rpc_succeeds(db: PgConn) -> None:
         """
 PREPARE record_listing_view_four_arg AS
   SELECT public.record_listing_view($1::uuid, $2::uuid, $3::date, $4::text);
+DEALLOCATE record_listing_view_four_arg;
 """
     )
     assert prepare.ok, prepare.error
-    dealloc = db.run("DEALLOCATE record_listing_view_four_arg;")
-    assert dealloc.ok, dealloc.error
