@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -62,6 +63,33 @@ def get_reservation_ttl_minutes() -> int:
             return raw
         if isinstance(raw, str) and raw.isdigit():
             return int(raw)
+    return _DEFAULT_TTL_MIN
+
+
+def load_reservation_ttl_minutes() -> int:
+    """Read reservation TTL from platform_config via SQL (test/RLS-harness safe)."""
+    result = run_sql_script(
+        """
+SELECT value::text
+FROM public.platform_config
+WHERE key = 'reservation_ttl_min'
+LIMIT 1;
+"""
+    )
+    if not result.ok or not result.rows:
+        return _DEFAULT_TTL_MIN
+    raw = result.rows[0].strip()
+    if not raw:
+        return _DEFAULT_TTL_MIN
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        parsed = raw
+    if isinstance(parsed, int) and parsed > 0:
+        return parsed
+    if isinstance(parsed, str) and parsed.strip().isdigit():
+        value = int(parsed.strip())
+        return value if value > 0 else _DEFAULT_TTL_MIN
     return _DEFAULT_TTL_MIN
 
 

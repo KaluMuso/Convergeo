@@ -18,6 +18,10 @@ from app.services.events.gmv_cap import (
     event_paid_gmv_ngwee,
     load_organiser_t1_event_gmv_cap_ngwee,
 )
+from app.services.events.gmv_reservation import (
+    capture_gmv_reservation,
+    event_active_reserved_gmv_ngwee,
+)
 from app.services.kyc.eligibility import VendorKycEligibility
 from app.services.tickets.purchase import add_ticket_to_checkout, rsvp
 from tests.rls.conftest import (
@@ -169,6 +173,7 @@ INSERT INTO public.payments (
         )
     )
     assert result.ok, result.error
+    assert capture_gmv_reservation(checkout_group_id)
 
 
 def _seed_approved_kyc(conn: PgConn, *, vendor_id: str, tier: int) -> None:
@@ -403,15 +408,15 @@ def test_free_rsvp_unaffected(
     db: PgConn, service: _ServiceWrapper, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Free RSVP must not consult / trip the paid GMV cap."""
-    called: list[str] = []
+    calls: list[str] = []
 
-    def _boom(*_a: Any, **_k: Any) -> None:
-        called.append("enforce")
-        raise AssertionError("GMV cap must not run for free RSVP")
+    def _track(**_kwargs: Any) -> str:
+        calls.append("reserve")
+        raise AssertionError("GMV reservation must not run for free RSVP")
 
     monkeypatch.setattr(
-        "app.services.tickets.purchase.enforce_organiser_t1_gmv_cap",
-        _boom,
+        "app.services.tickets.purchase.build_atomic_gmv_reserve_sql",
+        _track,
     )
     event_id = str(uuid.uuid4())
     instance_id = str(uuid.uuid4())
@@ -434,7 +439,7 @@ def test_free_rsvp_unaffected(
         qty=1,
     )
     assert result.order_id
-    assert called == []
+    assert calls == []
 
 
 def test_enforce_uses_auditable_cap_tier_path(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -517,3 +522,80 @@ def test_config_key_present_after_migration_seed(db: PgConn) -> None:
     )
     assert result.ok and result.rows
     assert json.loads(result.rows[0]) == DEFAULT_CAP_NGWEE
+
+
+def test_pending_reservation_blocks_second_checkout(
+    db: PgConn, service: _ServiceWrapper, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """EVT-GMV-ATOMIC: unpaid checkout reserves headroom; concurrent attempt rejected."""
+    monkeypatch.setattr(
+        "app.services.events.gmv_cap.resolve_vendor_eligibility",
+        lambda *_a, **_k: _t1_eligibility(),
+    )
+    event_id = str(uuid.uuid4())
+    instance_id = str(uuid.uuid4())
+    ticket_type_id = str(uuid.uuid4())
+    _insert_event_with_instance(db, event_id=event_id, instance_id=instance_id)
+    _insert_ticket_type(
+        db, ticket_type_id=ticket_type_id, event_id=event_id, price_ngwee=500_000
+    )
+
+    first = add_ticket_to_checkout(
+        service,
+        customer_id=CUSTOMER_A,
+        instance_id=instance_id,
+        ticket_type_id=ticket_type_id,
+        qty=3,
+    )
+    assert first.subtotal_ngwee == 1_500_000
+    assert event_active_reserved_gmv_ngwee(event_id) == 1_500_000
+
+    with pytest.raises(AppError) as exc_info:
+        add_ticket_to_checkout(
+            service,
+            customer_id=CUSTOMER_B,
+            instance_id=instance_id,
+            ticket_type_id=ticket_type_id,
+            qty=2,
+        )
+    assert exc_info.value.code == "organiser_gmv_cap_exceeded"
+    assert exc_info.value.details["reserved_gmv_ngwee"] == 1_500_000
+
+
+def test_reservation_released_on_claim_release(
+    db: PgConn, service: _ServiceWrapper, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "app.services.events.gmv_cap.resolve_vendor_eligibility",
+        lambda *_a, **_k: _t1_eligibility(),
+    )
+    from app.services.tickets.purchase import release_ticket_claim
+
+    event_id = str(uuid.uuid4())
+    instance_id = str(uuid.uuid4())
+    ticket_type_id = str(uuid.uuid4())
+    _insert_event_with_instance(db, event_id=event_id, instance_id=instance_id)
+    _insert_ticket_type(
+        db, ticket_type_id=ticket_type_id, event_id=event_id, price_ngwee=500_000
+    )
+
+    checkout = add_ticket_to_checkout(
+        service,
+        customer_id=CUSTOMER_A,
+        instance_id=instance_id,
+        ticket_type_id=ticket_type_id,
+        qty=3,
+    )
+    assert event_active_reserved_gmv_ngwee(event_id) == 1_500_000
+
+    release_ticket_claim(service, checkout_group_id=checkout.checkout_group_id)
+    assert event_active_reserved_gmv_ngwee(event_id) == 0
+
+    second = add_ticket_to_checkout(
+        service,
+        customer_id=CUSTOMER_B,
+        instance_id=instance_id,
+        ticket_type_id=ticket_type_id,
+        qty=3,
+    )
+    assert second.subtotal_ngwee == 1_500_000

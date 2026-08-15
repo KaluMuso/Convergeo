@@ -14,9 +14,24 @@ from app.errors import AppError
 from app.services.cart.totals import line_total_ngwee
 from app.services.commissions.engine import FREE_EVENTS_CATEGORY
 from app.services.events.access import verify_event_access_proof
-from app.services.events.gmv_cap import enforce_organiser_t1_gmv_cap
+from app.services.events.gmv_cap import (
+    _resolve_cap_tier,
+    _write_cap_reject_audit,
+    event_paid_gmv_ngwee,
+    load_organiser_t1_event_gmv_cap_ngwee,
+)
+from app.services.events.gmv_reservation import (
+    _cap_exceeded_error,
+    _expires_literal,
+    build_atomic_gmv_reserve_sql,
+    capture_gmv_reservation,
+    event_active_reserved_gmv_ngwee,
+    release_expired_gmv_reservations,
+    release_gmv_reservation,
+)
 from app.services.stock.claim import (
     get_reservation_ttl_minutes,
+    load_reservation_ttl_minutes,
     run_sql_script,
     sql_int,
     sql_uuid,
@@ -386,6 +401,10 @@ def _insert_checkout_spine(
     checkout_status: str,
     order_status: str,
     attendee_names: list[str] | None = None,
+    gmv_event_id: str | None = None,
+    gmv_amount_ngwee: int | None = None,
+    gmv_ttl_minutes: int | None = None,
+    service_client: Any | None = None,
 ) -> tuple[str, str, str]:
     checkout_group_id = str(uuid.uuid4())
     order_id = str(uuid.uuid4())
@@ -404,6 +423,25 @@ def _insert_checkout_spine(
     snapshot_sql = _sql_json(commission_snapshot)
     title_sql = title_snapshot.replace("'", "''")
     names_sql = _sql_json_names(attendee_names)
+
+    gmv_reserve_sql = ""
+    if (
+        gmv_event_id is not None
+        and gmv_amount_ngwee is not None
+        and gmv_amount_ngwee > 0
+        and service_client is not None
+    ):
+        tier = _resolve_cap_tier(service_client, organiser_vendor_id)
+        if tier < 2:
+            ttl = gmv_ttl_minutes if gmv_ttl_minutes is not None else load_reservation_ttl_minutes()
+            expires_literal = _expires_literal(ttl_minutes=ttl)
+            gmv_reserve_sql = build_atomic_gmv_reserve_sql(
+                checkout_group_id=checkout_group_id,
+                organiser_vendor_id=organiser_vendor_id,
+                event_id=gmv_event_id,
+                amount_ngwee=gmv_amount_ngwee,
+                expires_at_literal=expires_literal,
+            )
 
     script = f"""
 BEGIN;
@@ -426,11 +464,36 @@ INSERT INTO public.order_items (
 );
 INSERT INTO public.order_item_tickets (order_item_id, ticket_type_id, instance_id, attendee_names)
 VALUES ({item_sql}, {type_sql}, {instance_sql}, {names_sql});
+{gmv_reserve_sql}
 COMMIT;
 """
     result = run_sql_script(script)
     if not result.ok:
         raise RuntimeError(f"ticket checkout spine insert failed: {result.error}")
+    if gmv_reserve_sql and (not result.rows or result.rows[-1] != "1"):
+        assert gmv_event_id is not None and gmv_amount_ngwee is not None
+        cap_ngwee = load_organiser_t1_event_gmv_cap_ngwee()
+        paid = event_paid_gmv_ngwee(gmv_event_id)
+        reserved = event_active_reserved_gmv_ngwee(gmv_event_id)
+        tier = _resolve_cap_tier(service_client, organiser_vendor_id)
+        _write_cap_reject_audit(
+            service_client,
+            organiser_vendor_id=organiser_vendor_id,
+            event_id=gmv_event_id,
+            current_gmv_ngwee=paid + reserved,
+            additional_ngwee=gmv_amount_ngwee,
+            cap_ngwee=cap_ngwee,
+            cap_tier=tier,
+        )
+        raise _cap_exceeded_error(
+            organiser_vendor_id=organiser_vendor_id,
+            event_id=gmv_event_id,
+            current_gmv_ngwee=paid,
+            reserved_gmv_ngwee=reserved,
+            additional_ngwee=gmv_amount_ngwee,
+            cap_ngwee=cap_ngwee,
+            cap_tier=tier,
+        )
     return checkout_group_id, order_id, order_item_id
 
 
@@ -501,15 +564,8 @@ def add_ticket_to_checkout(
         qty=qty,
         now=now or datetime.now(UTC),
     )
-    # VF-P06 / BG-3: Tier-1 organisers cannot push per-event paid GMV over the
-    # configured fraud cap. Enforce after price resolve, before claim/spine so
-    # no capacity or escrow-bound rows are created for over-cap attempts.
-    enforce_organiser_t1_gmv_cap(
-        service_client,
-        organiser_vendor_id=str(ctx["organiser_vendor_id"]),
-        event_id=str(ctx["event"]["id"]),
-        additional_ngwee=line_total_ngwee(qty, unit_price),
-    )
+    # EVT-GMV-ATOMIC / VF-P06: reserve GMV headroom atomically with checkout spine.
+    line_total = line_total_ngwee(qty, unit_price)
     title = str(ticket_type.get("name") or "Ticket")
     provisional_snapshot = _build_ticket_commission_snapshot(
         ticket_type_id=ticket_type_id,
@@ -532,6 +588,10 @@ def add_ticket_to_checkout(
         checkout_status="pending",
         order_status="placed",
         attendee_names=names,
+        gmv_event_id=str(ctx["event"]["id"]),
+        gmv_amount_ngwee=line_total,
+        gmv_ttl_minutes=load_reservation_ttl_minutes(),
+        service_client=service_client,
     )
 
     claim = claim_ticket_or_raise(
@@ -753,6 +813,8 @@ SELECT EXISTS (
             details={"order_id": order_id},
         )
 
+    capture_gmv_reservation(checkout_group_id)
+
     items_result = run_sql_script(
         f"""
 SELECT
@@ -876,6 +938,7 @@ SELECT count(*)::text FROM voided;
     if not result.ok:
         raise RuntimeError(f"release_ticket_claim failed: {result.error}")
     voided = int(result.rows[0]) if result.rows else 0
+    release_gmv_reservation(checkout_group_id)
     return ReleaseClaimResult(checkout_group_id=checkout_group_id, voided_count=voided)
 
 
@@ -1024,6 +1087,7 @@ SELECT count(*)::text FROM voided;
     if not result.ok:
         raise RuntimeError(f"release_stale_ticket_claims failed: {result.error}")
     voided = int(result.rows[0]) if result.rows else 0
+    release_expired_gmv_reservations()
     return ReleaseStaleClaimsResult(voided_count=voided, ttl_minutes=ttl)
 
 
