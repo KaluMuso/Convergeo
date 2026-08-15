@@ -299,6 +299,9 @@ def _insert_ticket_order(
             ) ON CONFLICT (lenco_reference) DO NOTHING;
             """
         )
+        from app.services.events.settlement_snapshot import create_settlement_snapshot
+
+        assert create_settlement_snapshot(order_id)
 
 
 def _insert_ticket(
@@ -1122,3 +1125,89 @@ def test_phased_final_release_anchors_on_ends_at() -> None:
         assert due.phases_posted == ("phase2",)
         capture.assert_called_once()
         post.assert_called_once()
+
+
+class TestSettlementSnapshotImmutability:
+    """EVT-SETTLEMENT-SNAPSHOT: release timing follows purchase-time schedule, not live rows."""
+
+    def test_reschedule_after_purchase_does_not_shift_release(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        event_id = str(uuid.uuid4())
+        instance_id = str(uuid.uuid4())
+        type_id = str(uuid.uuid4())
+        order_id = str(uuid.uuid4())
+        original_starts = datetime(2026, 9, 1, 12, 0, tzinfo=UTC)
+        purchased_at = original_starts - timedelta(days=20)  # phased branch
+
+        _insert_event(db, event_id=event_id, organiser_vendor_id=VENDOR_A)
+        _insert_instance(
+            db, instance_id=instance_id, event_id=event_id, starts_at=original_starts
+        )
+        _insert_ticket_type(db, type_id=type_id, event_id=event_id)
+        _insert_ticket_order(
+            db,
+            order_id=order_id,
+            group_id=str(uuid.uuid4()),
+            item_id=str(uuid.uuid4()),
+            instance_id=instance_id,
+            ticket_type_id=type_id,
+            created_at=purchased_at,
+        )
+
+        rescheduled_starts = original_starts + timedelta(days=30)
+        rescheduled_ends = _default_instance_end(rescheduled_starts)
+        db.run(
+            f"""
+            UPDATE public.event_instances
+            SET starts_at = '{rescheduled_starts.isoformat()}'::timestamptz,
+                ends_at = '{rescheduled_ends.isoformat()}'::timestamptz
+            WHERE id = '{instance_id}';
+            """
+        )
+
+        live_phase1 = rescheduled_starts - timedelta(days=PHASE1_LEAD_DAYS)
+        snapshot_phase1 = original_starts - timedelta(days=PHASE1_LEAD_DAYS)
+        assert snapshot_phase1 < live_phase1
+
+        at_snapshot_phase1 = evaluate_event_release(
+            _SERVICE, order_id, now=snapshot_phase1
+        )
+        assert at_snapshot_phase1.outcome == "released"
+        assert at_snapshot_phase1.branch == "phased"
+        assert at_snapshot_phase1.phases_posted == ("phase1",)
+        assert _txn_count(db, phase1_release_key(order_id)) == 1
+
+    def test_create_settlement_snapshot_is_idempotent(
+        self, db: PgConn, db_url_env: None
+    ) -> None:
+        from app.services.events.settlement_snapshot import (
+            create_settlement_snapshot,
+            load_settlement_schedule,
+        )
+
+        event_id = str(uuid.uuid4())
+        instance_id = str(uuid.uuid4())
+        type_id = str(uuid.uuid4())
+        order_id = str(uuid.uuid4())
+        starts_at = datetime(2026, 8, 15, 18, 0, tzinfo=UTC)
+        purchased_at = starts_at - timedelta(days=5)
+
+        _insert_event(db, event_id=event_id, organiser_vendor_id=VENDOR_A)
+        _insert_instance(db, instance_id=instance_id, event_id=event_id, starts_at=starts_at)
+        _insert_ticket_type(db, type_id=type_id, event_id=event_id)
+        _insert_ticket_order(
+            db,
+            order_id=order_id,
+            group_id=str(uuid.uuid4()),
+            item_id=str(uuid.uuid4()),
+            instance_id=instance_id,
+            ticket_type_id=type_id,
+            created_at=purchased_at,
+        )
+
+        schedule = load_settlement_schedule(order_id)
+        assert schedule is not None
+        assert schedule.starts_at == starts_at
+        assert schedule.branch == "full"
+        assert create_settlement_snapshot(order_id) is False

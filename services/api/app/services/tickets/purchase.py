@@ -29,6 +29,7 @@ from app.services.events.gmv_reservation import (
     release_expired_gmv_reservations,
     release_gmv_reservation,
 )
+from app.services.events.settlement_snapshot import create_settlement_snapshot
 from app.services.stock.claim import (
     get_reservation_ttl_minutes,
     load_reservation_ttl_minutes,
@@ -814,6 +815,7 @@ SELECT EXISTS (
         )
 
     capture_gmv_reservation(checkout_group_id)
+    create_settlement_snapshot(order_id)
 
     items_result = run_sql_script(
         f"""
