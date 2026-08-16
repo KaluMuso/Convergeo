@@ -69,25 +69,19 @@ Last files (ordered):
 
 ### Staging (`iyasmrmbcrvlfxpzescb`)
 
-| Field              | Value                                                                                                                                  |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Ledger row count   | 103 (per repair plan)                                                                                                                  |
-| Ledger tip (live)  | `20260813073039` `event_strategy_completion_foundation`                                                                                |
-| Ledger state       | **REHEARSAL / NON-CANONICAL** — contains 7 rehearsal rows that must be normalized                                                      |
-| Canonical parity   | **6 migrations pending** after ledger repair per `staging-ledger-repair-plan.md`                                                       |
-| FORCE RLS (sample) | `event_categories`, `product_relations`, `service_reviews`, `ticket_type_*` → `relrowsecurity=true`, `relforcerowsecurity=true`        |
-| Event money tables | `event_gmv_reservations`, `event_settlement_snapshots`, `event_refund_jobs` **exist** (schema from `20260813063754` / rehearsal alias) |
+| Field              | Value                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Ledger row count   | **108** (post STG-LEDGER-02, 2026-08-16)                                                                                        |
+| Ledger tip (live)  | **`20260815230000`** `refunds_provider_authority_active_index`                                                                  |
+| Ledger state       | **CANONICAL** — rehearsal rows normalized; repository reconcile PASS                                                            |
+| Canonical parity   | **PASS** — zero pending migrations vs repository @ `9a08540d`                                                                   |
+| FORCE RLS (sample) | `event_gmv_reservations`, `event_settlement_snapshots`, `event_refund_jobs` → `relrowsecurity=true`, `relforcerowsecurity=true` |
+| Event money tables | Present; settlement/refund/GMV invariants applied through canonical tip                                                         |
 
-**Pending canonical migrations (post-repair):**
+**STG-LEDGER-02 executed 2026-08-16** — evidence:
+`docs/production-readiness/2026-08-16/stg-ledger-02/` (before/after ledger, preflight JSON, `EXECUTION-REPORT.md`).
 
-1. `20260812090000_product_strategy_integrity`
-2. `20260813064106_product_strategy_core_contract`
-3. `20260813150000_kyc_approve_vendor_atomic`
-4. `20260813160000_rate_counter_scope_manifest`
-5. `20260813160100_listing_view_surface_telemetry`
-6. `20260813160200_security_definer_hardening`
-
-**Status:** `DEPLOYMENT_REQUIRED` + `LIVE_VERIFICATION_REQUIRED` — ledger repair + `db push` not yet executed on canonical path (STG-DRIFT-03 merged tooling; operator execution pending).
+**Status:** `LIVE_VERIFICATION_REQUIRED` for integrated staging certification + deployed-target E2E (STG-CERT), not ledger repair.
 
 ### Production (`dpadrlxukcjbewpqympu`)
 
@@ -226,12 +220,12 @@ Last files (ordered):
 
 ### DEPLOYMENT_REQUIRED
 
-| ID              | Item                                            | Blocker detail                                           |
-| --------------- | ----------------------------------------------- | -------------------------------------------------------- |
-| STG-LEDGER      | Staging ledger normalization + 6-migration push | `staging-ledger-repair-plan.md`; STG-DRIFT-03 merged     |
-| PROD-MIG        | Production migration catch-up 0072→tip          | 35+ migrations; founder-approved window only             |
-| N8N-FLEET       | Import/activate money workflows                 | 18/27 workflows IN_GIT_ONLY                              |
-| BACKUP-ACTIVATE | Database backup workflow                        | Imported but **inactive**; needs SSH + destination creds |
+| ID              | Item                                                      | Blocker detail                                                                      |
+| --------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| STG-LEDGER      | Staging ledger normalization + 8-migration canonical push | **EXECUTED 2026-08-16** — see `docs/production-readiness/2026-08-16/stg-ledger-02/` |
+| PROD-MIG        | Production migration catch-up 0072→tip                    | 35+ migrations; founder-approved window only                                        |
+| N8N-FLEET       | Import/activate money workflows                           | 18/27 workflows IN_GIT_ONLY                                                         |
+| BACKUP-ACTIVATE | Database backup workflow                                  | Imported but **inactive**; needs SSH + destination creds                            |
 
 ### LIVE_VERIFICATION_REQUIRED
 
