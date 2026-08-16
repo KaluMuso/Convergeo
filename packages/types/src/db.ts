@@ -511,6 +511,7 @@ export type Database = {
           delivery_fee_ngwee: number
           id: string
           idempotency_key: string
+          platform_fee_ngwee: number
           status: string
           subtotal_ngwee: number
           total_ngwee: number
@@ -522,6 +523,7 @@ export type Database = {
           delivery_fee_ngwee: number
           id?: string
           idempotency_key: string
+          platform_fee_ngwee?: number
           status?: string
           subtotal_ngwee: number
           total_ngwee: number
@@ -533,6 +535,7 @@ export type Database = {
           delivery_fee_ngwee?: number
           id?: string
           idempotency_key?: string
+          platform_fee_ngwee?: number
           status?: string
           subtotal_ngwee?: number
           total_ngwee?: number
@@ -851,9 +854,12 @@ export type Database = {
           admin_decision: string | null
           created_at: string
           evidence_paths: string[]
+          event_id: string | null
           id: string
+          kind: string
           opener_user_id: string
           order_id: string
+          organiser_respond_by: string | null
           status: string
           updated_at: string
           vendor_response: string | null
@@ -862,9 +868,12 @@ export type Database = {
           admin_decision?: string | null
           created_at?: string
           evidence_paths?: string[]
+          event_id?: string | null
           id?: string
+          kind?: string
           opener_user_id: string
           order_id: string
+          organiser_respond_by?: string | null
           status?: string
           updated_at?: string
           vendor_response?: string | null
@@ -873,9 +882,12 @@ export type Database = {
           admin_decision?: string | null
           created_at?: string
           evidence_paths?: string[]
+          event_id?: string | null
           id?: string
+          kind?: string
           opener_user_id?: string
           order_id?: string
+          organiser_respond_by?: string | null
           status?: string
           updated_at?: string
           vendor_response?: string | null
@@ -1178,6 +1190,58 @@ export type Database = {
           },
         ]
       }
+      event_checkin_overrides: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          event_id: string
+          id: string
+          instance_id: string
+          reason: string
+          ticket_id: string
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          event_id: string
+          id?: string
+          instance_id: string
+          reason: string
+          ticket_id: string
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          instance_id?: string
+          reason?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_checkin_overrides_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_checkin_overrides_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "event_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_checkin_overrides_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_gmv_reservations: {
         Row: {
           amount_ngwee: number
@@ -1336,6 +1400,58 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_promo_redemptions: {
+        Row: {
+          created_at: string
+          customer_id: string
+          discount_ngwee: number
+          event_id: string
+          id: string
+          order_id: string
+          promo_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          discount_ngwee: number
+          event_id: string
+          id?: string
+          order_id: string
+          promo_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          discount_ngwee?: number
+          event_id?: string
+          id?: string
+          order_id?: string
+          promo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_promo_redemptions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_promo_redemptions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_promo_redemptions_promo_id_fkey"
+            columns: ["promo_id"]
+            isOneToOne: false
+            referencedRelation: "event_promo_codes"
             referencedColumns: ["id"]
           },
         ]
@@ -1649,10 +1765,14 @@ export type Database = {
           cancelled_at: string | null
           cancelled_by: string | null
           category_slug: string | null
+          city: string | null
           created_at: string
           description: string | null
           event_type: string
+          high_value_verified_at: string | null
+          high_value_verified_by: string | null
           id: string
+          id_check_enabled: boolean
           images: string[]
           landmark: string | null
           lat: number | null
@@ -1679,10 +1799,14 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           category_slug?: string | null
+          city?: string | null
           created_at?: string
           description?: string | null
           event_type?: string
+          high_value_verified_at?: string | null
+          high_value_verified_by?: string | null
           id?: string
+          id_check_enabled?: boolean
           images?: string[]
           landmark?: string | null
           lat?: number | null
@@ -1709,10 +1833,14 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           category_slug?: string | null
+          city?: string | null
           created_at?: string
           description?: string | null
           event_type?: string
+          high_value_verified_at?: string | null
+          high_value_verified_by?: string | null
           id?: string
+          id_check_enabled?: boolean
           images?: string[]
           landmark?: string | null
           lat?: number | null
@@ -3317,6 +3445,7 @@ export type Database = {
           pickup_pin_hash: string | null
           pickup_qr_secret: string | null
           pickup_token_version: number
+          platform_fee_ngwee: number
           status: string
           updated_at: string
           vendor_id: string
@@ -3337,6 +3466,7 @@ export type Database = {
           pickup_pin_hash?: string | null
           pickup_qr_secret?: string | null
           pickup_token_version?: number
+          platform_fee_ngwee?: number
           status?: string
           updated_at?: string
           vendor_id: string
@@ -3357,6 +3487,7 @@ export type Database = {
           pickup_pin_hash?: string | null
           pickup_qr_secret?: string | null
           pickup_token_version?: number
+          platform_fee_ngwee?: number
           status?: string
           updated_at?: string
           vendor_id?: string
@@ -4618,7 +4749,9 @@ export type Database = {
           id: string
           kind: string
           name: string
+          pass_kind: string
           per_customer_cap: number | null
+          perks: string | null
           price_ngwee: number
           qty_cap: number | null
           updated_at: string
@@ -4632,7 +4765,9 @@ export type Database = {
           id?: string
           kind: string
           name: string
+          pass_kind?: string
           per_customer_cap?: number | null
+          perks?: string | null
           price_ngwee: number
           qty_cap?: number | null
           updated_at?: string
@@ -4646,7 +4781,9 @@ export type Database = {
           id?: string
           kind?: string
           name?: string
+          pass_kind?: string
           per_customer_cap?: number | null
+          perks?: string | null
           price_ngwee?: number
           qty_cap?: number | null
           updated_at?: string

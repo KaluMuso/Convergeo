@@ -947,6 +947,8 @@ EXPECTATIONS: TableExpectations = {
     "event_promo_codes": client_invisible(),
     "event_affiliates": client_invisible(),
     "event_campaigns": client_invisible(),
+    "event_checkin_overrides": client_invisible(),
+    "event_promo_redemptions": client_invisible(),
     # R02-P13 (D37). Enquiries are private correspondence between exactly two
     # parties, so there is no public read at all: anon has no grant (→ deny even
     # for select), authenticated has a SELECT grant plus a two-party policy

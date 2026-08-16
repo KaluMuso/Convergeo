@@ -25,7 +25,9 @@ from app.services.orders.state import SYSTEM_ACTOR_ID
 from app.services.stock.claim import run_sql_script, sql_uuid
 
 CONFIG_KEY = "organiser_t1_event_gmv_cap_ngwee"
+SUCCESS_EVENTS_CONFIG_KEY = "organiser_t1_success_events_to_uncap"
 DEFAULT_CAP_NGWEE = 2_000_000
+DEFAULT_SUCCESS_EVENTS_TO_UNCAP = 3
 AUDIT_ACTION = "organiser_t1_gmv_cap_exceeded"
 
 
@@ -121,6 +123,58 @@ LIMIT 1;
         value = int(parsed.strip())
         return value if value > 0 else DEFAULT_CAP_NGWEE
     return DEFAULT_CAP_NGWEE
+
+
+def load_organiser_t1_success_events_to_uncap() -> int:
+    key_sql = "'" + SUCCESS_EVENTS_CONFIG_KEY.replace("'", "''") + "'"
+    result = run_sql_script(
+        f"""
+SELECT value::text
+FROM public.platform_config
+WHERE key = {key_sql}
+LIMIT 1;
+"""
+    )
+    if not result.ok or not result.rows:
+        return DEFAULT_SUCCESS_EVENTS_TO_UNCAP
+    raw = result.rows[0].strip()
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        parsed = raw
+    if isinstance(parsed, int) and parsed > 0:
+        return parsed
+    if isinstance(parsed, str) and parsed.strip().isdigit():
+        value = int(parsed.strip())
+        return value if value > 0 else DEFAULT_SUCCESS_EVENTS_TO_UNCAP
+    return DEFAULT_SUCCESS_EVENTS_TO_UNCAP
+
+
+def organiser_successful_paid_event_count(organiser_vendor_id: str) -> int:
+    """Count completed events with at least one successful paid ticket payment."""
+    vendor_sql = sql_uuid(organiser_vendor_id, "organiser_vendor_id")
+    result = run_sql_script(
+        f"""
+SELECT count(*)::text
+FROM public.events e
+WHERE e.organiser_vendor_id = {vendor_sql}
+  AND e.status = 'completed'
+  AND EXISTS (
+    SELECT 1
+    FROM public.ticket_types tt
+    INNER JOIN public.order_item_tickets oit ON oit.ticket_type_id = tt.id
+    INNER JOIN public.order_items oi ON oi.id = oit.order_item_id
+    INNER JOIN public.orders o ON o.id = oi.order_id
+    INNER JOIN public.payments p ON p.checkout_group_id = o.checkout_group_id
+    WHERE tt.event_id = e.id
+      AND tt.kind <> 'free_rsvp'
+      AND p.status = 'success'
+  );
+"""
+    )
+    if not result.ok or not result.rows:
+        raise RuntimeError(f"successful event count failed: {result.error}")
+    return int(result.rows[0])
 
 
 def event_paid_gmv_ngwee(event_id: str) -> int:
@@ -231,6 +285,9 @@ def enforce_organiser_t1_gmv_cap(
 
     tier = _resolve_cap_tier(service, organiser_vendor_id)
     if tier >= 2:
+        return
+    required = load_organiser_t1_success_events_to_uncap()
+    if organiser_successful_paid_event_count(organiser_vendor_id) >= required:
         return
 
     cap_ngwee = load_organiser_t1_event_gmv_cap_ngwee()

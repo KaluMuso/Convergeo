@@ -34,6 +34,7 @@ type TypeDraft = {
   qtyCap: string;
   perCustomerCap: string;
   attendeeNamed: boolean;
+  perks: string;
 };
 
 const EMPTY_DRAFT: TypeDraft = {
@@ -43,6 +44,7 @@ const EMPTY_DRAFT: TypeDraft = {
   qtyCap: "",
   perCustomerCap: "",
   attendeeNamed: false,
+  perks: "",
 };
 
 function draftFromType(type: TicketTypeSummary): TypeDraft {
@@ -53,6 +55,7 @@ function draftFromType(type: TicketTypeSummary): TypeDraft {
     qtyCap: type.qty_cap === null ? "" : String(type.qty_cap),
     perCustomerCap: type.per_customer_cap === null ? "" : String(type.per_customer_cap),
     attendeeNamed: type.attendee_named,
+    perks: type.perks ?? "",
   };
 }
 
@@ -169,6 +172,7 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
       qty_cap: parseOptionalPositiveInt(draft.qtyCap),
       per_customer_cap: parseOptionalPositiveInt(draft.perCustomerCap),
       attendee_named: draft.attendeeNamed,
+      perks: draft.perks.trim() || null,
     };
 
     setSaving(true);
@@ -411,6 +415,17 @@ export function TicketTypeConfig({ locale, eventId }: TicketTypeConfigProps) {
                 <span className="text-xs text-muted">{t("tickets.fields.attendeeNamedHelp")}</span>
               </span>
             </label>
+
+            <FormField
+              label={t("tickets.fields.perksLabel")}
+              helpText={t("tickets.fields.perksHelp")}
+            >
+              <Input
+                value={draft.perks}
+                onChange={(event) => setDraft((c) => ({ ...c, perks: event.target.value }))}
+                placeholder={t("tickets.fields.perksPlaceholder")}
+              />
+            </FormField>
 
             <div className="flex gap-2 pt-1">
               <Button

@@ -22,6 +22,12 @@ export type EscrowSplit = {
   released_ngwee: number;
 };
 
+export type SalesVelocity = {
+  sold_last_24h: number;
+  revenue_last_24h_ngwee: number;
+  projected_sold: number | null;
+};
+
 export type OrganiserEventStats = {
   event_id: string;
   event_status: string;
@@ -30,6 +36,7 @@ export type OrganiserEventStats = {
   check_in: CheckInProgress;
   escrow: EscrowSplit;
   mass_refund_flagged: boolean;
+  velocity?: SalesVelocity;
 };
 
 export function createDashboardClient(getToken: () => string | null | Promise<string | null>) {

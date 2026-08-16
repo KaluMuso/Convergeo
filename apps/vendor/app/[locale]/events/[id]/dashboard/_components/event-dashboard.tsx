@@ -114,6 +114,28 @@ export function EventDashboard({ locale, eventId }: EventDashboardProps) {
             <p className="text-2xl font-semibold">{formatK(stats.revenue_ngwee)}</p>
           </section>
 
+          {stats.velocity ? (
+            <section className="rounded-lg border border-border bg-surface p-3 shadow-sm">
+              <h2 className="text-sm font-semibold">{t("eventDashboard.sections.velocity")}</h2>
+              <dl className="mt-1 flex flex-col gap-1 text-sm">
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted">{t("eventDashboard.labels.soldLast24h")}</dt>
+                  <dd className="font-medium">{stats.velocity.sold_last_24h}</dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-muted">{t("eventDashboard.labels.revenueLast24h")}</dt>
+                  <dd className="font-medium">{formatK(stats.velocity.revenue_last_24h_ngwee)}</dd>
+                </div>
+                {stats.velocity.projected_sold !== null ? (
+                  <div className="flex items-center justify-between">
+                    <dt className="text-muted">{t("eventDashboard.labels.projectedSold")}</dt>
+                    <dd className="font-medium">{stats.velocity.projected_sold}</dd>
+                  </div>
+                ) : null}
+              </dl>
+            </section>
+          ) : null}
+
           <section className="rounded-lg border border-border bg-surface p-3 shadow-sm">
             <h2 className="text-sm font-semibold">{t("eventDashboard.sections.checkIn")}</h2>
             <p className="text-sm text-muted">

@@ -33,6 +33,8 @@ class TicketPurchaseRequest(BaseModel):
     # Returned only by POST /events/{slug}/access/unlock. It is deliberately a
     # request body value, never a query parameter that can reach access logs.
     event_access_proof: str | None = Field(default=None, max_length=2048)
+    promo_code: str | None = Field(default=None, max_length=40)
+    affiliate_code: str | None = Field(default=None, max_length=40)
 
     @field_validator("attendee_names")
     @classmethod
@@ -47,6 +49,8 @@ class TicketCheckoutResponse(BaseModel):
     order_id: str
     order_item_id: str
     subtotal_ngwee: int
+    platform_fee_ngwee: int = 0
+    total_ngwee: int = 0
     redirect_to: str
 
 
@@ -89,6 +93,8 @@ def _to_checkout_response(result: TicketCheckoutResult) -> TicketCheckoutRespons
         order_id=result.order_id,
         order_item_id=result.order_item_id,
         subtotal_ngwee=result.subtotal_ngwee,
+        platform_fee_ngwee=result.platform_fee_ngwee,
+        total_ngwee=result.total_ngwee or result.subtotal_ngwee,
         redirect_to=f"/checkout?group={result.checkout_group_id}",
     )
 
@@ -107,6 +113,8 @@ async def ticket_checkout(
         qty=body.qty,
         attendee_names=body.attendee_names,
         event_access_proof=body.event_access_proof,
+        promo_code=body.promo_code,
+        affiliate_code=body.affiliate_code,
     )
     return _to_checkout_response(result)
 

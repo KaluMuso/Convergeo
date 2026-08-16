@@ -36,6 +36,7 @@ export type TicketPickerType = {
   early_bird_price_ngwee: number | null;
   early_bird_until: string | null;
   tiers: { min_qty: number; price_ngwee: number }[];
+  perks?: string | null;
 };
 
 export type TicketPickerProps = {
@@ -45,6 +46,7 @@ export type TicketPickerProps = {
   instances: TicketPickerInstance[];
   ticketTypes: TicketPickerType[];
   isSoldOut: boolean;
+  platformFeePayer?: "organiser" | "buyer";
 };
 
 async function getAccessToken(): Promise<string | null> {
@@ -91,6 +93,7 @@ export function TicketPicker({
   instances,
   ticketTypes,
   isSoldOut,
+  platformFeePayer = "organiser",
 }: TicketPickerProps) {
   const t = useTranslations("events.ticketPurchase");
   const tEvents = useTranslations("events");
@@ -101,6 +104,7 @@ export function TicketPicker({
   const [selectedTypeId, setSelectedTypeId] = useState(() => ticketTypes[0]?.id ?? "");
   const [qty, setQty] = useState(1);
   const [attendeeNames, setAttendeeNames] = useState<string[]>([]);
+  const [promoCode, setPromoCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -138,6 +142,11 @@ export function TicketPicker({
   }, [selectedType, qty]);
 
   const lineTotalNgwee = resolvedUnitNgwee * qty;
+  const platformFeeNgwee =
+    platformFeePayer === "buyer" && !selectedType?.is_free
+      ? Math.floor((lineTotalNgwee * 500) / 10_000)
+      : 0;
+  const checkoutTotalNgwee = lineTotalNgwee + platformFeeNgwee;
 
   const earlyBirdActive = useMemo(
     () => (selectedType ? isEarlyBirdActive(selectedType, new Date()) : false),
@@ -224,6 +233,9 @@ export function TicketPicker({
           ...(selectedType.attendee_named
             ? { attendee_names: cleanedAttendeeNames(attendeeNames, qty) }
             : {}),
+          ...(!selectedType.is_free && promoCode.trim()
+            ? { promo_code: promoCode.trim().toUpperCase() }
+            : {}),
         }),
       });
 
@@ -243,6 +255,8 @@ export function TicketPicker({
           setError(t("errors.attendeeNamesRequired"));
         } else if (apiError?.code === "tickets.attendee_names_mismatch") {
           setError(t("errors.attendeeNamesMismatch"));
+        } else if (apiError?.code === "promo_not_found") {
+          setError(t("errors.promoInvalid"));
         } else {
           setError(apiError?.message ?? t("errors.generic"));
         }
@@ -270,7 +284,17 @@ export function TicketPicker({
     } finally {
       setLoading(false);
     }
-  }, [attendeeNames, checkAuth, eventAccessProof, locale, qty, selectedInstance, selectedType, t]);
+  }, [
+    attendeeNames,
+    checkAuth,
+    eventAccessProof,
+    locale,
+    promoCode,
+    qty,
+    selectedInstance,
+    selectedType,
+    t,
+  ]);
 
   if (ticketTypes.length === 0) {
     return null;
@@ -334,6 +358,8 @@ export function TicketPicker({
           })}
         </p>
       ) : null}
+
+      {selectedType?.perks ? <p className="text-xs text-text-2">{selectedType.perks}</p> : null}
 
       {hasDiscounts && selectedType ? (
         <div className="flex flex-col gap-1 rounded-md bg-bg-2 px-3 py-2 text-xs">
@@ -426,9 +452,38 @@ export function TicketPicker({
       ) : null}
 
       {selectedType && !selectedType.is_free ? (
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-text-2">{t("total")}</span>
-          <PriceBlock ngwee={lineTotalNgwee} />
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="font-medium text-text-2">{t("promoCode")}</span>
+          <input
+            type="text"
+            autoCapitalize="characters"
+            autoComplete="off"
+            className="min-h-11 rounded-md border border-border bg-bg px-3 text-sm text-text"
+            value={promoCode}
+            onChange={(event) => setPromoCode(event.target.value)}
+            placeholder={t("promoCodePlaceholder")}
+          />
+        </label>
+      ) : null}
+
+      {selectedType && !selectedType.is_free ? (
+        <div className="flex flex-col gap-1 text-sm">
+          {platformFeeNgwee > 0 ? (
+            <>
+              <div className="flex items-center justify-between text-text-2">
+                <span>{t("subtotal")}</span>
+                <PriceBlock ngwee={lineTotalNgwee} />
+              </div>
+              <div className="flex items-center justify-between text-text-2">
+                <span>{t("platformFee")}</span>
+                <PriceBlock ngwee={platformFeeNgwee} />
+              </div>
+            </>
+          ) : null}
+          <div className="flex items-center justify-between">
+            <span className="text-text-2">{t("total")}</span>
+            <PriceBlock ngwee={checkoutTotalNgwee} />
+          </div>
         </div>
       ) : null}
 

@@ -313,6 +313,23 @@ def _notify_recipient(client: Any, *, transfer_row: dict[str, Any], ticket_id: s
     )
 
 
+def _load_display_name(service_client: _ServiceRoleClient, user_id: str) -> str | None:
+    response = (
+        service_client.client.table("profiles")
+        .select("display_name")
+        .eq("id", user_id)
+        .maybe_single()
+        .execute()
+    )
+    row = _single_row(response)
+    if row is None:
+        return None
+    name = row.get("display_name")
+    if not isinstance(name, str) or not name.strip():
+        return None
+    return name.strip()[:120]
+
+
 def _claim_transfer_atomic(
     *,
     transfer_id: str,
@@ -320,6 +337,7 @@ def _claim_transfer_atomic(
     qr_secret: str,
     pin_hash: str,
     now: datetime,
+    holder_name: str | None,
 ) -> tuple[str, str] | None:
     """Atomically flip pending -> claimed and reassign the ticket holder/secrets.
 
@@ -330,6 +348,7 @@ def _claim_transfer_atomic(
     transfer_sql = sql_uuid(transfer_id, "transfer_id")
     holder_sql = sql_uuid(claiming_user_id, "claiming_user_id")
     now_sql = sql_literal(now.isoformat())
+    name_sql = "NULL" if not holder_name else sql_literal(holder_name)
     script = f"""
 BEGIN;
 WITH target_transfer AS (
@@ -351,6 +370,7 @@ target_ticket AS (
 ticket_upd AS (
   UPDATE public.tickets t
   SET holder_user_id = {holder_sql},
+      holder_name = {name_sql},
       qr_secret = {sql_literal(qr_secret)},
       pin_hash = {sql_literal(pin_hash)}
   WHERE t.id IN (SELECT id FROM target_ticket)
@@ -537,6 +557,7 @@ async def claim_transfer(
         qr_secret=new_qr_secret,
         pin_hash=new_pin_hash,
         now=now,
+        holder_name=_load_display_name(service_client, current_user.id),
     )
     if claimed is None:
         refreshed = _load_transfer(service_client, transfer_id)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from typing import Annotated, Any, Literal, Protocol
 from zoneinfo import ZoneInfo
 
@@ -11,6 +11,19 @@ from app.services.events.access import (
     issue_event_access_proof,
     verify_access_code,
     verify_event_access_proof,
+)
+from app.services.events.date_windows import (
+    DateWindow,
+    instance_in_bounds,
+    tonight_window,
+    weekend_window,
+    window_bounds,
+)
+from app.services.events.ranking import (
+    NEAR_ME_DEFAULT_KM,
+    browse_rank_tuple,
+    is_selling_fast,
+    within_near_me_radius,
 )
 from app.services.events.timing import instance_display_end
 from app.services.events.type_policy import normalize_event_type, normalize_visibility
@@ -30,15 +43,7 @@ EVENT_CATEGORIES = (
     "free-rsvp",
 )
 
-DateWindow = Literal["tonight", "this_weekend"]
-EventCategory = Literal[
-    "workshops",
-    "comedy-theatre",
-    "pop-up-dinners",
-    "cultural-arts",
-    "lifestyle-community",
-    "free-rsvp",
-]
+EventCategory = str
 
 SOLD_TICKET_STATUSES = frozenset({"issued", "checked_in"})
 
@@ -92,6 +97,7 @@ class TicketTypeResponse(BaseModel):
     early_bird_price_ngwee: int | None = None
     early_bird_until: datetime | None = None
     tiers: list[PriceTierResponse] = Field(default_factory=list)
+    perks: str | None = None
 
 
 class EventBrowseItem(BaseModel):
@@ -108,6 +114,8 @@ class EventBrowseItem(BaseModel):
     spots_sold: int = 0
     spots_total: int = 0
     is_sold_out: bool = False
+    is_selling_fast: bool = False
+    city: str | None = None
     organiser: EventOrganiserResponse
 
 
@@ -132,6 +140,8 @@ class EventDetailResponse(BaseModel):
     event_type: str = "standard"
     visibility: Literal["public", "unlisted", "private"] = "public"
     age_restriction: int | None = None
+    platform_fee_payer: Literal["organiser", "buyer"] = "organiser"
+    id_check_enabled: bool = False
     instances: list[EventInstanceResponse] = Field(default_factory=list)
     ticket_types: list[TicketTypeResponse] = Field(default_factory=list)
     min_price_ngwee: int | None = None
@@ -170,36 +180,11 @@ def _parse_ends_at(row: dict[str, Any]) -> datetime | None:
     return parse_starts_at(raw)
 
 
-def tonight_window(ref: datetime | None = None) -> tuple[datetime, datetime]:
-    """Return [start, end] for tonight in Africa/Lusaka (from ref through end of local day)."""
-    local = (ref or datetime.now(LUSAKA_TZ)).astimezone(LUSAKA_TZ)
-    start = local
-    end = datetime.combine(local.date(), time(23, 59, 59, 999999), tzinfo=LUSAKA_TZ)
-    return start, end
-
-
-def weekend_window(ref: datetime | None = None) -> tuple[datetime, datetime]:
-    """Return [start, end] for the current or upcoming Fri–Sun window in Africa/Lusaka."""
-    local = (ref or datetime.now(LUSAKA_TZ)).astimezone(LUSAKA_TZ)
-    weekday = local.weekday()  # Monday=0 … Sunday=6
-    if weekday <= 3:
-        days_to_friday = 4 - weekday
-    else:
-        days_to_friday = 4 - weekday
-    friday = local.date() + timedelta(days=days_to_friday)
-    sunday = friday + timedelta(days=2)
-    start = datetime.combine(friday, time.min, tzinfo=LUSAKA_TZ)
-    end = datetime.combine(sunday, time(23, 59, 59, 999999), tzinfo=LUSAKA_TZ)
-    return start, end
-
-
 def instance_in_window(starts_at: datetime, window: DateWindow, ref: datetime) -> bool:
-    local_start = starts_at.astimezone(LUSAKA_TZ)
-    if window == "tonight":
-        win_start, win_end = tonight_window(ref)
-    else:
-        win_start, win_end = weekend_window(ref)
-    return win_start <= local_start <= win_end
+    bounds = window_bounds(window, on_date=None, ref=ref)
+    if bounds is None:
+        return True
+    return instance_in_bounds(starts_at, bounds)
 
 
 def order_instances(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -327,6 +312,11 @@ def _build_ticket_type_response(
                 for tier in tiers
             ]
         ),
+        perks=(
+            str(row["perks"]).strip()
+            if isinstance(row.get("perks"), str) and str(row.get("perks")).strip()
+            else None
+        ),
     )
 
 
@@ -350,17 +340,55 @@ def _min_price_ngwee(ticket_type_rows: list[dict[str, Any]]) -> int | None:
     return min(prices)
 
 
+def _category_family(client: Any) -> dict[str, set[str]]:
+    """Map each slug to itself plus descendant slugs (one parent level)."""
+    family, _parents = _load_category_taxonomy(client)
+    return family
+
+
+def _load_category_taxonomy(client: Any) -> tuple[dict[str, set[str]], list[str]]:
+    """Return (family map, parent slugs in sort order) from event_categories."""
+    family: dict[str, set[str]] = {}
+    parents: list[str] = []
+    try:
+        response = (
+            client.table("event_categories").select("slug, parent_slug, sort").order("sort").execute()
+        )
+        rows = [row for row in (response.data or []) if isinstance(row, dict)]
+    except Exception:
+        return family, list(EVENT_CATEGORIES)
+    for row in rows:
+        slug = str(row.get("slug") or "")
+        if not slug:
+            continue
+        family.setdefault(slug, set()).add(slug)
+        parent = row.get("parent_slug")
+        if isinstance(parent, str) and parent:
+            family.setdefault(parent, set()).add(parent)
+            family[parent].add(slug)
+        else:
+            parents.append(slug)
+    if "free-rsvp" not in parents:
+        parents.append("free-rsvp")
+    return family, parents or list(EVENT_CATEGORIES)
+
+
 def _matches_category(
     category: EventCategory | None,
     *,
     ticket_type_rows: list[dict[str, Any]],
     event_category: str | None,
+    family: dict[str, set[str]] | None = None,
 ) -> bool:
     if category is None:
         return True
     if category == "free-rsvp":
         return _event_is_free(ticket_type_rows)
-    return event_category == category
+    if event_category == category:
+        return True
+    if family and event_category:
+        return event_category in family.get(category, set())
+    return False
 
 
 def _upcoming_instances(
@@ -442,7 +470,7 @@ def _fetch_published_events(client: Any) -> list[dict[str, Any]]:
         client.table("events")
         .select(
             "id, slug, title, description, venue, lat, lng, images, status, "
-            "category_slug, landmark, event_type, "
+            "category_slug, landmark, event_type, city, "
             "organiser_vendor_id, vendors!inner("
             "id, slug, display_name, preferred_badge, logo_url, description, status, "
             "vendor_locations(landmark)"
@@ -466,7 +494,7 @@ def _fetch_event_by_slug(client: Any, slug: str) -> dict[str, Any] | None:
         .select(
             "id, slug, title, description, venue, lat, lng, images, status, "
             "category_slug, landmark, event_type, visibility, "
-            "age_restriction, "
+            "age_restriction, platform_fee_payer, id_check_enabled, city, "
             "organiser_vendor_id, vendors!inner("
             "id, slug, display_name, preferred_badge, logo_url, description, status, "
             "vendor_locations(landmark)"
@@ -504,7 +532,7 @@ def _fetch_ticket_types(client: Any, event_ids: list[str]) -> list[dict[str, Any
         client.table("ticket_types")
         .select(
             "id, event_id, kind, name, price_ngwee, qty_cap, attendee_named, "
-            "early_bird_price_ngwee, early_bird_until"
+            "early_bird_price_ngwee, early_bird_until, perks"
         )
         .in_("event_id", event_ids)
         .execute()
@@ -549,9 +577,16 @@ def build_browse_response(
     date_window: DateWindow | None = None,
     category: EventCategory | None = None,
     ref: datetime | None = None,
+    on_date: date | None = None,
+    city: str | None = None,
+    near_lat: float | None = None,
+    near_lng: float | None = None,
+    radius_km: float = NEAR_ME_DEFAULT_KM,
 ) -> EventBrowseResponse:
     now = (ref or datetime.now(LUSAKA_TZ)).astimezone(ZoneInfo("UTC"))
     ref_lusaka = (ref or datetime.now(LUSAKA_TZ)).astimezone(LUSAKA_TZ)
+    bounds = window_bounds(date_window, on_date=on_date, ref=ref_lusaka)
+    family, parent_slugs = _load_category_taxonomy(client)
 
     events = _fetch_published_events(client)
     event_ids = [str(row["id"]) for row in events if row.get("id")]
@@ -587,19 +622,28 @@ def build_browse_response(
             category,
             ticket_type_rows=event_ticket_types,
             event_category=event_category,
+            family=family,
         ):
             continue
+
+        city_value = event.get("city") if isinstance(event.get("city"), str) else None
+        if city and (not city_value or city_value.casefold() != city.casefold()):
+            venue = event.get("venue") if isinstance(event.get("venue"), str) else ""
+            landmark = event.get("landmark") if isinstance(event.get("landmark"), str) else ""
+            haystack = f"{city_value or ''} {venue} {landmark}".casefold()
+            if city.casefold() not in haystack:
+                continue
 
         upcoming = _upcoming_instances(event_instances, now=now)
         if not upcoming:
             continue
 
         matching_instances = upcoming
-        if date_window is not None:
+        if bounds is not None:
             matching_instances = [
                 row
                 for row in upcoming
-                if instance_in_window(parse_starts_at(row["starts_at"]), date_window, ref_lusaka)
+                if instance_in_bounds(parse_starts_at(row["starts_at"]), bounds)
             ]
             if not matching_instances:
                 continue
@@ -612,6 +656,22 @@ def build_browse_response(
         spots_total = int(next_instance.get("capacity") or 0)
         vendor_raw = event.get("vendors")
         vendor_row = vendor_raw if isinstance(vendor_raw, dict) else None
+        sold_out = _browse_item_sold_out(
+            next_instance,
+            event_ticket_types,
+            tickets_by_instance=tickets_by_instance,
+            tickets_by_type=tickets_by_type,
+        )
+        event_lat = event.get("lat") if isinstance(event.get("lat"), (int, float)) else None
+        event_lng = event.get("lng") if isinstance(event.get("lng"), (int, float)) else None
+        if not within_near_me_radius(
+            event_lat=float(event_lat) if event_lat is not None else None,
+            event_lng=float(event_lng) if event_lng is not None else None,
+            user_lat=near_lat,
+            user_lng=near_lng,
+            radius_km=radius_km,
+        ):
+            continue
 
         items.append(
             EventBrowseItem(
@@ -627,12 +687,11 @@ def build_browse_response(
                 is_free=_event_is_free(event_ticket_types),
                 spots_sold=spots_sold,
                 spots_total=spots_total,
-                is_sold_out=_browse_item_sold_out(
-                    next_instance,
-                    event_ticket_types,
-                    tickets_by_instance=tickets_by_instance,
-                    tickets_by_type=tickets_by_type,
+                is_sold_out=sold_out,
+                is_selling_fast=is_selling_fast(
+                    spots_sold=spots_sold, spots_total=spots_total, is_sold_out=sold_out
                 ),
+                city=city_value if isinstance(city_value, str) else None,
                 organiser=_parse_organiser(vendor_row),
             )
         )
@@ -640,10 +699,35 @@ def build_browse_response(
         for row in matching_instances:
             calendar_date_set.add(parse_starts_at(row["starts_at"]).astimezone(LUSAKA_TZ).date())
 
-    items.sort(key=lambda item: item.next_starts_at or datetime.max.replace(tzinfo=ZoneInfo("UTC")))
+    def _rank_key(item: EventBrowseItem) -> tuple[int, int, int, int, float, datetime]:
+        organiser = item.organiser
+        event_row = next((row for row in events if str(row.get("id")) == item.id), {})
+        lat_raw = event_row.get("lat") if isinstance(event_row, dict) else None
+        lng_raw = event_row.get("lng") if isinstance(event_row, dict) else None
+        return browse_rank_tuple(
+            next_starts_at=item.next_starts_at
+            or datetime.max.replace(tzinfo=ZoneInfo("UTC")),
+            spots_sold=item.spots_sold,
+            spots_total=item.spots_total,
+            is_sold_out=item.is_sold_out,
+            verified=bool(organiser.preferred_badge),
+            event_lat=float(lat_raw) if isinstance(lat_raw, (int, float)) else None,
+            event_lng=float(lng_raw) if isinstance(lng_raw, (int, float)) else None,
+            user_lat=near_lat,
+            user_lng=near_lng,
+            category=item.category,
+            affinity_categories=frozenset(),
+        )
+
+    items.sort(key=_rank_key)
     calendar_dates = sorted(day.isoformat() for day in calendar_date_set)
 
-    return EventBrowseResponse(items=items, total=len(items), calendar_dates=calendar_dates)
+    return EventBrowseResponse(
+        items=items,
+        total=len(items),
+        calendar_dates=calendar_dates,
+        categories=parent_slugs,
+    )
 
 
 def _load_access_credential(client: Any, event_id: str) -> tuple[str, int] | None:
@@ -759,6 +843,8 @@ def build_detail_response(
             event.get("visibility") if isinstance(event.get("visibility"), str) else None
         ),
         age_restriction=int(age_restriction) if age_restriction is not None else None,
+        platform_fee_payer="buyer" if event.get("platform_fee_payer") == "buyer" else "organiser",
+        id_check_enabled=bool(event.get("id_check_enabled")),
         instances=instance_responses,
         ticket_types=ticket_type_responses,
         min_price_ngwee=_min_price_ngwee(ticket_types),
@@ -780,11 +866,21 @@ def list_events(
     supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
     date_window: Annotated[DateWindow | None, Query(alias="date_window")] = None,
     category: Annotated[EventCategory | None, Query()] = None,
+    on_date: Annotated[date | None, Query(alias="on_date")] = None,
+    city: Annotated[str | None, Query(max_length=80)] = None,
+    lat: Annotated[float | None, Query(ge=-90, le=90)] = None,
+    lng: Annotated[float | None, Query(ge=-180, le=180)] = None,
+    radius_km: Annotated[float, Query(gt=0, le=200)] = NEAR_ME_DEFAULT_KM,
 ) -> EventBrowseResponse:
     return build_browse_response(
         supabase.client,
         date_window=date_window,
         category=category,
+        on_date=on_date,
+        city=city.strip() if city else None,
+        near_lat=lat,
+        near_lng=lng,
+        radius_km=radius_km,
     )
 
 

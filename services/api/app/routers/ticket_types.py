@@ -7,6 +7,11 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
+from app.services.events.capacity_tree import (
+    assert_allocation_capacity_tree,
+    load_instance_capacities,
+    load_other_type_allocated,
+)
 from app.services.kyc.state_machine import ServiceRoleClient
 from fastapi import APIRouter, Depends
 from pydantic import Field, field_validator, model_validator
@@ -26,6 +31,8 @@ class TicketTypeResponse(StrictModel):
     per_customer_cap: int | None = None
     attendee_named: bool = False
     tickets_sold: int = 0
+    perks: str | None = None
+    pass_kind: Literal["instance", "event_pass"] = "instance"
 
 
 class AllocationInput(StrictModel):
@@ -116,6 +123,8 @@ class TicketTypeCreateRequest(StrictModel):
     # When true, buyers must supply a name per ticket at purchase (enforced in
     # purchase._validate_attendee_names). Valid for paid and free types alike.
     attendee_named: bool = False
+    perks: str | None = Field(default=None, max_length=500)
+    pass_kind: Literal["instance", "event_pass"] = "instance"
 
     @model_validator(mode="after")
     def validate_price_for_kind(self) -> TicketTypeCreateRequest:
@@ -134,6 +143,8 @@ class TicketTypeUpdateRequest(StrictModel):
     qty_cap: int | None = Field(default=None, gt=0)
     per_customer_cap: int | None = Field(default=None, gt=0)
     attendee_named: bool | None = None
+    perks: str | None = Field(default=None, max_length=500)
+    pass_kind: Literal["instance", "event_pass"] | None = None
 
     @field_validator("qty_cap", "per_customer_cap", mode="before")
     @classmethod
@@ -233,7 +244,7 @@ def _load_ticket_type(
         service_client.client.table("ticket_types")
         .select(
             "id, event_id, kind, name, price_ngwee, qty_cap, per_customer_cap, "
-            "attendee_named, early_bird_price_ngwee, early_bird_until"
+            "attendee_named, early_bird_price_ngwee, early_bird_until, perks, pass_kind"
         )
         .eq("id", ticket_type_id)
         .maybe_single()
@@ -400,6 +411,12 @@ def _to_ticket_type_response(
         ),
         attendee_named=bool(row.get("attendee_named", False)),
         tickets_sold=tickets_sold,
+        perks=(
+            str(row["perks"]).strip()
+            if isinstance(row.get("perks"), str) and str(row["perks"]).strip()
+            else None
+        ),
+        pass_kind="event_pass" if row.get("pass_kind") == "event_pass" else "instance",
     )
 
 
@@ -416,7 +433,8 @@ def list_ticket_types(
     rows = _rows(
         service_client.client.table("ticket_types")
         .select(
-            "id, event_id, kind, name, price_ngwee, qty_cap, per_customer_cap, attendee_named"
+            "id, event_id, kind, name, price_ngwee, qty_cap, per_customer_cap, attendee_named, "
+            "perks, pass_kind"
         )
         .eq("event_id", event_id)
         .order("created_at")
@@ -479,6 +497,8 @@ def create_ticket_type(
         "qty_cap": body.qty_cap,
         "per_customer_cap": body.per_customer_cap,
         "attendee_named": body.attendee_named,
+        "perks": body.perks.strip() if body.perks else None,
+        "pass_kind": body.pass_kind,
     }
     response = service_client.client.table("ticket_types").insert(payload).execute()
     row = _single_row(response)
@@ -504,6 +524,8 @@ def update_ticket_type(
     _assert_event_owned(event, str(vendor["id"]), event_id=str(existing["event_id"]))
 
     updates = body.model_dump(exclude_unset=True)
+    if "perks" in updates and isinstance(updates["perks"], str):
+        updates["perks"] = updates["perks"].strip() or None
     if not updates:
         return _to_ticket_type_response(
             existing,
@@ -635,6 +657,17 @@ def set_allocations(
                     "message_key": "vendor.tickets.errors.allocationBelowSold",
                 },
             )
+
+    proposed = {entry.instance_id: entry.allocation for entry in body.allocations}
+    assert_allocation_capacity_tree(
+        instance_capacities=load_instance_capacities(
+            service_client.client, event_id=event_id
+        ),
+        other_allocated=load_other_type_allocated(
+            service_client.client, event_id=event_id, ticket_type_id=ticket_type_id
+        ),
+        proposed=proposed,
+    )
 
     kept = {entry.instance_id for entry in body.allocations}
     existing = set(_load_allocations(service_client, ticket_type_id))

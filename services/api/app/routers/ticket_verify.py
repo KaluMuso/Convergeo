@@ -12,11 +12,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal, Protocol
 
-from app.core.auth import CurrentUser, require_role
+from app.core.auth import CurrentUser, get_current_user
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.events.high_value import ID_CHECK_THRESHOLD_NGWEE
+from app.services.events.teams import OVERRIDE_ROLES, SCAN_ROLES, require_event_role
 from app.services.orders.audit import run_sql_script
 from app.services.orders.state import sql_uuid
 from app.services.tickets.qr import verify_pin as qr_verify_pin
@@ -156,6 +158,9 @@ class TicketRow:
     event_status: str
     holder_name: str | None
     ticket_type_name: str
+    event_title: str = ""
+    ticket_price_ngwee: int = 0
+    id_check_enabled: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,6 +173,12 @@ class CheckInResult:
     instance_id: str
     holder_name: str | None
     ticket_type_name: str
+    event_title: str = ""
+    id_check_required: bool = False
+
+
+def _id_check_required(ticket: TicketRow) -> bool:
+    return bool(ticket.id_check_enabled) and ticket.ticket_price_ngwee >= ID_CHECK_THRESHOLD_NGWEE
 
 
 def _single_row(response: Any) -> dict[str, Any] | None:
@@ -179,26 +190,52 @@ def _single_row(response: Any) -> dict[str, Any] | None:
     return None
 
 
-def _load_vendor_for_owner(
-    service_client: _ServiceRoleClient,
-    owner_user_id: str,
-) -> dict[str, Any]:
+def _load_event_organiser(service_client: _ServiceRoleClient, event_id: str) -> dict[str, Any]:
     response = (
-        service_client.client.table("vendors")
-        .select("id, owner_user_id")
-        .eq("owner_user_id", owner_user_id)
+        service_client.client.table("events")
+        .select("id, organiser_vendor_id, title")
+        .eq("id", event_id)
         .maybe_single()
         .execute()
     )
     row = _single_row(response)
     if row is None:
-        raise AppError(
-            code="forbidden",
-            message="Authenticated user does not own a vendor profile",
-            http_status=403,
-            details={"message_key": "vendor.errors.not_found"},
-        )
-    return row
+        raise AppError(code="not_found", message="Event not found", http_status=404)
+    vendor = (
+        service_client.client.table("vendors")
+        .select("id, owner_user_id")
+        .eq("id", str(row["organiser_vendor_id"]))
+        .maybe_single()
+        .execute()
+    )
+    vendor_row = _single_row(vendor)
+    if vendor_row is None:
+        raise AppError(code="not_found", message="Event organiser not found", http_status=404)
+    return {
+        "event_id": str(row["id"]),
+        "vendor_id": str(vendor_row["id"]),
+        "owner_user_id": str(vendor_row["owner_user_id"]),
+        "title": str(row.get("title") or ""),
+    }
+
+
+def _require_scanner_access(
+    service_client: _ServiceRoleClient,
+    *,
+    user_id: str,
+    event_id: str,
+    allowed: frozenset[str],
+) -> str:
+    """Return organiser vendor_id if the user may scan/override this event."""
+    context = _load_event_organiser(service_client, event_id)
+    require_event_role(
+        service_client.client,
+        event_id=event_id,
+        user_id=user_id,
+        organiser_owner_user_id=context["owner_user_id"],
+        allowed=allowed,
+    )
+    return str(context["vendor_id"])
 
 
 def _fetch_ticket_row(ticket_id: str) -> TicketRow:
@@ -216,7 +253,10 @@ SELECT json_build_object(
   'instance_id', ei.id,
   'event_status', e.status,
   'holder_name', t.holder_name,
-  'ticket_type_name', tt.name
+  'ticket_type_name', tt.name,
+  'event_title', e.title,
+  'ticket_price_ngwee', tt.price_ngwee,
+  'id_check_enabled', coalesce(e.id_check_enabled, false)
 )::text
 FROM public.tickets t
 JOIN public.event_instances ei ON ei.id = t.instance_id
@@ -259,6 +299,9 @@ WHERE t.id = {ticket_sql};
         event_status=str(row["event_status"]),
         holder_name=str(holder_name_raw) if holder_name_raw is not None else None,
         ticket_type_name=str(row.get("ticket_type_name") or ""),
+        event_title=str(row.get("event_title") or ""),
+        ticket_price_ngwee=int(row.get("ticket_price_ngwee") or 0),
+        id_check_enabled=bool(row.get("id_check_enabled")),
     )
 
 
@@ -269,6 +312,7 @@ def _safe_ticket_details(ticket: TicketRow) -> dict[str, str | None]:
         "instance_id": ticket.instance_id,
         "holder_name": ticket.holder_name,
         "ticket_type_name": ticket.ticket_type_name,
+        "event_title": ticket.event_title,
         "checked_in_at": ticket.checked_in_at,
     }
 
@@ -430,6 +474,8 @@ COMMIT;
         instance_id=ticket.instance_id,
         holder_name=ticket.holder_name,
         ticket_type_name=ticket.ticket_type_name,
+        event_title=ticket.event_title,
+        id_check_required=_id_check_required(ticket),
     )
 
 
@@ -589,6 +635,8 @@ class VerifyTicketResponse(StrictModel):
     instance_id: str
     holder_name: str | None
     ticket_type_name: str
+    event_title: str = ""
+    id_check_required: bool = False
 
 
 class BatchScanItem(StrictModel):
@@ -633,6 +681,8 @@ class BatchScanResult(StrictModel):
     instance_id: str | None = None
     holder_name: str | None = None
     ticket_type_name: str | None = None
+    event_title: str | None = None
+    id_check_required: bool = False
 
 
 class BatchVerifyResponse(StrictModel):
@@ -689,6 +739,8 @@ def _process_batch_scan(
             instance_id=ticket.instance_id,
             holder_name=ticket.holder_name,
             ticket_type_name=ticket.ticket_type_name,
+            event_title=ticket.event_title,
+            id_check_required=_id_check_required(ticket),
         )
 
     try:
@@ -748,6 +800,8 @@ def _process_batch_scan(
                 instance_id=refreshed.instance_id,
                 holder_name=refreshed.holder_name,
                 ticket_type_name=refreshed.ticket_type_name,
+                event_title=refreshed.event_title,
+                id_check_required=_id_check_required(refreshed),
             )
         return BatchScanResult(
             ticket_id=item.ticket_id,
@@ -767,6 +821,8 @@ def _process_batch_scan(
         instance_id=claimed.instance_id,
         holder_name=claimed.holder_name,
         ticket_type_name=claimed.ticket_type_name,
+        event_title=claimed.event_title,
+        id_check_required=claimed.id_check_required,
     )
 
 
@@ -804,12 +860,16 @@ def verify_batch_scans(
 def verify_ticket(
     body: VerifyTicketRequest,
     request: Request,
-    current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
 ) -> VerifyTicketResponse:
     _rate_limit_verify(request, current_user.id, service_client)
-    vendor = _load_vendor_for_owner(service_client, current_user.id)
-    vendor_id = str(vendor["id"])
+    vendor_id = _require_scanner_access(
+        service_client,
+        user_id=current_user.id,
+        event_id=body.event_id.strip(),
+        allowed=SCAN_ROLES,
+    )
 
     result = verify_and_check_in_ticket(
         ticket_id=body.ticket_id.strip(),
@@ -828,6 +888,8 @@ def verify_ticket(
         instance_id=result.instance_id,
         holder_name=result.holder_name,
         ticket_type_name=result.ticket_type_name,
+        event_title=result.event_title,
+        id_check_required=result.id_check_required,
     )
 
 
@@ -835,12 +897,16 @@ def verify_ticket(
 def verify_ticket_batch(
     body: BatchVerifyRequest,
     request: Request,
-    current_user: Annotated[CurrentUser, Depends(require_role("vendor"))],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
     service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
 ) -> BatchVerifyResponse:
     _rate_limit_verify(request, current_user.id, service_client)
-    vendor = _load_vendor_for_owner(service_client, current_user.id)
-    vendor_id = str(vendor["id"])
+    vendor_id = _require_scanner_access(
+        service_client,
+        user_id=current_user.id,
+        event_id=body.event_id.strip(),
+        allowed=SCAN_ROLES,
+    )
 
     results = verify_batch_scans(
         scans=body.scans,
@@ -849,3 +915,101 @@ def verify_ticket_batch(
         expected_instance_id=body.instance_id.strip(),
     )
     return BatchVerifyResponse(results=results)
+
+
+class OverrideCheckInRequest(StrictModel):
+    ticket_id: str
+    event_id: str
+    instance_id: str | None = None
+    reason: str = Field(min_length=3, max_length=500)
+
+
+def override_and_check_in_ticket(
+    *,
+    ticket_id: str,
+    vendor_id: str,
+    actor_user_id: str,
+    reason: str,
+    expected_event_id: str,
+    expected_instance_id: str | None,
+) -> CheckInResult:
+    ticket = _fetch_ticket_row(ticket_id)
+    _assert_organiser_scope(ticket=ticket, vendor_id=vendor_id)
+    _assert_event_published(ticket)
+    _assert_expected_scope(
+        ticket,
+        expected_event_id=expected_event_id,
+        expected_instance_id=expected_instance_id,
+    )
+    _assert_paid_ticket(ticket)
+    _assert_checkinable_status(ticket)
+    claimed = _atomic_check_in(
+        ticket=ticket,
+        vendor_id=vendor_id,
+        expected_event_id=expected_event_id,
+        expected_instance_id=expected_instance_id,
+    )
+    if claimed is None:
+        raise AppError(
+            code="ticket_check_in_failed",
+            message="Ticket could not be checked in",
+            http_status=409,
+            details={"ticket_id": ticket_id},
+        )
+    event_sql = sql_uuid(ticket.event_id, "event_id")
+    ticket_sql = sql_uuid(ticket.ticket_id, "ticket_id")
+    instance_sql = sql_uuid(ticket.instance_id, "instance_id")
+    actor_sql = sql_uuid(actor_user_id, "actor_user_id")
+    reason_sql = "'" + reason.replace("'", "''") + "'"
+    script = f"""
+INSERT INTO public.event_checkin_overrides (
+  event_id, ticket_id, instance_id, actor_user_id, reason
+) VALUES (
+  {event_sql}, {ticket_sql}, {instance_sql}, {actor_sql}, {reason_sql}
+);
+INSERT INTO public.audit_log (actor, action, entity_type, entity_id, before, after)
+VALUES (
+  {actor_sql}, 'event_checkin_override', 'ticket', {ticket_sql}, NULL,
+  jsonb_build_object('reason', {reason_sql}, 'event_id', {event_sql}::text)
+);
+"""
+    result = run_sql_script(script)
+    if not result.ok:
+        raise RuntimeError(f"check-in override audit failed: {result.error}")
+    return claimed
+
+
+@router.post("/verify/override", response_model=VerifyTicketResponse)
+def override_ticket_check_in(
+    body: OverrideCheckInRequest,
+    request: Request,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    service_client: Annotated[_ServiceRoleClient, Depends(get_supabase_client)],
+) -> VerifyTicketResponse:
+    _rate_limit_verify(request, current_user.id, service_client)
+    vendor_id = _require_scanner_access(
+        service_client,
+        user_id=current_user.id,
+        event_id=body.event_id.strip(),
+        allowed=OVERRIDE_ROLES,
+    )
+    result = override_and_check_in_ticket(
+        ticket_id=body.ticket_id.strip(),
+        vendor_id=vendor_id,
+        actor_user_id=current_user.id,
+        reason=body.reason.strip(),
+        expected_event_id=body.event_id.strip(),
+        expected_instance_id=body.instance_id.strip() if body.instance_id else None,
+    )
+    return VerifyTicketResponse(
+        ticket_id=result.ticket_id,
+        from_status=result.from_status,
+        to_status=result.to_status,
+        checked_in_at=result.checked_in_at,
+        event_id=result.event_id,
+        instance_id=result.instance_id,
+        holder_name=result.holder_name,
+        ticket_type_name=result.ticket_type_name,
+        event_title=result.event_title,
+        id_check_required=result.id_check_required,
+    )

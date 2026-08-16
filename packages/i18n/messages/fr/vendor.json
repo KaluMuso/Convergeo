@@ -1074,6 +1074,9 @@
           "title": "Pas un code de billet",
           "body": "Cela ne ressemble pas à un QR de billet d'événement."
         },
+        "holder": "Titulaire : {name}",
+        "tier": "Billet : {name}",
+        "idCheck": "Contrôle d'identité requis pour ce billet",
         "scanAnother": "Scanner un autre"
       },
       "recent": {
@@ -1131,7 +1134,12 @@
       "saving": "Enregistrement…",
       "saved": "Modifications enregistrées.",
       "backToList": "Retour aux événements",
-      "ticketsSold": "{count, plural, one {# billet vendu} other {# billets vendus}}"
+      "ticketsSold": "{count, plural, one {# billet vendu} other {# billets vendus}}",
+      "city": "Ville",
+      "cityPlaceholder": "Lusaka",
+      "cityHelp": "Utilisée pour les filtres de découverte. Le landmark et le GPS restent l'adresse.",
+      "idCheckLabel": "Demander un contrôle d'identité pour les billets de plus de K500",
+      "idCheckHelp": "Affiche un rappel d'identité sur le scanner pour les billets payants à K500 ou plus. La plateforme ne stocke aucun document d'identité."
     },
     "instances": {
       "heading": "Dates et capacité",
@@ -1278,7 +1286,10 @@
       "soldLabel": "{count, plural, one {# vendu} other {# vendus}}",
       "attendeeNamedLabel": "Recueillir les noms des participants",
       "attendeeNamedHelp": "Exiger un nom pour chaque billet au paiement — utile pour les ateliers, dîners et événements avec places assises.",
-      "attendeeNamedBadge": "Noms requis"
+      "attendeeNamedBadge": "Noms requis",
+      "perksLabel": "Avantages (facultatif)",
+      "perksHelp": "Affichés à l'acheteur — lounge, goodies, jetons boisson. Laissez vide s'il n'y en a pas.",
+      "perksPlaceholder": "ex. Inclut un jeton boisson"
     },
     "actions": {
       "save": "Enregistrer le type",
@@ -1460,6 +1471,7 @@
     "viewRoster": "Voir la liste des participants",
     "sections": {
       "revenue": "Revenus",
+      "velocity": "Rythme des ventes",
       "checkIn": "Progression du pointage",
       "escrow": "Séquestre",
       "salesByType": "Ventes par type de billet"
@@ -1467,6 +1479,9 @@
     "labels": {
       "pending": "En attente de déblocage",
       "released": "Débloqué pour vous",
+      "soldLast24h": "Vendus sur 24 h",
+      "revenueLast24h": "Revenus sur 24 h",
+      "projectedSold": "Projection de ventes d'ici le début (d'après le rythme récent)",
       "eventStatus": "Statut de l'événement",
       "soldCheckedIn": "{sold, plural, one {# vendu} other {# vendus}} · {checkedIn, plural, one {# pointé} other {# pointés}}"
     },

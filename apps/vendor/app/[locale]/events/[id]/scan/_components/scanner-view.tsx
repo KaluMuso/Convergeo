@@ -20,7 +20,12 @@ import { CameraScanner } from "./camera-scanner";
 import { OfflineBanner } from "./offline-banner";
 import { RecentScans, type RecentScanItem, type RecentScanStatus } from "./recent-scans";
 import { ScanCount } from "./scan-count";
-import { ScanResultFlash, type ScanResultKind, type ScanResultState } from "./scan-result-flash";
+import {
+  ScanResultFlash,
+  type ScanResultKind,
+  type ScanResultState,
+  type ScanTicketContext,
+} from "./scan-result-flash";
 
 type ScannerViewProps = {
   eventId: string;
@@ -202,6 +207,9 @@ export function ScannerView({ eventId }: ScannerViewProps) {
       void (async () => {
         try {
           const { parsed, validation } = store.validate(raw);
+          const context: ScanTicketContext | undefined = parsed
+            ? (store.ticketContext(parsed.ticketId) ?? undefined)
+            : undefined;
           if (!parsed) {
             setResultState({ kind: "invalid_format", ticketId: null });
             return;
@@ -210,6 +218,7 @@ export function ScannerView({ eventId }: ScannerViewProps) {
             setResultState({
               kind: outcomeToResultKind(validation.outcome),
               ticketId: parsed.ticketId,
+              context,
             });
             return;
           }
@@ -219,6 +228,7 @@ export function ScannerView({ eventId }: ScannerViewProps) {
             setResultState({
               kind: outcomeToResultKind(enqueued.outcome),
               ticketId: parsed.ticketId,
+              context,
             });
             return;
           }
@@ -234,7 +244,11 @@ export function ScannerView({ eventId }: ScannerViewProps) {
               ...current,
             ].slice(0, 12),
           );
-          setResultState({ kind: online ? "valid" : "queued", ticketId: parsed.ticketId });
+          setResultState({
+            kind: online ? "valid" : "queued",
+            ticketId: parsed.ticketId,
+            context,
+          });
 
           if (online) {
             await attemptReconcile();

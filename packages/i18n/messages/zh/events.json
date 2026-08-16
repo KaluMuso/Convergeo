@@ -6,6 +6,7 @@
     "emptyTitle": "此时间段内暂无活动",
     "emptyBody": "尝试其他日期筛选，或稍后再来查看新活动。",
     "soldOut": "已售罄",
+    "sellingFast": "热卖中",
     "free": "免费",
     "viewEvent": "查看活动",
     "verified": "已认证",
@@ -16,8 +17,14 @@
   "filters": {
     "tonight": "今晚",
     "thisWeekend": "本周末",
+    "nextWeek": "下周",
+    "nextMonth": "下月",
     "allDates": "全部即将开始",
-    "categoryLabel": "类别"
+    "categoryLabel": "类别",
+    "cityLabel": "城市",
+    "cityPlaceholder": "Lusaka, Ndola, Kitwe…",
+    "nearMe": "附近",
+    "nearMeDenied": "未开启定位 — 仍可用城市搜索。"
   },
   "categories": {
     "all": "全部",
@@ -26,7 +33,24 @@
     "pop-up-dinners": "快闪晚宴",
     "cultural-arts": "文化与艺术",
     "lifestyle-community": "生活与社区",
-    "free-rsvp": "免费预约"
+    "free-rsvp": "免费预约",
+    "music": "音乐",
+    "comedy-theatre-parent": "喜剧与戏剧",
+    "sports": "体育",
+    "conferences-workshops": "会议与工作坊",
+    "family": "家庭",
+    "religious": "宗教",
+    "markets": "市集",
+    "exhibitions": "展览",
+    "nightlife": "夜生活",
+    "community": "社区",
+    "private-events": "私人活动",
+    "concerts": "演唱会",
+    "festivals": "音乐节",
+    "gospel": "福音",
+    "stand-up": "单口喜剧",
+    "football": "足球",
+    "church": "教会"
   },
   "detail": {
     "metaTitle": "{title} — 活动",
@@ -60,6 +84,10 @@
     "increase": "增加数量",
     "increaseSymbol": "+",
     "total": "总计",
+    "subtotal": "门票",
+    "platformFee": "平台费（5%）",
+    "promoCode": "优惠码",
+    "promoCodePlaceholder": "可选",
     "freeRsvpCta": "预约免费名额",
     "payCta": "购买门票",
     "processing": "处理中…",
@@ -82,7 +110,8 @@
       "paidUseCheckout": "此门票需要付款。",
       "oversell": "已无法购买",
       "attendeeNamesRequired": "请为每张门票输入姓名。",
-      "attendeeNamesMismatch": "请为每张门票输入且仅输入一个姓名。"
+      "attendeeNamesMismatch": "请为每张门票输入且仅输入一个姓名。",
+      "promoInvalid": "此优惠码不适用于该活动。"
     }
   },
   "wallet": {
@@ -126,7 +155,20 @@
         "void": "此门票已失效。"
       },
       "transferBanner": "转让的门票无法扫描。接收者拥有新的二维码和 PIN。",
-      "voidBanner": "此门票已作废，无法用于入场。"
+      "voidBanner": "此门票已作废，无法用于入场。",
+      "cancel": {
+        "heading": "取消或退出",
+        "policy": "开始前超过 7 天：全额退款减去 5% 手续费。1–7 天：退 50%。不足 24 小时：不退款（仍可转让）。退款会排队处理，不会立即到账。",
+        "cta": "申请退款",
+        "optOutCta": "退出改期",
+        "submitting": "提交中…",
+        "queued": "{amount} 的退款已排队，将原路退回移动支付。",
+        "voidedNoRefund": "门票已作废。此时间窗口无需退款。",
+        "tooLate": "此门票已无法取消退款。请改为转让。",
+        "noReschedule": "此活动尚未改期。",
+        "failed": "无法完成该请求，请重试。",
+        "loginRequired": "请登录以取消此门票。"
+      }
     }
   },
   "access": {

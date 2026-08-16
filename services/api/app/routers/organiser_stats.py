@@ -10,7 +10,7 @@ from __future__ import annotations
 import csv
 import io
 import json
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Protocol
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -59,6 +59,12 @@ class EscrowSplit(StrictModel):
     released_ngwee: int
 
 
+class SalesVelocity(StrictModel):
+    sold_last_24h: int
+    revenue_last_24h_ngwee: int
+    projected_sold: int | None = None
+
+
 class OrganiserEventStatsResponse(StrictModel):
     event_id: str
     event_status: str
@@ -67,6 +73,7 @@ class OrganiserEventStatsResponse(StrictModel):
     check_in: CheckInProgress
     escrow: EscrowSplit
     mass_refund_flagged: bool
+    velocity: SalesVelocity
 
 
 class RosterAttendee(StrictModel):
@@ -270,6 +277,58 @@ WHERE al.entity_type = 'order'
     return int(result.rows[0]) > 0
 
 
+def _load_velocity(event_id: str, *, sold_so_far: int) -> SalesVelocity:
+    event_sql = _sql_uuid(event_id)
+    result = run_sql_script(
+        f"""
+SELECT
+  coalesce((
+    SELECT count(*) FROM public.tickets t
+    JOIN public.event_instances ei ON ei.id = t.instance_id
+    WHERE ei.event_id = {event_sql}
+      AND t.status <> 'void'
+      AND t.created_at >= timezone('utc', now()) - interval '24 hours'
+  ), 0)::text,
+  coalesce((
+    SELECT sum(oi.qty * oi.unit_price_ngwee)
+    FROM public.order_items oi
+    JOIN public.order_item_tickets oit ON oit.order_item_id = oi.id
+    JOIN public.event_instances ei ON ei.id = oit.instance_id
+    JOIN public.orders o ON o.id = oi.order_id
+    JOIN public.payments p ON p.checkout_group_id = o.checkout_group_id
+    WHERE ei.event_id = {event_sql}
+      AND p.status = 'success'
+      AND p.created_at >= timezone('utc', now()) - interval '24 hours'
+  ), 0)::text,
+  coalesce((SELECT min(ei.starts_at) FROM public.event_instances ei WHERE ei.event_id = {event_sql}), timezone('utc', now()))::text,
+  coalesce((SELECT sum(ei.capacity) FROM public.event_instances ei WHERE ei.event_id = {event_sql}), 0)::text;
+"""
+    )
+    if not result.ok or not result.rows:
+        return SalesVelocity(sold_last_24h=0, revenue_last_24h_ngwee=0)
+    parts = result.rows[0].split("|")
+    if len(parts) != 4:
+        return SalesVelocity(sold_last_24h=0, revenue_last_24h_ngwee=0)
+    sold_24h = int(parts[0])
+    revenue_24h = int(parts[1])
+    try:
+        next_start = datetime.fromisoformat(parts[2].replace("Z", "+00:00"))
+        if next_start.tzinfo is None:
+            next_start = next_start.replace(tzinfo=UTC)
+    except ValueError:
+        next_start = datetime.now(UTC)
+    capacity = int(parts[3])
+    days_until = (next_start.astimezone(UTC) - datetime.now(UTC)) / timedelta(days=1)
+    projected: int | None = None
+    if days_until > 0 and sold_24h > 0:
+        projected = min(capacity, sold_so_far + int(sold_24h * days_until))
+    return SalesVelocity(
+        sold_last_24h=sold_24h,
+        revenue_last_24h_ngwee=revenue_24h,
+        projected_sold=projected,
+    )
+
+
 @router.get("/events/{event_id}/stats", response_model=OrganiserEventStatsResponse)
 async def get_organiser_event_stats(
     event_id: str,
@@ -319,6 +378,7 @@ async def get_organiser_event_stats(
         check_in=CheckInProgress(issued=total_issued, checked_in=total_checked_in),
         escrow=escrow,
         mass_refund_flagged=flagged,
+        velocity=_load_velocity(event_id, sold_so_far=total_issued),
     )
 
 

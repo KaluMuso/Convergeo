@@ -2,13 +2,7 @@ import { createApiClient } from "@vergeo/config";
 
 import { getApiBaseUrl } from "../../../../lib/api-base-url";
 
-export type EventCategory =
-  | "workshops"
-  | "comedy-theatre"
-  | "pop-up-dinners"
-  | "cultural-arts"
-  | "lifestyle-community"
-  | "free-rsvp";
+export type EventCategory = string;
 
 export type EventStatus = "draft" | "published" | "cancelled" | "completed";
 export type EventType = "standard" | "single" | "multi_day" | "recurring" | "free_rsvp" | "private";
@@ -57,6 +51,8 @@ export type EventDetail = {
   recurrence_until: string | null;
   recurrence_horizon_days: number;
   platform_fee_payer: PlatformFeePayer;
+  city: string | null;
+  id_check_enabled: boolean;
   description: string | null;
   venue: string | null;
   lat: number | null;
@@ -90,6 +86,8 @@ export type EventCreatePayload = {
   recurrence_until?: string | null;
   recurrence_horizon_days?: number;
   platform_fee_payer?: PlatformFeePayer;
+  city?: string | null;
+  id_check_enabled?: boolean;
   images: string[];
   instances: EventInstanceInput[];
 };

@@ -58,6 +58,7 @@ type TicketType = {
   early_bird_price_ngwee: number | null;
   early_bird_until: string | null;
   tiers: { min_qty: number; price_ngwee: number }[];
+  perks?: string | null;
 };
 
 type EventDetail = {
@@ -75,6 +76,7 @@ type EventDetail = {
   min_price_ngwee: number | null;
   is_free: boolean;
   is_sold_out: boolean;
+  platform_fee_payer?: "organiser" | "buyer";
   visibility?: "public" | "unlisted" | "private";
   organiser: {
     id: string;
@@ -415,6 +417,7 @@ export default async function EventDetailPage({ params }: PageProps) {
             ticketTypes={event.ticket_types}
             isSoldOut={event.is_sold_out}
             eventAccessProof={eventAccessProof}
+            platformFeePayer={event.platform_fee_payer === "buyer" ? "buyer" : "organiser"}
           />
 
           <section className="rounded-lg border border-border bg-bg-2 p-5">

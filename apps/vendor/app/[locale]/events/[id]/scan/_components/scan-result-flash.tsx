@@ -15,7 +15,15 @@ export type ScanResultKind =
   | "invalid_sig"
   | "invalid_format";
 
-export type ScanResultState = { kind: "idle" } | { kind: ScanResultKind; ticketId: string | null };
+export type ScanTicketContext = {
+  holderName: string | null;
+  ticketTypeName: string | null;
+  eventTitle: string | null;
+  idCheckRequired: boolean;
+};
+
+export type ScanResultState =
+  { kind: "idle" } | { kind: ScanResultKind; ticketId: string | null; context?: ScanTicketContext };
 
 const SUCCESS_KINDS = new Set<ScanResultKind>(["valid", "queued"]);
 
@@ -46,6 +54,7 @@ export function ScanResultFlash({ state, onDismiss }: ScanResultFlashProps) {
   const isSuccess = SUCCESS_KINDS.has(state.kind);
   const messageKey = `scan.eventCheckIn.result.${MESSAGE_KEY_BY_KIND[state.kind]}`;
   const tone = isSuccess ? "success" : "danger";
+  const context = state.context;
 
   return (
     <div
@@ -69,6 +78,30 @@ export function ScanResultFlash({ state, onDismiss }: ScanResultFlashProps) {
       >
         {t(`${messageKey}.title`)}
       </p>
+      {context?.eventTitle ? (
+        <p style={{ margin: "var(--sp-2) 0 0", fontWeight: 600 }}>{context.eventTitle}</p>
+      ) : null}
+      {context?.holderName ? (
+        <p style={{ margin: "var(--sp-1) 0 0" }}>
+          {t("scan.eventCheckIn.result.holder", { name: context.holderName })}
+        </p>
+      ) : null}
+      {context?.ticketTypeName ? (
+        <p style={{ margin: "var(--sp-1) 0 0", color: "var(--text-2)" }}>
+          {t("scan.eventCheckIn.result.tier", { name: context.ticketTypeName })}
+        </p>
+      ) : null}
+      {context?.idCheckRequired ? (
+        <p
+          style={{
+            margin: "var(--sp-2) 0 0",
+            fontWeight: 600,
+            color: "var(--warning)",
+          }}
+        >
+          {t("scan.eventCheckIn.result.idCheck")}
+        </p>
+      ) : null}
       <p style={{ margin: "var(--sp-2) 0 var(--sp-4)", color: "var(--text-2)" }}>
         {t(`${messageKey}.body`, { ticketId: state.ticketId ? state.ticketId.slice(0, 8) : "" })}
       </p>

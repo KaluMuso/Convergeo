@@ -1116,6 +1116,9 @@
           "title": "Not a ticket code",
           "body": "This does not look like an event ticket QR."
         },
+        "holder": "Holder: {name}",
+        "tier": "Ticket: {name}",
+        "idCheck": "ID check required for this ticket",
         "scanAnother": "Scan another"
       },
       "recent": {
@@ -1206,7 +1209,12 @@
       "platformFeeOptions": {
         "organiser": "Absorb it as the organiser",
         "buyer": "Show it as a buyer pass-through fee"
-      }
+      },
+      "city": "City",
+      "cityPlaceholder": "Lusaka",
+      "cityHelp": "Used for city discovery filters. Landmark and GPS still handle addressing.",
+      "idCheckLabel": "Ask door staff to ID-check tickets over K500",
+      "idCheckHelp": "Shows an ID-check hint on the scanner for paid tickets at or above K500. The platform does not store ID documents."
     },
     "instances": {
       "heading": "Dates & capacity",
@@ -1353,7 +1361,10 @@
       "soldLabel": "{count, plural, one {# sold} other {# sold}}",
       "attendeeNamedLabel": "Collect attendee names",
       "attendeeNamedHelp": "Require a name for each ticket at checkout — useful for workshops, dinners, and seated events.",
-      "attendeeNamedBadge": "Names required"
+      "attendeeNamedBadge": "Names required",
+      "perksLabel": "Perks (optional)",
+      "perksHelp": "Shown to buyers — lounge access, merch, drink tokens. Leave blank if none.",
+      "perksPlaceholder": "e.g. Includes one drink token"
     },
     "actions": {
       "save": "Save type",
@@ -1565,6 +1576,7 @@
     "viewRoster": "View attendee roster",
     "sections": {
       "revenue": "Revenue",
+      "velocity": "Sales velocity",
       "checkIn": "Check-in progress",
       "escrow": "Escrow",
       "salesByType": "Sales by ticket type"
@@ -1572,6 +1584,9 @@
     "labels": {
       "pending": "Pending release",
       "released": "Released to you",
+      "soldLast24h": "Sold in last 24 hours",
+      "revenueLast24h": "Revenue in last 24 hours",
+      "projectedSold": "Projected sold by start (from recent pace)",
       "eventStatus": "Event status",
       "soldCheckedIn": "{sold, plural, one {# sold} other {# sold}} · {checkedIn, plural, one {# checked in} other {# checked in}}"
     },

@@ -28,12 +28,29 @@ import {
 } from "./instance-editor";
 
 const CATEGORIES: EventCategory[] = [
+  "music",
+  "comedy-theatre-parent",
+  "sports",
+  "conferences-workshops",
+  "family",
+  "religious",
+  "markets",
+  "exhibitions",
+  "nightlife",
+  "community",
+  "private-events",
   "workshops",
   "comedy-theatre",
   "pop-up-dinners",
   "cultural-arts",
   "lifestyle-community",
   "free-rsvp",
+  "concerts",
+  "festivals",
+  "gospel",
+  "stand-up",
+  "football",
+  "church",
 ];
 
 const EVENT_TYPE_VALUES: EventType[] = ["single", "multi_day", "recurring", "free_rsvp", "private"];
@@ -79,6 +96,8 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
   const [platformFeePayer, setPlatformFeePayer] = useState<PlatformFeePayer>(
     initialEvent?.platform_fee_payer ?? "organiser",
   );
+  const [city, setCity] = useState(initialEvent?.city ?? "");
+  const [idCheckEnabled, setIdCheckEnabled] = useState(initialEvent?.id_check_enabled ?? false);
   const [instances, setInstances] = useState<InstanceDraft[]>(
     initialEvent?.instances.length
       ? initialEvent.instances.map((row) => toInstanceDraft(row))
@@ -116,6 +135,8 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
     );
     setRecurrenceHorizonDays(String(initialEvent.recurrence_horizon_days ?? 90));
     setPlatformFeePayer(initialEvent.platform_fee_payer ?? "organiser");
+    setCity(initialEvent.city ?? "");
+    setIdCheckEnabled(initialEvent.id_check_enabled ?? false);
     setInstances(initialEvent.instances.map((row) => toInstanceDraft(row)));
     setStatus(initialEvent.status);
     setTicketsSold(initialEvent.tickets_sold);
@@ -142,6 +163,8 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
         }
       : {}),
     platform_fee_payer: platformFeePayer,
+    city: city.trim() || null,
+    id_check_enabled: idCheckEnabled,
     instances: draftToPayload(instances),
   });
 
@@ -421,6 +444,29 @@ export function EventForm({ locale, mode, eventId, initialEvent }: EventFormProp
           disabled={readOnly || saving}
         />
       </FormField>
+
+      <FormField label={t("events.form.city")} helpText={t("events.form.cityHelp")}>
+        <Input
+          value={city}
+          onChange={(event) => setCity(event.target.value)}
+          placeholder={t("events.form.cityPlaceholder")}
+          disabled={readOnly || saving}
+        />
+      </FormField>
+
+      <label className="flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="mt-0.5 h-4 w-4 rounded border-border"
+          checked={idCheckEnabled}
+          disabled={readOnly || saving}
+          onChange={(event) => setIdCheckEnabled(event.target.checked)}
+        />
+        <span className="flex flex-col gap-0.5">
+          <span className="font-medium">{t("events.form.idCheckLabel")}</span>
+          <span className="text-xs text-text-2">{t("events.form.idCheckHelp")}</span>
+        </span>
+      </label>
 
       <div className="grid grid-cols-2 gap-3">
         <FormField label={t("events.form.lat")}>

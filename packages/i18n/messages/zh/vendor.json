@@ -1074,6 +1074,9 @@
           "title": "非门票代码",
           "body": "这看起来不像是活动门票二维码。"
         },
+        "holder": "持票人：{name}",
+        "tier": "门票：{name}",
+        "idCheck": "此票需要核验身份",
         "scanAnother": "扫描下一个"
       },
       "recent": {
@@ -1131,7 +1134,12 @@
       "saving": "保存中…",
       "saved": "更改已保存。",
       "backToList": "返回活动列表",
-      "ticketsSold": "{count, plural, one {已售 # 张门票} other {已售 # 张门票}}"
+      "ticketsSold": "{count, plural, one {已售 # 张门票} other {已售 # 张门票}}",
+      "city": "城市",
+      "cityPlaceholder": "Lusaka",
+      "cityHelp": "用于城市发现筛选。地标和 GPS 仍用于寻址。",
+      "idCheckLabel": "对超过 K500 的门票要求门口核验身份",
+      "idCheckHelp": "扫描器会对单价达到 K500 的付费票显示身份核验提示。平台不存储身份证件。"
     },
     "instances": {
       "heading": "日期与容量",
@@ -1278,7 +1286,10 @@
       "soldLabel": "{count, plural, one {已售 # 张} other {已售 # 张}}",
       "attendeeNamedLabel": "收集参加者姓名",
       "attendeeNamedHelp": "结账时为每张门票要求填写姓名，适用于研讨会、晚宴和对号入座的活动。",
-      "attendeeNamedBadge": "需要姓名"
+      "attendeeNamedBadge": "需要姓名",
+      "perksLabel": "权益（可选）",
+      "perksHelp": "向买家展示 — 休息室、周边、饮品券。没有则留空。",
+      "perksPlaceholder": "例如含一张饮品券"
     },
     "actions": {
       "save": "保存类型",
@@ -1460,6 +1471,7 @@
     "viewRoster": "查看参与者名单",
     "sections": {
       "revenue": "收入",
+      "velocity": "销售速度",
       "checkIn": "检票进度",
       "escrow": "托管",
       "salesByType": "按门票类型销售"
@@ -1467,6 +1479,9 @@
     "labels": {
       "pending": "待释放",
       "released": "已释放给您",
+      "soldLast24h": "过去 24 小时售出",
+      "revenueLast24h": "过去 24 小时收入",
+      "projectedSold": "按近期节奏预估至开场销量",
       "eventStatus": "活动状态",
       "soldCheckedIn": "{sold, plural, one {已售 #} other {已售 #}} · {checkedIn, plural, one {已检票 #} other {已检票 #}}"
     },

@@ -8,6 +8,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
 import { getAccountAccessToken } from "../../_components/account-server";
+import { TicketActions } from "./_components/ticket-actions";
 
 import type { Metadata } from "next";
 
@@ -353,6 +354,8 @@ export default async function AccountTicketDetailPage({ params }: PageProps) {
           <p className="text-sm text-text-2">{t("pinUnavailable")}</p>
         )}
       </section>
+
+      <TicketActions ticketId={id} status={detail.status} />
 
       {detail.status === "issued" ? (
         <script

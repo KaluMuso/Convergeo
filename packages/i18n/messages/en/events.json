@@ -6,6 +6,7 @@
     "emptyTitle": "No events in this window",
     "emptyBody": "Try another date filter or check back soon for new listings.",
     "soldOut": "Sold out",
+    "sellingFast": "Selling fast",
     "free": "Free",
     "viewEvent": "View event",
     "verified": "Verified",
@@ -16,8 +17,14 @@
   "filters": {
     "tonight": "Tonight",
     "thisWeekend": "This Weekend",
+    "nextWeek": "Next week",
+    "nextMonth": "Next month",
     "allDates": "All upcoming",
-    "categoryLabel": "Category"
+    "categoryLabel": "Category",
+    "cityLabel": "City",
+    "cityPlaceholder": "Lusaka, Ndola, Kitwe…",
+    "nearMe": "Near me",
+    "nearMeDenied": "Location is off — city search still works."
   },
   "categories": {
     "all": "All",
@@ -26,7 +33,24 @@
     "pop-up-dinners": "Pop-up dinners",
     "cultural-arts": "Cultural & arts",
     "lifestyle-community": "Lifestyle & community",
-    "free-rsvp": "Free RSVP"
+    "free-rsvp": "Free RSVP",
+    "music": "Music",
+    "comedy-theatre-parent": "Comedy & theatre",
+    "sports": "Sports",
+    "conferences-workshops": "Conferences & workshops",
+    "family": "Family",
+    "religious": "Religious",
+    "markets": "Markets",
+    "exhibitions": "Exhibitions",
+    "nightlife": "Nightlife",
+    "community": "Community",
+    "private-events": "Private events",
+    "concerts": "Concerts",
+    "festivals": "Festivals",
+    "gospel": "Gospel",
+    "stand-up": "Stand-up",
+    "football": "Football",
+    "church": "Church"
   },
   "detail": {
     "metaTitle": "{title} — Events",
@@ -60,6 +84,10 @@
     "increase": "Increase quantity",
     "increaseSymbol": "+",
     "total": "Total",
+    "subtotal": "Tickets",
+    "platformFee": "Platform fee (5%)",
+    "promoCode": "Promo code",
+    "promoCodePlaceholder": "Optional code",
     "freeRsvpCta": "Reserve free spot",
     "payCta": "Get tickets",
     "processing": "Processing…",
@@ -82,7 +110,8 @@
       "paidUseCheckout": "This ticket requires payment.",
       "oversell": "No longer available",
       "attendeeNamesRequired": "Enter a name for each ticket.",
-      "attendeeNamesMismatch": "Enter exactly one name per ticket."
+      "attendeeNamesMismatch": "Enter exactly one name per ticket.",
+      "promoInvalid": "That promo code is not valid for this event."
     }
   },
   "wallet": {
@@ -126,7 +155,20 @@
         "void": "This ticket is no longer valid."
       },
       "transferBanner": "Transferred tickets cannot be scanned. The recipient has a new QR and PIN.",
-      "voidBanner": "This ticket has been voided and cannot be used for entry."
+      "voidBanner": "This ticket has been voided and cannot be used for entry.",
+      "cancel": {
+        "heading": "Cancel or opt out",
+        "policy": "More than 7 days before start: full refund minus 5% admin fee. 1–7 days: 50% refund. Under 24 hours: no refund (you can still transfer). Refunds are queued, not paid instantly.",
+        "cta": "Request refund",
+        "optOutCta": "Opt out of reschedule",
+        "submitting": "Submitting…",
+        "queued": "Refund of {amount} queued. You will be paid on the original mobile-money rail.",
+        "voidedNoRefund": "Ticket voided. No refund is due for this window.",
+        "tooLate": "This ticket can no longer be cancelled for a refund. Transfer it instead.",
+        "noReschedule": "This event has not been rescheduled, so there is nothing to opt out of.",
+        "failed": "Could not complete that request. Try again.",
+        "loginRequired": "Sign in to cancel this ticket."
+      }
     }
   },
   "access": {

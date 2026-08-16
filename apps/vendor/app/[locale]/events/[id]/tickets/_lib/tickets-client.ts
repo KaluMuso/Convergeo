@@ -13,6 +13,7 @@ export type TicketTypeSummary = {
   qty_cap: number | null;
   per_customer_cap: number | null;
   attendee_named: boolean;
+  perks: string | null;
   tickets_sold: number;
 };
 
@@ -23,6 +24,7 @@ export type TicketTypeCreatePayload = {
   qty_cap?: number | null;
   per_customer_cap?: number | null;
   attendee_named?: boolean;
+  perks?: string | null;
 };
 
 export type TicketTypeUpdatePayload = Partial<TicketTypeCreatePayload>;

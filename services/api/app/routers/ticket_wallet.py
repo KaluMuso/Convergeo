@@ -7,6 +7,10 @@ from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
+from app.services.events.buyer_cancellation import (
+    cancel_buyer_ticket,
+    opt_out_rescheduled_ticket,
+)
 from app.services.tickets.qr import (
     DEFAULT_HORIZON_WINDOWS,
     MAX_HORIZON_WINDOWS,
@@ -375,4 +379,39 @@ async def get_wallet_horizon(
         pin=pin,
         pin_available=pin_available,
         entries=[HorizonEntryOut(**horizon_entry_to_dict(entry)) for entry in entries],
+    )
+
+
+class WalletCancelResponse(StrictModel):
+    ticket_id: str
+    band: str
+    refund_ngwee: int
+    queued: bool
+
+
+@router.post("/{ticket_id}/cancel", response_model=WalletCancelResponse)
+def cancel_wallet_ticket(
+    ticket_id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> WalletCancelResponse:
+    result = cancel_buyer_ticket(ticket_id=ticket_id, holder_user_id=current_user.id)
+    return WalletCancelResponse(
+        ticket_id=result.ticket_id,
+        band=result.band,
+        refund_ngwee=result.refund_ngwee,
+        queued=result.queued,
+    )
+
+
+@router.post("/{ticket_id}/reschedule-opt-out", response_model=WalletCancelResponse)
+def opt_out_wallet_ticket(
+    ticket_id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> WalletCancelResponse:
+    result = opt_out_rescheduled_ticket(ticket_id=ticket_id, holder_user_id=current_user.id)
+    return WalletCancelResponse(
+        ticket_id=result.ticket_id,
+        band=result.band,
+        refund_ngwee=result.refund_ngwee,
+        queued=result.queued,
     )

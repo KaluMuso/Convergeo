@@ -35,6 +35,7 @@ class _ServiceRoleClient(Protocol):
 class OpenDisputeRequest(StrictModel):
     evidence_paths: list[str] = Field(default_factory=list, max_length=8)
     description: str = Field(default="", max_length=2000)
+    kind: Literal["order", "event_misrepresentation"] = "order"
 
 
 class OpenDisputeResponse(StrictModel):
@@ -274,6 +275,7 @@ async def customer_open_dispute(
         opener_user_id=current_user.id,
         evidence_paths=body.evidence_paths,
         note=note,
+        kind=body.kind,
     )
     return OpenDisputeResponse(
         dispute_id=result.dispute_id,

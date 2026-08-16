@@ -6,6 +6,7 @@
     "emptyTitle": "Aucun événement dans cette période",
     "emptyBody": "Essayez un autre filtre de date ou revenez bientôt pour de nouvelles annonces.",
     "soldOut": "Complet",
+    "sellingFast": "Se vend vite",
     "free": "Gratuit",
     "viewEvent": "Voir l'événement",
     "verified": "Vérifié",
@@ -16,8 +17,14 @@
   "filters": {
     "tonight": "Ce soir",
     "thisWeekend": "Ce week-end",
+    "nextWeek": "Semaine prochaine",
+    "nextMonth": "Mois prochain",
     "allDates": "Tous à venir",
-    "categoryLabel": "Catégorie"
+    "categoryLabel": "Catégorie",
+    "cityLabel": "Ville",
+    "cityPlaceholder": "Lusaka, Ndola, Kitwe…",
+    "nearMe": "Près de moi",
+    "nearMeDenied": "La localisation est désactivée — la recherche par ville reste disponible."
   },
   "categories": {
     "all": "Tous",
@@ -26,7 +33,24 @@
     "pop-up-dinners": "Dîners éphémères",
     "cultural-arts": "Culture et arts",
     "lifestyle-community": "Style de vie et communauté",
-    "free-rsvp": "RSVP gratuit"
+    "free-rsvp": "RSVP gratuit",
+    "music": "Musique",
+    "comedy-theatre-parent": "Comédie et théâtre",
+    "sports": "Sports",
+    "conferences-workshops": "Conférences et ateliers",
+    "family": "Famille",
+    "religious": "Religieux",
+    "markets": "Marchés",
+    "exhibitions": "Expositions",
+    "nightlife": "Vie nocturne",
+    "community": "Communauté",
+    "private-events": "Événements privés",
+    "concerts": "Concerts",
+    "festivals": "Festivals",
+    "gospel": "Gospel",
+    "stand-up": "Stand-up",
+    "football": "Football",
+    "church": "Église"
   },
   "detail": {
     "metaTitle": "{title} — Événements",
@@ -60,6 +84,10 @@
     "increase": "Augmenter la quantité",
     "increaseSymbol": "+",
     "total": "Total",
+    "subtotal": "Billets",
+    "platformFee": "Frais de plateforme (5 %)",
+    "promoCode": "Code promo",
+    "promoCodePlaceholder": "Code facultatif",
     "freeRsvpCta": "Réserver une place gratuite",
     "payCta": "Obtenir des billets",
     "processing": "Traitement…",
@@ -82,7 +110,8 @@
       "paidUseCheckout": "Ce billet nécessite un paiement.",
       "oversell": "Plus disponible",
       "attendeeNamesRequired": "Saisissez un nom pour chaque billet.",
-      "attendeeNamesMismatch": "Saisissez exactement un nom par billet."
+      "attendeeNamesMismatch": "Saisissez exactement un nom par billet.",
+      "promoInvalid": "Ce code promo n'est pas valable pour cet événement."
     }
   },
   "wallet": {
@@ -126,7 +155,20 @@
         "void": "Ce billet n'est plus valide."
       },
       "transferBanner": "Les billets transférés ne peuvent pas être scannés. Le destinataire a un nouveau QR et PIN.",
-      "voidBanner": "Ce billet a été annulé et ne peut pas être utilisé pour l'entrée."
+      "voidBanner": "Ce billet a été annulé et ne peut pas être utilisé pour l'entrée.",
+      "cancel": {
+        "heading": "Annuler ou se retirer",
+        "policy": "Plus de 7 jours avant le début : remboursement intégral moins 5 % de frais. 1–7 jours : 50 %. Moins de 24 heures : pas de remboursement (le transfert reste possible). Les remboursements sont mis en file, pas payés instantanément.",
+        "cta": "Demander un remboursement",
+        "optOutCta": "Refuser le report",
+        "submitting": "Envoi…",
+        "queued": "Remboursement de {amount} mis en file. Vous serez payé sur le même mobile money.",
+        "voidedNoRefund": "Billet annulé. Aucun remboursement n'est dû pour cette fenêtre.",
+        "tooLate": "Ce billet ne peut plus être annulé pour un remboursement. Transférez-le plutôt.",
+        "noReschedule": "Cet événement n'a pas été reporté.",
+        "failed": "Impossible de terminer cette demande. Réessayez.",
+        "loginRequired": "Connectez-vous pour annuler ce billet."
+      }
     }
   },
   "transfer": {
