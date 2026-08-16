@@ -13,7 +13,12 @@ from app.routers.health import (
     _supabase_readiness_headers,
     _supabase_readiness_url,
 )
+from app.settings import get_settings
 from fastapi.testclient import TestClient
+
+
+def _expected_service_role_key() -> str:
+    return get_settings().supabase_service_role_key
 
 
 class _CorrelatedLogRecord(Protocol):
@@ -184,9 +189,10 @@ def test_supabase_readiness_url_targets_platform_config_not_openapi_root() -> No
 
 
 def test_supabase_readiness_headers_use_service_role_only() -> None:
-    headers = _supabase_readiness_headers("service-role-key")
-    assert headers["apikey"] == "service-role-key"
-    assert headers["Authorization"] == "Bearer service-role-key"
+    service_role_key = _expected_service_role_key()
+    headers = _supabase_readiness_headers(service_role_key)
+    assert headers["apikey"] == service_role_key
+    assert headers["Authorization"] == f"Bearer {service_role_key}"
     assert "anon" not in headers["Authorization"]
 
 
@@ -204,7 +210,7 @@ async def test_supabase_reachable_ok_on_data_api_200(
     assert client.get_calls
     call = client.get_calls[0]
     assert "platform_config" in call["url"]
-    assert call["headers"]["Authorization"] == "Bearer service-role-key"
+    assert call["headers"]["Authorization"] == f"Bearer {_expected_service_role_key()}"
     assert not any(record.message == "upstream_dependency_failed" for record in caplog.records)
 
 
@@ -304,9 +310,9 @@ async def test_readiness_no_longer_probes_anon_openapi_root(
     assert "/rest/v1/platform_config" in url
     assert url.endswith("select=key&limit=1")
     assert url.rstrip("/") != "https://example.supabase.co/rest/v1"
-    assert headers["apikey"] == "service-role-key"
-    assert headers["Authorization"] == "Bearer service-role-key"
-    assert headers["apikey"] != "anon-key"
+    assert headers["apikey"] == _expected_service_role_key()
+    assert headers["Authorization"] == f"Bearer {_expected_service_role_key()}"
+    assert headers["apikey"] != get_settings().supabase_anon_key
 
 
 def test_readyz_ok_when_data_api_probe_succeeds(
@@ -385,9 +391,10 @@ def test_readyz_service_role_not_exposed_in_public_response(
 
     body = client.get("/readyz").json()
     blob = str(body).lower()
-    assert "service-role-key" not in blob
+    service_role_key = _expected_service_role_key()
+    assert service_role_key.lower() not in blob
     assert "service_role" not in blob
-    assert recording.get_calls[0]["headers"]["Authorization"] == "Bearer service-role-key"
+    assert recording.get_calls[0]["headers"]["Authorization"] == f"Bearer {service_role_key}"
 
 
 def test_readyz_logs_upstream_failure_for_data_api_401(

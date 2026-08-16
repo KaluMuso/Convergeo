@@ -10,6 +10,7 @@ import httpx
 import pytest
 from app.core.upstream import UpstreamFailureKind, classify_httpx_error
 from app.routers.health import _supabase_reachable
+from app.settings import get_settings
 
 
 class _UpstreamLogRecord(Protocol):
@@ -90,9 +91,10 @@ async def test_readiness_rejects_non_success_supabase_response(
 
     assert "platform_config" in str(captured["url"])
     assert "select=key" in str(captured["url"])
+    service_role_key = get_settings().supabase_service_role_key
     assert captured["headers"] == {
-        "apikey": "service-role-key",
-        "Authorization": "Bearer service-role-key",
+        "apikey": service_role_key,
+        "Authorization": f"Bearer {service_role_key}",
     }
 
     failure = [
