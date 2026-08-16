@@ -127,6 +127,29 @@ function main() {
     errors.push("promote-production-frontends.yml must be read-only (contents: read)");
   }
 
+  const deployStaging = read(".github/workflows/deploy-staging.yml");
+  const reconcileStart = deployStaging.indexOf(
+    "- name: Reconcile repository migrations against remote ledger",
+  );
+  const reconcileEnd = deployStaging.indexOf(
+    "\n      - name: Generate types against staging",
+    reconcileStart,
+  );
+  const reconcileBlock =
+    reconcileStart >= 0 && reconcileEnd > reconcileStart
+      ? deployStaging.slice(reconcileStart, reconcileEnd)
+      : "";
+
+  if (
+    !reconcileBlock.includes(
+      "SEND_SMS_HOOK_SECRET: ${{ secrets.SEND_SMS_HOOK_SECRET }}",
+    )
+  ) {
+    errors.push(
+      "deploy-staging reconcile step must inject SEND_SMS_HOOK_SECRET before invoking Supabase CLI",
+    );
+  }
+
   if (errors.length) {
     for (const err of errors) {
       console.error(`FAIL: ${err}`);
