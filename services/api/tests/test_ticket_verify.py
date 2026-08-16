@@ -15,6 +15,8 @@ from app.errors import AppError
 from app.main import create_app
 from app.routers.ticket_verify import (
     BatchScanItem,
+    _load_event_organiser,
+    _require_scanner_access,
     build_qr_code,
     current_window,
     hash_ticket_pin,
@@ -23,6 +25,7 @@ from app.routers.ticket_verify import (
     verify_ticket_pin,
     window_sig,
 )
+from app.services.events.teams import SCAN_ROLES
 from app.services.tickets.purchase import (
     add_ticket_to_checkout,
     issue_tickets_for_paid_order,
@@ -69,7 +72,7 @@ def db() -> Generator[PgConn, None, None]:
     yield conn
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def db_url_env(db: PgConn) -> Generator[None, None, None]:
     import os
 
@@ -550,6 +553,27 @@ class TestTicketVerifyHttp:
         assert _ticket_status(db, ticket_id) == "checked_in"
 
 
+def test_http_authz_mock_loads_organiser_and_allows_owner() -> None:
+    """Postgres-free: HTTP verify now looks up events before vendors."""
+    service_wrapper = MagicMock()
+    real_client = MagicMock()
+    real_client.table.side_effect = lambda name: _VendorLookupTable(name)
+    service_wrapper.client = real_client
+
+    context = _load_event_organiser(service_wrapper, FESTIVAL_EVENT)
+    assert context["vendor_id"] == SHOP_B
+    assert context["owner_user_id"] == VENDOR_B_OWNER
+    assert context["event_id"] == FESTIVAL_EVENT
+
+    vendor_id = _require_scanner_access(
+        service_wrapper,
+        user_id=VENDOR_B_OWNER,
+        event_id=FESTIVAL_EVENT,
+        allowed=SCAN_ROLES,
+    )
+    assert vendor_id == SHOP_B
+
+
 class _VendorLookupTable:
     def __init__(self, name: str) -> None:
         self._name = name
@@ -559,24 +583,47 @@ class _VendorLookupTable:
 
 
 class _VendorLookupQuery:
+    """Service-role mock for HTTP verify authz.
+
+    `_load_event_organiser` reads `events` then `vendors`. Owner match in
+    `load_event_role` short-circuits before `event_team_members`.
+    """
+
     def __init__(self, name: str) -> None:
         self._name = name
+        self._filters: dict[str, Any] = {}
 
     def eq(self, column: str, value: Any) -> _VendorLookupQuery:
+        self._filters[column] = value
+        return self
+
+    def is_(self, column: str, value: Any) -> _VendorLookupQuery:
+        self._filters[column] = value
         return self
 
     def maybe_single(self) -> _VendorLookupQuery:
         return self
 
     def execute(self) -> MagicMock:
-        if self._name != "vendors":
-            raise AssertionError(f"unexpected table {self._name}")
-        return MagicMock(
-            data={
-                "id": SHOP_B,
-                "owner_user_id": VENDOR_B_OWNER,
-            }
-        )
+        if self._name == "events":
+            event_id = str(self._filters.get("id") or FESTIVAL_EVENT)
+            return MagicMock(
+                data={
+                    "id": event_id,
+                    "organiser_vendor_id": SHOP_B,
+                    "title": "Festival",
+                }
+            )
+        if self._name == "vendors":
+            return MagicMock(
+                data={
+                    "id": SHOP_B,
+                    "owner_user_id": VENDOR_B_OWNER,
+                }
+            )
+        if self._name == "event_team_members":
+            return MagicMock(data=None)
+        raise AssertionError(f"unexpected table {self._name}")
 
 
 def _insert_event_with_ticket_type(db: PgConn, *, status: str = "published") -> dict[str, str]:
