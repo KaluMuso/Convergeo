@@ -11,6 +11,7 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.main import create_app
 from app.services.commissions.engine import FREE_EVENTS_CATEGORY, compute_order_commission
+from app.services.events.access import hash_access_code, issue_event_access_proof
 from app.services.tickets.purchase import (
     EVENT_TICKETS_CATEGORY,
     EVENT_TICKETS_RATE_BPS,
@@ -803,6 +804,155 @@ def test_private_event_purchase_fails_closed_without_access_proof(
     assert exc.value.code == "tickets.private_access_required"
     assert exc.value.http_status == 403
     assert _ticket_count(db, instance_id=instance_id) == 0
+
+
+def test_private_event_purchase_succeeds_with_valid_access_proof(
+    db: PgConn,
+    service: _ServiceWrapper,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("EVENT_ACCESS_SIGNING_SECRET", "test-access-secret")
+    event_id = str(uuid.uuid4())
+    instance_id = str(uuid.uuid4())
+    ticket_type_id = str(uuid.uuid4())
+    _insert_event_with_instance(
+        db,
+        event_id=event_id,
+        instance_id=instance_id,
+        visibility="private",
+    )
+    _insert_ticket_type(db, ticket_type_id=ticket_type_id, event_id=event_id)
+    code_hash = hash_access_code("backstage-pass")
+    db.run(
+        f"""
+        INSERT INTO public.event_access_credentials (event_id, code_hash, version)
+        VALUES ('{event_id}', '{code_hash}', 1)
+        ON CONFLICT (event_id) DO UPDATE
+          SET code_hash = EXCLUDED.code_hash,
+              version = EXCLUDED.version;
+        """
+    )
+    proof = issue_event_access_proof(
+        event_id=event_id,
+        credential_version=1,
+        secret="test-access-secret",
+    )
+
+    checkout = add_ticket_to_checkout(
+        service,
+        customer_id=CUSTOMER_A,
+        instance_id=instance_id,
+        ticket_type_id=ticket_type_id,
+        qty=1,
+        event_access_proof=proof,
+    )
+
+    assert len(checkout.claimed_ticket_ids) == 1
+
+
+def test_private_event_rsvp_requires_and_accepts_access_proof(
+    db: PgConn,
+    service: _ServiceWrapper,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("EVENT_ACCESS_SIGNING_SECRET", "test-access-secret")
+    event_id = str(uuid.uuid4())
+    instance_id = str(uuid.uuid4())
+    ticket_type_id = str(uuid.uuid4())
+    _insert_event_with_instance(
+        db,
+        event_id=event_id,
+        instance_id=instance_id,
+        visibility="private",
+    )
+    _insert_ticket_type(
+        db,
+        ticket_type_id=ticket_type_id,
+        event_id=event_id,
+        kind="free_rsvp",
+        name="RSVP",
+        price_ngwee=0,
+    )
+    code_hash = hash_access_code("guest-list")
+    db.run(
+        f"""
+        INSERT INTO public.event_access_credentials (event_id, code_hash, version)
+        VALUES ('{event_id}', '{code_hash}', 1)
+        ON CONFLICT (event_id) DO UPDATE
+          SET code_hash = EXCLUDED.code_hash,
+              version = EXCLUDED.version;
+        """
+    )
+    proof = issue_event_access_proof(
+        event_id=event_id,
+        credential_version=1,
+        secret="test-access-secret",
+    )
+
+    with pytest.raises(AppError) as denied:
+        rsvp(
+            service,
+            customer_id=CUSTOMER_A,
+            instance_id=instance_id,
+            ticket_type_id=ticket_type_id,
+            qty=1,
+        )
+    assert denied.value.code == "tickets.private_access_required"
+
+    result = rsvp(
+        service,
+        customer_id=CUSTOMER_A,
+        instance_id=instance_id,
+        ticket_type_id=ticket_type_id,
+        qty=1,
+        event_access_proof=proof,
+    )
+    assert len(result.ticket_ids) == 1
+
+
+def test_private_event_purchase_rejects_stale_credential_version(
+    db: PgConn,
+    service: _ServiceWrapper,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("EVENT_ACCESS_SIGNING_SECRET", "test-access-secret")
+    event_id = str(uuid.uuid4())
+    instance_id = str(uuid.uuid4())
+    ticket_type_id = str(uuid.uuid4())
+    _insert_event_with_instance(
+        db,
+        event_id=event_id,
+        instance_id=instance_id,
+        visibility="private",
+    )
+    _insert_ticket_type(db, ticket_type_id=ticket_type_id, event_id=event_id)
+    code_hash = hash_access_code("rotate-me")
+    db.run(
+        f"""
+        INSERT INTO public.event_access_credentials (event_id, code_hash, version)
+        VALUES ('{event_id}', '{code_hash}', 2)
+        ON CONFLICT (event_id) DO UPDATE
+          SET code_hash = EXCLUDED.code_hash,
+              version = EXCLUDED.version;
+        """
+    )
+    stale_proof = issue_event_access_proof(
+        event_id=event_id,
+        credential_version=1,
+        secret="test-access-secret",
+    )
+
+    with pytest.raises(AppError) as exc:
+        add_ticket_to_checkout(
+            service,
+            customer_id=CUSTOMER_A,
+            instance_id=instance_id,
+            ticket_type_id=ticket_type_id,
+            qty=1,
+            event_access_proof=stale_proof,
+        )
+
+    assert exc.value.code == "tickets.private_access_required"
 
 
 def test_issue_tick_http_issues_paid_order(
