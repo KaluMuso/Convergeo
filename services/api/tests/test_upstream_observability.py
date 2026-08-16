@@ -10,6 +10,7 @@ import httpx
 import pytest
 from app.core.upstream import UpstreamFailureKind, classify_httpx_error
 from app.routers.health import _supabase_reachable
+from app.settings import get_settings
 
 
 class _UpstreamLogRecord(Protocol):
@@ -60,6 +61,8 @@ async def test_readiness_rejects_non_success_supabase_response(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    captured: dict[str, object] = {}
+
     class _Response:
         status_code = 401
         is_success = False
@@ -71,12 +74,28 @@ async def test_readiness_rejects_non_success_supabase_response(
         async def __aexit__(self, *_args: object) -> None:
             return None
 
-        async def get(self, *_args: object, **_kwargs: object) -> _Response:
+        async def get(
+            self,
+            url: str,
+            *,
+            headers: dict[str, str] | None = None,
+            **_kwargs: object,
+        ) -> _Response:
+            captured["url"] = url
+            captured["headers"] = headers or {}
             return _Response()
 
     monkeypatch.setattr(httpx, "AsyncClient", lambda **_kwargs: _Client())
     with caplog.at_level(logging.WARNING, logger="app.core.upstream"):
         assert await _supabase_reachable() is False
+
+    assert "platform_config" in str(captured["url"])
+    assert "select=key" in str(captured["url"])
+    service_role_key = get_settings().supabase_service_role_key
+    assert captured["headers"] == {
+        "apikey": service_role_key,
+        "Authorization": f"Bearer {service_role_key}",
+    }
 
     failure = [
         record for record in caplog.records if record.message == "upstream_dependency_failed"
