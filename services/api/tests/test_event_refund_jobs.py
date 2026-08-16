@@ -70,9 +70,9 @@ class FakeSqlState:
         if normalized.startswith(
             "SELECT id::text, status FROM public.event_refund_jobs WHERE refund_id"
         ):
-            for job in self.jobs.values():
-                if job.get("refund_id") == REFUND_ID:
-                    return SqlResult(ok=True, rows=[f"{job['id']}|{job['status']}"])
+            for linked_job in self.jobs.values():
+                if linked_job.get("refund_id") == REFUND_ID:
+                    return SqlResult(ok=True, rows=[f"{linked_job['id']}|{linked_job['status']}"])
             return SqlResult(ok=True, rows=[])
 
         if normalized.startswith("SELECT status FROM public.refunds WHERE id"):
@@ -84,7 +84,7 @@ class FakeSqlState:
             and "status = 'processing'" in normalized
         ):
             job = self.jobs.get(JOB_ID)
-            if job and job["status"] == "queued":
+            if job is not None and job["status"] == "queued":
                 job["status"] = "processing"
                 job["attempts"] = str(int(job["attempts"]) + 1)
                 return SqlResult(ok=True, rows=[JOB_ID])
