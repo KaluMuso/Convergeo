@@ -1,0 +1,7 @@
+{
+  "status": "ok",
+  "env": "staging",
+  "git_sha": "161b58a3e1973b79abd4fc8064611c50fa0268c8",
+  "image_tag": "161b58a3e1973b79abd4fc8064611c50fa0268c8",
+  "supabase_project_ref": "iyasmrmbcrvlfxpzescb"
+}

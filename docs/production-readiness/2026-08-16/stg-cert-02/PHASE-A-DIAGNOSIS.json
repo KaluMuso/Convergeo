@@ -1,0 +1,117 @@
+{
+  "task": "STG-CERT-02",
+  "captured_at_utc": "2026-08-16T09:20:00Z",
+  "candidate_sha": "9a08540d2e0e4ad3f04bd5e2b1cb4a7d51df112c",
+  "staging_branch_sha": "9a08540d2e0e4ad3f04bd5e2b1cb4a7d51df112c",
+  "staging_db_tip": "20260815230000",
+  "schema_convergence": "PASS",
+  "public_launch": false,
+  "production_touched": false,
+  "investigated_run": {
+    "run_id": 31937277741,
+    "url": "https://github.com/KaluMuso/Convergeo/actions/runs/31937277741",
+    "workflow": "Deploy staging",
+    "workflow_path": ".github/workflows/deploy-staging.yml",
+    "status": "pending",
+    "conclusion": null,
+    "event": "push",
+    "head_branch": "staging",
+    "head_sha": "9a08540d2e0e4ad3f04bd5e2b1cb4a7d51df112c",
+    "run_attempt": 1,
+    "created_at": "2026-08-16T08:45:46Z",
+    "updated_at": "2026-08-16T08:45:47Z",
+    "jobs_total_count": 0,
+    "jobs": [],
+    "pending_deployments": [],
+    "classification": "CONCURRENCY_BLOCK"
+  },
+  "concurrency_blocker": {
+    "run_id": 30897217202,
+    "url": "https://github.com/KaluMuso/Convergeo/actions/runs/30897217202",
+    "status": "waiting",
+    "conclusion": null,
+    "event": "push",
+    "head_branch": "staging",
+    "head_sha": "b084b0dec74d7f3871c7f857186ad76cc65d3d4c",
+    "created_at": "2026-08-04T09:38:42Z",
+    "age_hours_approx": 288,
+    "jobs": [
+      {
+        "name": "Environment separation",
+        "status": "waiting",
+        "conclusion": null,
+        "url": "https://github.com/KaluMuso/Convergeo/actions/runs/30897217202/job/91952883759"
+      }
+    ],
+    "pending_deployments": [
+      {
+        "environment": "staging",
+        "reviewer_login": "KaluMuso",
+        "current_user_can_approve": false
+      }
+    ],
+    "secondary_classification": "ENVIRONMENT_APPROVAL"
+  },
+  "workflow_concurrency": {
+    "group": "deploy-staging",
+    "cancel_in_progress": false,
+    "effect": "Run 31937277741 cannot schedule jobs while run 30897217202 remains waiting/in-progress in the same concurrency group."
+  },
+  "environment_staging": {
+    "name": "staging",
+    "can_admins_bypass": true,
+    "protection_rules": ["required_reviewers (KaluMuso)", "branch_policy"],
+    "html_url": "https://github.com/KaluMuso/Convergeo/deployments/activity_log?environments_filter=staging"
+  },
+  "workflow_validation": {
+    "deploy_staging_yml": "valid",
+    "release_certify_yml": "valid",
+    "deploy_staging_state": "active"
+  },
+  "recent_deploy_staging_runs": [
+    {
+      "run_id": 31937277741,
+      "status": "pending",
+      "event": "push",
+      "head_sha": "9a08540d2e0e4ad3f04bd5e2b1cb4a7d51df112c"
+    },
+    {
+      "run_id": 31333704686,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "event": "push"
+    },
+    {
+      "run_id": 31315246673,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "event": "push"
+    },
+    {
+      "run_id": 30897217202,
+      "status": "waiting",
+      "event": "push",
+      "head_sha": "b084b0dec74d7f3871c7f857186ad76cc65d3d4c"
+    },
+    {
+      "run_id": 30749305987,
+      "status": "completed",
+      "conclusion": "success",
+      "event": "push"
+    }
+  ],
+  "agent_recovery_attempts": {
+    "cancel_run_30897217202": "HTTP 403 Resource not accessible by integration",
+    "cancel_run_31937277741": "HTTP 403 Resource not accessible by integration",
+    "approve_run_30897217202": "HTTP 403 Resource not accessible by integration",
+    "approve_run_31937277741": "HTTP 403 Resource not accessible by integration",
+    "workflow_dispatch_release_certify": "HTTP 403 Resource not accessible by integration"
+  },
+  "pre_deploy_live_targets": {
+    "api_fingerprint_git_sha": "161b58a3e1973b79abd4fc8064611c50fa0268c8",
+    "api_fingerprint_supabase_ref": "iyasmrmbcrvlfxpzescb",
+    "candidate_sha_match": false,
+    "vercel_staging_previews": "DEPLOYMENT_NOT_FOUND (no staging-branch preview at probe time)"
+  },
+  "root_cause_summary": "Run 31937277741 shows zero jobs and empty pending_deployments because deploy-staging concurrency (cancel-in-progress: false) is held by stale run 30897217202 (waiting since 2026-08-04 for staging environment approval on wrong SHA b084b0de). This is CONCURRENCY_BLOCK, not environment approval on run 31937277741 itself."
+}
