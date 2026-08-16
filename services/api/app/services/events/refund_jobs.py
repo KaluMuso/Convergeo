@@ -166,9 +166,7 @@ def enqueue_event_refund_job(
     source_sql = sql_literal(source)
     source_key_sql = sql_literal(source_key)
     policy_json = json.dumps(
-        _policy_snapshot(
-            event_id=event_id, order_id=order_id, source=source, extra=extra_policy
-        )
+        _policy_snapshot(event_id=event_id, order_id=order_id, source=source, extra=extra_policy)
     )
     policy_sql = sql_literal(policy_json) + "::jsonb"
 

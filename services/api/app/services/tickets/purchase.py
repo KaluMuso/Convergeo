@@ -16,10 +16,10 @@ from app.services.commissions.engine import FREE_EVENTS_CATEGORY
 from app.services.events.access import verify_event_access_proof
 from app.services.events.fees import (
     checkout_total_ngwee,
+    commission_rate_bps,
     normalize_fee_payer,
     platform_fee_ngwee,
 )
-from app.services.events.promo import record_promo_redemption, resolve_promo_discount
 from app.services.events.gmv_cap import (
     _resolve_cap_tier,
     _write_cap_reject_audit,
@@ -35,6 +35,7 @@ from app.services.events.gmv_reservation import (
     release_expired_gmv_reservations,
     release_gmv_reservation,
 )
+from app.services.events.promo import record_promo_redemption, resolve_promo_discount
 from app.services.events.settlement_snapshot import create_settlement_snapshot
 from app.services.stock.claim import (
     get_reservation_ttl_minutes,
@@ -349,11 +350,15 @@ def _require_private_event_access(
         version = int(row.get("version") or 0) if isinstance(row, dict) else 0
     except (TypeError, ValueError):
         version = 0
-    if version < 1 or verify_event_access_proof(
-        access_proof,
-        event_id=event_id,
-        credential_version=version,
-    ) is None:
+    if (
+        version < 1
+        or verify_event_access_proof(
+            access_proof,
+            event_id=event_id,
+            credential_version=version,
+        )
+        is None
+    ):
         raise AppError(
             code="tickets.private_access_required",
             message="Private event ticket purchase requires verified access",
@@ -474,7 +479,8 @@ INSERT INTO public.checkout_groups (
   id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee,
   platform_fee_ngwee, total_ngwee, status
 ) VALUES (
-  {group_sql}, {customer_sql}, '{idempotency_key}', {subtotal}, 0, {fee}, {total}, '{checkout_status}'
+  {group_sql}, {customer_sql}, '{idempotency_key}',
+  {subtotal}, 0, {fee}, {total}, '{checkout_status}'
 );
 INSERT INTO public.orders (
   id, checkout_group_id, vendor_id, customer_id, status, fulfilment,
@@ -603,9 +609,7 @@ def add_ticket_to_checkout(
     charged = line_total - discount
     charged_unit = charged // qty if qty else 0
     fee_payer = normalize_fee_payer(ctx["event"].get("platform_fee_payer"))
-    fee = platform_fee_ngwee(
-        line_total_ngwee=charged, fee_payer=fee_payer, is_free=False
-    )
+    fee = platform_fee_ngwee(line_total_ngwee=charged, fee_payer=fee_payer, is_free=False)
     title = str(ticket_type.get("name") or "Ticket")
     snapshot_kwargs = {
         "ticket_type_id": ticket_type_id,

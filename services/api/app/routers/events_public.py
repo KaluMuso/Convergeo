@@ -15,8 +15,6 @@ from app.services.events.access import (
 from app.services.events.date_windows import (
     DateWindow,
     instance_in_bounds,
-    tonight_window,
-    weekend_window,
     window_bounds,
 )
 from app.services.events.ranking import (
@@ -215,9 +213,7 @@ def _parse_organiser(vendor_row: dict[str, Any] | None) -> EventOrganiserRespons
         preferred_badge=bool(vendor_row.get("preferred_badge")),
         landmark=landmark,
         logo_url=(str(vendor_row.get("logo_url")) if vendor_row.get("logo_url") else None),
-        description=(
-            str(vendor_row.get("description")) if vendor_row.get("description") else None
-        ),
+        description=(str(vendor_row.get("description")) if vendor_row.get("description") else None),
     )
 
 
@@ -352,7 +348,10 @@ def _load_category_taxonomy(client: Any) -> tuple[dict[str, set[str]], list[str]
     parents: list[str] = []
     try:
         response = (
-            client.table("event_categories").select("slug, parent_slug, sort").order("sort").execute()
+            client.table("event_categories")
+            .select("slug, parent_slug, sort")
+            .order("sort")
+            .execute()
         )
         rows = [row for row in (response.data or []) if isinstance(row, dict)]
     except Exception:
@@ -423,10 +422,7 @@ def _ticket_types_sold_out(
     capped = [row for row in ticket_type_rows if row.get("qty_cap") is not None]
     if not capped:
         return False
-    return all(
-        tickets_by_type.get(str(row["id"]), 0) >= int(row["qty_cap"])
-        for row in capped
-    )
+    return all(tickets_by_type.get(str(row["id"]), 0) >= int(row["qty_cap"]) for row in capped)
 
 
 def _event_sold_out(
@@ -540,9 +536,7 @@ def _fetch_ticket_types(client: Any, event_ids: list[str]) -> list[dict[str, Any
     return [row for row in (response.data or []) if isinstance(row, dict)]
 
 
-def _fetch_price_tiers(
-    client: Any, ticket_type_ids: list[str]
-) -> dict[str, list[dict[str, Any]]]:
+def _fetch_price_tiers(client: Any, ticket_type_ids: list[str]) -> dict[str, list[dict[str, Any]]]:
     if not ticket_type_ids:
         return {}
     response = (
@@ -705,8 +699,7 @@ def build_browse_response(
         lat_raw = event_row.get("lat") if isinstance(event_row, dict) else None
         lng_raw = event_row.get("lng") if isinstance(event_row, dict) else None
         return browse_rank_tuple(
-            next_starts_at=item.next_starts_at
-            or datetime.max.replace(tzinfo=ZoneInfo("UTC")),
+            next_starts_at=item.next_starts_at or datetime.max.replace(tzinfo=ZoneInfo("UTC")),
             spots_sold=item.spots_sold,
             spots_total=item.spots_total,
             is_sold_out=item.is_sold_out,
@@ -750,11 +743,15 @@ def _load_access_credential(client: Any, event_id: str) -> tuple[str, int] | Non
 
 def _require_private_access(client: Any, *, event_id: str, access_proof: str | None) -> None:
     credential = _load_access_credential(client, event_id)
-    if credential is None or verify_event_access_proof(
-        access_proof,
-        event_id=event_id,
-        credential_version=credential[1],
-    ) is None:
+    if (
+        credential is None
+        or verify_event_access_proof(
+            access_proof,
+            event_id=event_id,
+            credential_version=credential[1],
+        )
+        is None
+    ):
         # Keep private-event existence non-disclosing.
         raise AppError("event.not_found", "Event not found", 404)
 

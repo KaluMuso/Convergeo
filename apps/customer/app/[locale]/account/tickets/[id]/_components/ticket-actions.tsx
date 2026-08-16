@@ -1,7 +1,7 @@
 "use client";
 
 import { formatK } from "@vergeo/i18n";
-import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 

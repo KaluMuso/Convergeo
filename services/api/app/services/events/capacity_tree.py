@@ -47,10 +47,7 @@ def assert_allocation_capacity_tree(
 
 def load_instance_capacities(client: Any, *, event_id: str) -> dict[str, int]:
     rows = _rows(
-        client.table("event_instances")
-        .select("id, capacity")
-        .eq("event_id", event_id)
-        .execute()
+        client.table("event_instances").select("id, capacity").eq("event_id", event_id).execute()
     )
     result: dict[str, int] = {}
     for row in rows:
@@ -67,13 +64,9 @@ def load_other_type_allocated(
     ticket_type_id: str,
 ) -> dict[str, int]:
     """Sum allocations for every type on this event except ``ticket_type_id``."""
-    type_rows = _rows(
-        client.table("ticket_types").select("id").eq("event_id", event_id).execute()
-    )
+    type_rows = _rows(client.table("ticket_types").select("id").eq("event_id", event_id).execute())
     other_ids = [
-        str(row["id"])
-        for row in type_rows
-        if row.get("id") and str(row["id"]) != ticket_type_id
+        str(row["id"]) for row in type_rows if row.get("id") and str(row["id"]) != ticket_type_id
     ]
     if not other_ids:
         return {}

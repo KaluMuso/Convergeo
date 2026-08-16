@@ -127,8 +127,14 @@ def test_date_windows_cover_next_week_month_and_on_date() -> None:
 
 
 def test_promo_percent_and_fixed_never_exceed_line() -> None:
-    assert apply_promo_discount(line_total_ngwee=10_000, discount_kind="percent", discount_value=10) == 1_000
-    assert apply_promo_discount(line_total_ngwee=10_000, discount_kind="fixed", discount_value=50_000) == 10_000
+    assert (
+        apply_promo_discount(line_total_ngwee=10_000, discount_kind="percent", discount_value=10)
+        == 1_000
+    )
+    assert (
+        apply_promo_discount(line_total_ngwee=10_000, discount_kind="fixed", discount_value=50_000)
+        == 10_000
+    )
     assert apply_promo_discount(line_total_ngwee=0, discount_kind="percent", discount_value=10) == 0
 
 

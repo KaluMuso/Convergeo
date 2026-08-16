@@ -179,9 +179,7 @@ def _ticket_paid_ngwee(row: dict[str, Any]) -> int:
 def cancel_buyer_ticket(*, ticket_id: str, holder_user_id: str) -> BuyerCancelResult:
     row = _load_holder_ticket_for_cancel(ticket_id, holder_user_id)
     if row["status"] == "void":
-        return BuyerCancelResult(
-            ticket_id=ticket_id, band="none", refund_ngwee=0, queued=False
-        )
+        return BuyerCancelResult(ticket_id=ticket_id, band="none", refund_ngwee=0, queued=False)
     if row["status"] != "issued":
         raise AppError(
             code="ticket_not_cancellable",

@@ -3241,7 +3241,9 @@ def _probe_insert(session: RoleSession, table: str) -> Any:
 
 def _probe_vendor_listings_insert(session: RoleSession) -> Any:
     """Owner insert is granted; DEFAULT VALUES fails on NOT NULL instead of RLS."""
-    vendor_id = _LISTING_PROBE_VENDOR_IDS.get(session.persona, _LISTING_PROBE_VENDOR_IDS[Persona.VENDOR])
+    vendor_id = _LISTING_PROBE_VENDOR_IDS.get(
+        session.persona, _LISTING_PROBE_VENDOR_IDS[Persona.VENDOR]
+    )
     session.execute("SAVEPOINT rls_probe")
     result = session.execute(
         "INSERT INTO public.vendor_listings "
@@ -3403,9 +3405,7 @@ def test_wishlist_update_acl_is_withheld_from_all_api_roles(db: PgConn) -> None:
         "ORDER BY role_name"
     )
     assert result.ok, result.error
-    assert result.rows == [], (
-        f"user_wishlist UPDATE must stay private: {result.rows}"
-    )
+    assert result.rows == [], f"user_wishlist UPDATE must stay private: {result.rows}"
 
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:

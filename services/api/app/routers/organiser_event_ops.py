@@ -9,7 +9,12 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import StrictModel
-from app.services.events.teams import EDIT_ROLES, FINANCE_ROLES, list_team_members, require_event_role
+from app.services.events.teams import (
+    EDIT_ROLES,
+    FINANCE_ROLES,
+    list_team_members,
+    require_event_role,
+)
 from app.services.kyc.state_machine import ServiceRoleClient
 from fastapi import APIRouter, Depends
 from pydantic import Field
@@ -174,9 +179,11 @@ def add_event_team_member(
         "invited_by": current_user.id,
         "accepted_at": datetime.now(UTC).isoformat(),
     }
-    response = service_client.client.table("event_team_members").upsert(
-        payload, on_conflict="event_id,user_id"
-    ).execute()
+    response = (
+        service_client.client.table("event_team_members")
+        .upsert(payload, on_conflict="event_id,user_id")
+        .execute()
+    )
     row = _single_row(response)
     if row is None:
         raise AppError(code="internal_error", message="Could not add team member", http_status=500)
@@ -213,7 +220,9 @@ def _promo_out(row: dict[str, Any]) -> PromoOut:
         code=str(row["code"]),
         discount_kind=row["discount_kind"],  # type: ignore[arg-type]
         discount_value=int(row["discount_value"]),
-        max_redemptions=int(row["max_redemptions"]) if row.get("max_redemptions") is not None else None,
+        max_redemptions=(
+            int(row["max_redemptions"]) if row.get("max_redemptions") is not None else None
+        ),
         starts_at=datetime.fromisoformat(str(starts).replace("Z", "+00:00")) if starts else None,
         ends_at=datetime.fromisoformat(str(ends).replace("Z", "+00:00")) if ends else None,
         active=bool(row.get("active", True)),
@@ -230,7 +239,9 @@ def list_event_promos(
     _load_owned_event(service_client, event_id=event_id, vendor_id=str(vendor["id"]))
     rows = _rows(
         service_client.client.table("event_promo_codes")
-        .select("id, code, discount_kind, discount_value, max_redemptions, starts_at, ends_at, active")
+        .select(
+            "id, code, discount_kind, discount_value, max_redemptions, starts_at, ends_at, active"
+        )
         .eq("event_id", event_id)
         .order("created_at", desc=True)
         .execute()

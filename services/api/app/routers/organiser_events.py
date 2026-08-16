@@ -298,11 +298,7 @@ def _unique_event_slug(service_client: ServiceRoleClient, base_title: str) -> st
     for suffix in range(0, 100):
         candidate = base if suffix == 0 else f"{base}-{suffix}"
         existing = (
-            client.table("events")
-            .select("id")
-            .eq("slug", candidate)
-            .maybe_single()
-            .execute()
+            client.table("events").select("id").eq("slug", candidate).maybe_single().execute()
         )
         if _single_row(existing) is None:
             return candidate
@@ -512,8 +508,9 @@ def _load_event_for_vendor(
         .select(
             "id, organiser_vendor_id, title, slug, description, venue, lat, lng, images, "
             "status, category_slug, landmark, event_type, visibility, recurrence_rule, "
-            "recurrence_timezone, recurrence_until, recurrence_horizon_days, platform_fee_payer, "
-            "refund_policy_key, age_restriction, terms, city, id_check_enabled, high_value_verified_at"
+            "recurrence_timezone, recurrence_until, recurrence_horizon_days, "
+            "platform_fee_payer, refund_policy_key, age_restriction, terms, "
+            "city, id_check_enabled, high_value_verified_at"
         )
         .eq("id", event_id)
         .maybe_single()
@@ -725,9 +722,7 @@ def _schedule_event_date_label(client: Any, event_id: str) -> str:
     if not instances:
         return ""
     starts_at_values = [
-        _parse_starts_at(row["starts_at"])
-        for row in instances
-        if row.get("starts_at") is not None
+        _parse_starts_at(row["starts_at"]) for row in instances if row.get("starts_at") is not None
     ]
     if not starts_at_values:
         return ""
@@ -924,8 +919,9 @@ async def list_organiser_events(
         client.table("events")
         .select(
             "id, title, slug, description, venue, images, status, category_slug, landmark, "
-            "event_type, visibility, recurrence_rule, recurrence_timezone, recurrence_until, "
-            "recurrence_horizon_days, platform_fee_payer, city, id_check_enabled, high_value_verified_at"
+            "event_type, visibility, recurrence_rule, recurrence_timezone, "
+            "recurrence_until, recurrence_horizon_days, platform_fee_payer, "
+            "city, id_check_enabled, high_value_verified_at"
         )
         .eq("organiser_vendor_id", vendor_id)
         .order("updated_at", desc=True)
@@ -958,9 +954,8 @@ async def create_organiser_event(
         recurrence_until=body.recurrence_until,
     )
     seed = body.instances[0] if body.instances else None
-    recurring_seed_invalid = (
-        body.event_type == "recurring"
-        and (len(body.instances) != 1 or seed is None or seed.ends_at is None)
+    recurring_seed_invalid = body.event_type == "recurring" and (
+        len(body.instances) != 1 or seed is None or seed.ends_at is None
     )
     if recurring_seed_invalid:
         raise AppError(
@@ -1131,9 +1126,7 @@ async def update_organiser_event(
         body.recurrence_until
         if "recurrence_until" in body.model_fields_set
         else (
-            recurrence_until_from_row.isoformat()
-            if recurrence_until_from_row is not None
-            else None
+            recurrence_until_from_row.isoformat() if recurrence_until_from_row is not None else None
         )
     )
     _validate_recurrence_payload(

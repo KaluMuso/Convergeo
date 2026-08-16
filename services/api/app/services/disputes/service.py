@@ -20,12 +20,12 @@ from app.services.disputes.state import (
     transition_dispute,
     write_dispute_audit_log,
 )
+from app.services.escrow.release import evaluate_and_release
 from app.services.events.disputes_policy import (
     MISREPRESENTATION_KIND,
     assert_event_dispute_openable,
     organiser_respond_by,
 )
-from app.services.escrow.release import evaluate_and_release
 from app.services.refunds.config import load_restocking_fee_bps
 from app.services.refunds.execute import execute_refund
 from app.services.refunds.math import compute_lane2_refund, restocking_fee_ngwee
@@ -271,9 +271,7 @@ def open_dispute(
     }
     if kind == MISREPRESENTATION_KIND:
         event_id, ends_at = _load_ticket_event_end(order_id)
-        assert_event_dispute_openable(
-            ends_at=ends_at, kind=kind, evidence_paths=paths
-        )
+        assert_event_dispute_openable(ends_at=ends_at, kind=kind, evidence_paths=paths)
         insert_row["event_id"] = event_id
         insert_row["organiser_respond_by"] = organiser_respond_by().isoformat()
     response = service_client.client.table("disputes").insert(insert_row).execute()
@@ -398,9 +396,7 @@ def resolve(
     # the payout reference and is backstopped by the refunds(order_id) partial unique
     # index (0032), so a retry collapses to one ledger drain + one payout.
     if (
-        resolve_transition(
-            from_status=snapshot.status, event=event, actor_role=ActorRole.ADMIN
-        )
+        resolve_transition(from_status=snapshot.status, event=event, actor_role=ActorRole.ADMIN)
         is None
     ):
         raise DisputeTransitionError(
@@ -497,10 +493,7 @@ def list_vendor_disputes(
     vendor_id: str,
 ) -> list[DisputeRecord]:
     orders_response = (
-        service_client.client.table("orders")
-        .select("id")
-        .eq("vendor_id", vendor_id)
-        .execute()
+        service_client.client.table("orders").select("id").eq("vendor_id", vendor_id).execute()
     )
     order_ids = [str(row["id"]) for row in _rows(orders_response)]
     if not order_ids:

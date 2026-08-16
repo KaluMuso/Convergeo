@@ -55,9 +55,11 @@ def browse_rank_tuple(
     5. Nearer events first when coordinates exist, else a large sentinel.
     6. Sooner start time.
     """
-    selling = 0 if is_selling_fast(
-        spots_sold=spots_sold, spots_total=spots_total, is_sold_out=is_sold_out
-    ) else 1
+    selling = (
+        0
+        if is_selling_fast(spots_sold=spots_sold, spots_total=spots_total, is_sold_out=is_sold_out)
+        else 1
+    )
     distance = 10_000.0
     if (
         user_lat is not None

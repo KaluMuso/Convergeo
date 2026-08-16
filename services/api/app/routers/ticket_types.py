@@ -604,9 +604,7 @@ def list_allocations(
     event_id = str(ticket_type["event_id"])
     event = _load_event(service_client, event_id)
     _assert_event_owned(event, str(vendor["id"]), event_id=event_id)
-    return _build_allocation_rows(
-        service_client, event_id=event_id, ticket_type_id=ticket_type_id
-    )
+    return _build_allocation_rows(service_client, event_id=event_id, ticket_type_id=ticket_type_id)
 
 
 @router.put(
@@ -660,9 +658,7 @@ def set_allocations(
 
     proposed = {entry.instance_id: entry.allocation for entry in body.allocations}
     assert_allocation_capacity_tree(
-        instance_capacities=load_instance_capacities(
-            service_client.client, event_id=event_id
-        ),
+        instance_capacities=load_instance_capacities(service_client.client, event_id=event_id),
         other_allocated=load_other_type_allocated(
             service_client.client, event_id=event_id, ticket_type_id=ticket_type_id
         ),
@@ -692,9 +688,7 @@ def set_allocations(
             "ticket_type_id", ticket_type_id
         ).in_("instance_id", to_delete).execute()
 
-    return _build_allocation_rows(
-        service_client, event_id=event_id, ticket_type_id=ticket_type_id
-    )
+    return _build_allocation_rows(service_client, event_id=event_id, ticket_type_id=ticket_type_id)
 
 
 # --- M10-P15: pricing-write helpers + endpoints -----------------------------
@@ -840,9 +834,7 @@ def set_early_bird(
         # Clear: both columns back to NULL (satisfies the both-or-neither constraint).
         update = {"early_bird_price_ngwee": None, "early_bird_until": None}
 
-    service_client.client.table("ticket_types").update(update).eq(
-        "id", ticket_type_id
-    ).execute()
+    service_client.client.table("ticket_types").update(update).eq("id", ticket_type_id).execute()
 
     refreshed = _load_ticket_type(service_client, ticket_type_id)
     return _build_pricing_response(service_client, refreshed)

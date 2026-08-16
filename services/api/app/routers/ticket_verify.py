@@ -290,9 +290,7 @@ WHERE t.id = {ticket_sql};
         order_item_id=str(order_item_raw) if order_item_raw is not None else None,
         qr_secret=str(row["qr_secret"]) if row.get("qr_secret") is not None else None,
         pin_hash=str(row["pin_hash"]) if row.get("pin_hash") is not None else None,
-        checked_in_at=(
-            str(row["checked_in_at"]) if row.get("checked_in_at") is not None else None
-        ),
+        checked_in_at=(str(row["checked_in_at"]) if row.get("checked_in_at") is not None else None),
         organiser_vendor_id=str(row["organiser_vendor_id"]),
         event_id=str(row["event_id"]),
         instance_id=str(row["instance_id"]),
@@ -419,9 +417,7 @@ def _atomic_check_in(
         event_clause = f"AND e.id = {sql_uuid(expected_event_id, 'expected_event_id')}"
     instance_clause = ""
     if expected_instance_id is not None:
-        instance_clause = (
-            f"AND ei.id = {sql_uuid(expected_instance_id, 'expected_instance_id')}"
-        )
+        instance_clause = f"AND ei.id = {sql_uuid(expected_instance_id, 'expected_instance_id')}"
     script = f"""
 BEGIN;
 WITH event_lock AS MATERIALIZED (

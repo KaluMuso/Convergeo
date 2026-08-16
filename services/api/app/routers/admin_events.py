@@ -10,11 +10,9 @@ from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
 from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
-from app.routers.admin_base import router as admin_router
-from fastapi import APIRouter, Depends
+from app.routers.admin_base import router
+from fastapi import Depends
 from pydantic import BaseModel
-
-events_router = APIRouter(prefix="/events", tags=["admin-events"])
 
 
 class ServiceRoleClient(Protocol):
@@ -37,7 +35,7 @@ def _single_row(response: Any) -> dict[str, Any] | None:
     return None
 
 
-@events_router.post("/{event_id}/high-value-verify", response_model=HighValueVerifyResponse)
+@router.post("/events/{event_id}/high-value-verify", response_model=HighValueVerifyResponse)
 def verify_high_value_event(
     event_id: UUID,
     current_user: Annotated[CurrentUser, Depends(require_role("admin", "superadmin"))],
@@ -71,6 +69,3 @@ def verify_high_value_event(
         high_value_verified_at=now,
         high_value_verified_by=UUID(current_user.id),
     )
-
-
-admin_router.include_router(events_router)

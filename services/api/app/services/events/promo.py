@@ -170,4 +170,3 @@ ON CONFLICT (order_id) DO NOTHING;
     )
     if not result.ok:
         raise RuntimeError(f"promo redemption insert failed: {result.error}")
-

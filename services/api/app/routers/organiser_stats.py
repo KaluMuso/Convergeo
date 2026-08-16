@@ -300,8 +300,14 @@ SELECT
       AND p.status = 'success'
       AND p.created_at >= timezone('utc', now()) - interval '24 hours'
   ), 0)::text,
-  coalesce((SELECT min(ei.starts_at) FROM public.event_instances ei WHERE ei.event_id = {event_sql}), timezone('utc', now()))::text,
-  coalesce((SELECT sum(ei.capacity) FROM public.event_instances ei WHERE ei.event_id = {event_sql}), 0)::text;
+  coalesce(
+    (SELECT min(ei.starts_at) FROM public.event_instances ei WHERE ei.event_id = {event_sql}),
+    timezone('utc', now())
+  )::text,
+  coalesce(
+    (SELECT sum(ei.capacity) FROM public.event_instances ei WHERE ei.event_id = {event_sql}),
+    0
+  )::text;
 """
     )
     if not result.ok or not result.rows:

@@ -15,10 +15,9 @@ from app.routers.events_public import (
     instance_in_window,
     order_instances,
     parse_starts_at,
-    tonight_window,
-    weekend_window,
 )
 from app.services.events.access import hash_access_code, issue_event_access_proof
+from app.services.events.date_windows import tonight_window, weekend_window
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -708,9 +707,7 @@ def test_detail_private_requires_signed_access_proof(
         build_detail_response(
             store,
             "secret-private",
-            access_proof=issue_event_access_proof(
-                event_id="different-event", credential_version=1
-            ),
+            access_proof=issue_event_access_proof(event_id="different-event", credential_version=1),
         )
     # Correct code → served.
     detail = build_detail_response(
@@ -775,7 +772,8 @@ def test_detail_and_browse_surface_event_type(store: FakeSupabaseStore) -> None:
     detail = build_detail_response(store, "weekly-series")
     assert detail.event_type == "recurring"
     series = next(
-        item for item in build_browse_response(store, ref=REF_THURSDAY).items
+        item
+        for item in build_browse_response(store, ref=REF_THURSDAY).items
         if item.slug == "weekly-series"
     )
     assert series.event_type == "recurring"
