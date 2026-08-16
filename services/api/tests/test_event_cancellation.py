@@ -1,12 +1,9 @@
-"""D3: organiser event cancellation -> admin refund flags + buyer/holder notices.
-
-Money is never moved here; the test asserts the queue + notifications only.
-"""
+"""D3 + Prompt G: organiser event cancellation -> refund jobs + buyer/holder notices."""
 
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from app.routers.organiser_events import _notify_schedule_change
 from app.services.escrow.event_release import MASS_REFUND_FLAG_ACTION
@@ -145,8 +142,19 @@ def _rows(client: _Client, name: str) -> list[dict[str, Any]]:
 
 def test_cancellation_flags_paid_order_and_notifies_buyer_and_holder() -> None:
     client = _seeded()
-    result = process_event_cancellation(_Service(client), event_id=EVENT_ID, event_title="Jazz")
+    with (
+        patch(
+            "app.services.events.cancellation.order_ticket_refund_amount_ngwee",
+            return_value=25_000,
+        ),
+        patch(
+            "app.services.events.cancellation.enqueue_organiser_cancel_refund_job",
+            return_value=True,
+        ) as enqueue_mock,
+    ):
+        result = process_event_cancellation(_Service(client), event_id=EVENT_ID, event_title="Jazz")
 
+    enqueue_mock.assert_called_once()
     flags = _rows(client, "audit_log")
     assert len(flags) == 1
     assert flags[0]["action"] == MASS_REFUND_FLAG_ACTION
@@ -162,14 +170,15 @@ def test_cancellation_flags_paid_order_and_notifies_buyer_and_holder() -> None:
     buyer_row = next(row for row in outbox if row["payload"]["recipient_id"] == BUYER_ID)
     assert buyer_row["payload"]["event_title"] == "Jazz"
     assert buyer_row["payload"]["event_date"] == "15 Aug 2026, 18:00 UTC"
-    assert buyer_row["payload"]["refund_status"] == "review_required"
+    assert buyer_row["payload"]["refund_status"] == "queued"
     assert "refund" in buyer_row["payload"]["refund_detail"].lower()
-    assert "no payout" in buyer_row["payload"]["refund_detail"].lower()
+    assert "queued automatically" in buyer_row["payload"]["refund_detail"].lower()
 
     holder_row = next(row for row in outbox if row["payload"]["recipient_id"] == HOLDER_ID)
     assert holder_row["payload"]["refund_status"] == "none"
 
     assert result.orders_flagged == 1
+    assert result.jobs_enqueued == 1
     assert result.recipients_notified == 2
 
 
@@ -177,7 +186,17 @@ def test_voided_holder_is_still_notified_after_database_cancellation() -> None:
     client = _seeded()
     client.tables["tickets"].rows[0]["status"] = "void"
 
-    result = process_event_cancellation(_Service(client), event_id=EVENT_ID, event_title="Jazz")
+    with (
+        patch(
+            "app.services.events.cancellation.order_ticket_refund_amount_ngwee",
+            return_value=25_000,
+        ),
+        patch(
+            "app.services.events.cancellation.enqueue_organiser_cancel_refund_job",
+            return_value=True,
+        ),
+    ):
+        result = process_event_cancellation(_Service(client), event_id=EVENT_ID, event_title="Jazz")
 
     recipients = {
         row["payload"]["recipient_id"] for row in _rows(client, "notification_outbox")
@@ -188,17 +207,33 @@ def test_voided_holder_is_still_notified_after_database_cancellation() -> None:
 
 def test_cancellation_is_idempotent_for_refund_flags_and_outbox() -> None:
     client = _seeded()
-    process_event_cancellation(_Service(client), event_id=EVENT_ID, event_title="Jazz")
-    second = process_event_cancellation(_Service(client), event_id=EVENT_ID, event_title="Jazz")
+    patches = (
+        patch(
+            "app.services.events.cancellation.order_ticket_refund_amount_ngwee",
+            return_value=25_000,
+        ),
+        patch(
+            "app.services.events.cancellation.enqueue_organiser_cancel_refund_job",
+            side_effect=[True, False],
+        ),
+    )
+    with patches[0], patches[1]:
+        process_event_cancellation(_Service(client), event_id=EVENT_ID, event_title="Jazz")
+        second = process_event_cancellation(_Service(client), event_id=EVENT_ID, event_title="Jazz")
     # No duplicate admin refund flag on re-run.
     assert len(_rows(client, "audit_log")) == 1
     assert len(_rows(client, "notification_outbox")) == 2
     assert second.orders_flagged == 0
+    assert second.jobs_enqueued == 0
 
 
 def test_cancellation_skips_unpaid_orders_but_still_notifies_holder() -> None:
     client = _seeded(paid=False)
-    result = process_event_cancellation(_Service(client), event_id=EVENT_ID, event_title="Jazz")
+    with patch(
+        "app.services.events.cancellation.enqueue_organiser_cancel_refund_job",
+    ) as enqueue_mock:
+        result = process_event_cancellation(_Service(client), event_id=EVENT_ID, event_title="Jazz")
+    enqueue_mock.assert_not_called()
     assert _rows(client, "audit_log") == []  # unpaid -> no refund to queue
     assert result.orders_flagged == 0
     # The attendee is still told the event is off.

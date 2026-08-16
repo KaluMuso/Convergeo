@@ -202,6 +202,7 @@ POLICIES: dict[str, RateLimitPolicy] = {
     "POST /internal/dispatch/tick": INTERNAL_CRON,
     "POST /internal/embeddings/tick": INTERNAL_CRON,
     "POST /internal/event-release/tick": INTERNAL_CRON,
+    "POST /internal/event-refund-jobs/tick": INTERNAL_CRON,
     "POST /internal/event-recurrence/tick": INTERNAL_CRON,
     "POST /internal/funnel/abandon-tick": INTERNAL_CRON,
     # M18-P07 WAHA intake operations. Three separate sweeps rather than one

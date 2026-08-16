@@ -162,14 +162,27 @@ def _notify_customer_refund_payout_outcome(
             payout_id=payout_id,
             provider_status=provider_status,
         )
-        return
-    fail_refund_from_provider_payout(
-        service_client,
-        payout_id=payout_id,
-        reason=reason or "provider_failed",
-        provider_status=provider_status,
-        dead_lettered=dead_lettered,
+    else:
+        fail_refund_from_provider_payout(
+            service_client,
+            payout_id=payout_id,
+            reason=reason or "provider_failed",
+            provider_status=provider_status,
+            dead_lettered=dead_lettered,
+        )
+
+    refund_resp = (
+        service_client.client.table("refunds")
+        .select("id")
+        .eq("payout_ref", payout_id)
+        .maybe_single()
+        .execute()
     )
+    refund_row = getattr(refund_resp, "data", None)
+    if isinstance(refund_row, dict) and refund_row.get("id"):
+        from app.services.events.refund_jobs import sync_event_refund_job_for_refund
+
+        sync_event_refund_job_for_refund(service_client, refund_id=str(refund_row["id"]))
 
 
 async def retry_payout_row(
