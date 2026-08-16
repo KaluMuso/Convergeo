@@ -1,0 +1,111 @@
+{
+  "name": "Event Cancellation Refund Jobs Tick",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every Five Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.API_URL}}/internal/event-refund-jobs/tick",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Internal-Token",
+              "value": "={{$env.INTERNAL_EVENT_REFUND_JOBS_TOKEN}}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "event-refund-jobs-tick",
+      "name": "Sweep Cancellation Refund Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300],
+      "retryOnFail": false,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "Vergeo5 Internal Event Refund Jobs"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "const src = ($input.first() && $input.first().json) || {};\nconst dead = Number(src.dead || 0);\nconst manualReview = Number(src.manual_review || 0);\nif (!Number.isFinite(dead) || dead < 0) {\n  throw new Error('Event refund jobs tick returned invalid dead counter');\n}\nif (!Number.isFinite(manualReview) || manualReview < 0) {\n  throw new Error('Event refund jobs tick returned invalid manual_review counter');\n}\nif (dead > 0) {\n  throw new Error(`Event refund jobs dead-lettered ${dead} item(s)`);\n}\nif (manualReview > 0) {\n  throw new Error(`Event refund jobs need manual review for ${manualReview} item(s)`);\n}\nreturn $input.all();"
+      },
+      "id": "assert-refund-jobs-healthy",
+      "name": "Assert Refund Jobs Healthy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 300]
+    }
+  ],
+  "connections": {
+    "Every Five Minutes": {
+      "main": [
+        [
+          {
+            "node": "Sweep Cancellation Refund Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sweep Cancellation Refund Jobs": {
+      "main": [
+        [
+          {
+            "node": "Assert Refund Jobs Healthy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 300
+  },
+  "versionId": "prompt-g-event-refund-jobs",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {
+      "name": "M10",
+      "createdAt": "2026-08-16T00:00:00.000Z",
+      "updatedAt": "2026-08-16T00:00:00.000Z"
+    },
+    {
+      "name": "Prompt-G",
+      "createdAt": "2026-08-16T00:00:00.000Z",
+      "updatedAt": "2026-08-16T00:00:00.000Z"
+    }
+  ]
+}

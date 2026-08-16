@@ -18,7 +18,7 @@ degraded=true`). Fix that first; see `infra/.env.example`.
 
 - **Wave A — activate now.** No money movement.
 - **Wave B — HELD** (`payouts`, `release-job`, `order-jobs`, `event-release`,
-  `tickets-issue`, `tickets-release`) until the Lenco **sandbox** money path is proven (VB-P01…P06)
+  `event-refund-jobs`, `tickets-issue`, `tickets-release`) until the Lenco **sandbox** money path is proven (VB-P01…P06)
   **and** legal **F4** (NPS-Act escrow) clears. Do not activate before both are green.
 - **operational-nudges — HELD** until real vendors onboard (it enqueues outward SMS/
   email that the live dispatch workflow delivers; keeping it off avoids messaging the
@@ -40,6 +40,7 @@ degraded=true`). Fix that first; see `infra/.env.example`.
 | `payouts.json`                                                              | `/internal/payouts/{retry,tick}`                                       | `INTERNAL_PAYOUTS_TOKEN`                                           | Wave B                 |
 | `order-jobs.json`                                                           | `/internal/order-jobs/{auto-confirm,auto-release}`                     | `INTERNAL_ORDER_JOBS_TOKEN`                                        | Wave B                 |
 | `event-release.json`                                                        | `/internal/event-release/tick`                                         | `INTERNAL_EVENT_RELEASE_TOKEN`                                     | Wave B                 |
+| `event-refund-jobs.json`                                                    | `/internal/event-refund-jobs/tick`                                     | `INTERNAL_EVENT_REFUND_JOBS_TOKEN`                                 | Wave B                 |
 | `tickets-issue.json` / `tickets-release.json`                               | `/internal/tickets/{issue,release}-tick`                               | `INTERNAL_TICKETS_ISSUE_TOKEN`                                     | Wave B                 |
 | `abandoned-cart.json` / `funnel-abandon.json`                               | `/internal/n8n/abandoned-carts/tick` / `/internal/funnel/abandon-tick` | `INTERNAL_N8N_TOKEN` / `INTERNAL_FUNNEL_TOKEN`                     | Keep OFF (flag-gated)  |
 
