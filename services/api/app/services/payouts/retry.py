@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from app.services.payments.lenco.models import LencoTransferStatusResponse
 from app.services.payments.state import SYSTEM_ACTOR_ID
@@ -20,6 +20,10 @@ from app.services.payouts.execution import (
     _update_payout_row,
 )
 from app.services.payouts.resolve_check import VendorPayoutProfile, load_vendor_payout_profile
+from app.services.refunds.state import (
+    complete_refund_from_provider_payout,
+    fail_refund_from_provider_payout,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +147,31 @@ def dead_letter_payout(
     )
 
 
+def _notify_customer_refund_payout_outcome(
+    service_client: ServiceRoleClient,
+    *,
+    payout_id: str,
+    outcome: Literal["paid", "failed"],
+    provider_status: str | None = None,
+    reason: str | None = None,
+    dead_lettered: bool = False,
+) -> None:
+    if outcome == "paid":
+        complete_refund_from_provider_payout(
+            service_client,
+            payout_id=payout_id,
+            provider_status=provider_status,
+        )
+        return
+    fail_refund_from_provider_payout(
+        service_client,
+        payout_id=payout_id,
+        reason=reason or "provider_failed",
+        provider_status=provider_status,
+        dead_lettered=dead_lettered,
+    )
+
+
 async def retry_payout_row(
     service_client: ServiceRoleClient,
     payout_row: dict[str, Any],
@@ -193,6 +222,13 @@ async def retry_payout_row(
                 payout_id,
                 {"status": "paid", "resolve_snapshot": merged},
             )
+            if _is_customer_refund(snapshot):
+                _notify_customer_refund_payout_outcome(
+                    service_client,
+                    payout_id=payout_id,
+                    outcome="paid",
+                    provider_status=query_response.data.status,
+                )
             return "completed"
 
         if provider_status == "failed" and status != "processing":
@@ -202,6 +238,14 @@ async def retry_payout_row(
                 payout_id,
                 {"status": "failed", "resolve_snapshot": merged},
             )
+            if _is_customer_refund(snapshot):
+                _notify_customer_refund_payout_outcome(
+                    service_client,
+                    payout_id=payout_id,
+                    outcome="failed",
+                    provider_status=query_response.data.status,
+                    reason="provider_failed",
+                )
             return "failed"
 
     if status not in {"processing", "pending"}:
@@ -228,6 +272,14 @@ async def retry_payout_row(
                 },
             },
         )
+        if _is_customer_refund(snapshot):
+            _notify_customer_refund_payout_outcome(
+                service_client,
+                payout_id=payout_id,
+                outcome="failed",
+                reason="max_retry_attempts_exceeded",
+                dead_lettered=True,
+            )
         return "dead_lettered"
 
     profile = _payout_destination_profile(
@@ -270,6 +322,14 @@ async def retry_payout_row(
                 payout_id,
                 {"status": "failed", "resolve_snapshot": {**merged, "dead_lettered": True}},
             )
+            if _is_customer_refund(snapshot):
+                _notify_customer_refund_payout_outcome(
+                    service_client,
+                    payout_id=payout_id,
+                    outcome="failed",
+                    reason=str(exc),
+                    dead_lettered=True,
+                )
             return "dead_lettered"
         return "retried"
 
@@ -295,6 +355,13 @@ async def retry_payout_row(
             payout_id,
             {"status": "paid", "resolve_snapshot": merged},
         )
+        if _is_customer_refund(snapshot):
+            _notify_customer_refund_payout_outcome(
+                service_client,
+                payout_id=payout_id,
+                outcome="paid",
+                provider_status=transfer.status.value,
+            )
         return "completed"
 
     if terminal_status == "failed":
@@ -313,6 +380,15 @@ async def retry_payout_row(
                 payout_id,
                 {"status": "failed", "resolve_snapshot": {**merged, "dead_lettered": True}},
             )
+            if _is_customer_refund(snapshot):
+                _notify_customer_refund_payout_outcome(
+                    service_client,
+                    payout_id=payout_id,
+                    outcome="failed",
+                    provider_status=transfer.status.value,
+                    reason="provider_failed",
+                    dead_lettered=True,
+                )
             return "dead_lettered"
         backoff = compute_retry_backoff_seconds(new_attempts)
         merged["next_retry_at"] = (clock + timedelta(seconds=backoff)).isoformat()

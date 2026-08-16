@@ -6,6 +6,7 @@ from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
+from app.services.refunds.constants import AWAITING_PROVIDER_STATUSES
 from fastapi import APIRouter, Depends
 
 router = APIRouter(prefix="/account/orders", tags=["customer-orders"])
@@ -180,10 +181,24 @@ def _is_paid_order(service_client: _ServiceRoleClient, order_row: dict[str, Any]
 
 
 def _order_has_refund(service_client: _ServiceRoleClient, order_id: str) -> bool:
+    """True only when Lenco confirmed the customer refund (refunds.status=completed)."""
     response = (
         service_client.client.table("refunds")
         .select("id")
         .eq("order_id", order_id)
+        .eq("status", "completed")
+        .limit(1)
+        .execute()
+    )
+    return bool(_rows(response))
+
+
+def _order_refund_in_progress(service_client: _ServiceRoleClient, order_id: str) -> bool:
+    response = (
+        service_client.client.table("refunds")
+        .select("id")
+        .eq("order_id", order_id)
+        .in_("status", sorted(AWAITING_PROVIDER_STATUSES))
         .limit(1)
         .execute()
     )
@@ -304,6 +319,7 @@ def build_customer_timeline(
     cod: bool,
     paid: bool,
     refunded: bool,
+    refund_in_progress: bool = False,
     created_at: str,
     events: list[dict[str, Any]],
 ) -> list[TimelineStepOut]:
@@ -376,7 +392,7 @@ def build_customer_timeline(
                 escrow_copy_key="none",
             )
         )
-        if paid or refunded:
+        if paid or refunded or refund_in_progress:
             steps.append(
                 TimelineStepOut(
                     step_key="refunded",
@@ -519,6 +535,7 @@ def _build_order_detail(
     items = _load_order_items(service_client, order_id)
     paid = _is_paid_order(service_client, order_row)
     refunded = _order_has_refund(service_client, order_id)
+    refund_in_progress = _order_refund_in_progress(service_client, order_id)
     events = _load_order_events(service_client, order_id)
     cod = bool(order_row.get("cod"))
     subtotal = _sum_items_ngwee(items)
@@ -545,6 +562,7 @@ def _build_order_detail(
             cod=cod,
             paid=paid,
             refunded=refunded,
+            refund_in_progress=refund_in_progress,
             created_at=str(order_row["created_at"]),
             events=events,
         ),

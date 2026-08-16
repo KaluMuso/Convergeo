@@ -124,6 +124,7 @@ class FakeSupabaseClient:
             "payouts": FakeTable(),
             "ledger_transactions": FakeTable(),
             "platform_config": FakeTable(),
+            "audit_log": FakeTable(),
         }
 
     def table(self, name: str) -> FakeTable:
@@ -309,7 +310,7 @@ class TestExecuteRefundPaths:
         assert call["template"] == LedgerTemplate.REFUND_LANE1
         assert call["refund_ngwee"] == 105_000
         assert len(fake.tables["payouts"].rows) == 1
-        assert fake.tables["refunds"].rows[0]["status"] == "completed"
+        assert fake.tables["refunds"].rows[0]["status"] == "awaiting_payout"
 
     @patch("app.services.refunds.execute.post_transaction")
     def test_pre_release_refund_exceeding_remaining_escrow_blocked(
@@ -406,7 +407,7 @@ class TestExecuteRefundPaths:
         assert result.phase == RefundPhase.PRE_RELEASE
         assert result.amount_ngwee == 105_000
         mock_post.assert_called_once()
-        assert fake.tables["refunds"].rows[0]["status"] == "completed"
+        assert fake.tables["refunds"].rows[0]["status"] == "awaiting_payout"
 
     @patch("app.services.refunds.execute.post_transaction")
     def test_post_release_lane1_posts_clawback(

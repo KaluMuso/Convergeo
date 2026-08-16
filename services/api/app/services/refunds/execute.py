@@ -17,6 +17,7 @@ from app.services.ledger.engine import post_transaction
 from app.services.ledger.templates import LedgerTemplate
 from app.services.refunds.clawback import clawback_outstanding_from_payable_balance
 from app.services.refunds.config import load_restocking_fee_bps
+from app.services.refunds.constants import ACTIVE_REFUND_STATUSES, AWAITING_PROVIDER_STATUSES
 from app.services.refunds.math import (
     Lane1RefundAmount,
     Lane2RefundBreakdown,
@@ -24,10 +25,10 @@ from app.services.refunds.math import (
     compute_lane2_refund,
 )
 from app.services.refunds.payout_port import CustomerRail, initiate_customer_refund_payout
+from app.services.refunds.state import mark_refund_awaiting_payout
 from postgrest.exceptions import APIError
 
 Lane = Literal[1, 2]
-ACTIVE_REFUND_STATUSES = frozenset({"pending", "processing", "completed"})
 # Postgres unique_violation SQLSTATE — raised when the source_key partial unique
 # index rejects a concurrent/retried second insert for the same caller key.
 _UNIQUE_VIOLATION = "23505"
@@ -331,7 +332,7 @@ def _complete_refund_money_path(
     customer_momo: str,
     created: bool,
 ) -> RefundExecutionResult:
-    """Post ledger + customer payout and mark the refund completed (idempotent keys)."""
+    """Post ledger + queue customer payout; refund completes when Lenco confirms delivery."""
     ledger_ids: list[str] = []
     if phase == RefundPhase.PRE_RELEASE:
         ledger_ids.extend(
@@ -370,13 +371,12 @@ def _complete_refund_money_path(
     breakdown["lenco_reference"] = payout.lenco_reference
     breakdown["phase"] = phase.value
 
-    service_client.client.table("refunds").update(
-        {
-            "status": "completed",
-            "payout_ref": payout.payout_id,
-            "breakdown": breakdown,
-        }
-    ).eq("id", refund_id).execute()
+    mark_refund_awaiting_payout(
+        service_client,
+        refund_id=refund_id,
+        payout_ref=payout.payout_id,
+        breakdown=breakdown,
+    )
 
     return RefundExecutionResult(
         refund_id=refund_id,
@@ -488,6 +488,8 @@ def execute_refund(
     if existing is not None:
         status = str(existing.get("status") or "")
         if status == "completed":
+            return _result_from_existing(existing)
+        if status in AWAITING_PROVIDER_STATUSES:
             return _result_from_existing(existing)
         if status in {"processing", "pending"}:
             return _resume_processing_refund(
@@ -640,6 +642,8 @@ def execute_refund(
             raise
         raced_status = str(raced.get("status") or "")
         if raced_status == "completed":
+            return _result_from_existing(raced)
+        if raced_status in AWAITING_PROVIDER_STATUSES:
             return _result_from_existing(raced)
         if raced_status in {"processing", "pending"}:
             return _resume_processing_refund(

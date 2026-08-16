@@ -18,10 +18,10 @@ from dataclasses import dataclass
 from typing import Literal
 
 from app.services.orders.audit import run_sql_script, sql_literal
+from app.services.refunds.constants import ACTIVE_REFUND_STATUSES
 
 RELEASE_LEDGER_KIND = "release_to_vendor"
 REFUND_LEDGER_KINDS = frozenset({"refund_lane1", "refund_lane2"})
-ACTIVE_REFUND_STATUSES = frozenset({"pending", "processing", "completed"})
 
 
 class OrderMoneyGateError(Exception):
