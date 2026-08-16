@@ -230,15 +230,20 @@ def process_event_cancellation(
             continue
         try:
             amount_ngwee = order_ticket_refund_amount_ngwee(order_id)
-        except RuntimeError:
-            continue
-        if enqueue_organiser_cancel_refund_job(
-            event_id=event_id,
-            order_id=order_id,
-            customer_id=customer_id,
-            amount_ngwee=amount_ngwee,
-        ):
-            jobs_enqueued += 1
+        except Exception:
+            amount_ngwee = 0
+        if amount_ngwee > 0:
+            try:
+                if enqueue_organiser_cancel_refund_job(
+                    event_id=event_id,
+                    order_id=order_id,
+                    customer_id=customer_id,
+                    amount_ngwee=amount_ngwee,
+                ):
+                    jobs_enqueued += 1
+            except Exception:
+                # Best-effort — audit flag + escrow sweep still recover refunds.
+                pass
 
     recipients = {customer_id for _, customer_id in orders if customer_id}
     recipients |= _holder_ids(client, instance_ids)
