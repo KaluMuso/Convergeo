@@ -678,7 +678,7 @@ def test_cancel_event_queues_refund_and_notifies(
     organiser_client: TestClient,
     fake_client: FakeSupabaseClient,
 ) -> None:
-    # D3: cancelling flags each paid order for admin refund and notifies buyers.
+    # D3 + Prompt G: cancelling flags paid orders, enqueues refund jobs, and notifies buyers.
     _seed_event(fake_client, event_id=EVENT_A_ID, status="published")
     _seed_ticket(fake_client)  # holder HOLDER_ID on INSTANCE_A_ID
     fake_client.table("order_item_tickets").rows.append(

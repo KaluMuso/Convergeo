@@ -1,18 +1,17 @@
-"""Organiser event cancellation side-effects (D3, approach b).
+"""Organiser event cancellation side-effects (D3 + EVT-CANCELLATION-REFUND-JOBS).
 
-Cancelling an event does **not** move money automatically. It:
+Cancelling an event:
 
-  1. flags each paid ticket order for admin mass-refund — the same
-     ``audit_log`` signal the escrow sweep uses (``MASS_REFUND_FLAG_ACTION``),
-     written immediately at cancel time so the admin refund queue is populated
-     now rather than lazily on the sweep's next run; and
-  2. notifies every affected buyer and current ticket holder that the event was
+  1. enqueues one durable ``event_refund_jobs`` row per paid ticket order so the
+     internal sweeper can call ``execute_refund`` asynchronously with
+     provider-authoritative completion (Prompt F); and
+  2. flags each paid order in ``audit_log`` (``MASS_REFUND_FLAG_ACTION``) so the
+     escrow sweep and admin queue stay populated even if enqueue fails; and
+  3. notifies every affected buyer and current ticket holder that the event was
      cancelled.
 
-An admin then executes each refund payout via ``services.refunds.execute_refund``
-(untouched), so outbound money stays behind a human gate. The escrow sweep
-continues to block organiser release for cancelled events and de-dupes against
-the same flag, so a failure here is recovered on the next sweep.
+Outbound money is **not** sent in this HTTP path — the refund job sweeper moves
+it. The escrow sweep continues to block organiser release for cancelled events.
 """
 
 from __future__ import annotations
@@ -22,6 +21,10 @@ from datetime import UTC, datetime
 from typing import Any, Protocol
 
 from app.services.escrow.event_release import MASS_REFUND_FLAG_ACTION
+from app.services.events.refund_jobs import (
+    enqueue_organiser_cancel_refund_job,
+    order_ticket_refund_amount_ngwee,
+)
 from app.services.notifications.events import emit_event
 from app.services.orders.state import SYSTEM_ACTOR_ID
 
@@ -40,6 +43,7 @@ class ServiceRoleClient(Protocol):
 @dataclass(frozen=True, slots=True)
 class EventCancellationResult:
     orders_flagged: int
+    jobs_enqueued: int
     recipients_notified: int
 
 
@@ -84,6 +88,11 @@ def _earliest_event_date(client: Any, instance_ids: list[str]) -> str:
 
 
 def _refund_detail(refund_status: str) -> str:
+    if refund_status == "queued":
+        return (
+            "Your refund has been queued automatically; you will receive a payout "
+            "once processing completes."
+        )
     if refund_status == "review_required":
         return "Your refund has been queued for review; no payout has been sent yet."
     return "No payment was found on your account for this event."
@@ -205,7 +214,7 @@ def _notify(
 def process_event_cancellation(
     service_client: ServiceRoleClient, *, event_id: str, event_title: str
 ) -> EventCancellationResult:
-    """Flag paid orders for admin refund and notify buyers + holders. Idempotent."""
+    """Enqueue refund jobs, flag paid orders, and notify buyers + holders. Idempotent."""
     client = service_client.client
     instance_ids = _instance_ids(client, event_id)
     orders = _paid_orders(client, instance_ids)
@@ -213,14 +222,33 @@ def process_event_cancellation(
     paid_buyers = {customer_id for _, customer_id in orders if customer_id}
 
     flagged = 0
-    for order_id, _customer_id in orders:
+    jobs_enqueued = 0
+    for order_id, customer_id in orders:
         if _flag_refund(client, order_id=order_id, event_id=event_id):
             flagged += 1
+        if not customer_id:
+            continue
+        try:
+            amount_ngwee = order_ticket_refund_amount_ngwee(order_id)
+        except Exception:
+            amount_ngwee = 0
+        if amount_ngwee > 0:
+            try:
+                if enqueue_organiser_cancel_refund_job(
+                    event_id=event_id,
+                    order_id=order_id,
+                    customer_id=customer_id,
+                    amount_ngwee=amount_ngwee,
+                ):
+                    jobs_enqueued += 1
+            except Exception:
+                # Best-effort — audit flag + escrow sweep still recover refunds.
+                pass
 
     recipients = {customer_id for _, customer_id in orders if customer_id}
     recipients |= _holder_ids(client, instance_ids)
     for recipient_id in sorted(recipients):
-        refund_status = "review_required" if recipient_id in paid_buyers else "none"
+        refund_status = "queued" if recipient_id in paid_buyers else "none"
         _notify(
             client,
             event_id=event_id,
@@ -230,4 +258,8 @@ def process_event_cancellation(
             refund_status=refund_status,
         )
 
-    return EventCancellationResult(orders_flagged=flagged, recipients_notified=len(recipients))
+    return EventCancellationResult(
+        orders_flagged=flagged,
+        jobs_enqueued=jobs_enqueued,
+        recipients_notified=len(recipients),
+    )
