@@ -60,6 +60,24 @@ def test_access_proof_is_event_version_bound_and_expires() -> None:
     )
 
 
+def test_access_proof_invalid_after_credential_rotation() -> None:
+    event_id = "33333333-3333-3333-3333-333333333333"
+    proof_v1 = issue_event_access_proof(
+        event_id=event_id,
+        credential_version=1,
+        secret="test-secret",
+    )
+    assert (
+        verify_event_access_proof(
+            proof_v1,
+            event_id=event_id,
+            credential_version=2,
+            secret="test-secret",
+        )
+        is None
+    )
+
+
 def test_weekly_rrule_materialises_selected_weekdays_without_crossing_horizon() -> None:
     seed = datetime(2026, 8, 1, 18, tzinfo=UTC)  # Saturday in Africa/Lusaka
     rule = parse_rrule("FREQ=WEEKLY;BYDAY=WE,SA;COUNT=4", timezone="Africa/Lusaka")

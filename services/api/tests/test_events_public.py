@@ -727,6 +727,49 @@ def test_detail_private_without_code_set_is_unreachable(store: FakeSupabaseStore
         build_detail_response(store, "private-no-code", access_proof="anything")
 
 
+def test_unlock_private_event_proof_chain_via_http(
+    client: TestClient,
+    store: FakeSupabaseStore,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Prompt H: code unlock → signed proof → private detail (no code in URLs/logs)."""
+    monkeypatch.setenv("EVENT_ACCESS_SIGNING_SECRET", "test-event-access-secret")
+    monkeypatch.setattr(
+        "app.routers.events_public.bump_rate_counter",
+        lambda **_kwargs: (True, 0),
+    )
+    _add_event(
+        store,
+        event_id="e-private-chain",
+        slug="invite-only-gig",
+        visibility="private",
+        access_code_hash=hash_access_code("backstage-pass"),
+    )
+
+    denied = client.post(
+        "/events/invite-only-gig/access/unlock",
+        json={"code": "wrong-code"},
+    )
+    assert denied.status_code == 404
+
+    unlocked = client.post(
+        "/events/invite-only-gig/access/unlock",
+        json={"code": "backstage-pass"},
+    )
+    assert unlocked.status_code == 200
+    payload = unlocked.json()
+    proof = payload["access_proof"]
+    assert isinstance(proof, str) and proof
+    assert isinstance(payload["expires_at"], str) and payload["expires_at"]
+
+    without_proof = client.get("/events/invite-only-gig")
+    assert without_proof.status_code == 404
+
+    with_proof = client.get("/events/invite-only-gig", headers={"X-Event-Access": proof})
+    assert with_proof.status_code == 200
+    assert with_proof.json()["slug"] == "invite-only-gig"
+
+
 def test_detail_and_browse_surface_event_type(store: FakeSupabaseStore) -> None:
     _add_event(store, event_id="e-series", slug="weekly-series", event_type="recurring")
     detail = build_detail_response(store, "weekly-series")
