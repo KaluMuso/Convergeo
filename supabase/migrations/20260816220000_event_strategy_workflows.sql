@@ -44,9 +44,12 @@ declare
   v_allocated bigint;
 begin
   v_instance_id := coalesce(new.instance_id, old.instance_id);
+  -- Lock the instance row so concurrent allocation writes cannot both pass
+  -- a stale sum and oversell venue capacity.
   select ei.capacity into v_capacity
   from public.event_instances ei
-  where ei.id = v_instance_id;
+  where ei.id = v_instance_id
+  for update;
   if v_capacity is null then
     return coalesce(new, old);
   end if;
