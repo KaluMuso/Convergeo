@@ -611,20 +611,19 @@ def add_ticket_to_checkout(
     fee_payer = normalize_fee_payer(ctx["event"].get("platform_fee_payer"))
     fee = platform_fee_ngwee(line_total_ngwee=charged, fee_payer=fee_payer, is_free=False)
     title = str(ticket_type.get("name") or "Ticket")
-    snapshot_kwargs = {
-        "ticket_type_id": ticket_type_id,
-        "instance_id": instance_id,
-        "ticket_name": title,
-        "kind": kind,
-        "qty": qty,
-        "unit_price_ngwee": charged_unit,
-        "fee_payer": fee_payer,
-        "platform_fee": fee,
-        "promo_code": promo_norm,
-        "promo_discount_ngwee": discount,
-        "affiliate_code": affiliate_code,
-    }
-    provisional_snapshot = _build_ticket_commission_snapshot(**snapshot_kwargs)
+    provisional_snapshot = _build_ticket_commission_snapshot(
+        ticket_type_id=ticket_type_id,
+        instance_id=instance_id,
+        ticket_name=title,
+        kind=kind,
+        qty=qty,
+        unit_price_ngwee=charged_unit,
+        fee_payer=fee_payer,
+        platform_fee=fee,
+        promo_code=promo_norm,
+        promo_discount_ngwee=discount,
+        affiliate_code=affiliate_code,
+    )
 
     checkout_group_id, order_id, order_item_id = _insert_checkout_spine(
         customer_id=customer_id,

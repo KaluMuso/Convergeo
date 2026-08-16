@@ -1,7 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";

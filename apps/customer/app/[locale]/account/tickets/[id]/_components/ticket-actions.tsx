@@ -1,9 +1,10 @@
 "use client";
 
 import { formatK } from "@vergeo/i18n";
-import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
+
+import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 
 type TicketActionsProps = {
   ticketId: string;

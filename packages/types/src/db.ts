@@ -853,8 +853,8 @@ export type Database = {
         Row: {
           admin_decision: string | null
           created_at: string
-          evidence_paths: string[]
           event_id: string | null
+          evidence_paths: string[]
           id: string
           kind: string
           opener_user_id: string
@@ -867,8 +867,8 @@ export type Database = {
         Insert: {
           admin_decision?: string | null
           created_at?: string
-          evidence_paths?: string[]
           event_id?: string | null
+          evidence_paths?: string[]
           id?: string
           kind?: string
           opener_user_id: string
@@ -881,8 +881,8 @@ export type Database = {
         Update: {
           admin_decision?: string | null
           created_at?: string
-          evidence_paths?: string[]
           event_id?: string | null
+          evidence_paths?: string[]
           id?: string
           kind?: string
           opener_user_id?: string
@@ -893,6 +893,13 @@ export type Database = {
           vendor_response?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "disputes_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "disputes_order_id_fkey"
             columns: ["order_id"]
@@ -1443,7 +1450,7 @@ export type Database = {
           {
             foreignKeyName: "event_promo_redemptions_order_id_fkey"
             columns: ["order_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
