@@ -6,6 +6,7 @@
     "emptyTitle": "Takuli events mu iyi window",
     "emptyBody": "Esheni date filter imbi nangu bwelako limbi pa listings shishiya.",
     "soldOut": "Yapwa",
+    "sellingFast": "Shilechitisha bwangu",
     "free": "Free",
     "viewEvent": "Lolesha event",
     "verified": "Verified",
@@ -16,8 +17,16 @@
   "filters": {
     "tonight": "Ulecungulo",
     "thisWeekend": "Uyu weekend",
+    "nextWeek": "Ulu lwakubuta",
+    "nextMonth": "Uweshi uleisa",
     "allDates": "Shonse ishisa",
-    "categoryLabel": "Category"
+    "categoryLabel": "Category",
+    "cityLabel": "Mushi",
+    "cityPlaceholder": "Lusaka, Ndola, Kitwe…",
+    "neighbourhoodLabel": "Cipande",
+    "neighbourhoodPlaceholder": "Kabulonga, Woodlands…",
+    "nearMe": "Pepi naine",
+    "nearMeDenied": "Location ileikala off — ukufwaya mushi kulebomba."
   },
   "categories": {
     "all": "Shonse",
@@ -26,7 +35,24 @@
     "pop-up-dinners": "Pop-up dinners",
     "cultural-arts": "Cultural & arts",
     "lifestyle-community": "Lifestyle & community",
-    "free-rsvp": "Free RSVP"
+    "free-rsvp": "Free RSVP",
+    "music": "Nyimbo",
+    "comedy-theatre-parent": "Comedy & theatre",
+    "sports": "Sports",
+    "conferences-workshops": "Conferences & workshops",
+    "family": "Ulupwa",
+    "religious": "Religious",
+    "markets": "Amalichi",
+    "exhibitions": "Exhibitions",
+    "nightlife": "Nightlife",
+    "community": "Community",
+    "private-events": "Private events",
+    "concerts": "Concerts",
+    "festivals": "Festivals",
+    "gospel": "Gospel",
+    "stand-up": "Stand-up",
+    "football": "Football",
+    "church": "Church"
   },
   "detail": {
     "metaTitle": "{title} — Events",
@@ -60,6 +86,10 @@
     "increase": "Onjesha quantity",
     "increaseSymbol": "+",
     "total": "Total",
+    "subtotal": "Tickets",
+    "platformFee": "Platform fee (5%)",
+    "promoCode": "Promo code",
+    "promoCodePlaceholder": "Code ya optional",
     "freeRsvpCta": "Sunga free spot",
     "payCta": "Poka tickets",
     "processing": "Ileprocess…",
@@ -82,7 +112,8 @@
       "paidUseCheckout": "Iyi ticket ilefwailwa payment.",
       "oversell": "Taikaliko",
       "attendeeNamesRequired": "Lembeni ishina pa ticket cimo cimo.",
-      "attendeeNamesMismatch": "Lembeni ishina limo fye pa ticket cimo."
+      "attendeeNamesMismatch": "Lembeni ishina limo fye pa ticket cimo.",
+      "promoInvalid": "Uyu promo code tauli valid pa iyi event."
     }
   },
   "wallet": {
@@ -126,7 +157,21 @@
         "void": "Iyi ticket taikaliko valid."
       },
       "transferBanner": "Tickets sha transferred tashiscanwa. Recipient ali na QR na PIN iishiya.",
-      "voidBanner": "Iyi ticket yavoidwa no tingabomfiwa ku entry."
+      "voidBanner": "Iyi ticket yavoidwa no tingabomfiwa ku entry.",
+      "cancel": {
+        "heading": "Cancel nangu opt out",
+        "policy": "Ukucila nshiku 7 before start: full refund minus 5% admin fee. 1–7 days: 50% refund. Panshi ya maola 24: takuli refund (kuti watransfer). Refunds shilequeue, tashilipilwa nomba.",
+        "cta": "Lomba refund",
+        "optOutCta": "Opt out pa reschedule",
+        "submitting": "Ilesubmit…",
+        "queued": "Refund ya {amount} yaqueue. Mukalipilwa pa original mobile-money rail.",
+        "voidedNoRefund": "Ticket yavoidwa. Takuli refund mu iyi window.",
+        "tooLate": "Iyi ticket tacingacancelwa pa refund. Transfer instead.",
+        "thisRefund": "Estimated refund nga mwacancel nomba: {amount}",
+        "noReschedule": "Iyi event taikala rescheduled, takuli icakufuma.",
+        "failed": "Tatwakwanisha ukupwisha request. Esheni again.",
+        "loginRequired": "Ingilani ukucancel iyi ticket."
+      }
     }
   },
   "access": {
@@ -174,5 +219,15 @@
       "phoneMismatch": "Ingilani na nomba ya foni iyo ticket yatumiwa.",
       "rateLimited": "Requests shingi. Esheni limbi."
     }
+  },
+  "teamAccept": {
+    "title": "Join event team",
+    "intro": "Bomfya one-time token iyo organiser amupele. Ingilani na nomba ya foni iyo batumine.",
+    "tokenLabel": "Invite token",
+    "cta": "Poka invite",
+    "submitting": "Ilepoka…",
+    "success": "Nomba muli pa door team ya iyi event.",
+    "failed": "Iyi invite tauli valid, yaexpira, nangu yatumiwa ku nomba imbi.",
+    "loginRequired": "Ingilani ukupoka iyi invite."
   }
 }

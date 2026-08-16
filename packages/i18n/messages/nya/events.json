@@ -6,6 +6,7 @@
     "emptyTitle": "Palibe events mu window iyi",
     "emptyBody": "Yesani date filter ina kapena bweraninso posachedwa pa listings zatsopano.",
     "soldOut": "Zapatha",
+    "sellingFast": "Zikugulitsidwa mofulumira",
     "free": "Free",
     "viewEvent": "Onani event",
     "verified": "Verified",
@@ -16,8 +17,16 @@
   "filters": {
     "tonight": "Usikuuno",
     "thisWeekend": "Weekend ino",
+    "nextWeek": "Sabata yamawa",
+    "nextMonth": "Mwezi wotsatira",
     "allDates": "Zonse zikubwera",
-    "categoryLabel": "Category"
+    "categoryLabel": "Category",
+    "cityLabel": "Mzinda",
+    "cityPlaceholder": "Lusaka, Ndola, Kitwe…",
+    "neighbourhoodLabel": "Neighbourhood",
+    "neighbourhoodPlaceholder": "Kabulonga, Woodlands…",
+    "nearMe": "Pafupi ndine",
+    "nearMeDenied": "Location ili off — kufufuza mzinda kukugwirabe ntchito."
   },
   "categories": {
     "all": "Zonse",
@@ -26,7 +35,24 @@
     "pop-up-dinners": "Pop-up dinners",
     "cultural-arts": "Cultural & arts",
     "lifestyle-community": "Lifestyle & community",
-    "free-rsvp": "Free RSVP"
+    "free-rsvp": "Free RSVP",
+    "music": "Nyimbo",
+    "comedy-theatre-parent": "Comedy & theatre",
+    "sports": "Sports",
+    "conferences-workshops": "Conferences & workshops",
+    "family": "Banja",
+    "religious": "Religious",
+    "markets": "Misika",
+    "exhibitions": "Exhibitions",
+    "nightlife": "Nightlife",
+    "community": "Community",
+    "private-events": "Private events",
+    "concerts": "Concerts",
+    "festivals": "Festivals",
+    "gospel": "Gospel",
+    "stand-up": "Stand-up",
+    "football": "Football",
+    "church": "Church"
   },
   "detail": {
     "metaTitle": "{title} — Events",
@@ -60,6 +86,10 @@
     "increase": "Onjezerani quantity",
     "increaseSymbol": "+",
     "total": "Total",
+    "subtotal": "Tickets",
+    "platformFee": "Platform fee (5%)",
+    "promoCode": "Promo code",
+    "promoCodePlaceholder": "Code ya optional",
     "freeRsvpCta": "Sungani free spot",
     "payCta": "Pezani tickets",
     "processing": "Ikuprocess…",
@@ -82,7 +112,8 @@
       "paidUseCheckout": "Ticket iyi ikufuna payment.",
       "oversell": "Siliponso",
       "attendeeNamesRequired": "Lembani dzina pa ticket iliyonse.",
-      "attendeeNamesMismatch": "Lembani dzina limodzi lokha pa ticket iliyonse."
+      "attendeeNamesMismatch": "Lembani dzina limodzi lokha pa ticket iliyonse.",
+      "promoInvalid": "Promo code iyi si valid pa event iyi."
     }
   },
   "wallet": {
@@ -126,7 +157,21 @@
         "void": "Ticket iyi silinso valid."
       },
       "transferBanner": "Tickets za transferred sizingascanidwe. Recipient ali ndi QR ndi PIN yatsopano.",
-      "voidBanner": "Ticket iyi yavoided ndipo singagwiritsidwe ku entry."
+      "voidBanner": "Ticket iyi yavoided ndipo singagwiritsidwe ku entry.",
+      "cancel": {
+        "heading": "Cancel kapena opt out",
+        "policy": "Kupitirira masiku 7 event isanayambe: full refund minus 5% admin fee. 1–7 days: 50% refund. Pansi pa maola 24: palibe refund (mutha kutransfer). Refunds zimaqueue, sizilipidwa nthawi yomweyo.",
+        "cta": "Pemphani refund",
+        "optOutCta": "Opt out pa reschedule",
+        "submitting": "Ikusubmit…",
+        "queued": "Refund ya {amount} yaqueue. Mudzalipidwa pa original mobile-money rail.",
+        "voidedNoRefund": "Ticket yavoided. Palibe refund mu window iyi.",
+        "tooLate": "Ticket iyi singacancelled pa refund. Transfer m'malo mwake.",
+        "thisRefund": "Estimated refund ngati mucancel tsopano: {amount}",
+        "noReschedule": "Event iyi sinasinthidwe nthawi, palibe choti muopt out.",
+        "failed": "Situnathe kumaliza request. Yesaninso.",
+        "loginRequired": "Lowani kuti mucancel ticket iyi."
+      }
     }
   },
   "access": {
@@ -174,5 +219,15 @@
       "phoneMismatch": "Lowani ndi nambala ya foni yomwe ticket inatumizidwa.",
       "rateLimited": "Ma request ambiri. Yesaninso posachedwa."
     }
+  },
+  "teamAccept": {
+    "title": "Lowani pa event team",
+    "intro": "Gwiritsani one-time token yomwe organiser anakupatsani. Lowani ndi nambala ya foni yomwe anakuitanira.",
+    "tokenLabel": "Invite token",
+    "cta": "Landirani invite",
+    "submitting": "Ikulandira…",
+    "success": "Tsopano muli pa door team ya event iyi.",
+    "failed": "Invite iyi si valid, yaexpired, kapena inatumizidwa ku nambala ina.",
+    "loginRequired": "Lowani kuti mulandire invite iyi."
   }
 }
