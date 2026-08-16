@@ -17,6 +17,11 @@ from fastapi import APIRouter, Query
 router = APIRouter(tags=["health"])
 
 _READINESS_TIMEOUT = httpx.Timeout(connect=1.0, read=1.0, write=1.0, pool=1.0)
+# Cheap, read-only PostgREST probe against a stable baseline relation seeded in
+# 0008_config.sql — avoids the obsolete anon-key GET /rest/v1/ OpenAPI root
+# (Supabase removed anon schema access in 2026; HTTP 401 there is not a Data API outage).
+_SUPABASE_READINESS_PATH = "/rest/v1/platform_config"
+_SUPABASE_READINESS_QUERY = "select=key&limit=1"
 _BUILD_IDENTIFIER_RE = re.compile(r"^(?:[0-9a-f]{7,64}|sha256:[0-9a-f]{64})$")
 
 
@@ -65,16 +70,25 @@ async def fingerprint() -> dict[str, str]:
     }
 
 
+def _supabase_readiness_url(supabase_url: str) -> str:
+    base = supabase_url.rstrip("/")
+    return f"{base}{_SUPABASE_READINESS_PATH}?{_SUPABASE_READINESS_QUERY}"
+
+
+def _supabase_readiness_headers(service_role_key: str) -> dict[str, str]:
+    return {
+        "apikey": service_role_key,
+        "Authorization": f"Bearer {service_role_key}",
+    }
+
+
 async def _supabase_reachable() -> bool:
     settings = get_settings()
     try:
         async with httpx.AsyncClient(timeout=_READINESS_TIMEOUT) as client:
             response = await client.get(
-                f"{settings.supabase_url.rstrip('/')}/rest/v1/",
-                headers={
-                    "apikey": settings.supabase_anon_key,
-                    "Authorization": f"Bearer {settings.supabase_anon_key}",
-                },
+                _supabase_readiness_url(settings.supabase_url),
+                headers=_supabase_readiness_headers(settings.supabase_service_role_key),
             )
             if response.is_success:
                 return True
