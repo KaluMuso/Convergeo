@@ -1116,7 +1116,17 @@
           "title": "Not a ticket code",
           "body": "This does not look like an event ticket QR."
         },
+        "holder": "Holder: {name}",
+        "tier": "Ticket: {name}",
+        "idCheck": "ID check ikufunika pa ticket iyi",
         "scanAnother": "Scan another"
+      },
+      "override": {
+        "cta": "Lowetsani ndi organiser override",
+        "reasonLabel": "Chifukwa (required)",
+        "reasonPlaceholder": "Phone yafa / QR siwerengeka",
+        "submitting": "Ikulemba override…",
+        "failed": "Override yalepheka. Onani kuti ticket iyi ili pa session iyi."
       },
       "recent": {
         "heading": "Recent scans",
@@ -1206,7 +1216,12 @@
       "platformFeeOptions": {
         "organiser": "Absorb it as the organiser",
         "buyer": "Show it as a buyer pass-through fee"
-      }
+      },
+      "city": "Mzinda",
+      "cityPlaceholder": "Lusaka",
+      "cityHelp": "Imagwiritsidwa pa city discovery filters. Landmark ndi GPS zikugwirabe addressing.",
+      "idCheckLabel": "Pemphani door staff kuti a-ID-check tickets zoposa K500",
+      "idCheckHelp": "Awonetsa ID-check hint pa scanner pa paid tickets kuyambira K500. Platform sisunga ID documents."
     },
     "instances": {
       "heading": "Tsikus & capacity",
@@ -1353,7 +1368,10 @@
       "soldLabel": "{count, plural, one {# sold} other {# sold}}",
       "attendeeNamedLabel": "Collect attendee names",
       "attendeeNamedHelp": "Require a name for each ticket at checkout — useful for workshops, dinners, and seated events.",
-      "attendeeNamedBadge": "Dzinas required"
+      "attendeeNamedBadge": "Dzinas required",
+      "perksLabel": "Perks (optional)",
+      "perksHelp": "Ziwonetsedwa kwa buyers — lounge, merch, drink tokens. Siyani blank ngati palibe.",
+      "perksPlaceholder": "e.g. Includes one drink token"
     },
     "actions": {
       "save": "Save type",
@@ -1565,6 +1583,8 @@
     "viewRoster": "View attendee roster",
     "sections": {
       "revenue": "⚠ Revenue",
+      "velocity": "Sales velocity",
+      "acquisition": "Acquisition source",
       "checkIn": "Check-in progress",
       "escrow": "⚠ Escrow",
       "salesByType": "⚠ Sales by ticket type"
@@ -1572,6 +1592,12 @@
     "labels": {
       "pending": "Ikudikira release",
       "released": "Released to you",
+      "soldLast24h": "Zogulitsidwa mu maola 24 apitawo",
+      "revenueLast24h": "Revenue mu maola 24 apitawo",
+      "projectedSold": "Projected sold mpaka start (kuchokera pa recent pace)",
+      "direct": "Direct / unknown",
+      "affiliateSource": "Affiliate {code}",
+      "acquisitionRow": "{orders, plural, one {# order} other {# orders}} · {revenue}",
       "eventStatus": "Event status",
       "soldCheckedIn": "{sold, plural, one {# sold} other {# sold}} · {checkedIn, plural, one {# checked in} other {# checked in}}"
     },
@@ -1580,6 +1606,31 @@
       "unauthorized": "Sign in as an organiser to view this dashboard.",
       "notFound": "Event not found.",
       "forbidden": "You may only view the dashboard for your own events."
+    },
+    "ops": {
+      "heading": "Team, promos, ndi tracking",
+      "intro": "Itanani door staff ndi foni, pangani percent promo codes, ndi kupanga tracking codes. Affiliate codes zimalembedwa pa checkout — sizilipidwa pano.",
+      "loadFailed": "Could not load organiser tools.",
+      "teamHeading": "Door team",
+      "revoke": "Chotsani",
+      "pendingInvite": "Pending {role} invite ku {phone}",
+      "phonePlaceholder": "Nambala ya foni",
+      "roleLabel": "Role",
+      "roleDoor": "Door",
+      "roleManager": "Manager",
+      "inviteCta": "Itanani",
+      "inviteFailed": "Situnathe kutumiza invite iyi.",
+      "shareToken": "Share uli one-time link: {path}?token={token}",
+      "promoHeading": "Promo codes",
+      "promoCodePlaceholder": "SAVE10",
+      "promoPercentPlaceholder": "Percent off",
+      "promoCta": "Pangani promo",
+      "promoFailed": "Situnathe kupanga promo iyi.",
+      "affiliateHeading": "Affiliate tracking codes",
+      "affiliateNote": "Codes zimalembedwa pa paid orders. Palibe affiliate payout mu version iyi.",
+      "affiliatePlaceholder": "PARTNER",
+      "affiliateCta": "Pangani code",
+      "affiliateFailed": "Situnathe kupanga tracking code iyi."
     }
   },
   "eventRoster": {

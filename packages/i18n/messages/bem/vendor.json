@@ -1116,7 +1116,17 @@
           "title": "Not a ticket code",
           "body": "This does not look like an event ticket QR."
         },
+        "holder": "Holder: {name}",
+        "tier": "Ticket: {name}",
+        "idCheck": "ID check ilefwailwa pa iyi ticket",
         "scanAnother": "Scan another"
+      },
+      "override": {
+        "cta": "Ingisha na organiser override",
+        "reasonLabel": "Ifyo fyacitika (required)",
+        "reasonPlaceholder": "Phone yalile / QR taibalikwa",
+        "submitting": "Ilelemba override…",
+        "failed": "Override yalile. Lolesha ukuti iyi ticket yali pa uyu session."
       },
       "recent": {
         "heading": "Recent scans",
@@ -1206,7 +1216,12 @@
       "platformFeeOptions": {
         "organiser": "Absorb it as the organiser",
         "buyer": "Show it as a buyer pass-through fee"
-      }
+      },
+      "city": "Mushi",
+      "cityPlaceholder": "Lusaka",
+      "cityHelp": "Ibomfiwa pa city discovery filters. Landmark na GPS fyalikwata addressing.",
+      "idCheckLabel": "Lomba door staff uku-ID-check tickets shilechila K500",
+      "idCheckHelp": "Langa ID-check hint pa scanner pa paid tickets from K500. Platform tailemba ID documents."
     },
     "instances": {
       "heading": "Dates & capacity",
@@ -1353,7 +1368,10 @@
       "soldLabel": "{count, plural, one {# sold} other {# sold}}",
       "attendeeNamedLabel": "Collect attendee names",
       "attendeeNamedHelp": "Require a name for each ticket at checkout — useful for workshops, dinners, and seated events.",
-      "attendeeNamedBadge": "Ishinas required"
+      "attendeeNamedBadge": "Ishinas required",
+      "perksLabel": "Perks (optional)",
+      "perksHelp": "Shilaoneshwa ku buyers — lounge, merch, drink tokens. Shileka blank nga takuli.",
+      "perksPlaceholder": "e.g. Includes one drink token"
     },
     "actions": {
       "save": "Save type",
@@ -1565,6 +1583,8 @@
     "viewRoster": "View attendee roster",
     "sections": {
       "revenue": "⚠ Revenue",
+      "velocity": "Sales velocity",
+      "acquisition": "Acquisition source",
       "checkIn": "Check-in progress",
       "escrow": "⚠ Escrow",
       "salesByType": "⚠ Sales by ticket type"
@@ -1572,6 +1592,12 @@
     "labels": {
       "pending": "Iilindilila release",
       "released": "Released to you",
+      "soldLast24h": "Shashitishiwa mu maola 24 yapita",
+      "revenueLast24h": "Revenue mu maola 24 yapita",
+      "projectedSold": "Projected sold ukufika start (kufuma pa recent pace)",
+      "direct": "Direct / unknown",
+      "affiliateSource": "Affiliate {code}",
+      "acquisitionRow": "{orders, plural, one {# order} other {# orders}} · {revenue}",
       "eventStatus": "Event status",
       "soldCheckedIn": "{sold, plural, one {# sold} other {# sold}} · {checkedIn, plural, one {# checked in} other {# checked in}}"
     },
@@ -1580,6 +1606,31 @@
       "unauthorized": "Sign in as an organiser to view this dashboard.",
       "notFound": "Event not found.",
       "forbidden": "You may only view the dashboard for your own events."
+    },
+    "ops": {
+      "heading": "Team, promos, na tracking",
+      "intro": "Itaneni door staff na foni, panga percent promo codes, no kufuma tracking codes. Affiliate codes shilelemba pa checkout — tashilipila pano.",
+      "loadFailed": "Could not load organiser tools.",
+      "teamHeading": "Door team",
+      "revoke": "Fumya",
+      "pendingInvite": "Pending {role} invite ku {phone}",
+      "phonePlaceholder": "Nomba ya foni",
+      "roleLabel": "Role",
+      "roleDoor": "Door",
+      "roleManager": "Manager",
+      "inviteCta": "Itana",
+      "inviteFailed": "Tatwakwanisha ukutuma iyi invite.",
+      "shareToken": "Share uyu one-time link: {path}?token={token}",
+      "promoHeading": "Promo codes",
+      "promoCodePlaceholder": "SAVE10",
+      "promoPercentPlaceholder": "Percent off",
+      "promoCta": "Panga promo",
+      "promoFailed": "Tatwakwanisha ukupanga uyu promo.",
+      "affiliateHeading": "Affiliate tracking codes",
+      "affiliateNote": "Codes shilelemba pa paid orders. Takuli affiliate payout mu iyi version.",
+      "affiliatePlaceholder": "PARTNER",
+      "affiliateCta": "Panga code",
+      "affiliateFailed": "Tatwakwanisha ukupanga uyu tracking code."
     }
   },
   "eventRoster": {
