@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 import { Button } from "../../../../listings/new/_lib/ui";
 
@@ -42,10 +43,18 @@ const MESSAGE_KEY_BY_KIND: Record<ScanResultKind, string> = {
 type ScanResultFlashProps = {
   state: ScanResultState;
   onDismiss: () => void;
+  onOverride?: (reason: string) => void;
+  overrideBusy?: boolean;
 };
 
-export function ScanResultFlash({ state, onDismiss }: ScanResultFlashProps) {
+export function ScanResultFlash({
+  state,
+  onDismiss,
+  onOverride,
+  overrideBusy = false,
+}: ScanResultFlashProps) {
   const t = useTranslations("vendor");
+  const [reason, setReason] = useState("");
 
   if (state.kind === "idle") {
     return null;
@@ -105,6 +114,38 @@ export function ScanResultFlash({ state, onDismiss }: ScanResultFlashProps) {
       <p style={{ margin: "var(--sp-2) 0 var(--sp-4)", color: "var(--text-2)" }}>
         {t(`${messageKey}.body`, { ticketId: state.ticketId ? state.ticketId.slice(0, 8) : "" })}
       </p>
+      {state.kind === "rejected" && state.ticketId && onOverride ? (
+        <form
+          className="mb-4 flex flex-col gap-2 text-left"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (reason.trim().length < 3) {
+              return;
+            }
+            onOverride(reason.trim());
+          }}
+        >
+          <label className="text-sm font-medium" htmlFor="override-reason">
+            {t("scan.eventCheckIn.override.reasonLabel")}
+          </label>
+          <input
+            id="override-reason"
+            className="min-h-11 rounded-md border border-border bg-bg px-3"
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder={t("scan.eventCheckIn.override.reasonPlaceholder")}
+          />
+          <Button
+            type="submit"
+            variant="secondary"
+            loading={overrideBusy}
+            loadingLabel={t("scan.eventCheckIn.override.submitting")}
+            disabled={overrideBusy || reason.trim().length < 3}
+          >
+            {t("scan.eventCheckIn.override.cta")}
+          </Button>
+        </form>
+      ) : null}
       <Button
         type="button"
         variant={isSuccess ? "primary" : "secondary"}

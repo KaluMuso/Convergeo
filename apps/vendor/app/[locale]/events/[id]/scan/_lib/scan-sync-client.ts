@@ -35,5 +35,17 @@ export function createScanSyncClient(getToken: () => string | null | Promise<str
       });
       return response.results;
     },
+
+    overrideCheckIn(body: {
+      ticket_id: string;
+      event_id: string;
+      instance_id: string;
+      reason: string;
+    }): Promise<{ ticket_id: string; to_status: string }> {
+      return client.request<{ ticket_id: string; to_status: string }>("/tickets/verify/override", {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
+    },
   };
 }

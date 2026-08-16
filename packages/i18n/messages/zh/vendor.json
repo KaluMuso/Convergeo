@@ -1079,6 +1079,13 @@
         "idCheck": "此票需要核验身份",
         "scanAnother": "扫描下一个"
       },
+      "override": {
+        "cta": "主办方覆盖放行",
+        "reasonLabel": "原因（必填）",
+        "reasonPlaceholder": "手机没电 / 二维码无法识别",
+        "submitting": "正在记录覆盖…",
+        "failed": "覆盖失败。请确认该票属于本场次。"
+      },
       "recent": {
         "heading": "最近扫描",
         "empty": "暂无扫描记录",
@@ -1472,6 +1479,7 @@
     "sections": {
       "revenue": "收入",
       "velocity": "销售速度",
+      "acquisition": "获客来源",
       "checkIn": "检票进度",
       "escrow": "托管",
       "salesByType": "按门票类型销售"
@@ -1482,6 +1490,9 @@
       "soldLast24h": "过去 24 小时售出",
       "revenueLast24h": "过去 24 小时收入",
       "projectedSold": "按近期节奏预估至开场销量",
+      "direct": "直接 / 未知",
+      "affiliateSource": "推广 {code}",
+      "acquisitionRow": "{orders, plural, one {# 笔订单} other {# 笔订单}} · {revenue}",
       "eventStatus": "活动状态",
       "soldCheckedIn": "{sold, plural, one {已售 #} other {已售 #}} · {checkedIn, plural, one {已检票 #} other {已检票 #}}"
     },
@@ -1490,6 +1501,31 @@
       "unauthorized": "请以主办方身份登录以查看此仪表板。",
       "notFound": "未找到活动。",
       "forbidden": "您只能查看自己活动的仪表板。"
+    },
+    "ops": {
+      "heading": "团队、优惠码与追踪",
+      "intro": "通过手机号邀请检票人员，创建百分比优惠码，并签发追踪码。推广码会记录在结账订单上 — 此版本尚不结算推广佣金。",
+      "loadFailed": "无法加载主办方工具。",
+      "teamHeading": "检票团队",
+      "revoke": "移除",
+      "pendingInvite": "待处理的 {role} 邀请：{phone}",
+      "phonePlaceholder": "手机号",
+      "roleLabel": "角色",
+      "roleDoor": "检票",
+      "roleManager": "经理",
+      "inviteCta": "邀请",
+      "inviteFailed": "无法发送该邀请。",
+      "shareToken": "分享此一次性链接：{path}?token={token}",
+      "promoHeading": "优惠码",
+      "promoCodePlaceholder": "SAVE10",
+      "promoPercentPlaceholder": "折扣百分比",
+      "promoCta": "创建优惠码",
+      "promoFailed": "无法创建该优惠码。",
+      "affiliateHeading": "推广追踪码",
+      "affiliateNote": "代码会记录在已支付订单上。此版本没有推广分成。",
+      "affiliatePlaceholder": "PARTNER",
+      "affiliateCta": "创建代码",
+      "affiliateFailed": "无法创建该追踪码。"
     }
   },
   "eventRoster": {

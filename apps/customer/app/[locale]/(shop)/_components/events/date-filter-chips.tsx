@@ -33,6 +33,8 @@ type DateFilterLabels = {
   calendarLabel: string;
   cityLabel: string;
   cityPlaceholder: string;
+  neighbourhoodLabel: string;
+  neighbourhoodPlaceholder: string;
   nearMe: string;
   nearMeDenied: string;
   categories: {
@@ -48,6 +50,7 @@ type DateFilterChipsProps = {
   activeOnDate: string | null;
   activeCategory: EventCategory | null;
   activeCity: string;
+  activeNeighbourhood: string;
   nearMeActive: boolean;
 };
 
@@ -79,6 +82,7 @@ export function DateFilterChips({
   activeOnDate,
   activeCategory,
   activeCity,
+  activeNeighbourhood,
   nearMeActive,
 }: DateFilterChipsProps) {
   const router = useRouter();
@@ -86,6 +90,7 @@ export function DateFilterChips({
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [cityDraft, setCityDraft] = useState(activeCity);
+  const [neighbourhoodDraft, setNeighbourhoodDraft] = useState(activeNeighbourhood);
   const [geoDenied, setGeoDenied] = useState(false);
 
   const eventDateSet = useMemo(() => new Set(calendarDates), [calendarDates]);
@@ -216,6 +221,27 @@ export function DateFilterChips({
               if (event.key === "Enter") {
                 event.preventDefault();
                 updateParams({ city: cityDraft.trim() || null });
+              }
+            }}
+          />
+        </label>
+        <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-sm">
+          <span className="font-semibold text-text-2">{labels.neighbourhoodLabel}</span>
+          <input
+            type="search"
+            className="min-h-11 rounded-md border border-border bg-bg px-3 text-text"
+            value={neighbourhoodDraft}
+            placeholder={labels.neighbourhoodPlaceholder}
+            onChange={(event) => setNeighbourhoodDraft(event.target.value)}
+            onBlur={() => {
+              if (neighbourhoodDraft.trim() !== activeNeighbourhood) {
+                updateParams({ neighbourhood: neighbourhoodDraft.trim() || null });
+              }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                updateParams({ neighbourhood: neighbourhoodDraft.trim() || null });
               }
             }}
           />

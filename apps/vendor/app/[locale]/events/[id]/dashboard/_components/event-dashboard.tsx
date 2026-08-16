@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Spinner } from "../../../../listings/new/_lib/ui";
 import { createDashboardClient, type OrganiserEventStats } from "../_lib/dashboard-client";
+import { EventOpsPanel } from "./event-ops-panel";
 
 type EventDashboardProps = {
   locale: string;
@@ -136,6 +137,29 @@ export function EventDashboard({ locale, eventId }: EventDashboardProps) {
             </section>
           ) : null}
 
+          {stats.acquisition && stats.acquisition.length > 0 ? (
+            <section className="rounded-lg border border-border bg-surface p-3 shadow-sm">
+              <h2 className="text-sm font-semibold">{t("eventDashboard.sections.acquisition")}</h2>
+              <ul className="mt-1 flex flex-col gap-1 text-sm">
+                {stats.acquisition.map((row) => (
+                  <li key={row.source} className="flex items-center justify-between gap-2">
+                    <span className="text-muted">
+                      {row.source === "direct"
+                        ? t("eventDashboard.labels.direct")
+                        : t("eventDashboard.labels.affiliateSource", { code: row.source })}
+                    </span>
+                    <span className="font-medium">
+                      {t("eventDashboard.labels.acquisitionRow", {
+                        orders: row.orders,
+                        revenue: formatK(row.revenue_ngwee),
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           <section className="rounded-lg border border-border bg-surface p-3 shadow-sm">
             <h2 className="text-sm font-semibold">{t("eventDashboard.sections.checkIn")}</h2>
             <p className="text-sm text-muted">
@@ -194,6 +218,8 @@ export function EventDashboard({ locale, eventId }: EventDashboardProps) {
           </section>
         </>
       ) : null}
+
+      <EventOpsPanel eventId={eventId} getToken={getToken} locale={locale} />
     </div>
   );
 }

@@ -23,6 +23,8 @@
     "categoryLabel": "Category",
     "cityLabel": "City",
     "cityPlaceholder": "Lusaka, Ndola, Kitwe…",
+    "neighbourhoodLabel": "Neighbourhood",
+    "neighbourhoodPlaceholder": "Kabulonga, Woodlands…",
     "nearMe": "Near me",
     "nearMeDenied": "Location is off — city search still works."
   },
@@ -165,6 +167,7 @@
         "queued": "Refund of {amount} queued. You will be paid on the original mobile-money rail.",
         "voidedNoRefund": "Ticket voided. No refund is due for this window.",
         "tooLate": "This ticket can no longer be cancelled for a refund. Transfer it instead.",
+        "thisRefund": "Estimated refund if you cancel now: {amount}",
         "noReschedule": "This event has not been rescheduled, so there is nothing to opt out of.",
         "failed": "Could not complete that request. Try again.",
         "loginRequired": "Sign in to cancel this ticket."
@@ -216,5 +219,15 @@
       "phoneMismatch": "Sign in with the phone number the ticket was sent to.",
       "rateLimited": "Too many requests. Try again shortly."
     }
+  },
+  "teamAccept": {
+    "title": "Join an event team",
+    "intro": "Use the one-time token from the organiser. Sign in with the phone number they invited.",
+    "tokenLabel": "Invite token",
+    "cta": "Accept invite",
+    "submitting": "Accepting…",
+    "success": "You are now on this event's door team.",
+    "failed": "That invite is invalid, expired, or was issued to a different phone number.",
+    "loginRequired": "Sign in to accept this invite."
   }
 }

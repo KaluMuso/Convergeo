@@ -36,6 +36,7 @@ type PageProps = {
     category?: string;
     on_date?: string;
     city?: string;
+    neighbourhood?: string;
     lat?: string;
     lng?: string;
   }>;
@@ -113,6 +114,7 @@ async function fetchEvents(params: {
   category: EventCategory | null;
   onDate: string | null;
   city: string;
+  neighbourhood: string;
   lat: number | null;
   lng: number | null;
 }): Promise<EventsApiResponse | null> {
@@ -127,6 +129,9 @@ async function fetchEvents(params: {
   }
   if (params.city) {
     search.set("city", params.city);
+  }
+  if (params.neighbourhood) {
+    search.set("neighbourhood", params.neighbourhood);
   }
   if (params.lat !== null && params.lng !== null) {
     search.set("lat", String(params.lat));
@@ -165,6 +170,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     Boolean(query.category) ||
     Boolean(query.on_date) ||
     Boolean(query.city) ||
+    Boolean(query.neighbourhood) ||
     Boolean(query.lat);
 
   return {
@@ -198,6 +204,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
   const category = parseCategory(query.category);
   const onDate = parseOnDate(query.on_date);
   const city = (query.city ?? "").trim();
+  const neighbourhood = (query.neighbourhood ?? "").trim();
   const lat = parseCoord(query.lat, -90, 90);
   const lng = parseCoord(query.lng, -180, 180);
   const data = await fetchEvents({
@@ -205,6 +212,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
     category,
     onDate,
     city,
+    neighbourhood,
     lat,
     lng,
   });
@@ -224,6 +232,8 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
     calendarLabel: t("browse.calendarLabel"),
     cityLabel: t("filters.cityLabel"),
     cityPlaceholder: t("filters.cityPlaceholder"),
+    neighbourhoodLabel: t("filters.neighbourhoodLabel"),
+    neighbourhoodPlaceholder: t("filters.neighbourhoodPlaceholder"),
     nearMe: t("filters.nearMe"),
     nearMeDenied: t("filters.nearMeDenied"),
     categories: {
@@ -338,6 +348,7 @@ export default async function EventsPage({ params, searchParams }: PageProps) {
               activeOnDate={onDate}
               activeCategory={category}
               activeCity={city}
+              activeNeighbourhood={neighbourhood}
               nearMeActive={lat !== null && lng !== null}
             />
           </Suspense>

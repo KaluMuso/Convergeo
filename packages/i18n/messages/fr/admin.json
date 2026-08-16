@@ -15,7 +15,8 @@
     "config": "Configuration",
     "merch": "Merchandising",
     "translations": "Traductions",
-    "support": "Support"
+    "support": "Support",
+    "events": "Événements à haute valeur"
   },
   "hubs": {
     "moderation": {
@@ -221,6 +222,20 @@
       "confirmReject": "Confirmer le rejet",
       "cancel": "Annuler",
       "reasonPlaceholder": "Motif (visible par le demandeur)"
+    }
+  },
+  "events": {
+    "title": "Événements à haute valeur",
+    "subtitle": "Les événements dont le GMV payé projeté atteint au moins K100 000 doivent être vérifiés par un admin avant publication. Ceci n'appelle personne automatiquement.",
+    "queue": {
+      "loading": "Chargement des événements à haute valeur…",
+      "empty": "Aucun événement à haute valeur non vérifié.",
+      "error": "Impossible de charger la file des événements à haute valeur.",
+      "actionError": "Impossible de vérifier cet événement. Réessayez.",
+      "verify": "Vérifier",
+      "threshold": "Seuil {amount}",
+      "projected": "GMV projeté {amount}",
+      "status": "Statut : {status}"
     }
   },
   "kyc": {

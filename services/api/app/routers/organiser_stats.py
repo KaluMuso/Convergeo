@@ -65,6 +65,12 @@ class SalesVelocity(StrictModel):
     projected_sold: int | None = None
 
 
+class AcquisitionSource(StrictModel):
+    source: str
+    orders: int
+    revenue_ngwee: int
+
+
 class OrganiserEventStatsResponse(StrictModel):
     event_id: str
     event_status: str
@@ -74,6 +80,7 @@ class OrganiserEventStatsResponse(StrictModel):
     escrow: EscrowSplit
     mass_refund_flagged: bool
     velocity: SalesVelocity
+    acquisition: list[AcquisitionSource] = []
 
 
 class RosterAttendee(StrictModel):
@@ -335,6 +342,42 @@ SELECT
     )
 
 
+def _load_acquisition(event_id: str) -> list[AcquisitionSource]:
+    event_sql = _sql_uuid(event_id)
+    result = run_sql_script(
+        f"""
+SELECT
+  coalesce(nullif(o.commission_snapshot->>'affiliate_code', ''), 'direct') AS src,
+  count(DISTINCT o.id)::text,
+  coalesce(sum(oi.qty * oi.unit_price_ngwee), 0)::text
+FROM public.orders o
+JOIN public.order_items oi ON oi.order_id = o.id
+JOIN public.order_item_tickets oit ON oit.order_item_id = oi.id
+JOIN public.event_instances ei ON ei.id = oit.instance_id
+JOIN public.payments p ON p.checkout_group_id = o.checkout_group_id
+WHERE ei.event_id = {event_sql}
+  AND p.status = 'success'
+GROUP BY 1
+ORDER BY 3 DESC;
+"""
+    )
+    if not result.ok or not result.rows:
+        return []
+    items: list[AcquisitionSource] = []
+    for raw in result.rows:
+        parts = raw.split("|")
+        if len(parts) != 3:
+            continue
+        items.append(
+            AcquisitionSource(
+                source=parts[0],
+                orders=int(parts[1]),
+                revenue_ngwee=int(parts[2]),
+            )
+        )
+    return items
+
+
 @router.get("/events/{event_id}/stats", response_model=OrganiserEventStatsResponse)
 async def get_organiser_event_stats(
     event_id: str,
@@ -385,6 +428,7 @@ async def get_organiser_event_stats(
         escrow=escrow,
         mass_refund_flagged=flagged,
         velocity=_load_velocity(event_id, sold_so_far=total_issued),
+        acquisition=_load_acquisition(event_id),
     )
 
 

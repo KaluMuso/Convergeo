@@ -28,7 +28,8 @@
     "translations": "Translations",
     "support": "Support",
     "intake": "WhatsApp intake",
-    "clips": "Clips moderation"
+    "clips": "Clips moderation",
+    "events": "High-value events"
   },
   "hubs": {
     "moderation": {
@@ -237,6 +238,20 @@
       "confirmReject": "Confirm reject",
       "cancel": "Cancel",
       "reasonPlaceholder": "Reason (shown to the applicant)"
+    }
+  },
+  "events": {
+    "title": "High-value events",
+    "subtitle": "Events whose projected paid GMV is at least K100,000 must be verified by an admin before publish. This does not call anyone automatically.",
+    "queue": {
+      "loading": "Loading high-value events…",
+      "empty": "No unverified high-value events.",
+      "error": "Could not load the high-value queue.",
+      "actionError": "Could not verify this event. Try again.",
+      "verify": "Verify",
+      "threshold": "Threshold {amount}",
+      "projected": "Projected GMV {amount}",
+      "status": "Status: {status}"
     }
   },
   "kyc": {

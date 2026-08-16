@@ -1121,6 +1121,13 @@
         "idCheck": "ID check required for this ticket",
         "scanAnother": "Scan another"
       },
+      "override": {
+        "cta": "Admit with organiser override",
+        "reasonLabel": "Reason (required)",
+        "reasonPlaceholder": "Phone dead / QR unreadable",
+        "submitting": "Recording override…",
+        "failed": "Override failed. Check that this ticket belongs to this session."
+      },
       "recent": {
         "heading": "Recent scans",
         "empty": "No scans yet",
@@ -1577,6 +1584,7 @@
     "sections": {
       "revenue": "Revenue",
       "velocity": "Sales velocity",
+      "acquisition": "Acquisition source",
       "checkIn": "Check-in progress",
       "escrow": "Escrow",
       "salesByType": "Sales by ticket type"
@@ -1587,6 +1595,9 @@
       "soldLast24h": "Sold in last 24 hours",
       "revenueLast24h": "Revenue in last 24 hours",
       "projectedSold": "Projected sold by start (from recent pace)",
+      "direct": "Direct / unknown",
+      "affiliateSource": "Affiliate {code}",
+      "acquisitionRow": "{orders, plural, one {# order} other {# orders}} · {revenue}",
       "eventStatus": "Event status",
       "soldCheckedIn": "{sold, plural, one {# sold} other {# sold}} · {checkedIn, plural, one {# checked in} other {# checked in}}"
     },
@@ -1595,6 +1606,31 @@
       "unauthorized": "Sign in as an organiser to view this dashboard.",
       "notFound": "Event not found.",
       "forbidden": "You may only view the dashboard for your own events."
+    },
+    "ops": {
+      "heading": "Team, promos, and tracking",
+      "intro": "Invite door staff by phone, create percent promo codes, and issue tracking codes. Affiliate codes are tracked on checkout — they do not pay out yet.",
+      "loadFailed": "Could not load organiser tools.",
+      "teamHeading": "Door team",
+      "revoke": "Remove",
+      "pendingInvite": "Pending {role} invite to {phone}",
+      "phonePlaceholder": "Phone number",
+      "roleLabel": "Role",
+      "roleDoor": "Door",
+      "roleManager": "Manager",
+      "inviteCta": "Invite",
+      "inviteFailed": "Could not send that invite.",
+      "shareToken": "Share this one-time link: {path}?token={token}",
+      "promoHeading": "Promo codes",
+      "promoCodePlaceholder": "SAVE10",
+      "promoPercentPlaceholder": "Percent off",
+      "promoCta": "Create promo",
+      "promoFailed": "Could not create that promo.",
+      "affiliateHeading": "Affiliate tracking codes",
+      "affiliateNote": "Codes are recorded on paid orders. There is no affiliate payout in this version.",
+      "affiliatePlaceholder": "PARTNER",
+      "affiliateCta": "Create code",
+      "affiliateFailed": "Could not create that tracking code."
     }
   },
   "eventRoster": {

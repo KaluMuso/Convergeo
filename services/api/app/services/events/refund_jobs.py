@@ -20,11 +20,11 @@ from app.services.refunds.execute import ServiceRoleClient as RefundServiceClien
 from app.services.refunds.payout_port import CustomerRail
 from app.services.stock.claim import sql_int, sql_uuid
 
-SOURCE_ORGANISER_CANCEL = "organiser_cancel"
-SOURCE_BUYER_CANCEL = "buyer_cancel"
-SOURCE_RESCHEDULE_OPT_OUT = "reschedule_opt_out"
-SOURCE_KEY_V1 = "v1"
 RefundSource = Literal["organiser_cancel", "buyer_cancel", "reschedule_opt_out"]
+SOURCE_ORGANISER_CANCEL: RefundSource = "organiser_cancel"
+SOURCE_BUYER_CANCEL: RefundSource = "buyer_cancel"
+SOURCE_RESCHEDULE_OPT_OUT: RefundSource = "reschedule_opt_out"
+SOURCE_KEY_V1 = "v1"
 MAX_JOB_ATTEMPTS = 5
 RETRY_BACKOFF_BASE_SECONDS = 120
 

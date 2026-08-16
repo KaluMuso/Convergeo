@@ -15,7 +15,8 @@
     "config": "配置",
     "merch": "商品运营",
     "translations": "翻译",
-    "support": "客服"
+    "support": "客服",
+    "events": "高价值活动"
   },
   "hubs": {
     "moderation": {
@@ -221,6 +222,20 @@
       "confirmReject": "确认拒绝",
       "cancel": "取消",
       "reasonPlaceholder": "原因（将显示给申请人）"
+    }
+  },
+  "events": {
+    "title": "高价值活动",
+    "subtitle": "预计付费 GMV 至少达 K100,000 的活动须经管理员核实后才能发布。此操作不会自动联系任何人。",
+    "queue": {
+      "loading": "正在加载高价值活动…",
+      "empty": "暂无未核实的高价值活动。",
+      "error": "无法加载高价值活动队列。",
+      "actionError": "无法核实该活动。请重试。",
+      "verify": "核实",
+      "threshold": "阈值 {amount}",
+      "projected": "预计 GMV {amount}",
+      "status": "状态：{status}"
     }
   },
   "kyc": {

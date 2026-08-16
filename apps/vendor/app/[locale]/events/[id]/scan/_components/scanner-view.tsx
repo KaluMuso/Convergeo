@@ -80,6 +80,7 @@ export function ScannerView({ eventId }: ScannerViewProps) {
 
   const [cameraDenied, setCameraDenied] = useState(false);
   const [resultState, setResultState] = useState<ScanResultState>({ kind: "idle" });
+  const [overrideBusy, setOverrideBusy] = useState(false);
   const [checkedInCount, setCheckedInCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const [recent, setRecent] = useState<RecentScanItem[]>([]);
@@ -264,6 +265,34 @@ export function ScannerView({ eventId }: ScannerViewProps) {
   const handleCameraDenied = useCallback(() => setCameraDenied(true), []);
   const dismissResult = useCallback(() => setResultState({ kind: "idle" }), []);
 
+  const handleOverride = useCallback(
+    async (reason: string) => {
+      if (resultState.kind === "idle" || !resultState.ticketId || !instanceId) {
+        return;
+      }
+      setOverrideBusy(true);
+      try {
+        await scanSyncClient.overrideCheckIn({
+          ticket_id: resultState.ticketId,
+          event_id: eventId,
+          instance_id: instanceId,
+          reason,
+        });
+        setResultState({
+          kind: "valid",
+          ticketId: resultState.ticketId,
+          context: resultState.context,
+        });
+        setCheckedInCount((count) => count + 1);
+      } catch {
+        setSyncError(t("scan.eventCheckIn.override.failed"));
+      } finally {
+        setOverrideBusy(false);
+      }
+    },
+    [eventId, instanceId, resultState, scanSyncClient, t],
+  );
+
   if (sessionLoading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", padding: "var(--sp-8)" }}>
@@ -377,7 +406,14 @@ export function ScannerView({ eventId }: ScannerViewProps) {
       ) : null}
 
       {resultState.kind !== "idle" ? (
-        <ScanResultFlash state={resultState} onDismiss={dismissResult} />
+        <ScanResultFlash
+          state={resultState}
+          onDismiss={dismissResult}
+          onOverride={(reason) => {
+            void handleOverride(reason);
+          }}
+          overrideBusy={overrideBusy}
+        />
       ) : null}
 
       {showScanner ? (

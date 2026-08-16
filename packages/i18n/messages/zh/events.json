@@ -23,6 +23,8 @@
     "categoryLabel": "类别",
     "cityLabel": "城市",
     "cityPlaceholder": "Lusaka, Ndola, Kitwe…",
+    "neighbourhoodLabel": "街区",
+    "neighbourhoodPlaceholder": "Kabulonga, Woodlands…",
     "nearMe": "附近",
     "nearMeDenied": "未开启定位 — 仍可用城市搜索。"
   },
@@ -165,6 +167,7 @@
         "queued": "{amount} 的退款已排队，将原路退回移动支付。",
         "voidedNoRefund": "门票已作废。此时间窗口无需退款。",
         "tooLate": "此门票已无法取消退款。请改为转让。",
+        "thisRefund": "现在取消的预估退款：{amount}",
         "noReschedule": "此活动尚未改期。",
         "failed": "无法完成该请求，请重试。",
         "loginRequired": "请登录以取消此门票。"
@@ -216,5 +219,15 @@
       "phoneMismatch": "请使用门票发送到的电话号码登录。",
       "rateLimited": "请求过多，请稍后重试。"
     }
+  },
+  "teamAccept": {
+    "title": "加入活动团队",
+    "intro": "使用主办方提供的一次性令牌。请用被邀请的手机号登录。",
+    "tokenLabel": "邀请令牌",
+    "cta": "接受邀请",
+    "submitting": "正在接受…",
+    "success": "您已加入该活动的检票团队。",
+    "failed": "该邀请无效、已过期，或发给了其他手机号。",
+    "loginRequired": "请登录以接受此邀请。"
   }
 }

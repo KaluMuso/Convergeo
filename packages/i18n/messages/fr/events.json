@@ -23,6 +23,8 @@
     "categoryLabel": "Catégorie",
     "cityLabel": "Ville",
     "cityPlaceholder": "Lusaka, Ndola, Kitwe…",
+    "neighbourhoodLabel": "Quartier",
+    "neighbourhoodPlaceholder": "Kabulonga, Woodlands…",
     "nearMe": "Près de moi",
     "nearMeDenied": "La localisation est désactivée — la recherche par ville reste disponible."
   },
@@ -165,6 +167,7 @@
         "queued": "Remboursement de {amount} mis en file. Vous serez payé sur le même mobile money.",
         "voidedNoRefund": "Billet annulé. Aucun remboursement n'est dû pour cette fenêtre.",
         "tooLate": "Ce billet ne peut plus être annulé pour un remboursement. Transférez-le plutôt.",
+        "thisRefund": "Remboursement estimé si vous annulez maintenant : {amount}",
         "noReschedule": "Cet événement n'a pas été reporté.",
         "failed": "Impossible de terminer cette demande. Réessayez.",
         "loginRequired": "Connectez-vous pour annuler ce billet."
@@ -205,5 +208,15 @@
       "phoneMismatch": "Connectez-vous avec le numéro de téléphone auquel le billet a été envoyé.",
       "rateLimited": "Trop de demandes. Réessayez bientôt."
     }
+  },
+  "teamAccept": {
+    "title": "Rejoindre une équipe d'événement",
+    "intro": "Utilisez le jeton à usage unique de l'organisateur. Connectez-vous avec le numéro invité.",
+    "tokenLabel": "Jeton d'invitation",
+    "cta": "Accepter l'invitation",
+    "submitting": "Acceptation…",
+    "success": "Vous faites maintenant partie de l'équipe d'entrée de cet événement.",
+    "failed": "Cette invitation est invalide, expirée, ou a été envoyée à un autre numéro.",
+    "loginRequired": "Connectez-vous pour accepter cette invitation."
   }
 }

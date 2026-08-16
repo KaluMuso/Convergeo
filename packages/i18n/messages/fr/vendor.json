@@ -1079,6 +1079,13 @@
         "idCheck": "Contrôle d'identité requis pour ce billet",
         "scanAnother": "Scanner un autre"
       },
+      "override": {
+        "cta": "Admettre avec une dérogation organisateur",
+        "reasonLabel": "Motif (obligatoire)",
+        "reasonPlaceholder": "Téléphone éteint / QR illisible",
+        "submitting": "Enregistrement de la dérogation…",
+        "failed": "La dérogation a échoué. Vérifiez que ce billet appartient à cette session."
+      },
       "recent": {
         "heading": "Scans récents",
         "empty": "Aucun scan pour le moment",
@@ -1472,6 +1479,7 @@
     "sections": {
       "revenue": "Revenus",
       "velocity": "Rythme des ventes",
+      "acquisition": "Source d'acquisition",
       "checkIn": "Progression du pointage",
       "escrow": "Séquestre",
       "salesByType": "Ventes par type de billet"
@@ -1482,6 +1490,9 @@
       "soldLast24h": "Vendus sur 24 h",
       "revenueLast24h": "Revenus sur 24 h",
       "projectedSold": "Projection de ventes d'ici le début (d'après le rythme récent)",
+      "direct": "Direct / inconnu",
+      "affiliateSource": "Affilié {code}",
+      "acquisitionRow": "{orders, plural, one {# commande} other {# commandes}} · {revenue}",
       "eventStatus": "Statut de l'événement",
       "soldCheckedIn": "{sold, plural, one {# vendu} other {# vendus}} · {checkedIn, plural, one {# pointé} other {# pointés}}"
     },
@@ -1490,6 +1501,31 @@
       "unauthorized": "Connectez-vous en tant qu'organisateur pour voir ce tableau de bord.",
       "notFound": "Événement introuvable.",
       "forbidden": "Vous ne pouvez consulter le tableau de bord que de vos propres événements."
+    },
+    "ops": {
+      "heading": "Équipe, promos et suivi",
+      "intro": "Invitez le staff d'entrée par téléphone, créez des codes promo en pourcentage, et émettez des codes de suivi. Les codes affiliés sont enregistrés au paiement — ils ne paient pas encore.",
+      "loadFailed": "Impossible de charger les outils organisateur.",
+      "teamHeading": "Équipe d'entrée",
+      "revoke": "Retirer",
+      "pendingInvite": "Invitation {role} en attente pour {phone}",
+      "phonePlaceholder": "Numéro de téléphone",
+      "roleLabel": "Rôle",
+      "roleDoor": "Entrée",
+      "roleManager": "Manager",
+      "inviteCta": "Inviter",
+      "inviteFailed": "Impossible d'envoyer cette invitation.",
+      "shareToken": "Partagez ce lien à usage unique : {path}?token={token}",
+      "promoHeading": "Codes promo",
+      "promoCodePlaceholder": "SAVE10",
+      "promoPercentPlaceholder": "Pourcentage",
+      "promoCta": "Créer un promo",
+      "promoFailed": "Impossible de créer ce promo.",
+      "affiliateHeading": "Codes de suivi affilié",
+      "affiliateNote": "Les codes sont enregistrés sur les commandes payées. Il n'y a pas de paiement affilié dans cette version.",
+      "affiliatePlaceholder": "PARTNER",
+      "affiliateCta": "Créer un code",
+      "affiliateFailed": "Impossible de créer ce code de suivi."
     }
   },
   "eventRoster": {

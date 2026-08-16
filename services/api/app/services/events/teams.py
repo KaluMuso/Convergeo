@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+import hashlib
+import re
+import secrets
+from typing import Any, Literal, cast
 
 from app.errors import AppError
+
+_E164_RE = re.compile(r"^\+[1-9]\d{6,14}$")
 
 TeamRole = Literal["owner", "manager", "door"]
 
@@ -53,7 +58,7 @@ def load_event_role(
         return None
     role = row.get("role")
     if role in {"owner", "manager", "door"}:
-        return role  # type: ignore[return-value]
+        return cast(TeamRole, role)
     return None
 
 
@@ -79,6 +84,33 @@ def require_event_role(
             details={"message_key": "vendor.events.errors.forbidden"},
         )
     return role
+
+
+def digest_invite_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def mint_invite_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def normalize_invite_phone(value: str) -> str:
+    digits = "".join(ch for ch in value.strip() if ch.isdigit() or ch == "+")
+    if digits.startswith("+"):
+        normalized = digits
+    elif digits.startswith("260"):
+        normalized = f"+{digits}"
+    elif digits.startswith("0"):
+        normalized = f"+260{digits[1:]}"
+    else:
+        normalized = f"+{digits}"
+    if not _E164_RE.match(normalized):
+        raise AppError(
+            code="invalid_phone",
+            message="Invite phone must be a valid number",
+            http_status=422,
+        )
+    return normalized
 
 
 def list_team_members(client: Any, *, event_id: str) -> list[dict[str, Any]]:

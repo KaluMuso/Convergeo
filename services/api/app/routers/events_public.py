@@ -573,6 +573,7 @@ def build_browse_response(
     ref: datetime | None = None,
     on_date: date | None = None,
     city: str | None = None,
+    neighbourhood: str | None = None,
     near_lat: float | None = None,
     near_lng: float | None = None,
     radius_km: float = NEAR_ME_DEFAULT_KM,
@@ -626,6 +627,13 @@ def build_browse_response(
             landmark = event.get("landmark") if isinstance(event.get("landmark"), str) else ""
             haystack = f"{city_value or ''} {venue} {landmark}".casefold()
             if city.casefold() not in haystack:
+                continue
+
+        if neighbourhood:
+            venue = event.get("venue") if isinstance(event.get("venue"), str) else ""
+            landmark = event.get("landmark") if isinstance(event.get("landmark"), str) else ""
+            place = f"{landmark} {venue}".casefold()
+            if neighbourhood.casefold() not in place:
                 continue
 
         upcoming = _upcoming_instances(event_instances, now=now)
@@ -865,6 +873,7 @@ def list_events(
     category: Annotated[EventCategory | None, Query()] = None,
     on_date: Annotated[date | None, Query(alias="on_date")] = None,
     city: Annotated[str | None, Query(max_length=80)] = None,
+    neighbourhood: Annotated[str | None, Query(max_length=80)] = None,
     lat: Annotated[float | None, Query(ge=-90, le=90)] = None,
     lng: Annotated[float | None, Query(ge=-180, le=180)] = None,
     radius_km: Annotated[float, Query(gt=0, le=200)] = NEAR_ME_DEFAULT_KM,
@@ -875,6 +884,7 @@ def list_events(
         category=category,
         on_date=on_date,
         city=city.strip() if city else None,
+        neighbourhood=neighbourhood.strip() if neighbourhood else None,
         near_lat=lat,
         near_lng=lng,
         radius_km=radius_km,

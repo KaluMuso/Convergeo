@@ -777,3 +777,13 @@ def test_detail_and_browse_surface_event_type(store: FakeSupabaseStore) -> None:
         if item.slug == "weekly-series"
     )
     assert series.event_type == "recurring"
+
+
+def test_neighbourhood_filter_matches_landmark(store: FakeSupabaseStore) -> None:
+    for row in store.events:
+        if row["id"] == EVENT_A:
+            row["landmark"] = "Kabulonga"
+    hits = build_browse_response(store, neighbourhood="Kabulonga", ref=REF_THURSDAY)
+    assert "tonight-gig" in {item.slug for item in hits.items}
+    misses = build_browse_response(store, neighbourhood="Woodlands", ref=REF_THURSDAY)
+    assert "tonight-gig" not in {item.slug for item in misses.items}

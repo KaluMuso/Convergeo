@@ -10,6 +10,7 @@ from app.schemas.base import StrictModel
 from app.services.events.buyer_cancellation import (
     cancel_buyer_ticket,
     opt_out_rescheduled_ticket,
+    preview_buyer_cancel,
 )
 from app.services.tickets.qr import (
     DEFAULT_HORIZON_WINDOWS,
@@ -382,11 +383,42 @@ async def get_wallet_horizon(
     )
 
 
+class WalletCancelPolicyResponse(StrictModel):
+    ticket_id: str
+    status: TicketStatus
+    band: str
+    refund_ngwee: int
+    admin_fee_ngwee: int
+    hours_until_start: float
+    cancellable: bool
+    reschedule_opt_out_open: bool
+    reschedule_deadline: str | None = None
+
+
 class WalletCancelResponse(StrictModel):
     ticket_id: str
     band: str
     refund_ngwee: int
     queued: bool
+
+
+@router.get("/{ticket_id}/cancel-policy", response_model=WalletCancelPolicyResponse)
+def get_wallet_cancel_policy(
+    ticket_id: str,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> WalletCancelPolicyResponse:
+    preview = preview_buyer_cancel(ticket_id=ticket_id, holder_user_id=current_user.id)
+    return WalletCancelPolicyResponse(
+        ticket_id=preview.ticket_id,
+        status=preview.status,  # type: ignore[arg-type]
+        band=preview.band,
+        refund_ngwee=preview.refund_ngwee,
+        admin_fee_ngwee=preview.admin_fee_ngwee,
+        hours_until_start=preview.hours_until_start,
+        cancellable=preview.cancellable,
+        reschedule_opt_out_open=preview.reschedule_opt_out_open,
+        reschedule_deadline=preview.reschedule_deadline,
+    )
 
 
 @router.post("/{ticket_id}/cancel", response_model=WalletCancelResponse)

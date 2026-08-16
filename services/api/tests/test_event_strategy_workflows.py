@@ -30,6 +30,7 @@ from app.services.events.fees import (
 )
 from app.services.events.promo import apply_promo_discount
 from app.services.events.ranking import browse_rank_tuple, is_selling_fast
+from app.services.events.teams import digest_invite_token, normalize_invite_phone
 
 REF = datetime(2026, 8, 13, 15, 0, tzinfo=UTC)  # Thursday afternoon Lusaka = 17:00
 
@@ -179,3 +180,9 @@ def test_event_dispute_requires_evidence_and_seven_day_window() -> None:
         kind=MISREPRESENTATION_KIND,
         evidence_paths=["path/a.jpg"],
     )
+
+
+def test_invite_phone_normalises_zambian_local() -> None:
+    assert normalize_invite_phone("0977123456") == "+260977123456"
+    assert digest_invite_token("abc") == digest_invite_token("abc")
+    assert digest_invite_token("abc") != digest_invite_token("abd")

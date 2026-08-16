@@ -3,12 +3,26 @@
 import { formatK } from "@vergeo/i18n";
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type TicketActionsProps = {
   ticketId: string;
   status: "issued" | "checked_in" | "transferred" | "void";
 };
+
+type CancelPolicy = {
+  band: string;
+  refund_ngwee: number;
+  cancellable: boolean;
+  reschedule_opt_out_open: boolean;
+};
+
+async function readAccessToken(): Promise<string | null> {
+  const { createBrowserClient } = await import("@vergeo/auth");
+  const supabase = createBrowserClient();
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
+}
 
 export function TicketActions({ ticketId, status }: TicketActionsProps) {
   const t = useTranslations("events.wallet.detail");
@@ -16,15 +30,46 @@ export function TicketActions({ ticketId, status }: TicketActionsProps) {
   const [busy, setBusy] = useState<"cancel" | "optOut" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [policy, setPolicy] = useState<CancelPolicy | null>(null);
+
+  useEffect(() => {
+    if (status !== "issued") {
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const token = await readAccessToken();
+      if (!token || cancelled) {
+        return;
+      }
+      try {
+        const response = await fetch(
+          `${getApiBaseUrl().replace(/\/$/, "")}/account/tickets/${ticketId}/cancel-policy`,
+          { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } },
+        );
+        if (!response.ok || cancelled) {
+          return;
+        }
+        const payload = (await response.json()) as CancelPolicy;
+        if (!cancelled) {
+          setPolicy(payload);
+        }
+      } catch {
+        if (!cancelled) {
+          setPolicy(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, ticketId]);
 
   const postAction = useCallback(
     async (path: "cancel" | "reschedule-opt-out") => {
       setError(null);
       setMessage(null);
-      const { createBrowserClient } = await import("@vergeo/auth");
-      const supabase = createBrowserClient();
-      const { data } = await supabase.auth.getSession();
-      const token = data.session?.access_token;
+      const token = await readAccessToken();
       if (!token) {
         setError(t("cancel.loginRequired"));
         return;
@@ -92,31 +137,52 @@ export function TicketActions({ ticketId, status }: TicketActionsProps) {
     return null;
   }
 
+  const showCancel = policy?.cancellable ?? true;
+  const showOptOut = policy?.reschedule_opt_out_open ?? false;
+
+  if (!showCancel && !showOptOut && policy) {
+    return (
+      <section className="space-y-3 rounded border border-border bg-surface p-4">
+        <h3 className="text-sm font-semibold text-display-ink">{t("cancel.heading")}</h3>
+        <p className="text-sm text-text-2">{t("cancel.tooLate")}</p>
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-3 rounded border border-border bg-surface p-4">
       <h3 className="text-sm font-semibold text-display-ink">{t("cancel.heading")}</h3>
       <p className="text-sm text-text-2">{t("cancel.policy")}</p>
+      {policy?.cancellable ? (
+        <p className="text-sm text-text">
+          {t("cancel.thisRefund", { amount: formatK(policy.refund_ngwee) })}
+        </p>
+      ) : null}
       <div className="flex flex-col gap-2 sm:flex-row">
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center justify-center rounded bg-danger px-4 text-sm font-semibold text-surface disabled:opacity-50"
-          disabled={busy !== null}
-          onClick={() => {
-            void postAction("cancel");
-          }}
-        >
-          {busy === "cancel" ? t("cancel.submitting") : t("cancel.cta")}
-        </button>
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 text-sm font-semibold text-text disabled:opacity-50"
-          disabled={busy !== null}
-          onClick={() => {
-            void postAction("reschedule-opt-out");
-          }}
-        >
-          {busy === "optOut" ? t("cancel.submitting") : t("cancel.optOutCta")}
-        </button>
+        {showCancel ? (
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center justify-center rounded bg-danger px-4 text-sm font-semibold text-surface disabled:opacity-50"
+            disabled={busy !== null}
+            onClick={() => {
+              void postAction("cancel");
+            }}
+          >
+            {busy === "cancel" ? t("cancel.submitting") : t("cancel.cta")}
+          </button>
+        ) : null}
+        {showOptOut ? (
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center justify-center rounded border border-border px-4 text-sm font-semibold text-text disabled:opacity-50"
+            disabled={busy !== null}
+            onClick={() => {
+              void postAction("reschedule-opt-out");
+            }}
+          >
+            {busy === "optOut" ? t("cancel.submitting") : t("cancel.optOutCta")}
+          </button>
+        ) : null}
       </div>
       {message ? <p className="text-sm text-success">{message}</p> : null}
       {error ? (

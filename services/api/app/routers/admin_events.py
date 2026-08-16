@@ -11,8 +11,9 @@ from app.core.auth import CurrentUser, require_role
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router
+from app.services.events.high_value import load_high_value_gmv_ngwee, projected_paid_gmv_ngwee
 from fastapi import Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ServiceRoleClient(Protocol):
@@ -35,7 +36,60 @@ def _single_row(response: Any) -> dict[str, Any] | None:
     return None
 
 
-@router.post("/events/{event_id}/high-value-verify", response_model=HighValueVerifyResponse)
+class HighValueQueueItem(BaseModel):
+    event_id: UUID
+    title: str
+    status: str
+    organiser_vendor_id: UUID | None = None
+    projected_gmv_ngwee: int
+    high_value_verified_at: datetime | None = None
+
+
+class HighValueQueueResponse(BaseModel):
+    items: list[HighValueQueueItem]
+    threshold_ngwee: int = Field(gt=0)
+
+
+@router.get("/events/high-value-queue", response_model=HighValueQueueResponse)
+def list_high_value_queue(
+    current_user: Annotated[CurrentUser, Depends(require_role("admin", "superadmin"))],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> HighValueQueueResponse:
+    del current_user
+    threshold = load_high_value_gmv_ngwee()
+    response = (
+        service_client.client.table("events")
+        .select("id, title, status, organiser_vendor_id, high_value_verified_at")
+        .in_("status", ["draft", "published"])
+        .is_("high_value_verified_at", "null")
+        .execute()
+    )
+    rows = response.data if isinstance(response.data, list) else []
+    items: list[HighValueQueueItem] = []
+    for row in rows:
+        if not isinstance(row, dict) or not row.get("id"):
+            continue
+        event_id = str(row["id"])
+        projected = projected_paid_gmv_ngwee(event_id)
+        if projected < threshold:
+            continue
+        organiser = row.get("organiser_vendor_id")
+        items.append(
+            HighValueQueueItem(
+                event_id=UUID(event_id),
+                title=str(row.get("title") or ""),
+                status=str(row.get("status") or ""),
+                organiser_vendor_id=UUID(str(organiser)) if organiser else None,
+                projected_gmv_ngwee=projected,
+            )
+        )
+    return HighValueQueueResponse(items=items, threshold_ngwee=threshold)
+
+
+@router.post(
+    "/events/{event_id}/high-value-verify",
+    response_model=HighValueVerifyResponse,
+)
 def verify_high_value_event(
     event_id: UUID,
     current_user: Annotated[CurrentUser, Depends(require_role("admin", "superadmin"))],

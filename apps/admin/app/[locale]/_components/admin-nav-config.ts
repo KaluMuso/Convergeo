@@ -11,6 +11,7 @@ export type AdminNavItemKey =
   | "business"
   | "merch"
   | "clips"
+  | "events"
   | "config"
   | "translations"
   | "theme";
@@ -40,6 +41,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { key: "disputes", href: "disputes" },
       { key: "support", href: "support" },
       { key: "intake", href: "intake" },
+      { key: "events", href: "events" },
     ],
   },
   {

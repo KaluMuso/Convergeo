@@ -22,6 +22,7 @@ export function resolveAdminNavCapabilities(): AdminNavCapabilities {
     business: true,
     merch: true,
     clips: true,
+    events: true,
     config: true,
     translations: true,
     theme: true,

@@ -151,6 +151,66 @@ WHERE t.id = {ticket_sql}
     }
 
 
+def _open_reschedule(event_id: str) -> tuple[str, str] | None:
+    event_sql = sql_uuid(event_id, "event_id")
+    open_result = run_sql_script(
+        f"""
+SELECT id::text, opt_out_deadline::text
+FROM public.event_reschedules
+WHERE event_id = {event_sql}
+  AND opt_out_deadline > timezone('utc', now())
+ORDER BY announced_at DESC
+LIMIT 1;
+"""
+    )
+    if not open_result.ok:
+        raise RuntimeError(f"reschedule lookup failed: {open_result.error}")
+    if not open_result.rows:
+        return None
+    parts = open_result.rows[0].split("|")
+    if len(parts) < 2:
+        return None
+    return parts[0], parts[1]
+
+
+@dataclass(frozen=True, slots=True)
+class BuyerCancelPreview:
+    ticket_id: str
+    status: str
+    band: BuyerCancelBand
+    refund_ngwee: int
+    admin_fee_ngwee: int
+    hours_until_start: float
+    cancellable: bool
+    reschedule_opt_out_open: bool
+    reschedule_deadline: str | None
+
+
+def preview_buyer_cancel(*, ticket_id: str, holder_user_id: str) -> BuyerCancelPreview:
+    row = _load_holder_ticket_for_cancel(ticket_id, holder_user_id)
+    starts_at = _parse_dt(str(row["starts_at"]))
+    paid = _ticket_paid_ngwee(row) if row.get("order_id") else 0
+    policy = compute_buyer_cancel_refund(paid_ngwee=paid, starts_at=starts_at)
+    open_reschedule = _open_reschedule(str(row["event_id"]))
+    cancellable = (
+        str(row["status"]) == "issued"
+        and bool(row.get("order_id"))
+        and policy.refund_ngwee > 0
+        and policy.band != "none"
+    )
+    return BuyerCancelPreview(
+        ticket_id=ticket_id,
+        status=str(row["status"]),
+        band=policy.band,
+        refund_ngwee=policy.refund_ngwee,
+        admin_fee_ngwee=policy.admin_fee_ngwee,
+        hours_until_start=policy.hours_until_start,
+        cancellable=cancellable,
+        reschedule_opt_out_open=open_reschedule is not None and str(row["status"]) == "issued",
+        reschedule_deadline=open_reschedule[1] if open_reschedule else None,
+    )
+
+
 def _void_issued_ticket(ticket_id: str, holder_user_id: str) -> bool:
     ticket_sql = sql_uuid(ticket_id, "ticket_id")
     holder_sql = sql_uuid(holder_user_id, "holder_user_id")
@@ -248,20 +308,8 @@ def opt_out_rescheduled_ticket(*, ticket_id: str, holder_user_id: str) -> BuyerC
             http_status=409,
             details={"message_key": "events.wallet.reschedule.errors.notCancellable"},
         )
-    event_sql = sql_uuid(str(row["event_id"]), "event_id")
-    open_result = run_sql_script(
-        f"""
-SELECT id::text, opt_out_deadline::text
-FROM public.event_reschedules
-WHERE event_id = {event_sql}
-  AND opt_out_deadline > timezone('utc', now())
-ORDER BY announced_at DESC
-LIMIT 1;
-"""
-    )
-    if not open_result.ok:
-        raise RuntimeError(f"reschedule lookup failed: {open_result.error}")
-    if not open_result.rows:
+    open_reschedule = _open_reschedule(str(row["event_id"]))
+    if open_reschedule is None:
         raise AppError(
             code="reschedule_opt_out_closed",
             message="There is no open reschedule opt-out window for this ticket",
@@ -288,7 +336,7 @@ LIMIT 1;
         amount_ngwee=paid,
         source=SOURCE_RESCHEDULE_OPT_OUT,
         source_key=ticket_id,
-        extra_policy={"ticket_id": ticket_id, "reschedule_id": open_result.rows[0].split("|")[0]},
+        extra_policy={"ticket_id": ticket_id, "reschedule_id": open_reschedule[0]},
     )
     return BuyerCancelResult(
         ticket_id=ticket_id,
