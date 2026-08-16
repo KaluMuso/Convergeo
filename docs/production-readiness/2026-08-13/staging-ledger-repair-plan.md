@@ -1,5 +1,10 @@
 # Staging sandbox ledger repair plan (DO NOT EXECUTE from CI)
 
+> **EXECUTED — STG-LEDGER-02 (2026-08-16 UTC).** Staging `iyasmrmbcrvlfxpzescb` ledger
+> normalized and **eight** canonical migrations applied through tip `20260815230000`.
+> Evidence: `docs/production-readiness/2026-08-16/stg-ledger-02/EXECUTION-REPORT.md`.
+> The procedure below is retained as historical operator documentation.
+
 This document describes the **one-time, human-operated** ledger normalization for
 `vergeo-sandbox` (`iyasmrmbcrvlfxpzescb`) after equivalence and physical parity
 evidence in `scripts/ci/staging-migration-equivalence.json` and
@@ -20,15 +25,16 @@ verify live sandbox ledger + physical state
 → revert the seven noncanonical ledger rows
 → mark ONLY the four exact aliases applied:
      0096, 20260809214010, 20260812010000, 20260813063754
-→ leave six canonical migrations pending:
+→ leave **eight** canonical migrations pending (see repository test contract):
      20260812090000, 20260813064106, 20260813150000,
-     20260813160000, 20260813160100, 20260813160200
+     20260813160000, 20260813160100, 20260813160200,
+     20260815194500, 20260815230000
 → run convergence preflight:
      ledger drift = clean
      unresolved physical drift = zero
      known pending migration drift = allowed
      schema_apply_required = true
-→ normal supabase db push applies all six
+→ normal supabase db push applies all eight
 → exact ledger reconciliation
 → extract physical state again
 → require final canonical physical parity = PASS
@@ -147,6 +153,8 @@ Expected **pending** repository migrations (applied later via normal `db push`):
 4. `20260813160000` — rate counter scope manifest (re-entrant on rehearsal schema)
 5. `20260813160100` — listing view surface telemetry (`p_surface DEFAULT 'unknown'`)
 6. `20260813160200` — security definer hardening (guarded extension relocation)
+7. `20260815194500` — privileged function EXECUTE hardening (SEC-DB-01)
+8. `20260815230000` — refund provider-authoritative active index
 
 ```bash
 psql "$SUPABASE_DB_URL" -tA -c \
