@@ -20,8 +20,10 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
-function mergeAbortSignals(signals: Array<AbortSignal | undefined>): AbortSignal | undefined {
-  const active = signals.filter((signal): signal is AbortSignal => signal !== undefined);
+function mergeAbortSignals(
+  signals: Array<AbortSignal | null | undefined>,
+): AbortSignal | undefined {
+  const active = signals.filter((signal): signal is AbortSignal => signal != null);
   if (active.length === 0) {
     return undefined;
   }
