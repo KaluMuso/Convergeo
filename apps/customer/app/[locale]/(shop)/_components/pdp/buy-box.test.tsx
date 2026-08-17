@@ -153,6 +153,20 @@ describe("BuyBox", () => {
     expect(screen.getByTestId("pdp-single-vendor")).toBeInTheDocument();
   });
 
+  it("hides add-to-cart for quote-only listings", () => {
+    render(
+      <BuyBox
+        listing={{ ...inStockListing, pricingMode: "quote_only" }}
+        labels={labels}
+        singleVendor={false}
+      />,
+    );
+
+    expect(screen.getByTestId("pdp-quote-required")).toBeInTheDocument();
+    expect(screen.queryByTestId("pdp-add-to-cart")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("pdp-qty-increase")).not.toBeInTheDocument();
+  });
+
   it("surfaces preferred seller at the purchase moment", () => {
     render(
       <BuyBox

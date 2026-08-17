@@ -53,7 +53,15 @@
       "categoriesTitle": "Category tree",
       "categoriesBody": "Public catalogue category structure.",
       "platformTitle": "Platform knobs",
-      "platformBody": "Operational limits and platform settings."
+      "platformBody": "Operational limits and platform settings.",
+      "fxTitle": "USD/ZMW FX rate",
+      "fxBody": "Publish the audited daily conversion used at checkout.",
+      "categoryPoliciesTitle": "Category policies",
+      "categoryPoliciesBody": "Phase, class, and high-risk rules that gate the catalogue.",
+      "classDTitle": "Class D release gate",
+      "classDBody": "Read-only checklist. Shoppers cannot see used goods until both flags are on.",
+      "governanceTitle": "Vendor cancel-rate",
+      "governanceBody": "Watchlist and reinstatement for vendors above the cancel-rate thresholds."
     }
   },
   "translations": {
@@ -129,7 +137,11 @@
       "deliveryZones": "Delivery zones",
       "platform": "Platform knobs",
       "flags": "Feature flags",
-      "categories": "Category tree"
+      "categories": "Category tree",
+      "fx": "FX rate",
+      "categoryPolicies": "Category policies",
+      "classD": "Class D gate",
+      "governance": "Cancel-rate"
     },
     "common": {
       "save": "Save changes",
@@ -202,6 +214,54 @@
       "moveChildrenConfirm": "Move with children",
       "orphanWarning": "Cannot move without children — enable move-with-children.",
       "rootOption": "Root (no parent)"
+    },
+    "fx": {
+      "title": "USD/ZMW FX rate",
+      "subtitle": "Admin-published daily rate. Checkout snapshots this value; stale rates block USD conversion.",
+      "currentHeading": "Current rate",
+      "publishHeading": "Publish a new rate",
+      "publishHelp": "Publishing supersedes the current row. The new rate expires in 24 hours.",
+      "rate": "Rate",
+      "rateZmw": "ZMW per US dollar",
+      "margin": "Vendor margin (bps)",
+      "source": "Source",
+      "expires": "Expires",
+      "nonePublished": "No current USD/ZMW rate is published.",
+      "staleWarning": "This rate is stale. USD checkout is blocked until you publish a fresh rate.",
+      "stale": "stale",
+      "preview": "Customers will see {rate} per US dollar.",
+      "publish": "Publish rate",
+      "publishError": "Could not publish this FX rate.",
+      "historyHeading": "Recent rates"
+    },
+    "categoryPolicies": {
+      "title": "Category policies",
+      "subtitle": "Disabled categories stay hidden from public browse. Phase and class rules are enforced server-side.",
+      "phase": "Phase",
+      "highRisk": "High-risk",
+      "classes": "Allowed product classes",
+      "saveError": "Could not save this category policy."
+    },
+    "classD": {
+      "title": "Class D release gate",
+      "subtitle": "Used-goods shopper visibility stays off until operations and the customer-release flag are both enabled.",
+      "help": "This page reports live flags. It does not enable Class D for shoppers.",
+      "opsApproved": "Operations checklist",
+      "customerRelease": "Customer release flag",
+      "escrowHours": "Escrow hold (hours)",
+      "shopperVisible": "Visible to shoppers",
+      "visible": "Yes — both gates are on",
+      "hidden": "No — shoppers cannot discover or buy Class D",
+      "flagNote": "Enable product_class_d_operations_approved and product_class_d_customer_release from Feature flags only after the 72-hour escrow procedure is approved.",
+      "openFlags": "Open feature flags"
+    },
+    "governance": {
+      "title": "Vendor cancel-rate",
+      "subtitle": "Vendors at or above the warn threshold. Auto-suspend stays off unless its feature flag is enabled.",
+      "thresholds": "Warn {warn} · critical {critical} · minimum {minOrders} orders",
+      "empty": "No vendors currently meet the warn or critical cancel-rate threshold.",
+      "reinstate": "Reinstate",
+      "reinstateError": "Could not reinstate this vendor."
     }
   },
   "business": {

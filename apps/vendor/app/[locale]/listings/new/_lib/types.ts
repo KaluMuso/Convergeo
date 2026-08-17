@@ -2,6 +2,16 @@ export type ListingMode = "attach" | "new_canonical" | "quick_list";
 
 export type ProductClass = "A" | "B" | "C" | "D" | "E";
 export type ListingCondition = "new" | "refurbished" | "used";
+export type ConditionDetail =
+  | "new"
+  | "open_box"
+  | "refurbished"
+  | "used_excellent"
+  | "used_good"
+  | "used_fair"
+  | "parts_not_working";
+export type PricingMode =
+  "fixed" | "measured" | "bundle" | "tiered" | "range" | "from" | "quote_only";
 export type SaleUnit = "each" | "metre" | "kg" | "litre" | "bag" | "sqm";
 export type FulfilmentMode = "stocked" | "made_to_order";
 export type StockMode = "tracked" | "always_available";
@@ -55,6 +65,8 @@ export type ListingCreatePayload = {
   unit_step_milli: number;
   min_steps: number;
   condition: ListingCondition;
+  condition_detail?: ConditionDetail;
+  pricing_mode?: PricingMode;
   defect_notes?: string | null;
   fulfilment_mode: FulfilmentMode;
   lead_time_days?: number | null;

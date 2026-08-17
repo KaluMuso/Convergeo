@@ -38,7 +38,15 @@
       "categoriesTitle": "分类树",
       "categoriesBody": "公开目录分类结构。",
       "platformTitle": "平台参数",
-      "platformBody": "运营限额与平台设置。"
+      "platformBody": "运营限额与平台设置。",
+      "fxTitle": "美元/克瓦查汇率",
+      "fxBody": "发布结账使用的已审计每日换算汇率。",
+      "categoryPoliciesTitle": "品类政策",
+      "categoryPoliciesBody": "控制目录可见性的阶段、品类与高风险规则。",
+      "classDTitle": "D 类上线门槛",
+      "classDBody": "只读检查清单。在两个开关都打开之前，买家看不到二手商品。",
+      "governanceTitle": "卖家取消率",
+      "governanceBody": "超过取消率阈值的卖家观察名单与恢复。"
     }
   },
   "translations": {
@@ -113,7 +121,11 @@
       "deliveryZones": "配送区域",
       "platform": "平台参数",
       "flags": "功能开关",
-      "categories": "分类树"
+      "categories": "分类树",
+      "fx": "汇率",
+      "categoryPolicies": "品类政策",
+      "classD": "D 类门槛",
+      "governance": "取消率"
     },
     "common": {
       "save": "保存更改",
@@ -186,6 +198,54 @@
       "moveChildrenConfirm": "连同子分类一起移动",
       "orphanWarning": "无法在不移动子分类的情况下移动该分类——请启用“连同子分类一起移动”。",
       "rootOption": "根节点（无父级）"
+    },
+    "fx": {
+      "title": "美元/克瓦查汇率",
+      "subtitle": "由管理员发布的每日汇率。结账会快照该值；过期汇率会阻止美元换算。",
+      "currentHeading": "当前汇率",
+      "publishHeading": "发布新汇率",
+      "publishHelp": "发布会取代当前记录。新汇率将在 24 小时后过期。",
+      "rate": "汇率",
+      "rateZmw": "每美元克瓦查",
+      "margin": "卖家加价（基点）",
+      "source": "来源",
+      "expires": "过期时间",
+      "nonePublished": "尚未发布当前美元/克瓦查汇率。",
+      "staleWarning": "该汇率已过期。在您发布新汇率之前，美元结账会被阻止。",
+      "stale": "已过期",
+      "preview": "买家将看到每美元 {rate}。",
+      "publish": "发布汇率",
+      "publishError": "无法发布该汇率。",
+      "historyHeading": "近期汇率"
+    },
+    "categoryPolicies": {
+      "title": "品类政策",
+      "subtitle": "停用的品类不会出现在公开浏览中。阶段与品类规则由服务端强制执行。",
+      "phase": "阶段",
+      "highRisk": "高风险",
+      "classes": "允许的商品类别",
+      "saveError": "无法保存该品类政策。"
+    },
+    "classD": {
+      "title": "D 类上线门槛",
+      "subtitle": "在运营清单与买家开关都启用之前，二手商品对买家保持不可见。",
+      "help": "此页只报告实时开关，不会为买家启用 D 类。",
+      "opsApproved": "运营清单",
+      "customerRelease": "买家上线开关",
+      "escrowHours": "托管时长（小时）",
+      "shopperVisible": "买家可见",
+      "visible": "是 — 两个门槛均已打开",
+      "hidden": "否 — 买家无法发现或购买 D 类商品",
+      "flagNote": "仅在 72 小时托管流程获批后，才从功能开关启用 product_class_d_operations_approved 和 product_class_d_customer_release。",
+      "openFlags": "打开功能开关"
+    },
+    "governance": {
+      "title": "卖家取消率",
+      "subtitle": "达到或超过警告阈值的卖家。除非打开对应功能开关，否则不会自动停权。",
+      "thresholds": "警告 {warn} · 严重 {critical} · 至少 {minOrders} 笔订单",
+      "empty": "目前没有卖家达到警告或严重取消率阈值。",
+      "reinstate": "恢复",
+      "reinstateError": "无法恢复该卖家。"
     }
   },
   "business": {

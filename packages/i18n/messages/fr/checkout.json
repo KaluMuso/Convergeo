@@ -65,7 +65,8 @@
     "escrowTeaser": "Lorsque vous payez en ligne, Convergeo conserve votre argent jusqu'à la livraison — puis le libère au vendeur.",
     "stockUnavailableNotice": "Un article n'est plus disponible. Vérifiez votre panier avant de continuer.",
     "summaryHeading": "Récapitulatif",
-    "sellerIndex": "Vendeur {index} sur {total}"
+    "sellerIndex": "Vendeur {index} sur {total}",
+    "quote_required": "Cette annonce nécessite un devis accepté avant d'être ajoutée au panier."
   },
   "checkout": {
     "pageTitle": "Paiement",
@@ -245,6 +246,8 @@
       "widgetUnavailable": "Les paiements par carte sont temporairement indisponibles. Essayez le mobile money ou réessayez plus tard.",
       "widgetLabel": "Commande Convergeo",
       "secureNote": "Sécurisé par Lenco — paiement hébergé conforme PCI"
-    }
+    },
+    "fxUnavailable": "Les annonces en USD ne peuvent pas être payées tant qu'un administrateur n'a pas publié le taux USD/ZMW du jour.",
+    "fxStale": "Le taux USD/ZMW publié a expiré. Le paiement est suspendu jusqu'à ce qu'un administrateur publie un taux à jour."
   }
 }

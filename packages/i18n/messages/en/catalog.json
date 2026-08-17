@@ -301,7 +301,15 @@
       "moreThanLowest": "{diff} more than the lowest offer",
       "wishlistAdd": "Save to wishlist",
       "wishlistRemove": "Remove from wishlist",
-      "wishlistSaved": "Saved to wishlist"
+      "wishlistSaved": "Saved to wishlist",
+      "quoteOnlyTitle": "This listing is quote-only",
+      "quoteOnlyBody": "Add to cart is unavailable until the seller sends an accepted ZMW quote.",
+      "rangePriceTitle": "This listing uses a price range",
+      "rangePriceBody": "Request a quote for a final ZMW price before you can buy.",
+      "fxLoading": "Checking the published USD/ZMW rate…",
+      "fxPublished": "USD prices convert at {rate} per US dollar.",
+      "fxStale": "The published USD/ZMW rate has expired. Checkout is paused until an admin publishes a fresh rate.",
+      "fxUnavailable": "USD listings cannot be checked out until an admin publishes today's USD/ZMW rate."
     },
     "stickyAtc": {
       "ariaLabel": "Quick add to cart",

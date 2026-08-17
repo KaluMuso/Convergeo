@@ -297,7 +297,15 @@
       "moreThanLowest": "{diff} de plus que l'offre la plus basse",
       "wishlistAdd": "Ajouter à la liste de souhaits",
       "wishlistRemove": "Retirer de la liste de souhaits",
-      "wishlistSaved": "Ajouté à la liste de souhaits"
+      "wishlistSaved": "Ajouté à la liste de souhaits",
+      "quoteOnlyTitle": "Cette annonce est sur devis uniquement",
+      "quoteOnlyBody": "L'ajout au panier est indisponible jusqu'à ce que le vendeur envoie un devis ZMW accepté.",
+      "rangePriceTitle": "Cette annonce utilise une fourchette de prix",
+      "rangePriceBody": "Demandez un devis pour un prix ZMW définitif avant d'acheter.",
+      "fxLoading": "Vérification du taux USD/ZMW publié…",
+      "fxPublished": "Les prix en USD se convertissent à {rate} par dollar US.",
+      "fxStale": "Le taux USD/ZMW publié a expiré. Le paiement est suspendu jusqu'à ce qu'un administrateur publie un taux à jour.",
+      "fxUnavailable": "Les annonces en USD ne peuvent pas être payées tant qu'un administrateur n'a pas publié le taux USD/ZMW du jour."
     },
     "stickyAtc": {
       "ariaLabel": "Ajout rapide au panier"

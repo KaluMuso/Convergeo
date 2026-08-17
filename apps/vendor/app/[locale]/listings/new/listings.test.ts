@@ -32,6 +32,8 @@ describe("listings i18n", () => {
     expect(vendorMessages.listings.fields.classA).toBe("A. Branded SKU");
     expect(vendorMessages.listings.fields.classB).toBe("B. Branded variant");
     expect(vendorMessages.listings.fields.classC).toBe("C. Commodity / generic");
+    expect(vendorMessages.listings.fields.conditionDetailLabel).toBe("Condition detail");
+    expect(vendorMessages.listings.fields.pricingQuoteOnly).toBe("Quote only");
     expect(vendorMessages.listings.errors.standalone_required).toBeTruthy();
   });
 });
@@ -49,10 +51,10 @@ describe("listing unit-step conversion", () => {
 });
 
 describe("product-class form rules", () => {
-  it("forces Class D to used condition", () => {
-    expect(applyListingFieldPatch(DEFAULT_LISTING_FIELDS, { productClass: "D" }).condition).toBe(
-      "used",
-    );
+  it("forces Class D to used condition with a used-tier detail", () => {
+    const fields = applyListingFieldPatch(DEFAULT_LISTING_FIELDS, { productClass: "D" });
+    expect(fields.condition).toBe("used");
+    expect(fields.conditionDetail).toBe("used_good");
   });
 
   it("forces Class E to made-to-order fulfilment", () => {

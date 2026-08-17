@@ -21,6 +21,7 @@ import {
 } from "../sale-quantity";
 
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
+import { FxRateDisclosure } from "./fx-rate-disclosure";
 
 import type { ListingPurchaseControls } from "./use-listing-purchase";
 
@@ -30,6 +31,8 @@ export type BuyBoxListing = {
   priceNgwee: number;
   condition: ListingCondition;
   productClass?: string;
+  pricingMode?: string;
+  currencyCode?: string;
   stockMode: "tracked" | "always_available";
   stockQty: number | null;
   moq: number;
@@ -40,6 +43,10 @@ export type BuyBoxListing = {
   leadTimeDays?: number | null;
   vendorCapacityPerWeek?: number | null;
 };
+
+export function listingRequiresQuote(listing: { pricingMode?: string | null }): boolean {
+  return listing.pricingMode === "quote_only" || listing.pricingMode === "range";
+}
 
 export type BuyBoxSellerSummary = {
   displayName: string;
@@ -216,6 +223,7 @@ export function BuyBox({
         ? labels.conditionUsedLabel
         : labels.conditionRefurbishedLabel;
   const showAuthenticityBadge = listing.productClass === "D" || listing.condition === "used";
+  const quoteRequired = listingRequiresQuote(listing);
   const leadTimeDays =
     listing.leadTimeDays != null && listing.leadTimeDays > 0 ? listing.leadTimeDays : null;
 
@@ -228,7 +236,7 @@ export function BuyBox({
   }, [listing]);
 
   const handleAddToCart = useCallback(async () => {
-    if (!listing.inStock || adding) {
+    if (!listing.inStock || adding || listingRequiresQuote(listing)) {
       return;
     }
 
@@ -300,6 +308,7 @@ export function BuyBox({
             {priceContextLabel}
           </p>
         ) : null}
+        <FxRateDisclosure currencyCode={listing.currencyCode} />
         {/* Keep a test hook for the formatted price string used by existing tests. */}
         <p className="sr-only" data-testid="pdp-price">
           {formatK(listing.priceNgwee)}
@@ -339,57 +348,80 @@ export function BuyBox({
         </p>
       ) : null}
 
-      <div className="flex flex-col gap-2">
-        <span className="text-sm font-medium text-text">{labels.quantityLabel}</span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label={labels.decreaseLabel}
-            data-testid="pdp-qty-decrease"
-            onClick={onDecrease}
-            disabled={!listing.inStock || atMin || isAdding}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span aria-hidden="true">{labels.decreaseSymbol}</span>
-          </button>
-          <output
-            data-testid="pdp-qty-value"
-            className="min-w-12 text-center font-mono text-lg"
-            aria-live="polite"
-            aria-label={`${labels.quantityLabel}: ${formattedQuantity}`}
-          >
-            {formattedQuantity}
-          </output>
-          <button
-            type="button"
-            aria-label={labels.increaseLabel}
-            data-testid="pdp-qty-increase"
-            onClick={onIncrease}
-            disabled={!listing.inStock || atMax || isAdding}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span aria-hidden="true">{labels.increaseSymbol}</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="flex items-stretch gap-2">
-        <Button
-          type="button"
-          variant="primary"
-          size="lg"
-          className="min-w-0 flex-1"
-          disabled={!listing.inStock || isAdding}
-          loading={isAdding}
-          loadingLabel={labels.addingToCartLabel}
-          data-testid="pdp-add-to-cart"
-          aria-label={listing.inStock ? labels.addToCartLabel : labels.outOfStockLabel}
-          onClick={onAdd}
+      {quoteRequired ? (
+        <div
+          className="rounded border border-border bg-bg p-3"
+          data-testid="pdp-quote-required"
+          role="note"
         >
-          {labels.addToCartLabel}
-        </Button>
-        {wishlistSlot}
-      </div>
+          <p className="text-sm font-medium text-text">
+            {listing.pricingMode === "range"
+              ? t("pdp.buyBox.rangePriceTitle")
+              : t("pdp.buyBox.quoteOnlyTitle")}
+          </p>
+          <p className="mt-1 text-sm text-text-2">
+            {listing.pricingMode === "range"
+              ? t("pdp.buyBox.rangePriceBody")
+              : t("pdp.buyBox.quoteOnlyBody")}
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-text">{labels.quantityLabel}</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label={labels.decreaseLabel}
+                data-testid="pdp-qty-decrease"
+                onClick={onDecrease}
+                disabled={!listing.inStock || atMin || isAdding}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span aria-hidden="true">{labels.decreaseSymbol}</span>
+              </button>
+              <output
+                data-testid="pdp-qty-value"
+                className="min-w-12 text-center font-mono text-lg"
+                aria-live="polite"
+                aria-label={`${labels.quantityLabel}: ${formattedQuantity}`}
+              >
+                {formattedQuantity}
+              </output>
+              <button
+                type="button"
+                aria-label={labels.increaseLabel}
+                data-testid="pdp-qty-increase"
+                onClick={onIncrease}
+                disabled={!listing.inStock || atMax || isAdding}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span aria-hidden="true">{labels.increaseSymbol}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-stretch gap-2">
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              className="min-w-0 flex-1"
+              disabled={!listing.inStock || isAdding}
+              loading={isAdding}
+              loadingLabel={labels.addingToCartLabel}
+              data-testid="pdp-add-to-cart"
+              aria-label={listing.inStock ? labels.addToCartLabel : labels.outOfStockLabel}
+              onClick={onAdd}
+            >
+              {labels.addToCartLabel}
+            </Button>
+            {wishlistSlot}
+          </div>
+        </>
+      )}
+
+      {quoteRequired ? wishlistSlot : null}
 
       {compareHref && compareLabel ? (
         <Link

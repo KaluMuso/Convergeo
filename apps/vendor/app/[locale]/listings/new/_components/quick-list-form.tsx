@@ -80,6 +80,8 @@ export function QuickListForm({
         unit_step_milli: parsed.unitStepMilli,
         min_steps: parsed.minSteps,
         condition: fields.condition,
+        condition_detail: fields.conditionDetail,
+        pricing_mode: fields.pricingMode,
         defect_notes: parsed.defectNotes,
         fulfilment_mode: fields.fulfilmentMode,
         lead_time_days: parsed.leadTimeDays,

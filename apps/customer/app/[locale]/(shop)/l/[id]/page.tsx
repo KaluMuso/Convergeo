@@ -69,6 +69,8 @@ function toBuyBoxListing(listing: StandaloneListing): BuyBoxListing {
     priceNgwee: listing.price_ngwee,
     condition: listing.condition,
     productClass: listing.product_class,
+    pricingMode: listing.pricing_mode,
+    currencyCode: listing.currency_code,
     stockMode: listing.stock_mode,
     stockQty: listing.stock_qty,
     moq: listing.moq,

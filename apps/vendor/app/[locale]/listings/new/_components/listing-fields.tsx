@@ -7,6 +7,8 @@ import { FormField, Input, Select, Switch, Textarea } from "../_lib/ui";
 import type {
   FulfilmentMode,
   ListingCondition,
+  ConditionDetail,
+  PricingMode,
   ProductClass,
   SaleUnit,
   StockMode,
@@ -20,6 +22,8 @@ export type ListingFieldValues = {
   unitStep: string;
   minSteps: string;
   condition: ListingCondition;
+  conditionDetail: ConditionDetail;
+  pricingMode: PricingMode;
   defectNotes: string;
   fulfilmentMode: FulfilmentMode;
   leadTimeDays: string;
@@ -37,6 +41,8 @@ export const DEFAULT_LISTING_FIELDS: ListingFieldValues = {
   unitStep: "1",
   minSteps: "1",
   condition: "new",
+  conditionDetail: "new",
+  pricingMode: "fixed",
   defectNotes: "",
   fulfilmentMode: "stocked",
   leadTimeDays: "",
@@ -75,6 +81,21 @@ export type ListingFieldLabels = {
   conditionNew: string;
   conditionRefurbished: string;
   conditionUsed: string;
+  conditionDetailLabel: string;
+  conditionOpenBox: string;
+  conditionUsedExcellent: string;
+  conditionUsedGood: string;
+  conditionUsedFair: string;
+  conditionParts: string;
+  pricingModeLabel: string;
+  pricingFixed: string;
+  pricingMeasured: string;
+  pricingBundle: string;
+  pricingTiered: string;
+  pricingRange: string;
+  pricingFrom: string;
+  pricingQuoteOnly: string;
+  pricingQuoteHelp: string;
   defectNotesLabel: string;
   defectNotesPlaceholder: string;
   defectNotesHelp: string;
@@ -136,6 +157,19 @@ export function applyListingFieldPatch(
   if (patch.condition && patch.condition !== "used") {
     next.defectNotes = "";
   }
+  if (patch.condition === "new") {
+    next.conditionDetail = "new";
+  } else if (patch.condition === "refurbished") {
+    next.conditionDetail = next.conditionDetail === "open_box" ? "open_box" : "refurbished";
+  } else if (patch.condition === "used") {
+    if (
+      next.conditionDetail === "new" ||
+      next.conditionDetail === "open_box" ||
+      next.conditionDetail === "refurbished"
+    ) {
+      next.conditionDetail = "used_good";
+    }
+  }
   if (patch.fulfilmentMode === "stocked") {
     next.leadTimeDays = "";
   }
@@ -145,6 +179,13 @@ export function applyListingFieldPatch(
 
   if (next.productClass === "D") {
     next.condition = "used";
+    if (
+      next.conditionDetail === "new" ||
+      next.conditionDetail === "open_box" ||
+      next.conditionDetail === "refurbished"
+    ) {
+      next.conditionDetail = "used_good";
+    }
   }
   if (next.productClass === "E") {
     next.fulfilmentMode = "made_to_order";
@@ -351,6 +392,55 @@ export function ListingFields({
             {labels.conditionRefurbished}
           </option>
           <option value="used">{labels.conditionUsed}</option>
+        </Select>
+      </FormField>
+
+      <FormField label={labels.conditionDetailLabel}>
+        <Select
+          value={values.conditionDetail}
+          onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+            handleChange({ conditionDetail: event.target.value as ConditionDetail })
+          }
+        >
+          {values.condition === "new" ? <option value="new">{labels.conditionNew}</option> : null}
+          {values.condition === "refurbished" ? (
+            <>
+              <option value="open_box">{labels.conditionOpenBox}</option>
+              <option value="refurbished">{labels.conditionRefurbished}</option>
+            </>
+          ) : null}
+          {values.condition === "used" ? (
+            <>
+              <option value="used_excellent">{labels.conditionUsedExcellent}</option>
+              <option value="used_good">{labels.conditionUsedGood}</option>
+              <option value="used_fair">{labels.conditionUsedFair}</option>
+              <option value="parts_not_working">{labels.conditionParts}</option>
+            </>
+          ) : null}
+        </Select>
+      </FormField>
+
+      <FormField
+        label={labels.pricingModeLabel}
+        helpText={
+          values.pricingMode === "quote_only" || values.pricingMode === "range"
+            ? labels.pricingQuoteHelp
+            : undefined
+        }
+      >
+        <Select
+          value={values.pricingMode}
+          onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+            handleChange({ pricingMode: event.target.value as PricingMode })
+          }
+        >
+          <option value="fixed">{labels.pricingFixed}</option>
+          <option value="measured">{labels.pricingMeasured}</option>
+          <option value="bundle">{labels.pricingBundle}</option>
+          <option value="tiered">{labels.pricingTiered}</option>
+          <option value="range">{labels.pricingRange}</option>
+          <option value="from">{labels.pricingFrom}</option>
+          <option value="quote_only">{labels.pricingQuoteOnly}</option>
         </Select>
       </FormField>
 

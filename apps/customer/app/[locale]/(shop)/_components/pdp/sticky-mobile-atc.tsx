@@ -12,7 +12,12 @@ import {
   resolveSaleUnit,
 } from "../sale-quantity";
 
-import { getMinimumQuantity, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
+import {
+  getMinimumQuantity,
+  listingRequiresQuote,
+  type BuyBoxLabels,
+  type BuyBoxListing,
+} from "./buy-box";
 
 import type { ListingPurchaseControls } from "./use-listing-purchase";
 
@@ -42,7 +47,7 @@ export function StickyMobileAtc({
 }: StickyMobileAtcProps) {
   const t = useTranslations("catalog");
   const [buyBoxOutOfView, setBuyBoxOutOfView] = useState(false);
-  const visible = buyBoxOutOfView && listing.inStock;
+  const visible = buyBoxOutOfView && listing.inStock && !listingRequiresQuote(listing);
   const unitLabels = useMemo(() => catalogSaleUnitLabels(t), [t]);
   const saleUnit = resolveSaleUnit(listing.saleUnit);
   const minimum = getMinimumQuantity(listing);

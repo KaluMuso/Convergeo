@@ -3,8 +3,10 @@ import { createApiClient } from "@vergeo/config";
 import { getApiBaseUrl } from "../../../../../../lib/api-base-url";
 
 import type {
+  ConditionDetail,
   FulfilmentMode,
   ListingCondition,
+  PricingMode,
   ProductClass,
   SaleUnit,
 } from "../../../new/_lib/types";
@@ -27,6 +29,8 @@ export type ListingSummary = {
   unit_step_milli?: number;
   min_steps?: number;
   condition: ListingCondition;
+  condition_detail?: ConditionDetail;
+  pricing_mode?: PricingMode;
   defect_notes?: string | null;
   fulfilment_mode?: FulfilmentMode;
   lead_time_days?: number | null;
@@ -55,6 +59,8 @@ export type ListingUpdatePayload = {
   unit_step_milli?: number;
   min_steps?: number;
   condition?: ListingCondition;
+  condition_detail?: ConditionDetail;
+  pricing_mode?: PricingMode;
   defect_notes?: string | null;
   fulfilment_mode?: FulfilmentMode;
   lead_time_days?: number | null;

@@ -50,6 +50,30 @@ export default async function ConfigHubPage({ params }: PageProps) {
       title: t("platformTitle"),
       body: t("platformBody"),
     },
+    {
+      key: "fx",
+      href: `/${locale}/config/fx`,
+      title: t("fxTitle"),
+      body: t("fxBody"),
+    },
+    {
+      key: "category-policies",
+      href: `/${locale}/config/category-policies`,
+      title: t("categoryPoliciesTitle"),
+      body: t("categoryPoliciesBody"),
+    },
+    {
+      key: "class-d",
+      href: `/${locale}/config/class-d`,
+      title: t("classDTitle"),
+      body: t("classDBody"),
+    },
+    {
+      key: "governance",
+      href: `/${locale}/config/governance`,
+      title: t("governanceTitle"),
+      body: t("governanceBody"),
+    },
   ] as const;
 
   return (

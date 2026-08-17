@@ -38,7 +38,15 @@
       "categoriesTitle": "Arborescence des catégories",
       "categoriesBody": "Structure publique du catalogue.",
       "platformTitle": "Réglages de la plateforme",
-      "platformBody": "Limites opérationnelles et paramètres plateforme."
+      "platformBody": "Limites opérationnelles et paramètres plateforme.",
+      "fxTitle": "Taux USD/ZMW",
+      "fxBody": "Publier la conversion quotidienne contrôlée utilisée au paiement.",
+      "categoryPoliciesTitle": "Politiques de catégorie",
+      "categoryPoliciesBody": "Règles de phase, de classe et de risque élevé qui filtrent le catalogue.",
+      "classDTitle": "Porte de lancement classe D",
+      "classDBody": "Liste de contrôle en lecture seule. Les acheteurs ne voient pas l'occasion tant que les deux drapeaux sont activés.",
+      "governanceTitle": "Taux d'annulation vendeur",
+      "governanceBody": "Liste de surveillance et réintégration des vendeurs au-dessus des seuils d'annulation."
     }
   },
   "translations": {
@@ -113,7 +121,11 @@
       "deliveryZones": "Zones de livraison",
       "platform": "Réglages de la plateforme",
       "flags": "Fonctionnalités (drapeaux)",
-      "categories": "Arborescence des catégories"
+      "categories": "Arborescence des catégories",
+      "fx": "Taux de change",
+      "categoryPolicies": "Politiques de catégorie",
+      "classD": "Porte classe D",
+      "governance": "Annulations"
     },
     "common": {
       "save": "Enregistrer les modifications",
@@ -186,6 +198,54 @@
       "moveChildrenConfirm": "Déplacer avec les sous-catégories",
       "orphanWarning": "Impossible de déplacer sans les sous-catégories — activez le déplacement avec sous-catégories.",
       "rootOption": "Racine (aucun parent)"
+    },
+    "fx": {
+      "title": "Taux USD/ZMW",
+      "subtitle": "Taux quotidien publié par l'admin. Le paiement en enregistre une copie ; un taux périmé bloque la conversion USD.",
+      "currentHeading": "Taux actuel",
+      "publishHeading": "Publier un nouveau taux",
+      "publishHelp": "La publication remplace la ligne actuelle. Le nouveau taux expire dans 24 heures.",
+      "rate": "Taux",
+      "rateZmw": "ZMW par dollar US",
+      "margin": "Marge vendeur (bps)",
+      "source": "Source",
+      "expires": "Expire",
+      "nonePublished": "Aucun taux USD/ZMW n'est publié.",
+      "staleWarning": "Ce taux est périmé. Le paiement USD est bloqué jusqu'à la publication d'un taux à jour.",
+      "stale": "périmé",
+      "preview": "Les clients verront {rate} par dollar US.",
+      "publish": "Publier le taux",
+      "publishError": "Impossible de publier ce taux de change.",
+      "historyHeading": "Taux récents"
+    },
+    "categoryPolicies": {
+      "title": "Politiques de catégorie",
+      "subtitle": "Les catégories désactivées restent masquées de la navigation publique. Les règles de phase et de classe sont appliquées côté serveur.",
+      "phase": "Phase",
+      "highRisk": "Risque élevé",
+      "classes": "Classes de produit autorisées",
+      "saveError": "Impossible d'enregistrer cette politique de catégorie."
+    },
+    "classD": {
+      "title": "Porte de lancement classe D",
+      "subtitle": "La visibilité occasion reste désactivée tant que les opérations et le drapeau client ne sont pas tous deux activés.",
+      "help": "Cette page affiche les drapeaux en direct. Elle n'active pas la classe D pour les acheteurs.",
+      "opsApproved": "Liste opérationnelle",
+      "customerRelease": "Drapeau de lancement client",
+      "escrowHours": "Séquestre (heures)",
+      "shopperVisible": "Visible pour les acheteurs",
+      "visible": "Oui — les deux portes sont ouvertes",
+      "hidden": "Non — les acheteurs ne peuvent ni découvrir ni acheter la classe D",
+      "flagNote": "Activez product_class_d_operations_approved et product_class_d_customer_release depuis les drapeaux seulement après validation de la procédure de séquestre de 72 heures.",
+      "openFlags": "Ouvrir les drapeaux"
+    },
+    "governance": {
+      "title": "Taux d'annulation vendeur",
+      "subtitle": "Vendeurs au seuil d'avertissement ou au-dessus. La suspension automatique reste désactivée sauf si son drapeau est activé.",
+      "thresholds": "Avertissement {warn} · critique {critical} · minimum {minOrders} commandes",
+      "empty": "Aucun vendeur n'atteint actuellement le seuil d'avertissement ou critique.",
+      "reinstate": "Réintégrer",
+      "reinstateError": "Impossible de réintégrer ce vendeur."
     }
   },
   "business": {

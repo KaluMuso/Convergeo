@@ -65,7 +65,8 @@
     "escrowTeaser": "在线支付时，Convergeo 会托管您的款项直至送达，再释放给卖家。",
     "stockUnavailableNotice": "有商品已不可用。请在继续结账前检查购物车。",
     "summaryHeading": "订单摘要",
-    "sellerIndex": "卖家 {index}/{total}"
+    "sellerIndex": "卖家 {index}/{total}",
+    "quote_required": "加入购物车前，此商品需要一份已接受的报价。"
   },
   "checkout": {
     "pageTitle": "结账",
@@ -245,6 +246,8 @@
       "widgetUnavailable": "银行卡付款暂时不可用。请尝试移动支付或稍后重试。",
       "widgetLabel": "Convergeo 订单",
       "secureNote": "由 Lenco 保护——符合 PCI 标准的托管结账"
-    }
+    },
+    "fxUnavailable": "在管理员发布当日美元/克瓦查汇率之前，无法结算美元标价商品。",
+    "fxStale": "已发布的美元/克瓦查汇率已过期。在管理员发布新汇率之前，结账已暂停。"
   }
 }

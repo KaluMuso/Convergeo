@@ -68,7 +68,8 @@
     "escrowTeaser": "When you pay online, Convergeo holds your money until delivery — then releases it to the seller.",
     "stockUnavailableNotice": "An item is no longer available. Review your cart before continuing to checkout.",
     "summaryHeading": "Order summary",
-    "sellerIndex": "Seller {index} of {total}"
+    "sellerIndex": "Seller {index} of {total}",
+    "quote_required": "This listing needs an accepted quote before it can be added to the cart."
   },
   "checkout": {
     "pageTitle": "Checkout",
@@ -248,6 +249,8 @@
       "widgetUnavailable": "Card payments are temporarily unavailable. Try mobile money or try again later.",
       "widgetLabel": "Convergeo order",
       "secureNote": "Secured by Lenco — PCI compliant hosted checkout"
-    }
+    },
+    "fxUnavailable": "USD listings cannot be checked out until an admin publishes today's USD/ZMW rate.",
+    "fxStale": "The published USD/ZMW rate has expired. Checkout is paused until an admin publishes a fresh rate."
   }
 }

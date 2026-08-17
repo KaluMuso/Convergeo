@@ -13,7 +13,7 @@ import {
   type LogisticsPillLabels,
 } from "../plp/logistics-pills";
 
-import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
+import { BuyBox, listingRequiresQuote, type BuyBoxLabels, type BuyBoxListing } from "./buy-box";
 import { BuyerTrustPanel } from "./buyer-trust-panel";
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
 import { PdpGallery } from "./gallery";
@@ -110,6 +110,8 @@ export type ProductListing = {
   priceNgwee: number;
   condition: ListingCondition;
   productClass: string;
+  pricingMode?: string;
+  currencyCode?: string;
   stockMode: "tracked" | "always_available";
   stockQty: number | null;
   moq: number;
@@ -614,6 +616,8 @@ export function PdpInteractiveBody({
       priceNgwee: selectedListing.priceNgwee,
       condition: selectedListing.condition,
       productClass: selectedListing.productClass,
+      pricingMode: selectedListing.pricingMode,
+      currencyCode: selectedListing.currencyCode,
       stockMode: selectedListing.stockMode,
       stockQty: selectedListing.stockQty,
       moq: selectedListing.moq,
@@ -721,7 +725,7 @@ export function PdpInteractiveBody({
               />
             }
           />
-          {selectedListing.productClass === "E" ? (
+          {selectedListing.productClass === "E" || listingRequiresQuote(selectedListing) ? (
             <RequestQuoteButton
               locale={locale}
               listingId={selectedListing.id}

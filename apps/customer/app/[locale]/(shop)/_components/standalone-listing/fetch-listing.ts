@@ -14,6 +14,8 @@ export type StandaloneListing = {
   id: string;
   title: string;
   product_class: "A" | "B" | "C" | "D" | "E";
+  pricing_mode?: string;
+  currency_code?: string;
   condition: ListingCondition;
   defect_notes: string | null;
   price_ngwee: number;

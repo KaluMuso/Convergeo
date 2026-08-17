@@ -36,6 +36,8 @@ export type Listing = {
   price_ngwee: number;
   condition: ListingCondition;
   product_class?: string;
+  pricing_mode?: string;
+  currency_code?: string;
   stock_mode: "tracked" | "always_available";
   stock_qty: number | null;
   moq: number;

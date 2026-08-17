@@ -16,6 +16,7 @@
   "ai.quota.guestExceeded": "Vous avez utilisé toutes vos questions gratuites d'invité. Inscrivez-vous pour continuer à poser des questions.",
   "ai.quota.monthlyExceeded": "Vous avez atteint votre limite de questions mensuelle.",
   "ai.quota.killSwitch": "Ask Convergeo est temporairement indisponible. Veuillez réessayer plus tard.",
+  "ai.quota.maturityGate": "Ask Convergeo n'est pas disponible tant que le catalogue n'a pas assez de commandes terminées.",
   "ai.quota.tooLong": "Votre question est trop longue. Veuillez la raccourcir.",
   "ai.quota.rateLimited": "Trop de questions en peu de temps. Veuillez patienter un instant.",
   "ai.quota.duplicate": "Veuillez poser une autre question.",

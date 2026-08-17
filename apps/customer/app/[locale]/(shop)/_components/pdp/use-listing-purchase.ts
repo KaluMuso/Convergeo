@@ -11,6 +11,7 @@ import {
   getMaxQuantity,
   getMinimumQuantity,
   getStockLabel,
+  listingRequiresQuote,
   type BuyBoxLabels,
   type BuyBoxListing,
 } from "./buy-box";
@@ -110,7 +111,7 @@ export function useListingPurchase(
   }, [listing]);
 
   const handleAddToCart = useCallback(() => {
-    if (!listing || !listing.inStock || adding) {
+    if (!listing || !listing.inStock || adding || listingRequiresQuote(listing)) {
       return;
     }
 

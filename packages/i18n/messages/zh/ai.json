@@ -16,6 +16,7 @@
   "ai.quota.guestExceeded": "您已用完免费访客提问次数。注册后即可继续向 Vergeo 提问。",
   "ai.quota.monthlyExceeded": "您已达到每月提问上限。",
   "ai.quota.killSwitch": "Ask Convergeo 暂时不可用。请稍后重试。",
+  "ai.quota.maturityGate": "在目录积累足够的已完成订单之前，Ask Convergeo 不可用。",
   "ai.quota.tooLong": "您的问题太长。请将其缩短。",
   "ai.quota.rateLimited": "提问过于频繁。请稍候片刻。",
   "ai.quota.duplicate": "请换一个问题提问。",

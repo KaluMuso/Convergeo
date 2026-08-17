@@ -297,7 +297,15 @@
       "moreThanLowest": "比最低报价高 {diff}",
       "wishlistAdd": "加入心愿单",
       "wishlistRemove": "移出心愿单",
-      "wishlistSaved": "已加入心愿单"
+      "wishlistSaved": "已加入心愿单",
+      "quoteOnlyTitle": "此商品仅接受报价",
+      "quoteOnlyBody": "在卖家发送并被接受的克瓦查报价之前，无法加入购物车。",
+      "rangePriceTitle": "此商品使用价格区间",
+      "rangePriceBody": "购买前请先申请报价以获得最终克瓦查价格。",
+      "fxLoading": "正在核对已发布的美元/克瓦查汇率…",
+      "fxPublished": "美元价格按每美元 {rate} 换算。",
+      "fxStale": "已发布的美元/克瓦查汇率已过期。在管理员发布新汇率之前，结账已暂停。",
+      "fxUnavailable": "在管理员发布当日美元/克瓦查汇率之前，无法结算美元标价商品。"
     },
     "stickyAtc": {
       "ariaLabel": "快速加入购物车"

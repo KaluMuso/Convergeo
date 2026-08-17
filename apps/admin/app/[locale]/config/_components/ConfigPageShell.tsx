@@ -3,7 +3,16 @@ import { getTranslations } from "next-intl/server";
 
 type ConfigPageShellProps = {
   locale: string;
-  active: "commissions" | "delivery-zones" | "platform" | "flags" | "categories";
+  active:
+    | "commissions"
+    | "delivery-zones"
+    | "platform"
+    | "flags"
+    | "categories"
+    | "fx"
+    | "category-policies"
+    | "class-d"
+    | "governance";
   titleKey: string;
   subtitleKey: string;
   children: React.ReactNode;
@@ -15,6 +24,10 @@ const TABS = [
   { slug: "platform", key: "platform" },
   { slug: "flags", key: "flags" },
   { slug: "categories", key: "categories" },
+  { slug: "fx", key: "fx" },
+  { slug: "category-policies", key: "categoryPolicies" },
+  { slug: "class-d", key: "classD" },
+  { slug: "governance", key: "governance" },
 ] as const;
 
 export async function ConfigPageShell({
