@@ -7,8 +7,10 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
 from app.schemas.vendor_listing import (
+    ConditionDetail,
     FulfilmentMode,
     ListingCondition,
+    PricingMode,
     ProductClass,
     SaleUnit,
     StockMode,
@@ -50,6 +52,8 @@ class ListingSummary(StrictModel):
     compare_at_ngwee: int | None = None
     product_class: ProductClass
     condition: ListingCondition
+    condition_detail: ConditionDetail = "new"
+    pricing_mode: PricingMode = "fixed"
     sale_unit: SaleUnit
     unit_step_milli: int
     min_steps: int
@@ -74,6 +78,8 @@ class ListingUpdateRequest(StrictModel):
     compare_at_ngwee: NgweeInt | None = None
     product_class: ProductClass | None = None
     condition: ListingCondition | None = None
+    condition_detail: ConditionDetail | None = None
+    pricing_mode: PricingMode | None = None
     sale_unit: SaleUnit | None = None
     unit_step_milli: int | None = Field(default=None, ge=1)
     min_steps: int | None = Field(default=None, ge=1)
@@ -252,6 +258,8 @@ def _to_listing_summary(row: dict[str, Any]) -> ListingSummary:
         ),
         product_class=str(row.get("product_class") or "A"),  # type: ignore[arg-type]
         condition=str(row["condition"]),  # type: ignore[arg-type]
+        condition_detail=str(row.get("condition_detail") or "new"),  # type: ignore[arg-type]
+        pricing_mode=str(row.get("pricing_mode") or "fixed"),  # type: ignore[arg-type]
         sale_unit=str(row.get("sale_unit") or "each"),  # type: ignore[arg-type]
         unit_step_milli=int(row.get("unit_step_milli") or 1000),
         min_steps=int(row.get("min_steps") or 1),
@@ -288,7 +296,7 @@ def _load_listing(
         service_client.client.table("vendor_listings")
         .select(
             "id, vendor_id, product_id, title_override, price_ngwee, compare_at_ngwee, "
-            "product_class, condition, sale_unit, unit_step_milli, min_steps, "
+            "product_class, condition, condition_detail, pricing_mode, sale_unit, unit_step_milli, min_steps, "
             "fulfilment_mode, lead_time_days, vendor_capacity_per_week, defect_notes, "
             "stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
             "return_window_hours, status, products(name), "
@@ -437,6 +445,8 @@ def _validate_strategy_listing(
             product_class=product_class,
             status=_effective_update_value(body, listing, "status", "draft"),
             condition=_effective_update_value(body, listing, "condition", "new"),
+            condition_detail=_effective_update_value(body, listing, "condition_detail"),
+            pricing_mode=_effective_update_value(body, listing, "pricing_mode", "fixed"),
             sale_unit=_effective_update_value(body, listing, "sale_unit", "each"),
             unit_step_milli=_effective_update_value(
                 body, listing, "unit_step_milli", 1000
@@ -539,6 +549,10 @@ def _apply_listing_update(
         update_payload["product_class"] = body.product_class
     if body.condition is not None:
         update_payload["condition"] = body.condition
+    if body.condition_detail is not None:
+        update_payload["condition_detail"] = body.condition_detail
+    if body.pricing_mode is not None:
+        update_payload["pricing_mode"] = body.pricing_mode
     if body.sale_unit is not None:
         update_payload["sale_unit"] = body.sale_unit
     if body.unit_step_milli is not None:
@@ -622,7 +636,7 @@ async def list_vendor_listings(
         service_client.client.table("vendor_listings")
         .select(
             "id, vendor_id, product_id, title_override, price_ngwee, compare_at_ngwee, "
-            "product_class, condition, sale_unit, unit_step_milli, min_steps, "
+            "product_class, condition, condition_detail, pricing_mode, sale_unit, unit_step_milli, min_steps, "
             "fulfilment_mode, lead_time_days, vendor_capacity_per_week, defect_notes, "
             "stock_mode, stock_qty, wholesale, price_tiers, moq, returnable, "
             "return_window_hours, status, products(name), "

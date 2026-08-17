@@ -177,3 +177,64 @@ def test_weekly_capacity_reads_listing_link_table_and_excludes_cancelled() -> No
         operation == "gte" and column == "order_items.orders.created_at"
         for operation, column, _value in query.filters
     )
+
+
+class TestQuoteRequiredCartGuard:
+    def test_quote_only_blocks_without_accepted_quote(self) -> None:
+        listing: dict[str, Any] = {
+            **LISTING_D_USED,
+            "product_class": "A",
+            "condition": "new",
+            "pricing_mode": "quote_only",
+        }
+        with pytest.raises(AppError) as exc_info:
+            validate_listing_purchasable_for_cart(
+                listing=listing,
+                qty=1,
+                evidence_image_count=0,
+            )
+        assert exc_info.value.code == "cart.quote_required"
+
+    def test_range_blocks_without_accepted_quote(self) -> None:
+        listing: dict[str, Any] = {
+            **LISTING_D_USED,
+            "product_class": "A",
+            "condition": "new",
+            "pricing_mode": "range",
+        }
+        with pytest.raises(AppError) as exc_info:
+            validate_listing_purchasable_for_cart(
+                listing=listing,
+                qty=1,
+                evidence_image_count=0,
+            )
+        assert exc_info.value.code == "cart.quote_required"
+
+    def test_from_pricing_is_purchasable_at_listed_price(self) -> None:
+        listing: dict[str, Any] = {
+            **LISTING_D_USED,
+            "product_class": "A",
+            "condition": "new",
+            "pricing_mode": "from",
+            "stock_mode": "always_available",
+        }
+        validate_listing_purchasable_for_cart(
+            listing=listing,
+            qty=1,
+            evidence_image_count=0,
+        )
+
+    def test_accepted_quote_allows_quote_only(self) -> None:
+        listing: dict[str, Any] = {
+            **LISTING_D_USED,
+            "product_class": "A",
+            "condition": "new",
+            "pricing_mode": "quote_only",
+            "stock_mode": "always_available",
+        }
+        validate_listing_purchasable_for_cart(
+            listing=listing,
+            qty=1,
+            evidence_image_count=0,
+            has_accepted_quote=True,
+        )

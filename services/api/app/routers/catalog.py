@@ -72,6 +72,8 @@ class CatalogListingItem(BaseModel):
     below_median: bool = False
     delivery_available: bool = False
     pickup_available: bool = False
+    pricing_mode: str = "fixed"
+    currency_code: str = "ZMW"
     # B2B wholesale fields — populated only on the gated wholesale/supplies feed.
     wholesale: bool | None = None
     moq: int | None = None
@@ -123,6 +125,8 @@ class StandaloneListingResponse(BaseModel):
     moq: int = Field(default=1, ge=1)
     wholesale: bool = False
     in_stock: bool
+    pricing_mode: str = "fixed"
+    currency_code: str = "ZMW"
     vendor: StandaloneListingVendor
     location: StandaloneListingLocation | None = None
     images: list[StandaloneListingImage] = Field(default_factory=list)
@@ -230,6 +234,8 @@ class _ListingRow(BaseModel):
     created_at: str | None = None
     wholesale: bool = False
     compare_at_ngwee: int | None = None
+    pricing_mode: str = "fixed"
+    currency_code: str = "ZMW"
 
 
 def haversine_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -415,6 +421,7 @@ _STANDALONE_LISTING_SELECT = (
     "id,product_id,title_override,price_ngwee,compare_at_ngwee,condition,product_class,"
     "sale_unit,unit_step_milli,min_steps,fulfilment_mode,lead_time_days,"
     "vendor_capacity_per_week,defect_notes,stock_mode,stock_qty,moq,wholesale,status,"
+    "pricing_mode,currency_code,"
     "vendors!inner("
     "id,slug,display_name,status,vendor_locations(landmark,lat,lng,created_at)"
     "),"
@@ -564,6 +571,8 @@ def get_standalone_listing(
         moq=int(row.get("moq") or 1),
         wholesale=bool(row.get("wholesale")),
         in_stock=_standalone_listing_in_stock(row),
+        pricing_mode=str(row.get("pricing_mode") or "fixed"),
+        currency_code=str(row.get("currency_code") or "ZMW"),
         vendor=StandaloneListingVendor(
             id=str(vendor["id"]),
             name=vendor_name,
@@ -581,7 +590,7 @@ def get_standalone_listing(
 _LISTING_ENRICHED_SELECT = (
     "id,vendor_id,product_id,condition,product_class,sale_unit,unit_step_milli,min_steps,"
     "fulfilment_mode,lead_time_days,vendor_capacity_per_week,stock_mode,stock_qty,moq,"
-    "created_at,status,wholesale,compare_at_ngwee,"
+    "created_at,status,wholesale,compare_at_ngwee,pricing_mode,currency_code,"
     "vendors!inner(id,slug,display_name,status,vendor_locations(landmark,created_at)),"
     "products(id,slug,name,status),"
     "listing_images(cloudinary_public_id,position)"
@@ -1140,6 +1149,8 @@ def list_catalog(
                 below_median=logistics["below_median"],
                 delivery_available=logistics["delivery_available"],
                 pickup_available=logistics["pickup_available"],
+                pricing_mode=row.listing.pricing_mode,
+                currency_code=row.listing.currency_code,
             )
         )
 

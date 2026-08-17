@@ -79,13 +79,20 @@ class FakeQuery:
 
 
 class FakeSupabaseClient:
-    def __init__(self, rows: list[dict[str, Any]]) -> None:
+    def __init__(
+        self,
+        rows: list[dict[str, Any]],
+        policies: list[dict[str, Any]] | None = None,
+    ) -> None:
         self._rows = rows
+        self._policies = policies or []
         self.db_calls = 0
 
     def table(self, name: str) -> FakeQuery:
-        assert name == "categories"
         self.db_calls += 1
+        if name == "category_product_policies":
+            return FakeQuery(list(self._policies))
+        assert name == "categories"
         return FakeQuery(list(self._rows))
 
 
@@ -124,11 +131,11 @@ def test_list_public_categories_uses_cache() -> None:
     store = InMemoryTtlCacheStore()
 
     first = list_public_categories(client, use_cache=True, store=store)
-    assert client.db_calls == 1
+    assert client.db_calls == 2
     assert len(first) == 2
 
     second = list_public_categories(client, use_cache=True, store=store)
-    assert client.db_calls == 1
+    assert client.db_calls == 2
     assert [row.model_dump() for row in second] == [row.model_dump() for row in first]
 
 
@@ -155,6 +162,16 @@ def test_categories_endpoint_sets_cache_control(categories_client: TestClient) -
     assert "s-maxage=3600" in cache_control
 
 
+def test_load_public_categories_hides_disabled_policy_rows() -> None:
+    client = FakeSupabaseClient(
+        SEED_CATEGORIES,
+        policies=[{"category_id": CHILD_ID, "enabled": False}],
+    )
+    categories = load_public_categories_from_db(client)
+    ids = {category.id for category in categories}
+    assert ids == {PARENT_ID}
+
+
 def test_categories_cache_key_and_ttl_constants() -> None:
-    assert CATEGORIES_CACHE_KEY == "public:categories:v1"
+    assert CATEGORIES_CACHE_KEY == "public:categories:v2"
     assert CATEGORIES_CACHE_TTL_SECONDS == 3600

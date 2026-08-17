@@ -32,6 +32,14 @@ def listing_lead_time_days(listing: dict[str, Any]) -> int | None:
     return None
 
 
+QUOTE_REQUIRED_PRICING_MODES = frozenset({"quote_only", "range"})
+
+
+def listing_requires_accepted_quote(listing: dict[str, Any]) -> bool:
+    """Range and quote-only listings cannot enter checkout at the listed price."""
+    return str(listing.get("pricing_mode") or "fixed") in QUOTE_REQUIRED_PRICING_MODES
+
+
 def validate_listing_purchasable_for_cart(
     *,
     listing: dict[str, Any],
@@ -40,6 +48,7 @@ def validate_listing_purchasable_for_cart(
     weekly_committed_qty: int = 0,
     location_id: str | None = None,
     customer_released: bool = True,
+    has_accepted_quote: bool = False,
 ) -> None:
     """Raise AppError when a listing fails class-specific cart rules."""
     product_class = str(listing.get("product_class") or "A")
@@ -52,6 +61,19 @@ def validate_listing_purchasable_for_cart(
                 "message_key": "cart.product_class_release_gated",
                 "listing_id": str(listing.get("id", "")),
                 "product_class": product_class,
+                "retry": False,
+            },
+        )
+
+    if listing_requires_accepted_quote(listing) and not has_accepted_quote:
+        raise AppError(
+            code="cart.quote_required",
+            message="This listing requires an accepted vendor quote before purchase",
+            http_status=400,
+            details={
+                "message_key": "cart.quote_required",
+                "listing_id": str(listing.get("id", "")),
+                "pricing_mode": str(listing.get("pricing_mode") or "fixed"),
                 "retry": False,
             },
         )

@@ -652,3 +652,16 @@ async def preferred_badge_tick(
         "revoked": revoked,
     }
 
+
+@router.post(
+    "/cancel-rate-suspend/tick",
+    dependencies=[Depends(require_internal_n8n_token)],
+)
+async def cancel_rate_suspend_tick(
+    supabase: Annotated[Any, Depends(get_supabase_client)],
+) -> dict[str, Any]:
+    from app.services.moderation.vendor_governance import run_cancel_rate_auto_suspend
+
+    result = run_cancel_rate_auto_suspend(supabase)
+    return {"ok": True, **result}
+

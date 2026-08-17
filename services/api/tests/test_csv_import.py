@@ -517,6 +517,29 @@ def test_suggest_matches_filters_below_threshold_and_caps_limit() -> None:
     assert len(capped) <= 3
 
 
+def test_unique_high_confidence_match_requires_single_winner() -> None:
+    from app.services.listings.canonical_match import (
+        CanonicalCandidate,
+        unique_high_confidence_match,
+    )
+
+    unique = [
+        CanonicalCandidate(product_id=PHONE_PRODUCT_ID, name="Itel A70 Smartphone"),
+        CanonicalCandidate(product_id=CHITENGE_PRODUCT_ID, name="Chitenge Fabric 6yd"),
+    ]
+    assert unique_high_confidence_match("Itel A70 Smartphone", unique) == PHONE_PRODUCT_ID
+    assert unique_high_confidence_match("something else entirely", unique) is None
+
+    twins = [
+        CanonicalCandidate(product_id=PHONE_PRODUCT_ID, name="Itel A70 Smartphone"),
+        CanonicalCandidate(
+            product_id="b0000000-0000-0000-0000-000000000099",
+            name="Itel A70 Smartphone",
+        ),
+    ]
+    assert unique_high_confidence_match("Itel A70 Smartphone", twins) is None
+
+
 # ---------------------------------------------------------------------------
 # product_id attach + preview (API)
 # ---------------------------------------------------------------------------

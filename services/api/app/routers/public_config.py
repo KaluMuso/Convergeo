@@ -100,3 +100,35 @@ async def get_public_commission_rates(
         rates=rates,
         updated_at=latest_updated_at or datetime.now(UTC),
     )
+
+
+class PublicFxRateResponse(StrictModel):
+    published: bool
+    stale: bool = True
+    rate_zmw_per_usd_micros: int | None = None
+    vendor_margin_bps: int | None = None
+    effective_at: datetime | None = None
+    expires_at: datetime | None = None
+    source: str | None = None
+
+
+@router.get("/fx-rate", response_model=PublicFxRateResponse)
+async def get_public_fx_rate(
+    response: Response,
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> PublicFxRateResponse:
+    from app.services.fx.rates import load_current_usd_zmw_rate
+
+    snapshot = load_current_usd_zmw_rate(service_client.client)
+    response.headers["Cache-Control"] = "public, s-maxage=60, stale-while-revalidate=30"
+    if snapshot is None:
+        return PublicFxRateResponse(published=False, stale=True)
+    return PublicFxRateResponse(
+        published=True,
+        stale=snapshot.stale,
+        rate_zmw_per_usd_micros=snapshot.rate_zmw_per_usd_micros,
+        vendor_margin_bps=snapshot.vendor_margin_bps,
+        effective_at=snapshot.effective_at,
+        expires_at=snapshot.expires_at,
+        source=snapshot.source,
+    )

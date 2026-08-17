@@ -108,3 +108,30 @@ def test_null_geo_hit_is_kept_and_unboosted() -> None:
     null_hit = next(h for h in result.results if h.entity_id == NULL_ID)
     assert null_hit.distance_km is None
     assert result.results[0].entity_id == NEAR_ID  # boosted near hit leads
+
+
+def test_class_c_proximity_weight_outranks_equal_class_a() -> None:
+    from app.services.search import SearchHit, _geo_rerank
+
+    class_a = SearchHit(
+        id=NEAR_ID,
+        entity_kind="product",
+        entity_id=NEAR_ID,
+        title="Class A",
+        rrf_score=1.0,
+        lat=LUSAKA[0],
+        lng=LUSAKA[1],
+        product_class="A",
+    )
+    class_c = SearchHit(
+        id=FAR_ID,
+        entity_kind="product",
+        entity_id=FAR_ID,
+        title="Class C",
+        rrf_score=1.0,
+        lat=LUSAKA[0],
+        lng=LUSAKA[1],
+        product_class="C",
+    )
+    ranked = _geo_rerank([class_a, class_c], user_lat=LUSAKA[0], user_lng=LUSAKA[1])
+    assert ranked[0].entity_id == FAR_ID

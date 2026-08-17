@@ -6,14 +6,10 @@ surfaces a rising cancel-rate to admins *before* it costs the badge, and there i
 no "critical" tier for egregious offenders. The Product-Strategy audit flagged
 this as F11 ("cancel-rate warn-5% / auto-suspend-10% not enforced").
 
-This module adds the **read-only governance signal** the v1 manual-moderation
-stance (§G IN — "manual admin moderation") was missing: it classifies every
-active vendor's cancel-rate into ``ok`` / ``warn`` (>= 5%) / ``critical`` (>= 10%)
-so an admin can review offenders and act with the *existing* manual controls
-(``/flags/{id}/warn-vendor`` and ``/flags/{id}/escalate-suspend``). It deliberately
-does **not** auto-suspend or mutate any vendor state — automated enforcement is a
-separate, decision-gated follow-up (the audit's Phase-2 pointer), and suspension
-already exists as a guarded manual action.
+This module classifies every vendor's cancel-rate into ``ok`` / ``warn``
+(>= 5%) / ``critical`` (>= 10%). Auto-suspension is a separate, **flag-gated**
+path (``cancel_rate_auto_suspend``, default off) so production stays on manual
+moderation until an operator explicitly enables it.
 
 Single source of truth: the **warn** threshold is imported from
 ``badge.MAX_CANCEL_RATE`` so this signal can never disagree with the D9 badge
@@ -149,3 +145,50 @@ def scan_vendor_governance(
         reverse=True,
     )
     return signals
+
+
+def _flag_enabled(client: Any, flag: str) -> bool:
+    try:
+        response = (
+            client.table("feature_flags")
+            .select("enabled")
+            .eq("flag", flag)
+            .maybe_single()
+            .execute()
+        )
+    except Exception:
+        return False
+    row = response.data if isinstance(getattr(response, "data", None), dict) else None
+    return bool(row and row.get("enabled") is True)
+
+
+def run_cancel_rate_auto_suspend(service_client: ServiceRoleClient) -> dict[str, Any]:
+    """Suspend active vendors at the critical cancel-rate when the flag is on.
+
+    Default-off. Manual reinstatement remains the recovery path.
+    """
+    client = service_client.client
+    if not _flag_enabled(client, "cancel_rate_auto_suspend"):
+        return {"enabled": False, "suspended_vendor_ids": [], "skipped": 0}
+
+    from app.routers.admin_flags import transition_vendor_suspend
+    from app.errors import AppError
+
+    signals = scan_vendor_governance(service_client, min_severity="critical")
+    suspended: list[str] = []
+    skipped = 0
+    for signal in signals:
+        if signal.status != "active":
+            skipped += 1
+            continue
+        try:
+            transition_vendor_suspend(service_client, vendor_id=signal.vendor_id)
+        except AppError:
+            skipped += 1
+            continue
+        suspended.append(signal.vendor_id)
+    return {
+        "enabled": True,
+        "suspended_vendor_ids": suspended,
+        "skipped": skipped,
+    }

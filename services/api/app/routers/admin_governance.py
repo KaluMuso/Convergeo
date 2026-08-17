@@ -17,8 +17,10 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, Protocol
 from uuid import UUID
 
+from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
 from app.deps import get_supabase_client
 from app.routers.admin_base import router as admin_router
+from app.routers.admin_flags import transition_vendor_reinstate
 from app.services.moderation.vendor_governance import (
     CRITICAL_CANCEL_RATE,
     MIN_ORDERS_FOR_SIGNAL,
@@ -96,6 +98,43 @@ async def list_vendor_governance(
         min_orders=MIN_ORDERS_FOR_SIGNAL,
         generated_at=datetime.now(UTC),
         vendors=[_to_item(signal) for signal in signals],
+    )
+
+
+class VendorReinstateResponse(BaseModel):
+    vendor_id: UUID
+    status: str
+
+
+@governance_router.post(
+    "/vendors/{vendor_id}/reinstate",
+    response_model=VendorReinstateResponse,
+)
+async def reinstate_vendor(
+    vendor_id: UUID,
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+    service_client: Annotated[ServiceRoleClient, Depends(get_supabase_client)],
+) -> VendorReinstateResponse:
+    vendor_id_str = str(vendor_id)
+    before = (
+        service_client.client.table("vendors")
+        .select("id, status")
+        .eq("id", vendor_id_str)
+        .maybe_single()
+        .execute()
+    )
+    before_row = before.data if isinstance(getattr(before, "data", None), dict) else None
+    updated = transition_vendor_reinstate(service_client, vendor_id=vendor_id_str)
+    recorder.record(
+        action="governance.vendor.reinstate",
+        entity_type="vendor",
+        entity_id=vendor_id_str,
+        before=before_row,
+        after={"id": updated.get("id"), "status": updated.get("status")},
+    )
+    return VendorReinstateResponse(
+        vendor_id=UUID(str(updated["id"])),
+        status=str(updated["status"]),
     )
 
 

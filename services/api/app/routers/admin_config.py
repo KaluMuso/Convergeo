@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from typing import Annotated, Any
+from datetime import datetime
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from app.core.admin_audit import AdminAuditRecorder, get_admin_audit_recorder
+from app.core.auth import CurrentUser, get_current_user
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.routers.admin_base import router as admin_router
@@ -811,6 +813,336 @@ async def reorder_categories(
         after={"categories": after_snapshot},
     )
     return updated
+
+
+# ---------------------------------------------------------------------------
+# FX rates, category product policy, Class-D release checklist
+# ---------------------------------------------------------------------------
+
+ALLOWED_PRODUCT_CLASSES = frozenset({"A", "B", "C", "D", "E"})
+
+
+class FxRateOut(BaseModel):
+    id: str
+    rate_zmw_per_usd_micros: int
+    vendor_margin_bps: int
+    source: str
+    source_reference: str | None = None
+    effective_at: datetime
+    expires_at: datetime
+    stale: bool
+
+
+class FxRatesResponse(BaseModel):
+    current: FxRateOut | None = None
+    history: list[FxRateOut] = Field(default_factory=list)
+
+
+class PublishFxRateRequest(BaseModel):
+    rate_zmw_per_usd_micros: int = Field(gt=0)
+    vendor_margin_bps: int = Field(default=0, ge=0, le=5000)
+    source: str = Field(min_length=1, max_length=160)
+    source_reference: str | None = Field(default=None, max_length=240)
+    effective_at: datetime
+    expires_at: datetime
+
+
+class CategoryPolicyOut(BaseModel):
+    category_id: str
+    category_name: str
+    path: str
+    phase: int
+    enabled: bool
+    allowed_product_classes: list[str]
+    minimum_kyc_tier: int | None = None
+    required_licence_types: list[str] = Field(default_factory=list)
+    evidence_requirements: dict[str, Any] = Field(default_factory=dict)
+    high_risk: bool = False
+
+
+class CategoryPolicyPatch(BaseModel):
+    phase: int | None = Field(default=None, ge=1, le=3)
+    enabled: bool | None = None
+    allowed_product_classes: list[Literal["A", "B", "C", "D", "E"]] | None = None
+    minimum_kyc_tier: int | None = Field(default=None, ge=1, le=3)
+    required_licence_types: list[str] | None = None
+    evidence_requirements: dict[str, Any] | None = None
+    high_risk: bool | None = None
+
+
+class ClassDReadinessResponse(BaseModel):
+    customer_release: bool
+    operations_approved: bool
+    escrow_hours: int
+    shopper_visible: bool
+
+
+def _fx_out(snapshot: Any) -> FxRateOut:
+    return FxRateOut(
+        id=snapshot.rate_id,
+        rate_zmw_per_usd_micros=snapshot.rate_zmw_per_usd_micros,
+        vendor_margin_bps=snapshot.vendor_margin_bps,
+        source=snapshot.source,
+        source_reference=snapshot.source_reference,
+        effective_at=snapshot.effective_at,
+        expires_at=snapshot.expires_at,
+        stale=snapshot.stale,
+    )
+
+
+def _policy_classes(raw: Any) -> list[str]:
+    if not isinstance(raw, list):
+        return ["A", "B"]
+    classes = [str(item).strip().upper() for item in raw if str(item).strip()]
+    return [item for item in classes if item in ALLOWED_PRODUCT_CLASSES] or ["A", "B"]
+
+
+@config_router.get("/fx-rates", response_model=FxRatesResponse)
+async def list_fx_rates(
+    service_client: Annotated[Any, Depends(get_supabase_client)],
+) -> FxRatesResponse:
+    from app.services.fx.rates import list_usd_zmw_rates, load_current_usd_zmw_rate
+
+    current = load_current_usd_zmw_rate(service_client.client)
+    history = list_usd_zmw_rates(service_client.client)
+    return FxRatesResponse(
+        current=_fx_out(current) if current is not None else None,
+        history=[_fx_out(item) for item in history],
+    )
+
+
+@config_router.post("/fx-rates", response_model=FxRateOut)
+async def publish_fx_rate(
+    body: PublishFxRateRequest,
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
+) -> FxRateOut:
+    from app.services.fx.rates import load_current_usd_zmw_rate, publish_usd_zmw_rate
+
+    before = load_current_usd_zmw_rate(service_client.client)
+    published = publish_usd_zmw_rate(
+        service_client.client,
+        rate_zmw_per_usd_micros=body.rate_zmw_per_usd_micros,
+        vendor_margin_bps=body.vendor_margin_bps,
+        source=body.source,
+        source_reference=body.source_reference,
+        effective_at=body.effective_at,
+        expires_at=body.expires_at,
+        created_by=current_user.id,
+    )
+    _audit_mutation(
+        recorder,
+        action="config.fx_rate.publish",
+        entity_type="fx_rate",
+        entity_id=published.rate_id,
+        before=_fx_out(before).model_dump(mode="json") if before is not None else None,
+        after=_fx_out(published).model_dump(mode="json"),
+    )
+    return _fx_out(published)
+
+
+@config_router.get("/category-policies", response_model=list[CategoryPolicyOut])
+async def list_category_policies(
+    service_client: Annotated[Any, Depends(get_supabase_client)],
+) -> list[CategoryPolicyOut]:
+    categories = _load_categories(service_client)
+    response = (
+        _table(service_client, "category_product_policies")
+        .select(
+            "category_id, phase, enabled, allowed_product_classes, minimum_kyc_tier, "
+            "required_licence_types, evidence_requirements, high_risk"
+        )
+        .execute()
+    )
+    rows = response.data if isinstance(response.data, list) else []
+    by_id: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if isinstance(row, dict) and isinstance(row.get("category_id"), str):
+            by_id[str(row["category_id"])] = row
+
+    out: list[CategoryPolicyOut] = []
+    for category in categories:
+        category_id = str(category["id"])
+        policy = by_id.get(category_id, {})
+        out.append(
+            CategoryPolicyOut(
+                category_id=category_id,
+                category_name=str(category.get("name") or ""),
+                path=str(category.get("path") or ""),
+                phase=int(policy.get("phase") or 1),
+                enabled=bool(policy["enabled"]) if "enabled" in policy else True,
+                allowed_product_classes=_policy_classes(policy.get("allowed_product_classes")),
+                minimum_kyc_tier=(
+                    int(policy["minimum_kyc_tier"])
+                    if isinstance(policy.get("minimum_kyc_tier"), int)
+                    else None
+                ),
+                required_licence_types=(
+                    [str(item) for item in policy["required_licence_types"]]
+                    if isinstance(policy.get("required_licence_types"), list)
+                    else []
+                ),
+                evidence_requirements=(
+                    policy["evidence_requirements"]
+                    if isinstance(policy.get("evidence_requirements"), dict)
+                    else {}
+                ),
+                high_risk=bool(policy.get("high_risk")),
+            )
+        )
+    return out
+
+
+@config_router.patch(
+    "/category-policies/{category_id}",
+    response_model=CategoryPolicyOut,
+)
+async def patch_category_policy(
+    category_id: UUID,
+    body: CategoryPolicyPatch,
+    recorder: Annotated[AdminAuditRecorder, Depends(get_admin_audit_recorder)],
+    service_client: Annotated[Any, Depends(get_supabase_client)],
+) -> CategoryPolicyOut:
+    category_id_str = str(category_id)
+    category = _single_row(
+        _table(service_client, "categories")
+        .select("id,name,path")
+        .eq("id", category_id_str)
+        .execute()
+        .data,
+        entity="category",
+        key=category_id_str,
+    )
+    existing_response = (
+        _table(service_client, "category_product_policies")
+        .select(
+            "category_id, phase, enabled, allowed_product_classes, minimum_kyc_tier, "
+            "required_licence_types, evidence_requirements, high_risk"
+        )
+        .eq("category_id", category_id_str)
+        .execute()
+    )
+    existing_rows = existing_response.data if isinstance(existing_response.data, list) else []
+    existing = existing_rows[0] if existing_rows and isinstance(existing_rows[0], dict) else None
+    patch: dict[str, Any] = {}
+    if body.phase is not None:
+        patch["phase"] = body.phase
+    if body.enabled is not None:
+        patch["enabled"] = body.enabled
+    if body.allowed_product_classes is not None:
+        patch["allowed_product_classes"] = list(body.allowed_product_classes)
+    if body.minimum_kyc_tier is not None:
+        patch["minimum_kyc_tier"] = body.minimum_kyc_tier
+    if body.required_licence_types is not None:
+        patch["required_licence_types"] = body.required_licence_types
+    if body.evidence_requirements is not None:
+        patch["evidence_requirements"] = body.evidence_requirements
+    if body.high_risk is not None:
+        patch["high_risk"] = body.high_risk
+    if not patch:
+        raise AppError(
+            code="validation_error",
+            message="No fields to update",
+            http_status=400,
+        )
+
+    if existing is None:
+        payload = {
+            "category_id": category_id_str,
+            "phase": patch.get("phase", 1),
+            "enabled": patch.get("enabled", False),
+            "allowed_product_classes": patch.get("allowed_product_classes", ["A", "B"]),
+            "minimum_kyc_tier": patch.get("minimum_kyc_tier"),
+            "required_licence_types": patch.get("required_licence_types", []),
+            "evidence_requirements": patch.get("evidence_requirements", {}),
+            "high_risk": patch.get("high_risk", False),
+        }
+        _table(service_client, "category_product_policies").insert(payload).execute()
+        after = payload
+    else:
+        _table(service_client, "category_product_policies").update(patch).eq(
+            "category_id", category_id_str
+        ).execute()
+        after = {**existing, **patch}
+
+    _audit_mutation(
+        recorder,
+        action="config.category_policy.update",
+        entity_type="category_product_policy",
+        entity_id=category_id_str,
+        before=existing,
+        after=after,
+    )
+    return CategoryPolicyOut(
+        category_id=category_id_str,
+        category_name=str(category.get("name") or ""),
+        path=str(category.get("path") or ""),
+        phase=int(after.get("phase") or 1),
+        enabled=bool(after.get("enabled")),
+        allowed_product_classes=_policy_classes(after.get("allowed_product_classes")),
+        minimum_kyc_tier=(
+            int(after["minimum_kyc_tier"])
+            if isinstance(after.get("minimum_kyc_tier"), int)
+            else None
+        ),
+        required_licence_types=(
+            [str(item) for item in after["required_licence_types"]]
+            if isinstance(after.get("required_licence_types"), list)
+            else []
+        ),
+        evidence_requirements=(
+            after["evidence_requirements"]
+            if isinstance(after.get("evidence_requirements"), dict)
+            else {}
+        ),
+        high_risk=bool(after.get("high_risk")),
+    )
+
+
+@config_router.get("/class-d-readiness", response_model=ClassDReadinessResponse)
+async def get_class_d_readiness(
+    service_client: Annotated[Any, Depends(get_supabase_client)],
+) -> ClassDReadinessResponse:
+    flags = (
+        _table(service_client, "feature_flags")
+        .select("flag, enabled")
+        .in_(
+            "flag",
+            [
+                "product_class_d_customer_release",
+                "product_class_d_operations_approved",
+            ],
+        )
+        .execute()
+    )
+    enabled = {
+        str(row.get("flag"))
+        for row in (flags.data if isinstance(flags.data, list) else [])
+        if isinstance(row, dict) and row.get("enabled") is True
+    }
+    config = (
+        _table(service_client, "platform_config")
+        .select("key, value")
+        .eq("key", "product_class_d_escrow_hours")
+        .execute()
+    )
+    escrow_hours = 72
+    config_rows = config.data if isinstance(config.data, list) else []
+    if config_rows and isinstance(config_rows[0], dict):
+        raw = config_rows[0].get("value")
+        if isinstance(raw, int):
+            escrow_hours = raw
+        elif isinstance(raw, str) and raw.isdigit():
+            escrow_hours = int(raw)
+    customer_release = "product_class_d_customer_release" in enabled
+    operations_approved = "product_class_d_operations_approved" in enabled
+    return ClassDReadinessResponse(
+        customer_release=customer_release,
+        operations_approved=operations_approved,
+        escrow_hours=escrow_hours,
+        shopper_visible=customer_release and operations_approved,
+    )
 
 
 # Mount on admin_base so authz + audit route class apply automatically.

@@ -434,6 +434,40 @@ def transition_vendor_suspend(
     return updated[0]
 
 
+def transition_vendor_reinstate(
+    service_client: ServiceRoleClient,
+    *,
+    vendor_id: str,
+) -> dict[str, Any]:
+    vendor = _load_vendor_row(service_client, vendor_id)
+    from_status = str(vendor["status"])
+    if from_status == "active":
+        return vendor
+    if from_status != "suspended":
+        raise AppError(
+            code="vendor_not_reinstatable",
+            message="Only suspended vendors can be reinstated",
+            http_status=409,
+            details={"vendor_id": vendor_id, "status": from_status},
+        )
+    response = (
+        _table(service_client, "vendors")
+        .update({"status": "active"})
+        .eq("id", vendor_id)
+        .eq("status", "suspended")
+        .execute()
+    )
+    updated = _rows(response)
+    if not updated:
+        raise AppError(
+            code="vendor_transition_conflict",
+            message="Vendor status changed concurrently",
+            http_status=409,
+            details={"vendor_id": vendor_id},
+        )
+    return updated[0]
+
+
 def _enqueue_notification(
     service_client: ServiceRoleClient,
     *,

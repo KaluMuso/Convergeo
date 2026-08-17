@@ -519,6 +519,7 @@ def _enforce_listing_cart_rules(
     qty: int,
     *,
     location_id: str | None = None,
+    has_accepted_quote: bool = False,
 ) -> None:
     service = service_db_client()
     listing_id = str(listing["id"])
@@ -558,6 +559,7 @@ def _enforce_listing_cart_rules(
         weekly_committed_qty=weekly_committed,
         location_id=location_id,
         customer_released=customer_released,
+        has_accepted_quote=has_accepted_quote,
     )
 
 
@@ -756,7 +758,12 @@ async def update_cart_item(
         unit_price, wholesale = validate_item_qty_for_listing(
             listing=listing, qty=body.qty, business_eligible=business_eligible
         )
-    _enforce_listing_cart_rules(listing, body.qty, location_id=location_id)
+    _enforce_listing_cart_rules(
+        listing,
+        body.qty,
+        location_id=location_id,
+        has_accepted_quote=rfq_thread_id is not None,
+    )
 
     # Service client for the same reason as add_cart_item: 0086 revoked client
     # writes on cart_items, and the price columns must come from this API's
@@ -1084,7 +1091,9 @@ async def accept_rfq_into_cart(
         delivery_lat=body.delivery_lat,
         delivery_lng=body.delivery_lng,
     )
-    _enforce_listing_cart_rules(listing, body.qty, location_id=location_id)
+    _enforce_listing_cart_rules(
+        listing, body.qty, location_id=location_id, has_accepted_quote=True
+    )
 
     client = _db_client_for_owner(
         owner,

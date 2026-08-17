@@ -66,6 +66,9 @@ class SearchHit(StrictModel):
     # Whether any branch of the resolved vendor is open now (Africa/Lusaka clock).
     # ``None`` when hours are not published — never treated as closed.
     is_open_now: bool | None = None
+    # Listing/product class used for Class-C proximity weighting. Absent on
+    # non-catalogue hits.
+    product_class: str | None = None
 
 
 class SearchKindTotals(StrictModel):
@@ -293,20 +296,25 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
     event_ids = [hit.entity_id for hit in hits if hit.entity_kind == "event"]
 
     product_slugs: dict[str, str] = {}
+    product_classes: dict[str, str] = {}
     listing_slugs: dict[str, str] = {}
+    listing_classes: dict[str, str] = {}
     routable_listing_ids: set[str] = set()
     vendor_slugs: dict[str, str] = {}
     event_slugs: dict[str, str] = {}
 
     if product_ids:
         response = (
-            client.table("products").select("id, slug").in_("id", product_ids).execute()
+            client.table("products").select("id, slug, product_class").in_("id", product_ids).execute()
         )
         for row in _rows(response):
             entity_id = row.get("id")
             row_slug = row.get("slug")
             if entity_id and isinstance(row_slug, str) and row_slug.strip():
                 product_slugs[str(entity_id)] = row_slug.strip()
+            product_class = row.get("product_class")
+            if entity_id and isinstance(product_class, str) and product_class.strip():
+                product_classes[str(entity_id)] = product_class.strip()
 
     if listing_ids:
         released_listing_classes = _customer_released_listing_classes(client)
@@ -328,6 +336,7 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
             if str(row.get("product_class") or "A") not in released_listing_classes:
                 continue
             listing_id = str(entity_id)
+            listing_classes[listing_id] = str(row.get("product_class") or "A")
             if row.get("product_id") is None:
                 # A true standalone listing deliberately has no canonical slug;
                 # the customer routes it by listing UUID at /l/{id}. The
@@ -385,7 +394,12 @@ def attach_route_slugs(client: Any, hits: list[SearchHit]) -> list[SearchHit]:
             route_slug = hit.entity_id
         else:
             route_slug = None
-        enriched.append(hit.model_copy(update={"slug": route_slug}))
+        product_class = None
+        if hit.entity_kind == "listing":
+            product_class = listing_classes.get(hit.entity_id)
+        elif hit.entity_kind == "product":
+            product_class = product_classes.get(hit.entity_id)
+        enriched.append(hit.model_copy(update={"slug": route_slug, "product_class": product_class}))
     return enriched
 
 
@@ -407,6 +421,7 @@ def log_zero_result(*, query: str, filters: dict[str, Any], kind: SearchKind | N
 # relevant hit outrank a near, strongly relevant one.
 _GEO_DECAY_KM = 12.0  # distance at which the proximity factor falls to ~1/e
 _GEO_WEIGHT = 0.5  # max fractional uplift for a co-located hit
+_GEO_CLASS_C_WEIGHT_MULTIPLIER = 2.5  # strategy: 2–3× Class C proximity
 _EARTH_RADIUS_KM = 6371.0088
 
 
@@ -433,7 +448,10 @@ def _geo_rerank(
             distance = _haversine_km(user_lat, user_lng, hit.lat, hit.lng)
             hit.distance_km = round(distance, 3)
             geo_factor = math.exp(-distance / _GEO_DECAY_KM)  # (0, 1]
-            blended = hit.rrf_score * (1.0 + _GEO_WEIGHT * geo_factor)
+            geo_weight = _GEO_WEIGHT
+            if hit.product_class == "C":
+                geo_weight *= _GEO_CLASS_C_WEIGHT_MULTIPLIER
+            blended = hit.rrf_score * (1.0 + geo_weight * geo_factor)
         scored.append((blended, idx, hit))
     scored.sort(key=lambda item: (-item[0], item[1]))
     return [hit for _blended, _idx, hit in scored]

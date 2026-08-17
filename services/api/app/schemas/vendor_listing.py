@@ -10,10 +10,36 @@ from app.schemas.base import NgweeInt, StrictModel
 
 ProductClass = Literal["A", "B", "C", "D", "E"]
 ListingCondition = Literal["new", "refurbished", "used"]
+ConditionDetail = Literal[
+    "new",
+    "open_box",
+    "refurbished",
+    "used_excellent",
+    "used_good",
+    "used_fair",
+    "parts_not_working",
+]
+PricingMode = Literal["fixed", "measured", "bundle", "tiered", "range", "from", "quote_only"]
 SaleUnit = Literal["each", "metre", "kg", "litre", "bag", "sqm"]
 FulfilmentMode = Literal["stocked", "made_to_order"]
 StockMode = Literal["tracked", "always_available"]
 ListingLifecycleStatus = Literal["draft", "active", "paused"]
+
+
+def coarse_condition_from_detail(detail: ConditionDetail) -> ListingCondition:
+    if detail == "new":
+        return "new"
+    if detail in {"open_box", "refurbished"}:
+        return "refurbished"
+    return "used"
+
+
+def default_condition_detail(condition: ListingCondition) -> ConditionDetail:
+    if condition == "new":
+        return "new"
+    if condition == "refurbished":
+        return "refurbished"
+    return "used_good"
 
 
 class VendorListingEvidenceImage(StrictModel):
@@ -32,6 +58,8 @@ class VendorListing(StrictModel):
     product_class: ProductClass = "A"
     status: ListingLifecycleStatus = "active"
     condition: ListingCondition
+    condition_detail: ConditionDetail | None = None
+    pricing_mode: PricingMode = "fixed"
     sale_unit: SaleUnit = "each"
     unit_step_milli: int = Field(default=1000, ge=1)
     min_steps: int = Field(default=1, ge=1)
@@ -60,6 +88,28 @@ class VendorListing(StrictModel):
             raise ValueError("each listings require unit_step_milli equal to 1000")
         if self.sale_unit != "each" and self.wholesale:
             raise ValueError("per-measure wholesale listings are not supported")
+
+        detail = self.condition_detail
+        if detail is None:
+            derived: ConditionDetail = (
+                "new"
+                if self.condition == "new"
+                else "refurbished"
+                if self.condition == "refurbished"
+                else "used_good"
+            )
+            self = self.model_copy(update={"condition_detail": derived})
+            detail = derived
+        else:
+            coarse: ListingCondition = (
+                "new"
+                if detail == "new"
+                else "refurbished"
+                if detail in {"open_box", "refurbished"}
+                else "used"
+            )
+            if coarse != self.condition:
+                self = self.model_copy(update={"condition": coarse})
 
         if self.condition == "used":
             if self.defect_notes is None or len(self.defect_notes.strip()) < 10:

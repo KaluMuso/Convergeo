@@ -237,6 +237,77 @@ def _reserve_quota(
     return QuotaReservation(id=reservation_id)
 
 
+def _enforce_maturity_gate(*, client: ServiceClient) -> None:
+    """Refuse Ask when the data-maturity flag is on and completed orders are low.
+
+    The flag defaults off so live Ask is unchanged until an operator enables it.
+    """
+    try:
+        flag_response = (
+            client.table("feature_flags")
+            .select("enabled")
+            .eq("flag", "ask_maturity_gate")
+            .maybe_single()
+            .execute()
+        )
+    except Exception:
+        return
+    flag_row = (
+        flag_response.data if isinstance(getattr(flag_response, "data", None), dict) else None
+    )
+    if flag_row is None or flag_row.get("enabled") is not True:
+        return
+
+    threshold = 10_000
+    try:
+        config_response = (
+            client.table("platform_config")
+            .select("value")
+            .eq("key", "ask_min_completed_orders")
+            .maybe_single()
+            .execute()
+        )
+        config_row = (
+            config_response.data
+            if isinstance(getattr(config_response, "data", None), dict)
+            else None
+        )
+        raw = config_row.get("value") if config_row else None
+        if isinstance(raw, int) and raw > 0:
+            threshold = raw
+        elif isinstance(raw, str) and raw.isdigit():
+            threshold = int(raw)
+    except Exception:
+        pass
+
+    try:
+        count_response = (
+            client.table("orders")
+            .select("id", count="exact")
+            .eq("status", "completed")
+            .limit(1)
+            .execute()
+        )
+        completed = getattr(count_response, "count", None)
+        if not isinstance(completed, int):
+            rows = count_response.data if isinstance(count_response.data, list) else []
+            completed = len(rows)
+    except Exception:
+        raise _quota_error(
+            code="ai_maturity_gate",
+            i18n_key="ai.quota.maturityGate",
+            http_status=503,
+        ) from None
+
+    if completed < threshold:
+        raise _quota_error(
+            code="ai_maturity_gate",
+            i18n_key="ai.quota.maturityGate",
+            http_status=503,
+            details={"completed_orders": completed, "required": threshold},
+        )
+
+
 def check_and_reserve(
     *,
     client: ServiceClient | None = None,
@@ -249,6 +320,7 @@ def check_and_reserve(
     service = client or _service_client()
 
     raise_if_killed(client=service)
+    _enforce_maturity_gate(client=service)
     _screen_abuse(
         client=service,
         question=question,

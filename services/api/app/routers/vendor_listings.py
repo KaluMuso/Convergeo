@@ -9,12 +9,16 @@ from app.deps import get_supabase_client
 from app.errors import AppError
 from app.schemas.base import NgweeInt, StrictModel
 from app.schemas.vendor_listing import (
+    ConditionDetail,
     FulfilmentMode,
     ListingCondition,
+    PricingMode,
     ProductClass,
     SaleUnit,
     StockMode,
     VendorListing,
+    coarse_condition_from_detail,
+    default_condition_detail,
 )
 from app.services.kyc.caps import VendorCapLimits, require_listing_cap
 from app.services.kyc.state_machine import ServiceRoleClient
@@ -47,6 +51,8 @@ class ListingCreateRequest(StrictModel):
     compare_at_ngwee: NgweeInt | None = None
     product_class: ProductClass = "A"
     condition: ListingCondition
+    condition_detail: ConditionDetail | None = None
+    pricing_mode: PricingMode = "fixed"
     sale_unit: SaleUnit = "each"
     unit_step_milli: int = Field(default=1000, ge=1)
     min_steps: int = Field(default=1, ge=1)
@@ -98,6 +104,8 @@ class ListingCreateRequest(StrictModel):
             product_class=self.product_class,
             status=status,
             condition=self.condition,
+            condition_detail=self.condition_detail,
+            pricing_mode=self.pricing_mode,
             sale_unit=self.sale_unit,
             unit_step_milli=self.unit_step_milli,
             min_steps=self.min_steps,
@@ -558,7 +566,13 @@ def create_listing_for_vendor(
         "price_ngwee": body.price_ngwee,
         "compare_at_ngwee": body.compare_at_ngwee,
         "product_class": body.product_class,
-        "condition": body.condition,
+        "condition": (
+            coarse_condition_from_detail(body.condition_detail)
+            if body.condition_detail
+            else body.condition
+        ),
+        "condition_detail": body.condition_detail or default_condition_detail(body.condition),
+        "pricing_mode": body.pricing_mode,
         "sale_unit": body.sale_unit,
         "unit_step_milli": body.unit_step_milli,
         "min_steps": body.min_steps,

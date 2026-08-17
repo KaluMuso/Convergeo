@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 
 from app.errors import AppError
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
+from app.services.fx.rates import build_order_fx_snapshot, require_fresh_usd_zmw_rate
 from app.services.notifications.dedupe import build_dedupe_key
 from app.services.orders.audit import sql_literal
 from app.services.orders.state import OrderStatus
@@ -378,6 +379,25 @@ def _load_listing_commission_keys(client: Any, listing_ids: list[str]) -> dict[s
     return keys
 
 
+def _listings_use_usd(client: Any, listing_ids: list[str]) -> bool:
+    if not listing_ids:
+        return False
+    response = (
+        client.table("vendor_listings")
+        .select("id, currency_code")
+        .in_("id", listing_ids)
+        .execute()
+    )
+    rows = response.data if isinstance(response.data, list) else []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        code = str(row.get("currency_code") or "ZMW").strip().upper()
+        if code == "USD":
+            return True
+    return False
+
+
 def _build_commission_snapshot(
     *,
     lines: list[CartLineInput],
@@ -667,6 +687,10 @@ def create_orders_atomic(
     commission_keys = _load_listing_commission_keys(client, listing_ids)
     product_ids = _load_product_ids(client, listing_ids)
 
+    used_usd = _listings_use_usd(client, listing_ids)
+    fx_rate = require_fresh_usd_zmw_rate(client) if used_usd else None
+    fx_snapshot = build_order_fx_snapshot(used_usd=used_usd, rate=fx_rate)
+
     cod = payment_method == "cod"
     planned_orders: list[tuple[CreatedOrder, list[CartLineInput]]] = []
     for vendor_id in sorted(groups_by_vendor):
@@ -720,15 +744,16 @@ def create_orders_atomic(
         zone_sql = sql_literal(order.delivery_zone) if order.delivery_zone is not None else "NULL"
         address_sql = sql_uuid(address_id, "address_id") if address_id is not None else "NULL"
         snapshot_sql = _sql_json(order.commission_snapshot)
+        fx_sql = _sql_json(fx_snapshot)
         statements.append(
             f"""
 INSERT INTO public.orders (
   id, checkout_group_id, vendor_id, customer_id, status, fulfilment,
-  delivery_zone, address_id, delivery_fee_ngwee, cod, commission_snapshot
+  delivery_zone, address_id, delivery_fee_ngwee, cod, commission_snapshot, fx_snapshot
 ) VALUES (
   {order_sql}, {session_sql}, {vendor_sql}, {customer_sql}, '{status_placed}',
   '{order.fulfilment}', {zone_sql}, {address_sql}, {order.delivery_fee_ngwee},
-  {"true" if order.cod else "false"}, {snapshot_sql}::jsonb
+  {"true" if order.cod else "false"}, {snapshot_sql}::jsonb, {fx_sql}::jsonb
 );
 """
         )

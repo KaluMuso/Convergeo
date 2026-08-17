@@ -74,6 +74,8 @@ class ListingResponse(BaseModel):
     lead_time_days: int | None = None
     vendor_capacity_per_week: int | None = None
     defect_notes: str | None = None
+    pricing_mode: str = "fixed"
+    currency_code: str = "ZMW"
     vendor: VendorSummaryResponse
     images: list[ProductImageResponse] = Field(default_factory=list)
 
@@ -392,6 +394,7 @@ def build_product_detail(
             "id, title_override, price_ngwee, condition, product_class, stock_mode, stock_qty, "
             "moq, wholesale, status, sale_unit, unit_step_milli, min_steps, "
             "fulfilment_mode, lead_time_days, vendor_capacity_per_week, defect_notes, "
+            "pricing_mode, currency_code, "
             "vendors!inner("
             "id, slug, display_name, preferred_badge, status, "
             "vendor_locations(landmark, lat, lng)"
@@ -526,6 +529,8 @@ def build_product_detail(
                 defect_notes=(
                     str(row["defect_notes"]) if row.get("defect_notes") else None
                 ),
+                pricing_mode=str(row.get("pricing_mode") or "fixed"),
+                currency_code=str(row.get("currency_code") or "ZMW"),
                 vendor=_parse_vendor_row(
                     vendor_raw,
                     rating_avg=rating_avg,

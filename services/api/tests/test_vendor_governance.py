@@ -46,6 +46,7 @@ class _FakeQuery:
     def __init__(self, rows: list[dict[str, Any]]) -> None:
         self._rows = rows
         self._filters: list[tuple[str, Any]] = []
+        self._maybe_single = False
 
     def select(self, *_args: Any, **_kwargs: Any) -> _FakeQuery:
         return self
@@ -54,12 +55,18 @@ class _FakeQuery:
         self._filters.append((column, value))
         return self
 
-    def execute(self) -> _FakeResult:
+    def maybe_single(self) -> _FakeQuery:
+        self._maybe_single = True
+        return self
+
+    def execute(self) -> Any:
         rows = [
             row
             for row in self._rows
             if all(row.get(col) == val for col, val in self._filters)
         ]
+        if self._maybe_single:
+            return type("Result", (), {"data": rows[0] if rows else None})()
         return _FakeResult(rows)
 
 
@@ -252,3 +259,14 @@ def test_endpoint_rejects_non_admin() -> None:
         response = client.get("/admin/governance/vendors")
     app.dependency_overrides.clear()
     assert response.status_code == 403
+
+
+def test_auto_suspend_is_noop_when_flag_is_off() -> None:
+    from app.services.moderation.vendor_governance import run_cancel_rate_auto_suspend
+
+    client = _FakeClient()
+    _seed(client)
+    result = run_cancel_rate_auto_suspend(_FakeWrapper(client))
+    assert result["enabled"] is False
+    assert result["suspended_vendor_ids"] == []
+    assert all(row["status"] == "active" for row in client.tables["vendors"].rows if row["id"] == V_CRIT)

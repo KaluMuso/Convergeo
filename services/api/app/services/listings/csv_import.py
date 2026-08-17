@@ -4,7 +4,7 @@ import csv
 import io
 import json
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Literal, Protocol, cast
 
 from app.services.kyc.caps import LISTING_COUNT_STATUSES, VendorCapLimits
@@ -12,6 +12,7 @@ from app.services.listings.canonical_match import (
     CanonicalCandidate,
     load_active_candidates,
     suggest_matches,
+    unique_high_confidence_match,
 )
 from app.services.moderation.prohibited import screen_listing
 
@@ -480,7 +481,8 @@ def import_listing_rows(
     rejected = 0
 
     sku_map = _load_existing_sku_map(client, vendor_id)
-    valid_product_ids = {candidate.product_id for candidate in load_active_candidates(client)}
+    candidates = load_active_candidates(client)
+    valid_product_ids = {candidate.product_id for candidate in candidates}
     cap_slots_used = limits.listing_count
     max_listings = limits.quota.max_listings
     seen_skus_in_file: set[str] = set()
@@ -534,6 +536,10 @@ def import_listing_rows(
             )
             continue
 
+        attached_product_id = parsed.product_id
+        if attached_product_id is None:
+            attached_product_id = unique_high_confidence_match(parsed.title, candidates)
+
         existing = sku_map.get(sku)
         is_new = existing is None
         if is_new and _counts_toward_cap(parsed.status):
@@ -551,7 +557,9 @@ def import_listing_rows(
                 continue
             cap_slots_used += 1
 
-        payload = _listing_payload(vendor_id, parsed)
+        payload = _listing_payload(
+            vendor_id, replace(parsed, product_id=attached_product_id)
+        )
 
         try:
             if existing is not None:

@@ -3,10 +3,13 @@
 Given a vendor's listing title, suggest existing canonical products it might
 attach to, so a bulk-imported listing can join the price-comparison view
 ("N vendors selling this product") instead of living as an unattached
-standalone listing. Matches are SUGGESTIONS only — a listing is never
-auto-attached; the vendor confirms in the import preview or supplies an
-explicit `product_id` column. This mirrors the "admin confirms every merge"
-moderation stance (M13-P03).
+standalone listing.
+
+High-confidence unique matches (score ≥ 0.95, exactly one winner) are
+auto-attached on import. Ambiguous or weaker matches remain suggestions in the
+preview — the vendor still confirms or supplies an explicit ``product_id``.
+This does **not** auto-approve new canonical products.
+"""
 
 The trigram similarity mirrors PostgreSQL `pg_trgm.similarity(text, text)`
 (same algorithm as `app.routers.admin_products.pg_trgm_similarity`, kept as a
@@ -23,6 +26,7 @@ DEFAULT_SUGGESTION_LIMIT = 3
 # An exact (normalized) alias hit is a strong signal even when the trigram
 # overlap of the surface strings is modest.
 ALIAS_EXACT_SCORE = 0.95
+AUTO_ATTACH_MIN_SCORE = 0.95
 
 
 class _TableClient(Protocol):
@@ -101,6 +105,23 @@ def suggest_matches(
     # Deterministic order: score desc, then name for stable ties.
     scored.sort(key=lambda item: (-item.score, item.name))
     return scored[:limit]
+
+
+def unique_high_confidence_match(
+    title: str,
+    candidates: list[CanonicalCandidate],
+) -> str | None:
+    """Return a product_id only when exactly one match scores ≥ 0.95."""
+    matches = suggest_matches(
+        title,
+        candidates,
+        limit=DEFAULT_SUGGESTION_LIMIT,
+        threshold=AUTO_ATTACH_MIN_SCORE,
+    )
+    winners = [item for item in matches if item.score >= AUTO_ATTACH_MIN_SCORE]
+    if len(winners) != 1:
+        return None
+    return winners[0].product_id
 
 
 def load_active_candidates(client: _TableClient) -> list[CanonicalCandidate]:
