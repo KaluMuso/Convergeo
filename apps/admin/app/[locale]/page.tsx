@@ -1,5 +1,5 @@
 import { LOCALES, loadNamespace, type Locale } from "@vergeo/i18n";
-import { createTranslator } from "next-intl";
+import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 
 import { DashboardBoard } from "./_components/DashboardBoard";
@@ -7,6 +7,8 @@ import { DashboardBoard } from "./_components/DashboardBoard";
 type PageProps = {
   params: Promise<{ locale: string }>;
 };
+
+type DashboardTranslator = (key: string) => string;
 
 export function generateStaticParams() {
   return LOCALES.map((locale) => ({ locale }));
@@ -18,9 +20,9 @@ export default async function HomePage({ params }: PageProps) {
   const adminMessages = await loadNamespace(locale as Locale, "admin");
   const t = createTranslator({
     locale,
-    messages: { admin: adminMessages },
+    messages: { admin: adminMessages } as AbstractIntlMessages,
     namespace: "admin.dashboard",
-  });
+  }) as unknown as DashboardTranslator;
 
   return (
     <div className="space-y-4">
