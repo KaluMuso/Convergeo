@@ -1,9 +1,10 @@
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 
-import type { ListingViewSurface } from "../../../../../lib/listing-view-telemetry";
 import { shouldShowSampleListingBadge } from "../demo-listing";
 
 import { ListingCard, type ListingCardLabels } from "./listing-card";
+
+import type { ListingViewSurface } from "../../../../../lib/listing-view-telemetry";
 
 export type CatalogListing = {
   id: string;
