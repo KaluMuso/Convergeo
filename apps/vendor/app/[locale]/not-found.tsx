@@ -1,7 +1,6 @@
+import { DEFAULT_LOCALE, loadNamespace } from "@vergeo/i18n";
 import Link from "next/link";
 import { createTranslator } from "next-intl";
-
-import { DEFAULT_LOCALE, loadNamespace } from "@vergeo/i18n";
 
 export default async function NotFound() {
   const [commonMessages, navMessages] = await Promise.all([

@@ -41,14 +41,18 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   }
 
   setRequestLocale(locale);
-  // Client chrome uses `vendor` and `nav`. The shared request config only ships
-  // `common`, which previously left login/chrome throwing MISSING_MESSAGE: nav.
-  const [baseMessages, vendorMessages, navMessages] = await Promise.all([
+  // Shared request config only ships `common`. Vendor chrome and feature pages
+  // also need `vendor`, `nav`, `services`, and `events`.
+  const [baseMessages, extra] = await Promise.all([
     getMessages(),
-    loadNamespace(locale as Locale, "vendor"),
-    loadNamespace(locale as Locale, "nav"),
+    Promise.all(
+      (["vendor", "nav", "services", "events"] as const).map(async (namespace) => [
+        namespace,
+        await loadNamespace(locale as Locale, namespace),
+      ]),
+    ),
   ]);
-  const messages = { ...baseMessages, vendor: vendorMessages, nav: navMessages };
+  const messages = { ...baseMessages, ...Object.fromEntries(extra) };
   const navCapabilities = await resolveVendorNavCapabilities();
 
   return (

@@ -18,6 +18,10 @@ function loadFlat(locale: string, namespace: string): Record<string, string> {
   return flattenMessages(raw as Parameters<typeof flattenMessages>[0]);
 }
 
+type IcuTestValue = string | number | ((chunks: string) => string);
+type IcuTestValues = Record<string, IcuTestValue>;
+type TranslatorValues = Record<string, string | number | Date>;
+
 function dummyValues(placeholders: string[]): Record<string, string | number> {
   return Object.fromEntries(
     placeholders.map((name, index) => [name, name === "count" || name === "qty" ? 2 : `v${index}`]),
@@ -32,6 +36,16 @@ function richTextTags(template: string): Record<string, (chunks: string) => stri
     }
   }
   return Object.fromEntries([...tags].map((tag) => [tag, (chunks: string) => chunks]));
+}
+
+function translatorValues(template: string, placeholders: string[]): TranslatorValues {
+  const values: IcuTestValues = {
+    ...dummyValues(placeholders),
+    ...richTextTags(template),
+  };
+  // next-intl accepts rich-text tag functions at runtime; createTranslator's
+  // public values type only lists primitives.
+  return values as unknown as TranslatorValues;
 }
 
 function bracesAreBalanced(template: string): boolean {
@@ -70,10 +84,7 @@ describe("ICU message parsing coverage", () => {
               throw error;
             },
           });
-          translator("leaf", {
-            ...dummyValues(placeholders),
-            ...richTextTags(template),
-          });
+          translator("leaf", translatorValues(template, placeholders));
         } catch (error) {
           failures.push(`${key}: ${error instanceof Error ? error.message : String(error)}`);
         }
