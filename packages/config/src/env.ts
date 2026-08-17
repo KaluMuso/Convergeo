@@ -89,3 +89,26 @@ export function loadEnv(source: EnvSource = readProcessEnv()): LoadedEnv {
     public: loadPublicEnv(source),
   };
 }
+
+/**
+ * Fail Vercel production and preview builds when public Supabase config is
+ * missing. GitHub Actions `next build` does not set `VERCEL`, so CI dummy
+ * builds stay unblocked; Vercel preview/prod cannot reach runtime without keys.
+ */
+export function assertVercelPublicSupabaseEnv(source: EnvSource = readProcessEnv()): void {
+  if (source.VERCEL !== "1") {
+    return;
+  }
+  const url = source.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const anonKey = source.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+  if (url && anonKey) {
+    return;
+  }
+  const missing = [
+    !url ? "NEXT_PUBLIC_SUPABASE_URL" : null,
+    !anonKey ? "NEXT_PUBLIC_SUPABASE_ANON_KEY" : null,
+  ].filter((key): key is string => key !== null);
+  throw new Error(
+    `Missing required public Supabase environment variable${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}`,
+  );
+}

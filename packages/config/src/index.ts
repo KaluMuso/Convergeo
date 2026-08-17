@@ -19,7 +19,7 @@ export {
   type DeploymentPlane,
   type PublicApiEnvKey,
 } from "./api-base-url";
-export { loadPublicEnv, type PublicEnv } from "./env";
+export { assertVercelPublicSupabaseEnv, loadPublicEnv, type PublicEnv } from "./env";
 export {
   buildConnectSrc,
   buildStaticSecurityHeaders,

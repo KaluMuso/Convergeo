@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { type EnvSource, loadEnv, loadPublicEnv, loadServerEnv } from "./env";
+import {
+  assertVercelPublicSupabaseEnv,
+  type EnvSource,
+  loadEnv,
+  loadPublicEnv,
+  loadServerEnv,
+} from "./env";
 
 const validEnv: EnvSource = {
   SUPABASE_URL: "https://example.supabase.co",
@@ -48,5 +54,27 @@ describe("loadEnv", () => {
   it("loads public env independently", () => {
     const publicEnv = loadPublicEnv(withEnv());
     expect(publicEnv.SUPABASE_ANON_KEY).toBe("anon-key");
+  });
+});
+
+describe("assertVercelPublicSupabaseEnv", () => {
+  it("does not require public Supabase vars outside Vercel", () => {
+    expect(() => assertVercelPublicSupabaseEnv({})).not.toThrow();
+  });
+
+  it("fails Vercel builds when public Supabase vars are missing", () => {
+    expect(() => assertVercelPublicSupabaseEnv({ VERCEL: "1" })).toThrow(
+      "Missing required public Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    );
+  });
+
+  it("passes Vercel builds when both public Supabase vars are set", () => {
+    expect(() =>
+      assertVercelPublicSupabaseEnv({
+        VERCEL: "1",
+        NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key",
+      }),
+    ).not.toThrow();
   });
 });

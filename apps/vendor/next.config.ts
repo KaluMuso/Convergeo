@@ -1,3 +1,4 @@
+import { assertVercelPublicSupabaseEnv } from "@vergeo/config";
 import createNextIntlPlugin from "next-intl/plugin";
 import {
   buildConnectSrc,
@@ -10,6 +11,7 @@ import {
 import type { NextConfig } from "next";
 
 const withNextIntl = createNextIntlPlugin("../../packages/i18n/src/request.ts");
+assertVercelPublicSupabaseEnv();
 
 /**
  * Security headers & CSP — M15-P03 + security audit wave (vendor origin, behind Caddy on OCI).

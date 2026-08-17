@@ -41,14 +41,14 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   }
 
   setRequestLocale(locale);
-  // The vendor dashboard's client views call useTranslations("vendor"), so the
-  // namespace must live on the app-wide provider — the shared request config
-  // only ships `common`, which previously left those views rendering raw keys.
-  const [baseMessages, vendorMessages] = await Promise.all([
+  // Client chrome uses `vendor` and `nav`. The shared request config only ships
+  // `common`, which previously left login/chrome throwing MISSING_MESSAGE: nav.
+  const [baseMessages, vendorMessages, navMessages] = await Promise.all([
     getMessages(),
     loadNamespace(locale as Locale, "vendor"),
+    loadNamespace(locale as Locale, "nav"),
   ]);
-  const messages = { ...baseMessages, vendor: vendorMessages };
+  const messages = { ...baseMessages, vendor: vendorMessages, nav: navMessages };
   const navCapabilities = await resolveVendorNavCapabilities();
 
   return (

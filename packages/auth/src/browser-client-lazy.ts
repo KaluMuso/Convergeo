@@ -17,3 +17,8 @@ export async function getBrowserClient(): Promise<SupabaseClient> {
   const { createBrowserClient } = await import("./browser-client");
   return createBrowserClient();
 }
+
+export async function getBrowserAccessTokenLazy(): Promise<string | null> {
+  const { getBrowserAccessToken } = await import("./browser-client");
+  return getBrowserAccessToken();
+}

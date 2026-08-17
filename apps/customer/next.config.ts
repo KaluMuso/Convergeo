@@ -1,5 +1,6 @@
 import withSerwistInit from "@serwist/next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { assertVercelPublicSupabaseEnv } from "@vergeo/config";
 import {
   buildConnectSrc,
   buildStaticSecurityHeaders,
@@ -13,6 +14,7 @@ import { resolveApiBaseUrl } from "./lib/api-base-url";
 import type { NextConfig } from "next";
 
 const withNextIntl = createNextIntlPlugin("../../packages/i18n/src/request.ts");
+assertVercelPublicSupabaseEnv();
 
 /**
  * PWA / serwist — M16-P02. Compiles the unified `sw.ts` to `public/sw.js` and

@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 
+import { resolveOpenGraphParams } from "./opengraph-params";
+
 /**
  * Keep this Edge route tiny: do not import `@vergeo/i18n` or `@vergeo/ui`
  * (message JSON + token graphs push the OG worker over Vercel's 1 MB limit).
@@ -22,13 +24,13 @@ const COLORS = {
 
 type ImageProps = {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ name?: string; price?: string }>;
+  searchParams?: Promise<{ name?: string; price?: string } | undefined>;
 };
 
 export default async function OpenGraphImage({ searchParams }: ImageProps) {
-  const { name, price } = await searchParams;
-  const displayName = name?.trim() || "Convergeo";
-  const displayPrice = price?.trim() || null;
+  const { displayName, displayPrice } = resolveOpenGraphParams(
+    searchParams ? await searchParams : undefined,
+  );
 
   return new ImageResponse(
     <div
