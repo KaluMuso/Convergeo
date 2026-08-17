@@ -16,6 +16,8 @@ INTERNAL_TRIGGER_GUARDS: tuple[str, ...] = (
     "rfq_threads_guard",
     "storefront_collection_items_guard",
     "guard_vendor_licence_status_update",
+    "guard_kyc_record_integrity",
+    "validate_service_review_verified_engagement",
 )
 
 SERVICE_ROLE_ONLY_RPCS: tuple[tuple[str, str], ...] = (
@@ -148,3 +150,26 @@ def test_listing_line_total_ngwee_search_path_pinned(db: PgConn) -> None:
     assert result.ok, result.error
     assert result.rows
     assert "search_path=public" in result.rows[0]
+
+
+def test_search_query_facets_not_granted_to_clients(db: PgConn) -> None:
+    """Backend search RPC — service_role only after 20260813160200."""
+    assert _client_grantees(db, "search_query_facets") == []
+
+
+def test_pg_trgm_and_vector_live_outside_public(db: PgConn) -> None:
+    result = db.run(
+        """
+        SELECT e.extname || '=' || n.nspname
+        FROM pg_extension e
+        JOIN pg_namespace n ON n.oid = e.extnamespace
+        WHERE e.extname IN ('pg_trgm', 'vector')
+        ORDER BY e.extname
+        """
+    )
+    assert result.ok, result.error
+    if not result.rows:
+        pytest.skip("pg_trgm/vector are not installed in this test database")
+    for row in result.rows:
+        name, schema = row.split("=", 1)
+        assert schema != "public", f"{name} must not remain in public"
