@@ -431,6 +431,7 @@ export function HomeProductRail({
         labels={labels}
         priorityCount={priorityCount}
         density="compact"
+        viewSurface="home"
       />
     </section>
   );

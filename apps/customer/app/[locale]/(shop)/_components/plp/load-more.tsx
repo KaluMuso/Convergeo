@@ -113,7 +113,13 @@ export function PlpBrowseClient({
 
   return (
     <>
-      <ListingGrid locale={locale} listings={items} labels={gridLabels} density="compact" />
+      <ListingGrid
+        locale={locale}
+        listings={items}
+        labels={gridLabels}
+        density="compact"
+        viewSurface="plp"
+      />
       <ProgressiveLoadControls
         status={status}
         hasMore={hasMore}

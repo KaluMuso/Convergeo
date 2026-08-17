@@ -120,7 +120,7 @@ describe("ListingCard impression eligibility", () => {
     act(() => vi.advanceTimersByTime(1));
 
     expect(telemetry.queueListingImpression).toHaveBeenCalledTimes(1);
-    expect(telemetry.queueListingImpression).toHaveBeenCalledWith(LISTING_ID);
+    expect(telemetry.queueListingImpression).toHaveBeenCalledWith(LISTING_ID, "unknown");
     expect(disconnect).toHaveBeenCalled();
   });
 });

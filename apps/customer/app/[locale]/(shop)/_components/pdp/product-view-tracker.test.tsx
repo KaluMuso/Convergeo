@@ -33,7 +33,7 @@ describe("ProductViewTracker listing telemetry", () => {
     render(<ProductViewTracker productId="product-1" listingId={listingId} />);
 
     expect(mocks.recordListingPdpView).toHaveBeenCalledTimes(1);
-    expect(mocks.recordListingPdpView).toHaveBeenCalledWith(listingId);
+    expect(mocks.recordListingPdpView).toHaveBeenCalledWith(listingId, "pdp");
   });
 
   it("does not invent a listing view when the PDP has no selected listing", () => {

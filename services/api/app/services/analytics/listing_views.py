@@ -1,8 +1,9 @@
 """Listing impression and PDP view recording.
 
-Writes are deduped per (session_id, listing_id, UTC day, view_kind) via the
-``listing_view_dedup`` table (or optional Upstash Redis SET NX when configured).
-Aggregates land in the partitioned ``listing_analytics`` table.
+Writes are deduped per (session_id, listing_id, UTC day, view_kind, surface) via
+the ``listing_view_dedup`` table (or optional Upstash Redis SET NX when configured).
+Aggregates land in the partitioned ``listing_analytics`` table. An optional
+viewer user id is used only to suppress a vendor's own listings and is never stored.
 """
 
 from __future__ import annotations
@@ -22,6 +23,10 @@ from app.settings import Settings, get_settings
 logger = logging.getLogger(__name__)
 
 ViewKind = Literal["impression", "pdp_view"]
+ListingViewSurface = Literal["home", "plp", "storefront", "pdp", "unknown"]
+LISTING_VIEW_SURFACES: frozenset[str] = frozenset(
+    ("home", "plp", "storefront", "pdp", "unknown")
+)
 
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -107,8 +112,15 @@ def _utc_today() -> date:
     return datetime.now(tz=UTC).date()
 
 
-def _dedup_key(*, session_id: str, listing_id: str, day: date, view_kind: ViewKind) -> str:
-    return f"lv:{day.isoformat()}:{view_kind}:{session_id}:{listing_id}"
+def _dedup_key(
+    *,
+    session_id: str,
+    listing_id: str,
+    day: date,
+    view_kind: ViewKind,
+    surface: ListingViewSurface,
+) -> str:
+    return f"lv:{day.isoformat()}:{view_kind}:{surface}:{session_id}:{listing_id}"
 
 
 def _record_one(
@@ -117,20 +129,33 @@ def _record_one(
     listing_id: str,
     day: date,
     view_kind: ViewKind,
+    surface: ListingViewSurface,
+    viewer_user_id: str | None,
     redis_store: _DedupStore | None,
 ) -> bool:
     """Record a single view. Returns True when counted (not deduped)."""
     if redis_store is not None:
-        key = _dedup_key(session_id=session_id, listing_id=listing_id, day=day, view_kind=view_kind)
+        key = _dedup_key(
+            session_id=session_id,
+            listing_id=listing_id,
+            day=day,
+            view_kind=view_kind,
+            surface=surface,
+        )
         if not redis_store.try_claim(key):
             return False
 
+    viewer_sql = (
+        "NULL::uuid" if viewer_user_id is None else f"{sql_literal(viewer_user_id)}::uuid"
+    )
     script = f"""
 SELECT public.record_listing_view(
   {sql_literal(session_id)}::uuid,
   {sql_literal(listing_id)}::uuid,
   {sql_literal(day.isoformat())}::date,
-  {sql_literal(view_kind)}
+  {sql_literal(view_kind)},
+  {sql_literal(surface)},
+  {viewer_sql}
 )::text;
 """
     result = run_sql_script(script)
@@ -147,6 +172,8 @@ def record_listing_views(
     session_id: str | None,
     listing_ids: list[str],
     view_kind: ViewKind,
+    surface: ListingViewSurface = "unknown",
+    viewer_user_id: str | None = None,
 ) -> int:
     """Record one or more listing views. Returns the number newly counted."""
     if not listing_ids:
@@ -155,6 +182,15 @@ def record_listing_views(
         return 0
 
     session = _valid_uuid(session_id, field="session_id")
+    resolved_surface: ListingViewSurface = (
+        surface if surface in LISTING_VIEW_SURFACES else "unknown"
+    )
+    viewer: str | None = None
+    if viewer_user_id is not None:
+        try:
+            viewer = _valid_uuid(viewer_user_id, field="viewer_user_id")
+        except ValueError:
+            viewer = None
     day = _utc_today()
     redis_store = _resolve_dedup_store()
 
@@ -173,6 +209,8 @@ def record_listing_views(
             listing_id=listing_id,
             day=day,
             view_kind=view_kind,
+            surface=resolved_surface,
+            viewer_user_id=viewer,
             redis_store=redis_store,
         ):
             counted += 1

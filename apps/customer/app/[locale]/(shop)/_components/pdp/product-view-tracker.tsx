@@ -32,7 +32,7 @@ export function ProductViewTracker({ productId, listingId, recent }: Props): nul
       listingId ? { product_id: productId, listing_id: listingId } : { product_id: productId },
     );
     if (listingId) {
-      recordListingPdpView(listingId);
+      recordListingPdpView(listingId, "pdp");
     }
     if (recentSlug && recentName) {
       recordRecentlyViewed(recentSlug, recentName);

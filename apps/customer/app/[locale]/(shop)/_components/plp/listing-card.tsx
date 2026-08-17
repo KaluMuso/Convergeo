@@ -5,7 +5,10 @@ import { ProductCard } from "@vergeo/ui/src/product-card";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { queueListingImpression } from "../../../../../lib/listing-view-telemetry";
+import {
+  queueListingImpression,
+  type ListingViewSurface,
+} from "../../../../../lib/listing-view-telemetry";
 import { isDemoListingPublicId, shouldShowSampleListingBadge } from "../demo-listing";
 
 import { ListingLogisticsPills, type LogisticsPillLabels } from "./logistics-pills";
@@ -83,6 +86,7 @@ type ListingCardProps = {
   media?: ReactNode;
   showSampleBadge?: boolean;
   density?: "default" | "compact";
+  viewSurface?: ListingViewSurface;
 };
 
 export function listingCardHref(
@@ -101,6 +105,7 @@ export function ListingCard({
   media,
   showSampleBadge = shouldShowSampleListingBadge(),
   density = "default",
+  viewSurface = "unknown",
 }: ListingCardProps) {
   const { isWishlisted, toggleWishlist, enabled } = useLocalWishlist(listing.productSlug);
   const [wishlistStatusAnnouncement, setWishlistStatusAnnouncement] = useState("");
@@ -175,7 +180,7 @@ export function ListingCard({
 
         eligibleTimer = setTimeout(() => {
           eligibleTimer = null;
-          queueListingImpression(listing.id);
+          queueListingImpression(listing.id, viewSurface);
           observer.disconnect();
         }, IMPRESSION_MIN_VISIBLE_MS);
       },
@@ -187,7 +192,7 @@ export function ListingCard({
       clearEligibilityTimer();
       observer.disconnect();
     };
-  }, [listing.id]);
+  }, [listing.id, viewSurface]);
 
   const onQuickAdd = useCallback(() => {
     if (!listing.inStock || quickAdding) {

@@ -1,5 +1,6 @@
 import { CloudinaryImageStatic } from "@vergeo/ui/src/media/cloudinary-image-static";
 
+import type { ListingViewSurface } from "../../../../../lib/listing-view-telemetry";
 import { shouldShowSampleListingBadge } from "../demo-listing";
 
 import { ListingCard, type ListingCardLabels } from "./listing-card";
@@ -40,6 +41,7 @@ type ListingGridProps = {
   /** Injectable for tests; defaults to production-safe sample gate. */
   showSampleBadge?: boolean;
   density?: "default" | "compact";
+  viewSurface?: ListingViewSurface;
 };
 
 const LISTING_MEDIA_SIZES = "(max-width: 360px) 50vw, (max-width: 720px) 33vw, 25vw";
@@ -55,6 +57,7 @@ export function ListingGrid({
   priorityCount = 2,
   showSampleBadge = shouldShowSampleListingBadge(),
   density = "default",
+  viewSurface = "unknown",
 }: ListingGridProps) {
   return (
     <div
@@ -84,6 +87,7 @@ export function ListingGrid({
             media={media}
             showSampleBadge={showSampleBadge}
             density={density}
+            viewSurface={viewSurface}
           />
         );
       })}

@@ -11,12 +11,18 @@ import re
 from datetime import timedelta
 from typing import Literal
 
+from app.core.auth import get_current_user
 from app.core.ratelimit import bump_rate_counter, get_client_ip, raise_rate_limited
 from app.errors import AppError
 from app.schemas.base import StrictModel
-from app.services.analytics.listing_views import record_listing_views
+from app.services.analytics.listing_views import (
+    LISTING_VIEW_SURFACES,
+    ListingViewSurface,
+    record_listing_views,
+)
+from app.settings import get_settings
 from fastapi import APIRouter, BackgroundTasks, Request
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +36,45 @@ _UUID_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Obvious crawlers only. Do not treat in-app browsers (WhatsApp, Instagram) as bots.
+_BOT_USER_AGENT_MARKERS = (
+    "googlebot",
+    "bingbot",
+    "slurp",
+    "duckduckbot",
+    "baiduspider",
+    "yandexbot",
+    "facebookexternalhit",
+    "twitterbot",
+    "linkedinbot",
+    "applebot",
+    "semrushbot",
+    "ahrefsbot",
+    "mj12bot",
+    "dotbot",
+    "petalbot",
+    "bytespider",
+    "gptbot",
+    "claudebot",
+    "ccbot",
+    "amazonbot",
+)
+
 
 class ViewsRequest(StrictModel):
     session_id: str | None = Field(default=None, max_length=36)
     listing_id: str | None = Field(default=None, max_length=36)
     listing_ids: list[str] | None = None
+    surface: ListingViewSurface = "unknown"
+
+    @field_validator("surface", mode="before")
+    @classmethod
+    def _coerce_surface(cls, value: object) -> object:
+        if value is None or value == "":
+            return "unknown"
+        if isinstance(value, str) and value not in LISTING_VIEW_SURFACES:
+            raise ValueError("surface must be one of home, plp, storefront, pdp, unknown")
+        return value
 
     @model_validator(mode="after")
     def exactly_one_shape(self) -> ViewsRequest:
@@ -77,14 +117,41 @@ def _valid_session_id(value: str | None) -> str | None:
     return value
 
 
+def _is_obvious_bot(user_agent: str | None) -> bool:
+    if not user_agent:
+        return False
+    lowered = user_agent.lower()
+    return any(marker in lowered for marker in _BOT_USER_AGENT_MARKERS)
+
+
+async def _optional_viewer_user_id(request: Request) -> str | None:
+    """Bearer token only — never accept a viewer id from the JSON body."""
+    authorization = request.headers.get("Authorization")
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    try:
+        user = await get_current_user(request, get_settings())
+    except AppError:
+        return None
+    return user.id
+
+
 def _persist_views(
     *,
     session_id: str | None,
     listing_ids: list[str],
     view_kind: Literal["impression", "pdp_view"],
+    surface: ListingViewSurface,
+    viewer_user_id: str | None,
 ) -> None:
     try:
-        record_listing_views(session_id=session_id, listing_ids=listing_ids, view_kind=view_kind)
+        record_listing_views(
+            session_id=session_id,
+            listing_ids=listing_ids,
+            view_kind=view_kind,
+            surface=surface,
+            viewer_user_id=viewer_user_id,
+        )
     except Exception:  # noqa: BLE001 — analytics must never crash the worker.
         logger.debug("telemetry views background persist failed", exc_info=True)
 
@@ -96,6 +163,9 @@ async def ingest_views(
     background_tasks: BackgroundTasks,
 ) -> ViewsResponse:
     _enforce_rate_limit(request)
+
+    if _is_obvious_bot(request.headers.get("user-agent")):
+        return ViewsResponse(accepted=0, queued=False)
 
     session_id = _valid_session_id(body.session_id)
     if session_id is None:
@@ -125,11 +195,14 @@ async def ingest_views(
             )
         view_kind = "impression"
 
+    viewer_user_id = await _optional_viewer_user_id(request)
     background_tasks.add_task(
         _persist_views,
         session_id=session_id,
         listing_ids=listing_ids,
         view_kind=view_kind,
+        surface=body.surface,
+        viewer_user_id=viewer_user_id,
     )
 
     return ViewsResponse(accepted=len(listing_ids))

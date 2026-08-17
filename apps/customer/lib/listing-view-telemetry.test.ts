@@ -72,7 +72,9 @@ describe("listing view telemetry", () => {
       `${API_ORIGIN}/telemetry/views`,
       expect.any(CapturingBlob),
     );
-    expect(parsedBodies()).toEqual([{ session_id: SESSION_ID, listing_id: LISTING_ONE }]);
+    expect(parsedBodies()).toEqual([
+      { session_id: SESSION_ID, listing_id: LISTING_ONE, surface: "pdp" },
+    ]);
   });
 
   it("deduplicates and batches impressions instead of sending per card", () => {
@@ -85,7 +87,7 @@ describe("listing view telemetry", () => {
 
     expect(navigator.sendBeacon).toHaveBeenCalledTimes(1);
     expect(parsedBodies()).toEqual([
-      { session_id: SESSION_ID, listing_ids: [LISTING_ONE, LISTING_TWO] },
+      { session_id: SESSION_ID, listing_ids: [LISTING_ONE, LISTING_TWO], surface: "unknown" },
     ]);
   });
 
@@ -100,6 +102,14 @@ describe("listing view telemetry", () => {
     expect(parsedBodies().map((payload) => (payload.listing_ids as string[]).length)).toEqual([
       MAX_LISTING_IMPRESSION_BATCH,
       1,
+    ]);
+  });
+
+  it("includes an explicit surface in impression payloads", () => {
+    expect(queueListingImpression(LISTING_ONE, "home")).toBe(true);
+    vi.runAllTimers();
+    expect(parsedBodies()).toEqual([
+      { session_id: SESSION_ID, listing_ids: [LISTING_ONE], surface: "home" },
     ]);
   });
 
@@ -131,6 +141,7 @@ describe("listing view telemetry", () => {
         body: JSON.stringify({
           session_id: SESSION_ID,
           listing_id: LISTING_ONE,
+          surface: "pdp",
         }),
         credentials: "omit",
         keepalive: true,

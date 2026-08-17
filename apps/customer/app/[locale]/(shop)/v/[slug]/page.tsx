@@ -339,6 +339,7 @@ export default async function VendorProfilePage({ params }: PageProps) {
         <ListingGrid
           locale={locale}
           listings={listingsForGrid}
+          viewSurface="storefront"
           labels={{
             vendor: t("listings.vendor"),
             noReviews: t("listings.noReviews"),

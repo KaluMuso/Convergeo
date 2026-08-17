@@ -3,6 +3,8 @@ import { getSessionId } from "@vergeo/analytics";
 import { absoluteApiUrl } from "./api-base-url";
 
 export const MAX_LISTING_IMPRESSION_BATCH = 50;
+export const LISTING_VIEW_SURFACES = ["home", "plp", "storefront", "pdp", "unknown"] as const;
+export type ListingViewSurface = (typeof LISTING_VIEW_SURFACES)[number];
 
 const IMPRESSION_BATCH_DELAY_MS = 75;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -11,6 +13,7 @@ type PendingImpression = {
   key: string;
   listingId: string;
   sessionId: string;
+  surface: ListingViewSurface;
 };
 
 let pendingImpressions = new Map<string, PendingImpression>();
@@ -29,8 +32,8 @@ function currentUtcDay(): string {
   return day;
 }
 
-function dedupKey(sessionId: string, listingId: string): string {
-  return `${currentUtcDay()}:${sessionId}:${listingId}`;
+function dedupKey(sessionId: string, listingId: string, surface: ListingViewSurface): string {
+  return `${currentUtcDay()}:${surface}:${sessionId}:${listingId}`;
 }
 
 function isValidUuid(value: string): boolean {
@@ -51,6 +54,10 @@ function canSendTelemetry(): boolean {
  * This follows the existing analytics convention: the anonymous server record
  * is consent-independent; only the optional GA4 mirror is consent-gated. No
  * account id, query, referrer, or other shopper data is included here.
+ * sendBeacon cannot attach Authorization. The keepalive fetch fallback stays
+ * credential-free so this module never initializes the Supabase realtime client.
+ * When a Bearer token is present (authenticated API clients), the server
+ * suppresses a vendor's own listing views without persisting identity.
  */
 function transmit(payload: Record<string, string | string[]>): boolean {
   if (typeof navigator === "undefined" || navigator.onLine === false) {
@@ -94,7 +101,10 @@ function transmit(payload: Record<string, string | string[]>): boolean {
 }
 
 /** Record one PDP view. The server remains the authoritative daily deduper. */
-export function recordListingPdpView(listingId: string): boolean {
+export function recordListingPdpView(
+  listingId: string,
+  surface: ListingViewSurface = "pdp",
+): boolean {
   if (!isValidUuid(listingId) || !canSendTelemetry()) {
     return false;
   }
@@ -104,12 +114,12 @@ export function recordListingPdpView(listingId: string): boolean {
     return false;
   }
 
-  const key = dedupKey(sessionId, listingId);
+  const key = dedupKey(sessionId, listingId, surface);
   if (sentPdpViews.has(key)) {
     return false;
   }
 
-  const accepted = transmit({ session_id: sessionId, listing_id: listingId });
+  const accepted = transmit({ session_id: sessionId, listing_id: listingId, surface });
   if (accepted) {
     sentPdpViews.add(key);
   }
@@ -132,19 +142,26 @@ export function flushListingImpressions(): void {
     return;
   }
 
-  const bySession = new Map<string, PendingImpression[]>();
+  const bySessionSurface = new Map<string, PendingImpression[]>();
   for (const item of batch) {
-    const sessionBatch = bySession.get(item.sessionId) ?? [];
+    const groupKey = `${item.sessionId}:${item.surface}`;
+    const sessionBatch = bySessionSurface.get(groupKey) ?? [];
     sessionBatch.push(item);
-    bySession.set(item.sessionId, sessionBatch);
+    bySessionSurface.set(groupKey, sessionBatch);
   }
 
-  for (const [sessionId, sessionBatch] of bySession) {
+  for (const sessionBatch of bySessionSurface.values()) {
+    const sessionId = sessionBatch[0]?.sessionId;
+    const surface = sessionBatch[0]?.surface;
+    if (!sessionId || !surface) {
+      continue;
+    }
     for (let start = 0; start < sessionBatch.length; start += MAX_LISTING_IMPRESSION_BATCH) {
       const chunk = sessionBatch.slice(start, start + MAX_LISTING_IMPRESSION_BATCH);
       const accepted = transmit({
         session_id: sessionId,
         listing_ids: chunk.map((item) => item.listingId),
+        surface,
       });
       if (accepted) {
         for (const item of chunk) {
@@ -156,7 +173,10 @@ export function flushListingImpressions(): void {
 }
 
 /** Queue an eligible (50% visible for 1s) listing impression for one batch. */
-export function queueListingImpression(listingId: string): boolean {
+export function queueListingImpression(
+  listingId: string,
+  surface: ListingViewSurface = "unknown",
+): boolean {
   if (!isValidUuid(listingId) || !canSendTelemetry()) {
     return false;
   }
@@ -166,12 +186,12 @@ export function queueListingImpression(listingId: string): boolean {
     return false;
   }
 
-  const key = dedupKey(sessionId, listingId);
+  const key = dedupKey(sessionId, listingId, surface);
   if (sentImpressions.has(key) || pendingImpressions.has(key)) {
     return false;
   }
 
-  pendingImpressions.set(key, { key, listingId, sessionId });
+  pendingImpressions.set(key, { key, listingId, sessionId, surface });
   if (pendingImpressions.size >= MAX_LISTING_IMPRESSION_BATCH) {
     flushListingImpressions();
   } else if (impressionBatchTimer === null) {
