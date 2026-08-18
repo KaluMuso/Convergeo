@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@sentry/nextjs": "^10.69.0",
+    "@sentry/nextjs": "^10.70.0",
     "@vergeo/analytics": "workspace:*",
     "@vergeo/auth": "workspace:*",
     "@vergeo/config": "workspace:*",
@@ -20,7 +20,7 @@
     "@vergeo/observability": "workspace:*",
     "@vergeo/ui": "workspace:*",
     "next": "^15.5.23",
-    "next-intl": "^4.13.5",
+    "next-intl": "^4.13.6",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "serwist": "^9.5.12"
@@ -30,7 +30,7 @@
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
-    "@testing-library/user-event": "^14.6.3",
+    "@testing-library/user-event": "^14.6.4",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "jsdom": "^26.0.0",
