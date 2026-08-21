@@ -1,5 +1,7 @@
 import { LOCALES } from "@vergeo/i18n";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
+
+import { getAdminTranslator } from "../../../../lib/admin-translator";
 
 import { DuplicateQueue } from "./_components/DuplicateQueue";
 import { PendingCanonicalQueue } from "./_components/PendingCanonicalQueue";
@@ -16,7 +18,7 @@ export function generateStaticParams() {
 export default async function ProductModerationPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("admin.moderation");
+  const t = await getAdminTranslator(locale, "admin.moderation");
 
   return (
     <div className="space-y-4">

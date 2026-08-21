@@ -1,6 +1,8 @@
 import { LOCALES } from "@vergeo/i18n";
 import Link from "next/link";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
+
+import { getAdminTranslator } from "../../../lib/admin-translator";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -17,7 +19,7 @@ export function generateStaticParams() {
 export default async function ModerationHubPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("admin.hubs.moderation");
+  const t = await getAdminTranslator(locale, "admin.hubs.moderation");
 
   const destinations = [
     {
