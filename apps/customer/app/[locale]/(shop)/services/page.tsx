@@ -11,7 +11,8 @@ import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
 
 import { ServiceGrid, type ServiceBrowseItem } from "./_components/service-grid";
-import { SERVICE_VERTICALS, VerticalFilterChips } from "./_components/vertical-filter-chips";
+import { SERVICE_VERTICALS } from "./_components/service-verticals";
+import { VerticalFilterChips } from "./_components/vertical-filter-chips";
 
 import type { Metadata } from "next";
 
