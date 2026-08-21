@@ -36,7 +36,27 @@ vi.mock("@vergeo/auth/middleware", async (importOriginal) => {
   };
 });
 
-import middleware from "./middleware";
+import middleware, { config } from "./middleware";
+
+describe("vendor middleware matcher", () => {
+  it("keeps the CSP report path and the broadened locale-redirect matcher", () => {
+    expect(config.matcher).toEqual(["/api/csp-report", "/((?!api|_next|_vercel|.*\\..*).*)"]);
+  });
+
+  it("matches locale-less app paths so the gate check and next-intl redirect both run on them (regression: a bare path like `/onboarding` used to skip both, land on `/[locale]` with an invalid locale value, and throw formatting any interpolated message)", () => {
+    const pattern = new RegExp(`^${config.matcher[1]}$`);
+    expect(pattern.test("/onboarding")).toBe(true);
+    expect(pattern.test("/listings")).toBe(true);
+    expect(pattern.test("/en/listings")).toBe(true);
+  });
+
+  it("still excludes Next internals, other API routes, and static files with an extension", () => {
+    const pattern = new RegExp(`^${config.matcher[1]}$`);
+    expect(pattern.test("/api/csp-report")).toBe(false);
+    expect(pattern.test("/_next/static/chunk.js")).toBe(false);
+    expect(pattern.test("/favicon.ico")).toBe(false);
+  });
+});
 
 function getScriptSrc(csp: string | null): string | undefined {
   return csp?.split("; ").find((directive) => directive.startsWith("script-src"));

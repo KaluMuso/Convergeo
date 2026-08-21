@@ -165,5 +165,11 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/csp-report", "/", "/(en|bem|nya|fr|zh)/:path*"],
+  // See apps/customer/middleware.ts for the full rationale: a locale-less
+  // path previously skipped both the Cloudflare Access check below and
+  // next-intl's redirect, landing on `/[locale]` with an invalid locale
+  // value and throwing when any interpolated message tried to format.
+  // Broadening this also means the CF Access re-verification below now runs
+  // on more paths than before — strictly additive, never a relaxation.
+  matcher: ["/api/csp-report", "/((?!api|_next|_vercel|.*\\..*).*)"],
 };

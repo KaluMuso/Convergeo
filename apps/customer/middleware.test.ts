@@ -6,7 +6,27 @@ vi.mock("next-intl/middleware", () => ({
   default: vi.fn(() => vi.fn(() => NextResponse.next())),
 }));
 
-import { isCheckoutCardRoute } from "./middleware";
+import { config, isCheckoutCardRoute } from "./middleware";
+
+describe("customer middleware matcher", () => {
+  it("keeps the CSP report path and the broadened locale-redirect matcher", () => {
+    expect(config.matcher).toEqual(["/api/csp-report", "/((?!api|_next|_vercel|.*\\..*).*)"]);
+  });
+
+  it("matches locale-less app paths so next-intl can redirect them (regression: a bare path like `/cart` or `/sw.js` used to skip the redirect, land on `/[locale]` with an invalid locale value, and throw formatting any interpolated message — INVALID_MESSAGE in production)", () => {
+    const pattern = new RegExp(`^${config.matcher[1]}$`);
+    expect(pattern.test("/cart")).toBe(true);
+    expect(pattern.test("/wishlist")).toBe(true);
+    expect(pattern.test("/en/cart")).toBe(true);
+  });
+
+  it("still excludes Next internals, other API routes, and static files with an extension", () => {
+    const pattern = new RegExp(`^${config.matcher[1]}$`);
+    expect(pattern.test("/api/csp-report")).toBe(false);
+    expect(pattern.test("/_next/static/chunk.js")).toBe(false);
+    expect(pattern.test("/favicon.ico")).toBe(false);
+  });
+});
 
 describe("customer locale routing", () => {
   it("redirect contract points / to /en", () => {
