@@ -3,17 +3,6 @@
 import { Rail } from "@vergeo/ui/src/rail";
 import Link from "next/link";
 
-export const SERVICE_VERTICALS = [
-  "beauty",
-  "food-catering",
-  "auto",
-  "printing-creative",
-  "home-services",
-  "tech-services",
-  "cleaning",
-  "tailoring",
-] as const;
-
 type VerticalFilterChipsProps = {
   locale: string;
   labels: {
