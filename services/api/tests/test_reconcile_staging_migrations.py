@@ -25,6 +25,7 @@ PENDING_REPAIR_VERSIONS = {
     "20260815230000",
     # Repo migrations added after the 2026-08-13 post-repair ledger snapshot.
     "20260816220000",
+    "20260817200000",
 }
 
 
