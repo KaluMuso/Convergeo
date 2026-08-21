@@ -1,6 +1,7 @@
 import { LOCALES } from "@vergeo/i18n";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
 
+import { getAdminTranslator } from "../../../../lib/admin-translator";
 import { ClipAnalyticsPanel } from "../_components/ClipAnalyticsPanel";
 
 type PageProps = {
@@ -14,7 +15,7 @@ export function generateStaticParams() {
 export default async function ClipAnalyticsPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("admin.clips.analytics");
+  const t = await getAdminTranslator(locale, "admin.clips.analytics");
 
   return (
     <div className="space-y-4">

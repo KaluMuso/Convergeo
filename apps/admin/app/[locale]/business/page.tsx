@@ -1,5 +1,7 @@
 import { LOCALES } from "@vergeo/i18n";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
+
+import { getAdminTranslator } from "../../../lib/admin-translator";
 
 import { BusinessQueue } from "./_components/BusinessQueue";
 
@@ -14,7 +16,7 @@ export function generateStaticParams() {
 export default async function BusinessQueuePage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("admin.business");
+  const t = await getAdminTranslator(locale, "admin.business");
 
   return (
     <div className="space-y-4">
