@@ -60,6 +60,44 @@ PORTAL_ENV_BY_PORTAL = {
 #: Pre-existing repository-wide secret — backward-compatible fallback only.
 FALLBACK_ENV = "VERCEL_AUTOMATION_BYPASS_SECRET"
 
+#: curl exit codes that represent a TRANSPORT failure worth retrying, verified
+#: against libcurl's own CURLE_* enum (read from the installed libcurl, not
+#: copied from memory). Each is a network-level condition that can succeed on a
+#: later attempt:
+#:    5 CURLE_COULDNT_RESOLVE_PROXY   6 CURLE_COULDNT_RESOLVE_HOST
+#:    7 CURLE_COULDNT_CONNECT        18 CURLE_PARTIAL_FILE (transfer cut short)
+#:   28 CURLE_OPERATION_TIMEDOUT     35 CURLE_SSL_CONNECT_ERROR
+#:   52 CURLE_GOT_NOTHING            55 CURLE_SEND_ERROR
+#:   56 CURLE_RECV_ERROR
+#:
+#: 35 is included deliberately: CURLE_SSL_CONNECT_ERROR is a failure DURING the
+#: TLS handshake (a dropped connection mid-handshake, an edge node not yet
+#: serving), which is transient. It is distinct from 60/77, which are
+#: deterministic certificate/CA-file problems and must never be retried.
+RETRYABLE_CURL_EXIT_CODES = frozenset({5, 6, 7, 18, 28, 35, 52, 55, 56})
+
+#: Names for the codes this probe can plausibly encounter, so a CI log says
+#: what happened instead of printing a bare integer. Codes absent here are
+#: still classified (as non-retryable) — the set above is the only gate.
+CURL_EXIT_NAMES = {
+    3: "CURLE_URL_MALFORMAT",
+    5: "CURLE_COULDNT_RESOLVE_PROXY",
+    6: "CURLE_COULDNT_RESOLVE_HOST",
+    7: "CURLE_COULDNT_CONNECT",
+    18: "CURLE_PARTIAL_FILE",
+    22: "CURLE_HTTP_RETURNED_ERROR",
+    23: "CURLE_WRITE_ERROR",
+    26: "CURLE_READ_ERROR",
+    28: "CURLE_OPERATION_TIMEDOUT",
+    35: "CURLE_SSL_CONNECT_ERROR",
+    47: "CURLE_TOO_MANY_REDIRECTS",
+    52: "CURLE_GOT_NOTHING",
+    55: "CURLE_SEND_ERROR",
+    56: "CURLE_RECV_ERROR",
+    60: "CURLE_PEER_FAILED_VERIFICATION",
+    77: "CURLE_SSL_CACERT_BADFILE",
+}
+
 #: Substrings that identify a Vercel SSO / Deployment Protection challenge
 #: rather than an application response. Matched case-insensitively against the
 #: Location header and the response body.
@@ -103,6 +141,38 @@ class AccessVerdict:
     verdict: Verdict
     #: Safe, secret-free explanation for CI logs.
     detail: str
+
+
+@dataclass(frozen=True)
+class CurlExitVerdict:
+    """What one curl exit code means for the probe's retry decision.
+
+    `kind` is the reported classification:
+      HTTP_RESPONSE      — curl succeeded; an HTTP response exists and belongs
+                           to classify_access(). Never retried, whatever the
+                           status: a 302 protection challenge goes straight to
+                           the Deployment Protection classifier.
+      TRANSIENT_TRANSPORT — a network-level failure that may succeed on retry.
+      NON_RETRYABLE_CURL  — a deterministic local/configuration/certificate
+                           failure. Retrying cannot help, so fail immediately.
+    """
+
+    kind: str
+    retryable: bool
+    #: CURLE_* name when known, else "" — never any request/response content.
+    name: str
+
+
+def classify_curl_exit(code: int) -> CurlExitVerdict:
+    """Classify a curl exit code for retry purposes. Fails safe: an unknown
+    code is NON_RETRYABLE_CURL, so a novel deterministic error surfaces
+    immediately rather than being retried five times."""
+    name = CURL_EXIT_NAMES.get(code, "")
+    if code == 0:
+        return CurlExitVerdict("HTTP_RESPONSE", False, "CURLE_OK")
+    if code in RETRYABLE_CURL_EXIT_CODES:
+        return CurlExitVerdict("TRANSIENT_TRANSPORT", True, name)
+    return CurlExitVerdict("NON_RETRYABLE_CURL", False, name)
 
 
 def resolve_bypass_source(env: dict[str, str], portal: str) -> BypassSource:
@@ -224,6 +294,11 @@ def main(argv: list[str] | None = None) -> int:
     resolve = sub.add_parser("resolve-source", help="Print the bypass source kind for a portal")
     resolve.add_argument("--portal", required=True, choices=list(PORTALS))
 
+    curl_exit = sub.add_parser(
+        "classify-curl-exit", help="Print '<kind>\\t<retryable 0|1>\\t<CURLE name>'"
+    )
+    curl_exit.add_argument("--code", type=int, required=True)
+
     classify = sub.add_parser("classify", help="Print the access verdict word")
     classify.add_argument("--http-status", type=int, required=True)
     classify.add_argument("--location", default="")
@@ -245,6 +320,11 @@ def main(argv: list[str] | None = None) -> int:
         source = resolve_bypass_source(dict(os.environ), args.portal)
         # Prints only the source kind and env var NAME — never a value.
         print(f"{source.kind}\t{source.env_name or ''}")
+        return 0
+
+    if args.command == "classify-curl-exit":
+        exit_verdict = classify_curl_exit(args.code)
+        print(f"{exit_verdict.kind}\t{1 if exit_verdict.retryable else 0}\t{exit_verdict.name}")
         return 0
 
     result = classify_access(
