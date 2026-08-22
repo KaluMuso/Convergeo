@@ -60,10 +60,26 @@ export function isProductionCfAccessRequired(): boolean {
  * verifier prove the deployed admin build's effective API wiring
  * (`GET /{locale}/health` -> {status, app, env, buildId, apiHost}, never
  * session/user/admin data — see route.ts) without a Cloudflare Access
- * assertion. Gated on `NEXT_PUBLIC_DEPLOYMENT_PLANE`, a build-time signal
- * baked in by the Vercel project's own environment configuration — not a
- * request header, cookie, or query param a caller could set — so it cannot
- * be triggered against any deployment by an external request.
+ * assertion.
+ *
+ * Requires TWO independent, non-request-controllable signals to agree —
+ * neither is a request header, cookie, or query param a caller could set,
+ * so this cannot be triggered against any deployment by an external
+ * request:
+ *
+ *   A. `VERCEL_ENV === "preview"` — Vercel's own system signal for which
+ *      kind of deployment this actually is. `NODE_ENV` cannot substitute
+ *      for this: Next.js sets `NODE_ENV=production` for the built server
+ *      bundle on every Vercel deployment, Production and Preview alike, so
+ *      it cannot distinguish them.
+ *   B. `NEXT_PUBLIC_DEPLOYMENT_PLANE` is `staging` or `preview` — the
+ *      application-level plane, baked in by the Vercel project's own
+ *      environment configuration.
+ *
+ * A misconfigured `NEXT_PUBLIC_DEPLOYMENT_PLANE` alone (e.g. accidentally
+ * left as `staging` on a Production deployment) cannot open this exception:
+ * `VERCEL_ENV` on Production is `"production"`, so signal A still fails
+ * closed regardless of B.
  *
  * On the `production` plane this is always false, so CF Access (and the
  * admin role gate below) keep guarding `/health` exactly as before: this
@@ -72,10 +88,17 @@ export function isProductionCfAccessRequired(): boolean {
  * unrelated and unaffected by this narrower, path-scoped exception.
  */
 export function isStagingHealthCheckException(request: NextRequest): boolean {
-  const plane = process.env.NEXT_PUBLIC_DEPLOYMENT_PLANE;
-  if (plane !== "staging" && plane !== "preview") {
+  const isPreviewDeployment = process.env.VERCEL_ENV === "preview";
+  if (!isPreviewDeployment) {
     return false;
   }
+
+  const plane = process.env.NEXT_PUBLIC_DEPLOYMENT_PLANE;
+  const isStagingPlane = plane === "staging" || plane === "preview";
+  if (!isStagingPlane) {
+    return false;
+  }
+
   return isHealthCheckPath(request.nextUrl.pathname, LOCALES);
 }
 
