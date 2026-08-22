@@ -383,8 +383,11 @@ def portal_doc(
     health_status: str = "ok",
     health_app: str | None = None,
     api_host: str = "api.staging.vergeo5.com",
+    health_env: str = "staging",
+    build_id: str | None = None,
+    omit_build_id: bool = False,
 ):
-    return {
+    doc = {
         "portal": portal,
         "preview_url": f"https://{portal}.example.vercel.app",
         "deployment_id": f"dpl_{portal}",
@@ -393,11 +396,13 @@ def portal_doc(
         "target": "preview",
         "health_status": health_status,
         "health_app": health_app if health_app is not None else portal,
-        "health_env": "staging",
-        "health_build_id": sha,
+        "health_env": health_env,
         "health_api_host": api_host,
         "env_metadata_status": env_metadata,
     }
+    if not omit_build_id:
+        doc["health_build_id"] = build_id if build_id is not None else sha
+    return doc
 
 def fingerprint(*, sha: str = GOOD_SHA, ref: str = STAGING_REF, env: str = "staging", image: str = GOOD_SHA):
     return {"env": env, "git_sha": sha, "image_tag": image, "supabase_project_ref": ref}
@@ -448,6 +453,18 @@ cases = [
         t, fingerprint(), {**previews_ok, "vendor": portal_doc("vendor", health_app="customer")}, False)),
     ("missing health_api_host fails", lambda t: run_validate(
         t, fingerprint(), {**previews_ok, "customer": portal_doc("customer", api_host="")}, False)),
+    ("production API host rejected even with every other field correct", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "vendor": portal_doc("vendor", api_host="api.vergeo5.com")}, False)),
+    ("localhost API host rejected", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "vendor": portal_doc("vendor", api_host="localhost")}, False)),
+    ("arbitrary wrong API host rejected", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "vendor": portal_doc("vendor", api_host="wrong-host.example.com")}, False)),
+    ("wrong health_env fails", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "admin": portal_doc("admin", health_env="production")}, False)),
+    ("health_build_id absent passes (deployment_sha already proves candidate identity)", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "customer": portal_doc("customer", omit_build_id=True)}, True)),
+    ("health_build_id present and wrong fails", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "customer": portal_doc("customer", build_id="cafe" * 10)}, False)),
 ]
 
 failed = []

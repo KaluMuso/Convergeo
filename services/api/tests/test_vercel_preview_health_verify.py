@@ -1,6 +1,6 @@
 """Regression tests for the deployed-health staging release proof (Option B).
 
-Covers HEALTH-01..09 from the OPTION-B mandate: verify_health() is the
+Covers HEALTH-01..12 from the OPTION-B mandate: verify_health() is the
 PRIMARY blocking check that replaced Vercel env-value decryption
 (vercel_preview_env_verify.py stays as a non-blocking, informational
 secondary signal — see vercel-staging-preview-prove.sh).
@@ -154,6 +154,52 @@ def test_health_09_correct_host_but_wrong_sha_fails() -> None:
     )
     assert result.ok is False
     assert result.reason == "sha_mismatch"
+
+
+def test_health_10_build_id_present_and_correct_passes() -> None:
+    """The authoritative SHA proof is the caller's deployment-metadata check
+    (see vercel-staging-preview-prove.sh); buildId is opt-in corroboration —
+    present-and-correct is the ordinary passing case."""
+    result = health_mod.verify_health(
+        _body("customer", build_id=CANDIDATE_SHA),
+        expected_app="customer",
+        expected_api_host=STAGING_HOST,
+        expected_sha=CANDIDATE_SHA,
+    )
+    assert result.ok is True
+    assert result.build_id == CANDIDATE_SHA
+
+
+def test_health_11_build_id_absent_passes_when_sha_expected() -> None:
+    """buildId is absent whenever a project doesn't have Vercel's
+    'Automatically expose System Environment Variables' enabled — this must
+    NOT fail the deploy on its own, since the caller already independently
+    proved candidate identity via deployment metadata before ever calling
+    this function."""
+    result = health_mod.verify_health(
+        _body("customer", build_id=None),
+        expected_app="customer",
+        expected_api_host=STAGING_HOST,
+        expected_sha=CANDIDATE_SHA,
+    )
+    assert result.ok is True
+    assert result.reason == "ok"
+    assert result.build_id is None
+
+
+def test_health_12_build_id_present_and_wrong_fails() -> None:
+    """Present-but-wrong is a real staleness signal and must still fail
+    (distinct from HEALTH-09 only in explicitly documenting the absent-vs-
+    wrong distinction this policy hinges on)."""
+    result = health_mod.verify_health(
+        _body("customer", build_id="0000000000000000000000000000000000dead"),
+        expected_app="customer",
+        expected_api_host=STAGING_HOST,
+        expected_sha=CANDIDATE_SHA,
+    )
+    assert result.ok is False
+    assert result.reason == "sha_mismatch"
+    assert result.build_id == "0000000000000000000000000000000000dead"
 
 
 def test_sha_check_is_opt_in() -> None:

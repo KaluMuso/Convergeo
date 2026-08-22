@@ -14,6 +14,15 @@ was actually deployed. `apiHost` is safe to expose — the corresponding
 derives it from the exact same effective-configuration resolver the running
 app itself uses (`packages/config/src/api-base-url.ts`), so this proves the
 real thing rather than merely a stored setting.
+
+SHA proof: the AUTHORITATIVE, blocking candidate-identity check is Vercel's
+own deployment metadata (`deployment.meta.githubCommitSha == candidate SHA`),
+verified by the caller (vercel-staging-preview-prove.sh) before this module
+ever runs. `body["buildId"]` (Vercel's `VERCEL_GIT_COMMIT_SHA`, which is only
+populated when a project has "Automatically expose System Environment
+Variables" enabled) is opt-in corroboration on top of that: present-and-wrong
+fails as a staleness signal, but absent never fails on its own — this
+verifier does not depend on that Vercel project setting being enabled.
 """
 
 from __future__ import annotations
@@ -91,12 +100,23 @@ def verify_health(
     if host != expected_api_host.strip().lower():
         return HealthVerdict(False, "host_mismatch", host=host)
 
+    # buildId resolves to Vercel's auto-injected VERCEL_GIT_COMMIT_SHA, which
+    # is only populated when a project has "Automatically expose System
+    # Environment Variables" enabled — a per-project Vercel setting this repo
+    # cannot independently confirm for convergeo-{customer,vendor,admin}. The
+    # AUTHORITATIVE, blocking SHA proof is the Vercel deployment metadata
+    # check the caller already performed before ever invoking this function
+    # (deployment.meta.githubCommitSha == candidate SHA — see
+    # vercel-staging-preview-prove.sh's `commit_sha` check, which `die`s
+    # before reaching the health probe on a mismatch). So here buildId is
+    # opt-in corroboration only: present-and-wrong is a real staleness signal
+    # and must fail; absent must NOT fail on its own, since the identity
+    # proof was already established independently.
     build_id = body.get("buildId")
     build_id = build_id if isinstance(build_id, str) and build_id else None
 
-    if expected_sha:
-        if build_id != expected_sha:
-            return HealthVerdict(False, "sha_mismatch", host=host, build_id=build_id)
+    if expected_sha and build_id is not None and build_id != expected_sha:
+        return HealthVerdict(False, "sha_mismatch", host=host, build_id=build_id)
 
     return HealthVerdict(True, "ok", host=host, build_id=build_id)
 
