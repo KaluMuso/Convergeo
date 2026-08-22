@@ -732,7 +732,7 @@ python3 - <<PY
 import json, pathlib
 root = pathlib.Path("${TMP_FIXTURE}")
 proof = json.loads((root / "staging-sha-proof-9002.json").read_text())
-proof["previews"]["vendor"]["github_commit_sha"] = "${SHA_OTHER}"
+proof["previews"]["vendor"]["deployment_sha"] = "${SHA_OTHER}"
 (root / "staging-sha-proof-9002.json").write_text(json.dumps(proof, indent=2) + "\\n")
 PY
 artifact_gate_reject "wrong vendor preview SHA rejected" \

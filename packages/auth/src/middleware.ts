@@ -216,6 +216,27 @@ export function isVendorOnboardingPath(pathname: string, locales: readonly strin
   return segments[1] === "onboarding";
 }
 
+/**
+ * `/{locale}/health` — a portal's deployed-configuration proof (status/app/
+ * env/buildId/apiHost; never session, user, or secret data). Exported so
+ * each app's own middleware can decide, locally, whether and how to exempt
+ * it from that portal's auth/CF Access gates; this predicate only matches
+ * the path, it does not grant access on its own.
+ */
+export function isHealthCheckPath(pathname: string, locales: readonly string[]): boolean {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length !== 2) {
+    return false;
+  }
+
+  const locale = segments[0];
+  if (!locale || !locales.includes(locale)) {
+    return false;
+  }
+
+  return segments[1] === "health";
+}
+
 export function isAdminPermissionDeniedPath(pathname: string, locales: readonly string[]): boolean {
   const segments = pathname.split("/").filter(Boolean);
   if (segments.length < 2) {
