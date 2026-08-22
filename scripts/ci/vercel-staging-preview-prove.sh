@@ -168,62 +168,28 @@ vercel_api() {
 }
 
 verify_project_env() {
-  local env_json verdict host
-  verdict="verified"
-  if ! env_json="$(vercel_api GET "v9/projects/${PROJECT_ID}/env?teamId=${VERCEL_ORG_ID}")"; then
+  local env_json tmp_env_json verdict
+  # decrypt=true: without it Vercel returns ciphertext for encrypted/secret/
+  # sensitive rows, not the plaintext value — this is not evidence of a leaked
+  # credential, it is the documented shape of an un-decrypted response.
+  # gitBranch=staging: server-side filter for branch-scoped Preview rows;
+  # vercel_preview_env_verify.py independently re-checks each row's own
+  # gitBranch field, so selection stays correct regardless of exactly which
+  # rows the filter returns.
+  if ! env_json="$(vercel_api GET "v9/projects/${PROJECT_ID}/env?teamId=${VERCEL_ORG_ID}&decrypt=true&gitBranch=staging")"; then
     printf '%s' "BLOCKED_EXTERNAL"
     return 0
   fi
 
-  API_ENV_VAR="${API_ENV_VAR}" \
-  EXPECTED_API_HOST="${EXPECTED_API_HOST}" \
-  ENV_JSON="${env_json}" \
-  python3 - <<'PY'
-import json, os, sys
-
-var = os.environ["API_ENV_VAR"]
-expected_host = os.environ["EXPECTED_API_HOST"]
-doc = json.loads(os.environ["ENV_JSON"])
-rows = doc if isinstance(doc, list) else doc.get("envs", doc.get("environmentVariables", []))
-if not isinstance(rows, list):
-    print("BLOCKED_EXTERNAL")
-    sys.exit(0)
-
-def matches_preview(row):
-    target = row.get("target") or []
-    if isinstance(target, str):
-        target = [target]
-    targets = {t.lower() for t in target}
-    if "preview" not in targets and "development" not in targets:
-        return False
-    git_branch = row.get("gitBranch") or row.get("branch") or ""
-    if git_branch and git_branch != "staging":
-        return False
-    return True
-
-value = None
-for row in rows:
-    if row.get("key") != var:
-        continue
-    if not matches_preview(row):
-        continue
-    value = row.get("value") or ""
-    break
-
-if not value:
-    print("missing")
-    sys.exit(0)
-
-lower = value.lower()
-if "api.vergeo5.com" in lower or "localhost" in lower:
-    print("forbidden")
-    sys.exit(0)
-host = value.split("://", 1)[-1].split("/", 1)[0].split(":", 1)[0].lower()
-if host != expected_host.lower():
-    print(f"host_mismatch:{host}")
-    sys.exit(0)
-print("verified")
-PY
+  tmp_env_json="$(mktemp)"
+  printf '%s' "${env_json}" > "${tmp_env_json}"
+  verdict="$(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_env_verify.py" \
+    --key "${API_ENV_VAR}" \
+    --git-branch staging \
+    --expected-host "${EXPECTED_API_HOST}" \
+    --env-json-file "${tmp_env_json}")"
+  rm -f "${tmp_env_json}"
+  printf '%s' "${verdict}"
 }
 
 create_deployment() {
@@ -328,10 +294,15 @@ api_env_verdict="$(verify_project_env)"
 case "${api_env_verdict}" in
   verified) log "API env ${API_ENV_VAR} verified for staging Preview" ;;
   missing) die "Vercel Preview env ${API_ENV_VAR} missing for branch staging" ;;
+  missing_branch_override)
+    die "Vercel Preview env ${API_ENV_VAR} has no Git Branch=staging override (a generic Preview value may exist, but the staging contract requires the branch-specific override and does not fall back)"
+    ;;
   forbidden) die "Vercel Preview env ${API_ENV_VAR} points at production or localhost" ;;
-  host_mismatch:*)
-    got_host="${api_env_verdict#host_mismatch:}"
-    die "Vercel Preview env ${API_ENV_VAR} host ${got_host} != expected ${EXPECTED_API_HOST}"
+  ciphertext)
+    die "Vercel Preview env ${API_ENV_VAR} returned encrypted (decrypt=true did not yield a plaintext value) — cannot verify staging API wiring"
+    ;;
+  host_mismatch)
+    die "Vercel Preview env ${API_ENV_VAR} did not resolve to the expected staging host"
     ;;
   BLOCKED_EXTERNAL)
     die "Vercel Preview env ${API_ENV_VAR} BLOCKED_EXTERNAL — cannot verify staging API wiring"
