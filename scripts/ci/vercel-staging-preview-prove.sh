@@ -359,17 +359,14 @@ fi
 # The secret goes to curl via a mode-600 config file so it never appears in
 # argv (visible to `ps`), in a URL, or in any trace. `set -x` is deliberately
 # never enabled in this script; the config file is removed immediately after
-# the request in all paths.
+# the request in all paths. Only the two bypass headers live in the config —
+# every other flag stays on the command line, keeping the config-parsing
+# surface to the one thing that must not be in argv.
 health_curl_config="$(mktemp)"
 chmod 600 "${health_curl_config}"
 cleanup_health_curl_config() { rm -f "${health_curl_config}"; }
 trap cleanup_health_curl_config EXIT
 {
-  printf 'silent\n'
-  printf 'show-error\n'
-  printf 'location = false\n'
-  printf 'connect-timeout = 15\n'
-  printf 'max-time = 30\n'
   printf 'header = "Accept: application/json"\n'
   if [ -n "${BYPASS_SECRET}" ]; then
     printf 'header = "x-vercel-protection-bypass: %s"\n' "${BYPASS_SECRET}"
@@ -377,17 +374,45 @@ trap cleanup_health_curl_config EXIT
   fi
 } > "${health_curl_config}"
 
-set +e
-health_http="$(curl --config "${health_curl_config}" \
-  -o "${health_body_file}" -D "${health_headers_file}" -w '%{http_code}' \
-  "${health_url}" 2>/dev/null)"
-health_rc=$?
-set -e
+# A Vercel deployment reports READY before its per-deployment hostname is
+# necessarily resolvable/routable from an external network, so a probe fired
+# immediately after READY can fail to connect (deploy-staging run #32 failed
+# this way on all three portals ~0.7s after READY — far below the 15s
+# connect timeout, i.e. an immediate resolve/connect error rather than a
+# slow endpoint). Retry connection-level failures only: an HTTP response of
+# ANY status means the endpoint answered and is handled by the classifier
+# below, never retried.
+health_stderr_file="${OUTPUT_DIR}/health-curl-stderr.txt"
+health_http=""
+health_rc=1
+for health_attempt in 1 2 3 4 5; do
+  set +e
+  health_http="$(curl --config "${health_curl_config}" \
+    --silent --show-error --no-location \
+    --connect-timeout 15 --max-time 30 \
+    -o "${health_body_file}" -D "${health_headers_file}" -w '%{http_code}' \
+    "${health_url}" 2>"${health_stderr_file}")"
+  health_rc=$?
+  set -e
+
+  if [ "${health_rc}" -eq 0 ]; then
+    break
+  fi
+
+  # curl's own message (never contains request headers without -v, so the
+  # bypass secret cannot appear here) plus the numeric exit code, so a
+  # connection failure is self-diagnosing in the CI log.
+  log "health probe attempt ${health_attempt}/5 failed (curl exit ${health_rc}): $(tr -d '\r' < "${health_stderr_file}" | tail -1)"
+  if [ "${health_attempt}" -lt 5 ]; then
+    sleep $((health_attempt * 3))
+  fi
+done
+
 cleanup_health_curl_config
 trap - EXIT
 
 if [ "${health_rc}" -ne 0 ]; then
-  die "health probe failed to connect ${health_url}"
+  die "health probe could not connect to ${health_url} after 5 attempts (curl exit ${health_rc}: $(tr -d '\r' < "${health_stderr_file}" | tail -1)). This is a connection-level failure, not an application or Deployment Protection response."
 fi
 
 # Classify BEFORE asserting health: a Deployment Protection challenge must

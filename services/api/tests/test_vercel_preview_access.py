@@ -341,3 +341,32 @@ def test_case_d_prove_script_never_puts_the_secret_in_argv_or_evidence() -> None
     assert 'log "protection bypass: using ${BYPASS_SOURCE_VAR} (${BYPASS_SOURCE})"' in script
     assert 'echo "${BYPASS_SECRET}"' not in script
     assert 'log "${BYPASS_SECRET}"' not in script
+
+
+def test_health_probe_retries_connection_failures_and_surfaces_the_curl_exit_code() -> None:
+    """deploy-staging run #32 regression: a Vercel deployment reports READY
+    before its per-deployment hostname is reliably resolvable, so the probe
+    failed to CONNECT ~0.7s after READY on all three portals — well under the
+    15s connect timeout. The original probe discarded curl's stderr
+    (`2>/dev/null`), which made that undiagnosable. The probe must now retry
+    connection-level failures and report curl's actual exit code/message."""
+    script = PROVE_SCRIPT.read_text(encoding="utf-8")
+
+    # Retries the probe rather than dying on the first connection failure.
+    assert "for health_attempt in 1 2 3 4 5; do" in script
+    assert "sleep $((health_attempt * 3))" in script
+
+    # curl's stderr is captured to a file, never discarded, and surfaced.
+    assert '2>"${health_stderr_file}"' in script
+    assert 'curl --config "${health_curl_config}" \\\n    --silent' in script
+    assert "curl exit ${health_rc}" in script
+
+    # An HTTP response of any status must NOT be retried — only rc != 0 is.
+    # (Status handling belongs to classify_access, below the loop.)
+    loop_body = script.split("for health_attempt in 1 2 3 4 5; do")[1].split("done")[0]
+    assert 'if [ "${health_rc}" -eq 0 ]; then' in loop_body
+    assert "break" in loop_body
+    assert "blocked_external" not in loop_body
+
+    # The old discard-stderr form is gone from the health probe.
+    assert "-w '%{http_code}' \\\n  \"${health_url}\" 2>/dev/null" not in script
