@@ -374,17 +374,40 @@ trap cleanup_health_curl_config EXIT
   fi
 } > "${health_curl_config}"
 
-# A Vercel deployment reports READY before its per-deployment hostname is
-# necessarily resolvable/routable from an external network, so a probe fired
-# immediately after READY can fail to connect (deploy-staging run #32 failed
-# this way on all three portals ~0.7s after READY — far below the 15s
-# connect timeout, i.e. an immediate resolve/connect error rather than a
-# slow endpoint). Retry connection-level failures only: an HTTP response of
-# ANY status means the endpoint answered and is handled by the classifier
-# below, never retried.
+# deploy-staging run #32 failed all three portals here: curl exited non-zero
+# roughly 0.7s after READY, before any HTTP response, and the probe discarded
+# stderr — so the exact transport failure is UNKNOWN and no root cause can be
+# asserted from that run. Two independent corrections follow: retry genuinely
+# transient transport errors, and preserve curl's real diagnostic so a
+# deterministic failure is identifiable on the next run instead of being
+# retried blindly.
+#
+# Retry eligibility is decided by curl's exit code, classified against
+# libcurl's CURLE_* enum in scripts/ci/vercel_preview_access.py. Only
+# TRANSIENT_TRANSPORT codes retry; deterministic failures (malformed URL,
+# local read/write, certificate validation, anything unrecognised) fail
+# immediately. An HTTP response of ANY status is never retried — it means the
+# endpoint answered, and it goes to classify_access() below, so a 302
+# protection challenge still reaches the Deployment Protection classifier on
+# the first attempt.
 health_stderr_file="${OUTPUT_DIR}/health-curl-stderr.txt"
+
+# curl with --show-error and without -v never echoes request headers, so the
+# bypass secret cannot appear in its stderr. Redact defensively anyway, using
+# pure bash parameter expansion so the secret never reaches an argv or a pipe.
+sanitized_curl_error() {
+  local raw
+  raw="$(tr -d '\r' < "${health_stderr_file}" 2>/dev/null | tail -1)"
+  if [ -n "${BYPASS_SECRET}" ]; then
+    raw="${raw//${BYPASS_SECRET}/[redacted]}"
+  fi
+  printf '%s' "${raw}"
+}
+
 health_http=""
 health_rc=1
+health_exit_kind="NON_RETRYABLE_CURL"
+health_exit_name=""
 for health_attempt in 1 2 3 4 5; do
   set +e
   health_http="$(curl --config "${health_curl_config}" \
@@ -396,13 +419,20 @@ for health_attempt in 1 2 3 4 5; do
   set -e
 
   if [ "${health_rc}" -eq 0 ]; then
+    health_exit_kind="HTTP_RESPONSE"
     break
   fi
 
-  # curl's own message (never contains request headers without -v, so the
-  # bypass secret cannot appear here) plus the numeric exit code, so a
-  # connection failure is self-diagnosing in the CI log.
-  log "health probe attempt ${health_attempt}/5 failed (curl exit ${health_rc}): $(tr -d '\r' < "${health_stderr_file}" | tail -1)"
+  IFS=$'\t' read -r health_exit_kind health_exit_retryable health_exit_name < <(
+    python3 "${REPO_ROOT}/scripts/ci/vercel_preview_access.py" classify-curl-exit \
+      --code "${health_rc}"
+  )
+
+  log "health probe attempt ${health_attempt}/5 failed — curl exit ${health_rc} ${health_exit_name:-unknown} [${health_exit_kind}]: $(sanitized_curl_error)"
+
+  if [ "${health_exit_retryable}" != "1" ]; then
+    break
+  fi
   if [ "${health_attempt}" -lt 5 ]; then
     sleep $((health_attempt * 3))
   fi
@@ -412,7 +442,14 @@ cleanup_health_curl_config
 trap - EXIT
 
 if [ "${health_rc}" -ne 0 ]; then
-  die "health probe could not connect to ${health_url} after 5 attempts (curl exit ${health_rc}: $(tr -d '\r' < "${health_stderr_file}" | tail -1)). This is a connection-level failure, not an application or Deployment Protection response."
+  case "${health_exit_kind}" in
+    TRANSIENT_TRANSPORT)
+      die "TRANSIENT_TRANSPORT: ${PORTAL} health probe could not reach ${health_url} after 5 attempts — curl exit ${health_rc} ${health_exit_name:-unknown}: $(sanitized_curl_error). No HTTP response was ever received, so this is neither an application failure nor a Deployment Protection challenge."
+      ;;
+    *)
+      die "NON_RETRYABLE_CURL: ${PORTAL} health probe failed deterministically against ${health_url} — curl exit ${health_rc} ${health_exit_name:-unknown}: $(sanitized_curl_error). This class of curl error cannot be fixed by retrying; no HTTP response was received."
+      ;;
+  esac
 fi
 
 # Classify BEFORE asserting health: a Deployment Protection challenge must

@@ -343,6 +343,128 @@ def test_case_d_prove_script_never_puts_the_secret_in_argv_or_evidence() -> None
     assert 'log "${BYPASS_SECRET}"' not in script
 
 
+# --------------------------------------------------------------------------
+# curl exit-code classification — retry only genuinely transient transport
+# errors. Codes verified against libcurl's own CURLE_* enum.
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("code", "name"),
+    [
+        (5, "CURLE_COULDNT_RESOLVE_PROXY"),
+        (6, "CURLE_COULDNT_RESOLVE_HOST"),
+        (7, "CURLE_COULDNT_CONNECT"),
+        (18, "CURLE_PARTIAL_FILE"),
+        (28, "CURLE_OPERATION_TIMEDOUT"),
+        (35, "CURLE_SSL_CONNECT_ERROR"),
+        (52, "CURLE_GOT_NOTHING"),
+        (55, "CURLE_SEND_ERROR"),
+        (56, "CURLE_RECV_ERROR"),
+    ],
+)
+def test_transient_transport_curl_codes_are_retried(code: int, name: str) -> None:
+    verdict = access.classify_curl_exit(code)
+    assert verdict.kind == "TRANSIENT_TRANSPORT"
+    assert verdict.retryable is True
+    assert verdict.name == name
+
+
+@pytest.mark.parametrize(
+    ("code", "name"),
+    [
+        (3, "CURLE_URL_MALFORMAT"),
+        (23, "CURLE_WRITE_ERROR"),
+        (26, "CURLE_READ_ERROR"),
+        (60, "CURLE_PEER_FAILED_VERIFICATION"),
+        (77, "CURLE_SSL_CACERT_BADFILE"),
+    ],
+)
+def test_deterministic_curl_codes_fail_immediately(code: int, name: str) -> None:
+    """Malformed URL, local read/write faults and certificate-validation
+    failures cannot be fixed by retrying — they must fail on attempt 1."""
+    verdict = access.classify_curl_exit(code)
+    assert verdict.kind == "NON_RETRYABLE_CURL"
+    assert verdict.retryable is False
+    assert verdict.name == name
+
+
+def test_certificate_validation_is_not_retried_even_though_tls_handshake_is() -> None:
+    """35 (handshake failure, transient) and 60/77 (certificate/CA problems,
+    deterministic) must land on opposite sides of the retry boundary."""
+    assert access.classify_curl_exit(35).retryable is True
+    assert access.classify_curl_exit(60).retryable is False
+    assert access.classify_curl_exit(77).retryable is False
+
+
+def test_unknown_curl_code_fails_safe_as_non_retryable() -> None:
+    verdict = access.classify_curl_exit(99)
+    assert verdict.kind == "NON_RETRYABLE_CURL"
+    assert verdict.retryable is False
+    assert verdict.name == ""
+
+
+def test_curl_exit_zero_is_an_http_response_and_is_never_retried() -> None:
+    verdict = access.classify_curl_exit(0)
+    assert verdict.kind == "HTTP_RESPONSE"
+    assert verdict.retryable is False
+
+
+def test_http_302_protection_challenge_reaches_the_classifier_without_retry() -> None:
+    """curl rc=0 with a 302 means the endpoint answered: no retry, and the
+    response goes to the Deployment Protection classifier unchanged."""
+    assert access.classify_curl_exit(0).retryable is False
+    verdict = access.classify_access(
+        http_status=302, location=VERCEL_SSO_LOCATION, bypass_present=False
+    )
+    assert verdict.verdict == "blocked_external"
+
+
+def test_http_200_with_rc_zero_proceeds_to_health_verification() -> None:
+    assert access.classify_curl_exit(0).retryable is False
+    verdict = access.classify_access(http_status=200, body=_health_body(), bypass_present=True)
+    assert verdict.verdict == "ok"
+
+
+def test_classify_curl_exit_cli_prints_kind_retryable_and_name(tmp_path: Path) -> None:
+    proc = subprocess.run(
+        [sys.executable, str(MODULE_PATH), "classify-curl-exit", "--code", "6"],
+        capture_output=True,
+        text=True,
+        env={"PATH": "/usr/bin:/bin", "VERCEL_AUTOMATION_BYPASS_SECRET": SECRET_VALUE},
+    )
+    assert proc.returncode == 0
+    assert proc.stdout.strip() == "TRANSIENT_TRANSPORT\t1\tCURLE_COULDNT_RESOLVE_HOST"
+    assert SECRET_VALUE not in proc.stdout
+    assert SECRET_VALUE not in proc.stderr
+
+
+def test_probe_classifies_and_labels_the_failure_class() -> None:
+    """The final diagnostic must name the actual class, never call a
+    certificate or malformed-URL error 'a connection-level failure'."""
+    script = PROVE_SCRIPT.read_text(encoding="utf-8")
+    assert "classify-curl-exit" in script
+    assert "TRANSIENT_TRANSPORT)" in script
+    assert "NON_RETRYABLE_CURL:" in script
+    assert 'if [ "${health_exit_retryable}" != "1" ]; then' in script
+    # The old blanket wording is gone.
+    assert "This is a connection-level failure, not an application" not in script
+
+
+def test_probe_redacts_the_bypass_secret_from_curl_stderr() -> None:
+    """curl never echoes request headers without -v, but the probe redacts
+    defensively — via bash parameter expansion, so the secret never reaches
+    an argv or a pipe even while being redacted."""
+    script = PROVE_SCRIPT.read_text(encoding="utf-8")
+    assert "sanitized_curl_error()" in script
+    assert 'raw="${raw//${BYPASS_SECRET}/[redacted]}"' in script
+    # Redaction must not shell out with the secret as an argument.
+    assert "sed" not in script.split("sanitized_curl_error()")[1].split("}")[0]
+    # Every place the error is surfaced goes through the sanitizer.
+    assert "$(sanitized_curl_error)" in script
+    assert 'tail -1 "${health_stderr_file}"' not in script
+
+
 def test_health_probe_retries_connection_failures_and_surfaces_the_curl_exit_code() -> None:
     """deploy-staging run #32 regression: a Vercel deployment reports READY
     before its per-deployment hostname is reliably resolvable, so the probe

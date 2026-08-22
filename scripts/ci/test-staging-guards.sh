@@ -589,6 +589,40 @@ else
   bad "vercel-staging-preview-prove must classify a protection challenge as BLOCKED_EXTERNAL"
 fi
 
+# The probe must retry only genuinely transient transport errors and fail
+# immediately on deterministic ones (run #32 follow-up). Verified against
+# libcurl's CURLE_* enum in vercel_preview_access.py.
+retry_classification_ok=1
+for code in 6 7 28; do
+  verdict="$(python3 scripts/ci/vercel_preview_access.py classify-curl-exit --code "${code}")"
+  case "${verdict}" in
+    TRANSIENT_TRANSPORT*$'\t'1*) ;;
+    *) retry_classification_ok=0; echo "  curl ${code} should be retryable, got: ${verdict}" ;;
+  esac
+done
+for code in 3 23 26 60; do
+  verdict="$(python3 scripts/ci/vercel_preview_access.py classify-curl-exit --code "${code}")"
+  case "${verdict}" in
+    NON_RETRYABLE_CURL*$'\t'0*) ;;
+    *) retry_classification_ok=0; echo "  curl ${code} must NOT be retryable, got: ${verdict}" ;;
+  esac
+done
+if [ "${retry_classification_ok}" -eq 1 ] \
+  && grep -q 'if \[ "\${health_exit_retryable}" != "1" \]; then' scripts/ci/vercel-staging-preview-prove.sh; then
+  ok "health probe retries transient transport errors only, never deterministic ones"
+else
+  bad "health probe must retry only transient curl transport errors (6/7/28/...) and fail fast on 3/23/26/60"
+fi
+
+# The bypass secret is redacted from any surfaced curl error, without ever
+# being passed to an external command.
+if grep -q 'sanitized_curl_error()' scripts/ci/vercel-staging-preview-prove.sh \
+  && grep -q 'raw="\${raw//\${BYPASS_SECRET}/\[redacted\]}"' scripts/ci/vercel-staging-preview-prove.sh; then
+  ok "curl stderr is redacted via bash expansion before being logged"
+else
+  bad "curl stderr must be redacted of the bypass secret before logging"
+fi
+
 # deploy-staging must scope the bypass secret per matrix leg (secrets are
 # issued per Vercel project; three portals = three projects).
 if grep -q 'bypass_secret_name: VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER' .github/workflows/deploy-staging.yml \
