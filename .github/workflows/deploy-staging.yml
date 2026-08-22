@@ -375,7 +375,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        portal: [customer, vendor, admin]
+        # `bypass_secret_name` lets each leg pull ONLY its own project's Vercel
+        # Protection Bypass for Automation secret (secrets are per Vercel
+        # project; the three portals are three projects). A job never receives
+        # the other two portals' secrets.
+        include:
+          - portal: customer
+            bypass_secret_name: VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER
+          - portal: vendor
+            bypass_secret_name: VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR
+          - portal: admin
+            bypass_secret_name: VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN
     steps:
       - uses: actions/checkout@v7
 
@@ -403,6 +413,14 @@ jobs:
           VERCEL_PROJECT_ID_ADMIN: ${{ secrets.VERCEL_PROJECT_ID_ADMIN }}
           STAGING_API_BASE_URL: ${{ secrets.STAGING_API_BASE_URL }}
           STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+          # Deployment Protection bypass, scoped by the matrix to THIS portal's
+          # Vercel project only. The probe sends it as a header
+          # (x-vercel-protection-bypass) — never a URL or query parameter — and
+          # it is masked by Actions, so it cannot reach the logs or evidence.
+          VERCEL_PORTAL_BYPASS_SECRET: ${{ secrets[matrix.bypass_secret_name] }}
+          # Backward-compatible fallback for portals whose project-specific
+          # secret has not been created yet (see docs/ops/vercel-deployment-protection.md).
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           set -euo pipefail
           # Git-source Preview deployment (target defaults to preview).

@@ -18,6 +18,8 @@ from urllib.parse import urlparse
 PROD_SUPABASE_PROJECT_REF = "dpadrlxukcjbewpqympu"
 REQUIRED_PORTALS = ("customer", "vendor", "admin")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+STAGING_API_HOST = "api.staging.vergeo5.com"
+VALID_HEALTH_ENVS = ("staging", "preview")
 
 
 class ProofValidationError(ValueError):
@@ -88,14 +90,20 @@ def validate_portal_proof(
     The deployed-health proof (vercel_preview_health_verify.py) is the
     primary, blocking release gate; a portal's evidence.json only exists at
     all once that check has already passed inside
-    vercel-staging-preview-prove.sh (see PR #666), so `health_status` here
-    is confirmatory, not a second independent gate — but it is still
-    asserted, since a stale/hand-edited evidence file should not slip
-    through. The Vercel env-API result (`env_metadata_status`) is
-    informational only and is never checked here — do not reintroduce it
-    as a blocking condition (see vercel_preview_env_verify.py's docstring
-    for why Vercel can refuse to decrypt a row for reasons entirely outside
-    this repo's control).
+    vercel-staging-preview-prove.sh (see PR #666), so these fields here are
+    confirmatory, not a second independent gate — but they are still fully
+    asserted (not just non-empty-checked), since a stale/hand-edited
+    evidence file should not slip through. The Vercel env-API result
+    (`env_metadata_status`) is informational only and is never checked here
+    — do not reintroduce it as a blocking condition (see
+    vercel_preview_env_verify.py's docstring for why Vercel can refuse to
+    decrypt a row for reasons entirely outside this repo's control).
+
+    `health_build_id` follows the same opt-in-corroboration policy as
+    vercel_preview_health_verify.py: `deployment_sha` above is already the
+    blocking candidate-identity proof, so an absent `health_build_id` (a
+    project without Vercel's "Automatically expose System Environment
+    Variables" enabled) is accepted; present-and-wrong is not.
     """
     _require_sha(candidate_sha, "candidate_sha")
 
@@ -127,9 +135,25 @@ def validate_portal_proof(
     if health_app != portal:
         raise ProofValidationError(f"{portal} health_app={health_app!r} want {portal!r}")
 
-    health_api_host = proof.get("health_api_host") or ""
-    if not health_api_host:
-        raise ProofValidationError(f"{portal} health_api_host is missing/empty")
+    health_env = proof.get("health_env") or ""
+    if health_env not in VALID_HEALTH_ENVS:
+        raise ProofValidationError(
+            f"{portal} health_env={health_env!r} want one of {VALID_HEALTH_ENVS}"
+        )
+
+    health_api_host = str(proof.get("health_api_host") or "").strip().lower()
+    if health_api_host != STAGING_API_HOST:
+        raise ProofValidationError(
+            f"{portal} health_api_host={health_api_host!r} != {STAGING_API_HOST!r}"
+        )
+
+    health_build_id = proof.get("health_build_id") or ""
+    if health_build_id and health_build_id != candidate_sha:
+        raise ProofValidationError(
+            f"{portal} health_build_id={health_build_id!r} != candidate_sha={candidate_sha!r} "
+            "(absent is accepted — deployment_sha above already proves candidate identity; "
+            "present-but-wrong is a staleness signal and is not)"
+        )
 
 
 def validate_staging_proof(

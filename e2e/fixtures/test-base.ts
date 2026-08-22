@@ -1,24 +1,58 @@
 import { test as base, expect } from "@playwright/test";
 
-import { THROTTLE } from "./env";
+import { bypassSecretForUrl, hasPortalSpecificBypass, THROTTLE } from "./env";
 import { applyFast3G } from "./network";
 import { resetSeed } from "./seed";
 
 type Fixtures = {
   /** Auto-fixture: applies Fast-3G throttling on the throttled project. */
   fast3g: void;
+  /** Auto-fixture: per-origin Vercel Deployment Protection bypass. */
+  portalBypass: void;
 };
 
 /**
  * Shared test object. Extends Playwright's base test with:
  *  - `fast3g` auto-fixture: emulates Fast-3G on Chromium for the throttled
  *    project (viewport/mobile flags come from the project `use` block).
+ *  - `portalBypass` auto-fixture: sends the RIGHT project's Vercel protection
+ *    bypass secret per origin (see below).
  */
 export const test = base.extend<Fixtures>({
+  /**
+   * Vercel issues a "Protection Bypass for Automation" secret per project, and
+   * specs navigate the vendor app on its own origin (vendor-sell,
+   * event-ticket), so a single global header can be wrong for that origin.
+   * `playwright.config.ts`'s `extraHTTPHeaders` still covers the common
+   * single-secret setup; this fixture only engages when a portal-specific
+   * secret is actually configured, rewriting the bypass header to match the
+   * origin each request targets. Secrets are never logged or asserted on.
+   */
+  portalBypass: [
+    async ({ context }, use) => {
+      if (hasPortalSpecificBypass()) {
+        await context.route("**/*", async (route) => {
+          const secret = bypassSecretForUrl(route.request().url());
+          if (!secret) {
+            await route.fallback();
+            return;
+          }
+          await route.fallback({
+            headers: {
+              ...route.request().headers(),
+              "x-vercel-protection-bypass": secret,
+              "x-vercel-set-bypass-cookie": "true",
+            },
+          });
+        });
+      }
+      await use();
+    },
+    { auto: true },
+  ],
   fast3g: [
     async ({ page, context }, use, testInfo) => {
-      const wantsThrottle =
-        THROTTLE && testInfo.project.name.toLowerCase().includes("3g");
+      const wantsThrottle = THROTTLE && testInfo.project.name.toLowerCase().includes("3g");
       if (wantsThrottle) {
         try {
           const client = await context.newCDPSession(page);
