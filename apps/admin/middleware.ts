@@ -7,6 +7,7 @@ import {
   handleCspReportRequest,
   isAdminBypassActive,
   isCspReportRequest,
+  isHealthCheckPath,
   mergeSessionCookies,
   resolveGatedRedirect,
   updateSession,
@@ -54,6 +55,30 @@ export function isProductionCfAccessRequired(): boolean {
   return process.env.NODE_ENV === "production" && !isAdminBypassActive();
 }
 
+/**
+ * Staging/Preview-only, `/health`-only exception: lets the deploy-staging
+ * verifier prove the deployed admin build's effective API wiring
+ * (`GET /{locale}/health` -> {status, app, env, buildId, apiHost}, never
+ * session/user/admin data — see route.ts) without a Cloudflare Access
+ * assertion. Gated on `NEXT_PUBLIC_DEPLOYMENT_PLANE`, a build-time signal
+ * baked in by the Vercel project's own environment configuration — not a
+ * request header, cookie, or query param a caller could set — so it cannot
+ * be triggered against any deployment by an external request.
+ *
+ * On the `production` plane this is always false, so CF Access (and the
+ * admin role gate below) keep guarding `/health` exactly as before: this
+ * function changes nothing about production admin's security model. It
+ * also never touches `isAdminBypassActive()` — that flag's own scope is
+ * unrelated and unaffected by this narrower, path-scoped exception.
+ */
+export function isStagingHealthCheckException(request: NextRequest): boolean {
+  const plane = process.env.NEXT_PUBLIC_DEPLOYMENT_PLANE;
+  if (plane !== "staging" && plane !== "preview") {
+    return false;
+  }
+  return isHealthCheckPath(request.nextUrl.pathname, LOCALES);
+}
+
 export function hasCfAccessJwtAssertion(request: NextRequest): boolean {
   const assertion = request.headers.get(CF_ACCESS_HEADER);
   return typeof assertion === "string" && assertion.trim().length > 0;
@@ -72,8 +97,9 @@ export default async function middleware(request: NextRequest) {
   const locale = getLocaleFromPath(request.nextUrl.pathname, LOCALES, DEFAULT_LOCALE);
 
   const adminBypass = isAdminBypassActive();
+  const healthCheckException = isStagingHealthCheckException(request);
 
-  if (isProductionCfAccessRequired()) {
+  if (isProductionCfAccessRequired() && !healthCheckException) {
     // Cryptographically verify the Cloudflare Access assertion: signature against the
     // team JWKS (RS256) + expected audience + issuer + expiry. Fails closed — absent,
     // malformed, unsigned, wrong-key, wrong-audience, expired, or an unconfigured
@@ -86,14 +112,18 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-  const gate = resolveGatedRedirect(
-    "admin",
-    request.nextUrl.pathname,
-    LOCALES,
-    session.user,
-    session.roles,
-    { adminBypass },
-  );
+  const gate = healthCheckException
+    ? null
+    : resolveGatedRedirect(
+        "admin",
+        request.nextUrl.pathname,
+        LOCALES,
+        session.user,
+        session.roles,
+        {
+          adminBypass,
+        },
+      );
 
   if (gate) {
     return applyReportOnlyCspNonce(

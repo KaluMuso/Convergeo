@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Deploy a Git-source Vercel Preview for one portal on the staging branch,
-# await READY, verify SHA/target/project, check API env wiring, and probe health.
+# await READY, verify SHA/target/project, then prove the EFFECTIVE DEPLOYED
+# CONFIGURATION from the live artifact's own /health response (primary,
+# blocking). Vercel's stored env-var config is also checked but only as a
+# secondary, non-blocking, informational signal — see
+# scripts/ci/vercel_preview_health_verify.py and vercel_preview_env_verify.py.
 #
 # Usage (from deploy-staging.yml or local with VERCEL_TOKEN):
 #   bash scripts/ci/vercel-staging-preview-prove.sh --portal customer
@@ -290,32 +294,23 @@ fi
 preview_url="https://${deployment_url}"
 log "READY ${preview_url}"
 
+# Secondary, NON-BLOCKING signal: what Vercel's stored project config says.
+# Kept for informational/troubleshooting value (see vercel_preview_env_verify.py's
+# docstring for why Vercel can refuse to decrypt a row for reasons outside this
+# repo's control) — it must never fail the deploy. The PRIMARY, blocking proof
+# is the live artifact's own /health response, below.
 api_env_verdict="$(verify_project_env)"
-case "${api_env_verdict}" in
-  verified) log "API env ${API_ENV_VAR} verified for staging Preview" ;;
-  missing) die "Vercel Preview env ${API_ENV_VAR} missing for branch staging" ;;
-  missing_branch_override)
-    die "Vercel Preview env ${API_ENV_VAR} has no Git Branch=staging override (a generic Preview value may exist, but the staging contract requires the branch-specific override and does not fall back)"
-    ;;
-  forbidden) die "Vercel Preview env ${API_ENV_VAR} points at production or localhost" ;;
-  ciphertext)
-    die "Vercel Preview env ${API_ENV_VAR} returned encrypted (decrypt=true did not yield a plaintext value) — cannot verify staging API wiring"
-    ;;
-  host_mismatch)
-    die "Vercel Preview env ${API_ENV_VAR} did not resolve to the expected staging host"
-    ;;
-  BLOCKED_EXTERNAL)
-    die "Vercel Preview env ${API_ENV_VAR} BLOCKED_EXTERNAL — cannot verify staging API wiring"
-    ;;
-  *)
-    die "unexpected API env verdict: ${api_env_verdict}"
-    ;;
-esac
+log "env metadata (informational only, non-blocking): ${API_ENV_VAR} -> ${api_env_verdict}"
+env_metadata_status="${api_env_verdict}"
 
+# ==========================================================================
+# PRIMARY PROOF: effective deployed configuration, read from the live
+# artifact's own /health response — not Vercel's stored (and possibly
+# undecryptable) project settings. Blocking for all three portals.
+# See scripts/ci/vercel_preview_health_verify.py for the assertion contract.
+# ==========================================================================
 health_path="/${HEALTH_LOCALE}/health"
 health_url="${preview_url}${health_path}"
-health_verdict="skipped"
-health_http=""
 health_body_file="${OUTPUT_DIR}/health.json"
 
 set +e
@@ -325,47 +320,33 @@ health_rc=$?
 set -e
 
 if [ "${health_rc}" -ne 0 ]; then
-  health_verdict="unreachable"
   die "health probe failed to connect ${health_url}"
 fi
 
-if [ "${PORTAL}" = "admin" ]; then
-  if [ "${health_http}" = "403" ]; then
-    if grep -q "Cloudflare Access" "${health_body_file}" 2>/dev/null; then
-      health_verdict="cf_access_gate"
-      log "admin health returned 403 (CF Access gate — expected on Preview)"
-    else
-      die "admin health 403 without CF Access marker"
-    fi
-  elif [ "${health_http}" = "200" ]; then
-    health_verdict="ok"
-    log "admin health returned 200 (bypass or non-prod gate)"
-  else
-    die "admin health unexpected HTTP ${health_http}"
+if [ "${health_http}" != "200" ]; then
+  if [ "${PORTAL}" = "admin" ] && [ "${health_http}" = "403" ]; then
+    die "admin health returned 403 — the staging-only CF Access exception did not activate (check NEXT_PUBLIC_DEPLOYMENT_PLANE is staging/preview on this Vercel project); a 403 cannot prove admin's effective staging API host, so it is no longer accepted as a passing outcome"
   fi
-else
-  if [ "${health_http}" != "200" ]; then
-    die "${PORTAL} health returned HTTP ${health_http}, want 200"
-  fi
-  PORTAL="${PORTAL}" HEALTH_BODY_FILE="${health_body_file}" python3 - <<'PY'
-import json, os, sys
-portal = os.environ["PORTAL"]
-with open(os.environ["HEALTH_BODY_FILE"], encoding="utf-8") as fh:
-    body = json.load(fh)
-if body.get("status") != "ok":
-    print(f"::error::health status={body.get('status')!r}", file=sys.stderr)
-    sys.exit(1)
-if body.get("app") != portal:
-    print(f"::error::health app={body.get('app')!r} want {portal}", file=sys.stderr)
-    sys.exit(1)
-env = body.get("env") or ""
-if env not in {"staging", "preview", "development"}:
-    print(f"::warning::health env={env!r}")
-print("ok")
-PY
-  health_verdict="ok"
-  log "${PORTAL} health OK"
+  die "${PORTAL} health returned HTTP ${health_http}, want 200"
 fi
+
+health_verdict="$(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_health_verify.py" \
+  --app "${APP_ID}" \
+  --expected-api-host "${EXPECTED_API_HOST}" \
+  --expected-sha "${GITHUB_SHA}" \
+  --health-json-file "${health_body_file}")"
+
+case "${health_verdict}" in
+  ok) log "${PORTAL} health OK — effective apiHost verified for staging SHA ${GITHUB_SHA:0:12}" ;;
+  status) die "${PORTAL} health status is not ok" ;;
+  app) die "${PORTAL} health app field does not match this portal" ;;
+  env) die "${PORTAL} health env is not staging/preview" ;;
+  missing_host) die "${PORTAL} health apiHost is missing/empty — deployed app has no effective API configuration" ;;
+  forbidden_host) die "${PORTAL} health apiHost resolves to production or localhost — deployed app is wired to the wrong API" ;;
+  host_mismatch) die "${PORTAL} health apiHost did not match the expected staging host" ;;
+  sha_mismatch) die "${PORTAL} health buildId does not match candidate SHA ${GITHUB_SHA} — deployment may be stale" ;;
+  *) die "unexpected health verdict: ${health_verdict}" ;;
+esac
 
 EVIDENCE_PATH="${VERCEL_PREVIEW_PROVE_EVIDENCE:-${OUTPUT_DIR}/evidence.json}"
 PORTAL="${PORTAL}" \
@@ -375,14 +356,18 @@ GITHUB_SHA="${GITHUB_SHA}" \
 deployment_id="${deployment_id}" \
 preview_url="${preview_url}" \
 commit_sha="${commit_sha}" \
-api_env_var="${API_ENV_VAR}" \
-api_env_verdict="${api_env_verdict}" \
-health_verdict="${health_verdict}" \
-health_http="${health_http}" \
+env_metadata_status="${env_metadata_status}" \
+health_body_file="${health_body_file}" \
 EVIDENCE_PATH="${EVIDENCE_PATH}" \
 python3 - <<'PY'
 import json, os
 from datetime import UTC, datetime
+
+# Only the documented safe fields are read back out of health.json — never
+# an env value, token, key, or arbitrary env var (see route.ts for the
+# full contract each app's /health response is limited to).
+with open(os.environ["health_body_file"], encoding="utf-8") as fh:
+    health_body = json.load(fh)
 
 doc = {
     "portal": os.environ["PORTAL"],
@@ -390,14 +375,15 @@ doc = {
     "project_id": os.environ["PROJECT_ID"],
     "candidate_sha": os.environ["GITHUB_SHA"],
     "deployment_id": os.environ["deployment_id"],
-    "deployment_url": os.environ["preview_url"],
-    "github_commit_sha": os.environ["commit_sha"],
+    "preview_url": os.environ["preview_url"],
+    "deployment_sha": os.environ["commit_sha"],
     "target": "preview",
-    "api_env_var": os.environ["api_env_var"],
-    "api_env_verdict": os.environ["api_env_verdict"],
-    "health_url": os.environ["preview_url"] + "/en/health",
-    "health_http": os.environ["health_http"],
-    "health_verdict": os.environ["health_verdict"],
+    "health_status": health_body.get("status"),
+    "health_app": health_body.get("app"),
+    "health_env": health_body.get("env"),
+    "health_build_id": health_body.get("buildId"),
+    "health_api_host": health_body.get("apiHost"),
+    "env_metadata_status": os.environ["env_metadata_status"],
     "proved_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
 }
 with open(os.environ["EVIDENCE_PATH"], "w", encoding="utf-8") as fh:
@@ -413,7 +399,7 @@ if [ -n "${GITHUB_OUTPUT:-}" ]; then
     printf 'url=%s\n' "${preview_url}"
     printf 'deployment_id=%s\n' "${deployment_id}"
     printf 'sha=%s\n' "${commit_sha}"
-    printf 'api_env_verdict=%s\n' "${api_env_verdict}"
+    printf 'env_metadata_status=%s\n' "${env_metadata_status}"
     printf 'health_verdict=%s\n' "${health_verdict}"
   } >> "${GITHUB_OUTPUT}"
 fi

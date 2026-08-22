@@ -16,6 +16,7 @@ import {
   isAdminPermissionDeniedPath,
   isAuthExemptPath,
   isCspReportRequest,
+  isHealthCheckPath,
   isVendorOnboardingPath,
   mergeSessionCookies,
   resolveGatedRedirect,
@@ -212,6 +213,18 @@ describe("middleware matrix", () => {
     expect(
       resolveGatedRedirect("vendor", "/en", locales, { id: "user-1" } as never, ["vendor"]),
     ).toBeNull();
+  });
+
+  it("matches only the exact /{locale}/health path", () => {
+    expect(isHealthCheckPath("/en/health", locales)).toBe(true);
+    expect(isHealthCheckPath("/bem/health", locales)).toBe(true);
+    expect(isHealthCheckPath("/nya/health", locales)).toBe(true);
+    expect(isHealthCheckPath("/en/health/", locales)).toBe(true);
+    expect(isHealthCheckPath("/en/health/extra", locales)).toBe(false);
+    expect(isHealthCheckPath("/en/healthcheck", locales)).toBe(false);
+    expect(isHealthCheckPath("/health", locales)).toBe(false);
+    expect(isHealthCheckPath("/xx/health", locales)).toBe(false);
+    expect(isHealthCheckPath("/", locales)).toBe(false);
   });
 
   it("does not treat authentication as admin authorization", () => {

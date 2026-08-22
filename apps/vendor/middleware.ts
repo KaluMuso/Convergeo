@@ -6,6 +6,7 @@ import {
   getLocaleFromPath,
   handleCspReportRequest,
   isCspReportRequest,
+  isHealthCheckPath,
   mergeSessionCookies,
   resolveGatedRedirect,
   updateSession,
@@ -55,13 +56,17 @@ export default async function middleware(request: NextRequest) {
 
   const session = await updateSession(request);
   const locale = getLocaleFromPath(request.nextUrl.pathname, LOCALES, DEFAULT_LOCALE);
-  const gate = resolveGatedRedirect(
-    "vendor",
-    request.nextUrl.pathname,
-    LOCALES,
-    session.user,
-    session.roles,
-  );
+  // /health carries only non-secret status/config facts (see route.ts) — it
+  // must stay reachable unauthenticated, like any deployment health check.
+  const gate = isHealthCheckPath(request.nextUrl.pathname, LOCALES)
+    ? null
+    : resolveGatedRedirect(
+        "vendor",
+        request.nextUrl.pathname,
+        LOCALES,
+        session.user,
+        session.roles,
+      );
 
   if (gate) {
     return applyReportOnlyCspNonce(

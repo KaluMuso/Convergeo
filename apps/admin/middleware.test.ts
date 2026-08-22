@@ -45,6 +45,7 @@ import middleware, {
   createCfAccessForbiddenResponse,
   hasCfAccessJwtAssertion,
   isProductionCfAccessRequired,
+  isStagingHealthCheckException,
 } from "./middleware";
 
 describe("admin middleware CF Access helpers", () => {
@@ -90,6 +91,53 @@ describe("admin middleware CF Access helpers", () => {
   it("returns a 403 forbidden response for missing CF Access", () => {
     const response = createCfAccessForbiddenResponse();
     expect(response.status).toBe(403);
+  });
+});
+
+describe("isStagingHealthCheckException", () => {
+  const originalPlane = process.env.NEXT_PUBLIC_DEPLOYMENT_PLANE;
+
+  afterEach(() => {
+    if (originalPlane === undefined) {
+      delete process.env.NEXT_PUBLIC_DEPLOYMENT_PLANE;
+    } else {
+      vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", originalPlane);
+    }
+  });
+
+  it("is true only for the exact /health path on the staging or preview plane", () => {
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "staging");
+    expect(
+      isStagingHealthCheckException(new NextRequest("https://admin.vergeo5.com/en/health")),
+    ).toBe(true);
+
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "preview");
+    expect(
+      isStagingHealthCheckException(new NextRequest("https://admin.vergeo5.com/en/health")),
+    ).toBe(true);
+  });
+
+  it("HEALTH-10: is false for any other path, even on the staging plane", () => {
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "staging");
+    for (const path of ["/en", "/en/users", "/en/vendors", "/en/orders", "/en/settings"]) {
+      expect(
+        isStagingHealthCheckException(new NextRequest(`https://admin.vergeo5.com${path}`)),
+      ).toBe(false);
+    }
+  });
+
+  it("is false on the production plane, even for /health", () => {
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "production");
+    expect(
+      isStagingHealthCheckException(new NextRequest("https://admin.vergeo5.com/en/health")),
+    ).toBe(false);
+  });
+
+  it("is false when the plane is unset", () => {
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", undefined);
+    expect(
+      isStagingHealthCheckException(new NextRequest("https://admin.vergeo5.com/en/health")),
+    ).toBe(false);
   });
 });
 
@@ -176,6 +224,54 @@ describe("admin middleware — CF Access enforcement", () => {
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe("https://admin.vergeo5.com/en/permission-denied");
+  });
+
+  it("HEALTH-10: on the staging plane, /health skips CF Access but /users and /en still require it", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "staging");
+    verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
+
+    const health = await middleware(new NextRequest("https://admin.vergeo5.com/en/health"));
+    expect(health.status).toBe(200);
+    expect(verifyCfAccessAssertionMock).not.toHaveBeenCalled();
+
+    verifyCfAccessAssertionMock.mockClear();
+    const dashboard = await middleware(new NextRequest("https://admin.vergeo5.com/en"));
+    expect(dashboard.status).toBe(403);
+    expect(verifyCfAccessAssertionMock).toHaveBeenCalledWith(null);
+
+    verifyCfAccessAssertionMock.mockClear();
+    const users = await middleware(new NextRequest("https://admin.vergeo5.com/en/users"));
+    expect(users.status).toBe(403);
+    expect(verifyCfAccessAssertionMock).toHaveBeenCalledWith(null);
+
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", undefined);
+  });
+
+  it("does not exempt /health on the production plane — CF Access still guards it", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "production");
+    verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
+
+    const response = await middleware(new NextRequest("https://admin.vergeo5.com/en/health"));
+
+    expect(response.status).toBe(403);
+    expect(verifyCfAccessAssertionMock).toHaveBeenCalledWith(null);
+
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", undefined);
+  });
+
+  it("does not exempt a path that merely starts with health on the staging plane", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "staging");
+    verifyCfAccessAssertionMock.mockResolvedValue({ ok: false, reason: "assertion_missing" });
+
+    const response = await middleware(new NextRequest("https://admin.vergeo5.com/en/healthcheck"));
+
+    expect(response.status).toBe(403);
+    expect(verifyCfAccessAssertionMock).toHaveBeenCalledWith(null);
+
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", undefined);
   });
 
   it("substitutes a report-only CSP nonce without enabling unsafe script directives", async () => {
