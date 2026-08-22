@@ -16,6 +16,18 @@
 #   GITHUB_SHA, GITHUB_REF_NAME (must be "staging" in CI)
 #   STAGING_API_BASE_URL and/or STAGING_API_HOST
 #
+# Vercel Deployment Protection (see scripts/ci/vercel_preview_access.py):
+#   Preview deployments sit behind Deployment Protection, so the health probe
+#   must authenticate with a "Protection Bypass for Automation" secret, sent as
+#   the x-vercel-protection-bypass header. A secret is issued PER VERCEL
+#   PROJECT and the three portals are three separate projects, so one portal's
+#   secret is never assumed to work for another. Precedence, highest first:
+#     VERCEL_PORTAL_BYPASS_SECRET                    (pre-scoped by the caller)
+#     VERCEL_AUTOMATION_BYPASS_SECRET_{CUSTOMER,VENDOR,ADMIN}
+#     VERCEL_AUTOMATION_BYPASS_SECRET                (legacy fallback only)
+#   The value is passed to curl through a mode-600 config file, never through
+#   argv, a URL, a query parameter, the evidence JSON, GITHUB_OUTPUT, or a log.
+#
 # Optional:
 #   GITHUB_OUTPUT — when set, writes url, deployment_id, sha outputs
 #   VERCEL_PREVIEW_PROVE_EVIDENCE — path for JSON evidence (default: $OUTPUT_DIR/evidence.json)
@@ -312,23 +324,104 @@ env_metadata_status="${api_env_verdict}"
 health_path="/${HEALTH_LOCALE}/health"
 health_url="${preview_url}${health_path}"
 health_body_file="${OUTPUT_DIR}/health.json"
+health_headers_file="${OUTPUT_DIR}/health-headers.txt"
+
+# Resolve this portal's Deployment Protection bypass secret. Presence is
+# checked one source at a time in precedence order; the values are never
+# compared to each other, so nothing here can reveal whether two projects
+# share a secret.
+portal_upper="$(printf '%s' "${PORTAL}" | tr '[:lower:]' '[:upper:]')"
+portal_secret_var="VERCEL_AUTOMATION_BYPASS_SECRET_${portal_upper}"
+BYPASS_SECRET=""
+BYPASS_SOURCE="none"
+BYPASS_SOURCE_VAR=""
+if [ -n "${VERCEL_PORTAL_BYPASS_SECRET:-}" ]; then
+  BYPASS_SECRET="${VERCEL_PORTAL_BYPASS_SECRET}"
+  BYPASS_SOURCE="portal_scoped"
+  BYPASS_SOURCE_VAR="VERCEL_PORTAL_BYPASS_SECRET"
+elif [ -n "${!portal_secret_var:-}" ]; then
+  BYPASS_SECRET="${!portal_secret_var}"
+  BYPASS_SOURCE="portal_specific"
+  BYPASS_SOURCE_VAR="${portal_secret_var}"
+elif [ -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}" ]; then
+  BYPASS_SECRET="${VERCEL_AUTOMATION_BYPASS_SECRET}"
+  BYPASS_SOURCE="fallback"
+  BYPASS_SOURCE_VAR="VERCEL_AUTOMATION_BYPASS_SECRET"
+fi
+
+# Only the SOURCE (kind + variable name) is ever logged — never the value.
+if [ "${BYPASS_SOURCE}" = "none" ]; then
+  log "protection bypass: none configured for ${PORTAL} (probe will be unauthenticated)"
+else
+  log "protection bypass: using ${BYPASS_SOURCE_VAR} (${BYPASS_SOURCE})"
+fi
+
+# The secret goes to curl via a mode-600 config file so it never appears in
+# argv (visible to `ps`), in a URL, or in any trace. `set -x` is deliberately
+# never enabled in this script; the config file is removed immediately after
+# the request in all paths.
+health_curl_config="$(mktemp)"
+chmod 600 "${health_curl_config}"
+cleanup_health_curl_config() { rm -f "${health_curl_config}"; }
+trap cleanup_health_curl_config EXIT
+{
+  printf 'silent\n'
+  printf 'show-error\n'
+  printf 'location = false\n'
+  printf 'connect-timeout = 15\n'
+  printf 'max-time = 30\n'
+  printf 'header = "Accept: application/json"\n'
+  if [ -n "${BYPASS_SECRET}" ]; then
+    printf 'header = "x-vercel-protection-bypass: %s"\n' "${BYPASS_SECRET}"
+    printf 'header = "x-vercel-set-bypass-cookie: true"\n'
+  fi
+} > "${health_curl_config}"
 
 set +e
-health_http="$(curl -sS -o "${health_body_file}" -w '%{http_code}' \
-  --connect-timeout 15 --max-time 30 "${health_url}" 2>/dev/null)"
+health_http="$(curl --config "${health_curl_config}" \
+  -o "${health_body_file}" -D "${health_headers_file}" -w '%{http_code}' \
+  "${health_url}" 2>/dev/null)"
 health_rc=$?
 set -e
+cleanup_health_curl_config
+trap - EXIT
 
 if [ "${health_rc}" -ne 0 ]; then
   die "health probe failed to connect ${health_url}"
 fi
 
-if [ "${health_http}" != "200" ]; then
-  if [ "${PORTAL}" = "admin" ] && [ "${health_http}" = "403" ]; then
-    die "admin health returned 403 — the staging-only CF Access exception did not activate (check NEXT_PUBLIC_DEPLOYMENT_PLANE is staging/preview on this Vercel project); a 403 cannot prove admin's effective staging API host, so it is no longer accepted as a passing outcome"
-  fi
-  die "${PORTAL} health returned HTTP ${health_http}, want 200"
+# Classify BEFORE asserting health: a Deployment Protection challenge must
+# never be reported as a broken application route (deploy-staging run #31,
+# where all three routes were in fact correct and only the probe's access was
+# missing). See scripts/ci/vercel_preview_access.py.
+health_location="$(sed -n 's/^[Ll]ocation:[[:space:]]*//p' "${health_headers_file}" | tr -d '\r' | tail -1)"
+bypass_present_flag=0
+if [ -n "${BYPASS_SECRET}" ]; then
+  bypass_present_flag=1
 fi
+
+access_verdict="$(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_access.py" classify \
+  --http-status "${health_http}" \
+  --location "${health_location}" \
+  --body-file "${health_body_file}" \
+  --bypass-present "${bypass_present_flag}" \
+  --print-detail)"
+
+case "${access_verdict}" in
+  ok) ;;
+  blocked_external)
+    die "BLOCKED_EXTERNAL: ${PORTAL} Preview is behind Vercel Deployment Protection and the automation bypass is missing or invalid (HTTP ${health_http}). The application health route itself is NOT implicated. Configure the ${PORTAL} project's 'Protection Bypass for Automation' secret and expose it as ${portal_secret_var} (or VERCEL_PORTAL_BYPASS_SECRET for this job)."
+    ;;
+  app_error)
+    die "${PORTAL} health returned HTTP ${health_http} — application runtime failure in the deployed Preview, not a protection challenge"
+    ;;
+  not_json)
+    die "${PORTAL} health returned HTTP 200 but the body is not a JSON object — application or verifier failure"
+    ;;
+  *)
+    die "${PORTAL} health returned HTTP ${health_http} (verdict ${access_verdict}) — want 200 with a JSON body"
+    ;;
+esac
 
 health_verdict="$(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_health_verify.py" \
   --app "${APP_ID}" \
@@ -357,6 +450,7 @@ deployment_id="${deployment_id}" \
 preview_url="${preview_url}" \
 commit_sha="${commit_sha}" \
 env_metadata_status="${env_metadata_status}" \
+bypass_source="${BYPASS_SOURCE}" \
 health_body_file="${health_body_file}" \
 EVIDENCE_PATH="${EVIDENCE_PATH}" \
 python3 - <<'PY'
@@ -365,7 +459,8 @@ from datetime import UTC, datetime
 
 # Only the documented safe fields are read back out of health.json — never
 # an env value, token, key, or arbitrary env var (see route.ts for the
-# full contract each app's /health response is limited to).
+# full contract each app's /health response is limited to). `bypass_source`
+# is the NAME/kind of the protection-bypass source used, never its value.
 with open(os.environ["health_body_file"], encoding="utf-8") as fh:
     health_body = json.load(fh)
 
@@ -384,6 +479,7 @@ doc = {
     "health_build_id": health_body.get("buildId"),
     "health_api_host": health_body.get("apiHost"),
     "env_metadata_status": os.environ["env_metadata_status"],
+    "bypass_source": os.environ["bypass_source"],
     "proved_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
 }
 with open(os.environ["EVIDENCE_PATH"], "w", encoding="utf-8") as fh:

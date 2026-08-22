@@ -30,6 +30,72 @@ export const BASE_URL = str("E2E_BASE_URL", "http://localhost:3000");
 export const VENDOR_BASE_URL = str("E2E_VENDOR_BASE_URL", BASE_URL);
 export const ADMIN_BASE_URL = str("E2E_ADMIN_BASE_URL", BASE_URL);
 
+/**
+ * Vercel "Protection Bypass for Automation" secrets.
+ *
+ * A bypass secret is issued PER VERCEL PROJECT, and the three portals are
+ * three separate projects (convergeo-customer/-vendor/-admin), so a secret
+ * generated for one is NOT assumed to work on another. Specs navigate the
+ * vendor origin directly (vendor-sell, event-ticket), so when the vendor app
+ * runs on its own origin it needs its own secret.
+ *
+ * Each resolves portal-specific first, then the pre-existing repository-wide
+ * secret as a backward-compatible fallback. Presence is checked per source;
+ * values are never compared to each other.
+ */
+export const BYPASS_SECRET_FALLBACK = str("VERCEL_AUTOMATION_BYPASS_SECRET");
+export const BYPASS_SECRET_CUSTOMER = str(
+  "VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER",
+  BYPASS_SECRET_FALLBACK,
+);
+export const BYPASS_SECRET_VENDOR = str(
+  "VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR",
+  BYPASS_SECRET_FALLBACK,
+);
+export const BYPASS_SECRET_ADMIN = str(
+  "VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN",
+  BYPASS_SECRET_FALLBACK,
+);
+
+/**
+ * True when at least one portal-specific secret is configured. Only then does
+ * the suite need per-origin header injection; otherwise the single global
+ * `extraHTTPHeaders` in playwright.config.ts is already correct and behavior
+ * is unchanged. Presence-based — never compares two secret values.
+ */
+export function hasPortalSpecificBypass(): boolean {
+  return (
+    str("VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER").length > 0 ||
+    str("VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR").length > 0 ||
+    str("VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN").length > 0
+  );
+}
+
+function originOf(raw: string): string {
+  try {
+    return new URL(raw).origin.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Pick the bypass secret for whichever portal origin a request targets.
+ * Returns "" when nothing is configured for that origin (caller then leaves
+ * the request's headers untouched).
+ */
+export function bypassSecretForUrl(url: string): string {
+  const target = originOf(url);
+  if (!target) return BYPASS_SECRET_CUSTOMER;
+  // Customer is matched FIRST: VENDOR_BASE_URL/ADMIN_BASE_URL default to the
+  // customer base, so on a collision (portal origin not separately configured)
+  // the origin is genuinely the customer app and must get the customer secret.
+  if (target === originOf(BASE_URL)) return BYPASS_SECRET_CUSTOMER;
+  if (target === originOf(VENDOR_BASE_URL)) return BYPASS_SECRET_VENDOR;
+  if (target === originOf(ADMIN_BASE_URL)) return BYPASS_SECRET_ADMIN;
+  return BYPASS_SECRET_CUSTOMER;
+}
+
 /** Build a locale-prefixed absolute URL against an explicit origin. */
 export function urlOn(origin: string, p: string): string {
   const clean = p.startsWith("/") ? p : `/${p}`;

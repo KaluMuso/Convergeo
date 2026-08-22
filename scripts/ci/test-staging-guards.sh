@@ -272,7 +272,9 @@ fi
 # 13) deploy-staging wires explicit Preview proof for all three portals
 if grep -q 'prove-vercel-preview' .github/workflows/deploy-staging.yml \
   && grep -q 'matrix:' .github/workflows/deploy-staging.yml \
-  && grep -q 'portal: \[customer, vendor, admin\]' .github/workflows/deploy-staging.yml \
+  && grep -q 'portal: customer' .github/workflows/deploy-staging.yml \
+  && grep -q 'portal: vendor' .github/workflows/deploy-staging.yml \
+  && grep -q 'portal: admin' .github/workflows/deploy-staging.yml \
   && grep -q 'vercel-staging-preview-prove.sh' .github/workflows/deploy-staging.yml \
   && grep -q 'staging-sha-proof' .github/workflows/deploy-staging.yml \
   && grep -q 'staging-evidence-bundle.sh' .github/workflows/deploy-staging.yml \
@@ -519,10 +521,15 @@ fi
 # blocking release gate; the Vercel env-API check (including its
 # BLOCKED_EXTERNAL outcome) is non-blocking/informational only (PR #666 —
 # see vercel_preview_health_verify.py / vercel_preview_env_verify.py).
-if grep -q 'BLOCKED_EXTERNAL.*die\|die.*BLOCKED_EXTERNAL' scripts/ci/vercel-staging-preview-prove.sh; then
-  bad "vercel-staging-preview-prove must NOT die on env-API BLOCKED_EXTERNAL — it is a non-blocking, informational signal, not the release gate"
+# Precisely: the ENV-API verdict must never appear in a failing branch. (A
+# Vercel Deployment Protection challenge on the health probe is a DIFFERENT,
+# legitimately blocking BLOCKED_EXTERNAL — see check 19 — so this must test
+# the env-API variables, not the bare string.)
+if grep -E 'api_env_verdict|env_metadata_status' scripts/ci/vercel-staging-preview-prove.sh \
+  | grep -q 'die'; then
+  bad "vercel-staging-preview-prove must NOT die on the env-API verdict — it is a non-blocking, informational signal, not the release gate"
 else
-  ok "vercel-staging-preview-prove treats env-API BLOCKED_EXTERNAL as non-blocking"
+  ok "vercel-staging-preview-prove treats the env-API verdict as non-blocking"
 fi
 
 if grep -Eq 'missing_host\) die|forbidden_host\) die|host_mismatch\) die|sha_mismatch\) die' \
@@ -530,6 +537,67 @@ if grep -Eq 'missing_host\) die|forbidden_host\) die|host_mismatch\) die|sha_mis
   ok "vercel-staging-preview-prove fails closed on deployed-health verdict failures"
 else
   bad "vercel-staging-preview-prove must die on a failing health verdict (missing_host/forbidden_host/host_mismatch/sha_mismatch)"
+fi
+
+# 19) Vercel Deployment Protection bypass (deploy-staging run #31 root cause):
+# the health probe must authenticate with a per-project automation bypass
+# secret, and that secret must never reach argv, a URL, a log, evidence, or
+# GITHUB_OUTPUT. See scripts/ci/vercel_preview_access.py.
+if grep -q -- '--config "${health_curl_config}"' scripts/ci/vercel-staging-preview-prove.sh \
+  && grep -q 'chmod 600 "${health_curl_config}"' scripts/ci/vercel-staging-preview-prove.sh \
+  && ! grep -q -- '-H "x-vercel-protection-bypass' scripts/ci/vercel-staging-preview-prove.sh; then
+  ok "protection bypass secret reaches curl via a mode-600 config file, never argv"
+else
+  bad "protection bypass secret must be passed through a mode-600 curl config file, never -H/argv"
+fi
+
+# The secret must never be traced, echoed, or written to any evidence sink.
+if grep -vE '^\s*#' scripts/ci/vercel-staging-preview-prove.sh | grep -Eq '(^|\s)set -x(\s|$)'; then
+  bad "vercel-staging-preview-prove must never enable set -x (would trace the bypass secret)"
+else
+  ok "vercel-staging-preview-prove never enables set -x"
+fi
+
+# The ONLY permitted use of the secret value is writing the curl header line
+# into the mode-600 config file; it must never be echoed or logged.
+bypass_secret_uses="$(grep -n 'BYPASS_SECRET' scripts/ci/vercel-staging-preview-prove.sh \
+  | grep -vE '^\s*[0-9]+:\s*#' \
+  | grep -E 'echo|log |printf' \
+  | grep -v 'x-vercel-protection-bypass: %s' || true)"
+if [ -n "${bypass_secret_uses}" ]; then
+  bad "vercel-staging-preview-prove must never echo/log the bypass secret value: ${bypass_secret_uses}"
+else
+  ok "vercel-staging-preview-prove never echoes the bypass secret value"
+fi
+
+# Only the SOURCE label (kind + variable name) may be recorded.
+if grep -q '"bypass_source": os.environ\["bypass_source"\]' scripts/ci/vercel-staging-preview-prove.sh \
+  && ! sed -n "/if \[ -n \"\${GITHUB_OUTPUT:-}\" \]; then/,\$p" scripts/ci/vercel-staging-preview-prove.sh \
+     | grep -q 'BYPASS_SECRET'; then
+  ok "only the bypass SOURCE label reaches evidence/GITHUB_OUTPUT, never the secret"
+else
+  bad "bypass secret must not reach evidence.json or GITHUB_OUTPUT (only its source label)"
+fi
+
+# A Vercel protection challenge must be classified BLOCKED_EXTERNAL, never
+# reported as a broken application health route (run #31 misdiagnosis).
+if grep -q 'blocked_external)' scripts/ci/vercel-staging-preview-prove.sh \
+  && grep -q 'BLOCKED_EXTERNAL' scripts/ci/vercel-staging-preview-prove.sh \
+  && python3 -m py_compile scripts/ci/vercel_preview_access.py; then
+  ok "protection challenge classified BLOCKED_EXTERNAL, distinct from app failure"
+else
+  bad "vercel-staging-preview-prove must classify a protection challenge as BLOCKED_EXTERNAL"
+fi
+
+# deploy-staging must scope the bypass secret per matrix leg (secrets are
+# issued per Vercel project; three portals = three projects).
+if grep -q 'bypass_secret_name: VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER' .github/workflows/deploy-staging.yml \
+  && grep -q 'bypass_secret_name: VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR' .github/workflows/deploy-staging.yml \
+  && grep -q 'bypass_secret_name: VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN' .github/workflows/deploy-staging.yml \
+  && grep -q 'VERCEL_PORTAL_BYPASS_SECRET: ${{ secrets\[matrix.bypass_secret_name\] }}' .github/workflows/deploy-staging.yml; then
+  ok "deploy-staging passes only the matching portal bypass secret to each matrix leg"
+else
+  bad "deploy-staging must scope the Vercel bypass secret per portal via the job matrix"
 fi
 
 echo "Results: ${pass} passed, ${fail} failed, ${skip} skipped"

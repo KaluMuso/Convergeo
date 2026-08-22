@@ -198,7 +198,14 @@ export async function probeStagingAccess(env, opts = {}) {
 
   const locale = (env.E2E_LOCALE ?? "en").trim() || "en";
   const healthUrl = `${baseParse.base}/${locale}/health`;
-  const bypassSecret = (env.VERCEL_AUTOMATION_BYPASS_SECRET ?? "").trim();
+  // This probe targets the CUSTOMER surface only (E2E_BASE_URL). Vercel issues
+  // a bypass secret per project, so prefer the customer project's own secret
+  // and keep the repository-wide one as a backward-compatible fallback.
+  const bypassSecret = (
+    env.VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER ??
+    env.VERCEL_AUTOMATION_BYPASS_SECRET ??
+    ""
+  ).trim();
   const expectedSha = (env.E2E_EXPECT_SHA ?? env.GITHUB_SHA ?? "").trim();
   const strictSha =
     (env.E2E_STRICT_SHA ?? "").trim().toLowerCase() === "1" ||
@@ -220,8 +227,8 @@ export async function probeStagingAccess(env, opts = {}) {
 
   if (detectProtectionChallenge(response, bodyText)) {
     const hint = bypassSecret
-      ? "protection challenge despite bypass header — verify VERCEL_AUTOMATION_BYPASS_SECRET"
-      : "set VERCEL_AUTOMATION_BYPASS_SECRET (Vercel Protection Bypass for Automation)";
+      ? "protection challenge despite bypass header — the secret is invalid, expired, or was issued for a different Vercel project (verify VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER, else VERCEL_AUTOMATION_BYPASS_SECRET)"
+      : "set VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER (or VERCEL_AUTOMATION_BYPASS_SECRET) from the convergeo-customer project's Protection Bypass for Automation";
     return {
       verdict: "BLOCKED_EXTERNAL",
       detail: `deployment protection / SSO challenge (HTTP ${response.status}); ${hint}`,

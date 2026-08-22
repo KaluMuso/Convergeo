@@ -45,7 +45,16 @@ jobs:
       E2E_ADMIN_BASE_URL: ${{ secrets.E2E_ADMIN_BASE_URL }}
       E2E_LOCALE: en
       # Vercel Deployment Protection bypass for automation (header — never in URLs).
+      # A bypass secret is issued PER VERCEL PROJECT and the three portals are
+      # three projects, so specs that navigate the vendor origin directly
+      # (vendor-sell, event-ticket) need the vendor project's own secret.
+      # Portal-specific values take precedence; the repository-wide secret below
+      # stays as the backward-compatible fallback (and remains sufficient on its
+      # own while every portal shares one origin/secret).
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER }}
+      VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR }}
+      VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN }}
       E2E_EXPECT_SHA: ${{ inputs.expect_sha || github.sha }}
       E2E_STRICT_SHA: ${{ inputs.pre_release && 'true' || '' }}
       CERTIFICATION_MODE: ${{ inputs.pre_release && 'integrated-staging' || '' }}
