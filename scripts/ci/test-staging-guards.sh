@@ -314,24 +314,24 @@ GOOD_SHA=deadbeefcafebabe0123456789abcdef01234567
 STAGING_REF=abcdefghij1234567890
 mkdir -p /tmp/evidence-bundle-test/{customer,vendor,admin}
 for portal in customer vendor admin; do
-  health_verdict="ok"
-  health_http="200"
-  if [ "$portal" = "admin" ]; then
-    health_verdict="cf_access_gate"
-    health_http="403"
-  fi
   python3 - <<PY
 import json, pathlib
 portal = "${portal}"
 doc = {
     "portal": portal,
-    "deployment_url": f"https://{portal}.example.vercel.app",
+    "vercel_project": f"convergeo-{portal}",
+    "project_id": f"prj_{portal}",
+    "candidate_sha": "${GOOD_SHA}",
     "deployment_id": f"dpl_{portal}",
-    "github_commit_sha": "${GOOD_SHA}",
+    "preview_url": f"https://{portal}.example.vercel.app",
+    "deployment_sha": "${GOOD_SHA}",
     "target": "preview",
-    "api_env_verdict": "verified",
-    "health_verdict": "${health_verdict}",
-    "health_http": "${health_http}",
+    "health_status": "ok",
+    "health_app": portal,
+    "health_env": "staging",
+    "health_build_id": "${GOOD_SHA}",
+    "health_api_host": "api.staging.vergeo5.com",
+    "env_metadata_status": "verified",
 }
 pathlib.Path("/tmp/evidence-bundle-test", portal, "evidence.json").write_text(
     json.dumps(doc) + "\n", encoding="utf-8"
@@ -374,18 +374,29 @@ STAGING_REF = "abcdefghij1234567890"
 PROD_REF = "dpadrlxukcjbewpqympu"
 REPO = Path("scripts/ci")
 
-def portal_doc(portal: str, *, sha: str = GOOD_SHA, api_env: str = "verified", health: str = "ok", http: str = "200"):
-    if portal == "admin" and health == "cf_access_gate":
-        http = "403"
+def portal_doc(
+    portal: str,
+    *,
+    sha: str = GOOD_SHA,
+    candidate_sha: str | None = None,
+    env_metadata: str = "verified",
+    health_status: str = "ok",
+    health_app: str | None = None,
+    api_host: str = "api.staging.vergeo5.com",
+):
     return {
         "portal": portal,
-        "deployment_url": f"https://{portal}.example.vercel.app",
+        "preview_url": f"https://{portal}.example.vercel.app",
         "deployment_id": f"dpl_{portal}",
-        "github_commit_sha": sha,
+        "candidate_sha": candidate_sha if candidate_sha is not None else sha,
+        "deployment_sha": sha,
         "target": "preview",
-        "api_env_verdict": api_env,
-        "health_verdict": health,
-        "health_http": http,
+        "health_status": health_status,
+        "health_app": health_app if health_app is not None else portal,
+        "health_env": "staging",
+        "health_build_id": sha,
+        "health_api_host": api_host,
+        "env_metadata_status": env_metadata,
     }
 
 def fingerprint(*, sha: str = GOOD_SHA, ref: str = STAGING_REF, env: str = "staging", image: str = GOOD_SHA):
@@ -421,19 +432,22 @@ def run_validate(tmp: Path, fp: dict, previews: dict[str, dict], expect_ok: bool
     return ok if expect_ok else (not ok)
 
 previews_ok = {p: portal_doc(p) for p in ("customer", "vendor", "admin")}
-previews_ok["admin"] = portal_doc("admin", health="cf_access_gate")
 
 cases = [
     ("correct proof succeeds", lambda t: run_validate(t, fingerprint(), previews_ok, True)),
     ("wrong API git SHA fails", lambda t: run_validate(t, fingerprint(sha="0000000000000000000000000000000000000001"), previews_ok, False)),
     ("wrong staging Supabase ref fails", lambda t: run_validate(t, fingerprint(ref="wrongref123456789012345"), previews_ok, False)),
     ("production Supabase ref fails", lambda t: run_validate(t, fingerprint(ref=PROD_REF), previews_ok, False)),
-    ("BLOCKED_EXTERNAL Vercel env proof fails", lambda t: run_validate(
-        t, fingerprint(), {**previews_ok, "customer": portal_doc("customer", api_env="BLOCKED_EXTERNAL")}, False)),
-    ("wrong portal SHA fails", lambda t: run_validate(
+    ("BLOCKED_EXTERNAL env metadata does NOT fail the proof (non-blocking, informational only)", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "customer": portal_doc("customer", env_metadata="BLOCKED_EXTERNAL")}, True)),
+    ("wrong portal deployment SHA fails", lambda t: run_validate(
         t, fingerprint(), {**previews_ok, "vendor": portal_doc("vendor", sha="cafe" * 10)}, False)),
-    ("valid admin CF Access 403 remains accepted", lambda t: run_validate(
-        t, fingerprint(), {**previews_ok, "admin": portal_doc("admin", health="cf_access_gate")}, True)),
+    ("admin health_status != ok is rejected — CF Access 403 is no longer an accepted outcome (PR #666)", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "admin": portal_doc("admin", health_status="cf_access_gate", api_host="")}, False)),
+    ("wrong health_app fails", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "vendor": portal_doc("vendor", health_app="customer")}, False)),
+    ("missing health_api_host fails", lambda t: run_validate(
+        t, fingerprint(), {**previews_ok, "customer": portal_doc("customer", api_host="")}, False)),
 ]
 
 failed = []
@@ -484,11 +498,21 @@ else
   cat /tmp/reconcile-ok.txt /tmp/reconcile-bad.txt || true
 fi
 
-# 18) vercel-staging-preview-prove rejects BLOCKED_EXTERNAL at source
+# 18) vercel-staging-preview-prove: the deployed-health proof is the sole
+# blocking release gate; the Vercel env-API check (including its
+# BLOCKED_EXTERNAL outcome) is non-blocking/informational only (PR #666 —
+# see vercel_preview_health_verify.py / vercel_preview_env_verify.py).
 if grep -q 'BLOCKED_EXTERNAL.*die\|die.*BLOCKED_EXTERNAL' scripts/ci/vercel-staging-preview-prove.sh; then
-  ok "vercel-staging-preview-prove fails closed on BLOCKED_EXTERNAL"
+  bad "vercel-staging-preview-prove must NOT die on env-API BLOCKED_EXTERNAL — it is a non-blocking, informational signal, not the release gate"
 else
-  bad "vercel-staging-preview-prove must die on BLOCKED_EXTERNAL"
+  ok "vercel-staging-preview-prove treats env-API BLOCKED_EXTERNAL as non-blocking"
+fi
+
+if grep -Eq 'missing_host\) die|forbidden_host\) die|host_mismatch\) die|sha_mismatch\) die' \
+  scripts/ci/vercel-staging-preview-prove.sh; then
+  ok "vercel-staging-preview-prove fails closed on deployed-health verdict failures"
+else
+  bad "vercel-staging-preview-prove must die on a failing health verdict (missing_host/forbidden_host/host_mismatch/sha_mismatch)"
 fi
 
 echo "Results: ${pass} passed, ${fail} failed, ${skip} skipped"

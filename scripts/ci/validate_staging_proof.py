@@ -83,47 +83,53 @@ def validate_portal_proof(
     *,
     candidate_sha: str,
 ) -> None:
-    """Assert one Vercel Preview evidence document is consistent."""
+    """Assert one Vercel Preview evidence document is consistent.
+
+    The deployed-health proof (vercel_preview_health_verify.py) is the
+    primary, blocking release gate; a portal's evidence.json only exists at
+    all once that check has already passed inside
+    vercel-staging-preview-prove.sh (see PR #666), so `health_status` here
+    is confirmatory, not a second independent gate — but it is still
+    asserted, since a stale/hand-edited evidence file should not slip
+    through. The Vercel env-API result (`env_metadata_status`) is
+    informational only and is never checked here — do not reintroduce it
+    as a blocking condition (see vercel_preview_env_verify.py's docstring
+    for why Vercel can refuse to decrypt a row for reasons entirely outside
+    this repo's control).
+    """
     _require_sha(candidate_sha, "candidate_sha")
 
-    commit_sha = proof.get("github_commit_sha") or proof.get("candidate_sha") or ""
-    if commit_sha != candidate_sha:
+    deployment_sha = proof.get("deployment_sha") or ""
+    if deployment_sha != candidate_sha:
         raise ProofValidationError(
-            f"{portal} github_commit_sha={commit_sha!r} != candidate_sha={candidate_sha!r}"
+            f"{portal} deployment_sha={deployment_sha!r} != candidate_sha={candidate_sha!r}"
+        )
+
+    proof_candidate_sha = proof.get("candidate_sha") or ""
+    if proof_candidate_sha != candidate_sha:
+        raise ProofValidationError(
+            f"{portal} evidence candidate_sha={proof_candidate_sha!r} != {candidate_sha!r}"
         )
 
     target = (proof.get("target") or "").lower()
     if target != "preview":
         raise ProofValidationError(f"{portal} target={target!r} want preview")
 
-    deployment_url = proof.get("deployment_url") or ""
-    if not _valid_deployment_url(deployment_url):
-        raise ProofValidationError(f"{portal} deployment_url invalid: {deployment_url!r}")
+    preview_url = proof.get("preview_url") or ""
+    if not _valid_deployment_url(preview_url):
+        raise ProofValidationError(f"{portal} preview_url invalid: {preview_url!r}")
 
-    api_env_verdict = proof.get("api_env_verdict") or ""
-    if api_env_verdict == "BLOCKED_EXTERNAL":
-        raise ProofValidationError(
-            f"{portal} api_env_verdict=BLOCKED_EXTERNAL — staging API env not verified"
-        )
-    if api_env_verdict != "verified":
-        raise ProofValidationError(
-            f"{portal} api_env_verdict={api_env_verdict!r} want verified"
-        )
+    health_status = proof.get("health_status") or ""
+    if health_status != "ok":
+        raise ProofValidationError(f"{portal} health_status={health_status!r} want ok")
 
-    health_verdict = proof.get("health_verdict") or ""
-    if portal == "admin":
-        if health_verdict not in {"ok", "cf_access_gate"}:
-            raise ProofValidationError(
-                f"admin health_verdict={health_verdict!r} want ok or cf_access_gate"
-            )
-        if health_verdict == "cf_access_gate":
-            health_http = str(proof.get("health_http") or "")
-            if health_http != "403":
-                raise ProofValidationError(
-                    f"admin cf_access_gate requires health_http=403, got {health_http!r}"
-                )
-    elif health_verdict != "ok":
-        raise ProofValidationError(f"{portal} health_verdict={health_verdict!r} want ok")
+    health_app = proof.get("health_app") or ""
+    if health_app != portal:
+        raise ProofValidationError(f"{portal} health_app={health_app!r} want {portal!r}")
+
+    health_api_host = proof.get("health_api_host") or ""
+    if not health_api_host:
+        raise ProofValidationError(f"{portal} health_api_host is missing/empty")
 
 
 def validate_staging_proof(
@@ -156,9 +162,7 @@ def validate_staging_proof(
         validate_portal_proof(portal, previews[portal], candidate_sha=candidate_sha)
 
     if require_migrate_success and migrate_result != "success":
-        raise ProofValidationError(
-            f"migrate_supabase_result={migrate_result!r} want success"
-        )
+        raise ProofValidationError(f"migrate_supabase_result={migrate_result!r} want success")
 
 
 def load_json_file(path: Path) -> dict[str, Any]:

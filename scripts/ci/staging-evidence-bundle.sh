@@ -124,11 +124,12 @@ with open(output, "w", encoding="utf-8") as fh:
 print(f"candidate_sha={candidate_sha}")
 for portal, row in portals.items():
     print(
-        f"{portal}: url={row.get('deployment_url')} "
+        f"{portal}: url={row.get('preview_url')} "
         f"dpl={row.get('deployment_id')} "
-        f"sha={row.get('github_commit_sha')} "
-        f"api_env={row.get('api_env_verdict')} "
-        f"health={row.get('health_verdict')}"
+        f"sha={row.get('deployment_sha')} "
+        f"health={row.get('health_status')} "
+        f"api_host={row.get('health_api_host')} "
+        f"env_metadata={row.get('env_metadata_status')} (informational)"
     )
 if fingerprint:
     print(
