@@ -614,6 +614,44 @@ else
   bad "health probe must retry only transient curl transport errors (6/7/28/...) and fail fast on 3/23/26/60"
 fi
 
+# One-shot health probes send ONLY x-vercel-protection-bypass. Vercel
+# documents x-vercel-set-bypass-cookie as optional, for maintaining
+# authorization across multiple requests / in iframes — that belongs to the
+# Playwright browser flow, not to a single manual-redirect request (run #33
+# returned HTTP 307 on all three portals with it set).
+if grep -q 'x-vercel-set-bypass-cookie' scripts/ci/vercel-staging-preview-prove.sh \
+  && grep 'x-vercel-set-bypass-cookie' scripts/ci/vercel-staging-preview-prove.sh | grep -q 'printf'; then
+  bad "deploy-staging one-shot health probe must NOT request a bypass cookie"
+elif grep -n 'x-vercel-set-bypass-cookie' scripts/ci/e2e-staging-probe.mjs \
+  | grep -vE '^\s*[0-9]+:\s*(//|\*)' | grep -q 'headers\['; then
+  bad "e2e-staging-probe one-shot health fetch must NOT request a bypass cookie"
+else
+  ok "one-shot health probes send only x-vercel-protection-bypass (no cookie request)"
+fi
+
+# ...while the multi-request browser flow KEEPS the cookie, per Vercel's docs.
+if grep -q 'x-vercel-set-bypass-cookie' e2e/playwright.config.ts \
+  && grep -q 'x-vercel-set-bypass-cookie' e2e/fixtures/test-base.ts; then
+  ok "Playwright browser flow preserves the bypass cookie for follow-up requests"
+else
+  bad "Playwright must keep x-vercel-set-bypass-cookie for multi-request browser continuity"
+fi
+
+# Redirect diagnostics must never surface a cookie value, a secret, or a query.
+redirect_diag_headers="$(mktemp)"
+printf 'HTTP/2 307 \r\nlocation: https://h.example/p?x-vercel-protection-bypass=LEAKME&nonce=N\r\nset-cookie: _vercel_jwt=JWTLEAK; Path=/\r\nserver: Vercel\r\n\r\n' \
+  > "${redirect_diag_headers}"
+redirect_diag_out="$(python3 scripts/ci/vercel_preview_access.py summarize-headers \
+  --headers-file "${redirect_diag_headers}" 2>&1 || true)"
+rm -f "${redirect_diag_headers}"
+if grep -q 'summarize-headers --headers-file' scripts/ci/vercel-staging-preview-prove.sh \
+  && ! printf '%s' "${redirect_diag_out}" | grep -Eq 'LEAKME|JWTLEAK|nonce|_vercel_jwt' \
+  && printf '%s' "${redirect_diag_out}" | grep -q 'set_cookie=yes'; then
+  ok "redirect diagnostics expose host/path + set_cookie=yes/no only, never values"
+else
+  bad "redirect diagnostics must not print Set-Cookie values, secrets, or query strings"
+fi
+
 # The bypass secret is redacted from any surfaced curl error, without ever
 # being passed to an external command.
 if grep -q 'sanitized_curl_error()' scripts/ci/vercel-staging-preview-prove.sh \

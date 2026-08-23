@@ -159,10 +159,17 @@ export function validateBuildSha(buildId, expectedSha, opts = {}) {
 export async function fetchHealth(healthUrl, opts = {}) {
   const timeoutMs = opts.timeoutMs ?? 45_000;
   const fetchImpl = opts.fetchImpl ?? fetch;
+  // One-shot probe: this makes a single request that already carries the
+  // bypass header, and it runs `redirect: "manual"`. Vercel documents
+  // `x-vercel-set-bypass-cookie` as OPTIONAL, for maintaining authorization
+  // "across multiple requests or within iframes" — Playwright keeps it for
+  // exactly that reason, and its browser context is a separate process that
+  // never inherits a cookie set here. Asking for a cookie on a single
+  // manual-redirect request only invites the redirect that failed
+  // deploy-staging run #33 on all three portals.
   const headers = { Accept: "application/json" };
   if (opts.bypassSecret) {
     headers["x-vercel-protection-bypass"] = opts.bypassSecret;
-    headers["x-vercel-set-bypass-cookie"] = "true";
   }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);

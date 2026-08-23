@@ -366,11 +366,19 @@ health_curl_config="$(mktemp)"
 chmod 600 "${health_curl_config}"
 cleanup_health_curl_config() { rm -f "${health_curl_config}"; }
 trap cleanup_health_curl_config EXIT
+# Exactly the headers Vercel documents for a ONE-SHOT automation request:
+# `x-vercel-protection-bypass` alone (their own curl example sends nothing
+# else). `x-vercel-set-bypass-cookie` is documented as OPTIONAL and exists to
+# "maintain authorization across multiple requests or within iframes" — it is
+# for browser/follow-up flows such as Playwright, which keeps it. This probe
+# makes a single request that already carries the bypass header, so the cookie
+# header is not sent here; run #33 returned HTTP 307 on all three portals with
+# it set, and asking for a cookie is the one part of this request that has any
+# documented reason to involve a redirect.
 {
   printf 'header = "Accept: application/json"\n'
   if [ -n "${BYPASS_SECRET}" ]; then
     printf 'header = "x-vercel-protection-bypass: %s"\n' "${BYPASS_SECRET}"
-    printf 'header = "x-vercel-set-bypass-cookie: true"\n'
   fi
 } > "${health_curl_config}"
 
@@ -468,6 +476,19 @@ access_verdict="$(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_access.py" cla
   --body-file "${health_body_file}" \
   --bypass-present "${bypass_present_flag}" \
   --print-detail)"
+
+# Safe response metadata on any non-2xx, so a redirect is diagnosable without
+# re-running: status line, whether a Location exists plus its host/path with
+# the query stripped, whether a Set-Cookie exists (never its value), and the
+# server header. Diagnostics only — it does not influence the verdict or
+# weaken the gate.
+case "${health_http}" in
+  2??) ;;
+  *)
+    log "${PORTAL} response diagnostics: $(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_access.py" \
+      summarize-headers --headers-file "${health_headers_file}")"
+    ;;
+esac
 
 case "${access_verdict}" in
   ok) ;;
