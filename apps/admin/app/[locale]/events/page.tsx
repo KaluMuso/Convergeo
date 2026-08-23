@@ -1,5 +1,7 @@
 import { LOCALES } from "@vergeo/i18n";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
+
+import { getAdminTranslator } from "../../../lib/admin-translator";
 
 import { HighValueQueue } from "./_components/HighValueQueue";
 
@@ -14,7 +16,7 @@ export function generateStaticParams() {
 export default async function HighValueEventsPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations("admin.events");
+  const t = await getAdminTranslator(locale, "admin.events");
 
   return (
     <div className="space-y-4">
