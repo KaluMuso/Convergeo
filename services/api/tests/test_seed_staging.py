@@ -432,3 +432,339 @@ def test_seed_sql_executes_idempotently_and_cleans_up(migrated_db: PgConn) -> No
     for location in VENDOR_LOCATIONS:
         parsed = uuid.UUID(location.location_id)
         assert str(parsed) == location.location_id
+
+
+# ---------------------------------------------------------------------------
+# FIXTURE_BUG regression coverage (staging E2E run #45): a live browser run of
+# shop-cod.spec.ts places a REAL order through the actual /checkout API (no
+# founder gate — it runs on every strict E2E pass). That order's
+# idempotency_key never matches the QA transactional-fixture driver's
+# {SEED_PREFIX}-txn- namespace, so it is invisible to the cleanup's existing
+# transactional-row scoping. These UUIDs are deliberately outside every
+# fixture family used by synthetic_contract.py (a1/b1/c1/d1/e*/f1) so they can
+# never collide with canonical fixture ids.
+# ---------------------------------------------------------------------------
+_REAL_ORDER_ADDRESS_ID = "09000000-0000-4000-8000-000000000001"
+_REAL_ORDER_CHECKOUT_GROUP_ID = "09000000-0000-4000-8000-000000000002"
+_REAL_ORDER_ID = "09000000-0000-4000-8000-000000000003"
+_REAL_ORDER_ITEM_ID = "09000000-0000-4000-8000-000000000004"
+_REAL_ORDER_PAYMENT_ID = "09000000-0000-4000-8000-000000000005"
+_UNRELATED_CART_ID = "09000000-0000-4000-8000-000000000006"
+_UNRELATED_CART_ITEM_ID = "09000000-0000-4000-8000-000000000007"
+
+
+def _insert_real_order(conn: PgConn, *, customer_id: str, vendor_id: str, listing_id: str) -> None:
+    """Mirrors shop-cod.spec.ts placing a real COD order through the live
+    checkout API — idempotency_key uses the real API's `chk-<token>` shape
+    (services/api/app/routers/checkout.py), never the QA transactional
+    driver's `{SEED_PREFIX}-txn-` prefix.
+    """
+    sql = f"""
+BEGIN;
+INSERT INTO public.addresses (id, user_id, landmark, phone)
+VALUES ('{_REAL_ORDER_ADDRESS_ID}', '{customer_id}', 'Test landmark', '+260970000000');
+INSERT INTO public.checkout_groups (
+  id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee, total_ngwee
+) VALUES (
+  '{_REAL_ORDER_CHECKOUT_GROUP_ID}', '{customer_id}', 'chk-e2e-regression-test', 10000, 0, 10000
+);
+INSERT INTO public.orders (
+  id, checkout_group_id, vendor_id, customer_id, fulfilment, address_id, delivery_fee_ngwee, cod
+) VALUES (
+  '{_REAL_ORDER_ID}', '{_REAL_ORDER_CHECKOUT_GROUP_ID}', '{vendor_id}', '{customer_id}',
+  'delivery', '{_REAL_ORDER_ADDRESS_ID}', 0, true
+);
+INSERT INTO public.order_items (id, order_id, item_kind, qty, unit_price_ngwee, title_snapshot)
+VALUES ('{_REAL_ORDER_ITEM_ID}', '{_REAL_ORDER_ID}', 'product', 1, 10000, 'test');
+INSERT INTO public.order_item_products (order_item_id, listing_id)
+VALUES ('{_REAL_ORDER_ITEM_ID}', '{listing_id}');
+INSERT INTO public.payments (
+  id, checkout_group_id, provider, rail, lenco_reference, amount_ngwee, status
+) VALUES (
+  '{_REAL_ORDER_PAYMENT_ID}', '{_REAL_ORDER_CHECKOUT_GROUP_ID}', 'lenco', 'cod',
+  'cod-e2e-regression-test', 10000, 'initiated'
+);
+COMMIT;
+"""
+    result = conn.run_script(sql)
+    assert result.ok, result.error or "real-order test fixture setup failed"
+
+
+def _delete_real_order(conn: PgConn) -> None:
+    sql = f"""
+BEGIN;
+DELETE FROM public.payments WHERE id = '{_REAL_ORDER_PAYMENT_ID}';
+DELETE FROM public.order_item_products WHERE order_item_id = '{_REAL_ORDER_ITEM_ID}';
+DELETE FROM public.order_items WHERE id = '{_REAL_ORDER_ITEM_ID}';
+DELETE FROM public.orders WHERE id = '{_REAL_ORDER_ID}';
+DELETE FROM public.checkout_groups WHERE id = '{_REAL_ORDER_CHECKOUT_GROUP_ID}';
+DELETE FROM public.addresses WHERE id = '{_REAL_ORDER_ADDRESS_ID}';
+COMMIT;
+"""
+    result = conn.run_script(sql)
+    assert result.ok, result.error or "real-order test fixture teardown failed"
+
+
+def test_cleanup_removes_stray_cart_items_and_reproduces_run_45(migrated_db: PgConn) -> None:
+    """Exact reproduction of staging E2E run #45 (32650074063): a lone
+    cart_items row referencing a canonical vendor_listing, with nothing else
+    holding it. Before this PR's fix, DELETE FROM public.vendor_listings
+    failed with cart_items_listing_id_fkey (cart_items was never cleaned by
+    build_cleanup_sql()). Also proves an unrelated listing's cart row is
+    untouched by unrelated cleanup scoping.
+    """
+    assert_contract_valid()
+    seeded = migrated_db.run_script(build_seed_sql())
+    assert seeded.ok, seeded.error
+
+    listing_a = product_fixture("PRODUCT_A").listings[0].listing_id
+    customer = persona_by_key("CUSTOMER_A").user_id
+
+    setup = migrated_db.run_script(
+        f"""
+BEGIN;
+INSERT INTO public.carts (id, user_id, status)
+VALUES ('{_UNRELATED_CART_ID}', '{customer}', 'active');
+INSERT INTO public.cart_items (id, cart_id, listing_id, qty, unit_price_ngwee)
+VALUES ('{_UNRELATED_CART_ITEM_ID}', '{_UNRELATED_CART_ID}', '{listing_a}', 1, 10000);
+COMMIT;
+"""
+    )
+    assert setup.ok, setup.error or "stray cart_items setup failed"
+
+    cleanup = migrated_db.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or (
+        "cleanup must not fail on a stray cart_items row referencing a "
+        "canonical listing (run #45 reproduction)"
+    )
+
+    remaining = migrated_db.run(
+        f"SELECT count(*)::text FROM public.cart_items WHERE id = '{_UNRELATED_CART_ITEM_ID}'"
+    )
+    assert remaining.ok and remaining.rows == ["0"], (
+        "cart_items for a canonical listing must be removed"
+    )
+
+    migrated_db.run(f"DELETE FROM public.carts WHERE id = '{_UNRELATED_CART_ID}'")
+    reseed = migrated_db.run_script(build_seed_sql())
+    assert reseed.ok, reseed.error
+
+
+def test_cleanup_preserves_full_dependency_chain_for_a_live_real_order(
+    migrated_db: PgConn,
+) -> None:
+    """A live real order (shop-cod.spec.ts) must never be force-deleted, and
+    neither must anything it transitively depends on: vendor_listings ->
+    products -> categories (vendor_listings_product_strategy_policy trigger,
+    20260813064106_product_strategy_core_contract.sql) and vendors -> profiles
+    / auth.users (vendors_owner_user_id_fkey, 0002_identity_vendors.sql). Each
+    of these was found by live reproduction, not by static FK reading alone —
+    the trigger-enforced ones do not show up in a plain FK grep. Unrelated
+    canonical rows in the SAME cleanup cycle must still be removed and
+    reseeded normally.
+    """
+    assert_contract_valid()
+    seeded = migrated_db.run_script(build_seed_sql())
+    assert seeded.ok, seeded.error
+
+    product_a = product_fixture("PRODUCT_A")
+    ordered = product_a.listings[0]
+    unrelated = product_a.listings[1]
+    assert ordered.vendor_key != unrelated.vendor_key, "PRODUCT_A must remain multiseller"
+
+    ordered_vendor = persona_by_key(ordered.vendor_key)
+    unrelated_vendor = persona_by_key(unrelated.vendor_key)
+    customer = persona_by_key("CUSTOMER_A").user_id
+    assert ordered_vendor.vendor_id is not None
+
+    _insert_real_order(
+        migrated_db,
+        customer_id=customer,
+        vendor_id=ordered_vendor.vendor_id,
+        listing_id=ordered.listing_id,
+    )
+
+    cleanup = migrated_db.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or "cleanup failed with a live real order present"
+
+    def _exists(sql: str) -> bool:
+        result = migrated_db.run(sql)
+        assert result.ok, result.error
+        return result.rows == ["1"]
+
+    # Preserved: the ordered listing and everything it transitively depends on.
+    assert _exists(
+        f"SELECT count(*)::text FROM public.vendor_listings WHERE id = '{ordered.listing_id}'"
+    ), "vendor_listings row for a live real order must survive cleanup"
+    assert _exists(
+        f"SELECT count(*)::text FROM public.vendors WHERE id = '{ordered_vendor.vendor_id}'"
+    ), "vendors row for a live real order must survive cleanup"
+    assert _exists(
+        f"SELECT count(*)::text FROM public.profiles WHERE id = '{ordered_vendor.user_id}'"
+    ), "profiles row for the surviving vendor's owner must survive cleanup"
+    assert _exists(
+        f"SELECT count(*)::text FROM auth.users WHERE id = '{ordered_vendor.user_id}'"
+    ), "auth.users row for the surviving vendor's owner must survive cleanup"
+    assert _exists(
+        f"SELECT count(*)::text FROM auth.users WHERE id = '{customer}'"
+    ), "auth.users row for the ordering customer must survive cleanup"
+    assert _exists(
+        f"SELECT count(*)::text FROM public.products WHERE id = '{product_a.product_id}'"
+    ), "products row for a listing still in use must survive cleanup"
+    assert _exists(
+        f"SELECT count(*)::text FROM public.categories WHERE id = '{product_a.category_id}'"
+    ), "categories row for a product still in use must survive cleanup"
+
+    # The real order rows themselves are untouched — never force-deleted.
+    for table, value in (
+        ("orders", _REAL_ORDER_ID),
+        ("checkout_groups", _REAL_ORDER_CHECKOUT_GROUP_ID),
+        ("payments", _REAL_ORDER_PAYMENT_ID),
+        ("order_items", _REAL_ORDER_ITEM_ID),
+    ):
+        assert _exists(
+            f"SELECT count(*)::text FROM public.{table} WHERE id = '{value}'"
+        ), f"real order row {table} must never be force-deleted"
+
+    # Unrelated canonical rows in the SAME cycle still clean up normally.
+    unrelated_listing_gone = migrated_db.run(
+        f"SELECT count(*)::text FROM public.vendor_listings WHERE id = '{unrelated.listing_id}'"
+    )
+    assert unrelated_listing_gone.ok and unrelated_listing_gone.rows == ["0"], (
+        "unrelated vendor_listings row must still be cleaned up"
+    )
+    unrelated_vendor_gone = migrated_db.run(
+        f"SELECT count(*)::text FROM public.vendors WHERE id = '{unrelated_vendor.vendor_id}'"
+    )
+    assert unrelated_vendor_gone.ok and unrelated_vendor_gone.rows == ["0"], (
+        "unrelated vendors row must still be cleaned up"
+    )
+
+    # Full healing: the next seed restores everything cleanup legitimately
+    # removed and refreshes the preserved rows to their canonical values.
+    reseed = migrated_db.run_script(build_seed_sql())
+    assert reseed.ok, reseed.error or "reseed after a preserved real order failed"
+    _run_verification(migrated_db)
+    _assert_contract_proof_with_live_order(migrated_db)
+
+    _delete_real_order(migrated_db)
+
+
+def _assert_contract_proof_with_live_order(conn: PgConn) -> None:
+    """Same shape as _assert_contract_proof, minus the zero-orders assertion —
+    a live real order is deliberately kept across this test's cleanup cycle.
+    """
+    product_a = product_fixture("PRODUCT_A")
+    listing_a_ids = ", ".join(f"'{listing.listing_id}'" for listing in product_a.listings)
+    prices = conn.run(
+        "SELECT price_ngwee::text FROM public.vendor_listings "
+        f"WHERE id IN ({listing_a_ids}) ORDER BY price_ngwee"
+    )
+    assert prices.ok and prices.rows == ["12500", "14900"]
+
+    locations = conn.run("SELECT count(*)::text FROM public.vendor_locations")
+    assert locations.ok and locations.rows == ["2"]
+
+    ledger = conn.run("SELECT count(*)::text FROM public.ledger_transactions")
+    assert ledger.ok and ledger.rows == ["0"], "static seed must not create ledger rows"
+
+
+def test_cleanup_transaction_is_atomic_all_or_nothing(migrated_db: PgConn) -> None:
+    """Structural fix for run #45's partial-commit: the original cleanup ran
+    `DELETE FROM public.listing_location_stock` in its own early BEGIN/COMMIT
+    block, separate from the rest of cleanup, so it stayed durably deleted
+    even when a later block failed. This PR merges cleanup into one
+    transaction. Proves that end-to-end: a forced failure appended just before
+    the real cleanup's own COMMIT rolls back everything, including that very
+    first DELETE.
+    """
+    assert_contract_valid()
+    seeded = migrated_db.run_script(build_seed_sql())
+    assert seeded.ok, seeded.error
+
+    before: dict[str, list[str]] = {}
+    tables = (
+        "listing_location_stock",
+        "vendor_listings",
+        "products",
+        "vendors",
+        "profiles",
+        "categories",
+    )
+    for table in tables:
+        result = migrated_db.run(f"SELECT count(*)::text FROM public.{table}")
+        assert result.ok, result.error
+        before[table] = result.rows
+    auth_before = migrated_db.run(
+        f"SELECT count(*)::text FROM auth.users WHERE email LIKE '%{SEED_PREFIX}%'"
+    )
+    assert auth_before.ok
+
+    real_sql = build_cleanup_sql()
+    assert real_sql.rstrip().endswith("COMMIT;"), "unexpected cleanup SQL shape — update this test"
+    forced_failure_sql = real_sql.rstrip()[: -len("COMMIT;")] + "\nSELECT 1/0;\nCOMMIT;\n"
+
+    result = migrated_db.run_script(forced_failure_sql)
+    assert not result.ok, "expected the forced failure statement to abort the transaction"
+
+    for table in tables:
+        after = migrated_db.run(f"SELECT count(*)::text FROM public.{table}")
+        assert after.ok and after.rows == before[table], (
+            f"{table} must be fully rolled back when a later statement in the "
+            "same transaction fails — partial commit reproduces run #45"
+        )
+    auth_after = migrated_db.run(
+        f"SELECT count(*)::text FROM auth.users WHERE email LIKE '%{SEED_PREFIX}%'"
+    )
+    assert auth_after.ok and auth_after.rows == auth_before.rows
+
+    cleanup = migrated_db.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or (
+        "the real cleanup must still succeed after the forced-failure run"
+    )
+    reseed = migrated_db.run_script(build_seed_sql())
+    assert reseed.ok, reseed.error
+
+
+def test_cleanup_seed_cycle_is_idempotent_across_three_cycles_with_a_live_order(
+    migrated_db: PgConn,
+) -> None:
+    """cleanup -> seed, repeated three times, with a real order persisting
+    throughout (as it would across repeated staging E2E runs, since no run
+    ever cleans up its own shop-cod.spec.ts order). All three cycles must
+    succeed, the canonical fixture must stay correct each time, and the real
+    order must never be disturbed.
+    """
+    assert_contract_valid()
+    seeded = migrated_db.run_script(build_seed_sql())
+    assert seeded.ok, seeded.error
+
+    product_a = product_fixture("PRODUCT_A")
+    ordered = product_a.listings[0]
+    ordered_vendor = persona_by_key(ordered.vendor_key)
+    customer = persona_by_key("CUSTOMER_A").user_id
+    assert ordered_vendor.vendor_id is not None
+
+    _insert_real_order(
+        migrated_db,
+        customer_id=customer,
+        vendor_id=ordered_vendor.vendor_id,
+        listing_id=ordered.listing_id,
+    )
+
+    for cycle in range(1, 4):
+        cleanup = migrated_db.run_script(build_cleanup_sql())
+        assert cleanup.ok, f"cycle {cycle}: cleanup failed: {cleanup.error}"
+        seed = migrated_db.run_script(build_seed_sql())
+        assert seed.ok, f"cycle {cycle}: seed failed: {seed.error}"
+
+        _run_verification(migrated_db)
+
+        order_present = migrated_db.run(
+            f"SELECT count(*)::text FROM public.orders WHERE id = '{_REAL_ORDER_ID}'"
+        )
+        assert order_present.ok and order_present.rows == ["1"], (
+            f"cycle {cycle}: live real order must never be disturbed"
+        )
+
+    _delete_real_order(migrated_db)
