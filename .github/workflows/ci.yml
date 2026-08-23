@@ -171,6 +171,12 @@ jobs:
       - name: Self-test separation + seed + config syntax
         run: bash scripts/ci/test-staging-guards.sh
 
+      # The E2E portal-identity probe decides whether a release baseline runs
+      # against the candidate SHA at all, so its unit contract is a per-PR gate
+      # here rather than only inside release-certify.
+      - name: E2E staging probe unit tests
+        run: node --test scripts/qa/self-test/e2e-staging-probe.test.mjs
+
   release-control:
     name: Release control contract (RELCTRL-01)
     runs-on: ubuntu-latest

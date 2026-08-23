@@ -687,6 +687,97 @@ else
   bad "deploy-staging must scope the Vercel bypass secret per portal via the job matrix"
 fi
 
+# ── E2E portal identity (Workstream A) ───────────────────────────────────────
+# Playwright navigates the customer AND vendor origins directly, so a release
+# baseline must pin and prove BOTH. These guards keep that contract from
+# silently regressing back to "prove customer, assume the rest".
+
+# The vendor target must be overridable at dispatch, exactly like base_url, so a
+# release run can pin the immutable Preview URL instead of a mutable alias.
+if grep -q '^      vendor_base_url:' .github/workflows/e2e.yml \
+  && grep -q 'E2E_VENDOR_BASE_URL: ${{ inputs.vendor_base_url || secrets.E2E_VENDOR_BASE_URL }}' \
+    .github/workflows/e2e.yml; then
+  ok "e2e workflow accepts vendor_base_url and prefers it over the secret"
+else
+  bad "e2e workflow must expose a vendor_base_url dispatch input wired ahead of E2E_VENDOR_BASE_URL"
+fi
+
+# Both preflights must run, and both must run BEFORE any Playwright install, so
+# a skewed target never reaches a browser.
+# `|| true` matters: this file runs under `set -euo pipefail`, so a grep that
+# matches nothing would abort the whole harness mid-run — failing with no
+# diagnostic and silently skipping every guard below. A missing step must
+# report as a FAILED GUARD, not as a crash.
+e2e_probe_customer_line="$(grep -n 'e2e-staging-probe.mjs customer' .github/workflows/e2e.yml | head -1 | cut -d: -f1 || true)"
+e2e_probe_vendor_line="$(grep -n 'e2e-staging-probe.mjs vendor' .github/workflows/e2e.yml | head -1 | cut -d: -f1 || true)"
+e2e_install_line="$(grep -n 'playwright install' .github/workflows/e2e.yml | head -1 | cut -d: -f1 || true)"
+if [[ -z "${e2e_probe_customer_line}" || -z "${e2e_probe_vendor_line}" ]]; then
+  bad "e2e workflow must preflight BOTH directly-navigated portals (customer and vendor)"
+elif [[ -z "${e2e_install_line}" ]]; then
+  bad "e2e workflow: could not locate the Playwright install step to order preflights against"
+elif [[ "${e2e_probe_customer_line}" -lt "${e2e_install_line}" \
+  && "${e2e_probe_vendor_line}" -lt "${e2e_install_line}" ]]; then
+  ok "e2e workflow proves customer + vendor identity before installing Playwright"
+else
+  bad "e2e portal preflights must run before the Playwright install step"
+fi
+
+# Admin is proven independently by Deploy staging and no spec navigates it.
+# The moment a spec DOES navigate the admin origin, this guard demands the
+# matching preflight rather than letting admin ride along unproven.
+if grep -rqE '\bADMIN_BASE_URL\b' e2e/specs; then
+  if grep -q 'e2e-staging-probe.mjs admin' .github/workflows/e2e.yml; then
+    ok "a spec navigates the admin origin and the admin preflight exists"
+  else
+    bad "a spec now navigates ADMIN_BASE_URL — add an admin preflight to e2e.yml and PORTALS"
+  fi
+elif grep -q 'e2e-staging-probe.mjs admin' .github/workflows/e2e.yml; then
+  bad "admin preflight present but no spec navigates the admin origin — remove the churn"
+else
+  ok "no spec navigates admin; correctly no admin preflight (Deploy staging proves it)"
+fi
+
+# Specs that navigate the vendor app must go through the fail-closed resolver,
+# never the raw constant that silently falls back to the customer origin.
+vendor_nav_specs="$(grep -rlE 'urlOn\(\s*(VENDOR_BASE_URL|vendorOrigin)' e2e/specs || true)"
+if [[ -z "${vendor_nav_specs}" ]]; then
+  bad "expected at least one spec to navigate the vendor origin"
+elif grep -rqE '\bVENDOR_BASE_URL\b' e2e/specs; then
+  bad "vendor-navigating specs must use requireVendorBaseUrl(), not the VENDOR_BASE_URL fallback"
+elif grep -rq 'requireVendorBaseUrl' e2e/specs; then
+  ok "vendor-navigating specs resolve their origin through the fail-closed requireVendorBaseUrl()"
+else
+  bad "vendor-navigating specs must resolve their origin through requireVendorBaseUrl()"
+fi
+
+# The resolver itself must fail closed on both degenerate configurations.
+if grep -q 'export function requireVendorBaseUrl' e2e/fixtures/env.ts \
+  && grep -q 'E2E_VENDOR_BASE_URL is not set' e2e/fixtures/env.ts \
+  && grep -q 'same origin as E2E_BASE_URL' e2e/fixtures/env.ts; then
+  ok "requireVendorBaseUrl fails closed on an unset vendor target and on origin collapse"
+else
+  bad "requireVendorBaseUrl must fail closed when E2E_VENDOR_BASE_URL is unset or collapses onto the customer origin"
+fi
+
+# The probe registry stays limited to portals a spec actually navigates.
+if grep -q 'admin:' scripts/ci/e2e-staging-probe.mjs; then
+  bad "e2e-staging-probe registers an admin portal that nothing navigates"
+elif grep -q 'customer:' scripts/ci/e2e-staging-probe.mjs \
+  && grep -q 'vendor:' scripts/ci/e2e-staging-probe.mjs; then
+  ok "e2e-staging-probe registers exactly the directly-navigated portals"
+else
+  bad "e2e-staging-probe must register the customer and vendor portals"
+fi
+
+# Secret hygiene: the probe may name the SOURCE VARIABLE, never a value.
+if grep -nE 'console\.(log|warn|error)' scripts/ci/e2e-staging-probe.mjs \
+  | grep -vE '^\s*[0-9]+:\s*//' \
+  | grep -qE '\$\{[^}]*(bypassSecret|secret)\b[^}]*\}'; then
+  bad "e2e-staging-probe must never interpolate a bypass secret value into output"
+else
+  ok "e2e-staging-probe prints bypass SOURCE VARIABLE names only, never secret values"
+fi
+
 echo "Results: ${pass} passed, ${fail} failed, ${skip} skipped"
 if [[ "$skip" -gt 0 ]]; then
   echo "NOTE: ${skip} case(s) could not run — they are NOT passes. See SKIP lines above."

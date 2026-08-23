@@ -1,4 +1,4 @@
-import { otpVerifyReady, urlOn, VENDOR_BASE_URL } from "../fixtures/env";
+import { otpVerifyReady, requireVendorBaseUrl, urlOn } from "../fixtures/env";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
 
@@ -14,8 +14,12 @@ import { expect, test } from "../fixtures/test-base";
  */
 test.describe("vendor · sell", () => {
   test("approved vendor lists, receives and ships an order", async ({ page }) => {
+    // Resolved once: in a strict certification run this throws rather than
+    // letting the customer origin stand in for the vendor app.
+    const vendorOrigin = requireVendorBaseUrl();
+
     // Vendor app login surface (separate origin).
-    await page.goto(urlOn(VENDOR_BASE_URL, "/login"));
+    await page.goto(urlOn(vendorOrigin, "/login"));
 
     if (!otpVerifyReady()) {
       test.info().annotations.push({
@@ -34,11 +38,11 @@ test.describe("vendor · sell", () => {
     // (Login helper is exercised in detail by auth-otp.spec; here we assume the
     //  session cookie is established through the same path.)
     // 1. Listings — confirm the seeded buyable listing exists / create path.
-    await page.goto(urlOn(VENDOR_BASE_URL, "/services"));
+    await page.goto(urlOn(vendorOrigin, "/services"));
     await expect(page).toHaveURL(/services/);
 
     // 2. Orders — an order for the seeded listing should be receivable.
-    await page.goto(urlOn(VENDOR_BASE_URL, "/orders"));
+    await page.goto(urlOn(vendorOrigin, "/orders"));
     const firstOrder = page.getByRole("link", { name: /order|#/i }).first();
     await expect(firstOrder).toBeVisible();
     await firstOrder.click();
@@ -51,9 +55,9 @@ test.describe("vendor · sell", () => {
     await shipButton.first().click();
 
     // 4. Confirm the state machine moved to a shipped/fulfilled status.
-    await expect(
-      page.getByText(/shipped|dispatched|on the way|fulfilled/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/shipped|dispatched|on the way|fulfilled/i).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     // Touch the seed constant so lint keeps it wired to the fixture contract.
     expect(SEED.vendor.slug).toBeTruthy();

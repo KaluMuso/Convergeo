@@ -1,9 +1,4 @@
-import {
-  otpVerifyReady,
-  path,
-  urlOn,
-  VENDOR_BASE_URL,
-} from "../fixtures/env";
+import { otpVerifyReady, path, requireVendorBaseUrl, urlOn } from "../fixtures/env";
 import { sandboxEnabled } from "../fixtures/lenco";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
@@ -22,6 +17,11 @@ import { expect, test } from "../fixtures/test-base";
  */
 test.describe("event · ticket lifecycle", () => {
   test("buy → wallet → scan verify → duplicate rejected", async ({ page }) => {
+    // The scanner legs below navigate the vendor origin directly; in a strict
+    // certification run an unset/collapsed vendor target fails here rather
+    // than silently scanning on the customer app.
+    const vendorOrigin = requireVendorBaseUrl();
+
     // Event PDP.
     await page.goto(path(`/e/${SEED.event.slug}`));
 
@@ -36,9 +36,7 @@ test.describe("event · ticket lifecycle", () => {
       });
       // Wallet shows the purchased ticket.
       await page.goto(path("/account/tickets"));
-      await expect(
-        page.getByRole("heading", { name: /ticket/i }).first(),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { name: /ticket/i }).first()).toBeVisible();
     } else {
       test.info().annotations.push({
         type: "founder-gated",
@@ -56,7 +54,7 @@ test.describe("event · ticket lifecycle", () => {
         description:
           "Scanner verify/duplicate-reject skipped — needs vendor OTP creds + E2E_TICKET_QR (staging). Asserting scanner surface loads.",
       });
-      await page.goto(urlOn(VENDOR_BASE_URL, `/events/${SEED.event.slug}/scan`));
+      await page.goto(urlOn(vendorOrigin, `/events/${SEED.event.slug}/scan`));
       await expect(
         page
           .getByTestId("scan-pin-fallback")
@@ -68,21 +66,30 @@ test.describe("event · ticket lifecycle", () => {
     }
 
     // Organiser scanner — use the PIN/manual fallback to submit a ticket token.
-    await page.goto(urlOn(VENDOR_BASE_URL, `/events/${SEED.event.slug}/scan`));
-    await page.getByTestId("scan-switch-pin").click().catch(() => {});
+    await page.goto(urlOn(vendorOrigin, `/events/${SEED.event.slug}/scan`));
+    await page
+      .getByTestId("scan-switch-pin")
+      .click()
+      .catch(() => {});
     const pinInput = page.getByTestId("scan-pin-fallback").getByRole("textbox");
 
     // First scan → verified.
     await pinInput.fill(ticketQr);
-    await page.getByRole("button", { name: /verify|check|scan/i }).first().click();
+    await page
+      .getByRole("button", { name: /verify|check|scan/i })
+      .first()
+      .click();
     await expect(page.getByTestId("scan-success")).toBeVisible({ timeout: 20_000 });
 
     // Second scan of the same ticket → duplicate rejected (not a success).
     await pinInput.fill(ticketQr);
-    await page.getByRole("button", { name: /verify|check|scan/i }).first().click();
-    await expect(
-      page.getByText(/already|duplicate|used|rejected/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    await page
+      .getByRole("button", { name: /verify|check|scan/i })
+      .first()
+      .click();
+    await expect(page.getByText(/already|duplicate|used|rejected/i).first()).toBeVisible({
+      timeout: 20_000,
+    });
     await expect(page.getByTestId("scan-success")).toBeHidden();
   });
 });
