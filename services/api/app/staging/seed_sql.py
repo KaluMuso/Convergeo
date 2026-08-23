@@ -367,15 +367,56 @@ def build_cleanup_sql() -> str:
         f"'{t.ticket_id}'" for event in EVENTS for t in event.tickets
     )
 
+    # A row whose FK points at an exact canonical synthetic listing/vendor/
+    # persona is dependent fixture state EXCEPT when it descends from a real
+    # order — i.e. a checkout_group whose idempotency_key does NOT match the
+    # QA transactional-fixture driver's `{SEED_PREFIX}-txn-` namespace. Every
+    # strict E2E run places exactly this kind of real order (shop-cod.spec.ts
+    # runs unconditionally, no founder gate, straight through the live
+    # checkout API — see e2e/specs/shop-cod.spec.ts). Orders/payments are
+    # guarded financial state machines (CLAUDE.md convention #4): cleanup must
+    # never force a delete through one. The listing/vendor/persona row is left
+    # in place instead — the seed step's `ON CONFLICT (id) DO UPDATE` upserts
+    # it fresh regardless, so correctness is unaffected; only the
+    # delete-and-recreate churn is skipped for that one row.
+    real_order_listing_ids_sql = f"""
+    SELECT oip.listing_id
+    FROM public.order_item_products oip
+    JOIN public.order_items oi ON oi.id = oip.order_item_id
+    JOIN public.orders o ON o.id = oi.order_id
+    JOIN public.checkout_groups cg ON cg.id = o.checkout_group_id
+    WHERE cg.idempotency_key NOT LIKE '{SEED_PREFIX}-txn-%'
+    """
+    real_order_vendor_ids_sql = f"""
+    SELECT o.vendor_id
+    FROM public.orders o
+    JOIN public.checkout_groups cg ON cg.id = o.checkout_group_id
+    WHERE cg.idempotency_key NOT LIKE '{SEED_PREFIX}-txn-%'
+    """
+    real_order_customer_ids_sql = f"""
+    SELECT cg.customer_id
+    FROM public.checkout_groups cg
+    WHERE cg.idempotency_key NOT LIKE '{SEED_PREFIX}-txn-%'
+    """
+
     return f"""
 BEGIN;
+
+-- Branch stock rows are owned by the migration owner (postgres), same as the
+-- seed's INSERT — must run before the SET LOCAL role switch below. Sharing
+-- this transaction with the rest of cleanup (rather than its own early
+-- BEGIN/COMMIT) means a later failure rolls this back too instead of leaving
+-- it durably deleted while the rest of the fixture survives untouched.
 DELETE FROM public.listing_location_stock
 WHERE listing_id IN ({listing_ids});
-COMMIT;
 
-BEGIN;
 SET LOCAL role service_role;
 SET LOCAL "request.jwt.claims" = '{{"role":"service_role"}}';
+
+-- Cart rows are ephemeral pre-purchase state with no downstream dependents —
+-- safe to clear unconditionally for canonical synthetic listings.
+DELETE FROM public.cart_items
+WHERE listing_id IN ({listing_ids});
 
 -- Transactional rows created by QA drivers (scoped to synthetic checkout keys).
 DELETE FROM public.payments
@@ -403,13 +444,33 @@ DELETE FROM public.listing_images
 WHERE listing_id IN ({listing_ids})
    OR cloudinary_public_id LIKE 'staging-synthetic/{SEED_PREFIX}%';
 
+-- rfq_threads and listing_specification_snapshots also restrict-FK into
+-- vendor_listings, but neither grants service_role table access (SELECT is
+-- authenticated-only in their own migrations — 0095, 20260813064106), so a
+-- defensive exclusion here cannot even run under this transaction's role.
+-- Both are also NOT reachable by any current E2E spec (no spec exercises
+-- RFQ/quote flows, and nothing in services/api writes
+-- listing_specification_snapshots yet), so this is deliberately left as a
+-- follow-up: add the matching NOT IN exclusion (and its own grant, if still
+-- needed) only once one becomes reachable and the failure is proven live.
 DELETE FROM public.vendor_listings
-WHERE id IN ({listing_ids})
-   OR sku LIKE '{SEED_PREFIX}%';
+WHERE (id IN ({listing_ids}) OR sku LIKE '{SEED_PREFIX}%')
+  AND id NOT IN ({real_order_listing_ids_sql});
 
+-- A canonical product still referenced by a vendor_listings row we just
+-- skipped above (real-order guard) cannot be deleted either: products.id has
+-- ON DELETE SET NULL into vendor_listings.product_id (0003_catalog.sql), and
+-- the vendor_listings_product_strategy_policy trigger rejects that resulting
+-- UPDATE for Class A/B/C listings ("Class % listings require a canonical
+-- product") — proven live, not inferred. By this point in the transaction
+-- vendor_listings has already been pruned to exactly the surviving rows, so
+-- checking current references is sufficient and needs no separate real-order
+-- subquery of its own.
 DELETE FROM public.products
-WHERE id IN ({product_ids})
-   OR slug LIKE '{SEED_PREFIX}%';
+WHERE (id IN ({product_ids}) OR slug LIKE '{SEED_PREFIX}%')
+  AND id NOT IN (
+    SELECT product_id FROM public.vendor_listings WHERE product_id IS NOT NULL
+  );
 
 -- Events before vendors/profiles: tickets reference holders and events
 -- reference the organiser vendor.
@@ -443,20 +504,55 @@ DELETE FROM public.business_buyers
 WHERE id = '{business_buyer_id}';
 
 DELETE FROM public.vendors
-WHERE id IN ({vendor_ids})
-   OR slug LIKE '{SEED_PREFIX}%';
+WHERE (id IN ({vendor_ids}) OR slug LIKE '{SEED_PREFIX}%')
+  AND id NOT IN ({real_order_vendor_ids_sql});
 
 DELETE FROM public.user_roles
 WHERE user_id IN ({user_ids});
 
+-- Mirrors the products guard above: vendors.owner_user_id references
+-- profiles(id) on delete restrict (0002_identity_vendors.sql) — the only
+-- restrict FK into profiles in the schema. A profile still owning a
+-- surviving (real-order-guarded) vendor row cannot be deleted either;
+-- proven live the same way the products landmine was. vendors has already
+-- been pruned to survivors only by this point, so checking current state is
+-- sufficient.
 DELETE FROM public.profiles
-WHERE id IN ({user_ids});
+WHERE id IN ({user_ids})
+  AND id NOT IN (
+    SELECT owner_user_id FROM public.vendors WHERE owner_user_id IS NOT NULL
+  );
 
+-- Same pattern one level further down the chain: products.category_id
+-- (0003_catalog.sql) and vendor_listings.category_id
+-- (20260813064106_product_strategy_core_contract.sql) both restrict-reference
+-- categories. A surviving (real-order-guarded) product or listing still
+-- pointing at the canonical synthetic category blocks its delete — proven
+-- live, not inferred. Both tables have already been pruned to survivors only
+-- by this point, so checking current state is sufficient.
 DELETE FROM public.categories
-WHERE slug = '{CATEGORY_FIXTURE["category_slug"]}';
+WHERE slug = '{CATEGORY_FIXTURE["category_slug"]}'
+  AND id NOT IN (
+    SELECT category_id FROM public.products WHERE category_id IS NOT NULL
+    UNION
+    SELECT category_id FROM public.vendor_listings WHERE category_id IS NOT NULL
+  );
 
+-- Skips a persona still referenced as the customer on a real checkout_group,
+-- for the same reason vendor_listings/vendors are skipped above. Also skips
+-- a persona still owning a surviving vendor: profiles.id cascades from
+-- auth.users (0002_identity_vendors.sql), so deleting auth.users here would
+-- cascade into profiles and re-trigger the exact vendors_owner_user_id_fkey
+-- restrict violation the profiles guard above already exists to avoid —
+-- proven live, not inferred. user_roles deletion above is unaffected either
+-- way: deleting a CHILD row while the auth.users parent survives is never
+-- FK-blocked.
 DELETE FROM auth.users
-WHERE id IN ({user_ids});
+WHERE id IN ({user_ids})
+  AND id NOT IN ({real_order_customer_ids_sql})
+  AND id NOT IN (
+    SELECT owner_user_id FROM public.vendors WHERE owner_user_id IS NOT NULL
+  );
 
 COMMIT;
 """
