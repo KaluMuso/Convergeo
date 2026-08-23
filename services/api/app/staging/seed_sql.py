@@ -538,6 +538,25 @@ WHERE slug = '{CATEGORY_FIXTURE["category_slug"]}'
     SELECT category_id FROM public.vendor_listings WHERE category_id IS NOT NULL
   );
 
+-- auth.users is administered by the hosted project's session owner
+-- (postgres), not service_role: on real staging Supabase, service_role has
+-- BYPASSRLS on public.* tables (granted per-table by our own migrations) but
+-- no table-level GRANT on auth.users, which the platform reserves for GoTrue
+-- and the connecting owner role. Every other statement above touches public
+-- schema tables service_role legitimately owns; this is the one place the
+-- earlier SET LOCAL role service_role must be undone before writing. Do NOT
+-- confuse this Postgres role with the STAGING_SUPABASE_SERVICE_ROLE_KEY
+-- GitHub secret used elsewhere to seal the ticket credential over HTTPS —
+-- that key has no bearing on this psql session's table privileges. RESET
+-- ROLE reverts current_role to session_user (the role STAGING_SUPABASE_DB_URL
+-- connects as) immediately, still inside this same transaction, so a later
+-- failure still rolls back everything, including this delete and every
+-- earlier one — proven live against staging E2E run #46
+-- (permission denied for table users) and confirmed via a hosted-privilege
+-- regression test that revokes service_role's local test-only auth.users
+-- grant before exercising this exact statement.
+RESET ROLE;
+
 -- Skips a persona still referenced as the customer on a real checkout_group,
 -- for the same reason vendor_listings/vendors are skipped above. Also skips
 -- a persona still owning a surviving vendor: profiles.id cascades from
