@@ -460,7 +460,13 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           pattern: staging-preview-evidence-*
-          merge-multiple: true
+          # NO merge-multiple: each portal's artifact holds evidence.json and
+          # deployment.json at its ROOT, so merging all three into one directory
+          # makes them collide and only the last writer survives — deploy-staging
+          # run #34 downloaded three artifacts and was left with a single
+          # /tmp/preview-evidence-raw/evidence.json. Without merge-multiple,
+          # download-artifact unpacks each into <path>/<artifact-name>/, which is
+          # exactly the per-portal layout the normalize step below expects.
           path: /tmp/preview-evidence-raw
 
       - name: Normalize Preview evidence paths
