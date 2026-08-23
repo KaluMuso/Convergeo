@@ -2,15 +2,21 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from app.staging.synthetic_contract import (
     CATALOG_FIXTURES,
     CATEGORY_FIXTURE,
+    EVENTS,
     KYC_FIXTURES,
     PERSONAS,
     SEED_PREFIX,
     VENDOR_LOCATIONS,
     persona_by_key,
 )
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from app.staging.ticket_credentials import TicketCredential
 
 IMAGE_IDS: dict[str, str] = {
     "f1000000-0000-4000-8000-000000000001": "11000000-0000-4000-8000-000000000001",
@@ -41,7 +47,9 @@ INSERT INTO auth.users (
     return "\n".join(parts)
 
 
-def build_seed_sql() -> str:
+def build_seed_sql(
+    ticket_credentials: tuple[TicketCredential, ...] | None = None,
+) -> str:
     """Build idempotent SQL from fixed synthetic constants (no user input)."""
     sql_parts = [
         "BEGIN;",
@@ -216,12 +224,121 @@ ON CONFLICT (listing_id, location_id) DO UPDATE SET stock_qty = EXCLUDED.stock_q
             )
 
     sql_parts.append("COMMIT;")
+    # Events come last: they reference the vendors and profiles seeded above.
+    sql_parts.append(build_events_sql(ticket_credentials))
     if location_stock_parts:
         # Branch stock rows are inserted as the migration owner (postgres). service_role
         # lacks a stable SET ROLE grant on every CI/bare-Postgres shim, while postgres
         # must seed deterministic QA fixtures without tripping RLS (owner bypass).
         sql_parts.extend(["BEGIN;", *location_stock_parts, "COMMIT;"])
     return _auth_users_sql() + "\n" + "\n".join(sql_parts)
+
+
+def _sql_literal(value: str) -> str:
+    return value.replace("'", "''")
+
+
+def build_events_sql(
+    ticket_credentials: tuple[TicketCredential, ...] | None = None,
+) -> str:
+    """Events, instances, ticket types and issued tickets for the scanner journey.
+
+    `ticket_credentials` carries the run-scoped sealed PIN / QR secret. When it is
+    absent the ticket rows are still created (identity is canonical) but with a
+    NULL pin_hash, so a scanner run without the staging service-role key fails
+    visibly at verification rather than appearing to pass.
+    """
+    by_ticket = {c.ticket_id: c for c in (ticket_credentials or ())}
+    parts = ["BEGIN;"]
+    for event in EVENTS:
+        organiser = persona_by_key(event.organiser_key)
+        parts.append(
+            f"""
+INSERT INTO public.events (
+  id, organiser_vendor_id, slug, title, event_type, status, visibility,
+  platform_fee_payer, venue, city, landmark, lat, lng, images
+) VALUES (
+  '{event.event_id}', '{organiser.vendor_id}', '{_sql_literal(event.slug)}',
+  '{_sql_literal(event.title)}', '{event.event_type}', '{event.status}',
+  '{event.visibility}', '{event.platform_fee_payer}',
+  '{_sql_literal(event.venue)}', '{_sql_literal(event.city)}',
+  '{_sql_literal(event.landmark)}', {event.lat}, {event.lng}, '{{}}'
+) ON CONFLICT (id) DO UPDATE SET
+  organiser_vendor_id = EXCLUDED.organiser_vendor_id,
+  slug = EXCLUDED.slug,
+  title = EXCLUDED.title,
+  event_type = EXCLUDED.event_type,
+  status = EXCLUDED.status,
+  visibility = EXCLUDED.visibility,
+  platform_fee_payer = EXCLUDED.platform_fee_payer,
+  venue = EXCLUDED.venue,
+  city = EXCLUDED.city,
+  landmark = EXCLUDED.landmark,
+  lat = EXCLUDED.lat,
+  lng = EXCLUDED.lng;
+
+INSERT INTO public.event_instances (id, event_id, starts_at, ends_at, capacity, status)
+VALUES (
+  '{event.instance_id}', '{event.event_id}', '{event.starts_at}',
+  '{event.ends_at}', {event.capacity}, 'scheduled'
+) ON CONFLICT (id) DO UPDATE SET
+  starts_at = EXCLUDED.starts_at,
+  ends_at = EXCLUDED.ends_at,
+  capacity = EXCLUDED.capacity,
+  status = EXCLUDED.status;
+"""
+        )
+        for ticket_type in event.ticket_types:
+            qty_cap = "NULL" if ticket_type.qty_cap is None else str(ticket_type.qty_cap)
+            parts.append(
+                f"""
+INSERT INTO public.ticket_types (
+  id, event_id, kind, pass_kind, name, price_ngwee, qty_cap, attendee_named
+) VALUES (
+  '{ticket_type.ticket_type_id}', '{event.event_id}', '{ticket_type.kind}',
+  '{ticket_type.pass_kind}', '{_sql_literal(ticket_type.name)}',
+  {ticket_type.price_ngwee}, {qty_cap}, {str(ticket_type.attendee_named).lower()}
+) ON CONFLICT (id) DO UPDATE SET
+  kind = EXCLUDED.kind,
+  pass_kind = EXCLUDED.pass_kind,
+  name = EXCLUDED.name,
+  price_ngwee = EXCLUDED.price_ngwee,
+  qty_cap = EXCLUDED.qty_cap,
+  attendee_named = EXCLUDED.attendee_named;
+
+INSERT INTO public.ticket_type_instances (instance_id, ticket_type_id, allocation)
+VALUES ('{event.instance_id}', '{ticket_type.ticket_type_id}', {ticket_type.allocation})
+ON CONFLICT (instance_id, ticket_type_id) DO UPDATE SET
+  allocation = EXCLUDED.allocation;
+"""
+            )
+        for ticket in event.tickets:
+            holder = persona_by_key(ticket.holder_key)
+            credential = by_ticket.get(ticket.ticket_id)
+            pin_hash = f"'{credential.pin_hash}'" if credential else "NULL"
+            qr_secret = f"'{credential.qr_secret}'" if credential else "NULL"
+            parts.append(
+                f"""
+INSERT INTO public.tickets (
+  id, instance_id, ticket_type_id, holder_user_id, status, pin_hash, qr_secret,
+  checked_in_at
+) VALUES (
+  '{ticket.ticket_id}', '{event.instance_id}', '{ticket.ticket_type_id}',
+  '{holder.user_id}', '{ticket.status}', {pin_hash}, {qr_secret}, NULL
+) ON CONFLICT (id) DO UPDATE SET
+  instance_id = EXCLUDED.instance_id,
+  ticket_type_id = EXCLUDED.ticket_type_id,
+  holder_user_id = EXCLUDED.holder_user_id,
+  status = EXCLUDED.status,
+  pin_hash = EXCLUDED.pin_hash,
+  qr_secret = EXCLUDED.qr_secret,
+  -- Re-seeding restores an un-scanned ticket so verify-then-duplicate-reject
+  -- is reproducible on every run.
+  checked_in_at = NULL;
+"""
+            )
+    parts.append("COMMIT;")
+    return "\n".join(parts)
 
 
 def build_cleanup_sql() -> str:
@@ -241,6 +358,14 @@ def build_cleanup_sql() -> str:
     location_ids = ", ".join(f"'{loc.location_id}'" for loc in VENDOR_LOCATIONS)
     kyc_ids = ", ".join(f"'{record.id}'" for record in KYC_FIXTURES)
     business_buyer_id = persona_by_key("BUSINESS_BUYER").business_buyer_id
+    event_ids = ", ".join(f"'{event.event_id}'" for event in EVENTS)
+    instance_ids = ", ".join(f"'{event.instance_id}'" for event in EVENTS)
+    ticket_type_ids = ", ".join(
+        f"'{t.ticket_type_id}'" for event in EVENTS for t in event.ticket_types
+    )
+    ticket_ids = ", ".join(
+        f"'{t.ticket_id}'" for event in EVENTS for t in event.tickets
+    )
 
     return f"""
 BEGIN;
@@ -284,6 +409,28 @@ WHERE id IN ({listing_ids})
 
 DELETE FROM public.products
 WHERE id IN ({product_ids})
+   OR slug LIKE '{SEED_PREFIX}%';
+
+-- Events before vendors/profiles: tickets reference holders and events
+-- reference the organiser vendor.
+DELETE FROM public.tickets
+WHERE id IN ({ticket_ids})
+   OR instance_id IN ({instance_ids});
+
+DELETE FROM public.ticket_type_instances
+WHERE instance_id IN ({instance_ids})
+   OR ticket_type_id IN ({ticket_type_ids});
+
+DELETE FROM public.ticket_types
+WHERE id IN ({ticket_type_ids})
+   OR event_id IN ({event_ids});
+
+DELETE FROM public.event_instances
+WHERE id IN ({instance_ids})
+   OR event_id IN ({event_ids});
+
+DELETE FROM public.events
+WHERE id IN ({event_ids})
    OR slug LIKE '{SEED_PREFIX}%';
 
 DELETE FROM public.vendor_locations
@@ -340,6 +487,27 @@ def verification_queries() -> dict[str, str]:
             "SELECT wholesale::text FROM public.vendor_listings "
             "WHERE sku LIKE '%-list-prd-d-wholesale'"
         ),
+        "event_published": (
+            "SELECT count(*)::int FROM public.events "
+            f"WHERE slug LIKE '{SEED_PREFIX}%' AND status = 'published'"
+        ),
+        "event_instances_scheduled": (
+            "SELECT count(*)::int FROM public.event_instances ei "
+            "JOIN public.events e ON e.id = ei.event_id "
+            f"WHERE e.slug LIKE '{SEED_PREFIX}%' AND ei.status = 'scheduled'"
+        ),
+        "event_ticket_types": (
+            "SELECT count(*)::int FROM public.ticket_types tt "
+            "JOIN public.events e ON e.id = tt.event_id "
+            f"WHERE e.slug LIKE '{SEED_PREFIX}%'"
+        ),
+        "issued_tickets": (
+            "SELECT count(*)::int FROM public.tickets t "
+            "JOIN public.event_instances ei ON ei.id = t.instance_id "
+            "JOIN public.events e ON e.id = ei.event_id "
+            f"WHERE e.slug LIKE '{SEED_PREFIX}%' "
+            "AND t.status = 'issued' AND t.checked_in_at IS NULL"
+        ),
         "zero_price_guard": (
             "SELECT count(*)::int FROM public.vendor_listings "
             f"WHERE sku LIKE '{SEED_PREFIX}%' AND price_ngwee < 1"
@@ -362,11 +530,27 @@ def parse_verification(results: dict[str, list[str]]) -> None:
         raise RuntimeError("wholesale-only product D verification failed")
     if results["zero_price_guard"] != ["0"]:
         raise RuntimeError("zero-price guard failed for synthetic listings")
+    if int(results["event_published"][0]) < len(EVENTS):
+        raise RuntimeError("synthetic event verification failed")
+    if int(results["event_instances_scheduled"][0]) < len(EVENTS):
+        raise RuntimeError("synthetic event instance verification failed")
+    expected_types = sum(len(e.ticket_types) for e in EVENTS)
+    if int(results["event_ticket_types"][0]) < expected_types:
+        raise RuntimeError("synthetic ticket type verification failed")
+    expected_tickets = sum(
+        1 for e in EVENTS for t in e.tickets if t.status == "issued"
+    )
+    if int(results["issued_tickets"][0]) < expected_tickets:
+        raise RuntimeError(
+            "synthetic issued-ticket verification failed — the scanner journey "
+            "needs an un-scanned ticket"
+        )
 
 
 __all__ = [
     "IMAGE_IDS",
     "build_cleanup_sql",
+    "build_events_sql",
     "build_seed_sql",
     "parse_verification",
     "verification_queries",

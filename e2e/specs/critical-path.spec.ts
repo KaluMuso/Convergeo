@@ -1,4 +1,4 @@
-import { BASE_URL, LOCALE, flag, lencoSandboxReady, otpVerifyReady, path } from "../fixtures/env";
+import { BASE_URL, LOCALE, customerOtpReady, flag, lencoSandboxReady, path } from "../fixtures/env";
 import { completeSandboxMomoPush, sandboxEnabled } from "../fixtures/lenco";
 import {
   FIXTURE_GROUP_ID,
@@ -117,7 +117,7 @@ test.describe("critical-path", () => {
     }
 
     // Deployed-target sandbox pay (F9b) — requires live session + Lenco sandbox.
-    if (!sandboxEnabled() || !otpVerifyReady()) {
+    if (!sandboxEnabled() || !customerOtpReady()) {
       test.info().annotations.push({
         type: "founder-gated",
         description:

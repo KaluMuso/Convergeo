@@ -1,6 +1,6 @@
 import { BASE_URL, LOCALE, path, strictSyntheticRequired } from "../fixtures/env";
 import { assertNoAccidentalRealMoney, paymentMockMode } from "../fixtures/payment-fixtures";
-import { SEED, resetSeed } from "../fixtures/seed";
+import { SEED, assertFixtureVersion } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
 
 /**
@@ -16,12 +16,9 @@ test.describe("browse-journey · release certification", () => {
   test.beforeEach(async () => {
     assertNoAccidentalRealMoney();
     if (strictSyntheticRequired()) {
-      const reset = await resetSeed();
-      if (!reset) {
-        throw new Error(
-          "strictSyntheticRequired: seed reset unavailable (E2E_SEED_RESET_URL/TOKEN) — cannot certify staging without fixtures",
-        );
-      }
+      // The canonical seed already ran once, before any browser started. All
+      // this asserts is that we are talking to that exact fixture generation.
+      assertFixtureVersion();
     }
   });
 

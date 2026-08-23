@@ -1,4 +1,4 @@
-import { otpVerifyReady, requireVendorBaseUrl, urlOn } from "../fixtures/env";
+import { requireVendorBaseUrl, urlOn, vendorOtpReady } from "../fixtures/env";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
 
@@ -21,11 +21,11 @@ test.describe("vendor · sell", () => {
     // Vendor app login surface (separate origin).
     await page.goto(urlOn(vendorOrigin, "/login"));
 
-    if (!otpVerifyReady()) {
+    if (!vendorOtpReady()) {
       test.info().annotations.push({
         type: "founder-gated",
         description:
-          "Vendor authenticated flow skipped — set E2E_TEST_PHONE + E2E_TEST_OTP (staging test vendor). Asserted login surface only.",
+          "Vendor authenticated flow skipped — set E2E_VENDOR_TEST_OTP (Supabase staging test-OTP for the synthetic approved-vendor phone). Asserted login surface only.",
       });
       await expect(
         page.getByRole("heading").first().or(page.locator("form").first()),

@@ -1,4 +1,4 @@
-import { lenco, otp, path, whatsappMockReady } from "../fixtures/env";
+import { customerOtp, lenco, path, whatsappMockReady } from "../fixtures/env";
 import { completeSandboxMomoPush, sandboxEnabled } from "../fixtures/lenco";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
@@ -86,7 +86,7 @@ test.describe("shop · checkout · momo", () => {
     // ── ENV-GATED: WhatsApp mock receipt assertion ───────────────────────────
     if (whatsappMockReady()) {
       await expectWhatsAppMessage(
-        otp.testPhone || SEED.address.phone,
+        customerOtp.testPhone || SEED.address.phone,
         /order|receipt|escrow|paid/i,
       );
     } else {

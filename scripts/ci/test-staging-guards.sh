@@ -778,6 +778,92 @@ else
   ok "e2e-staging-probe prints bypass SOURCE VARIABLE names only, never secret values"
 fi
 
+# ── Canonical E2E fixture contract (Workstream B) ────────────────────────────
+# One source of truth for synthetic staging identity, one destructive reset per
+# run, and no credential in generated source.
+
+# The generated TS view must match the Python contract it claims to describe.
+if python3 scripts/ci/generate-e2e-fixtures.py --check >/dev/null 2>&1; then
+  ok "generated E2E fixtures are in sync with synthetic_contract.py"
+else
+  bad "e2e/fixtures/seed.generated.ts is stale — run python3 scripts/ci/generate-e2e-fixtures.py"
+fi
+
+# The generated file must stay generated.
+if head -1 e2e/fixtures/seed.generated.ts | grep -q '@generated'; then
+  ok "generated E2E fixtures carry the do-not-edit banner"
+else
+  bad "e2e/fixtures/seed.generated.ts must keep its @generated banner"
+fi
+
+# No credential may be generated into source. Comments explaining their ABSENCE
+# are fine, so strip comments before scanning.
+generated_code="$(sed 's://.*::' e2e/fixtures/seed.generated.ts | perl -0pe 's{/\*.*?\*/}{}gs' || true)"
+if printf '%s' "${generated_code}" | grep -qiE 'otp|ticketpin|service_role|pin_hash'; then
+  bad "generated E2E fixtures must never contain OTP codes, ticket PINs or service-role material"
+else
+  ok "generated E2E fixtures carry non-secret identity only"
+fi
+
+# Playwright must not reseed: the old module-scope beforeAll ran once per spec
+# file per project (~80 destructive resets racing each other).
+if grep -rq 'resetSeed' e2e; then
+  bad "destructive resetSeed() must not run inside the Playwright lifecycle"
+else
+  ok "no destructive reset inside Playwright — reset is a single workflow step"
+fi
+
+# Exactly one mutating seed invocation per E2E run.
+e2e_seed_applies="$(grep -c -- '--apply' .github/workflows/e2e.yml || true)"
+if [ "${e2e_seed_applies}" = "1" ] && grep -q -- '--cleanup' .github/workflows/e2e.yml; then
+  ok "e2e workflow performs exactly one destructive cleanup+seed per run"
+else
+  bad "e2e workflow must run exactly one canonical cleanup+seed (found ${e2e_seed_applies} --apply)"
+fi
+
+# The staging service-role key is step-scoped. Job-level env would expose it to
+# every step including the Playwright run.
+e2e_job_env="$(sed -n '/^    env:/,/^    steps:/p' .github/workflows/e2e.yml || true)"
+if printf '%s' "${e2e_job_env}" | grep -q 'SERVICE_ROLE'; then
+  bad "the staging service-role key must never be a job-level env var in e2e.yml"
+elif [ "$(grep -c 'secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY' .github/workflows/e2e.yml || true)" = "1" ]; then
+  ok "staging service-role key is mapped into the canonical seed step only"
+else
+  bad "staging service-role key must be mapped exactly once, inside the seed step"
+fi
+
+# The seed target guard must run before the step that holds the key.
+seed_guard_line="$(grep -n 'Guard canonical seed target' .github/workflows/e2e.yml | head -1 | cut -d: -f1 || true)"
+seed_apply_line="$(grep -n 'Canonical cleanup + seed' .github/workflows/e2e.yml | head -1 | cut -d: -f1 || true)"
+browser_line="$(grep -n 'Install Playwright Chromium' .github/workflows/e2e.yml | head -1 | cut -d: -f1 || true)"
+if [ -z "${seed_guard_line}" ] || [ -z "${seed_apply_line}" ] || [ -z "${browser_line}" ]; then
+  bad "e2e workflow must guard the seed target, seed once, then install the browser"
+elif [ "${seed_guard_line}" -lt "${seed_apply_line}" ] && [ "${seed_apply_line}" -lt "${browser_line}" ]; then
+  ok "e2e seeds only after the fail-closed target guard and before any browser"
+else
+  bad "e2e seed ordering is wrong: guard -> seed -> browser"
+fi
+
+# The run-scoped PIN is masked and the private file is always removed.
+if grep -q '::add-mask::' .github/workflows/e2e.yml \
+  && grep -q 'convergeo-e2e-private.json' .github/workflows/e2e.yml \
+  && sed -n '/Remove private runtime material/,/run:/p' .github/workflows/e2e.yml | grep -q 'always()'; then
+  ok "scanner PIN is masked and its private file is removed with always()"
+else
+  bad "e2e must mask the scanner PIN and delete the private runtime file with always()"
+fi
+
+# The retired remote-reset contract must not come back.
+# --exclude this harness: it names the retired route in its own guard text, and
+# a self-match would fail the check forever.
+if grep -qE 'secrets\.E2E_SEED_(RESET_URL|TOKEN)' .github/workflows/e2e.yml \
+  || grep -rq --exclude="$(basename "${BASH_SOURCE[0]}")" 'internal/e2e/reset' \
+       .github/workflows scripts services/api/app 2>/dev/null; then
+  bad "the remote seed-reset endpoint contract must stay retired (direct workflow seeding only)"
+else
+  ok "no remote seed-reset endpoint — direct protected-staging workflow seeding only"
+fi
+
 echo "Results: ${pass} passed, ${fail} failed, ${skip} skipped"
 if [[ "$skip" -gt 0 ]]; then
   echo "NOTE: ${skip} case(s) could not run — they are NOT passes. See SKIP lines above."

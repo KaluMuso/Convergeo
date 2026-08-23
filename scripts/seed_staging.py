@@ -47,12 +47,19 @@ from app.staging.seed_sql import (  # noqa: E402
 )
 from app.staging.synthetic_contract import (  # noqa: E402
     CATALOG_FIXTURES,
+    EVENTS,
     FIXTURES,
     KYC_FIXTURES_LEGACY,
     PERSONAS,
     SEED_PREFIX,
     assert_contract_valid,
+    fixture_version,
     guard_seed_targets,
+)
+from app.staging.ticket_credentials import (  # noqa: E402
+    TicketCredential,
+    mint_ticket_credentials,
+    primary_ticket_pin,
 )
 
 # Back-compat re-exports for tests importing the script module directly.
@@ -132,6 +139,25 @@ def _connection_hint(dsn: str) -> str | None:
     )
 
 
+def _write_private_runtime_file(
+    path: Path, credentials: tuple[TicketCredential, ...]
+) -> None:
+    """Hand the run-scoped scanner PIN to the caller through a 0600 file.
+
+    A file — not stdout, not GITHUB_OUTPUT — so the value never passes through a
+    log buffer on its way out. The service-role key is deliberately NOT written
+    here: only the credential the scanner spec needs.
+    """
+    import json
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    # Create with the restrictive mode from the start; never widen it afterwards.
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        json.dump({"ticketPin": primary_ticket_pin(credentials)}, handle)
+    os.chmod(path, 0o600)
+
+
 def _die(msg: str) -> int:
     print(f"ERROR: {msg}", file=sys.stderr)
     return 1
@@ -200,7 +226,28 @@ def main() -> int:
         action="store_true",
         help="Delete only deterministic stg-rv-* contract rows before optional re-seed.",
     )
+    parser.add_argument(
+        "--private-file",
+        default=None,
+        help=(
+            "Write run-scoped scanner credentials (ticket PIN) to this path with "
+            "mode 0600. Requires SUPABASE_SERVICE_ROLE_KEY; never logged."
+        ),
+    )
+    parser.add_argument(
+        "--print-fixture-version",
+        action="store_true",
+        help="Print the canonical fixture contract hash and exit.",
+    )
     args = parser.parse_args()
+
+    if args.print_fixture_version:
+        try:
+            _validate_fixtures()
+        except StagingIsolationError as exc:
+            return _die(str(exc))
+        print(fixture_version())
+        return 0
 
     try:
         _validate_fixtures()
@@ -248,6 +295,8 @@ def main() -> int:
 
     _plan()
     print(f"  - catalogue products: {len(CATALOG_FIXTURES)}")
+    print(f"  - events: {len(EVENTS)} (organiser scanner journey)")
+    print(f"  - fixture version: {fixture_version()}")
 
     if args.dry_run or not mutating:
         print("DRY RUN — no database writes. Pass --apply to seed a verified staging DB.")
@@ -281,9 +330,30 @@ def main() -> int:
         if not args.apply:
             return 0
 
-    seed = conn.run(build_seed_sql())
+    # Scanner credentials are minted only when the caller asks for them, so the
+    # existing deploy-staging seed (which holds no service-role key) is unchanged.
+    credentials: tuple[TicketCredential, ...] = ()
+    if args.private_file:
+        try:
+            credentials = mint_ticket_credentials()
+        except RuntimeError as exc:
+            return _die(
+                "cannot mint synthetic ticket credentials — "
+                "STAGING_SUPABASE_SERVICE_ROLE_KEY must be mapped into this step "
+                f"as SUPABASE_SERVICE_ROLE_KEY ({exc})"
+            )
+
+    seed = conn.run(build_seed_sql(credentials))
     if not seed.ok:
         return _die(seed.error or "seed SQL failed")
+
+    if args.private_file:
+        try:
+            _write_private_runtime_file(Path(args.private_file), credentials)
+        except OSError as exc:
+            return _die(f"cannot write private runtime file: {exc}")
+        # Path only — never the contents.
+        print(f"Run-scoped scanner credentials written to {args.private_file} (mode 0600)")
 
     try:
         _verify_contract(conn)
@@ -292,7 +362,8 @@ def main() -> int:
 
     print(
         "Seed complete "
-        f"(staging, prefix={SEED_PREFIX}, products={len(CATALOG_FIXTURES)})"
+        f"(staging, prefix={SEED_PREFIX}, products={len(CATALOG_FIXTURES)}, "
+        f"events={len(EVENTS)}, fixture_version={fixture_version()})"
     )
     return 0
 
