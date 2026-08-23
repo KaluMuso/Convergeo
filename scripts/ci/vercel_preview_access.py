@@ -249,8 +249,9 @@ def classify_access(
     if 300 <= http_status < 400:
         return AccessVerdict(
             "http_error",
-            f"unexpected redirect (HTTP {http_status}) that is not a Vercel "
-            "protection challenge — the application redirected the health route",
+            f"unexpected HTTP redirect from deployed health endpoint (HTTP {http_status}) — "
+            "no Vercel SSO marker was detected in the Location header or body; see the "
+            "sanitized redirect diagnostics for the target host/path",
         )
 
     if http_status >= 500:
@@ -279,6 +280,100 @@ def classify_access(
     return AccessVerdict("ok", "reachable — application JSON body received")
 
 
+#: Headers whose VALUE must never be printed. Presence may be reported as a
+#: yes/no; the value itself never is.
+NEVER_PRINT_HEADER_VALUES = frozenset(
+    {
+        "set-cookie",
+        "cookie",
+        "authorization",
+        "proxy-authorization",
+        "x-vercel-protection-bypass",
+        "x-vercel-set-bypass-cookie",
+        "www-authenticate",
+    }
+)
+
+
+def _last_header_block(raw: str) -> list[str]:
+    """Return the final response's header lines (curl -D can dump several)."""
+    blocks: list[list[str]] = [[]]
+    for line in raw.replace("\r", "").split("\n"):
+        if line.strip() == "":
+            if blocks[-1]:
+                blocks.append([])
+            continue
+        if line.upper().startswith("HTTP/") and blocks[-1]:
+            blocks.append([])
+        blocks[-1].append(line)
+    for block in reversed(blocks):
+        if block:
+            return block
+    return []
+
+
+def sanitize_location(value: str) -> str:
+    """Reduce a Location header to `host + path`, dropping any query/fragment.
+
+    A redirect target can carry credentials or tokens in its query string (a
+    Vercel SSO challenge, for instance, carries a nonce), so only the host and
+    path are ever surfaced.
+    """
+    value = value.strip()
+    if not value:
+        return ""
+    try:
+        parsed = urlparse(value)
+    except ValueError:
+        return "[unparseable]"
+    host = (parsed.hostname or "").lower()
+    path = parsed.path or "/"
+    if not host:
+        # Relative redirect: path only, still query-stripped.
+        return f"path={path}"
+    return f"host={host} path={path}"
+
+
+def summarize_response_headers(raw: str) -> str:
+    """One safe diagnostic line for a non-2xx response.
+
+    Reports only: status line, whether a Location exists and its sanitized
+    host/path, whether a Set-Cookie exists (never its value), and the server
+    header. No header listed in NEVER_PRINT_HEADER_VALUES ever has its value
+    rendered, and the Location query string is always stripped.
+    """
+    lines = _last_header_block(raw)
+    if not lines:
+        return "no response headers captured"
+
+    status_line = lines[0].strip() if lines[0].upper().startswith("HTTP/") else ""
+    location = ""
+    has_set_cookie = False
+    server = ""
+
+    for line in lines[1:]:
+        name, _, value = line.partition(":")
+        key = name.strip().lower()
+        if key == "location":
+            location = value
+        elif key == "set-cookie":
+            has_set_cookie = True
+        elif key == "server":
+            server = value.strip()
+
+    parts: list[str] = []
+    if status_line:
+        parts.append(f"status_line={status_line}")
+    if location.strip():
+        parts.append(f"location=present {sanitize_location(location)}")
+    else:
+        parts.append("location=absent")
+    parts.append(f"set_cookie={'yes' if has_set_cookie else 'no'}")
+    if server:
+        parts.append(f"server={server}")
+    return " | ".join(parts)
+
+
 def _read_text(path: Path | None) -> str:
     if path is None or not path.is_file():
         return ""
@@ -298,6 +393,12 @@ def main(argv: list[str] | None = None) -> int:
         "classify-curl-exit", help="Print '<kind>\\t<retryable 0|1>\\t<CURLE name>'"
     )
     curl_exit.add_argument("--code", type=int, required=True)
+
+    headers = sub.add_parser(
+        "summarize-headers",
+        help="Print one safe diagnostic line for a non-2xx response (no secrets)",
+    )
+    headers.add_argument("--headers-file", type=Path, required=True)
 
     classify = sub.add_parser("classify", help="Print the access verdict word")
     classify.add_argument("--http-status", type=int, required=True)
@@ -325,6 +426,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "classify-curl-exit":
         exit_verdict = classify_curl_exit(args.code)
         print(f"{exit_verdict.kind}\t{1 if exit_verdict.retryable else 0}\t{exit_verdict.name}")
+        return 0
+
+    if args.command == "summarize-headers":
+        print(summarize_response_headers(_read_text(args.headers_file)))
         return 0
 
     result = classify_access(

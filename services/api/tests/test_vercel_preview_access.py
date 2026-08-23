@@ -124,14 +124,15 @@ def test_any_vercel_com_redirect_host_is_a_challenge() -> None:
 
 
 def test_app_redirect_that_is_not_a_vercel_challenge_is_not_blocked_external() -> None:
-    """A 302 to our OWN login path is an application routing regression (the
-    vendor-middleware bug PR #666 fixed) — it must not be excused as a
-    protection challenge."""
+    """A 302 to our OWN login path is still a failure and must not be excused
+    as a protection challenge. The wording stays neutral about the cause (a
+    redirect can also come from an optional Vercel cookie flow), so it asserts
+    the classification rather than blaming the application."""
     verdict = access.classify_access(
         http_status=302, location="/en/login?next=%2Fen%2Fhealth", bypass_present=True
     )
     assert verdict.verdict == "http_error"
-    assert "not a Vercel" in verdict.detail
+    assert "no Vercel SSO marker was detected" in verdict.detail
 
 
 def test_http_200_with_non_json_body_is_an_application_failure() -> None:
@@ -341,6 +342,200 @@ def test_case_d_prove_script_never_puts_the_secret_in_argv_or_evidence() -> None
     assert 'log "protection bypass: using ${BYPASS_SOURCE_VAR} (${BYPASS_SOURCE})"' in script
     assert 'echo "${BYPASS_SECRET}"' not in script
     assert 'log "${BYPASS_SECRET}"' not in script
+
+
+# --------------------------------------------------------------------------
+# One-shot health-probe request contract (deploy-staging run #33).
+#
+# Run #33 returned HTTP 307 on all three portals with curl exit 0 — an HTTP
+# response, not a transport failure. Vercel documents
+# `x-vercel-set-bypass-cookie` as OPTIONAL, for maintaining authorization
+# "across multiple requests or within iframes"; their own one-shot curl
+# example sends `x-vercel-protection-bypass` alone. This probe makes a single
+# request, so it now sends only the bypass header. Playwright (a multi-request
+# browser flow) keeps the cookie header.
+# --------------------------------------------------------------------------
+
+
+def _health_curl_config_block() -> str:
+    """The `{ ... } > "${health_curl_config}"` block that builds the request."""
+    script = PROVE_SCRIPT.read_text(encoding="utf-8")
+    before = script.split('} > "${health_curl_config}"')[0]
+    return before[before.rindex("\n{\n") :]
+
+
+def test_case_a_one_shot_probe_sends_bypass_header_without_cookie_header() -> None:
+    """CASE A: with a bypass configured, the probe emits
+    x-vercel-protection-bypass and NOT x-vercel-set-bypass-cookie."""
+    block = _health_curl_config_block()
+    assert "x-vercel-protection-bypass: %s" in block
+    assert "x-vercel-set-bypass-cookie" not in block
+    # Accept header is retained.
+    assert 'header = "Accept: application/json"' in block
+
+
+def test_case_a_cookie_header_is_absent_from_the_whole_prove_script() -> None:
+    """The cookie header must not reappear anywhere in the deploy-staging
+    probe — including in a fallback branch."""
+    script = PROVE_SCRIPT.read_text(encoding="utf-8")
+    emitting = [
+        line
+        for line in script.splitlines()
+        if "x-vercel-set-bypass-cookie" in line and "printf" in line
+    ]
+    assert emitting == []
+
+
+def test_case_b_no_bypass_configured_emits_no_bypass_headers() -> None:
+    """CASE B: the bypass header is emitted only inside the
+    `if [ -n "${BYPASS_SECRET}" ]` guard, so an unconfigured portal sends
+    neither bypass header."""
+    block = _health_curl_config_block()
+    guard_index = block.index('if [ -n "${BYPASS_SECRET}" ]')
+    bypass_index = block.index("x-vercel-protection-bypass")
+    assert guard_index < bypass_index
+    # Accept is outside the guard and always sent.
+    assert block.index('header = "Accept: application/json"') < guard_index
+
+
+def test_case_c_http_200_with_correct_health_payload_passes() -> None:
+    verdict = access.classify_access(http_status=200, body=_health_body(), bypass_present=True)
+    assert verdict.verdict == "ok"
+
+
+@pytest.mark.parametrize("status", [302, 307])
+def test_case_d_redirect_after_cookie_removal_fails_as_unexpected(status: int) -> None:
+    """CASE D: with the cookie header gone, a remaining 3xx that carries no
+    Vercel SSO marker is an unexpected deployed-health redirect and fails."""
+    verdict = access.classify_access(
+        http_status=status, location="/en/somewhere", bypass_present=True
+    )
+    assert verdict.verdict == "http_error"
+    assert "unexpected HTTP redirect from deployed health endpoint" in verdict.detail
+    # Wording must no longer assert the application as the cause.
+    assert "the application redirected the health route" not in verdict.detail
+
+
+def test_case_d_a_vercel_sso_redirect_is_still_blocked_external_not_http_error() -> None:
+    """Removing the cookie header must not blur the protection classification."""
+    verdict = access.classify_access(
+        http_status=307, location=VERCEL_SSO_LOCATION, bypass_present=True
+    )
+    assert verdict.verdict == "blocked_external"
+
+
+# --------------------------------------------------------------------------
+# CASE E — redirect diagnostics are safe
+# --------------------------------------------------------------------------
+
+
+def _headers_blob() -> str:
+    return (
+        "HTTP/2 307 \r\n"
+        "location: https://example.vercel.app/en/health"
+        "?x-vercel-protection-bypass=SUPERSECRET&nonce=abc123\r\n"
+        "set-cookie: _vercel_jwt=TOPSECRETJWT; Path=/; HttpOnly\r\n"
+        "server: Vercel\r\n"
+        "\r\n"
+    )
+
+
+def test_case_e_diagnostics_report_useful_metadata() -> None:
+    summary = access.summarize_response_headers(_headers_blob())
+    assert "status_line=HTTP/2 307" in summary
+    assert "location=present" in summary
+    assert "host=example.vercel.app" in summary
+    assert "path=/en/health" in summary
+    assert "set_cookie=yes" in summary
+    assert "server=Vercel" in summary
+
+
+@pytest.mark.parametrize(
+    "forbidden",
+    ["SUPERSECRET", "TOPSECRETJWT", "nonce", "_vercel_jwt", "HttpOnly", "abc123"],
+)
+def test_case_e_diagnostics_never_print_secrets_cookies_or_query(forbidden: str) -> None:
+    """CASE E: no Set-Cookie value, no bypass secret, no query string."""
+    summary = access.summarize_response_headers(_headers_blob())
+    assert forbidden not in summary
+
+
+def test_case_e_location_query_is_always_stripped() -> None:
+    assert access.sanitize_location("https://h.example/p?token=abc") == "host=h.example path=/p"
+    # Relative redirects are query-stripped too.
+    assert access.sanitize_location("/en/login?next=%2Fen%2Fhealth") == "path=/en/login"
+    assert access.sanitize_location("") == ""
+
+
+def test_case_e_set_cookie_absence_is_reported_as_no() -> None:
+    summary = access.summarize_response_headers("HTTP/2 307 \r\nlocation: /en/x\r\n\r\n")
+    assert "set_cookie=no" in summary
+    assert "location=present path=/en/x" in summary
+
+
+def test_case_e_missing_location_is_reported_as_absent() -> None:
+    summary = access.summarize_response_headers("HTTP/2 500 \r\nserver: Vercel\r\n\r\n")
+    assert "location=absent" in summary
+
+
+def test_case_e_only_the_final_response_block_is_summarized() -> None:
+    """curl -D can dump several blocks; the last response is the one that
+    matters."""
+    raw = (
+        "HTTP/2 307 \r\nlocation: https://first.example/a?q=1\r\n\r\n"
+        "HTTP/2 200 \r\nserver: Vercel\r\n\r\n"
+    )
+    summary = access.summarize_response_headers(raw)
+    assert "status_line=HTTP/2 200" in summary
+    assert "first.example" not in summary
+
+
+def test_case_e_diagnostics_cli_is_secret_free(tmp_path: Path) -> None:
+    headers_file = tmp_path / "h.txt"
+    headers_file.write_text(_headers_blob(), encoding="utf-8")
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(MODULE_PATH),
+            "summarize-headers",
+            "--headers-file",
+            str(headers_file),
+        ],
+        capture_output=True,
+        text=True,
+        env={"PATH": "/usr/bin:/bin", "VERCEL_AUTOMATION_BYPASS_SECRET": SECRET_VALUE},
+    )
+    assert proc.returncode == 0
+    for forbidden in ("SUPERSECRET", "TOPSECRETJWT", SECRET_VALUE):
+        assert forbidden not in proc.stdout
+        assert forbidden not in proc.stderr
+
+
+def test_case_e_diagnostics_run_only_on_non_2xx_and_never_gate() -> None:
+    """Diagnostics must be logged, not used as a verdict input."""
+    script = PROVE_SCRIPT.read_text(encoding="utf-8")
+    assert "summarize-headers --headers-file" in script
+    assert "response diagnostics:" in script
+    # Guarded to non-2xx, and emitted via log (not feeding any decision).
+    diag = script.split("# Safe response metadata on any non-2xx")[1].split("esac")[0]
+    assert "2??) ;;" in diag
+    assert "log " in diag
+    assert "die" not in diag
+
+
+# --------------------------------------------------------------------------
+# CASE F — #668's retry classification is unchanged
+# --------------------------------------------------------------------------
+
+
+def test_case_f_transport_retry_and_http_no_retry_behaviour_is_unchanged() -> None:
+    for code in (5, 6, 7, 18, 28, 35, 52, 55, 56):
+        assert access.classify_curl_exit(code).retryable is True
+    for code in (3, 23, 26, 60, 77, 99):
+        assert access.classify_curl_exit(code).retryable is False
+    # Any HTTP response is never retried.
+    assert access.classify_curl_exit(0).kind == "HTTP_RESPONSE"
+    assert access.classify_curl_exit(0).retryable is False
 
 
 # --------------------------------------------------------------------------
