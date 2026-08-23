@@ -198,8 +198,45 @@ export function certificationMode(): CertificationMode {
   return "local-development";
 }
 
-/** True when absent seed/fixtures must FAIL (not soft-skip). */
-export function strictSyntheticRequired(): boolean {
+/**
+ * True when this run is a release-certification run (integrated staging or
+ * production readiness) rather than local exploration or a nightly smoke.
+ */
+export function strictCertificationRequired(): boolean {
   const mode = certificationMode();
   return mode === "integrated-staging" || mode === "production-readiness";
+}
+
+/** True when absent seed/fixtures must FAIL (not soft-skip). */
+export function strictSyntheticRequired(): boolean {
+  return strictCertificationRequired();
+}
+
+/**
+ * Origin for specs that navigate the VENDOR app directly (vendor-sell,
+ * event-ticket).
+ *
+ * `VENDOR_BASE_URL` deliberately falls back to `BASE_URL` so `--list` and
+ * typecheck work with no extra env, but that fallback silently points vendor
+ * specs at the CUSTOMER app. Convenient locally; unacceptable for
+ * certification, where a "pass" against the wrong origin is worse than a
+ * failure. In a strict run the target must be configured and must be a
+ * genuinely different origin — otherwise fail closed, loudly.
+ */
+export function requireVendorBaseUrl(): string {
+  if (!strictCertificationRequired()) {
+    return VENDOR_BASE_URL;
+  }
+  const configured = str("E2E_VENDOR_BASE_URL");
+  if (!configured) {
+    throw new Error(
+      "strictCertification: E2E_VENDOR_BASE_URL is not set — vendor specs would navigate the customer origin; a release baseline cannot certify the vendor portal on an unproven target",
+    );
+  }
+  if (originOf(configured) === originOf(BASE_URL)) {
+    throw new Error(
+      "strictCertification: E2E_VENDOR_BASE_URL resolves to the same origin as E2E_BASE_URL — vendor specs would navigate the customer app",
+    );
+  }
+  return configured;
 }

@@ -14,6 +14,10 @@ on:
         description: "Override E2E_BASE_URL (else uses the E2E_BASE_URL secret)"
         required: false
         type: string
+      vendor_base_url:
+        description: "Override E2E_VENDOR_BASE_URL (else uses the E2E_VENDOR_BASE_URL secret)"
+        required: false
+        type: string
       expect_sha:
         description: "Release-candidate SHA for strict buildId proof (default GITHUB_SHA)"
         required: false
@@ -41,7 +45,11 @@ jobs:
       # Canonical staging customer origin — set repository secret E2E_BASE_URL to
       # match staging environment STAGING_CUSTOMER_URL (Vercel Preview on branch staging).
       E2E_BASE_URL: ${{ inputs.base_url || secrets.E2E_BASE_URL }}
-      E2E_VENDOR_BASE_URL: ${{ secrets.E2E_VENDOR_BASE_URL }}
+      # Pin the vendor target the same way base_url pins the customer target:
+      # a release-quality run passes the exact immutable Preview URL, never a
+      # mutable branch alias. Specs navigate this origin directly (vendor-sell,
+      # event-ticket), so it is proven by its own preflight below.
+      E2E_VENDOR_BASE_URL: ${{ inputs.vendor_base_url || secrets.E2E_VENDOR_BASE_URL }}
       E2E_ADMIN_BASE_URL: ${{ secrets.E2E_ADMIN_BASE_URL }}
       E2E_LOCALE: en
       # Vercel Deployment Protection bypass for automation (header — never in URLs).
@@ -90,8 +98,16 @@ jobs:
           host="$(printf '%s' "${E2E_BASE_URL}" | sed -E 's#^https?://##; s#/.*##')"
           echo "staging customer host=${host}"
 
+      # Every portal Playwright navigates directly must prove the SAME
+      # E2E_EXPECT_SHA before a single browser is installed. Both probes read
+      # that one variable, so they cannot certify different candidates.
+      # No admin preflight: no current spec navigates the admin origin, and
+      # admin identity is proven independently by Deploy staging.
       - name: Probe staging customer (identity + protection)
-        run: node scripts/ci/e2e-staging-probe.mjs
+        run: node scripts/ci/e2e-staging-probe.mjs customer
+
+      - name: Probe staging vendor (identity + protection)
+        run: node scripts/ci/e2e-staging-probe.mjs vendor
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
