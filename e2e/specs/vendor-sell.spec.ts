@@ -1,4 +1,5 @@
 import { requireVendorBaseUrl, urlOn, vendorOtpReady } from "../fixtures/env";
+import { enforceGate, resolveGate } from "../fixtures/gating";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
 
@@ -22,15 +23,19 @@ test.describe("vendor · sell", () => {
     await page.goto(urlOn(vendorOrigin, "/login"));
 
     if (!vendorOtpReady()) {
-      test.info().annotations.push({
-        type: "founder-gated",
-        description:
-          "Vendor authenticated flow skipped — set E2E_VENDOR_TEST_OTP (Supabase staging test-OTP for the synthetic approved-vendor phone). Asserted login surface only.",
+      const gate = resolveGate({
+        kind: "REQUIRED_STRICT",
+        journey: "vendor authenticated sell flow (list -> receive order -> ship)",
+        fixtures: ["E2E_VENDOR_TEST_OTP"],
       });
+      // Without this the order state machine is never exercised end to end, so
+      // a certification run must not report success.
+      enforceGate(gate);
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
       await expect(
         page.getByRole("heading").first().or(page.locator("form").first()),
       ).toBeVisible();
-      test.skip(true, "Vendor sell flow needs a staging test-vendor OTP (founder-gated)");
+      test.skip(true, gate.reason);
       return;
     }
 

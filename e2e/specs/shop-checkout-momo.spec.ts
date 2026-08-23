@@ -1,4 +1,5 @@
 import { customerOtp, lenco, path, whatsappMockReady } from "../fixtures/env";
+import { resolveGate } from "../fixtures/gating";
 import { completeSandboxMomoPush, sandboxEnabled } from "../fixtures/lenco";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
@@ -62,17 +63,18 @@ test.describe("shop · checkout · momo", () => {
 
     // ── ENV-GATED: live Lenco sandbox charge (F9b) ───────────────────────────
     if (!sandboxEnabled()) {
-      test.info().annotations.push({
-        type: "founder-gated",
-        description:
-          "Lenco sandbox pay skipped — set LENCO_SANDBOX=1 + LENCO_SANDBOX_* creds (F9b). Asserted up to pay-initiation only.",
+      const gate = resolveGate({
+        kind: "OPTIONAL_GATE",
+        journey: "Lenco sandbox charge (F9b)",
+        fixtures: ["LENCO_SANDBOX"],
       });
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
       // We still expect the app to have moved past the pay button into a
       // pending/USSD-wait or hosted-widget state (initiation succeeded).
       await expect(page.getByTestId("ussd-wait").or(page.getByTestId("payment-cod"))).toBeVisible({
         timeout: 30_000,
       });
-      test.skip(true, "Lenco sandbox pay leg is founder/staging-gated (F9b)");
+      test.skip(true, gate.reason);
       return;
     }
 

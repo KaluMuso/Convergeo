@@ -178,7 +178,7 @@ jobs:
           version: 2.109.1
 
       - name: QA framework self-tests
-        run: node --test scripts/qa/self-test/*.test.mjs
+        run: node --experimental-strip-types --test scripts/qa/self-test/*.test.mjs
 
       - name: Planted critical-failure self-test (optional)
         if: inputs.planted_fail_self_test == true

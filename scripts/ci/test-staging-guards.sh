@@ -864,6 +864,88 @@ else
   ok "no remote seed-reset endpoint — direct protected-staging workflow seeding only"
 fi
 
+# ── Strict E2E execution policy (PR C) ───────────────────────────────────────
+# "Skipped" and "passed" look identical in a green tick. A release baseline that
+# silently skipped a required journey never exercised it — but reported success.
+
+# Every release-critical journey must declare REQUIRED_STRICT *and* enforce it.
+# Declaring without enforcing is the exact regression this guards against.
+strict_sites_ok=1
+for site in \
+  "e2e/specs/auth-otp.spec.ts:customer OTP verification" \
+  "e2e/specs/vendor-sell.spec.ts:vendor authenticated sell flow" \
+  "e2e/specs/event-ticket.spec.ts:event scanner verify + duplicate-reject" \
+  "e2e/specs/critical-path.spec.ts:checkout place-order -> payment surface"; do
+  spec_file="${site%%:*}"
+  spec_journey="${site#*:}"
+  if ! grep -q 'kind: "REQUIRED_STRICT"' "${spec_file}"; then
+    bad "${spec_file} no longer declares a REQUIRED_STRICT gate"
+    strict_sites_ok=0
+  elif ! grep -vE '^\s*(//|\*|/\*)' "${spec_file}" | grep -q 'enforceGate('; then
+    # Comment lines are stripped first: a commented-out enforceGate() is exactly
+    # the silent-skip regression this guard exists to catch.
+    bad "${spec_file} declares a required gate but never enforces it — it would silently skip"
+    strict_sites_ok=0
+  elif ! grep -qF "${spec_journey}" "${spec_file}"; then
+    bad "${spec_file} lost its REQUIRED_STRICT journey label (${spec_journey})"
+    strict_sites_ok=0
+  fi
+done
+if [ "${strict_sites_ok}" = "1" ]; then
+  ok "all four release-critical journeys declare AND enforce REQUIRED_STRICT"
+fi
+
+# Optional gates must stay classified and must never escalate.
+optional_ok=1
+for site in \
+  "e2e/specs/shop-checkout-momo.spec.ts:OPTIONAL_GATE" \
+  "e2e/specs/clips-feed.spec.ts:FEATURE_DISABLED" \
+  "e2e/specs/clips-commerce.spec.ts:FEATURE_DISABLED" \
+  "e2e/specs/mobile-layout.spec.ts:VIEWPORT_NOT_APPLICABLE"; do
+  spec_file="${site%%:*}"
+  spec_kind="${site#*:}"
+  if ! grep -q "kind: \"${spec_kind}\"" "${spec_file}"; then
+    bad "${spec_file} lost its ${spec_kind} classification"
+    optional_ok=0
+  elif grep -vE '^\s*(//|\*|/\*)' "${spec_file}" | grep -q 'enforceGate('; then
+    bad "${spec_file} must not enforce — ${spec_kind} is never a certification failure"
+    optional_ok=0
+  fi
+done
+if [ "${optional_ok}" = "1" ]; then
+  ok "optional/feature/viewport gates stay classified and never escalate"
+fi
+
+# One definition of strict mode, reusing the existing certification helper.
+# The policy's failure text legitimately says "integrated-staging"; what must
+# never happen is the policy READING the environment for itself.
+if grep -q 'strictCertificationRequired' e2e/fixtures/gating.ts \
+  && ! grep -qE 'process\.env|CERTIFICATION_MODE' e2e/fixtures/gating-policy.ts; then
+  ok "gating reuses strictCertificationRequired — no second definition of strict mode"
+else
+  bad "gating must derive strict mode from strictCertificationRequired(), not re-read the env"
+fi
+
+# Failure messages name the missing FIXTURE, never its value.
+if grep -nE 'resolveGate\(\{' -A6 e2e/specs/*.spec.ts \
+  | grep -qE '(staticCode|scannerPin|ticketPin\(\)|process\.env)'; then
+  bad "a spec passes a credential VALUE into resolveGate — pass the fixture NAME only"
+else
+  ok "gates carry fixture NAMES only, never OTP/PIN/service-role/bypass values"
+fi
+
+# The gating tests import a .ts module, so every self-test invocation must carry
+# the type-stripping flag or release-certify breaks the moment it runs them.
+selftest_calls="$(grep -rhoE 'node .*--test scripts/qa/self-test/\*\.test\.mjs' \
+  .github/workflows package.json scripts/qa/release-certify.sh 2>/dev/null || true)"
+if [ -z "${selftest_calls}" ]; then
+  bad "could not locate the qa self-test invocations"
+elif printf '%s\n' "${selftest_calls}" | grep -qv -- '--experimental-strip-types'; then
+  bad "every 'node --test scripts/qa/self-test/*' invocation must pass --experimental-strip-types"
+else
+  ok "all qa self-test invocations enable TypeScript stripping for the gating tests"
+fi
+
 echo "Results: ${pass} passed, ${fail} failed, ${skip} skipped"
 if [[ "$skip" -gt 0 ]]; then
   echo "NOTE: ${skip} case(s) could not run — they are NOT passes. See SKIP lines above."
