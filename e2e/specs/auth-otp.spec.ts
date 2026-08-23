@@ -1,4 +1,5 @@
 import { customerOtp, customerOtpReady, path } from "../fixtures/env";
+import { enforceGate, resolveGate } from "../fixtures/gating";
 import { expect, test } from "../fixtures/test-base";
 
 /**
@@ -34,12 +35,15 @@ test.describe("auth · phone OTP", () => {
 
     // ── ENV-GATED: verify with the deterministic test OTP ────────────────────
     if (!customerOtpReady()) {
-      test.info().annotations.push({
-        type: "founder-gated",
-        description:
-          "OTP verify skipped — set E2E_CUSTOMER_TEST_OTP (Supabase staging test-OTP for the synthetic customer phone). Asserted 'code sent' boundary only.",
+      const gate = resolveGate({
+        kind: "REQUIRED_STRICT",
+        journey: "customer OTP verification",
+        fixtures: ["E2E_CUSTOMER_TEST_OTP"],
       });
-      test.skip(true, "OTP verify leg is staging/founder-gated");
+      // Certification runs fail here; local/nightly runs keep the old skip.
+      enforceGate(gate);
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test.skip(true, gate.reason);
       return;
     }
 

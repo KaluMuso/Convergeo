@@ -555,7 +555,7 @@ run_deploy_identity() {
 run_qa_self_tests() {
   log "QA framework self-tests"
   run_gate_cmd "qa-self-test" "static" "QA self-tests" \
-    bash -c "cd '$REPO_ROOT' && node --test scripts/qa/self-test/*.test.mjs"
+    bash -c "cd '$REPO_ROOT' && node --experimental-strip-types --test scripts/qa/self-test/*.test.mjs"
 }
 
 # ── Orchestrate ──────────────────────────────────────────────────────────────

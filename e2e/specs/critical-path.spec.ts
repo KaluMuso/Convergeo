@@ -1,4 +1,5 @@
 import { BASE_URL, LOCALE, customerOtpReady, flag, lencoSandboxReady, path } from "../fixtures/env";
+import { enforceGate, resolveGate } from "../fixtures/gating";
 import { completeSandboxMomoPush, sandboxEnabled } from "../fixtures/lenco";
 import {
   FIXTURE_GROUP_ID,
@@ -118,17 +119,25 @@ test.describe("critical-path", () => {
 
     // Deployed-target sandbox pay (F9b) — requires live session + Lenco sandbox.
     if (!sandboxEnabled() || !customerOtpReady()) {
-      test.info().annotations.push({
-        type: "founder-gated",
-        description:
-          "Sandbox MoMo settle skipped — set E2E_DEPLOYED_TARGET + LENCO_SANDBOX_* + E2E_TEST_PHONE/OTP. Browse/cart asserted above.",
+      // OPTIONAL: real sandbox money is a founder gate (F9b). Never escalated,
+      // even in certification — browse/cart were asserted above.
+      const gate = resolveGate({
+        kind: "OPTIONAL_GATE",
+        journey: "deployed sandbox MoMo settle (F9b)",
+        fixtures: ["LENCO_SANDBOX", "E2E_CUSTOMER_TEST_OTP"],
       });
-      test.skip(true, "Deployed sandbox pay leg is founder/staging-gated (F9b)");
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test.skip(true, gate.reason);
       return;
     }
 
     if (!pdpAvailable) {
-      test.skip(true, "No buyable PDP on deployed target for sandbox settle");
+      const gate = resolveGate({
+        kind: "OPTIONAL_GATE",
+        journey: "sandbox settle",
+        detail: "no buyable PDP on the deployed target",
+      });
+      test.skip(true, gate.reason);
       return;
     }
 
@@ -165,12 +174,17 @@ test.describe("critical-path", () => {
       .catch(() => false);
 
     if (!reachedPay) {
-      test.info().annotations.push({
-        type: "gap",
-        description:
-          "Checkout place-order did not reach a payment surface — full sandbox settle remains LIVE_VERIFICATION (LIVE-06/VE-P07 ops).",
+      // Reached only when the Lenco sandbox leg is ACTIVE (see the F9b gate
+      // above), so by this point the pay path is supposed to work. Skipping
+      // here disguised a real product failure as an absent optional gate.
+      const gate = resolveGate({
+        kind: "REQUIRED_STRICT",
+        journey: "checkout place-order -> payment surface",
+        detail: "no payment surface appeared within 30s of place-order",
       });
-      test.skip(true, "Place-order → payment surface not reachable on this deploy");
+      enforceGate(gate);
+      test.info().annotations.push({ type: "gap", description: gate.reason });
+      test.skip(true, gate.reason);
       return;
     }
 

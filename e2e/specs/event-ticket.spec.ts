@@ -1,4 +1,5 @@
 import { path, requireVendorBaseUrl, ticketPin, urlOn, vendorOtpReady } from "../fixtures/env";
+import { enforceGate, resolveGate } from "../fixtures/gating";
 import { sandboxEnabled } from "../fixtures/lenco";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
@@ -51,11 +52,19 @@ test.describe("event · ticket lifecycle", () => {
     // rotating 60-second QR window code, which no stored secret could outlive.
     const scannerPin = ticketPin();
     if (!vendorOtpReady() || !scannerPin) {
-      test.info().annotations.push({
-        type: "founder-gated",
-        description:
-          "Scanner verify/duplicate-reject skipped — needs E2E_VENDOR_TEST_OTP + the run-scoped E2E_TICKET_PIN from the canonical seed step. Asserting scanner surface loads.",
+      // One gate, two release-critical assertions: the first scan must verify
+      // AND the second scan of the same ticket must be rejected. #657 Events
+      // ships in this release, so neither may vanish into a skip.
+      const missing: string[] = [];
+      if (!vendorOtpReady()) missing.push("E2E_VENDOR_TEST_OTP");
+      if (!scannerPin) missing.push("E2E_TICKET_PIN");
+      const gate = resolveGate({
+        kind: "REQUIRED_STRICT",
+        journey: "event scanner verify + duplicate-reject",
+        fixtures: missing,
       });
+      enforceGate(gate);
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
       await page.goto(urlOn(vendorOrigin, `/events/${SEED.event.slug}/scan`));
       await expect(
         page
@@ -63,7 +72,7 @@ test.describe("event · ticket lifecycle", () => {
           .or(page.getByTestId("scan-camera-loading"))
           .or(page.getByTestId("event-scan-count")),
       ).toBeVisible();
-      test.skip(true, "Ticket scan flow is staging/founder-gated (F9b + organiser OTP)");
+      test.skip(true, gate.reason);
       return;
     }
 

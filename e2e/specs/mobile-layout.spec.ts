@@ -1,5 +1,6 @@
 import { CERTIFICATION_VIEWPORTS, MIN_TOUCH_TARGET_PX } from "../fixtures/viewports";
 import { path, strictSyntheticRequired } from "../fixtures/env";
+import { resolveGate } from "../fixtures/gating";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
 
@@ -58,7 +59,14 @@ for (const vp of CERTIFICATION_VIEWPORTS) {
     });
 
     test("bottom navigation visible and within viewport on mobile", async ({ page }) => {
-      test.skip(vp.width >= 1024, "bottom nav check is mobile-only");
+      test.skip(
+        vp.width >= 1024,
+        resolveGate({
+          kind: "VIEWPORT_NOT_APPLICABLE",
+          journey: "bottom navigation check",
+          detail: "mobile-only assertion",
+        }).reason,
+      );
       await page.goto(path("/"));
       await page.waitForLoadState("domcontentloaded");
 

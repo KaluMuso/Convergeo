@@ -177,6 +177,13 @@ jobs:
       - name: E2E staging probe unit tests
         run: node --test scripts/qa/self-test/e2e-staging-probe.test.mjs
 
+      # The gating policy decides whether a missing fixture fails a release
+      # baseline or silently skips it, so it is a per-PR gate. It imports the
+      # pure TypeScript policy directly (Node type-stripping) — no browser, no
+      # Playwright run needed.
+      - name: E2E strict-gating policy tests
+        run: node --experimental-strip-types --test scripts/qa/self-test/e2e-gating.test.mjs
+
   release-control:
     name: Release control contract (RELCTRL-01)
     runs-on: ubuntu-latest
