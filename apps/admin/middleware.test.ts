@@ -345,8 +345,24 @@ describe("admin middleware — CF Access enforcement", () => {
 });
 
 describe("admin middleware matrix", () => {
-  it("documents locale matcher coverage for all supported locales", async () => {
+  it("keeps the CSP report path and the broadened locale-redirect matcher", async () => {
     const { config } = await import("./middleware");
-    expect(config.matcher).toEqual(["/api/csp-report", "/", "/(en|bem|nya|fr|zh)/:path*"]);
+    expect(config.matcher).toEqual(["/api/csp-report", "/((?!api|_next|_vercel|.*\\..*).*)"]);
+  });
+
+  it("matches locale-less app paths so next-intl and the CF Access check both run on them (regression: a bare path like `/dashboard` used to skip both, land on `/[locale]` with an invalid locale value, and throw formatting any interpolated message)", async () => {
+    const { config } = await import("./middleware");
+    const pattern = new RegExp(`^${config.matcher[1]}$`);
+    expect(pattern.test("/dashboard")).toBe(true);
+    expect(pattern.test("/permission-denied")).toBe(true);
+    expect(pattern.test("/en/dashboard")).toBe(true);
+  });
+
+  it("still excludes Next internals, other API routes, and static files with an extension", async () => {
+    const { config } = await import("./middleware");
+    const pattern = new RegExp(`^${config.matcher[1]}$`);
+    expect(pattern.test("/api/csp-report")).toBe(false);
+    expect(pattern.test("/_next/static/chunk.js")).toBe(false);
+    expect(pattern.test("/favicon.ico")).toBe(false);
   });
 });

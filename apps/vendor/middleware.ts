@@ -85,5 +85,9 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/csp-report", "/", "/(en|bem|nya|fr|zh)/:path*"],
+  // See apps/customer/middleware.ts for the full rationale: a locale-less
+  // path (e.g. `/onboarding`, `/sw.js`) previously skipped both the gate
+  // check and next-intl's redirect, landing on `/[locale]` with an invalid
+  // locale value and throwing when any interpolated message tried to format.
+  matcher: ["/api/csp-report", "/((?!api|_next|_vercel|.*\\..*).*)"],
 };

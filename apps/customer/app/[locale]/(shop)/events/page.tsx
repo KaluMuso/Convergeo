@@ -10,13 +10,13 @@ import { Suspense } from "react";
 
 import { absoluteApiUrl } from "../../../../lib/api-base-url";
 import { BackToTop } from "../_components/back-to-top";
+import { DateFilterChips } from "../_components/events/date-filter-chips";
+import { EventGrid, type EventBrowseItem } from "../_components/events/event-grid";
 import {
-  DateFilterChips,
   EVENT_CATEGORIES,
   type EventCategory,
   type EventDateWindow,
-} from "../_components/events/date-filter-chips";
-import { EventGrid, type EventBrowseItem } from "../_components/events/event-grid";
+} from "../_components/events/event-taxonomy";
 
 import type { Metadata } from "next";
 

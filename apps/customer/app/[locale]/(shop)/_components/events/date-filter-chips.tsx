@@ -4,24 +4,7 @@ import { Button } from "@vergeo/ui/src/button";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState, useTransition } from "react";
 
-export const EVENT_DATE_WINDOWS = [
-  "tonight",
-  "this_weekend",
-  "next_week",
-  "next_month",
-  "all",
-] as const;
-export const EVENT_CATEGORIES = [
-  "workshops",
-  "comedy-theatre",
-  "pop-up-dinners",
-  "cultural-arts",
-  "lifestyle-community",
-  "free-rsvp",
-] as const;
-
-export type EventDateWindow = (typeof EVENT_DATE_WINDOWS)[number];
-export type EventCategory = string;
+import { EVENT_CATEGORIES, type EventCategory, type EventDateWindow } from "./event-taxonomy";
 
 type DateFilterLabels = {
   tonight: string;

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+
+import { getAdminTranslator } from "../../../../lib/admin-translator";
 
 type ConfigPageShellProps = {
   locale: string;
@@ -24,7 +25,7 @@ export async function ConfigPageShell({
   subtitleKey,
   children,
 }: ConfigPageShellProps) {
-  const t = await getTranslations("admin.config");
+  const t = await getAdminTranslator(locale, "admin.config");
 
   return (
     <div className="space-y-4">

@@ -8,6 +8,7 @@ import {
   buildWebSiteJsonLd,
   JsonLdScript,
 } from "@vergeo/ui/src/seo/json-ld";
+import { notFound } from "next/navigation";
 import { createTranslator, type AbstractIntlMessages } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
@@ -72,6 +73,9 @@ async function getCatalogTranslator(locale: string) {
 
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { locale } = await params;
+  if (!LOCALES.includes(locale as Locale)) {
+    notFound();
+  }
   const resolvedSearchParams = await searchParams;
   const merchPreview = readMerchPreviewParam(resolvedSearchParams);
   const t = await getCatalogTranslator(locale);
@@ -144,6 +148,15 @@ function renderCampaignSection(
 
 export default async function ShopHomePage({ params, searchParams }: PageProps) {
   const { locale } = await params;
+  // Belt-and-suspenders alongside the root layout's own guard: React can start
+  // rendering this segment concurrently with the layout, so relying solely on
+  // the layout's `notFound()` still lets an invalid locale (e.g. a bot request
+  // to a locale-less path the middleware matcher didn't catch) reach the
+  // `IntlMessageFormat` calls below, which throw for anything that isn't a
+  // valid BCP-47 tag — see apps/customer/middleware.ts.
+  if (!LOCALES.includes(locale as Locale)) {
+    notFound();
+  }
   const resolvedSearchParams = await searchParams;
   const merchPreview = readMerchPreviewParam(resolvedSearchParams);
   setRequestLocale(locale);
