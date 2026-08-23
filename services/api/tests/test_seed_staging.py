@@ -768,3 +768,137 @@ def test_cleanup_seed_cycle_is_idempotent_across_three_cycles_with_a_live_order(
         )
 
     _delete_real_order(migrated_db)
+
+
+# ---------------------------------------------------------------------------
+# FIXTURE_BUG regression coverage (staging E2E run #46, 32658100525): on real
+# hosted Supabase, service_role has BYPASSRLS on public.* tables (granted
+# per-table by our own migrations) but no table-level grant on auth.users,
+# which the platform reserves for GoTrue and the connecting session owner
+# (postgres). build_cleanup_sql() switches to service_role early via
+# `SET LOCAL role service_role` and never switched back before the final
+# `DELETE FROM auth.users`, so that statement inherited service_role's lack
+# of privilege there — "permission denied for table users", live on staging.
+# tests/rls/conftest.py's AUTH_BOOTSTRAP_SQL grants service_role full CRUD on
+# its local auth.users stub as a convenience for other RLS tests, which is
+# exactly why #676's local reproduction never caught this: the local stub is
+# more permissive than real hosted Supabase. These tests revoke that local
+# grant to reproduce the real boundary before exercising the fix.
+# ---------------------------------------------------------------------------
+
+
+def test_reset_role_restores_session_owner_within_same_transaction(
+    migrated_db: PgConn,
+) -> None:
+    """No commit needed — proves RESET ROLE semantics alone: SET LOCAL role
+    service_role changes current_user, RESET ROLE reverts it to session_user,
+    both inside the same still-open transaction.
+    """
+    result = migrated_db.run_script(
+        """
+BEGIN;
+SELECT current_user::text || '|before';
+SET LOCAL role service_role;
+SELECT current_user::text || '|as_service_role';
+RESET ROLE;
+SELECT current_user::text || '|after_reset';
+ROLLBACK;
+"""
+    )
+    assert result.ok, result.error
+    rows = [row for row in result.rows if "|" in row]
+    assert len(rows) == 3, f"expected 3 labelled rows, got: {result.rows}"
+    before, during, after = (row.split("|") for row in rows)
+    assert before[1] == "before" and during[1] == "as_service_role" and after[1] == "after_reset"
+    assert during[0] == "service_role"
+    assert before[0] != "service_role"
+    assert after[0] == before[0], "RESET ROLE must restore the original session_user"
+
+
+def test_auth_users_cleanup_uses_session_owner_not_service_role(
+    migrated_db: PgConn,
+) -> None:
+    """Exact reproduction of staging E2E run #46: revokes the local test
+    harness's convenience grant so this database matches real hosted
+    Supabase's actual auth.users privilege boundary, then proves (a) the real
+    fixed cleanup succeeds under that boundary and (b) the identical
+    statement WITHOUT the RESET ROLE fix fails with run #46's exact error —
+    a behavioral SQL execution test, not a substring check, so it cannot pass
+    vacuously.
+    """
+    assert_contract_valid()
+    revoke = migrated_db.run(
+        "REVOKE SELECT, INSERT, UPDATE, DELETE ON auth.users FROM service_role"
+    )
+    assert revoke.ok, revoke.error
+    try:
+        for priv in ("SELECT", "DELETE"):
+            result = migrated_db.run(
+                f"SELECT has_table_privilege('service_role', 'auth.users', '{priv}')::text"
+            )
+            assert result.ok and result.rows == ["false"], (
+                f"precondition failed: service_role must not have {priv} on auth.users"
+            )
+        for priv in ("SELECT", "DELETE"):
+            owner = migrated_db.run(
+                f"SELECT has_table_privilege(current_user, 'auth.users', '{priv}')::text"
+            )
+            assert owner.ok and owner.rows == ["true"], (
+                f"precondition failed: session owner must retain {priv} on auth.users "
+                "(RESET ROLE has nothing to restore to otherwise)"
+            )
+
+        seeded = migrated_db.run_script(build_seed_sql())
+        assert seeded.ok, seeded.error
+
+        cleanup = migrated_db.run_script(build_cleanup_sql())
+        assert cleanup.ok, cleanup.error or (
+            "cleanup must succeed under the real hosted-Supabase privilege boundary "
+            "(service_role has zero grants on auth.users) — run #46 reproduction"
+        )
+
+        auth_users_gone = migrated_db.run(
+            f"SELECT count(*)::text FROM auth.users WHERE email LIKE '%{SEED_PREFIX}%'"
+        )
+        assert auth_users_gone.ok and auth_users_gone.rows == ["0"]
+
+        # Negative control: the identical cleanup SQL with RESET ROLE removed
+        # must fail with run #46's exact error class under this same revoked
+        # boundary — proves this test actually exercises the privilege
+        # boundary rather than passing regardless of the fix.
+        reseeded = migrated_db.run_script(build_seed_sql())
+        assert reseeded.ok, reseeded.error
+        full_sql = build_cleanup_sql()
+        broken_sql = full_sql.replace("RESET ROLE;\n\n", "", 1)
+        assert broken_sql != full_sql, "RESET ROLE not found in generated SQL — update this test"
+        broken = migrated_db.run_script(broken_sql)
+        assert not broken.ok, "expected the no-RESET-ROLE cleanup to fail under this boundary"
+        assert "permission denied" in (broken.error or "").lower()
+        assert "users" in (broken.error or "").lower()
+    finally:
+        restore = migrated_db.run(
+            "GRANT SELECT, INSERT, UPDATE, DELETE ON auth.users TO postgres, service_role"
+        )
+        assert restore.ok, restore.error
+        migrated_db.run_script(build_seed_sql())
+
+
+def test_cleanup_never_broadens_auth_users_grants() -> None:
+    """Guards the remediation itself: the fix is RESET ROLE, never a widened
+    grant. No generated SQL — cleanup or seed — may ever issue an executable
+    GRANT statement; the privilege boundary run #46 exposed must stay exactly
+    as tight as real hosted Supabase already enforces it. Checks statements
+    only (skips `--` comments), since the fix's own explanatory comments
+    legitimately use the English word "grant"/"GRANT" in prose. Needs no live
+    database, so it always runs regardless of Postgres availability.
+    """
+    for sql in (build_cleanup_sql(), build_seed_sql()):
+        statements = (
+            line.strip()
+            for line in sql.splitlines()
+            if line.strip() and not line.strip().startswith("--")
+        )
+        for statement in statements:
+            assert not statement.upper().startswith("GRANT"), (
+                f"generated SQL must never issue GRANT: {statement!r}"
+            )
