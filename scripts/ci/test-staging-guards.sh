@@ -661,6 +661,21 @@ else
   bad "curl stderr must be redacted of the bypass secret before logging"
 fi
 
+# Per-portal Preview evidence must NOT be downloaded with merge-multiple.
+# Each portal artifact carries evidence.json/deployment.json at its root, so
+# merging all three into one directory collides them and silently destroys two
+# portals' evidence (deploy-staging run #34). Without merge-multiple,
+# download-artifact unpacks each artifact into its own <artifact-name>/ dir.
+evidence_dl_block="$(sed -n '/Download Preview evidence artifacts/,/Normalize Preview evidence paths/p' \
+  .github/workflows/deploy-staging.yml)"
+if printf '%s' "${evidence_dl_block}" | grep -vE '^\s*#' | grep -q 'merge-multiple'; then
+  bad "Preview evidence download must NOT use merge-multiple — the three portal artifacts collide and two are lost"
+elif printf '%s' "${evidence_dl_block}" | grep -q 'pattern: staging-preview-evidence-\*'; then
+  ok "Preview evidence downloads per-portal without merge-multiple (no artifact collision)"
+else
+  bad "Preview evidence download step must select the per-portal artifacts by pattern"
+fi
+
 # deploy-staging must scope the bypass secret per matrix leg (secrets are
 # issued per Vercel project; three portals = three projects).
 if grep -q 'bypass_secret_name: VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER' .github/workflows/deploy-staging.yml \
