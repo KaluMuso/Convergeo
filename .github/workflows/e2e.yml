@@ -39,6 +39,10 @@ jobs:
   e2e:
     name: Playwright critical paths (Fast-3G · 360px)
     runs-on: ubuntu-latest
+    # The protected `staging` environment gates this run behind human approval and
+    # is the ONLY place the staging database credentials and the staging
+    # service-role key exist. Nothing here is a repository-level secret.
+    environment: staging
     timeout-minutes: 25
     env:
       CI: "true"
@@ -66,13 +70,15 @@ jobs:
       E2E_EXPECT_SHA: ${{ inputs.expect_sha || github.sha }}
       E2E_STRICT_SHA: ${{ inputs.pre_release && 'true' || '' }}
       CERTIFICATION_MODE: ${{ inputs.pre_release && 'integrated-staging' || '' }}
-      # Deterministic seed reset (staging-only, token-guarded).
-      E2E_SEED_RESET_URL: ${{ secrets.E2E_SEED_RESET_URL }}
-      E2E_SEED_TOKEN: ${{ secrets.E2E_SEED_TOKEN }}
-      # OTP test creds (Supabase staging test-OTP map).
-      E2E_TEST_PHONE: ${{ secrets.E2E_TEST_PHONE }}
-      E2E_TEST_OTP: ${{ secrets.E2E_TEST_OTP }}
-      E2E_TICKET_QR: ${{ secrets.E2E_TICKET_QR }}
+      # Role-specific OTP codes (Supabase staging test-OTP map). Only the CODES
+      # are secrets — the synthetic phone numbers come from the generated
+      # canonical fixture contract (e2e/fixtures/seed.generated.ts).
+      E2E_CUSTOMER_TEST_OTP: ${{ secrets.E2E_CUSTOMER_TEST_OTP }}
+      E2E_VENDOR_TEST_OTP: ${{ secrets.E2E_VENDOR_TEST_OTP }}
+      # NOTE: there is deliberately no E2E_SEED_RESET_URL/E2E_SEED_TOKEN. The
+      # reset is a guarded, once-per-run CLI step below — not a remotely
+      # callable mutation endpoint. E2E_TICKET_PIN is minted by that step and
+      # injected via GITHUB_ENV after masking; it is never a stored secret.
       # Lenco sandbox pay leg — founder gate F9b. Absent secrets => leg skips.
       LENCO_SANDBOX: ${{ secrets.LENCO_SANDBOX }}
       LENCO_SANDBOX_PUBLIC_KEY: ${{ secrets.LENCO_SANDBOX_PUBLIC_KEY }}
@@ -109,6 +115,74 @@ jobs:
       - name: Probe staging vendor (identity + protection)
         run: node scripts/ci/e2e-staging-probe.mjs vendor
 
+      # ── Canonical synthetic seed — strict certification runs only ──────────
+      # Exactly ONE destructive reset per run, before any browser exists. The
+      # per-worker resetSeed() that used to run inside Playwright is gone: it
+      # fired once per spec file per project (~80x), with workers deleting rows
+      # other workers were asserting on.
+      - name: Install PostgreSQL client
+        if: ${{ inputs.pre_release }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Guard canonical seed target (fail closed before any mutation)
+        if: ${{ inputs.pre_release }}
+        env:
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+        run: |
+          set -euo pipefail
+          # Dry run exercises the same guard_seed_targets() contract the mutating
+          # run uses, so a production ref or host is refused BEFORE the step that
+          # holds the service-role key ever executes.
+          python3 scripts/seed_staging.py --env staging --dry-run >/dev/null
+          echo "canonical seed target guards passed (staging project ref verified)"
+
+      - name: Canonical cleanup + seed (once per run)
+        if: ${{ inputs.pre_release }}
+        env:
+          SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+          # Step-scoped ONLY. The staging service-role key is required to seal the
+          # ticket PIN through the same contract the app verifies with. It is
+          # never a job-level env var, never a repository secret, and never
+          # written to the private runtime file.
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          python3 scripts/seed_staging.py \
+            --env staging \
+            --cleanup \
+            --apply \
+            --private-file "${RUNNER_TEMP}/convergeo-e2e-private.json"
+
+      - name: Publish fixture version + mask scanner PIN
+        if: ${{ inputs.pre_release }}
+        run: |
+          set -euo pipefail
+          private_file="${RUNNER_TEMP}/convergeo-e2e-private.json"
+          test -f "${private_file}"
+          # Extract without ever echoing: python writes the mask directive and the
+          # GITHUB_ENV line directly, so the value never lands in a shell trace.
+          python3 - "${private_file}" <<'PY'
+          import json, os, sys
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              pin = json.load(handle)["ticketPin"]
+          # Mask FIRST, so any later accidental echo is redacted by the runner.
+          print(f"::add-mask::{pin}")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+              env_file.write(f"E2E_TICKET_PIN={pin}\n")
+          PY
+          # Non-secret: the fixture generation the suite must match.
+          fixture_version="$(python3 scripts/seed_staging.py --env staging --print-fixture-version)"
+          echo "E2E_FIXTURE_VERSION=${fixture_version}" >> "${GITHUB_ENV}"
+          echo "canonical seed applied — fixture_version=${fixture_version}"
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
@@ -132,6 +206,13 @@ jobs:
       - name: Guard — browser tests must have executed
         if: success()
         run: node scripts/ci/verify-e2e-executed.mjs e2e/results/results.json
+
+      - name: Remove private runtime material
+        if: ${{ always() }}
+        run: |
+          set -euo pipefail
+          rm -f "${RUNNER_TEMP}/convergeo-e2e-private.json"
+          echo "private runtime file removed"
 
       - name: Upload trace/video artifacts on failure
         if: failure()

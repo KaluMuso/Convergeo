@@ -1,4 +1,4 @@
-import { otpVerifyReady, path, requireVendorBaseUrl, urlOn } from "../fixtures/env";
+import { path, requireVendorBaseUrl, ticketPin, urlOn, vendorOtpReady } from "../fixtures/env";
 import { sandboxEnabled } from "../fixtures/lenco";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
@@ -12,7 +12,7 @@ import { expect, test } from "../fixtures/test-base";
  *  - Ticket PURCHASE is a Lenco charge → gated behind `LENCO_SANDBOX` (F9b).
  *  - Scanner VERIFY / duplicate-reject runs on the vendor app (separate origin)
  *    and needs an organiser session → gated behind OTP test creds. A seeded
- *    single-use ticket token may be supplied via `E2E_TICKET_QR` so the
+ *    run-scoped single-use ticket PIN is supplied via `E2E_TICKET_PIN` so the
  *    duplicate-reject assertion can run without a live purchase.
  */
 test.describe("event · ticket lifecycle", () => {
@@ -47,12 +47,14 @@ test.describe("event · ticket lifecycle", () => {
     }
 
     // ── Scanner verify + duplicate-reject leg (vendor app, OTP-gated) ─────────
-    const ticketQr = process.env.E2E_TICKET_QR?.trim();
-    if (!otpVerifyReady() || !ticketQr) {
+    // Stable PIN fallback, minted per run by the canonical seed step — not the
+    // rotating 60-second QR window code, which no stored secret could outlive.
+    const scannerPin = ticketPin();
+    if (!vendorOtpReady() || !scannerPin) {
       test.info().annotations.push({
         type: "founder-gated",
         description:
-          "Scanner verify/duplicate-reject skipped — needs vendor OTP creds + E2E_TICKET_QR (staging). Asserting scanner surface loads.",
+          "Scanner verify/duplicate-reject skipped — needs E2E_VENDOR_TEST_OTP + the run-scoped E2E_TICKET_PIN from the canonical seed step. Asserting scanner surface loads.",
       });
       await page.goto(urlOn(vendorOrigin, `/events/${SEED.event.slug}/scan`));
       await expect(
@@ -74,7 +76,7 @@ test.describe("event · ticket lifecycle", () => {
     const pinInput = page.getByTestId("scan-pin-fallback").getByRole("textbox");
 
     // First scan → verified.
-    await pinInput.fill(ticketQr);
+    await pinInput.fill(scannerPin);
     await page
       .getByRole("button", { name: /verify|check|scan/i })
       .first()
@@ -82,7 +84,7 @@ test.describe("event · ticket lifecycle", () => {
     await expect(page.getByTestId("scan-success")).toBeVisible({ timeout: 20_000 });
 
     // Second scan of the same ticket → duplicate rejected (not a success).
-    await pinInput.fill(ticketQr);
+    await pinInput.fill(scannerPin);
     await page
       .getByRole("button", { name: /verify|check|scan/i })
       .first()

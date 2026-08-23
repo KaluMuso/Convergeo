@@ -2,7 +2,7 @@ import { test as base, expect } from "@playwright/test";
 
 import { bypassSecretForUrl, hasPortalSpecificBypass, THROTTLE } from "./env";
 import { applyFast3G } from "./network";
-import { resetSeed } from "./seed";
+import { verifyFixtureVersion } from "./seed";
 
 type Fixtures = {
   /** Auto-fixture: applies Fast-3G throttling on the throttled project. */
@@ -70,15 +70,20 @@ export const test = base.extend<Fixtures>({
 export { expect };
 
 /**
- * Run the deterministic seed reset once per worker before the specs execute.
- * Idempotent + a no-op (annotated) when the reset env is absent.
+ * Record which fixture generation this worker is running against.
+ *
+ * NON-DESTRUCTIVE by design. This hook runs once per spec file per project — 16
+ * files x 5 viewport projects — so the destructive reset that used to live here
+ * fired ~80 times per run, with workers deleting rows other workers were
+ * asserting on. The reset is now a single guarded workflow step before any
+ * browser starts; all this does is observe.
  */
 test.beforeAll(async () => {
-  const didReset = await resetSeed();
+  const verdict = verifyFixtureVersion();
   test.info().annotations.push({
-    type: "seed-reset",
-    description: didReset
-      ? "deterministic seed reset applied (idempotent)"
-      : "seed reset skipped — E2E_SEED_RESET_URL/E2E_SEED_TOKEN not set (founder/staging-gated)",
+    type: "fixture-version",
+    description: verdict.ok
+      ? "fixture generation verified (no destructive reset inside Playwright)"
+      : (verdict.reason ?? "fixture version verification failed"),
   });
 });

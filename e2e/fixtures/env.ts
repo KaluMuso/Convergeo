@@ -8,6 +8,8 @@
  * are skipped with a clear annotation rather than failing.
  */
 
+import { SEED } from "./seed.generated";
+
 export function flag(name: string): boolean {
   const raw = process.env[name];
   if (raw === undefined) return false;
@@ -141,32 +143,59 @@ export function whatsappMockReady(): boolean {
 }
 
 /**
- * Deterministic seed reset. When present, the reset hook POSTs to a test-only
- * endpoint (guarded server-side, staging only) that idempotently rebuilds the
- * canonical fixtures keyed by the slugs in `seed.ts`.
+ * Fixture generation the staging database was seeded from.
+ *
+ * Published by the canonical seed step in the workflow. There is deliberately no
+ * `E2E_SEED_RESET_URL`/`E2E_SEED_TOKEN` any more: the reset is a guarded,
+ * once-per-run CLI step against the protected staging environment, not a
+ * remotely callable mutation endpoint.
  */
-export const seed = {
-  resetUrl: str("E2E_SEED_RESET_URL"),
-  token: str("E2E_SEED_TOKEN"),
-};
-
-export function seedResetReady(): boolean {
-  return seed.resetUrl.length > 0 && seed.token.length > 0;
+export function expectedFixtureVersion(): string {
+  return str("E2E_FIXTURE_VERSION");
 }
 
 /**
- * OTP login. Staging is configured with a fixed test phone whose OTP is either
- * static (Supabase test OTP map) or readable from the WhatsApp/SMS mock outbox.
- * Without these, the auth spec asserts up to the "code sent" boundary and skips
- * the verify leg.
+ * OTP login identities.
+ *
+ * The canonical personas carry DISTINCT database roles — `customer` vs `vendor`
+ * — so one account provably cannot drive both the customer auth journey and the
+ * vendor-portal journeys. Phones come from the generated fixture contract (they
+ * are public synthetic identifiers, already committed in the Python source);
+ * only the CODES are secrets.
  */
-export const otp = {
-  testPhone: str("E2E_TEST_PHONE"),
-  staticCode: str("E2E_TEST_OTP"),
+export const customerOtp = {
+  testPhone: str("E2E_CUSTOMER_TEST_PHONE", SEED.personas.customer.phone),
+  staticCode: str("E2E_CUSTOMER_TEST_OTP"),
 };
 
-export function otpVerifyReady(): boolean {
-  return otp.testPhone.length > 0 && otp.staticCode.length > 0;
+export const vendorOtp = {
+  testPhone: str("E2E_VENDOR_TEST_PHONE", SEED.personas.vendor.phone),
+  staticCode: str("E2E_VENDOR_TEST_OTP"),
+};
+
+export function customerOtpReady(): boolean {
+  return customerOtp.testPhone.length > 0 && customerOtp.staticCode.length > 0;
+}
+
+export function vendorOtpReady(): boolean {
+  return vendorOtp.testPhone.length > 0 && vendorOtp.staticCode.length > 0;
+}
+
+/**
+ * Organiser scanner credential for the seeded ticket.
+ *
+ * This is the stable PIN fallback, not the rotating QR: the real QR window code
+ * changes every 60 seconds (`services/tickets/qr.py`), so no stored value could
+ * stay valid. It is minted per run by the canonical seed step, masked, and
+ * exported into the job — never committed. `E2E_TICKET_QR` remains a temporary
+ * backward-compatible alias.
+ */
+export function ticketPin(): string {
+  return str("E2E_TICKET_PIN") || str("E2E_TICKET_QR");
+}
+
+export function ticketPinReady(): boolean {
+  return ticketPin().length > 0;
 }
 
 /** Convenience: build a locale-prefixed path. */
