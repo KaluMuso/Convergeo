@@ -196,16 +196,29 @@ jobs:
         working-directory: e2e
         run: npx playwright install --with-deps chromium
 
+      - name: Record expected matrix (static --list, no browser)
+        working-directory: e2e
+        run: |
+          set -euo pipefail
+          mkdir -p results
+          npx playwright test --list --reporter=json > results/list.json
+
       - name: Run E2E suite
         working-directory: e2e
-        # Playwright has a 15-minute global timeout, but retain an independent
-        # process deadline so a stuck runner cannot consume a staging gate
-        # indefinitely if the test runner watchdog does not get to exit.
-        run: timeout --signal=TERM --kill-after=60s 18m npx playwright test
+        # Playwright has a 12-minute global timeout (matrix bound to 65
+        # project-test instances — see fixtures/spec-classification.ts), but
+        # retain an independent process deadline so a stuck runner cannot
+        # consume a staging gate indefinitely if the test runner watchdog
+        # does not get to exit.
+        run: timeout --signal=TERM --kill-after=60s 15m npx playwright test
 
       - name: Guard — browser tests must have executed
         if: success()
         run: node scripts/ci/verify-e2e-executed.mjs e2e/results/results.json
+
+      - name: Guard — E2E execution-completeness contract
+        if: success()
+        run: node scripts/ci/verify-e2e-matrix.mjs e2e/results/list.json e2e/results/results.json
 
       - name: Remove private runtime material
         if: ${{ always() }}

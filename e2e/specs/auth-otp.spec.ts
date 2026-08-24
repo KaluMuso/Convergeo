@@ -16,10 +16,17 @@ test.describe("auth · phone OTP", () => {
     await page.goto(path("/login"));
 
     // Enter the phone number and request a code.
-    const phoneInput = page
-      .getByLabel(/phone|mobile/i)
-      .or(page.getByRole("textbox", { name: /phone|mobile/i }))
-      .first();
+    //
+    // PhoneForm renders FormField in `asGroup` mode (packages/ui/form-field.tsx):
+    // the visible <label> is an unassociated sibling (aria-labelledby on the
+    // group, not htmlFor on a control), so `getByLabel` resolves ambiguously —
+    // it matches BOTH the national-number input (via its own aria-label) and
+    // the enclosing `role="group"` (via aria-labelledby). A single semantic
+    // `getByRole("textbox", ...)` resolves to exactly the national-number
+    // input and nothing else; reproduced locally against the real component
+    // before this change (jsdom/RTL: getAllByLabelText returned 2 matches,
+    // getByRole("textbox", ...) returned exactly 1).
+    const phoneInput = page.getByRole("textbox", { name: /phone|mobile/i });
     await expect(phoneInput).toBeVisible();
     await phoneInput.fill(customerOtp.testPhone);
 
