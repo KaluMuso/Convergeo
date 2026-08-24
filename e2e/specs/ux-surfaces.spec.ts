@@ -88,10 +88,19 @@ test.describe("ux-surfaces · release certification", () => {
   test("error state on invalid PDP is honest", async ({ page }) => {
     await page.goto(path("/p/this-product-definitely-does-not-exist-xyz"));
     await page.waitForLoadState("domcontentloaded");
+    // A genuinely nonexistent slug hits fetchProduct's "not_found" branch, which
+    // calls Next's notFound() and renders app/[locale]/not-found.tsx — copy is
+    // "We can't find that page" (marketing.notFound.heading), not "not found" /
+    // "no longer". "unavailable" alone still covers the in-page PDP "unavailable"
+    // state (catalog.pdp.unavailableTitle: "Product unavailable").
     await expect(
       page
         .getByTestId("pdp-unavailable")
-        .or(page.getByRole("heading", { name: /not found|unavailable|no longer/i }))
+        .or(
+          page.getByRole("heading", {
+            name: /not found|unavailable|no longer|can't find|can’t find/i,
+          }),
+        )
         .first(),
     ).toBeVisible({ timeout: 20_000 });
   });
