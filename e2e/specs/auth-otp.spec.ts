@@ -55,6 +55,14 @@ test.describe("auth · phone OTP", () => {
     }
 
     // Type the 6-digit static test code into the OTP field.
+    //
+    // OtpField (packages/ui/src/otp-field.tsx) renders 6 separate inputs with no
+    // auto-focus — page.keyboard.type() sends keystrokes to whatever currently
+    // has DOM focus, which is nothing until a digit box is explicitly focused.
+    // Reproduced locally (RTL) before this change: document.activeElement was
+    // document.body after render; explicitly focusing the first digit box
+    // ("Digit 1 of 6") made it the target.
+    await page.getByRole("textbox", { name: "Digit 1 of 6" }).click();
     for (const digit of customerOtp.staticCode.slice(0, 6).split("")) {
       await page.keyboard.type(digit);
     }
