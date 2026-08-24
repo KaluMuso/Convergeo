@@ -57,6 +57,56 @@ describe("GET /[locale]/health (customer)", () => {
 
     const body = await GET().json();
 
-    expect(Object.keys(body).sort()).toEqual(["apiHost", "app", "buildId", "env", "status"]);
+    expect(Object.keys(body).sort()).toEqual([
+      "apiHost",
+      "app",
+      "buildId",
+      "e2eMockSessionEnabled",
+      "env",
+      "status",
+    ]);
+  });
+});
+
+describe("GET /[locale]/health (customer) — e2eMockSessionEnabled", () => {
+  it("is true on the staging plane with the explicit flag", async () => {
+    vi.stubEnv("NEXT_PUBLIC_E2E_MOCK_SESSION", "1");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "staging");
+    vi.stubEnv("NODE_ENV", "production");
+
+    const body = await GET().json();
+
+    expect(body.e2eMockSessionEnabled).toBe(true);
+  });
+
+  it("is false on the staging plane without the flag", async () => {
+    vi.stubEnv("NEXT_PUBLIC_E2E_MOCK_SESSION", undefined);
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "staging");
+    vi.stubEnv("NODE_ENV", "production");
+
+    const body = await GET().json();
+
+    expect(body.e2eMockSessionEnabled).toBe(false);
+  });
+
+  it("is false on the production plane even with the flag set (fail-closed)", async () => {
+    vi.stubEnv("NEXT_PUBLIC_E2E_MOCK_SESSION", "1");
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", "production");
+    vi.stubEnv("NODE_ENV", "production");
+
+    const body = await GET().json();
+
+    expect(body.e2eMockSessionEnabled).toBe(false);
+  });
+
+  it("is false with no plane and no flag", async () => {
+    vi.stubEnv("NEXT_PUBLIC_E2E_MOCK_SESSION", undefined);
+    vi.stubEnv("NEXT_PUBLIC_DEPLOYMENT_PLANE", undefined);
+    vi.stubEnv("NODE_ENV", "production");
+
+    const body = await GET().json();
+
+    expect(body.e2eMockSessionEnabled).toBe(false);
+    expect(body.status).toBe("ok");
   });
 });

@@ -10,6 +10,7 @@ export {
   STAGING_API_HOST,
   hostnameOfOrigin,
   isDeployedFrontendEnv,
+  isE2EMockSessionAllowed,
   isLoopbackApiOrigin,
   isProductionApiOrigin,
   isStagingApiOrigin,

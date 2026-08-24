@@ -25,7 +25,8 @@
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
-    "@supabase/supabase-js": "^2.112.2"
+    "@supabase/supabase-js": "^2.112.2",
+    "@vergeo/config": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",

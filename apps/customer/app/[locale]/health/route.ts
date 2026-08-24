@@ -1,3 +1,5 @@
+import { isE2EMockSessionAllowed } from "@vergeo/config/api-base-url";
+
 import { resolveApiHost } from "../../../lib/api-base-url";
 
 function buildId(): string {
@@ -19,5 +21,11 @@ export function GET() {
     // never the full URL, never a secret). null when unset/malformed:
     // never silently substitutes a default host.
     apiHost: resolveApiHost(process.env),
+    // Boolean only — never the injected session/access-token itself. Lets the
+    // E2E preflight prove the staging Preview build actually compiled the
+    // payment-mock session contract in BEFORE any browser test runs, instead
+    // of every mock-session-dependent spec silently timing out. Always false
+    // on Production (see isE2EMockSessionAllowed's fail-closed contract).
+    e2eMockSessionEnabled: isE2EMockSessionAllowed(process.env),
   });
 }
