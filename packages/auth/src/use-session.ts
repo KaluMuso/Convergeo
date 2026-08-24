@@ -1,6 +1,7 @@
 "use client";
 
 import type { Session, User } from "@supabase/supabase-js";
+import { isE2EMockSessionAllowed } from "@vergeo/config/api-base-url";
 import { useEffect, useState } from "react";
 
 import { getBrowserClient } from "./browser-client-lazy";
@@ -26,15 +27,14 @@ export function useSession(): UseSessionResult {
     let active = true;
     let unsubscribe: (() => void) | undefined;
 
-    // Deterministic E2E buyer session (CI payment-mock mode only). Never active
-    // unless NEXT_PUBLIC_E2E_MOCK_SESSION=1 is compiled into the client bundle.
-    // Allow Playwright-injected sessions in development, or when the explicit
-    // NEXT_PUBLIC_E2E_MOCK_SESSION=1 flag is compiled into the client (staging
-    // honesty specs). Never honour the injection in production builds without
-    // that flag.
-    const e2eMockAllowed =
-      process.env.NEXT_PUBLIC_E2E_MOCK_SESSION === "1" || process.env.NODE_ENV === "development";
-    if (e2eMockAllowed) {
+    // Deterministic E2E buyer session (CI payment-mock mode / staging honesty
+    // specs only). Fails closed on every axis — see
+    // @vergeo/config's isE2EMockSessionAllowed for the full contract: the
+    // explicit NEXT_PUBLIC_E2E_MOCK_SESSION=1 flag is never sufficient alone,
+    // it must be paired with the immutable NEXT_PUBLIC_DEPLOYMENT_PLANE=staging
+    // build marker, so an accidental flag on a Production build still denies
+    // the mock. `next dev` remains the one unconditional exception.
+    if (isE2EMockSessionAllowed()) {
       const injected = window.__VERGEO_E2E_SESSION__;
       if (injected?.access_token) {
         setSession(injected);

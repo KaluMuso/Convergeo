@@ -2,6 +2,7 @@ export type ApiBaseEnvBag = {
   NEXT_PUBLIC_API_BASE_URL?: string;
   NEXT_PUBLIC_VERGEO_API_URL?: string;
   NEXT_PUBLIC_DEPLOYMENT_PLANE?: string;
+  NEXT_PUBLIC_E2E_MOCK_SESSION?: string;
   NODE_ENV?: string;
 };
 
@@ -29,6 +30,7 @@ function inlinedEnv(): ApiBaseEnvBag {
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
     NEXT_PUBLIC_VERGEO_API_URL: process.env.NEXT_PUBLIC_VERGEO_API_URL,
     NEXT_PUBLIC_DEPLOYMENT_PLANE: process.env.NEXT_PUBLIC_DEPLOYMENT_PLANE,
+    NEXT_PUBLIC_E2E_MOCK_SESSION: process.env.NEXT_PUBLIC_E2E_MOCK_SESSION,
     NODE_ENV: process.env.NODE_ENV,
   };
 }
@@ -61,6 +63,11 @@ function mergeEnv(env: ApiBaseEnvBag): ApiBaseEnvBag {
       env,
       "NEXT_PUBLIC_DEPLOYMENT_PLANE",
       inlined.NEXT_PUBLIC_DEPLOYMENT_PLANE,
+    ),
+    NEXT_PUBLIC_E2E_MOCK_SESSION: readBag(
+      env,
+      "NEXT_PUBLIC_E2E_MOCK_SESSION",
+      inlined.NEXT_PUBLIC_E2E_MOCK_SESSION,
     ),
     NODE_ENV: readBag(env, "NODE_ENV", inlined.NODE_ENV),
   };
@@ -114,6 +121,30 @@ export function isDeployedFrontendEnv(env: ApiBaseEnvBag = {}): boolean {
     return true;
   }
   return merged.NODE_ENV === "production";
+}
+
+/**
+ * Single source of truth for whether a build may honour a Playwright-injected
+ * E2E buyer session (`window.__VERGEO_E2E_SESSION__`, see @vergeo/auth's
+ * useSession and e2e/fixtures/payment-fixtures.ts's installMockBuyerSession).
+ *
+ * Fails closed on every axis: `NEXT_PUBLIC_E2E_MOCK_SESSION=1` alone is never
+ * sufficient — it must be paired with the immutable, build-time
+ * `NEXT_PUBLIC_DEPLOYMENT_PLANE=staging` marker (the same signal
+ * {@link resolvePublicApiBaseUrl} already trusts to keep a Production bundle
+ * from ever resolving a staging/loopback API origin). A Production build that
+ * somehow carries `NEXT_PUBLIC_E2E_MOCK_SESSION=1` without the staging plane
+ * marker — accidental or otherwise — still denies the mock. `development`
+ * (`next dev`) is the one unconditional exception, matching every other
+ * plane-gated helper in this module.
+ */
+export function isE2EMockSessionAllowed(env: ApiBaseEnvBag = {}): boolean {
+  const merged = mergeEnv(env);
+  if (merged.NODE_ENV === "development") {
+    return true;
+  }
+  const plane = normalizeDeploymentPlane(merged.NEXT_PUBLIC_DEPLOYMENT_PLANE);
+  return merged.NEXT_PUBLIC_E2E_MOCK_SESSION === "1" && plane === "staging";
 }
 
 function pickConfigured(env: ApiBaseEnvBag, keys: readonly PublicApiEnvKey[]): string | undefined {

@@ -158,11 +158,11 @@ importers:
         version: 19.2.8(react@19.2.8)
       serwist:
         specifier: ^9.5.12
-        version: 9.5.12(browserslist@4.28.6)(typescript@5.9.3)
+        version: 9.5.12(browserslist@4.28.7)(typescript@5.9.3)
     devDependencies:
       '@serwist/next':
         specifier: ^9.5.12
-        version: 9.5.12(next@15.5.23(@opentelemetry/api@1.9.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(typescript@5.9.3)(webpack@5.108.4(lightningcss@1.32.0))
+        version: 9.5.12(next@15.5.23(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(typescript@5.9.3)(webpack@5.108.4(lightningcss@1.32.0))
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3
@@ -290,6 +290,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.112.2
         version: 2.112.2(@opentelemetry/api@1.9.1)
+      '@vergeo/config':
+        specifier: workspace:*
+        version: link:../config
     devDependencies:
       '@types/node':
         specifier: ^22.20.1
@@ -2862,6 +2865,7 @@ packages:
   eslint@9.39.5:
     resolution: {integrity: sha512-DgZS62aPLXKlnxILS/AYCoRvHaZeXceIzlXPkkGGzJWSow1aEk0lbTlxUSlyjC8jcaKxAdOnTDz+o1JFSBsyjw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -6237,7 +6241,7 @@ snapshots:
     transitivePeerDependencies:
       - browserslist
 
-  '@serwist/next@9.5.12(next@15.5.23(@opentelemetry/api@1.9.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(typescript@5.9.3)(webpack@5.108.4(lightningcss@1.32.0))':
+  '@serwist/next@9.5.12(next@15.5.23(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)(typescript@5.9.3)(webpack@5.108.4(lightningcss@1.32.0))':
     dependencies:
       '@serwist/build': 9.5.12(browserslist@4.28.6)(typescript@5.9.3)
       '@serwist/utils': 9.5.12(browserslist@4.28.6)
@@ -6259,6 +6263,10 @@ snapshots:
   '@serwist/utils@9.5.12(browserslist@4.28.6)':
     optionalDependencies:
       browserslist: 4.28.6
+
+  '@serwist/utils@9.5.12(browserslist@4.28.7)':
+    optionalDependencies:
+      browserslist: 4.28.7
 
   '@serwist/webpack-plugin@9.5.12(browserslist@4.28.6)(typescript@5.9.3)(webpack@5.108.4(lightningcss@1.32.0))':
     dependencies:
@@ -9224,6 +9232,15 @@ snapshots:
   serwist@9.5.12(browserslist@4.28.6)(typescript@5.9.3):
     dependencies:
       '@serwist/utils': 9.5.12(browserslist@4.28.6)
+      idb: 8.0.3
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - browserslist
+
+  serwist@9.5.12(browserslist@4.28.7)(typescript@5.9.3):
+    dependencies:
+      '@serwist/utils': 9.5.12(browserslist@4.28.7)
       idb: 8.0.3
     optionalDependencies:
       typescript: 5.9.3
