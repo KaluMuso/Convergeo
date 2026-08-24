@@ -398,7 +398,7 @@ ensure_e2e_deps() {
 }
 
 run_e2e_suite() {
-  local spec="$1" gate_id="$2"
+  local spec="$1" gate_id="$2" project="${3:-mobile-390}"
   log "L3 E2E: ${gate_id}"
   if [[ "$SKIP_E2E" -eq 1 ]]; then
     write_gate "$gate_id" "ux" "NOT_RUN" "--skip-e2e"
@@ -420,7 +420,7 @@ run_e2e_suite() {
     E2E_BASE_URL='${E2E_BASE_URL}' E2E_THROTTLE=0 \
       CERTIFICATION_MODE='${MODE}' \
       PW_CHROMIUM_PATH='${PW_CHROMIUM_PATH:-}' \
-      npx playwright test '${spec}' --reporter=list --project=mobile-fast-3g-360
+      npx playwright test '${spec}' --reporter=list --project='${project}'
   "
   rc=$_RUN_TIMED_RC
   ms=$_RUN_TIMED_MS
@@ -439,11 +439,17 @@ run_e2e_suite() {
 
 run_e2e() {
   run_e2e_suite "specs/browse-journey.spec.ts" "e2e-browse-journey"
+  # mobile-layout.spec.ts is RESPONSIVE_ALL_VIEWPORTS (fixtures/spec-classification.ts):
+  # the CI E2E workflow runs it once per certification viewport (5 projects). This
+  # gate exercises it on the canonical mobile-390 project only — a single-viewport
+  # smoke, not the full cross-viewport certification.
   run_e2e_suite "specs/mobile-layout.spec.ts" "e2e-mobile-layout"
   run_e2e_suite "specs/data-quality.spec.ts" "e2e-data-quality"
   run_e2e_suite "specs/ux-surfaces.spec.ts" "e2e-ux-surfaces"
   run_e2e_suite "specs/a11y-smoke.spec.ts" "a11y-axe-smoke"
-  run_e2e_suite "specs/performance-smoke.spec.ts" "perf-web-vitals-smoke"
+  # performance-smoke.spec.ts is NETWORK_THROTTLED_ONLY, assigned only to the
+  # fast-3g project's testMatch — no other project would even discover it.
+  run_e2e_suite "specs/performance-smoke.spec.ts" "perf-web-vitals-smoke" "fast-3g"
 }
 
 run_payments_sandbox() {

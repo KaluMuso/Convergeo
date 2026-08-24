@@ -280,7 +280,7 @@ jobs:
         env:
           E2E_BASE_URL: http://localhost:3000
           E2E_THROTTLE: "0"
-        run: npx playwright test specs/a11y-smoke.spec.ts --project=mobile-fast-3g-360
+        run: npx playwright test specs/a11y-smoke.spec.ts --project=mobile-390
 
       - name: Stop servers
         if: always()

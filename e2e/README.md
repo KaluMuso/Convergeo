@@ -50,7 +50,12 @@ npm install --no-package-lock          # installs @playwright/test 1.56.1
 # Against a local customer dev server (pnpm --filter customer dev on :3000):
 E2E_BASE_URL=http://localhost:3000 \
 PW_CHROMIUM_PATH=/opt/pw-browsers/chromium \
-  npx playwright test --project=mobile-fast-3g-360
+  npx playwright test --project=mobile-390
+
+# Six projects total (fixtures/spec-classification.ts is the source of truth for
+# which spec runs on which): mobile-360/390/430, tablet-768, desktop-1440 (the
+# certification viewports) and fast-3g (throttled, performance/byte-budget specs
+# only). mobile-390 is canonical — most specs run there and nowhere else.
 
 # Discover specs without launching a browser:
 npx playwright test --list
