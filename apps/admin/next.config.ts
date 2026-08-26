@@ -1,4 +1,5 @@
 import createNextIntlPlugin from "next-intl/plugin";
+import { assertVercelPublicSupabaseEnv } from "@vergeo/config";
 import {
   buildConnectSrc,
   buildStaticSecurityHeaders,
@@ -8,6 +9,11 @@ import {
 } from "@vergeo/config/security-headers";
 
 import type { NextConfig } from "next";
+
+// Fail Vercel Preview/Production builds closed on missing/invalid public
+// Supabase config — inactive off Vercel (GitHub CI, local `next build`,
+// or the OCI/Caddy standalone build). See packages/config/src/env.ts.
+assertVercelPublicSupabaseEnv();
 
 const withNextIntl = createNextIntlPlugin("../../packages/i18n/src/request.ts");
 

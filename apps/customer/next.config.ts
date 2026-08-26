@@ -1,5 +1,6 @@
 import withSerwistInit from "@serwist/next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { assertVercelPublicSupabaseEnv } from "@vergeo/config";
 import {
   buildConnectSrc,
   buildStaticSecurityHeaders,
@@ -11,6 +12,11 @@ import {
 import { resolveApiBaseUrl } from "./lib/api-base-url";
 
 import type { NextConfig } from "next";
+
+// Fail Vercel Preview/Production builds closed on missing/invalid public
+// Supabase config — inactive off Vercel (GitHub CI, local `next build`).
+// See packages/config/src/env.ts for the shared contract every portal uses.
+assertVercelPublicSupabaseEnv();
 
 const withNextIntl = createNextIntlPlugin("../../packages/i18n/src/request.ts");
 
