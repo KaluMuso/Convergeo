@@ -45,9 +45,27 @@ export class FetchHttpError extends Error {
   }
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
+/**
+ * Retry backoff delay that observes the CALLER's AbortSignal (never the
+ * per-attempt timeout signal — that one governs a single `fetch()` call, not
+ * the gap between attempts). Without this, a caller cancelling mid-backoff
+ * would not be noticed until the delay finished and the next `fetch()`
+ * attempt started — the exact PR-E review gap this fixes.
+ */
+function sleepWithSignal(ms: number, signal?: AbortSignal | null): Promise<void> {
+  if (signal?.aborted) {
+    return Promise.reject(signal.reason);
+  }
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    function onAbort(): void {
+      clearTimeout(timer);
+      reject(signal!.reason);
+    }
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
 }
 
@@ -106,8 +124,15 @@ export async function fetchJson<T>(url: string, options: FetchJsonOptions = {}):
 
       if (!response.ok) {
         if (response.status >= 500 && attempt < retries) {
+          // This attempt already produced a response — its own timeout must
+          // not keep running through the backoff delay that follows.
+          if (timeoutHandle !== null) {
+            clearTimeout(timeoutHandle);
+          }
           attempt += 1;
-          await sleep(retryDelayMs * attempt);
+          // Rejects promptly (caught below) if the caller aborts mid-backoff
+          // — never starts a further attempt.
+          await sleepWithSignal(retryDelayMs * attempt, callerSignal);
           continue;
         }
         // 4xx, or 5xx with no retry budget left — thrown here, never inside
@@ -131,8 +156,16 @@ export async function fetchJson<T>(url: string, options: FetchJsonOptions = {}):
       if (attempt >= retries) {
         break;
       }
+      // This attempt already failed (network error or internal timeout) —
+      // its own timeout must not keep running through the backoff delay.
+      if (timeoutHandle !== null) {
+        clearTimeout(timeoutHandle);
+      }
       attempt += 1;
-      await sleep(retryDelayMs * attempt);
+      // Rejects promptly if the caller aborts mid-backoff — propagates
+      // straight out of this catch block, past `finally`'s cleanup, with no
+      // further attempt (never re-enters the loop).
+      await sleepWithSignal(retryDelayMs * attempt, callerSignal);
     } finally {
       if (timeoutHandle !== null) {
         clearTimeout(timeoutHandle);

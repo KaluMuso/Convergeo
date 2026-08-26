@@ -179,6 +179,50 @@ describe("fetchJson", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("A. caller abort DURING network-error retry backoff — no second attempt", async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const fetchMock = vi.fn().mockRejectedValueOnce(new TypeError("network down"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const promise = fetchJson("https://api.example.test/catalog", {
+      signal: controller.signal,
+      retryDelayMs: 1_000,
+    });
+    promise.catch(() => {});
+
+    // Let the rejected first attempt reach the catch block and register the
+    // backoff's abort listener, WITHOUT advancing past the 1000ms delay.
+    await vi.advanceTimersByTimeAsync(0);
+    controller.abort(new DOMException("Caller cancelled", "AbortError"));
+
+    await expect(promise).rejects.toMatchObject({ name: "AbortError" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("B. caller abort DURING 5xx retry backoff — no second attempt", async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response("down", { status: 503 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const promise = fetchJson("https://api.example.test/catalog", {
+      signal: controller.signal,
+      retryDelayMs: 1_000,
+    });
+    promise.catch(() => {});
+
+    // Let the 503 response reach the retry branch and register the
+    // backoff's abort listener, WITHOUT advancing past the 1000ms delay.
+    await vi.advanceTimersByTimeAsync(0);
+    controller.abort(new DOMException("Caller cancelled", "AbortError"));
+
+    await expect(promise).rejects.toMatchObject({ name: "AbortError" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it("12. caller signal + internal timeout signal can coexist on a normal success", async () => {
     const controller = new AbortController();
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
