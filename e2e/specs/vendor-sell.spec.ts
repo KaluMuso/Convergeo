@@ -1,5 +1,6 @@
 import { requireVendorBaseUrl, urlOn, vendorOtpReady } from "../fixtures/env";
 import { enforceGate, resolveGate } from "../fixtures/gating";
+import { loginVendorViaOtp } from "../fixtures/otp-login";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
 
@@ -19,10 +20,10 @@ test.describe("vendor · sell", () => {
     // letting the customer origin stand in for the vendor app.
     const vendorOrigin = requireVendorBaseUrl();
 
-    // Vendor app login surface (separate origin).
-    await page.goto(urlOn(vendorOrigin, "/login"));
-
     if (!vendorOtpReady()) {
+      // Vendor app login surface (separate origin) — asserted reachable even
+      // when the authenticated leg is gated off.
+      await page.goto(urlOn(vendorOrigin, "/login"));
       const gate = resolveGate({
         kind: "REQUIRED_STRICT",
         journey: "vendor authenticated sell flow (list -> receive order -> ship)",
@@ -39,11 +40,13 @@ test.describe("vendor · sell", () => {
       return;
     }
 
-    // Authenticate the seeded approved vendor via OTP (helper drives phone+code).
-    // (Login helper is exercised in detail by auth-otp.spec; here we assume the
-    //  session cookie is established through the same path.)
+    // Authenticate the seeded approved vendor via the REAL phone-OTP login UI
+    // (anonymous -> /login -> real signInWithOtp -> /otp -> real verifyOtp ->
+    // Supabase session). Lands on /services — a vendor-role-gated route an
+    // anonymous visitor cannot reach — which is itself the auth proof.
+    await loginVendorViaOtp(page);
+
     // 1. Listings — confirm the seeded buyable listing exists / create path.
-    await page.goto(urlOn(vendorOrigin, "/services"));
     await expect(page).toHaveURL(/services/);
 
     // 2. Orders — an order for the seeded listing should be receivable.
