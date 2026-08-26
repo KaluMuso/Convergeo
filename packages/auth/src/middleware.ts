@@ -183,6 +183,13 @@ export function getLocaleFromPath(
   return defaultLocale;
 }
 
+/**
+ * `/login` AND `/otp` stay exempt from a portal's role gate: a phone-OTP
+ * login is a two-request flow (request code, then verify it) and there is no
+ * authenticated session yet on either request — gating `/otp` the same as any
+ * other route would bounce an anonymous, mid-login user straight back to
+ * `/login` before they ever get to enter the code.
+ */
 export function isAuthExemptPath(pathname: string, locales: readonly string[]): boolean {
   const segments = pathname.split("/").filter(Boolean);
   if (segments.length < 2) {
@@ -194,7 +201,7 @@ export function isAuthExemptPath(pathname: string, locales: readonly string[]): 
     return false;
   }
 
-  return segments[1] === "login";
+  return segments[1] === "login" || segments[1] === "otp";
 }
 
 /**

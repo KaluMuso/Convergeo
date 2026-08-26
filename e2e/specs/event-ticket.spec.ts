@@ -1,6 +1,7 @@
 import { path, requireVendorBaseUrl, ticketPin, urlOn, vendorOtpReady } from "../fixtures/env";
 import { enforceGate, resolveGate } from "../fixtures/gating";
 import { sandboxEnabled } from "../fixtures/lenco";
+import { loginVendorViaOtp } from "../fixtures/otp-login";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
 
@@ -76,8 +77,15 @@ test.describe("event · ticket lifecycle", () => {
       return;
     }
 
+    // Authenticate as the seeded organiser vendor via the REAL phone-OTP login
+    // UI (same helper as vendor-sell) — establishes WHO is scanning. The PIN
+    // below identifies WHICH ticket; the two are deliberately independent.
+    // Lands directly on the scanner: a vendor-role-gated route an anonymous
+    // visitor cannot reach, which is itself the auth proof.
+    await loginVendorViaOtp(page, { next: path(`/events/${SEED.event.slug}/scan`) });
+
     // Organiser scanner — use the PIN/manual fallback to submit a ticket token.
-    await page.goto(urlOn(vendorOrigin, `/events/${SEED.event.slug}/scan`));
+    await expect(page).toHaveURL(new RegExp(`/events/${SEED.event.slug}/scan`));
     await page
       .getByTestId("scan-switch-pin")
       .click()

@@ -176,6 +176,18 @@ describe("middleware matrix", () => {
     expect(shouldRedirectToLogin("admin", "/fr/login", locales, null, [])).toBe(false);
   });
 
+  it("otp routes stay exempt for gated apps — mid-login has no session yet", () => {
+    // A phone-OTP login is two anonymous requests (send code, then verify it);
+    // gating /otp like any other route would bounce a mid-login vendor back to
+    // /login before they can ever submit the code. `request.nextUrl.pathname`
+    // never carries the query string, so `?phone=...` is not part of this input.
+    expect(shouldRedirectToLogin("vendor", "/en/otp", locales, null, [])).toBe(false);
+    expect(isAuthExemptPath("/en/otp", locales)).toBe(true);
+    expect(isAuthExemptPath("/nya/otp", locales)).toBe(true);
+    // Confirms this is a segment match, not a substring match.
+    expect(isAuthExemptPath("/en/otpish", locales)).toBe(false);
+  });
+
   it("authenticated customers can reach vendor onboarding without vendor role", () => {
     expect(isVendorOnboardingPath("/en/onboarding", locales)).toBe(true);
     expect(isVendorOnboardingPath("/fr/onboarding/status", locales)).toBe(true);
