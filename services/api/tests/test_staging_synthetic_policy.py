@@ -25,7 +25,6 @@ from app.services.listings.demo import (
     fetch_demo_listing_ids,
     is_non_genuine_public_id,
 )
-
 from tests.test_demo_exclusion import _Store
 
 SYNTHETIC_LISTING_ID = "a1000000-0000-4000-8000-000000000001"
