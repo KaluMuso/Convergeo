@@ -1,8 +1,9 @@
-import { MIN_TOUCH_TARGET_PX } from "../fixtures/viewports";
 import { path, strictSyntheticRequired } from "../fixtures/env";
 import { resolveGate } from "../fixtures/gating";
+import { BOTTOM_NAV_ARIA_LABEL } from "../fixtures/nav-contract";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
+import { MIN_TOUCH_TARGET_PX } from "../fixtures/viewports";
 
 /**
  * Mobile layout certification across required viewports.
@@ -70,12 +71,12 @@ test.describe("mobile-layout", () => {
     await page.goto(path("/"));
     await page.waitForLoadState("domcontentloaded");
 
-    const bottomNav = page.getByTestId("bottom-nav").or(
-      page
-        .locator("nav")
-        .filter({ has: page.locator("a[href*='/cart']") })
-        .last(),
-    );
+    // Semantic contract, not a testid production never renders: BottomNav
+    // (packages/ui/src/bottom-nav.tsx) is a <nav aria-label="Primary shop
+    // navigation">, and its 5 real tabs (Home/Browse/Ask/Orders/Account —
+    // bottom-nav-client.tsx) never include a Cart item, so a `/cart`-href
+    // filter can never match either. See fixtures/nav-contract.ts.
+    const bottomNav = page.getByRole("navigation", { name: BOTTOM_NAV_ARIA_LABEL, exact: true });
     const visible = await bottomNav.isVisible().catch(() => false);
     if (!visible) {
       if (strictSyntheticRequired()) {

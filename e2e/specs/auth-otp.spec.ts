@@ -1,5 +1,6 @@
 import { customerOtp, customerOtpReady, path } from "../fixtures/env";
 import { enforceGate, resolveGate } from "../fixtures/gating";
+import { nationalNumberFromE164 } from "../fixtures/phone";
 import { expect, test } from "../fixtures/test-base";
 
 /**
@@ -28,7 +29,11 @@ test.describe("auth · phone OTP", () => {
     // getByRole("textbox", ...) returned exactly 1).
     const phoneInput = page.getByRole("textbox", { name: /phone|mobile/i });
     await expect(phoneInput).toBeVisible();
-    await phoneInput.fill(customerOtp.testPhone);
+    // The field takes only the national number — the country code (+260) is a
+    // fixed, read-only prefix rendered separately by PhoneForm. Filling the
+    // raw E.164 fixture phone here (E2E run #52, RC-2) made the app's own
+    // normalizer reject a well-formed number before any OTP was requested.
+    await phoneInput.fill(nationalNumberFromE164(customerOtp.testPhone));
 
     await page
       .getByRole("button", { name: /continue|send|next|get code/i })
