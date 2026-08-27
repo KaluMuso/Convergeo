@@ -13,7 +13,8 @@ export type ProductCardProps = {
   media?: ReactNode;
   categoryColor?: string;
   badge?: ReactNode;
-  ngwee: number;
+  /** Null when the product has no priced offer right now — never coerce to 0. */
+  ngwee: number | null;
   oldNgwee?: number;
   savingsLabel?: string;
   /** Pre-formatted discount chip on the image, e.g. "−38%". Parent owns the copy. */
@@ -230,7 +231,9 @@ export function ProductCard({
             reviewCountLabel={reviewCountLabel}
           />
         ) : null}
-        <PriceBlock ngwee={ngwee} oldNgwee={oldNgwee} savingsLabel={savingsLabel} />
+        {ngwee != null ? (
+          <PriceBlock ngwee={ngwee} oldNgwee={oldNgwee} savingsLabel={savingsLabel} />
+        ) : null}
         {meta ? <div className="text-xs text-text-2">{meta}</div> : null}
         {compact && reviewCount > 0 ? (
           <StarRating

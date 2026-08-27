@@ -47,6 +47,13 @@ describe("ProductCard", () => {
     expect(screen.queryByTestId("product-card-discount")).not.toBeInTheDocument();
   });
 
+  it("renders no price line — never a fabricated K0.00 — when ngwee is null", () => {
+    render(<ProductCard {...baseProps} ngwee={null} />);
+    expect(screen.queryByTestId("price-block")).not.toBeInTheDocument();
+    expect(screen.queryByText(/K0\.00/)).not.toBeInTheDocument();
+    expect(screen.getByText("Wireless Earbuds")).toBeInTheDocument();
+  });
+
   it("renders skeleton variant", () => {
     render(<ProductCard {...baseProps} skeleton />);
     expect(screen.getByTestId("product-card-skeleton")).toBeInTheDocument();
