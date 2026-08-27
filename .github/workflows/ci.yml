@@ -195,6 +195,13 @@ jobs:
       - name: E2E phone national-number helper tests
         run: node --experimental-strip-types --test scripts/qa/self-test/e2e-phone.test.mjs
 
+      # RC-5: required-synthetic-surface checks (PDP buy box, cart terminal
+      # state, vendor storefront) must genuinely wait in strict mode instead
+      # of racing an instant isVisible() sample — proven from E2E run #52's
+      # actual Playwright artifact, not a hypothesis.
+      - name: E2E strict-mode surface-wait contract tests
+        run: node --test scripts/qa/self-test/e2e-strict-surface-wait.test.mjs
+
   release-control:
     name: Release control contract (RELCTRL-01)
     runs-on: ubuntu-latest

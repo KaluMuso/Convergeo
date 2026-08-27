@@ -68,7 +68,18 @@ test.describe("browse-journey · release certification", () => {
     // 4. PDP (strict modes require buyable synthetic product)
     await page.goto(path(`/p/${SEED.product.slug}`));
     const buyBox = page.getByTestId("pdp-buy-box");
-    const pdpAvailable = await buyBox.isVisible().catch(() => false);
+    // E2E run #52 (RC-5): an immediate isVisible() sampled the DOM before the
+    // PDP finished rendering and misclassified a genuinely-present buy box as
+    // absent — the failing attempt's own snapshot showed the full buy box.
+    // Strict/certification modes wait (bounded, not sleep) for the required
+    // synthetic surface instead of racing it; local exploratory mode keeps the
+    // instant honest-fallback read.
+    const pdpAvailable = strictSyntheticRequired()
+      ? await buyBox
+          .waitFor({ state: "visible", timeout: 20_000 })
+          .then(() => true)
+          .catch(() => false)
+      : await buyBox.isVisible().catch(() => false);
 
     if (!pdpAvailable) {
       if (strictSyntheticRequired()) {
@@ -100,10 +111,23 @@ test.describe("browse-journey · release certification", () => {
         .first(),
     ).toBeVisible({ timeout: 20_000 });
 
-    const hasItems = await page
-      .getByTestId("cart-vendor-groups")
-      .isVisible()
-      .catch(() => false);
+    // The assertion above resolves as soon as ANY of the three surfaces
+    // appears, including the transient "cart-loading" state — an immediate
+    // isVisible() sample right after it can catch the cart mid-load and
+    // misread "not yet populated" as "empty" (E2E run #52, RC-5). Strict mode
+    // waits (bounded) specifically for the terminal vendor-groups state
+    // instead of accepting that intermediate loading snapshot as final; local
+    // exploratory mode keeps the instant honest-empty read.
+    const hasItems = strictSyntheticRequired()
+      ? await page
+          .getByTestId("cart-vendor-groups")
+          .waitFor({ state: "visible", timeout: 20_000 })
+          .then(() => true)
+          .catch(() => false)
+      : await page
+          .getByTestId("cart-vendor-groups")
+          .isVisible()
+          .catch(() => false);
     if (!hasItems) {
       if (strictSyntheticRequired()) {
         throw new Error("strictSyntheticRequired: cart empty after add-to-cart — FAIL");
