@@ -26,6 +26,21 @@ SECRET_FIELDS = frozenset(
     }
 )
 
+# Vercel immutable Preview deployment origins for Convergeo's three staging
+# portals (customer/vendor/admin), confirmed from primary evidence (strict
+# E2E run #52 Playwright traces plus the real fixture URLs already used by
+# scripts/qa/self-test/e2e-staging-probe.test.mjs) against the "vergeo-projects"
+# Vercel team namespace. Matches both the per-deployment hash suffix (e.g.
+# "29zn11wb8") and the mutable branch-alias suffix ("git-staging") — both are
+# lowercase letters/digits/hyphens only.
+#
+# Code-owned and NOT operator-configurable via CORS_ORIGINS: every SHA-pinned
+# Preview deployment gets a newly generated hostname, so a static allowlist
+# would require an API redeploy per deployment. See RC-6 / PR-F3.
+STAGING_PREVIEW_ORIGIN_REGEX = (
+    r"^https://convergeo-(customer|vendor|admin)-[a-z0-9-]+-vergeo-projects\.vercel\.app$"
+)
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=None, extra="ignore")
@@ -121,6 +136,18 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def cors_allow_origin_regex(self) -> str | None:
+        """Staging-only immutable-Preview CORS pattern for CORSMiddleware.
+
+        Fail-closed: returns None (Starlette's allow_origin_regex disabled)
+        for every ENV other than "staging", so this can never become active
+        outside staging regardless of CORS_ORIGINS content.
+        """
+        if self.env != "staging":
+            return None
+        return STAGING_PREVIEW_ORIGIN_REGEX
 
     @cached_property
     def cloudinary_cloud_name(self) -> str:

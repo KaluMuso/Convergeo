@@ -1,3 +1,4 @@
+import { clickAddToCartAndAwaitOutcome } from "../fixtures/add-to-cart";
 import { BASE_URL, LOCALE, customerOtpReady, flag, lencoSandboxReady, path } from "../fixtures/env";
 import { enforceGate, resolveGate } from "../fixtures/gating";
 import { completeSandboxMomoPush, sandboxEnabled } from "../fixtures/lenco";
@@ -86,10 +87,7 @@ test.describe("critical-path", () => {
       await expect(page.getByTestId("pdp-price")).toBeVisible();
 
       // 4. Add to cart.
-      await page.getByTestId("pdp-add-to-cart").click();
-      await expect(page.getByTestId("pdp-add-to-cart-success")).toBeVisible({
-        timeout: 20_000,
-      });
+      await clickAddToCartAndAwaitOutcome(page, test.info(), { timeout: 20_000 });
 
       // 5. Reach cart + checkout.
       await page.goto(path("/cart"));
