@@ -375,6 +375,52 @@ class TestSyncTriggerRefreshes:
         assert _search_doc_or_fail(migrated_db, "product", product_a)["price_min_ngwee"] == "4000"
         assert _search_doc_or_fail(migrated_db, "product", product_b)["price_min_ngwee"] == "6000"
 
+    def test_listing_reassigned_to_different_vendor_refreshes_product_document(
+        self, migrated_db: PgConn
+    ) -> None:
+        """The price aggregate's JOIN to vendors means vendor_id alone gates
+        eligibility: reassigning a listing to a different vendor changes
+        whether it counts, even with product_id/price_ngwee/status all
+        unchanged. The sync trigger must catch that, not just product_id/
+        price/status changes.
+        """
+        cat = _create_category(migrated_db)
+        vendor_a = _create_vendor(migrated_db, status="active", display_name="Vendor A (active)")
+        vendor_b = _create_vendor(
+            migrated_db, status="suspended", display_name="Vendor B (inactive)"
+        )
+        product = _create_product(migrated_db, cat, name="Vendor-reassignment product")
+        listing = _create_listing(
+            migrated_db, vendor_id=vendor_a, product_id=product, price_ngwee=11000
+        )
+
+        assert _search_doc_or_fail(migrated_db, "product", product)["price_min_ngwee"] == "11000"
+
+        # Same listing, same product_id/price_ngwee/status — only vendor_id
+        # changes, from active Vendor A to inactive Vendor B.
+        reassigned = migrated_db.run(
+            f"UPDATE public.vendor_listings SET vendor_id = '{vendor_b}' WHERE id = '{listing}'"
+        )
+        assert reassigned.ok, reassigned.error
+
+        after_reassign = _search_doc_or_fail(migrated_db, "product", product)
+        assert after_reassign["price_min_ngwee"] is None
+        assert after_reassign["price_max_ngwee"] is None
+        # Honest no-offer, never a fabricated zero.
+        assert after_reassign["price_min_ngwee"] != "0"
+        assert after_reassign["is_public"] == "true"
+
+        # Reassign back to an active vendor — price must return.
+        vendor_c = _create_vendor(migrated_db, status="active", display_name="Vendor C (active)")
+        reassigned_back = migrated_db.run(
+            f"UPDATE public.vendor_listings SET vendor_id = '{vendor_c}' WHERE id = '{listing}'"
+        )
+        assert reassigned_back.ok, reassigned_back.error
+
+        after_return = _search_doc_or_fail(migrated_db, "product", product)
+        assert after_return["price_min_ngwee"] == "11000"
+        assert after_return["price_max_ngwee"] == "11000"
+
 
 class TestBackfillAndReplay:
     def test_existing_broken_document_is_backfilled(self, migrated_db: PgConn) -> None:

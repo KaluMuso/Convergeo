@@ -158,14 +158,19 @@ begin
   end if;
 
   -- UPDATE: refresh the (possibly new) product whenever price, publication
-  -- status, or product assignment changed; separately refresh the OLD
-  -- product only when the listing actually moved off it (already covered by
-  -- the block above when it stayed on the same product).
+  -- status, product assignment, or owning vendor changed — the price
+  -- aggregate's JOIN to vendors means a vendor reassignment alone (same
+  -- product_id/price_ngwee/status) can change eligibility, e.g. moving an
+  -- otherwise-unchanged listing from an active vendor to a suspended one.
+  -- Separately refresh the OLD product only when the listing actually moved
+  -- off it (already covered by the block above when it stayed on the same
+  -- product).
   if new.product_id is not null
      and (
        new.product_id is distinct from old.product_id
        or new.price_ngwee is distinct from old.price_ngwee
        or new.status is distinct from old.status
+       or new.vendor_id is distinct from old.vendor_id
      ) then
     perform public.search_upsert_product(new.product_id);
   end if;
