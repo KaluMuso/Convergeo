@@ -28,19 +28,40 @@ IMAGE_IDS: dict[str, str] = {
 
 
 def _auth_users_sql() -> str:
+    """Idempotent synthetic auth.users seed for the fixed PERSONAS contract.
+
+    Sets `phone_confirmed_at` alongside `email_confirmed_at` on every fresh
+    row: Supabase Auth's phone-login `signInWithOtp` (`shouldCreateUser:
+    false`, the mode every OTP-driving spec uses) requires an existing
+    CONFIRMED-phone identity, and rejects an unconfirmed one with
+    `422 otp_disabled` — the confirmed root cause of every Vendor OTP failure
+    in E2E run #52 (RC-3). `confirmed_at` is a generated column
+    (`LEAST(email_confirmed_at, phone_confirmed_at)`, ignoring NULLs) and is
+    never written directly.
+
+    `ON CONFLICT ... DO UPDATE` repairs a pre-existing synthetic row whose
+    `phone_confirmed_at` is still NULL (rows created by the seed step before
+    this fix existed) without re-stamping an already-confirmed row on every
+    reseed (`coalesce` keeps the first-ever value once set), and never
+    touches any other column. The conflict target is this persona's own
+    fixed UUID from PERSONAS, so it can only ever match a row this same seed
+    step created — never an unrelated real user's row.
+    """
     parts = ["BEGIN;"]
     for persona in PERSONAS:
         parts.append(
             f"""
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, phone, encrypted_password,
-  email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+  email_confirmed_at, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+  created_at, updated_at
 ) VALUES (
   '00000000-0000-0000-0000-000000000000', '{persona.user_id}', 'authenticated',
   'authenticated', '{persona.email}', '{persona.phone}', 'staging-hash-not-real',
-  timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
+  timezone('utc', now()), timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
   timezone('utc', now()), timezone('utc', now())
-) ON CONFLICT (id) DO NOTHING;
+) ON CONFLICT (id) DO UPDATE SET
+  phone_confirmed_at = coalesce(auth.users.phone_confirmed_at, excluded.phone_confirmed_at);
 """
         )
     parts.append("COMMIT;")
