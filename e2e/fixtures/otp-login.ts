@@ -1,6 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
 import { path, requireVendorBaseUrl, urlOn, vendorOtp } from "./env";
+import { nationalNumberFromE164 } from "./phone";
 
 export type LoginVendorViaOtpOptions = {
   /**
@@ -48,9 +49,10 @@ export async function loginVendorViaOtp(
   await expect(phoneInput).toBeVisible();
   // The field takes only the national number — the country code (+260) is a
   // fixed, read-only prefix rendered separately by PhoneForm. The canonical
-  // Vendor phone is already a Zambian E.164 number, so its last 9 digits are
-  // exactly that national number.
-  await phoneInput.fill(vendorOtp.testPhone.slice(-9));
+  // Vendor phone is already a Zambian E.164 number; nationalNumberFromE164
+  // extracts exactly that national number (shared with auth-otp.spec.ts —
+  // see fixtures/phone.ts — instead of duplicating the slice logic here).
+  await phoneInput.fill(nationalNumberFromE164(vendorOtp.testPhone));
 
   await page
     .getByRole("button", { name: /continue|send|next|get code/i })

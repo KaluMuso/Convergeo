@@ -298,6 +298,17 @@ def migrated_db() -> Generator[PgConn, None, None]:
     except Exception as exc:  # noqa: BLE001 — skip when extensions/migrations unavailable
         pytest.skip(f"migrations unavailable: {exc}")
     conn.run("ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS phone text")
+    # Mirrors the real hosted Supabase schema (queried live off
+    # iyasmrmbcrvlfxpzescb's information_schema.columns): phone_confirmed_at
+    # is a plain nullable timestamptz, and confirmed_at is a STORED generated
+    # column — LEAST() ignores NULL operands, which is exactly why a persona
+    # with only email_confirmed_at set still showed a non-null confirmed_at
+    # in run #52's evidence despite phone_confirmed_at being NULL.
+    conn.run("ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS phone_confirmed_at timestamptz")
+    conn.run(
+        "ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS confirmed_at timestamptz "
+        "GENERATED ALWAYS AS (LEAST(email_confirmed_at, phone_confirmed_at)) STORED"
+    )
     conn.run(
         "DO $$ BEGIN "
         "IF NOT EXISTS (SELECT 1 FROM pg_auth_members m "
@@ -432,6 +443,126 @@ def test_seed_sql_executes_idempotently_and_cleans_up(migrated_db: PgConn) -> No
     for location in VENDOR_LOCATIONS:
         parsed = uuid.UUID(location.location_id)
         assert str(parsed) == location.location_id
+
+
+# ---------------------------------------------------------------------------
+# RC-3 regression coverage (staging E2E run #52): every Vendor OTP send
+# 422'd with otp_disabled because _auth_users_sql() never set
+# phone_confirmed_at for any persona. Supabase Auth's phone-login
+# signInWithOtp(shouldCreateUser=false) requires an existing CONFIRMED-phone
+# identity, and rejects an unconfirmed one this way — confirmed live via
+# auth_logs against staging project iyasmrmbcrvlfxpzescb.
+# CUSTOMER_A carries no vendor_id/business_buyer_id, so deleting its
+# auth.users row cascades only into its own profiles row (0002_identity_
+# vendors.sql) with no RESTRICT-guarded dependent to trip.
+# ---------------------------------------------------------------------------
+_CUSTOMER_A_ID = persona_by_key("CUSTOMER_A").user_id
+
+
+def test_seed_sql_sets_phone_confirmed_at_for_a_fresh_persona(migrated_db: PgConn) -> None:
+    """A persona row auth.users has never seen before must come out of the
+    seed step with phone_confirmed_at already populated by the INSERT itself
+    — not left NULL for a later repair pass, since even its very first OTP
+    send would otherwise 422 with otp_disabled.
+    """
+    deleted = migrated_db.run(f"DELETE FROM auth.users WHERE id = '{_CUSTOMER_A_ID}'")
+    assert deleted.ok, deleted.error or "pre-test delete of CUSTOMER_A failed"
+
+    seeded = migrated_db.run_script(build_seed_sql())
+    assert seeded.ok, seeded.error or "seed failed"
+
+    result = migrated_db.run(
+        "SELECT count(*)::text FROM auth.users "
+        f"WHERE id = '{_CUSTOMER_A_ID}' AND phone_confirmed_at IS NOT NULL"
+    )
+    assert result.ok and result.rows == ["1"], "fresh persona must have phone_confirmed_at set"
+
+
+def test_seed_sql_repairs_existing_null_phone_confirmation(migrated_db: PgConn) -> None:
+    """A synthetic persona row created before this fix existed
+    (phone_confirmed_at NULL, matching the live evidence pulled from run #52)
+    must be repaired by the next seed run, not left permanently broken.
+    """
+    seeded = migrated_db.run_script(build_seed_sql())
+    assert seeded.ok, seeded.error or "seed failed"
+
+    broken = migrated_db.run(
+        f"UPDATE auth.users SET phone_confirmed_at = NULL WHERE id = '{_CUSTOMER_A_ID}'"
+    )
+    assert broken.ok, broken.error or "failed to simulate a pre-fix unconfirmed persona"
+    still_broken = migrated_db.run(
+        "SELECT count(*)::text FROM auth.users "
+        f"WHERE id = '{_CUSTOMER_A_ID}' AND phone_confirmed_at IS NULL"
+    )
+    assert still_broken.ok and still_broken.rows == ["1"], "simulated NULL did not take"
+
+    repaired = migrated_db.run_script(build_seed_sql())
+    assert repaired.ok, repaired.error or "repair reseed failed"
+
+    result = migrated_db.run(
+        "SELECT count(*)::text FROM auth.users "
+        f"WHERE id = '{_CUSTOMER_A_ID}' AND phone_confirmed_at IS NOT NULL"
+    )
+    assert result.ok and result.rows == ["1"], "rerun must repair a NULL phone_confirmed_at"
+
+
+def test_seed_sql_is_idempotent_for_an_already_confirmed_persona(migrated_db: PgConn) -> None:
+    """Once a persona's phone is confirmed, reseeding must never re-stamp
+    (let alone clear) that timestamp — repeat seeding is a true no-op for an
+    already-healthy row, not a source of churn on every run.
+    """
+    first = migrated_db.run_script(build_seed_sql())
+    assert first.ok, first.error or "seed failed"
+    before = migrated_db.run(
+        f"SELECT phone_confirmed_at::text FROM auth.users WHERE id = '{_CUSTOMER_A_ID}'"
+    )
+    assert before.ok and before.rows and before.rows[0]
+
+    second = migrated_db.run_script(build_seed_sql())
+    assert second.ok, second.error or "reseed failed"
+    after = migrated_db.run(
+        f"SELECT phone_confirmed_at::text FROM auth.users WHERE id = '{_CUSTOMER_A_ID}'"
+    )
+    assert after.ok and after.rows == before.rows, (
+        "reseeding must not change an already-confirmed persona's phone_confirmed_at"
+    )
+
+
+def test_seed_sql_never_touches_a_non_persona_auth_users_row(migrated_db: PgConn) -> None:
+    """The ON CONFLICT repair is scoped to the fixed PERSONAS ids only — an
+    unrelated row (a real user, or a fixture the separate RLS matrix seeder
+    owns) must never be touched by this seed step.
+    """
+    outside_id = str(uuid.uuid4())
+    inserted = migrated_db.run(
+        f"""
+INSERT INTO auth.users (
+  instance_id, id, aud, role, email, phone, encrypted_password,
+  email_confirmed_at, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+  created_at, updated_at
+) VALUES (
+  '00000000-0000-0000-0000-000000000000', '{outside_id}', 'authenticated',
+  'authenticated', 'outside-{outside_id}@example.test', '+260970099999',
+  'not-a-real-hash', NULL, NULL, '{{}}'::jsonb, '{{}}'::jsonb,
+  timezone('utc', now()), timezone('utc', now())
+)
+"""
+    )
+    assert inserted.ok, inserted.error or "failed to insert unrelated auth.users row"
+
+    try:
+        seeded = migrated_db.run_script(build_seed_sql())
+        assert seeded.ok, seeded.error or "seed failed"
+
+        result = migrated_db.run(
+            "SELECT count(*)::text FROM auth.users "
+            f"WHERE id = '{outside_id}' AND phone_confirmed_at IS NULL"
+        )
+        assert result.ok and result.rows == ["1"], (
+            "seeding must never confirm an unrelated (non-PERSONAS) auth.users row"
+        )
+    finally:
+        migrated_db.run(f"DELETE FROM auth.users WHERE id = '{outside_id}'")
 
 
 # ---------------------------------------------------------------------------
