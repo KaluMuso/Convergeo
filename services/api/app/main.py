@@ -52,6 +52,9 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
+        # Staging-only immutable Vercel Preview origins (RC-6 / PR-F3). Always
+        # None outside ENV=staging — see Settings.cors_allow_origin_regex.
+        allow_origin_regex=settings.cors_allow_origin_regex,
         allow_credentials=True,
         allow_methods=CORS_ALLOW_METHODS,
         allow_headers=CORS_ALLOW_HEADERS,

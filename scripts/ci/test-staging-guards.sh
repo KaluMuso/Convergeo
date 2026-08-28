@@ -262,11 +262,72 @@ if bash -n scripts/ci/vercel-staging-preview-prove.sh \
   && bash -n scripts/ci/staging-evidence-bundle.sh \
   && bash -n scripts/ci/reconcile-staging-migrations.sh \
   && bash -n scripts/ci/preflight-staging-schema-convergence.sh \
+  && bash -n scripts/ci/staging-cors-preview-probe.sh \
   && python3 -m py_compile scripts/ci/validate_staging_proof.py \
   && python3 -m py_compile scripts/ci/reconcile_staging_migrations.py; then
-  ok "preview prove + evidence bundle + migration reconcile syntax"
+  ok "preview prove + evidence bundle + migration reconcile + CORS probe syntax"
 else
-  bad "preview prove / evidence bundle / migration reconcile syntax invalid"
+  bad "preview prove / evidence bundle / migration reconcile / CORS probe syntax invalid"
+fi
+
+# 12b) RC-6 / PR-F3: CORS Preview probe wiring, ordering, and offline failure modes.
+#
+# strict E2E run #52 proved (real Playwright traces) that a browser hitting
+# the deployed Customer/Vendor/Admin Preview origins got CORS-rejected by the
+# staging API — because every SHA-pinned Preview deployment gets a newly
+# generated immutable hostname a static CORS_ORIGINS entry can never
+# anticipate. This turns that class of bug into a deploy-time proof instead
+# of something only Playwright discovers deep into the browse journey.
+cors_probe_line="$(grep -n 'staging-cors-preview-probe.sh' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+health_fp_line="$(grep -n 'Health + fingerprint' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+if [[ -z "${cors_probe_line}" ]]; then
+  bad "deploy-staging must wire scripts/ci/staging-cors-preview-probe.sh into the smoke job"
+elif [[ -z "${health_fp_line}" ]]; then
+  bad "deploy-staging: could not locate the Health + fingerprint step to order the CORS proof against"
+elif [[ "${cors_probe_line}" -lt "${health_fp_line}" ]] \
+  && grep -q "prove-vercel-preview.result == 'success'" .github/workflows/deploy-staging.yml; then
+  ok "deploy-staging proves staging CORS for the certified Preview origins before health/fingerprint"
+else
+  bad "CORS proof must run after prove-vercel-preview succeeds and before Health + fingerprint"
+fi
+
+if grep -q 'preview-dir /tmp/preview-evidence' .github/workflows/deploy-staging.yml; then
+  ok "CORS proof reads the same normalized Preview evidence directory as fingerprinting"
+else
+  bad "CORS proof step must read /tmp/preview-evidence (the normalized per-portal evidence dir)"
+fi
+
+# The script must fail closed offline: missing evidence, a malformed
+# preview_url, and a production API host must all be rejected without
+# reaching the network.
+set +e
+mkdir -p /tmp/cors-probe-selftest/customer
+echo '{"preview_url": "not-an-https-url"}' > /tmp/cors-probe-selftest/customer/evidence.json
+bash scripts/ci/staging-cors-preview-probe.sh \
+  --preview-dir /tmp/cors-probe-selftest \
+  --api-base https://api.staging.vergeo5.com >/tmp/cors-probe-malformed.txt 2>&1
+rc_malformed=$?
+set -e
+rm -rf /tmp/cors-probe-selftest
+if [[ "${rc_malformed}" -ne 0 ]] \
+  && grep -qi 'not a valid https origin\|missing Preview evidence' /tmp/cors-probe-malformed.txt; then
+  ok "CORS probe fails closed on missing/malformed Preview evidence"
+else
+  bad "CORS probe should fail closed on missing/malformed Preview evidence (rc=${rc_malformed})"
+  cat /tmp/cors-probe-malformed.txt || true
+fi
+
+set +e
+bash scripts/ci/staging-cors-preview-probe.sh \
+  --preview-dir /tmp \
+  --api-base https://api.vergeo5.com >/tmp/cors-probe-prod.txt 2>&1
+rc_prod=$?
+set -e
+if [[ "${rc_prod}" -ne 0 ]] && grep -qi 'production API host' /tmp/cors-probe-prod.txt; then
+  ok "CORS probe refuses to probe the production API host"
+else
+  bad "CORS probe should refuse api.vergeo5.com (rc=${rc_prod})"
+  cat /tmp/cors-probe-prod.txt || true
 fi
 
 # 13) deploy-staging wires explicit Preview proof for all three portals

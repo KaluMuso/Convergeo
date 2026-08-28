@@ -1,3 +1,4 @@
+import { clickAddToCartAndAwaitOutcome } from "../fixtures/add-to-cart";
 import { BASE_URL, LOCALE, path, strictSyntheticRequired } from "../fixtures/env";
 import { assertNoAccidentalRealMoney, paymentMockMode } from "../fixtures/payment-fixtures";
 import { SEED, assertFixtureVersion } from "../fixtures/seed";
@@ -98,8 +99,7 @@ test.describe("browse-journey · release certification", () => {
     }
 
     // 5. ADD TO CART
-    await page.getByTestId("pdp-add-to-cart").click();
-    await expect(page.getByTestId("pdp-add-to-cart-success")).toBeVisible({ timeout: 15_000 });
+    await clickAddToCartAndAwaitOutcome(page, test.info(), { timeout: 15_000 });
 
     // 6. CART
     await page.goto(path("/cart"));
