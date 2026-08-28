@@ -249,7 +249,8 @@ function SearchResultRow({
   );
 }
 
-function SearchProductCard({
+/** Exported for focused unit testing (results-tabs.test.tsx) — not used outside this module otherwise. */
+export function SearchProductCard({
   hit,
   locale,
   labels,
@@ -260,7 +261,10 @@ function SearchProductCard({
 }) {
   const imagePublicId = readImagePublicId(hit);
   const href = searchResultHref(locale, hit);
-  const priceNgwee = hit.price_min_ngwee ?? hit.price_max_ngwee ?? 0;
+  // Never coerce an absent price to 0 — a product with no eligible offer
+  // right now must render with no price line (ProductCard already handles
+  // `ngwee: null`), not a fabricated K0.00 (E2E run #52, RC-4).
+  const priceNgwee = hit.price_min_ngwee ?? hit.price_max_ngwee;
   const category = formatCategoryLabel(hit.category_path);
   const distance = distanceLabel(hit, labels);
   const openStatus = openNowLabel(hit, labels);
