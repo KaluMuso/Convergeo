@@ -1,5 +1,13 @@
 import { clickAddToCartAndAwaitOutcome } from "../fixtures/add-to-cart";
-import { BASE_URL, LOCALE, customerOtpReady, flag, lencoSandboxReady, path } from "../fixtures/env";
+import {
+  BASE_URL,
+  LOCALE,
+  customerOtpReady,
+  flag,
+  lencoSandboxReady,
+  path,
+  strictSyntheticRequired,
+} from "../fixtures/env";
 import { enforceGate, resolveGate } from "../fixtures/gating";
 import { completeSandboxMomoPush, sandboxEnabled } from "../fixtures/lenco";
 import {
@@ -76,9 +84,27 @@ test.describe("critical-path", () => {
     // 3. Open a PDP fixture (seed slug — non-demo when inventory exists).
     await page.goto(path(`/p/${SEED.product.slug}`));
     const buyBox = page.getByTestId("pdp-buy-box");
-    const pdpAvailable = await buyBox.isVisible().catch(() => false);
+    // E2E run #52 (RC-5): an immediate isVisible() sampled the DOM before the
+    // PDP finished rendering, misread a genuinely-present buy box as absent,
+    // and silently fell through to the payment-mock confirmation branch below
+    // — passing without ever exercising a real add-to-cart/cart leg. Strict
+    // mode now waits (bounded, not sleep) for the required synthetic PDP;
+    // local browse-safe mode keeps the instant honest-fallback read.
+    const pdpAvailable = strictSyntheticRequired()
+      ? await buyBox
+          .waitFor({ state: "visible", timeout: 20_000 })
+          .then(() => true)
+          .catch(() => false)
+      : await buyBox.isVisible().catch(() => false);
 
     if (!pdpAvailable) {
+      if (strictSyntheticRequired()) {
+        throw new Error(
+          `strictSyntheticRequired: seeded PDP ${SEED.product.slug} unavailable — the critical-path journey ` +
+            "requires the real add-to-cart/cart/checkout leg and must not fall through to payment-mock " +
+            "confirmation as a substitute",
+        );
+      }
       test.info().annotations.push({
         type: "inventory",
         description: `PDP ${SEED.product.slug} unavailable on this target (empty/demo-excluded catalogue). Browse legs asserted; ATC/checkout continue via payment-mock confirmation.`,
