@@ -512,6 +512,22 @@ jobs:
             --preview-dir /tmp/preview-evidence \
             --api-base "${BASE}"
 
+      - name: Native DB pool + service-role read proof (cart-location remediation)
+        if: ${{ needs.prove-vercel-preview.result == 'success' }}
+        env:
+          STAGING_API_BASE_URL: ${{ secrets.STAGING_API_BASE_URL }}
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+        run: |
+          set -euo pipefail
+          BASE="${STAGING_API_BASE_URL:-https://${STAGING_API_HOST}}"
+          case "$BASE" in
+            *api.vergeo5.com*) echo "::error::DB service-role proof refused production API"; exit 1 ;;
+          esac
+          bash scripts/ci/staging-db-service-role-proof.sh \
+            --preview-dir /tmp/preview-evidence \
+            --api-base "${BASE}" \
+            --listing-id f1000000-0000-4000-8000-000000000001
+
       - name: Health + fingerprint
         env:
           STAGING_API_BASE_URL: ${{ secrets.STAGING_API_BASE_URL }}

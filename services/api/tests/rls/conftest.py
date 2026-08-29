@@ -261,6 +261,20 @@ AS $$
   SELECT COALESCE(NULLIF(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb);
 $$;
 
+-- Mirrors the real hosted Supabase project's auth.role() (reads the "role"
+-- key out of the request.jwt.claims JSON blob PostgREST/GoTrue populate on
+-- the current platform contract) — not something this repo defines on a
+-- real project, but required here so bump_rate_counter's auth.role() check
+-- (20260829120000_bump_rate_counter_service_role_auth_role.sql) is testable
+-- against this local stub schema the same way it runs on hosted staging.
+CREATE OR REPLACE FUNCTION auth.role()
+RETURNS text
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT NULLIF(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role';
+$$;
+
 GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON auth.users TO postgres, service_role;
 """

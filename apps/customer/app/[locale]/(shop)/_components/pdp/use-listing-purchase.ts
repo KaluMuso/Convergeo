@@ -14,6 +14,8 @@ import {
   type BuyBoxLabels,
   type BuyBoxListing,
 } from "./buy-box";
+import type { PickupLocation } from "./pickup-locations";
+import { usePickupLocationSelection } from "./use-pickup-location-selection";
 
 export type ListingPurchaseControls = {
   quantity: number;
@@ -27,6 +29,13 @@ export type ListingPurchaseControls = {
   handleAddToCart: () => void;
   stockLabel: string;
   maxQuantity: number | null;
+  /** null while unknown (loading/error) — the picker/gate must never treat null as "not required". */
+  pickupBranchTracked: boolean | null;
+  pickupLocations: PickupLocation[];
+  pickupLocationsLoading: boolean;
+  pickupLocationsLoadError: boolean;
+  selectedPickupLocationId: string | null;
+  selectPickupLocation: (locationId: string) => void;
 };
 
 /**
@@ -48,6 +57,7 @@ export function useListingPurchase(
   const [adding, setAdding] = useState(false);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
+  const pickup = usePickupLocationSelection(listingId);
 
   const listingStockMode = listing?.stockMode;
   const listingStockQty = listing?.stockQty;
@@ -113,12 +123,27 @@ export function useListingPurchase(
     if (!listing || !listing.inStock || adding) {
       return;
     }
+    // Fail closed: never send add-to-cart while branch-tracking status is
+    // unknown (loading/error) or known-tracked with no branch chosen yet —
+    // the server would reject it as cart.pickup_location_required anyway,
+    // but this never silently omits pickup_location_id for a real user click.
+    if (pickup.branchTracked !== false && !pickup.selectedLocationId) {
+      setAddError(t("pdp.buyBox.pickup.required"));
+      return;
+    }
 
     setAdding(true);
     setAddError(null);
     setAddedMessage(null);
 
-    void addCartItem(listing.id, quantity)
+    void addCartItem(
+      listing.id,
+      quantity,
+      undefined,
+      pickup.selectedLocationId
+        ? { pickupLocationId: pickup.selectedLocationId, fulfilment: "pickup" }
+        : undefined,
+    )
       .then(() => {
         setAddedMessage(labels.addToCartLabel);
         setLastAddedMessage(labels.addToCartLabel);
@@ -130,7 +155,16 @@ export function useListingPurchase(
       .finally(() => {
         setAdding(false);
       });
-  }, [adding, labels.addToCartErrorLabel, labels.addToCartLabel, listing, quantity]);
+  }, [
+    adding,
+    labels.addToCartErrorLabel,
+    labels.addToCartLabel,
+    listing,
+    pickup.branchTracked,
+    pickup.selectedLocationId,
+    quantity,
+    t,
+  ]);
 
   if (!listing) {
     return null;
@@ -150,6 +184,12 @@ export function useListingPurchase(
     addedMessage,
     handleAddToCart,
     stockLabel,
+    pickupBranchTracked: pickup.branchTracked,
+    pickupLocations: pickup.locations,
+    pickupLocationsLoading: pickup.loading,
+    pickupLocationsLoadError: pickup.loadError,
+    selectedPickupLocationId: pickup.selectedLocationId,
+    selectPickupLocation: pickup.selectLocation,
     maxQuantity,
   };
 }

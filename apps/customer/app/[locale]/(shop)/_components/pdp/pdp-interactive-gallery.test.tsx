@@ -19,6 +19,10 @@ vi.mock("../cart/mini-cart-drawer", () => ({
   setLastAddedMessage: vi.fn(),
 }));
 
+vi.mock("./pickup-locations", () => ({
+  fetchPickupLocations: vi.fn().mockResolvedValue({ branchTracked: false, locations: [] }),
+}));
+
 vi.mock("./contact-vendor-button", () => ({
   ContactVendorButton: () => <button type="button" data-testid="pdp-contact-vendor-cta" />,
 }));
@@ -121,6 +125,14 @@ function renderBody(
           conditionRefurbishedLabel: "Refurbished",
           conditionUsedLabel: "Used",
           conditionAuthenticityLabel: "Condition & Authenticity",
+        }}
+        pickupLabels={{
+          heading: "Choose a pickup branch",
+          selectAria: "Pickup branch",
+          placeholder: "Select a branch",
+          loading: "Loading pickup branches…",
+          loadError: "Could not load pickup branches. Try again.",
+          unavailable: "No pickup branch is currently available for this item",
         }}
         comparisonLabels={{
           heading: "Compare",

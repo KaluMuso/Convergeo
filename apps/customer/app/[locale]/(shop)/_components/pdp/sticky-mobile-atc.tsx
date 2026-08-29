@@ -178,7 +178,10 @@ export function StickyMobileAtc({
           variant="primary"
           size="md"
           className="shrink-0"
-          disabled={purchase.adding}
+          disabled={
+            purchase.adding ||
+            (purchase.pickupBranchTracked !== false && !purchase.selectedPickupLocationId)
+          }
           loading={purchase.adding}
           loadingLabel={labels.addingToCartLabel}
           data-testid="pdp-sticky-add-to-cart"

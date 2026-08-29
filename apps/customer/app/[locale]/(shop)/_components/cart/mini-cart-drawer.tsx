@@ -231,19 +231,39 @@ export async function refreshCart(): Promise<CartResponse | null> {
   }
 }
 
+export type AddCartItemLocationOptions = {
+  pickupLocationId?: string;
+  fulfilment?: "pickup" | "delivery";
+};
+
 /**
  * Add to cart. `clipId` (M17-P05) is optional attribution, not a second cart:
  * the same endpoint, the same payload plus one field, and the server validates
  * the clip before crediting anything — the client cannot mint credit.
+ *
+ * `locationOptions` is required by the API (cart.pickup_location_required)
+ * whenever the listing is branch-tracked — the PDP's branch selector resolves
+ * it before calling this (see pdp/use-listing-purchase.ts); every other
+ * caller (PLP quick-add, wishlist, clips) omits it unchanged, same as before
+ * this option existed.
  */
 export async function addCartItem(
   listingId: string,
   qty: number,
   clipId?: string,
+  locationOptions?: AddCartItemLocationOptions,
 ): Promise<CartResponse> {
   const cart = await cartRequest<CartResponse>("/cart/items", {
     method: "POST",
-    body: JSON.stringify({ listing_id: listingId, qty, ...(clipId ? { clip_id: clipId } : {}) }),
+    body: JSON.stringify({
+      listing_id: listingId,
+      qty,
+      ...(clipId ? { clip_id: clipId } : {}),
+      ...(locationOptions?.pickupLocationId
+        ? { pickup_location_id: locationOptions.pickupLocationId }
+        : {}),
+      ...(locationOptions?.fulfilment ? { fulfilment: locationOptions.fulfilment } : {}),
+    }),
   });
   const notices = cart.notices ?? (await fetchRevalidateNotices());
   setStoreState({ cart, notices });

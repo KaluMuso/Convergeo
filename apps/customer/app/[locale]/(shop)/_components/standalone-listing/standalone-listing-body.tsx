@@ -5,6 +5,7 @@ import { useCallback } from "react";
 
 import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "../pdp/buy-box";
 import { PdpGallery, type PdpGalleryImage } from "../pdp/gallery";
+import type { PickupLocationPickerLabels } from "../pdp/pickup-location-picker";
 
 export type StandaloneListingBodyProps = {
   locale: string;
@@ -18,6 +19,7 @@ export type StandaloneListingBodyProps = {
     next: string;
   };
   buyBoxLabels: BuyBoxLabels;
+  pickupLabels: PickupLocationPickerLabels;
 };
 
 export function StandaloneListingBody({
@@ -28,6 +30,7 @@ export function StandaloneListingBody({
   cloudName,
   galleryLabels,
   buyBoxLabels,
+  pickupLabels,
 }: StandaloneListingBodyProps) {
   const t = useTranslations("catalog");
   const indicatorLabel = useCallback(
@@ -48,6 +51,7 @@ export function StandaloneListingBody({
       <BuyBox
         listing={listing}
         labels={buyBoxLabels}
+        pickupLabels={pickupLabels}
         singleVendor={false}
         seller={{ displayName: sellerName, preferred: false, ratingLabel: null }}
         locale={locale}

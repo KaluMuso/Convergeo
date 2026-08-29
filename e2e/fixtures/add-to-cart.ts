@@ -13,6 +13,15 @@ import type { Page, TestInfo } from "@playwright/test";
  * This is a diagnostic aid, not a gate change: a failed add-to-cart still
  * throws exactly as before, just with the outcome/status attached to the
  * failure for faster triage.
+ *
+ * A branch-tracked listing requires an explicit pickup branch before Add to
+ * Cart is even enabled (cart.pickup_location_required). This drives the
+ * REAL UI: it waits (bounded, briefly) for the picker to appear and, only
+ * if it does, selects the first real option through the select element —
+ * it never injects pickup_location_id directly into API traffic, since
+ * that would test a different, API-level contract instead of the actual
+ * Customer journey. A legacy (non-branch-tracked) listing never renders
+ * the picker at all, so this is a no-op for it.
  */
 export async function clickAddToCartAndAwaitOutcome(
   page: Page,
@@ -20,6 +29,21 @@ export async function clickAddToCartAndAwaitOutcome(
   options: { timeout?: number } = {},
 ): Promise<void> {
   const timeout = options.timeout ?? 15_000;
+
+  const pickupSelect = page.getByTestId("pdp-pickup-location-select");
+  const pickupRequired = await pickupSelect
+    .waitFor({ state: "visible", timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (pickupRequired) {
+    const branchOptions = await pickupSelect.locator("option:not([value=''])").allTextContents();
+    if (branchOptions.length === 0) {
+      throw new Error(
+        "pdp-pickup-location-select rendered with no selectable branch — cannot proceed",
+      );
+    }
+    await pickupSelect.selectOption({ index: 1 });
+  }
 
   const cartItemsResponse = page
     .waitForResponse(

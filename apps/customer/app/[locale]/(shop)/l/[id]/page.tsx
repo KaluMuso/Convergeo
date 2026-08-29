@@ -23,6 +23,7 @@ import {
 import { StandaloneListingBody } from "../../_components/standalone-listing/standalone-listing-body";
 
 import type { BuyBoxLabels, BuyBoxListing } from "../../_components/pdp/buy-box";
+import type { PickupLocationPickerLabels } from "../../_components/pdp/pickup-location-picker";
 import type { Metadata } from "next";
 
 export const revalidate = 60;
@@ -101,6 +102,17 @@ function buyBoxLabels(t: CatalogTranslator): BuyBoxLabels {
     conditionRefurbishedLabel: t("pdp.condition.refurbished"),
     conditionUsedLabel: t("pdp.condition.used"),
     conditionAuthenticityLabel: t("pdp.condition.authenticity"),
+  };
+}
+
+function pickupLabels(t: CatalogTranslator): PickupLocationPickerLabels {
+  return {
+    heading: t("pdp.buyBox.pickup.heading"),
+    selectAria: t("pdp.buyBox.pickup.selectAria"),
+    placeholder: t("pdp.buyBox.pickup.placeholder"),
+    loading: t("pdp.buyBox.pickup.loading"),
+    loadError: t("pdp.buyBox.pickup.loadError"),
+    unavailable: t("pdp.buyBox.pickup.unavailable"),
   };
 }
 
@@ -257,6 +269,7 @@ export default async function StandaloneListingPage({ params }: PageProps) {
           next: t("pdp.gallery.next"),
         }}
         buyBoxLabels={buyBoxLabels(t)}
+        pickupLabels={pickupLabels(t)}
       />
 
       <section
