@@ -675,6 +675,14 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             conditionUsedLabel: t("pdp.condition.used"),
             conditionAuthenticityLabel: t("pdp.condition.authenticity"),
           }}
+          pickupLabels={{
+            heading: t("pdp.buyBox.pickup.heading"),
+            selectAria: t("pdp.buyBox.pickup.selectAria"),
+            placeholder: t("pdp.buyBox.pickup.placeholder"),
+            loading: t("pdp.buyBox.pickup.loading"),
+            loadError: t("pdp.buyBox.pickup.loadError"),
+            unavailable: t("pdp.buyBox.pickup.unavailable"),
+          }}
           comparisonLabels={{
             heading: t("comparison.heading"),
             vendorCount: t("comparison.vendorCount"),

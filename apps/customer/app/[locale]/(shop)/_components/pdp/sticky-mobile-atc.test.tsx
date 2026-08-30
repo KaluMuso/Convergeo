@@ -73,6 +73,12 @@ function makePurchase(overrides: Partial<ListingPurchaseControls> = {}): Listing
     handleAddToCart: vi.fn(),
     stockLabel: "In stock",
     maxQuantity: 5,
+    pickupBranchTracked: false,
+    pickupLocations: [],
+    pickupLocationsLoading: false,
+    pickupLocationsLoadError: false,
+    selectedPickupLocationId: null,
+    selectPickupLocation: vi.fn(),
     ...overrides,
   };
 }
@@ -193,6 +199,34 @@ describe("StickyMobileAtc", () => {
     expect(await screen.findByTestId("pdp-sticky-stock")).toHaveTextContent(
       "In stock · Minimum order: 3",
     );
+  });
+
+  it("disables the sticky Add to Cart button until a required branch is selected", async () => {
+    const observeRef = createRef<HTMLElement | null>();
+    observeRef.current = document.createElement("section");
+    const purchase = makePurchase({ pickupBranchTracked: true, selectedPickupLocationId: null });
+
+    render(
+      <StickyMobileAtc
+        listing={listing}
+        labels={labels}
+        purchase={purchase}
+        observeRef={observeRef}
+        ariaLabel="Quick add to cart"
+      />,
+    );
+
+    observerCallback?.(
+      [
+        {
+          isIntersecting: false,
+          target: observeRef.current!,
+        } as unknown as IntersectionObserverEntry,
+      ],
+      {} as IntersectionObserver,
+    );
+
+    expect(await screen.findByTestId("pdp-sticky-add-to-cart")).toBeDisabled();
   });
 
   it("does not render when listing is out of stock", () => {

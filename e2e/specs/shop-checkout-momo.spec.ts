@@ -1,3 +1,4 @@
+import { clickAddToCartAndAwaitOutcome } from "../fixtures/add-to-cart";
 import { customerOtp, lenco, path, whatsappMockReady } from "../fixtures/env";
 import { resolveGate } from "../fixtures/gating";
 import { completeSandboxMomoPush, sandboxEnabled } from "../fixtures/lenco";
@@ -30,8 +31,7 @@ test.describe("shop · checkout · momo", () => {
     await expect(page.getByTestId("pdp-price")).toBeVisible();
 
     // 4. Add to cart.
-    await page.getByTestId("pdp-add-to-cart").click();
-    await expect(page.getByTestId("pdp-add-to-cart-success")).toBeVisible();
+    await clickAddToCartAndAwaitOutcome(page, test.info(), { timeout: 15_000 });
 
     // 5. Go to cart, confirm the line is present.
     await page.goto(path("/cart"));

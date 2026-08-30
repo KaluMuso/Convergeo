@@ -160,7 +160,16 @@
       "moreThanLowest": "{diff} ukucila ku offer iucepa",
       "wishlistAdd": "Sungileni ku wishlist",
       "wishlistRemove": "Futeni ku wishlist",
-      "wishlistSaved": "Yasungilwe ku wishlist"
+      "wishlistSaved": "Yasungilwe ku wishlist",
+      "pickup": {
+        "heading": "Saleni pa kusenda",
+        "selectAria": "Pa kusenda",
+        "placeholder": "Saleni ubushiku",
+        "loading": "Tuli no kufwaya ifya kusenda…",
+        "loadError": "Tatwakonkeshe ukusanga ifya kusenda. Esheni na kabili.",
+        "unavailable": "Takwaba apakusenda ubu",
+        "required": "Saleni pa kusenda pa kubika ici mu cart"
+      }
     },
     "stickyAtc": {
       "ariaLabel": "Longeni bwangu mu cart",

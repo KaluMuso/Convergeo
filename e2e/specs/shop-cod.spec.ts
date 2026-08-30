@@ -1,3 +1,4 @@
+import { clickAddToCartAndAwaitOutcome } from "../fixtures/add-to-cart";
 import { path } from "../fixtures/env";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
@@ -14,8 +15,7 @@ test.describe("shop · cash on delivery", () => {
     // Open the seeded PDP and add to cart.
     await page.goto(path(`/p/${SEED.product.slug}`));
     await expect(page.getByTestId("pdp-buy-box")).toBeVisible();
-    await page.getByTestId("pdp-add-to-cart").click();
-    await expect(page.getByTestId("pdp-add-to-cart-success")).toBeVisible();
+    await clickAddToCartAndAwaitOutcome(page, test.info(), { timeout: 15_000 });
 
     // Cart → checkout.
     await page.goto(path("/cart"));

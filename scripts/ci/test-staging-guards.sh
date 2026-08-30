@@ -330,6 +330,65 @@ else
   cat /tmp/cors-probe-prod.txt || true
 fi
 
+# 12c) Cart-location remediation: native DB pool + service-role read proof.
+#
+# Run #55's aftermath proved location_stock.py's raw psycopg pool
+# (run_sql_script/resolve_db_url) is a connectivity path distinct from the
+# PostgREST/service-role client every other deploy check exercises — a
+# healthy /healthz + a passing CORS preflight both say nothing about it.
+if bash -n scripts/ci/staging-db-service-role-proof.sh; then
+  ok "staging-db-service-role-proof.sh syntax"
+else
+  bad "staging-db-service-role-proof.sh syntax invalid"
+fi
+
+db_proof_line="$(grep -n 'staging-db-service-role-proof.sh' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+if [[ -z "${db_proof_line}" ]]; then
+  bad "deploy-staging must wire scripts/ci/staging-db-service-role-proof.sh into the smoke job"
+elif [[ -z "${health_fp_line}" ]]; then
+  bad "deploy-staging: could not locate the Health + fingerprint step to order the DB proof against"
+elif [[ "${cors_probe_line}" -lt "${db_proof_line}" && "${db_proof_line}" -lt "${health_fp_line}" ]]; then
+  ok "deploy-staging proves the native DB pool + service-role read after the CORS proof and before health/fingerprint"
+else
+  bad "DB service-role proof must run after the CORS proof and before Health + fingerprint"
+fi
+
+if grep -q -- '--listing-id f1000000-0000-4000-8000-000000000001' .github/workflows/deploy-staging.yml; then
+  ok "DB service-role proof targets the canonical branch-tracked E2E fixture listing"
+else
+  bad "DB service-role proof step must target the canonical branch-tracked fixture listing"
+fi
+
+# Fails closed offline: missing evidence and a production API host must both
+# be rejected without reaching the network — same discipline as the CORS probe.
+set +e
+bash scripts/ci/staging-db-service-role-proof.sh \
+  --preview-dir /tmp/nonexistent-preview-dir \
+  --api-base https://api.staging.vergeo5.com \
+  --listing-id f1000000-0000-4000-8000-000000000001 >/tmp/db-proof-missing-evidence.txt 2>&1
+rc_missing=$?
+set -e
+if [[ "${rc_missing}" -ne 0 ]] && grep -qi 'missing Preview evidence' /tmp/db-proof-missing-evidence.txt; then
+  ok "DB service-role proof fails closed on missing Preview evidence"
+else
+  bad "DB service-role proof should fail closed on missing Preview evidence (rc=${rc_missing})"
+  cat /tmp/db-proof-missing-evidence.txt || true
+fi
+
+set +e
+bash scripts/ci/staging-db-service-role-proof.sh \
+  --preview-dir /tmp \
+  --api-base https://api.vergeo5.com \
+  --listing-id f1000000-0000-4000-8000-000000000001 >/tmp/db-proof-prod.txt 2>&1
+rc_db_prod=$?
+set -e
+if [[ "${rc_db_prod}" -ne 0 ]] && grep -qi 'production API host' /tmp/db-proof-prod.txt; then
+  ok "DB service-role proof refuses to probe the production API host"
+else
+  bad "DB service-role proof should refuse api.vergeo5.com (rc=${rc_db_prod})"
+  cat /tmp/db-proof-prod.txt || true
+fi
+
 # 13) deploy-staging wires explicit Preview proof for all three portals
 if grep -q 'prove-vercel-preview' .github/workflows/deploy-staging.yml \
   && grep -q 'matrix:' .github/workflows/deploy-staging.yml \

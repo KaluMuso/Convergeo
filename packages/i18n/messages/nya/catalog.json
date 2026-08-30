@@ -160,7 +160,16 @@
       "moreThanLowest": "{diff} kuposa offer yotsika",
       "wishlistAdd": "Sungani ku wishlist",
       "wishlistRemove": "Chotsani ku wishlist",
-      "wishlistSaved": "Zasungidwa ku wishlist"
+      "wishlistSaved": "Zasungidwa ku wishlist",
+      "pickup": {
+        "heading": "Sankhani nthambi yotenga",
+        "selectAria": "Nthambi yotenga",
+        "placeholder": "Sankhani nthambi",
+        "loading": "Tikuyang'ana nthambi zotenga…",
+        "loadError": "Sitinathe kupeza nthambi zotenga. Yesaninso.",
+        "unavailable": "Palibe nthambi yotenga yomwe ilipo pano",
+        "required": "Sankhani nthambi yotenga kuti muwonjezere ichi ku cart"
+      }
     },
     "stickyAtc": {
       "ariaLabel": "Onjezani mwachangu ku cart",

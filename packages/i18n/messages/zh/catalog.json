@@ -297,7 +297,16 @@
       "moreThanLowest": "比最低报价高 {diff}",
       "wishlistAdd": "加入心愿单",
       "wishlistRemove": "移出心愿单",
-      "wishlistSaved": "已加入心愿单"
+      "wishlistSaved": "已加入心愿单",
+      "pickup": {
+        "heading": "选择提货点",
+        "selectAria": "提货点",
+        "placeholder": "请选择提货点",
+        "loading": "正在加载提货点…",
+        "loadError": "无法加载提货点，请重试。",
+        "unavailable": "该商品当前没有可用的提货点",
+        "required": "请选择提货点后再加入购物车"
+      }
     },
     "stickyAtc": {
       "ariaLabel": "快速加入购物车"

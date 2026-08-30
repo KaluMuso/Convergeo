@@ -301,7 +301,16 @@
       "moreThanLowest": "{diff} more than the lowest offer",
       "wishlistAdd": "Save to wishlist",
       "wishlistRemove": "Remove from wishlist",
-      "wishlistSaved": "Saved to wishlist"
+      "wishlistSaved": "Saved to wishlist",
+      "pickup": {
+        "heading": "Choose a pickup branch",
+        "selectAria": "Pickup branch",
+        "placeholder": "Select a branch",
+        "loading": "Loading pickup branches…",
+        "loadError": "Could not load pickup branches. Try again.",
+        "unavailable": "No pickup branch is currently available for this item",
+        "required": "Select a pickup branch to add this item"
+      }
     },
     "stickyAtc": {
       "ariaLabel": "Quick add to cart",

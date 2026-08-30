@@ -22,6 +22,7 @@ import { PdpWishlistButton } from "./pdp-wishlist-button";
 import { useListingPurchase } from "./use-listing-purchase";
 import { VendorBlock } from "./vendor-block";
 
+import type { PickupLocationPickerLabels } from "./pickup-location-picker";
 import type { SaleUnit } from "../sale-quantity";
 import type { ContactVendorLabels } from "./contact-vendor-button";
 import type { PdpGalleryLabelStrings } from "./gallery-labels";
@@ -143,6 +144,7 @@ export type PdpInteractiveBodyProps = {
   /** Serializable strings only — never pass functions across the RSC boundary. */
   galleryLabels: PdpGalleryLabelStrings;
   buyBoxLabels: BuyBoxLabels;
+  pickupLabels: PickupLocationPickerLabels;
   comparisonLabels: ComparisonLabels;
   vendorLabels: {
     heading: string;
@@ -569,6 +571,7 @@ export function PdpInteractiveBody({
   cloudName,
   galleryLabels,
   buyBoxLabels,
+  pickupLabels,
   comparisonLabels,
   vendorLabels,
   trustLabels,
@@ -699,6 +702,7 @@ export function PdpInteractiveBody({
             listing={buyBoxListing}
             singleVendor={singleVendor}
             labels={buyBoxLabels}
+            pickupLabels={pickupLabels}
             locale={locale}
             purchase={purchase}
             buyBoxRef={buyBoxRef}

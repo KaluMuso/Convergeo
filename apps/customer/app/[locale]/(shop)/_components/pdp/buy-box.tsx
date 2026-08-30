@@ -21,6 +21,8 @@ import {
 } from "../sale-quantity";
 
 import { ConditionBadge, type ListingCondition } from "./condition-badge";
+import { PickupLocationPicker, type PickupLocationPickerLabels } from "./pickup-location-picker";
+import { usePickupLocationSelection } from "./use-pickup-location-selection";
 
 import type { ListingPurchaseControls } from "./use-listing-purchase";
 
@@ -73,6 +75,7 @@ export type BuyBoxLabels = {
 export type BuyBoxProps = {
   listing: BuyBoxListing;
   labels: BuyBoxLabels;
+  pickupLabels: PickupLocationPickerLabels;
   singleVendor: boolean;
   onAddedToCart?: () => void;
   /** Shared qty/ATC when sticky mobile bar is wired from the parent. */
@@ -147,6 +150,7 @@ export function getStockLabel(
 export function BuyBox({
   listing,
   labels,
+  pickupLabels,
   singleVendor,
   onAddedToCart,
   purchase,
@@ -166,6 +170,9 @@ export function BuyBox({
   const [adding, setAdding] = useState(false);
   const [addedMessage, setAddedMessage] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
+  // Only used when `purchase` is not supplied (standalone-listing path) —
+  // when it is, the caller's useListingPurchase() already owns this state.
+  const internalPickup = usePickupLocationSelection(purchase ? null : listing.id);
 
   const maxQuantity = useMemo(() => getMaxQuantity(listing), [listing]);
   const unitLabels: SaleUnitLabels = useMemo(() => catalogSaleUnitLabels(t), [t]);
@@ -231,13 +238,27 @@ export function BuyBox({
     if (!listing.inStock || adding) {
       return;
     }
+    // Same fail-closed gate as useListingPurchase's handleAddToCart — never
+    // send add-to-cart while branch-tracking status is unknown or a
+    // required branch hasn't been chosen yet.
+    if (internalPickup.branchTracked !== false && !internalPickup.selectedLocationId) {
+      setAddError(t("pdp.buyBox.pickup.required"));
+      return;
+    }
 
     setAdding(true);
     setAddError(null);
     setAddedMessage(null);
 
     try {
-      await addCartItem(listing.id, quantity);
+      await addCartItem(
+        listing.id,
+        quantity,
+        undefined,
+        internalPickup.selectedLocationId
+          ? { pickupLocationId: internalPickup.selectedLocationId, fulfilment: "pickup" }
+          : undefined,
+      );
       setAddedMessage(labels.addToCartLabel);
       setLastAddedMessage(labels.addToCartLabel);
       openMiniCart();
@@ -249,12 +270,15 @@ export function BuyBox({
     }
   }, [
     adding,
+    internalPickup.branchTracked,
+    internalPickup.selectedLocationId,
     labels.addToCartErrorLabel,
     labels.addToCartLabel,
     listing.id,
     listing.inStock,
     onAddedToCart,
     quantity,
+    t,
   ]);
 
   const onDecrease = purchase?.decrease ?? decrease;
@@ -264,6 +288,15 @@ export function BuyBox({
   const isAdding = purchase?.adding ?? adding;
   const errorMessage = purchase?.addError ?? addError;
   const successMessage = purchase?.addedMessage ?? addedMessage;
+  const pickupBranchTracked = purchase?.pickupBranchTracked ?? internalPickup.branchTracked;
+  const pickupLocations = purchase?.pickupLocations ?? internalPickup.locations;
+  const pickupLocationsLoading = purchase?.pickupLocationsLoading ?? internalPickup.loading;
+  const pickupLocationsLoadError = purchase?.pickupLocationsLoadError ?? internalPickup.loadError;
+  const selectedPickupLocationId =
+    purchase?.selectedPickupLocationId ?? internalPickup.selectedLocationId;
+  const onSelectPickupLocation = purchase?.selectPickupLocation ?? internalPickup.selectLocation;
+  const pickupSelectionSatisfied =
+    pickupBranchTracked === false || (pickupBranchTracked === true && !!selectedPickupLocationId);
   const stockLabel = purchase?.stockLabel || localStockLabel;
   const onAdd = purchase?.handleAddToCart ?? (() => void handleAddToCart());
 
@@ -339,6 +372,17 @@ export function BuyBox({
         </p>
       ) : null}
 
+      {listing.inStock && pickupBranchTracked !== false ? (
+        <PickupLocationPicker
+          locations={pickupLocations}
+          loading={pickupLocationsLoading}
+          loadError={pickupLocationsLoadError}
+          selectedLocationId={selectedPickupLocationId}
+          onSelect={onSelectPickupLocation}
+          labels={pickupLabels}
+        />
+      ) : null}
+
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium text-text">{labels.quantityLabel}</span>
         <div className="flex items-center gap-2">
@@ -379,7 +423,7 @@ export function BuyBox({
           variant="primary"
           size="lg"
           className="min-w-0 flex-1"
-          disabled={!listing.inStock || isAdding}
+          disabled={!listing.inStock || isAdding || !pickupSelectionSatisfied}
           loading={isAdding}
           loadingLabel={labels.addingToCartLabel}
           data-testid="pdp-add-to-cart"

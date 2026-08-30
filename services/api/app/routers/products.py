@@ -6,6 +6,11 @@ from typing import Annotated, Any, Protocol
 from app.deps import get_supabase_client
 from app.errors import AppError
 from app.services.business.access import BusinessAccess, get_business_access
+from app.services.cart.store import fetch_listing
+from app.services.inventory.location_stock import (
+    fetch_branch_stock_rows,
+    is_branch_tracked,
+)
 from app.services.listings.availability import is_listing_available
 from app.services.listings.demo import fetch_demo_listing_ids, is_non_genuine_public_id
 from fastapi import APIRouter, Depends
@@ -718,6 +723,72 @@ def build_related_products(
         key=lambda item: (item.from_price_ngwee or 0, item.name),
     )
     return RelatedProductsResponse(product_slug=slug, items=items[:limit])
+
+
+class PickupLocationResponse(BaseModel):
+    id: str
+    landmark: str
+    lat: float
+    lng: float
+
+
+class PickupLocationsResponse(BaseModel):
+    listing_id: str
+    branch_tracked: bool
+    locations: list[PickupLocationResponse] = Field(default_factory=list)
+
+
+@router.get("/listings/{listing_id}/pickup-locations", response_model=PickupLocationsResponse)
+async def get_pickup_locations(
+    listing_id: str,
+    supabase: Annotated[_ServiceClient, Depends(get_supabase_client)],
+    access: Annotated[BusinessAccess, Depends(get_business_access)],
+) -> PickupLocationsResponse:
+    """Active branches carrying a branch-tracked listing — the Customer PDP's
+    required-pickup-branch selector reads this before Add to Cart.
+
+    Same existence/visibility rule cart mutations already enforce (D36): an
+    id the caller isn't eligible to see is answered as though it never
+    existed, so this never leaks whether a wholesale-gated listing exists.
+
+    `branch_tracked=false` (legacy pooled listing) always returns an empty
+    `locations` list — the PDP needs no selection for those. A genuinely
+    branch-tracked listing with zero currently-active branches also returns
+    an empty list with `branch_tracked=true`, so the caller can render an
+    honest "no pickup branch available" state instead of a fabricated one.
+    """
+    fetch_listing(listing_id, business_eligible=access.eligible)
+
+    if not is_branch_tracked(listing_id):
+        return PickupLocationsResponse(listing_id=listing_id, branch_tracked=False, locations=[])
+
+    rows = [row for row in fetch_branch_stock_rows(listing_id) if row.status == "active"]
+    landmarks: dict[str, str] = {}
+    if rows:
+        response = (
+            supabase.client.table("vendor_locations")
+            .select("id, landmark")
+            .in_("id", [row.location_id for row in rows])
+            .execute()
+        )
+        for location_row in response.data or []:
+            location_id = location_row.get("id")
+            if location_id:
+                landmarks[str(location_id)] = str(location_row.get("landmark") or "")
+
+    return PickupLocationsResponse(
+        listing_id=listing_id,
+        branch_tracked=True,
+        locations=[
+            PickupLocationResponse(
+                id=row.location_id,
+                landmark=landmarks.get(row.location_id, ""),
+                lat=row.lat,
+                lng=row.lng,
+            )
+            for row in rows
+        ],
+    )
 
 
 @router.get("/{slug}", response_model=ProductDetailResponse)
