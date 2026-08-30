@@ -157,6 +157,11 @@ PUBLIC_OPEN_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/products/{slug}"),
         ("GET", "/products/{slug}/comparison"),
         ("GET", "/products/{slug}/related"),
+        # D-required explicit pickup-branch selection for branch-tracked listings
+        # (cart location remediation). Same eligibility gate as the PDP itself
+        # (fetch_listing's 404-for-both-missing-and-ineligible rule); no auth
+        # required to view which branches a listing is available at.
+        ("GET", "/products/listings/{listing_id}/pickup-locations"),
         ("GET", "/reviews"),
         ("GET", "/search"),
         ("GET", "/search/nearby"),
