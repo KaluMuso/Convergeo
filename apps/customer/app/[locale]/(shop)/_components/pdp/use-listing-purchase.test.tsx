@@ -19,9 +19,11 @@ vi.mock("next-intl", () => ({
 }));
 
 import { addCartItem } from "../cart/mini-cart-drawer";
+
 import { fetchPickupLocations } from "./pickup-locations";
-import type { BuyBoxLabels, BuyBoxListing } from "./buy-box";
 import { useListingPurchase } from "./use-listing-purchase";
+
+import type { BuyBoxLabels, BuyBoxListing } from "./buy-box";
 
 afterEach(() => {
   cleanup();

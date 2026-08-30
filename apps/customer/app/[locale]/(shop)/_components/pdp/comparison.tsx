@@ -19,10 +19,10 @@ import { ConditionBadge, type ListingCondition } from "./condition-badge";
 import { PdpGallery } from "./gallery";
 import { buildOfferPriceContext } from "./offer-price-context";
 import { PdpWishlistButton } from "./pdp-wishlist-button";
-import type { PickupLocationPickerLabels } from "./pickup-location-picker";
 import { useListingPurchase } from "./use-listing-purchase";
 import { VendorBlock } from "./vendor-block";
 
+import type { PickupLocationPickerLabels } from "./pickup-location-picker";
 import type { SaleUnit } from "../sale-quantity";
 import type { ContactVendorLabels } from "./contact-vendor-button";
 import type { PdpGalleryLabelStrings } from "./gallery-labels";

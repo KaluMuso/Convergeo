@@ -14,8 +14,9 @@ import {
   type BuyBoxLabels,
   type BuyBoxListing,
 } from "./buy-box";
-import type { PickupLocation } from "./pickup-locations";
 import { usePickupLocationSelection } from "./use-pickup-location-selection";
+
+import type { PickupLocation } from "./pickup-locations";
 
 export type ListingPurchaseControls = {
   quantity: number;

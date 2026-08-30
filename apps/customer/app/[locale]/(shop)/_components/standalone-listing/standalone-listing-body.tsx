@@ -5,6 +5,7 @@ import { useCallback } from "react";
 
 import { BuyBox, type BuyBoxLabels, type BuyBoxListing } from "../pdp/buy-box";
 import { PdpGallery, type PdpGalleryImage } from "../pdp/gallery";
+
 import type { PickupLocationPickerLabels } from "../pdp/pickup-location-picker";
 
 export type StandaloneListingBodyProps = {
