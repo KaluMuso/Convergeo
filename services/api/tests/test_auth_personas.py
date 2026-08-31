@@ -24,7 +24,12 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-from app.staging.auth_personas import AuthPersonaError, ensure_auth_personas, verify_auth_personas
+from app.staging.auth_personas import (
+    AuthPersonaError,
+    canonical_auth_phone,
+    ensure_auth_personas,
+    verify_auth_personas,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +57,15 @@ VENDOR = _FakePersona(
 )
 UNRELATED_REAL_USER_ID = "99999999-0000-4000-8000-000000000099"
 WRONG_PHONE = "+260970099999"
+
+# Run #55 live evidence: hosted Supabase Auth normalizes a create_user()
+# call's "+260970000001" input to a stored auth.users.phone of
+# "260970000001" (no leading '+'). CUSTOMER.phone is the E.164 form the
+# fixture contract declares ("+260970000001"); this is that same number as
+# hosted storage actually returns it.
+STORED_NO_PLUS = "260970000001"
+WRONG_PHONE_NO_PLUS = "260970099999"
+MALFORMED_PHONES = ("260 970000001", "260-970000001", "++260970000001")
 
 
 class _Identity:
@@ -273,6 +287,107 @@ class TestEnsureAuthPersonas:
         assert ("delete", CUSTOMER.user_id) in admin.calls
         assert ("create", CUSTOMER.user_id) in admin.calls
 
+    def test_no_op_when_stored_phone_lacks_leading_plus(self) -> None:
+        """Run #55 reproduction: hosted Supabase Auth normalizes storage to
+        drop the leading '+'. That normalization alone must never trigger
+        delete/recreate — the already-good persona must classify as
+        already-ok, not recreated-mismatched-row."""
+        admin = FakeAdminApi(
+            seed_users={
+                CUSTOMER.user_id: _User(
+                    id=CUSTOMER.user_id,
+                    phone=STORED_NO_PLUS,
+                    phone_confirmed_at="2026-01-01T00:00:00Z",
+                    identities=[_phone_identity(CUSTOMER.user_id, STORED_NO_PLUS)],
+                )
+            }
+        )
+        client = FakeClient(admin)
+
+        outcomes = ensure_auth_personas(client, personas=(CUSTOMER,))
+
+        assert outcomes == {"CUSTOMER_A": "already-ok"}
+        assert admin.calls == [("get", CUSTOMER.user_id)]
+        assert ("create", CUSTOMER.user_id) not in admin.calls
+        assert ("delete", CUSTOMER.user_id) not in admin.calls
+
+    def test_recreates_when_stored_digits_wrong_even_without_leading_plus(self) -> None:
+        """The '+' tolerance must not widen into accepting a genuinely wrong
+        number just because it also lacks a leading '+'."""
+        admin = FakeAdminApi(
+            seed_users={
+                CUSTOMER.user_id: _User(
+                    id=CUSTOMER.user_id,
+                    phone=WRONG_PHONE_NO_PLUS,
+                    phone_confirmed_at="2026-01-01T00:00:00Z",
+                    identities=[_phone_identity(CUSTOMER.user_id, WRONG_PHONE_NO_PLUS)],
+                )
+            }
+        )
+        client = FakeClient(admin)
+
+        outcomes = ensure_auth_personas(client, personas=(CUSTOMER,))
+
+        assert outcomes == {"CUSTOMER_A": "recreated-mismatched-row"}
+        assert ("delete", CUSTOMER.user_id) in admin.calls
+        assert ("create", CUSTOMER.user_id) in admin.calls
+
+    def test_no_op_when_identity_data_phone_lacks_leading_plus(self) -> None:
+        admin = FakeAdminApi(
+            seed_users={
+                CUSTOMER.user_id: _User(
+                    id=CUSTOMER.user_id,
+                    phone=CUSTOMER.phone,
+                    phone_confirmed_at="2026-01-01T00:00:00Z",
+                    identities=[_phone_identity(CUSTOMER.user_id, STORED_NO_PLUS)],
+                )
+            }
+        )
+        client = FakeClient(admin)
+
+        outcomes = ensure_auth_personas(client, personas=(CUSTOMER,))
+
+        assert outcomes == {"CUSTOMER_A": "already-ok"}
+        assert ("delete", CUSTOMER.user_id) not in admin.calls
+
+    def test_recreates_when_identity_data_phone_wrong_even_without_leading_plus(self) -> None:
+        admin = FakeAdminApi(
+            seed_users={
+                CUSTOMER.user_id: _User(
+                    id=CUSTOMER.user_id,
+                    phone=CUSTOMER.phone,
+                    phone_confirmed_at="2026-01-01T00:00:00Z",
+                    identities=[_phone_identity(CUSTOMER.user_id, WRONG_PHONE_NO_PLUS)],
+                )
+            }
+        )
+        client = FakeClient(admin)
+
+        outcomes = ensure_auth_personas(client, personas=(CUSTOMER,))
+
+        assert outcomes == {"CUSTOMER_A": "recreated-mismatched-row"}
+
+    @pytest.mark.parametrize("malformed", MALFORMED_PHONES)
+    def test_malformed_stored_phone_fails_closed_to_recreate(self, malformed: str) -> None:
+        """A malformed stored value (not '[+]?[0-9]+') must never be treated
+        as equivalent to the correct number — fail closed means "mismatch",
+        not "crash" and not "accept"."""
+        admin = FakeAdminApi(
+            seed_users={
+                CUSTOMER.user_id: _User(
+                    id=CUSTOMER.user_id,
+                    phone=malformed,
+                    phone_confirmed_at="2026-01-01T00:00:00Z",
+                    identities=[_phone_identity(CUSTOMER.user_id, malformed)],
+                )
+            }
+        )
+        client = FakeClient(admin)
+
+        outcomes = ensure_auth_personas(client, personas=(CUSTOMER,))
+
+        assert outcomes == {"CUSTOMER_A": "recreated-mismatched-row"}
+
     def test_reseed_is_idempotent(self) -> None:
         admin = FakeAdminApi()
         client = FakeClient(admin)
@@ -481,6 +596,87 @@ class TestVerifyAuthPersonas:
         with pytest.raises(AuthPersonaError, match="provider='phone'"):
             verify_auth_personas(client, personas=(CUSTOMER,))
 
+    def test_passes_when_stored_phone_lacks_leading_plus(self) -> None:
+        """Run #55 reproduction: this exact shape (stored phone normalized
+        to drop the leading '+') must verify as correct, not raise."""
+        admin = FakeAdminApi(
+            seed_users={
+                CUSTOMER.user_id: _User(
+                    id=CUSTOMER.user_id,
+                    phone=STORED_NO_PLUS,
+                    phone_confirmed_at="2026-01-01T00:00:00Z",
+                    identities=[_phone_identity(CUSTOMER.user_id, STORED_NO_PLUS)],
+                )
+            }
+        )
+        client = FakeClient(admin)
+
+        verify_auth_personas(client, personas=(CUSTOMER,))  # must not raise
+
+    def test_fails_closed_when_stored_digits_wrong_even_without_leading_plus(self) -> None:
+        admin = FakeAdminApi(
+            seed_users={
+                CUSTOMER.user_id: _User(
+                    id=CUSTOMER.user_id,
+                    phone=WRONG_PHONE_NO_PLUS,
+                    phone_confirmed_at="2026-01-01T00:00:00Z",
+                    identities=[_phone_identity(CUSTOMER.user_id, WRONG_PHONE_NO_PLUS)],
+                )
+            }
+        )
+        client = FakeClient(admin)
+
+        with pytest.raises(AuthPersonaError, match="phone"):
+            verify_auth_personas(client, personas=(CUSTOMER,))
+
+    def test_passes_when_identity_data_phone_lacks_leading_plus(self) -> None:
+        admin = FakeAdminApi(
+            seed_users={
+                CUSTOMER.user_id: _User(
+                    id=CUSTOMER.user_id,
+                    phone=CUSTOMER.phone,
+                    phone_confirmed_at="2026-01-01T00:00:00Z",
+                    identities=[_phone_identity(CUSTOMER.user_id, STORED_NO_PLUS)],
+                )
+            }
+        )
+        client = FakeClient(admin)
+
+        verify_auth_personas(client, personas=(CUSTOMER,))  # must not raise
+
+    def test_fails_closed_when_identity_data_phone_wrong_even_without_leading_plus(self) -> None:
+        admin = FakeAdminApi(
+            seed_users={
+                CUSTOMER.user_id: _User(
+                    id=CUSTOMER.user_id,
+                    phone=CUSTOMER.phone,
+                    phone_confirmed_at="2026-01-01T00:00:00Z",
+                    identities=[_phone_identity(CUSTOMER.user_id, WRONG_PHONE_NO_PLUS)],
+                )
+            }
+        )
+        client = FakeClient(admin)
+
+        with pytest.raises(AuthPersonaError, match="provider='phone'"):
+            verify_auth_personas(client, personas=(CUSTOMER,))
+
+    @pytest.mark.parametrize("malformed", MALFORMED_PHONES)
+    def test_malformed_stored_phone_fails_closed(self, malformed: str) -> None:
+        admin = FakeAdminApi(
+            seed_users={
+                CUSTOMER.user_id: _User(
+                    id=CUSTOMER.user_id,
+                    phone=malformed,
+                    phone_confirmed_at="2026-01-01T00:00:00Z",
+                    identities=[_phone_identity(CUSTOMER.user_id, malformed)],
+                )
+            }
+        )
+        client = FakeClient(admin)
+
+        with pytest.raises(AuthPersonaError, match="phone"):
+            verify_auth_personas(client, personas=(CUSTOMER,))
+
     def test_passes_when_identity_data_has_no_phone_key(self) -> None:
         """The identity_data phone check is best-effort: its absence must
         not itself fail verification when everything else (top-level
@@ -498,3 +694,34 @@ class TestVerifyAuthPersonas:
         client = FakeClient(admin)
 
         verify_auth_personas(client, personas=(CUSTOMER,))  # must not raise
+
+
+class TestCanonicalAuthPhone:
+    """Direct coverage of canonical_auth_phone()'s own contract: only an
+    optional single leading '+' is treated as insignificant — nothing else
+    is stripped, and anything that isn't `[+]?[0-9]+` fails closed."""
+
+    def test_accepts_plain_digits(self) -> None:
+        assert canonical_auth_phone("260970000001") == "260970000001"
+
+    def test_strips_single_leading_plus(self) -> None:
+        assert canonical_auth_phone("+260970000001") == "260970000001"
+
+    def test_plus_and_no_plus_forms_are_equivalent(self) -> None:
+        assert canonical_auth_phone("+260970000001") == canonical_auth_phone("260970000001")
+
+    def test_different_digits_are_not_equivalent(self) -> None:
+        assert canonical_auth_phone("+260970000001") != canonical_auth_phone("260970000002")
+
+    @pytest.mark.parametrize("malformed", MALFORMED_PHONES)
+    def test_rejects_malformed_forms(self, malformed: str) -> None:
+        with pytest.raises(ValueError):
+            canonical_auth_phone(malformed)
+
+    def test_rejects_empty_string(self) -> None:
+        with pytest.raises(ValueError):
+            canonical_auth_phone("")
+
+    def test_rejects_bare_plus(self) -> None:
+        with pytest.raises(ValueError):
+            canonical_auth_phone("+")
