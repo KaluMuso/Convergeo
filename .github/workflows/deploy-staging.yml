@@ -269,7 +269,18 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -euo pipefail
-          uv run --project services/api python3 scripts/seed_staging.py --env staging --apply
+          # --cleanup before --apply: ensure_auth_personas() (called by
+          # --apply) repairs a contract-mismatched persona via the Auth
+          # Admin API's delete_user()+create_user(), which restrict-FK-fails
+          # while that persona's own canonical public dependants (profiles,
+          # tickets, ...) still exist. --cleanup removes those dependants —
+          # and, absent real transactional evidence, the stale auth.users row
+          # itself — before persona repair ever runs, matching e2e.yml's
+          # already-correct order. See
+          # test_legacy_identity_less_persona_recreation_is_safe_only_after_cleanup
+          # (test_seed_staging.py) for the proof, including that real-order
+          # protection stays fail-closed.
+          uv run --project services/api python3 scripts/seed_staging.py --env staging --cleanup --apply
 
   build-api-image:
     name: Build API image (SHA tag)

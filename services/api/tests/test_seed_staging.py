@@ -729,6 +729,117 @@ def _assert_contract_proof_with_live_order(conn: PgConn) -> None:
     assert ledger.ok and ledger.rows == ["0"], "static seed must not create ledger rows"
 
 
+def test_legacy_identity_less_persona_recreation_is_safe_only_after_cleanup(
+    migrated_db: PgConn,
+) -> None:
+    """Section D (PR #689): deploy-staging.yml's optional synthetic reseed
+    previously ran seed_staging.py with --apply alone. When a persona's Auth
+    Admin API contract needs repair, ensure_auth_personas() (auth_personas.py)
+    deletes and recreates it (delete_user() then create_user()) — but if that
+    persona's own canonical public dependants (profiles, tickets, ...) still
+    exist, delete_user() hits the same restrict-FK wall the real-order guard
+    below deliberately relies on, and fails. The fix (Option 1) is that
+    deploy's optional reseed now runs --cleanup --apply, matching e2e.yml's
+    already-correct order: cleanup's own scoped, guarded delete of public
+    dependants — and, for a synthetic row with no real transactional
+    evidence, of auth.users itself — always runs before any Auth Admin API
+    repair.
+
+    Proven here end to end for a legacy identity-less row: this file's bare
+    auth.users stand-in (_bare_auth_users_sql(), see its docstring above)
+    never creates an auth.identities row, matching exactly the zero-identity
+    state live staging inspection found (auth_personas.py's module
+    docstring). And proven to remain fail-closed when real transactional
+    evidence exists — a persona must never be torn down, cleanup or not.
+    """
+    assert_contract_valid()
+    seeded = _seed(migrated_db)
+    assert seeded.ok, seeded.error
+
+    customer = persona_by_key("CUSTOMER_A").user_id
+
+    # Negative control: proves the danger this fix addresses is real, not
+    # assumed. CUSTOMER_A holds a synthetic ticket (tickets.holder_user_id
+    # references auth.users on delete restrict, 0004_services_events.sql) —
+    # a stand-in for whatever canonical dependant a real Admin API
+    # delete_user() call would race if it ran before cleanup. If this delete
+    # now succeeds, the danger this test guards against no longer applies and
+    # the test (not the fix) needs revisiting.
+    blocked = migrated_db.run(f"DELETE FROM auth.users WHERE id = '{customer}'")
+    assert not blocked.ok, (
+        "expected deleting a persona's auth.users row to be FK-blocked while "
+        "its own canonical public dependants still exist"
+    )
+    still_present = migrated_db.run(
+        f"SELECT count(*)::text FROM auth.users WHERE id = '{customer}'"
+    )
+    assert still_present.ok and still_present.rows == ["1"], (
+        "the blocked delete must not have partially applied"
+    )
+
+    # The fix: cleanup (--cleanup) runs BEFORE any Auth Admin API repair.
+    # Removes every public dependant on `customer` and — since no real order
+    # exists for this persona — the legacy auth.users row itself, via
+    # cleanup's own guarded final DELETE FROM auth.users.
+    cleanup = migrated_db.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or "cleanup failed"
+
+    gone = migrated_db.run(f"SELECT count(*)::text FROM auth.users WHERE id = '{customer}'")
+    assert gone.ok and gone.rows == ["0"], (
+        "a legacy identity-less persona with no real transactional evidence "
+        "must be fully removed by cleanup, so the subsequent Auth Admin API "
+        "call is a plain create_user() — never a delete_user() racing "
+        "leftover public dependants"
+    )
+
+    # Supported Auth recreation: stands in for ensure_auth_personas() calling
+    # create_user() for the now-missing persona (see the module comment above
+    # _bare_auth_users_sql() for why this file uses that stand-in rather than
+    # a live Admin API mock — that contract lives in test_auth_personas.py).
+    # Then the normal --apply seed. Both must succeed.
+    reseed = _seed(migrated_db)
+    assert reseed.ok, reseed.error or "seed must succeed after cleanup-then-recreate"
+    _run_verification(migrated_db)
+    _assert_contract_proof(migrated_db)
+
+    # Real-order protection remains fail-closed even in this same cycle: a
+    # persona with genuine transactional evidence must never be torn down by
+    # cleanup, so ensure_auth_personas() never even reaches a delete_user()
+    # call for it.
+    product_a = product_fixture("PRODUCT_A")
+    ordered = product_a.listings[0]
+    ordered_vendor = persona_by_key(ordered.vendor_key)
+    assert ordered_vendor.vendor_id is not None
+    _insert_real_order(
+        migrated_db,
+        customer_id=customer,
+        vendor_id=ordered_vendor.vendor_id,
+        listing_id=ordered.listing_id,
+    )
+    try:
+        cleanup_with_order = migrated_db.run_script(build_cleanup_sql())
+        assert cleanup_with_order.ok, cleanup_with_order.error or (
+            "cleanup failed with a live real order present"
+        )
+        survives = migrated_db.run(
+            f"SELECT count(*)::text FROM auth.users WHERE id = '{customer}'"
+        )
+        assert survives.ok and survives.rows == ["1"], (
+            "auth.users row for a persona with a live real order must "
+            "survive cleanup — real-order protection must remain fail-closed"
+        )
+        blocked_again = migrated_db.run(f"DELETE FROM auth.users WHERE id = '{customer}'")
+        assert not blocked_again.ok, (
+            "a persona still tied to a real order must remain FK-blocked "
+            "from deletion even after cleanup runs — cleanup did not (and an "
+            "Auth Admin API delete_user() call could not) force it through"
+        )
+    finally:
+        reheal = _seed(migrated_db)
+        assert reheal.ok, reheal.error or "final reseed failed"
+        _delete_real_order(migrated_db)
+
+
 def test_cleanup_transaction_is_atomic_all_or_nothing(migrated_db: PgConn) -> None:
     """Structural fix for run #45's partial-commit: the original cleanup ran
     `DELETE FROM public.listing_location_stock` in its own early BEGIN/COMMIT

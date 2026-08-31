@@ -36,9 +36,42 @@ class AuthPersonaError(RuntimeError):
     """
 
 
-def _has_phone_identity(user: Any) -> bool:
+def _identity_phone_matches(identity: Any, persona: Any) -> bool:
+    """Best-effort extra check: when the identity's own identity_data
+    exposes a 'phone' key (GoTrue's typical phone-provider payload), it
+    must also match persona.phone — but the key's absence is not itself a
+    failure, since the top-level user.phone check in
+    _matches_phone_contract is already authoritative on its own."""
+    data = getattr(identity, "identity_data", None) or {}
+    if not isinstance(data, dict) or "phone" not in data:
+        return True
+    return bool(data.get("phone") == persona.phone)
+
+
+def _has_owned_phone_identity(user: Any, persona: Any) -> bool:
     identities = getattr(user, "identities", None) or ()
-    return any(getattr(identity, "provider", None) == PHONE_PROVIDER for identity in identities)
+    return any(
+        getattr(identity, "provider", None) == PHONE_PROVIDER
+        and getattr(identity, "user_id", None) == persona.user_id
+        and _identity_phone_matches(identity, persona)
+        for identity in identities
+    )
+
+
+def _matches_phone_contract(user: Any, persona: Any) -> bool:
+    """The full deterministic-fixture contract: same user id (defensive —
+    always true by construction, since callers look up by persona.user_id,
+    but a mismatch here would mean the caller/mock is broken), same E.164
+    phone, and a phone identity owned by that exact user id. A wrong phone
+    (a canonical UUID reused with a different number, e.g. after a fixture
+    edit) must NEVER be treated as already correct — that is exactly what
+    would leave a deterministic OTP fixture silently signing in with the
+    wrong number."""
+    if getattr(user, "id", None) != persona.user_id:
+        return False
+    if getattr(user, "phone", None) != persona.phone:
+        return False
+    return _has_owned_phone_identity(user, persona)
 
 
 def _fetch_existing(client: Any, user_id: str) -> Any | None:
@@ -93,19 +126,29 @@ def _repair_phone_confirmation(client: Any, persona: Any) -> None:
 
 def ensure_auth_personas(client: Any, *, personas: tuple[Any, ...]) -> dict[str, str]:
     """Idempotently ensures every entry in `personas` is a real Auth-managed
-    user with a confirmed phone identity, through the Auth Admin API only.
+    user matching the full deterministic contract, through the Auth Admin
+    API only: same user id, same E.164 phone, phone confirmed, and a
+    provider='phone' identity owned by that exact user id.
 
     For each persona (deterministic, hardcoded UUID from PERSONAS — never a
     dynamically discovered id, so this can only ever touch these exact known
     synthetic users, never an unrelated or real one):
 
-      - missing entirely            -> create_user()
-      - exists, has a phone identity -> no-op (repair confirmation if somehow
-                                         unconfirmed)
-      - exists, zero identities      -> the legacy raw-SQL state this
-                                         replaces: delete_user() then
-                                         create_user(), since only create_user
-                                         actually populates auth.identities
+      - missing entirely                 -> create_user()
+      - exists, full contract matches    -> no-op (repair confirmation only
+                                             if somehow unconfirmed — a pure
+                                             attribute flip, never touches
+                                             phone/identity)
+      - exists, contract does NOT match  -> delete_user() then create_user().
+        (zero/mismatched identity, or a   Covers both the legacy raw-SQL
+         wrong phone on this UUID)        state (zero identities) and a
+                                           wrong-phone UUID reuse — only
+                                           create_user() is proven to
+                                           correctly (re)populate
+                                           auth.identities for the canonical
+                                           phone, so this is the one
+                                           deterministic repair used for any
+                                           contract mismatch.
 
     Returns {persona.key: outcome} for the caller to log/verify. Raises
     AuthPersonaError (fail closed) on the first Admin API error — never
@@ -115,7 +158,7 @@ def ensure_auth_personas(client: Any, *, personas: tuple[Any, ...]) -> dict[str,
     for persona in personas:
         existing = _fetch_existing(client, persona.user_id)
 
-        if existing is not None and _has_phone_identity(existing):
+        if existing is not None and _matches_phone_contract(existing, persona):
             if getattr(existing, "phone_confirmed_at", None) is None:
                 _repair_phone_confirmation(client, persona)
                 outcomes[persona.key] = "repaired-confirmation"
@@ -126,7 +169,7 @@ def ensure_auth_personas(client: Any, *, personas: tuple[Any, ...]) -> dict[str,
         if existing is not None:
             _delete(client, persona)
             _create(client, persona)
-            outcomes[persona.key] = "recreated-legacy-row"
+            outcomes[persona.key] = "recreated-mismatched-row"
             continue
 
         _create(client, persona)
@@ -137,9 +180,13 @@ def ensure_auth_personas(client: Any, *, personas: tuple[Any, ...]) -> dict[str,
 
 def verify_auth_personas(client: Any, *, personas: tuple[Any, ...]) -> None:
     """Post-condition check: every persona must be a real Auth-managed user
-    with `phone_confirmed_at` set AND a `provider='phone'` identity owned by
-    that exact user id. Raises AuthPersonaError (fail closed) otherwise — the
-    caller must not let E2E proceed against a fixture that fails this.
+    matching the full deterministic contract — same user id, same E.164
+    phone (a wrong phone must never verify as correct — that is exactly what
+    would leave a deterministic OTP fixture silently signing in with the
+    wrong number), `phone_confirmed_at` set, AND a `provider='phone'`
+    identity owned by that exact user id. Raises AuthPersonaError (fail
+    closed) otherwise — the caller must not let E2E proceed against a
+    fixture that fails this.
     """
     for persona in personas:
         user = _fetch_existing(client, persona.user_id)
@@ -148,21 +195,26 @@ def verify_auth_personas(client: Any, *, personas: tuple[Any, ...]) -> None:
                 f"canonical persona {persona.key} ({persona.user_id}) does not exist "
                 "after seeding"
             )
+        if getattr(user, "id", None) != persona.user_id:
+            raise AuthPersonaError(
+                f"canonical persona {persona.key}: Admin API returned a user id "
+                f"mismatch ({getattr(user, 'id', None)!r} != {persona.user_id!r})"
+            )
+        if getattr(user, "phone", None) != persona.phone:
+            raise AuthPersonaError(
+                f"canonical persona {persona.key} ({persona.user_id}) has phone "
+                f"{getattr(user, 'phone', None)!r}, expected {persona.phone!r}"
+            )
         if getattr(user, "phone_confirmed_at", None) is None:
             raise AuthPersonaError(
                 f"canonical persona {persona.key} ({persona.user_id}) has no "
                 "phone_confirmed_at after seeding"
             )
-        identities = getattr(user, "identities", None) or ()
-        owned_phone_identity = any(
-            getattr(identity, "provider", None) == PHONE_PROVIDER
-            and getattr(identity, "user_id", None) == persona.user_id
-            for identity in identities
-        )
-        if not owned_phone_identity:
+        if not _has_owned_phone_identity(user, persona):
             raise AuthPersonaError(
                 f"canonical persona {persona.key} ({persona.user_id}) has no "
-                "provider='phone' identity owned by that user id after seeding"
+                "provider='phone' identity owned by that user id and matching "
+                "persona.phone after seeding"
             )
 
 
