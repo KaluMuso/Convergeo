@@ -9,14 +9,17 @@ Safety:
   - Seeds only synthetic stg-rv-* handles from the staging test-data register
   - Never copies production auth users, orders, payments, or KYC documents
 
-Usage:
+Usage (run via `uv run --project services/api python3 ...` — this script
+imports `supabase` to reach the Auth Admin API for canonical persona
+provisioning, so it needs that project's venv, not bare system python3):
   STAGING_SUPABASE_PROJECT_ID=iyasmrmbcrvlfxpzescb SUPABASE_DB_URL=<staging-db-url> \\
-    python scripts/seed_staging.py --env staging --apply
+    SUPABASE_SERVICE_ROLE_KEY=<staging-service-role-key> \\
+    uv run --project services/api python3 scripts/seed_staging.py --env staging --apply
 
-  python scripts/seed_staging.py --env staging --cleanup --apply
+  uv run --project services/api python3 scripts/seed_staging.py --env staging --cleanup --apply
 
   # Default is dry-run (prints plan, touches nothing):
-  python scripts/seed_staging.py --env staging --dry-run
+  uv run --project services/api python3 scripts/seed_staging.py --env staging --dry-run
 """
 
 from __future__ import annotations
@@ -38,6 +41,11 @@ sys.path.insert(0, str(API_ROOT))
 from app.core.env_guards import (  # noqa: E402
     STAGING_SUPABASE_PROJECT_REF,
     StagingIsolationError,
+)
+from app.staging.auth_personas import (  # noqa: E402
+    AuthPersonaError,
+    ensure_auth_personas,
+    verify_auth_personas,
 )
 from app.staging.seed_sql import (  # noqa: E402
     build_cleanup_sql,
@@ -61,6 +69,7 @@ from app.staging.ticket_credentials import (  # noqa: E402
     mint_ticket_credentials,
     primary_ticket_pin,
 )
+from supabase import create_client  # noqa: E402
 
 # Back-compat re-exports for tests importing the script module directly.
 CATALOG_FIXTURE = __import__(
@@ -330,8 +339,35 @@ def main() -> int:
         if not args.apply:
             return 0
 
-    # Scanner credentials are minted only when the caller asks for them, so the
-    # existing deploy-staging seed (which holds no service-role key) is unchanged.
+    # Auth personas are provisioned through the Supabase Auth Admin API, not
+    # raw SQL (a hand-authored auth.users row is never a real Auth-managed
+    # user — GoTrue's phone-login signInWithOtp requires an actual phone
+    # IDENTITY, which only create_user() creates). Required for every
+    # --apply: public.profiles/vendors FK-reference auth.users.id, so this
+    # must run — and succeed — before build_seed_sql()'s SQL does.
+    service_role_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    if not service_role_key:
+        return _die(
+            "SUPABASE_SERVICE_ROLE_KEY is required for --apply — canonical Auth "
+            "personas are provisioned through the Supabase Auth Admin API"
+        )
+    if not supabase_url:
+        return _die(
+            "STAGING_SUPABASE_URL (or SUPABASE_URL) is required for --apply — "
+            "needed to reach the Supabase Auth Admin API"
+        )
+    try:
+        auth_client = create_client(supabase_url, service_role_key)
+    except Exception as exc:  # noqa: BLE001
+        return _die(f"cannot construct Supabase Auth Admin client: {exc}")
+
+    try:
+        outcomes = ensure_auth_personas(auth_client, personas=PERSONAS)
+    except AuthPersonaError as exc:
+        return _die(f"Auth persona provisioning failed (seed aborted): {exc}")
+    print(f"Auth personas: {outcomes}")
+
+    # Scanner credentials are minted only when the caller asks for them.
     credentials: tuple[TicketCredential, ...] = ()
     if args.private_file:
         try:
@@ -357,6 +393,9 @@ def main() -> int:
 
     try:
         _verify_contract(conn)
+        verify_auth_personas(auth_client, personas=PERSONAS)
+    except AuthPersonaError as exc:
+        return _die(f"seed verification failed: {exc}")
     except Exception as exc:  # noqa: BLE001
         return _die(f"seed verification failed: {exc}")
 

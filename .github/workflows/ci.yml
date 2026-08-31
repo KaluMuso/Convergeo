@@ -168,6 +168,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # test-staging-guards.sh invokes scripts/seed_staging.py, which imports
+      # `supabase` (Auth Admin API client for canonical persona provisioning)
+      # at module level — needs services/api's venv, not bare system python3.
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+
+      - name: Install API dependencies
+        working-directory: services/api
+        run: uv sync --dev
+
       - name: Self-test separation + seed + config syntax
         run: bash scripts/ci/test-staging-guards.sh
 

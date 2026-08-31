@@ -395,15 +395,14 @@ def _assert_contract_proof(conn: PgConn) -> None:
 
 def test_seed_sql_executes_idempotently_and_cleans_up(migrated_db: PgConn) -> None:
     assert_contract_valid()
-    seed_sql = build_seed_sql()
 
-    first = migrated_db.run_script(seed_sql)
+    first = _seed(migrated_db)
     assert first.ok, first.error or "initial seed failed"
 
     _run_verification(migrated_db)
     _assert_contract_proof(migrated_db)
 
-    second = migrated_db.run_script(seed_sql)
+    second = _seed(migrated_db)
     assert second.ok, second.error or "idempotent re-seed failed"
 
     _run_verification(migrated_db)
@@ -446,123 +445,53 @@ def test_seed_sql_executes_idempotently_and_cleans_up(migrated_db: PgConn) -> No
 
 
 # ---------------------------------------------------------------------------
-# RC-3 regression coverage (staging E2E run #52): every Vendor OTP send
-# 422'd with otp_disabled because _auth_users_sql() never set
-# phone_confirmed_at for any persona. Supabase Auth's phone-login
-# signInWithOtp(shouldCreateUser=false) requires an existing CONFIRMED-phone
-# identity, and rejects an unconfirmed one this way — confirmed live via
-# auth_logs against staging project iyasmrmbcrvlfxpzescb.
-# CUSTOMER_A carries no vendor_id/business_buyer_id, so deleting its
-# auth.users row cascades only into its own profiles row (0002_identity_
-# vendors.sql) with no RESTRICT-guarded dependent to trip.
+# auth.users/auth.identities are no longer created by build_seed_sql() at
+# all (RC-3's fix, then the later discovery that a hand-authored auth.users
+# row is never a real Auth-managed user — GoTrue's phone-login requires an
+# actual auth.identities row, which only the Auth Admin API's create_user()
+# populates). That create/repair/idempotency/never-touch-unrelated-rows
+# contract now lives against app.staging.auth_personas.ensure_auth_personas()
+# in test_auth_personas.py, mocking the Admin API the same way
+# app/services/identity.py's tests already do — this bare-Postgres harness
+# has no live GoTrue to call. _seed() below stands in for what the Admin API
+# would have already done, purely so the public.* FK chain
+# (profiles.id -> auth.users.id) holds for the tests in THIS file, which are
+# about cleanup/reseed dependency-chain safety, not auth.users itself.
 # ---------------------------------------------------------------------------
-_CUSTOMER_A_ID = persona_by_key("CUSTOMER_A").user_id
-
-
-def test_seed_sql_sets_phone_confirmed_at_for_a_fresh_persona(migrated_db: PgConn) -> None:
-    """A persona row auth.users has never seen before must come out of the
-    seed step with phone_confirmed_at already populated by the INSERT itself
-    — not left NULL for a later repair pass, since even its very first OTP
-    send would otherwise 422 with otp_disabled.
+def _bare_auth_users_sql() -> str:
+    """Test-only stand-in for the Admin API having already created every
+    PERSONAS entry — NOT a claim about auth.identities (real create_user()
+    behavior is covered by test_auth_personas.py's mocks). ON CONFLICT DO
+    NOTHING: build_cleanup_sql() may have already removed a row, or an
+    earlier call in the same test may have already inserted it.
     """
-    deleted = migrated_db.run(f"DELETE FROM auth.users WHERE id = '{_CUSTOMER_A_ID}'")
-    assert deleted.ok, deleted.error or "pre-test delete of CUSTOMER_A failed"
-
-    seeded = migrated_db.run_script(build_seed_sql())
-    assert seeded.ok, seeded.error or "seed failed"
-
-    result = migrated_db.run(
-        "SELECT count(*)::text FROM auth.users "
-        f"WHERE id = '{_CUSTOMER_A_ID}' AND phone_confirmed_at IS NOT NULL"
-    )
-    assert result.ok and result.rows == ["1"], "fresh persona must have phone_confirmed_at set"
-
-
-def test_seed_sql_repairs_existing_null_phone_confirmation(migrated_db: PgConn) -> None:
-    """A synthetic persona row created before this fix existed
-    (phone_confirmed_at NULL, matching the live evidence pulled from run #52)
-    must be repaired by the next seed run, not left permanently broken.
-    """
-    seeded = migrated_db.run_script(build_seed_sql())
-    assert seeded.ok, seeded.error or "seed failed"
-
-    broken = migrated_db.run(
-        f"UPDATE auth.users SET phone_confirmed_at = NULL WHERE id = '{_CUSTOMER_A_ID}'"
-    )
-    assert broken.ok, broken.error or "failed to simulate a pre-fix unconfirmed persona"
-    still_broken = migrated_db.run(
-        "SELECT count(*)::text FROM auth.users "
-        f"WHERE id = '{_CUSTOMER_A_ID}' AND phone_confirmed_at IS NULL"
-    )
-    assert still_broken.ok and still_broken.rows == ["1"], "simulated NULL did not take"
-
-    repaired = migrated_db.run_script(build_seed_sql())
-    assert repaired.ok, repaired.error or "repair reseed failed"
-
-    result = migrated_db.run(
-        "SELECT count(*)::text FROM auth.users "
-        f"WHERE id = '{_CUSTOMER_A_ID}' AND phone_confirmed_at IS NOT NULL"
-    )
-    assert result.ok and result.rows == ["1"], "rerun must repair a NULL phone_confirmed_at"
-
-
-def test_seed_sql_is_idempotent_for_an_already_confirmed_persona(migrated_db: PgConn) -> None:
-    """Once a persona's phone is confirmed, reseeding must never re-stamp
-    (let alone clear) that timestamp — repeat seeding is a true no-op for an
-    already-healthy row, not a source of churn on every run.
-    """
-    first = migrated_db.run_script(build_seed_sql())
-    assert first.ok, first.error or "seed failed"
-    before = migrated_db.run(
-        f"SELECT phone_confirmed_at::text FROM auth.users WHERE id = '{_CUSTOMER_A_ID}'"
-    )
-    assert before.ok and before.rows and before.rows[0]
-
-    second = migrated_db.run_script(build_seed_sql())
-    assert second.ok, second.error or "reseed failed"
-    after = migrated_db.run(
-        f"SELECT phone_confirmed_at::text FROM auth.users WHERE id = '{_CUSTOMER_A_ID}'"
-    )
-    assert after.ok and after.rows == before.rows, (
-        "reseeding must not change an already-confirmed persona's phone_confirmed_at"
-    )
-
-
-def test_seed_sql_never_touches_a_non_persona_auth_users_row(migrated_db: PgConn) -> None:
-    """The ON CONFLICT repair is scoped to the fixed PERSONAS ids only — an
-    unrelated row (a real user, or a fixture the separate RLS matrix seeder
-    owns) must never be touched by this seed step.
-    """
-    outside_id = str(uuid.uuid4())
-    inserted = migrated_db.run(
-        f"""
+    parts = ["BEGIN;"]
+    for persona in PERSONAS:
+        parts.append(
+            f"""
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, phone, encrypted_password,
   email_confirmed_at, phone_confirmed_at, raw_app_meta_data, raw_user_meta_data,
   created_at, updated_at
 ) VALUES (
-  '00000000-0000-0000-0000-000000000000', '{outside_id}', 'authenticated',
-  'authenticated', 'outside-{outside_id}@example.test', '+260970099999',
-  'not-a-real-hash', NULL, NULL, '{{}}'::jsonb, '{{}}'::jsonb,
+  '00000000-0000-0000-0000-000000000000', '{persona.user_id}', 'authenticated',
+  'authenticated', '{persona.email}', '{persona.phone}', 'staging-hash-not-real',
+  timezone('utc', now()), timezone('utc', now()), '{{}}'::jsonb, '{{}}'::jsonb,
   timezone('utc', now()), timezone('utc', now())
-)
+) ON CONFLICT (id) DO NOTHING;
 """
-    )
-    assert inserted.ok, inserted.error or "failed to insert unrelated auth.users row"
-
-    try:
-        seeded = migrated_db.run_script(build_seed_sql())
-        assert seeded.ok, seeded.error or "seed failed"
-
-        result = migrated_db.run(
-            "SELECT count(*)::text FROM auth.users "
-            f"WHERE id = '{outside_id}' AND phone_confirmed_at IS NULL"
         )
-        assert result.ok and result.rows == ["1"], (
-            "seeding must never confirm an unrelated (non-PERSONAS) auth.users row"
-        )
-    finally:
-        migrated_db.run(f"DELETE FROM auth.users WHERE id = '{outside_id}'")
+    parts.append("COMMIT;")
+    return "\n".join(parts)
+
+
+def _seed(
+    conn: PgConn, ticket_credentials: tuple[Any, ...] | None = None
+) -> Any:
+    bare = conn.run_script(_bare_auth_users_sql())
+    assert bare.ok, bare.error or "test-only bare auth.users seed failed"
+    sql = build_seed_sql(ticket_credentials) if ticket_credentials else build_seed_sql()
+    return conn.run_script(sql)
 
 
 # ---------------------------------------------------------------------------
@@ -645,7 +574,7 @@ def test_cleanup_removes_stray_cart_items_and_reproduces_run_45(migrated_db: PgC
     untouched by unrelated cleanup scoping.
     """
     assert_contract_valid()
-    seeded = migrated_db.run_script(build_seed_sql())
+    seeded = _seed(migrated_db)
     assert seeded.ok, seeded.error
 
     listing_a = product_fixture("PRODUCT_A").listings[0].listing_id
@@ -677,7 +606,7 @@ COMMIT;
     )
 
     migrated_db.run(f"DELETE FROM public.carts WHERE id = '{_UNRELATED_CART_ID}'")
-    reseed = migrated_db.run_script(build_seed_sql())
+    reseed = _seed(migrated_db)
     assert reseed.ok, reseed.error
 
 
@@ -695,7 +624,7 @@ def test_cleanup_preserves_full_dependency_chain_for_a_live_real_order(
     reseeded normally.
     """
     assert_contract_valid()
-    seeded = migrated_db.run_script(build_seed_sql())
+    seeded = _seed(migrated_db)
     assert seeded.ok, seeded.error
 
     product_a = product_fixture("PRODUCT_A")
@@ -773,7 +702,7 @@ def test_cleanup_preserves_full_dependency_chain_for_a_live_real_order(
 
     # Full healing: the next seed restores everything cleanup legitimately
     # removed and refreshes the preserved rows to their canonical values.
-    reseed = migrated_db.run_script(build_seed_sql())
+    reseed = _seed(migrated_db)
     assert reseed.ok, reseed.error or "reseed after a preserved real order failed"
     _run_verification(migrated_db)
     _assert_contract_proof_with_live_order(migrated_db)
@@ -800,6 +729,117 @@ def _assert_contract_proof_with_live_order(conn: PgConn) -> None:
     assert ledger.ok and ledger.rows == ["0"], "static seed must not create ledger rows"
 
 
+def test_legacy_identity_less_persona_recreation_is_safe_only_after_cleanup(
+    migrated_db: PgConn,
+) -> None:
+    """Section D (PR #689): deploy-staging.yml's optional synthetic reseed
+    previously ran seed_staging.py with --apply alone. When a persona's Auth
+    Admin API contract needs repair, ensure_auth_personas() (auth_personas.py)
+    deletes and recreates it (delete_user() then create_user()) — but if that
+    persona's own canonical public dependants (profiles, tickets, ...) still
+    exist, delete_user() hits the same restrict-FK wall the real-order guard
+    below deliberately relies on, and fails. The fix (Option 1) is that
+    deploy's optional reseed now runs --cleanup --apply, matching e2e.yml's
+    already-correct order: cleanup's own scoped, guarded delete of public
+    dependants — and, for a synthetic row with no real transactional
+    evidence, of auth.users itself — always runs before any Auth Admin API
+    repair.
+
+    Proven here end to end for a legacy identity-less row: this file's bare
+    auth.users stand-in (_bare_auth_users_sql(), see its docstring above)
+    never creates an auth.identities row, matching exactly the zero-identity
+    state live staging inspection found (auth_personas.py's module
+    docstring). And proven to remain fail-closed when real transactional
+    evidence exists — a persona must never be torn down, cleanup or not.
+    """
+    assert_contract_valid()
+    seeded = _seed(migrated_db)
+    assert seeded.ok, seeded.error
+
+    customer = persona_by_key("CUSTOMER_A").user_id
+
+    # Negative control: proves the danger this fix addresses is real, not
+    # assumed. CUSTOMER_A holds a synthetic ticket (tickets.holder_user_id
+    # references auth.users on delete restrict, 0004_services_events.sql) —
+    # a stand-in for whatever canonical dependant a real Admin API
+    # delete_user() call would race if it ran before cleanup. If this delete
+    # now succeeds, the danger this test guards against no longer applies and
+    # the test (not the fix) needs revisiting.
+    blocked = migrated_db.run(f"DELETE FROM auth.users WHERE id = '{customer}'")
+    assert not blocked.ok, (
+        "expected deleting a persona's auth.users row to be FK-blocked while "
+        "its own canonical public dependants still exist"
+    )
+    still_present = migrated_db.run(
+        f"SELECT count(*)::text FROM auth.users WHERE id = '{customer}'"
+    )
+    assert still_present.ok and still_present.rows == ["1"], (
+        "the blocked delete must not have partially applied"
+    )
+
+    # The fix: cleanup (--cleanup) runs BEFORE any Auth Admin API repair.
+    # Removes every public dependant on `customer` and — since no real order
+    # exists for this persona — the legacy auth.users row itself, via
+    # cleanup's own guarded final DELETE FROM auth.users.
+    cleanup = migrated_db.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or "cleanup failed"
+
+    gone = migrated_db.run(f"SELECT count(*)::text FROM auth.users WHERE id = '{customer}'")
+    assert gone.ok and gone.rows == ["0"], (
+        "a legacy identity-less persona with no real transactional evidence "
+        "must be fully removed by cleanup, so the subsequent Auth Admin API "
+        "call is a plain create_user() — never a delete_user() racing "
+        "leftover public dependants"
+    )
+
+    # Supported Auth recreation: stands in for ensure_auth_personas() calling
+    # create_user() for the now-missing persona (see the module comment above
+    # _bare_auth_users_sql() for why this file uses that stand-in rather than
+    # a live Admin API mock — that contract lives in test_auth_personas.py).
+    # Then the normal --apply seed. Both must succeed.
+    reseed = _seed(migrated_db)
+    assert reseed.ok, reseed.error or "seed must succeed after cleanup-then-recreate"
+    _run_verification(migrated_db)
+    _assert_contract_proof(migrated_db)
+
+    # Real-order protection remains fail-closed even in this same cycle: a
+    # persona with genuine transactional evidence must never be torn down by
+    # cleanup, so ensure_auth_personas() never even reaches a delete_user()
+    # call for it.
+    product_a = product_fixture("PRODUCT_A")
+    ordered = product_a.listings[0]
+    ordered_vendor = persona_by_key(ordered.vendor_key)
+    assert ordered_vendor.vendor_id is not None
+    _insert_real_order(
+        migrated_db,
+        customer_id=customer,
+        vendor_id=ordered_vendor.vendor_id,
+        listing_id=ordered.listing_id,
+    )
+    try:
+        cleanup_with_order = migrated_db.run_script(build_cleanup_sql())
+        assert cleanup_with_order.ok, cleanup_with_order.error or (
+            "cleanup failed with a live real order present"
+        )
+        survives = migrated_db.run(
+            f"SELECT count(*)::text FROM auth.users WHERE id = '{customer}'"
+        )
+        assert survives.ok and survives.rows == ["1"], (
+            "auth.users row for a persona with a live real order must "
+            "survive cleanup — real-order protection must remain fail-closed"
+        )
+        blocked_again = migrated_db.run(f"DELETE FROM auth.users WHERE id = '{customer}'")
+        assert not blocked_again.ok, (
+            "a persona still tied to a real order must remain FK-blocked "
+            "from deletion even after cleanup runs — cleanup did not (and an "
+            "Auth Admin API delete_user() call could not) force it through"
+        )
+    finally:
+        reheal = _seed(migrated_db)
+        assert reheal.ok, reheal.error or "final reseed failed"
+        _delete_real_order(migrated_db)
+
+
 def test_cleanup_transaction_is_atomic_all_or_nothing(migrated_db: PgConn) -> None:
     """Structural fix for run #45's partial-commit: the original cleanup ran
     `DELETE FROM public.listing_location_stock` in its own early BEGIN/COMMIT
@@ -810,7 +850,7 @@ def test_cleanup_transaction_is_atomic_all_or_nothing(migrated_db: PgConn) -> No
     first DELETE.
     """
     assert_contract_valid()
-    seeded = migrated_db.run_script(build_seed_sql())
+    seeded = _seed(migrated_db)
     assert seeded.ok, seeded.error
 
     before: dict[str, list[str]] = {}
@@ -853,7 +893,7 @@ def test_cleanup_transaction_is_atomic_all_or_nothing(migrated_db: PgConn) -> No
     assert cleanup.ok, cleanup.error or (
         "the real cleanup must still succeed after the forced-failure run"
     )
-    reseed = migrated_db.run_script(build_seed_sql())
+    reseed = _seed(migrated_db)
     assert reseed.ok, reseed.error
 
 
@@ -867,7 +907,7 @@ def test_cleanup_seed_cycle_is_idempotent_across_three_cycles_with_a_live_order(
     order must never be disturbed.
     """
     assert_contract_valid()
-    seeded = migrated_db.run_script(build_seed_sql())
+    seeded = _seed(migrated_db)
     assert seeded.ok, seeded.error
 
     product_a = product_fixture("PRODUCT_A")
@@ -886,7 +926,7 @@ def test_cleanup_seed_cycle_is_idempotent_across_three_cycles_with_a_live_order(
     for cycle in range(1, 4):
         cleanup = migrated_db.run_script(build_cleanup_sql())
         assert cleanup.ok, f"cycle {cycle}: cleanup failed: {cleanup.error}"
-        seed = migrated_db.run_script(build_seed_sql())
+        seed = _seed(migrated_db)
         assert seed.ok, f"cycle {cycle}: seed failed: {seed.error}"
 
         _run_verification(migrated_db)
@@ -979,7 +1019,7 @@ def test_auth_users_cleanup_uses_session_owner_not_service_role(
                 "(RESET ROLE has nothing to restore to otherwise)"
             )
 
-        seeded = migrated_db.run_script(build_seed_sql())
+        seeded = _seed(migrated_db)
         assert seeded.ok, seeded.error
 
         cleanup = migrated_db.run_script(build_cleanup_sql())
@@ -997,7 +1037,7 @@ def test_auth_users_cleanup_uses_session_owner_not_service_role(
         # must fail with run #46's exact error class under this same revoked
         # boundary — proves this test actually exercises the privilege
         # boundary rather than passing regardless of the fix.
-        reseeded = migrated_db.run_script(build_seed_sql())
+        reseeded = _seed(migrated_db)
         assert reseeded.ok, reseeded.error
         full_sql = build_cleanup_sql()
         broken_sql = full_sql.replace("RESET ROLE;\n\n", "", 1)
@@ -1011,7 +1051,7 @@ def test_auth_users_cleanup_uses_session_owner_not_service_role(
             "GRANT SELECT, INSERT, UPDATE, DELETE ON auth.users TO postgres, service_role"
         )
         assert restore.ok, restore.error
-        migrated_db.run_script(build_seed_sql())
+        _seed(migrated_db)
 
 
 def test_cleanup_never_broadens_auth_users_grants() -> None:
