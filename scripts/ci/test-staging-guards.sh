@@ -77,8 +77,12 @@ else
 fi
 
 # 6) Synthetic seed dry-run + no production markers in fixtures
+# uv run --project services/api (not bare python3): scripts/seed_staging.py
+# imports `supabase` at module level to reach the Auth Admin API for
+# canonical persona provisioning, mirroring the exact invocation
+# deploy-staging.yml / e2e.yml now use.
 set +e
-python3 scripts/seed_staging.py --env staging --dry-run >/tmp/seed-dry.txt 2>&1
+uv run --project services/api python3 scripts/seed_staging.py --env staging --dry-run >/tmp/seed-dry.txt 2>&1
 rc=$?
 set -e
 if [[ "$rc" -eq 0 ]] && grep -q 'stg-rv-20260719' /tmp/seed-dry.txt; then
@@ -102,7 +106,7 @@ fi
 # Seed must refuse production identifiers when provided
 set +e
 STAGING_SUPABASE_PROJECT_ID=dpadrlxukcjbewpqympu \
-  python3 scripts/seed_staging.py --env staging --dry-run >/tmp/seed-prod.txt 2>&1
+  uv run --project services/api python3 scripts/seed_staging.py --env staging --dry-run >/tmp/seed-prod.txt 2>&1
 rc=$?
 set -e
 if [[ "$rc" -ne 0 ]]; then
@@ -115,7 +119,7 @@ fi
 set +e
 STAGING_SUPABASE_PROJECT_ID=abcdefghij1234567890 \
 STAGING_API_HOST=api.vergeo5.com \
-  python3 scripts/seed_staging.py --env staging --dry-run >/tmp/seed-api.txt 2>&1
+  uv run --project services/api python3 scripts/seed_staging.py --env staging --dry-run >/tmp/seed-api.txt 2>&1
 rc=$?
 set -e
 if [[ "$rc" -ne 0 ]]; then

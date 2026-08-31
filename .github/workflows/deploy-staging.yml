@@ -239,6 +239,23 @@ jobs:
           bash scripts/ci/check-db-reachable.sh
           bash scripts/ci/check-staging-schema.sh
 
+      - name: Setup uv (synthetic seed — Auth Admin API client)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed_synthetic }}
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python (synthetic seed)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed_synthetic }}
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+
+      - name: Install API dependencies (synthetic seed)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed_synthetic }}
+        working-directory: services/api
+        run: uv sync --dev
+
       - name: Synthetic seed (optional)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.seed_synthetic }}
         env:
@@ -246,9 +263,13 @@ jobs:
           STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
           STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
           STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+          # Step-scoped ONLY. Required to provision canonical Auth personas
+          # through the Supabase Auth Admin API — never a job-level env var,
+          # never a repository secret.
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -euo pipefail
-          python3 scripts/seed_staging.py --env staging --apply
+          uv run --project services/api python3 scripts/seed_staging.py --env staging --apply
 
   build-api-image:
     name: Build API image (SHA tag)

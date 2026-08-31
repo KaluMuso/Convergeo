@@ -127,6 +127,23 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends postgresql-client
 
+      - name: Setup uv (staging seed — Auth Admin API client)
+        if: ${{ inputs.pre_release }}
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python (staging seed)
+        if: ${{ inputs.pre_release }}
+        uses: actions/setup-python@v7
+        with:
+          python-version-file: services/api/.python-version
+
+      - name: Install API dependencies (staging seed)
+        if: ${{ inputs.pre_release }}
+        working-directory: services/api
+        run: uv sync --dev
+
       - name: Guard canonical seed target (fail closed before any mutation)
         if: ${{ inputs.pre_release }}
         env:
@@ -138,7 +155,7 @@ jobs:
           # Dry run exercises the same guard_seed_targets() contract the mutating
           # run uses, so a production ref or host is refused BEFORE the step that
           # holds the service-role key ever executes.
-          python3 scripts/seed_staging.py --env staging --dry-run >/dev/null
+          uv run --project services/api python3 scripts/seed_staging.py --env staging --dry-run >/dev/null
           echo "canonical seed target guards passed (staging project ref verified)"
 
       - name: Canonical cleanup + seed (once per run)
@@ -148,14 +165,15 @@ jobs:
           STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
           STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
           STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
-          # Step-scoped ONLY. The staging service-role key is required to seal the
-          # ticket PIN through the same contract the app verifies with. It is
-          # never a job-level env var, never a repository secret, and never
-          # written to the private runtime file.
+          # Step-scoped ONLY. The staging service-role key is required both to
+          # provision canonical Auth personas through the Supabase Auth Admin
+          # API and to seal the ticket PIN through the same contract the app
+          # verifies with. It is never a job-level env var, never a repository
+          # secret, and never written to the private runtime file.
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -euo pipefail
-          python3 scripts/seed_staging.py \
+          uv run --project services/api python3 scripts/seed_staging.py \
             --env staging \
             --cleanup \
             --apply \
@@ -179,7 +197,7 @@ jobs:
               env_file.write(f"E2E_TICKET_PIN={pin}\n")
           PY
           # Non-secret: the fixture generation the suite must match.
-          fixture_version="$(python3 scripts/seed_staging.py --env staging --print-fixture-version)"
+          fixture_version="$(uv run --project services/api python3 scripts/seed_staging.py --env staging --print-fixture-version)"
           echo "E2E_FIXTURE_VERSION=${fixture_version}" >> "${GITHUB_ENV}"
           echo "canonical seed applied — fixture_version=${fixture_version}"
 
