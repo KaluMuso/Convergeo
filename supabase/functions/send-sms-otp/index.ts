@@ -1,4 +1,5 @@
 import { resolveAtClientConfig, sendAtSms } from "./at_client.ts";
+import { buildPermanentHookFailure, buildRetryableHookFailure } from "./hook_response.ts";
 import { buildOtpMessage, verifySendSmsHook } from "./hook.ts";
 import { logSmsOtpEvent } from "./logging.ts";
 import { formatPhoneForAt } from "./phone.ts";
@@ -118,17 +119,11 @@ export async function handleSendSmsOtp(req: Request, deps: HandlerDeps = {}): Pr
     return new Response(null, { status: 200 });
   }
 
-  const status = result.retryable ? 500 : 400;
-  return new Response(
-    JSON.stringify({
-      error: {
-        http_code: result.status,
-        message: result.message,
-        retryable: result.retryable,
-      },
-    }),
-    { status, headers: { "Content-Type": "application/json" } },
-  );
+  if (result.retryable) {
+    return buildRetryableHookFailure(result);
+  }
+
+  return buildPermanentHookFailure(result);
 }
 
 if (import.meta.main) {

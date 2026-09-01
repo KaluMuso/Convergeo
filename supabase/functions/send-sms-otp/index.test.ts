@@ -374,7 +374,7 @@ Deno.test("sendAtSms rejects empty Recipients array", async () => {
   assertEquals(result.ok, false);
 });
 
-Deno.test("handleSendSmsOtp returns 400 on AT 4xx and 500 on AT 5xx", async () => {
+Deno.test("handleSendSmsOtp returns 400 on AT 4xx and 503+retry-after on AT 5xx", async () => {
   const body = {
     user: { phone: "+260971000099" },
     sms: { otp: "111111" },
@@ -389,6 +389,7 @@ Deno.test("handleSendSmsOtp returns 400 on AT 4xx and 500 on AT 5xx", async () =
       }),
   );
   assertEquals(permanent.status, 400);
+  assertEquals(permanent.headers.get("retry-after"), null);
 
   const retryable = await makeHookRequest(
     body,
@@ -398,7 +399,30 @@ Deno.test("handleSendSmsOtp returns 400 on AT 4xx and 500 on AT 5xx", async () =
         status: 502,
       }),
   );
-  assertEquals(retryable.status, 500);
+  assertEquals(retryable.status, 503);
+  assertEquals(retryable.headers.get("retry-after"), "2");
+});
+
+Deno.test("handleSendSmsOtp returns 429+retry-after on AT rate limiting", async () => {
+  const response = await makeHookRequest(
+    { user: { phone: "+260971000099" }, sms: { otp: "111111" } },
+    {},
+    async () => new Response("rate limited", { status: 429 }),
+  );
+  assertEquals(response.status, 429);
+  assertEquals(response.headers.get("retry-after"), "60");
+});
+
+Deno.test("handleSendSmsOtp returns 503+retry-after on transport failure", async () => {
+  const response = await makeHookRequest(
+    { user: { phone: "+260971000099" }, sms: { otp: "111111" } },
+    {},
+    async () => {
+      throw new Error("network down");
+    },
+  );
+  assertEquals(response.status, 503);
+  assertEquals(response.headers.get("retry-after"), "2");
 });
 
 Deno.test("handleSendSmsOtp returns 400 when AT accepts HTTP but rejects recipient", async () => {

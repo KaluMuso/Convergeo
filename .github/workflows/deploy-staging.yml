@@ -306,6 +306,7 @@ jobs:
             echo "::error::refusing to deploy edge functions to production Supabase project"
             exit 1
           fi
+          echo "Operator gate: confirm Supabase edge secrets AT_ENVIRONMENT matches AT credential class (SANDBOX vs LIVE) before enabling SMS."
           supabase functions deploy send-sms-otp \
             --project-ref "${STAGING_SUPABASE_PROJECT_ID}" \
             --no-verify-jwt

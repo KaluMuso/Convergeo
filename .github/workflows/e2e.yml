@@ -206,12 +206,10 @@ jobs:
         env:
           STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
           STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
-          E2E_CUSTOMER_TEST_PHONE: ${{ secrets.E2E_CUSTOMER_TEST_PHONE }}
           E2E_CUSTOMER_TEST_OTP: ${{ secrets.E2E_CUSTOMER_TEST_OTP }}
-          E2E_VENDOR_TEST_PHONE: ${{ secrets.E2E_VENDOR_TEST_PHONE }}
           E2E_VENDOR_TEST_OTP: ${{ secrets.E2E_VENDOR_TEST_OTP }}
           CERTIFICATION_MODE: integrated-staging
-        run: node scripts/ci/preflight-e2e-test-otp.mjs
+        run: node --experimental-strip-types scripts/ci/preflight-e2e-test-otp.mjs
 
       - name: Setup Node.js
         uses: actions/setup-node@v7

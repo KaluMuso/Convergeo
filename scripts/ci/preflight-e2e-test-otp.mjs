@@ -2,38 +2,33 @@
 /**
  * Fail-closed preflight for the synthetic E2E OTP contract.
  *
- * Proves that hosted Supabase Auth test-OTP mapping is active for the canonical
- * synthetic personas. When configured, Supabase short-circuits SMS delivery and
- * accepts the mapped static code without invoking the Send SMS hook.
+ * Phones are public canonical fixture data (seed.generated.ts). Only OTP codes
+ * are secrets (E2E_CUSTOMER_TEST_OTP / E2E_VENDOR_TEST_OTP).
  *
  * Never logs OTP codes, tokens, or full phone numbers.
- *
- * Usage:
- *   SUPABASE_URL=... SUPABASE_ANON_KEY=... \
- *   E2E_CUSTOMER_TEST_PHONE=... E2E_CUSTOMER_TEST_OTP=... \
- *   E2E_VENDOR_TEST_PHONE=... E2E_VENDOR_TEST_OTP=... \
- *   node scripts/ci/preflight-e2e-test-otp.mjs
- *
- * Exit codes:
- *   0 — PASS (all configured personas verified)
- *   0 — SKIPPED (no OTP secrets configured; non-strict runs only)
- *   1 — FAIL (misconfiguration or test-OTP contract not functioning)
  */
+
+import { SEED } from "../../e2e/fixtures/seed.generated.ts";
 
 const STRICT_CERT_MODES = new Set(["integrated-staging", "production-readiness"]);
 
-function str(name) {
-  return (process.env[name] ?? "").trim();
+const CANONICAL_PERSONAS = [
+  { label: "customer", phone: SEED.personas.customer.phone, otpEnv: "E2E_CUSTOMER_TEST_OTP" },
+  { label: "vendor", phone: SEED.personas.vendor.phone, otpEnv: "E2E_VENDOR_TEST_OTP" },
+];
+
+function str(name, env = process.env) {
+  return (env[name] ?? "").trim();
 }
 
-function certificationMode() {
-  const raw = str("CERTIFICATION_MODE").toLowerCase();
+function certificationMode(env = process.env) {
+  const raw = str("CERTIFICATION_MODE", env).toLowerCase();
   if (raw === "staging") return "integrated-staging";
   return raw || "local-development";
 }
 
-function strictRequired() {
-  return STRICT_CERT_MODES.has(certificationMode());
+function strictRequired(env = process.env) {
+  return STRICT_CERT_MODES.has(certificationMode(env));
 }
 
 function maskPhoneTail(phone) {
@@ -49,9 +44,59 @@ function toAuthPhone(phone) {
   throw new Error("phone is not in international format");
 }
 
-async function verifyTestOtpPersona({ label, phone, otp, supabaseUrl, anonKey }) {
+function resolvePersonas(env = process.env) {
+  return CANONICAL_PERSONAS.map((persona) => ({
+    label: persona.label,
+    phone: persona.phone,
+    otp: str(persona.otpEnv, env),
+    otpEnv: persona.otpEnv,
+  }));
+}
+
+export function evaluatePreflightConfig(personas, { strict }) {
+  const missingOtps = personas.filter((persona) => !persona.otp).map((persona) => persona.otpEnv);
+  const configured = personas.filter((persona) => persona.otp);
+
+  if (strict) {
+    if (missingOtps.length > 0) {
+      return {
+        verdict: "FAIL",
+        detail: `strict certification requires both OTP secrets: missing ${missingOtps.join(", ")}`,
+        configured,
+      };
+    }
+    return { verdict: "READY", configured };
+  }
+
+  if (configured.length === 0) {
+    return {
+      verdict: "SKIPPED",
+      detail: "no E2E test-OTP secrets configured",
+      configured,
+    };
+  }
+
+  if (configured.length !== personas.length) {
+    return {
+      verdict: "FAIL",
+      detail: `partial OTP configuration is not allowed: missing ${missingOtps.join(", ")}`,
+      configured,
+    };
+  }
+
+  return { verdict: "READY", configured };
+}
+
+async function verifyTestOtpPersona({
+  label,
+  phone,
+  otp,
+  supabaseUrl,
+  anonKey,
+  fetchImpl = fetch,
+}) {
   const authPhone = toAuthPhone(phone);
-  const sendRes = await fetch(`${supabaseUrl}/auth/v1/otp`, {
+  const sendRes = await fetchImpl(`${supabaseUrl}/auth/v1/otp`, {
     method: "POST",
     headers: {
       apikey: anonKey,
@@ -72,7 +117,7 @@ async function verifyTestOtpPersona({ label, phone, otp, supabaseUrl, anonKey })
     };
   }
 
-  const verifyRes = await fetch(`${supabaseUrl}/auth/v1/verify`, {
+  const verifyRes = await fetchImpl(`${supabaseUrl}/auth/v1/verify`, {
     method: "POST",
     headers: {
       apikey: anonKey,
@@ -100,28 +145,16 @@ async function verifyTestOtpPersona({ label, phone, otp, supabaseUrl, anonKey })
   return { ok: true, label, phoneTail: maskPhoneTail(authPhone) };
 }
 
-export async function runPreflight(env = process.env) {
-  const supabaseUrl = str("SUPABASE_URL") || str("STAGING_SUPABASE_URL");
-  const anonKey = str("SUPABASE_ANON_KEY") || str("STAGING_SUPABASE_ANON_KEY");
+export async function runPreflight(env = process.env, options = {}) {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const supabaseUrl = str("SUPABASE_URL", env) || str("STAGING_SUPABASE_URL", env);
+  const anonKey = str("SUPABASE_ANON_KEY", env) || str("STAGING_SUPABASE_ANON_KEY", env);
+  const personas = resolvePersonas(env);
+  const strict = options.strict ?? strictRequired(env);
+  const config = evaluatePreflightConfig(personas, { strict });
 
-  const personas = [
-    { label: "customer", phone: str("E2E_CUSTOMER_TEST_PHONE"), otp: str("E2E_CUSTOMER_TEST_OTP") },
-    { label: "vendor", phone: str("E2E_VENDOR_TEST_PHONE"), otp: str("E2E_VENDOR_TEST_OTP") },
-  ];
-
-  const configured = personas.filter((persona) => persona.phone && persona.otp);
-  if (configured.length === 0) {
-    if (strictRequired()) {
-      return {
-        verdict: "FAIL",
-        detail:
-          "E2E_CUSTOMER_TEST_PHONE/E2E_CUSTOMER_TEST_OTP (and vendor equivalents) are required in strict certification mode",
-      };
-    }
-    return {
-      verdict: "SKIPPED",
-      detail: "no E2E test-OTP secrets configured",
-    };
+  if (config.verdict === "FAIL" || config.verdict === "SKIPPED") {
+    return config;
   }
 
   if (!supabaseUrl || !anonKey) {
@@ -133,7 +166,7 @@ export async function runPreflight(env = process.env) {
   }
 
   const results = [];
-  for (const persona of configured) {
+  for (const persona of config.configured) {
     results.push(
       await verifyTestOtpPersona({
         label: persona.label,
@@ -141,6 +174,7 @@ export async function runPreflight(env = process.env) {
         otp: persona.otp,
         supabaseUrl,
         anonKey,
+        fetchImpl,
       }),
     );
   }

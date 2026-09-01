@@ -42,16 +42,23 @@ Africa's Talking is **not** a built-in Supabase SMS provider. Vergeo5 uses Supab
    Set `AT_ENVIRONMENT=sandbox` on staging and `AT_ENVIRONMENT=live` on
    production. Unknown values fail closed at request time.
 
+**Operator confirmation (required before staging deploy):** confirm the Africa's
+Talking credentials stored in Supabase edge secrets match the selected
+`AT_ENVIRONMENT` (`sandbox` endpoint requires sandbox credentials; `live`
+endpoint requires live credentials). Do not assume credentials are sandbox-only.
+No secret values need to be revealed — only the credential class (SANDBOX vs
+LIVE) must be confirmed.
+
 ### 2a. Hosted test-OTP map (E2E / synthetic personas only)
 
 The 65-test certification suite must **not** depend on real Africa's Talking
 delivery. Configure Supabase Auth's hosted **test OTP** map for the canonical
 synthetic persona phones (dashboard → Authentication → Phone → Test OTP):
 
-| Phone (digits, no `+`) | Purpose                                   |
-| ---------------------- | ----------------------------------------- |
-| `260970000001`         | Customer synthetic persona (`CUSTOMER_A`) |
-| `260970000002`         | Vendor synthetic persona (`VENDOR_A`)     |
+| Phone (digits, no `+`) | Purpose                                        |
+| ---------------------- | ---------------------------------------------- |
+| `260970000001`         | Customer synthetic persona (`CUSTOMER_A`)      |
+| `260970000004`         | Vendor synthetic persona (`APPROVED_VENDOR_A`) |
 
 Map each phone to the static code stored in GitHub secrets
 `E2E_CUSTOMER_TEST_OTP` / `E2E_VENDOR_TEST_OTP` (values never committed).

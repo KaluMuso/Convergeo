@@ -164,21 +164,21 @@ export function expectedFixtureVersion(): string {
  * only the CODES are secrets.
  */
 export const customerOtp = {
-  testPhone: str("E2E_CUSTOMER_TEST_PHONE", SEED.personas.customer.phone),
+  testPhone: SEED.personas.customer.phone,
   staticCode: str("E2E_CUSTOMER_TEST_OTP"),
 };
 
 export const vendorOtp = {
-  testPhone: str("E2E_VENDOR_TEST_PHONE", SEED.personas.vendor.phone),
+  testPhone: SEED.personas.vendor.phone,
   staticCode: str("E2E_VENDOR_TEST_OTP"),
 };
 
 export function customerOtpReady(): boolean {
-  return customerOtp.testPhone.length > 0 && customerOtp.staticCode.length > 0;
+  return customerOtp.staticCode.length > 0;
 }
 
 export function vendorOtpReady(): boolean {
-  return vendorOtp.testPhone.length > 0 && vendorOtp.staticCode.length > 0;
+  return vendorOtp.staticCode.length > 0;
 }
 
 /**

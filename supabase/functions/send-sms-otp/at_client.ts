@@ -22,6 +22,7 @@ export type AtSendResult =
       ok: false;
       status: number;
       retryable: boolean;
+      rateLimited?: boolean;
       message: string;
       recipient?: AtRecipientOutcome;
     };
@@ -125,7 +126,7 @@ export async function sendAtSms(
       provider_outcome: "transport_error",
       phone_tail: maskPhoneTail(params.to),
     });
-    return { ok: false, status: 502, retryable: true, message };
+    return { ok: false, status: 502, retryable: true, rateLimited: false, message };
   }
 
   const responseText = await response.text();
@@ -133,7 +134,8 @@ export async function sendAtSms(
   const recipient = firstRecipient(parsed);
 
   if (!response.ok) {
-    const retryable = response.status >= 500;
+    const rateLimited = response.status === 429;
+    const retryable = response.status >= 500 || rateLimited;
     logSmsOtpEvent("at_http_error", {
       at_environment: params.environment,
       at_http_status: response.status,
@@ -147,6 +149,7 @@ export async function sendAtSms(
       ok: false,
       status: response.status,
       retryable,
+      rateLimited,
       message: responseText || `Africa's Talking HTTP ${response.status}`,
       recipient,
     };
