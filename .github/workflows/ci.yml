@@ -161,6 +161,22 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         run: uv run pytest tests/evals -q
 
+  edge-functions:
+    name: Supabase edge functions (Deno)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.4
+
+      - name: Test send-sms-otp edge function
+        working-directory: supabase/functions/send-sms-otp
+        run: deno test --allow-env --no-lock index.test.ts
+
   staging-guards:
     name: Staging plane guards (STG-01)
     runs-on: ubuntu-latest

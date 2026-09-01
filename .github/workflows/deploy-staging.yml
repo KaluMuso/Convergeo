@@ -282,6 +282,66 @@ jobs:
           # protection stays fail-closed.
           uv run --project services/api python3 scripts/seed_staging.py --env staging --cleanup --apply
 
+  deploy-edge-functions:
+    name: Supabase edge functions (staging)
+    needs: [environment-separation, migrate-supabase]
+    if: ${{ always() && needs.environment-separation.result == 'success' && (needs.migrate-supabase.result == 'success' || needs.migrate-supabase.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: 2.109.1
+
+      - name: Deploy send-sms-otp to staging (signed webhook, no JWT)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          if [ "${STAGING_SUPABASE_PROJECT_ID}" = "${PROD_SUPABASE_PROJECT_REF}" ]; then
+            echo "::error::refusing to deploy edge functions to production Supabase project"
+            exit 1
+          fi
+          supabase functions deploy send-sms-otp \
+            --project-ref "${STAGING_SUPABASE_PROJECT_ID}" \
+            --no-verify-jwt
+
+      - name: Prove send-sms-otp is active on staging
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          supabase functions list --project-ref "${STAGING_SUPABASE_PROJECT_ID}" | tee /tmp/staging-edge-functions.txt
+          if ! grep -q 'send-sms-otp' /tmp/staging-edge-functions.txt; then
+            echo "::error::send-sms-otp not present after deploy"
+            exit 1
+          fi
+          if ! grep -E 'send-sms-otp.*ACTIVE|ACTIVE.*send-sms-otp' /tmp/staging-edge-functions.txt; then
+            echo "::error::send-sms-otp is not ACTIVE after deploy"
+            cat /tmp/staging-edge-functions.txt
+            exit 1
+          fi
+          mkdir -p /tmp/staging-evidence
+          cat > /tmp/staging-evidence/edge-function-deploy.txt <<EOF
+          function=send-sms-otp
+          project_ref=${STAGING_SUPABASE_PROJECT_ID}
+          sha=${EXPECTED_SOURCE_SHA}
+          at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          EOF
+          cat /tmp/staging-evidence/edge-function-deploy.txt
+
+      - name: Upload edge function deploy evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: staging-edge-function-deploy-record
+          path: /tmp/staging-evidence/edge-function-deploy.txt
+
   build-api-image:
     name: Build API image (SHA tag)
     needs: environment-separation
@@ -335,9 +395,9 @@ jobs:
 
   deploy-api-oci:
     name: Deploy API to OCI staging
-    needs: [environment-separation, build-api-image, migrate-supabase]
-    # Allow deploy when migrate was skipped via workflow_dispatch.
-    if: ${{ always() && needs.environment-separation.result == 'success' && needs.build-api-image.result == 'success' && (needs.migrate-supabase.result == 'success' || needs.migrate-supabase.result == 'skipped') }}
+    needs: [environment-separation, build-api-image, migrate-supabase, deploy-edge-functions]
+    # Allow deploy when migrate or edge-function deploy was skipped via workflow_dispatch.
+    if: ${{ always() && needs.environment-separation.result == 'success' && needs.build-api-image.result == 'success' && (needs.migrate-supabase.result == 'success' || needs.migrate-supabase.result == 'skipped') && (needs.deploy-edge-functions.result == 'success' || needs.deploy-edge-functions.result == 'skipped') }}
     runs-on: ubuntu-latest
     environment: staging
     steps:
