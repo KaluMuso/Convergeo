@@ -23,9 +23,49 @@ never silently continues past a partially-created persona.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 PHONE_PROVIDER = "phone"
+
+_PHONE_DIGITS_RE = re.compile(r"^[0-9]+$")
+
+
+def canonical_auth_phone(value: str) -> str:
+    """Canonicalizes a phone number for cross-source comparison against
+    Supabase Auth's stored form.
+
+    Live evidence (staging Deploy run #55): hosted Supabase Auth normalizes
+    a `create_user()` call's E.164 input `+260970000001` to a stored
+    `auth.users.phone` of `260970000001` — an optional single leading '+'
+    is the only transformation the platform is known to apply. This
+    function accepts exactly that and nothing more: no stripping of
+    spaces, hyphens, parentheses, other punctuation, or leading zeroes,
+    since no repository/Supabase evidence establishes those as part of the
+    supported contract. Anything else is malformed and must fail closed
+    rather than being silently treated as equivalent.
+
+    Raises ValueError on any value that is not `[+]?[0-9]+`.
+    """
+    digits = value[1:] if value.startswith("+") else value
+    if not digits or not _PHONE_DIGITS_RE.match(digits):
+        raise ValueError(f"not a canonical-comparable phone number: {value!r}")
+    return digits
+
+
+def _phones_equivalent(actual: str | None, expected: str) -> bool:
+    """True only when both canonicalize to the same digit string.
+
+    Fails closed: a missing or malformed `actual` value returns False
+    (never raises, never treated as a match) — the caller's own
+    mismatch-handling path takes it from there.
+    """
+    if actual is None:
+        return False
+    try:
+        return canonical_auth_phone(actual) == canonical_auth_phone(expected)
+    except ValueError:
+        return False
 
 
 class AuthPersonaError(RuntimeError):
@@ -45,7 +85,7 @@ def _identity_phone_matches(identity: Any, persona: Any) -> bool:
     data = getattr(identity, "identity_data", None) or {}
     if not isinstance(data, dict) or "phone" not in data:
         return True
-    return bool(data.get("phone") == persona.phone)
+    return _phones_equivalent(data.get("phone"), persona.phone)
 
 
 def _has_owned_phone_identity(user: Any, persona: Any) -> bool:
@@ -69,7 +109,7 @@ def _matches_phone_contract(user: Any, persona: Any) -> bool:
     wrong number."""
     if getattr(user, "id", None) != persona.user_id:
         return False
-    if getattr(user, "phone", None) != persona.phone:
+    if not _phones_equivalent(getattr(user, "phone", None), persona.phone):
         return False
     return _has_owned_phone_identity(user, persona)
 
@@ -127,8 +167,10 @@ def _repair_phone_confirmation(client: Any, persona: Any) -> None:
 def ensure_auth_personas(client: Any, *, personas: tuple[Any, ...]) -> dict[str, str]:
     """Idempotently ensures every entry in `personas` is a real Auth-managed
     user matching the full deterministic contract, through the Auth Admin
-    API only: same user id, same E.164 phone, phone confirmed, and a
-    provider='phone' identity owned by that exact user id.
+    API only: same user id, same E.164 phone number (an optional leading
+    '+' difference is treated as equivalent — hosted Supabase Auth
+    normalizes it away on storage, see canonical_auth_phone()), phone
+    confirmed, and a provider='phone' identity owned by that exact user id.
 
     For each persona (deterministic, hardcoded UUID from PERSONAS — never a
     dynamically discovered id, so this can only ever touch these exact known
@@ -181,12 +223,13 @@ def ensure_auth_personas(client: Any, *, personas: tuple[Any, ...]) -> dict[str,
 def verify_auth_personas(client: Any, *, personas: tuple[Any, ...]) -> None:
     """Post-condition check: every persona must be a real Auth-managed user
     matching the full deterministic contract — same user id, same E.164
-    phone (a wrong phone must never verify as correct — that is exactly what
-    would leave a deterministic OTP fixture silently signing in with the
-    wrong number), `phone_confirmed_at` set, AND a `provider='phone'`
-    identity owned by that exact user id. Raises AuthPersonaError (fail
-    closed) otherwise — the caller must not let E2E proceed against a
-    fixture that fails this.
+    phone number (an optional leading '+' difference is treated as
+    equivalent, see canonical_auth_phone() — but a wrong phone must never
+    verify as correct, since that is exactly what would leave a
+    deterministic OTP fixture silently signing in with the wrong number),
+    `phone_confirmed_at` set, AND a `provider='phone'` identity owned by
+    that exact user id. Raises AuthPersonaError (fail closed) otherwise —
+    the caller must not let E2E proceed against a fixture that fails this.
     """
     for persona in personas:
         user = _fetch_existing(client, persona.user_id)
@@ -200,7 +243,7 @@ def verify_auth_personas(client: Any, *, personas: tuple[Any, ...]) -> None:
                 f"canonical persona {persona.key}: Admin API returned a user id "
                 f"mismatch ({getattr(user, 'id', None)!r} != {persona.user_id!r})"
             )
-        if getattr(user, "phone", None) != persona.phone:
+        if not _phones_equivalent(getattr(user, "phone", None), persona.phone):
             raise AuthPersonaError(
                 f"canonical persona {persona.key} ({persona.user_id}) has phone "
                 f"{getattr(user, 'phone', None)!r}, expected {persona.phone!r}"
@@ -218,4 +261,9 @@ def verify_auth_personas(client: Any, *, personas: tuple[Any, ...]) -> None:
             )
 
 
-__all__ = ["AuthPersonaError", "ensure_auth_personas", "verify_auth_personas"]
+__all__ = [
+    "AuthPersonaError",
+    "canonical_auth_phone",
+    "ensure_auth_personas",
+    "verify_auth_personas",
+]
