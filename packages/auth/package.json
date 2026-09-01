@@ -24,13 +24,13 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.12.4",
-    "@supabase/supabase-js": "^2.112.2"
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.112.4"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
     "@types/react": "^19.2.18",
-    "next": "^15.5.23",
+    "next": "^15.5.24",
     "react": "^19.2.8",
     "typescript": "^5.8.2",
     "vitest": "^3.0.9"
