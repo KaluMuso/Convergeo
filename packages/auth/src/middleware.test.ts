@@ -25,20 +25,29 @@ import {
 } from "./middleware";
 
 const getUser = vi.fn();
+const getClaims = vi.fn();
 
 vi.mock("@supabase/ssr", () => ({
   createServerClient: vi.fn(() => ({
     auth: {
       getUser,
+      getClaims,
     },
   })),
 }));
+
+function claimsResult(appMetadata: unknown) {
+  return { data: { claims: { app_metadata: appMetadata } }, error: null };
+}
 
 describe("updateSession", () => {
   beforeEach(() => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://example.supabase.co";
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key";
     getUser.mockReset();
+    getClaims.mockReset();
+    // Default: no session — matches an anonymous request unless a test overrides it.
+    getClaims.mockResolvedValue({ data: null, error: null });
   });
 
   afterEach(() => {
@@ -57,21 +66,135 @@ describe("updateSession", () => {
     expect(getUser).toHaveBeenCalledOnce();
   });
 
-  it("extracts roles from the authenticated user", async () => {
+  // Scenario A: the returned User object carries NO app_metadata.roles at
+  // all (as a real Supabase User looks before/without the token hook
+  // touching auth.users), but the VERIFIED access token claims do — proving
+  // roles come from getClaims(), never from the User object.
+  it("A — extracts roles from verified claims even when the User object has none, and the vendor gate allows it", async () => {
     getUser.mockResolvedValue({
-      data: {
-        user: {
-          id: "user-1",
-          app_metadata: { roles: ["vendor"] },
-        },
-      },
+      data: { user: { id: "user-1", app_metadata: {} } },
     });
+    getClaims.mockResolvedValue(claimsResult({ roles: ["customer", "vendor"] }));
 
     const request = new NextRequest("http://localhost:3001/en");
     const result = await updateSession(request);
 
     expect(result.user?.id).toBe("user-1");
+    expect(result.roles).toEqual(["customer", "vendor"]);
+    expect(
+      resolveGatedRedirect("vendor", "/en/listings", ["en"], result.user, result.roles),
+    ).toBeNull();
+  });
+
+  // Scenario B: claims carry only "customer" — the vendor gate must send
+  // this session to onboarding, not through.
+  it("B — customer-only claims send the vendor gate to onboarding", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getClaims.mockResolvedValue(claimsResult({ roles: ["customer"] }));
+
+    const request = new NextRequest("http://localhost:3001/en");
+    const result = await updateSession(request);
+
+    expect(result.roles).toEqual(["customer"]);
+    expect(resolveGatedRedirect("vendor", "/en/listings", ["en"], result.user, result.roles)).toBe(
+      "onboarding",
+    );
+  });
+
+  // Scenario C: authenticated, but claims carry no roles at all.
+  it("C — authenticated user with no claim roles is sent to onboarding", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getClaims.mockResolvedValue(claimsResult({ roles: [] }));
+
+    const request = new NextRequest("http://localhost:3001/en");
+    const result = await updateSession(request);
+
+    expect(result.roles).toEqual([]);
+    expect(resolveGatedRedirect("vendor", "/en/listings", ["en"], result.user, result.roles)).toBe(
+      "onboarding",
+    );
+  });
+
+  // Scenario D: malformed claims fail closed to roles=[] rather than
+  // throwing out of updateSession() or granting anything — covers both a
+  // malformed payload shape and getClaims() itself erroring/rejecting.
+  it("D — malformed claims fail closed to no roles, never throwing", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getClaims.mockResolvedValue(claimsResult({ roles: "vendor" }));
+
+    const request = new NextRequest("http://localhost:3001/en");
+    const result = await updateSession(request);
+
+    expect(result.roles).toEqual([]);
+    expect(resolveGatedRedirect("vendor", "/en/listings", ["en"], result.user, result.roles)).toBe(
+      "onboarding",
+    );
+  });
+
+  it("D — a getClaims() error also fails closed to no roles", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getClaims.mockResolvedValue({
+      data: null,
+      error: { message: "jwks unavailable" },
+    });
+
+    const request = new NextRequest("http://localhost:3001/en");
+    const result = await updateSession(request);
+
+    expect(result.roles).toEqual([]);
+  });
+
+  it("D — a getClaims() rejection also fails closed to no roles", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getClaims.mockRejectedValue(new Error("network error"));
+
+    const request = new NextRequest("http://localhost:3001/en");
+    const result = await updateSession(request);
+
+    expect(result.roles).toEqual([]);
+  });
+
+  // Scenario E: admin claims correctly pass the admin gate.
+  it("E — admin claims pass the admin gate", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getClaims.mockResolvedValue(claimsResult({ roles: ["admin"] }));
+
+    const request = new NextRequest("http://localhost:3001/en");
+    const result = await updateSession(request);
+
+    expect(result.roles).toEqual(["admin"]);
+    expect(resolveGatedRedirect("admin", "/en", ["en"], result.user, result.roles)).toBeNull();
+  });
+
+  // Scenario F: unknown role strings are discarded, known ones kept.
+  it("F — unknown claim roles are discarded", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getClaims.mockResolvedValue(claimsResult({ roles: ["vendor", "superuser"] }));
+
+    const request = new NextRequest("http://localhost:3001/en");
+    const result = await updateSession(request);
+
     expect(result.roles).toEqual(["vendor"]);
+  });
+
+  // Scenario G: user_metadata must never be trusted as a role source, even
+  // if it happens to carry a "roles"-shaped payload.
+  it("G — user_metadata on the claims is never trusted for roles", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1", app_metadata: {} } } });
+    getClaims.mockResolvedValue({
+      data: {
+        claims: {
+          app_metadata: {},
+          user_metadata: { roles: ["vendor"] },
+        },
+      },
+      error: null,
+    });
+
+    const request = new NextRequest("http://localhost:3001/en");
+    const result = await updateSession(request);
+
+    expect(result.roles).toEqual([]);
   });
 });
 

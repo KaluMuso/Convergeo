@@ -5,7 +5,7 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
 import { mergeSecureCookieOptions } from "./cookie-security";
-import { getRolesFromUser, hasRole, type AppRole } from "./roles";
+import { getRolesFromClaims, hasRole, type AppRole } from "./roles";
 
 export type AuthGate = "none" | "vendor" | "admin";
 export type GatedRedirectKind = "login" | "onboarding" | "permission-denied" | null;
@@ -387,6 +387,35 @@ export async function updateSession(request: NextRequest): Promise<UpdateSession
   return {
     response,
     user,
-    roles: getRolesFromUser(user),
+    roles: await resolveVerifiedRoles(supabase),
   };
+}
+
+/**
+ * Roles for middleware gating come from the VERIFIED access token claims
+ * (`getClaims()`), never from the `User` object `getUser()` returns: the
+ * Custom Access Token Hook writes granted roles into the issued token's
+ * `app_metadata.roles`, not into `auth.users.raw_app_meta_data` (which is
+ * what `User.app_metadata` reflects) — see `getRolesFromClaims()`'s
+ * docstring. Authoritative privileged API mutations must continue to check
+ * `public.user_roles` server-side (`getRoles()`); this is a routing/gating
+ * fast path only.
+ *
+ * Fails closed on any `getClaims()` error, a null/missing claims payload,
+ * or a thrown exception (e.g. no session, or a JWKS fetch failure) —
+ * `roles=[]`, never a fallback to `user.app_metadata` or any other
+ * untrusted source.
+ */
+async function resolveVerifiedRoles(
+  supabase: ReturnType<typeof createServerClient>,
+): Promise<AppRole[]> {
+  try {
+    const { data, error } = await supabase.auth.getClaims();
+    if (error || !data) {
+      return [];
+    }
+    return getRolesFromClaims(data.claims);
+  } catch {
+    return [];
+  }
 }

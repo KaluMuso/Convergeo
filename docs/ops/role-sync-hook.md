@@ -3,10 +3,13 @@
 Auto-provisions vendor/admin roles into the JWT so login works end-to-end
 without manually editing Supabase App Metadata.
 
-**Do not enable this hook from AUTH-VENDOR-ROLE-01/02.** SQL function existence
-is not proof that Auth is invoking it. Live Dashboard hook registration could
-not be read via MCP (`HOOK_REGISTRATION_UNVERIFIED` for staging and
-production).
+**Staging: CONFIRMED ENABLED.** Live Auth logs prove `public.
+custom_access_token_hook` runs on token mint for staging and correctly
+writes `public.user_roles` into `claims.app_metadata.roles` (verified via a
+fresh Vendor OTP verification for the canonical approved-vendor persona).
+**Production registration status is unchanged and still unverified** — do
+not assume production behaves the same without independently confirming it
+there first.
 
 **Supabase projects (read-only verification):**
 
@@ -22,23 +25,37 @@ On both projects, `public.custom_access_token_hook` exists and
 
 ## The gap this closes
 
-The vendor and admin middleware gate on `user.app_metadata.roles`
-(`packages/auth/src/roles.ts` → `getRolesFromUser`). Signup only ever grants the
-`customer` role (`0010_profile_bootstrap.sql`). KYC approval now inserts
+The vendor and admin middleware gate on the roles carried in the **verified
+access token claims** (`packages/auth/src/middleware.ts` → `updateSession()`
+→ `supabase.auth.getClaims()` → `packages/auth/src/roles.ts` →
+`getRolesFromClaims(claims)`). Signup only ever grants the `customer` role
+(`0010_profile_bootstrap.sql`). KYC approval now inserts
 `public.user_roles.vendor` for `vendors.owner_user_id` (see
-`docs/ops/vendor-role-lifecycle.md`) — **that row does not appear in the JWT
-until this hook is registered**.
+`docs/ops/vendor-role-lifecycle.md`) — **that row does not appear in any
+issued token's claims until this hook is registered**.
 
 The hook in `0051_custom_access_token_role_hook.sql` reads `public.user_roles`
-on every token mint and injects the roles into `app_metadata.roles`. After it's
-enabled, granting a role is a single insert (already performed by
+on every token mint and injects the roles into `claims.app_metadata.roles`.
+After it's enabled, granting a role is a single insert (already performed by
 `ensure_vendor_owner_role`):
 
 ```sql
 insert into public.user_roles (user_id, role) values ('<uid>', 'vendor');
 ```
 
-(The user must re-authenticate or refresh their token for the new claim to land.)
+(The user must re-authenticate or refresh their token for the new claim to
+land.)
+
+**Historical note:** middleware previously read `user.app_metadata.roles`
+from the `User` object `getUser()` returns (`getRolesFromUser`) — a
+DIFFERENT object from the token claims this hook writes into. The hook
+mutates the issued token's claims only, never `auth.users.
+raw_app_meta_data` (which is what `User.app_metadata` reflects), so that
+old read path could never see a role granted this way even with the hook
+correctly enabled and running. `getRolesFromUser` still exists for the one
+other caller that genuinely needs the `User` object shape
+(`apps/customer/.../vendor-portal-hub-card.tsx`, a cosmetic UI decision,
+never a security gate) — middleware itself no longer calls it.
 
 ## Enable it (staging first — later operator work)
 
