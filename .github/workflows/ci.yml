@@ -161,6 +161,22 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         run: uv run pytest tests/evals -q
 
+  edge-functions:
+    name: Supabase edge functions (Deno)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.4
+
+      - name: Test send-sms-otp edge function
+        working-directory: supabase/functions/send-sms-otp
+        run: deno test --allow-env --no-lock index.test.ts
+
   staging-guards:
     name: Staging plane guards (STG-01)
     runs-on: ubuntu-latest
@@ -193,6 +209,9 @@ jobs:
       # here rather than only inside release-certify.
       - name: E2E staging probe unit tests
         run: node --test scripts/qa/self-test/e2e-staging-probe.test.mjs
+
+      - name: E2E test-OTP preflight unit tests
+        run: node --experimental-strip-types --test scripts/qa/self-test/preflight-e2e-test-otp.test.mjs
 
       # The gating policy decides whether a missing fixture fails a release
       # baseline or silently skips it, so it is a per-PR gate. It imports the

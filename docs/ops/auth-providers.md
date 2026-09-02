@@ -15,6 +15,7 @@ Phone OTP (primary), email+password, and Google OAuth. Secrets are env-only — 
 | `AT_API_KEY`                              | `send-sms-otp` edge function                                |
 | `AT_USERNAME`                             | `send-sms-otp` edge function                                |
 | `AT_SENDER_ID`                            | `send-sms-otp` edge function (alphanumeric sender ID)       |
+| `AT_ENVIRONMENT`                          | `send-sms-otp` edge function (`sandbox` or `live`)          |
 | `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID` | Supabase Auth Google provider                               |
 | `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET`    | Supabase Auth Google provider                               |
 
@@ -38,6 +39,40 @@ Africa's Talking is **not** a built-in Supabase SMS provider. Vergeo5 uses Supab
 2. URL (hosted): `https://<project-ref>.supabase.co/functions/v1/send-sms-otp`
 3. Click **Generate secret** → copy `v1,whsec_<base64>` → `SEND_SMS_HOOK_SECRET`.
 4. Deploy the edge function with `AT_*` secrets in the function environment.
+   Set `AT_ENVIRONMENT=sandbox` on staging and `AT_ENVIRONMENT=live` on
+   production. Unknown values fail closed at request time.
+
+**Operator confirmation (required before staging deploy):** confirm the Africa's
+Talking credentials stored in Supabase edge secrets match the selected
+`AT_ENVIRONMENT` (`sandbox` endpoint requires sandbox credentials; `live`
+endpoint requires live credentials). Do not assume credentials are sandbox-only.
+No secret values need to be revealed — only the credential class (SANDBOX vs
+LIVE) must be confirmed.
+
+### 2a. Hosted test-OTP map (E2E / synthetic personas only)
+
+The 65-test certification suite must **not** depend on real Africa's Talking
+delivery. Configure Supabase Auth's hosted **test OTP** map for the canonical
+synthetic persona phones (dashboard → Authentication → Phone → Test OTP):
+
+| Phone (digits, no `+`) | Purpose                                        |
+| ---------------------- | ---------------------------------------------- |
+| `260970000001`         | Customer synthetic persona (`CUSTOMER_A`)      |
+| `260970000004`         | Vendor synthetic persona (`APPROVED_VENDOR_A`) |
+
+Map each phone to the static code stored in GitHub secrets
+`E2E_CUSTOMER_TEST_OTP` / `E2E_VENDOR_TEST_OTP` (values never committed).
+When the map is active, Supabase short-circuits SMS delivery and does **not**
+invoke the Send SMS hook for those numbers.
+
+Verify with:
+
+```bash
+node scripts/ci/preflight-e2e-test-otp.mjs
+```
+
+Real SMS integration belongs in a separate focused staging smoke against a
+designated non-synthetic number — never in the strict E2E certification path.
 
 **Local (`supabase start`):** `supabase/config.toml` wires:
 
@@ -176,7 +211,7 @@ Enabled via `[auth.email] enable_signup = true` in `config.toml`. Configure prod
 
 ```bash
 # Edge function unit tests (mocked AT — no network)
-deno test --allow-env supabase/functions/send-sms-otp/index.test.ts
+deno test --allow-env --no-lock supabase/functions/send-sms-otp/index.test.ts
 
 # DB migrations through 0010 + pgTAP bootstrap test
 supabase db reset

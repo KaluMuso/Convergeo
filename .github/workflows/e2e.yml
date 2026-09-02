@@ -201,6 +201,16 @@ jobs:
           echo "E2E_FIXTURE_VERSION=${fixture_version}" >> "${GITHUB_ENV}"
           echo "canonical seed applied — fixture_version=${fixture_version}"
 
+      - name: Preflight synthetic test-OTP contract (strict certification)
+        if: ${{ inputs.pre_release }}
+        env:
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          E2E_CUSTOMER_TEST_OTP: ${{ secrets.E2E_CUSTOMER_TEST_OTP }}
+          E2E_VENDOR_TEST_OTP: ${{ secrets.E2E_VENDOR_TEST_OTP }}
+          CERTIFICATION_MODE: integrated-staging
+        run: node --experimental-strip-types scripts/ci/preflight-e2e-test-otp.mjs
+
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
