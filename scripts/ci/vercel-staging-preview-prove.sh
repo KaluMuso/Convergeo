@@ -31,6 +31,12 @@
 # Optional:
 #   GITHUB_OUTPUT — when set, writes url, deployment_id, sha outputs
 #   VERCEL_PREVIEW_PROVE_EVIDENCE — path for JSON evidence (default: $OUTPUT_DIR/evidence.json)
+#   CUSTOMER_STAGING_STABLE_HOSTNAME — customer portal only. When set, once
+#     this exact deployment is proven to match GITHUB_SHA, alias this stable
+#     same-site hostname (e.g. customer.staging.vergeo5.com) to it via the
+#     Vercel API — see docs/ops/staging-samesite-guest-cart.md. A no-op
+#     (stable_hostname_status="not_configured") until set; fail-closed once
+#     set (a failed alias fails this job, never silently skips).
 #
 set -euo pipefail
 
@@ -524,6 +530,54 @@ case "${health_verdict}" in
   *) die "unexpected health verdict: ${health_verdict}" ;;
 esac
 
+# ==========================================================================
+# OPTIONAL: alias the stable same-site staging hostname to THIS exact,
+# SHA-proven deployment (customer portal only — see
+# docs/ops/staging-samesite-guest-cart.md). Guest-cart SameSite=Lax cookies
+# cannot survive the cross-site *.vercel.app Preview topology (Run #62);
+# the fix is a stable hostname sharing the API's registrable domain, kept
+# pointed at the current candidate SHA on every deploy rather than a
+# manually-clicked Vercel alias.
+#
+# Fail-closed only once configured: absent CUSTOMER_STAGING_STABLE_HOSTNAME
+# this step is a complete no-op (today's behavior, unchanged) — it never
+# blocks a deploy that hasn't opted in. Once an operator sets it (after the
+# one-time DNS + Vercel custom-domain setup the doc describes), a failure
+# to alias is a hard failure of this job: a customer deploy must never
+# silently leave the stable hostname pointed at a stale/wrong deployment.
+# ==========================================================================
+stable_hostname_status="not_configured"
+stable_hostname_url=""
+if [ "${PORTAL}" = "customer" ] && [ -n "${CUSTOMER_STAGING_STABLE_HOSTNAME:-}" ]; then
+  stable_hostname="${CUSTOMER_STAGING_STABLE_HOSTNAME}"
+  case "${stable_hostname}" in
+    *.vercel.app)
+      die "CUSTOMER_STAGING_STABLE_HOSTNAME must not be a *.vercel.app Preview host — that is the cross-site origin this hostname exists to replace"
+      ;;
+    *.vergeo5.com) ;;
+    *)
+      die "CUSTOMER_STAGING_STABLE_HOSTNAME (${stable_hostname}) must share the vergeo5.com registrable domain the staging API uses, or SameSite=Lax guest-cart cookies still cannot work"
+      ;;
+  esac
+  log "aliasing stable hostname ${stable_hostname} -> deployment ${deployment_id} (candidate SHA ${GITHUB_SHA:0:12})"
+  alias_payload="$(printf '{"alias":"%s"}' "${stable_hostname}")"
+  if ! alias_response="$(vercel_api POST "v2/deployments/${deployment_id}/aliases?teamId=${VERCEL_ORG_ID}" "${alias_payload}")"; then
+    die "failed to alias ${stable_hostname} to deployment ${deployment_id} — is the domain added to the ${VERCEL_NAME} Vercel project yet? (one-time operator setup — see docs/ops/staging-samesite-guest-cart.md)"
+  fi
+  aliased_value="$(ALIAS_JSON="${alias_response}" python3 - <<'PY'
+import json, os
+doc = json.loads(os.environ["ALIAS_JSON"])
+print(doc.get("alias") or "")
+PY
+)"
+  if [ "${aliased_value}" != "${stable_hostname}" ]; then
+    die "alias response did not confirm ${stable_hostname} was pointed at deployment ${deployment_id} (got '${aliased_value}') — refusing to report this as aliased"
+  fi
+  stable_hostname_status="aliased"
+  stable_hostname_url="https://${stable_hostname}"
+  log "stable hostname aliased: ${stable_hostname_url} -> deployment ${deployment_id} (proven SHA ${GITHUB_SHA:0:12})"
+fi
+
 EVIDENCE_PATH="${VERCEL_PREVIEW_PROVE_EVIDENCE:-${OUTPUT_DIR}/evidence.json}"
 PORTAL="${PORTAL}" \
 VERCEL_NAME="${VERCEL_NAME}" \
@@ -535,6 +589,8 @@ commit_sha="${commit_sha}" \
 env_metadata_status="${env_metadata_status}" \
 bypass_source="${BYPASS_SOURCE}" \
 health_body_file="${health_body_file}" \
+stable_hostname_status="${stable_hostname_status}" \
+stable_hostname_url="${stable_hostname_url}" \
 EVIDENCE_PATH="${EVIDENCE_PATH}" \
 python3 - <<'PY'
 import json, os
@@ -563,6 +619,12 @@ doc = {
     "health_api_host": health_body.get("apiHost"),
     "env_metadata_status": os.environ["env_metadata_status"],
     "bypass_source": os.environ["bypass_source"],
+    # Customer-only, opt-in (see docs/ops/staging-samesite-guest-cart.md):
+    # "not_configured" until CUSTOMER_STAGING_STABLE_HOSTNAME is set,
+    # "aliased" once this exact SHA-proven deployment_id is confirmed
+    # pointed at by the stable same-site hostname.
+    "stable_hostname_status": os.environ["stable_hostname_status"],
+    "stable_hostname_url": os.environ["stable_hostname_url"] or None,
     "proved_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
 }
 with open(os.environ["EVIDENCE_PATH"], "w", encoding="utf-8") as fh:
@@ -580,6 +642,8 @@ if [ -n "${GITHUB_OUTPUT:-}" ]; then
     printf 'sha=%s\n' "${commit_sha}"
     printf 'env_metadata_status=%s\n' "${env_metadata_status}"
     printf 'health_verdict=%s\n' "${health_verdict}"
+    printf 'stable_hostname_status=%s\n' "${stable_hostname_status}"
+    printf 'stable_hostname_url=%s\n' "${stable_hostname_url}"
   } >> "${GITHUB_OUTPUT}"
 fi
 
