@@ -109,3 +109,118 @@ export function evaluateCookieEvidence(cookieObservedOnRequests) {
   const missing = required.filter((label) => !observed.has(label));
   return { ok: missing.length === 0, missing, observed: [...observed] };
 }
+
+/**
+ * Network-level Cookie-header observer for a Playwright `page.on("request")`
+ * stream.
+ *
+ * MUST use the COMPLETE header API. Playwright's synchronous
+ * `request.headers()` does NOT return security-related headers, including
+ * Cookie — that is documented Playwright behavior, not a bug to work around:
+ * `request.allHeaders()` (async) is the one that includes it. A prior
+ * version of this probe read `request.headers()["cookie"]`, which can never
+ * be truthy — a false-negative bug that could fail the probe even when
+ * SameSite persistence genuinely worked.
+ *
+ * `req` is duck-typed ({ url(): string, method(): string, allHeaders():
+ * Promise<Record<string,string>> }) — no Playwright import here, so this is
+ * unit-testable with a plain mock object; see
+ * scripts/qa/self-test/customer-stable-cart-probe-lib.test.mjs.
+ *
+ * `request` events are synchronous and `allHeaders()` is async, so a
+ * `page.on("request", handleRequest)` handler that merely calls
+ * `allHeaders()` without tracking the returned promise creates a race: the
+ * caller could evaluate cookie evidence before the header read resolves.
+ * `handleRequest` pushes every in-flight check into an internal list;
+ * `waitForPending()` awaits all of them, so a caller that calls it before
+ * reading `seen` can never observe that race.
+ *
+ * Labels the two `GET /cart` calls this probe makes by ORDER (the first
+ * `POST /cart/items` flips an internal flag), not just method+path, so the
+ * evidence genuinely distinguishes "cookie missing on the very first
+ * request, before any cart exists" (expected, not a defect) from "cookie
+ * missing on the request AFTER the cart was created" (exactly the Run #62
+ * symptom) — a same-labeled generic listener could not tell these apart.
+ *
+ * @param {{ apiOrigin: string }} args
+ */
+export function createCookieObserver({ apiOrigin }) {
+  /** @type {Set<string>} */
+  const seen = new Set();
+  /** @type {Promise<void>[]} */
+  const pending = [];
+  let sawCartItemsPost = false;
+
+  function labelFor(url, method) {
+    if (!url.startsWith(apiOrigin)) return null;
+    if (method === "POST" && url === `${apiOrigin}/cart/items`) return "POST /cart/items";
+    if (method === "GET" && url === `${apiOrigin}/cart`) {
+      return sawCartItemsPost ? "GET /cart (final)" : "GET /cart (initial)";
+    }
+    return null;
+  }
+
+  /** @param {{ url(): string, method(): string, allHeaders(): Promise<Record<string,string>> }} req */
+  function handleRequest(req) {
+    const url = req.url();
+    const method = req.method();
+    const label = labelFor(url, method);
+    if (!label) return;
+    if (label === "POST /cart/items") sawCartItemsPost = true;
+
+    const check = Promise.resolve(req.allHeaders())
+      .then((headers) => {
+        if (headers && headers["cookie"]) {
+          seen.add(label);
+        }
+      })
+      .catch(() => {
+        // A header-read race with page navigation/context teardown must not
+        // crash the probe — an unset label simply fails the cookie-evidence
+        // assertion downstream, which is the correct fail-closed outcome.
+      });
+    pending.push(check);
+  }
+
+  async function waitForPending() {
+    await Promise.all(pending);
+  }
+
+  return { handleRequest, waitForPending, seen };
+}
+
+/**
+ * Fail-closed check: did navigation actually land on the expected stable
+ * hostname, or did Vercel Deployment Protection redirect it away (typically
+ * to a vercel.com SSO/login page)? Pure string/URL comparison — no
+ * Playwright import, no live target needed to test it.
+ *
+ * @param {string} landedUrl the URL the browser actually ended up on (e.g.
+ *   the main navigation Response's `.url()`, or `page.url()`)
+ * @param {string} expectedOrigin
+ */
+export function detectProtectionChallenge(landedUrl, expectedOrigin) {
+  let landed;
+  try {
+    landed = new URL(landedUrl);
+  } catch {
+    return { blocked: true, reason: `navigation landed on an unparseable URL: ${landedUrl}` };
+  }
+  let expected;
+  try {
+    expected = new URL(expectedOrigin);
+  } catch {
+    return { blocked: true, reason: `expected origin is not a valid URL: ${expectedOrigin}` };
+  }
+  if (landed.hostname.toLowerCase() !== expected.hostname.toLowerCase()) {
+    return {
+      blocked: true,
+      reason:
+        `navigation landed on ${landed.hostname}, not the stable hostname ${expected.hostname} ` +
+        "— this is the signature of a Vercel Deployment Protection / SSO redirect, not the " +
+        "Customer app. Confirm VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER is set and valid for " +
+        "the convergeo-customer Vercel project.",
+    };
+  }
+  return { blocked: false };
+}

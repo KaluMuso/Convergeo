@@ -4,10 +4,26 @@ import { describe, it } from "node:test";
 import {
   assertSameSite,
   buildPdpPath,
+  createCookieObserver,
+  detectProtectionChallenge,
   evaluateCartIdentity,
   evaluateCookieEvidence,
   parseStableOrigin,
 } from "../../../e2e/scripts/customer-stable-cart-probe-lib.mjs";
+
+/** Minimal duck-typed mock of a Playwright Request — no @playwright/test import needed. */
+function mockRequest({ url, method, allHeaders }) {
+  return {
+    url: () => url,
+    method: () => method,
+    allHeaders: () => allHeaders(),
+  };
+}
+
+/** A promise that resolves on the next microtask/macrotask tick, to simulate a real async header read. */
+function tick(ms = 0) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 describe("customer-stable-cart-probe: parseStableOrigin", () => {
   it("missing value -> SKIPPED-eligible (missing:true)", () => {
@@ -169,5 +185,214 @@ describe("customer-stable-cart-probe: evaluateCookieEvidence", () => {
   it("accepts a plain array as well as a Set", () => {
     const r = evaluateCookieEvidence(["POST /cart/items", "GET /cart (final)"]);
     assert.equal(r.ok, true);
+  });
+});
+
+const API_ORIGIN = "https://api.staging.vergeo5.com";
+
+describe("customer-stable-cart-probe: createCookieObserver (Playwright request.headers() bug regression)", () => {
+  it("a request whose headers() lacks Cookie but allHeaders() carries it is NOT a false negative", async () => {
+    // The exact prior bug: reading `req.headers()["cookie"]` can never see
+    // Cookie (Playwright's documented behavior — headers() omits
+    // security-related headers). This proves the observer uses allHeaders()
+    // instead, by making headers() (if it were called) provably wrong.
+    const observer = createCookieObserver({ apiOrigin: API_ORIGIN });
+    const req = mockRequest({
+      url: `${API_ORIGIN}/cart/items`,
+      method: "POST",
+      allHeaders: async () => ({
+        "content-type": "application/json",
+        cookie: "vergeo_guest_cart=abc",
+      }),
+    });
+    // Sanity: this mock's headers() would be the buggy read — assert it's
+    // absent/wrong here so a regression that switches back to it is caught.
+    assert.equal(req.headers, undefined, "mock intentionally has no synchronous headers()");
+
+    observer.handleRequest(req);
+    await observer.waitForPending();
+
+    assert.ok(observer.seen.has("POST /cart/items"));
+  });
+
+  it("allHeaders() reporting Cookie is accepted for the final GET /cart", async () => {
+    const observer = createCookieObserver({ apiOrigin: API_ORIGIN });
+    observer.handleRequest(
+      mockRequest({
+        url: `${API_ORIGIN}/cart/items`,
+        method: "POST",
+        allHeaders: async () => ({ cookie: "vergeo_guest_cart=abc" }),
+      }),
+    );
+    observer.handleRequest(
+      mockRequest({
+        url: `${API_ORIGIN}/cart`,
+        method: "GET",
+        allHeaders: async () => ({ cookie: "vergeo_guest_cart=abc" }),
+      }),
+    );
+    await observer.waitForPending();
+
+    assert.ok(observer.seen.has("POST /cart/items"));
+    assert.ok(observer.seen.has("GET /cart (final)"));
+  });
+
+  it("no Cookie in the complete headers correctly fails (the real Run #62 signature)", async () => {
+    const observer = createCookieObserver({ apiOrigin: API_ORIGIN });
+    observer.handleRequest(
+      mockRequest({
+        url: `${API_ORIGIN}/cart/items`,
+        method: "POST",
+        allHeaders: async () => ({ cookie: "vergeo_guest_cart=abc" }),
+      }),
+    );
+    observer.handleRequest(
+      mockRequest({
+        url: `${API_ORIGIN}/cart`,
+        method: "GET",
+        allHeaders: async () => ({ "content-type": "application/json" }), // no cookie
+      }),
+    );
+    await observer.waitForPending();
+
+    assert.ok(observer.seen.has("POST /cart/items"));
+    assert.equal(observer.seen.has("GET /cart (final)"), false);
+  });
+
+  it("async header inspection completes before the caller evaluates evidence (race closed)", async () => {
+    const observer = createCookieObserver({ apiOrigin: API_ORIGIN });
+    let resolveHeaders;
+    const slowHeaders = new Promise((resolve) => {
+      resolveHeaders = () => resolve({ cookie: "vergeo_guest_cart=abc" });
+    });
+    observer.handleRequest(
+      mockRequest({
+        url: `${API_ORIGIN}/cart/items`,
+        method: "POST",
+        allHeaders: () => slowHeaders,
+      }),
+    );
+
+    // Immediately after handleRequest returns, the async header read has not
+    // resolved yet — this is the exact race the fix must close.
+    assert.equal(observer.seen.has("POST /cart/items"), false);
+
+    resolveHeaders();
+    await observer.waitForPending();
+
+    assert.ok(
+      observer.seen.has("POST /cart/items"),
+      "waitForPending() must await the in-flight read",
+    );
+  });
+
+  it("distinguishes the initial GET /cart (before any cart exists) from the final GET /cart (after POST)", async () => {
+    const observer = createCookieObserver({ apiOrigin: API_ORIGIN });
+    // Initial GET: legitimately no cookie yet — must not be mislabeled "final".
+    observer.handleRequest(
+      mockRequest({
+        url: `${API_ORIGIN}/cart`,
+        method: "GET",
+        allHeaders: async () => ({}),
+      }),
+    );
+    observer.handleRequest(
+      mockRequest({
+        url: `${API_ORIGIN}/cart/items`,
+        method: "POST",
+        allHeaders: async () => ({ cookie: "vergeo_guest_cart=abc" }),
+      }),
+    );
+    observer.handleRequest(
+      mockRequest({
+        url: `${API_ORIGIN}/cart`,
+        method: "GET",
+        allHeaders: async () => ({ cookie: "vergeo_guest_cart=abc" }),
+      }),
+    );
+    await observer.waitForPending();
+
+    assert.equal(observer.seen.has("GET /cart (initial)"), false);
+    assert.ok(observer.seen.has("GET /cart (final)"));
+  });
+
+  it("ignores requests to unrelated origins (e.g. the stable Customer hostname itself)", async () => {
+    const observer = createCookieObserver({ apiOrigin: API_ORIGIN });
+    observer.handleRequest(
+      mockRequest({
+        url: "https://customer.staging.vergeo5.com/en/p/foo",
+        method: "GET",
+        allHeaders: async () => ({ cookie: "vergeo_guest_cart=abc" }),
+      }),
+    );
+    await observer.waitForPending();
+    assert.equal(observer.seen.size, 0);
+  });
+
+  it("a rejected allHeaders() promise fails closed (not observed) rather than crashing the probe", async () => {
+    const observer = createCookieObserver({ apiOrigin: API_ORIGIN });
+    observer.handleRequest(
+      mockRequest({
+        url: `${API_ORIGIN}/cart/items`,
+        method: "POST",
+        allHeaders: async () => {
+          throw new Error("context torn down mid-navigation");
+        },
+      }),
+    );
+    await assert.doesNotReject(observer.waitForPending());
+    assert.equal(observer.seen.has("POST /cart/items"), false);
+  });
+
+  it("HttpOnly does not require document.cookie access — this module runs in plain Node, which has no `document` global at all", () => {
+    assert.equal(typeof globalThis.document, "undefined");
+  });
+
+  it("real async timing (setTimeout) still resolves correctly, not just a synchronously-resolved mock", async () => {
+    const observer = createCookieObserver({ apiOrigin: API_ORIGIN });
+    observer.handleRequest(
+      mockRequest({
+        url: `${API_ORIGIN}/cart`,
+        method: "GET",
+        allHeaders: async () => {
+          await tick(5);
+          return { cookie: "vergeo_guest_cart=abc" };
+        },
+      }),
+    );
+    await observer.waitForPending();
+    assert.ok(observer.seen.has("GET /cart (initial)"));
+  });
+});
+
+describe("customer-stable-cart-probe: detectProtectionChallenge", () => {
+  it("landing on the expected hostname is not blocked", () => {
+    const r = detectProtectionChallenge(
+      "https://customer.staging.vergeo5.com/en/p/foo",
+      "https://customer.staging.vergeo5.com",
+    );
+    assert.equal(r.blocked, false);
+  });
+
+  it("landing on a different host (e.g. Vercel SSO) is blocked", () => {
+    const r = detectProtectionChallenge(
+      "https://vercel.com/sso-api/foo?bar=baz",
+      "https://customer.staging.vergeo5.com",
+    );
+    assert.equal(r.blocked, true);
+    assert.match(r.reason, /vercel\.com/);
+  });
+
+  it("an unparseable landed URL is blocked (fails closed)", () => {
+    const r = detectProtectionChallenge("not a url", "https://customer.staging.vergeo5.com");
+    assert.equal(r.blocked, true);
+  });
+
+  it("hostname comparison is case-insensitive", () => {
+    const r = detectProtectionChallenge(
+      "https://Customer.Staging.VERGEO5.com/en",
+      "https://customer.staging.vergeo5.com",
+    );
+    assert.equal(r.blocked, false);
   });
 });
