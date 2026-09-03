@@ -514,6 +514,11 @@ jobs:
           # Backward-compatible fallback for portals whose project-specific
           # secret has not been created yet (see docs/ops/vercel-deployment-protection.md).
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          # Customer portal only, opt-in (docs/ops/staging-samesite-guest-cart.md):
+          # absent until an operator completes the one-time DNS + Vercel
+          # custom-domain setup, at which point the script aliases this
+          # SHA-proven deployment to it. A no-op for vendor/admin regardless.
+          CUSTOMER_STAGING_STABLE_HOSTNAME: ${{ vars.CUSTOMER_STAGING_STABLE_HOSTNAME }}
         run: |
           set -euo pipefail
           # Git-source Preview deployment (target defaults to preview).
@@ -595,15 +600,21 @@ jobs:
         env:
           STAGING_API_BASE_URL: ${{ secrets.STAGING_API_BASE_URL }}
           STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+          CUSTOMER_STAGING_STABLE_HOSTNAME: ${{ vars.CUSTOMER_STAGING_STABLE_HOSTNAME }}
         run: |
           set -euo pipefail
           BASE="${STAGING_API_BASE_URL:-https://${STAGING_API_HOST}}"
           case "$BASE" in
             *api.vergeo5.com*) echo "::error::CORS proof refused production API"; exit 1 ;;
           esac
+          extra_origin_args=()
+          if [ -n "${CUSTOMER_STAGING_STABLE_HOSTNAME:-}" ]; then
+            extra_origin_args=(--extra-origin "https://${CUSTOMER_STAGING_STABLE_HOSTNAME}")
+          fi
           bash scripts/ci/staging-cors-preview-probe.sh \
             --preview-dir /tmp/preview-evidence \
-            --api-base "${BASE}"
+            --api-base "${BASE}" \
+            "${extra_origin_args[@]}"
 
       - name: Native DB pool + service-role read proof (cart-location remediation)
         if: ${{ needs.prove-vercel-preview.result == 'success' }}
@@ -620,6 +631,41 @@ jobs:
             --preview-dir /tmp/preview-evidence \
             --api-base "${BASE}" \
             --listing-id f1000000-0000-4000-8000-000000000001
+
+      # ── Stable same-site Customer hostname: guest-cart browser proof ───────
+      # Opt-in only (docs/ops/staging-samesite-guest-cart.md): every step below
+      # is a no-op — no Node setup, no npm install, no browser download — until
+      # an operator sets the CUSTOMER_STAGING_STABLE_HOSTNAME repository/
+      # environment variable, after the one-time DNS + Vercel custom-domain
+      # setup the doc describes. Once set, this is a real gate: the
+      # prove-vercel-preview job already refused to report success unless its
+      # alias step confirmed this exact SHA's deployment is what the hostname
+      # points at, so a failure here is a genuine guest-cart regression, not a
+      # flake to route around.
+      - name: Setup Node (stable-hostname cart probe)
+        if: ${{ needs.prove-vercel-preview.result == 'success' && vars.CUSTOMER_STAGING_STABLE_HOSTNAME != '' }}
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install e2e dependencies (stable-hostname cart probe)
+        if: ${{ needs.prove-vercel-preview.result == 'success' && vars.CUSTOMER_STAGING_STABLE_HOSTNAME != '' }}
+        working-directory: e2e
+        run: npm ci
+
+      - name: Install Chromium (stable-hostname cart probe)
+        if: ${{ needs.prove-vercel-preview.result == 'success' && vars.CUSTOMER_STAGING_STABLE_HOSTNAME != '' }}
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Guest-cart SameSite proof on the stable Customer hostname
+        if: ${{ needs.prove-vercel-preview.result == 'success' && vars.CUSTOMER_STAGING_STABLE_HOSTNAME != '' }}
+        working-directory: e2e
+        env:
+          CUSTOMER_STAGING_STABLE_URL: https://${{ vars.CUSTOMER_STAGING_STABLE_HOSTNAME }}
+          CUSTOMER_STAGING_API_URL: ${{ secrets.STAGING_API_BASE_URL }}
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+        run: node --experimental-strip-types scripts/customer-stable-cart-probe.mjs
 
       - name: Health + fingerprint
         env:

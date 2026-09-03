@@ -31,6 +31,16 @@
 # Optional:
 #   GITHUB_OUTPUT — when set, writes url, deployment_id, sha outputs
 #   VERCEL_PREVIEW_PROVE_EVIDENCE — path for JSON evidence (default: $OUTPUT_DIR/evidence.json)
+#   CUSTOMER_STAGING_STABLE_HOSTNAME — customer portal only. When set, once
+#     this exact deployment is proven to match GITHUB_SHA, alias this stable
+#     same-site hostname (e.g. customer.staging.vergeo5.com) to it via the
+#     Vercel API, then independently prove the alias is LIVE by re-running
+#     the same app/env/buildId/apiHost health fingerprint against the
+#     hostname itself (a 2xx alias response alone does not prove edge
+#     propagation finished) — see docs/ops/staging-samesite-guest-cart.md.
+#     A no-op (stable_hostname_status="not_configured") until set;
+#     fail-closed once set (a failed alias or failed live fingerprint fails
+#     this job, never silently skips).
 #
 set -euo pipefail
 
@@ -243,6 +253,141 @@ print("\t".join([
     doc.get("id") or doc.get("uid") or "",
 ]))
 PY
+}
+
+# Independent LIVE proof that the stable hostname's alias genuinely serves
+# the SHA-proven deployment — a successful POST /aliases response alone does
+# not prove that (edge propagation can lag the API's 2xx). Runs the exact
+# same app/env/buildId/apiHost assertion the Preview URL proof above already
+# performed, against the stable hostname itself. Called only from the
+# customer-portal alias block below, after BYPASS_SECRET/portal_secret_var/
+# health_path/APP_ID/EXPECTED_API_HOST are already set by the primary health
+# check earlier in this script — reuses that SAME customer-project bypass
+# secret (Vercel issues one secret per project; the stable hostname aliases
+# a deployment in the same project the Preview URL already proved), never a
+# new or duplicated one. `die` on any failure — this is a hard gate.
+prove_stable_hostname_health() {
+  local hostname="$1"
+  local url="https://${hostname}${health_path}"
+  local body_file="${OUTPUT_DIR}/stable-health.json"
+  local headers_file="${OUTPUT_DIR}/stable-health-headers.txt"
+  local stderr_file="${OUTPUT_DIR}/stable-health-curl-stderr.txt"
+  local curl_config
+  curl_config="$(mktemp)"
+  chmod 600 "${curl_config}"
+  cleanup_stable_health_curl_config() { rm -f "${curl_config}"; }
+  trap cleanup_stable_health_curl_config EXIT
+  {
+    printf 'header = "Accept: application/json"\n'
+    if [ -n "${BYPASS_SECRET}" ]; then
+      printf 'header = "x-vercel-protection-bypass: %s"\n' "${BYPASS_SECRET}"
+    fi
+  } > "${curl_config}"
+
+  sanitized_stable_health_curl_error() {
+    local raw
+    raw="$(tr -d '\r' < "${stderr_file}" 2>/dev/null | tail -1)"
+    if [ -n "${BYPASS_SECRET}" ]; then
+      raw="${raw//${BYPASS_SECRET}/[redacted]}"
+    fi
+    printf '%s' "${raw}"
+  }
+
+  local http="" rc=1 exit_kind="NON_RETRYABLE_CURL" exit_name="" exit_retryable=""
+  local attempt
+  for attempt in 1 2 3 4 5; do
+    set +e
+    http="$(curl --config "${curl_config}" \
+      --silent --show-error --no-location \
+      --connect-timeout 15 --max-time 30 \
+      -o "${body_file}" -D "${headers_file}" -w '%{http_code}' \
+      "${url}" 2>"${stderr_file}")"
+    rc=$?
+    set -e
+
+    if [ "${rc}" -eq 0 ]; then
+      exit_kind="HTTP_RESPONSE"
+      break
+    fi
+
+    IFS=$'\t' read -r exit_kind exit_retryable exit_name < <(
+      python3 "${REPO_ROOT}/scripts/ci/vercel_preview_access.py" classify-curl-exit \
+        --code "${rc}"
+    )
+
+    log "stable-hostname health attempt ${attempt}/5 failed — curl exit ${rc} ${exit_name:-unknown} [${exit_kind}]: $(sanitized_stable_health_curl_error)"
+
+    if [ "${exit_retryable}" != "1" ]; then
+      break
+    fi
+    if [ "${attempt}" -lt 5 ]; then
+      sleep $((attempt * 3))
+    fi
+  done
+
+  cleanup_stable_health_curl_config
+  trap - EXIT
+
+  if [ "${rc}" -ne 0 ]; then
+    die "stable-hostname health probe against ${hostname} failed after 5 attempts — curl exit ${rc} ${exit_name:-unknown}: $(sanitized_stable_health_curl_error). No HTTP response was ever received — the alias/DNS/TLS may not have finished propagating."
+  fi
+
+  local location bypass_present_flag=0
+  location="$(sed -n 's/^[Ll]ocation:[[:space:]]*//p' "${headers_file}" | tr -d '\r' | tail -1)"
+  if [ -n "${BYPASS_SECRET}" ]; then
+    bypass_present_flag=1
+  fi
+
+  local verdict
+  verdict="$(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_access.py" classify \
+    --http-status "${http}" \
+    --location "${location}" \
+    --body-file "${body_file}" \
+    --bypass-present "${bypass_present_flag}" \
+    --print-detail)"
+
+  case "${http}" in
+    2??) ;;
+    *)
+      log "stable hostname response diagnostics: $(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_access.py" \
+        summarize-headers --headers-file "${headers_file}")"
+      ;;
+  esac
+
+  case "${verdict}" in
+    ok) ;;
+    blocked_external)
+      die "stable hostname ${hostname} is behind Vercel Deployment Protection and the automation bypass is missing or invalid (HTTP ${http}) — the alias resolves, but this probe cannot reach the application. Confirm the ${portal_secret_var} secret's project covers this custom domain too."
+      ;;
+    app_error)
+      die "stable hostname ${hostname} health returned HTTP ${http} — application runtime failure, not a protection challenge"
+      ;;
+    not_json)
+      die "stable hostname ${hostname} health returned HTTP 200 but the body is not a JSON object"
+      ;;
+    *)
+      die "stable hostname ${hostname} health returned HTTP ${http} (verdict ${verdict}) — want 200 with a JSON body"
+      ;;
+  esac
+
+  local health_verdict
+  health_verdict="$(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_health_verify.py" \
+    --app "${APP_ID}" \
+    --expected-api-host "${EXPECTED_API_HOST}" \
+    --expected-sha "${GITHUB_SHA}" \
+    --health-json-file "${body_file}")"
+
+  case "${health_verdict}" in
+    ok) log "stable hostname ${hostname} health OK — live fingerprint matches candidate SHA ${GITHUB_SHA:0:12}" ;;
+    status) die "stable hostname ${hostname} health status is not ok" ;;
+    app) die "stable hostname ${hostname} health app field does not match ${APP_ID}" ;;
+    env) die "stable hostname ${hostname} health env is not staging/preview" ;;
+    missing_host) die "stable hostname ${hostname} health apiHost is missing/empty" ;;
+    forbidden_host) die "stable hostname ${hostname} health apiHost resolves to production or localhost" ;;
+    host_mismatch) die "stable hostname ${hostname} health apiHost did not match the expected staging host" ;;
+    sha_mismatch) die "stable hostname ${hostname} health buildId does not match candidate SHA ${GITHUB_SHA} — the alias may still be propagating or points at a stale deployment" ;;
+    *) die "unexpected stable-hostname health verdict: ${health_verdict}" ;;
+  esac
 }
 
 log "creating Preview deployment for ${VERCEL_NAME} @ ${GITHUB_SHA:0:12}"
@@ -524,6 +669,58 @@ case "${health_verdict}" in
   *) die "unexpected health verdict: ${health_verdict}" ;;
 esac
 
+# ==========================================================================
+# OPTIONAL: alias the stable same-site staging hostname to THIS exact,
+# SHA-proven deployment (customer portal only — see
+# docs/ops/staging-samesite-guest-cart.md). Guest-cart SameSite=Lax cookies
+# cannot survive the cross-site *.vercel.app Preview topology (Run #62);
+# the fix is a stable hostname sharing the API's registrable domain, kept
+# pointed at the current candidate SHA on every deploy rather than a
+# manually-clicked Vercel alias.
+#
+# Fail-closed only once configured: absent CUSTOMER_STAGING_STABLE_HOSTNAME
+# this step is a complete no-op (today's behavior, unchanged) — it never
+# blocks a deploy that hasn't opted in. Once an operator sets it (after the
+# one-time DNS + Vercel custom-domain setup the doc describes), a failure
+# to alias is a hard failure of this job: a customer deploy must never
+# silently leave the stable hostname pointed at a stale/wrong deployment.
+# ==========================================================================
+stable_hostname_status="not_configured"
+stable_hostname_url=""
+if [ "${PORTAL}" = "customer" ] && [ -n "${CUSTOMER_STAGING_STABLE_HOSTNAME:-}" ]; then
+  stable_hostname="${CUSTOMER_STAGING_STABLE_HOSTNAME}"
+  case "${stable_hostname}" in
+    *.vercel.app)
+      die "CUSTOMER_STAGING_STABLE_HOSTNAME must not be a *.vercel.app Preview host — that is the cross-site origin this hostname exists to replace"
+      ;;
+    *.vergeo5.com) ;;
+    *)
+      die "CUSTOMER_STAGING_STABLE_HOSTNAME (${stable_hostname}) must share the vergeo5.com registrable domain the staging API uses, or SameSite=Lax guest-cart cookies still cannot work"
+      ;;
+  esac
+  log "aliasing stable hostname ${stable_hostname} -> deployment ${deployment_id} (candidate SHA ${GITHUB_SHA:0:12})"
+  alias_payload="$(printf '{"alias":"%s"}' "${stable_hostname}")"
+  if ! alias_response="$(vercel_api POST "v2/deployments/${deployment_id}/aliases?teamId=${VERCEL_ORG_ID}" "${alias_payload}")"; then
+    die "failed to alias ${stable_hostname} to deployment ${deployment_id} — is the domain added to the ${VERCEL_NAME} Vercel project yet? (one-time operator setup — see docs/ops/staging-samesite-guest-cart.md)"
+  fi
+  aliased_value="$(ALIAS_JSON="${alias_response}" python3 - <<'PY'
+import json, os
+doc = json.loads(os.environ["ALIAS_JSON"])
+print(doc.get("alias") or "")
+PY
+)"
+  if [ "${aliased_value}" != "${stable_hostname}" ]; then
+    die "alias response did not confirm ${stable_hostname} was pointed at deployment ${deployment_id} (got '${aliased_value}') — refusing to report this as aliased"
+  fi
+  log "alias API confirmed ${stable_hostname} -> deployment ${deployment_id} — now proving the LIVE fingerprint (a 2xx alias response alone does not prove edge propagation is complete)"
+  # Exact-SHA proof is deployment API identity (above) PLUS this live
+  # fingerprint — never alias-response trust alone.
+  prove_stable_hostname_health "${stable_hostname}"
+  stable_hostname_status="verified"
+  stable_hostname_url="https://${stable_hostname}"
+  log "stable hostname verified: ${stable_hostname_url} -> deployment ${deployment_id} (proven SHA ${GITHUB_SHA:0:12}, live fingerprint confirmed)"
+fi
+
 EVIDENCE_PATH="${VERCEL_PREVIEW_PROVE_EVIDENCE:-${OUTPUT_DIR}/evidence.json}"
 PORTAL="${PORTAL}" \
 VERCEL_NAME="${VERCEL_NAME}" \
@@ -535,6 +732,8 @@ commit_sha="${commit_sha}" \
 env_metadata_status="${env_metadata_status}" \
 bypass_source="${BYPASS_SOURCE}" \
 health_body_file="${health_body_file}" \
+stable_hostname_status="${stable_hostname_status}" \
+stable_hostname_url="${stable_hostname_url}" \
 EVIDENCE_PATH="${EVIDENCE_PATH}" \
 python3 - <<'PY'
 import json, os
@@ -563,6 +762,13 @@ doc = {
     "health_api_host": health_body.get("apiHost"),
     "env_metadata_status": os.environ["env_metadata_status"],
     "bypass_source": os.environ["bypass_source"],
+    # Customer-only, opt-in (see docs/ops/staging-samesite-guest-cart.md):
+    # "not_configured" until CUSTOMER_STAGING_STABLE_HOSTNAME is set,
+    # "verified" once this exact SHA-proven deployment_id is BOTH confirmed
+    # aliased AND proven live (app/env/buildId/apiHost fingerprint) on the
+    # stable same-site hostname — never alias-API-response trust alone.
+    "stable_hostname_status": os.environ["stable_hostname_status"],
+    "stable_hostname_url": os.environ["stable_hostname_url"] or None,
     "proved_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
 }
 with open(os.environ["EVIDENCE_PATH"], "w", encoding="utf-8") as fh:
@@ -580,6 +786,8 @@ if [ -n "${GITHUB_OUTPUT:-}" ]; then
     printf 'sha=%s\n' "${commit_sha}"
     printf 'env_metadata_status=%s\n' "${env_metadata_status}"
     printf 'health_verdict=%s\n' "${health_verdict}"
+    printf 'stable_hostname_status=%s\n' "${stable_hostname_status}"
+    printf 'stable_hostname_url=%s\n' "${stable_hostname_url}"
   } >> "${GITHUB_OUTPUT}"
 fi
 

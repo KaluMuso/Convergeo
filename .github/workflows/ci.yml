@@ -238,6 +238,13 @@ jobs:
       - name: E2E strict-mode surface-wait contract tests
         run: node --test scripts/qa/self-test/e2e-strict-surface-wait.test.mjs
 
+      # Run #62 SameSite remediation: pure request/assertion logic for the
+      # opt-in stable-hostname guest-cart browser probe
+      # (e2e/scripts/customer-stable-cart-probe.mjs) — no Playwright import,
+      # so this runs from the repo root with no e2e/ install.
+      - name: Customer stable-hostname cart probe unit tests
+        run: node --test scripts/qa/self-test/customer-stable-cart-probe-lib.test.mjs
+
   release-control:
     name: Release control contract (RELCTRL-01)
     runs-on: ubuntu-latest
