@@ -120,7 +120,7 @@ const labels = {
   },
   miniCart: {
     title: cartMessages.title,
-    close: cartMessages.close,
+    close: cartMessages.miniCartClose,
     viewCart: cartMessages.viewCart,
     checkout: cartMessages.checkoutCta,
     empty: cartMessages.emptyTitle,
@@ -135,7 +135,7 @@ const labels = {
     vendorGroup: cartMessages.vendorGroup,
     loadError: cartMessages.loadErrorTitle,
     retry: cartMessages.loadErrorRetry,
-    addedToCart: cartMessages.addedToCart,
+    addedToCart: cartMessages.added,
     openCart: cartMessages.openCart,
   },
 } as unknown as Parameters<typeof CartPageView>[0]["labels"];
