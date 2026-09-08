@@ -1,6 +1,7 @@
 import { path } from "../fixtures/env";
 import {
   FIXTURE_GROUP_ID,
+  FIXTURE_ORDER_ID,
   FIXTURE_PAYMENT_ID,
   FORBIDDEN_SUCCESS_COPY,
   assertNoAccidentalRealMoney,
@@ -125,6 +126,40 @@ test.describe("checkout · false-success", () => {
     await installMockBuyerSession(page);
     await mockPaymentStatus(page, statusFixture({ status: "success", cod: false }));
 
+    /**
+     * Order-navigation isolation — deliberate, and scoped to THIS test.
+     *
+     * On a `success` poll the app correctly calls `router.replace` to
+     * `/account/orders/{order_id}` (ussd-wait.tsx): the order page, not this
+     * one, is where escrow/ledger state is authoritative. That destination is
+     * out of contract here. This spec's subject is payment-outcome HONESTY —
+     * that a provider success renders as "confirming", never as a final paid
+     * claim. Real purchase/order integration is other journeys' job.
+     *
+     * Following the redirect would drag this assertion into Account
+     * server-auth and order-data behaviour using FIXTURE_ORDER_ID, which the
+     * canonical staging seed deliberately never creates (scripts/seed_staging.py
+     * seeds no orders or payments), so the destination could only ever resolve
+     * to an unauthenticated/not-found surface — Run #68 captured exactly that:
+     * a final snapshot of the Customer "Sign in" page instead of the confirming
+     * state. That is an artefact of the fixture, not a product defect, and it
+     * must not be papered over by weakening Account authentication, enabling
+     * NEXT_PUBLIC_E2E_MOCK_SESSION on deployed staging, adding a production
+     * test bypass, changing Customer middleware, or suppressing the redirect in
+     * application code. None of those happen here.
+     *
+     * Instead the navigation is observed and stopped at the network boundary —
+     * the narrowest mechanism available — which both PROVES the app attempted
+     * the correct destination and holds the confirming surface still long
+     * enough to assert it. Route interception covers the RSC fetch and any
+     * document-navigation fallback alike.
+     */
+    const orderNavigations: string[] = [];
+    await page.route("**/account/orders**", async (route) => {
+      orderNavigations.push(route.request().url());
+      await route.abort();
+    });
+
     await page.goto(path(`/checkout/pending/${FIXTURE_GROUP_ID}`));
 
     // Brief honest confirming surface (CUST-08) before order redirect.
@@ -134,6 +169,13 @@ test.describe("checkout · false-success", () => {
     await expect(page.getByTestId("ussd-wait")).toHaveCount(0);
     await expect(page.getByTestId("payment-card-success")).toHaveCount(0);
     await expect(confirming.getByRole("heading", { name: /order confirmed/i })).toHaveCount(0);
+    await expect(page.getByText(FORBIDDEN_SUCCESS_COPY)).toHaveCount(0);
+
+    // The redirect to authoritative order state must actually be attempted —
+    // "confirming" is a transition, not a terminal screen. Asserting the
+    // attempt keeps that contract honest even though we stop the navigation.
+    await expect.poll(() => orderNavigations.length, { timeout: 10_000 }).toBeGreaterThan(0);
+    expect(orderNavigations.some((url) => url.includes(FIXTURE_ORDER_ID))).toBe(true);
   });
 
   test("COD confirmation never uses MoMo/card prepaid success copy", async ({ page }) => {
