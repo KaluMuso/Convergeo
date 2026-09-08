@@ -97,9 +97,58 @@ names take precedence wherever both are present.
   value.
 - Resolution is presence-based, one source at a time; two secret values are
   never compared, so nothing can reveal whether projects share a secret.
-- `e2e/fixtures/test-base.ts` injects the matching secret per origin only when a
-  portal-specific secret is configured; otherwise the single global
-  `extraHTTPHeaders` behavior is unchanged.
+- `e2e/fixtures/test-base.ts` is the ONLY place the browser attaches a bypass
+  header. It injects the matching secret per origin whenever any bypass
+  credential is configured — a portal-specific one or the legacy repository-wide
+  fallback. `e2e/playwright.config.ts` sets no `extraHTTPHeaders` at all:
+  that header set is context-level, so a credential placed there is sent to
+  Supabase, the staging FastAPI, Cloudinary and every third-party origin the
+  browser touches.
+
+## Origin contract for the Playwright per-origin injection (fails closed)
+
+`e2e/fixtures/portal-bypass.ts` is the single decision point, and it is
+deliberately exhaustive:
+
+| Request origin                                            | Credential sent                       |
+| --------------------------------------------------------- | ------------------------------------- |
+| `E2E_BASE_URL` origin (customer)                          | customer secret                       |
+| `E2E_VENDOR_BASE_URL` origin                              | vendor secret                         |
+| `E2E_ADMIN_BASE_URL` origin                               | admin secret                          |
+| anything else — Supabase, staging FastAPI, CDN, 3rd party | **none**; request forwarded untouched |
+| unparseable URL                                           | **none**; request forwarded untouched |
+
+Two properties hold this:
+
+1. `test-base.ts` registers its route with an **origin matcher**, so non-portal
+   requests are never intercepted or rebuilt at all — not a `**/*` catch-all.
+2. `resolveBypassSecret` returns `""` for every unmatched origin, and the caller
+   treats `""` as "leave this request completely alone".
+
+A rewritten request is rebuilt from `await request.allHeaders()`, never
+`request.headers()`: `route.fallback({ headers })` REPLACES the whole header
+map, and the synchronous accessor omits security-sensitive headers, so
+rebuilding from it strips the Supabase session `Cookie` off every intercepted
+request. `scripts/qa/self-test/e2e-portal-bypass.test.mjs` gates both
+properties in ordinary CI.
+
+### Legacy-only setups
+
+`VERCEL_AUTOMATION_BYPASS_SECRET` alone remains a fully supported
+configuration. With no portal-specific secret set, all three portals resolve to
+that one value and the per-origin fixture still engages — it just sends the same
+legacy credential to each portal origin, and nothing to anything else.
+
+### If the fail-closed contract was ever absent
+
+Before this contract landed, an unmatched origin received the **customer**
+credential — i.e. `VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER`, or
+`VERCEL_AUTOMATION_BYPASS_SECRET` when the customer-specific secret is unset.
+Treat that as credential exposure: rotate the `convergeo-customer` project's
+Protection Bypass for Automation secret in Vercel, then update those two GitHub
+secret NAMES with the new value. The vendor and admin secrets were only ever
+returned for their own matched origins, so this remediation does not imply they
+were exposed.
 
 ## Precedence
 

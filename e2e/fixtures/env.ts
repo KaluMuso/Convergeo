@@ -8,6 +8,7 @@
  * are skipped with a clear annotation rather than failing.
  */
 
+import { originOf, resolveBypassSecret, type PortalBypassConfig } from "./portal-bypass";
 import { SEED } from "./seed.generated";
 
 export function flag(name: string): boolean {
@@ -42,8 +43,13 @@ export const ADMIN_BASE_URL = str("E2E_ADMIN_BASE_URL", BASE_URL);
  * runs on its own origin it needs its own secret.
  *
  * Each resolves portal-specific first, then the pre-existing repository-wide
- * secret as a backward-compatible fallback. Presence is checked per source;
- * values are never compared to each other.
+ * secret as a backward-compatible fallback, then nothing. Presence is checked
+ * per source; values are never compared to each other.
+ *
+ * Per portal, therefore:
+ *   VERCEL_AUTOMATION_BYPASS_SECRET_<PORTAL>  ->  that portal's own secret
+ *   else VERCEL_AUTOMATION_BYPASS_SECRET      ->  the legacy shared fallback
+ *   else ""                                   ->  no bypass for that portal
  */
 export const BYPASS_SECRET_FALLBACK = str("VERCEL_AUTOMATION_BYPASS_SECRET");
 export const BYPASS_SECRET_CUSTOMER = str(
@@ -60,42 +66,46 @@ export const BYPASS_SECRET_ADMIN = str(
 );
 
 /**
- * True when at least one portal-specific secret is configured. Only then does
- * the suite need per-origin header injection; otherwise the single global
- * `extraHTTPHeaders` in playwright.config.ts is already correct and behavior
- * is unchanged. Presence-based — never compares two secret values.
+ * True when ANY bypass credential is configured — portal-specific OR the
+ * legacy repository-wide fallback.
+ *
+ * This is the fixture's activation gate, and it deliberately does NOT require
+ * a portal-specific secret. The per-origin fixture is now the ONLY place a
+ * bypass header is attached in the browser (playwright.config.ts no longer
+ * sets one globally), so a legacy-only setup must engage it too — otherwise
+ * a legacy-only run would send no bypass at all and every protected portal
+ * would 401/SSO-redirect. Presence-based; never compares two secret values.
  */
-export function hasPortalSpecificBypass(): boolean {
+export function hasBypassCredential(): boolean {
   return (
-    str("VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER").length > 0 ||
-    str("VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR").length > 0 ||
-    str("VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN").length > 0
+    BYPASS_SECRET_FALLBACK.length > 0 ||
+    BYPASS_SECRET_CUSTOMER.length > 0 ||
+    BYPASS_SECRET_VENDOR.length > 0 ||
+    BYPASS_SECRET_ADMIN.length > 0
   );
 }
 
-function originOf(raw: string): string {
-  try {
-    return new URL(raw).origin.toLowerCase();
-  } catch {
-    return "";
-  }
+/** Snapshot of the per-portal origin/secret pairing this run is configured with. */
+export function portalBypassConfig(): PortalBypassConfig {
+  return {
+    customer: { baseUrl: BASE_URL, secret: BYPASS_SECRET_CUSTOMER },
+    vendor: { baseUrl: VENDOR_BASE_URL, secret: BYPASS_SECRET_VENDOR },
+    admin: { baseUrl: ADMIN_BASE_URL, secret: BYPASS_SECRET_ADMIN },
+  };
 }
 
 /**
  * Pick the bypass secret for whichever portal origin a request targets.
- * Returns "" when nothing is configured for that origin (caller then leaves
- * the request's headers untouched).
+ *
+ * Fails CLOSED: anything that is not one of the three configured portal
+ * origins — Supabase, the staging FastAPI, a CDN, a third party, an
+ * unparseable URL — resolves to "" and the caller then leaves that request's
+ * headers completely untouched. The previous fallback handed the CUSTOMER
+ * credential to every unmatched origin, which is a credential-exposure
+ * condition rather than a convenience. See `portal-bypass.ts`.
  */
 export function bypassSecretForUrl(url: string): string {
-  const target = originOf(url);
-  if (!target) return BYPASS_SECRET_CUSTOMER;
-  // Customer is matched FIRST: VENDOR_BASE_URL/ADMIN_BASE_URL default to the
-  // customer base, so on a collision (portal origin not separately configured)
-  // the origin is genuinely the customer app and must get the customer secret.
-  if (target === originOf(BASE_URL)) return BYPASS_SECRET_CUSTOMER;
-  if (target === originOf(VENDOR_BASE_URL)) return BYPASS_SECRET_VENDOR;
-  if (target === originOf(ADMIN_BASE_URL)) return BYPASS_SECRET_ADMIN;
-  return BYPASS_SECRET_CUSTOMER;
+  return resolveBypassSecret(url, portalBypassConfig());
 }
 
 /** Build a locale-prefixed absolute URL against an explicit origin. */

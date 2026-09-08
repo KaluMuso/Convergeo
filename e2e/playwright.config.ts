@@ -10,13 +10,24 @@ import { CERTIFICATION_VIEWPORTS } from "./fixtures/viewports";
 
 const isCI = !!process.env.CI;
 
-/** Vercel Deployment Protection bypass for automation (header only — never in URLs). */
-const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim() ?? "";
-const protectionHeaders: Record<string, string> = {};
-if (bypassSecret) {
-  protectionHeaders["x-vercel-protection-bypass"] = bypassSecret;
-  protectionHeaders["x-vercel-set-bypass-cookie"] = "true";
-}
+/**
+ * Vercel Deployment Protection bypass is deliberately ABSENT from this file.
+ *
+ * `extraHTTPHeaders` is a CONTEXT-level header set: Playwright attaches it to
+ * every request the browser makes, portal or not. Injecting the bypass secret
+ * here therefore sent a Vercel credential to Supabase, the staging FastAPI,
+ * Cloudinary, fonts, analytics — every origin a page happened to touch.
+ *
+ * There is now exactly ONE browser injection mechanism: the origin-aware
+ * `portalBypass` fixture in fixtures/test-base.ts, which resolves the right
+ * project's secret per origin (portal-specific first, then the legacy
+ * repository-wide `VERCEL_AUTOMATION_BYPASS_SECRET`) and attaches nothing at
+ * all to an unmatched origin. The legacy secret is still fully supported —
+ * it is just routed per origin instead of broadcast.
+ *
+ * scripts/qa/self-test/e2e-portal-bypass.test.mjs fails if a bypass header
+ * reappears in this file.
+ */
 
 /**
  * Use the pre-installed Chromium when `PW_CHROMIUM_PATH` is exported (this build
@@ -111,7 +122,6 @@ export default defineConfig({
   outputDir: "results/artifacts",
   use: {
     baseURL: BASE_URL,
-    extraHTTPHeaders: protectionHeaders,
     trace: "on-first-retry",
     video: "retain-on-failure",
     screenshot: "only-on-failure",

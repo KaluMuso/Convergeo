@@ -1,7 +1,8 @@
 import { test as base, expect } from "@playwright/test";
 
-import { bypassSecretForUrl, hasPortalSpecificBypass, THROTTLE } from "./env";
+import { hasBypassCredential, portalBypassConfig, THROTTLE } from "./env";
 import { applyFast3G } from "./network";
+import { applyPortalBypass, isPortalOrigin, resolveBypassSecret } from "./portal-bypass";
 import { verifyFixtureVersion } from "./seed";
 
 type Fixtures = {
@@ -20,31 +21,38 @@ type Fixtures = {
  */
 export const test = base.extend<Fixtures>({
   /**
+   * The ONE place a Vercel Deployment Protection bypass header is attached in
+   * the browser.
+   *
    * Vercel issues a "Protection Bypass for Automation" secret per project, and
    * specs navigate the vendor app on its own origin (vendor-sell,
-   * event-ticket), so a single global header can be wrong for that origin.
-   * `playwright.config.ts`'s `extraHTTPHeaders` still covers the common
-   * single-secret setup; this fixture only engages when a portal-specific
-   * secret is actually configured, rewriting the bypass header to match the
-   * origin each request targets. Secrets are never logged or asserted on.
+   * event-ticket), so a single global header can be wrong for that origin —
+   * and `extraHTTPHeaders` would broadcast it to Supabase and every third
+   * party besides. `playwright.config.ts` therefore sets no bypass header at
+   * all; this fixture resolves the right project's secret per origin
+   * (portal-specific, else the legacy repository-wide fallback) and engages
+   * whenever ANY bypass credential is configured, legacy-only included.
+   * Secrets are never logged or asserted on.
    */
   portalBypass: [
     async ({ context }, use) => {
-      if (hasPortalSpecificBypass()) {
-        await context.route("**/*", async (route) => {
-          const secret = bypassSecretForUrl(route.request().url());
-          if (!secret) {
-            await route.fallback();
-            return;
-          }
-          await route.fallback({
-            headers: {
-              ...route.request().headers(),
-              "x-vercel-protection-bypass": secret,
-              "x-vercel-set-bypass-cookie": "true",
-            },
-          });
-        });
+      if (hasBypassCredential()) {
+        const config = portalBypassConfig();
+        // Matcher, not a `**/*` catch-all: only the three portal origins are
+        // intercepted at all, so a request to Supabase, the staging FastAPI or
+        // any third party is never rebuilt and can never carry a Vercel
+        // credential. `applyPortalBypass` fails closed a second time on the
+        // secret itself.
+        await context.route(
+          (url) => isPortalOrigin(url.toString(), config),
+          async (route) => {
+            // The header rewrite lives in the pure helper (unit-tested by
+            // scripts/qa/self-test/e2e-portal-bypass.test.mjs), including the
+            // `allHeaders()` — not `headers()` — rule that keeps the Supabase
+            // session Cookie on every rewritten request.
+            await applyPortalBypass(route, (target) => resolveBypassSecret(target, config));
+          },
+        );
       }
       await use();
     },

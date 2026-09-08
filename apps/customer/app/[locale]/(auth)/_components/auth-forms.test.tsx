@@ -100,6 +100,80 @@ describe("PhoneForm", () => {
       expect(push).toHaveBeenCalledWith("/en/otp?phone=%2B260971234567");
     });
   });
+
+  /**
+   * Run #70 product defect: middleware bounces a protected route to
+   * `/{locale}/login?next=<destination>`, the login page reads `next`
+   * correctly, and AuthLoginShell forwarded it to the email/OAuth legs — but
+   * PhoneForm built its OTP URL from `{ phone }` alone, so the phone leg threw
+   * the destination away and every phone login landed on the portal home.
+   */
+  it("carries a safe next destination into the OTP URL", async () => {
+    const user = userEvent.setup();
+    render(<PhoneForm locale="en" labels={phoneLabels} otpPath="/otp" nextParam="/en/services" />);
+
+    await user.type(screen.getByLabelText("Phone number"), "971234567");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/en/otp?phone=%2B260971234567&next=%2Fen%2Fservices");
+    });
+  });
+
+  it("preserves a deeper destination path unchanged", async () => {
+    const user = userEvent.setup();
+    render(
+      <PhoneForm
+        locale="en"
+        labels={phoneLabels}
+        otpPath="/otp"
+        nextParam="/en/events/synthetic-event/scan"
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Phone number"), "971234567");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalled();
+    });
+    const target = new URL(String(push.mock.calls.at(-1)?.[0]), "https://vendor.test");
+    expect(target.pathname).toBe("/en/otp");
+    expect(target.searchParams.get("phone")).toBe("+260971234567");
+    expect(target.searchParams.get("next")).toBe("/en/events/synthetic-event/scan");
+  });
+
+  it("without a next param, the OTP URL is byte-identical to the previous behavior", async () => {
+    const user = userEvent.setup();
+    render(<PhoneForm locale="en" labels={phoneLabels} otpPath="/otp" nextParam={null} />);
+
+    await user.type(screen.getByLabelText("Phone number"), "971234567");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/en/otp?phone=%2B260971234567");
+    });
+  });
+
+  it("refuses to echo an attacker-controlled external destination into the OTP URL", async () => {
+    const user = userEvent.setup();
+    render(
+      <PhoneForm
+        locale="en"
+        labels={phoneLabels}
+        otpPath="/otp"
+        nextParam="https://evil.test/steal"
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Phone number"), "971234567");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/en/otp?phone=%2B260971234567");
+    });
+    expect(String(push.mock.calls.at(-1)?.[0])).not.toContain("evil.test");
+  });
 });
 
 describe("OtpForm", () => {

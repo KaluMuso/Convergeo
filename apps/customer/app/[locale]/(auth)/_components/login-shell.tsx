@@ -121,7 +121,17 @@ export function AuthLoginShell({
       </header>
 
       {phoneEnabled && method === "phone" ? (
-        <PhoneForm locale={locale} labels={labels.phone} otpPath={otpPath} mode="login" />
+        // `nextParam` must reach PhoneForm too: middleware bounces a protected
+        // route to `/{locale}/login?next=…`, and without this the phone leg
+        // built its OTP URL from `{ phone }` alone and silently dropped the
+        // destination that email/OAuth both keep.
+        <PhoneForm
+          locale={locale}
+          labels={labels.phone}
+          otpPath={otpPath}
+          mode="login"
+          nextParam={nextParam}
+        />
       ) : (
         <EmailForm
           locale={locale}

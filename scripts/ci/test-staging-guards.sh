@@ -754,11 +754,40 @@ else
 fi
 
 # ...while the multi-request browser flow KEEPS the cookie, per Vercel's docs.
-if grep -q 'x-vercel-set-bypass-cookie' e2e/playwright.config.ts \
-  && grep -q 'x-vercel-set-bypass-cookie' e2e/fixtures/test-base.ts; then
+# The bypass moved OUT of playwright.config.ts entirely: extraHTTPHeaders is
+# context-level, so a credential set there is broadcast to Supabase, the
+# staging API and every third-party origin the browser touches. The single
+# injection point is now the origin-aware fixture, which is where the cookie
+# request must live.
+if grep -q 'x-vercel-set-bypass-cookie' e2e/fixtures/portal-bypass.ts \
+  && grep -q 'SET_BYPASS_COOKIE_HEADER' e2e/fixtures/portal-bypass.ts \
+  && grep -q 'applyPortalBypass' e2e/fixtures/test-base.ts; then
   ok "Playwright browser flow preserves the bypass cookie for follow-up requests"
 else
   bad "Playwright must keep x-vercel-set-bypass-cookie for multi-request browser continuity"
+fi
+
+# ...and the config must NOT broadcast a bypass credential to every origin.
+# Comment lines are stripped first: the file DOCUMENTS why the bypass was
+# removed from it, and naming the trap must not trip the guard against it.
+if sed -E '/^[[:space:]]*(\*|\/\*|\/\/)/d' e2e/playwright.config.ts \
+  | grep -qE 'x-vercel-(protection-bypass|set-bypass-cookie)|extraHTTPHeaders|VERCEL_AUTOMATION_BYPASS_SECRET'; then
+  bad "playwright.config.ts must not inject a Vercel bypass credential globally (extraHTTPHeaders reaches every origin)"
+elif grep -q 'hasBypassCredential()' e2e/fixtures/test-base.ts \
+  && grep -q 'BYPASS_SECRET_FALLBACK' e2e/fixtures/env.ts; then
+  ok "bypass injection is per-origin only; the legacy repository-wide secret stays supported as a fallback"
+else
+  bad "the per-origin fixture must engage on any bypass credential, including the legacy fallback"
+fi
+
+# Run #70: a rewritten request must be rebuilt from allHeaders() (which keeps
+# Cookie), and an unmatched origin must receive NO portal credential at all.
+if grep -q 'await request.allHeaders()' e2e/fixtures/portal-bypass.ts \
+  && ! grep -qE '\.\.\.[^;{},]{0,200}\.headers\(\)' e2e/fixtures/test-base.ts e2e/fixtures/portal-bypass.ts \
+  && ! grep -qE '^\s*return BYPASS_SECRET_CUSTOMER;' e2e/fixtures/env.ts; then
+  ok "portal bypass rewrites from allHeaders() and hands no credential to unmatched origins"
+else
+  bad "portal bypass must rebuild requests from allHeaders() and fail closed on unmatched origins"
 fi
 
 # Redirect diagnostics must never surface a cookie value, a secret, or a query.
