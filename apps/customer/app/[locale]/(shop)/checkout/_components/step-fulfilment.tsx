@@ -7,6 +7,7 @@ import { Button } from "@vergeo/ui/src/button";
 import { FormField } from "@vergeo/ui/src/form-field";
 import { Input } from "@vergeo/ui/src/input";
 import { Radio } from "@vergeo/ui/src/radio";
+import { Skeleton } from "@vergeo/ui/src/skeleton";
 import { Stepper } from "@vergeo/ui/src/stepper";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -678,12 +679,60 @@ export function CheckoutShell({ locale, labels: messageLabels }: CheckoutShellPr
   ];
 
   if (sessionLoading || initializing) {
+    /**
+     * Layout-stability contract (Run #68 CLS).
+     *
+     * This state used to be a heading plus a one-line "Loading…" paragraph,
+     * which then swapped for the full Stepper + first-step surface once the
+     * session resolved — a shift of most of the viewport that pushed checkout
+     * CLS to ~0.21 against a 0.20 ceiling, failing or passing purely on whether
+     * the swap landed inside the sampling window.
+     *
+     * The fix is structural, not a threshold change: render the SAME outer
+     * spacing and the REAL Stepper (its geometry is then exact by construction,
+     * not an approximation, and the four step labels are true static chrome —
+     * no fabricated content), then reserve the first step's shape with
+     * skeletons. Heights come from the primitives and the real form controls
+     * they stand in for, so this stays correct at 360/390 and on desktop
+     * without pinning viewport-sized boxes.
+     */
     return (
-      <div className="space-y-4">
+      <div className="space-y-6" aria-busy="true">
         <h1 className="font-display text-h1 text-display-ink">{labels.pageTitle}</h1>
-        <p className="font-body text-sm text-text-3" aria-live="polite">
-          {labels.loading}
-        </p>
+
+        <Stepper
+          steps={steps}
+          currentStep={step}
+          stepAnnouncement={(current, total) => labels.stepAnnouncement(current, total)}
+          doneIndicator={labels.doneIndicator}
+          LinkComponent={Link}
+        />
+
+        {/*
+         * Reserves the first step's geometry: section heading + subtitle, a
+         * labelled field row (lg Input is h-12), and a full-width lg Button
+         * (h-12). Matches StepContact's `space-y-4` / `gap-4` rhythm.
+         */}
+        <div className="space-y-4" data-testid="checkout-loading-skeleton">
+          <p className="sr-only" aria-live="polite">
+            {labels.loading}
+          </p>
+          <div className="space-y-1" aria-hidden="true">
+            <Skeleton shape="line" width="60%" height="1.5rem" />
+            <Skeleton shape="line" width="80%" />
+          </div>
+          <div className="flex flex-col gap-4" aria-hidden="true">
+            <div className="space-y-2">
+              <Skeleton shape="line" width="8rem" />
+              <div className="flex gap-2">
+                <Skeleton width="6rem" height="3rem" />
+                <Skeleton className="min-w-0 flex-1" height="3rem" />
+              </div>
+              <Skeleton shape="line" width="70%" />
+            </div>
+            <Skeleton height="3rem" />
+          </div>
+        </div>
       </div>
     );
   }
