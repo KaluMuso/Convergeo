@@ -1,15 +1,17 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const signInWithOtp = vi.fn(async () => ({ error: null }));
+
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   getBrowserClient: async () => ({
     auth: {
-      signInWithOtp: vi.fn(),
+      signInWithOtp,
       verifyOtp: vi.fn(),
       exchangeCodeForSession: vi.fn(),
       getSession: vi.fn(),
@@ -23,8 +25,10 @@ vi.mock("../../account/_components/account-api", () => ({
   createAccountApiClient: () => ({ getPreferences: vi.fn() }),
 }));
 
+const push = vi.fn();
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ push, refresh: vi.fn() }),
 }));
 
 afterEach(() => {
@@ -138,5 +142,78 @@ describe("AuthLoginShell — per-portal phone/email contract", () => {
 
     expect(screen.getByRole("textbox", { name: /phone|mobile/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Use email instead" })).toBeInTheDocument();
+  });
+});
+
+/**
+ * Run #70: the vendor portal imports this exact shell (apps/vendor's login
+ * page.tsx), and its middleware bounces protected routes to
+ * `/{locale}/login?next=…`. The shell forwarded `nextParam` to EmailForm and
+ * GoogleButton but not to PhoneForm, so the phone leg — the ONLY leg the
+ * vendor portal's E2E journey uses — lost the destination between /login and
+ * /otp. These cases pin the wiring for both portals that render phone login.
+ */
+describe("AuthLoginShell — next destination survives the phone OTP leg", () => {
+  it("vendor: the shell's nextParam reaches the OTP URL PhoneForm builds", async () => {
+    const user = userEvent.setup();
+    render(
+      <AuthLoginShell
+        locale="en"
+        variant="vendor"
+        labels={labels}
+        defaultNextPath="/en"
+        nextParam="/en/services"
+        showSignupLink={false}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Phone number"), "971234567");
+    await user.click(screen.getByRole("button", { name: "Continue with phone" }));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/en/otp?phone=%2B260971234567&next=%2Fen%2Fservices");
+    });
+  });
+
+  it("customer: the same wiring holds on the customer portal", async () => {
+    const user = userEvent.setup();
+    render(
+      <AuthLoginShell
+        locale="en"
+        variant="customer"
+        labels={labels}
+        defaultNextPath="/en"
+        nextParam="/en/account/orders"
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Phone number"), "971234567");
+    await user.click(screen.getByRole("button", { name: "Continue with phone" }));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith(
+        "/en/otp?phone=%2B260971234567&next=%2Fen%2Faccount%2Forders",
+      );
+    });
+  });
+
+  it("no next param: the OTP URL is unchanged from the previous behavior", async () => {
+    const user = userEvent.setup();
+    render(
+      <AuthLoginShell
+        locale="en"
+        variant="vendor"
+        labels={labels}
+        defaultNextPath="/en"
+        showSignupLink={false}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Phone number"), "971234567");
+    await user.click(screen.getByRole("button", { name: "Continue with phone" }));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/en/otp?phone=%2B260971234567");
+    });
   });
 });

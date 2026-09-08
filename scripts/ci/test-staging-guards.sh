@@ -754,11 +754,26 @@ else
 fi
 
 # ...while the multi-request browser flow KEEPS the cookie, per Vercel's docs.
+# The per-origin rewrite path moved into e2e/fixtures/portal-bypass.ts (run #70
+# remediation), so the header literal now lives there and test-base.ts must
+# still route its requests through that helper.
 if grep -q 'x-vercel-set-bypass-cookie' e2e/playwright.config.ts \
-  && grep -q 'x-vercel-set-bypass-cookie' e2e/fixtures/test-base.ts; then
+  && grep -q 'x-vercel-set-bypass-cookie' e2e/fixtures/portal-bypass.ts \
+  && grep -q 'SET_BYPASS_COOKIE_HEADER' e2e/fixtures/portal-bypass.ts \
+  && grep -q 'applyPortalBypass' e2e/fixtures/test-base.ts; then
   ok "Playwright browser flow preserves the bypass cookie for follow-up requests"
 else
   bad "Playwright must keep x-vercel-set-bypass-cookie for multi-request browser continuity"
+fi
+
+# Run #70: a rewritten request must be rebuilt from allHeaders() (which keeps
+# Cookie), and an unmatched origin must receive NO portal credential at all.
+if grep -q 'await request.allHeaders()' e2e/fixtures/portal-bypass.ts \
+  && ! grep -qE '\.\.\.[^;{},]{0,200}\.headers\(\)' e2e/fixtures/test-base.ts e2e/fixtures/portal-bypass.ts \
+  && ! grep -qE '^\s*return BYPASS_SECRET_CUSTOMER;' e2e/fixtures/env.ts; then
+  ok "portal bypass rewrites from allHeaders() and hands no credential to unmatched origins"
+else
+  bad "portal bypass must rebuild requests from allHeaders() and fail closed on unmatched origins"
 fi
 
 # Redirect diagnostics must never surface a cookie value, a secret, or a query.

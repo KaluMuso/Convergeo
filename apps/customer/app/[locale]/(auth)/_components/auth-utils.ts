@@ -121,6 +121,33 @@ export function resolvePostAuthPath(
   return sanitizeNextPath(locale, nextParam, fallbackPath);
 }
 
+/**
+ * Sentinel that `sanitizeNextPath` can never legitimately return: every value
+ * it accepts starts with "/". Used only to tell "rejected" apart from "a real
+ * destination" without inventing a second sanitizer.
+ */
+const REJECTED_NEXT = "__vergeo_rejected_next__";
+
+/**
+ * The `next` value safe to carry FORWARD through an intermediate auth step
+ * (login -> /otp), or null when there is nothing safe to carry.
+ *
+ * This does NOT replace the post-auth guard: `navigateAfterPortalAuth` still
+ * sanitizes at redirect time, so an attacker-supplied absolute URL could never
+ * become an external redirect either way. It exists so an unsafe value is
+ * dropped at the first hop instead of being echoed into the next URL.
+ */
+export function forwardableNextParam(
+  locale: string,
+  nextParam: string | null | undefined,
+): string | null {
+  if (!nextParam) {
+    return null;
+  }
+  const resolved = sanitizeNextPath(locale, nextParam, REJECTED_NEXT);
+  return resolved === REJECTED_NEXT ? null : resolved;
+}
+
 export const ONBOARDING_INTERESTS = [
   "electronics",
   "fashion",

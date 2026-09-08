@@ -10,6 +10,7 @@ import { useState, type FormEvent } from "react";
 import {
   DEFAULT_COUNTRY_CODE,
   formatE164,
+  forwardableNextParam,
   isValidZambianMobile,
   normalizeNationalNumber,
   parseAuthError,
@@ -35,9 +36,16 @@ type PhoneFormProps = {
   labels: PhoneFormLabels;
   otpPath: string;
   mode?: "login" | "signup";
+  /**
+   * Destination the visitor was bounced here from (middleware's
+   * `/{locale}/login?next=…`). Carried into the OTP URL so phone login lands
+   * where email/OAuth already do — the OTP page reads it back and hands it to
+   * `navigateAfterPortalAuth`, which re-sanitizes it before redirecting.
+   */
+  nextParam?: string | null;
 };
 
-export function PhoneForm({ locale, labels, otpPath, mode = "login" }: PhoneFormProps) {
+export function PhoneForm({ locale, labels, otpPath, mode = "login", nextParam }: PhoneFormProps) {
   const router = useRouter();
   const [countryCode] = useState(DEFAULT_COUNTRY_CODE);
   const [nationalNumber, setNationalNumber] = useState("");
@@ -81,6 +89,13 @@ export function PhoneForm({ locale, labels, otpPath, mode = "login" }: PhoneForm
       }
 
       const params = new URLSearchParams({ phone });
+      // Only a destination that already survives the post-auth sanitizer is
+      // echoed forward; an external/absolute `next` is dropped here rather
+      // than round-tripped through the OTP URL.
+      const forwardNext = forwardableNextParam(locale, nextParam);
+      if (forwardNext) {
+        params.set("next", forwardNext);
+      }
       router.push(`/${locale}${otpPath}?${params.toString()}`);
     } catch (response) {
       if (response instanceof Response && response.status === 429) {

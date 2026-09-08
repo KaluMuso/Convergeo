@@ -101,6 +101,44 @@ names take precedence wherever both are present.
   portal-specific secret is configured; otherwise the single global
   `extraHTTPHeaders` behavior is unchanged.
 
+## Origin contract for the Playwright per-origin injection (fails closed)
+
+`e2e/fixtures/portal-bypass.ts` is the single decision point, and it is
+deliberately exhaustive:
+
+| Request origin                                            | Credential sent                       |
+| --------------------------------------------------------- | ------------------------------------- |
+| `E2E_BASE_URL` origin (customer)                          | customer secret                       |
+| `E2E_VENDOR_BASE_URL` origin                              | vendor secret                         |
+| `E2E_ADMIN_BASE_URL` origin                               | admin secret                          |
+| anything else — Supabase, staging FastAPI, CDN, 3rd party | **none**; request forwarded untouched |
+| unparseable URL                                           | **none**; request forwarded untouched |
+
+Two properties hold this:
+
+1. `test-base.ts` registers its route with an **origin matcher**, so non-portal
+   requests are never intercepted or rebuilt at all — not a `**/*` catch-all.
+2. `resolveBypassSecret` returns `""` for every unmatched origin, and the caller
+   treats `""` as "leave this request completely alone".
+
+A rewritten request is rebuilt from `await request.allHeaders()`, never
+`request.headers()`: `route.fallback({ headers })` REPLACES the whole header
+map, and the synchronous accessor omits security-sensitive headers, so
+rebuilding from it strips the Supabase session `Cookie` off every intercepted
+request. `scripts/qa/self-test/e2e-portal-bypass.test.mjs` gates both
+properties in ordinary CI.
+
+### If the fail-closed contract was ever absent
+
+Before this contract landed, an unmatched origin received the **customer**
+credential — i.e. `VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER`, or
+`VERCEL_AUTOMATION_BYPASS_SECRET` when the customer-specific secret is unset.
+Treat that as credential exposure: rotate the `convergeo-customer` project's
+Protection Bypass for Automation secret in Vercel, then update those two GitHub
+secret NAMES with the new value. The vendor and admin secrets were only ever
+returned for their own matched origins, so this remediation does not imply they
+were exposed.
+
 ## Precedence
 
 For each portal, highest first:

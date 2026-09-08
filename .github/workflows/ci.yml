@@ -238,6 +238,13 @@ jobs:
       - name: E2E strict-mode surface-wait contract tests
         run: node --test scripts/qa/self-test/e2e-strict-surface-wait.test.mjs
 
+      # Run #70 request-boundary remediation: the per-origin Vercel bypass
+      # must (a) never hand a portal credential to an unmatched origin and
+      # (b) rebuild a rewritten request from allHeaders(), so the Supabase
+      # session Cookie survives. Pure logic — no browser, no secrets.
+      - name: E2E portal-bypass request-boundary tests
+        run: node --experimental-strip-types --test scripts/qa/self-test/e2e-portal-bypass.test.mjs
+
       # Run #62 SameSite remediation: pure request/assertion logic for the
       # opt-in stable-hostname guest-cart browser probe
       # (e2e/scripts/customer-stable-cart-probe.mjs) — no Playwright import,

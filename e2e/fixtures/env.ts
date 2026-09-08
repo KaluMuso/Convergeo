@@ -8,6 +8,7 @@
  * are skipped with a clear annotation rather than failing.
  */
 
+import { originOf, resolveBypassSecret, type PortalBypassConfig } from "./portal-bypass";
 import { SEED } from "./seed.generated";
 
 export function flag(name: string): boolean {
@@ -73,29 +74,27 @@ export function hasPortalSpecificBypass(): boolean {
   );
 }
 
-function originOf(raw: string): string {
-  try {
-    return new URL(raw).origin.toLowerCase();
-  } catch {
-    return "";
-  }
+/** Snapshot of the per-portal origin/secret pairing this run is configured with. */
+export function portalBypassConfig(): PortalBypassConfig {
+  return {
+    customer: { baseUrl: BASE_URL, secret: BYPASS_SECRET_CUSTOMER },
+    vendor: { baseUrl: VENDOR_BASE_URL, secret: BYPASS_SECRET_VENDOR },
+    admin: { baseUrl: ADMIN_BASE_URL, secret: BYPASS_SECRET_ADMIN },
+  };
 }
 
 /**
  * Pick the bypass secret for whichever portal origin a request targets.
- * Returns "" when nothing is configured for that origin (caller then leaves
- * the request's headers untouched).
+ *
+ * Fails CLOSED: anything that is not one of the three configured portal
+ * origins — Supabase, the staging FastAPI, a CDN, a third party, an
+ * unparseable URL — resolves to "" and the caller then leaves that request's
+ * headers completely untouched. The previous fallback handed the CUSTOMER
+ * credential to every unmatched origin, which is a credential-exposure
+ * condition rather than a convenience. See `portal-bypass.ts`.
  */
 export function bypassSecretForUrl(url: string): string {
-  const target = originOf(url);
-  if (!target) return BYPASS_SECRET_CUSTOMER;
-  // Customer is matched FIRST: VENDOR_BASE_URL/ADMIN_BASE_URL default to the
-  // customer base, so on a collision (portal origin not separately configured)
-  // the origin is genuinely the customer app and must get the customer secret.
-  if (target === originOf(BASE_URL)) return BYPASS_SECRET_CUSTOMER;
-  if (target === originOf(VENDOR_BASE_URL)) return BYPASS_SECRET_VENDOR;
-  if (target === originOf(ADMIN_BASE_URL)) return BYPASS_SECRET_ADMIN;
-  return BYPASS_SECRET_CUSTOMER;
+  return resolveBypassSecret(url, portalBypassConfig());
 }
 
 /** Build a locale-prefixed absolute URL against an explicit origin. */
