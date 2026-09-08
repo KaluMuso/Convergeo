@@ -131,6 +131,112 @@ describe("resolveBypassSecret — fails closed on every unmatched origin", () =>
   });
 });
 
+/**
+ * Legacy-only setup: `VERCEL_AUTOMATION_BYPASS_SECRET` is the sole credential.
+ *
+ * This is the shape env.ts produces when no portal-specific secret is set —
+ * every portal resolves to the same legacy fallback. It must keep working:
+ * removing the bypass from playwright.config.ts's `extraHTTPHeaders` made the
+ * per-origin fixture the ONLY injection mechanism, so a legacy-only run that
+ * did not engage it would send no bypass at all.
+ */
+const LEGACY_ONLY_CONFIG = {
+  customer: { baseUrl: "https://customer.staging.test", secret: "legacy-credential" },
+  vendor: { baseUrl: "https://vendor.staging.test", secret: "legacy-credential" },
+  admin: { baseUrl: "https://admin.staging.test", secret: "legacy-credential" },
+};
+
+/** Vendor configured with its own secret; customer/admin still on the legacy fallback. */
+const MIXED_CONFIG = {
+  customer: { baseUrl: "https://customer.staging.test", secret: "legacy-credential" },
+  vendor: { baseUrl: "https://vendor.staging.test", secret: "vendor-credential" },
+  admin: { baseUrl: "https://admin.staging.test", secret: "legacy-credential" },
+};
+
+describe("legacy-only fallback — every portal, and nothing else", () => {
+  it("Customer, Vendor and Admin each receive the legacy credential", () => {
+    assert.equal(
+      resolveBypassSecret("https://customer.staging.test/en/cart", LEGACY_ONLY_CONFIG),
+      "legacy-credential",
+    );
+    assert.equal(
+      resolveBypassSecret("https://vendor.staging.test/en/login", LEGACY_ONLY_CONFIG),
+      "legacy-credential",
+    );
+    assert.equal(
+      resolveBypassSecret("https://admin.staging.test/en/disputes", LEGACY_ONLY_CONFIG),
+      "legacy-credential",
+    );
+  });
+
+  it("no unmatched origin receives the legacy credential", () => {
+    for (const url of [
+      "https://abcdefgh.supabase.co/auth/v1/verify",
+      "https://api.staging.test/v1/orders",
+      "https://res.cloudinary.com/demo/image/upload/x.webp",
+      "https://o0.ingest.sentry.io/api/1/envelope/",
+      "https://www.google-analytics.com/g/collect",
+      "https://fonts.gstatic.com/s/inter.woff2",
+      "https://evil.example/collect",
+    ]) {
+      assert.equal(
+        resolveBypassSecret(url, LEGACY_ONLY_CONFIG),
+        "",
+        `legacy-only must NOT hand a credential to ${url}`,
+      );
+    }
+  });
+
+  it("a malformed URL receives nothing under legacy-only too", () => {
+    for (const url of ["", "   ", "not-a-url", "/en/cart", "://missing-scheme"]) {
+      assert.equal(resolveBypassSecret(url, LEGACY_ONLY_CONFIG), "");
+    }
+  });
+
+  it("only the three portal origins are even intercepted under legacy-only", () => {
+    assert.ok(isPortalOrigin("https://customer.staging.test/en", LEGACY_ONLY_CONFIG));
+    assert.ok(isPortalOrigin("https://vendor.staging.test/en", LEGACY_ONLY_CONFIG));
+    assert.ok(isPortalOrigin("https://admin.staging.test/en", LEGACY_ONLY_CONFIG));
+    assert.equal(isPortalOrigin("https://abcdefgh.supabase.co/", LEGACY_ONLY_CONFIG), false);
+    assert.equal(isPortalOrigin("https://api.staging.test/", LEGACY_ONLY_CONFIG), false);
+  });
+});
+
+describe("precedence — a portal-specific secret overrides the legacy fallback", () => {
+  it("only the portal that has its own secret stops using the fallback", () => {
+    assert.equal(
+      resolveBypassSecret("https://vendor.staging.test/en/services", MIXED_CONFIG),
+      "vendor-credential",
+    );
+    assert.equal(
+      resolveBypassSecret("https://customer.staging.test/en", MIXED_CONFIG),
+      "legacy-credential",
+    );
+    assert.equal(
+      resolveBypassSecret("https://admin.staging.test/en", MIXED_CONFIG),
+      "legacy-credential",
+    );
+  });
+
+  it("the override never leaks to an unmatched origin", () => {
+    assert.equal(resolveBypassSecret("https://abcdefgh.supabase.co/auth/v1", MIXED_CONFIG), "");
+    assert.equal(resolveBypassSecret("https://api.staging.test/v1/health", MIXED_CONFIG), "");
+  });
+
+  it("env.ts encodes that precedence with str(portal, legacyFallback)", () => {
+    const source = readFileSync(path.join(REPO_ROOT, "e2e/fixtures/env.ts"), "utf8");
+    for (const portal of ["CUSTOMER", "VENDOR", "ADMIN"]) {
+      const pattern = new RegExp(
+        `str\\(\\s*"VERCEL_AUTOMATION_BYPASS_SECRET_${portal}"\\s*,\\s*BYPASS_SECRET_FALLBACK\\s*,?\\s*\\)`,
+      );
+      assert.ok(
+        pattern.test(source),
+        `env.ts must resolve ${portal} as portal-specific first, then BYPASS_SECRET_FALLBACK`,
+      );
+    }
+  });
+});
+
 describe("route matcher — only portal origins are intercepted at all", () => {
   it("recognizes exactly the three configured portal origins", () => {
     assert.deepEqual(portalOrigins(CONFIG), [
@@ -386,6 +492,60 @@ describe("request-rewriting guard", () => {
     assert.ok(
       source.includes("applyPortalBypass"),
       "test-base.ts must delegate the header rewrite to the unit-tested helper",
+    );
+  });
+
+  /**
+   * The amendment's core contract: `extraHTTPHeaders` is CONTEXT-level, so a
+   * bypass header set there reaches Supabase, the staging FastAPI, Cloudinary,
+   * analytics — every origin the browser touches. There must be exactly one
+   * injection mechanism, and it is the origin-aware fixture.
+   */
+  it("playwright.config.ts injects NO bypass header globally", () => {
+    const source = stripComments(
+      readFileSync(path.join(REPO_ROOT, "e2e/playwright.config.ts"), "utf8"),
+    );
+    assert.ok(
+      !/x-vercel-protection-bypass/i.test(source),
+      "playwright.config.ts must not set x-vercel-protection-bypass — extraHTTPHeaders is " +
+        "context-level and would broadcast the credential to every origin",
+    );
+    assert.ok(
+      !/x-vercel-set-bypass-cookie/i.test(source),
+      "playwright.config.ts must not set x-vercel-set-bypass-cookie either",
+    );
+    assert.ok(
+      !/VERCEL_AUTOMATION_BYPASS_SECRET/.test(source),
+      "playwright.config.ts must not read any Vercel bypass secret at all",
+    );
+    assert.ok(
+      !/extraHTTPHeaders/.test(source),
+      "playwright.config.ts must not set extraHTTPHeaders — the per-origin fixture is the " +
+        "only browser injection mechanism",
+    );
+  });
+
+  it("the fixture engages on ANY bypass credential, legacy fallback included", () => {
+    const env = readFileSync(path.join(REPO_ROOT, "e2e/fixtures/env.ts"), "utf8");
+    const gate = env.slice(
+      env.indexOf("export function hasBypassCredential"),
+      env.indexOf("export function portalBypassConfig"),
+    );
+    assert.ok(gate.length > 0, "env.ts must export hasBypassCredential");
+    assert.ok(
+      gate.includes("BYPASS_SECRET_FALLBACK"),
+      "hasBypassCredential must count the legacy repository-wide secret — with no global " +
+        "extraHTTPHeaders, a legacy-only run that skips the fixture sends no bypass at all",
+    );
+
+    const base = readFileSync(path.join(REPO_ROOT, "e2e/fixtures/test-base.ts"), "utf8");
+    assert.ok(
+      base.includes("hasBypassCredential()"),
+      "test-base.ts must gate on hasBypassCredential(), not on portal-specific secrets only",
+    );
+    assert.ok(
+      !base.includes("hasPortalSpecificBypass"),
+      "test-base.ts must not reintroduce the portal-specific-only activation gate",
     );
   });
 

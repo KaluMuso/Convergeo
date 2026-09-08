@@ -43,8 +43,13 @@ export const ADMIN_BASE_URL = str("E2E_ADMIN_BASE_URL", BASE_URL);
  * runs on its own origin it needs its own secret.
  *
  * Each resolves portal-specific first, then the pre-existing repository-wide
- * secret as a backward-compatible fallback. Presence is checked per source;
- * values are never compared to each other.
+ * secret as a backward-compatible fallback, then nothing. Presence is checked
+ * per source; values are never compared to each other.
+ *
+ * Per portal, therefore:
+ *   VERCEL_AUTOMATION_BYPASS_SECRET_<PORTAL>  ->  that portal's own secret
+ *   else VERCEL_AUTOMATION_BYPASS_SECRET      ->  the legacy shared fallback
+ *   else ""                                   ->  no bypass for that portal
  */
 export const BYPASS_SECRET_FALLBACK = str("VERCEL_AUTOMATION_BYPASS_SECRET");
 export const BYPASS_SECRET_CUSTOMER = str(
@@ -61,16 +66,22 @@ export const BYPASS_SECRET_ADMIN = str(
 );
 
 /**
- * True when at least one portal-specific secret is configured. Only then does
- * the suite need per-origin header injection; otherwise the single global
- * `extraHTTPHeaders` in playwright.config.ts is already correct and behavior
- * is unchanged. Presence-based — never compares two secret values.
+ * True when ANY bypass credential is configured — portal-specific OR the
+ * legacy repository-wide fallback.
+ *
+ * This is the fixture's activation gate, and it deliberately does NOT require
+ * a portal-specific secret. The per-origin fixture is now the ONLY place a
+ * bypass header is attached in the browser (playwright.config.ts no longer
+ * sets one globally), so a legacy-only setup must engage it too — otherwise
+ * a legacy-only run would send no bypass at all and every protected portal
+ * would 401/SSO-redirect. Presence-based; never compares two secret values.
  */
-export function hasPortalSpecificBypass(): boolean {
+export function hasBypassCredential(): boolean {
   return (
-    str("VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER").length > 0 ||
-    str("VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR").length > 0 ||
-    str("VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN").length > 0
+    BYPASS_SECRET_FALLBACK.length > 0 ||
+    BYPASS_SECRET_CUSTOMER.length > 0 ||
+    BYPASS_SECRET_VENDOR.length > 0 ||
+    BYPASS_SECRET_ADMIN.length > 0
   );
 }
 
