@@ -61,6 +61,8 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const skippedRef = useRef(false);
+  /** Single-flight lock for OTP verification — see handleVerifyOtp. */
+  const verifyingRef = useRef(false);
 
   const completeContactStep = async (accessToken: string, contactPhone?: string) => {
     const client = createApiClient({
@@ -142,11 +144,22 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   };
 
   const handleVerifyOtp = async (otpCode: string) => {
-    if (otpCode.length !== 6 || loading) {
+    // Same single-flight contract as the standalone OtpForm, for the same
+    // reason: OtpField auto-submits on the sixth digit AND the Verify button
+    // below can fire, while `loading` state only lands on the next render
+    // commit — so a redundant interaction in that window would send a second
+    // verifyOtp for one single-use code. The ref is synchronous, so acquiring
+    // it before the first await actually closes the window.
+    if (otpCode.length !== 6 || verifyingRef.current) {
       return;
     }
+    verifyingRef.current = true;
+
     setErrorMessage(null);
     setLoading(true);
+
+    let codeAccepted = false;
+
     try {
       const supabase = await getBrowserClient();
       const { data, error } = await supabase.auth.verifyOtp({
@@ -165,18 +178,30 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
         } else {
           setErrorMessage(labels.generic);
         }
+        // Recoverable — let the buyer correct and resubmit the code.
+        verifyingRef.current = false;
+        setLoading(false);
         return;
       }
       const token = data.session?.access_token;
       if (!token) {
         setErrorMessage(labels.generic);
+        verifyingRef.current = false;
+        setLoading(false);
         return;
       }
+
+      codeAccepted = true;
+
+      // Held through the step transition: the code is spent, so re-arming
+      // submission could only ever fire a doomed second verifyOtp.
       await completeContactStep(token, phone);
     } catch {
-      setErrorMessage(labels.generic);
-    } finally {
+      if (!codeAccepted) {
+        verifyingRef.current = false;
+      }
       setLoading(false);
+      setErrorMessage(labels.generic);
     }
   };
 

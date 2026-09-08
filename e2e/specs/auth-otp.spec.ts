@@ -71,10 +71,12 @@ test.describe("auth · phone OTP", () => {
     for (const digit of customerOtp.staticCode.slice(0, 6).split("")) {
       await page.keyboard.type(digit);
     }
-    await page
-      .getByRole("button", { name: /verify|submit|continue/i })
-      .first()
-      .click();
+
+    // No explicit Verify click — same reason as fixtures/otp-login.ts. The
+    // Customer and Vendor OTP pages render the same shared OtpForm, whose
+    // OtpField auto-submits on the sixth digit, so verification is already in
+    // flight here. Clicking on top of it drove a duplicate verifyOtp for one
+    // single-use code (Run #68). The bounded assertion below is unchanged.
 
     // A signed-in session lands off the auth routes (home/account).
     await expect(page).not.toHaveURL(/login|otp|verify/i, { timeout: 20_000 });

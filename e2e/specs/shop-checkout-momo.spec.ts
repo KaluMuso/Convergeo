@@ -2,6 +2,7 @@ import { clickAddToCartAndAwaitOutcome } from "../fixtures/add-to-cart";
 import { customerOtp, lenco, path, whatsappMockReady } from "../fixtures/env";
 import { resolveGate } from "../fixtures/gating";
 import { completeSandboxMomoPush, sandboxEnabled } from "../fixtures/lenco";
+import { captureSearchStateOnFailure } from "../fixtures/search-diagnostics";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
 import { expectWhatsAppMessage } from "../fixtures/whatsapp";
@@ -23,7 +24,14 @@ test.describe("shop · checkout · momo", () => {
 
     // 2. Search for the seeded, buyable product.
     await page.goto(path(`/search?q=${encodeURIComponent(SEED.searchTerm)}`));
-    await expect(page.getByTestId("search-results-list")).toBeVisible();
+    // Assertion unchanged and still strict — no fallback selector, no extra
+    // wait. The wrapper only records WHICH honest state the page was in if it
+    // fails, so a repeat of Run #68's single search retry tells us whether the
+    // canonical term genuinely returned zero hits (a separate seed/index root
+    // cause) instead of leaving a bare locator timeout.
+    await captureSearchStateOnFailure(page, () =>
+      expect(page.getByTestId("search-results-list")).toBeVisible(),
+    );
 
     // 3. Open the seeded PDP directly (search ranking is not under test here).
     await page.goto(path(`/p/${SEED.product.slug}`));

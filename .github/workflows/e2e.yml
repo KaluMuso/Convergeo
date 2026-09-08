@@ -27,6 +27,24 @@ on:
         required: false
         default: false
         type: boolean
+      focus_group:
+        # DIAGNOSTIC ONLY. A focused run is never a certification: it sets
+        # CERTIFICATION_MODE=diagnostic-staging, which the certification
+        # artifact gate rejects (it accepts integrated-staging only). A typed
+        # choice, not a string — GitHub validates the value against this list
+        # before the job starts, and it is never interpolated into a command;
+        # the run step maps it to hardcoded spec paths in a case statement.
+        description: "Diagnostic subset to run (NON-CERTIFICATION; pre_release requires full)"
+        required: false
+        default: full
+        type: choice
+        options:
+          - full
+          - previous-six
+          - cart
+          - vendor-auth
+          - checkout-honesty
+          - performance
 
 permissions:
   contents: read
@@ -68,8 +86,21 @@ jobs:
       VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR }}
       VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN }}
       E2E_EXPECT_SHA: ${{ inputs.expect_sha || github.sha }}
-      E2E_STRICT_SHA: ${{ inputs.pre_release && 'true' || '' }}
-      CERTIFICATION_MODE: ${{ inputs.pre_release && 'integrated-staging' || '' }}
+      # A focused diagnostic run keeps the SAME strict identity/SHA and portal
+      # protection proof as certification — a subset result is only worth
+      # reading if it ran against the exact deployed candidate. Strictness and
+      # certification are deliberately separate switches.
+      E2E_STRICT_SHA: ${{ (inputs.pre_release || (inputs.focus_group != '' && inputs.focus_group != 'full')) && 'true' || '' }}
+      # integrated-staging ONLY for a full pre-release run. Focused runs are
+      # marked diagnostic-staging so nothing downstream can mistake a subset
+      # green for certification.
+      CERTIFICATION_MODE: ${{ inputs.pre_release && 'integrated-staging' || (inputs.focus_group != '' && inputs.focus_group != 'full') && 'diagnostic-staging' || '' }}
+      # 'true' when this run must perform the full staging prerequisite chain
+      # (canonical seed, fixture version, synthetic OTP preflight). Focused
+      # diagnostic runs need it too: without the canonical seed the subset is
+      # asserting against whatever the last run happened to leave behind.
+      E2E_STAGING_SETUP: ${{ (inputs.pre_release || (inputs.focus_group != '' && inputs.focus_group != 'full')) && 'true' || '' }}
+      E2E_FOCUS_GROUP: ${{ inputs.focus_group || 'full' }}
       # Role-specific OTP codes (Supabase staging test-OTP map). Only the CODES
       # are secrets — the synthetic phone numbers come from the generated
       # canonical fixture contract (e2e/fixtures/seed.generated.ts).
@@ -90,6 +121,32 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      # Fail closed BEFORE anything else: a strict certification must always
+      # execute the complete matrix. A focused subset can never certify, so the
+      # combination is refused rather than silently downgraded.
+      - name: Guard — strict certification must run the full matrix
+        run: |
+          set -euo pipefail
+          focus="${E2E_FOCUS_GROUP:-full}"
+          if [ -z "${focus}" ]; then
+            focus="full"
+          fi
+          case "${focus}" in
+            full|previous-six|cart|vendor-auth|checkout-honesty|performance) ;;
+            *)
+              echo "::error::unknown focus_group '${focus}' — allowlisted values only"
+              exit 1
+              ;;
+          esac
+          if [ "${{ inputs.pre_release }}" = "true" ] && [ "${focus}" != "full" ]; then
+            echo "::error::pre_release certification requires focus_group=full — a focused subset is diagnostic only and can never certify a release."
+            exit 1
+          fi
+          if [ "${focus}" != "full" ]; then
+            echo "::warning::DIAGNOSTIC RUN (focus_group=${focus}) — NOT a certification. CERTIFICATION_MODE=${CERTIFICATION_MODE:-<unset>}"
+          fi
+          echo "focus_group=${focus}"
 
       - name: Guard — E2E_BASE_URL must be set
         run: |
@@ -121,31 +178,31 @@ jobs:
       # fired once per spec file per project (~80x), with workers deleting rows
       # other workers were asserting on.
       - name: Install PostgreSQL client
-        if: ${{ inputs.pre_release }}
+        if: ${{ env.E2E_STAGING_SETUP == 'true' }}
         run: |
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends postgresql-client
 
       - name: Setup uv (staging seed — Auth Admin API client)
-        if: ${{ inputs.pre_release }}
+        if: ${{ env.E2E_STAGING_SETUP == 'true' }}
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
 
       - name: Setup Python (staging seed)
-        if: ${{ inputs.pre_release }}
+        if: ${{ env.E2E_STAGING_SETUP == 'true' }}
         uses: actions/setup-python@v7
         with:
           python-version-file: services/api/.python-version
 
       - name: Install API dependencies (staging seed)
-        if: ${{ inputs.pre_release }}
+        if: ${{ env.E2E_STAGING_SETUP == 'true' }}
         working-directory: services/api
         run: uv sync --dev
 
       - name: Guard canonical seed target (fail closed before any mutation)
-        if: ${{ inputs.pre_release }}
+        if: ${{ env.E2E_STAGING_SETUP == 'true' }}
         env:
           STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
           STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
@@ -159,7 +216,7 @@ jobs:
           echo "canonical seed target guards passed (staging project ref verified)"
 
       - name: Canonical cleanup + seed (once per run)
-        if: ${{ inputs.pre_release }}
+        if: ${{ env.E2E_STAGING_SETUP == 'true' }}
         env:
           SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
           STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
@@ -180,7 +237,7 @@ jobs:
             --private-file "${RUNNER_TEMP}/convergeo-e2e-private.json"
 
       - name: Publish fixture version + mask scanner PIN
-        if: ${{ inputs.pre_release }}
+        if: ${{ env.E2E_STAGING_SETUP == 'true' }}
         run: |
           set -euo pipefail
           private_file="${RUNNER_TEMP}/convergeo-e2e-private.json"
@@ -202,7 +259,7 @@ jobs:
           echo "canonical seed applied — fixture_version=${fixture_version}"
 
       - name: Preflight synthetic test-OTP contract (strict certification)
-        if: ${{ inputs.pre_release }}
+        if: ${{ env.E2E_STAGING_SETUP == 'true' }}
         env:
           STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
           STAGING_SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
@@ -224,21 +281,77 @@ jobs:
         working-directory: e2e
         run: npx playwright install --with-deps chromium
 
+      # Focus groups map to HARDCODED spec paths. The workflow input only
+      # selects a branch of this case statement — its value never reaches a
+      # command line, so there is no injection surface even before GitHub's
+      # own choice-type validation.
+      - name: Resolve focused spec selection
+        id: focus
+        run: |
+          set -euo pipefail
+          focus="${E2E_FOCUS_GROUP:-full}"
+          if [ -z "${focus}" ]; then
+            focus="full"
+          fi
+          case "${focus}" in
+            full)
+              specs=""
+              ;;
+            previous-six)
+              specs="specs/browse-journey.spec.ts specs/critical-path.spec.ts specs/shop-checkout-momo.spec.ts specs/shop-cod.spec.ts specs/vendor-sell.spec.ts specs/event-ticket.spec.ts"
+              ;;
+            cart)
+              specs="specs/critical-path.spec.ts specs/shop-checkout-momo.spec.ts specs/shop-cod.spec.ts"
+              ;;
+            vendor-auth)
+              specs="specs/vendor-sell.spec.ts specs/event-ticket.spec.ts"
+              ;;
+            checkout-honesty)
+              specs="specs/checkout-false-success.spec.ts"
+              ;;
+            performance)
+              specs="specs/performance-smoke.spec.ts"
+              ;;
+            *)
+              echo "::error::unknown focus_group '${focus}'"
+              exit 1
+              ;;
+          esac
+          echo "specs=${specs}" >> "${GITHUB_OUTPUT}"
+          if [ -z "${specs}" ]; then
+            echo "selection: FULL matrix"
+          else
+            echo "selection: ${specs}"
+          fi
+
       - name: Record expected matrix (static --list, no browser)
         working-directory: e2e
+        env:
+          FOCUS_SPECS: ${{ steps.focus.outputs.specs }}
         run: |
           set -euo pipefail
           mkdir -p results
-          npx playwright test --list --reporter=json > results/list.json
+          # The expected matrix must be listed with the SAME selection the run
+          # uses, so EXPECTED == DISCOVERED stays a real completeness contract
+          # for a focused run instead of comparing a subset against all 65.
+          # shellcheck disable=SC2086
+          npx playwright test ${FOCUS_SPECS} --list --reporter=json > results/list.json
 
       - name: Run E2E suite
         working-directory: e2e
+        env:
+          FOCUS_SPECS: ${{ steps.focus.outputs.specs }}
         # Playwright has a 12-minute global timeout (matrix bound to 65
         # project-test instances — see fixtures/spec-classification.ts), but
         # retain an independent process deadline so a stuck runner cannot
         # consume a staging gate indefinitely if the test runner watchdog
         # does not get to exit.
-        run: timeout --signal=TERM --kill-after=60s 15m npx playwright test
+        # FOCUS_SPECS is empty for a full run, so the default stays byte-for-byte
+        # the previous command; nightly/schedule behaviour is unchanged.
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2086
+          timeout --signal=TERM --kill-after=60s 15m npx playwright test ${FOCUS_SPECS}
 
       - name: Guard — browser tests must have executed
         if: success()
@@ -255,8 +368,12 @@ jobs:
           rm -f "${RUNNER_TEMP}/convergeo-e2e-private.json"
           echo "private runtime file removed"
 
-      - name: Upload trace/video artifacts on failure
-        if: failure()
+      # Failures always upload evidence. A focused diagnostic run uploads even
+      # when it passes: the point of running one is to READ the evidence (e.g.
+      # whether a canonical search term genuinely returned zero hits), which a
+      # green run would otherwise discard.
+      - name: Upload trace/video artifacts
+        if: ${{ failure() || env.E2E_FOCUS_GROUP != 'full' }}
         uses: actions/upload-artifact@v7
         with:
           name: playwright-artifacts-${{ github.run_id }}

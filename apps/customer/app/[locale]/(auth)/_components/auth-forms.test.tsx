@@ -169,8 +169,11 @@ describe("OtpForm", () => {
       />,
     );
 
+    // No Verify click: OtpField auto-submits on the sixth digit, so filling the
+    // code IS the submission. On success the form stays locked through the
+    // navigation transition (the button reads "Verifying"), which is the whole
+    // point of the single-flight guard — see the OtpForm single-flight block.
     await fillOtp(user);
-    await user.click(screen.getByRole("button", { name: "Verify" }));
 
     await waitFor(() => {
       expect(verifyOtp).toHaveBeenCalledWith({
@@ -201,12 +204,137 @@ describe("OtpForm", () => {
     );
 
     await fillOtp(user);
-    await user.click(screen.getByRole("button", { name: "Verify" }));
 
     await waitFor(() => {
       expect(verifyOtp).toHaveBeenCalled();
       expect(getPreferences).not.toHaveBeenCalled();
       expect(push).toHaveBeenCalledWith("/en/listings");
+    });
+  });
+
+  /**
+   * Single-flight regression (Run #68).
+   *
+   * OtpForm has two verification triggers — OtpField's `onComplete` on the
+   * sixth digit, and the Verify button — and its old guard was a `loading`
+   * React state flag that only becomes true on the next render commit. A
+   * redundant Verify interaction landing before that commit slipped through and
+   * fired a SECOND verifyOtp for the same single-use code, which is what Run
+   * #68's Vendor traces show as two POSTs to /auth/v1/verify.
+   *
+   * OtpForm is shared by both portals (apps/vendor/.../otp/page.tsx imports
+   * this very component), so both are asserted.
+   */
+  describe("single-flight verification", () => {
+    it("auto-submit plus a redundant Verify click sends exactly one verifyOtp (customer)", async () => {
+      verifyOtp.mockResolvedValue({ error: null });
+      const user = userEvent.setup();
+
+      render(
+        <OtpForm
+          locale="en"
+          phone="+260971234567"
+          labels={otpLabels}
+          loginPath="/login"
+          defaultNextPath="/en"
+        />,
+      );
+
+      await fillOtp(user);
+      // Matches the submit control in EITHER state ("Verify" idle / "Verifying"
+      // while a flight is held), so this fails on the call count below rather
+      // than on a name lookup if the guard ever regresses.
+      const submitButton = screen.getByRole("button", { name: /^verify/i });
+      await user.click(submitButton).catch(() => undefined);
+
+      await waitFor(() => {
+        expect(push).toHaveBeenCalledWith("/en");
+      });
+      expect(verifyOtp).toHaveBeenCalledTimes(1);
+    });
+
+    it("auto-submit plus a redundant Verify click sends exactly one verifyOtp (vendor)", async () => {
+      verifyOtp.mockResolvedValue({ error: null });
+      const user = userEvent.setup();
+
+      render(
+        <OtpForm
+          locale="en"
+          phone="+260971234567"
+          labels={otpLabels}
+          loginPath="/login"
+          portal="vendor"
+          defaultNextPath="/en"
+          nextParam="/en/listings"
+        />,
+      );
+
+      await fillOtp(user);
+      const submitButton = screen.getByRole("button", { name: /^verify/i });
+      await user.click(submitButton).catch(() => undefined);
+
+      await waitFor(() => {
+        expect(push).toHaveBeenCalledWith("/en/listings");
+      });
+      expect(verifyOtp).toHaveBeenCalledTimes(1);
+      expect(getPreferences).not.toHaveBeenCalled();
+    });
+
+    it("stays locked after a successful verify so the spent code cannot be resubmitted", async () => {
+      verifyOtp.mockResolvedValue({ error: null });
+      const user = userEvent.setup();
+
+      render(
+        <OtpForm
+          locale="en"
+          phone="+260971234567"
+          labels={otpLabels}
+          loginPath="/login"
+          portal="vendor"
+          defaultNextPath="/en"
+        />,
+      );
+
+      await fillOtp(user);
+      await waitFor(() => {
+        expect(push).toHaveBeenCalled();
+      });
+
+      // Re-entering a digit must not re-arm submission: the code is consumed
+      // and navigation is in flight, so a second verifyOtp could only fail.
+      const group = screen.getByRole("group", { name: "Verification code" });
+      const inputs = group.querySelectorAll("input");
+      await user.type(inputs[5]!, "9").catch(() => undefined);
+
+      expect(verifyOtp).toHaveBeenCalledTimes(1);
+    });
+
+    it("re-arms submission after a rejected code so the user can retry", async () => {
+      verifyOtp.mockResolvedValue({ error: { message: "Invalid OTP" } });
+      const user = userEvent.setup();
+
+      render(
+        <OtpForm
+          locale="en"
+          phone="+260971234567"
+          labels={otpLabels}
+          loginPath="/login"
+          defaultNextPath="/en"
+        />,
+      );
+
+      await fillOtp(user);
+      await waitFor(() => {
+        expect(screen.getByRole("alert")).toHaveTextContent("Wrong code");
+      });
+      expect(verifyOtp).toHaveBeenCalledTimes(1);
+
+      // A rejection is recoverable — the lock must have been released.
+      await user.click(screen.getByRole("button", { name: "Verify" }));
+
+      await waitFor(() => {
+        expect(verifyOtp).toHaveBeenCalledTimes(2);
+      });
     });
   });
 });

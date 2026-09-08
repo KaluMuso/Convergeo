@@ -496,7 +496,19 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
 export function CartPageView({ locale, labels }: CartPageViewProps) {
   return (
     <CartProvider>
-      <CartPageBody locale={locale} labels={labels} />
+      {/*
+       * `cart-page` marks the Cart page surface itself, NOT any one cart state.
+       * It lives here — around every CartPageBody branch — precisely because it
+       * previously sat on a single unconditional cart render and was lost when
+       * that render was split into the loading / load-error / empty / populated
+       * branches below: each branch returns early, so a per-branch attribute
+       * silently drifts the moment a new branch is added. Anchoring it once, at
+       * the surface boundary, keeps the contract true for every current and
+       * future state. Do not move it onto a state-specific element.
+       */}
+      <div data-testid="cart-page">
+        <CartPageBody locale={locale} labels={labels} />
+      </div>
     </CartProvider>
   );
 }
