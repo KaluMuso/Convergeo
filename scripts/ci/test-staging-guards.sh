@@ -988,6 +988,87 @@ else
   ok "no remote seed-reset endpoint — direct protected-staging workflow seeding only"
 fi
 
+# ── Focused diagnostic E2E mode ──────────────────────────────────────────────
+# A focused subset is a debugging tool, never a release gate. These guards keep
+# the two apart and keep the selection free of any injection surface.
+
+# The selector must be a typed choice — a free-text input could carry anything
+# into the job, and GitHub validates a choice against its options list before
+# the run starts.
+if sed -n '/^      focus_group:/,/^$/p' .github/workflows/e2e.yml \
+  | grep -q '^        type: choice$'; then
+  ok "focus_group is a typed choice input (no free-text selector)"
+else
+  bad "focus_group must be 'type: choice' — free text would reach the job unvalidated"
+fi
+
+# The allowlist itself.
+focus_opts_missing=""
+for opt in full previous-six cart vendor-auth checkout-honesty performance; do
+  grep -qE "^          - ${opt}$" .github/workflows/e2e.yml || focus_opts_missing="${focus_opts_missing} ${opt}"
+done
+if [ -z "${focus_opts_missing}" ]; then
+  ok "focus_group allowlist carries every diagnostic group"
+else
+  bad "focus_group allowlist is missing:${focus_opts_missing}"
+fi
+
+# Strict certification must always execute the complete matrix.
+if grep -q 'pre_release certification requires focus_group=full' .github/workflows/e2e.yml; then
+  ok "e2e refuses a focused pre_release run (certification runs the full matrix)"
+else
+  bad "e2e must fail closed when pre_release is combined with a focused subset"
+fi
+
+# A focused run must never be able to present itself as certification. The
+# certification artifact gate accepts integrated-staging only, so the mode
+# expression is what keeps a subset out.
+if grep -q "CERTIFICATION_MODE: \${{ inputs.pre_release && 'integrated-staging'" .github/workflows/e2e.yml \
+  && grep -q "'diagnostic-staging'" .github/workflows/e2e.yml; then
+  ok "focused runs are marked diagnostic-staging, never integrated-staging"
+else
+  bad "focused e2e runs must set CERTIFICATION_MODE=diagnostic-staging"
+fi
+
+# The input must never be interpolated into a shell command: the case statement
+# maps it to hardcoded spec paths instead.
+if grep -nE '^\s+(run:|.*npx playwright).*inputs\.focus_group' .github/workflows/e2e.yml >/dev/null 2>&1; then
+  bad "focus_group must not be interpolated into a run command — map it to hardcoded spec paths"
+else
+  ok "focus_group never reaches a command line (hardcoded spec paths only)"
+fi
+
+# Every allowlisted group must resolve to spec files that actually exist, or a
+# diagnostic run silently tests nothing.
+focus_specs_missing=""
+while read -r spec; do
+  [ -f "e2e/${spec}" ] || focus_specs_missing="${focus_specs_missing} ${spec}"
+done < <(grep -oE 'specs/[a-z0-9-]+\.spec\.ts' .github/workflows/e2e.yml | sort -u)
+if [ -z "${focus_specs_missing}" ]; then
+  ok "every focus-group spec path exists"
+else
+  bad "focus-group spec paths do not exist:${focus_specs_missing}"
+fi
+
+# A focused run is only worth reading if it ran the canonical seed and the same
+# strict identity proof as certification.
+if grep -q 'E2E_STAGING_SETUP:' .github/workflows/e2e.yml \
+  && grep -q "if: \${{ env.E2E_STAGING_SETUP == 'true' }}" .github/workflows/e2e.yml \
+  && grep -q "E2E_STRICT_SHA: \${{ (inputs.pre_release ||" .github/workflows/e2e.yml; then
+  ok "focused runs keep the canonical seed and strict identity/SHA proof"
+else
+  bad "focused e2e runs must still seed canonically and prove deployed identity"
+fi
+
+# The expected matrix must be listed with the same selection the run uses, or
+# EXPECTED vs DISCOVERED compares a subset against all 65 and always fails.
+if sed -n '/Record expected matrix/,/Run E2E suite/p' .github/workflows/e2e.yml \
+  | grep -q 'playwright test ${FOCUS_SPECS} --list'; then
+  ok "expected-matrix listing uses the same focused selection as the run"
+else
+  bad "the --list step must apply the same focus selection as the run step"
+fi
+
 # ── Strict E2E execution policy (PR C) ───────────────────────────────────────
 # "Skipped" and "passed" look identical in a green tick. A release baseline that
 # silently skipped a required journey never exercised it — but reported success.
