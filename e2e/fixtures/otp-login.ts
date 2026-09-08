@@ -70,10 +70,16 @@ export async function loginVendorViaOtp(
     await page.keyboard.type(digit);
   }
 
-  await page
-    .getByRole("button", { name: /verify|submit|continue/i })
-    .first()
-    .click();
+  // No explicit Verify click. OtpField fires `onComplete` the moment the sixth
+  // digit lands, so OtpForm has ALREADY started verifying by the time the last
+  // keystroke returns — clicking Verify on top of that was driving a second
+  // submission at a speed no human produces, and Run #68's traces show the
+  // resulting duplicate POST to /auth/v1/verify racing itself for one
+  // single-use code. The app now holds a synchronous single-flight lock
+  // (apps/customer/.../otp-form.tsx), so the click is harmless; it is dropped
+  // because asserting the real auto-submit UX is the honest contract, not
+  // because the guard makes it survivable. The bounded URL wait below is
+  // unchanged and remains the authentication proof.
 
   // Real OtpForm -> supabase.auth.verifyOtp -> navigateAfterPortalAuth(portal:
   // "vendor") -> the destination. Middleware's vendor-role gate is what makes
