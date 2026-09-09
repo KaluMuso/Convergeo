@@ -369,8 +369,21 @@ jobs:
         #   GHSA-jmr9-qjv8-65gv — extract-zip<3.0.0 symlink path traversal via
         #     @lhci/cli → lighthouse → puppeteer-core → @puppeteer/browsers.
         #     CI/dev-only; no production exposure. See A06/F7.
+        #   GHSA-7pqw-9j4j-h8q3 — extract-zip<=2.0.1 arbitrary file write via symlink
+        #     archive entries. SAME chain as GHSA-jmr9-qjv8-65gv above, and there is
+        #     no patched release to move to: 2.0.1 IS extract-zip's latest published
+        #     version and the advisory carries no patched range. A parent upgrade
+        #     cannot remove it either — @lhci/cli@0.15.1 is already the newest release
+        #     and exact-pins lighthouse 12.6.1, while the chain is only repaired in
+        #     lighthouse>=13.4.1 (puppeteer-core>=25.3.0 → @puppeteer/browsers>=3.x,
+        #     which drops extract-zip). Root devDependency only; extract-zip runs
+        #     solely to unpack the Chrome archive @puppeteer/browsers downloads from
+        #     Google for Lighthouse CI — not attacker-controlled, never bundled into a
+        #     shipped app or the API runtime. ACCEPTED, REVIEW 2026-12-09.
+        #     Remove once @lhci/cli takes lighthouse>=13.4.1. Full reachability
+        #     analysis: docs/ops/owasp-audit.md (A06/F8).
         run: |
-          ALLOWLIST="GHSA-ph9p-34f9-6g65 GHSA-mh99-v99m-4gvg GHSA-7p8r-x3mc-p8w7 GHSA-mwp4-54f8-5fhr GHSA-rgw5-rvv9-x895 GHSA-jmr9-qjv8-65gv"
+          ALLOWLIST="GHSA-ph9p-34f9-6g65 GHSA-mh99-v99m-4gvg GHSA-7p8r-x3mc-p8w7 GHSA-mwp4-54f8-5fhr GHSA-rgw5-rvv9-x895 GHSA-jmr9-qjv8-65gv GHSA-7pqw-9j4j-h8q3"
           pnpm audit --audit-level=high --json > audit.json || true
           ALLOWLIST="$ALLOWLIST" python3 - <<'PY'
           import json, os, sys
