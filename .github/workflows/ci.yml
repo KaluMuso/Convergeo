@@ -238,6 +238,15 @@ jobs:
       - name: E2E strict-mode surface-wait contract tests
         run: node --test scripts/qa/self-test/e2e-strict-surface-wait.test.mjs
 
+      # Run #74 root cause B: apps/vendor and apps/admin render the Customer
+      # auth shell through relative cross-app imports, so a change confined to
+      # apps/customer must still invalidate their Turborepo build hash — or
+      # Vercel replays a stale build and the deployed portal silently keeps the
+      # old bundle while /health still reports the new SHA. Static check; no
+      # turbo run needed.
+      - name: Cross-app build-input contract (Turborepo)
+        run: node --experimental-strip-types --test scripts/qa/self-test/turbo-cross-app-inputs.test.mjs
+
       # Run #70 request-boundary remediation: the per-origin Vercel bypass
       # must (a) never hand a portal credential to an unmatched origin and
       # (b) rebuild a rewritten request from allHeaders(), so the Supabase
