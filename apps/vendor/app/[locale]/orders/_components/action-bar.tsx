@@ -239,6 +239,7 @@ export function OrderActionBar({
               value={trackingNote}
               onChange={(event) => setTrackingNote(event.target.value)}
               placeholder={t("orders.actions.shipPlaceholder")}
+              data-testid="vendor-order-ship-tracking"
             />
           </FormField>
           <div className="flex flex-col gap-2">
@@ -249,6 +250,7 @@ export function OrderActionBar({
               loadingLabel={t("orders.actions.shipping")}
               disabled={pendingAction !== null && pendingAction !== "ship"}
               onClick={() => void runAction("ship")}
+              data-testid="vendor-order-ship-submit"
             >
               {t("orders.actions.submitShip")}
             </Button>
@@ -284,6 +286,7 @@ export function OrderActionBar({
               loadingLabel={t(ACTION_PENDING_KEYS[action])}
               disabled={pendingAction !== null && pendingAction !== action}
               onClick={() => handlePrimaryClick(action)}
+              data-testid={`vendor-order-action-${action}`}
             >
               {t(ACTION_LABEL_KEYS[action])}
             </Button>
@@ -407,7 +410,13 @@ export function OrderDetailView({ orderId }: OrderDetailViewProps) {
           {t("orders.title")}
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-lg font-semibold text-text">{statusLabel(order.status)}</h1>
+          <h1
+            className="text-lg font-semibold text-text"
+            data-testid="vendor-order-status"
+            data-status={order.status}
+          >
+            {statusLabel(order.status)}
+          </h1>
           <Badge variant="public" label={fulfilmentLabel} />
         </div>
         <p className="text-xs text-text-3">{order.id}</p>

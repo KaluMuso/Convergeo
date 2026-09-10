@@ -234,6 +234,7 @@ jobs:
             --env staging \
             --cleanup \
             --apply \
+            --transactional-cod \
             --private-file "${RUNNER_TEMP}/convergeo-e2e-private.json"
 
       - name: Publish fixture version + mask scanner PIN
