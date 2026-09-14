@@ -23,12 +23,17 @@ populated when a project has "Automatically expose System Environment
 Variables" enabled) is opt-in corroboration on top of that: present-and-wrong
 fails as a staleness signal, but absent never fails on its own — this
 verifier does not depend on that Vercel project setting being enabled.
+
+The post-alias poller opts into require_build_id=True. A mutable hostname
+does not inherit the immutable deployment's metadata proof: its live response
+must carry the exact full candidate SHA and the exact staging environment.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -39,6 +44,7 @@ from typing import Any
 FORBIDDEN_HOSTS = {"api.vergeo5.com", "localhost", "127.0.0.1", "0.0.0.0", "::1"}
 
 DEFAULT_EXPECTED_ENV = ("staging", "preview")
+FULL_SHA = re.compile(r"[0-9a-f]{40}\Z")
 
 #: "ok" | "status" | "app" | "env" | "missing_host" | "forbidden_host"
 #: | "host_mismatch" | "sha_mismatch"
@@ -75,6 +81,7 @@ def verify_health(
     expected_api_host: str,
     expected_sha: str | None = None,
     expected_env: tuple[str, ...] = DEFAULT_EXPECTED_ENV,
+    require_build_id: bool = False,
 ) -> HealthVerdict:
     """Validate one portal's `/health` JSON body against the staging contract.
 
@@ -114,6 +121,15 @@ def verify_health(
     # proof was already established independently.
     build_id = body.get("buildId")
     build_id = build_id if isinstance(build_id, str) and build_id else None
+
+    # A mutable alias has no independently proven live identity. Unlike the
+    # immutable Preview path, it must supply a full SHA, never a missing id or
+    # an abbreviated/shared prefix. Callers opt in without changing that path.
+    if require_build_id:
+        if expected_sha is None or FULL_SHA.fullmatch(expected_sha) is None:
+            return HealthVerdict(False, "invalid_expected_sha")
+        if build_id is None or FULL_SHA.fullmatch(build_id) is None:
+            return HealthVerdict(False, "invalid_build_id")
 
     if expected_sha and build_id is not None and build_id != expected_sha:
         return HealthVerdict(False, "sha_mismatch", host=host, build_id=build_id)
