@@ -420,7 +420,17 @@ export function ScannerView({ eventId }: ScannerViewProps) {
   const showManual = cameraDenied || scanMode === "manual";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
+    // `data-event-id` / `data-instance-id` publish the identity every verify
+    // call will actually carry. `eventId` is only a route parameter; these are
+    // the canonical ids resolved from the event detail response, so a test can
+    // pin the instance it seeded rather than trusting whatever
+    // pickDefaultInstance() happened to choose.
+    <div
+      data-testid="event-scan-root"
+      data-event-id={canonicalEventId ?? ""}
+      data-instance-id={instanceId ?? ""}
+      style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}
+    >
       <header>
         <p
           style={{
@@ -446,7 +456,11 @@ export function ScannerView({ eventId }: ScannerViewProps) {
           <span style={{ fontSize: "var(--fs-small)", color: "var(--text-2)" }}>
             {t("scan.eventCheckIn.instanceLabel")}
           </span>
-          <Select value={instanceId ?? ""} onChange={(event) => setInstanceId(event.target.value)}>
+          <Select
+            data-testid="event-scan-instance-select"
+            value={instanceId ?? ""}
+            onChange={(event) => setInstanceId(event.target.value)}
+          >
             {instances.map((instance) => (
               <option key={instance.id} value={instance.id}>
                 {new Date(instance.starts_at).toLocaleString()}

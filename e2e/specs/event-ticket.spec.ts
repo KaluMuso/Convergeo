@@ -94,15 +94,41 @@ test.describe("event · ticket lifecycle", () => {
     await loginVendorViaOtp(page, { next: scanRoute });
     await expect(page).toHaveURL(new RegExp(`/events/${SEED.event.id}/scan`));
 
-    // Organiser scanner — open the event-scanner manual fallback. It opens by
-    // itself when the camera is unavailable (the headless default), so the
-    // explicit switch is only needed when a camera did start.
+    // Organiser scanner. The body only mounts once the event detail request
+    // resolves, so nothing below may be probed before then: an immediate
+    // isVisible() on the switch answers "false" during loading and silently
+    // skips the click, which then strands a camera-capable browser on the
+    // camera view. Wait for the scanner to SETTLE into one of its two
+    // supported states first — manual already open (camera unavailable or
+    // denied, the headless default) or the camera running with its switch
+    // offered — and only then decide. `.or()` polls until one appears, so this
+    // absorbs slow event loading without a sleep or a timeout bump.
+    const scannerRoot = page.getByTestId("event-scan-root");
     const manualForm = page.getByTestId("event-scan-manual-fallback");
     const switchToManual = page.getByTestId("event-scan-switch-manual");
-    if (await switchToManual.isVisible().catch(() => false)) {
+
+    await expect(scannerRoot).toBeVisible({ timeout: 20_000 });
+    await expect(manualForm.or(switchToManual)).toBeVisible({ timeout: 20_000 });
+    // Evaluated only after the state settled, so it reflects a real state
+    // rather than a still-loading screen. The two states are mutually
+    // exclusive in ScannerView, so this cannot double-match.
+    if (await switchToManual.isVisible()) {
       await switchToManual.click();
     }
-    await expect(manualForm).toBeVisible({ timeout: 20_000 });
+    await expect(manualForm).toBeVisible();
+
+    // Pin the SEEDED instance rather than inheriting pickDefaultInstance()'s
+    // choice, which is "earliest upcoming, else instances[0]" and would follow
+    // the seed data if it ever grew a second session. The picker only renders
+    // when the event has more than one instance, so select it when present and
+    // assert the effective identity either way — that attribute is what the
+    // verify call actually carries.
+    const instancePicker = page.getByTestId("event-scan-instance-select");
+    if (await instancePicker.isVisible()) {
+      await instancePicker.selectOption(SEED.event.instanceId);
+    }
+    await expect(scannerRoot).toHaveAttribute("data-instance-id", SEED.event.instanceId);
+    await expect(scannerRoot).toHaveAttribute("data-event-id", SEED.event.id);
 
     const ticketIdInput = manualForm.getByTestId("event-scan-manual-ticket-id");
     const pinInput = manualForm.getByTestId("event-scan-manual-pin");
@@ -112,19 +138,27 @@ test.describe("event · ticket lifecycle", () => {
     await ticketIdInput.fill(SEED.event.ticketId);
     await pinInput.fill(scannerPin);
     await submit.click();
-    await expect(page.getByTestId("event-scan-flash-success")).toBeVisible({
-      timeout: 20_000,
-    });
+    const accepted = page.getByTestId("event-scan-flash-success");
+    await expect(accepted).toBeVisible({ timeout: 20_000 });
+    await expect(accepted).toHaveAttribute("data-scan-result-kind", "valid");
 
-    // Second check-in of the same ticket → rejected. Single-use is enforced in
-    // `POST /tickets/verify` (`ticket_already_checked_in`), so this asserts the
-    // server's verdict surfaced honestly, not a client-side guard.
+    // Second check-in of the same ticket → rejected BECAUSE it was already
+    // spent. Single-use is enforced in `POST /tickets/verify`
+    // (`ticket_already_checked_in` → the `conflict` kind), so the assertion
+    // names that kind: every failure renders the same `event-scan-flash-error`
+    // testid, and the old message regex also matched "rejected", so a wrong
+    // PIN, a 403, an unknown ticket or an offline submit would all have passed
+    // as proof of single-use enforcement. Those are real failures of this leg,
+    // not evidence for it.
     await ticketIdInput.fill(SEED.event.ticketId);
     await pinInput.fill(scannerPin);
     await submit.click();
     const rejection = page.getByTestId("event-scan-flash-error");
     await expect(rejection).toBeVisible({ timeout: 20_000 });
-    await expect(rejection).toContainText(/already|duplicate|used|rejected/i);
+    await expect(rejection).toHaveAttribute("data-scan-result-kind", "conflict");
+    // `conflict` is not overridable from the flash: no override form may be
+    // offered on a spent ticket.
+    await expect(rejection.getByRole("button", { name: /override/i })).toHaveCount(0);
     await expect(page.getByTestId("event-scan-flash-success")).toBeHidden();
   });
 });

@@ -383,3 +383,188 @@ describe("event scanner · manual fallback i18n", () => {
     expect(eventCheckIn.result.manualOffline.title).toBe("You're offline");
   });
 });
+
+/**
+ * The readiness contract `e2e/specs/event-ticket.spec.ts` depends on.
+ *
+ * The spec cannot ask "is the camera available?" — it settles on whichever
+ * supported state the browser reaches. That only works if, once the event
+ * detail resolves, EXACTLY ONE of `event-scan-manual-fallback` /
+ * `event-scan-switch-manual` is on screen, and NEITHER is on screen before it.
+ * An immediate probe used to answer "no switch" while still loading, skip the
+ * click, and strand a camera-capable browser on the camera view.
+ */
+describe("event scanner · readiness contract for the E2E spec", () => {
+  it("offers neither settled affordance while the event is still loading", async () => {
+    let resolveEvent: (value: unknown) => void = () => {};
+    getEventMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveEvent = resolve;
+      }),
+    );
+
+    renderScanner();
+
+    // The window the old immediate isVisible() probe fell into.
+    expect(screen.queryByTestId("event-scan-root")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("event-scan-switch-manual")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("event-scan-manual-fallback")).not.toBeInTheDocument();
+
+    resolveEvent({
+      event: {
+        id: CANONICAL_EVENT_ID,
+        slug: ROUTE_EVENT_PARAM,
+        title: "Synthetic staging launch expo",
+        instances: [
+          {
+            id: INSTANCE_ID,
+            starts_at: new Date(Date.now() + 3_600_000).toISOString(),
+            ends_at: null,
+            capacity: 200,
+            tickets_sold: 1,
+          },
+        ],
+      },
+    });
+
+    // Settles late — the spec waits for this rather than probing early.
+    expect(await screen.findByTestId("event-scan-switch-manual")).toBeInTheDocument();
+    expect(screen.queryByTestId("event-scan-manual-fallback")).not.toBeInTheDocument();
+  });
+
+  it("settles on the switch — not the manual form — when a camera is available", async () => {
+    await renderReadyScanner();
+
+    // Exactly one of the two settled affordances, so `.or()` cannot double-match.
+    expect(screen.getByTestId("event-scan-switch-manual")).toBeInTheDocument();
+    expect(screen.queryByTestId("event-scan-manual-fallback")).not.toBeInTheDocument();
+
+    await userEvent.setup().click(screen.getByTestId("event-scan-switch-manual"));
+    expect(await screen.findByTestId("event-scan-manual-fallback")).toBeInTheDocument();
+  });
+
+  it("settles on the manual form — with no switch to click — when the camera is denied", async () => {
+    const user = userEvent.setup();
+    await renderReadyScanner();
+
+    await user.click(screen.getByTestId("stub-deny-camera"));
+
+    expect(await screen.findByTestId("event-scan-manual-fallback")).toBeInTheDocument();
+    // The spec's conditional click must find nothing here; a switch would mean
+    // it clicked its way back out of the only usable surface.
+    expect(screen.queryByTestId("event-scan-switch-manual")).not.toBeInTheDocument();
+  });
+});
+
+describe("event scanner · instance identity is explicit, not defaulted", () => {
+  it("publishes the canonical event and instance the verify call will carry", async () => {
+    await renderReadyScanner();
+
+    const root = screen.getByTestId("event-scan-root");
+    // The route param is a slug; the published id is the resolved primary key.
+    expect(root).toHaveAttribute("data-event-id", CANONICAL_EVENT_ID);
+    expect(root).toHaveAttribute("data-instance-id", INSTANCE_ID);
+    // Single-instance events render no picker — the spec must still be able to
+    // assert the identity, which is why it lives on the root and not the select.
+    expect(screen.queryByTestId("event-scan-instance-select")).not.toBeInTheDocument();
+  });
+
+  it("lets a second session be selected instead of inheriting the default pick", async () => {
+    const OTHER_INSTANCE_ID = "e2000000-0000-4000-8000-000000000002";
+    getEventMock.mockResolvedValue({
+      event: {
+        id: CANONICAL_EVENT_ID,
+        slug: ROUTE_EVENT_PARAM,
+        title: "Synthetic staging launch expo",
+        instances: [
+          {
+            // Earliest upcoming — what pickDefaultInstance() selects unprompted.
+            id: OTHER_INSTANCE_ID,
+            starts_at: new Date(Date.now() + 3_600_000).toISOString(),
+            ends_at: null,
+            capacity: 200,
+            tickets_sold: 0,
+          },
+          {
+            id: INSTANCE_ID,
+            starts_at: new Date(Date.now() + 90_000_000).toISOString(),
+            ends_at: null,
+            capacity: 200,
+            tickets_sold: 1,
+          },
+        ],
+      },
+    });
+
+    await renderReadyScanner();
+
+    const root = screen.getByTestId("event-scan-root");
+    // The default is NOT the seeded instance here — exactly the drift the spec
+    // must not inherit silently.
+    expect(root).toHaveAttribute("data-instance-id", OTHER_INSTANCE_ID);
+
+    const picker = await screen.findByTestId("event-scan-instance-select");
+    await userEvent.setup().selectOptions(picker, INSTANCE_ID);
+
+    await waitFor(() => expect(root).toHaveAttribute("data-instance-id", INSTANCE_ID));
+  });
+});
+
+describe("event scanner · rejection evidence names the verdict", () => {
+  it("marks a spent ticket as `conflict`, distinct from every other failure", async () => {
+    verifyManualPinMock.mockRejectedValue(
+      new ApiError("ticket_already_checked_in", "Ticket has already been checked in", {
+        status: 409,
+      }),
+    );
+
+    await renderReadyScanner();
+    await openManualFallback();
+    await submitManual(TICKET_ID, "654321");
+
+    const flash = await screen.findByTestId("event-scan-flash-error");
+    expect(flash).toHaveAttribute("data-scan-result-kind", "conflict");
+  });
+
+  it.each([
+    ["ticket_invalid_pin", "invalid_pin"],
+    ["forbidden", "unauthorized"],
+    ["not_found", "unknown_ticket"],
+  ])("does not let %s masquerade as single-use enforcement", async (code, expectedKind) => {
+    verifyManualPinMock.mockRejectedValue(new ApiError(code, "refused", { status: 422 }));
+
+    await renderReadyScanner();
+    await openManualFallback();
+    await submitManual(TICKET_ID, "654321");
+
+    const flash = await screen.findByTestId("event-scan-flash-error");
+    // Same testid as a duplicate rejection — only the kind separates them,
+    // which is why the E2E spec asserts the kind and not the testid alone.
+    expect(flash).toHaveAttribute("data-scan-result-kind", expectedKind);
+    expect(flash).not.toHaveAttribute("data-scan-result-kind", "conflict");
+  });
+
+  it("marks a successful check-in as `valid`", async () => {
+    verifyManualPinMock.mockResolvedValue({
+      ticket_id: TICKET_ID,
+      from_status: "issued",
+      to_status: "checked_in",
+      checked_in_at: "2026-09-14T10:00:00Z",
+      event_id: CANONICAL_EVENT_ID,
+      instance_id: INSTANCE_ID,
+      holder_name: "Chanda Mwansa",
+      ticket_type_name: "General admission",
+      event_title: "Synthetic staging launch expo",
+      id_check_required: false,
+    });
+
+    await renderReadyScanner();
+    await openManualFallback();
+    await submitManual(TICKET_ID, "654321");
+
+    expect(await screen.findByTestId("event-scan-flash-success")).toHaveAttribute(
+      "data-scan-result-kind",
+      "valid",
+    );
+  });
+});

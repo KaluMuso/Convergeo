@@ -72,8 +72,13 @@ export function ScanResultFlash({
   const context = state.context;
 
   return (
+    // `data-scan-result-kind` carries the exact verdict. Every failure kind
+    // renders the same `event-scan-flash-error` testid, so that testid alone
+    // cannot tell a spent single-use ticket apart from a wrong PIN, a 403 or an
+    // offline submit — a test that needs one specific outcome asserts the kind.
     <div
       data-testid={isSuccess ? "event-scan-flash-success" : "event-scan-flash-error"}
+      data-scan-result-kind={state.kind}
       role={isSuccess ? "status" : "alert"}
       style={{
         borderRadius: "var(--r)",
