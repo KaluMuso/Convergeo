@@ -11,6 +11,7 @@ const TRUSTED_WORKFLOWS = new Set([
   ".github/workflows/staging-operation.yml",
 ]);
 const MAX_ARCHIVE_BYTES = 1024 * 1024;
+const MAX_RUN_ATTEMPTS = 100;
 
 function requireContract(condition, code) {
   if (!condition) throw new Error(code);
@@ -28,7 +29,11 @@ function exactLogicalJob(jobs, logicalName, attempt) {
 
 async function collectHandoffMetadata({ github, context, runId, attempt }) {
   requireContract(
-    Number.isSafeInteger(runId) && runId > 0 && Number.isSafeInteger(attempt) && attempt > 0,
+    Number.isSafeInteger(runId) &&
+      runId > 0 &&
+      Number.isSafeInteger(attempt) &&
+      attempt > 0 &&
+      attempt <= MAX_RUN_ATTEMPTS,
     "INVALID_SOURCE_RUN_IDENTITY",
   );
   requireContract(
@@ -82,13 +87,22 @@ async function collectHandoffMetadata({ github, context, runId, attempt }) {
   );
 
   const expectedName = `staging-sha-proof-${runId}-attempt-${attempt}`;
-  const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+  const artifactResponse = await github.rest.actions.listWorkflowRunArtifacts({
     owner,
     repo,
     run_id: runId,
     name: expectedName,
     per_page: 100,
   });
+  const artifactPage = artifactResponse.data;
+  requireContract(
+    Number.isSafeInteger(artifactPage.total_count) &&
+      artifactPage.total_count <= 100 &&
+      Array.isArray(artifactPage.artifacts) &&
+      artifactPage.artifacts.length === artifactPage.total_count,
+    "UNBOUNDED_PROOF_ARTIFACT_SET",
+  );
+  const artifacts = artifactPage.artifacts;
   const matching = artifacts.filter((artifact) => {
     const created = Date.parse(artifact.created_at);
     return (
@@ -156,6 +170,7 @@ function writeHandoffMetadata(directory, result) {
 
 module.exports = {
   MAX_ARCHIVE_BYTES,
+  MAX_RUN_ATTEMPTS,
   collectHandoffMetadata,
   exactLogicalJob,
   writeHandoffMetadata,

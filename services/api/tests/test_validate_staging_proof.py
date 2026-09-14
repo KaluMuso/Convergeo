@@ -314,3 +314,8 @@ def test_release_envelope_binds_checkpoint_reprobe_counts_and_configuration() ->
     proof["previews"]["admin"]["configuration_revision"] = "stale-config"
     with pytest.raises(proof_mod.ProofValidationError, match="configuration revision"):
         _validate_release(proof)
+
+    proof = _release_proof()
+    proof["previews"]["customer"]["deployment_create_calls"] = True
+    with pytest.raises(proof_mod.ProofValidationError, match="deployment count"):
+        _validate_release(proof)

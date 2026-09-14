@@ -299,7 +299,11 @@ def validate_release_envelope(
             raise ProofValidationError(
                 f"release proof {portal} deployment action is invalid"
             )
-        if (create_calls, reused) != ((1, 0) if action == "created" else (0, 1)):
+        if (
+            type(create_calls) is not int
+            or type(reused) is not int
+            or (create_calls, reused) != ((1, 0) if action == "created" else (0, 1))
+        ):
             raise ProofValidationError(
                 f"release proof {portal} deployment count mismatch"
             )

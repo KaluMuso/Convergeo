@@ -8,7 +8,6 @@ const SHA = "a".repeat(40);
 const ARCHIVE = Buffer.from("bounded-proof-archive");
 
 function fixture() {
-  const artifactRoute = Symbol("artifacts");
   const run = {
     id: 10,
     run_attempt: 2,
@@ -34,11 +33,12 @@ function fixture() {
   };
   const github = {
     request: async () => ({ data: run }),
-    paginate: async (route, params) =>
-      route === artifactRoute ? [artifact] : params.attempt_number === 2 ? [smoke] : [],
+    paginate: async (_route, params) => (params.attempt_number === 2 ? [smoke] : []),
     rest: {
       actions: {
-        listWorkflowRunArtifacts: artifactRoute,
+        listWorkflowRunArtifacts: async () => ({
+          data: { total_count: 1, artifacts: [artifact] },
+        }),
         downloadArtifact: async () => ({ data: ARCHIVE }),
       },
       git: { getRef: async () => ({ data: { object: { sha: SHA } } }) },
@@ -104,5 +104,30 @@ test("fork/source workflow metadata fails before artifact use", async () => {
       attempt: 2,
     }),
     /UNTRUSTED_SOURCE_RUN/,
+  );
+});
+
+test("user-supplied attempt and artifact enumeration stay bounded", async () => {
+  const value = fixture();
+  await assert.rejects(
+    adapter.collectHandoffMetadata({
+      github: value.github,
+      context: value.context,
+      runId: 10,
+      attempt: adapter.MAX_RUN_ATTEMPTS + 1,
+    }),
+    /INVALID_SOURCE_RUN_IDENTITY/,
+  );
+  value.github.rest.actions.listWorkflowRunArtifacts = async () => ({
+    data: { total_count: 101, artifacts: [value.artifact] },
+  });
+  await assert.rejects(
+    adapter.collectHandoffMetadata({
+      github: value.github,
+      context: value.context,
+      runId: 10,
+      attempt: 2,
+    }),
+    /UNBOUNDED_PROOF_ARTIFACT_SET/,
   );
 });
