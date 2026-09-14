@@ -29,6 +29,7 @@ CUSTOMER_STAGING_ORIGIN = "https://customer.staging.vergeo5.com"
 CONFIG_REVISION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 OPAQUE_ID_RE = re.compile(r"^(?:dpl|prj)_[A-Za-z0-9]+$")
 RELEASE_PROOF_OUTCOMES = (
+    "deployment_checkpoint_reprobe",
     "portal_identity_customer",
     "portal_identity_vendor",
     "portal_identity_admin",
@@ -282,6 +283,61 @@ def validate_release_envelope(
         if not OPAQUE_ID_RE.fullmatch(str(row.get("project_id") or "")):
             raise ProofValidationError(
                 f"release proof {portal} project identity is invalid"
+            )
+        if row.get("configuration_revision") != configuration_revision:
+            raise ProofValidationError(
+                f"release proof {portal} configuration revision mismatch"
+            )
+        if row.get("checkpoint_stage") != "PRE_PROBE":
+            raise ProofValidationError(
+                f"release proof {portal} checkpoint stage mismatch"
+            )
+        action = row.get("deployment_action")
+        create_calls = row.get("deployment_create_calls")
+        reused = row.get("reused_deployments")
+        if action not in {"created", "reused"}:
+            raise ProofValidationError(
+                f"release proof {portal} deployment action is invalid"
+            )
+        if (create_calls, reused) != ((1, 0) if action == "created" else (0, 1)):
+            raise ProofValidationError(
+                f"release proof {portal} deployment count mismatch"
+            )
+        origin_attempt = row.get("deployment_origin_attempt")
+        if (
+            type(origin_attempt) is not int
+            or origin_attempt <= 0
+            or origin_attempt > source_run_attempt
+        ):
+            raise ProofValidationError(
+                f"release proof {portal} deployment origin attempt mismatch"
+            )
+
+    efficiency = proof.get("deployment_efficiency")
+    if not isinstance(efficiency, dict):
+        raise ProofValidationError("release proof deployment efficiency is required")
+    expected_create_calls = sum(
+        int(previews[portal]["deployment_create_calls"]) for portal in REQUIRED_PORTALS
+    )
+    expected_reused = sum(
+        int(previews[portal]["reused_deployments"]) for portal in REQUIRED_PORTALS
+    )
+    if efficiency.get("create_calls") != expected_create_calls:
+        raise ProofValidationError("release proof deployment create count mismatch")
+    if efficiency.get("reused_deployments") != expected_reused:
+        raise ProofValidationError("release proof deployment reuse count mismatch")
+    portal_efficiency = efficiency.get("portals")
+    if not isinstance(portal_efficiency, dict) or set(portal_efficiency) != set(
+        REQUIRED_PORTALS
+    ):
+        raise ProofValidationError("release proof deployment portal counts mismatch")
+    for portal in REQUIRED_PORTALS:
+        if portal_efficiency.get(portal) != {
+            "action": previews[portal]["deployment_action"],
+            "origin_attempt": previews[portal]["deployment_origin_attempt"],
+        }:
+            raise ProofValidationError(
+                f"release proof {portal} deployment efficiency mismatch"
             )
 
     customer = previews["customer"]

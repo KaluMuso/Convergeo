@@ -85,10 +85,21 @@ class HandoffTests(unittest.TestCase):
                 "health_api_host": API_HOST,
                 "health_build_id": S,
                 "preview_url": f"https://convergeo-{portal}-abc123-vergeo-projects.vercel.app",
+                "configuration_revision": "rev_fixture",
+                "checkpoint_stage": "PRE_PROBE",
+                "deployment_action": "created",
+                "deployment_origin_attempt": 2,
+                "deployment_create_calls": 1,
+                "reused_deployments": 0,
             }
         self.proof["previews"]["customer"].update(
             stable_hostname_status="verified", stable_hostname_url=CUSTOMER_ORIGIN
         )
+        self.proof["deployment_efficiency"] = {
+            "create_calls": 3,
+            "reused_deployments": 0,
+            "portals": {portal: {"action": "created", "origin_attempt": 2} for portal in PORTALS},
+        }
         self.run = {
             "id": 10,
             "run_attempt": 2,
@@ -105,7 +116,7 @@ class HandoffTests(unittest.TestCase):
         }
         self.artifact = {
             "id": 20,
-            "name": "staging-sha-proof",
+            "name": "staging-sha-proof-10-attempt-2",
             "expired": False,
             "created_at": "2026-09-14T12:01:01Z",
             "workflow_run": {
@@ -121,7 +132,13 @@ class HandoffTests(unittest.TestCase):
                 "projectId": "prj_" + portal,
                 "readyState": "READY",
                 "target": None,
-                "meta": {"githubCommitSha": S},
+                "meta": {
+                    "githubCommitSha": S,
+                    "convergeoBuildConfigRevision": "rev_fixture",
+                    "convergeoRepositoryId": str(REPOSITORY_ID),
+                    "convergeoSourceRunId": "10",
+                    "convergeoCreationAttempt": "2",
+                },
                 "url": f"convergeo-{portal}-abc123-vergeo-projects.vercel.app",
             }
             for portal in PORTALS
@@ -236,6 +253,10 @@ class HandoffTests(unittest.TestCase):
         self.artifact["created_at"] = "2026-09-14T11:55:00Z"
         self.fails("ARTIFACT_ATTEMPT_NOT_BOUND")
 
+    def test_previous_attempt_artifact_name_is_rejected_before_opening(self):
+        self.artifact["name"] = "staging-sha-proof-10-attempt-1"
+        self.fails("WRONG_ARTIFACT_KIND")
+
     def test_previous_successful_dependencies_can_be_reused(self):
         self.jobs[0]["run_attempt"] = 1
         self.assertEqual(self.resolve().source_attempt, 2)
@@ -335,13 +356,21 @@ class HandoffTests(unittest.TestCase):
         archive = archive_of(self.proof)
         self.artifact["digest"] = "sha256:" + "0" * 64
         with self.assertRaisesRegex(ContractError, "ARTIFACT_DIGEST_MISMATCH"):
-            read_proof_archive(archive, self.artifact)
+            read_proof_archive(
+                archive,
+                self.artifact,
+                expected_name="staging-sha-proof-10-attempt-2",
+            )
 
     def test_path_traversal_rejected_without_extraction(self):
         archive = archive_of(self.proof, "../staging-sha-proof.json")
         self.artifact["digest"] = "sha256:" + hashlib.sha256(archive).hexdigest()
         with self.assertRaisesRegex(ContractError, "UNEXPECTED_ARCHIVE_PATH"):
-            read_proof_archive(archive, self.artifact)
+            read_proof_archive(
+                archive,
+                self.artifact,
+                expected_name="staging-sha-proof-10-attempt-2",
+            )
 
     def test_duplicate_json_fields_rejected(self):
         buf = io.BytesIO()
@@ -349,7 +378,11 @@ class HandoffTests(unittest.TestCase):
             zf.writestr("staging-sha-proof.json", '{"a":1,"a":2}')
         self.artifact["digest"] = "sha256:" + hashlib.sha256(buf.getvalue()).hexdigest()
         with self.assertRaisesRegex(ContractError, "DUPLICATE_JSON_KEY"):
-            read_proof_archive(buf.getvalue(), self.artifact)
+            read_proof_archive(
+                buf.getvalue(),
+                self.artifact,
+                expected_name="staging-sha-proof-10-attempt-2",
+            )
 
     def test_full_scope_derives_certification_inputs(self):
         inputs = self.resolve().workflow_inputs("full")
@@ -390,6 +423,21 @@ class HandoffTests(unittest.TestCase):
     def test_manifest_project_must_match_expected_project(self):
         self.proof["previews"]["admin"]["project_id"] = "prj_other"
         self.fails("VERCEL_PROJECT_MISMATCH")
+
+    def test_live_vercel_configuration_and_producer_are_bound(self):
+        meta = self.live_deployments["admin"]["meta"]
+        cases = (
+            ("convergeoBuildConfigRevision", "stale", "VERCEL_CONFIGURATION_MISMATCH"),
+            ("convergeoRepositoryId", "999", "VERCEL_PRODUCER_MISMATCH"),
+            ("convergeoSourceRunId", "11", "VERCEL_PRODUCER_MISMATCH"),
+            ("convergeoCreationAttempt", "1", "VERCEL_PRODUCER_MISMATCH"),
+        )
+        for field, value, code in cases:
+            with self.subTest(field=field):
+                original = meta[field]
+                meta[field] = value
+                self.fails(code)
+                meta[field] = original
 
     def test_reusable_workflow_job_prefixes_remain_unambiguous(self):
         self.run["path"] = ORCHESTRATION_WORKFLOW

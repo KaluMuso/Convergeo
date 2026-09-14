@@ -180,7 +180,19 @@ if release_envelope:
         "identity_scheme": "operator-managed-non-secret-v1",
         "revision": os.environ["CONFIGURATION_REVISION"],
     }
+    bundle["deployment_efficiency"] = {
+        "create_calls": sum(row["deployment_create_calls"] for row in portals.values()),
+        "reused_deployments": sum(row["reused_deployments"] for row in portals.values()),
+        "portals": {
+            portal: {
+                "action": row["deployment_action"],
+                "origin_attempt": row["deployment_origin_attempt"],
+            }
+            for portal, row in portals.items()
+        },
+    }
     bundle["proof_outcomes"] = {
+        "deployment_checkpoint_reprobe": "PASS",
         "portal_identity_customer": "PASS",
         "portal_identity_vendor": "PASS",
         "portal_identity_admin": "PASS",

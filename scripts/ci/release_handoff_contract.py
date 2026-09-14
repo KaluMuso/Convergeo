@@ -110,9 +110,19 @@ def _unique_json(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
-def read_proof_archive(archive: bytes, artifact: Mapping[str, Any]) -> dict[str, Any]:
+def read_proof_archive(
+    archive: bytes, artifact: Mapping[str, Any], *, expected_name: str
+) -> dict[str, Any]:
     """Read exactly one bounded proof file, in memory; never extract paths."""
-    require(artifact.get("name") == "staging-sha-proof", "WRONG_ARTIFACT_KIND")
+    require(
+        isinstance(expected_name, str)
+        and re.fullmatch(
+            r"staging-sha-proof-[1-9][0-9]*-attempt-[1-9][0-9]*", expected_name
+        )
+        is not None,
+        "INVALID_ARTIFACT_IDENTITY",
+    )
+    require(artifact.get("name") == expected_name, "WRONG_ARTIFACT_KIND")
     require(artifact.get("expired") is False, "ARTIFACT_EXPIRED_OR_UNKNOWN")
     expected = artifact.get("digest")
     require(
@@ -302,6 +312,8 @@ def validate_vercel_metadata(
     *,
     candidate_sha: str,
     expected_project_ids: Mapping[str, str],
+    configuration_revision: str,
+    source_run_id: int,
 ) -> dict[str, str]:
     """Bind manifest identities to authenticated current Vercel metadata."""
     require(set(live_deployments) == set(PORTALS), "INCOMPLETE_VERCEL_METADATA")
@@ -328,9 +340,19 @@ def validate_vercel_metadata(
         )
         require(live.get("readyState") == "READY", "VERCEL_DEPLOYMENT_NOT_READY")
         require(live.get("target") in {None, "preview"}, "VERCEL_TARGET_MISMATCH")
+        meta = live.get("meta")
+        require(type(meta) is dict, "INVALID_VERCEL_METADATA")
+        require(meta.get("githubCommitSha") == candidate_sha, "VERCEL_SHA_MISMATCH")
         require(
-            live.get("meta", {}).get("githubCommitSha") == candidate_sha,
-            "VERCEL_SHA_MISMATCH",
+            meta.get("convergeoBuildConfigRevision") == configuration_revision,
+            "VERCEL_CONFIGURATION_MISMATCH",
+        )
+        require(
+            meta.get("convergeoRepositoryId") == str(REPOSITORY_ID)
+            and meta.get("convergeoSourceRunId") == str(source_run_id)
+            and meta.get("convergeoCreationAttempt")
+            == str(row.get("deployment_origin_attempt")),
+            "VERCEL_PRODUCER_MISMATCH",
         )
         origin = preview_origin(portal, row.get("preview_url"))
         require(live.get("url") == urlsplit(origin).hostname, "VERCEL_URL_MISMATCH")
@@ -399,7 +421,11 @@ def resolve_handoff(
         and arun.get("repository_id") == REPOSITORY_ID,
         "ARTIFACT_PROVENANCE_MISMATCH",
     )
-    proof = read_proof_archive(archive, artifact)
+    proof = read_proof_archive(
+        archive,
+        artifact,
+        expected_name=f"staging-sha-proof-{run_id}-attempt-{attempt}",
+    )
     require(proof.get("candidate_sha") == candidate, "PROOF_SHA_MISMATCH")
     proved_at = timestamp(proof.get("proved_at"))
     started = timestamp(run.get("run_started_at"))
@@ -495,6 +521,8 @@ def resolve_handoff(
         live_deployments,
         candidate_sha=candidate,
         expected_project_ids=expected_project_ids,
+        configuration_revision=configuration_revision,
+        source_run_id=run_id,
     )
     return Handoff(
         candidate,
@@ -564,12 +592,13 @@ def _read_archive(path: Path) -> bytes:
         raise ContractError("INPUT_FILE_UNAVAILABLE") from None
 
 
-def _write_env(path: Path, values: Mapping[str, Any]) -> None:
+def _write_pairs(path: Path, values: Mapping[str, Any], *, upper_keys: bool) -> None:
     lines: list[str] = []
     for key, value in values.items():
         rendered = str(value).lower() if isinstance(value, bool) else str(value)
         require("\n" not in rendered and "\r" not in rendered, "UNSAFE_OUTPUT_VALUE")
-        lines.append(f"{key}={rendered}")
+        output_key = key.upper() if upper_keys else key.lower()
+        lines.append(f"{output_key}={rendered}")
     try:
         with path.open("a", encoding="utf-8") as handle:
             handle.write("\n".join(lines) + "\n")
@@ -641,7 +670,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--project-admin", required=True)
     parser.add_argument("--focus-group", choices=sorted(FOCUS), required=True)
     parser.add_argument("--max-age-seconds", type=int, default=21_600)
-    parser.add_argument("--github-env", type=Path, required=True)
+    parser.add_argument("--github-env", type=Path)
+    parser.add_argument("--github-output", type=Path)
     parser.add_argument("--summary", type=Path)
     args = parser.parse_args(argv)
 
@@ -660,7 +690,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             }
         else:
             archive_for_lookup = _read_archive(args.archive)
-            proof_for_lookup = read_proof_archive(archive_for_lookup, artifact)
+            proof_for_lookup = read_proof_archive(
+                archive_for_lookup,
+                artifact,
+                expected_name=(
+                    f"staging-sha-proof-{args.run_id}-attempt-{args.attempt}"
+                ),
+            )
             live = _fetch_vercel_deployments(
                 proof_for_lookup,
                 token=os.environ.get("VERCEL_TOKEN", ""),
@@ -691,20 +727,25 @@ def main(argv: Sequence[str] | None = None) -> int:
             max_age_seconds=args.max_age_seconds,
         )
         values = handoff.workflow_inputs(args.focus_group)
-        _write_env(
-            args.github_env,
-            {
-                "E2E_BASE_URL": values["base_url"],
-                "E2E_VENDOR_BASE_URL": values["vendor_base_url"],
-                "E2E_ADMIN_BASE_URL": values["admin_base_url"],
-                "E2E_EXPECT_SHA": values["expect_sha"],
-                "E2E_SOURCE_RUN_ID": values["source_run_id"],
-                "E2E_SOURCE_RUN_ATTEMPT": values["source_run_attempt"],
-                "E2E_SOURCE_ARTIFACT_ID": values["source_artifact_id"],
-                "E2E_PRE_RELEASE": values["pre_release"],
-                "E2E_FOCUS_GROUP": values["focus_group"],
-            },
+        values_for_transport = {
+            "E2E_BASE_URL": values["base_url"],
+            "E2E_VENDOR_BASE_URL": values["vendor_base_url"],
+            "E2E_ADMIN_BASE_URL": values["admin_base_url"],
+            "E2E_EXPECT_SHA": values["expect_sha"],
+            "E2E_SOURCE_RUN_ID": values["source_run_id"],
+            "E2E_SOURCE_RUN_ATTEMPT": values["source_run_attempt"],
+            "E2E_SOURCE_ARTIFACT_ID": values["source_artifact_id"],
+            "E2E_PRE_RELEASE": values["pre_release"],
+            "E2E_FOCUS_GROUP": values["focus_group"],
+        }
+        require(
+            args.github_env is not None or args.github_output is not None,
+            "OUTPUT_FILE_UNAVAILABLE",
         )
+        if args.github_env is not None:
+            _write_pairs(args.github_env, values_for_transport, upper_keys=True)
+        if args.github_output is not None:
+            _write_pairs(args.github_output, values_for_transport, upper_keys=False)
         if args.summary:
             try:
                 with args.summary.open("a", encoding="utf-8") as handle:

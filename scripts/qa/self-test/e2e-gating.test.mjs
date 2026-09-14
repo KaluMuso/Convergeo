@@ -9,6 +9,7 @@ import { resolveGatePolicy } from "../../../e2e/fixtures/gating-policy.ts";
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const SPEC_DIR = path.join(REPO_ROOT, "e2e", "specs");
 const E2E_WORKFLOW = path.join(REPO_ROOT, ".github", "workflows", "e2e.yml");
+const HANDOFF_ADAPTER = path.join(REPO_ROOT, "scripts", "ci", "github_handoff_metadata.cjs");
 
 /**
  * PR C contract: in an integrated-staging certification run, a required journey
@@ -200,6 +201,7 @@ describe("release handoff workflow contract", () => {
   const source = readFileSync(E2E_WORKFLOW, "utf8");
 
   it("manual runs accept an authenticated source run, not hand-entered SHA or URLs", () => {
+    const adapter = readFileSync(HANDOFF_ADAPTER, "utf8");
     const dispatch = source.slice(
       source.indexOf("  workflow_dispatch:"),
       source.indexOf("\npermissions:"),
@@ -208,8 +210,9 @@ describe("release handoff workflow contract", () => {
     assert.match(dispatch, /source_run_attempt:/);
     assert.doesNotMatch(dispatch, /Override E2E_BASE_URL|expect_sha:|vendor_base_url:/);
     assert.match(source, /actions\/github-script@v8/);
-    assert.match(source, /downloadArtifact/);
-    assert.match(source, /\^sha256:\[0-9a-f\]\{64\}\$/);
+    assert.match(source, /github_handoff_metadata\.cjs/);
+    assert.match(adapter, /downloadArtifact/);
+    assert.match(adapter, /\^sha256:\[0-9a-f\]\{64\}\$/);
   });
 
   it("standalone E2E shares one non-cancelling staging operation key", () => {
@@ -220,12 +223,16 @@ describe("release handoff workflow contract", () => {
 
   it("nested E2E requires a run-bound internal identity and cannot reacquire the parent key", () => {
     assert.match(source, /internal_operation_id:/);
-    assert.match(source, /expected="\$\{REPOSITORY_ID\}:\$\{GITHUB_RUN_ID\}"/);
+    assert.match(
+      source,
+      /expected="\$\{REPOSITORY_ID\}:\$\{GITHUB_RUN_ID\}:\$\{GITHUB_RUN_ATTEMPT\}:\$\{GITHUB_SHA\}"/,
+    );
     assert.match(
       source,
       /KaluMuso\/Convergeo\/\.github\/workflows\/staging-operation\.yml@refs\/heads\/staging/,
     );
     assert.match(source, /GITHUB_SHA.*E2E_EXPECT_SHA/);
+    assert.match(source, /CALLED_WORKFLOW_REF/);
     assert.match(source, /staging-e2e-nested-/);
     assert.ok(
       source.indexOf("Guard trusted staging operation entry") <

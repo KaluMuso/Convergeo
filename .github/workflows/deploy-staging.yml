@@ -2,14 +2,61 @@ name: Deploy staging
 
 # Manually controlled staging pipeline. Never auto-promotes to production.
 #
-# Triggers:
-#   - workflow_dispatch (explicit)
-#   - push to the protected `staging` branch (controlled branch deploy)
+# Entry points:
+#   - workflow_dispatch (explicit standalone operation)
+#   - workflow_call from the trusted staging-operation.yml graph
+# Protected `staging` pushes are owned by that outer graph so deploy and E2E
+# cannot leave an unlocked gap between separate workflow runs.
 #
 # Required GitHub Environment: `staging` (protection rules + secrets).
 # Secret *names* only below — values live in the environment, never in git.
 
 on:
+  workflow_call:
+    inputs:
+      internal_operation_id:
+        description: "Repository/run/attempt/SHA identity assigned by staging-operation.yml"
+        required: false
+        default: ""
+        type: string
+      release_candidate:
+        description: "Require and expose the v2 release handoff proof"
+        required: false
+        default: false
+        type: boolean
+      api_image_tag:
+        required: false
+        default: ""
+        type: string
+      skip_vercel:
+        required: false
+        default: false
+        type: boolean
+      skip_migrate:
+        required: false
+        default: false
+        type: boolean
+      seed_synthetic:
+        required: false
+        default: false
+        type: boolean
+    outputs:
+      handoff_status:
+        value: ${{ jobs.release-handoff.outputs.handoff_status }}
+      base_url:
+        value: ${{ jobs.release-handoff.outputs.base_url }}
+      vendor_base_url:
+        value: ${{ jobs.release-handoff.outputs.vendor_base_url }}
+      admin_base_url:
+        value: ${{ jobs.release-handoff.outputs.admin_base_url }}
+      expect_sha:
+        value: ${{ jobs.release-handoff.outputs.expect_sha }}
+      source_run_id:
+        value: ${{ jobs.release-handoff.outputs.source_run_id }}
+      source_run_attempt:
+        value: ${{ jobs.release-handoff.outputs.source_run_attempt }}
+      source_artifact_id:
+        value: ${{ jobs.release-handoff.outputs.source_artifact_id }}
   workflow_dispatch:
     inputs:
       api_image_tag:
@@ -31,12 +78,12 @@ on:
         required: false
         type: boolean
         default: false
-  push:
-    branches:
-      - staging
 
 concurrency:
-  group: deploy-staging
+  # Standalone manual deployments share the whole staging-operation lock.
+  # A trusted outer operation already owns that lock; its called deploy leg
+  # uses a run-scoped nested key and therefore cannot deadlock on its parent.
+  group: ${{ inputs.internal_operation_id != '' && format('staging-deploy-nested-{0}', github.run_id) || 'staging-operation' }}
   cancel-in-progress: false
 
 permissions:
@@ -56,6 +103,37 @@ jobs:
     environment: staging
     steps:
       - uses: actions/checkout@v7
+
+      - name: Guard trusted staging operation entry
+        env:
+          INTERNAL_OPERATION_ID: ${{ inputs.internal_operation_id }}
+          CALLER_WORKFLOW_REF: ${{ github.workflow_ref }}
+          CALLED_WORKFLOW_REF: ${{ job.workflow_ref }}
+          REPOSITORY_ID: ${{ github.repository_id }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REPOSITORY}" != "KaluMuso/Convergeo" ] || [ "${REPOSITORY_ID}" != "1290591718" ]; then
+            echo "::error::untrusted repository for protected staging deploy"
+            exit 1
+          fi
+          if [ -n "${INTERNAL_OPERATION_ID}" ]; then
+            expected="${REPOSITORY_ID}:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}:${GITHUB_SHA}"
+            if [ "${INTERNAL_OPERATION_ID}" != "${expected}" ]; then
+              echo "::error::invalid internal staging operation identity"
+              exit 1
+            fi
+            if [ "${CALLER_WORKFLOW_REF}" != "KaluMuso/Convergeo/.github/workflows/staging-operation.yml@refs/heads/staging" ]; then
+              echo "::error::untrusted reusable-workflow caller"
+              exit 1
+            fi
+            if [ "${CALLED_WORKFLOW_REF}" != "KaluMuso/Convergeo/.github/workflows/deploy-staging.yml@refs/heads/staging" ]; then
+              echo "::error::untrusted reusable deploy definition"
+              exit 1
+            fi
+          elif [ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ] || [ "${GITHUB_REF}" != "refs/heads/staging" ]; then
+            echo "::error::standalone staging deploy must be manually dispatched from refs/heads/staging"
+            exit 1
+          fi
 
       - name: Refuse missing staging identifiers
         env:
@@ -359,7 +437,7 @@ jobs:
         id: tag
         run: |
           set -euo pipefail
-          TAG="${{ github.event.inputs.api_image_tag || github.sha }}"
+          TAG="${{ inputs.api_image_tag || github.sha }}"
           if [ "$TAG" = "latest" ]; then
             echo "::error::refusing image tag 'latest'"
             exit 1
@@ -925,6 +1003,10 @@ jobs:
         if: ${{ needs.prove-vercel-preview.result == 'success' }}
         env:
           STAGING_SUPABASE_PROJECT_ID: ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
+          STAGING_BUILD_CONFIG_REVISION: ${{ vars.STAGING_BUILD_CONFIG_REVISION }}
+          CUSTOMER_STAGING_STABLE_HOSTNAME: ${{ vars.CUSTOMER_STAGING_STABLE_HOSTNAME }}
+          INTERNAL_OPERATION_ID: ${{ inputs.internal_operation_id }}
+          RELEASE_CANDIDATE: ${{ inputs.release_candidate && 'true' || 'false' }}
         run: |
           set -euo pipefail
           migrate_result="${{ needs.migrate-supabase.result }}"
@@ -940,6 +1022,26 @@ jobs:
           if [ "${migrate_result}" = "skipped" ]; then
             bundle_args+=(--allow-migrate-skipped)
           fi
+          if [ "${RELEASE_CANDIDATE}" = "true" ]; then
+            if [ -z "${CUSTOMER_STAGING_STABLE_HOSTNAME}" ]; then
+              echo "::error::release handoff requires the configured Customer stable hostname"
+              exit 1
+            fi
+            source_workflow=".github/workflows/deploy-staging.yml"
+            if [ -n "${INTERNAL_OPERATION_ID}" ]; then
+              source_workflow=".github/workflows/staging-operation.yml"
+            fi
+            bundle_args+=(
+              --release-envelope
+              --source-repository "${GITHUB_REPOSITORY}"
+              --source-repository-id "${GITHUB_REPOSITORY_ID}"
+              --source-workflow "${source_workflow}"
+              --source-ref "${GITHUB_REF}"
+              --source-run-id "${GITHUB_RUN_ID}"
+              --source-run-attempt "${GITHUB_RUN_ATTEMPT}"
+              --configuration-revision "${STAGING_BUILD_CONFIG_REVISION}"
+            )
+          fi
           bash scripts/ci/staging-evidence-bundle.sh "${bundle_args[@]}"
 
       - name: Upload smoke evidence
@@ -952,16 +1054,83 @@ jobs:
             /tmp/fingerprint.json
 
       - name: Upload unified staging SHA proof
+        id: proof_upload
         if: ${{ needs.prove-vercel-preview.result == 'success' }}
         uses: actions/upload-artifact@v7
         with:
           name: staging-sha-proof-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: /tmp/staging-sha-proof.json
 
+  release-handoff:
+    name: Resolve authenticated release handoff
+    needs: [smoke]
+    if: ${{ inputs.release_candidate && needs.smoke.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment: staging
+    outputs:
+      handoff_status: ${{ steps.resolve_handoff.outputs.handoff_status }}
+      base_url: ${{ steps.resolve_handoff.outputs.e2e_base_url }}
+      vendor_base_url: ${{ steps.resolve_handoff.outputs.e2e_vendor_base_url }}
+      admin_base_url: ${{ steps.resolve_handoff.outputs.e2e_admin_base_url }}
+      expect_sha: ${{ steps.resolve_handoff.outputs.e2e_expect_sha }}
+      source_run_id: ${{ steps.resolve_handoff.outputs.e2e_source_run_id }}
+      source_run_attempt: ${{ steps.resolve_handoff.outputs.e2e_source_run_attempt }}
+      source_artifact_id: ${{ steps.resolve_handoff.outputs.e2e_source_artifact_id }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read exact run, jobs, artifact and current staging ref
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const path = require('path');
+            const adapter = require('./scripts/ci/github_handoff_metadata.cjs');
+            const result = await adapter.collectHandoffMetadata({
+              github,
+              context,
+              runId: context.runId,
+              attempt: context.runAttempt,
+            });
+            adapter.writeHandoffMetadata(
+              path.join(process.env.RUNNER_TEMP, 'staging-handoff'),
+              result,
+            );
+
+      - name: Validate proof and expose allowlisted E2E inputs
+        id: resolve_handoff
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID_CUSTOMER: ${{ secrets.VERCEL_PROJECT_ID_CUSTOMER }}
+          VERCEL_PROJECT_ID_VENDOR: ${{ secrets.VERCEL_PROJECT_ID_VENDOR }}
+          VERCEL_PROJECT_ID_ADMIN: ${{ secrets.VERCEL_PROJECT_ID_ADMIN }}
+          STAGING_BUILD_CONFIG_REVISION: ${{ vars.STAGING_BUILD_CONFIG_REVISION }}
+        run: |
+          set -euo pipefail
+          handoff_dir="${RUNNER_TEMP}/staging-handoff"
+          expected_sha="$(tr -d '\r\n' < "${handoff_dir}/expected-sha.txt")"
+          staging_sha="$(tr -d '\r\n' < "${handoff_dir}/staging-sha.txt")"
+          python3 scripts/ci/release_handoff_contract.py \
+            --archive "${handoff_dir}/proof.zip" \
+            --run "${handoff_dir}/run.json" \
+            --artifact "${handoff_dir}/artifact.json" \
+            --jobs "${handoff_dir}/jobs.json" \
+            --expected-sha "${expected_sha}" \
+            --current-staging-sha "${staging_sha}" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --attempt "${GITHUB_RUN_ATTEMPT}" \
+            --configuration-revision "${STAGING_BUILD_CONFIG_REVISION}" \
+            --project-customer "${VERCEL_PROJECT_ID_CUSTOMER}" \
+            --project-vendor "${VERCEL_PROJECT_ID_VENDOR}" \
+            --project-admin "${VERCEL_PROJECT_ID_ADMIN}" \
+            --focus-group full \
+            --github-output "${GITHUB_OUTPUT}"
+          echo "handoff_status=PASS" >> "${GITHUB_OUTPUT}"
+
   # Explicit non-promotion marker — this workflow never deploys production.
   never-promote-production:
     name: Guard — no production promotion
-    needs: [smoke]
+    needs: [smoke, release-handoff]
     if: always()
     runs-on: ubuntu-latest
     steps:

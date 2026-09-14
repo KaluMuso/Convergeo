@@ -192,6 +192,12 @@ def _release_proof() -> dict[str, Any]:
         row["deployment_id"] = f"dpl_{portal}"
         row["project_id"] = f"prj_{portal}"
         row["preview_url"] = f"https://convergeo-{portal}-abc123-vergeo-projects.vercel.app"
+        row["configuration_revision"] = "staging-config-2026-09-14"
+        row["checkpoint_stage"] = "PRE_PROBE"
+        row["deployment_action"] = "created"
+        row["deployment_origin_attempt"] = 2
+        row["deployment_create_calls"] = 1
+        row["reused_deployments"] = 0
     previews["customer"]["stable_hostname_status"] = "verified"
     previews["customer"]["stable_hostname_url"] = proof_mod.CUSTOMER_STAGING_ORIGIN
     return {
@@ -217,6 +223,14 @@ def _release_proof() -> dict[str, Any]:
         "configuration": {
             "identity_scheme": "operator-managed-non-secret-v1",
             "revision": "staging-config-2026-09-14",
+        },
+        "deployment_efficiency": {
+            "create_calls": 3,
+            "reused_deployments": 0,
+            "portals": {
+                portal: {"action": "created", "origin_attempt": 2}
+                for portal in proof_mod.REQUIRED_PORTALS
+            },
         },
         "proof_outcomes": {proof_id: "PASS" for proof_id in proof_mod.RELEASE_PROOF_OUTCOMES},
     }
@@ -280,4 +294,23 @@ def test_release_envelope_binds_configuration_and_customer_same_site_origin() ->
         "https://convergeo-customer-abc123-vergeo-projects.vercel.app"
     )
     with pytest.raises(proof_mod.ProofValidationError, match="same-site origin"):
+        _validate_release(proof)
+
+
+def test_release_envelope_binds_checkpoint_reprobe_counts_and_configuration() -> None:
+    proof = _release_proof()
+    proof["previews"]["vendor"].update(
+        deployment_action="reused", deployment_create_calls=0, reused_deployments=1
+    )
+    proof["deployment_efficiency"].update(create_calls=2, reused_deployments=1)
+    proof["deployment_efficiency"]["portals"]["vendor"]["action"] = "reused"
+    _validate_release(proof)
+
+    proof["deployment_efficiency"]["create_calls"] = 3
+    with pytest.raises(proof_mod.ProofValidationError, match="create count"):
+        _validate_release(proof)
+
+    proof = _release_proof()
+    proof["previews"]["admin"]["configuration_revision"] = "stale-config"
+    with pytest.raises(proof_mod.ProofValidationError, match="configuration revision"):
         _validate_release(proof)

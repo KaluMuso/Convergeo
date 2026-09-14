@@ -6,9 +6,26 @@ name: E2E (Playwright · staging)
 # when their secrets are present (founder gate F9b).
 on:
   workflow_call:
+    outputs:
+      staging_ref_outcome:
+        value: ${{ jobs.e2e.outputs.staging_ref_outcome }}
+      customer_probe_outcome:
+        value: ${{ jobs.e2e.outputs.customer_probe_outcome }}
+      vendor_probe_outcome:
+        value: ${{ jobs.e2e.outputs.vendor_probe_outcome }}
+      setup_outcome:
+        value: ${{ jobs.e2e.outputs.setup_outcome }}
+      browser_outcome:
+        value: ${{ jobs.e2e.outputs.browser_outcome }}
+      execution_outcome:
+        value: ${{ jobs.e2e.outputs.execution_outcome }}
+      matrix_outcome:
+        value: ${{ jobs.e2e.outputs.matrix_outcome }}
+      cleanup_outcome:
+        value: ${{ jobs.e2e.outputs.cleanup_outcome }}
     inputs:
       internal_operation_id:
-        description: "Repository/run identity assigned by staging-operation.yml"
+        description: "Repository/run/attempt/SHA identity assigned by staging-operation.yml"
         required: true
         type: string
       source_run_id:
@@ -86,6 +103,15 @@ jobs:
   e2e:
     name: Playwright critical paths (Fast-3G · 360px)
     runs-on: ubuntu-latest
+    outputs:
+      staging_ref_outcome: ${{ steps.staging_ref_guard.outcome }}
+      customer_probe_outcome: ${{ steps.customer_probe.outcome }}
+      vendor_probe_outcome: ${{ steps.vendor_probe.outcome }}
+      setup_outcome: ${{ steps.canonical_setup.outcome }}
+      browser_outcome: ${{ steps.e2e_run.outcome }}
+      execution_outcome: ${{ steps.execution_guard.outcome }}
+      matrix_outcome: ${{ steps.matrix_guard.outcome }}
+      cleanup_outcome: ${{ steps.cleanup.outcome }}
     # The protected `staging` environment gates this run behind human approval and
     # is the ONLY place the staging database credentials and the staging
     # service-role key exist. Nothing here is a repository-level secret.
@@ -159,21 +185,26 @@ jobs:
         env:
           INTERNAL_OPERATION_ID: ${{ inputs.internal_operation_id }}
           CALLER_WORKFLOW_REF: ${{ github.workflow_ref }}
+          CALLED_WORKFLOW_REF: ${{ job.workflow_ref }}
           REPOSITORY_ID: ${{ github.repository_id }}
         run: |
           set -euo pipefail
-          if [ "${GITHUB_REPOSITORY}" != "KaluMuso/Convergeo" ]; then
+          if [ "${GITHUB_REPOSITORY}" != "KaluMuso/Convergeo" ] || [ "${REPOSITORY_ID}" != "1290591718" ]; then
             echo "::error::untrusted repository for protected staging E2E"
             exit 1
           fi
           if [ -n "${INTERNAL_OPERATION_ID}" ]; then
-            expected="${REPOSITORY_ID}:${GITHUB_RUN_ID}"
+            expected="${REPOSITORY_ID}:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}:${GITHUB_SHA}"
             if [ "${INTERNAL_OPERATION_ID}" != "${expected}" ]; then
               echo "::error::invalid internal staging operation identity"
               exit 1
             fi
             if [ "${CALLER_WORKFLOW_REF}" != "KaluMuso/Convergeo/.github/workflows/staging-operation.yml@refs/heads/staging" ]; then
               echo "::error::untrusted reusable-workflow caller"
+              exit 1
+            fi
+            if [ "${CALLED_WORKFLOW_REF}" != "KaluMuso/Convergeo/.github/workflows/e2e.yml@refs/heads/staging" ]; then
+              echo "::error::untrusted reusable E2E definition"
               exit 1
             fi
             if [ "${GITHUB_REF}" != "refs/heads/staging" ] || [ "${GITHUB_SHA}" != "${E2E_EXPECT_SHA}" ]; then
@@ -196,76 +227,13 @@ jobs:
           SOURCE_RUN_ATTEMPT: ${{ inputs.source_run_attempt }}
         with:
           script: |
-            const fs = require('fs');
             const path = require('path');
             const runId = Number(process.env.SOURCE_RUN_ID);
             const attempt = Number(process.env.SOURCE_RUN_ATTEMPT);
-            if (!Number.isSafeInteger(runId) || runId <= 0 || !Number.isSafeInteger(attempt) || attempt <= 0) {
-              core.setFailed('invalid deployment run identity');
-              return;
-            }
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const runResponse = await github.request(
-              'GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}',
-              { owner, repo, run_id: runId, attempt_number: attempt },
-            );
-            const run = runResponse.data;
-            const jobs = [];
-            for (let runAttempt = 1; runAttempt <= attempt; runAttempt += 1) {
-              const attemptJobs = await github.paginate(
-                'GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/jobs',
-                { owner, repo, run_id: runId, attempt_number: runAttempt, per_page: 100 },
-              );
-              for (const job of attemptJobs) {
-                jobs.push({ ...job, run_id: runId, run_attempt: runAttempt, head_sha: run.head_sha });
-              }
-            }
-            const smoke = jobs.filter((job) =>
-              job.run_attempt === attempt &&
-              (job.name === 'Staging smoke + evidence' || job.name.endsWith(' / Staging smoke + evidence'))
-            );
-            if (smoke.length !== 1) {
-              core.setFailed('missing or ambiguous current-attempt smoke job');
-              return;
-            }
-            const smokeStarted = Date.parse(smoke[0].started_at);
-            const smokeCompleted = Date.parse(smoke[0].completed_at);
-            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
-              owner, repo, run_id: runId, name: 'staging-sha-proof', per_page: 100,
-            });
-            const matching = artifacts.filter((artifact) => {
-              const created = Date.parse(artifact.created_at);
-              return artifact.name === 'staging-sha-proof' && artifact.expired === false &&
-                Number.isSafeInteger(artifact.size_in_bytes) && artifact.size_in_bytes > 0 &&
-                artifact.size_in_bytes <= 1024 * 1024 &&
-                created >= smokeStarted && created <= smokeCompleted;
-            });
-            if (matching.length !== 1 || !/^sha256:[0-9a-f]{64}$/.test(matching[0].digest || '')) {
-              core.setFailed('missing, ambiguous, expired, or undigested current-attempt proof artifact');
-              return;
-            }
-            const artifact = {
-              ...matching[0],
-              workflow_run: {
-                id: run.id,
-                head_sha: run.head_sha,
-                head_branch: run.head_branch,
-                repository_id: run.repository?.id,
-              },
-            };
-            const download = await github.rest.actions.downloadArtifact({
-              owner, repo, artifact_id: artifact.id, archive_format: 'zip',
-            });
-            const refResponse = await github.rest.git.getRef({ owner, repo, ref: 'heads/staging' });
+            const adapter = require('./scripts/ci/github_handoff_metadata.cjs');
+            const result = await adapter.collectHandoffMetadata({ github, context, runId, attempt });
             const directory = path.join(process.env.RUNNER_TEMP, 'staging-handoff');
-            fs.mkdirSync(directory, { recursive: true });
-            fs.writeFileSync(path.join(directory, 'run.json'), JSON.stringify(run));
-            fs.writeFileSync(path.join(directory, 'artifact.json'), JSON.stringify(artifact));
-            fs.writeFileSync(path.join(directory, 'jobs.json'), JSON.stringify(jobs));
-            fs.writeFileSync(path.join(directory, 'proof.zip'), Buffer.from(download.data));
-            fs.writeFileSync(path.join(directory, 'expected-sha.txt'), `${run.head_sha}\n`);
-            fs.writeFileSync(path.join(directory, 'staging-sha.txt'), `${refResponse.data.object.sha}\n`);
+            adapter.writeHandoffMetadata(directory, result);
 
       - name: Resolve verified manifest to E2E inputs
         id: resolve_handoff
@@ -589,7 +557,7 @@ jobs:
         if: ${{ failure() || cancelled() || env.E2E_FOCUS_GROUP != 'full' }}
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-artifacts-${{ github.run_id }}
+          name: playwright-artifacts-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
             e2e/playwright-report
             e2e/results
@@ -597,7 +565,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Publish sanitized completion record
-        if: ${{ always() }}
+        if: ${{ always() && inputs.internal_operation_id == '' }}
         env:
           JOB_STATUS: ${{ job.status }}
           INTERNAL_OPERATION_ID: ${{ inputs.internal_operation_id }}
@@ -683,7 +651,7 @@ jobs:
             echo "| Execution completeness | $(classify "${MATRIX_OUTCOME}") |"
             echo "| Private material cleanup | $(classify "${CLEANUP_OUTCOME}") |"
             echo
-            echo "Artifacts: \`playwright-artifacts-${GITHUB_RUN_ID}\` when uploaded."
+            echo "Artifacts: \`playwright-artifacts-${GITHUB_RUN_ID}-attempt-${GITHUB_RUN_ATTEMPT}\` when uploaded."
             echo "Approval/completion path: GitHub native \`staging\` environment and workflow completion."
             if [ "${JOB_STATUS}" = "success" ]; then
               echo "Next owned action: coordinator review; no deployment or promotion was performed by this E2E workflow."
