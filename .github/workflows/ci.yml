@@ -97,10 +97,11 @@ jobs:
         run: uv run mypy app tests scripts
 
       - name: Pytest
-        # Blocking full suite (testpaths=tests) — includes the route x role authz
-        # matrix (tests/test_authz_matrix.py) and the rate-limit fuzz suite
-        # (tests/fuzz, once M15-P04 lands) as security gates.
-        run: uv run pytest
+        # Blocking broad suite (testpaths=tests). The route x role authorization
+        # matrix has one mandatory owner below in `security-gates`; excluding that
+        # exact file here removes duplicate execution without excluding any other
+        # security, integration or deny-path test.
+        run: uv run pytest --ignore=tests/test_authz_matrix.py
         env:
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
@@ -422,8 +423,8 @@ jobs:
 
   security-gates:
     name: Security gates (headers + authz matrix)
-    # Blocking (M15-P05). Runs in parallel with `python`, so the redundant authz-matrix
-    # run adds no wall-clock time while giving a named, required security check.
+    # Blocking (M15-P05) and the sole owner of the complete route x role matrix.
+    # Keep this job name stable: it is a required master-branch check context.
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -452,15 +453,28 @@ jobs:
         working-directory: services/api
         run: uv sync --dev
 
-      - name: Route x role authz matrix (no DB)
-        # Isolation-clean (dependency overrides, guard short-circuits before any DB
-        # call). Also runs under the full `python` job; named here as the security gate.
+      - name: Route x role authz matrix (sole owner, no DB)
+        # Isolation-clean: dependency overrides and guards short-circuit before DB
+        # calls. JUnit is checked below so an empty or skipped matrix cannot pass.
         working-directory: services/api
-        run: uv run pytest tests/test_authz_matrix.py -q
+        run: uv run pytest tests/test_authz_matrix.py -q --junitxml=authz-matrix.xml
         env:
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
           SUPABASE_ANON_KEY: test-anon-key
+
+      - name: Prove the authz matrix ran (no silent skip)
+        if: always()
+        working-directory: services/api
+        run: python3 ../../scripts/ci/assert_authz_matrix_ran.py authz-matrix.xml
+
+      - name: Upload authorization matrix report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: authorization-matrix
+          path: services/api/authz-matrix.xml
+          if-no-files-found: error
 
   i18n-lint:
     name: i18n hardcoded strings
@@ -650,8 +664,10 @@ jobs:
       - name: Start local database
         run: supabase db start
 
-      - name: Reset local database (with seed)
-        run: supabase db reset
+      - name: Reset local database (no demo seed)
+        # The RLS fixture owns its matrix data. `supabase/config.toml` also has
+        # db.seed.enabled=false, so make the observed no-seed precondition explicit.
+        run: supabase db reset --no-seed
 
       # Provision the matrix's impersonation roles in ISOLATION, before any
       # pytest process touches the database. On 2026-08-02 the same bootstrap,
@@ -666,10 +682,6 @@ jobs:
             docker ps --format '{{.Names}}' | grep -i 'supabase_db' | head -1 | xargs -r docker logs --tail 100
             exit 1
           fi
-
-      - name: Seed demo data
-        continue-on-error: true
-        run: uv run python ../../scripts/seed.py --env local
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
