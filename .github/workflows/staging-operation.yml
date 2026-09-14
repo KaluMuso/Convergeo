@@ -1,0 +1,88 @@
+name: Protected staging operation
+
+# One staging-only window owns deploy/proof -> canonical setup -> selected E2E
+# -> evidence and private-file cleanup. No job in this graph promotes production.
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+    inputs:
+      focus_group:
+        description: "E2E scope (only full is release-eligible)"
+        required: true
+        default: full
+        type: choice
+        options:
+          - full
+          - previous-six
+          - cart
+          - vendor-auth
+          - checkout-honesty
+          - performance
+
+permissions:
+  actions: read
+  contents: read
+  packages: write
+
+concurrency:
+  group: staging-operation
+  cancel-in-progress: false
+
+jobs:
+  authorize:
+    name: Authorize protected staging graph
+    runs-on: ubuntu-latest
+    steps:
+      - name: Bind repository, ref and full candidate
+        env:
+          REPOSITORY_ID: ${{ github.repository_id }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REPOSITORY}" != "KaluMuso/Convergeo" ] || [ "${REPOSITORY_ID}" != "1290591718" ]; then
+            echo "::error::untrusted repository for staging operation"
+            exit 1
+          fi
+          if [ "${GITHUB_REF}" != "refs/heads/staging" ] || ! printf '%s' "${GITHUB_SHA}" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::protected staging operation requires refs/heads/staging at a full SHA"
+            exit 1
+          fi
+
+  deploy:
+    name: Deploy and prove candidate
+    needs: authorize
+    uses: ./.github/workflows/deploy-staging.yml
+    permissions:
+      actions: read
+      contents: read
+      packages: write
+    with:
+      internal_operation_id: ${{ format('{0}:{1}:{2}:{3}', github.repository_id, github.run_id, github.run_attempt, github.sha) }}
+      release_candidate: true
+      api_image_tag: ${{ github.sha }}
+      skip_vercel: false
+      skip_migrate: false
+      seed_synthetic: false
+    secrets: inherit
+
+  e2e:
+    name: Canonical setup and selected E2E
+    needs: deploy
+    if: ${{ needs.deploy.result == 'success' && needs.deploy.outputs.handoff_status == 'PASS' }}
+    uses: ./.github/workflows/e2e.yml
+    permissions:
+      actions: read
+      contents: read
+    with:
+      internal_operation_id: ${{ format('{0}:{1}:{2}:{3}', github.repository_id, github.run_id, github.run_attempt, github.sha) }}
+      source_run_id: ${{ fromJSON(needs.deploy.outputs.source_run_id) }}
+      source_run_attempt: ${{ fromJSON(needs.deploy.outputs.source_run_attempt) }}
+      source_artifact_id: ${{ fromJSON(needs.deploy.outputs.source_artifact_id) }}
+      base_url: ${{ needs.deploy.outputs.base_url }}
+      vendor_base_url: ${{ needs.deploy.outputs.vendor_base_url }}
+      admin_base_url: ${{ needs.deploy.outputs.admin_base_url }}
+      expect_sha: ${{ needs.deploy.outputs.expect_sha }}
+      pre_release: ${{ (inputs.focus_group || 'full') == 'full' }}
+      focus_group: ${{ inputs.focus_group || 'full' }}
+    secrets: inherit
