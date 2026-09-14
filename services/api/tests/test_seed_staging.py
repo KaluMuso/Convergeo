@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 import uuid
@@ -1073,3 +1074,244 @@ def test_cleanup_never_broadens_auth_users_grants() -> None:
             assert not statement.upper().startswith("GRANT"), (
                 f"generated SQL must never issue GRANT: {statement!r}"
             )
+
+
+# ---------------------------------------------------------------------------
+# Behavioural coverage for the transactional notification-outbox cleanup.
+#
+# public.notification_outbox carries NO foreign key to orders or
+# checkout_groups (0007_trust_ops.sql), so deleting a synthetic order never
+# cascades to the notifications it enqueued: create_orders_atomic writes
+# order.placed at placement, and each later guarded transition
+# (order-status-changed, order-refund-required, lane-1 intent, support
+# request) enqueues its own row keyed on order_id. Before build_cleanup_sql()
+# grew its outbox DELETE, every one of those rows survived cleanup and
+# accumulated across strict E2E runs.
+#
+# test_cod_fixture_lives_in_the_namespace_cleanup_already_owns asserts the
+# SHAPE of the generated SQL (statement order, both payload predicates). The
+# cases below assert the BEHAVIOUR against a real migrated database: what the
+# cleanup deletes, what it must leave alone, and that a second run is safe.
+# A textual assertion cannot catch a predicate that matches nothing (a typo in
+# a payload key, or `id` compared against text), so both layers are kept.
+# ---------------------------------------------------------------------------
+
+_OUTBOX_CHECKOUT_GROUP_ID = "0a000000-0000-4000-8000-000000000101"
+_OUTBOX_ORDER_ID = "0a000000-0000-4000-8000-000000000102"
+_OUTBOX_ADDRESS_ID = "0a000000-0000-4000-8000-000000000103"
+
+_OUTBOX_KEY_PREFIX = "stg-outbox-regression-"
+# Sorts ahead of the synthetic keys, so survivor lists below stay readable.
+_OUTBOX_REAL_ORDER_KEY = f"{_OUTBOX_KEY_PREFIX}a-real-order"
+_OUTBOX_UNRELATED_KEY = f"{_OUTBOX_KEY_PREFIX}b-unrelated"
+_OUTBOX_BY_CHECKOUT_GROUP_KEY = f"{_OUTBOX_KEY_PREFIX}c-synthetic-by-checkout-group"
+_OUTBOX_BY_ORDER_KEY = f"{_OUTBOX_KEY_PREFIX}d-synthetic-by-order"
+
+
+def _outbox_payload(**fields: str) -> str:
+    """A notification_outbox.payload JSON literal, escaped for a SQL string."""
+    return json.dumps(fields).replace("'", "''")
+
+
+def _arrange_outbox_rows(conn: PgConn) -> None:
+    """Seed, then place the two orders the cases discriminate between.
+
+    One order sits in the QA transactional namespace (``{SEED_PREFIX}-txn-``);
+    the other is placed the way the live checkout API places it (a ``chk-``
+    idempotency key, via ``_insert_real_order``) and stands in for a real
+    customer's order. Four outbox rows are then written across both, each
+    carrying only the payload keys its real enqueue path would carry.
+    """
+    assert_contract_valid()
+    seeded = _seed(conn)
+    assert seeded.ok, seeded.error or "seed failed"
+
+    product = product_fixture("PRODUCT_A")
+    listing = product.listings[0]
+    vendor = persona_by_key(listing.vendor_key)
+    customer = persona_by_key("CUSTOMER_A").user_id
+    assert vendor.vendor_id is not None
+
+    _insert_real_order(
+        conn,
+        customer_id=customer,
+        vendor_id=vendor.vendor_id,
+        listing_id=listing.listing_id,
+    )
+
+    sql = f"""
+BEGIN;
+INSERT INTO public.addresses (id, user_id, landmark, phone)
+VALUES (
+  '{_OUTBOX_ADDRESS_ID}', '{customer}', 'Outbox regression landmark', '+260970000002'
+);
+INSERT INTO public.checkout_groups (
+  id, customer_id, idempotency_key, subtotal_ngwee, delivery_fee_ngwee, total_ngwee
+) VALUES (
+  '{_OUTBOX_CHECKOUT_GROUP_ID}', '{customer}',
+  '{SEED_PREFIX}-txn-outbox-regression', 10000, 0, 10000
+);
+INSERT INTO public.orders (
+  id, checkout_group_id, vendor_id, customer_id, fulfilment, address_id,
+  delivery_fee_ngwee, cod
+) VALUES (
+  '{_OUTBOX_ORDER_ID}', '{_OUTBOX_CHECKOUT_GROUP_ID}', '{vendor.vendor_id}',
+  '{customer}', 'delivery', '{_OUTBOX_ADDRESS_ID}', 0, true
+);
+INSERT INTO public.notification_outbox (dedupe_key, channel, template, payload, status)
+VALUES
+  -- (C) a real customer order's status notification: order_id only, and that
+  -- order is NOT in the synthetic namespace.
+  (
+    '{_OUTBOX_REAL_ORDER_KEY}', 'whatsapp', 'order_status_changed',
+    '{_outbox_payload(order_id=_REAL_ORDER_ID)}'::jsonb, 'pending'
+  ),
+  -- (D) unrelated entirely: no order or checkout-group linkage of any kind.
+  (
+    '{_OUTBOX_UNRELATED_KEY}', 'email', 'kyc_approved',
+    '{_outbox_payload(kyc_record_id=_OUTBOX_CHECKOUT_GROUP_ID)}'::jsonb, 'pending'
+  ),
+  -- (A) order.placed as create_orders_atomic writes it, reduced to the
+  -- checkout_group_id link alone so only the first predicate can match it.
+  (
+    '{_OUTBOX_BY_CHECKOUT_GROUP_KEY}', 'whatsapp', 'order_placed',
+    '{_outbox_payload(checkout_group_id=_OUTBOX_CHECKOUT_GROUP_ID)}'::jsonb, 'pending'
+  ),
+  -- (B) a later guarded transition: order_id only, no checkout_group_id —
+  -- exactly the shape _enqueue_status_notification writes.
+  (
+    '{_OUTBOX_BY_ORDER_KEY}', 'whatsapp', 'order_status_changed',
+    '{_outbox_payload(order_id=_OUTBOX_ORDER_ID)}'::jsonb, 'pending'
+  );
+COMMIT;
+"""
+    result = conn.run_script(sql)
+    assert result.ok, result.error or "outbox regression fixture setup failed"
+
+
+def _clear_outbox_rows(conn: PgConn) -> None:
+    sql = f"""
+BEGIN;
+DELETE FROM public.notification_outbox WHERE dedupe_key LIKE '{_OUTBOX_KEY_PREFIX}%';
+DELETE FROM public.orders WHERE id = '{_OUTBOX_ORDER_ID}';
+DELETE FROM public.checkout_groups WHERE id = '{_OUTBOX_CHECKOUT_GROUP_ID}';
+DELETE FROM public.addresses WHERE id = '{_OUTBOX_ADDRESS_ID}';
+COMMIT;
+"""
+    result = conn.run_script(sql)
+    assert result.ok, result.error or "outbox regression fixture teardown failed"
+    _delete_real_order(conn)
+
+
+def _outbox_keys(conn: PgConn) -> list[str]:
+    """The regression fixture's surviving outbox rows, in a stable order."""
+    result = conn.run(
+        "SELECT dedupe_key FROM public.notification_outbox "
+        f"WHERE dedupe_key LIKE '{_OUTBOX_KEY_PREFIX}%' ORDER BY dedupe_key"
+    )
+    assert result.ok, result.error
+    return result.rows
+
+
+@pytest.fixture
+def outbox_rows(migrated_db: PgConn) -> Generator[PgConn, None, None]:
+    _arrange_outbox_rows(migrated_db)
+    try:
+        yield migrated_db
+    finally:
+        _clear_outbox_rows(migrated_db)
+
+
+def test_cleanup_deletes_outbox_rows_linked_only_by_checkout_group_id(
+    outbox_rows: PgConn,
+) -> None:
+    """(A) order.placed carries checkout_group_id; its group is synthetic."""
+    assert _OUTBOX_BY_CHECKOUT_GROUP_KEY in _outbox_keys(outbox_rows)
+
+    cleanup = outbox_rows.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or "cleanup failed"
+
+    assert _OUTBOX_BY_CHECKOUT_GROUP_KEY not in _outbox_keys(outbox_rows), (
+        "an outbox row linked to a synthetic checkout group must be deleted"
+    )
+
+
+def test_cleanup_deletes_outbox_rows_linked_only_by_order_id(
+    outbox_rows: PgConn,
+) -> None:
+    """(B) Later transitions carry order_id only — reached via the order join."""
+    assert _OUTBOX_BY_ORDER_KEY in _outbox_keys(outbox_rows)
+
+    cleanup = outbox_rows.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or "cleanup failed"
+
+    assert _OUTBOX_BY_ORDER_KEY not in _outbox_keys(outbox_rows), (
+        "an outbox row linked to an order in the synthetic namespace must be deleted"
+    )
+
+
+def test_cleanup_preserves_outbox_rows_for_a_real_non_namespace_order(
+    outbox_rows: PgConn,
+) -> None:
+    """(C) A real buyer's notification must survive: its order is not synthetic.
+
+    This is the assertion that keeps the namespace scoping honest — widening
+    either predicate to all orders would delete a live customer's pending
+    WhatsApp notification.
+    """
+    cleanup = outbox_rows.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or "cleanup failed"
+
+    assert _OUTBOX_REAL_ORDER_KEY in _outbox_keys(outbox_rows), (
+        "a real order's notification must never be deleted by staging cleanup"
+    )
+
+
+def test_cleanup_preserves_unrelated_outbox_rows(outbox_rows: PgConn) -> None:
+    """(D) A notification with no order linkage at all is out of scope."""
+    cleanup = outbox_rows.run_script(build_cleanup_sql())
+    assert cleanup.ok, cleanup.error or "cleanup failed"
+
+    assert _OUTBOX_UNRELATED_KEY in _outbox_keys(outbox_rows), (
+        "an unrelated notification must never be deleted by staging cleanup"
+    )
+
+
+def test_repeat_cleanup_is_idempotent_and_leaves_no_outbox_residue(
+    outbox_rows: PgConn,
+) -> None:
+    """(E) Cleanup runs once per strict E2E run; a second run must be a no-op.
+
+    Also pins zero residue: after cleanup no outbox row still points at the
+    synthetic checkout group or order, which is the leak this coverage exists
+    to catch.
+    """
+    first = outbox_rows.run_script(build_cleanup_sql())
+    assert first.ok, first.error or "first cleanup failed"
+
+    survivors = _outbox_keys(outbox_rows)
+    assert survivors == [_OUTBOX_REAL_ORDER_KEY, _OUTBOX_UNRELATED_KEY]
+
+    second = outbox_rows.run_script(build_cleanup_sql())
+    assert second.ok, second.error or "repeat cleanup failed"
+    assert _outbox_keys(outbox_rows) == survivors, (
+        "a repeated cleanup must not touch the rows the first run preserved"
+    )
+
+    residue = outbox_rows.run(
+        "SELECT count(*)::text FROM public.notification_outbox "
+        f"WHERE payload->>'checkout_group_id' = '{_OUTBOX_CHECKOUT_GROUP_ID}' "
+        f"   OR payload->>'order_id' = '{_OUTBOX_ORDER_ID}'"
+    )
+    assert residue.ok, residue.error
+    assert residue.rows == ["0"], "synthetic outbox residue must be zero after cleanup"
+
+    for table, row_id in (
+        ("orders", _OUTBOX_ORDER_ID),
+        ("checkout_groups", _OUTBOX_CHECKOUT_GROUP_ID),
+    ):
+        gone = outbox_rows.run(
+            f"SELECT count(*)::text FROM public.{table} WHERE id = '{row_id}'"
+        )
+        assert gone.ok, gone.error
+        assert gone.rows == ["0"], f"synthetic {table} row must be gone"
