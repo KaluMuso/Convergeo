@@ -86,3 +86,58 @@ jobs:
       pre_release: ${{ (inputs.focus_group || 'full') == 'full' }}
       focus_group: ${{ inputs.focus_group || 'full' }}
     secrets: inherit
+
+  completion:
+    name: One sanitized operation completion
+    needs: [deploy, e2e]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Publish truthful final record
+        env:
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          E2E_RESULT: ${{ needs.e2e.result }}
+          HANDOFF_STATUS: ${{ needs.deploy.outputs.handoff_status }}
+          STAGING_REF_OUTCOME: ${{ needs.e2e.outputs.staging_ref_outcome }}
+          CUSTOMER_PROBE_OUTCOME: ${{ needs.e2e.outputs.customer_probe_outcome }}
+          VENDOR_PROBE_OUTCOME: ${{ needs.e2e.outputs.vendor_probe_outcome }}
+          SETUP_OUTCOME: ${{ needs.e2e.outputs.setup_outcome }}
+          BROWSER_OUTCOME: ${{ needs.e2e.outputs.browser_outcome }}
+          EXECUTION_OUTCOME: ${{ needs.e2e.outputs.execution_outcome }}
+          MATRIX_OUTCOME: ${{ needs.e2e.outputs.matrix_outcome }}
+          CLEANUP_OUTCOME: ${{ needs.e2e.outputs.cleanup_outcome }}
+          FOCUS_GROUP: ${{ inputs.focus_group || 'full' }}
+        run: |
+          set +e
+          if ! python3 scripts/ci/staging_operation_contract.py \
+            --candidate "${GITHUB_SHA}" \
+            --scope "${FOCUS_GROUP}" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --run-attempt "${GITHUB_RUN_ATTEMPT}" \
+            --deploy-result "${DEPLOY_RESULT}" \
+            --e2e-result "${E2E_RESULT}" \
+            --handoff-status "${HANDOFF_STATUS}" \
+            --staging-ref "${STAGING_REF_OUTCOME}" \
+            --customer "${CUSTOMER_PROBE_OUTCOME}" \
+            --vendor "${VENDOR_PROBE_OUTCOME}" \
+            --setup "${SETUP_OUTCOME}" \
+            --browser "${BROWSER_OUTCOME}" \
+            --execution "${EXECUTION_OUTCOME}" \
+            --matrix "${MATRIX_OUTCOME}" \
+            --cleanup "${CLEANUP_OUTCOME}" \
+            --output "${GITHUB_STEP_SUMMARY}"; then
+            {
+              echo "## Protected staging operation completion"
+              echo
+              echo "- Candidate: \`UNKNOWN\`"
+              echo "- Run/attempt: \`${GITHUB_RUN_ID}/${GITHUB_RUN_ATTEMPT}\`"
+              echo "- Current phase: \`summary-generation-failed\`"
+              echo "- Failed boundary: \`completion-record\`"
+              echo "- Release eligible: \`NO\`"
+              echo "- Next owned action: inspect the workflow logs; no production promotion was performed."
+            } >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          # This reporting job never replaces the deploy/E2E conclusions.
+          exit 0

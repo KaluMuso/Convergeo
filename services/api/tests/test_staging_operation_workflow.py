@@ -64,3 +64,14 @@ def test_internal_contract_binds_caller_called_run_attempt_and_sha() -> None:
         assert "${REPOSITORY_ID}:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}:${GITHUB_SHA}" in text
         assert "skip_lock" not in text.lower()
         assert "cancel-in-progress: true" not in text
+
+
+def test_completion_record_runs_after_both_terminal_paths_without_masking_them() -> None:
+    workflow = load_workflow("staging-operation.yml")
+    completion = workflow["jobs"]["completion"]
+    assert set(completion["needs"]) == {"deploy", "e2e"}
+    assert completion["if"] == "${{ always() }}"
+    source = (REPO_ROOT / ".github" / "workflows" / "staging-operation.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "This reporting job never replaces the deploy/E2E conclusions" in source
