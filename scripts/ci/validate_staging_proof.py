@@ -19,7 +19,25 @@ PROD_SUPABASE_PROJECT_REF = "dpadrlxukcjbewpqympu"
 REQUIRED_PORTALS = ("customer", "vendor", "admin")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 STAGING_API_HOST = "api.staging.vergeo5.com"
+STAGING_SUPABASE_PROJECT_REF = "iyasmrmbcrvlfxpzescb"
 VALID_HEALTH_ENVS = ("staging", "preview")
+RELEASE_PROOF_VERSION = 2
+RELEASE_REPOSITORY = "KaluMuso/Convergeo"
+RELEASE_REPOSITORY_ID = 1290591718
+RELEASE_REF = "refs/heads/staging"
+CUSTOMER_STAGING_ORIGIN = "https://customer.staging.vergeo5.com"
+CONFIG_REVISION_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+OPAQUE_ID_RE = re.compile(r"^(?:dpl|prj)_[A-Za-z0-9]+$")
+RELEASE_PROOF_OUTCOMES = (
+    "portal_identity_customer",
+    "portal_identity_vendor",
+    "portal_identity_admin",
+    "cors",
+    "database_service_role",
+    "customer_same_site_cart",
+    "api_fingerprint",
+    "migrations",
+)
 
 
 class ProofValidationError(ValueError):
@@ -28,7 +46,7 @@ class ProofValidationError(ValueError):
 
 def _require_sha(value: str, label: str) -> None:
     if not SHA_RE.match(value or ""):
-        raise ProofValidationError(f"{label} must be a 40-char git SHA, got {value!r}")
+        raise ProofValidationError(f"{label} must be a 40-char git SHA")
 
 
 def validate_api_fingerprint(
@@ -45,21 +63,18 @@ def validate_api_fingerprint(
 
     env = fingerprint.get("env")
     if env != "staging":
-        raise ProofValidationError(f"fingerprint env={env!r} want staging")
+        raise ProofValidationError("fingerprint env must be staging")
 
     git_sha = fingerprint.get("git_sha") or ""
     if git_sha != candidate_sha:
-        raise ProofValidationError(
-            f"fingerprint git_sha={git_sha!r} != candidate_sha={candidate_sha!r}"
-        )
+        raise ProofValidationError("fingerprint git_sha does not match candidate_sha")
 
     project_ref = fingerprint.get("supabase_project_ref") or ""
     if project_ref == PROD_SUPABASE_PROJECT_REF:
         raise ProofValidationError("fingerprint supabase_project_ref is production")
     if project_ref != staging_supabase_project_id:
         raise ProofValidationError(
-            "fingerprint supabase_project_ref "
-            f"{project_ref!r} != staging project {staging_supabase_project_id!r}"
+            "fingerprint supabase_project_ref does not match staging"
         )
 
     image_tag = fingerprint.get("image_tag") or ""
@@ -67,7 +82,7 @@ def validate_api_fingerprint(
         want_tag = expected_image_tag or candidate_sha
         if image_tag != want_tag:
             raise ProofValidationError(
-                f"fingerprint image_tag={image_tag!r} != expected {want_tag!r}"
+                "fingerprint image_tag does not match expected candidate"
             )
 
 
@@ -110,49 +125,42 @@ def validate_portal_proof(
     deployment_sha = proof.get("deployment_sha") or ""
     if deployment_sha != candidate_sha:
         raise ProofValidationError(
-            f"{portal} deployment_sha={deployment_sha!r} != candidate_sha={candidate_sha!r}"
+            f"{portal} deployment_sha does not match candidate_sha"
         )
 
     proof_candidate_sha = proof.get("candidate_sha") or ""
     if proof_candidate_sha != candidate_sha:
-        raise ProofValidationError(
-            f"{portal} evidence candidate_sha={proof_candidate_sha!r} != {candidate_sha!r}"
-        )
+        raise ProofValidationError(f"{portal} evidence candidate_sha mismatch")
 
     target = (proof.get("target") or "").lower()
     if target != "preview":
-        raise ProofValidationError(f"{portal} target={target!r} want preview")
+        raise ProofValidationError(f"{portal} target must be preview")
 
     preview_url = proof.get("preview_url") or ""
     if not _valid_deployment_url(preview_url):
-        raise ProofValidationError(f"{portal} preview_url invalid: {preview_url!r}")
+        raise ProofValidationError(f"{portal} preview_url is invalid")
 
     health_status = proof.get("health_status") or ""
     if health_status != "ok":
-        raise ProofValidationError(f"{portal} health_status={health_status!r} want ok")
+        raise ProofValidationError(f"{portal} health_status must be ok")
 
     health_app = proof.get("health_app") or ""
     if health_app != portal:
-        raise ProofValidationError(f"{portal} health_app={health_app!r} want {portal!r}")
+        raise ProofValidationError(f"{portal} health_app mismatch")
 
     health_env = proof.get("health_env") or ""
     if health_env not in VALID_HEALTH_ENVS:
-        raise ProofValidationError(
-            f"{portal} health_env={health_env!r} want one of {VALID_HEALTH_ENVS}"
-        )
+        raise ProofValidationError(f"{portal} health_env is not a staging plane")
 
     health_api_host = str(proof.get("health_api_host") or "").strip().lower()
     if health_api_host != STAGING_API_HOST:
-        raise ProofValidationError(
-            f"{portal} health_api_host={health_api_host!r} != {STAGING_API_HOST!r}"
-        )
+        raise ProofValidationError(f"{portal} health_api_host mismatch")
 
     health_build_id = proof.get("health_build_id") or ""
     if health_build_id and health_build_id != candidate_sha:
         raise ProofValidationError(
-            f"{portal} health_build_id={health_build_id!r} != candidate_sha={candidate_sha!r} "
-            "(absent is accepted — deployment_sha above already proves candidate identity; "
-            "present-but-wrong is a staleness signal and is not)"
+            f"{portal} health_build_id mismatch "
+            "(absent is accepted; present-but-wrong is a staleness signal)"
         )
 
 
@@ -171,7 +179,9 @@ def validate_staging_proof(
 
     missing = [p for p in REQUIRED_PORTALS if p not in previews]
     if missing:
-        raise ProofValidationError(f"missing preview evidence for: {', '.join(missing)}")
+        raise ProofValidationError(
+            f"missing preview evidence for: {', '.join(missing)}"
+        )
 
     if fingerprint is None:
         raise ProofValidationError("api_fingerprint is required")
@@ -186,7 +196,117 @@ def validate_staging_proof(
         validate_portal_proof(portal, previews[portal], candidate_sha=candidate_sha)
 
     if require_migrate_success and migrate_result != "success":
-        raise ProofValidationError(f"migrate_supabase_result={migrate_result!r} want success")
+        raise ProofValidationError("migrate_supabase_result must be success")
+
+
+def validate_release_envelope(
+    proof: dict[str, Any],
+    *,
+    candidate_sha: str,
+    source_run_id: int,
+    source_run_attempt: int,
+    source_workflow: str,
+    configuration_revision: str,
+) -> None:
+    """Validate the stronger v2 manifest-to-E2E release handoff contract.
+
+    The ordinary staging validator remains compatible with diagnostic/legacy
+    evidence. This release envelope is deliberately stricter: all required
+    proof outcomes must have executed successfully, health must corroborate
+    the full SHA, and the producer/configuration identity must be explicit.
+    Authenticated run/artifact metadata and live Vercel metadata are checked by
+    release_handoff_contract.py in addition to these manifest assertions.
+    """
+    _require_sha(candidate_sha, "candidate_sha")
+    if proof.get("schema_version") != RELEASE_PROOF_VERSION:
+        raise ProofValidationError("release proof schema_version mismatch")
+    if type(source_run_id) is not int or source_run_id <= 0:
+        raise ProofValidationError("source_run_id must be a positive integer")
+    if type(source_run_attempt) is not int or source_run_attempt <= 0:
+        raise ProofValidationError("source_run_attempt must be a positive integer")
+    if not CONFIG_REVISION_RE.fullmatch(configuration_revision):
+        raise ProofValidationError("configuration_revision is invalid or missing")
+
+    source = proof.get("source")
+    if not isinstance(source, dict):
+        raise ProofValidationError("release proof source envelope is required")
+    expected_source = {
+        "repository": RELEASE_REPOSITORY,
+        "repository_id": RELEASE_REPOSITORY_ID,
+        "workflow": source_workflow,
+        "ref": RELEASE_REF,
+        "candidate_sha": candidate_sha,
+        "run_id": source_run_id,
+        "run_attempt": source_run_attempt,
+    }
+    for field, expected in expected_source.items():
+        if source.get(field) != expected:
+            raise ProofValidationError(f"release proof source.{field} mismatch")
+
+    configuration = proof.get("configuration")
+    if not isinstance(configuration, dict):
+        raise ProofValidationError("release proof configuration envelope is required")
+    if configuration.get("identity_scheme") != "operator-managed-non-secret-v1":
+        raise ProofValidationError(
+            "release proof configuration identity scheme mismatch"
+        )
+    if configuration.get("revision") != configuration_revision:
+        raise ProofValidationError("release proof configuration revision mismatch")
+
+    outcomes = proof.get("proof_outcomes")
+    if not isinstance(outcomes, dict):
+        raise ProofValidationError("release proof outcomes are required")
+    if set(outcomes) != set(RELEASE_PROOF_OUTCOMES):
+        raise ProofValidationError("release proof outcome set mismatch")
+    for proof_id in RELEASE_PROOF_OUTCOMES:
+        if outcomes.get(proof_id) != "PASS":
+            raise ProofValidationError(f"release proof outcome {proof_id} did not pass")
+
+    previews_raw = proof.get("previews")
+    if not isinstance(previews_raw, dict):
+        raise ProofValidationError("release proof previews object is required")
+    previews: dict[str, dict[str, Any]] = {}
+    for portal in REQUIRED_PORTALS:
+        row = previews_raw.get(portal)
+        if not isinstance(row, dict):
+            raise ProofValidationError(f"release proof {portal} preview is required")
+        previews[portal] = row
+        if row.get("health_build_id") != candidate_sha:
+            raise ProofValidationError(
+                f"release proof {portal} full health SHA mismatch"
+            )
+        if not OPAQUE_ID_RE.fullmatch(str(row.get("deployment_id") or "")):
+            raise ProofValidationError(
+                f"release proof {portal} deployment identity is invalid"
+            )
+        if not OPAQUE_ID_RE.fullmatch(str(row.get("project_id") or "")):
+            raise ProofValidationError(
+                f"release proof {portal} project identity is invalid"
+            )
+
+    customer = previews["customer"]
+    if customer.get("stable_hostname_status") != "verified":
+        raise ProofValidationError(
+            "release proof Customer stable hostname was not verified"
+        )
+    if customer.get("stable_hostname_url") != CUSTOMER_STAGING_ORIGIN:
+        raise ProofValidationError("release proof Customer same-site origin mismatch")
+
+    fingerprint = proof.get("api_fingerprint")
+    if not isinstance(fingerprint, dict):
+        raise ProofValidationError("release proof api_fingerprint is required")
+    if fingerprint.get("image_tag") != candidate_sha:
+        raise ProofValidationError("release proof API image tag mismatch")
+
+    validate_staging_proof(
+        candidate_sha=candidate_sha,
+        previews=previews,
+        fingerprint=fingerprint,
+        staging_supabase_project_id=STAGING_SUPABASE_PROJECT_REF,
+        migrate_result=str(proof.get("migrate_supabase_result") or ""),
+        expected_image_tag=candidate_sha,
+        require_migrate_success=True,
+    )
 
 
 def load_json_file(path: Path) -> dict[str, Any]:

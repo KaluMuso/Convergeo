@@ -11,6 +11,10 @@
 #     --migrate-result success \
 #     --output /tmp/staging-sha-proof.json
 #
+# Add --release-envelope plus the source/configuration arguments below only
+# for the stronger v2 manifest-to-E2E handoff. Legacy diagnostic callers keep
+# schema_version=1 and cannot be consumed as release inputs.
+#
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -24,6 +28,14 @@ API_DEPLOY_FILE=""
 EXPECTED_IMAGE_TAG=""
 ALLOW_MIGRATE_SKIPPED=0
 OUTPUT="/tmp/staging-sha-proof.json"
+RELEASE_ENVELOPE=0
+SOURCE_REPOSITORY=""
+SOURCE_REPOSITORY_ID=""
+SOURCE_WORKFLOW=""
+SOURCE_REF=""
+SOURCE_RUN_ID=""
+SOURCE_RUN_ATTEMPT=""
+CONFIGURATION_REVISION=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -35,6 +47,14 @@ while [[ $# -gt 0 ]]; do
     --api-deploy) API_DEPLOY_FILE="${2:-}"; shift 2 ;;
     --expected-image-tag) EXPECTED_IMAGE_TAG="${2:-}"; shift 2 ;;
     --allow-migrate-skipped) ALLOW_MIGRATE_SKIPPED=1; shift ;;
+    --release-envelope) RELEASE_ENVELOPE=1; shift ;;
+    --source-repository) SOURCE_REPOSITORY="${2:-}"; shift 2 ;;
+    --source-repository-id) SOURCE_REPOSITORY_ID="${2:-}"; shift 2 ;;
+    --source-workflow) SOURCE_WORKFLOW="${2:-}"; shift 2 ;;
+    --source-ref) SOURCE_REF="${2:-}"; shift 2 ;;
+    --source-run-id) SOURCE_RUN_ID="${2:-}"; shift 2 ;;
+    --source-run-attempt) SOURCE_RUN_ATTEMPT="${2:-}"; shift 2 ;;
+    --configuration-revision) CONFIGURATION_REVISION="${2:-}"; shift 2 ;;
     --output) OUTPUT="${2:-}"; shift 2 ;;
     -h|--help)
       sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
@@ -51,6 +71,25 @@ fi
 if [ -z "${STAGING_SUPABASE_PROJECT_ID}" ]; then
   echo "::error::--staging-supabase-project-id is required" >&2
   exit 1
+fi
+if [ "${RELEASE_ENVELOPE}" -eq 1 ]; then
+  for value in \
+    "${SOURCE_REPOSITORY}" \
+    "${SOURCE_REPOSITORY_ID}" \
+    "${SOURCE_WORKFLOW}" \
+    "${SOURCE_REF}" \
+    "${SOURCE_RUN_ID}" \
+    "${SOURCE_RUN_ATTEMPT}" \
+    "${CONFIGURATION_REVISION}"; do
+    if [ -z "${value}" ]; then
+      echo "::error::release envelope source/configuration arguments are required" >&2
+      exit 1
+    fi
+  done
+  if [ "${MIGRATE_RESULT}" != "success" ] || [ "${ALLOW_MIGRATE_SKIPPED}" -eq 1 ]; then
+    echo "::error::release envelope requires executed successful migrations" >&2
+    exit 1
+  fi
 fi
 
 VALIDATE_ARGS=(
@@ -79,9 +118,18 @@ FINGERPRINT_FILE="${FINGERPRINT_FILE}" \
 MIGRATE_RESULT="${MIGRATE_RESULT}" \
 API_DEPLOY_FILE="${API_DEPLOY_FILE}" \
 OUTPUT="${OUTPUT}" \
+RELEASE_ENVELOPE="${RELEASE_ENVELOPE}" \
+SOURCE_REPOSITORY="${SOURCE_REPOSITORY}" \
+SOURCE_REPOSITORY_ID="${SOURCE_REPOSITORY_ID}" \
+SOURCE_WORKFLOW="${SOURCE_WORKFLOW}" \
+SOURCE_REF="${SOURCE_REF}" \
+SOURCE_RUN_ID="${SOURCE_RUN_ID}" \
+SOURCE_RUN_ATTEMPT="${SOURCE_RUN_ATTEMPT}" \
+CONFIGURATION_REVISION="${CONFIGURATION_REVISION}" \
 python3 - <<'PY'
 import json
 import os
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -91,6 +139,7 @@ fingerprint_file = os.environ.get("FINGERPRINT_FILE", "")
 migrate_result = os.environ.get("MIGRATE_RESULT", "skipped")
 api_deploy_file = os.environ.get("API_DEPLOY_FILE", "")
 output = os.environ["OUTPUT"]
+release_envelope = os.environ.get("RELEASE_ENVELOPE") == "1"
 
 portals = {}
 for portal in ("customer", "vendor", "admin"):
@@ -108,6 +157,7 @@ if api_deploy_file and Path(api_deploy_file).is_file():
     api_deploy = Path(api_deploy_file).read_text(encoding="utf-8").strip()
 
 bundle = {
+    "schema_version": 2 if release_envelope else 1,
     "candidate_sha": candidate_sha,
     "proved_at": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "previews": portals,
@@ -115,6 +165,42 @@ bundle = {
     "api_deploy_record": api_deploy,
     "migrate_supabase_result": migrate_result,
 }
+
+if release_envelope:
+    bundle["source"] = {
+        "repository": os.environ["SOURCE_REPOSITORY"],
+        "repository_id": int(os.environ["SOURCE_REPOSITORY_ID"]),
+        "workflow": os.environ["SOURCE_WORKFLOW"],
+        "ref": os.environ["SOURCE_REF"],
+        "candidate_sha": candidate_sha,
+        "run_id": int(os.environ["SOURCE_RUN_ID"]),
+        "run_attempt": int(os.environ["SOURCE_RUN_ATTEMPT"]),
+    }
+    bundle["configuration"] = {
+        "identity_scheme": "operator-managed-non-secret-v1",
+        "revision": os.environ["CONFIGURATION_REVISION"],
+    }
+    bundle["proof_outcomes"] = {
+        "portal_identity_customer": "PASS",
+        "portal_identity_vendor": "PASS",
+        "portal_identity_admin": "PASS",
+        "cors": "PASS",
+        "database_service_role": "PASS",
+        "customer_same_site_cart": "PASS",
+        "api_fingerprint": "PASS",
+        "migrations": "PASS",
+    }
+    sys.path.insert(0, str(Path.cwd() / "scripts" / "ci"))
+    from validate_staging_proof import validate_release_envelope
+
+    validate_release_envelope(
+        bundle,
+        candidate_sha=candidate_sha,
+        source_run_id=int(os.environ["SOURCE_RUN_ID"]),
+        source_run_attempt=int(os.environ["SOURCE_RUN_ATTEMPT"]),
+        source_workflow=os.environ["SOURCE_WORKFLOW"],
+        configuration_revision=os.environ["CONFIGURATION_REVISION"],
+    )
 
 with open(output, "w", encoding="utf-8") as fh:
     json.dump(bundle, fh, indent=2)

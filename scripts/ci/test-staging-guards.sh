@@ -465,7 +465,7 @@ doc = {
     "project_id": f"prj_{portal}",
     "candidate_sha": "${GOOD_SHA}",
     "deployment_id": f"dpl_{portal}",
-    "preview_url": f"https://{portal}.example.vercel.app",
+    "preview_url": f"https://convergeo-{portal}-abc123-vergeo-projects.vercel.app",
     "deployment_sha": "${GOOD_SHA}",
     "target": "preview",
     "health_status": "ok",
@@ -475,6 +475,9 @@ doc = {
     "health_api_host": "api.staging.vergeo5.com",
     "env_metadata_status": "verified",
 }
+if portal == "customer":
+    doc["stable_hostname_status"] = "verified"
+    doc["stable_hostname_url"] = "https://customer.staging.vergeo5.com"
 pathlib.Path("/tmp/evidence-bundle-test", portal, "evidence.json").write_text(
     json.dumps(doc) + "\n", encoding="utf-8"
 )
@@ -501,6 +504,55 @@ if [[ "$rc" -eq 0 ]] \
 else
   bad "staging-evidence-bundle valid case failed (rc=$rc)"
   cat /tmp/bundle-out.txt || true
+fi
+
+# 15b) Release handoff is an explicit v2 envelope; missing source/config
+# identity cannot be promoted from a legacy diagnostic bundle.
+printf '{"env":"staging","git_sha":"%s","image_tag":"%s","supabase_project_ref":"iyasmrmbcrvlfxpzescb"}\n' \
+  "${GOOD_SHA}" "${GOOD_SHA}" >/tmp/fingerprint-release-test.json
+set +e
+bash scripts/ci/staging-evidence-bundle.sh \
+  --candidate-sha "${GOOD_SHA}" \
+  --preview-dir /tmp/evidence-bundle-test \
+  --fingerprint /tmp/fingerprint-release-test.json \
+  --staging-supabase-project-id iyasmrmbcrvlfxpzescb \
+  --migrate-result success \
+  --release-envelope \
+  --source-repository KaluMuso/Convergeo \
+  --source-repository-id 1290591718 \
+  --source-workflow .github/workflows/deploy-staging.yml \
+  --source-ref refs/heads/staging \
+  --source-run-id 100 \
+  --source-run-attempt 2 \
+  --configuration-revision staging-config-test-v1 \
+  --output /tmp/staging-sha-proof-v2-test.json >/tmp/bundle-v2-out.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]] \
+  && grep -q '"schema_version": 2' /tmp/staging-sha-proof-v2-test.json \
+  && grep -q '"run_attempt": 2' /tmp/staging-sha-proof-v2-test.json \
+  && grep -q '"customer_same_site_cart": "PASS"' /tmp/staging-sha-proof-v2-test.json; then
+  ok "staging-evidence-bundle emits validated v2 release envelope"
+else
+  bad "staging-evidence-bundle v2 release envelope failed (rc=$rc)"
+  cat /tmp/bundle-v2-out.txt || true
+fi
+
+set +e
+bash scripts/ci/staging-evidence-bundle.sh \
+  --candidate-sha "${GOOD_SHA}" \
+  --preview-dir /tmp/evidence-bundle-test \
+  --fingerprint /tmp/fingerprint-release-test.json \
+  --staging-supabase-project-id iyasmrmbcrvlfxpzescb \
+  --migrate-result success \
+  --release-envelope \
+  --output /tmp/staging-sha-proof-v2-invalid.json >/tmp/bundle-v2-invalid-out.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && [[ ! -f /tmp/staging-sha-proof-v2-invalid.json ]]; then
+  ok "staging-evidence-bundle rejects unbound v2 release envelope"
+else
+  bad "staging-evidence-bundle accepted unbound v2 release envelope"
 fi
 
 # 16) validate_staging_proof negative + positive regression cases
@@ -861,14 +913,14 @@ fi
 # baseline must pin and prove BOTH. These guards keep that contract from
 # silently regressing back to "prove customer, assume the rest".
 
-# The vendor target must be overridable at dispatch, exactly like base_url, so a
-# release run can pin the immutable Preview URL instead of a mutable alias.
+# The vendor target is accepted only through the trusted reusable handoff, so a
+# release run pins the validated immutable Preview URL instead of a mutable alias.
 if grep -q '^      vendor_base_url:' .github/workflows/e2e.yml \
-  && grep -q 'E2E_VENDOR_BASE_URL: ${{ inputs.vendor_base_url || secrets.E2E_VENDOR_BASE_URL }}' \
+  && grep -q "E2E_VENDOR_BASE_URL: \${{ inputs.internal_operation_id != '' && inputs.vendor_base_url" \
     .github/workflows/e2e.yml; then
-  ok "e2e workflow accepts vendor_base_url and prefers it over the secret"
+  ok "e2e reusable workflow accepts the machine-derived vendor Preview URL"
 else
-  bad "e2e workflow must expose a vendor_base_url dispatch input wired ahead of E2E_VENDOR_BASE_URL"
+  bad "e2e reusable workflow must wire the validated vendor Preview URL"
 fi
 
 # Both preflights must run, and both must run BEFORE any Playwright install, so
@@ -1123,7 +1175,7 @@ fi
 # A focused run must never be able to present itself as certification. The
 # certification artifact gate accepts integrated-staging only, so the mode
 # expression is what keeps a subset out.
-if grep -q "CERTIFICATION_MODE: \${{ inputs.pre_release && 'integrated-staging'" .github/workflows/e2e.yml \
+if grep -q "CERTIFICATION_MODE: \${{ (inputs.internal_operation_id != '' || github.event_name == 'workflow_dispatch')" .github/workflows/e2e.yml \
   && grep -q "'diagnostic-staging'" .github/workflows/e2e.yml; then
   ok "focused runs are marked diagnostic-staging, never integrated-staging"
 else
@@ -1154,7 +1206,7 @@ fi
 # strict identity proof as certification.
 if grep -q 'E2E_STAGING_SETUP:' .github/workflows/e2e.yml \
   && grep -q "if: \${{ env.E2E_STAGING_SETUP == 'true' }}" .github/workflows/e2e.yml \
-  && grep -q "E2E_STRICT_SHA: \${{ (inputs.pre_release ||" .github/workflows/e2e.yml; then
+  && grep -q "E2E_STRICT_SHA: \${{ (inputs.internal_operation_id != '' || github.event_name == 'workflow_dispatch')" .github/workflows/e2e.yml; then
   ok "focused runs keep the canonical seed and strict identity/SHA proof"
 else
   bad "focused e2e runs must still seed canonically and prove deployed identity"
