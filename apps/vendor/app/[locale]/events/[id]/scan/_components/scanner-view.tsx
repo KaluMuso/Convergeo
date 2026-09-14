@@ -96,6 +96,11 @@ export function ScannerView({ eventId }: ScannerViewProps) {
   const [pendingCount, setPendingCount] = useState(0);
   const [recent, setRecent] = useState<RecentScanItem[]>([]);
   const busyRef = useRef(false);
+  // The camera path has always held a synchronous lock; the manual path only
+  // had `manualBusy` state, which is stale for every event delivered before
+  // React re-renders. Two submits in one tick (Enter racing the click) both
+  // read `false` and both POST /tickets/verify.
+  const manualBusyRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -292,7 +297,7 @@ export function ScannerView({ eventId }: ScannerViewProps) {
    */
   const handleManualSubmit = useCallback(
     (ticketId: string, pin: string) => {
-      if (manualBusy) {
+      if (manualBusy || manualBusyRef.current) {
         return;
       }
       if (!online) {
@@ -303,7 +308,15 @@ export function ScannerView({ eventId }: ScannerViewProps) {
         setResultState({ kind: "rejected", ticketId });
         return;
       }
+      manualBusyRef.current = true;
       setManualBusy(true);
+      // A verdict belongs to exactly one guest. The form stays mounted under
+      // the flash so staff move straight on, which means the previous guest's
+      // green "checked in" would otherwise stay on screen for the whole of the
+      // next guest's request — and be read as theirs. Clear it as the new
+      // verification starts; the submit button's own loading state carries the
+      // pending affordance.
+      setResultState({ kind: "idle" });
       void (async () => {
         try {
           const response = await scanSyncClient.verifyManualPin({
@@ -339,6 +352,9 @@ export function ScannerView({ eventId }: ScannerViewProps) {
             ticketId,
           });
         } finally {
+          // Released on success AND failure: the next guest, or this guest
+          // retrying after a wrong PIN, must not be locked out.
+          manualBusyRef.current = false;
           setManualBusy(false);
         }
       })();
