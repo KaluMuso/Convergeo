@@ -527,13 +527,24 @@ jobs:
             --portal "${{ matrix.portal }}" \
             --output-dir "/tmp/staging-preview-${{ matrix.portal }}"
 
+      # Failure diagnostics are deliberately outside staging-preview-evidence-*
+      # consumed by smoke/certification. Never upload the whole probe directory:
+      # it also holds raw health responses, headers and curl diagnostics.
+      - name: Upload alias diagnostics (${{ matrix.portal }})
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: staging-alias-diagnostics-${{ matrix.portal }}
+          path: /tmp/staging-preview-${{ matrix.portal }}/stable-health-diagnostics.json
+          if-no-files-found: ignore
+
       - name: Upload Preview evidence (${{ matrix.portal }})
         uses: actions/upload-artifact@v7
         with:
           name: staging-preview-evidence-${{ matrix.portal }}
-          path: |
-            /tmp/staging-preview-${{ matrix.portal }}/evidence.json
-            /tmp/staging-preview-${{ matrix.portal }}/deployment.json
+          # Only the allowlisted certification projection, not the raw Vercel
+          # deployment response (which can include environment configuration).
+          path: /tmp/staging-preview-${{ matrix.portal }}/evidence.json
 
   smoke:
     name: Staging smoke + evidence

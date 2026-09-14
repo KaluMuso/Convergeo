@@ -255,139 +255,22 @@ print("\t".join([
 PY
 }
 
-# Independent LIVE proof that the stable hostname's alias genuinely serves
-# the SHA-proven deployment — a successful POST /aliases response alone does
-# not prove that (edge propagation can lag the API's 2xx). Runs the exact
-# same app/env/buildId/apiHost assertion the Preview URL proof above already
-# performed, against the stable hostname itself. Called only from the
-# customer-portal alias block below, after BYPASS_SECRET/portal_secret_var/
-# health_path/APP_ID/EXPECTED_API_HOST are already set by the primary health
-# check earlier in this script — reuses that SAME customer-project bypass
-# secret (Vercel issues one secret per project; the stable hostname aliases
-# a deployment in the same project the Preview URL already proved), never a
-# new or duplicated one. `die` on any failure — this is a hard gate.
+# Alias API confirmation is not live identity proof. Only the post-alias path
+# polls semantically: one 90s deadline, strict full buildId, exact staging plane.
+# The helper reuses the same portal-scoped bypass source; secrets stay private.
 prove_stable_hostname_health() {
   local hostname="$1"
-  local url="https://${hostname}${health_path}"
-  local body_file="${OUTPUT_DIR}/stable-health.json"
-  local headers_file="${OUTPUT_DIR}/stable-health-headers.txt"
-  local stderr_file="${OUTPUT_DIR}/stable-health-curl-stderr.txt"
-  local curl_config
-  curl_config="$(mktemp)"
-  chmod 600 "${curl_config}"
-  cleanup_stable_health_curl_config() { rm -f "${curl_config}"; }
-  trap cleanup_stable_health_curl_config EXIT
-  {
-    printf 'header = "Accept: application/json"\n'
-    if [ -n "${BYPASS_SECRET}" ]; then
-      printf 'header = "x-vercel-protection-bypass: %s"\n' "${BYPASS_SECRET}"
-    fi
-  } > "${curl_config}"
-
-  sanitized_stable_health_curl_error() {
-    local raw
-    raw="$(tr -d '\r' < "${stderr_file}" 2>/dev/null | tail -1)"
-    if [ -n "${BYPASS_SECRET}" ]; then
-      raw="${raw//${BYPASS_SECRET}/[redacted]}"
-    fi
-    printf '%s' "${raw}"
-  }
-
-  local http="" rc=1 exit_kind="NON_RETRYABLE_CURL" exit_name="" exit_retryable=""
-  local attempt
-  for attempt in 1 2 3 4 5; do
-    set +e
-    http="$(curl --config "${curl_config}" \
-      --silent --show-error --no-location \
-      --connect-timeout 15 --max-time 30 \
-      -o "${body_file}" -D "${headers_file}" -w '%{http_code}' \
-      "${url}" 2>"${stderr_file}")"
-    rc=$?
-    set -e
-
-    if [ "${rc}" -eq 0 ]; then
-      exit_kind="HTTP_RESPONSE"
-      break
-    fi
-
-    IFS=$'\t' read -r exit_kind exit_retryable exit_name < <(
-      python3 "${REPO_ROOT}/scripts/ci/vercel_preview_access.py" classify-curl-exit \
-        --code "${rc}"
-    )
-
-    log "stable-hostname health attempt ${attempt}/5 failed — curl exit ${rc} ${exit_name:-unknown} [${exit_kind}]: $(sanitized_stable_health_curl_error)"
-
-    if [ "${exit_retryable}" != "1" ]; then
-      break
-    fi
-    if [ "${attempt}" -lt 5 ]; then
-      sleep $((attempt * 3))
-    fi
-  done
-
-  cleanup_stable_health_curl_config
-  trap - EXIT
-
-  if [ "${rc}" -ne 0 ]; then
-    die "stable-hostname health probe against ${hostname} failed after 5 attempts — curl exit ${rc} ${exit_name:-unknown}: $(sanitized_stable_health_curl_error). No HTTP response was ever received — the alias/DNS/TLS may not have finished propagating."
-  fi
-
-  local location bypass_present_flag=0
-  location="$(sed -n 's/^[Ll]ocation:[[:space:]]*//p' "${headers_file}" | tr -d '\r' | tail -1)"
-  if [ -n "${BYPASS_SECRET}" ]; then
-    bypass_present_flag=1
-  fi
-
-  local verdict
-  verdict="$(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_access.py" classify \
-    --http-status "${http}" \
-    --location "${location}" \
-    --body-file "${body_file}" \
-    --bypass-present "${bypass_present_flag}" \
-    --print-detail)"
-
-  case "${http}" in
-    2??) ;;
-    *)
-      log "stable hostname response diagnostics: $(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_access.py" \
-        summarize-headers --headers-file "${headers_file}")"
-      ;;
-  esac
-
-  case "${verdict}" in
-    ok) ;;
-    blocked_external)
-      die "stable hostname ${hostname} is behind Vercel Deployment Protection and the automation bypass is missing or invalid (HTTP ${http}) — the alias resolves, but this probe cannot reach the application. Confirm the ${portal_secret_var} secret's project covers this custom domain too."
-      ;;
-    app_error)
-      die "stable hostname ${hostname} health returned HTTP ${http} — application runtime failure, not a protection challenge"
-      ;;
-    not_json)
-      die "stable hostname ${hostname} health returned HTTP 200 but the body is not a JSON object"
-      ;;
-    *)
-      die "stable hostname ${hostname} health returned HTTP ${http} (verdict ${verdict}) — want 200 with a JSON body"
-      ;;
-  esac
-
-  local health_verdict
-  health_verdict="$(python3 "${REPO_ROOT}/scripts/ci/vercel_preview_health_verify.py" \
+  if ! python3 "${REPO_ROOT}/scripts/ci/vercel_stable_health_poll.py" \
+    --hostname "${hostname}" \
+    --health-path "${health_path}" \
     --app "${APP_ID}" \
     --expected-api-host "${EXPECTED_API_HOST}" \
     --expected-sha "${GITHUB_SHA}" \
-    --health-json-file "${body_file}")"
-
-  case "${health_verdict}" in
-    ok) log "stable hostname ${hostname} health OK — live fingerprint matches candidate SHA ${GITHUB_SHA:0:12}" ;;
-    status) die "stable hostname ${hostname} health status is not ok" ;;
-    app) die "stable hostname ${hostname} health app field does not match ${APP_ID}" ;;
-    env) die "stable hostname ${hostname} health env is not staging/preview" ;;
-    missing_host) die "stable hostname ${hostname} health apiHost is missing/empty" ;;
-    forbidden_host) die "stable hostname ${hostname} health apiHost resolves to production or localhost" ;;
-    host_mismatch) die "stable hostname ${hostname} health apiHost did not match the expected staging host" ;;
-    sha_mismatch) die "stable hostname ${hostname} health buildId does not match candidate SHA ${GITHUB_SHA} — the alias may still be propagating or points at a stale deployment" ;;
-    *) die "unexpected stable-hostname health verdict: ${health_verdict}" ;;
-  esac
+    --deadline-seconds 90 \
+    --diagnostics-file "${OUTPUT_DIR}/stable-health-diagnostics.json"; then
+    die "stable-hostname fingerprint verification failed — see sanitized alias diagnostics (not certification evidence)"
+  fi
+  log "stable hostname ${hostname} health OK — exact live candidate SHA ${GITHUB_SHA}"
 }
 
 log "creating Preview deployment for ${VERCEL_NAME} @ ${GITHUB_SHA:0:12}"
