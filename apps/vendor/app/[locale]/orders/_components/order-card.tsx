@@ -231,7 +231,13 @@ export function OrderCard({ locale, order, onUpdated, onError }: OrderCardProps)
   return (
     <li className="rounded-xl border border-border bg-surface p-3 shadow-sm">
       <div className="flex items-start gap-3">
-        <Link className="min-w-0 flex-1" href={`/${locale}/orders/${order.id}`}>
+        <Link
+          className="min-w-0 flex-1"
+          href={`/${locale}/orders/${order.id}`}
+          data-testid="vendor-order-card-link"
+          data-order-id={order.id}
+          data-order-status={order.status}
+        >
           <div className="flex items-center gap-2">
             <p className="truncate text-sm font-semibold text-text">{order.preview_title}</p>
             <StatusChip tone={orderStatusTone(order.status)} label={statusLabel} />

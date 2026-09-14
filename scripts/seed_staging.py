@@ -69,6 +69,7 @@ from app.staging.ticket_credentials import (  # noqa: E402
     mint_ticket_credentials,
     primary_ticket_pin,
 )
+from app.staging.transactional import apply_cod_placed  # noqa: E402
 from supabase import create_client  # noqa: E402
 
 # Back-compat re-exports for tests importing the script module directly.
@@ -229,6 +230,17 @@ def main() -> int:
         "--apply",
         action="store_true",
         help="Apply inserts (requires reachable SUPABASE_DB_URL).",
+    )
+    parser.add_argument(
+        "--transactional-cod",
+        action="store_true",
+        help=(
+            "After seeding, place the canonical COD order through the real "
+            "order-creation service (create_orders_atomic). Requires --apply. "
+            "The static seed creates no orders; the vendor fulfilment journey "
+            "needs exactly one, and COD is the only state reachable without a "
+            "payment provider."
+        ),
     )
     parser.add_argument(
         "--cleanup",
@@ -398,6 +410,23 @@ def main() -> int:
         return _die(f"seed verification failed: {exc}")
     except Exception as exc:  # noqa: BLE001
         return _die(f"seed verification failed: {exc}")
+
+    # Transactional fixture. Deliberately inside THIS step: it is the one place
+    # the staging service-role key is mapped, and the one mutating window the
+    # staging guards allow per run. It writes no order by hand — the order is
+    # created by create_orders_atomic, so it starts in `placed` with a real
+    # commission snapshot and audit trail and every later transition must go
+    # through the guarded state machine.
+    if args.transactional_cod:
+        try:
+            outcome = apply_cod_placed(auth_client)
+        except Exception as exc:  # noqa: BLE001
+            return _die(f"COD transactional fixture failed: {exc}")
+        placed = ", ".join(order["order_id"] for order in outcome["orders"])
+        print(
+            f"COD transactional fixture applied (replayed={outcome['replayed']}, "
+            f"orders={placed})"
+        )
 
     print(
         "Seed complete "
