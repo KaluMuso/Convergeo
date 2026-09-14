@@ -40,6 +40,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
+  actions: read
   contents: read
   packages: write
 
@@ -340,7 +341,7 @@ jobs:
       - name: Upload edge function deploy evidence
         uses: actions/upload-artifact@v7
         with:
-          name: staging-edge-function-deploy-record
+          name: staging-edge-function-deploy-record-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: /tmp/staging-evidence/edge-function-deploy.txt
 
   build-api-image:
@@ -456,7 +457,7 @@ jobs:
       - name: Upload deploy record
         uses: actions/upload-artifact@v7
         with:
-          name: staging-api-deploy-record
+          name: staging-api-deploy-record-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: /tmp/staging-evidence/api-deploy.txt
 
   prove-vercel-preview:
@@ -474,10 +475,13 @@ jobs:
         # the other two portals' secrets.
         include:
           - portal: customer
+            project_secret_name: VERCEL_PROJECT_ID_CUSTOMER
             bypass_secret_name: VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER
           - portal: vendor
+            project_secret_name: VERCEL_PROJECT_ID_VENDOR
             bypass_secret_name: VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR
           - portal: admin
+            project_secret_name: VERCEL_PROJECT_ID_ADMIN
             bypass_secret_name: VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN
     steps:
       - uses: actions/checkout@v7
@@ -496,8 +500,110 @@ jobs:
           echo "Preview API base OK (host secret only)"
           test -f infra/staging/vercel-preview.env.example
 
-      - name: Deploy and prove Preview for staging SHA
-        id: prove_preview
+      - name: Read authenticated prior-attempt checkpoint
+        id: prior_checkpoint
+        if: ${{ github.run_attempt > 1 }}
+        uses: actions/github-script@v8
+        env:
+          PORTAL: ${{ matrix.portal }}
+          CURRENT_ATTEMPT: ${{ github.run_attempt }}
+        with:
+          script: |
+            const crypto = require('crypto');
+            const fs = require('fs');
+            const path = require('path');
+            const portal = process.env.PORTAL;
+            const currentAttempt = Number(process.env.CURRENT_ATTEMPT);
+            const runId = context.runId;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            if (!['customer', 'vendor', 'admin'].includes(portal) ||
+                !Number.isSafeInteger(currentAttempt) || currentAttempt <= 1) {
+              core.setFailed('invalid checkpoint lookup identity');
+              return;
+            }
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+              owner, repo, run_id: runId, per_page: 100,
+            });
+            for (let sourceAttempt = currentAttempt - 1; sourceAttempt >= 1; sourceAttempt -= 1) {
+              const expectedName = `staging-preview-checkpoint-${portal}-${runId}-attempt-${sourceAttempt}`;
+              const matches = artifacts.filter((artifact) => artifact.name === expectedName);
+              if (matches.length > 1) {
+                core.setFailed('ambiguous prior-attempt checkpoint artifact');
+                return;
+              }
+              if (matches.length === 0 || matches[0].expired === true) continue;
+              const artifact = matches[0];
+              if (!Number.isSafeInteger(artifact.size_in_bytes) || artifact.size_in_bytes <= 0 ||
+                  artifact.size_in_bytes > 256 * 1024 ||
+                  !/^sha256:[0-9a-f]{64}$/.test(artifact.digest || '')) {
+                core.setFailed('invalid prior-attempt checkpoint artifact metadata');
+                return;
+              }
+              const runResponse = await github.request(
+                'GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}',
+                { owner, repo, run_id: runId, attempt_number: sourceAttempt },
+              );
+              const run = runResponse.data;
+              if (run.id !== runId || run.head_sha !== context.sha || run.head_branch !== 'staging' ||
+                  run.path !== '.github/workflows/deploy-staging.yml' ||
+                  run.repository?.id !== 1290591718 ||
+                  run.repository?.full_name !== 'KaluMuso/Convergeo') {
+                core.setFailed('untrusted prior-attempt checkpoint producer');
+                return;
+              }
+              const jobs = await github.paginate(
+                'GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts/{attempt_number}/jobs',
+                { owner, repo, run_id: runId, attempt_number: sourceAttempt, per_page: 100 },
+              );
+              const expectedJob = `Vercel Preview proof (${portal})`;
+              const sourceJobs = jobs.filter((job) =>
+                job.name === expectedJob || job.name.endsWith(` / ${expectedJob}`)
+              );
+              if (sourceJobs.length !== 1 || sourceJobs[0].status !== 'completed') {
+                core.setFailed('checkpoint is not bound to one completed prior-attempt job');
+                return;
+              }
+              const sourceJob = sourceJobs[0];
+              const createdAt = Date.parse(artifact.created_at);
+              if (!Number.isFinite(createdAt) || createdAt < Date.parse(sourceJob.started_at) ||
+                  createdAt > Date.parse(sourceJob.completed_at)) {
+                core.setFailed('checkpoint artifact falls outside its producer job window');
+                return;
+              }
+              const download = await github.rest.actions.downloadArtifact({
+                owner, repo, artifact_id: artifact.id, archive_format: 'zip',
+              });
+              const archive = Buffer.from(download.data);
+              const digest = `sha256:${crypto.createHash('sha256').update(archive).digest('hex')}`;
+              if (digest !== artifact.digest) {
+                core.setFailed('checkpoint artifact digest mismatch');
+                return;
+              }
+              const directory = path.join(process.env.RUNNER_TEMP, `checkpoint-${portal}`);
+              fs.mkdirSync(directory, { recursive: true });
+              fs.writeFileSync(path.join(directory, 'prior.zip'), archive);
+              fs.writeFileSync(path.join(directory, 'artifact.json'), JSON.stringify({
+                ...artifact,
+                workflow_run: {
+                  id: run.id,
+                  head_sha: run.head_sha,
+                  head_branch: run.head_branch,
+                  repository: run.repository.full_name,
+                  repository_id: run.repository.id,
+                  path: run.path,
+                },
+                source_job: { ...sourceJob, run_attempt: sourceAttempt },
+              }));
+              core.setOutput('found', 'true');
+              core.setOutput('source_attempt', String(sourceAttempt));
+              return;
+            }
+            core.info('no reusable prior-attempt checkpoint artifact found');
+            core.setOutput('found', 'false');
+
+      - name: Resolve create versus reuse
+        id: checkpoint_selection
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -519,13 +625,106 @@ jobs:
           # custom-domain setup, at which point the script aliases this
           # SHA-proven deployment to it. A no-op for vendor/admin regardless.
           CUSTOMER_STAGING_STABLE_HOSTNAME: ${{ vars.CUSTOMER_STAGING_STABLE_HOSTNAME }}
+          STAGING_BUILD_CONFIG_REVISION: ${{ vars.STAGING_BUILD_CONFIG_REVISION }}
+          PROJECT_ID: ${{ secrets[matrix.project_secret_name] }}
+          PRIOR_CHECKPOINT_FOUND: ${{ steps.prior_checkpoint.outputs.found }}
+          PRIOR_CHECKPOINT_ATTEMPT: ${{ steps.prior_checkpoint.outputs.source_attempt }}
         run: |
           set -euo pipefail
-          # Git-source Preview deployment (target defaults to preview).
-          # Production promotion remains exclusively in deploy-production.yml.
+          selection="/tmp/staging-preview-${{ matrix.portal }}/checkpoint-selection.json"
+          args=(
+            select
+            --portal "${{ matrix.portal }}"
+            --project-id "${PROJECT_ID}"
+            --candidate-sha "${GITHUB_SHA}"
+            --configuration-revision "${STAGING_BUILD_CONFIG_REVISION}"
+            --run-id "${GITHUB_RUN_ID}"
+            --run-attempt "${GITHUB_RUN_ATTEMPT}"
+            --output "${selection}"
+          )
+          if [ "${PRIOR_CHECKPOINT_FOUND}" = "true" ]; then
+            args+=(
+              --archive "${RUNNER_TEMP}/checkpoint-${{ matrix.portal }}/prior.zip"
+              --artifact-metadata "${RUNNER_TEMP}/checkpoint-${{ matrix.portal }}/artifact.json"
+              --source-attempt "${PRIOR_CHECKPOINT_ATTEMPT}"
+            )
+          fi
+          python3 scripts/ci/vercel_deployment_checkpoint.py "${args[@]}"
+
+      - name: Create or recover Preview checkpoint
+        id: prepare_preview
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID_CUSTOMER: ${{ secrets.VERCEL_PROJECT_ID_CUSTOMER }}
+          VERCEL_PROJECT_ID_VENDOR: ${{ secrets.VERCEL_PROJECT_ID_VENDOR }}
+          VERCEL_PROJECT_ID_ADMIN: ${{ secrets.VERCEL_PROJECT_ID_ADMIN }}
+          STAGING_API_BASE_URL: ${{ secrets.STAGING_API_BASE_URL }}
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+          STAGING_BUILD_CONFIG_REVISION: ${{ vars.STAGING_BUILD_CONFIG_REVISION }}
+        run: |
+          set -euo pipefail
           bash scripts/ci/vercel-staging-preview-prove.sh \
             --portal "${{ matrix.portal }}" \
-            --output-dir "/tmp/staging-preview-${{ matrix.portal }}"
+            --output-dir "/tmp/staging-preview-${{ matrix.portal }}" \
+            --phase prepare \
+            --selection-file "/tmp/staging-preview-${{ matrix.portal }}/checkpoint-selection.json" \
+            --checkpoint-file "/tmp/staging-preview-${{ matrix.portal }}/deployment-checkpoint.json"
+
+      # This PRE_PROBE artifact is intentionally persisted before any health or
+      # Customer alias probe. It enables retry reuse but can never certify PASS.
+      - name: Upload PRE_PROBE checkpoint (${{ matrix.portal }})
+        uses: actions/upload-artifact@v7
+        with:
+          name: staging-preview-checkpoint-${{ matrix.portal }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: /tmp/staging-preview-${{ matrix.portal }}/deployment-checkpoint.json
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Re-probe immutable Preview and mutable Customer hostname
+        id: prove_preview
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID_CUSTOMER: ${{ secrets.VERCEL_PROJECT_ID_CUSTOMER }}
+          VERCEL_PROJECT_ID_VENDOR: ${{ secrets.VERCEL_PROJECT_ID_VENDOR }}
+          VERCEL_PROJECT_ID_ADMIN: ${{ secrets.VERCEL_PROJECT_ID_ADMIN }}
+          STAGING_API_BASE_URL: ${{ secrets.STAGING_API_BASE_URL }}
+          STAGING_API_HOST: ${{ secrets.STAGING_API_HOST }}
+          STAGING_BUILD_CONFIG_REVISION: ${{ vars.STAGING_BUILD_CONFIG_REVISION }}
+          VERCEL_PORTAL_BYPASS_SECRET: ${{ secrets[matrix.bypass_secret_name] }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          CUSTOMER_STAGING_STABLE_HOSTNAME: ${{ vars.CUSTOMER_STAGING_STABLE_HOSTNAME }}
+        run: |
+          set -euo pipefail
+          bash scripts/ci/vercel-staging-preview-prove.sh \
+            --portal "${{ matrix.portal }}" \
+            --output-dir "/tmp/staging-preview-${{ matrix.portal }}" \
+            --phase prove \
+            --checkpoint-file "/tmp/staging-preview-${{ matrix.portal }}/deployment-checkpoint.json"
+
+      - name: Publish deployment create/reuse count (${{ matrix.portal }})
+        if: ${{ always() }}
+        env:
+          PREPARE_OUTCOME: ${{ steps.prepare_preview.outcome }}
+          PROVE_OUTCOME: ${{ steps.prove_preview.outcome }}
+          DEPLOYMENT_ACTION: ${{ steps.prepare_preview.outputs.deployment_action }}
+          CREATE_CALLS: ${{ steps.prepare_preview.outputs.deployment_create_calls }}
+          REUSED_DEPLOYMENTS: ${{ steps.prepare_preview.outputs.reused_deployments }}
+        run: |
+          set +e
+          {
+            echo "### Vercel checkpoint — ${{ matrix.portal }}"
+            echo
+            echo "- Candidate: \`${GITHUB_SHA}\`"
+            echo "- Configuration revision: recorded (non-secret identity)"
+            echo "- Checkpoint stage: \`PRE_PROBE\` (not certification evidence)"
+            echo "- Decision: \`${DEPLOYMENT_ACTION:-UNKNOWN}\`"
+            echo "- Deployment-create calls: \`${CREATE_CALLS:-UNKNOWN}\`"
+            echo "- Reused deployments: \`${REUSED_DEPLOYMENTS:-UNKNOWN}\`"
+            echo "- Prepare/prove: \`${PREPARE_OUTCOME}/${PROVE_OUTCOME}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+          exit 0
 
       # Failure diagnostics are deliberately outside staging-preview-evidence-*
       # consumed by smoke/certification. Never upload the whole probe directory:
@@ -534,14 +733,14 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: staging-alias-diagnostics-${{ matrix.portal }}
+          name: staging-alias-diagnostics-${{ matrix.portal }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: /tmp/staging-preview-${{ matrix.portal }}/stable-health-diagnostics.json
           if-no-files-found: ignore
 
       - name: Upload Preview evidence (${{ matrix.portal }})
         uses: actions/upload-artifact@v7
         with:
-          name: staging-preview-evidence-${{ matrix.portal }}
+          name: staging-preview-evidence-${{ matrix.portal }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           # Only the allowlisted certification projection, not the raw Vercel
           # deployment response (which can include environment configuration).
           path: /tmp/staging-preview-${{ matrix.portal }}/evidence.json
@@ -568,14 +767,11 @@ jobs:
         if: ${{ needs.prove-vercel-preview.result == 'success' }}
         uses: actions/download-artifact@v8
         with:
-          pattern: staging-preview-evidence-*
-          # NO merge-multiple: each portal's artifact holds evidence.json and
-          # deployment.json at its ROOT, so merging all three into one directory
-          # makes them collide and only the last writer survives — deploy-staging
-          # run #34 downloaded three artifacts and was left with a single
-          # /tmp/preview-evidence-raw/evidence.json. Without merge-multiple,
-          # download-artifact unpacks each into <path>/<artifact-name>/, which is
-          # exactly the per-portal layout the normalize step below expects.
+          pattern: staging-preview-evidence-*-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          # NO merge-multiple: each portal's artifact holds evidence.json at its
+          # root. Attempt-scoped names prevent immutable-artifact collisions on
+          # rerun, while separate directories prevent three evidence.json files
+          # from overwriting one another.
           path: /tmp/preview-evidence-raw
 
       - name: Normalize Preview evidence paths
@@ -584,7 +780,8 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/preview-evidence
           for portal in customer vendor admin; do
-            src="/tmp/preview-evidence-raw/staging-preview-evidence-${portal}/evidence.json"
+            artifact_name="staging-preview-evidence-${portal}-${GITHUB_RUN_ID}-attempt-${GITHUB_RUN_ATTEMPT}"
+            src="/tmp/preview-evidence-raw/${artifact_name}/evidence.json"
             if [ ! -f "${src}" ]; then
               # download-artifact merge-multiple may flatten paths
               alt="/tmp/preview-evidence-raw/${portal}/evidence.json"
@@ -748,7 +945,7 @@ jobs:
       - name: Upload smoke evidence
         uses: actions/upload-artifact@v7
         with:
-          name: staging-smoke-evidence
+          name: staging-smoke-evidence-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
             /tmp/healthz.json
             /tmp/readyz.json
@@ -758,7 +955,7 @@ jobs:
         if: ${{ needs.prove-vercel-preview.result == 'success' }}
         uses: actions/upload-artifact@v7
         with:
-          name: staging-sha-proof
+          name: staging-sha-proof-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: /tmp/staging-sha-proof.json
 
   # Explicit non-promotion marker — this workflow never deploys production.

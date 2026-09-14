@@ -31,6 +31,10 @@
 # Optional:
 #   GITHUB_OUTPUT — when set, writes url, deployment_id, sha outputs
 #   VERCEL_PREVIEW_PROVE_EVIDENCE — path for JSON evidence (default: $OUTPUT_DIR/evidence.json)
+#   --phase prepare|prove|all — split prepare/upload/prove in CI so the
+#     PRE_PROBE checkpoint is persisted before any health or alias probe.
+#   --checkpoint-file PATH — current-attempt sanitized checkpoint.
+#   --selection-file PATH — authenticated prior-attempt reuse decision.
 #   CUSTOMER_STAGING_STABLE_HOSTNAME — customer portal only. When set, once
 #     this exact deployment is proven to match GITHUB_SHA, alias this stable
 #     same-site hostname (e.g. customer.staging.vergeo5.com) to it via the
@@ -52,6 +56,9 @@ GITHUB_ORG="${GITHUB_ORG:-KaluMuso}"
 GITHUB_REPO="${GITHUB_REPO:-Convergeo}"
 HEALTH_LOCALE="${HEALTH_LOCALE:-en}"
 DRY_RUN=0
+PHASE="all"
+CHECKPOINT_FILE=""
+SELECTION_FILE=""
 
 usage() {
   sed -n '2,18p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
@@ -70,6 +77,18 @@ while [[ $# -gt 0 ]]; do
       OUTPUT_DIR="${2:-}"
       shift 2
       ;;
+    --phase)
+      PHASE="${2:-}"
+      shift 2
+      ;;
+    --checkpoint-file)
+      CHECKPOINT_FILE="${2:-}"
+      shift 2
+      ;;
+    --selection-file)
+      SELECTION_FILE="${2:-}"
+      shift 2
+      ;;
     --dry-run)
       DRY_RUN=1
       shift
@@ -85,6 +104,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 mkdir -p "${OUTPUT_DIR}"
+
+case "${PHASE}" in
+  prepare|prove|all) ;;
+  *) die "--phase must be prepare, prove, or all" ;;
+esac
+
+if [ -z "${CHECKPOINT_FILE}" ]; then
+  CHECKPOINT_FILE="${OUTPUT_DIR}/deployment-checkpoint.json"
+fi
 
 case "${PORTAL}" in
   customer)
@@ -123,10 +151,9 @@ if [ "${GITHUB_REF_NAME}" != "staging" ]; then
   die "GITHUB_REF_NAME must be staging, got ${GITHUB_REF_NAME}"
 fi
 
-case "${GITHUB_SHA}" in
-  [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) ;;
-  *) die "GITHUB_SHA is not a commit SHA" ;;
-esac
+if [[ ! "${GITHUB_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+  die "GITHUB_SHA must be an exact lowercase 40-hex commit SHA"
+fi
 
 if [ "${GITHUB_SHA}" = "latest" ]; then
   die "refusing image/deployment tag latest"
@@ -150,6 +177,23 @@ EXPECTED_API_HOST="$(printf '%s' "${API_BASE}" | sed -E 's#^https?://##; s#/.*##
 if [ "${DRY_RUN}" -eq 1 ]; then
   log "dry-run OK portal=${PORTAL} project=${VERCEL_NAME} api_env=${API_ENV_VAR}"
   exit 0
+fi
+
+GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-}"
+GITHUB_REPOSITORY_ID="${GITHUB_REPOSITORY_ID:-}"
+GITHUB_RUN_ID="${GITHUB_RUN_ID:-}"
+GITHUB_RUN_ATTEMPT="${GITHUB_RUN_ATTEMPT:-}"
+STAGING_BUILD_CONFIG_REVISION="${STAGING_BUILD_CONFIG_REVISION:-}"
+if [ "${GITHUB_REPOSITORY}" != "KaluMuso/Convergeo" ] \
+  || [ "${GITHUB_REPOSITORY_ID}" != "1290591718" ]; then
+  die "untrusted GitHub repository identity"
+fi
+if [[ ! "${GITHUB_RUN_ID}" =~ ^[1-9][0-9]*$ ]] \
+  || [[ ! "${GITHUB_RUN_ATTEMPT}" =~ ^[1-9][0-9]*$ ]]; then
+  die "GitHub run/attempt identity is required"
+fi
+if [[ ! "${STAGING_BUILD_CONFIG_REVISION}" =~ ^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$ ]]; then
+  die "STAGING_BUILD_CONFIG_REVISION must be a non-secret versioned identity"
 fi
 
 vercel_api() {
@@ -221,7 +265,11 @@ verify_project_env() {
 create_deployment() {
   local payload
   payload="$(PROJECT_ID="${PROJECT_ID}" VERCEL_NAME="${VERCEL_NAME}" \
-    GITHUB_ORG="${GITHUB_ORG}" GITHUB_REPO="${GITHUB_REPO}" GITHUB_REF_NAME="${GITHUB_REF_NAME}" \
+    GITHUB_ORG="${GITHUB_ORG}" GITHUB_REPO="${GITHUB_REPO}" GITHUB_SHA="${GITHUB_SHA}" \
+    GITHUB_REF_NAME="${GITHUB_REF_NAME}" \
+    GITHUB_REPOSITORY_ID="${GITHUB_REPOSITORY_ID}" GITHUB_RUN_ID="${GITHUB_RUN_ID}" \
+    GITHUB_RUN_ATTEMPT="${GITHUB_RUN_ATTEMPT}" \
+    STAGING_BUILD_CONFIG_REVISION="${STAGING_BUILD_CONFIG_REVISION}" \
     python3 - <<'PY'
 import json, os
 print(json.dumps({
@@ -232,6 +280,13 @@ print(json.dumps({
         "org": os.environ["GITHUB_ORG"],
         "repo": os.environ["GITHUB_REPO"],
         "ref": os.environ["GITHUB_REF_NAME"],
+        "sha": os.environ["GITHUB_SHA"],
+    },
+    "meta": {
+        "convergeoBuildConfigRevision": os.environ["STAGING_BUILD_CONFIG_REVISION"],
+        "convergeoRepositoryId": os.environ["GITHUB_REPOSITORY_ID"],
+        "convergeoSourceRunId": os.environ["GITHUB_RUN_ID"],
+        "convergeoCreationAttempt": os.environ["GITHUB_RUN_ATTEMPT"],
     },
 }))
 PY
@@ -244,13 +299,17 @@ parse_deployment_metadata() {
 import json, os
 doc = json.loads(os.environ["DEPLOYMENT_JSON"])
 meta = doc.get("meta") or {}
-print("\t".join([
+print("\x1f".join([
     doc.get("readyState") or doc.get("state") or "UNKNOWN",
     doc.get("target") or "preview",
     doc.get("projectId") or "",
     meta.get("githubCommitSha") or meta.get("gitCommitSha") or "",
     doc.get("url") or "",
     doc.get("id") or doc.get("uid") or "",
+    meta.get("convergeoBuildConfigRevision") or "",
+    str(meta.get("convergeoRepositoryId") or ""),
+    str(meta.get("convergeoSourceRunId") or ""),
+    str(meta.get("convergeoCreationAttempt") or ""),
 ]))
 PY
 }
@@ -273,29 +332,132 @@ prove_stable_hostname_health() {
   log "stable hostname ${hostname} health OK — exact live candidate SHA ${GITHUB_SHA}"
 }
 
-log "creating Preview deployment for ${VERCEL_NAME} @ ${GITHUB_SHA:0:12}"
-deployment="$(create_deployment)"
-deployment_id="$(DEPLOYMENT_JSON="${deployment}" python3 - <<'PY'
-import json, os, sys
+deployment=""
+deployment_id=""
+deployment_action=""
+deployment_origin_attempt=""
+deployment_create_calls=""
+reused_deployments=""
+
+if [ "${PHASE}" = "prepare" ] || [ "${PHASE}" = "all" ]; then
+  if [ -z "${SELECTION_FILE}" ]; then
+    SELECTION_FILE="${OUTPUT_DIR}/checkpoint-selection.json"
+    python3 "${REPO_ROOT}/scripts/ci/vercel_deployment_checkpoint.py" select \
+      --portal "${PORTAL}" \
+      --project-id "${PROJECT_ID}" \
+      --candidate-sha "${GITHUB_SHA}" \
+      --configuration-revision "${STAGING_BUILD_CONFIG_REVISION}" \
+      --run-id "${GITHUB_RUN_ID}" \
+      --run-attempt "${GITHUB_RUN_ATTEMPT}" \
+      --output "${SELECTION_FILE}"
+  fi
+  IFS=$'\t' read -r selection_decision selected_deployment_id deployment_origin_attempt deployment_create_calls reused_deployments < <(
+    python3 - "${SELECTION_FILE}" <<'PY'
+import json, re, sys
+with open(sys.argv[1], encoding="utf-8") as handle:
+    value = json.load(handle)
+decision = value.get("decision")
+deployment_id = value.get("deployment_id") or "NONE"
+origin_attempt = value.get("origin_attempt")
+create_calls = value.get("deployment_create_calls")
+reused = value.get("reused_deployments")
+if decision not in {"create", "reuse"}:
+    raise SystemExit(1)
+if decision == "reuse" and re.fullmatch(r"dpl_[A-Za-z0-9]+", deployment_id) is None:
+    raise SystemExit(1)
+if not all(type(item) is int for item in (origin_attempt, create_calls, reused)):
+    raise SystemExit(1)
+print("\t".join(map(str, (decision, deployment_id, origin_attempt, create_calls, reused))))
+PY
+  )
+  if [ "${selection_decision}" = "reuse" ]; then
+    deployment_id="${selected_deployment_id}"
+    deployment_action="reused"
+    log "reusing authenticated deployment checkpoint; all live probes will run again"
+  else
+    log "creating Preview deployment for ${VERCEL_NAME} @ ${GITHUB_SHA:0:12}"
+    deployment="$(create_deployment)"
+    deployment_id="$(DEPLOYMENT_JSON="${deployment}" python3 - <<'PY'
+import json, os, re, sys
 doc = json.loads(os.environ["DEPLOYMENT_JSON"])
 deployment_id = doc.get("id") or doc.get("uid")
-if not deployment_id:
-    print("::error::create response missing deployment id", file=sys.stderr)
+if not isinstance(deployment_id, str) or re.fullmatch(r"dpl_[A-Za-z0-9]+", deployment_id) is None:
+    print("::error::create response missing valid deployment id", file=sys.stderr)
     raise SystemExit(1)
 print(deployment_id)
 PY
 )"
-log "deployment id ${deployment_id}"
+    deployment_action="created"
+  fi
+  python3 "${REPO_ROOT}/scripts/ci/vercel_deployment_checkpoint.py" write \
+    --selection "${SELECTION_FILE}" \
+    --portal "${PORTAL}" \
+    --project-id "${PROJECT_ID}" \
+    --deployment-id "${deployment_id}" \
+    --candidate-sha "${GITHUB_SHA}" \
+    --configuration-revision "${STAGING_BUILD_CONFIG_REVISION}" \
+    --run-id "${GITHUB_RUN_ID}" \
+    --run-attempt "${GITHUB_RUN_ATTEMPT}" \
+    --generated-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    --output "${CHECKPOINT_FILE}"
+  log "PRE_PROBE checkpoint written immediately for deployment ${deployment_id}"
+  if [ -n "${GITHUB_OUTPUT:-}" ]; then
+    {
+      printf 'checkpoint_path=%s\n' "${CHECKPOINT_FILE}"
+      printf 'deployment_id=%s\n' "${deployment_id}"
+      printf 'deployment_action=%s\n' "${deployment_action}"
+      printf 'deployment_origin_attempt=%s\n' "${deployment_origin_attempt}"
+      printf 'deployment_create_calls=%s\n' "${deployment_create_calls}"
+      printf 'reused_deployments=%s\n' "${reused_deployments}"
+    } >> "${GITHUB_OUTPUT}"
+  fi
+  if [ "${PHASE}" = "prepare" ]; then
+    exit 0
+  fi
+fi
+
+if [ "${PHASE}" = "prove" ]; then
+  validation_dir="$(mktemp -d)"
+  validation_json="${validation_dir}/current.json"
+  python3 "${REPO_ROOT}/scripts/ci/vercel_deployment_checkpoint.py" validate-current \
+    --checkpoint "${CHECKPOINT_FILE}" \
+    --portal "${PORTAL}" \
+    --project-id "${PROJECT_ID}" \
+    --candidate-sha "${GITHUB_SHA}" \
+    --configuration-revision "${STAGING_BUILD_CONFIG_REVISION}" \
+    --run-id "${GITHUB_RUN_ID}" \
+    --run-attempt "${GITHUB_RUN_ATTEMPT}" \
+    --output "${validation_json}"
+  IFS=$'\t' read -r deployment_id deployment_action deployment_origin_attempt deployment_create_calls reused_deployments < <(
+    python3 - "${validation_json}" <<'PY'
+import json, sys
+with open(sys.argv[1], encoding="utf-8") as handle:
+    value = json.load(handle)
+print("\t".join(map(str, (
+    value["deployment_id"], value["decision"], value["origin_attempt"],
+    value["deployment_create_calls"], value["reused_deployments"],
+))))
+PY
+  )
+  rm -rf "${validation_dir}"
+  log "checkpoint validated; re-probing deployment ${deployment_id}"
+fi
 
 ready_state=""
 target=""
 project_id=""
 commit_sha=""
 deployment_url=""
+deployment_config_revision=""
+deployment_repository_id=""
+deployment_source_run_id=""
+deployment_creation_attempt=""
 
 for attempt in $(seq 1 60); do
   deployment="$(vercel_api GET "v13/deployments/${deployment_id}?teamId=${VERCEL_ORG_ID}")"
-  IFS=$'\t' read -r ready_state target project_id commit_sha deployment_url _ <<< "$(parse_deployment_metadata "${deployment}")"
+  IFS=$'\x1f' read -r ready_state target project_id commit_sha deployment_url observed_deployment_id \
+    deployment_config_revision deployment_repository_id deployment_source_run_id deployment_creation_attempt \
+    <<< "$(parse_deployment_metadata "${deployment}")"
 
   case "${target}" in
     preview) ;;
@@ -304,6 +466,17 @@ for attempt in $(seq 1 60); do
 
   if [ "${project_id}" != "${PROJECT_ID}" ]; then
     die "deployment project id does not match expected ${PORTAL} project"
+  fi
+  if [ "${observed_deployment_id}" != "${deployment_id}" ]; then
+    die "deployment metadata id does not match the checkpoint"
+  fi
+  if [ "${deployment_config_revision}" != "${STAGING_BUILD_CONFIG_REVISION}" ]; then
+    die "deployment configuration revision is missing or stale"
+  fi
+  if [ "${deployment_repository_id}" != "${GITHUB_REPOSITORY_ID}" ] \
+    || [ "${deployment_source_run_id}" != "${GITHUB_RUN_ID}" ] \
+    || [ "${deployment_creation_attempt}" != "${deployment_origin_attempt}" ]; then
+    die "deployment producer metadata does not match the trusted checkpoint"
   fi
 
   case "${ready_state}" in
@@ -617,6 +790,11 @@ bypass_source="${BYPASS_SOURCE}" \
 health_body_file="${health_body_file}" \
 stable_hostname_status="${stable_hostname_status}" \
 stable_hostname_url="${stable_hostname_url}" \
+STAGING_BUILD_CONFIG_REVISION="${STAGING_BUILD_CONFIG_REVISION}" \
+deployment_action="${deployment_action}" \
+deployment_origin_attempt="${deployment_origin_attempt}" \
+deployment_create_calls="${deployment_create_calls}" \
+reused_deployments="${reused_deployments}" \
 EVIDENCE_PATH="${EVIDENCE_PATH}" \
 python3 - <<'PY'
 import json, os
@@ -638,6 +816,12 @@ doc = {
     "preview_url": os.environ["preview_url"],
     "deployment_sha": os.environ["commit_sha"],
     "target": "preview",
+    "configuration_revision": os.environ["STAGING_BUILD_CONFIG_REVISION"],
+    "checkpoint_stage": "PRE_PROBE",
+    "deployment_action": os.environ["deployment_action"],
+    "deployment_origin_attempt": int(os.environ["deployment_origin_attempt"]),
+    "deployment_create_calls": int(os.environ["deployment_create_calls"]),
+    "reused_deployments": int(os.environ["reused_deployments"]),
     "health_status": health_body.get("status"),
     "health_app": health_body.get("app"),
     "health_env": health_body.get("env"),
@@ -671,6 +855,10 @@ if [ -n "${GITHUB_OUTPUT:-}" ]; then
     printf 'health_verdict=%s\n' "${health_verdict}"
     printf 'stable_hostname_status=%s\n' "${stable_hostname_status}"
     printf 'stable_hostname_url=%s\n' "${stable_hostname_url}"
+    printf 'deployment_action=%s\n' "${deployment_action}"
+    printf 'deployment_origin_attempt=%s\n' "${deployment_origin_attempt}"
+    printf 'deployment_create_calls=%s\n' "${deployment_create_calls}"
+    printf 'reused_deployments=%s\n' "${reused_deployments}"
   } >> "${GITHUB_OUTPUT}"
 fi
 

@@ -267,6 +267,7 @@ if bash -n scripts/ci/vercel-staging-preview-prove.sh \
   && bash -n scripts/ci/reconcile-staging-migrations.sh \
   && bash -n scripts/ci/preflight-staging-schema-convergence.sh \
   && bash -n scripts/ci/staging-cors-preview-probe.sh \
+  && python3 -m py_compile scripts/ci/vercel_deployment_checkpoint.py \
   && python3 -m py_compile scripts/ci/validate_staging_proof.py \
   && python3 -m py_compile scripts/ci/reconcile_staging_migrations.py; then
   ok "preview prove + evidence bundle + migration reconcile + CORS probe syntax"
@@ -406,6 +407,21 @@ if grep -q 'prove-vercel-preview' .github/workflows/deploy-staging.yml \
   ok "deploy-staging proves customer/vendor/admin Preview at same SHA"
 else
   bad "deploy-staging missing three-portal Preview proof wiring"
+fi
+
+# 13a) E1 retry transport: creation is checkpointed before any probe; every
+# recovered deployment is then re-probed. Attempt-scoped artifacts must not
+# collide with immutable artifacts from a prior run attempt.
+checkpoint_prepare_line="$(grep -n 'Create or recover Preview checkpoint' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+checkpoint_upload_line="$(grep -n 'Upload PRE_PROBE checkpoint' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+checkpoint_probe_line="$(grep -n 'Re-probe immutable Preview and mutable Customer hostname' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+if [[ -n "${checkpoint_prepare_line}" && -n "${checkpoint_upload_line}" && -n "${checkpoint_probe_line}" ]] \
+  && [[ "${checkpoint_prepare_line}" -lt "${checkpoint_upload_line}" ]] \
+  && [[ "${checkpoint_upload_line}" -lt "${checkpoint_probe_line}" ]] \
+  && grep -q 'staging-preview-checkpoint-${{ matrix.portal }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}' .github/workflows/deploy-staging.yml; then
+  ok "Vercel retry checkpoint is attempt-scoped, persisted pre-probe, and always re-probed"
+else
+  bad "Vercel retry checkpoint must be uploaded before probes with an attempt-scoped artifact name"
 fi
 
 # 13b) deploy-staging must preflight ledger drift before db push
