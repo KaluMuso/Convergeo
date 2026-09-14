@@ -778,6 +778,35 @@ jobs:
             echo "::endgroup::"
           done
 
+      - name: Staging cleanup DB regression (notification-outbox scope)
+        # build_cleanup_sql()'s outbox DELETE is only provable against a real
+        # migrated database: tests/test_staging_cod_fixture.py asserts the SQL
+        # text, which cannot catch a predicate that matches nothing. The
+        # `python` job has no Postgres, so test_seed_staging.py's fixture skips
+        # there — this is the one place the behavioural cases actually execute.
+        # Isolated on purpose: its own schema reset, its own process, and NOT
+        # the rls job (whose curated set depends on retained fixture state).
+        run: |
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+            -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; DROP SCHEMA IF EXISTS auth CASCADE; DROP SCHEMA IF EXISTS extensions CASCADE; DROP EXTENSION IF EXISTS vector CASCADE; DROP EXTENSION IF EXISTS pg_trgm CASCADE;"
+          uv run pytest tests/test_seed_staging.py -q \
+            --junit-xml=staging-cleanup-regression.xml
+
+      - name: Prove the outbox regression ran (no silent skip)
+        # A green pytest exit code is NOT proof these ran: the database fixture
+        # skips on an unreachable Postgres, a missing extension or a failed
+        # migration. Fail the job unless every named case is present and passed.
+        if: always()
+        run: python3 ../../scripts/ci/assert_outbox_regression_ran.py staging-cleanup-regression.xml
+
+      - name: Upload staging cleanup regression report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: staging-cleanup-regression
+          path: services/api/staging-cleanup-regression.xml
+          if-no-files-found: error
+
   cod-container-smoke:
     name: COD production-container smoke
     # Blocking (WP-1B): builds the real infra/api.Dockerfile image and drives ONE

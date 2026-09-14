@@ -966,6 +966,61 @@ else
   ok "no destructive reset inside Playwright — reset is a single workflow step"
 fi
 
+# ── vendor-sell order targeting + real lifecycle (Phase 3A) ───────────────────
+#
+# Run #77 failed because the spec picked its "order" with
+# getByRole("link", { name: /order|#/i }), which resolves to the mobile
+# VendorShell "Orders" navigation tab — rendered BEFORE the page content — so
+# "click the first order" silently reloaded the same queue. Product title,
+# price and status are equally unusable as an order identifier.
+vendor_sell_spec="e2e/specs/vendor-sell.spec.ts"
+if grep -qE 'getByRole\(\s*"link"' "${vendor_sell_spec}"; then
+  bad "vendor-sell must not identify an order by accessible name — it matches the Orders nav tab"
+elif grep -q 'getByTestId("vendor-order-card-link")' "${vendor_sell_spec}"; then
+  ok "vendor-sell targets the order card by test id, not by navigation chrome"
+else
+  bad "vendor-sell must target the order card via getByTestId(\"vendor-order-card-link\")"
+fi
+
+# The card link must actually carry that hook, in the vendor app.
+if grep -q 'data-testid="vendor-order-card-link"' \
+  "apps/vendor/app/[locale]/orders/_components/order-card.tsx"; then
+  ok "the vendor order-card link exposes the order-card test id"
+else
+  bad "apps/vendor order-card link must expose data-testid=vendor-order-card-link"
+fi
+
+# ship is reachable ONLY from processing+delivery (orders/state.py
+# TRANSITION_TABLE), so a freshly received order can never be shipped in one
+# click. The spec must walk every guarded transition, in order.
+lifecycle_order="$(grep -oE 'vendor-order-action-(confirm|pack|ship)' "${vendor_sell_spec}" | tr '\n' ' ')"
+case "${lifecycle_order}" in
+  "vendor-order-action-confirm vendor-order-action-pack vendor-order-action-ship "*)
+    ok "vendor-sell walks the real lifecycle confirm -> pack -> ship in order"
+    ;;
+  *)
+    bad "vendor-sell must exercise confirm -> pack -> ship (found: ${lifecycle_order:-none})"
+    ;;
+esac
+
+# The order the journey needs is not seeded statically: it is placed once per
+# run through the real order-creation service, inside the single mutating seed
+# step (the one place the service-role key is mapped).
+if grep -q -- '--transactional-cod' .github/workflows/e2e.yml \
+  && grep -q 'create_orders_atomic' services/api/app/staging/transactional.py; then
+  ok "the COD fixture order is created by the guarded order service, once per run"
+else
+  bad "vendor-sell needs a COD order placed via create_orders_atomic in the seed step"
+fi
+
+# A fabricated order would bypass the state machine entirely.
+if grep -qE 'table\("(orders|order_items|order_item_products)"\)' \
+  services/api/app/staging/transactional.py; then
+  bad "the transactional fixture must never write an order row directly"
+else
+  ok "the transactional fixture writes no order row by hand"
+fi
+
 # Exactly one mutating seed invocation per E2E run.
 e2e_seed_applies="$(grep -c -- '--apply' .github/workflows/e2e.yml || true)"
 if [ "${e2e_seed_applies}" = "1" ] && grep -q -- '--cleanup' .github/workflows/e2e.yml; then

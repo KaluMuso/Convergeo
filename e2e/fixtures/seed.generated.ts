@@ -36,6 +36,21 @@ export const SEED = {
   },
   /** Search term guaranteed to return the buyable product. */
   searchTerm: "multiseller",
+  /**
+   * The COD order the transactional fixture step places for the approved
+   * vendor, through the real order-creation service. Single-listing product,
+   * so the receiving vendor is deterministic rather than buy-box dependent.
+   * The order id is NOT here: it is minted per run by the state machine.
+   */
+  codOrder: {
+    productSlug: "stg-rv-20260719-product-b",
+    productName: "Synthetic standard retail product B",
+    qty: 1,
+    unitPriceNgwee: 8750,
+    subtotalNgwee: 8750,
+    vendorSlug: "stg-rv-20260719-vend-apr",
+    initialStatus: "placed",
+  },
   /** Published event with an un-scanned ticket for the organiser scanner. */
   event: {
     /**
