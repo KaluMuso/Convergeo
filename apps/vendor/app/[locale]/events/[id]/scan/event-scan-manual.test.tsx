@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ApiError } from "@vergeo/config";
 import React from "react";
@@ -566,5 +566,124 @@ describe("event scanner · rejection evidence names the verdict", () => {
       "data-scan-result-kind",
       "valid",
     );
+  });
+});
+
+/**
+ * Door-queue hazard: one operator, one form, successive guests.
+ *
+ * The manual form stays mounted under the result flash by design, so staff move
+ * to the next guest without a dismiss tap. That makes the flash's lifetime a
+ * correctness property, not a cosmetic one: whatever it shows while the NEXT
+ * verification is in flight is what the operator reads when deciding to admit.
+ */
+describe("event scanner · one verdict belongs to one guest", () => {
+  const SECOND_TICKET_ID = "e4000000-0000-4000-8000-000000000002";
+
+  function checkedIn(holder: string) {
+    return {
+      ticket_id: TICKET_ID,
+      from_status: "issued",
+      to_status: "checked_in",
+      checked_in_at: "2026-09-14T10:00:00Z",
+      event_id: CANONICAL_EVENT_ID,
+      instance_id: INSTANCE_ID,
+      holder_name: holder,
+      ticket_type_name: "General admission",
+      event_title: "Synthetic staging launch expo",
+      id_check_required: false,
+    };
+  }
+
+  it("does not keep showing the previous guest's success while the next check is in flight", async () => {
+    verifyManualPinMock
+      .mockResolvedValueOnce(checkedIn("Chanda Mwansa"))
+      // Second guest: the server has not answered yet.
+      .mockReturnValueOnce(new Promise(() => {}));
+
+    await renderReadyScanner();
+    await openManualFallback();
+
+    await submitManual(TICKET_ID, "654321");
+    expect(await screen.findByTestId("event-scan-flash-success")).toHaveTextContent(
+      "Chanda Mwansa",
+    );
+
+    await submitManual(SECOND_TICKET_ID, "112233");
+    await waitFor(() => expect(verifyManualPinMock).toHaveBeenCalledTimes(2));
+
+    // The pending guest must not inherit the previous guest's green verdict —
+    // an operator reading it would admit guest two on guest one's check-in.
+    expect(screen.queryByTestId("event-scan-flash-success")).not.toBeInTheDocument();
+    expect(screen.queryByText("Chanda Mwansa")).not.toBeInTheDocument();
+    // …and the surface must still say it is working, not look idle.
+    expect(screen.getByTestId("event-scan-manual-submit")).toBeDisabled();
+  });
+
+  it("sends exactly one verification when two submits land in the same tick", async () => {
+    verifyManualPinMock.mockReturnValue(new Promise(() => {}));
+
+    await renderReadyScanner();
+    await openManualFallback();
+
+    // Synchronous fills: userEvent awaits between keystrokes, which would let
+    // React re-render and hide the very race under test.
+    fireEvent.change(screen.getByTestId("event-scan-manual-ticket-id"), {
+      target: { value: TICKET_ID },
+    });
+    fireEvent.change(screen.getByTestId("event-scan-manual-pin"), {
+      target: { value: "654321" },
+    });
+
+    // Realistic simultaneous dispatch: an Enter-key submit racing the click on
+    // the same form, both delivered before React re-renders the busy state.
+    const form = screen.getByTestId("event-scan-manual-fallback");
+    act(() => {
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+    });
+
+    // One guest, one server-side single-use claim attempt.
+    expect(verifyManualPinMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("still accepts the next guest after a completed check-in", async () => {
+    verifyManualPinMock
+      .mockResolvedValueOnce(checkedIn("Chanda Mwansa"))
+      .mockResolvedValueOnce(checkedIn("Mutale Banda"));
+
+    await renderReadyScanner();
+    await openManualFallback();
+
+    await submitManual(TICKET_ID, "654321");
+    expect(await screen.findByTestId("event-scan-flash-success")).toHaveTextContent(
+      "Chanda Mwansa",
+    );
+
+    await submitManual(SECOND_TICKET_ID, "112233");
+
+    // A lock that never releases would strand the queue after one guest.
+    await waitFor(() => expect(verifyManualPinMock).toHaveBeenCalledTimes(2));
+    expect(await screen.findByTestId("event-scan-flash-success")).toHaveTextContent("Mutale Banda");
+  });
+
+  it("still accepts a retry after a failed check-in", async () => {
+    verifyManualPinMock
+      .mockRejectedValueOnce(new ApiError("ticket_invalid_pin", "Incorrect PIN", { status: 422 }))
+      .mockResolvedValueOnce(checkedIn("Chanda Mwansa"));
+
+    await renderReadyScanner();
+    await openManualFallback();
+
+    await submitManual(TICKET_ID, "000000");
+    expect(await screen.findByTestId("event-scan-flash-error")).toHaveAttribute(
+      "data-scan-result-kind",
+      "invalid_pin",
+    );
+
+    // A failure must release the lock: the guest retypes their PIN.
+    await submitManual(TICKET_ID, "654321");
+    await waitFor(() => expect(verifyManualPinMock).toHaveBeenCalledTimes(2));
+    expect(await screen.findByTestId("event-scan-flash-success")).toBeInTheDocument();
   });
 });
