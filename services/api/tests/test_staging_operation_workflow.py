@@ -36,8 +36,8 @@ def test_failure_edges_block_handoff_and_e2e() -> None:
     deploy_jobs = deploy["jobs"]
     assert "needs.deploy.result == 'success'" in outer_jobs["e2e"]["if"]
     assert "needs.deploy.outputs.handoff_status == 'PASS'" in outer_jobs["e2e"]["if"]
-    assert deploy_jobs["release-handoff"]["needs"] == ["smoke"]
-    assert "needs.smoke.result == 'success'" in deploy_jobs["release-handoff"]["if"]
+    assert deploy_jobs["release_handoff"]["needs"] == ["smoke"]
+    assert "needs.smoke.result == 'success'" in deploy_jobs["release_handoff"]["if"]
     deploy_triggers = deploy["on"]
     assert isinstance(deploy_triggers, dict) and "push" not in deploy_triggers
 

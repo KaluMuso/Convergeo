@@ -42,21 +42,21 @@ on:
         type: boolean
     outputs:
       handoff_status:
-        value: ${{ jobs.release-handoff.outputs.handoff_status }}
+        value: ${{ jobs.release_handoff.outputs.handoff_status }}
       base_url:
-        value: ${{ jobs.release-handoff.outputs.base_url }}
+        value: ${{ jobs.release_handoff.outputs.base_url }}
       vendor_base_url:
-        value: ${{ jobs.release-handoff.outputs.vendor_base_url }}
+        value: ${{ jobs.release_handoff.outputs.vendor_base_url }}
       admin_base_url:
-        value: ${{ jobs.release-handoff.outputs.admin_base_url }}
+        value: ${{ jobs.release_handoff.outputs.admin_base_url }}
       expect_sha:
-        value: ${{ jobs.release-handoff.outputs.expect_sha }}
+        value: ${{ jobs.release_handoff.outputs.expect_sha }}
       source_run_id:
-        value: ${{ jobs.release-handoff.outputs.source_run_id }}
+        value: ${{ jobs.release_handoff.outputs.source_run_id }}
       source_run_attempt:
-        value: ${{ jobs.release-handoff.outputs.source_run_attempt }}
+        value: ${{ jobs.release_handoff.outputs.source_run_attempt }}
       source_artifact_id:
-        value: ${{ jobs.release-handoff.outputs.source_artifact_id }}
+        value: ${{ jobs.release_handoff.outputs.source_artifact_id }}
   workflow_dispatch:
     inputs:
       api_image_tag:
@@ -1061,7 +1061,7 @@ jobs:
           name: staging-sha-proof-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: /tmp/staging-sha-proof.json
 
-  release-handoff:
+  release_handoff:
     name: Resolve authenticated release handoff
     needs: [smoke]
     if: ${{ inputs.release_candidate && needs.smoke.result == 'success' }}
@@ -1084,12 +1084,15 @@ jobs:
         with:
           script: |
             const path = require('path');
-            const adapter = require('./scripts/ci/github_handoff_metadata.cjs');
+            const adapter = require(path.join(
+              process.env.GITHUB_WORKSPACE,
+              'scripts', 'ci', 'github_handoff_metadata.cjs',
+            ));
             const result = await adapter.collectHandoffMetadata({
               github,
               context,
               runId: context.runId,
-              attempt: context.runAttempt,
+              attempt: Number(process.env.GITHUB_RUN_ATTEMPT),
             });
             adapter.writeHandoffMetadata(
               path.join(process.env.RUNNER_TEMP, 'staging-handoff'),
@@ -1130,7 +1133,7 @@ jobs:
   # Explicit non-promotion marker — this workflow never deploys production.
   never-promote-production:
     name: Guard — no production promotion
-    needs: [smoke, release-handoff]
+    needs: [smoke, release_handoff]
     if: always()
     runs-on: ubuntu-latest
     steps:

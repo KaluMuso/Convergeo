@@ -230,7 +230,10 @@ jobs:
             const path = require('path');
             const runId = Number(process.env.SOURCE_RUN_ID);
             const attempt = Number(process.env.SOURCE_RUN_ATTEMPT);
-            const adapter = require('./scripts/ci/github_handoff_metadata.cjs');
+            const adapter = require(path.join(
+              process.env.GITHUB_WORKSPACE,
+              'scripts', 'ci', 'github_handoff_metadata.cjs',
+            ));
             const result = await adapter.collectHandoffMetadata({ github, context, runId, attempt });
             const directory = path.join(process.env.RUNNER_TEMP, 'staging-handoff');
             adapter.writeHandoffMetadata(directory, result);
