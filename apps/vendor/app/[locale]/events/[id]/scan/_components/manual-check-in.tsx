@@ -18,7 +18,20 @@ import type { FormEvent } from "react";
  *
  * The PIN is held in local component state only for as long as it takes to
  * submit, is cleared on every submit, and is never logged or persisted.
+ *
+ * An in-flight verification locks the fields with `readOnly`, never `disabled`.
+ * A disabled control cannot hold focus, so disabling the field the operator is
+ * standing in destroys that focus: the browser drops it to <body>, which on a
+ * phone also closes the on-screen keyboard. `readOnly` refuses the edit and
+ * keeps the focus, which is the only part that has to survive the request.
  */
+
+/**
+ * Same muted chrome the shared field styles give a disabled field, so a locked
+ * field still reads as locked now that it is `readOnly` rather than `disabled`.
+ * `:read-only` also matches a disabled input, so the two states stay identical.
+ */
+const READ_ONLY_WHILE_BUSY = "read-only:bg-bg-2 read-only:text-text-3";
 
 type ManualCheckInProps = {
   disabled: boolean;
@@ -83,7 +96,10 @@ export function ManualCheckIn({
           onChange={(event) => setTicketId(event.target.value)}
           placeholder={t("scan.eventCheckIn.manual.ticketIdPlaceholder")}
           autoComplete="off"
-          disabled={disabled || isSubmitting}
+          disabled={disabled}
+          readOnly={isSubmitting}
+          aria-busy={isSubmitting || undefined}
+          className={READ_ONLY_WHILE_BUSY}
           inputMode="text"
         />
       </FormField>
@@ -95,7 +111,10 @@ export function ManualCheckIn({
           onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 6))}
           placeholder={t("scan.eventCheckIn.manual.pinPlaceholder")}
           autoComplete="off"
-          disabled={disabled || isSubmitting}
+          disabled={disabled}
+          readOnly={isSubmitting}
+          aria-busy={isSubmitting || undefined}
+          className={READ_ONLY_WHILE_BUSY}
           inputMode="numeric"
           pattern="\d{6}"
           maxLength={6}

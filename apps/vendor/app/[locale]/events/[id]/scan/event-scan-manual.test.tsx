@@ -68,8 +68,8 @@ vi.mock("./_components/camera-scanner", () => ({
   ),
 }));
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string, values?: Record<string, string | number>) => {
+vi.mock("next-intl", () => {
+  const translate = (key: string, values?: Record<string, string | number>) => {
     const parts = key.split(".");
     let current: unknown = vendorMessages.scan as Record<string, unknown>;
     for (const part of parts.slice(1)) {
@@ -84,8 +84,19 @@ vi.mock("next-intl", () => ({
       );
     }
     return key;
-  },
-}));
+  };
+  // ONE translator instance, deliberately. Real next-intl memoises the
+  // function it returns (use-intl's `useTranslationsImpl` wraps it in
+  // `useMemo`), so `t` is referentially stable across renders. A mock that
+  // returned a fresh closure per render would put a changing value in the
+  // dependency list of ScannerView's event-load effect, so the effect would
+  // re-run on every render, flip `loadingEvent` back to true, and silently
+  // unmount the whole scanner — including the form the operator is typing in —
+  // behind the loading spinner. That is an artefact of the mock and does not
+  // happen in the app, but it makes anything to do with focus or retained
+  // field state untestable, so the mock matches next-intl here.
+  return { useTranslations: () => translate };
+});
 
 import { ScannerView } from "./_components/scanner-view";
 import { manualVerifyErrorKind } from "./_lib/manual-verify-errors";
@@ -685,5 +696,112 @@ describe("event scanner · one verdict belongs to one guest", () => {
     await submitManual(TICKET_ID, "654321");
     await waitFor(() => expect(verifyManualPinMock).toHaveBeenCalledTimes(2));
     expect(await screen.findByTestId("event-scan-flash-success")).toBeInTheDocument();
+  });
+});
+
+describe("event scanner · the operator's keyboard survives a verification", () => {
+  /** A verification held open, so the in-flight surface can be inspected. */
+  function heldVerification() {
+    let release: (value: unknown) => void = () => {};
+    verifyManualPinMock.mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve;
+      }),
+    );
+    return {
+      settle: async () => {
+        await act(async () => {
+          release({
+            ticket_id: TICKET_ID,
+            checked_in_at: new Date().toISOString(),
+            holder_name: "Chanda Mwale",
+            ticket_type_name: "General",
+            event_title: "Synthetic staging launch expo",
+            id_check_required: false,
+          });
+        });
+      },
+    };
+  }
+
+  /**
+   * Submits with the operator's focus still in the PIN field — the state a real
+   * browser is in when Enter implicitly submits the form.
+   *
+   * The form is submitted directly rather than with `userEvent`'s `{Enter}`:
+   * userEvent implements implicit submission by routing through the submit
+   * button, which moves focus there first, so it cannot observe what happens to
+   * focus that was in the field. Real Chromium does not do that — the 360/390px
+   * evidence harness drives a genuine Enter keypress and records the same
+   * outcome this test asserts (docs/design/evidence/event-scanner-mobile).
+   */
+  async function submitFromPinField() {
+    const user = userEvent.setup();
+    await user.type(screen.getByTestId("event-scan-manual-ticket-id"), TICKET_ID);
+    const pin = screen.getByTestId("event-scan-manual-pin");
+    await user.type(pin, "123456");
+    expect(document.activeElement).toBe(pin);
+    fireEvent.submit(screen.getByTestId("event-scan-manual-fallback"));
+    await waitFor(() => expect(verifyManualPinMock).toHaveBeenCalledTimes(1));
+    return pin;
+  }
+
+  /*
+   * Focus itself is NOT asserted here, deliberately. jsdom does not implement
+   * the browser behaviour that makes this bug a bug: it leaves `activeElement`
+   * on an input that has just been disabled, where a real browser drops focus
+   * to <body>. A focus assertion in jsdom therefore passes against the old
+   * `disabled` code as well as the new one, so it would prove nothing.
+   *
+   * The focus claim is asserted where it can actually fail — in real Chromium
+   * at 360px and 390px, by scripts/qa/evidence/event-scanner-mobile/run.mjs,
+   * which exits non-zero if focus leaves the field mid-verification. The
+   * recorded before/after is in docs/design/evidence/event-scanner-mobile.
+   *
+   * What jsdom CAN hold onto is the mechanism that produces the focus
+   * behaviour: the fields must be locked read-only rather than disabled.
+   */
+  it("locks the fields in flight without disabling them", async () => {
+    await renderReadyScanner();
+    await openManualFallback();
+    const held = heldVerification();
+
+    const pin = await submitFromPinField();
+    const ticketId = screen.getByTestId("event-scan-manual-ticket-id");
+
+    expect(pin).toHaveAttribute("readonly");
+    expect(pin).not.toBeDisabled();
+    expect(pin).toHaveAttribute("aria-busy", "true");
+    expect(ticketId).toHaveAttribute("readonly");
+    expect(ticketId).not.toBeDisabled();
+
+    await held.settle();
+  });
+
+  it("still refuses edits to the locked fields while the check-in is in flight", async () => {
+    await renderReadyScanner();
+    await openManualFallback();
+    const held = heldVerification();
+
+    const pin = await submitFromPinField();
+    // The PIN is cleared at submit; a read-only field must not let the next
+    // guest's digits be typed into a verification that is already in flight.
+    await userEvent.setup().type(pin, "999999");
+    expect((pin as HTMLInputElement).value).toBe("");
+
+    await held.settle();
+  });
+
+  it("hands the fields back as editable once the check-in settles", async () => {
+    await renderReadyScanner();
+    await openManualFallback();
+    const held = heldVerification();
+
+    const pin = await submitFromPinField();
+    await held.settle();
+
+    await waitFor(() => expect(pin).not.toHaveAttribute("readonly"));
+    expect(pin).not.toBeDisabled();
+    expect(pin).not.toHaveAttribute("aria-busy");
   });
 });

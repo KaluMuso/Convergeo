@@ -1,0 +1,358 @@
+{
+  "capturedAt": "2026-09-14T20:14:04.608Z",
+  "chromium": "playwright /opt/pw-browsers/chromium",
+  "results": [
+    {
+      "viewport": "mobile-360",
+      "width": 360,
+      "height": 800,
+      "keyboard": {
+        "attributes": {
+          "ticketId": {
+            "tag": "input",
+            "type": null,
+            "inputMode": "text",
+            "pattern": null,
+            "maxLength": null,
+            "autoComplete": "off",
+            "ariaDescribedBy": null,
+            "labelledBy": "Ticket ID"
+          },
+          "pin": {
+            "tag": "input",
+            "type": null,
+            "inputMode": "numeric",
+            "pattern": "\\d{6}",
+            "maxLength": "6",
+            "autoComplete": "off",
+            "ariaDescribedBy": null,
+            "labelledBy": "6-digit ticket PIN"
+          }
+        },
+        "tabOrderEmptyForm": [
+          "event-scan-manual-ticket-id",
+          "event-scan-manual-pin",
+          "event-scan-switch-camera",
+          "body"
+        ],
+        "tabOrderCompleteForm": [
+          "event-scan-manual-ticket-id",
+          "event-scan-manual-pin",
+          "event-scan-manual-submit",
+          "event-scan-switch-camera"
+        ],
+        "pinRejectsNonDigits": {
+          "typed": "12ab34xy56789",
+          "value": "123456"
+        },
+        "enterSubmits": 1
+      },
+      "focus": {
+        "visibleRingOnPin": {
+          "testid": "event-scan-manual-pin",
+          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(76, 84, 112, 0.23) 0px 0px 0px 2.90292px",
+          "borderColor": "rgb(81, 88, 115)",
+          "outlineStyle": "none"
+        },
+        "submitByEnterFromPin": {
+          "afterActivation": "event-scan-manual-pin",
+          "duringFlight": "event-scan-manual-pin",
+          "focusKept": true
+        },
+        "submitByTappingButton": {
+          "afterActivation": "body",
+          "duringFlight": "body",
+          "focusKept": false
+        },
+        "controlStatesInFlight": {
+          "pin": {
+            "readOnly": true,
+            "disabled": false,
+            "ariaBusy": "true"
+          },
+          "ticketId": {
+            "readOnly": true,
+            "disabled": false,
+            "ariaBusy": "true"
+          },
+          "submit": {
+            "readOnly": null,
+            "disabled": true,
+            "ariaBusy": "true"
+          }
+        }
+      },
+      "idle": {
+        "overflow": {
+          "event-scan-root": {
+            "scrollWidth": 328,
+            "clientWidth": 328,
+            "overflows": false,
+            "right": 344,
+            "withinViewport": true
+          },
+          "event-scan-manual-fallback": {
+            "scrollWidth": 328,
+            "clientWidth": 328,
+            "overflows": false,
+            "right": 344,
+            "withinViewport": true
+          }
+        },
+        "touchTargets": {
+          "event-scan-manual-ticket-id": {
+            "w": 328,
+            "h": 44,
+            "meetsMin": true
+          },
+          "event-scan-manual-pin": {
+            "w": 328,
+            "h": 44,
+            "meetsMin": true
+          },
+          "event-scan-manual-submit": {
+            "w": 328,
+            "h": 44,
+            "meetsMin": true
+          },
+          "event-scan-switch-camera": {
+            "w": 328,
+            "h": 44,
+            "meetsMin": true
+          }
+        }
+      },
+      "error": {
+        "role": "alert",
+        "kind": "invalid_pin",
+        "title": "Incorrect PIN",
+        "body": "That PIN does not match ticket e4000000. Check the guest's ticket and try again.",
+        "color": "rgb(42, 31, 14)",
+        "borderColor": "rgb(192, 57, 43)",
+        "offersOverride": false,
+        "overflow": {
+          "event-scan-root": {
+            "scrollWidth": 328,
+            "clientWidth": 328,
+            "overflows": false,
+            "right": 344,
+            "withinViewport": true
+          },
+          "event-scan-manual-fallback": {
+            "scrollWidth": 328,
+            "clientWidth": 328,
+            "overflows": false,
+            "right": 344,
+            "withinViewport": true
+          },
+          "event-scan-flash-error": {
+            "scrollWidth": 326,
+            "clientWidth": 326,
+            "overflows": false,
+            "right": 344,
+            "withinViewport": true
+          }
+        },
+        "touchTargets": {
+          "event-scan-manual-ticket-id": {
+            "w": 328,
+            "h": 44,
+            "meetsMin": true
+          },
+          "event-scan-manual-pin": {
+            "w": 328,
+            "h": 44,
+            "meetsMin": true
+          },
+          "event-scan-manual-submit": {
+            "w": 328,
+            "h": 44,
+            "meetsMin": true
+          },
+          "event-scan-switch-camera": {
+            "w": 328,
+            "h": 44,
+            "meetsMin": true
+          }
+        }
+      },
+      "consoleErrors": []
+    },
+    {
+      "viewport": "mobile-390",
+      "width": 390,
+      "height": 844,
+      "keyboard": {
+        "attributes": {
+          "ticketId": {
+            "tag": "input",
+            "type": null,
+            "inputMode": "text",
+            "pattern": null,
+            "maxLength": null,
+            "autoComplete": "off",
+            "ariaDescribedBy": null,
+            "labelledBy": "Ticket ID"
+          },
+          "pin": {
+            "tag": "input",
+            "type": null,
+            "inputMode": "numeric",
+            "pattern": "\\d{6}",
+            "maxLength": "6",
+            "autoComplete": "off",
+            "ariaDescribedBy": null,
+            "labelledBy": "6-digit ticket PIN"
+          }
+        },
+        "tabOrderEmptyForm": [
+          "event-scan-manual-ticket-id",
+          "event-scan-manual-pin",
+          "event-scan-switch-camera",
+          "body"
+        ],
+        "tabOrderCompleteForm": [
+          "event-scan-manual-ticket-id",
+          "event-scan-manual-pin",
+          "event-scan-manual-submit",
+          "event-scan-switch-camera"
+        ],
+        "pinRejectsNonDigits": {
+          "typed": "12ab34xy56789",
+          "value": "123456"
+        },
+        "enterSubmits": 1
+      },
+      "focus": {
+        "visibleRingOnPin": {
+          "testid": "event-scan-manual-pin",
+          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(76, 84, 112, 0.23) 0px 0px 0px 2.90204px",
+          "borderColor": "rgb(81, 89, 115)",
+          "outlineStyle": "none"
+        },
+        "submitByEnterFromPin": {
+          "afterActivation": "event-scan-manual-pin",
+          "duringFlight": "event-scan-manual-pin",
+          "focusKept": true
+        },
+        "submitByTappingButton": {
+          "afterActivation": "body",
+          "duringFlight": "body",
+          "focusKept": false
+        },
+        "controlStatesInFlight": {
+          "pin": {
+            "readOnly": true,
+            "disabled": false,
+            "ariaBusy": "true"
+          },
+          "ticketId": {
+            "readOnly": true,
+            "disabled": false,
+            "ariaBusy": "true"
+          },
+          "submit": {
+            "readOnly": null,
+            "disabled": true,
+            "ariaBusy": "true"
+          }
+        }
+      },
+      "idle": {
+        "overflow": {
+          "event-scan-root": {
+            "scrollWidth": 358,
+            "clientWidth": 358,
+            "overflows": false,
+            "right": 374,
+            "withinViewport": true
+          },
+          "event-scan-manual-fallback": {
+            "scrollWidth": 358,
+            "clientWidth": 358,
+            "overflows": false,
+            "right": 374,
+            "withinViewport": true
+          }
+        },
+        "touchTargets": {
+          "event-scan-manual-ticket-id": {
+            "w": 358,
+            "h": 44,
+            "meetsMin": true
+          },
+          "event-scan-manual-pin": {
+            "w": 358,
+            "h": 44,
+            "meetsMin": true
+          },
+          "event-scan-manual-submit": {
+            "w": 358,
+            "h": 44,
+            "meetsMin": true
+          },
+          "event-scan-switch-camera": {
+            "w": 358,
+            "h": 44,
+            "meetsMin": true
+          }
+        }
+      },
+      "error": {
+        "role": "alert",
+        "kind": "invalid_pin",
+        "title": "Incorrect PIN",
+        "body": "That PIN does not match ticket e4000000. Check the guest's ticket and try again.",
+        "color": "rgb(42, 31, 14)",
+        "borderColor": "rgb(192, 57, 43)",
+        "offersOverride": false,
+        "overflow": {
+          "event-scan-root": {
+            "scrollWidth": 358,
+            "clientWidth": 358,
+            "overflows": false,
+            "right": 374,
+            "withinViewport": true
+          },
+          "event-scan-manual-fallback": {
+            "scrollWidth": 358,
+            "clientWidth": 358,
+            "overflows": false,
+            "right": 374,
+            "withinViewport": true
+          },
+          "event-scan-flash-error": {
+            "scrollWidth": 356,
+            "clientWidth": 356,
+            "overflows": false,
+            "right": 374,
+            "withinViewport": true
+          }
+        },
+        "touchTargets": {
+          "event-scan-manual-ticket-id": {
+            "w": 358,
+            "h": 44,
+            "meetsMin": true
+          },
+          "event-scan-manual-pin": {
+            "w": 358,
+            "h": 44,
+            "meetsMin": true
+          },
+          "event-scan-manual-submit": {
+            "w": 358,
+            "h": 44,
+            "meetsMin": true
+          },
+          "event-scan-switch-camera": {
+            "w": 358,
+            "h": 44,
+            "meetsMin": true
+          }
+        }
+      },
+      "consoleErrors": []
+    }
+  ]
+}
