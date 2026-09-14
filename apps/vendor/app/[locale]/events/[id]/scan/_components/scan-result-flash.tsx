@@ -14,7 +14,10 @@ export type ScanResultKind =
   | "stale_window"
   | "not_synced"
   | "invalid_sig"
-  | "invalid_format";
+  | "invalid_format"
+  | "invalid_pin"
+  | "unauthorized"
+  | "manual_offline";
 
 export type ScanTicketContext = {
   holderName: string | null;
@@ -38,6 +41,9 @@ const MESSAGE_KEY_BY_KIND: Record<ScanResultKind, string> = {
   not_synced: "notSynced",
   invalid_sig: "invalidSig",
   invalid_format: "invalidFormat",
+  invalid_pin: "invalidPin",
+  unauthorized: "unauthorized",
+  manual_offline: "manualOffline",
 };
 
 type ScanResultFlashProps = {
@@ -66,8 +72,13 @@ export function ScanResultFlash({
   const context = state.context;
 
   return (
+    // `data-scan-result-kind` carries the exact verdict. Every failure kind
+    // renders the same `event-scan-flash-error` testid, so that testid alone
+    // cannot tell a spent single-use ticket apart from a wrong PIN, a 403 or an
+    // offline submit — a test that needs one specific outcome asserts the kind.
     <div
       data-testid={isSuccess ? "event-scan-flash-success" : "event-scan-flash-error"}
+      data-scan-result-kind={state.kind}
       role={isSuccess ? "status" : "alert"}
       style={{
         borderRadius: "var(--r)",

@@ -764,3 +764,148 @@ class TestTicketVerifyEndToEnd:
                 pin="123456",
             )
         assert exc.value.code == "ticket_unpaid_hold"
+
+
+@pytest.mark.usefixtures("db", "db_url_env")
+class TestTicketVerifyManualPinFallback:
+    """The organiser scanner's manual (PIN) fallback contract.
+
+    The vendor event scanner's manual entry posts `{ticket_id, event_id,
+    instance_id, pin}` to `POST /tickets/verify`. These assert the three
+    verdicts that surface tell the truth — admitted, wrong PIN, already spent —
+    and that none of them can be reached without event-scan authorization.
+    """
+
+    def test_incorrect_pin_is_rejected_and_leaves_the_ticket_issued(self, db: PgConn) -> None:
+        ticket_id = str(uuid.uuid4())
+        _insert_ticket(db, ticket_id=ticket_id, pin="654321")
+
+        with pytest.raises(AppError) as exc:
+            verify_and_check_in_ticket(
+                ticket_id=ticket_id,
+                vendor_id=SHOP_B,
+                pin="000000",
+                expected_event_id=FESTIVAL_EVENT,
+                expected_instance_id=FESTIVAL_INSTANCE,
+            )
+
+        assert exc.value.code == "ticket_invalid_pin"
+        assert exc.value.http_status == 422
+        # A wrong PIN must never burn the ticket.
+        assert _ticket_status(db, ticket_id) == "issued"
+        assert not _ticket_checked_in(db, ticket_id)
+
+    def test_second_pin_check_in_of_the_same_ticket_is_rejected(self, db: PgConn) -> None:
+        ticket_id = str(uuid.uuid4())
+        _insert_ticket(db, ticket_id=ticket_id, pin="654321")
+
+        first = verify_and_check_in_ticket(
+            ticket_id=ticket_id,
+            vendor_id=SHOP_B,
+            pin="654321",
+            expected_event_id=FESTIVAL_EVENT,
+            expected_instance_id=FESTIVAL_INSTANCE,
+        )
+        assert first.to_status == "checked_in"
+
+        with pytest.raises(AppError) as exc:
+            verify_and_check_in_ticket(
+                ticket_id=ticket_id,
+                vendor_id=SHOP_B,
+                pin="654321",
+                expected_event_id=FESTIVAL_EVENT,
+                expected_instance_id=FESTIVAL_INSTANCE,
+            )
+
+        assert exc.value.code == "ticket_already_checked_in"
+        assert exc.value.http_status == 409
+        # Single-use: the original admission stands, unchanged.
+        assert _ticket_status(db, ticket_id) == "checked_in"
+        assert "pin_hash" not in exc.value.details
+        assert "qr_secret" not in exc.value.details
+
+    def test_http_manual_pin_payload_checks_in(
+        self,
+        db: PgConn,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Exactly the body the vendor manual fallback sends."""
+        ticket_id = str(uuid.uuid4())
+        _insert_ticket(db, ticket_id=ticket_id, pin="654321")
+        _mock_auth(monkeypatch, VENDOR_B_OWNER)
+        monkeypatch.setattr(
+            "app.routers.ticket_verify.bump_rate_counter",
+            lambda **kwargs: (True, 0),
+        )
+
+        service_wrapper = MagicMock()
+        real_client = MagicMock()
+        real_client.table.side_effect = lambda name: _VendorLookupTable(name)
+        service_wrapper.client = real_client
+
+        app = create_app()
+        app.dependency_overrides[get_supabase_client] = lambda: service_wrapper
+
+        with TestClient(app, raise_server_exceptions=False) as client:
+            response = client.post(
+                "/tickets/verify",
+                headers={"Authorization": f"Bearer {TOKEN_B}"},
+                json={
+                    "ticket_id": ticket_id,
+                    "event_id": FESTIVAL_EVENT,
+                    "instance_id": FESTIVAL_INSTANCE,
+                    "pin": "654321",
+                },
+            )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["to_status"] == "checked_in"
+        assert payload["event_id"] == FESTIVAL_EVENT
+        assert payload["instance_id"] == FESTIVAL_INSTANCE
+        # The response is a check-in receipt, never a credential echo.
+        assert "pin" not in payload
+        assert "pin_hash" not in payload
+        assert "qr_secret" not in payload
+        assert _ticket_status(db, ticket_id) == "checked_in"
+
+    def test_http_manual_pin_denied_without_event_scan_role(
+        self,
+        db: PgConn,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A signed-in user outside SCAN_ROLES cannot check a ticket in by PIN."""
+        ticket_id = str(uuid.uuid4())
+        _insert_ticket(db, ticket_id=ticket_id, pin="654321")
+        # Authenticated, but neither the organiser owner nor an event team member:
+        # `_VendorLookupQuery` returns no `event_team_members` row for anyone.
+        _mock_auth(monkeypatch, CUSTOMER_A)
+        monkeypatch.setattr(
+            "app.routers.ticket_verify.bump_rate_counter",
+            lambda **kwargs: (True, 0),
+        )
+
+        service_wrapper = MagicMock()
+        real_client = MagicMock()
+        real_client.table.side_effect = lambda name: _VendorLookupTable(name)
+        service_wrapper.client = real_client
+
+        app = create_app()
+        app.dependency_overrides[get_supabase_client] = lambda: service_wrapper
+
+        with TestClient(app, raise_server_exceptions=False) as client:
+            response = client.post(
+                "/tickets/verify",
+                headers={"Authorization": "Bearer outsider-token"},
+                json={
+                    "ticket_id": ticket_id,
+                    "event_id": FESTIVAL_EVENT,
+                    "instance_id": FESTIVAL_INSTANCE,
+                    "pin": "654321",
+                },
+            )
+
+        assert response.status_code == 403
+        # Refused before any state change: the ticket is still admissible.
+        assert _ticket_status(db, ticket_id) == "issued"
+        assert not _ticket_checked_in(db, ticket_id)

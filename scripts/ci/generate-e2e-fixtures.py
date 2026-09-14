@@ -112,8 +112,16 @@ export const SEED = {{
   }},
   /** Published event with an un-scanned ticket for the organiser scanner. */
   event: {{
+    /**
+     * Canonical event UUID. The organiser scanner route and the ticket verify
+     * API are both keyed on this id, not on the public slug — `/organiser/events/{{id}}`
+     * and `POST /tickets/verify` both look events up by primary key.
+     */
+    id: {_ts(event.event_id)},
     slug: {_ts(event.slug)},
     title: {_ts(event.title)},
+    /** The session the seeded ticket belongs to. */
+    instanceId: {_ts(event.instance_id)},
     ticketTypeName: {_ts(ticket_type.name)},
     ticketId: {_ts(ticket.ticket_id)},
   }},
