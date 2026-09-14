@@ -9,6 +9,7 @@ import { Select, Spinner } from "../../../../listings/new/_lib/ui";
 // Reused, unmodified, from the order-pickup scanner feature.
 import { useOnline } from "../../../../scan/_lib/use-online";
 import { createEventsClient, type EventInstance } from "../../../_lib/events-client";
+import { manualVerifyErrorKind } from "../_lib/manual-verify-errors";
 import {
   createIndexedDbBackend,
   OfflineScanStore,
@@ -17,6 +18,7 @@ import {
 import { createScanSyncClient } from "../_lib/scan-sync-client";
 
 import { CameraScanner } from "./camera-scanner";
+import { ManualCheckIn } from "./manual-check-in";
 import { OfflineBanner } from "./offline-banner";
 import { RecentScans, type RecentScanItem, type RecentScanStatus } from "./recent-scans";
 import { ScanCount } from "./scan-count";
@@ -30,6 +32,9 @@ import {
 type ScannerViewProps = {
   eventId: string;
 };
+
+/** Camera QR scanning, or the manual ticket-id + PIN fallback. */
+export type ScanMode = "camera" | "manual";
 
 function pickDefaultInstance(instances: EventInstance[]): EventInstance | null {
   if (instances.length === 0) {
@@ -68,6 +73,10 @@ export function ScannerView({ eventId }: ScannerViewProps) {
   const store = useMemo(() => new OfflineScanStore(createIndexedDbBackend()), []);
 
   const [instances, setInstances] = useState<EventInstance[]>([]);
+  // The organiser-scoped event UUID as the API knows it. `eventId` is only a
+  // route parameter; every verify call must carry the canonical id the event
+  // detail response returned, never the raw URL segment.
+  const [canonicalEventId, setCanonicalEventId] = useState<string | null>(null);
   const [instanceId, setInstanceId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadingEvent, setLoadingEvent] = useState(true);
@@ -79,6 +88,8 @@ export function ScannerView({ eventId }: ScannerViewProps) {
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
 
   const [cameraDenied, setCameraDenied] = useState(false);
+  const [scanMode, setScanMode] = useState<ScanMode>("camera");
+  const [manualBusy, setManualBusy] = useState(false);
   const [resultState, setResultState] = useState<ScanResultState>({ kind: "idle" });
   const [overrideBusy, setOverrideBusy] = useState(false);
   const [checkedInCount, setCheckedInCount] = useState(0);
@@ -110,6 +121,7 @@ export function ScannerView({ eventId }: ScannerViewProps) {
       .getEvent(eventId)
       .then(({ event }) => {
         if (cancelled) return;
+        setCanonicalEventId(event.id);
         setInstances(event.instances);
         setInstanceId((current) => current ?? pickDefaultInstance(event.instances)?.id ?? null);
       })
@@ -262,8 +274,77 @@ export function ScannerView({ eventId }: ScannerViewProps) {
     [attemptReconcile, online, storeReady, store],
   );
 
-  const handleCameraDenied = useCallback(() => setCameraDenied(true), []);
+  // Camera unavailable or refused: the organiser is not left with a dead
+  // screen -- the manual PIN fallback opens automatically.
+  const handleCameraDenied = useCallback(() => {
+    setCameraDenied(true);
+    setScanMode("manual");
+  }, []);
   const dismissResult = useCallback(() => setResultState({ kind: "idle" }), []);
+
+  /**
+   * Manual fallback: verify one ticket by PIN against `POST /tickets/verify`.
+   *
+   * There is no offline path here by design. The device holds
+   * `pin_hash_present` but never the hash, so only the server can judge a PIN,
+   * and only the server may move `issued -> checked_in`. Every branch below
+   * renders a verdict the API actually returned.
+   */
+  const handleManualSubmit = useCallback(
+    (ticketId: string, pin: string) => {
+      if (manualBusy) {
+        return;
+      }
+      if (!online) {
+        setResultState({ kind: "manual_offline", ticketId });
+        return;
+      }
+      if (!canonicalEventId) {
+        setResultState({ kind: "rejected", ticketId });
+        return;
+      }
+      setManualBusy(true);
+      void (async () => {
+        try {
+          const response = await scanSyncClient.verifyManualPin({
+            ticket_id: ticketId,
+            event_id: canonicalEventId,
+            instance_id: instanceId,
+            pin,
+          });
+          setResultState({
+            kind: "valid",
+            ticketId: response.ticket_id,
+            context: {
+              holderName: response.holder_name ?? null,
+              ticketTypeName: response.ticket_type_name || null,
+              eventTitle: response.event_title || null,
+              idCheckRequired: Boolean(response.id_check_required),
+            },
+          });
+          setCheckedInCount((count) => count + 1);
+          setRecent((current) =>
+            [
+              {
+                ticketId: response.ticket_id,
+                scannedAt: response.checked_in_at,
+                status: "checked_in" as RecentScanStatus,
+              },
+              ...current,
+            ].slice(0, 12),
+          );
+        } catch (error) {
+          setResultState({
+            kind: manualVerifyErrorKind(error instanceof ApiError ? error.code : undefined),
+            ticketId,
+          });
+        } finally {
+          setManualBusy(false);
+        }
+      })();
+    },
+    [canonicalEventId, instanceId, manualBusy, online, scanSyncClient],
+  );
 
   const handleOverride = useCallback(
     async (reason: string) => {
@@ -334,6 +415,9 @@ export function ScannerView({ eventId }: ScannerViewProps) {
   }
 
   const showScanner = resultState.kind === "idle";
+  // The manual fallback stays mounted under any result flash: door staff move
+  // straight on to the next guest without a dismiss tap in between.
+  const showManual = cameraDenied || scanMode === "manual";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
@@ -416,30 +500,65 @@ export function ScannerView({ eventId }: ScannerViewProps) {
         />
       ) : null}
 
-      {showScanner ? (
-        cameraDenied ? (
-          <div
-            data-testid="event-scan-camera-denied-notice"
-            style={{
-              borderRadius: "var(--r)",
-              border: "1px dashed var(--border)",
-              padding: "var(--sp-3)",
-              fontSize: "var(--fs-small)",
-              color: "var(--text-2)",
-            }}
-          >
-            <p style={{ margin: 0, fontWeight: 600, color: "var(--text)" }}>
-              {t("scan.eventCheckIn.camera.denied")}
-            </p>
-            <p style={{ margin: "var(--sp-1) 0 0" }}>{t("scan.eventCheckIn.camera.deniedBody")}</p>
-          </div>
-        ) : (
+      {cameraDenied ? (
+        <div
+          data-testid="event-scan-camera-denied-notice"
+          style={{
+            borderRadius: "var(--r)",
+            border: "1px dashed var(--border)",
+            padding: "var(--sp-3)",
+            fontSize: "var(--fs-small)",
+            color: "var(--text-2)",
+          }}
+        >
+          <p style={{ margin: 0, fontWeight: 600, color: "var(--text)" }}>
+            {t("scan.eventCheckIn.camera.denied")}
+          </p>
+          <p style={{ margin: "var(--sp-1) 0 0" }}>{t("scan.eventCheckIn.camera.deniedBody")}</p>
+        </div>
+      ) : null}
+
+      {showScanner && !showManual ? (
+        <>
           <CameraScanner
             disabled={!storeReady}
             onCodeDetected={handleCodeDetected}
             onCameraDenied={handleCameraDenied}
           />
-        )
+          <button
+            type="button"
+            data-testid="event-scan-switch-manual"
+            onClick={() => setScanMode("manual")}
+            style={{
+              minHeight: "2.75rem",
+              border: "none",
+              background: "transparent",
+              color: "var(--primary)",
+              fontWeight: 600,
+              cursor: "pointer",
+              textAlign: "left",
+              padding: 0,
+            }}
+          >
+            {t("scan.eventCheckIn.camera.useManual")}
+          </button>
+        </>
+      ) : null}
+
+      {showManual ? (
+        <ManualCheckIn
+          disabled={!canonicalEventId}
+          isSubmitting={manualBusy}
+          offline={!online}
+          onSubmit={handleManualSubmit}
+          onUseCamera={
+            cameraDenied
+              ? undefined
+              : () => {
+                  setScanMode("camera");
+                }
+          }
+        />
       ) : null}
 
       <RecentScans items={recent} />

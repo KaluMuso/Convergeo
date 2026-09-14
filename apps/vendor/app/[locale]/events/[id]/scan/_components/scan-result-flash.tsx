@@ -14,7 +14,10 @@ export type ScanResultKind =
   | "stale_window"
   | "not_synced"
   | "invalid_sig"
-  | "invalid_format";
+  | "invalid_format"
+  | "invalid_pin"
+  | "unauthorized"
+  | "manual_offline";
 
 export type ScanTicketContext = {
   holderName: string | null;
@@ -38,6 +41,9 @@ const MESSAGE_KEY_BY_KIND: Record<ScanResultKind, string> = {
   not_synced: "notSynced",
   invalid_sig: "invalidSig",
   invalid_format: "invalidFormat",
+  invalid_pin: "invalidPin",
+  unauthorized: "unauthorized",
+  manual_offline: "manualOffline",
 };
 
 type ScanResultFlashProps = {

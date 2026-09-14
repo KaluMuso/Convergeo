@@ -1031,7 +1031,20 @@
         "hint": "将门票二维码对准框内中央",
         "loading": "正在启动摄像头…",
         "denied": "摄像头访问被阻止",
-        "deniedBody": "请在浏览器设置中允许摄像头访问以扫描门票。"
+        "deniedBody": "请在浏览器设置中允许摄像头访问以扫描门票。",
+        "useManual": "改为输入门票 PIN"
+      },
+      "manual": {
+        "heading": "手动签到",
+        "intro": "输入门票编号和宾客门票上的 6 位 PIN 码。",
+        "ticketIdLabel": "门票编号",
+        "ticketIdPlaceholder": "宾客门票上的编号",
+        "pinLabel": "6 位门票 PIN 码",
+        "pinPlaceholder": "000000",
+        "submit": "为门票签到",
+        "submitting": "正在签到…",
+        "useCamera": "返回摄像头扫描",
+        "offline": "手动签到需要联网——PIN 码在服务器端校验。"
       },
       "count": {
         "checkedIn": "{count, plural, one {已检票 # 人} other {已检票 # 人}}",
@@ -1073,6 +1086,18 @@
         "invalidFormat": {
           "title": "非门票代码",
           "body": "这看起来不像是活动门票二维码。"
+        },
+        "invalidPin": {
+          "title": "PIN 码不正确",
+          "body": "该 PIN 码与门票 {ticketId} 不匹配。请核对宾客门票后重试。"
+        },
+        "unauthorized": {
+          "title": "无权限",
+          "body": "您的账户无法为此活动的门票签到。"
+        },
+        "manualOffline": {
+          "title": "您已离线",
+          "body": "手动 PIN 签到需在服务器端校验。请恢复网络连接，或改为扫描门票二维码。"
         },
         "holder": "持票人：{name}",
         "tier": "门票：{name}",

@@ -1031,7 +1031,20 @@
         "hint": "Centrez le QR du billet dans le cadre",
         "loading": "Démarrage de la caméra…",
         "denied": "Accès à la caméra bloqué",
-        "deniedBody": "Autorisez l'accès à la caméra dans les paramètres de votre navigateur pour scanner les billets."
+        "deniedBody": "Autorisez l'accès à la caméra dans les paramètres de votre navigateur pour scanner les billets.",
+        "useManual": "Saisir plutôt le PIN du billet"
+      },
+      "manual": {
+        "heading": "Enregistrement manuel",
+        "intro": "Saisissez l'identifiant du billet et le PIN à 6 chiffres figurant sur le billet de l'invité.",
+        "ticketIdLabel": "Identifiant du billet",
+        "ticketIdPlaceholder": "Identifiant figurant sur le billet de l'invité",
+        "pinLabel": "PIN du billet à 6 chiffres",
+        "pinPlaceholder": "000000",
+        "submit": "Enregistrer le billet",
+        "submitting": "Enregistrement…",
+        "useCamera": "Revenir au scan par caméra",
+        "offline": "L'enregistrement manuel nécessite une connexion — le PIN est vérifié sur le serveur."
       },
       "count": {
         "checkedIn": "{count, plural, one {# enregistré} other {# enregistrés}}",
@@ -1073,6 +1086,18 @@
         "invalidFormat": {
           "title": "Pas un code de billet",
           "body": "Cela ne ressemble pas à un QR de billet d'événement."
+        },
+        "invalidPin": {
+          "title": "PIN incorrect",
+          "body": "Ce PIN ne correspond pas au billet {ticketId}. Vérifiez le billet de l'invité et réessayez."
+        },
+        "unauthorized": {
+          "title": "Non autorisé",
+          "body": "Votre compte ne peut pas enregistrer les billets de cet événement."
+        },
+        "manualOffline": {
+          "title": "Vous êtes hors ligne",
+          "body": "L'enregistrement manuel par PIN est vérifié sur le serveur. Reconnectez-vous ou scannez le QR du billet."
         },
         "holder": "Titulaire : {name}",
         "tier": "Billet : {name}",

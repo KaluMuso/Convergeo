@@ -38,8 +38,16 @@ export const SEED = {
   searchTerm: "multiseller",
   /** Published event with an un-scanned ticket for the organiser scanner. */
   event: {
+    /**
+     * Canonical event UUID. The organiser scanner route and the ticket verify
+     * API are both keyed on this id, not on the public slug — `/organiser/events/{id}`
+     * and `POST /tickets/verify` both look events up by primary key.
+     */
+    id: "e1000000-0000-4000-8000-000000000001",
     slug: "stg-rv-20260719-launch-expo",
     title: "Synthetic staging launch expo",
+    /** The session the seeded ticket belongs to. */
+    instanceId: "e2000000-0000-4000-8000-000000000001",
     ticketTypeName: "General admission",
     ticketId: "e4000000-0000-4000-8000-000000000001",
   },

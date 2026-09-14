@@ -1073,7 +1073,20 @@
         "hint": "Centre the ticket QR inside the frame",
         "loading": "Starting camera…",
         "denied": "Camera access blocked",
-        "deniedBody": "Allow camera access in your browser settings to scan tickets."
+        "deniedBody": "Allow camera access in your browser settings to scan tickets.",
+        "useManual": "Enter ticket PIN instead"
+      },
+      "manual": {
+        "heading": "Manual check-in",
+        "intro": "Enter the ticket ID and the 6-digit PIN printed on the guest's ticket.",
+        "ticketIdLabel": "Ticket ID",
+        "ticketIdPlaceholder": "Ticket ID from the guest's ticket",
+        "pinLabel": "6-digit ticket PIN",
+        "pinPlaceholder": "000000",
+        "submit": "Check in ticket",
+        "submitting": "Checking in…",
+        "useCamera": "Back to camera scan",
+        "offline": "Manual check-in needs a connection — the PIN is verified on the server."
       },
       "count": {
         "checkedIn": "{count, plural, one {# checked in} other {# checked in}}",
@@ -1115,6 +1128,18 @@
         "invalidFormat": {
           "title": "Not a ticket code",
           "body": "This does not look like an event ticket QR."
+        },
+        "invalidPin": {
+          "title": "Incorrect PIN",
+          "body": "That PIN does not match ticket {ticketId}. Check the guest's ticket and try again."
+        },
+        "unauthorized": {
+          "title": "Not permitted",
+          "body": "Your account cannot check in tickets for this event."
+        },
+        "manualOffline": {
+          "title": "You're offline",
+          "body": "Manual PIN check-in is verified on the server. Reconnect, or scan the ticket QR instead."
         },
         "holder": "Holder: {name}",
         "tier": "Ticket: {name}",
