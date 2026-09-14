@@ -119,9 +119,21 @@ def test_cod_fixture_lives_in_the_namespace_cleanup_already_owns() -> None:
     fixture = txn.cod_placed_fixture()
     assert fixture.idempotency_key.startswith(txn.CHECKOUT_IDEMPOTENCY_PREFIX)
     assert fixture.idempotency_key.startswith(f"{SEED_PREFIX}-txn-")
-    # The cleanup deletes checkout_groups (and their orders) in this namespace,
-    # so each run starts from a fresh `placed` order rather than a stale one.
-    assert f"LIKE '{SEED_PREFIX}-txn-%'" in build_cleanup_sql()
+
+    cleanup = build_cleanup_sql()
+    namespace = f"LIKE '{SEED_PREFIX}-txn-%'"
+    assert namespace in cleanup
+
+    # create_orders_atomic emits order.placed and later transitions may enqueue
+    # more notifications. Cleanup must remove only outbox rows linked through
+    # this run-scoped checkout/order namespace, before deleting the orders.
+    outbox_delete = cleanup.index("DELETE FROM public.notification_outbox")
+    payments_delete = cleanup.index("DELETE FROM public.payments")
+    order_delete = cleanup.index("DELETE FROM public.orders")
+    assert outbox_delete < payments_delete < order_delete
+    assert "payload->>'checkout_group_id'" in cleanup
+    assert "payload->>'order_id'" in cleanup
+    assert cleanup[outbox_delete:payments_delete].count(namespace) == 2
 
 
 def test_cod_amount_is_within_the_zambia_cod_cap() -> None:

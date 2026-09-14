@@ -406,6 +406,20 @@ DELETE FROM public.cart_items
 WHERE listing_id IN ({listing_ids});
 
 -- Transactional rows created by QA drivers (scoped to synthetic checkout keys).
+-- Order creation and guarded transitions enqueue notifications independently of
+-- the order foreign-key lifecycle. Remove only outbox rows whose payload points
+-- at this synthetic checkout namespace before deleting the referenced orders.
+DELETE FROM public.notification_outbox
+WHERE payload->>'checkout_group_id' IN (
+  SELECT id::text FROM public.checkout_groups
+  WHERE idempotency_key LIKE '{SEED_PREFIX}-txn-%'
+)
+OR payload->>'order_id' IN (
+  SELECT o.id::text
+  FROM public.orders o
+  JOIN public.checkout_groups cg ON cg.id = o.checkout_group_id
+  WHERE cg.idempotency_key LIKE '{SEED_PREFIX}-txn-%'
+);
 DELETE FROM public.payments
 WHERE checkout_group_id IN (
   SELECT id FROM public.checkout_groups
