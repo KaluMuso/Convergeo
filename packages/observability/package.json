@@ -16,16 +16,16 @@
     "lint": "tsc --noEmit"
   },
   "devDependencies": {
-    "@sentry/nextjs": "^10.69.0",
-    "@types/node": "^22.20.1",
-    "@types/react": "^19.2.8",
-    "react": "^19.2.8",
+    "@sentry/nextjs": "^10.74.0",
+    "@types/node": "^22.20.2",
+    "@types/react": "^19.3.0",
+    "react": "^19.3.0",
     "typescript": "^5.8.2",
     "vitest": "^3.0.9"
   },
   "peerDependencies": {
-    "@sentry/nextjs": "^10.69.0",
-    "react": "^19.2.8"
+    "@sentry/nextjs": "^10.74.0",
+    "react": "^19.3.0"
   },
   "peerDependenciesMeta": {
     "@sentry/nextjs": {
