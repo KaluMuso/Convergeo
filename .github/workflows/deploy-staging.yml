@@ -57,6 +57,10 @@ on:
         value: ${{ jobs.release_handoff.outputs.source_run_attempt }}
       source_artifact_id:
         value: ${{ jobs.release_handoff.outputs.source_artifact_id }}
+      deployment_create_calls:
+        value: ${{ jobs.release_handoff.outputs.deployment_create_calls }}
+      reused_deployments:
+        value: ${{ jobs.release_handoff.outputs.reused_deployments }}
   workflow_dispatch:
     inputs:
       api_image_tag:
@@ -1076,6 +1080,8 @@ jobs:
       source_run_id: ${{ steps.resolve_handoff.outputs.e2e_source_run_id }}
       source_run_attempt: ${{ steps.resolve_handoff.outputs.e2e_source_run_attempt }}
       source_artifact_id: ${{ steps.resolve_handoff.outputs.e2e_source_artifact_id }}
+      deployment_create_calls: ${{ steps.resolve_handoff.outputs.deployment_create_calls }}
+      reused_deployments: ${{ steps.resolve_handoff.outputs.reused_deployments }}
     steps:
       - uses: actions/checkout@v7
 

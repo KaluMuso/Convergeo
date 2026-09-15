@@ -162,10 +162,7 @@ function writeHandoffMetadata(directory, result) {
   fs.writeFileSync(path.join(directory, "jobs.json"), JSON.stringify(result.jobs));
   fs.writeFileSync(path.join(directory, "proof.zip"), result.archive);
   fs.writeFileSync(path.join(directory, "expected-sha.txt"), `${result.run.head_sha}\n`);
-  fs.writeFileSync(
-    path.join(directory, "staging-sha.txt"),
-    `${result.currentStagingSha}\n`,
-  );
+  fs.writeFileSync(path.join(directory, "staging-sha.txt"), `${result.currentStagingSha}\n`);
 }
 
 module.exports = {

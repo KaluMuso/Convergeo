@@ -18,6 +18,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 CANDIDATE_SHA=""
 PREVIEW_DIR=""
@@ -108,9 +109,7 @@ if [ "${ALLOW_MIGRATE_SKIPPED}" -eq 1 ]; then
   VALIDATE_ARGS+=(--allow-migrate-skipped)
 fi
 
-python3 "${REPO_ROOT}/scripts/ci/validate_staging_proof.py" "${VALIDATE_ARGS[@]}"
-
-mkdir -p "$(dirname "${OUTPUT}")"
+"${PYTHON_BIN}" "${REPO_ROOT}/scripts/ci/validate_staging_proof.py" "${VALIDATE_ARGS[@]}"
 
 CANDIDATE_SHA="${CANDIDATE_SHA}" \
 PREVIEW_DIR="${PREVIEW_DIR}" \
@@ -126,7 +125,7 @@ SOURCE_REF="${SOURCE_REF}" \
 SOURCE_RUN_ID="${SOURCE_RUN_ID}" \
 SOURCE_RUN_ATTEMPT="${SOURCE_RUN_ATTEMPT}" \
 CONFIGURATION_REVISION="${CONFIGURATION_REVISION}" \
-python3 - <<'PY'
+"${PYTHON_BIN}" - <<'PY'
 import json
 import os
 import sys
@@ -214,7 +213,9 @@ if release_envelope:
         configuration_revision=os.environ["CONFIGURATION_REVISION"],
     )
 
-with open(output, "w", encoding="utf-8") as fh:
+output_path = Path(output)
+output_path.parent.mkdir(parents=True, exist_ok=True)
+with output_path.open("w", encoding="utf-8") as fh:
     json.dump(bundle, fh, indent=2)
     fh.write("\n")
 

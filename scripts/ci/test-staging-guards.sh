@@ -768,10 +768,17 @@ else
   ok "vercel-staging-preview-prove never echoes the bypass secret value"
 fi
 
-# Only the SOURCE label (kind + variable name) may be recorded.
+# Only the SOURCE label (kind + variable name) may be recorded. Inspect each
+# GITHUB_OUTPUT block independently: E1 has a safe pre-probe checkpoint output
+# before the later secret selection, so scanning from the first block to EOF
+# would mistake unrelated in-memory secret handling for an output write.
+github_output_blocks="$(awk '
+  /if \[ -n "\$\{GITHUB_OUTPUT:-\}" \]; then/ { in_output = 1 }
+  in_output { print }
+  in_output && /^  fi$/ { in_output = 0 }
+' scripts/ci/vercel-staging-preview-prove.sh)"
 if grep -q '"bypass_source": os.environ\["bypass_source"\]' scripts/ci/vercel-staging-preview-prove.sh \
-  && ! sed -n "/if \[ -n \"\${GITHUB_OUTPUT:-}\" \]; then/,\$p" scripts/ci/vercel-staging-preview-prove.sh \
-     | grep -q 'BYPASS_SECRET'; then
+  && ! printf '%s\n' "${github_output_blocks}" | grep -q 'BYPASS_SECRET'; then
   ok "only the bypass SOURCE label reaches evidence/GITHUB_OUTPUT, never the secret"
 else
   bad "bypass secret must not reach evidence.json or GITHUB_OUTPUT (only its source label)"

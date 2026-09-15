@@ -62,15 +62,14 @@ def _positive_int(value: Any) -> int:
 
 
 def _full_sha(value: Any) -> str:
-    require(isinstance(value, str) and FULL_SHA.fullmatch(value), "INVALID_FULL_SHA")
+    if not isinstance(value, str) or FULL_SHA.fullmatch(value) is None:
+        raise CheckpointError("INVALID_FULL_SHA")
     return value
 
 
 def _config_revision(value: Any) -> str:
-    require(
-        isinstance(value, str) and CONFIG_REVISION.fullmatch(value),
-        "INVALID_CONFIGURATION_REVISION",
-    )
+    if not isinstance(value, str) or CONFIG_REVISION.fullmatch(value) is None:
+        raise CheckpointError("INVALID_CONFIGURATION_REVISION")
     return value
 
 
@@ -190,19 +189,19 @@ def parse_checkpoint(
     require(portal in PORTALS, "INVALID_PORTAL")
     project_id = value.get("project_id")
     deployment_id = value.get("deployment_id")
-    require(
-        isinstance(project_id, str) and PROJECT_ID.fullmatch(project_id),
-        "INVALID_PROJECT_ID",
-    )
-    require(
-        isinstance(deployment_id, str) and DEPLOYMENT_ID.fullmatch(deployment_id),
-        "INVALID_DEPLOYMENT_ID",
-    )
+    if not isinstance(project_id, str) or PROJECT_ID.fullmatch(project_id) is None:
+        raise CheckpointError("INVALID_PROJECT_ID")
+    if (
+        not isinstance(deployment_id, str)
+        or DEPLOYMENT_ID.fullmatch(deployment_id) is None
+    ):
+        raise CheckpointError("INVALID_DEPLOYMENT_ID")
     require(value.get("target") == "preview", "INVALID_TARGET")
     candidate_sha = _full_sha(value.get("candidate_sha"))
 
     configuration = value.get("configuration")
-    require(type(configuration) is dict, "INVALID_CONFIGURATION_IDENTITY")
+    if type(configuration) is not dict:
+        raise CheckpointError("INVALID_CONFIGURATION_IDENTITY")
     require(
         configuration.get("identity_scheme") == IDENTITY_SCHEME,
         "INVALID_CONFIGURATION_IDENTITY",
@@ -263,9 +262,8 @@ def read_checkpoint_archive(
         "ARTIFACT_SIZE_INVALID",
     )
     digest = artifact.get("digest")
-    require(
-        isinstance(digest, str) and DIGEST.fullmatch(digest), "MISSING_ARTIFACT_DIGEST"
-    )
+    if not isinstance(digest, str) or DIGEST.fullmatch(digest) is None:
+        raise CheckpointError("MISSING_ARTIFACT_DIGEST")
     require(0 < len(archive) <= MAX_ARCHIVE_BYTES, "ARCHIVE_SIZE_INVALID")
     require(
         "sha256:" + hashlib.sha256(archive).hexdigest() == digest,
@@ -273,7 +271,8 @@ def read_checkpoint_archive(
     )
 
     workflow_run = artifact.get("workflow_run")
-    require(type(workflow_run) is dict, "INVALID_ARTIFACT_PROVENANCE")
+    if type(workflow_run) is not dict:
+        raise CheckpointError("INVALID_ARTIFACT_PROVENANCE")
     require(
         workflow_run.get("id") == run_id
         and workflow_run.get("head_sha") == candidate_sha
@@ -284,7 +283,8 @@ def read_checkpoint_archive(
         "INVALID_ARTIFACT_PROVENANCE",
     )
     source_job = artifact.get("source_job")
-    require(type(source_job) is dict, "INVALID_ARTIFACT_PROVENANCE")
+    if type(source_job) is not dict:
+        raise CheckpointError("INVALID_ARTIFACT_PROVENANCE")
     expected_job = f"Vercel Preview proof ({portal})"
     job_name = source_job.get("name")
     require(
@@ -590,16 +590,27 @@ def main(argv: Sequence[str] | None = None) -> int:
                 archive = args.archive.read_bytes()
                 artifact = _read_json(args.artifact_metadata)
                 require(type(artifact) is dict, "INVALID_ARTIFACT_METADATA")
+                live_reader: Callable[[str], Mapping[str, Any]]
                 if args.live_metadata:
                     live_value = _read_json(args.live_metadata)
                     require(type(live_value) is dict, "INVALID_VERCEL_METADATA")
-                    live_reader = lambda _deployment_id: live_value
+
+                    def read_static_metadata(
+                        _deployment_id: str,
+                    ) -> Mapping[str, Any]:
+                        return live_value
+
+                    live_reader = read_static_metadata
                 else:
-                    live_reader = lambda deployment_id: fetch_vercel_deployment(
-                        deployment_id,
-                        token=os.environ.get("VERCEL_TOKEN", ""),
-                        organization_id=os.environ.get("VERCEL_ORG_ID", ""),
-                    )
+
+                    def read_live_metadata(deployment_id: str) -> Mapping[str, Any]:
+                        return fetch_vercel_deployment(
+                            deployment_id,
+                            token=os.environ.get("VERCEL_TOKEN", ""),
+                            organization_id=os.environ.get("VERCEL_ORG_ID", ""),
+                        )
+
+                    live_reader = read_live_metadata
                 decision = select_reuse(
                     archive=archive,
                     artifact=artifact,

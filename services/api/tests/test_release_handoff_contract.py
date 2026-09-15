@@ -197,6 +197,8 @@ class HandoffTests(unittest.TestCase):
         self.assertEqual(inputs["expect_sha"], S)
         self.assertIs(inputs["pre_release"], False)
         self.assertEqual(inputs["source_run_id"], 10)
+        self.assertEqual(inputs["deployment_create_calls"], 3)
+        self.assertEqual(inputs["reused_deployments"], 0)
         self.assertIn("STILL REQUIRED", h.summary())
         self.assertIn("not a browser-test result", h.summary())
 
@@ -403,6 +405,29 @@ class HandoffTests(unittest.TestCase):
             with self.subTest(outcome=outcome):
                 self.proof["proof_outcomes"]["cors"] = outcome
                 self.fails("RELEASE_MANIFEST_INVALID")
+
+    def test_efficiency_counts_are_exposed_only_after_exact_validation(self):
+        self.proof["previews"]["admin"]["deployment_action"] = "reused"
+        self.proof["previews"]["admin"]["deployment_create_calls"] = 0
+        self.proof["previews"]["admin"]["reused_deployments"] = 1
+        self.proof["deployment_efficiency"] = {
+            "create_calls": 2,
+            "reused_deployments": 1,
+            "portals": {
+                portal: {
+                    "action": row["deployment_action"],
+                    "origin_attempt": row["deployment_origin_attempt"],
+                }
+                for portal, row in self.proof["previews"].items()
+            },
+        }
+        handoff = self.resolve()
+        self.assertEqual(handoff.deployment_create_calls, 2)
+        self.assertEqual(handoff.reused_deployments, 1)
+
+    def test_efficiency_count_tampering_fails_closed(self):
+        self.proof["deployment_efficiency"]["create_calls"] = 2
+        self.fails("RELEASE_MANIFEST_INVALID")
 
     def test_live_vercel_project_deployment_sha_url_state_and_target_are_bound(self):
         cases = (

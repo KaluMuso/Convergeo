@@ -26,6 +26,14 @@ RAW_RESULTS = frozenset(
 )
 
 
+def positive_identity(raw: str) -> str:
+    return raw if raw.isdigit() and int(raw) > 0 else "UNKNOWN"
+
+
+def bounded_count(raw: str) -> int | str:
+    return int(raw) if raw.isdigit() and 0 <= int(raw) <= 3 else "UNKNOWN"
+
+
 def classify(raw: str, *, parent: str = "") -> str:
     if raw not in RAW_RESULTS:
         return "UNKNOWN"
@@ -48,6 +56,9 @@ def build_record(
     scope: str,
     run_id: str,
     run_attempt: str,
+    source_artifact_id: str,
+    create_calls: str,
+    reused_deployments: str,
     deploy_result: str,
     e2e_result: str,
     handoff_status: str,
@@ -55,19 +66,35 @@ def build_record(
 ) -> dict[str, object]:
     safe_candidate = candidate if SHA.fullmatch(candidate or "") else "UNKNOWN"
     safe_scope = scope if scope in SCOPES else "UNKNOWN"
-    safe_run_id = run_id if run_id.isdigit() and int(run_id) > 0 else "UNKNOWN"
-    safe_attempt = (
-        run_attempt if run_attempt.isdigit() and int(run_attempt) > 0 else "UNKNOWN"
+    safe_run_id = positive_identity(run_id)
+    safe_attempt = positive_identity(run_attempt)
+    safe_artifact_id = positive_identity(source_artifact_id)
+    safe_create_calls = bounded_count(create_calls)
+    safe_reused_deployments = bounded_count(reused_deployments)
+    counts_valid = (
+        type(safe_create_calls) is int
+        and type(safe_reused_deployments) is int
+        and safe_create_calls + safe_reused_deployments == 3
     )
     deployment = classify(deploy_result)
-    if handoff_status == "PASS" and deploy_result == "success":
+    if (
+        handoff_status == "PASS"
+        and deploy_result == "success"
+        and safe_artifact_id != "UNKNOWN"
+    ):
         manifest = "PASS"
-    elif handoff_status not in {"", "PASS"}:
+    elif handoff_status not in {"", "PASS"} or (
+        handoff_status == "PASS" and safe_artifact_id == "UNKNOWN"
+    ):
         manifest = "FAIL"
     else:
         manifest = classify("", parent=deploy_result)
     proofs = {
+        "Shared staging exclusion": classify(
+            outcomes.get("lock", ""), parent=deploy_result
+        ),
         "Deploy and staging proof": deployment,
+        "Deployment create/reuse accounting": "PASS" if counts_valid else "UNKNOWN",
         "Authenticated manifest handoff": manifest,
         "Current staging ref": classify(
             outcomes.get("staging_ref", ""), parent=e2e_result
@@ -88,13 +115,18 @@ def build_record(
     }
     failed_boundary = "none"
     for name, result in proofs.items():
-        if result in {"FAIL", "UNKNOWN"}:
+        if result != "PASS":
             failed_boundary = name
             break
     release_eligible = (
-        safe_scope == "full"
+        safe_candidate != "UNKNOWN"
+        and safe_scope == "full"
+        and safe_run_id != "UNKNOWN"
+        and safe_attempt != "UNKNOWN"
         and deploy_result == "success"
         and e2e_result == "success"
+        and safe_artifact_id != "UNKNOWN"
+        and counts_valid
         and all(result == "PASS" for result in proofs.values())
     )
     return {
@@ -102,6 +134,9 @@ def build_record(
         "scope": safe_scope,
         "run_id": safe_run_id,
         "run_attempt": safe_attempt,
+        "source_artifact_id": safe_artifact_id,
+        "deployment_create_calls": safe_create_calls,
+        "reused_deployments": safe_reused_deployments,
         "deploy_result": classify(deploy_result),
         "e2e_result": classify(e2e_result),
         "proofs": proofs,
@@ -121,6 +156,11 @@ def render(record: Mapping[str, object]) -> str:
         f"- Candidate: `{record['candidate']}`",
         f"- Selected scope: `{record['scope']}`",
         f"- Run/attempt: `{run_id}/{run_attempt}`",
+        f"- Source artifact: `{record['source_artifact_id']}`",
+        (
+            "- Deployment create/reuse counts: "
+            f"`{record['deployment_create_calls']}/{record['reused_deployments']}`"
+        ),
         "- Current phase: `complete`",
         f"- Deploy/E2E result: `{record['deploy_result']}/{record['e2e_result']}`",
         f"- Failed boundary: `{record['failed_boundary']}`",
@@ -163,10 +203,14 @@ def main() -> int:
     parser.add_argument("--scope", required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--run-attempt", required=True)
+    parser.add_argument("--source-artifact-id", default="")
+    parser.add_argument("--create-calls", default="")
+    parser.add_argument("--reused-deployments", default="")
     parser.add_argument("--deploy-result", required=True)
     parser.add_argument("--e2e-result", required=True)
     parser.add_argument("--handoff-status", default="")
     for name in (
+        "lock",
         "staging-ref",
         "customer",
         "vendor",
@@ -184,10 +228,14 @@ def main() -> int:
         scope=args.scope,
         run_id=args.run_id,
         run_attempt=args.run_attempt,
+        source_artifact_id=args.source_artifact_id,
+        create_calls=args.create_calls,
+        reused_deployments=args.reused_deployments,
         deploy_result=args.deploy_result,
         e2e_result=args.e2e_result,
         handoff_status=args.handoff_status,
         outcomes={
+            "lock": args.lock,
             "staging_ref": args.staging_ref,
             "customer": args.customer,
             "vendor": args.vendor,

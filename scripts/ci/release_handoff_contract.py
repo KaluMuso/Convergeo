@@ -190,6 +190,8 @@ class Handoff:
     source_run_id: int
     source_attempt: int
     source_artifact_id: int
+    deployment_create_calls: int
+    reused_deployments: int
     customer_url: str
     vendor_url: str
     admin_url: str
@@ -206,6 +208,8 @@ class Handoff:
             "source_run_id": self.source_run_id,
             "source_run_attempt": self.source_attempt,
             "source_artifact_id": self.source_artifact_id,
+            "deployment_create_calls": self.deployment_create_calls,
+            "reused_deployments": self.reused_deployments,
         }
 
     def diagnostic_inputs(self, focus_group: str) -> dict[str, Any]:
@@ -218,8 +222,11 @@ class Handoff:
             f"Candidate: `{self.candidate_sha}`\n\n"
             f"Deployment run: `{self.source_run_id}`, attempt `{self.source_attempt}`; "
             f"artifact `{self.source_artifact_id}`.\n\n"
+            f"Deployment-create calls: `{self.deployment_create_calls}`; "
+            f"reused deployments: `{self.reused_deployments}`.\n\n"
             "Artifact/provenance contract: PASS.\n\n"
-            "Runtime re-probe, staging exclusion, and explicit dispatch authorization: STILL REQUIRED.\n"
+            "Authenticated deployment re-probe and staging exclusion: PASS.\n\n"
+            "Browser execution and coordinator review: STILL REQUIRED.\n"
             "This is not a browser-test result or a production GO.\n"
         )
 
@@ -341,7 +348,8 @@ def validate_vercel_metadata(
         require(live.get("readyState") == "READY", "VERCEL_DEPLOYMENT_NOT_READY")
         require(live.get("target") in {None, "preview"}, "VERCEL_TARGET_MISMATCH")
         meta = live.get("meta")
-        require(type(meta) is dict, "INVALID_VERCEL_METADATA")
+        if type(meta) is not dict:
+            raise ContractError("INVALID_VERCEL_METADATA")
         require(meta.get("githubCommitSha") == candidate_sha, "VERCEL_SHA_MISMATCH")
         require(
             meta.get("convergeoBuildConfigRevision") == configuration_revision,
@@ -516,6 +524,19 @@ def resolve_handoff(
         )
     except ProofValidationError:
         raise ContractError("RELEASE_MANIFEST_INVALID") from None
+    efficiency = proof.get("deployment_efficiency")
+    if type(efficiency) is not dict:
+        raise ContractError("RELEASE_MANIFEST_INVALID")
+    create_calls = efficiency.get("create_calls")
+    reused_deployments = efficiency.get("reused_deployments")
+    if type(create_calls) is not int or type(reused_deployments) is not int:
+        raise ContractError("RELEASE_MANIFEST_INVALID")
+    if (
+        create_calls < 0
+        or reused_deployments < 0
+        or create_calls + reused_deployments != len(PORTALS)
+    ):
+        raise ContractError("RELEASE_MANIFEST_INVALID")
     urls = validate_vercel_metadata(
         proof,
         live_deployments,
@@ -529,6 +550,8 @@ def resolve_handoff(
         run_id,
         attempt,
         positive_id(artifact.get("id")),
+        create_calls,
+        reused_deployments,
         CUSTOMER_ORIGIN,
         urls["vendor"],
         urls["admin"],
@@ -735,6 +758,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             "E2E_SOURCE_RUN_ID": values["source_run_id"],
             "E2E_SOURCE_RUN_ATTEMPT": values["source_run_attempt"],
             "E2E_SOURCE_ARTIFACT_ID": values["source_artifact_id"],
+            "DEPLOYMENT_CREATE_CALLS": values["deployment_create_calls"],
+            "REUSED_DEPLOYMENTS": values["reused_deployments"],
             "E2E_PRE_RELEASE": values["pre_release"],
             "E2E_FOCUS_GROUP": values["focus_group"],
         }

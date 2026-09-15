@@ -69,9 +69,44 @@ def test_internal_contract_binds_caller_called_run_attempt_and_sha() -> None:
 def test_completion_record_runs_after_both_terminal_paths_without_masking_them() -> None:
     workflow = load_workflow("staging-operation.yml")
     completion = workflow["jobs"]["completion"]
-    assert set(completion["needs"]) == {"deploy", "e2e"}
+    assert set(completion["needs"]) == {"authorize", "deploy", "e2e"}
     assert completion["if"] == "${{ always() }}"
     source = (REPO_ROOT / ".github" / "workflows" / "staging-operation.yml").read_text(
         encoding="utf-8"
     )
     assert "This reporting job never replaces the deploy/E2E conclusions" in source
+
+
+def test_scheduled_manual_and_outer_competitors_share_the_same_lock() -> None:
+    outer = load_workflow("staging-operation.yml")
+    deploy = load_workflow("deploy-staging.yml")
+    e2e = load_workflow("e2e.yml")
+    assert "schedule" in e2e["on"]
+    assert "workflow_dispatch" in e2e["on"]
+    assert "workflow_dispatch" in deploy["on"]
+    assert {"push", "workflow_dispatch"}.issubset(outer["on"])
+    assert "staging-operation" in deploy["concurrency"]["group"]
+    assert "staging-operation" in e2e["concurrency"]["group"]
+    assert outer["concurrency"]["group"] == "staging-operation"
+
+
+def test_completion_wires_exact_identity_counts_and_never_runs_recovery_mutations() -> None:
+    outer = load_workflow("staging-operation.yml")
+    deploy = load_workflow("deploy-staging.yml")
+    completion = outer["jobs"]["completion"]
+    source = (REPO_ROOT / ".github" / "workflows" / "staging-operation.yml").read_text(
+        encoding="utf-8"
+    )
+    for name in (
+        "source_artifact_id",
+        "deployment_create_calls",
+        "reused_deployments",
+    ):
+        assert name in deploy["on"]["workflow_call"]["outputs"]
+        assert name in deploy["jobs"]["release_handoff"]["outputs"]
+    assert "needs.authorize.result" in str(completion["steps"])
+    assert "--source-artifact-id" in source
+    assert "--create-calls" in source
+    assert "--reused-deployments" in source
+    assert "seed_staging.py" not in source
+    assert "vercel deploy" not in source

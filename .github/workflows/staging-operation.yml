@@ -89,7 +89,7 @@ jobs:
 
   completion:
     name: One sanitized operation completion
-    needs: [deploy, e2e]
+    needs: [authorize, deploy, e2e]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
@@ -100,6 +100,10 @@ jobs:
           DEPLOY_RESULT: ${{ needs.deploy.result }}
           E2E_RESULT: ${{ needs.e2e.result }}
           HANDOFF_STATUS: ${{ needs.deploy.outputs.handoff_status }}
+          SOURCE_ARTIFACT_ID: ${{ needs.deploy.outputs.source_artifact_id }}
+          DEPLOYMENT_CREATE_CALLS: ${{ needs.deploy.outputs.deployment_create_calls }}
+          REUSED_DEPLOYMENTS: ${{ needs.deploy.outputs.reused_deployments }}
+          LOCK_OUTCOME: ${{ needs.authorize.result }}
           STAGING_REF_OUTCOME: ${{ needs.e2e.outputs.staging_ref_outcome }}
           CUSTOMER_PROBE_OUTCOME: ${{ needs.e2e.outputs.customer_probe_outcome }}
           VENDOR_PROBE_OUTCOME: ${{ needs.e2e.outputs.vendor_probe_outcome }}
@@ -116,9 +120,13 @@ jobs:
             --scope "${FOCUS_GROUP}" \
             --run-id "${GITHUB_RUN_ID}" \
             --run-attempt "${GITHUB_RUN_ATTEMPT}" \
+            --source-artifact-id "${SOURCE_ARTIFACT_ID}" \
+            --create-calls "${DEPLOYMENT_CREATE_CALLS}" \
+            --reused-deployments "${REUSED_DEPLOYMENTS}" \
             --deploy-result "${DEPLOY_RESULT}" \
             --e2e-result "${E2E_RESULT}" \
             --handoff-status "${HANDOFF_STATUS}" \
+            --lock "${LOCK_OUTCOME}" \
             --staging-ref "${STAGING_REF_OUTCOME}" \
             --customer "${CUSTOMER_PROBE_OUTCOME}" \
             --vendor "${VENDOR_PROBE_OUTCOME}" \
