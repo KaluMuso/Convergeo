@@ -453,6 +453,16 @@ jobs:
         working-directory: services/api
         run: uv sync --dev
 
+      - name: Collect trusted authorization matrix inventory
+        # Independent collection prevents the execution report from defining its
+        # own expected coverage. The manifest is bound to this exact checkout.
+        working-directory: services/api
+        run: >-
+          uv run python3 ../../scripts/ci/assert_authz_matrix_ran.py collect
+          --inventory authz-matrix-expected.json
+          --repo-root ../..
+          --checkout-sha "${GITHUB_SHA}"
+
       - name: Route x role authz matrix (sole owner, no DB)
         # Isolation-clean: dependency overrides and guards short-circuit before DB
         # calls. JUnit is checked below so an empty or skipped matrix cannot pass.
@@ -466,14 +476,20 @@ jobs:
       - name: Prove the authz matrix ran (no silent skip)
         if: always()
         working-directory: services/api
-        run: python3 ../../scripts/ci/assert_authz_matrix_ran.py authz-matrix.xml
+        run: >-
+          python3 ../../scripts/ci/assert_authz_matrix_ran.py validate authz-matrix.xml
+          --inventory authz-matrix-expected.json
+          --repo-root ../..
+          --checkout-sha "${GITHUB_SHA}"
 
       - name: Upload authorization matrix report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: authorization-matrix
-          path: services/api/authz-matrix.xml
+          path: |
+            services/api/authz-matrix.xml
+            services/api/authz-matrix-expected.json
           if-no-files-found: error
 
   i18n-lint:
