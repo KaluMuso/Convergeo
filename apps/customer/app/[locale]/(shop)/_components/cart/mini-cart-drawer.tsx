@@ -6,6 +6,7 @@ import { formatK } from "@vergeo/i18n";
 import { BottomSheet } from "@vergeo/ui/src/bottom-sheet";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   createContext,
   useContext,
@@ -366,7 +367,6 @@ export function useCartActions(): CartContextValue {
 export type MiniCartLabels = {
   title: string;
   close: string;
-  itemCount: string;
   subtotal: string;
   total: string;
   viewCart: string;
@@ -518,6 +518,9 @@ type MiniCartDrawerProps = {
 export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
   const { cart, drawerOpen, lastAddedMessage, loadError, loading } = useCartStore();
   const { closeDrawer, refresh } = useCartActions();
+  // See CartPageView: `cart.itemCount` is an ICU plural, so it is formatted here
+  // rather than interpolated from a template label.
+  const tCheckout = useTranslations("checkout");
   const count = getCartItemCount(cart);
 
   useEffect(() => {
@@ -566,7 +569,7 @@ export function MiniCartDrawer({ locale, labels }: MiniCartDrawerProps) {
         ) : cart && count > 0 ? (
           <div className="flex flex-col gap-4 p-4">
             <p className="text-sm text-text-2" data-testid="mini-cart-count" aria-live="polite">
-              {labels.itemCount.replace("{count}", String(count))}
+              {tCheckout("cart.itemCount", { count })}
             </p>
             <ul className="flex flex-col gap-3">
               {cart.items.map((item) => {

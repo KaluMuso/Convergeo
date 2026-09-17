@@ -195,6 +195,53 @@ describe("StickyMobileAtc", () => {
     );
   });
 
+  /**
+   * Regression: on one flex line the fixed-width qty stepper and CTA starved the
+   * summary column — measured at 32px wide on a 360px viewport and 62px at 390px
+   * — so `K249.00` (76px) spilled out of its box and painted over the decrement
+   * control, and the stock line read "In s…". jsdom has no layout engine, so the
+   * structural contract is asserted here and the widths are covered by the
+   * measured browser evidence.
+   */
+  it("keeps the summary off the control line until there is room for both", async () => {
+    const observeRef = createRef<HTMLElement | null>();
+    observeRef.current = document.createElement("section");
+
+    render(
+      <StickyMobileAtc
+        listing={listing}
+        labels={labels}
+        purchase={makePurchase()}
+        observeRef={observeRef}
+        ariaLabel="Quick add to cart"
+      />,
+    );
+
+    observerCallback?.(
+      [
+        {
+          isIntersecting: false,
+          target: observeRef.current!,
+        } as unknown as IntersectionObserverEntry,
+      ],
+      {} as IntersectionObserver,
+    );
+
+    const bar = await screen.findByTestId("pdp-sticky-mobile-atc");
+    const row = bar.firstElementChild as HTMLElement;
+
+    // Stacked on phones, side by side only once the row can hold both.
+    expect(row.className).toContain("flex-col");
+    expect(row.className).toContain("sm:flex-row");
+
+    // The price is clipped inside its own column, never painted over a control.
+    expect(screen.getByTestId("pdp-sticky-price").className).toContain("truncate");
+
+    // The stepper and the CTA still share one line.
+    const controls = screen.getByTestId("pdp-sticky-qty-decrease").parentElement!.parentElement!;
+    expect(controls).toContainElement(screen.getByTestId("pdp-sticky-add-to-cart"));
+  });
+
   it("does not render when listing is out of stock", () => {
     const observeRef = createRef<HTMLElement | null>();
     observeRef.current = document.createElement("section");

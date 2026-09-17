@@ -7,6 +7,7 @@ import { IconChevronDown } from "@vergeo/ui/src/icons";
 import { LinkButton } from "@vergeo/ui/src/link-button";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CartPageSkeleton } from "./cart-page-skeleton";
@@ -200,7 +201,6 @@ export type CartPageLabels = {
   emptyBody: string;
   emptyTrust: CartEmptyTrustLabels;
   browseCta: string;
-  itemCount: string;
   subtotal: string;
   total: string;
   checkoutCta: string;
@@ -332,6 +332,10 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
     [labels.updateError, saveForLater],
   );
 
+  // `cart.itemCount` is a true ICU plural, so it cannot travel as a template
+  // string the way the other cart labels do — it is formatted here, against the
+  // shop layout's client provider, so Bemba/Nyanja plural rules still apply.
+  const tCheckout = useTranslations("checkout");
   const itemCount = getCartItemCount(cart);
   const titleByListingId =
     cart?.items.reduce<Record<string, string>>((acc, item) => {
@@ -382,7 +386,7 @@ function CartPageBody({ locale, labels }: CartPageViewProps) {
           <h1 className="font-display text-2xl text-text">{labels.title}</h1>
           {cart ? (
             <p className="text-sm text-text-2" data-testid="cart-item-count">
-              {labels.itemCount.replace("{count}", String(itemCount))}
+              {tCheckout("cart.itemCount", { count: itemCount })}
             </p>
           ) : null}
         </header>

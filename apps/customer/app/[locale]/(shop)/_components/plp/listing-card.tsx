@@ -225,7 +225,7 @@ export function ListingCard({
         rating={listing.rating}
         reviewCount={listing.reviewCount}
         noReviewsLabel={labels.noReviews}
-        reviewCountLabel={labels.reviewCount}
+        reviewCountLabel={labels.reviewCount.replace("{count}", String(listing.reviewCount))}
         quickAddLabel={labels.quickAdd}
         wishlistLabel={wishlistLabel}
         wishlistStatusAnnouncement={wishlistStatusAnnouncement}

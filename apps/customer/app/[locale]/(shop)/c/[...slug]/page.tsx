@@ -63,6 +63,12 @@ type PageProps = {
 
 type CatalogTranslator = {
   (key: string, values?: Record<string, string | number>): string;
+  /**
+   * Literal ICU template, placeholders intact. Labels that cross into client
+   * components are interpolated there, and `t()` cannot format a message whose
+   * values are not known yet — it falls back to the bare key path instead.
+   */
+  raw: (key: string) => string;
 };
 
 async function getCatalogTranslator(locale: string): Promise<CatalogTranslator> {
@@ -267,28 +273,28 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
     rating4Plus: t("plp.facets.rating4Plus"),
     rating3Plus: t("plp.facets.rating3Plus"),
     location: t("plp.facets.location"),
-    radiusKm: t("plp.facets.radiusKm"),
+    radiusKm: t.raw("plp.facets.radiusKm"),
     apply: t("plp.facets.apply"),
     clear: t("plp.facets.clear"),
   };
 
   const gridLabels = {
-    vendor: t("plp.card.vendor"),
+    vendor: t.raw("plp.card.vendor"),
     noReviews: t("plp.card.noReviews"),
-    reviewCount: t("plp.card.reviewCount"),
+    reviewCount: t.raw("plp.card.reviewCount"),
     quickAdd: t("plp.card.quickAdd"),
     quickAddError: t("plp.card.quickAddError"),
     wishlist: t("plp.card.wishlist"),
     wishlistRemove: t("plp.card.wishlistRemove"),
     outOfStock: t("plp.card.outOfStock"),
-    discount: t("plp.card.discount"),
+    discount: t.raw("plp.card.discount"),
     sampleListing: t("home.demo.sampleListing"),
     mediaEmpty: t("plp.card.mediaEmpty"),
     conditionNew: t("plp.card.conditionNew"),
     conditionRefurbished: t("plp.card.conditionRefurbished"),
     conditionUsed: t("plp.card.conditionUsed"),
     logistics: {
-      nearest: t("plp.card.pill.nearest"),
+      nearest: t.raw("plp.card.pill.nearest"),
       belowMedian: t("plp.card.pill.belowMedian"),
       delivery: t("plp.card.pill.delivery"),
       pickup: t("plp.card.pill.pickup"),
@@ -411,7 +417,7 @@ export default async function CategoryPlpPage({ params, searchParams }: PageProp
               labels={{
                 loadMore: t("plp.loadMore"),
                 loading: t("plp.loading"),
-                moreLoaded: t("plp.moreLoaded"),
+                moreLoaded: t.raw("plp.moreLoaded"),
                 endOfResults: t("plp.endOfResults"),
                 loadError: t("plp.loadError"),
                 retry: t("plp.retry"),

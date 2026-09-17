@@ -155,6 +155,10 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
     loadNamespace(locale as Locale, "directory"),
   ]);
   const t = tRaw as unknown as CatalogTranslator;
+  // Card/rail labels cross into client components as serializable strings and are
+  // interpolated there, so messages holding `{…}` placeholders are read raw —
+  // `t()` cannot format them without values and falls back to the bare key path.
+  const raw = (key: string) => String(tRaw.raw(key));
   const tDirectory = createTranslator({
     locale,
     messages: { directory: directoryMessages } as AbstractIntlMessages,
@@ -183,22 +187,22 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
   };
 
   const railLabels = {
-    vendor: t("plp.card.vendor"),
+    vendor: raw("plp.card.vendor"),
     noReviews: t("plp.card.noReviews"),
-    reviewCount: t("plp.card.reviewCount"),
+    reviewCount: raw("plp.card.reviewCount"),
     quickAdd: t("plp.card.quickAdd"),
     quickAddError: t("plp.card.quickAddError"),
     wishlist: t("plp.card.wishlist"),
     wishlistRemove: t("plp.card.wishlistRemove"),
     outOfStock: t("plp.card.outOfStock"),
-    discount: t("plp.card.discount"),
+    discount: raw("plp.card.discount"),
     sampleListing: t("home.demo.sampleListing"),
     mediaEmpty: t("plp.card.mediaEmpty"),
     conditionNew: t("plp.card.conditionNew"),
     conditionRefurbished: t("plp.card.conditionRefurbished"),
     conditionUsed: t("plp.card.conditionUsed"),
     logistics: {
-      nearest: t("plp.card.pill.nearest"),
+      nearest: raw("plp.card.pill.nearest"),
       belowMedian: t("plp.card.pill.belowMedian"),
       delivery: t("plp.card.pill.delivery"),
       pickup: t("plp.card.pill.pickup"),
@@ -257,7 +261,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
         labels={{
           title: t("home.rails.recentTitle"),
           viewAll: t("home.rails.viewAll"),
-          viewProduct: t("home.rails.recentViewProduct"),
+          viewProduct: raw("home.rails.recentViewProduct"),
           view: t("home.rails.recentView"),
         }}
       />
@@ -303,7 +307,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
             services={defaultData.services}
             locale={locale}
             labels={{
-              provider: t("home.rails.services.provider"),
+              provider: raw("home.rails.services.provider"),
               fromPrice: t("home.rails.services.fromPrice"),
               noReviews: t("home.rails.services.noReviews"),
               view: t("home.rails.services.view"),
@@ -319,7 +323,7 @@ export default async function ShopHomePage({ params, searchParams }: PageProps) 
             labels={{
               listings: t("home.rails.vendors.listings"),
               reviews: t("home.rails.vendors.reviews"),
-              rating: t("home.rails.vendors.rating"),
+              rating: raw("home.rails.vendors.rating"),
               noReviews: t("home.rails.vendors.noReviews"),
               preferred: t("home.rails.vendors.preferred"),
               verified: t("home.rails.vendors.verified"),
