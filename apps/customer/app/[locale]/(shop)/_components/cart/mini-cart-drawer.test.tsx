@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { NextIntlClientProvider } from "next-intl";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -46,7 +47,6 @@ vi.mock("next/link", () => ({
 const labels = {
   title: checkoutMessages.cart.miniCartTitle,
   close: checkoutMessages.cart.miniCartClose,
-  itemCount: checkoutMessages.cart.itemCount,
   subtotal: checkoutMessages.cart.subtotal,
   total: checkoutMessages.cart.total,
   viewCart: checkoutMessages.cart.viewCart,
@@ -67,6 +67,19 @@ const labels = {
   saleUnits: checkoutMessages.cart.saleUnits,
   madeToOrderLeadTime: checkoutMessages.cart.madeToOrderLeadTime,
 };
+
+/**
+ * `cart.itemCount` is an ICU plural, so the drawer formats it itself rather than
+ * interpolating a template label. Mirror the shop layout, which puts the
+ * `checkout` namespace on the client provider.
+ */
+function renderInIntl(ui: React.ReactElement) {
+  return render(
+    <NextIntlClientProvider locale="en" messages={{ checkout: checkoutMessages }}>
+      {ui}
+    </NextIntlClientProvider>,
+  );
+}
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -104,7 +117,7 @@ describe("MiniCartDrawer a11y", () => {
     setLastAddedMessage("Added to cart");
     openMiniCart();
 
-    render(<MiniCartDrawer locale="en" labels={labels} />);
+    renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
 
     expect(screen.getByTestId("mini-cart-live")).toHaveTextContent("Added to cart");
     expect(screen.getByRole("dialog", { name: labels.title })).toBeInTheDocument();
@@ -123,7 +136,7 @@ describe("MiniCartDrawer a11y", () => {
     );
     openMiniCart();
 
-    render(<MiniCartDrawer locale="en" labels={labels} />);
+    renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
 
     expect(await screen.findByTestId("mini-cart-load-error")).toBeInTheDocument();
     expect(screen.queryByTestId("mini-cart-empty")).not.toBeInTheDocument();
@@ -131,7 +144,7 @@ describe("MiniCartDrawer a11y", () => {
 
   it("CartNavTrigger opens the drawer with a 44px target", async () => {
     const user = userEvent.setup();
-    render(
+    renderInIntl(
       <>
         <CartNavTrigger labels={{ openCart: labels.openCart }} cartIcon={<span>Cart</span>} />
         <MiniCartDrawer locale="en" labels={labels} />
@@ -172,7 +185,7 @@ describe("MiniCartDrawer a11y", () => {
     );
     openMiniCart();
 
-    render(<MiniCartDrawer locale="en" labels={labels} />);
+    renderInIntl(<MiniCartDrawer locale="en" labels={labels} />);
 
     expect(await screen.findByTestId("mini-cart-lead-time-listing-1")).toHaveTextContent(
       "Made to order · ready in 10 days",

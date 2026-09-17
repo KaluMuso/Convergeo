@@ -46,7 +46,12 @@ export function MobileHeaderSearch({
         data-testid="mobile-header-search-sheet"
       >
         <div className="px-4 pb-6 pt-2">
-          <SearchInput locale={locale} labels={labels} autoFocus />
+          {/* No `autoFocus` here: the sheet's focus trap already moves focus to
+              the first control (this input) on open. An input that focuses
+              itself on mount wins the race for `document.activeElement`, so the
+              trap records it — not the trigger — as the element to restore to,
+              and dismissing the sheet drops focus to <body>. */}
+          <SearchInput locale={locale} labels={labels} />
         </div>
       </BottomSheet>
     </>

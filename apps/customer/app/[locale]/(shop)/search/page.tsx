@@ -199,10 +199,15 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     catalog: catalogMessages,
     nav: navMessages,
   } as AbstractIntlMessages;
-  const t = createTranslator({ locale, messages, namespace: "search" }) as (
-    key: string,
-    values?: Record<string, string | number>,
-  ) => string;
+  const t = createTranslator({ locale, messages, namespace: "search" }) as {
+    (key: string, values?: Record<string, string | number>): string;
+    /**
+     * Literal ICU template, placeholders intact. Tab/filter/result labels are
+     * interpolated inside client components, and `t()` cannot format a message
+     * whose values are not known yet — it falls back to the bare key path.
+     */
+    raw: (key: string) => string;
+  };
   const tCatalog = createTranslator({ locale, messages, namespace: "catalog" });
   const tNav = createTranslator({ locale, messages, namespace: "nav" });
 
@@ -326,16 +331,16 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     clear: t("filters.clear"),
     openFilters: t("filters.openFilters"),
     filtersActive: t("filters.filtersActive"),
-    facetCount: t("filters.facetCount"),
+    facetCount: t.raw("filters.facetCount"),
   };
 
   const appliedFilterLabels = {
     ariaLabel: t("filters.appliedAria"),
     clearAll: t("filters.clearAll"),
-    removeChip: t("filters.removeChip"),
-    priceRange: t("filters.priceRange"),
-    minPriceOnly: t("filters.minPriceOnly"),
-    maxPriceOnly: t("filters.maxPriceOnly"),
+    removeChip: t.raw("filters.removeChip"),
+    priceRange: t.raw("filters.priceRange"),
+    minPriceOnly: t.raw("filters.minPriceOnly"),
+    maxPriceOnly: t.raw("filters.maxPriceOnly"),
   };
 
   const searchPathname = `/${locale}/search`;
@@ -354,14 +359,14 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     services: t("tabs.services"),
     events: t("tabs.events"),
     vendors: t("tabs.vendors"),
-    count: t("tabs.count"),
+    count: t.raw("tabs.count"),
     resultsCount: t("results.count", {
       count: view.status === "results" ? view.response.total : 0,
     }),
     degraded: t("results.degraded"),
-    priceFrom: t("result.priceFrom"),
-    category: t("result.category"),
-    distanceAway: t("nearMe.distanceAway"),
+    priceFrom: t.raw("result.priceFrom"),
+    category: t.raw("result.category"),
+    distanceAway: t.raw("nearMe.distanceAway"),
     openNow: t("nearMe.openNow"),
     closedNow: t("nearMe.closedNow"),
     marketplaceListing: t("result.marketplaceListing"),
@@ -373,7 +378,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
     productGridAria: t("results.productGridAria"),
     loadMore: t("pagination.loadMore"),
     loading: t("pagination.loading"),
-    moreLoaded: t("pagination.moreLoaded"),
+    moreLoaded: t.raw("pagination.moreLoaded"),
     endOfResults: t("pagination.endOfResults"),
     loadError: t("pagination.loadError"),
     retry: t("pagination.retry"),
@@ -441,7 +446,7 @@ export default async function SearchPage({ params, searchParams }: PageProps) {
         labels={{
           title: t("recent.title"),
           clear: t("recent.clear"),
-          remove: t("recent.remove"),
+          remove: t.raw("recent.remove"),
         }}
       />
 
