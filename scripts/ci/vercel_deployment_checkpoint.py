@@ -26,7 +26,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 REPOSITORY = "KaluMuso/Convergeo"
 REPOSITORY_ID = 1290591718
@@ -60,7 +60,7 @@ def require(condition: bool, code: str) -> None:
 
 def _positive_int(value: Any) -> int:
     require(type(value) is int and value > 0, "INVALID_IDENTIFIER")
-    return value
+    return cast(int, value)
 
 
 def _full_sha(value: Any) -> str:
@@ -482,7 +482,7 @@ def fetch_vercel_deployment(
         raise CheckpointError("VERCEL_METADATA_UNAVAILABLE") from None
     value = _loads(raw, max_bytes=MAX_DOCUMENT_BYTES)
     require(type(value) is dict, "INVALID_VERCEL_METADATA")
-    return value
+    return cast(dict[str, Any], value)
 
 
 def select_reuse(
@@ -608,7 +608,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     def read_static_metadata(
                         _deployment_id: str,
                     ) -> Mapping[str, Any]:
-                        return live_value
+                        return cast(dict[str, Any], live_value)
 
                     live_reader = read_static_metadata
                 else:

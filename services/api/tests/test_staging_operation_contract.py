@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Mapping
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -38,7 +40,19 @@ def record(**overrides: object) -> dict[str, object]:
         "outcomes": PASS_OUTCOMES,
     }
     values.update(overrides)
-    return operation.build_record(**values)  # type: ignore[arg-type]
+    return operation.build_record(
+        candidate=cast(str, values["candidate"]),
+        scope=cast(str, values["scope"]),
+        run_id=cast(str, values["run_id"]),
+        run_attempt=cast(str, values["run_attempt"]),
+        source_artifact_id=cast(str, values["source_artifact_id"]),
+        create_calls=cast(str, values["create_calls"]),
+        reused_deployments=cast(str, values["reused_deployments"]),
+        deploy_result=cast(str, values["deploy_result"]),
+        e2e_result=cast(str, values["e2e_result"]),
+        handoff_status=cast(str, values["handoff_status"]),
+        outcomes=cast(Mapping[str, str], values["outcomes"]),
+    )
 
 
 def test_successful_full_operation_is_release_eligible_once() -> None:

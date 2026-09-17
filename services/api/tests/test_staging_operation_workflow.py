@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
-def load_workflow(name: str) -> dict[str, object]:
-    return yaml.load(
-        (REPO_ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8"),
-        Loader=yaml.BaseLoader,
+def load_workflow(name: str) -> dict[str, Any]:
+    return cast(
+        dict[str, Any],
+        yaml.load(
+            (REPO_ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8"),
+            Loader=yaml.BaseLoader,
+        ),
     )
 
 

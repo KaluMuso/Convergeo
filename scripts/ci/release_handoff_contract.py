@@ -27,7 +27,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlsplit
 
 from validate_staging_proof import ProofValidationError, validate_release_envelope
@@ -82,12 +82,12 @@ def full_sha(value: Any) -> str:
     require(
         isinstance(value, str) and SHA.fullmatch(value) is not None, "INVALID_FULL_SHA"
     )
-    return value
+    return cast(str, value)
 
 
 def positive_id(value: Any) -> int:
     require(type(value) is int and value > 0, "INVALID_IDENTIFIER")
-    return value
+    return cast(int, value)
 
 
 def timestamp(value: Any) -> datetime:
@@ -150,7 +150,7 @@ def read_proof_archive(
     except (zipfile.BadZipFile, RuntimeError, UnicodeError, json.JSONDecodeError):
         raise ContractError("INVALID_PROOF_ARCHIVE") from None
     require(type(proof) is dict, "INVALID_PROOF_DOCUMENT")
-    return proof
+    return cast(dict[str, Any], proof)
 
 
 def preview_origin(portal: str, value: Any) -> str:

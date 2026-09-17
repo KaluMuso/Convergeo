@@ -9,6 +9,7 @@ import unittest
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "ci"))
@@ -24,6 +25,7 @@ from release_handoff_contract import (  # noqa: E402
     STAGING_PROJECT,
     WORKFLOW,
     ContractError,
+    Handoff,
     full_sha,
     preview_origin,
     read_proof_archive,
@@ -36,7 +38,7 @@ S = "a" * 40
 OTHER = "a" * 12 + "b" * 28
 
 
-def archive_of(proof, filename="staging-sha-proof.json"):
+def archive_of(proof: dict[str, Any], filename: str = "staging-sha-proof.json") -> bytes:
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(filename, json.dumps(proof))
@@ -44,8 +46,8 @@ def archive_of(proof, filename="staging-sha-proof.json"):
 
 
 class HandoffTests(unittest.TestCase):
-    def setUp(self):
-        self.proof = {
+    def setUp(self) -> None:
+        self.proof: dict[str, Any] = {
             "schema_version": 2,
             "candidate_sha": S,
             "proved_at": "2026-09-14T12:01:00Z",
@@ -100,7 +102,7 @@ class HandoffTests(unittest.TestCase):
             "reused_deployments": 0,
             "portals": {portal: {"action": "created", "origin_attempt": 2} for portal in PORTALS},
         }
-        self.run = {
+        self.run_data: dict[str, Any] = {
             "id": 10,
             "run_attempt": 2,
             "head_sha": S,
@@ -114,7 +116,7 @@ class HandoffTests(unittest.TestCase):
             "run_started_at": "2026-09-14T12:00:00Z",
             "updated_at": "2026-09-14T12:02:00Z",
         }
-        self.artifact = {
+        self.artifact: dict[str, Any] = {
             "id": 20,
             "name": "staging-sha-proof-10-attempt-2",
             "expired": False,
@@ -126,7 +128,7 @@ class HandoffTests(unittest.TestCase):
                 "repository_id": REPOSITORY_ID,
             },
         }
-        self.live_deployments = {
+        self.live_deployments: dict[str, dict[str, Any]] = {
             portal: {
                 "id": "dpl_" + portal,
                 "projectId": "prj_" + portal,
@@ -143,8 +145,10 @@ class HandoffTests(unittest.TestCase):
             }
             for portal in PORTALS
         }
-        self.expected_project_ids = {portal: "prj_" + portal for portal in PORTALS}
-        self.jobs = [
+        self.expected_project_ids: dict[str, str] = {
+            portal: "prj_" + portal for portal in PORTALS
+        }
+        self.jobs: list[dict[str, Any]] = [
             {
                 "name": name,
                 "run_id": 10,
@@ -163,7 +167,7 @@ class HandoffTests(unittest.TestCase):
             }
             for name in REQUIRED_JOBS
         ]
-        self.kwargs = dict(
+        self.kwargs: dict[str, Any] = dict(
             expected_sha=S,
             current_staging_sha=S,
             expected_run_id=10,
@@ -173,12 +177,12 @@ class HandoffTests(unittest.TestCase):
             now=datetime(2026, 9, 14, 12, 3, tzinfo=UTC),
         )
 
-    def resolve(self):
+    def resolve(self) -> Handoff:
         archive = archive_of(self.proof)
         self.artifact["digest"] = "sha256:" + hashlib.sha256(archive).hexdigest()
         return resolve_handoff(
             archive,
-            run=self.run,
+            run=self.run_data,
             artifact=self.artifact,
             jobs=self.jobs,
             live_deployments=self.live_deployments,
@@ -186,11 +190,11 @@ class HandoffTests(unittest.TestCase):
             **self.kwargs,
         )
 
-    def fails(self, code):
+    def fails(self, code: str) -> None:
         with self.assertRaisesRegex(ContractError, "^" + code + "$"):
             self.resolve()
 
-    def test_valid_proof_resolves_existing_dispatch_fields(self):
+    def test_valid_proof_resolves_existing_dispatch_fields(self) -> None:
         h = self.resolve()
         inputs = h.diagnostic_inputs("vendor-auth")
         self.assertEqual(inputs["base_url"], CUSTOMER_ORIGIN)
@@ -202,146 +206,146 @@ class HandoffTests(unittest.TestCase):
         self.assertIn("STILL REQUIRED", h.summary())
         self.assertIn("not a browser-test result", h.summary())
 
-    def test_full_suite_cannot_be_smuggled_in_as_diagnostic(self):
+    def test_full_suite_cannot_be_smuggled_in_as_diagnostic(self) -> None:
         with self.assertRaises(ContractError):
             self.resolve().diagnostic_inputs("full")
 
-    def test_staging_advanced(self):
+    def test_staging_advanced(self) -> None:
         self.kwargs["current_staging_sha"] = OTHER
         self.fails("STAGING_MOVED")
 
-    def test_same_prefix_wrong_sha_rejected(self):
+    def test_same_prefix_wrong_sha_rejected(self) -> None:
         self.proof["previews"]["vendor"]["health_build_id"] = OTHER
         self.fails("HEALTH_SHA_MISMATCH")
 
-    def test_missing_health_sha_rejected(self):
+    def test_missing_health_sha_rejected(self) -> None:
         self.proof["previews"]["vendor"].pop("health_build_id")
         self.fails("INVALID_FULL_SHA")
 
-    def test_candidate_requires_exact_full_hash(self):
+    def test_candidate_requires_exact_full_hash(self) -> None:
         for bad in ("a", "a" * 7, "a" * 12, "a" * 41, "z" * 40, None, S + "\n"):
             with self.subTest(bad=bad), self.assertRaises(ContractError):
                 full_sha(bad)
 
-    def test_untrusted_repo_rejected(self):
-        self.run["repository"]["id"] = 1
+    def test_untrusted_repo_rejected(self) -> None:
+        self.run_data["repository"]["id"] = 1
         self.fails("WRONG_REPOSITORY")
 
-    def test_fork_head_rejected(self):
-        self.run["head_repository"]["id"] = 1
+    def test_fork_head_rejected(self) -> None:
+        self.run_data["head_repository"]["id"] = 1
         self.fails("WRONG_REPOSITORY")
 
-    def test_wrong_workflow_rejected(self):
-        self.run["path"] = ".github/workflows/ci.yml"
+    def test_wrong_workflow_rejected(self) -> None:
+        self.run_data["path"] = ".github/workflows/ci.yml"
         self.fails("UNTRUSTED_WORKFLOW_REF")
 
-    def test_wrong_branch_rejected(self):
-        self.run["head_branch"] = "feature/test"
+    def test_wrong_branch_rejected(self) -> None:
+        self.run_data["head_branch"] = "feature/test"
         self.fails("UNTRUSTED_WORKFLOW_REF")
 
-    def test_untrusted_event_rejected(self):
-        self.run["event"] = "pull_request"
+    def test_untrusted_event_rejected(self) -> None:
+        self.run_data["event"] = "pull_request"
         self.fails("UNTRUSTED_EVENT")
 
-    def test_failed_run_rejected(self):
-        self.run["conclusion"] = "failure"
+    def test_failed_run_rejected(self) -> None:
+        self.run_data["conclusion"] = "failure"
         self.fails("RUN_NOT_SUCCESSFUL")
 
-    def test_wrong_run_attempt_rejected(self):
-        self.run["run_attempt"] = 1
+    def test_wrong_run_attempt_rejected(self) -> None:
+        self.run_data["run_attempt"] = 1
         self.fails("RUN_ATTEMPT_MISMATCH")
 
-    def test_previous_attempt_artifact_not_reused_as_final_manifest(self):
+    def test_previous_attempt_artifact_not_reused_as_final_manifest(self) -> None:
         self.artifact["created_at"] = "2026-09-14T11:55:00Z"
         self.fails("ARTIFACT_ATTEMPT_NOT_BOUND")
 
-    def test_previous_attempt_artifact_name_is_rejected_before_opening(self):
+    def test_previous_attempt_artifact_name_is_rejected_before_opening(self) -> None:
         self.artifact["name"] = "staging-sha-proof-10-attempt-1"
         self.fails("WRONG_ARTIFACT_KIND")
 
-    def test_previous_successful_dependencies_can_be_reused(self):
+    def test_previous_successful_dependencies_can_be_reused(self) -> None:
         self.jobs[0]["run_attempt"] = 1
         self.assertEqual(self.resolve().source_attempt, 2)
 
-    def test_current_failed_dependency_cannot_fall_back_to_old_success(self):
+    def test_current_failed_dependency_cannot_fall_back_to_old_success(self) -> None:
         previous = copy.deepcopy(self.jobs[0])
         previous["run_attempt"] = 1
         self.jobs[0]["conclusion"] = "failure"
         self.jobs.append(previous)
         self.fails("JOB_NOT_SUCCESSFUL")
 
-    def test_final_smoke_must_be_current_attempt(self):
+    def test_final_smoke_must_be_current_attempt(self) -> None:
         self.jobs[-1]["run_attempt"] = 1
         self.fails("SMOKE_NOT_CURRENT_ATTEMPT")
 
-    def test_proof_before_current_smoke_rejected_even_with_old_run_start(self):
-        self.run["run_started_at"] = "2026-09-14T11:00:00Z"
+    def test_proof_before_current_smoke_rejected_even_with_old_run_start(self) -> None:
+        self.run_data["run_started_at"] = "2026-09-14T11:00:00Z"
         self.proof["proved_at"] = "2026-09-14T11:59:00Z"
         self.fails("PROOF_ATTEMPT_NOT_BOUND")
 
-    def test_missing_job_attempt_is_not_provenance(self):
+    def test_missing_job_attempt_is_not_provenance(self) -> None:
         self.jobs[0].pop("run_attempt")
         self.fails("JOB_ATTEMPT_UNBOUND")
 
-    def test_artifact_other_run_rejected(self):
+    def test_artifact_other_run_rejected(self) -> None:
         self.artifact["workflow_run"]["id"] = 11
         self.fails("ARTIFACT_PROVENANCE_MISMATCH")
 
-    def test_expired_artifact_rejected(self):
+    def test_expired_artifact_rejected(self) -> None:
         self.artifact["expired"] = True
         self.fails("ARTIFACT_EXPIRED_OR_UNKNOWN")
 
-    def test_stale_proof_rejected(self):
+    def test_stale_proof_rejected(self) -> None:
         self.kwargs["max_age_seconds"] = 10
         self.fails("STALE_OR_FUTURE_PROOF")
 
-    def test_future_proof_rejected(self):
+    def test_future_proof_rejected(self) -> None:
         self.proof["proved_at"] = "2026-09-14T13:00:00Z"
         self.fails("STALE_OR_FUTURE_PROOF")
 
-    def test_missing_portal_rejected(self):
+    def test_missing_portal_rejected(self) -> None:
         self.proof["previews"].pop("admin")
         self.fails("INCOMPLETE_PORTAL_SET")
 
-    def test_cross_site_customer_disallowed(self):
+    def test_cross_site_customer_disallowed(self) -> None:
         self.proof["previews"]["customer"]["stable_hostname_url"] = "https://other.vercel.app"
         self.fails("SAMESITE_CUSTOMER_NOT_PROVEN")
 
-    def test_missing_deployment_identity(self):
+    def test_missing_deployment_identity(self) -> None:
         self.proof["previews"]["vendor"].pop("deployment_id")
         self.fails("MISSING_DEPLOYMENT_ID")
 
-    def test_mixed_backend_sha(self):
+    def test_mixed_backend_sha(self) -> None:
         self.proof["api_fingerprint"]["git_sha"] = OTHER
         self.fails("API_FINGERPRINT_MISMATCH")
 
-    def test_api_image_tag_required(self):
+    def test_api_image_tag_required(self) -> None:
         self.proof["api_fingerprint"].pop("image_tag")
         self.fails("API_FINGERPRINT_MISMATCH")
 
-    def test_production_database_forbidden(self):
+    def test_production_database_forbidden(self) -> None:
         self.proof["api_fingerprint"]["supabase_project_ref"] = "dpadrlxukcjbewpqympu"
         self.fails("API_FINGERPRINT_MISMATCH")
 
-    def test_skipped_migration_not_certified(self):
+    def test_skipped_migration_not_certified(self) -> None:
         self.proof["migrate_supabase_result"] = "skipped"
         self.fails("MIGRATIONS_NOT_PROVEN")
 
-    def test_missing_job_not_treated_as_success(self):
+    def test_missing_job_not_treated_as_success(self) -> None:
         self.jobs.pop()
         self.fails("MISSING_OR_AMBIGUOUS_JOB")
 
-    def test_failed_or_skipped_step_not_treated_as_success(self):
+    def test_failed_or_skipped_step_not_treated_as_success(self) -> None:
         for result in ("failure", "skipped", "cancelled", None):
             with self.subTest(result=result):
                 self.jobs[-1]["steps"][0]["conclusion"] = result
                 self.fails("SMOKE_STEP_NOT_EXECUTED_SUCCESSFULLY")
 
-    def test_other_run_job_not_accepted(self):
+    def test_other_run_job_not_accepted(self) -> None:
         self.jobs[0]["run_id"] = 99
         self.fails("JOB_PROVENANCE_MISMATCH")
 
-    def test_unsafe_urls_and_secret_values_never_echoed(self):
+    def test_unsafe_urls_and_secret_values_never_echoed(self) -> None:
         for value in (
             "http://convergeo-vendor-abc-vergeo-projects.vercel.app",
             "https://secret:secret@convergeo-vendor-abc-vergeo-projects.vercel.app",
@@ -354,7 +358,7 @@ class HandoffTests(unittest.TestCase):
                     preview_origin("vendor", value)
                 self.assertNotIn("secret", str(caught.exception).lower())
 
-    def test_checksum_mismatch_rejected(self):
+    def test_checksum_mismatch_rejected(self) -> None:
         archive = archive_of(self.proof)
         self.artifact["digest"] = "sha256:" + "0" * 64
         with self.assertRaisesRegex(ContractError, "ARTIFACT_DIGEST_MISMATCH"):
@@ -364,7 +368,7 @@ class HandoffTests(unittest.TestCase):
                 expected_name="staging-sha-proof-10-attempt-2",
             )
 
-    def test_path_traversal_rejected_without_extraction(self):
+    def test_path_traversal_rejected_without_extraction(self) -> None:
         archive = archive_of(self.proof, "../staging-sha-proof.json")
         self.artifact["digest"] = "sha256:" + hashlib.sha256(archive).hexdigest()
         with self.assertRaisesRegex(ContractError, "UNEXPECTED_ARCHIVE_PATH"):
@@ -374,7 +378,7 @@ class HandoffTests(unittest.TestCase):
                 expected_name="staging-sha-proof-10-attempt-2",
             )
 
-    def test_duplicate_json_fields_rejected(self):
+    def test_duplicate_json_fields_rejected(self) -> None:
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("staging-sha-proof.json", '{"a":1,"a":2}')
@@ -386,27 +390,27 @@ class HandoffTests(unittest.TestCase):
                 expected_name="staging-sha-proof-10-attempt-2",
             )
 
-    def test_full_scope_derives_certification_inputs(self):
+    def test_full_scope_derives_certification_inputs(self) -> None:
         inputs = self.resolve().workflow_inputs("full")
         self.assertIs(inputs["pre_release"], True)
         self.assertEqual(inputs["source_run_attempt"], 2)
         self.assertEqual(inputs["source_artifact_id"], 20)
 
-    def test_legacy_manifest_cannot_supply_e2e(self):
+    def test_legacy_manifest_cannot_supply_e2e(self) -> None:
         self.proof["schema_version"] = 1
         self.fails("RELEASE_MANIFEST_INVALID")
 
-    def test_configuration_revision_must_match_current_identity(self):
+    def test_configuration_revision_must_match_current_identity(self) -> None:
         self.kwargs["configuration_revision"] = "rev_other"
         self.fails("RELEASE_MANIFEST_INVALID")
 
-    def test_non_pass_manifest_outcomes_are_rejected(self):
+    def test_non_pass_manifest_outcomes_are_rejected(self) -> None:
         for outcome in ("FAIL", "NOT_RUN", "SKIPPED_APPROVED", "UNKNOWN"):
             with self.subTest(outcome=outcome):
                 self.proof["proof_outcomes"]["cors"] = outcome
                 self.fails("RELEASE_MANIFEST_INVALID")
 
-    def test_efficiency_counts_are_exposed_only_after_exact_validation(self):
+    def test_efficiency_counts_are_exposed_only_after_exact_validation(self) -> None:
         self.proof["previews"]["admin"]["deployment_action"] = "reused"
         self.proof["previews"]["admin"]["deployment_create_calls"] = 0
         self.proof["previews"]["admin"]["reused_deployments"] = 1
@@ -425,11 +429,11 @@ class HandoffTests(unittest.TestCase):
         self.assertEqual(handoff.deployment_create_calls, 2)
         self.assertEqual(handoff.reused_deployments, 1)
 
-    def test_efficiency_count_tampering_fails_closed(self):
+    def test_efficiency_count_tampering_fails_closed(self) -> None:
         self.proof["deployment_efficiency"]["create_calls"] = 2
         self.fails("RELEASE_MANIFEST_INVALID")
 
-    def test_live_vercel_project_deployment_sha_url_state_and_target_are_bound(self):
+    def test_live_vercel_project_deployment_sha_url_state_and_target_are_bound(self) -> None:
         cases = (
             ("projectId", "prj_other", "VERCEL_PROJECT_MISMATCH"),
             ("id", "dpl_other", "VERCEL_DEPLOYMENT_MISMATCH"),
@@ -445,11 +449,11 @@ class HandoffTests(unittest.TestCase):
                 self.fails(code)
                 self.live_deployments["vendor"] = original
 
-    def test_manifest_project_must_match_expected_project(self):
+    def test_manifest_project_must_match_expected_project(self) -> None:
         self.proof["previews"]["admin"]["project_id"] = "prj_other"
         self.fails("VERCEL_PROJECT_MISMATCH")
 
-    def test_live_vercel_configuration_and_producer_are_bound(self):
+    def test_live_vercel_configuration_and_producer_are_bound(self) -> None:
         meta = self.live_deployments["admin"]["meta"]
         cases = (
             ("convergeoBuildConfigRevision", "stale", "VERCEL_CONFIGURATION_MISMATCH"),
@@ -464,21 +468,21 @@ class HandoffTests(unittest.TestCase):
                 self.fails(code)
                 meta[field] = original
 
-    def test_reusable_workflow_job_prefixes_remain_unambiguous(self):
-        self.run["path"] = ORCHESTRATION_WORKFLOW
+    def test_reusable_workflow_job_prefixes_remain_unambiguous(self) -> None:
+        self.run_data["path"] = ORCHESTRATION_WORKFLOW
         self.proof["source"]["workflow"] = ORCHESTRATION_WORKFLOW
         for job in self.jobs:
             job["name"] = "deploy / " + job["name"]
         self.assertEqual(self.resolve().candidate_sha, S)
 
-    def test_in_progress_trusted_outer_operation_can_handoff_after_smoke(self):
-        self.run["path"] = ORCHESTRATION_WORKFLOW
-        self.run["status"] = "in_progress"
-        self.run["conclusion"] = None
+    def test_in_progress_trusted_outer_operation_can_handoff_after_smoke(self) -> None:
+        self.run_data["path"] = ORCHESTRATION_WORKFLOW
+        self.run_data["status"] = "in_progress"
+        self.run_data["conclusion"] = None
         self.proof["source"]["workflow"] = ORCHESTRATION_WORKFLOW
         self.assertEqual(self.resolve().candidate_sha, S)
 
-    def test_cancelled_or_pending_job_is_not_success(self):
+    def test_cancelled_or_pending_job_is_not_success(self) -> None:
         cases = (("completed", "cancelled"), ("queued", None), ("in_progress", None))
         for status, conclusion in cases:
             with self.subTest(status=status, conclusion=conclusion):
@@ -486,7 +490,7 @@ class HandoffTests(unittest.TestCase):
                 self.jobs[0]["conclusion"] = conclusion
                 self.fails("JOB_NOT_SUCCESSFUL")
 
-    def test_manifest_rejection_never_echoes_untrusted_value(self):
+    def test_manifest_rejection_never_echoes_untrusted_value(self) -> None:
         marker = "SECRET_MARKER_DO_NOT_LOG"
         self.proof["configuration"]["revision"] = marker
         with self.assertRaises(ContractError) as caught:
@@ -496,14 +500,14 @@ class HandoffTests(unittest.TestCase):
 
 
 class ReuseTests(unittest.TestCase):
-    def setUp(self):
-        self.receipt = dict(
+    def setUp(self) -> None:
+        self.receipt: dict[str, Any] = dict(
             candidate_sha=S,
             project_id="prj_fixture",
             deployment_id="dpl_fixture",
             build_config_revision="rev_fixture",
         )
-        self.live = dict(
+        self.live: dict[str, Any] = dict(
             id="dpl_fixture",
             projectId="prj_fixture",
             readyState="READY",
@@ -511,20 +515,22 @@ class ReuseTests(unittest.TestCase):
             meta={"githubCommitSha": S},
             build_config_revision="rev_fixture",
         )
-        self.kw = dict(candidate_sha=S, project_id="prj_fixture", config_revision="rev_fixture")
+        self.kw: dict[str, Any] = dict(
+            candidate_sha=S, project_id="prj_fixture", config_revision="rev_fixture"
+        )
 
-    def test_eligible_means_reprobe_not_accept(self):
+    def test_eligible_means_reprobe_not_accept(self) -> None:
         self.assertTrue(reuse_eligible(self.receipt, self.live, **self.kw))
 
-    def test_absent_configuration_revision_forbids_reuse(self):
+    def test_absent_configuration_revision_forbids_reuse(self) -> None:
         self.kw["config_revision"] = ""
         self.assertFalse(reuse_eligible(self.receipt, self.live, **self.kw))
 
-    def test_changed_configuration_forbids_reuse(self):
+    def test_changed_configuration_forbids_reuse(self) -> None:
         self.live["build_config_revision"] = "changed"
         self.assertFalse(reuse_eligible(self.receipt, self.live, **self.kw))
 
-    def test_wrong_sha_project_state_target_or_id_forbids_reuse(self):
+    def test_wrong_sha_project_state_target_or_id_forbids_reuse(self) -> None:
         for key, value in (
             ("projectId", "prj_other"),
             ("id", "dpl_other"),
