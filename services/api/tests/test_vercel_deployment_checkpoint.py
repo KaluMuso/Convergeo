@@ -94,6 +94,7 @@ class CheckpointFixture(unittest.TestCase):
             "created_at": "2026-09-14T12:00:12Z",
             "workflow_run": {
                 "id": RUN_ID,
+                "run_attempt": SOURCE_ATTEMPT,
                 "head_sha": SHA,
                 "head_branch": "staging",
                 "repository": REPOSITORY,
@@ -174,6 +175,29 @@ class CheckpointCreationTests(CheckpointFixture):
 
 
 class CheckpointTransportTests(CheckpointFixture):
+    def test_outer_run_does_not_relax_reusable_checkpoint_producer(self):
+        self.artifact["workflow_run"]["path"] = ".github/workflows/staging-operation.yml"
+        self.checkpoint["producer"]["workflow"] = ".github/workflows/staging-operation.yml"
+        self.archive = archive_of(self.checkpoint)
+        self.artifact["size_in_bytes"] = len(self.archive)
+        self.artifact["digest"] = "sha256:" + hashlib.sha256(self.archive).hexdigest()
+        with self.assertRaisesRegex(CheckpointError, "^UNTRUSTED_CHECKPOINT_PRODUCER$"):
+            self.select()
+
+    def test_authenticated_attempts_require_integers(self):
+        for field in ("workflow_run", "source_job"):
+            with self.subTest(field=field):
+                artifact = copy.deepcopy(self.artifact)
+                artifact[field]["run_attempt"] = True
+                with self.assertRaisesRegex(CheckpointError, "^INVALID_ARTIFACT_PROVENANCE$"):
+                    self.select(artifact=artifact)
+
+    def test_current_or_future_source_attempt_is_fatal_not_create(self):
+        for attempt in (CURRENT_ATTEMPT, CURRENT_ATTEMPT + 1):
+            with self.subTest(attempt=attempt):
+                with self.assertRaisesRegex(CheckpointError, "^INVALID_SOURCE_ATTEMPT$"):
+                    self.select(source_attempt=attempt)
+
     def test_failed_source_job_can_transport_pre_probe_checkpoint(self):
         checkpoint = read_checkpoint_archive(
             self.archive,

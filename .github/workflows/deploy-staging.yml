@@ -600,7 +600,9 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             if (!['customer', 'vendor', 'admin'].includes(portal) ||
-                !Number.isSafeInteger(currentAttempt) || currentAttempt <= 1) {
+                !Number.isSafeInteger(currentAttempt) || currentAttempt <= 1 ||
+                !Number.isSafeInteger(runId) || runId <= 0 ||
+                context.ref !== 'refs/heads/staging' || !/^[0-9a-f]{40}$/.test(context.sha)) {
               core.setFailed('invalid checkpoint lookup identity');
               return;
             }
@@ -627,8 +629,15 @@ jobs:
                 { owner, repo, run_id: runId, attempt_number: sourceAttempt },
               );
               const run = runResponse.data;
-              if (run.id !== runId || run.head_sha !== context.sha || run.head_branch !== 'staging' ||
-                  run.path !== '.github/workflows/deploy-staging.yml' ||
+              // GitHub identifies the caller run; the checkpoint still identifies
+              // deploy-staging.yml as its reusable producer. Do not rewrite either.
+              const trustedRunWorkflows = [
+                '.github/workflows/deploy-staging.yml',
+                '.github/workflows/staging-operation.yml',
+              ];
+              if (run.id !== runId || run.run_attempt !== sourceAttempt ||
+                  run.head_sha !== context.sha || run.head_branch !== 'staging' ||
+                  !trustedRunWorkflows.includes(run.path) ||
                   run.repository?.id !== 1290591718 ||
                   run.repository?.full_name !== 'KaluMuso/Convergeo') {
                 core.setFailed('untrusted prior-attempt checkpoint producer');
@@ -642,7 +651,8 @@ jobs:
               const sourceJobs = jobs.filter((job) =>
                 job.name === expectedJob || job.name.endsWith(` / ${expectedJob}`)
               );
-              if (sourceJobs.length !== 1 || sourceJobs[0].status !== 'completed') {
+              if (sourceJobs.length !== 1 || sourceJobs[0].status !== 'completed' ||
+                  sourceJobs[0].run_attempt !== sourceAttempt) {
                 core.setFailed('checkpoint is not bound to one completed prior-attempt job');
                 return;
               }
@@ -669,13 +679,14 @@ jobs:
                 ...artifact,
                 workflow_run: {
                   id: run.id,
+                  run_attempt: run.run_attempt,
                   head_sha: run.head_sha,
                   head_branch: run.head_branch,
                   repository: run.repository.full_name,
                   repository_id: run.repository.id,
                   path: run.path,
                 },
-                source_job: { ...sourceJob, run_attempt: sourceAttempt },
+                source_job: sourceJob,
               }));
               core.setOutput('found', 'true');
               core.setOutput('source_attempt', String(sourceAttempt));

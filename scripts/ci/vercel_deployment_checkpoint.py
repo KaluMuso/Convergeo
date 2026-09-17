@@ -31,6 +31,8 @@ from typing import Any
 REPOSITORY = "KaluMuso/Convergeo"
 REPOSITORY_ID = 1290591718
 WORKFLOW = ".github/workflows/deploy-staging.yml"
+# API run identity names the caller; checkpoint producer identity stays WORKFLOW.
+RUN_WORKFLOWS = frozenset({WORKFLOW, ".github/workflows/staging-operation.yml"})
 REF = "refs/heads/staging"
 SCHEMA_VERSION = 1
 EVIDENCE_KIND = "staging-vercel-deployment-checkpoint"
@@ -275,11 +277,14 @@ def read_checkpoint_archive(
         raise CheckpointError("INVALID_ARTIFACT_PROVENANCE")
     require(
         workflow_run.get("id") == run_id
+        and type(workflow_run.get("run_attempt")) is int
+        and workflow_run.get("run_attempt") == source_attempt
         and workflow_run.get("head_sha") == candidate_sha
         and workflow_run.get("head_branch") == "staging"
         and workflow_run.get("repository") == REPOSITORY
         and workflow_run.get("repository_id") == REPOSITORY_ID
-        and workflow_run.get("path") == WORKFLOW,
+        and isinstance(workflow_run.get("path"), str)
+        and workflow_run.get("path") in RUN_WORKFLOWS,
         "INVALID_ARTIFACT_PROVENANCE",
     )
     source_job = artifact.get("source_job")
@@ -288,7 +293,8 @@ def read_checkpoint_archive(
     expected_job = f"Vercel Preview proof ({portal})"
     job_name = source_job.get("name")
     require(
-        source_job.get("run_attempt") == source_attempt
+        type(source_job.get("run_attempt")) is int
+        and source_job.get("run_attempt") == source_attempt
         and isinstance(job_name, str)
         and (job_name == expected_job or job_name.endswith(f" / {expected_job}"))
         and source_job.get("status") == "completed"
@@ -494,6 +500,10 @@ def select_reuse(
 ) -> ReuseDecision:
     if archive is None or artifact is None or source_attempt is None:
         return create_decision("CHECKPOINT_MISSING", current_attempt)
+    require(
+        _positive_int(source_attempt) < _positive_int(current_attempt),
+        "INVALID_SOURCE_ATTEMPT",
+    )
     checkpoint = read_checkpoint_archive(
         archive,
         artifact,
