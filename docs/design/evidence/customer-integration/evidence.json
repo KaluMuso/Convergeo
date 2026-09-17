@@ -1,0 +1,128 @@
+{
+  "capturedAt": "2026-09-17T22:00:34.013Z",
+  "chromium": "playwright /opt/pw-browsers/chromium",
+  "results": [
+    {
+      "viewport": "360",
+      "stickyAtc": {
+        "layout": {
+          "priceRect": {
+            "left": 16,
+            "right": 344,
+            "top": 641.703125,
+            "bottom": 669.703125,
+            "width": 328
+          },
+          "decRect": {
+            "left": 16,
+            "right": 60,
+            "top": 692,
+            "bottom": 736,
+            "width": 44
+          },
+          "atcRect": {
+            "left": 228.875,
+            "right": 344,
+            "top": 692,
+            "bottom": 736,
+            "width": 115.125
+          },
+          "priceOverflowsViewport": false,
+          "priceOverlapsDecrementControl": false,
+          "priceScrollWidthExceedsClientWidth": false,
+          "stockText": "In stock · Minimum order: 3",
+          "stockTruncatedVisually": false
+        },
+        "consoleErrors": []
+      }
+    },
+    {
+      "viewport": "390",
+      "stickyAtc": {
+        "layout": {
+          "priceRect": {
+            "left": 16,
+            "right": 374,
+            "top": 685.703125,
+            "bottom": 713.703125,
+            "width": 358
+          },
+          "decRect": {
+            "left": 16,
+            "right": 60,
+            "top": 736,
+            "bottom": 780,
+            "width": 44
+          },
+          "atcRect": {
+            "left": 258.875,
+            "right": 374,
+            "top": 736,
+            "bottom": 780,
+            "width": 115.125
+          },
+          "priceOverflowsViewport": false,
+          "priceOverlapsDecrementControl": false,
+          "priceScrollWidthExceedsClientWidth": false,
+          "stockText": "In stock · Minimum order: 3",
+          "stockTruncatedVisually": false
+        },
+        "consoleErrors": []
+      }
+    },
+    {
+      "viewport": "1440",
+      "stickyAtc": {
+        "desktopLgHiddenConfirmed": true,
+        "domState": {
+          "present": true,
+          "display": "none",
+          "visuallyHidden": true
+        },
+        "consoleErrors": []
+      }
+    },
+    {
+      "viewport": "360",
+      "search": {
+        "beforeOpenFocus": "mobile-header-search-trigger",
+        "focusAfterOpen": {
+          "tag": "INPUT",
+          "testid": null,
+          "type": "search",
+          "insideDialog": true
+        },
+        "focusAfterEscape": {
+          "tag": "BUTTON",
+          "testid": "mobile-header-search-trigger",
+          "isTrigger": true,
+          "isBody": false
+        },
+        "reopened": true,
+        "focusAfterSecondEscape": "mobile-header-search-trigger",
+        "consoleErrors": []
+      }
+    },
+    {
+      "viewport": "390",
+      "search": {
+        "beforeOpenFocus": "mobile-header-search-trigger",
+        "focusAfterOpen": {
+          "tag": "INPUT",
+          "testid": null,
+          "type": "search",
+          "insideDialog": true
+        },
+        "focusAfterEscape": {
+          "tag": "BUTTON",
+          "testid": "mobile-header-search-trigger",
+          "isTrigger": true,
+          "isBody": false
+        },
+        "reopened": true,
+        "focusAfterSecondEscape": "mobile-header-search-trigger",
+        "consoleErrors": []
+      }
+    }
+  ]
+}
