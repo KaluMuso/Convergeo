@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import checkoutMessages from "../../../../../../../packages/i18n/messages/en/checkout.json";
@@ -55,6 +56,19 @@ vi.mock("./mini-cart-drawer", async (importOriginal) => {
 });
 
 const { CartPageView } = await import("./vendor-groups");
+
+/**
+ * `cart.itemCount` is an ICU plural, so CartPageBody formats it itself against
+ * the checkout namespace rather than interpolating a template label — mirror
+ * the shop layout's client provider, matching mini-cart-drawer.test.tsx.
+ */
+function renderInIntl(ui: React.ReactElement) {
+  return render(
+    <NextIntlClientProvider locale="en" messages={{ checkout: checkoutMessages }}>
+      {ui}
+    </NextIntlClientProvider>,
+  );
+}
 
 const cartMessages = checkoutMessages.cart;
 
@@ -191,7 +205,7 @@ describe("cart page surface contract", () => {
     storeState.loading = true;
     storeState.cart = null;
 
-    render(<CartPageView locale="en" labels={labels} />);
+    renderInIntl(<CartPageView locale="en" labels={labels} />);
 
     expect(screen.getByTestId("cart-page")).toBeInTheDocument();
     // Proves we are genuinely in the loading branch, not a fallback render.
@@ -203,7 +217,7 @@ describe("cart page surface contract", () => {
     storeState.loadError = true;
     storeState.cart = null;
 
-    render(<CartPageView locale="en" labels={labels} />);
+    renderInIntl(<CartPageView locale="en" labels={labels} />);
 
     expect(screen.getByTestId("cart-page")).toBeInTheDocument();
     expect(screen.getByTestId("cart-load-error")).toBeInTheDocument();
@@ -213,7 +227,7 @@ describe("cart page surface contract", () => {
     storeState.loading = false;
     storeState.cart = emptyCart;
 
-    render(<CartPageView locale="en" labels={labels} />);
+    renderInIntl(<CartPageView locale="en" labels={labels} />);
 
     expect(screen.getByTestId("cart-page")).toBeInTheDocument();
     expect(screen.getByTestId("cart-empty-state")).toBeInTheDocument();
@@ -223,7 +237,7 @@ describe("cart page surface contract", () => {
     storeState.loading = false;
     storeState.cart = populatedCart;
 
-    render(<CartPageView locale="en" labels={labels} />);
+    renderInIntl(<CartPageView locale="en" labels={labels} />);
 
     expect(screen.getByTestId("cart-page")).toBeInTheDocument();
     // The exact surfaces Run #68's screenshots proved were rendering fine while
@@ -237,7 +251,7 @@ describe("cart page surface contract", () => {
     storeState.loading = false;
     storeState.cart = populatedCart;
 
-    render(<CartPageView locale="en" labels={labels} />);
+    renderInIntl(<CartPageView locale="en" labels={labels} />);
 
     expect(screen.getAllByTestId("cart-page")).toHaveLength(1);
   });
