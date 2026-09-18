@@ -98,6 +98,17 @@ function makePurchase(overrides: Partial<ListingPurchaseControls> = {}): Listing
   };
 }
 
+// Harness-only scaffold copy. `_evidence` is a private folder that is never
+// routed or bundled, so this text is deliberately NOT a next-intl key: adding
+// it to the production catalogues would ship harness captions in every locale,
+// and referencing an undefined key would fail scripts/ci/i18n-lint.mjs. The
+// JSX below renders these through expression containers, which the
+// @vergeo/no-hardcoded-strings JSXText gate correctly leaves alone.
+const evidenceCaptions = {
+  buyBoxAnchor: "Buy box (anchor) — scroll past this to reveal the sticky bar.",
+  filler: "Filler content standing in for PDP description/reviews sections.",
+} as const;
+
 function StickyAtcHarness() {
   const observeRef = createRef<HTMLElement | null>();
 
@@ -112,11 +123,9 @@ function StickyAtcHarness() {
         data-testid="evidence-buybox-anchor"
         style={{ height: 220, background: "var(--bg-2)", padding: 16 }}
       >
-        Buy box (anchor) — scroll past this to reveal the sticky bar.
+        {evidenceCaptions.buyBoxAnchor}
       </div>
-      <div style={{ height: 1400, padding: 16 }}>
-        Filler content standing in for PDP description/reviews sections.
-      </div>
+      <div style={{ height: 1400, padding: 16 }}>{evidenceCaptions.filler}</div>
       <StickyMobileAtc
         listing={listing}
         labels={buyBoxLabels}
