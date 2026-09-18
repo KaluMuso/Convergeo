@@ -87,6 +87,79 @@ jobs:
       focus_group: ${{ inputs.focus_group || 'full' }}
     secrets: inherit
 
+  certify:
+    name: Certify completed full staging operation
+    needs: [authorize, deploy, e2e]
+    if: ${{ needs.authorize.result == 'success' && needs.deploy.result == 'success' && needs.deploy.outputs.handoff_status == 'PASS' && needs.e2e.result == 'success' && (github.event_name == 'push' || inputs.focus_group == 'full') }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read exact operation attempt and source proof
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const path = require('path');
+            const adapter = require(path.join(
+              process.env.GITHUB_WORKSPACE,
+              'scripts', 'ci', 'github_handoff_metadata.cjs',
+            ));
+            const result = await adapter.collectHandoffMetadata({
+              github,
+              context,
+              runId: context.runId,
+              attempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+            });
+            adapter.writeHandoffMetadata(
+              path.join(process.env.RUNNER_TEMP, 'staging-certification-source'),
+              result,
+            );
+
+      - name: Emit operation-bound staging certification evidence
+        env:
+          AUTHORIZE_OUTCOME: ${{ needs.authorize.result }}
+          DEPLOY_OUTCOME: ${{ needs.deploy.result }}
+          E2E_OUTCOME: ${{ needs.e2e.result }}
+          SETUP_OUTCOME: ${{ needs.e2e.outputs.setup_outcome }}
+          BROWSER_OUTCOME: ${{ needs.e2e.outputs.browser_outcome }}
+          EXECUTION_OUTCOME: ${{ needs.e2e.outputs.execution_outcome }}
+          MATRIX_OUTCOME: ${{ needs.e2e.outputs.matrix_outcome }}
+          CLEANUP_OUTCOME: ${{ needs.e2e.outputs.cleanup_outcome }}
+          STAGING_REF_OUTCOME: ${{ needs.e2e.outputs.staging_ref_outcome }}
+          CUSTOMER_PROBE_OUTCOME: ${{ needs.e2e.outputs.customer_probe_outcome }}
+          VENDOR_PROBE_OUTCOME: ${{ needs.e2e.outputs.vendor_probe_outcome }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/emit_staging_certification_evidence.py \
+            --candidate-sha "${GITHUB_SHA}" \
+            --certification-run-id "${GITHUB_RUN_ID}" \
+            --certification-run-attempt "${GITHUB_RUN_ATTEMPT}" \
+            --operation-metadata-dir "${RUNNER_TEMP}/staging-certification-source" \
+            --focus-group full \
+            --authorize-outcome "${AUTHORIZE_OUTCOME}" \
+            --deploy-outcome "${DEPLOY_OUTCOME}" \
+            --handoff-outcome success \
+            --e2e-outcome "${E2E_OUTCOME}" \
+            --setup-outcome "${SETUP_OUTCOME}" \
+            --browser-outcome "${BROWSER_OUTCOME}" \
+            --execution-outcome "${EXECUTION_OUTCOME}" \
+            --matrix-outcome "${MATRIX_OUTCOME}" \
+            --cleanup-outcome "${CLEANUP_OUTCOME}" \
+            --staging-ref-outcome "${STAGING_REF_OUTCOME}" \
+            --customer-probe-outcome "${CUSTOMER_PROBE_OUTCOME}" \
+            --vendor-probe-outcome "${VENDOR_PROBE_OUTCOME}"
+
+      - name: Upload operation-bound staging certification evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: staging-certification-evidence-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: staging-certification-evidence/staging-certification-evidence.json
+          retention-days: 90
+          if-no-files-found: error
+
   completion:
     name: One sanitized operation completion
     needs: [authorize, deploy, e2e]
