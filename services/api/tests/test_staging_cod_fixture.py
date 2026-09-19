@@ -17,13 +17,26 @@ tests pin the two properties that make that safe and useful:
 from __future__ import annotations
 
 from typing import Any
+from unittest.mock import MagicMock
 
+import psycopg
 import pytest
 from app.core.env_guards import StagingIsolationError
 from app.services.orders.state import ActorRole, OrderEvent, OrderStatus, resolve_transition
+from app.services.stock.claim import ClaimResult
 from app.staging import transactional as txn
 from app.staging.seed_sql import build_cleanup_sql
-from app.staging.synthetic_contract import SEED_PREFIX, persona_by_key, product_fixture
+from app.staging.synthetic_contract import (
+    SEED_PREFIX,
+    VENDOR_LOCATIONS,
+    persona_by_key,
+    product_fixture,
+)
+from psycopg import sql
+from tests.rls.conftest import PgConn
+from tests.test_order_creation import _PgClient, _Query
+from tests.test_seed_staging import _seed
+from tests.test_seed_staging import migrated_db as migrated_db
 
 
 class _FakeQuery:
@@ -43,7 +56,8 @@ class _FakeQuery:
     def select(self, *_args: Any, **_kwargs: Any) -> _FakeQuery:
         return self
 
-    def eq(self, *_args: Any, **_kwargs: Any) -> _FakeQuery:
+    def eq(self, column: str, value: Any) -> _FakeQuery:
+        self._recorder["filters"].append((self._table, column, value))
         return self
 
     def maybe_single(self) -> _FakeQuery:
@@ -56,24 +70,49 @@ class _FakeQuery:
 class _FakeClient:
     """Records table writes; never performs any."""
 
-    def __init__(self, existing_group: Any = None) -> None:
-        self.calls: dict[str, list[Any]] = {"upsert": [], "insert": []}
+    def __init__(self, existing_group: Any = None, existing_reservation: Any = None) -> None:
+        self.calls: dict[str, list[Any]] = {"upsert": [], "insert": [], "filters": []}
         self.tables: list[str] = []
         self._existing_group = existing_group
+        self._existing_reservation = existing_reservation
 
     def table(self, name: str) -> _FakeQuery:
         self.tables.append(name)
         existing = self._existing_group if name == "checkout_groups" else None
+        if name == "stock_reservations":
+            existing = self._existing_reservation
         return _FakeQuery(name, self.calls, existing)
 
 
 @pytest.fixture
-def captured_create(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+def captured_claim(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any]]:
+    calls: list[dict[str, Any]] = []
+
+    def claim(**kwargs: Any) -> ClaimResult:
+        calls.append(kwargs)
+        return ClaimResult(
+            claimed=True,
+            listing_id=kwargs["listing_id"],
+            checkout_group_id=kwargs["checkout_group_id"],
+            qty=kwargs["qty"],
+            location_id=kwargs["location_id"],
+        )
+
+    monkeypatch.setattr("app.services.stock.claim.claim_reservation", claim)
+    monkeypatch.setattr("app.services.stock.claim.load_reservation_ttl_minutes", lambda: 15)
+    return calls
+
+
+@pytest.fixture
+def captured_create(
+    monkeypatch: pytest.MonkeyPatch, captured_claim: list[dict[str, Any]]
+) -> dict[str, Any]:
     """Replace create_orders_atomic with a recorder returning a plausible result."""
     captured: dict[str, Any] = {}
 
     def _fake_create_orders_atomic(**kwargs: Any) -> Any:
         captured.update(kwargs)
+        captured["claim_count_at_create"] = len(captured_claim)
         order = type(
             "_Order",
             (),
@@ -209,12 +248,122 @@ def test_apply_totals_match_the_session_the_service_validates(
 
 def test_apply_is_idempotent_on_an_existing_checkout_group(
     captured_create: dict[str, Any],
+    captured_claim: list[dict[str, Any]],
 ) -> None:
     client = _FakeClient(existing_group={"id": txn.COD_CHECKOUT_GROUP_ID, "status": "completed"})
     txn.apply_cod_placed(client)
     # No second checkout session is inserted; the service replays by key.
     assert client.calls["insert"] == []
     assert captured_create["idempotency_key"] == txn.COD_IDEMPOTENCY_KEY
+    assert captured_claim == []
+    assert "stock_reservations" not in client.tables
+
+
+@pytest.mark.parametrize("existing_group", [None, {"status": "pending"}])
+def test_claim_precedes_order_creation_with_exact_canonical_binding(
+    existing_group: Any,
+    captured_create: dict[str, Any],
+    captured_claim: list[dict[str, Any]],
+) -> None:
+    client = _FakeClient(existing_group=existing_group)
+    txn.apply_cod_placed(client)
+    fixture = txn.cod_placed_fixture()
+    location = next(loc for loc in VENDOR_LOCATIONS if loc.vendor_key == "APPROVED_VENDOR_A")
+    assert captured_create["claim_count_at_create"] == 1
+    assert captured_claim == [
+        {
+            "listing_id": fixture.listing_id,
+            "checkout_group_id": txn.COD_CHECKOUT_GROUP_ID,
+            "qty": txn.COD_ORDER_QTY,
+            "location_id": location.location_id,
+            "ttl_minutes": 15,
+        }
+    ]
+    assert fixture.listing_id == "f1000000-0000-4000-8000-000000000003"
+    assert location.location_id == "12000000-0000-4000-8000-000000000004"
+    assert ("stock_reservations", "listing_id", fixture.listing_id) in client.calls["filters"]
+    assert ("stock_reservations", "checkout_group_id", txn.COD_CHECKOUT_GROUP_ID) in client.calls[
+        "filters"
+    ]
+
+
+def test_existing_hold_is_not_claimed_twice(
+    captured_create: dict[str, Any], captured_claim: list[dict[str, Any]]
+) -> None:
+    location = next(loc for loc in VENDOR_LOCATIONS if loc.vendor_key == "APPROVED_VENDOR_A")
+    client = _FakeClient(
+        existing_group={"status": "pending"},
+        existing_reservation={"qty": txn.COD_ORDER_QTY, "location_id": location.location_id},
+    )
+    txn.apply_cod_placed(client)
+    assert captured_claim == []
+    assert captured_create["session_id"] == txn.COD_CHECKOUT_GROUP_ID
+    assert client.calls["insert"] == []
+
+
+def test_absent_maybe_single_response_still_claims_before_create(
+    monkeypatch: pytest.MonkeyPatch,
+    captured_create: dict[str, Any],
+    captured_claim: list[dict[str, Any]],
+) -> None:
+    original_execute = _FakeQuery.execute
+
+    def execute(query: _FakeQuery) -> Any:
+        return None if query._table == "stock_reservations" else original_execute(query)
+
+    monkeypatch.setattr(_FakeQuery, "execute", execute)
+    txn.apply_cod_placed(_FakeClient())
+    assert len(captured_claim) == captured_create["claim_count_at_create"] == 1
+
+
+@pytest.mark.parametrize("skipped", [False, True])
+def test_failed_or_skipped_claim_blocks_order_creation(
+    monkeypatch: pytest.MonkeyPatch, captured_create: dict[str, Any], skipped: bool
+) -> None:
+    fixture = txn.cod_placed_fixture()
+    monkeypatch.setattr(
+        "app.services.stock.claim.claim_reservation",
+        lambda **kwargs: ClaimResult(
+            claimed=skipped,
+            skipped=skipped,
+            listing_id=fixture.listing_id,
+            checkout_group_id=fixture.checkout_group_id,
+            qty=fixture.qty,
+        ),
+    )
+    with pytest.raises(StagingIsolationError, match="reservation"):
+        txn.apply_cod_placed(_FakeClient())
+    assert captured_create == {}
+
+
+def test_claim_error_blocks_order_creation(
+    monkeypatch: pytest.MonkeyPatch, captured_create: dict[str, Any]
+) -> None:
+    def fail(**kwargs: Any) -> ClaimResult:
+        raise RuntimeError("reservation transport failed")
+
+    monkeypatch.setattr("app.services.stock.claim.claim_reservation", fail)
+    with pytest.raises(RuntimeError, match="reservation transport failed"):
+        txn.apply_cod_placed(_FakeClient())
+    assert captured_create == {}
+
+
+@pytest.mark.parametrize(
+    "reservation",
+    [
+        {"qty": 2, "location_id": "12000000-0000-4000-8000-000000000004"},
+        {"qty": txn.COD_ORDER_QTY, "location_id": "12000000-0000-4000-8000-000000000005"},
+    ],
+)
+def test_mismatched_hold_fails_without_reclaim_or_order(
+    reservation: dict[str, Any],
+    captured_create: dict[str, Any],
+    captured_claim: list[dict[str, Any]],
+) -> None:
+    with pytest.raises(StagingIsolationError, match="reservation"):
+        txn.apply_cod_placed(_FakeClient(existing_reservation=reservation))
+    assert captured_claim == []
+    assert captured_create == {}
 
 
 def test_fixture_refuses_a_multi_listing_product(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -239,3 +388,118 @@ def test_only_cod_is_service_drivable_among_order_states() -> None:
     assert txn.is_service_drivable(txn.TransactionalState.COD_PLACED)
     assert not txn.is_service_drivable(txn.TransactionalState.PROCESSING)
     assert not txn.is_service_drivable(txn.TransactionalState.DELIVERED)
+
+
+class _FixtureQuery(_Query):
+    """Extend the existing SQL-backed read adapter with buyer-input writes only."""
+
+    def insert(self, payload: dict[str, Any]) -> _FixtureQuery:
+        assert self.table == "checkout_groups"
+        self.payload, self.operation = payload, "insert"
+        return self
+
+    def upsert(self, payload: dict[str, Any]) -> _FixtureQuery:
+        assert self.table == "addresses"
+        self.payload, self.operation = payload, "upsert"
+        return self
+
+    def execute(self) -> MagicMock:
+        if self.operation not in {"insert", "upsert"}:
+            return super().execute()
+        assert self.payload is not None
+        columns = list(self.payload)
+        statement = sql.SQL("INSERT INTO public.{} ({}) VALUES ({})").format(
+            sql.Identifier(self.table),
+            sql.SQL(", ").join(map(sql.Identifier, columns)),
+            sql.SQL(", ").join(sql.Placeholder() for _ in columns),
+        )
+        if self.operation == "upsert":
+            statement += sql.SQL(" ON CONFLICT (id) DO UPDATE SET ") + sql.SQL(", ").join(
+                sql.SQL("{} = EXCLUDED.{}").format(sql.Identifier(key), sql.Identifier(key))
+                for key in columns
+                if key != "id"
+            )
+        with psycopg.connect(self.conn.dsn) as connection:
+            connection.execute(statement, list(self.payload.values()))
+        return MagicMock(data=[])
+
+
+class _FixtureClient(_PgClient):
+    def table(self, name: str) -> _FixtureQuery:
+        return _FixtureQuery(conn=self._conn, table=name)
+
+
+@pytest.mark.parametrize("resume_after_claim", [False, True])
+def test_fresh_seed_real_hold_is_consumed_by_cod_order_and_replay_is_stock_neutral(
+    migrated_db: PgConn, monkeypatch: pytest.MonkeyPatch, resume_after_claim: bool
+) -> None:
+    from app.services.orders import create as order_service
+    from app.services.stock import claim as stock_service
+
+    cleaned = migrated_db.run_script(build_cleanup_sql())
+    assert cleaned.ok, cleaned.error
+    seeded = _seed(migrated_db)
+    assert seeded.ok, seeded.error
+    monkeypatch.setenv("SUPABASE_DB_URL", migrated_db.dsn)
+    fixture = txn.cod_placed_fixture()
+    location = next(loc for loc in VENDOR_LOCATIONS if loc.vendor_key == "APPROVED_VENDOR_A")
+    client = _FixtureClient(migrated_db)
+    original_claim = stock_service.claim_reservation
+    original_create = order_service.create_orders_atomic
+    claims: list[ClaimResult] = []
+
+    def stock_qty() -> list[str]:
+        result = migrated_db.run(
+            "SELECT stock_qty FROM public.listing_location_stock "
+            f"WHERE listing_id = '{fixture.listing_id}' AND location_id = '{location.location_id}'"
+        )
+        assert result.ok, result.error
+        return result.rows
+
+    def claim(**kwargs: Any) -> ClaimResult:
+        result = original_claim(**kwargs)
+        claims.append(result)
+        return result
+
+    def create_with_hold_proof(**kwargs: Any) -> Any:
+        hold = migrated_db.run(
+            "SELECT qty, location_id, expires_at > now() FROM public.stock_reservations "
+            f"WHERE listing_id = '{fixture.listing_id}' "
+            f"AND checkout_group_id = '{fixture.checkout_group_id}'"
+        )
+        assert hold.ok, hold.error
+        assert hold.rows == [f"{fixture.qty}|{location.location_id}|t"]
+        assert stock_qty() == ["39"]
+        if resume_after_claim:
+            raise InterruptedError("order creation interrupted after real hold")
+        return original_create(**kwargs)
+
+    assert stock_qty() == ["40"]
+    monkeypatch.setattr(stock_service, "claim_reservation", claim)
+    monkeypatch.setattr(order_service, "create_orders_atomic", create_with_hold_proof)
+    if resume_after_claim:
+        with pytest.raises(InterruptedError, match="after real hold"):
+            txn.apply_cod_placed(client)
+        resume_after_claim = False
+    outcome = txn.apply_cod_placed(client)
+    assert len(claims) == 1
+    assert claims[0].claimed and not claims[0].skipped
+    assert claims[0].location_id == location.location_id
+    assert outcome["replayed"] is False
+    assert outcome["total_ngwee"] == 8750
+    placed = migrated_db.run(
+        "SELECT status, cod, fulfilment FROM public.orders "
+        f"WHERE checkout_group_id = '{fixture.checkout_group_id}'"
+    )
+    assert placed.ok and placed.rows == ["placed|t|delivery"]
+    holds = migrated_db.run(
+        "SELECT count(*) FROM public.stock_reservations "
+        f"WHERE checkout_group_id = '{fixture.checkout_group_id}'"
+    )
+    assert holds.ok and holds.rows == ["0"]
+    monkeypatch.setattr(order_service, "create_orders_atomic", original_create)
+    replay = txn.apply_cod_placed(client)
+    assert replay["replayed"] is True
+    assert replay["orders"] == outcome["orders"]
+    assert len(claims) == 1
+    assert stock_qty() == ["39"]

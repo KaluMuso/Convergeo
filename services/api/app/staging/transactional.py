@@ -279,6 +279,7 @@ def apply_cod_placed(
         VendorFulfilmentInput,
         create_orders_atomic,
     )
+    from app.services.stock.claim import claim_reservation, load_reservation_ttl_minutes
 
     fixture = cod_placed_fixture()
     # Landmark + phone default to the same canonical values the generated E2E
@@ -305,7 +306,8 @@ def apply_cod_placed(
         .maybe_single()
         .execute()
     )
-    if not isinstance(getattr(existing, "data", None), dict):
+    existing_group = getattr(existing, "data", None)
+    if not isinstance(existing_group, dict):
         client.table("checkout_groups").insert(
             {
                 "id": fixture.checkout_group_id,
@@ -317,6 +319,39 @@ def apply_cod_placed(
                 "status": "pending",
             }
         ).execute()
+
+    if not isinstance(existing_group, dict) or existing_group.get("status") != "completed":
+        reservation_response = (
+            client.table("stock_reservations")
+            .select("qty, location_id")
+            .eq("listing_id", fixture.listing_id)
+            .eq("checkout_group_id", fixture.checkout_group_id)
+            .maybe_single()
+            .execute()
+        )
+        reservation = getattr(reservation_response, "data", None)
+        if isinstance(reservation, dict):
+            # Claiming again would decrement stock twice. Leave expiry validation
+            # and consumption of the existing hold to create_orders_atomic.
+            if (
+                reservation.get("qty") != fixture.qty
+                or reservation.get("location_id") != location.location_id
+            ):
+                raise StagingIsolationError(
+                    "COD fixture reservation does not match its stock binding"
+                )
+        else:
+            claimed = claim_reservation(
+                listing_id=fixture.listing_id,
+                checkout_group_id=fixture.checkout_group_id,
+                qty=fixture.qty,
+                location_id=location.location_id,
+                ttl_minutes=load_reservation_ttl_minutes(),
+            )
+            if not claimed.claimed or claimed.skipped:
+                raise StagingIsolationError(
+                    "COD fixture tracked-stock reservation was not acquired"
+                )
 
     result = create_orders_atomic(
         client=client,
