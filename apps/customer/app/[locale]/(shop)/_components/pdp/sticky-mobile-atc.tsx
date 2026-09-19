@@ -116,11 +116,15 @@ export function StickyMobileAtc({
         transition: "transform var(--dur) var(--ease-out), opacity var(--dur) var(--ease-out)",
       }}
     >
-      <div className="mx-auto flex max-w-lg items-center gap-3 px-4 py-2">
-        <div className="min-w-0 flex-1">
+      {/* Phone widths cannot fit the summary and all three controls on one line:
+          the qty stepper and the CTA are fixed-width, so a single row starves the
+          summary column and the price overflows across the stepper. Stack until
+          there is room (>=640px), and clip inside the column rather than over it. */}
+      <div className="mx-auto flex max-w-lg flex-col gap-2 px-4 py-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="min-w-0 sm:flex-1">
           <p className="truncate text-micro text-text-2">{listing.title}</p>
           <p
-            className="font-mono text-lg font-semibold text-[var(--price)]"
+            className="truncate font-mono text-lg font-semibold text-[var(--price)]"
             data-testid="pdp-sticky-price"
           >
             {formatK(listing.priceNgwee)}
@@ -143,53 +147,55 @@ export function StickyMobileAtc({
             ) : null}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <button
+        <div className="flex items-center justify-between gap-2 sm:justify-end sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              aria-label={labels.decreaseLabel}
+              data-testid="pdp-sticky-qty-decrease"
+              onClick={purchase.decrease}
+              disabled={purchase.atMin || purchase.adding}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:opacity-50"
+            >
+              <span aria-hidden>{labels.decreaseSymbol}</span>
+            </button>
+            <output
+              data-testid="pdp-sticky-qty-value"
+              className="min-w-8 text-center font-mono text-base"
+              aria-live="polite"
+              aria-label={`${labels.quantityLabel}: ${formattedQuantity}`}
+            >
+              {formattedQuantity}
+            </output>
+            <button
+              type="button"
+              aria-label={labels.increaseLabel}
+              data-testid="pdp-sticky-qty-increase"
+              onClick={purchase.increase}
+              disabled={purchase.atMax || purchase.adding}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:opacity-50"
+            >
+              <span aria-hidden>{labels.increaseSymbol}</span>
+            </button>
+          </div>
+          <Button
             type="button"
-            aria-label={labels.decreaseLabel}
-            data-testid="pdp-sticky-qty-decrease"
-            onClick={purchase.decrease}
-            disabled={purchase.atMin || purchase.adding}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:opacity-50"
+            variant="primary"
+            size="md"
+            className="shrink-0"
+            disabled={
+              purchase.adding ||
+              (purchase.pickupBranchTracked !== false && !purchase.selectedPickupLocationId)
+            }
+            loading={purchase.adding}
+            loadingLabel={labels.addingToCartLabel}
+            data-testid="pdp-sticky-add-to-cart"
+            aria-label={labels.addToCartLabel}
+            onClick={purchase.handleAddToCart}
           >
-            <span aria-hidden>{labels.decreaseSymbol}</span>
-          </button>
-          <output
-            data-testid="pdp-sticky-qty-value"
-            className="min-w-8 text-center font-mono text-base"
-            aria-live="polite"
-            aria-label={`${labels.quantityLabel}: ${formattedQuantity}`}
-          >
-            {formattedQuantity}
-          </output>
-          <button
-            type="button"
-            aria-label={labels.increaseLabel}
-            data-testid="pdp-sticky-qty-increase"
-            onClick={purchase.increase}
-            disabled={purchase.atMax || purchase.adding}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded border border-border bg-bg text-lg disabled:opacity-50"
-          >
-            <span aria-hidden>{labels.increaseSymbol}</span>
-          </button>
+            {labels.addToCartLabel}
+          </Button>
         </div>
-        <Button
-          type="button"
-          variant="primary"
-          size="md"
-          className="shrink-0"
-          disabled={
-            purchase.adding ||
-            (purchase.pickupBranchTracked !== false && !purchase.selectedPickupLocationId)
-          }
-          loading={purchase.adding}
-          loadingLabel={labels.addingToCartLabel}
-          data-testid="pdp-sticky-add-to-cart"
-          aria-label={labels.addToCartLabel}
-          onClick={purchase.handleAddToCart}
-        >
-          {labels.addToCartLabel}
-        </Button>
       </div>
     </div>
   );

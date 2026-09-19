@@ -20,7 +20,9 @@ vi.mock("@vergeo/ui/src/icons", () => ({
 }));
 
 vi.mock("next-intl", () => ({
-  createTranslator: () => (key: string) => key,
+  // Mirrors the real translator surface: a callable with `.raw`, which the
+  // layout uses for messages that still carry `{…}` placeholders.
+  createTranslator: () => Object.assign((key: string) => key, { raw: (key: string) => key }),
   NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 

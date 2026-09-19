@@ -56,6 +56,12 @@ export const revalidate = 3600;
 
 type CatalogTranslator = {
   (key: string, values?: Record<string, string | number>): string;
+  /**
+   * Literal ICU template, placeholders intact. Labels that cross into client
+   * components are interpolated there, and `t()` cannot format a message whose
+   * values are not known yet — it falls back to the bare key path instead.
+   */
+  raw: (key: string) => string;
 };
 
 type ComparisonApiListing = {
@@ -536,16 +542,16 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           heading: t("reviews.heading"),
           empty: t("reviews.empty"),
           writeCta: t("reviews.writeCta"),
-          starsAria: t("reviews.starsAria"),
+          starsAria: t.raw("reviews.starsAria"),
           photoAlt: t("reviews.photoAlt"),
           vendorReply: t("reviews.vendorReply"),
           galleryPrevious: t("reviews.galleryPrevious"),
           galleryNext: t("reviews.galleryNext"),
-          galleryIndicator: t("reviews.galleryIndicator"),
+          galleryIndicator: t.raw("reviews.galleryIndicator"),
           starFilled: t("reviews.starFilled"),
           starEmpty: t("reviews.starEmpty"),
           distributionHeading: t("reviews.distributionHeading"),
-          distributionRowAria: t("reviews.distributionRowAria"),
+          distributionRowAria: t.raw("reviews.distributionRowAria"),
           verifiedPurchase: t("reviews.verifiedPurchase"),
           lightboxTitle: t("reviews.lightboxTitle"),
           report: {
@@ -575,7 +581,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
     heading: t("pdp.related.heading"),
     vendorFallback: t("pdp.related.vendorFallback"),
     noReviews: t("plp.card.noReviews"),
-    reviewCount: t("plp.card.reviewCount"),
+    reviewCount: t.raw("plp.card.reviewCount"),
     quickAdd: t("plp.card.quickAdd"),
     wishlist: t("plp.card.wishlist"),
     mediaEmpty: t("pdp.gallery.empty"),
@@ -685,13 +691,13 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           }}
           comparisonLabels={{
             heading: t("comparison.heading"),
-            vendorCount: t("comparison.vendorCount"),
+            vendorCount: t.raw("comparison.vendorCount"),
             sortLabel: t("comparison.sortLabel"),
             sortPrice: t("comparison.sortPrice"),
             sortDistance: t("comparison.sortDistance"),
             price: t("comparison.price"),
             condition: t("comparison.condition"),
-            distance: t("comparison.distance"),
+            distance: t.raw("comparison.distance"),
             vendor: t("comparison.vendor"),
             fulfillment: t("comparison.fulfillment"),
             delivery: t("comparison.delivery"),
@@ -700,7 +706,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
             selectedListing: t("comparison.selectedListing"),
             preferredBadge: t("comparison.preferredBadge"),
             noReviews: t("comparison.noReviews"),
-            rating: t("comparison.rating"),
+            rating: t.raw("comparison.rating"),
             conditionNew: t("comparison.conditionNew"),
             conditionRefurbished: t("comparison.conditionRefurbished"),
             conditionUsed: t("comparison.conditionUsed"),
@@ -728,7 +734,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           contactVendorLabels={{
             cta: t("pdp.contactVendor.cta"),
             dialogTitle: t("pdp.contactVendor.dialogTitle"),
-            dialogHint: t("pdp.contactVendor.dialogHint"),
+            dialogHint: t.raw("pdp.contactVendor.dialogHint"),
             messageLabel: t("pdp.contactVendor.messageLabel"),
             messagePlaceholder: t("pdp.contactVendor.messagePlaceholder"),
             submit: t("pdp.contactVendor.submit"),
@@ -753,7 +759,7 @@ export default async function ProductPage({ params, searchParams }: PageProps) {
           requestQuoteLabels={{
             cta: t("pdp.requestQuote.cta"),
             dialogTitle: t("pdp.requestQuote.dialogTitle"),
-            dialogHint: t("pdp.requestQuote.dialogHint"),
+            dialogHint: t.raw("pdp.requestQuote.dialogHint"),
             detailsLabel: t("pdp.requestQuote.detailsLabel"),
             detailsPlaceholder: t("pdp.requestQuote.detailsPlaceholder"),
             submit: t("pdp.requestQuote.submit"),

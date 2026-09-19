@@ -27,6 +27,11 @@ export default async function CartPage({ params }: CartPageProps) {
   const checkoutMessages = await loadNamespace(locale as Locale, "checkout");
   const messages = { ...baseMessages, checkout: checkoutMessages } as AbstractIntlMessages;
   const t = createTranslator({ locale, messages, namespace: "checkout" });
+  // Labels cross the server→client boundary as serializable strings, so messages
+  // that still carry `{…}` placeholders must be read with `t.raw` — `t()` cannot
+  // format them without values and falls back to the bare key path
+  // (see the same pattern in the auth OTP page).
+  const raw = (key: string) => String(t.raw(key));
 
   const labels: CartPageLabels = {
     title: t("cart.title"),
@@ -39,7 +44,6 @@ export default async function CartPage({ params }: CartPageProps) {
       pickup: t("cart.emptyTrustPickup"),
     },
     browseCta: t("cart.browseCta"),
-    itemCount: t("cart.itemCount"),
     subtotal: t("cart.subtotal"),
     total: t("cart.total"),
     checkoutCta: t("cart.checkoutCta"),
@@ -58,24 +62,24 @@ export default async function CartPage({ params }: CartPageProps) {
     summaryHeading: t("cart.summaryHeading"),
     vendor: {
       vendorGroup: t("cart.vendorGroup"),
-      vendorSubtotal: t("cart.vendorSubtotal"),
+      vendorSubtotal: raw("cart.vendorSubtotal"),
       deliveryEligible: t("cart.deliveryEligible"),
-      deliveryHint: t("cart.deliveryHint"),
-      deliveryThreshold: t("cart.deliveryThreshold"),
+      deliveryHint: raw("cart.deliveryHint"),
+      deliveryThreshold: raw("cart.deliveryThreshold"),
       deliveryScopeNote: t("cart.deliveryScopeNote"),
-      freeDeliveryProgress: t("cart.freeDeliveryProgress"),
+      freeDeliveryProgress: raw("cart.freeDeliveryProgress"),
       freeDeliveryUnlocked: t("cart.freeDeliveryUnlocked"),
-      sellerIndex: t("cart.sellerIndex"),
+      sellerIndex: raw("cart.sellerIndex"),
     },
     line: {
       decrease: t("cart.qtyDecrease"),
       increase: t("cart.qtyIncrease"),
-      value: t("cart.qtyValue"),
+      value: raw("cart.qtyValue"),
       updating: t("cart.updating"),
       decreaseSymbol: t("cart.qtyDecreaseSymbol"),
       increaseSymbol: t("cart.qtyIncreaseSymbol"),
-      unitPrice: t("cart.unitPrice"),
-      unitPriceMeasured: t("cart.unitPriceMeasured"),
+      unitPrice: raw("cart.unitPrice"),
+      unitPriceMeasured: raw("cart.unitPriceMeasured"),
       saleUnits: {
         each: t("cart.saleUnits.each"),
         metre: t("cart.saleUnits.metre"),
@@ -84,25 +88,24 @@ export default async function CartPage({ params }: CartPageProps) {
         bag: t("cart.saleUnits.bag"),
         sqm: t("cart.saleUnits.sqm"),
       },
-      madeToOrderLeadTime: t("cart.madeToOrderLeadTime"),
-      lineTotal: t("cart.lineTotal"),
+      madeToOrderLeadTime: raw("cart.madeToOrderLeadTime"),
+      lineTotal: raw("cart.lineTotal"),
       quotedPriceBadge: t("cart.quotedPriceBadge"),
       remove: t("cart.remove"),
-      removeLabel: t("cart.removeLabel"),
+      removeLabel: raw("cart.removeLabel"),
       saveForLater: t("cart.saveForLater"),
-      saveForLaterLabel: t("cart.saveForLaterLabel"),
+      saveForLaterLabel: raw("cart.saveForLaterLabel"),
       outOfStockLine: t("cart.outOfStockLine"),
     },
     notices: {
       title: t("cart.noticesTitle"),
-      priceChanged: t("cart.noticePriceChanged"),
+      priceChanged: raw("cart.noticePriceChanged"),
       outOfStock: t("cart.noticeOutOfStock"),
-      qtyReduced: t("cart.noticeQtyReduced"),
+      qtyReduced: raw("cart.noticeQtyReduced"),
     },
     miniCart: {
       title: t("cart.miniCartTitle"),
       close: t("cart.miniCartClose"),
-      itemCount: t("cart.itemCount"),
       subtotal: t("cart.subtotal"),
       total: t("cart.total"),
       viewCart: t("cart.viewCart"),
@@ -119,7 +122,7 @@ export default async function CartPage({ params }: CartPageProps) {
       loadErrorTitle: t("cart.loadErrorTitle"),
       loadErrorBody: t("cart.loadErrorBody"),
       loadErrorRetry: t("cart.loadErrorRetry"),
-      quantityValue: t("cart.qtyValue"),
+      quantityValue: raw("cart.qtyValue"),
       saleUnits: {
         each: t("cart.saleUnits.each"),
         metre: t("cart.saleUnits.metre"),
@@ -128,7 +131,7 @@ export default async function CartPage({ params }: CartPageProps) {
         bag: t("cart.saleUnits.bag"),
         sqm: t("cart.saleUnits.sqm"),
       },
-      madeToOrderLeadTime: t("cart.madeToOrderLeadTime"),
+      madeToOrderLeadTime: raw("cart.madeToOrderLeadTime"),
     },
   };
 
