@@ -106,12 +106,24 @@ jobs:
 
           rm -f /tmp/prod_api_key
 
+  verify-api-identity:
+    name: Verify exact production API identity (read-only)
+    needs: [guard, deploy-api]
+    if: >-
+      always() &&
+      needs.guard.result == 'success' &&
+      (needs.deploy-api.result == 'success' ||
+       (needs.deploy-api.result == 'skipped' && inputs.skip_api == true))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
       - name: Fingerprint probe
         run: |
           set -euo pipefail
-          curl -fsS --max-time 30 "https://${PROD_API_HOST}/fingerprint" | tee /tmp/fingerprint.json
+          curl -fsS --max-time 30 "https://${PROD_API_HOST}/fingerprint" -o "$RUNNER_TEMP/fingerprint.json"
           python3 scripts/ci/production_deploy_identity.py fingerprint \
-            --fingerprint-file /tmp/fingerprint.json \
+            --fingerprint-file "$RUNNER_TEMP/fingerprint.json" \
             --expected-sha "$WANT_SHA" \
             --expected-project "$PROD_SUPABASE_PROJECT_REF"
         env:
@@ -122,7 +134,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: production-api-fingerprint
-          path: /tmp/fingerprint.json
+          path: ${{ runner.temp }}/fingerprint.json
           if-no-files-found: ignore
 
   promote-vercel:
@@ -150,10 +162,11 @@ jobs:
 
   verify:
     name: Post-deploy verify
-    needs: [guard, deploy-api, promote-vercel]
+    needs: [guard, deploy-api, promote-vercel, verify-api-identity]
     if: >-
       always() &&
       needs.guard.result == 'success' &&
+      needs.verify-api-identity.result == 'success' &&
       inputs.verify_live == true &&
       (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped') &&
       (needs.promote-vercel.result == 'success' || needs.promote-vercel.result == 'skipped')
@@ -165,4 +178,6 @@ jobs:
         env:
           MASTER_GIT_SHA: ${{ inputs.api_image_tag }}
           EXPECTED_ENV: production
+          EXPECTED_IMAGE_TAG: ${{ inputs.api_image_tag }}
+          EXPECTED_SUPABASE_PROJECT_REF: ${{ env.PROD_SUPABASE_PROJECT_REF }}
         run: bash scripts/ops/verify_live.sh

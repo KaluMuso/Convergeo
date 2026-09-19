@@ -192,7 +192,7 @@ class ProductionWorkflowContractTests(unittest.TestCase):
             self.assertIn(arg, run)
 
     def test_fingerprint_uses_exact_validator(self) -> None:
-        steps = self.workflow["jobs"]["deploy-api"]["steps"]
+        steps = self.workflow["jobs"]["verify-api-identity"]["steps"]
         probe = next(s for s in steps if s.get("name") == "Fingerprint probe")
         self.assertIn("production_deploy_identity.py fingerprint", probe["run"])
         self.assertIn('--expected-project "$PROD_SUPABASE_PROJECT_REF"', probe["run"])
