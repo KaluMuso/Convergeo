@@ -13,7 +13,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import yaml  # type: ignore[import-untyped]
 
@@ -71,8 +71,9 @@ class ProductionIdentityTests(unittest.TestCase):
         self.validate(valid_fingerprint())
 
     def test_unknown_missing_and_non_string_sha_fields_fail(self) -> None:
+        cases: tuple[object, ...] = (None, "", "unknown", SHA[:7], True, 123, [], {})
         for field in ("git_sha", "image_tag"):
-            for value in (None, "", "unknown", SHA[:7], True, 123, [], {}):
+            for value in cases:
                 with self.subTest(field=field, value=value):
                     fp = valid_fingerprint()
                     fp[field] = value
@@ -106,7 +107,8 @@ class ProductionIdentityTests(unittest.TestCase):
             self.validate(valid_fingerprint(), expected_project="iyasmrmbcrvlfxpzescb")
 
     def test_non_object_fingerprint_fails(self) -> None:
-        for value in (None, [], "text", True, 12):
+        cases: tuple[object, ...] = (None, [], "text", True, 12)
+        for value in cases:
             with self.subTest(value=value), self.assertRaises(identity.ProductionIdentityError):
                 self.validate(value)
 
@@ -144,12 +146,19 @@ class ProductionIdentityTests(unittest.TestCase):
     def test_cli_request_exit_codes(self) -> None:
         args = [sys.executable, str(SCRIPT), "request", "--repository", "KaluMuso/Convergeo",
                 "--ref", "refs/heads/master", "--source-sha", SHA, "--image-tag", SHA]
-        self.assertEqual(subprocess.run(args, capture_output=True, check=False, timeout=5).returncode, 0)
+        self.assertEqual(
+            subprocess.run(args, capture_output=True, check=False, timeout=5).returncode, 0
+        )
         args[-1] = "b" * 40
-        self.assertEqual(subprocess.run(args, capture_output=True, check=False, timeout=5).returncode, 1)
+        self.assertEqual(
+            subprocess.run(args, capture_output=True, check=False, timeout=5).returncode, 1
+        )
 
 
 class ProductionWorkflowContractTests(unittest.TestCase):
+    raw: ClassVar[str]
+    workflow: ClassVar[dict[str, Any]]
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.raw = (ROOT / ".github/workflows/deploy-production.yml").read_text()
@@ -157,7 +166,9 @@ class ProductionWorkflowContractTests(unittest.TestCase):
 
     def test_only_manual_trigger_and_no_stale_default(self) -> None:
         self.assertEqual(set(self.workflow["on"]), {"workflow_dispatch"})
-        self.assertNotIn("default", self.workflow["on"]["workflow_dispatch"]["inputs"]["api_image_tag"])
+        self.assertNotIn(
+            "default", self.workflow["on"]["workflow_dispatch"]["inputs"]["api_image_tag"]
+        )
 
     def test_boolean_conditions_use_typed_inputs(self) -> None:
         jobs = self.workflow["jobs"]
