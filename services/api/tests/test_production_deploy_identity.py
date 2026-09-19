@@ -173,14 +173,14 @@ class ProductionWorkflowContractTests(unittest.TestCase):
     def test_boolean_conditions_use_typed_inputs(self) -> None:
         jobs = self.workflow["jobs"]
         self.assertEqual(jobs["deploy-api"]["if"], "${{ inputs.skip_api != true }}")
-        self.assertEqual(jobs["promote-vercel"]["if"], "${{ inputs.skip_vercel != true }}")
+        self.assertIn("inputs.skip_vercel == false", jobs["promote-vercel"]["if"])
         self.assertIn("inputs.verify_live == true", jobs["verify"]["if"])
         self.assertNotIn("github.event.inputs", self.raw)
 
     def test_guard_is_required_and_uses_environment_arguments(self) -> None:
         jobs = self.workflow["jobs"]
         self.assertEqual(jobs["deploy-api"]["needs"], "guard")
-        self.assertEqual(jobs["promote-vercel"]["needs"], "guard")
+        self.assertEqual(jobs["promote-vercel"]["needs"], ["guard", "verify-api-identity"])
         steps = jobs["guard"]["steps"]
         self.assertEqual(steps[0]["uses"], "actions/checkout@v7")
         run = steps[1]["run"]

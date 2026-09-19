@@ -55,10 +55,21 @@ def condition(expression: str, values: dict[str, str | bool]) -> bool:
     for key in sorted(values, key=len, reverse=True):
         source = source.replace(key, repr(values[key]))
     source = source.replace("always()", "True").replace("&&", " and ").replace("||", " or ")
+    source = source.replace("cancelled()", "False").replace("!", " not ").strip()
     source = re.sub(r"\btrue\b", "True", source)
     source = re.sub(r"\bfalse\b", "False", source)
     tree = ast.parse(source, mode="eval")
-    allowed = (ast.Expression, ast.BoolOp, ast.And, ast.Or, ast.Compare, ast.Eq, ast.Constant)
+    allowed = (
+        ast.Expression,
+        ast.BoolOp,
+        ast.And,
+        ast.Or,
+        ast.Compare,
+        ast.Eq,
+        ast.Constant,
+        ast.UnaryOp,
+        ast.Not,
+    )
     if not all(isinstance(node, allowed) for node in ast.walk(tree)):
         raise AssertionError("unsupported workflow condition")
     return bool(eval(compile(tree, "<workflow condition>", "eval"), {"__builtins__": {}}, {}))
@@ -252,6 +263,78 @@ Path(args[-1]).write_text(os.environ['TEST_FINGERPRINT'])
                         },
                     ),
                     guard == "success" and (deploy == "success" or (deploy == "skipped" and skip)),
+                )
+
+    def test_promotion_requires_successful_guard_and_identity_and_no_skip(self) -> None:
+        jobs = workflow("deploy-production.yml")["jobs"]
+        promote = jobs["promote-vercel"]
+        self.assertEqual(promote["needs"], ["guard", "verify-api-identity"])
+        # Explicit status evaluation allows the legitimate skipped API ancestor.
+        self.assertIn("!cancelled()", promote["if"])
+        self.assertIn("promote-vercel", jobs["verify"]["needs"])
+        for guard, identity_result, skip, cancelled in itertools.product(
+            ("success", "failure", "cancelled", "skipped"),
+            ("success", "failure", "cancelled", "skipped"),
+            (False, True),
+            (False, True),
+        ):
+            with self.subTest(
+                guard=guard, identity_result=identity_result, skip_vercel=skip, cancelled=cancelled
+            ):
+                self.assertEqual(
+                    condition(
+                        promote["if"],
+                        {
+                            "needs.guard.result": guard,
+                            "needs.verify-api-identity.result": identity_result,
+                            "inputs.skip_vercel": skip,
+                            "cancelled()": cancelled,
+                        },
+                    ),
+                    guard == "success"
+                    and identity_result == "success"
+                    and not skip
+                    and not cancelled,
+                )
+
+    def test_deploy_then_actual_identity_proof_controls_promotion_eligibility(self) -> None:
+        jobs = workflow("deploy-production.yml")["jobs"]
+        strict = jobs["verify-api-identity"]
+        step = next(s for s in strict["steps"] if s.get("name") == "Fingerprint probe")
+        cases = (
+            ("deploy candidate", "success", False, SHA, False, True),
+            ("already exact API", "skipped", True, SHA, False, True),
+            ("stale deployed API", "success", False, OTHER, False, False),
+            ("stale skipped API", "skipped", True, OTHER, False, False),
+            ("failed API deployment", "failure", False, SHA, False, False),
+            ("cancelled API deployment", "cancelled", False, SHA, False, False),
+            ("unintentional API skip", "skipped", False, SHA, False, False),
+            ("intentional promotion skip", "success", False, SHA, True, False),
+            ("both deployments skipped", "skipped", True, SHA, True, False),
+        )
+        for label, deploy, skip_api, api_sha, skip_vercel, expected in cases:
+            with self.subTest(case=label):
+                identity_result = "skipped"
+                if condition(
+                    strict["if"],
+                    {
+                        "needs.guard.result": "success",
+                        "needs.deploy-api.result": deploy,
+                        "inputs.skip_api": skip_api,
+                    },
+                ):
+                    proof = self.probe(step, {**fingerprint(), "git_sha": api_sha})
+                    identity_result = "success" if proof.returncode == 0 else "failure"
+                self.assertEqual(
+                    condition(
+                        jobs["promote-vercel"]["if"],
+                        {
+                            "needs.guard.result": "success",
+                            "needs.verify-api-identity.result": identity_result,
+                            "inputs.skip_vercel": skip_vercel,
+                        },
+                    ),
+                    expected,
                 )
 
     def test_both_workflows_use_same_strict_probe_before_success_evidence(self) -> None:

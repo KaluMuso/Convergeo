@@ -139,8 +139,12 @@ jobs:
 
   promote-vercel:
     name: Promote vendor + admin
-    needs: guard
-    if: ${{ inputs.skip_vercel != true }}
+    needs: [guard, verify-api-identity]
+    if: >-
+      !cancelled() &&
+      needs.guard.result == 'success' &&
+      needs.verify-api-identity.result == 'success' &&
+      inputs.skip_vercel == false
     runs-on: ubuntu-latest
     environment: production
     steps:
