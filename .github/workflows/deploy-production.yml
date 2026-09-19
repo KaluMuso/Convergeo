@@ -17,10 +17,9 @@ on:
   workflow_dispatch:
     inputs:
       api_image_tag:
-        description: "Immutable GHCR tag (git SHA). Clears G9 fingerprint when container recreates."
+        description: "Exact 40-character SHA of this master checkout; API and frontends must match."
         required: true
         type: string
-        default: "d591ef518980381aa75cd23f86e06e8990f7adbc"
       skip_api:
         description: "Skip Hetzner API redeploy"
         required: false
@@ -53,23 +52,28 @@ jobs:
     name: Guard inputs
     runs-on: ubuntu-latest
     steps:
-      - name: Refuse latest tag
+      - uses: actions/checkout@v7
+
+      - name: Require exact master deployment identity
+        env:
+          IMAGE_TAG: ${{ inputs.api_image_tag }}
         run: |
           set -euo pipefail
-          tag="${{ github.event.inputs.api_image_tag }}"
-          if [[ "$tag" == "latest" ]]; then
-            echo "::error::refusing image tag 'latest' — pin a git SHA"
+          checkout_sha="$(git rev-parse HEAD)"
+          if [ "$checkout_sha" != "$GITHUB_SHA" ]; then
+            echo "::error::checkout does not match the workflow SHA"
             exit 1
           fi
-          if [[ ! "$tag" =~ ^[0-9a-f]{7,40}$ ]]; then
-            echo "::error::api_image_tag must be a git SHA (7–40 hex chars)"
-            exit 1
-          fi
+          python3 scripts/ci/production_deploy_identity.py request \
+            --repository "$GITHUB_REPOSITORY" \
+            --ref "$GITHUB_REF" \
+            --source-sha "$checkout_sha" \
+            --image-tag "$IMAGE_TAG"
 
   deploy-api:
     name: Redeploy API (Hetzner)
     needs: guard
-    if: ${{ github.event.inputs.skip_api != true }}
+    if: ${{ inputs.skip_api != true }}
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -80,7 +84,7 @@ jobs:
           PRODUCTION_API_SSH_HOST: ${{ secrets.PRODUCTION_API_SSH_HOST }}
           PRODUCTION_API_SSH_USER: ${{ secrets.PRODUCTION_API_SSH_USER }}
           PRODUCTION_API_SSH_KEY: ${{ secrets.PRODUCTION_API_SSH_KEY }}
-          IMAGE_TAG: ${{ github.event.inputs.api_image_tag }}
+          IMAGE_TAG: ${{ inputs.api_image_tag }}
         run: |
           set -euo pipefail
           if [[ -z "${PRODUCTION_API_SSH_HOST}" || -z "${PRODUCTION_API_SSH_KEY}" ]]; then
@@ -88,6 +92,7 @@ jobs:
             exit 1
           fi
           user="${PRODUCTION_API_SSH_USER:-root}"
+          trap 'rm -f /tmp/prod_api_key' EXIT
           install -m 600 /dev/null /tmp/prod_api_key
           printf '%s\n' "${PRODUCTION_API_SSH_KEY}" > /tmp/prod_api_key
 
@@ -105,32 +110,25 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsS --max-time 30 "https://${PROD_API_HOST}/fingerprint" | tee /tmp/fingerprint.json
-          python3 - <<'PY'
-          import json, os, sys
-          fp = json.load(open("/tmp/fingerprint.json"))
-          want = os.environ["WANT_SHA"]
-          got = fp.get("git_sha") or ""
-          if got in ("unknown", ""):
-              print(f"::warning::fingerprint git_sha still unknown (got={got!r})")
-          elif not (got.startswith(want[:7]) or want.startswith(got[:7])):
-              print(f"::error::fingerprint sha mismatch want={want[:12]} got={got}")
-              sys.exit(1)
-          else:
-              print(f"OK fingerprint git_sha={got}")
-          PY
+          python3 scripts/ci/production_deploy_identity.py fingerprint \
+            --fingerprint-file /tmp/fingerprint.json \
+            --expected-sha "$WANT_SHA" \
+            --expected-project "$PROD_SUPABASE_PROJECT_REF"
         env:
-          WANT_SHA: ${{ github.event.inputs.api_image_tag }}
+          WANT_SHA: ${{ inputs.api_image_tag }}
 
       - name: Upload API deploy evidence
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: production-api-fingerprint
           path: /tmp/fingerprint.json
+          if-no-files-found: ignore
 
   promote-vercel:
     name: Promote vendor + admin
     needs: guard
-    if: ${{ github.event.inputs.skip_vercel != true }}
+    if: ${{ inputs.skip_vercel != true }}
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -152,10 +150,11 @@ jobs:
 
   verify:
     name: Post-deploy verify
-    needs: [deploy-api, promote-vercel]
+    needs: [guard, deploy-api, promote-vercel]
     if: >-
       always() &&
-      github.event.inputs.verify_live == true &&
+      needs.guard.result == 'success' &&
+      inputs.verify_live == true &&
       (needs.deploy-api.result == 'success' || needs.deploy-api.result == 'skipped') &&
       (needs.promote-vercel.result == 'success' || needs.promote-vercel.result == 'skipped')
     runs-on: ubuntu-latest
@@ -164,6 +163,6 @@ jobs:
 
       - name: verify_live.sh
         env:
-          MASTER_GIT_SHA: ${{ github.event.inputs.api_image_tag }}
+          MASTER_GIT_SHA: ${{ inputs.api_image_tag }}
           EXPECTED_ENV: production
         run: bash scripts/ops/verify_live.sh
