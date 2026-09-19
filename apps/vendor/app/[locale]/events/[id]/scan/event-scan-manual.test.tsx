@@ -90,6 +90,22 @@ vi.mock("next-intl", () => ({
 import { ScannerView } from "./_components/scanner-view";
 import { manualVerifyErrorKind } from "./_lib/manual-verify-errors";
 
+import type { VerifyTicketResponse } from "./_lib/scan-sync-client";
+
+const pendingManualVerifications: Array<() => Promise<void>> = [];
+
+function pendingManualVerification(response: VerifyTicketResponse) {
+  let resolve!: (value: VerifyTicketResponse) => void;
+  const pending = new Promise<VerifyTicketResponse>((settle) => {
+    resolve = settle;
+  });
+  pendingManualVerifications.push(async () => {
+    resolve(response);
+    await pending;
+  });
+  return pending;
+}
+
 function renderScanner() {
   return render(<ScannerView eventId={ROUTE_EVENT_PARAM} />);
 }
@@ -107,15 +123,21 @@ async function openManualFallback() {
 }
 
 async function submitManual(ticketId: string, pin: string) {
-  const user = userEvent.setup();
-  await user.clear(screen.getByTestId("event-scan-manual-ticket-id"));
-  await user.type(screen.getByTestId("event-scan-manual-ticket-id"), ticketId);
-  await user.clear(screen.getByTestId("event-scan-manual-pin"));
-  await user.type(screen.getByTestId("event-scan-manual-pin"), pin);
-  await user.click(screen.getByTestId("event-scan-manual-submit"));
+  fireEvent.change(screen.getByTestId("event-scan-manual-ticket-id"), {
+    target: { value: ticketId },
+  });
+  fireEvent.change(screen.getByTestId("event-scan-manual-pin"), { target: { value: pin } });
+  await userEvent.setup().click(screen.getByTestId("event-scan-manual-submit"));
 }
 
 beforeEach(() => {
+  // Call-history clearing leaves mock*Once queues and default implementations
+  // intact. Reset only this fixture's clients before re-establishing defaults.
+  getEventMock.mockReset();
+  getScanSyncMock.mockReset();
+  verifyBatchMock.mockReset();
+  verifyManualPinMock.mockReset();
+  overrideCheckInMock.mockReset();
   sessionValue = { access_token: "test-token" };
   sessionLoading = false;
   getEventMock.mockResolvedValue({
@@ -143,6 +165,15 @@ beforeEach(() => {
     horizon_end_window: 0,
     tickets: [],
   });
+  verifyBatchMock.mockResolvedValue([]);
+  verifyManualPinMock.mockRejectedValue(
+    new ApiError("forbidden", "Manual verification must be configured by the test", {
+      status: 403,
+    }),
+  );
+  overrideCheckInMock.mockRejectedValue(
+    new ApiError("forbidden", "Override is not allowed by this fixture", { status: 403 }),
+  );
   Object.defineProperty(navigator, "onLine", {
     configurable: true,
     value: true,
@@ -150,9 +181,44 @@ beforeEach(() => {
   });
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
-  vi.clearAllMocks();
+  // Pending-state assertions run before teardown. Unmount first, then finish
+  // these test-owned promises so no verification continuation crosses tests.
+  await act(async () => {
+    await Promise.all(pendingManualVerifications.splice(0).map((settle) => settle()));
+  });
+});
+
+// Exercise the real afterEach/beforeEach boundary, not a standalone spy model.
+// The first test intentionally finishes without consuming its queued response;
+// no timeout is needed to reproduce the fixture state left by an interrupted test.
+describe.sequential("event scanner · fixture lifecycle isolation", () => {
+  it("leaves a one-shot duplicate rejection unconsumed", () => {
+    verifyManualPinMock.mockRejectedValueOnce(
+      new ApiError("ticket_already_checked_in", "Ticket has already been checked in", {
+        status: 409,
+      }),
+    );
+    expect(verifyManualPinMock).not.toHaveBeenCalled();
+  });
+
+  it("uses a fresh forbidden response after the normal fixture reset", async () => {
+    verifyManualPinMock.mockRejectedValue(
+      new ApiError("forbidden", "You do not have access to this event", { status: 403 }),
+    );
+
+    await renderReadyScanner();
+    await openManualFallback();
+    await submitManual(TICKET_ID, "654321");
+
+    expect(verifyManualPinMock).toHaveBeenCalledTimes(1);
+    const flash = await screen.findByTestId("event-scan-flash-error");
+    expect(flash).toHaveTextContent("Not permitted");
+    expect(flash).toHaveAttribute("data-scan-result-kind", "unauthorized");
+    expect(flash).not.toHaveTextContent("Already checked in");
+    expect(screen.queryByTestId("event-scan-flash-success")).not.toBeInTheDocument();
+  });
 });
 
 describe("event scanner · manual fallback surface", () => {
@@ -599,7 +665,7 @@ describe("event scanner · one verdict belongs to one guest", () => {
     verifyManualPinMock
       .mockResolvedValueOnce(checkedIn("Chanda Mwansa"))
       // Second guest: the server has not answered yet.
-      .mockReturnValueOnce(new Promise(() => {}));
+      .mockReturnValueOnce(pendingManualVerification(checkedIn("Mutale Banda")));
 
     await renderReadyScanner();
     await openManualFallback();
@@ -621,7 +687,7 @@ describe("event scanner · one verdict belongs to one guest", () => {
   });
 
   it("sends exactly one verification when two submits land in the same tick", async () => {
-    verifyManualPinMock.mockReturnValue(new Promise(() => {}));
+    verifyManualPinMock.mockReturnValue(pendingManualVerification(checkedIn("Chanda Mwansa")));
 
     await renderReadyScanner();
     await openManualFallback();

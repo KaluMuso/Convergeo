@@ -1,0 +1,60 @@
+{
+  "capturedAt": "2026-09-17T22:05:00.000Z",
+  "chromium": "playwright /opt/pw-browsers/chromium",
+  "sourceComponent": "origin/master:apps/customer/app/[locale]/(shop)/_components/pdp/sticky-mobile-atc.tsx (pre-fix, single-row layout)",
+  "note": "priceScrollWidthExceedsClientWidth=false at 390 means the shorter K249.00 string happens to just fit its starved box at that width; stockTruncatedVisually=true at both widths is the reproduced defect (175px of content in a 61-91px box).",
+  "results": [
+    {
+      "viewport": "360",
+      "layout": {
+        "priceRect": {
+          "left": 16,
+          "right": 76.875,
+          "top": 693.703125,
+          "bottom": 721.703125,
+          "width": 60.875
+        },
+        "decRect": {
+          "left": 88.875,
+          "right": 132.875,
+          "top": 685.703125,
+          "bottom": 729.703125,
+          "width": 44
+        },
+        "priceOverlapsDecrementControl": false,
+        "priceScrollWidthExceedsClientWidth": true,
+        "priceClientWidth": 61,
+        "stockText": "In stock \u00b7 Minimum order: 3",
+        "stockScrollWidth": 175,
+        "stockClientWidth": 61,
+        "stockTruncatedVisually": true
+      }
+    },
+    {
+      "viewport": "390",
+      "layout": {
+        "priceRect": {
+          "left": 16,
+          "right": 106.875,
+          "top": 737.703125,
+          "bottom": 765.703125,
+          "width": 90.875
+        },
+        "decRect": {
+          "left": 118.875,
+          "right": 162.875,
+          "top": 729.703125,
+          "bottom": 773.703125,
+          "width": 44
+        },
+        "priceOverlapsDecrementControl": false,
+        "priceScrollWidthExceedsClientWidth": false,
+        "priceClientWidth": 91,
+        "stockText": "In stock \u00b7 Minimum order: 3",
+        "stockScrollWidth": 175,
+        "stockClientWidth": 91,
+        "stockTruncatedVisually": true
+      }
+    }
+  ]
+}

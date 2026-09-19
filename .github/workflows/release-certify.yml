@@ -2,7 +2,8 @@ name: Release certification
 
 # Independent release-certification suite — on-demand and weekly.
 # Produces evidence under scripts/qa/evidence/<sha>/<env>/<runId>/.
-# integrated-staging uploads immutable staging-certification-evidence artifact.
+# Historical integrated-staging artifacts remain consumer-compatible. New full
+# staging certification is produced only inside staging-operation.yml's lock.
 # Does NOT merge. Strict modes exit non-zero unless certification verdict PASS.
 run-name: release-certify ${{ inputs.mode || 'ci' }} ${{ inputs.candidate_sha || github.sha }}
 on:
@@ -19,10 +20,9 @@ on:
         options:
           - local-development
           - ci
-          - integrated-staging
           - production-readiness
       candidate_sha:
-        description: "Exact candidate git SHA to certify (required for integrated-staging)"
+        description: "Exact candidate git SHA to certify (defaults to the workflow SHA)"
         required: false
         type: string
       environment:
@@ -90,6 +90,12 @@ jobs:
           set -euo pipefail
           MODE="${{ inputs.mode || 'ci' }}"
           echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+
+      - name: Reject retired standalone integrated-staging mode
+        if: steps.mode.outputs.mode == 'integrated-staging'
+        run: |
+          echo "::error::integrated-staging certification is owned by the protected staging operation"
+          exit 1
 
       - name: Require explicit candidate SHA for integrated-staging
         if: steps.mode.outputs.mode == 'integrated-staging'

@@ -129,9 +129,46 @@ describe("e2e-staging-probe SHA proof", () => {
     assert.equal(r.ok, true);
   });
 
-  it("matching prefix → ok", () => {
+  it("matching prefix in strict mode → fail", () => {
     const r = validateBuildSha(sha.slice(0, 12), sha, { strict: true });
+    assert.equal(r.ok, false);
+    assert.match(r.reason, /full 40-hex/i);
+  });
+
+  it("matching validated prefix in non-strict mode → ok", () => {
+    const r = validateBuildSha(sha.slice(0, 12), sha, { strict: false });
     assert.equal(r.ok, true);
+    assert.equal(r.prefixLen, 12);
+  });
+
+  it("full SHAs sharing twelve characters but differing later fail strict", () => {
+    const collision = `${sha.slice(0, 12)}${"0".repeat(28)}`;
+    const r = validateBuildSha(collision, sha, { strict: true });
+    assert.equal(r.ok, false);
+    assert.match(r.reason, /exactly match/i);
+  });
+
+  it("missing expected SHA strict → fail", () => {
+    const r = validateBuildSha(sha, "", { strict: true });
+    assert.equal(r.ok, false);
+    assert.match(r.reason, /expected SHA missing/i);
+  });
+
+  it("abbreviated expected SHA always fails", () => {
+    for (const strict of [false, true]) {
+      const r = validateBuildSha(sha, sha.slice(0, 12), { strict });
+      assert.equal(r.ok, false);
+      assert.match(r.reason, /full 40-hex/i);
+    }
+  });
+
+  it("malformed partial buildId never passes", () => {
+    for (const buildId of ["deadbe", "deadbee?", "deadbeef\n", `${sha.slice(0, 12)}z`]) {
+      for (const strict of [false, true]) {
+        const r = validateBuildSha(buildId, sha, { strict });
+        assert.equal(r.ok, false);
+      }
+    }
   });
 
   it("wrong SHA strict → fail", () => {
@@ -216,7 +253,12 @@ describe("e2e-staging-probe integrated fetch", () => {
   it("strict certification + staging env → PASS", async () => {
     const fetchImpl = async () =>
       new Response(
-        JSON.stringify({ status: "ok", app: "customer", env: "staging", buildId: "deadbeef" }),
+        JSON.stringify({
+          status: "ok",
+          app: "customer",
+          env: "staging",
+          buildId: "deadbeefcafebabe0123456789abcdef01234567",
+        }),
         { status: 200 },
       );
 
@@ -334,7 +376,7 @@ describe("e2e-staging-probe strict portal identity", () => {
     );
     const r = await probeStagingAccess(strictEnvFor(), { portal: "customer", fetchImpl });
     assert.equal(r.verdict, "FAIL");
-    assert.match(r.detail, /buildId prefix mismatch/i);
+    assert.match(r.detail, /buildId does not.*match/i);
   });
 
   it("vendor on a different SHA → FAIL (version skew is never a baseline)", async () => {
@@ -349,7 +391,7 @@ describe("e2e-staging-probe strict portal identity", () => {
     );
     const r = await probeStagingAccess(strictEnvFor(), { portal: "vendor", fetchImpl });
     assert.equal(r.verdict, "FAIL");
-    assert.match(r.detail, /buildId prefix mismatch/i);
+    assert.match(r.detail, /buildId does not.*match/i);
   });
 
   it("vendor target serving the customer app → FAIL", async () => {

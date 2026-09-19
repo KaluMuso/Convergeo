@@ -39,16 +39,31 @@ def test_authorization_matrix_has_one_unconditional_owner() -> None:
     assert CI.count("uv run pytest tests/test_authz_matrix.py") == 1
     assert "if:" not in security_header
     assert re.search(r"(?m)^\s+continue-on-error:", security) is None
+    collect = security.index("Collect trusted authorization matrix inventory")
+    execute = security.index("Route x role authz matrix (sole owner, no DB)")
+    prove = security.index("Prove the authz matrix ran (no silent skip)")
+    assert collect < execute < prove
+    assert "assert_authz_matrix_ran.py collect" in security
+    assert "--inventory authz-matrix-expected.json" in security
+    assert '--checkout-sha "${GITHUB_SHA}"' in security
     assert "--junitxml=authz-matrix.xml" in security
     assert "if: always()" in security
-    assert "assert_authz_matrix_ran.py authz-matrix.xml" in security
+    assert "assert_authz_matrix_ran.py validate authz-matrix.xml" in security
+    assert "services/api/authz-matrix-expected.json" in security
+
+    guard = (REPO_ROOT / "scripts" / "ci" / "assert_authz_matrix_ran.py").read_text(
+        encoding="utf-8"
+    )
+    assert "MINIMUM_CASES" not in guard
+    assert "expected testcase identities missing" in guard
+    assert "unexpected testcase identities" in guard
 
 
 def test_rls_job_has_truthful_isolated_data_preconditions() -> None:
     rls = job_block("rls")
-    rls_fixture = (
-        REPO_ROOT / "services" / "api" / "tests" / "rls" / "conftest.py"
-    ).read_text(encoding="utf-8")
+    rls_fixture = (REPO_ROOT / "services" / "api" / "tests" / "rls" / "conftest.py").read_text(
+        encoding="utf-8"
+    )
 
     assert "supabase db reset --no-seed" in rls
     assert "scripts/seed.py" not in rls

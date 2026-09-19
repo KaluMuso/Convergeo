@@ -129,7 +129,8 @@ export default async function ShopLayout({ children, params }: ShopLayoutProps) 
           supplies: t("shop.supplies"),
           account: t("shop.account"),
           cart: t("shop.cart"),
-          cartWithCount: t("shop.cartWithCount"),
+          // Interpolated with the live cart count in the header client component.
+          cartWithCount: String(t.raw("shop.cartWithCount")),
           openCart: tCheckout("cart.openCart"),
           searchInput: {
             placeholder: t("shop.searchPlaceholder"),

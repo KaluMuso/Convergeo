@@ -195,6 +195,7 @@ jobs:
         run: |
           node scripts/ci/bundle-guard.mjs --self-test
           node scripts/ci/image-lint.mjs --self-test
+          node --test scripts/ci/perf-reporting.test.mjs
 
       - name: Validate Lighthouse config
         run: node scripts/ci/validate-lighthouserc.mjs
@@ -298,4 +299,6 @@ jobs:
         with:
           name: lighthouse-reports
           path: .lighthouseci
+          # LHCI writes into a dot-directory; upload-artifact excludes it by default.
+          include-hidden-files: true
           if-no-files-found: ignore

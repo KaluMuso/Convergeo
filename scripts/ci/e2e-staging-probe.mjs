@@ -194,7 +194,13 @@ export function validateHealthPayload(body, opts = {}) {
 }
 
 /**
- * Compare deployment buildId against an expected git SHA (prefix-safe).
+ * Compare deployment buildId against an expected git SHA.
+ *
+ * Strict release probes require two complete 40-hex SHAs and exact equality.
+ * Non-strict probes still require a complete expected SHA, but may accept a
+ * validated 7-39 hex build abbreviation that is its literal prefix. Unknown
+ * build identity may be skipped only outside strict mode; malformed identity
+ * always fails.
  *
  * @param {string} buildId
  * @param {string} expectedSha
@@ -202,13 +208,17 @@ export function validateHealthPayload(body, opts = {}) {
  */
 export function validateBuildSha(buildId, expectedSha, opts = {}) {
   const strict = opts.strict ?? false;
-  const normBuild = buildId.trim().toLowerCase();
-  const normExpected = expectedSha.trim().toLowerCase();
+  // Do not trim: surrounding whitespace makes either identity malformed.
+  const normBuild = buildId.toLowerCase();
+  const normExpected = expectedSha.toLowerCase();
   if (!normExpected) {
-    return { ok: true, skipped: true };
+    if (strict) {
+      return { ok: false, reason: "expected SHA missing in strict SHA mode" };
+    }
+    return { ok: true, skipped: true, warning: "expected SHA missing — SHA not verified" };
   }
-  if (!/^[0-9a-f]{7,40}$/.test(normExpected)) {
-    return { ok: false, reason: "expected SHA is not a valid git commit hash" };
+  if (!/^[0-9a-f]{40}$/.test(normExpected)) {
+    return { ok: false, reason: "expected SHA must be a full 40-hex git commit hash" };
   }
   if (!normBuild || normBuild === "unknown") {
     if (strict) {
@@ -216,17 +226,24 @@ export function validateBuildSha(buildId, expectedSha, opts = {}) {
     }
     return { ok: true, skipped: true, warning: "buildId missing — SHA not verified" };
   }
-  if (normBuild.startsWith(normExpected) || normExpected.startsWith(normBuild)) {
-    return { ok: true, matched: true };
+  if (strict) {
+    if (!/^[0-9a-f]{40}$/.test(normBuild)) {
+      return { ok: false, reason: "health buildId must be a full 40-hex SHA in strict mode" };
+    }
+    if (normBuild === normExpected) {
+      return { ok: true, matched: true };
+    }
+    return { ok: false, reason: "health buildId does not exactly match expected SHA" };
   }
-  // Allow shortened Vercel build ids that share a prefix with the full SHA.
-  const minLen = Math.min(normBuild.length, normExpected.length, 12);
-  if (minLen >= 7 && normBuild.slice(0, minLen) === normExpected.slice(0, minLen)) {
-    return { ok: true, matched: true, prefixLen: minLen };
+  if (!/^[0-9a-f]{7,40}$/.test(normBuild)) {
+    return { ok: false, reason: "health buildId must be 7-40 hexadecimal characters" };
+  }
+  if (normExpected.startsWith(normBuild)) {
+    return { ok: true, matched: true, prefixLen: normBuild.length };
   }
   return {
     ok: false,
-    reason: `buildId prefix mismatch (got ${normBuild.slice(0, 12)}…, want ${normExpected.slice(0, 12)}…)`,
+    reason: "health buildId does not match expected SHA",
   };
 }
 

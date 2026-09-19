@@ -5,28 +5,70 @@ name: E2E (Playwright · staging)
 # on any live target; the Lenco-sandbox pay and WhatsApp-mock legs only activate
 # when their secrets are present (founder gate F9b).
 on:
+  workflow_call:
+    outputs:
+      staging_ref_outcome:
+        value: ${{ jobs.e2e.outputs.staging_ref_outcome }}
+      customer_probe_outcome:
+        value: ${{ jobs.e2e.outputs.customer_probe_outcome }}
+      vendor_probe_outcome:
+        value: ${{ jobs.e2e.outputs.vendor_probe_outcome }}
+      setup_outcome:
+        value: ${{ jobs.e2e.outputs.setup_outcome }}
+      browser_outcome:
+        value: ${{ jobs.e2e.outputs.browser_outcome }}
+      execution_outcome:
+        value: ${{ jobs.e2e.outputs.execution_outcome }}
+      matrix_outcome:
+        value: ${{ jobs.e2e.outputs.matrix_outcome }}
+      cleanup_outcome:
+        value: ${{ jobs.e2e.outputs.cleanup_outcome }}
+    inputs:
+      internal_operation_id:
+        description: "Repository/run/attempt/SHA identity assigned by staging-operation.yml"
+        required: true
+        type: string
+      source_run_id:
+        required: true
+        type: number
+      source_run_attempt:
+        required: true
+        type: number
+      source_artifact_id:
+        required: true
+        type: number
+      base_url:
+        required: true
+        type: string
+      vendor_base_url:
+        required: true
+        type: string
+      admin_base_url:
+        required: true
+        type: string
+      expect_sha:
+        required: true
+        type: string
+      pre_release:
+        required: true
+        type: boolean
+      focus_group:
+        required: true
+        type: string
   schedule:
     # 02:30 UTC nightly.
     - cron: "30 2 * * *"
   workflow_dispatch:
     inputs:
-      base_url:
-        description: "Override E2E_BASE_URL (else uses the E2E_BASE_URL secret)"
-        required: false
-        type: string
-      vendor_base_url:
-        description: "Override E2E_VENDOR_BASE_URL (else uses the E2E_VENDOR_BASE_URL secret)"
-        required: false
-        type: string
-      expect_sha:
-        description: "Release-candidate SHA for strict buildId proof (default GITHUB_SHA)"
-        required: false
-        type: string
-      pre_release:
-        description: "Pre-release gate run (enables strict SHA verification)"
-        required: false
-        default: false
-        type: boolean
+      source_run_id:
+        description: "Successful trusted staging deployment run ID"
+        required: true
+        type: number
+      source_run_attempt:
+        description: "Exact deployment run attempt containing the final proof"
+        required: true
+        default: 1
+        type: number
       focus_group:
         # DIAGNOSTIC ONLY. A focused run is never a certification: it sets
         # CERTIFICATION_MODE=diagnostic-staging, which the certification
@@ -47,16 +89,29 @@ on:
           - performance
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
-  group: e2e-${{ github.ref }}
-  cancel-in-progress: true
+  # Standalone runs share the staging-operation key. A trusted outer operation
+  # already owns that key, so its called E2E leg uses a run-scoped nested key
+  # and cannot deadlock by reacquiring the parent's lock.
+  group: ${{ inputs.internal_operation_id != '' && format('staging-e2e-nested-{0}', github.run_id) || 'staging-operation' }}
+  cancel-in-progress: false
 
 jobs:
   e2e:
     name: Playwright critical paths (Fast-3G · 360px)
     runs-on: ubuntu-latest
+    outputs:
+      staging_ref_outcome: ${{ steps.staging_ref_guard.outcome }}
+      customer_probe_outcome: ${{ steps.customer_probe.outcome }}
+      vendor_probe_outcome: ${{ steps.vendor_probe.outcome }}
+      setup_outcome: ${{ steps.canonical_setup.outcome }}
+      browser_outcome: ${{ steps.e2e_run.outcome }}
+      execution_outcome: ${{ steps.execution_guard.outcome }}
+      matrix_outcome: ${{ steps.matrix_guard.outcome }}
+      cleanup_outcome: ${{ steps.cleanup.outcome }}
     # The protected `staging` environment gates this run behind human approval and
     # is the ONLY place the staging database credentials and the staging
     # service-role key exist. Nothing here is a repository-level secret.
@@ -66,13 +121,13 @@ jobs:
       CI: "true"
       # Canonical staging customer origin — set repository secret E2E_BASE_URL to
       # match staging environment STAGING_CUSTOMER_URL (Vercel Preview on branch staging).
-      E2E_BASE_URL: ${{ inputs.base_url || secrets.E2E_BASE_URL }}
+      E2E_BASE_URL: ${{ inputs.internal_operation_id != '' && inputs.base_url || github.event_name == 'schedule' && secrets.E2E_BASE_URL || '' }}
       # Pin the vendor target the same way base_url pins the customer target:
       # a release-quality run passes the exact immutable Preview URL, never a
       # mutable branch alias. Specs navigate this origin directly (vendor-sell,
       # event-ticket), so it is proven by its own preflight below.
-      E2E_VENDOR_BASE_URL: ${{ inputs.vendor_base_url || secrets.E2E_VENDOR_BASE_URL }}
-      E2E_ADMIN_BASE_URL: ${{ secrets.E2E_ADMIN_BASE_URL }}
+      E2E_VENDOR_BASE_URL: ${{ inputs.internal_operation_id != '' && inputs.vendor_base_url || github.event_name == 'schedule' && secrets.E2E_VENDOR_BASE_URL || '' }}
+      E2E_ADMIN_BASE_URL: ${{ inputs.internal_operation_id != '' && inputs.admin_base_url || github.event_name == 'schedule' && secrets.E2E_ADMIN_BASE_URL || '' }}
       E2E_LOCALE: en
       # Vercel Deployment Protection bypass for automation (header — never in URLs).
       # A bypass secret is issued PER VERCEL PROJECT and the three portals are
@@ -85,21 +140,25 @@ jobs:
       VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET_CUSTOMER }}
       VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET_VENDOR }}
       VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET_ADMIN }}
-      E2E_EXPECT_SHA: ${{ inputs.expect_sha || github.sha }}
+      E2E_EXPECT_SHA: ${{ inputs.internal_operation_id != '' && inputs.expect_sha || '' }}
+      E2E_SOURCE_RUN_ID: ${{ inputs.internal_operation_id != '' && inputs.source_run_id || '' }}
+      E2E_SOURCE_RUN_ATTEMPT: ${{ inputs.internal_operation_id != '' && inputs.source_run_attempt || '' }}
+      E2E_SOURCE_ARTIFACT_ID: ${{ inputs.internal_operation_id != '' && inputs.source_artifact_id || '' }}
+      E2E_PRE_RELEASE: ${{ inputs.internal_operation_id != '' && inputs.pre_release && 'true' || (inputs.internal_operation_id == '' && github.event_name == 'workflow_dispatch' && inputs.focus_group == 'full') && 'true' || '' }}
       # A focused diagnostic run keeps the SAME strict identity/SHA and portal
       # protection proof as certification — a subset result is only worth
       # reading if it ran against the exact deployed candidate. Strictness and
       # certification are deliberately separate switches.
-      E2E_STRICT_SHA: ${{ (inputs.pre_release || (inputs.focus_group != '' && inputs.focus_group != 'full')) && 'true' || '' }}
+      E2E_STRICT_SHA: ${{ (inputs.internal_operation_id != '' || github.event_name == 'workflow_dispatch') && 'true' || '' }}
       # integrated-staging ONLY for a full pre-release run. Focused runs are
       # marked diagnostic-staging so nothing downstream can mistake a subset
       # green for certification.
-      CERTIFICATION_MODE: ${{ inputs.pre_release && 'integrated-staging' || (inputs.focus_group != '' && inputs.focus_group != 'full') && 'diagnostic-staging' || '' }}
+      CERTIFICATION_MODE: ${{ (inputs.internal_operation_id != '' || github.event_name == 'workflow_dispatch') && inputs.focus_group == 'full' && 'integrated-staging' || (inputs.internal_operation_id != '' || github.event_name == 'workflow_dispatch') && inputs.focus_group != 'full' && 'diagnostic-staging' || '' }}
       # 'true' when this run must perform the full staging prerequisite chain
       # (canonical seed, fixture version, synthetic OTP preflight). Focused
       # diagnostic runs need it too: without the canonical seed the subset is
       # asserting against whatever the last run happened to leave behind.
-      E2E_STAGING_SETUP: ${{ (inputs.pre_release || (inputs.focus_group != '' && inputs.focus_group != 'full')) && 'true' || '' }}
+      E2E_STAGING_SETUP: ${{ (inputs.internal_operation_id != '' || github.event_name == 'workflow_dispatch') && 'true' || '' }}
       E2E_FOCUS_GROUP: ${{ inputs.focus_group || 'full' }}
       # Role-specific OTP codes (Supabase staging test-OTP map). Only the CODES
       # are secrets — the synthetic phone numbers come from the generated
@@ -122,10 +181,121 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Guard trusted staging operation entry
+        env:
+          INTERNAL_OPERATION_ID: ${{ inputs.internal_operation_id }}
+          CALLER_WORKFLOW_REF: ${{ github.workflow_ref }}
+          CALLED_WORKFLOW_REF: ${{ job.workflow_ref }}
+          REPOSITORY_ID: ${{ github.repository_id }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REPOSITORY}" != "KaluMuso/Convergeo" ] || [ "${REPOSITORY_ID}" != "1290591718" ]; then
+            echo "::error::untrusted repository for protected staging E2E"
+            exit 1
+          fi
+          if [ -n "${INTERNAL_OPERATION_ID}" ]; then
+            expected="${REPOSITORY_ID}:${GITHUB_RUN_ID}:${GITHUB_RUN_ATTEMPT}:${GITHUB_SHA}"
+            if [ "${INTERNAL_OPERATION_ID}" != "${expected}" ]; then
+              echo "::error::invalid internal staging operation identity"
+              exit 1
+            fi
+            if [ "${CALLER_WORKFLOW_REF}" != "KaluMuso/Convergeo/.github/workflows/staging-operation.yml@refs/heads/staging" ]; then
+              echo "::error::untrusted reusable-workflow caller"
+              exit 1
+            fi
+            if [ "${CALLED_WORKFLOW_REF}" != "KaluMuso/Convergeo/.github/workflows/e2e.yml@refs/heads/staging" ]; then
+              echo "::error::untrusted reusable E2E definition"
+              exit 1
+            fi
+            if [ "${GITHUB_REF}" != "refs/heads/staging" ] || [ "${GITHUB_SHA}" != "${E2E_EXPECT_SHA}" ]; then
+              echo "::error::nested staging operation ref/SHA mismatch"
+              exit 1
+            fi
+          elif [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            if [ "${GITHUB_REF}" != "refs/heads/staging" ]; then
+              echo "::error::manual staging E2E must run from refs/heads/staging"
+              exit 1
+            fi
+          fi
+
+      - name: Read exact deployment attempt and artifact metadata
+        id: source_handoff
+        if: ${{ inputs.internal_operation_id == '' && github.event_name == 'workflow_dispatch' }}
+        uses: actions/github-script@v8
+        env:
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SOURCE_RUN_ATTEMPT: ${{ inputs.source_run_attempt }}
+        with:
+          script: |
+            const path = require('path');
+            const runId = Number(process.env.SOURCE_RUN_ID);
+            const attempt = Number(process.env.SOURCE_RUN_ATTEMPT);
+            const adapter = require(path.join(
+              process.env.GITHUB_WORKSPACE,
+              'scripts', 'ci', 'github_handoff_metadata.cjs',
+            ));
+            const result = await adapter.collectHandoffMetadata({ github, context, runId, attempt });
+            const directory = path.join(process.env.RUNNER_TEMP, 'staging-handoff');
+            adapter.writeHandoffMetadata(directory, result);
+
+      - name: Resolve verified manifest to E2E inputs
+        id: resolve_handoff
+        if: ${{ inputs.internal_operation_id == '' && github.event_name == 'workflow_dispatch' }}
+        env:
+          SOURCE_RUN_ID: ${{ inputs.source_run_id }}
+          SOURCE_RUN_ATTEMPT: ${{ inputs.source_run_attempt }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID_CUSTOMER: ${{ secrets.VERCEL_PROJECT_ID_CUSTOMER }}
+          VERCEL_PROJECT_ID_VENDOR: ${{ secrets.VERCEL_PROJECT_ID_VENDOR }}
+          VERCEL_PROJECT_ID_ADMIN: ${{ secrets.VERCEL_PROJECT_ID_ADMIN }}
+          STAGING_BUILD_CONFIG_REVISION: ${{ vars.STAGING_BUILD_CONFIG_REVISION }}
+        run: |
+          set -euo pipefail
+          handoff_dir="${RUNNER_TEMP}/staging-handoff"
+          expected_sha="$(tr -d '\r\n' < "${handoff_dir}/expected-sha.txt")"
+          staging_sha="$(tr -d '\r\n' < "${handoff_dir}/staging-sha.txt")"
+          python3 scripts/ci/release_handoff_contract.py \
+            --archive "${handoff_dir}/proof.zip" \
+            --run "${handoff_dir}/run.json" \
+            --artifact "${handoff_dir}/artifact.json" \
+            --jobs "${handoff_dir}/jobs.json" \
+            --expected-sha "${expected_sha}" \
+            --current-staging-sha "${staging_sha}" \
+            --run-id "${SOURCE_RUN_ID}" \
+            --attempt "${SOURCE_RUN_ATTEMPT}" \
+            --configuration-revision "${STAGING_BUILD_CONFIG_REVISION}" \
+            --project-customer "${VERCEL_PROJECT_ID_CUSTOMER}" \
+            --project-vendor "${VERCEL_PROJECT_ID_VENDOR}" \
+            --project-admin "${VERCEL_PROJECT_ID_ADMIN}" \
+            --focus-group "${E2E_FOCUS_GROUP}" \
+            --github-env "${GITHUB_ENV}"
+
+      - name: Recheck staging ref immediately before protected mutation
+        id: staging_ref_guard
+        if: ${{ inputs.internal_operation_id != '' || github.event_name == 'workflow_dispatch' }}
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const expected = process.env.E2E_EXPECT_SHA || '';
+            if (!/^[0-9a-f]{40}$/.test(expected)) {
+              core.setFailed('verified full candidate SHA is unavailable');
+              return;
+            }
+            const current = await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'heads/staging',
+            });
+            if (current.data.object.sha !== expected) {
+              core.setFailed('staging ref moved after evidence resolution');
+            }
+
       # Fail closed BEFORE anything else: a strict certification must always
       # execute the complete matrix. A focused subset can never certify, so the
       # combination is refused rather than silently downgraded.
       - name: Guard — strict certification must run the full matrix
+        id: scope_guard
         run: |
           set -euo pipefail
           focus="${E2E_FOCUS_GROUP:-full}"
@@ -139,8 +309,12 @@ jobs:
               exit 1
               ;;
           esac
-          if [ "${{ inputs.pre_release }}" = "true" ] && [ "${focus}" != "full" ]; then
+          if [ "${E2E_PRE_RELEASE}" = "true" ] && [ "${focus}" != "full" ]; then
             echo "::error::pre_release certification requires focus_group=full — a focused subset is diagnostic only and can never certify a release."
+            exit 1
+          fi
+          if [ "${E2E_STRICT_SHA}" = "true" ] && [ "${focus}" = "full" ] && [ "${E2E_PRE_RELEASE}" != "true" ]; then
+            echo "::error::strict full-matrix execution must be an explicit pre-release certification."
             exit 1
           fi
           if [ "${focus}" != "full" ]; then
@@ -149,10 +323,11 @@ jobs:
           echo "focus_group=${focus}"
 
       - name: Guard — E2E_BASE_URL must be set
+        id: target_guard
         run: |
           set -euo pipefail
           if [ -z "${E2E_BASE_URL}" ]; then
-            echo "::error::E2E_BASE_URL not set — staging E2E blocked. Set repository secret E2E_BASE_URL to the canonical staging customer Preview URL (same value as staging environment STAGING_CUSTOMER_URL), or pass workflow_dispatch input base_url."
+            echo "::error::E2E_BASE_URL not set — provide a verified deployment handoff (manual runs require source_run_id/source_run_attempt)."
             exit 1
           fi
           case "${E2E_BASE_URL}" in
@@ -167,9 +342,11 @@ jobs:
       # No admin preflight: no current spec navigates the admin origin, and
       # admin identity is proven independently by Deploy staging.
       - name: Probe staging customer (identity + protection)
+        id: customer_probe
         run: node scripts/ci/e2e-staging-probe.mjs customer
 
       - name: Probe staging vendor (identity + protection)
+        id: vendor_probe
         run: node scripts/ci/e2e-staging-probe.mjs vendor
 
       # ── Canonical synthetic seed — strict certification runs only ──────────
@@ -216,6 +393,7 @@ jobs:
           echo "canonical seed target guards passed (staging project ref verified)"
 
       - name: Canonical cleanup + seed (once per run)
+        id: canonical_setup
         if: ${{ env.E2E_STAGING_SETUP == 'true' }}
         env:
           SUPABASE_DB_URL: ${{ secrets.STAGING_SUPABASE_DB_URL }}
@@ -339,6 +517,7 @@ jobs:
           npx playwright test ${FOCUS_SPECS} --list --reporter=json > results/list.json
 
       - name: Run E2E suite
+        id: e2e_run
         working-directory: e2e
         env:
           FOCUS_SPECS: ${{ steps.focus.outputs.specs }}
@@ -355,14 +534,17 @@ jobs:
           timeout --signal=TERM --kill-after=60s 15m npx playwright test ${FOCUS_SPECS}
 
       - name: Guard — browser tests must have executed
+        id: execution_guard
         if: success()
         run: node scripts/ci/verify-e2e-executed.mjs e2e/results/results.json
 
       - name: Guard — E2E execution-completeness contract
+        id: matrix_guard
         if: success()
         run: node scripts/ci/verify-e2e-matrix.mjs e2e/results/list.json e2e/results/results.json
 
       - name: Remove private runtime material
+        id: cleanup
         if: ${{ always() }}
         run: |
           set -euo pipefail
@@ -374,12 +556,110 @@ jobs:
       # whether a canonical search term genuinely returned zero hits), which a
       # green run would otherwise discard.
       - name: Upload trace/video artifacts
-        if: ${{ failure() || env.E2E_FOCUS_GROUP != 'full' }}
+        id: evidence_upload
+        if: ${{ failure() || cancelled() || env.E2E_FOCUS_GROUP != 'full' }}
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-artifacts-${{ github.run_id }}
+          name: playwright-artifacts-${{ github.run_id }}-attempt-${{ github.run_attempt }}
           path: |
             e2e/playwright-report
             e2e/results
           retention-days: 14
           if-no-files-found: ignore
+
+      - name: Publish sanitized completion record
+        if: ${{ always() && inputs.internal_operation_id == '' }}
+        env:
+          JOB_STATUS: ${{ job.status }}
+          INTERNAL_OPERATION_ID: ${{ inputs.internal_operation_id }}
+          SOURCE_READ_OUTCOME: ${{ steps.source_handoff.outcome }}
+          SOURCE_RESOLVE_OUTCOME: ${{ steps.resolve_handoff.outcome }}
+          SCOPE_OUTCOME: ${{ steps.scope_guard.outcome }}
+          TARGET_OUTCOME: ${{ steps.target_guard.outcome }}
+          STAGING_REF_OUTCOME: ${{ steps.staging_ref_guard.outcome }}
+          CUSTOMER_PROBE_OUTCOME: ${{ steps.customer_probe.outcome }}
+          VENDOR_PROBE_OUTCOME: ${{ steps.vendor_probe.outcome }}
+          SETUP_OUTCOME: ${{ steps.canonical_setup.outcome }}
+          E2E_OUTCOME: ${{ steps.e2e_run.outcome }}
+          EXECUTION_OUTCOME: ${{ steps.execution_guard.outcome }}
+          MATRIX_OUTCOME: ${{ steps.matrix_guard.outcome }}
+          CLEANUP_OUTCOME: ${{ steps.cleanup.outcome }}
+        run: |
+          set +e
+          classify() {
+            case "$1" in
+              success) printf 'PASS' ;;
+              failure) printf 'FAIL' ;;
+              skipped|'') printf 'NOT_RUN' ;;
+              cancelled) printf 'UNKNOWN' ;;
+              *) printf 'UNKNOWN' ;;
+            esac
+          }
+          scope="${E2E_FOCUS_GROUP:-full}"
+          case "${scope}" in
+            full|previous-six|cart|vendor-auth|checkout-honesty|performance) ;;
+            *) scope="UNKNOWN" ;;
+          esac
+          candidate="${E2E_EXPECT_SHA:-UNKNOWN}"
+          if ! printf '%s' "${candidate}" | grep -Eq '^[0-9a-f]{40}$'; then
+            candidate="UNKNOWN"
+          fi
+          if [ -n "${INTERNAL_OPERATION_ID}" ]; then
+            manifest_status="PASS"
+          elif [ "${SOURCE_READ_OUTCOME}" = "success" ] && [ "${SOURCE_RESOLVE_OUTCOME}" = "success" ]; then
+            manifest_status="PASS"
+          elif [ "${SOURCE_READ_OUTCOME}" = "failure" ] || [ "${SOURCE_RESOLVE_OUTCOME}" = "failure" ]; then
+            manifest_status="FAIL"
+          else
+            manifest_status="$(classify "${SOURCE_RESOLVE_OUTCOME}")"
+          fi
+          failed_boundary="none"
+          for entry in \
+            "manifest-to-e2e:${manifest_status}" \
+            "scope-guard:$(classify "${SCOPE_OUTCOME}")" \
+            "target-guard:$(classify "${TARGET_OUTCOME}")" \
+            "staging-ref:$(classify "${STAGING_REF_OUTCOME}")" \
+            "customer-full-sha:$(classify "${CUSTOMER_PROBE_OUTCOME}")" \
+            "vendor-full-sha:$(classify "${VENDOR_PROBE_OUTCOME}")" \
+            "canonical-setup:$(classify "${SETUP_OUTCOME}")" \
+            "browser-execution:$(classify "${E2E_OUTCOME}")" \
+            "execution-guard:$(classify "${EXECUTION_OUTCOME}")" \
+            "matrix-guard:$(classify "${MATRIX_OUTCOME}")"; do
+            name="${entry%%:*}"
+            result="${entry#*:}"
+            if [ "${result}" = "FAIL" ] || [ "${result}" = "UNKNOWN" ]; then
+              failed_boundary="${name}"
+              break
+            fi
+          done
+          {
+            echo "## Staging E2E completion"
+            echo
+            echo "- Candidate: \`${candidate}\`"
+            echo "- Scope: \`${scope}\`"
+            echo "- Run/attempt: \`${GITHUB_RUN_ID}/${GITHUB_RUN_ATTEMPT}\`"
+            echo "- Source deployment run/attempt: \`${E2E_SOURCE_RUN_ID:-UNKNOWN}/${E2E_SOURCE_RUN_ATTEMPT:-UNKNOWN}\`"
+            echo "- Current phase: \`complete\`"
+            echo "- Job result: \`${JOB_STATUS}\`"
+            echo "- Failed boundary: \`${failed_boundary}\`"
+            echo
+            echo "| Proof | Result |"
+            echo "|---|---|"
+            echo "| Manifest to E2E inputs | ${manifest_status} |"
+            echo "| Current staging ref | $(classify "${STAGING_REF_OUTCOME}") |"
+            echo "| Customer exact full SHA | $(classify "${CUSTOMER_PROBE_OUTCOME}") |"
+            echo "| Vendor exact full SHA | $(classify "${VENDOR_PROBE_OUTCOME}") |"
+            echo "| Canonical setup | $(classify "${SETUP_OUTCOME}") |"
+            echo "| Browser execution | $(classify "${E2E_OUTCOME}") |"
+            echo "| Execution completeness | $(classify "${MATRIX_OUTCOME}") |"
+            echo "| Private material cleanup | $(classify "${CLEANUP_OUTCOME}") |"
+            echo
+            echo "Artifacts: \`playwright-artifacts-${GITHUB_RUN_ID}-attempt-${GITHUB_RUN_ATTEMPT}\` when uploaded."
+            echo "Approval/completion path: GitHub native \`staging\` environment and workflow completion."
+            if [ "${JOB_STATUS}" = "success" ]; then
+              echo "Next owned action: coordinator review; no deployment or promotion was performed by this E2E workflow."
+            else
+              echo "Next owned action: inspect the failed boundary and retained diagnostics; this attempt is not release-eligible."
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
+          exit 0

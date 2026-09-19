@@ -267,6 +267,7 @@ if bash -n scripts/ci/vercel-staging-preview-prove.sh \
   && bash -n scripts/ci/reconcile-staging-migrations.sh \
   && bash -n scripts/ci/preflight-staging-schema-convergence.sh \
   && bash -n scripts/ci/staging-cors-preview-probe.sh \
+  && python3 -m py_compile scripts/ci/vercel_deployment_checkpoint.py \
   && python3 -m py_compile scripts/ci/validate_staging_proof.py \
   && python3 -m py_compile scripts/ci/reconcile_staging_migrations.py; then
   ok "preview prove + evidence bundle + migration reconcile + CORS probe syntax"
@@ -408,6 +409,21 @@ else
   bad "deploy-staging missing three-portal Preview proof wiring"
 fi
 
+# 13a) E1 retry transport: creation is checkpointed before any probe; every
+# recovered deployment is then re-probed. Attempt-scoped artifacts must not
+# collide with immutable artifacts from a prior run attempt.
+checkpoint_prepare_line="$(grep -n 'Create or recover Preview checkpoint' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+checkpoint_upload_line="$(grep -n 'Upload PRE_PROBE checkpoint' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+checkpoint_probe_line="$(grep -n 'Re-probe immutable Preview and mutable Customer hostname' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
+if [[ -n "${checkpoint_prepare_line}" && -n "${checkpoint_upload_line}" && -n "${checkpoint_probe_line}" ]] \
+  && [[ "${checkpoint_prepare_line}" -lt "${checkpoint_upload_line}" ]] \
+  && [[ "${checkpoint_upload_line}" -lt "${checkpoint_probe_line}" ]] \
+  && grep -q 'staging-preview-checkpoint-${{ matrix.portal }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}' .github/workflows/deploy-staging.yml; then
+  ok "Vercel retry checkpoint is attempt-scoped, persisted pre-probe, and always re-probed"
+else
+  bad "Vercel retry checkpoint must be uploaded before probes with an attempt-scoped artifact name"
+fi
+
 # 13b) deploy-staging must preflight ledger drift before db push
 preflight_line="$(grep -n 'preflight-staging-schema-convergence.sh' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
 push_line="$(grep -n 'supabase db push --include-all' .github/workflows/deploy-staging.yml | head -1 | cut -d: -f1 || true)"
@@ -449,9 +465,15 @@ doc = {
     "project_id": f"prj_{portal}",
     "candidate_sha": "${GOOD_SHA}",
     "deployment_id": f"dpl_{portal}",
-    "preview_url": f"https://{portal}.example.vercel.app",
+    "preview_url": f"https://convergeo-{portal}-abc123-vergeo-projects.vercel.app",
     "deployment_sha": "${GOOD_SHA}",
     "target": "preview",
+    "configuration_revision": "staging-config-test-v1",
+    "checkpoint_stage": "PRE_PROBE",
+    "deployment_action": "created",
+    "deployment_origin_attempt": 2,
+    "deployment_create_calls": 1,
+    "reused_deployments": 0,
     "health_status": "ok",
     "health_app": portal,
     "health_env": "staging",
@@ -459,6 +481,9 @@ doc = {
     "health_api_host": "api.staging.vergeo5.com",
     "env_metadata_status": "verified",
 }
+if portal == "customer":
+    doc["stable_hostname_status"] = "verified"
+    doc["stable_hostname_url"] = "https://customer.staging.vergeo5.com"
 pathlib.Path("/tmp/evidence-bundle-test", portal, "evidence.json").write_text(
     json.dumps(doc) + "\n", encoding="utf-8"
 )
@@ -485,6 +510,55 @@ if [[ "$rc" -eq 0 ]] \
 else
   bad "staging-evidence-bundle valid case failed (rc=$rc)"
   cat /tmp/bundle-out.txt || true
+fi
+
+# 15b) Release handoff is an explicit v2 envelope; missing source/config
+# identity cannot be promoted from a legacy diagnostic bundle.
+printf '{"env":"staging","git_sha":"%s","image_tag":"%s","supabase_project_ref":"iyasmrmbcrvlfxpzescb"}\n' \
+  "${GOOD_SHA}" "${GOOD_SHA}" >/tmp/fingerprint-release-test.json
+set +e
+bash scripts/ci/staging-evidence-bundle.sh \
+  --candidate-sha "${GOOD_SHA}" \
+  --preview-dir /tmp/evidence-bundle-test \
+  --fingerprint /tmp/fingerprint-release-test.json \
+  --staging-supabase-project-id iyasmrmbcrvlfxpzescb \
+  --migrate-result success \
+  --release-envelope \
+  --source-repository KaluMuso/Convergeo \
+  --source-repository-id 1290591718 \
+  --source-workflow .github/workflows/deploy-staging.yml \
+  --source-ref refs/heads/staging \
+  --source-run-id 100 \
+  --source-run-attempt 2 \
+  --configuration-revision staging-config-test-v1 \
+  --output /tmp/staging-sha-proof-v2-test.json >/tmp/bundle-v2-out.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -eq 0 ]] \
+  && grep -q '"schema_version": 2' /tmp/staging-sha-proof-v2-test.json \
+  && grep -q '"run_attempt": 2' /tmp/staging-sha-proof-v2-test.json \
+  && grep -q '"customer_same_site_cart": "PASS"' /tmp/staging-sha-proof-v2-test.json; then
+  ok "staging-evidence-bundle emits validated v2 release envelope"
+else
+  bad "staging-evidence-bundle v2 release envelope failed (rc=$rc)"
+  cat /tmp/bundle-v2-out.txt || true
+fi
+
+set +e
+bash scripts/ci/staging-evidence-bundle.sh \
+  --candidate-sha "${GOOD_SHA}" \
+  --preview-dir /tmp/evidence-bundle-test \
+  --fingerprint /tmp/fingerprint-release-test.json \
+  --staging-supabase-project-id iyasmrmbcrvlfxpzescb \
+  --migrate-result success \
+  --release-envelope \
+  --output /tmp/staging-sha-proof-v2-invalid.json >/tmp/bundle-v2-invalid-out.txt 2>&1
+rc=$?
+set -e
+if [[ "$rc" -ne 0 ]] && [[ ! -f /tmp/staging-sha-proof-v2-invalid.json ]]; then
+  ok "staging-evidence-bundle rejects unbound v2 release envelope"
+else
+  bad "staging-evidence-bundle accepted unbound v2 release envelope"
 fi
 
 # 16) validate_staging_proof negative + positive regression cases
@@ -694,10 +768,17 @@ else
   ok "vercel-staging-preview-prove never echoes the bypass secret value"
 fi
 
-# Only the SOURCE label (kind + variable name) may be recorded.
+# Only the SOURCE label (kind + variable name) may be recorded. Inspect each
+# GITHUB_OUTPUT block independently: E1 has a safe pre-probe checkpoint output
+# before the later secret selection, so scanning from the first block to EOF
+# would mistake unrelated in-memory secret handling for an output write.
+github_output_blocks="$(awk '
+  /if \[ -n "\$\{GITHUB_OUTPUT:-\}" \]; then/ { in_output = 1 }
+  in_output { print }
+  in_output && /^  fi$/ { in_output = 0 }
+' scripts/ci/vercel-staging-preview-prove.sh)"
 if grep -q '"bypass_source": os.environ\["bypass_source"\]' scripts/ci/vercel-staging-preview-prove.sh \
-  && ! sed -n "/if \[ -n \"\${GITHUB_OUTPUT:-}\" \]; then/,\$p" scripts/ci/vercel-staging-preview-prove.sh \
-     | grep -q 'BYPASS_SECRET'; then
+  && ! printf '%s\n' "${github_output_blocks}" | grep -q 'BYPASS_SECRET'; then
   ok "only the bypass SOURCE label reaches evidence/GITHUB_OUTPUT, never the secret"
 else
   bad "bypass secret must not reach evidence.json or GITHUB_OUTPUT (only its source label)"
@@ -845,14 +926,14 @@ fi
 # baseline must pin and prove BOTH. These guards keep that contract from
 # silently regressing back to "prove customer, assume the rest".
 
-# The vendor target must be overridable at dispatch, exactly like base_url, so a
-# release run can pin the immutable Preview URL instead of a mutable alias.
+# The vendor target is accepted only through the trusted reusable handoff, so a
+# release run pins the validated immutable Preview URL instead of a mutable alias.
 if grep -q '^      vendor_base_url:' .github/workflows/e2e.yml \
-  && grep -q 'E2E_VENDOR_BASE_URL: ${{ inputs.vendor_base_url || secrets.E2E_VENDOR_BASE_URL }}' \
+  && grep -q "E2E_VENDOR_BASE_URL: \${{ inputs.internal_operation_id != '' && inputs.vendor_base_url" \
     .github/workflows/e2e.yml; then
-  ok "e2e workflow accepts vendor_base_url and prefers it over the secret"
+  ok "e2e reusable workflow accepts the machine-derived vendor Preview URL"
 else
-  bad "e2e workflow must expose a vendor_base_url dispatch input wired ahead of E2E_VENDOR_BASE_URL"
+  bad "e2e reusable workflow must wire the validated vendor Preview URL"
 fi
 
 # Both preflights must run, and both must run BEFORE any Playwright install, so
@@ -1107,7 +1188,7 @@ fi
 # A focused run must never be able to present itself as certification. The
 # certification artifact gate accepts integrated-staging only, so the mode
 # expression is what keeps a subset out.
-if grep -q "CERTIFICATION_MODE: \${{ inputs.pre_release && 'integrated-staging'" .github/workflows/e2e.yml \
+if grep -q "CERTIFICATION_MODE: \${{ (inputs.internal_operation_id != '' || github.event_name == 'workflow_dispatch')" .github/workflows/e2e.yml \
   && grep -q "'diagnostic-staging'" .github/workflows/e2e.yml; then
   ok "focused runs are marked diagnostic-staging, never integrated-staging"
 else
@@ -1138,7 +1219,7 @@ fi
 # strict identity proof as certification.
 if grep -q 'E2E_STAGING_SETUP:' .github/workflows/e2e.yml \
   && grep -q "if: \${{ env.E2E_STAGING_SETUP == 'true' }}" .github/workflows/e2e.yml \
-  && grep -q "E2E_STRICT_SHA: \${{ (inputs.pre_release ||" .github/workflows/e2e.yml; then
+  && grep -q "E2E_STRICT_SHA: \${{ (inputs.internal_operation_id != '' || github.event_name == 'workflow_dispatch')" .github/workflows/e2e.yml; then
   ok "focused runs keep the canonical seed and strict identity/SHA proof"
 else
   bad "focused e2e runs must still seed canonically and prove deployed identity"
