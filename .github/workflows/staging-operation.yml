@@ -1,0 +1,224 @@
+name: Protected staging operation
+
+# One staging-only window owns deploy/proof -> canonical setup -> selected E2E
+# -> evidence and private-file cleanup. No job in this graph promotes production.
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+    inputs:
+      focus_group:
+        description: "E2E scope (only full is release-eligible)"
+        required: true
+        default: full
+        type: choice
+        options:
+          - full
+          - previous-six
+          - cart
+          - vendor-auth
+          - checkout-honesty
+          - performance
+
+permissions:
+  actions: read
+  contents: read
+  packages: write
+
+concurrency:
+  group: staging-operation
+  cancel-in-progress: false
+
+jobs:
+  authorize:
+    name: Authorize protected staging graph
+    runs-on: ubuntu-latest
+    steps:
+      - name: Bind repository, ref and full candidate
+        env:
+          REPOSITORY_ID: ${{ github.repository_id }}
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REPOSITORY}" != "KaluMuso/Convergeo" ] || [ "${REPOSITORY_ID}" != "1290591718" ]; then
+            echo "::error::untrusted repository for staging operation"
+            exit 1
+          fi
+          if [ "${GITHUB_REF}" != "refs/heads/staging" ] || ! printf '%s' "${GITHUB_SHA}" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::protected staging operation requires refs/heads/staging at a full SHA"
+            exit 1
+          fi
+
+  deploy:
+    name: Deploy and prove candidate
+    needs: authorize
+    uses: ./.github/workflows/deploy-staging.yml
+    permissions:
+      actions: read
+      contents: read
+      packages: write
+    with:
+      internal_operation_id: ${{ format('{0}:{1}:{2}:{3}', github.repository_id, github.run_id, github.run_attempt, github.sha) }}
+      release_candidate: true
+      api_image_tag: ${{ github.sha }}
+      skip_vercel: false
+      skip_migrate: false
+      seed_synthetic: false
+    secrets: inherit
+
+  e2e:
+    name: Canonical setup and selected E2E
+    needs: deploy
+    if: ${{ needs.deploy.result == 'success' && needs.deploy.outputs.handoff_status == 'PASS' }}
+    uses: ./.github/workflows/e2e.yml
+    permissions:
+      actions: read
+      contents: read
+    with:
+      internal_operation_id: ${{ format('{0}:{1}:{2}:{3}', github.repository_id, github.run_id, github.run_attempt, github.sha) }}
+      source_run_id: ${{ fromJSON(needs.deploy.outputs.source_run_id) }}
+      source_run_attempt: ${{ fromJSON(needs.deploy.outputs.source_run_attempt) }}
+      source_artifact_id: ${{ fromJSON(needs.deploy.outputs.source_artifact_id) }}
+      base_url: ${{ needs.deploy.outputs.base_url }}
+      vendor_base_url: ${{ needs.deploy.outputs.vendor_base_url }}
+      admin_base_url: ${{ needs.deploy.outputs.admin_base_url }}
+      expect_sha: ${{ needs.deploy.outputs.expect_sha }}
+      pre_release: ${{ (inputs.focus_group || 'full') == 'full' }}
+      focus_group: ${{ inputs.focus_group || 'full' }}
+    secrets: inherit
+
+  certify:
+    name: Certify completed full staging operation
+    needs: [authorize, deploy, e2e]
+    if: ${{ needs.authorize.result == 'success' && needs.deploy.result == 'success' && needs.deploy.outputs.handoff_status == 'PASS' && needs.e2e.result == 'success' && github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read exact operation attempt and source proof
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const path = require('path');
+            const adapter = require(path.join(
+              process.env.GITHUB_WORKSPACE,
+              'scripts', 'ci', 'github_handoff_metadata.cjs',
+            ));
+            const result = await adapter.collectHandoffMetadata({
+              github,
+              context,
+              runId: context.runId,
+              attempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+            });
+            adapter.writeHandoffMetadata(
+              path.join(process.env.RUNNER_TEMP, 'staging-certification-source'),
+              result,
+            );
+
+      - name: Emit operation-bound staging certification evidence
+        env:
+          AUTHORIZE_OUTCOME: ${{ needs.authorize.result }}
+          DEPLOY_OUTCOME: ${{ needs.deploy.result }}
+          E2E_OUTCOME: ${{ needs.e2e.result }}
+          SETUP_OUTCOME: ${{ needs.e2e.outputs.setup_outcome }}
+          BROWSER_OUTCOME: ${{ needs.e2e.outputs.browser_outcome }}
+          EXECUTION_OUTCOME: ${{ needs.e2e.outputs.execution_outcome }}
+          MATRIX_OUTCOME: ${{ needs.e2e.outputs.matrix_outcome }}
+          CLEANUP_OUTCOME: ${{ needs.e2e.outputs.cleanup_outcome }}
+          STAGING_REF_OUTCOME: ${{ needs.e2e.outputs.staging_ref_outcome }}
+          CUSTOMER_PROBE_OUTCOME: ${{ needs.e2e.outputs.customer_probe_outcome }}
+          VENDOR_PROBE_OUTCOME: ${{ needs.e2e.outputs.vendor_probe_outcome }}
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/emit_staging_certification_evidence.py \
+            --candidate-sha "${GITHUB_SHA}" \
+            --certification-run-id "${GITHUB_RUN_ID}" \
+            --certification-run-attempt "${GITHUB_RUN_ATTEMPT}" \
+            --operation-metadata-dir "${RUNNER_TEMP}/staging-certification-source" \
+            --focus-group full \
+            --authorize-outcome "${AUTHORIZE_OUTCOME}" \
+            --deploy-outcome "${DEPLOY_OUTCOME}" \
+            --handoff-outcome success \
+            --e2e-outcome "${E2E_OUTCOME}" \
+            --setup-outcome "${SETUP_OUTCOME}" \
+            --browser-outcome "${BROWSER_OUTCOME}" \
+            --execution-outcome "${EXECUTION_OUTCOME}" \
+            --matrix-outcome "${MATRIX_OUTCOME}" \
+            --cleanup-outcome "${CLEANUP_OUTCOME}" \
+            --staging-ref-outcome "${STAGING_REF_OUTCOME}" \
+            --customer-probe-outcome "${CUSTOMER_PROBE_OUTCOME}" \
+            --vendor-probe-outcome "${VENDOR_PROBE_OUTCOME}"
+
+      - name: Upload operation-bound staging certification evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: staging-certification-evidence-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: staging-certification-evidence/staging-certification-evidence.json
+          retention-days: 90
+          if-no-files-found: error
+
+  completion:
+    name: One sanitized operation completion
+    needs: [authorize, deploy, e2e]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Publish truthful final record
+        env:
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
+          E2E_RESULT: ${{ needs.e2e.result }}
+          HANDOFF_STATUS: ${{ needs.deploy.outputs.handoff_status }}
+          SOURCE_ARTIFACT_ID: ${{ needs.deploy.outputs.source_artifact_id }}
+          DEPLOYMENT_CREATE_CALLS: ${{ needs.deploy.outputs.deployment_create_calls }}
+          REUSED_DEPLOYMENTS: ${{ needs.deploy.outputs.reused_deployments }}
+          LOCK_OUTCOME: ${{ needs.authorize.result }}
+          STAGING_REF_OUTCOME: ${{ needs.e2e.outputs.staging_ref_outcome }}
+          CUSTOMER_PROBE_OUTCOME: ${{ needs.e2e.outputs.customer_probe_outcome }}
+          VENDOR_PROBE_OUTCOME: ${{ needs.e2e.outputs.vendor_probe_outcome }}
+          SETUP_OUTCOME: ${{ needs.e2e.outputs.setup_outcome }}
+          BROWSER_OUTCOME: ${{ needs.e2e.outputs.browser_outcome }}
+          EXECUTION_OUTCOME: ${{ needs.e2e.outputs.execution_outcome }}
+          MATRIX_OUTCOME: ${{ needs.e2e.outputs.matrix_outcome }}
+          CLEANUP_OUTCOME: ${{ needs.e2e.outputs.cleanup_outcome }}
+          FOCUS_GROUP: ${{ inputs.focus_group || 'full' }}
+        run: |
+          set +e
+          if ! python3 scripts/ci/staging_operation_contract.py \
+            --candidate "${GITHUB_SHA}" \
+            --scope "${FOCUS_GROUP}" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --run-attempt "${GITHUB_RUN_ATTEMPT}" \
+            --source-artifact-id "${SOURCE_ARTIFACT_ID}" \
+            --create-calls "${DEPLOYMENT_CREATE_CALLS}" \
+            --reused-deployments "${REUSED_DEPLOYMENTS}" \
+            --deploy-result "${DEPLOY_RESULT}" \
+            --e2e-result "${E2E_RESULT}" \
+            --handoff-status "${HANDOFF_STATUS}" \
+            --lock "${LOCK_OUTCOME}" \
+            --staging-ref "${STAGING_REF_OUTCOME}" \
+            --customer "${CUSTOMER_PROBE_OUTCOME}" \
+            --vendor "${VENDOR_PROBE_OUTCOME}" \
+            --setup "${SETUP_OUTCOME}" \
+            --browser "${BROWSER_OUTCOME}" \
+            --execution "${EXECUTION_OUTCOME}" \
+            --matrix "${MATRIX_OUTCOME}" \
+            --cleanup "${CLEANUP_OUTCOME}" \
+            --output "${GITHUB_STEP_SUMMARY}"; then
+            {
+              echo "## Protected staging operation completion"
+              echo
+              echo "- Candidate: \`UNKNOWN\`"
+              echo "- Run/attempt: \`${GITHUB_RUN_ID}/${GITHUB_RUN_ATTEMPT}\`"
+              echo "- Current phase: \`summary-generation-failed\`"
+              echo "- Failed boundary: \`completion-record\`"
+              echo "- Release eligible: \`NO\`"
+              echo "- Next owned action: inspect the workflow logs; no production promotion was performed."
+            } >> "${GITHUB_STEP_SUMMARY}"
+          fi
+          # This reporting job never replaces the deploy/E2E conclusions.
+          exit 0

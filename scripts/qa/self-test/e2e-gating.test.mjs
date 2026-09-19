@@ -8,6 +8,8 @@ import { resolveGatePolicy } from "../../../e2e/fixtures/gating-policy.ts";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const SPEC_DIR = path.join(REPO_ROOT, "e2e", "specs");
+const E2E_WORKFLOW = path.join(REPO_ROOT, ".github", "workflows", "e2e.yml");
+const HANDOFF_ADAPTER = path.join(REPO_ROOT, "scripts", "ci", "github_handoff_metadata.cjs");
 
 /**
  * PR C contract: in an integrated-staging certification run, a required journey
@@ -192,5 +194,70 @@ describe("PR C — required sites cannot regress to an unconditional skip", () =
         `${file} must not enforce — ${kind} is never a failure`,
       );
     }
+  });
+});
+
+describe("release handoff workflow contract", () => {
+  const source = readFileSync(E2E_WORKFLOW, "utf8");
+
+  it("manual runs accept an authenticated source run, not hand-entered SHA or URLs", () => {
+    const adapter = readFileSync(HANDOFF_ADAPTER, "utf8");
+    const dispatch = source.slice(
+      source.indexOf("  workflow_dispatch:"),
+      source.indexOf("\npermissions:"),
+    );
+    assert.match(dispatch, /source_run_id:/);
+    assert.match(dispatch, /source_run_attempt:/);
+    assert.doesNotMatch(dispatch, /Override E2E_BASE_URL|expect_sha:|vendor_base_url:/);
+    assert.match(source, /actions\/github-script@v8/);
+    assert.match(source, /github_handoff_metadata\.cjs/);
+    assert.match(adapter, /downloadArtifact/);
+    assert.match(adapter, /\^sha256:\[0-9a-f\]\{64\}\$/);
+  });
+
+  it("standalone E2E shares one non-cancelling staging operation key", () => {
+    assert.match(source, /\|\| 'staging-operation'/);
+    assert.match(source, /cancel-in-progress: false/);
+    assert.doesNotMatch(source, /cancel-in-progress: true/);
+  });
+
+  it("nested E2E requires a run-bound internal identity and cannot reacquire the parent key", () => {
+    assert.match(source, /internal_operation_id:/);
+    assert.match(
+      source,
+      /expected="\$\{REPOSITORY_ID\}:\$\{GITHUB_RUN_ID\}:\$\{GITHUB_RUN_ATTEMPT\}:\$\{GITHUB_SHA\}"/,
+    );
+    assert.match(
+      source,
+      /KaluMuso\/Convergeo\/\.github\/workflows\/staging-operation\.yml@refs\/heads\/staging/,
+    );
+    assert.match(source, /GITHUB_SHA.*E2E_EXPECT_SHA/);
+    assert.match(source, /CALLED_WORKFLOW_REF/);
+    assert.match(source, /staging-e2e-nested-/);
+    assert.ok(
+      source.indexOf("Guard trusted staging operation entry") <
+        source.indexOf("Canonical cleanup + seed"),
+    );
+  });
+
+  it("source proof resolves before mutation and exact-SHA browser probes", () => {
+    const resolve = source.indexOf("Resolve verified manifest to E2E inputs");
+    const customerProbe = source.indexOf("Probe staging customer");
+    const mutation = source.indexOf("Canonical cleanup + seed");
+    assert.ok(resolve >= 0 && resolve < customerProbe && customerProbe < mutation);
+    assert.match(source, /release_handoff_contract\.py/);
+    assert.match(source, /STAGING_BUILD_CONFIG_REVISION/);
+  });
+
+  it("always emits an allowlisted native completion record without messaging credentials", () => {
+    assert.match(source, /Publish sanitized completion record/);
+    assert.match(source, /if: \$\{\{ always\(\) \}\}/);
+    assert.match(source, /GitHub native .*staging.* environment and workflow completion/);
+    assert.match(source, /success\) printf 'PASS'/);
+    assert.match(source, /failure\) printf 'FAIL'/);
+    assert.match(source, /skipped\|''\) printf 'NOT_RUN'/);
+    assert.match(source, /cancelled\) printf 'UNKNOWN'/);
+    assert.match(source, /failure\(\) \|\| cancelled\(\)/);
+    assert.doesNotMatch(source, /SLACK_|WHATSAPP.*TOKEN|webhook.*notification/i);
   });
 });

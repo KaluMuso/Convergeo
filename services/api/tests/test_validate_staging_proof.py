@@ -184,3 +184,138 @@ def test_wrong_proof_candidate_sha_fails() -> None:
     proof = _proof("customer", candidate_sha=OTHER_SHA)
     with pytest.raises(proof_mod.ProofValidationError, match="candidate_sha"):
         proof_mod.validate_portal_proof("customer", proof, candidate_sha=CANDIDATE_SHA)
+
+
+def _release_proof() -> dict[str, Any]:
+    previews = {portal: _proof(portal) for portal in proof_mod.REQUIRED_PORTALS}
+    for portal, row in previews.items():
+        row["deployment_id"] = f"dpl_{portal}"
+        row["project_id"] = f"prj_{portal}"
+        row["preview_url"] = f"https://convergeo-{portal}-abc123-vergeo-projects.vercel.app"
+        row["configuration_revision"] = "staging-config-2026-09-14"
+        row["checkpoint_stage"] = "PRE_PROBE"
+        row["deployment_action"] = "created"
+        row["deployment_origin_attempt"] = 2
+        row["deployment_create_calls"] = 1
+        row["reused_deployments"] = 0
+    previews["customer"]["stable_hostname_status"] = "verified"
+    previews["customer"]["stable_hostname_url"] = proof_mod.CUSTOMER_STAGING_ORIGIN
+    return {
+        "schema_version": proof_mod.RELEASE_PROOF_VERSION,
+        "candidate_sha": CANDIDATE_SHA,
+        "previews": previews,
+        "api_fingerprint": {
+            "env": "staging",
+            "git_sha": CANDIDATE_SHA,
+            "image_tag": CANDIDATE_SHA,
+            "supabase_project_ref": proof_mod.STAGING_SUPABASE_PROJECT_REF,
+        },
+        "migrate_supabase_result": "success",
+        "source": {
+            "repository": proof_mod.RELEASE_REPOSITORY,
+            "repository_id": proof_mod.RELEASE_REPOSITORY_ID,
+            "workflow": ".github/workflows/deploy-staging.yml",
+            "ref": proof_mod.RELEASE_REF,
+            "candidate_sha": CANDIDATE_SHA,
+            "run_id": 10,
+            "run_attempt": 2,
+        },
+        "configuration": {
+            "identity_scheme": "operator-managed-non-secret-v1",
+            "revision": "staging-config-2026-09-14",
+        },
+        "deployment_efficiency": {
+            "create_calls": 3,
+            "reused_deployments": 0,
+            "portals": {
+                portal: {"action": "created", "origin_attempt": 2}
+                for portal in proof_mod.REQUIRED_PORTALS
+            },
+        },
+        "proof_outcomes": {proof_id: "PASS" for proof_id in proof_mod.RELEASE_PROOF_OUTCOMES},
+    }
+
+
+def _validate_release(proof: dict[str, Any]) -> None:
+    proof_mod.validate_release_envelope(
+        proof,
+        candidate_sha=CANDIDATE_SHA,
+        source_run_id=10,
+        source_run_attempt=2,
+        source_workflow=".github/workflows/deploy-staging.yml",
+        configuration_revision="staging-config-2026-09-14",
+    )
+
+
+def test_valid_v2_release_envelope_passes() -> None:
+    _validate_release(_release_proof())
+
+
+@pytest.mark.parametrize("outcome", ["FAIL", "NOT_RUN", "SKIPPED_APPROVED", "UNKNOWN"])
+def test_release_envelope_requires_executed_pass_outcomes(outcome: str) -> None:
+    proof = _release_proof()
+    proof["proof_outcomes"]["customer_same_site_cart"] = outcome
+    with pytest.raises(proof_mod.ProofValidationError, match="did not pass"):
+        _validate_release(proof)
+
+
+def test_release_envelope_rejects_legacy_schema_and_stale_attempt() -> None:
+    proof = _release_proof()
+    proof["schema_version"] = 1
+    with pytest.raises(proof_mod.ProofValidationError, match="schema_version"):
+        _validate_release(proof)
+
+    proof = _release_proof()
+    proof["source"]["run_attempt"] = 1
+    with pytest.raises(proof_mod.ProofValidationError, match="run_attempt"):
+        _validate_release(proof)
+
+
+def test_release_envelope_requires_full_health_and_api_image_sha() -> None:
+    proof = _release_proof()
+    proof["previews"]["vendor"]["health_build_id"] = None
+    with pytest.raises(proof_mod.ProofValidationError, match="full health SHA"):
+        _validate_release(proof)
+
+    proof = _release_proof()
+    proof["api_fingerprint"]["image_tag"] = "unknown"
+    with pytest.raises(proof_mod.ProofValidationError, match="image tag"):
+        _validate_release(proof)
+
+
+def test_release_envelope_binds_configuration_and_customer_same_site_origin() -> None:
+    proof = _release_proof()
+    proof["configuration"]["revision"] = "older-config"
+    with pytest.raises(proof_mod.ProofValidationError, match="configuration revision"):
+        _validate_release(proof)
+
+    proof = _release_proof()
+    proof["previews"]["customer"]["stable_hostname_url"] = (
+        "https://convergeo-customer-abc123-vergeo-projects.vercel.app"
+    )
+    with pytest.raises(proof_mod.ProofValidationError, match="same-site origin"):
+        _validate_release(proof)
+
+
+def test_release_envelope_binds_checkpoint_reprobe_counts_and_configuration() -> None:
+    proof = _release_proof()
+    proof["previews"]["vendor"].update(
+        deployment_action="reused", deployment_create_calls=0, reused_deployments=1
+    )
+    proof["deployment_efficiency"].update(create_calls=2, reused_deployments=1)
+    proof["deployment_efficiency"]["portals"]["vendor"]["action"] = "reused"
+    _validate_release(proof)
+
+    proof["deployment_efficiency"]["create_calls"] = 3
+    with pytest.raises(proof_mod.ProofValidationError, match="create count"):
+        _validate_release(proof)
+
+    proof = _release_proof()
+    proof["previews"]["admin"]["configuration_revision"] = "stale-config"
+    with pytest.raises(proof_mod.ProofValidationError, match="configuration revision"):
+        _validate_release(proof)
+
+    proof = _release_proof()
+    proof["previews"]["customer"]["deployment_create_calls"] = True
+    with pytest.raises(proof_mod.ProofValidationError, match="deployment count"):
+        _validate_release(proof)

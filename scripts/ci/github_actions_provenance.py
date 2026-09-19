@@ -13,12 +13,34 @@ from typing import Any, Protocol
 
 DEPLOY_STAGING_WORKFLOW = ".github/workflows/deploy-staging.yml"
 RELEASE_CERTIFY_WORKFLOW = ".github/workflows/release-certify.yml"
+STAGING_OPERATION_WORKFLOW = ".github/workflows/staging-operation.yml"
 STAGING_CERTIFICATION_ARTIFACT = "staging-certification-evidence"
 STAGING_SHA_PROOF_ARTIFACT = "staging-sha-proof"
 STAGING_SHA_PROOF_FILENAME = "staging-sha-proof.json"
 
 
+@dataclass(frozen=True)
+class WorkflowRunsPage:
+    """One bounded workflow-run query plus its server-reported total."""
+
+    runs: list[dict[str, Any]]
+    total_count: int
+
+    @property
+    def complete(self) -> bool:
+        return self.total_count == len(self.runs)
+
+
 class GitHubActionsClient(Protocol):
+    def get_workflow_runs_page(
+        self,
+        *,
+        workflow_path: str,
+        head_sha: str | None = None,
+        status: str | None = None,
+        per_page: int = 30,
+    ) -> WorkflowRunsPage: ...
+
     def get_workflow_runs(
         self,
         *,
@@ -29,6 +51,12 @@ class GitHubActionsClient(Protocol):
     ) -> list[dict[str, Any]]: ...
 
     def get_run(self, run_id: str) -> dict[str, Any]: ...
+
+    def get_run_attempt(self, run_id: str, attempt: int) -> dict[str, Any]: ...
+
+    def list_run_attempt_jobs(
+        self, run_id: str, attempt: int
+    ) -> list[dict[str, Any]]: ...
 
     def list_run_artifacts(self, run_id: str) -> list[dict[str, Any]]: ...
 
@@ -59,14 +87,14 @@ class LiveGitHubActionsClient:
         except urllib.error.URLError as exc:
             raise RuntimeError(f"GitHub API error for {url}: {exc.reason}") from exc
 
-    def get_workflow_runs(
+    def get_workflow_runs_page(
         self,
         *,
         workflow_path: str,
         head_sha: str | None = None,
         status: str | None = None,
         per_page: int = 30,
-    ) -> list[dict[str, Any]]:
+    ) -> WorkflowRunsPage:
         owner, repo = self.repository.split("/", 1)
         workflows = self._request(f"https://api.github.com/repos/{owner}/{repo}/actions/workflows")
         workflow_id = None
@@ -88,7 +116,32 @@ class LiveGitHubActionsClient:
         )
         payload = self._request(url)
         runs = payload.get("workflow_runs")
-        return runs if isinstance(runs, list) else []
+        total_count = payload.get("total_count")
+        if not isinstance(runs, list) or type(total_count) is not int:
+            raise RuntimeError("invalid workflow run listing")
+        normalized: list[dict[str, Any]] = []
+        for run in runs:
+            if not isinstance(run, dict):
+                raise RuntimeError("invalid workflow run metadata")
+            normalized.append(run)
+        if total_count < len(normalized):
+            raise RuntimeError("invalid workflow run total")
+        return WorkflowRunsPage(runs=normalized, total_count=total_count)
+
+    def get_workflow_runs(
+        self,
+        *,
+        workflow_path: str,
+        head_sha: str | None = None,
+        status: str | None = None,
+        per_page: int = 30,
+    ) -> list[dict[str, Any]]:
+        return self.get_workflow_runs_page(
+            workflow_path=workflow_path,
+            head_sha=head_sha,
+            status=status,
+            per_page=per_page,
+        ).runs
 
     def get_run(self, run_id: str) -> dict[str, Any]:
         owner, repo = self.repository.split("/", 1)
@@ -97,13 +150,53 @@ class LiveGitHubActionsClient:
         )
         return payload if isinstance(payload, dict) else {}
 
+    def get_run_attempt(self, run_id: str, attempt: int) -> dict[str, Any]:
+        owner, repo = self.repository.split("/", 1)
+        payload = self._request(
+            f"https://api.github.com/repos/{owner}/{repo}/actions/runs/"
+            f"{run_id}/attempts/{attempt}"
+        )
+        return payload if isinstance(payload, dict) else {}
+
+    def list_run_attempt_jobs(
+        self, run_id: str, attempt: int
+    ) -> list[dict[str, Any]]:
+        owner, repo = self.repository.split("/", 1)
+        payload = self._request(
+            f"https://api.github.com/repos/{owner}/{repo}/actions/runs/"
+            f"{run_id}/attempts/{attempt}/jobs?per_page=100"
+        )
+        jobs = payload.get("jobs")
+        result = jobs if isinstance(jobs, list) else []
+        total_count = payload.get("total_count")
+        if type(total_count) is not int or total_count != len(result):
+            raise RuntimeError("unbounded or incomplete workflow-attempt job set")
+        normalized: list[dict[str, Any]] = []
+        for raw in result:
+            if not isinstance(raw, dict):
+                raise RuntimeError("invalid workflow-attempt job metadata")
+            normalized.append(
+                {
+                    **raw,
+                    "run_id": int(run_id),
+                    "run_attempt": attempt,
+                    "head_sha": str(raw.get("head_sha") or ""),
+                }
+            )
+        return normalized
+
     def list_run_artifacts(self, run_id: str) -> list[dict[str, Any]]:
         owner, repo = self.repository.split("/", 1)
         payload = self._request(
-            f"https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}/artifacts"
+            f"https://api.github.com/repos/{owner}/{repo}/actions/runs/"
+            f"{run_id}/artifacts?per_page=100"
         )
         artifacts = payload.get("artifacts")
-        return artifacts if isinstance(artifacts, list) else []
+        result = artifacts if isinstance(artifacts, list) else []
+        total_count = payload.get("total_count")
+        if type(total_count) is not int or total_count != len(result):
+            raise RuntimeError("unbounded or incomplete workflow artifact set")
+        return result
 
     def download_artifact_zip(self, artifact_id: int) -> bytes:
         owner, repo = self.repository.split("/", 1)
