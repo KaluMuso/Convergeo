@@ -19,7 +19,28 @@ STAGING_SHA_PROOF_ARTIFACT = "staging-sha-proof"
 STAGING_SHA_PROOF_FILENAME = "staging-sha-proof.json"
 
 
+@dataclass(frozen=True)
+class WorkflowRunsPage:
+    """One bounded workflow-run query plus its server-reported total."""
+
+    runs: list[dict[str, Any]]
+    total_count: int
+
+    @property
+    def complete(self) -> bool:
+        return self.total_count == len(self.runs)
+
+
 class GitHubActionsClient(Protocol):
+    def get_workflow_runs_page(
+        self,
+        *,
+        workflow_path: str,
+        head_sha: str | None = None,
+        status: str | None = None,
+        per_page: int = 30,
+    ) -> WorkflowRunsPage: ...
+
     def get_workflow_runs(
         self,
         *,
@@ -66,14 +87,14 @@ class LiveGitHubActionsClient:
         except urllib.error.URLError as exc:
             raise RuntimeError(f"GitHub API error for {url}: {exc.reason}") from exc
 
-    def get_workflow_runs(
+    def get_workflow_runs_page(
         self,
         *,
         workflow_path: str,
         head_sha: str | None = None,
         status: str | None = None,
         per_page: int = 30,
-    ) -> list[dict[str, Any]]:
+    ) -> WorkflowRunsPage:
         owner, repo = self.repository.split("/", 1)
         workflows = self._request(f"https://api.github.com/repos/{owner}/{repo}/actions/workflows")
         workflow_id = None
@@ -95,7 +116,32 @@ class LiveGitHubActionsClient:
         )
         payload = self._request(url)
         runs = payload.get("workflow_runs")
-        return runs if isinstance(runs, list) else []
+        total_count = payload.get("total_count")
+        if not isinstance(runs, list) or type(total_count) is not int:
+            raise RuntimeError("invalid workflow run listing")
+        normalized: list[dict[str, Any]] = []
+        for run in runs:
+            if not isinstance(run, dict):
+                raise RuntimeError("invalid workflow run metadata")
+            normalized.append(run)
+        if total_count < len(normalized):
+            raise RuntimeError("invalid workflow run total")
+        return WorkflowRunsPage(runs=normalized, total_count=total_count)
+
+    def get_workflow_runs(
+        self,
+        *,
+        workflow_path: str,
+        head_sha: str | None = None,
+        status: str | None = None,
+        per_page: int = 30,
+    ) -> list[dict[str, Any]]:
+        return self.get_workflow_runs_page(
+            workflow_path=workflow_path,
+            head_sha=head_sha,
+            status=status,
+            per_page=per_page,
+        ).runs
 
     def get_run(self, run_id: str) -> dict[str, Any]:
         owner, repo = self.repository.split("/", 1)

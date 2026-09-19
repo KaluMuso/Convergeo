@@ -90,7 +90,7 @@ jobs:
   certify:
     name: Certify completed full staging operation
     needs: [authorize, deploy, e2e]
-    if: ${{ needs.authorize.result == 'success' && needs.deploy.result == 'success' && needs.deploy.outputs.handoff_status == 'PASS' && needs.e2e.result == 'success' && (github.event_name == 'push' || inputs.focus_group == 'full') }}
+    if: ${{ needs.authorize.result == 'success' && needs.deploy.result == 'success' && needs.deploy.outputs.handoff_status == 'PASS' && needs.e2e.result == 'success' && github.event_name == 'push' }}
     runs-on: ubuntu-latest
     permissions:
       actions: read

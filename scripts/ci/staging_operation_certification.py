@@ -106,7 +106,7 @@ def verify_operation_run(
         and run.get("head_branch") == "staging",
         "UNTRUSTED_WORKFLOW_REF",
     )
-    require(run.get("event") in {"push", "workflow_dispatch"}, "UNTRUSTED_EVENT")
+    require(run.get("event") == "push", "UNTRUSTED_EVENT")
     require(run.get("head_sha") == candidate, "RUN_SHA_MISMATCH")
     if require_completed:
         require(
@@ -425,6 +425,7 @@ def build_operation_certification_evidence(
         "certified_at": certified.isoformat().replace("+00:00", "Z"),
         "expires_at": expiry.isoformat().replace("+00:00", "Z"),
         "source_workflow": ORCHESTRATION_WORKFLOW,
+        "source_event": "push",
         "source_repository": REPOSITORY,
         "source_repository_id": REPOSITORY_ID,
         "source_ref": "refs/heads/staging",
@@ -490,6 +491,7 @@ def validate_operation_certification_evidence(
         require(run_id != str(current_run_id), "SELF_CERTIFICATION_FORBIDDEN")
     require(
         evidence.get("source_workflow") == ORCHESTRATION_WORKFLOW
+        and evidence.get("source_event") == "push"
         and evidence.get("source_repository") == REPOSITORY
         and evidence.get("source_repository_id") == REPOSITORY_ID
         and evidence.get("source_ref") == "refs/heads/staging",

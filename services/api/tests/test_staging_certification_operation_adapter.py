@@ -20,6 +20,10 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "ci"))
 
 from emit_staging_certification_evidence import main as emit_evidence  # noqa: E402
+from github_actions_provenance import (  # noqa: E402
+    GitHubActionsClient,
+    WorkflowRunsPage,
+)
 from release_handoff_contract import (  # noqa: E402
     API_HOST,
     CUSTOMER_ORIGIN,
@@ -85,12 +89,24 @@ def _workflow(name: str) -> dict[str, Any]:
 
 
 class OperationFixtureClient:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        run_id: int = RUN_ID,
+        attempt: int = ATTEMPT,
+        source_artifact_id: int = SOURCE_ARTIFACT_ID,
+        certification_artifact_id: int = CERTIFICATION_ARTIFACT_ID,
+    ) -> None:
         now = datetime.now(UTC).replace(microsecond=0)
         self.now = now
+        self.run_id = run_id
+        self.attempt = attempt
+        self.source_artifact_id = source_artifact_id
+        self.certification_artifact_id = certification_artifact_id
+        self.total_count = 1
         self.run: dict[str, Any] = {
-            "id": RUN_ID,
-            "run_attempt": ATTEMPT,
+            "id": run_id,
+            "run_attempt": attempt,
             "status": "completed",
             "conclusion": "success",
             "head_sha": SHA,
@@ -99,6 +115,7 @@ class OperationFixtureClient:
             "path": ORCHESTRATION_WORKFLOW,
             "repository": {"id": REPOSITORY_ID, "full_name": REPOSITORY},
             "head_repository": {"id": REPOSITORY_ID},
+            "created_at": _iso(now - timedelta(minutes=20)),
             "run_started_at": _iso(now - timedelta(minutes=20)),
             "updated_at": _iso(now),
         }
@@ -120,8 +137,8 @@ class OperationFixtureClient:
                 "workflow": ORCHESTRATION_WORKFLOW,
                 "ref": "refs/heads/staging",
                 "candidate_sha": SHA,
-                "run_id": RUN_ID,
-                "run_attempt": ATTEMPT,
+                "run_id": run_id,
+                "run_attempt": attempt,
             },
             "configuration": {
                 "identity_scheme": "operator-managed-non-secret-v1",
@@ -149,7 +166,7 @@ class OperationFixtureClient:
                 "configuration_revision": "rev_fixture",
                 "checkpoint_stage": "PRE_PROBE",
                 "deployment_action": "created",
-                "deployment_origin_attempt": ATTEMPT,
+                "deployment_origin_attempt": attempt,
                 "deployment_create_calls": 1,
                 "reused_deployments": 0,
             }
@@ -161,21 +178,21 @@ class OperationFixtureClient:
             "create_calls": 3,
             "reused_deployments": 0,
             "portals": {
-                portal: {"action": "created", "origin_attempt": ATTEMPT}
+                portal: {"action": "created", "origin_attempt": attempt}
                 for portal in PORTALS
             },
         }
         self.source_archive = _artifact_zip("staging-sha-proof.json", self.proof)
         self.source_artifact: dict[str, Any] = {
-            "id": SOURCE_ARTIFACT_ID,
-            "name": f"staging-sha-proof-{RUN_ID}-attempt-{ATTEMPT}",
-            "workflow_run_id": RUN_ID,
+            "id": source_artifact_id,
+            "name": f"staging-sha-proof-{run_id}-attempt-{attempt}",
+            "workflow_run_id": run_id,
             "expired": False,
             "digest": "sha256:" + hashlib.sha256(self.source_archive).hexdigest(),
             "size_in_bytes": len(self.source_archive),
             "created_at": _iso(now - timedelta(minutes=8)),
             "workflow_run": {
-                "id": RUN_ID,
+                "id": run_id,
                 "head_sha": SHA,
                 "head_branch": "staging",
                 "repository_id": REPOSITORY_ID,
@@ -197,8 +214,8 @@ class OperationFixtureClient:
     ) -> dict[str, Any]:
         return {
             "name": name,
-            "run_id": RUN_ID,
-            "run_attempt": ATTEMPT,
+            "run_id": self.run_id,
+            "run_attempt": self.attempt,
             "head_sha": SHA,
             "status": "completed",
             "conclusion": "success",
@@ -263,9 +280,11 @@ class OperationFixtureClient:
             "staging-certification-evidence.json", evidence
         )
         self.certification_artifact = {
-            "id": CERTIFICATION_ARTIFACT_ID,
-            "name": operation_certification_artifact_name(RUN_ID, ATTEMPT),
-            "workflow_run_id": RUN_ID,
+            "id": self.certification_artifact_id,
+            "name": operation_certification_artifact_name(
+                self.run_id, self.attempt
+            ),
+            "workflow_run_id": self.run_id,
             "expired": False,
             "digest": (
                 "sha256:" + hashlib.sha256(self.certification_archive).hexdigest()
@@ -273,7 +292,7 @@ class OperationFixtureClient:
             "size_in_bytes": len(self.certification_archive),
             "created_at": _iso(self.now - timedelta(seconds=70)),
             "workflow_run": {
-                "id": RUN_ID,
+                "id": self.run_id,
                 "head_sha": SHA,
                 "head_branch": "staging",
                 "repository_id": REPOSITORY_ID,
@@ -289,34 +308,126 @@ class OperationFixtureClient:
         status: str | None = None,
         per_page: int = 30,
     ) -> list[dict[str, Any]]:
-        _ = (head_sha, status, per_page)
-        return [self.run] if workflow_path == ORCHESTRATION_WORKFLOW else []
+        _ = per_page
+        if workflow_path != ORCHESTRATION_WORKFLOW:
+            return []
+        if head_sha and head_sha != self.run["head_sha"]:
+            return []
+        if status and status != self.run["status"]:
+            return []
+        return [self.run]
+
+    def get_workflow_runs_page(
+        self,
+        *,
+        workflow_path: str,
+        head_sha: str | None = None,
+        status: str | None = None,
+        per_page: int = 30,
+    ) -> WorkflowRunsPage:
+        runs = self.get_workflow_runs(
+            workflow_path=workflow_path,
+            head_sha=head_sha,
+            status=status,
+            per_page=per_page,
+        )
+        return WorkflowRunsPage(runs=runs, total_count=self.total_count)
 
     def get_run(self, run_id: str) -> dict[str, Any]:
-        if int(run_id) != RUN_ID:
+        if int(run_id) != self.run_id:
             raise AssertionError(run_id)
         return self.run
 
     def get_run_attempt(self, run_id: str, attempt: int) -> dict[str, Any]:
-        if int(run_id) != RUN_ID or attempt != ATTEMPT:
+        if int(run_id) != self.run_id or attempt != self.attempt:
             raise AssertionError((run_id, attempt))
         return self.run
 
     def list_run_attempt_jobs(self, run_id: str, attempt: int) -> list[dict[str, Any]]:
-        if int(run_id) != RUN_ID:
+        if int(run_id) != self.run_id:
             raise AssertionError(run_id)
-        return self.jobs if attempt == ATTEMPT else []
+        return self.jobs if attempt == self.attempt else []
 
     def list_run_artifacts(self, run_id: str) -> list[dict[str, Any]]:
-        if int(run_id) != RUN_ID:
+        if int(run_id) != self.run_id:
             raise AssertionError(run_id)
         return self.artifacts
 
     def download_artifact_zip(self, artifact_id: int) -> bytes:
-        if artifact_id == SOURCE_ARTIFACT_ID:
+        if artifact_id == self.source_artifact_id:
             return self.source_archive
-        if artifact_id == CERTIFICATION_ARTIFACT_ID:
+        if artifact_id == self.certification_artifact_id:
             return self.certification_archive
+        raise AssertionError(artifact_id)
+
+
+class OperationHistoryClient:
+    def __init__(
+        self,
+        clients: list[OperationFixtureClient],
+        *,
+        total_count: int | None = None,
+        current_runs: dict[int, dict[str, Any]] | None = None,
+    ) -> None:
+        self.clients = {client.run_id: client for client in clients}
+        self.total_count = total_count
+        self.current_runs = current_runs or {}
+        self.queries: list[tuple[str | None, int]] = []
+
+    def get_workflow_runs_page(
+        self,
+        *,
+        workflow_path: str,
+        head_sha: str | None = None,
+        status: str | None = None,
+        per_page: int = 30,
+    ) -> WorkflowRunsPage:
+        self.queries.append((status, per_page))
+        runs = [
+            client.run
+            for client in self.clients.values()
+            if workflow_path == ORCHESTRATION_WORKFLOW
+            and (head_sha is None or client.run.get("head_sha") == head_sha)
+            and (status is None or client.run.get("status") == status)
+        ]
+        total_count = self.total_count if self.total_count is not None else len(runs)
+        return WorkflowRunsPage(runs=runs[:per_page], total_count=total_count)
+
+    def get_workflow_runs(
+        self,
+        *,
+        workflow_path: str,
+        head_sha: str | None = None,
+        status: str | None = None,
+        per_page: int = 30,
+    ) -> list[dict[str, Any]]:
+        return self.get_workflow_runs_page(
+            workflow_path=workflow_path,
+            head_sha=head_sha,
+            status=status,
+            per_page=per_page,
+        ).runs
+
+    def get_run(self, run_id: str) -> dict[str, Any]:
+        numeric_id = int(run_id)
+        return self.current_runs.get(numeric_id, self.clients[numeric_id].run)
+
+    def get_run_attempt(self, run_id: str, attempt: int) -> dict[str, Any]:
+        return self.clients[int(run_id)].get_run_attempt(run_id, attempt)
+
+    def list_run_attempt_jobs(self, run_id: str, attempt: int) -> list[dict[str, Any]]:
+        return self.clients[int(run_id)].list_run_attempt_jobs(run_id, attempt)
+
+    def list_run_artifacts(self, run_id: str) -> list[dict[str, Any]]:
+        return self.clients[int(run_id)].list_run_artifacts(run_id)
+
+    def download_artifact_zip(self, artifact_id: int) -> bytes:
+        for client in self.clients.values():
+            if artifact_id in {
+                client.source_artifact_id,
+                client.certification_artifact_id,
+            }:
+                return client.download_artifact_zip(artifact_id)
         raise AssertionError(artifact_id)
 
 
@@ -324,7 +435,13 @@ class OperationCertificationAdapterTests(unittest.TestCase):
     def setUp(self) -> None:
         self.client = OperationFixtureClient()
 
-    def emit(self, client: OperationFixtureClient | None = None) -> dict[str, Any]:
+    def emit(
+        self,
+        client: OperationFixtureClient | None = None,
+        *,
+        focus_group: str = "full",
+        expected_exit: int = 0,
+    ) -> dict[str, Any]:
         selected = client or self.client
         with tempfile.TemporaryDirectory() as temp_name:
             root = Path(temp_name)
@@ -339,9 +456,9 @@ class OperationCertificationAdapterTests(unittest.TestCase):
                 "--candidate-sha",
                 SHA,
                 "--certification-run-id",
-                str(RUN_ID),
+                str(selected.run_id),
                 "--certification-run-attempt",
-                str(ATTEMPT),
+                str(selected.attempt),
                 "--operation-metadata-dir",
                 str(root),
                 "--output-dir",
@@ -349,7 +466,7 @@ class OperationCertificationAdapterTests(unittest.TestCase):
                 "--certified-at",
                 _iso(selected.now - timedelta(seconds=90)),
                 "--focus-group",
-                "full",
+                focus_group,
             ]
             for name in (
                 "authorize",
@@ -366,8 +483,16 @@ class OperationCertificationAdapterTests(unittest.TestCase):
                 "vendor_probe",
             ):
                 args.extend([f"--{name.replace('_', '-')}-outcome", "success"])
-            with contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(emit_evidence(args), 0)
+            with (
+                contextlib.redirect_stdout(io.StringIO()),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                self.assertEqual(emit_evidence(args), expected_exit)
+            if expected_exit != 0:
+                self.assertFalse(
+                    (output / "staging-certification-evidence.json").exists()
+                )
+                return {}
             evidence = json.loads(
                 (output / "staging-certification-evidence.json").read_text(
                     encoding="utf-8"
@@ -378,7 +503,7 @@ class OperationCertificationAdapterTests(unittest.TestCase):
         selected.publish_evidence(evidence)
         return evidence
 
-    def assert_rejected(self, client: OperationFixtureClient | None = None) -> None:
+    def assert_rejected(self, client: GitHubActionsClient | None = None) -> None:
         with self.assertRaises(MergeGateError):
             verify_staging_certification_gate(
                 candidate_sha=SHA,
@@ -397,8 +522,99 @@ class OperationCertificationAdapterTests(unittest.TestCase):
         self.assertEqual(evidence["staging_operation_workflow_run_id"], str(RUN_ID))
         self.assertEqual(evidence["staging_operation_run_attempt"], ATTEMPT)
         self.assertEqual(evidence["source_proof"]["artifact_id"], SOURCE_ARTIFACT_ID)
+        self.assertEqual(evidence["source_event"], "push")
+
+    def test_newest_operation_failure_state_is_authoritative(self) -> None:
+        self.emit()
+        for status, conclusion in (
+            ("queued", None),
+            ("in_progress", None),
+            ("completed", "failure"),
+            ("completed", "cancelled"),
+        ):
+            with self.subTest(status=status, conclusion=conclusion):
+                newer = OperationFixtureClient(
+                    run_id=RUN_ID + 1,
+                    source_artifact_id=9201,
+                    certification_artifact_id=9202,
+                )
+                newer.run.update(status=status, conclusion=conclusion)
+                self.assert_rejected(OperationHistoryClient([self.client, newer]))
+
+    def test_newer_valid_success_is_the_only_accepted_operation(self) -> None:
+        self.emit()
+        newer = OperationFixtureClient(
+            run_id=RUN_ID + 1,
+            source_artifact_id=9201,
+            certification_artifact_id=9202,
+        )
+        expected = self.emit(newer)
+        history = OperationHistoryClient([self.client, newer])
+        actual = verify_staging_certification_gate(
+            candidate_sha=SHA,
+            client=history,
+            current_run_id="999999999",
+        )
+        self.assertEqual(actual, expected)
+        self.assertEqual(
+            actual["staging_operation_workflow_run_id"], str(newer.run_id)
+        )
+        self.assertEqual(history.queries, [(None, 100)])
+
+    def test_newer_attempt_failure_invalidates_same_run_success(self) -> None:
+        successful_attempt = OperationFixtureClient(attempt=1)
+        self.emit(successful_attempt)
+        current = dict(successful_attempt.run)
+        current.update(run_attempt=2, status="completed", conclusion="failure")
+        history = OperationHistoryClient(
+            [successful_attempt],
+            current_runs={successful_attempt.run_id: current},
+        )
+        self.assert_rejected(history)
+
+    def test_incomplete_bounded_operation_history_is_rejected(self) -> None:
+        clients = [
+            OperationFixtureClient(
+                run_id=RUN_ID + index,
+                source_artifact_id=10000 + index * 2,
+                certification_artifact_id=10001 + index * 2,
+            )
+            for index in range(100)
+        ]
+        self.assert_rejected(OperationHistoryClient(clients, total_count=101))
+
+    def test_newest_success_without_current_attempt_certification_is_rejected(self) -> None:
+        self.emit()
+        newer = OperationFixtureClient(
+            run_id=RUN_ID + 1,
+            source_artifact_id=9201,
+            certification_artifact_id=9202,
+        )
+        self.assert_rejected(OperationHistoryClient([self.client, newer]))
+
+    def test_workflow_dispatch_full_cannot_produce_or_satisfy_gate(self) -> None:
+        diagnostic = OperationFixtureClient()
+        diagnostic.run["event"] = "workflow_dispatch"
+        self.assertEqual(self.emit(diagnostic, expected_exit=1), {})
+
+        self.emit()
+        self.client.run["event"] = "workflow_dispatch"
+        self.assert_rejected()
+
+    def test_non_push_source_event_is_rejected_by_evidence_consumer(self) -> None:
+        self.emit()
+        self.client.evidence["source_event"] = "workflow_dispatch"
+        self.client.publish_evidence(self.client.evidence)
+        self.assert_rejected()
 
     def test_diagnostic_vendor_auth_never_certifies(self) -> None:
+        diagnostic = OperationFixtureClient()
+        diagnostic.run["event"] = "workflow_dispatch"
+        self.assertEqual(
+            self.emit(diagnostic, focus_group="vendor-auth", expected_exit=1),
+            {},
+        )
+
         self.emit()
         self.client.evidence["focus_group"] = "vendor-auth"
         self.client.publish_evidence(self.client.evidence)
@@ -493,13 +709,9 @@ class OperationCertificationAdapterTests(unittest.TestCase):
         self.client.certification_artifact["name"] += "-newer"
         self.assert_rejected()
 
-    def test_retained_legacy_schema_four_fixture_still_passes(self) -> None:
+    def test_schema_four_is_rejected_by_main_merge_gate(self) -> None:
         fixture = REPO_ROOT / "scripts" / "ci" / "fixtures" / "staging-certification-gate" / "pass"
-        evidence = verify_staging_certification_gate(
-            candidate_sha=SHA,
-            client=FixtureGitHubActionsClient(fixture),
-        )
-        self.assertEqual(evidence["schema_version"], "4")
+        self.assert_rejected(FixtureGitHubActionsClient(fixture))
 
     def test_producer_stays_inside_outer_lock_and_standalone_path_is_retired(self) -> None:
         operation = _workflow("staging-operation.yml")
@@ -509,7 +721,8 @@ class OperationCertificationAdapterTests(unittest.TestCase):
             {"authorize", "deploy", "e2e"},
         )
         self.assertIn("needs.e2e.result == 'success'", certification["if"])
-        self.assertIn("inputs.focus_group == 'full'", certification["if"])
+        self.assertIn("github.event_name == 'push'", certification["if"])
+        self.assertNotIn("inputs.focus_group == 'full'", certification["if"])
         step_names = [step.get("name") for step in certification["steps"]]
         self.assertEqual(
             [name for name in step_names if name],

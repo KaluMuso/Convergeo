@@ -508,7 +508,7 @@ artifact_gate_accept() {
   fi
 }
 
-artifact_gate_accept "exact SHA + deploy + certification fixture" \
+artifact_gate_reject "schema-4 evidence cannot satisfy the main merge gate" \
   python3 scripts/ci/verify_staging_certification_gate.py \
     --candidate-sha "${SHA_CANDIDATE}" \
     --artifact-fixture-dir "${FIXTURE_PASS}"

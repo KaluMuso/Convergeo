@@ -21,6 +21,7 @@ from github_actions_provenance import (
     STAGING_OPERATION_WORKFLOW,
     GitHubActionsClient,
     LiveGitHubActionsClient,
+    WorkflowRunsPage,
     extract_artifact_json,
 )
 from release_handoff_contract import REPOSITORY_ID, ContractError, require, timestamp
@@ -39,7 +40,6 @@ from staging_deploy_provenance import (
 )
 from staging_operation_certification import (
     CERTIFICATION_JOB,
-    OPERATION_SCHEMA_VERSION,
     cross_check_operation_evidence_with_proof,
     operation_certification_artifact_name,
     read_operation_certification_archive,
@@ -95,6 +95,22 @@ class FixtureGitHubActionsClient:
                 continue
             filtered.append(run)
         return filtered
+
+    def get_workflow_runs_page(
+        self,
+        *,
+        workflow_path: str,
+        head_sha: str | None = None,
+        status: str | None = None,
+        per_page: int = 30,
+    ) -> WorkflowRunsPage:
+        runs = self.get_workflow_runs(
+            workflow_path=workflow_path,
+            head_sha=head_sha,
+            status=status,
+            per_page=per_page,
+        )
+        return WorkflowRunsPage(runs=runs, total_count=len(runs))
 
     def get_run(self, run_id: str) -> dict[str, Any]:
         for name in ("certification_run.json", "deploy_run.json", "operation_run.json"):
@@ -276,108 +292,137 @@ def _certification_artifact_window(
     require(started <= certified <= created <= completed, "CERTIFICATION_ARTIFACT_NOT_BOUND")
 
 
+OPERATION_RUN_RETRIEVAL_LIMIT = 100
+
+
+def _operation_run_order_key(run: dict[str, Any]) -> tuple[datetime, datetime, int]:
+    raw_run_id = run.get("id")
+    require(type(raw_run_id) is int and raw_run_id > 0, "INVALID_OPERATION_RUN_ID")
+    run_id = cast(int, raw_run_id)
+    return (
+        timestamp(run.get("created_at")),
+        timestamp(run.get("run_started_at")),
+        run_id,
+    )
+
+
 def _verify_operation_candidate(
     client: GitHubActionsClient,
     *,
     candidate_sha: str,
     current_run_id: str | None,
 ) -> dict[str, Any]:
-    runs = client.get_workflow_runs(
+    page = client.get_workflow_runs_page(
         workflow_path=STAGING_OPERATION_WORKFLOW,
         head_sha=candidate_sha,
-        status="completed",
-        per_page=30,
+        status=None,
+        per_page=OPERATION_RUN_RETRIEVAL_LIMIT,
     )
-    for discovered in runs:
-        try:
-            run_id, attempt = verify_operation_run(
-                discovered,
-                candidate_sha=candidate_sha,
-                require_completed=True,
-            )
-            run = client.get_run_attempt(str(run_id), attempt)
-            verify_operation_run(
-                run,
-                candidate_sha=candidate_sha,
-                expected_run_id=run_id,
-                expected_attempt=attempt,
-                require_completed=True,
-            )
-            artifacts = client.list_run_artifacts(str(run_id))
-            cert_artifact = _exact_artifact(
-                artifacts,
-                artifact_id=None,
-                name=operation_certification_artifact_name(run_id, attempt),
-            )
-            evidence = read_operation_certification_archive(
-                client.download_artifact_zip(int(cert_artifact["id"])),
-                cert_artifact,
-                run_id=run_id,
-                attempt=attempt,
-            )
-            validate_operation_certification_evidence(
-                evidence,
-                candidate_sha=candidate_sha,
-                operation_run_id=str(run_id),
-                operation_run_attempt=attempt,
-                current_run_id=current_run_id,
-                now=datetime.now(UTC),
-            )
-            jobs = _operation_jobs(
-                client,
-                run_id=str(run_id),
-                attempt=attempt,
-                candidate_sha=candidate_sha,
-            )
-            require_operation_jobs(
-                jobs,
-                run_id=run_id,
-                candidate_sha=candidate_sha,
-                attempt=attempt,
-                completed_consumer=True,
-            )
-            _certification_artifact_window(
-                cert_artifact,
-                jobs,
-                run_id=run_id,
-                attempt=attempt,
-                candidate_sha=candidate_sha,
-                evidence=evidence,
-            )
-            source = evidence["source_proof"]
-            assert isinstance(source, dict)
-            source_artifact = _exact_artifact(
-                artifacts,
-                artifact_id=int(source["artifact_id"]),
-                name=str(source["name"]),
-            )
-            proof, _, _ = read_operation_source(
-                archive=client.download_artifact_zip(int(source_artifact["id"])),
-                run=run,
-                artifact=source_artifact,
-                jobs=jobs,
-                candidate_sha=candidate_sha,
-            )
-            cross_check_operation_evidence_with_proof(
-                evidence,
-                proof=proof,
-                artifact=source_artifact,
-                jobs=jobs,
-            )
-            return evidence
-        except (
-            ContractError,
-            StagingDeployProvenanceError,
-            StagingCertificationError,
-            KeyError,
-            TypeError,
-            ValueError,
-        ):
-            continue
-    raise MergeGateError(
-        "no successful full protected staging operation found for candidate "
-        f"{candidate_sha[:12]}"
-    )
+    if not page.complete:
+        raise MergeGateError(
+            "staging operation run history is incomplete "
+            f"({len(page.runs)} of {page.total_count} runs returned)"
+        )
+    if not page.runs:
+        raise MergeGateError(
+            "no protected staging operation found for candidate "
+            f"{candidate_sha[:12]}"
+        )
+
+    try:
+        discovered = max(page.runs, key=_operation_run_order_key)
+        discovered_id = discovered.get("id")
+        require(type(discovered_id) is int, "INVALID_OPERATION_RUN_ID")
+        current = client.get_run(str(discovered_id))
+        run_id, attempt = verify_operation_run(
+            current,
+            candidate_sha=candidate_sha,
+            expected_run_id=discovered_id,
+            require_completed=True,
+        )
+        run = client.get_run_attempt(str(run_id), attempt)
+        verify_operation_run(
+            run,
+            candidate_sha=candidate_sha,
+            expected_run_id=run_id,
+            expected_attempt=attempt,
+            require_completed=True,
+        )
+        artifacts = client.list_run_artifacts(str(run_id))
+        cert_artifact = _exact_artifact(
+            artifacts,
+            artifact_id=None,
+            name=operation_certification_artifact_name(run_id, attempt),
+        )
+        evidence = read_operation_certification_archive(
+            client.download_artifact_zip(int(cert_artifact["id"])),
+            cert_artifact,
+            run_id=run_id,
+            attempt=attempt,
+        )
+        validate_operation_certification_evidence(
+            evidence,
+            candidate_sha=candidate_sha,
+            operation_run_id=str(run_id),
+            operation_run_attempt=attempt,
+            current_run_id=current_run_id,
+            now=datetime.now(UTC),
+        )
+        jobs = _operation_jobs(
+            client,
+            run_id=str(run_id),
+            attempt=attempt,
+            candidate_sha=candidate_sha,
+        )
+        require_operation_jobs(
+            jobs,
+            run_id=run_id,
+            candidate_sha=candidate_sha,
+            attempt=attempt,
+            completed_consumer=True,
+        )
+        _certification_artifact_window(
+            cert_artifact,
+            jobs,
+            run_id=run_id,
+            attempt=attempt,
+            candidate_sha=candidate_sha,
+            evidence=evidence,
+        )
+        source = evidence["source_proof"]
+        assert isinstance(source, dict)
+        source_artifact = _exact_artifact(
+            artifacts,
+            artifact_id=int(source["artifact_id"]),
+            name=str(source["name"]),
+        )
+        proof, _, _ = read_operation_source(
+            archive=client.download_artifact_zip(int(source_artifact["id"])),
+            run=run,
+            artifact=source_artifact,
+            jobs=jobs,
+            candidate_sha=candidate_sha,
+        )
+        cross_check_operation_evidence_with_proof(
+            evidence,
+            proof=proof,
+            artifact=source_artifact,
+            jobs=jobs,
+        )
+        return evidence
+    except (
+        ContractError,
+        StagingDeployProvenanceError,
+        StagingCertificationError,
+        KeyError,
+        RuntimeError,
+        TypeError,
+        ValueError,
+    ) as exc:
+        raise MergeGateError(
+            "newest protected staging operation rejected for candidate "
+            f"{candidate_sha[:12]} ({exc})"
+        ) from exc
 
 
 def _verify_legacy_candidate(
@@ -412,28 +457,11 @@ def verify_staging_certification_gate(
     client: GitHubActionsClient,
     current_run_id: str | None = None,
 ) -> dict[str, Any]:
-    try:
-        return _verify_operation_candidate(
-            client,
-            candidate_sha=candidate_sha,
-            current_run_id=current_run_id,
-        )
-    except MergeGateError as operation_error:
-        try:
-            return _verify_legacy_candidate(
-                client,
-                candidate_sha=candidate_sha,
-                current_run_id=current_run_id,
-            )
-        except (
-            MergeGateError,
-            StagingCertificationError,
-            StagingDeployProvenanceError,
-        ) as legacy_error:
-            raise MergeGateError(
-                f"operation certification rejected ({operation_error}); "
-                f"legacy schema-4 certification rejected ({legacy_error})"
-            ) from legacy_error
+    return _verify_operation_candidate(
+        client,
+        candidate_sha=candidate_sha,
+        current_run_id=current_run_id,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -451,25 +479,18 @@ def main(argv: list[str] | None = None) -> int:
         "--artifact-file",
         type=Path,
         default=None,
-        help="Offline mode: validate a local legacy artifact JSON without discovery",
+        help="Offline mode: validate local schema-5 operation evidence without discovery",
     )
     args = parser.parse_args(argv)
 
     try:
         if args.artifact_file is not None:
             evidence = json.loads(args.artifact_file.read_text(encoding="utf-8"))
-            if evidence.get("schema_version") == OPERATION_SCHEMA_VERSION:
-                validate_operation_certification_evidence(
-                    evidence,
-                    candidate_sha=args.candidate_sha,
-                    current_run_id=args.current_run_id or None,
-                )
-            else:
-                validate_staging_certification_evidence(
-                    evidence,
-                    candidate_sha=args.candidate_sha,
-                    current_run_id=args.current_run_id or None,
-                )
+            validate_operation_certification_evidence(
+                evidence,
+                candidate_sha=args.candidate_sha,
+                current_run_id=args.current_run_id or None,
+            )
         else:
             client: GitHubActionsClient
             if args.artifact_fixture_dir is not None:
