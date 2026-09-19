@@ -221,11 +221,24 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Verify exact production API identity (read-only)
+        env:
+          WANT_SHA: ${{ needs.guard.outputs.sha }}
+        run: |
+          set -euo pipefail
+          curl -fsS --max-time 30 "https://${PROD_API_HOST}/fingerprint" -o "$RUNNER_TEMP/fingerprint.json"
+          python3 scripts/ci/production_deploy_identity.py fingerprint \
+            --fingerprint-file "$RUNNER_TEMP/fingerprint.json" \
+            --expected-sha "$WANT_SHA" \
+            --expected-project "$PROD_SUPABASE_PROJECT_REF"
+
       - name: verify_live.sh (read-only)
         if: ${{ github.event.inputs.skip_live_verify != true }}
         env:
           MASTER_GIT_SHA: ${{ needs.guard.outputs.sha }}
           EXPECTED_ENV: production
+          EXPECTED_IMAGE_TAG: ${{ needs.guard.outputs.sha }}
+          EXPECTED_SUPABASE_PROJECT_REF: ${{ env.PROD_SUPABASE_PROJECT_REF }}
         run: bash scripts/ops/verify_live.sh
 
       - name: Write production release evidence
