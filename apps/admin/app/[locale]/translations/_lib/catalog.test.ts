@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import { buildTranslationCatalog } from "./catalog";
 
 describe("buildTranslationCatalog", () => {
+  // This semantic/inventory integration assertion intentionally performs the actual 19 × 5
+  // committed JSON imports. It is not a performance budget; deterministic performance and
+  // concurrency are not asserted through wall-clock time here.
   it("covers every namespace with English as the source of truth", async () => {
     const catalog = await buildTranslationCatalog();
 
@@ -25,5 +28,5 @@ describe("buildTranslationCatalog", () => {
     for (const locale of catalog.translatableLocales) {
       expect(events?.perLocale[locale]).toBeLessThanOrEqual(events?.totalKeys ?? 0);
     }
-  });
+  }, 15_000);
 });
