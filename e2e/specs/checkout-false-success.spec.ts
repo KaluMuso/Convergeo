@@ -15,6 +15,8 @@ import {
 } from "../fixtures/payment-fixtures";
 import { expect, test } from "../fixtures/test-base";
 
+import type { Route } from "@playwright/test";
+
 /**
  * VB-P07 / S6 / G4 — checkout honesty: pending/failed/unknown must never render
  * as paid/completed/successful without authoritative server confirmation.
@@ -148,34 +150,71 @@ test.describe("checkout · false-success", () => {
      * test bypass, changing Customer middleware, or suppressing the redirect in
      * application code. None of those happen here.
      *
-     * Instead the navigation is observed and stopped at the network boundary —
+     * Instead the navigation is observed and held at the network boundary —
      * the narrowest mechanism available — which both PROVES the app attempted
-     * the correct destination and holds the confirming surface still long
-     * enough to assert it. Route interception covers the RSC fetch and any
-     * document-navigation fallback alike.
+     * the correct destination and keeps the confirming surface available while
+     * it is asserted. The held request is aborted only during cleanup. Route
+     * interception covers the RSC fetch and any document-navigation fallback
+     * alike.
      */
+    const orderRoutePattern = "**/account/orders**";
     const orderNavigations: string[] = [];
-    await page.route("**/account/orders**", async (route) => {
-      orderNavigations.push(route.request().url());
-      await route.abort();
+    const heldNavigationSettlements = new Set<Promise<void>>();
+    let releaseOrderNavigation!: () => void;
+    const orderNavigationBarrier = new Promise<void>((resolve) => {
+      releaseOrderNavigation = resolve;
     });
+    const holdOrderNavigation = async (route: Route) => {
+      let markSettled!: () => void;
+      const settled = new Promise<void>((resolve) => {
+        markSettled = resolve;
+      });
+      heldNavigationSettlements.add(settled);
 
-    await page.goto(path(`/checkout/pending/${FIXTURE_GROUP_ID}`));
+      try {
+        // Recording the exact request URL is also the test-controlled signal
+        // that the application genuinely attempted its order hand-off.
+        orderNavigations.push(route.request().url());
+        await orderNavigationBarrier;
+        await route.abort();
+      } finally {
+        markSettled();
+        heldNavigationSettlements.delete(settled);
+      }
+    };
 
-    // Brief honest confirming surface (CUST-08) before order redirect.
-    const confirming = page.getByTestId("payment-confirming");
-    await expect(confirming).toBeVisible({ timeout: 10_000 });
-    await expect(confirming.getByText(/not a final paid confirmation/i).first()).toBeVisible();
-    await expect(page.getByTestId("ussd-wait")).toHaveCount(0);
-    await expect(page.getByTestId("payment-card-success")).toHaveCount(0);
-    await expect(confirming.getByRole("heading", { name: /order confirmed/i })).toHaveCount(0);
-    await expect(page.getByText(FORBIDDEN_SUCCESS_COPY)).toHaveCount(0);
+    // Register before loading the pending page so no order hand-off can race
+    // past the observation boundary.
+    await page.route(orderRoutePattern, holdOrderNavigation);
 
-    // The redirect to authoritative order state must actually be attempted —
-    // "confirming" is a transition, not a terminal screen. Asserting the
-    // attempt keeps that contract honest even though we stop the navigation.
-    await expect.poll(() => orderNavigations.length, { timeout: 10_000 }).toBeGreaterThan(0);
-    expect(orderNavigations.some((url) => url.includes(FIXTURE_ORDER_ID))).toBe(true);
+    try {
+      await page.goto(path(`/checkout/pending/${FIXTURE_GROUP_ID}`));
+
+      // Wait until router.replace has reached the held network boundary. From
+      // this point through the assertions below, the browser remains on the
+      // real pending page and its inherently transient confirming surface.
+      await expect.poll(() => orderNavigations.length, { timeout: 10_000 }).toBeGreaterThan(0);
+      await expect(page).toHaveURL(path(`/checkout/pending/${FIXTURE_GROUP_ID}`));
+
+      const confirming = page.getByTestId("payment-confirming");
+      await expect(confirming).toBeVisible({ timeout: 10_000 });
+      await expect(confirming.getByText(/not a final paid confirmation/i).first()).toBeVisible();
+      await expect(page.getByTestId("ussd-wait")).toHaveCount(0);
+      await expect(page.getByTestId("payment-card-success")).toHaveCount(0);
+      await expect(confirming.getByRole("heading", { name: /order confirmed/i })).toHaveCount(0);
+      await expect(page.getByText(FORBIDDEN_SUCCESS_COPY)).toHaveCount(0);
+
+      // "Confirming" is a transition, not a terminal screen: the attempted
+      // destination must identify the authoritative fixture order.
+      expect(orderNavigations.some((url) => url.includes(FIXTURE_ORDER_ID))).toBe(true);
+    } finally {
+      // Always release the barrier, even after a failed assertion. Removing
+      // this test's handler prevents later requests from joining the hold;
+      // every request already inside it is then aborted and allowed to settle.
+      releaseOrderNavigation();
+      await page.unroute(orderRoutePattern, holdOrderNavigation);
+      await Promise.allSettled([...heldNavigationSettlements]);
+    }
   });
 
   test("COD confirmation never uses MoMo/card prepaid success copy", async ({ page }) => {
