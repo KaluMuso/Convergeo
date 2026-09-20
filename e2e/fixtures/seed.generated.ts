@@ -6,7 +6,8 @@
 //
 // NON-SECRET identity only. OTP codes and the run-scoped ticket scanner PIN are
 // credentials: they arrive through the environment at run time and are never
-// generated into source.
+// generated into source. The scanner TICKET ID is not a credential but is still
+// absent: the real rsvp() service path mints it per run, so it is run state.
 
 /** Reserved synthetic namespace. Every identifier below sits under it. */
 export const SEED_PREFIX = "stg-rv-20260719";
@@ -16,7 +17,7 @@ export const SEED_PREFIX = "stg-rv-20260719";
  * staging database was seeded from this exact generation. Derived only from
  * fixture identity — never from a timestamp, run id, or credential.
  */
-export const FIXTURE_VERSION = "73d9223c0c8d6033093b96d31e037755";
+export const FIXTURE_VERSION = "5b060652e939b51824131c5427199e7d";
 
 /**
  * Canonical synthetic fixtures the specs depend on. These are public,
@@ -51,7 +52,13 @@ export const SEED = {
     vendorSlug: "stg-rv-20260719-vend-apr",
     initialStatus: "placed",
   },
-  /** Published event with an un-scanned ticket for the organiser scanner. */
+  /**
+   * Published event with two ticket lanes. The SCANNER ticket id is NOT here:
+   * it is claimed per run by the real `rsvp()` service path so it carries a
+   * genuine `order_item_id`, which is what `POST /tickets/verify` requires
+   * (`ticket_unpaid_hold` otherwise). Postgres mints that id, so it arrives
+   * through `E2E_TICKET_ID` alongside the PIN, never from source.
+   */
   event: {
     /**
      * Canonical event UUID. The organiser scanner route and the ticket verify
@@ -61,10 +68,19 @@ export const SEED = {
     id: "e1000000-0000-4000-8000-000000000001",
     slug: "stg-rv-20260719-launch-expo",
     title: "Synthetic staging launch expo",
-    /** The session the seeded ticket belongs to. */
+    /** The session both ticket lanes are allocated against. */
     instanceId: "e2000000-0000-4000-8000-000000000001",
-    ticketTypeName: "General admission",
-    ticketId: "e4000000-0000-4000-8000-000000000001",
+    /** Paid lane — what the Lenco-gated purchase leg buys. */
+    paidTicketTypeName: "General admission",
+    /** Free-RSVP lane the per-run scanner ticket is issued on. */
+    scannerTicketTypeName: "Scanner RSVP",
+    /**
+     * Statically seeded paid ticket. It has no `order_item_id` by construction,
+     * so it can NEVER be checked in — it is the live negative control for
+     * `ticket_unpaid_hold`, not a scanner subject. Do not fill it into the
+     * scanner form expecting a pass.
+     */
+    unpaidHoldTicketId: "e4000000-0000-4000-8000-000000000001",
   },
   /** Landmark/GPS-style delivery address used at checkout (Lusaka). */
   address: {

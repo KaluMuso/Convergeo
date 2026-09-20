@@ -20,6 +20,7 @@ from typing import Any
 import pytest
 from app.core.env_guards import PROD_SUPABASE_PROJECT_REF, StagingIsolationError
 from app.services.tickets.qr import verify_pin
+from app.staging.event_scanner import ScannerTicket, scanner_ticket_fixture
 from app.staging.seed_sql import (
     build_cleanup_sql,
     build_events_sql,
@@ -36,7 +37,9 @@ from app.staging.synthetic_contract import (
     event_fixture,
     fixture_version,
     guard_seed_targets,
+    paid_ticket_type,
     persona_by_key,
+    scanner_ticket_type,
 )
 from app.staging.ticket_credentials import mint_ticket_credentials, primary_ticket_pin
 
@@ -59,7 +62,7 @@ def test_event_fixture_exists_and_is_contract_valid() -> None:
     assert SEED_PREFIX in event.slug
     assert event.status == "published"
     assert event.ticket_types, "scanner journey needs a ticket type"
-    assert event.tickets, "scanner journey needs an issued ticket"
+    assert event.tickets, "the unpaid-hold negative control must stay seeded"
 
 
 def test_event_organiser_is_an_approved_synthetic_vendor() -> None:
@@ -71,9 +74,74 @@ def test_event_organiser_is_an_approved_synthetic_vendor() -> None:
     assert organiser.key == "APPROVED_VENDOR_A"
 
 
-def test_seeded_ticket_starts_unscanned_so_first_scan_can_succeed() -> None:
+def test_seeded_unpaid_hold_starts_unscanned_and_stays_on_the_paid_lane() -> None:
     event = event_fixture("EVENT_LAUNCH_EXPO")
     assert any(t.status == "issued" for t in event.tickets)
+    # Every statically seeded row belongs to the PAID lane. A static row on the
+    # free_rsvp lane would be an unpaid hold impersonating the scanner ticket.
+    scanner_type_id = scanner_ticket_type(event).ticket_type_id
+    assert all(t.ticket_type_id != scanner_type_id for t in event.tickets)
+
+
+def test_paid_general_admission_fixture_is_preserved() -> None:
+    """The Lenco-gated purchase journey's subject must survive this repair."""
+    event = event_fixture("EVENT_LAUNCH_EXPO")
+    paid = paid_ticket_type(event)
+    assert paid.ticket_type_id == "e3000000-0000-4000-8000-000000000001"
+    assert (paid.name, paid.kind, paid.price_ngwee) == ("General admission", "fixed", 15000)
+    assert (paid.qty_cap, paid.allocation) == (200, 200)
+    hold = event.tickets[0]
+    assert hold.ticket_id == "e4000000-0000-4000-8000-000000000001"
+    assert hold.ticket_type_id == paid.ticket_type_id
+
+
+def test_scanner_lane_is_a_zero_priced_free_rsvp_type() -> None:
+    """The no-payment path is the only one rsvp() will accept.
+
+    `purchase.rsvp()` raises `tickets.paid_use_checkout` for anything that is not
+    `free_rsvp`, and the DB's own `ticket_types_free_rsvp_price_chk` pins a
+    free_rsvp type to price zero. Both are why the scanner ticket can be issued
+    without fabricating a payment.
+    """
+    event = event_fixture("EVENT_LAUNCH_EXPO")
+    scanner = scanner_ticket_type(event)
+    assert scanner.kind == "free_rsvp"
+    assert scanner.price_ngwee == 0
+    assert scanner.pass_kind == "instance"
+    assert scanner.attendee_named is False
+    assert scanner.allocation and scanner.allocation <= event.capacity
+    assert scanner.qty_cap == scanner.allocation
+    assert scanner.ticket_type_id != paid_ticket_type(event).ticket_type_id
+
+
+def test_scanner_fixture_resolves_a_published_event_and_seeded_holder() -> None:
+    fixture = scanner_ticket_fixture()
+    assert fixture.event.status == "published"
+    assert fixture.instance_id == fixture.event.instance_id
+    assert fixture.ticket_type.kind == "free_rsvp"
+    assert fixture.holder_user_id == persona_by_key("CUSTOMER_A").user_id
+
+
+def test_contract_rejects_a_statically_seeded_ticket_on_the_scanner_lane(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    event = EVENTS[0]
+    scanner_type = scanner_ticket_type(event)
+    smuggled = replace(event.tickets[0], ticket_type_id=scanner_type.ticket_type_id)
+    broken = replace(event, tickets=(smuggled,))
+    monkeypatch.setattr("app.staging.synthetic_contract.EVENTS", (broken,))
+    with pytest.raises(StagingIsolationError, match="rsvp"):
+        assert_contract_valid()
+
+
+def test_contract_rejects_an_event_without_a_scanner_lane(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    event = EVENTS[0]
+    paid_only = replace(event, ticket_types=(paid_ticket_type(event),))
+    monkeypatch.setattr("app.staging.synthetic_contract.EVENTS", (paid_only,))
+    with pytest.raises(StagingIsolationError, match="free_rsvp"):
+        assert_contract_valid()
 
 
 def test_event_sql_is_created_and_cleaned_in_dependency_order() -> None:
@@ -102,6 +170,40 @@ def test_reseeding_restores_an_unscanned_ticket() -> None:
     assert "checked_in_at = NULL" in build_events_sql()
 
 
+def test_cleanup_removes_the_scanner_ticket_order_spine_in_fk_order() -> None:
+    """Cleanup must dismantle the rsvp() spine, and in a legal order.
+
+    order_item_tickets restrict-references ticket_types and event_instances, so
+    a surviving ticket order makes the ticket-type/instance deletes fail
+    outright; tickets.order_item_id references order_items with no ON DELETE
+    action, so the order items cannot go first either.
+    """
+    cleanup = build_cleanup_sql()
+    spine = cleanup.index("JOIN public.order_item_tickets oit ON oit.order_item_id = oi.id")
+    tickets = cleanup.index("DELETE FROM public.tickets")
+    ticket_types = cleanup.index("DELETE FROM public.ticket_types")
+    instances = cleanup.index("DELETE FROM public.event_instances")
+    assert tickets < spine < ticket_types
+    assert spine < instances
+
+
+def test_cleanup_sweeps_the_orphaned_scanner_checkout_group() -> None:
+    """rsvp() mints its own idempotency key, so the txn namespace cannot catch it.
+
+    The sweep is bounded to synthetic personas AND to groups with nothing left
+    pointing at them, so a group still carrying a payment or a stock hold is
+    never force-deleted.
+    """
+    cleanup = build_cleanup_sql()
+    sweep = cleanup.split("DELETE FROM public.checkout_groups cg", 1)[1].split(";", 1)[0]
+    assert "cg.customer_id IN" in sweep
+    for guarded in ("public.orders", "public.payments", "public.stock_reservations"):
+        assert "NOT EXISTS" in sweep and guarded in sweep
+    # Leaving it behind would make the profiles guard read it as a real order.
+    profiles = cleanup.index("DELETE FROM public.profiles")
+    assert cleanup.index("DELETE FROM public.checkout_groups cg") < profiles
+
+
 def test_event_verification_queries_are_scoped_to_the_synthetic_prefix() -> None:
     queries = verification_queries()
     for key in (
@@ -109,12 +211,14 @@ def test_event_verification_queries_are_scoped_to_the_synthetic_prefix() -> None
         "event_instances_scheduled",
         "event_ticket_types",
         "issued_tickets",
+        "scanner_ticket_checkinable",
     ):
         assert SEED_PREFIX in queries[key], f"{key} must be prefix-scoped"
 
 
-def test_event_verification_rejects_a_missing_issued_ticket() -> None:
-    results = {
+def _passing_verification() -> dict[str, list[str]]:
+    """A results set every parse_verification() gate accepts."""
+    return {
         "multiseller_count": ["2"],
         "multiseller_listings": ["2"],
         "location_stock_rows": ["2"],
@@ -123,10 +227,39 @@ def test_event_verification_rejects_a_missing_issued_ticket() -> None:
         "zero_price_guard": ["0"],
         "event_published": ["1"],
         "event_instances_scheduled": ["1"],
-        "event_ticket_types": ["1"],
-        "issued_tickets": ["0"],
+        "event_ticket_types": ["2"],
+        "issued_tickets": ["2"],
+        "scanner_ticket_checkinable": ["1"],
+        "unpaid_paid_holds": ["1"],
     }
-    with pytest.raises(RuntimeError, match="issued-ticket"):
+
+
+def test_event_verification_accepts_the_repaired_fixture_shape() -> None:
+    parse_verification(_passing_verification())
+
+
+def test_event_verification_rejects_a_missing_issued_ticket() -> None:
+    results = _passing_verification() | {"issued_tickets": ["0"]}
+    with pytest.raises(RuntimeError, match="unpaid-hold"):
+        parse_verification(results)
+
+
+def test_event_verification_rejects_a_scanner_ticket_without_an_order_item() -> None:
+    """The exact S3 failure, caught at seed time instead of in the browser.
+
+    A scanner ticket with no `order_item_id` is an unpaid hold, and
+    `POST /tickets/verify` answers `ticket_unpaid_hold` for it. That answer is
+    correct; the fixture was wrong. This gate makes the fixture fail loudly.
+    """
+    results = _passing_verification() | {"scanner_ticket_checkinable": ["0"]}
+    with pytest.raises(RuntimeError, match="order_item_id"):
+        parse_verification(results)
+
+
+def test_event_verification_rejects_a_hand_linked_paid_hold() -> None:
+    """Shortcutting the repair by linking the paid hold must fail the seed."""
+    results = _passing_verification() | {"unpaid_paid_holds": ["0"]}
+    with pytest.raises(RuntimeError, match="unpaid-hold"):
         parse_verification(results)
 
 
@@ -337,6 +470,24 @@ def test_generated_typescript_carries_no_credentials(service_role_key: str) -> N
     assert persona_by_key("APPROVED_VENDOR_A").phone in generated
 
 
+def test_generated_typescript_publishes_both_lanes_but_no_scanner_ticket_id() -> None:
+    """Fixture identity only. The scanner ticket id is run state, like the PIN.
+
+    The paid lane stays published for the Lenco purchase journey, and the static
+    hold is published under a name that says what it is, so nobody fills it into
+    a scanner expecting a pass.
+    """
+    generated = (REPO_ROOT / "e2e" / "fixtures" / "seed.generated.ts").read_text(
+        encoding="utf-8"
+    )
+    event = event_fixture("EVENT_LAUNCH_EXPO")
+    assert f'paidTicketTypeName: "{paid_ticket_type(event).name}"' in generated
+    assert f'scannerTicketTypeName: "{scanner_ticket_type(event).name}"' in generated
+    assert f'unpaidHoldTicketId: "{event.tickets[0].ticket_id}"' in generated
+    # The old key promised a scannable canonical ticket that never existed.
+    assert "ticketId:" not in generated
+
+
 # ── Private runtime material ──────────────────────────────────────────────
 
 
@@ -348,21 +499,41 @@ def _load_seed_script() -> Any:
     return seed_staging
 
 
+def _scanner_ticket_stub(pin: str = "424242") -> ScannerTicket:
+    return ScannerTicket(
+        ticket_id="9f1f4f1e-0000-4000-8000-00000000abcd",
+        order_item_id="9f1f4f1e-0000-4000-8000-00000000abce",
+        order_id="9f1f4f1e-0000-4000-8000-00000000abcf",
+        checkout_group_id="9f1f4f1e-0000-4000-8000-00000000abd0",
+        pin=pin,
+        replayed=False,
+    )
+
+
 def test_private_runtime_file_is_mode_0600_and_holds_no_service_role_key(
     tmp_path: Path, service_role_key: str
 ) -> None:
     seed_staging = _load_seed_script()
-    credentials = mint_ticket_credentials()
+    scanner = _scanner_ticket_stub()
     target = tmp_path / "convergeo-e2e-private.json"
-    seed_staging._write_private_runtime_file(target, credentials)
+    seed_staging._write_private_runtime_file(target, scanner)
 
     mode = stat.S_IMODE(target.stat().st_mode)
     assert mode == 0o600, f"expected 0600, got {oct(mode)}"
 
     payload = json.loads(target.read_text(encoding="utf-8"))
-    assert set(payload) == {"ticketPin"}
-    assert payload["ticketPin"] == credentials[0].pin
+    # The scanner TICKET ID ships with the PIN: rsvp() mints it per run, so it
+    # cannot come from the generated contract.
+    assert set(payload) == {"ticketPin", "ticketId"}
+    assert payload["ticketPin"] == scanner.pin
+    assert payload["ticketId"] == scanner.ticket_id
     assert SERVICE_ROLE_STUB not in target.read_text(encoding="utf-8")
+
+
+def test_scanner_ticket_repr_never_prints_the_pin() -> None:
+    scanner = _scanner_ticket_stub(pin="135791")
+    assert scanner.pin not in repr(scanner)
+    assert "<redacted>" in repr(scanner)
 
 
 def test_seed_cli_reports_fixture_version_without_touching_a_database() -> None:
@@ -408,6 +579,16 @@ def test_workflow_seeds_only_after_the_target_guard_and_before_any_browser() -> 
     seed = workflow.index("Canonical cleanup + seed (once per run)")
     browser = workflow.index("Install Playwright Chromium")
     assert guard < seed < browser
+
+
+def test_workflow_publishes_the_run_scoped_scanner_ticket_id() -> None:
+    """The spec cannot resolve the scanner ticket from source any more."""
+    workflow = _e2e_workflow()
+    assert "E2E_TICKET_ID=" in workflow
+    publish = workflow.split("Publish fixture version", 1)[1].split("- name:", 1)[0]
+    assert '"ticketId"' in publish
+    # Published, but only after it is proven to be a UUID the seeder wrote.
+    assert "malformed scanner ticket id" in publish
 
 
 def test_workflow_masks_the_pin_and_cleans_up_always() -> None:

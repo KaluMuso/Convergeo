@@ -479,6 +479,65 @@ DELETE FROM public.tickets
 WHERE id IN ({ticket_ids})
    OR instance_id IN ({instance_ids});
 
+-- The scanner ticket's order spine (app.staging.event_scanner drives the real
+-- rsvp() service path, which writes a completed checkout group + order +
+-- order_item and links the claimed ticket to it).
+--
+-- This delete is NOT optional housekeeping, it is what makes cleanup work at
+-- all: order_item_tickets.ticket_type_id and .instance_id are both ON DELETE
+-- RESTRICT into ticket_types / event_instances (0005_orders.sql), so the
+-- ticket-type and instance deletes immediately below fail while any ticket
+-- order for a synthetic instance survives. It also has to sit AFTER the tickets
+-- delete above: tickets.order_item_id references order_items with no ON DELETE
+-- action, so an order item still backing a live ticket cannot be removed.
+--
+-- Scope is derived, not guessed: an order item is ours exactly when its
+-- order_item_tickets row points at a canonical synthetic instance. rsvp() mints
+-- its own checkout idempotency key, so the '{SEED_PREFIX}-txn-%' namespace used
+-- for the COD fixture above cannot reach these rows. Deleting the order cascades
+-- order_items, which cascades order_item_tickets (both ON DELETE CASCADE).
+--
+-- A PAID ticket order for a synthetic instance (only reachable once the
+-- LENCO_SANDBOX founder gate F9b is on) is in scope too, and has to be: the
+-- event it points at is being torn down, and leaving it would fail the deletes
+-- below. Its payment row is deliberately NOT deleted here — payments are
+-- guarded financial state (CLAUDE.md convention #4) and the sweep immediately
+-- after leaves any checkout group still carrying one strictly alone.
+DELETE FROM public.notification_outbox
+WHERE payload->>'order_id' IN (
+  SELECT oi.order_id::text
+  FROM public.order_items oi
+  JOIN public.order_item_tickets oit ON oit.order_item_id = oi.id
+  WHERE oit.instance_id IN ({instance_ids})
+);
+
+DELETE FROM public.orders
+WHERE id IN (
+  SELECT oi.order_id
+  FROM public.order_items oi
+  JOIN public.order_item_tickets oit ON oit.order_item_id = oi.id
+  WHERE oit.instance_id IN ({instance_ids})
+);
+
+-- Whatever checkout group that order hung off is now orphaned. Bounded three
+-- ways — a synthetic persona owns it, no order survives in it, and nothing
+-- financial (a payment) or reserved (a stock hold) still points at it — so a
+-- group that still carries real state is left strictly alone rather than
+-- force-deleted. Without this the group lingers, and its non-'{SEED_PREFIX}-txn-'
+-- idempotency key then reads as a real order to the profiles guard further
+-- down, which would skip deleting the persona that owns it.
+DELETE FROM public.checkout_groups cg
+WHERE cg.customer_id IN ({user_ids})
+  AND NOT EXISTS (
+    SELECT 1 FROM public.orders o WHERE o.checkout_group_id = cg.id
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM public.payments p WHERE p.checkout_group_id = cg.id
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM public.stock_reservations sr WHERE sr.checkout_group_id = cg.id
+  );
+
 DELETE FROM public.ticket_type_instances
 WHERE instance_id IN ({instance_ids})
    OR ticket_type_id IN ({ticket_type_ids});
@@ -581,6 +640,7 @@ COMMIT;
 def verification_queries() -> dict[str, str]:
     product_a = CATALOG_FIXTURES[0]
     listing_ids = ", ".join(f"'{listing.listing_id}'" for listing in product_a.listings)
+    ticket_ids = ", ".join(f"'{t.ticket_id}'" for event in EVENTS for t in event.tickets)
     return {
         "multiseller_count": (
             "SELECT count(*)::int FROM public.vendor_listings "
@@ -624,6 +684,31 @@ def verification_queries() -> dict[str, str]:
             f"WHERE e.slug LIKE '{SEED_PREFIX}%' "
             "AND t.status = 'issued' AND t.checked_in_at IS NULL"
         ),
+        # The organiser scanner journey's actual subject: a free_rsvp ticket that
+        # the real rsvp() service path linked to an order item. Without
+        # order_item_id, POST /tickets/verify answers ticket_unpaid_hold and the
+        # scanner leg cannot pass — so this is checked at seed time, not learned
+        # from a red E2E run.
+        "scanner_ticket_checkinable": (
+            "SELECT count(*)::int FROM public.tickets t "
+            "JOIN public.event_instances ei ON ei.id = t.instance_id "
+            "JOIN public.events e ON e.id = ei.event_id "
+            "JOIN public.ticket_types tt ON tt.id = t.ticket_type_id "
+            f"WHERE e.slug LIKE '{SEED_PREFIX}%' AND e.status = 'published' "
+            "AND tt.kind = 'free_rsvp' AND t.order_item_id IS NOT NULL "
+            "AND t.status = 'issued' AND t.checked_in_at IS NULL "
+            "AND t.pin_hash IS NOT NULL AND t.qr_secret IS NOT NULL"
+        ),
+        # The preserved negative control: the statically seeded paid ticket must
+        # stay an unpaid hold, so a live scan of it still answers
+        # ticket_unpaid_hold. A row here that grew an order_item_id would mean
+        # something hand-linked a paid ticket.
+        "unpaid_paid_holds": (
+            "SELECT count(*)::int FROM public.tickets t "
+            "JOIN public.ticket_types tt ON tt.id = t.ticket_type_id "
+            f"WHERE t.id IN ({ticket_ids}) "
+            "AND tt.kind <> 'free_rsvp' AND t.order_item_id IS NULL"
+        ),
         "zero_price_guard": (
             "SELECT count(*)::int FROM public.vendor_listings "
             f"WHERE sku LIKE '{SEED_PREFIX}%' AND price_ngwee < 1"
@@ -658,8 +743,29 @@ def parse_verification(results: dict[str, list[str]]) -> None:
     )
     if int(results["issued_tickets"][0]) < expected_tickets:
         raise RuntimeError(
-            "synthetic issued-ticket verification failed — the scanner journey "
-            "needs an un-scanned ticket"
+            "synthetic issued-ticket verification failed — the static unpaid-hold "
+            "fixture is missing or already scanned"
+        )
+    if int(results["scanner_ticket_checkinable"][0]) < 1:
+        raise RuntimeError(
+            "scanner-ticket verification failed — the organiser scanner journey "
+            "needs a free_rsvp ticket carrying a real order_item_id, which only "
+            "the rsvp() service path produces (app.staging.event_scanner)"
+        )
+    expected_holds = sum(
+        1
+        for e in EVENTS
+        for t in e.tickets
+        if not any(
+            tt.ticket_type_id == t.ticket_type_id and tt.kind == "free_rsvp"
+            for tt in e.ticket_types
+        )
+    )
+    if int(results["unpaid_paid_holds"][0]) < expected_holds:
+        raise RuntimeError(
+            "unpaid-hold verification failed — a statically seeded paid ticket "
+            "must never carry an order_item_id; ticket_unpaid_hold is the "
+            "production rule this fixture exists to keep honest"
         )
 
 

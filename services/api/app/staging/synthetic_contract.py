@@ -145,10 +145,19 @@ class TicketTypeFixture:
 
 @dataclass(frozen=True, slots=True)
 class TicketFixture:
-    """A deterministic issued ticket the organiser scanner can verify.
+    """A deterministic ticket row the static seed SQL writes directly.
 
-    The scanner credential itself (the six-digit PIN) is deliberately NOT part of
-    this contract: it is minted per run with `secrets` and sealed through the real
+    These rows carry NO ``order_item_id``: nothing paid for them and no order
+    spine issued them, so by construction they are unpaid holds. That is not a
+    defect — ``POST /tickets/verify`` rejects an unpaid hold with
+    ``ticket_unpaid_hold`` (``routers/ticket_verify.py::_assert_paid_ticket``),
+    and this fixture is the live negative control that proves the rule still
+    holds on staging. It is deliberately NOT the ticket the organiser scanner
+    journey checks in; that one is produced by the real ``rsvp()`` service path
+    (``app.staging.event_scanner``) so it carries a legitimate ``order_item_id``.
+
+    The credential itself (the six-digit PIN) is deliberately NOT part of this
+    contract: it is minted per run with `secrets` and sealed through the real
     `seal_pin_storage()` path, so it never lands in source control and never
     perturbs `fixture_version()`.
     """
@@ -377,7 +386,12 @@ EVENTS: tuple[EventFixture, ...] = (
         instance_id="e2000000-0000-4000-8000-000000000001",
         starts_at="2030-06-19T17:00:00+00:00",
         ends_at="2030-06-19T21:00:00+00:00",
-        capacity=200,
+        # 200 for the paid lane + 5 for the scanner lane. The DB sums per-instance
+        # allocations and refuses a total above capacity
+        # (enforce_ticket_allocation_capacity_tree, 20260816220000), so adding the
+        # scanner lane had to buy its own headroom rather than take the paid
+        # lane's — General admission still allocates all 200.
+        capacity=205,
         venue=f"{SEED_PREFIX} expo hall",
         city="Lusaka",
         landmark=f"Opposite {SEED_PREFIX} expo hall main gate",
@@ -388,6 +402,9 @@ EVENTS: tuple[EventFixture, ...] = (
         visibility="public",
         platform_fee_payer="organiser",
         ticket_types=(
+            # PAID lane — preserved verbatim. This is the type the real
+            # purchase journey buys once LENCO_SANDBOX (F9b) is live, and the
+            # type the static unpaid-hold fixture below belongs to.
             TicketTypeFixture(
                 ticket_type_id="e3000000-0000-4000-8000-000000000001",
                 name="General admission",
@@ -397,7 +414,32 @@ EVENTS: tuple[EventFixture, ...] = (
                 qty_cap=200,
                 allocation=200,
             ),
+            # SCANNER lane — the one ticket type a synthetic run can legitimately
+            # turn into a check-in-able ticket without a payment provider.
+            # `services/tickets/purchase.py::rsvp()` claims inventory, writes a
+            # completed checkout/order/order_item spine and links the claimed
+            # ticket to `order_item_id`, all through the real service path and
+            # with no provider payment and no fabricated `payments` row. The
+            # ticket it mints is therefore paid-for in exactly the sense
+            # `_assert_paid_ticket` means: an order item issued it.
+            #
+            # Small allocation on purpose: exactly one scanner ticket is needed
+            # per run, and `app.staging.event_scanner` replays the existing one
+            # rather than claiming again, so this headroom only absorbs repeated
+            # --apply runs that never got a --cleanup.
+            TicketTypeFixture(
+                ticket_type_id="e3000000-0000-4000-8000-000000000002",
+                name="Scanner RSVP",
+                kind="free_rsvp",
+                pass_kind="instance",
+                price_ngwee=0,
+                qty_cap=5,
+                allocation=5,
+            ),
         ),
+        # Static ticket rows. These are UNPAID HOLDS by construction (see
+        # TicketFixture) and must stay on the paid lane: the scanner ticket is
+        # never written by hand, it is produced by rsvp().
         tickets=(
             TicketFixture(
                 ticket_id="e4000000-0000-4000-8000-000000000001",
@@ -415,6 +457,33 @@ def event_fixture(key: EventKey | str) -> EventFixture:
         if event.key == key:
             return event
     raise KeyError(f"unknown synthetic event fixture: {key}")
+
+
+def scanner_ticket_type(event: EventFixture) -> TicketTypeFixture:
+    """The free-RSVP lane the organiser scanner journey checks a ticket in on.
+
+    `assert_contract_valid()` pins this to exactly one type per event, so the
+    seed driver, the generated TypeScript and the tests all resolve the same
+    row without any of them hard-coding a second copy of the UUID.
+    """
+    candidates = [t for t in event.ticket_types if t.kind == "free_rsvp"]
+    if len(candidates) != 1:
+        raise StagingIsolationError(
+            "synthetic event must declare exactly one free_rsvp scanner ticket type, "
+            f"found {len(candidates)}"
+        )
+    return candidates[0]
+
+
+def paid_ticket_type(event: EventFixture) -> TicketTypeFixture:
+    """The preserved paid lane (General admission) the purchase journey buys."""
+    candidates = [t for t in event.ticket_types if t.kind != "free_rsvp"]
+    if len(candidates) != 1:
+        raise StagingIsolationError(
+            "synthetic event must declare exactly one paid ticket type, "
+            f"found {len(candidates)}"
+        )
+    return candidates[0]
 
 
 def persona_by_key(key: PersonaKey | str) -> PersonaFixture:
@@ -815,9 +884,27 @@ def assert_contract_valid() -> None:
             if ticket_type.allocation > event.capacity:
                 raise StagingIsolationError("ticket allocation exceeds instance capacity")
 
+        # Mirrors public.enforce_ticket_allocation_capacity_tree()
+        # (20260816220000_event_strategy_workflows.sql): the DB sums every
+        # ticket_type_instances.allocation for an instance and refuses a total
+        # above its capacity. Checked here so adding a lane fails in review
+        # rather than half-way through the seed transaction on staging.
+        allocated = sum(t.allocation for t in event.ticket_types)
+        if allocated > event.capacity:
+            raise StagingIsolationError(
+                "ticket type allocations exceed instance capacity "
+                f"({allocated} > {event.capacity})"
+            )
+
+        # Exactly one free-RSVP scanner lane and exactly one paid lane. Both
+        # raise on violation, so the assertions below (and every consumer that
+        # resolves a lane) can rely on a single unambiguous answer.
+        scanner_type = scanner_ticket_type(event)
+        paid_ticket_type(event)
+
         if not event.tickets:
             raise StagingIsolationError(
-                "synthetic event requires an issued ticket for the scanner journey"
+                "synthetic event requires the static unpaid-hold ticket fixture"
             )
         for ticket in event.tickets:
             if ticket.ticket_type_id not in type_ids:
@@ -826,11 +913,21 @@ def assert_contract_valid() -> None:
                 raise StagingIsolationError("ticket holder is not a seeded persona")
             if ticket.status not in TICKET_STATUSES:
                 raise StagingIsolationError(f"invalid synthetic ticket status: {ticket.status}")
-        # The scanner asserts verify-then-duplicate-reject, so the seeded ticket
-        # must start un-scanned.
+            # A hand-written row on the scanner lane would be an unpaid hold
+            # wearing the scanner's clothes: it has no order_item_id, so it
+            # could never check in, and it would silently consume the lane's
+            # allocation. The scanner ticket comes from rsvp(), never from here.
+            if ticket.ticket_type_id == scanner_type.ticket_type_id:
+                raise StagingIsolationError(
+                    "the free_rsvp scanner lane must not carry a statically seeded "
+                    "ticket — it is issued by the real rsvp() service path"
+                )
+        # The static holds exist to prove `ticket_unpaid_hold` still fires on a
+        # live staging scan, so at least one must start un-scanned and issued.
         if not any(t.status == "issued" for t in event.tickets):
             raise StagingIsolationError(
-                "synthetic event needs an 'issued' ticket so a first scan can succeed"
+                "synthetic event needs an 'issued' unpaid hold so the "
+                "ticket_unpaid_hold negative control is reachable"
             )
 
 
@@ -985,7 +1082,9 @@ __all__ = [
     "all_synthetic_vendor_ids",
     "assert_contract_valid",
     "guard_seed_targets",
+    "paid_ticket_type",
     "persona_by_key",
     "product_fixture",
     "resolve_project_ref",
+    "scanner_ticket_type",
 ]

@@ -169,6 +169,8 @@ jobs:
       # reset is a guarded, once-per-run CLI step below — not a remotely
       # callable mutation endpoint. E2E_TICKET_PIN is minted by that step and
       # injected via GITHUB_ENV after masking; it is never a stored secret.
+      # E2E_TICKET_ID comes from the same step: the scanner ticket is issued by
+      # the real rsvp() service path, so its id is minted per run too.
       # Lenco sandbox pay leg — founder gate F9b. Absent secrets => leg skips.
       LENCO_SANDBOX: ${{ secrets.LENCO_SANDBOX }}
       LENCO_SANDBOX_PUBLIC_KEY: ${{ secrets.LENCO_SANDBOX_PUBLIC_KEY }}
@@ -415,22 +417,30 @@ jobs:
             --transactional-cod \
             --private-file "${RUNNER_TEMP}/convergeo-e2e-private.json"
 
-      - name: Publish fixture version + mask scanner PIN
+      - name: Publish fixture version + scanner ticket, mask the PIN
         if: ${{ env.E2E_STAGING_SETUP == 'true' }}
         run: |
           set -euo pipefail
           private_file="${RUNNER_TEMP}/convergeo-e2e-private.json"
           test -f "${private_file}"
           # Extract without ever echoing: python writes the mask directive and the
-          # GITHUB_ENV line directly, so the value never lands in a shell trace.
+          # GITHUB_ENV lines directly, so the value never lands in a shell trace.
+          # The ticket id is run-scoped state, not a credential (the seed claims
+          # the scanner ticket through the real rsvp() service path, so Postgres
+          # mints its id), so it is published unmasked — the PIN is not.
           python3 - "${private_file}" <<'PY'
-          import json, os, sys
+          import json, os, re, sys
           with open(sys.argv[1], encoding="utf-8") as handle:
-              pin = json.load(handle)["ticketPin"]
+              payload = json.load(handle)
+          pin = payload["ticketPin"]
+          ticket_id = payload["ticketId"]
+          if not re.fullmatch(r"[0-9a-fA-F-]{36}", ticket_id):
+              raise SystemExit("seed produced a malformed scanner ticket id")
           # Mask FIRST, so any later accidental echo is redacted by the runner.
           print(f"::add-mask::{pin}")
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
               env_file.write(f"E2E_TICKET_PIN={pin}\n")
+              env_file.write(f"E2E_TICKET_ID={ticket_id}\n")
           PY
           # Non-secret: the fixture generation the suite must match.
           fixture_version="$(uv run --project services/api python3 scripts/seed_staging.py --env staging --print-fixture-version)"

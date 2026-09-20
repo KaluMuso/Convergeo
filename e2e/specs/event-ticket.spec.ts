@@ -1,4 +1,11 @@
-import { path, requireVendorBaseUrl, ticketPin, urlOn, vendorOtpReady } from "../fixtures/env";
+import {
+  path,
+  requireVendorBaseUrl,
+  ticketId,
+  ticketPin,
+  urlOn,
+  vendorOtpReady,
+} from "../fixtures/env";
 import { enforceGate, resolveGate } from "../fixtures/gating";
 import { sandboxEnabled } from "../fixtures/lenco";
 import { loginVendorViaOtp } from "../fixtures/otp-login";
@@ -12,9 +19,16 @@ import { expect, test } from "../fixtures/test-base";
  * Legs and their gates:
  *  - Ticket PURCHASE is a Lenco charge → gated behind `LENCO_SANDBOX` (F9b).
  *  - Scanner VERIFY / duplicate-reject runs on the vendor app (separate origin)
- *    and needs an organiser session → gated behind OTP test creds. A seeded
- *    run-scoped single-use ticket PIN is supplied via `E2E_TICKET_PIN` so the
+ *    and needs an organiser session → gated behind OTP test creds. The subject
+ *    is a run-scoped ticket issued by the canonical seed through the REAL
+ *    `rsvp()` service path — a free-RSVP claim with a completed order spine and
+ *    no payment — supplied via `E2E_TICKET_ID` + `E2E_TICKET_PIN`, so the
  *    duplicate-reject assertion can run without a live purchase.
+ *
+ *    It is deliberately NOT `SEED.event.unpaidHoldTicketId`. That statically
+ *    seeded row has no `order_item_id`, and `POST /tickets/verify` rejects it
+ *    with `ticket_unpaid_hold` — correctly, because an unpaid hold must never
+ *    walk into a venue. Using it here would test the refusal, not the journey.
  *
  * The scanner leg drives the EVENT scanner's manual fallback (`event-scan-*`),
  * not the order-pickup scanner: the event surface identifies a ticket by
@@ -33,6 +47,24 @@ test.describe("event · ticket lifecycle", () => {
 
     // ── Purchase leg (Lenco-gated) ───────────────────────────────────────────
     if (sandboxEnabled()) {
+      // The event now carries two lanes — paid General admission and the
+      // free-RSVP lane the scanner ticket is issued on — and the picker is a
+      // single <select> whose choice retitles the one submit button
+      // ("Get tickets" vs "Reserve free spot") and switches the endpoint
+      // between /tickets/checkout and /tickets/rsvp. Ticket-type order is not
+      // pinned by the API, so pin the PAID lane explicitly here: inheriting
+      // whichever option happened to land first would either miss the button
+      // regex below or quietly turn this leg into a free claim that never
+      // reaches a Lenco charge.
+      const paidOption = page
+        .locator("option")
+        .filter({ hasText: SEED.event.paidTicketTypeName })
+        .first();
+      await expect(paidOption).toBeAttached();
+      const paidTypeId = await paidOption.getAttribute("value");
+      expect(paidTypeId).toBeTruthy();
+      await page.locator(`select:has(option[value="${paidTypeId}"])`).selectOption(paidTypeId!);
+
       const buy = page.getByRole("button", { name: /buy|get ticket|book/i }).first();
       await expect(buy).toBeVisible();
       await buy.click();
@@ -55,18 +87,22 @@ test.describe("event · ticket lifecycle", () => {
     // ── Scanner verify + duplicate-reject leg (vendor app, OTP-gated) ─────────
     // Stable PIN fallback, minted per run by the canonical seed step — not the
     // rotating 60-second QR window code, which no stored secret could outlive.
+    // The ticket id is run-scoped for the same reason the order id is: the seed
+    // claims it through the real service path rather than writing a row.
     const scannerPin = ticketPin();
+    const scannerTicketId = ticketId();
     // The organiser scanner route and the verify API are both keyed on the
     // event's primary key, never its public slug.
     const scanRoute = path(`/events/${SEED.event.id}/scan`);
 
-    if (!vendorOtpReady() || !scannerPin) {
+    if (!vendorOtpReady() || !scannerPin || !scannerTicketId) {
       // One gate, two release-critical assertions: the first check-in must
       // verify AND the second check-in of the same ticket must be rejected.
       // #657 Events ships in this release, so neither may vanish into a skip.
       const missing: string[] = [];
       if (!vendorOtpReady()) missing.push("E2E_VENDOR_TEST_OTP");
       if (!scannerPin) missing.push("E2E_TICKET_PIN");
+      if (!scannerTicketId) missing.push("E2E_TICKET_ID");
       const gate = resolveGate({
         kind: "REQUIRED_STRICT",
         journey: "event scanner verify + duplicate-reject",
@@ -135,7 +171,7 @@ test.describe("event · ticket lifecycle", () => {
     const submit = manualForm.getByTestId("event-scan-manual-submit");
 
     // First check-in → verified by the server, not by the browser.
-    await ticketIdInput.fill(SEED.event.ticketId);
+    await ticketIdInput.fill(scannerTicketId);
     await pinInput.fill(scannerPin);
     await submit.click();
     const accepted = page.getByTestId("event-scan-flash-success");
@@ -150,7 +186,7 @@ test.describe("event · ticket lifecycle", () => {
     // PIN, a 403, an unknown ticket or an offline submit would all have passed
     // as proof of single-use enforcement. Those are real failures of this leg,
     // not evidence for it.
-    await ticketIdInput.fill(SEED.event.ticketId);
+    await ticketIdInput.fill(scannerTicketId);
     await pinInput.fill(scannerPin);
     await submit.click();
     const rejection = page.getByTestId("event-scan-flash-error");
