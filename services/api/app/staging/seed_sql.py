@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
+from app.staging.scanner_ticket import build_scanner_rsvp_cleanup_sql
 from app.staging.synthetic_contract import (
     CATALOG_FIXTURES,
     CATEGORY_FIXTURE,
@@ -15,9 +14,6 @@ from app.staging.synthetic_contract import (
     persona_by_key,
 )
 
-if TYPE_CHECKING:  # pragma: no cover - typing only
-    from app.staging.ticket_credentials import TicketCredential
-
 IMAGE_IDS: dict[str, str] = {
     "f1000000-0000-4000-8000-000000000001": "11000000-0000-4000-8000-000000000001",
     "f1000000-0000-4000-8000-000000000002": "11000000-0000-4000-8000-000000000002",
@@ -27,9 +23,7 @@ IMAGE_IDS: dict[str, str] = {
 }
 
 
-def build_seed_sql(
-    ticket_credentials: tuple[TicketCredential, ...] | None = None,
-) -> str:
+def build_seed_sql() -> str:
     """Build idempotent SQL from fixed synthetic constants (no user input).
 
     Assumes every PERSONAS entry is already a real Auth-managed user (created
@@ -212,7 +206,7 @@ ON CONFLICT (listing_id, location_id) DO UPDATE SET stock_qty = EXCLUDED.stock_q
 
     sql_parts.append("COMMIT;")
     # Events come last: they reference the vendors and profiles seeded above.
-    sql_parts.append(build_events_sql(ticket_credentials))
+    sql_parts.append(build_events_sql())
     if location_stock_parts:
         # Branch stock rows are inserted as the migration owner (postgres). service_role
         # lacks a stable SET ROLE grant on every CI/bare-Postgres shim, while postgres
@@ -225,17 +219,8 @@ def _sql_literal(value: str) -> str:
     return value.replace("'", "''")
 
 
-def build_events_sql(
-    ticket_credentials: tuple[TicketCredential, ...] | None = None,
-) -> str:
-    """Events, instances, ticket types and issued tickets for the scanner journey.
-
-    `ticket_credentials` carries the run-scoped sealed PIN / QR secret. When it is
-    absent the ticket rows are still created (identity is canonical) but with a
-    NULL pin_hash, so a scanner run without the staging service-role key fails
-    visibly at verification rather than appearing to pass.
-    """
-    by_ticket = {c.ticket_id: c for c in (ticket_credentials or ())}
+def build_events_sql() -> str:
+    """Seed event structure; the scanner ticket is issued later via real RSVP."""
     parts = ["BEGIN;"]
     for event in EVENTS:
         organiser = persona_by_key(event.organiser_key)
@@ -297,31 +282,6 @@ INSERT INTO public.ticket_type_instances (instance_id, ticket_type_id, allocatio
 VALUES ('{event.instance_id}', '{ticket_type.ticket_type_id}', {ticket_type.allocation})
 ON CONFLICT (instance_id, ticket_type_id) DO UPDATE SET
   allocation = EXCLUDED.allocation;
-"""
-            )
-        for ticket in event.tickets:
-            holder = persona_by_key(ticket.holder_key)
-            credential = by_ticket.get(ticket.ticket_id)
-            pin_hash = f"'{credential.pin_hash}'" if credential else "NULL"
-            qr_secret = f"'{credential.qr_secret}'" if credential else "NULL"
-            parts.append(
-                f"""
-INSERT INTO public.tickets (
-  id, instance_id, ticket_type_id, holder_user_id, status, pin_hash, qr_secret,
-  checked_in_at
-) VALUES (
-  '{ticket.ticket_id}', '{event.instance_id}', '{ticket.ticket_type_id}',
-  '{holder.user_id}', '{ticket.status}', {pin_hash}, {qr_secret}, NULL
-) ON CONFLICT (id) DO UPDATE SET
-  instance_id = EXCLUDED.instance_id,
-  ticket_type_id = EXCLUDED.ticket_type_id,
-  holder_user_id = EXCLUDED.holder_user_id,
-  status = EXCLUDED.status,
-  pin_hash = EXCLUDED.pin_hash,
-  qr_secret = EXCLUDED.qr_secret,
-  -- Re-seeding restores an un-scanned ticket so verify-then-duplicate-reject
-  -- is reproducible on every run.
-  checked_in_at = NULL;
 """
             )
     parts.append("COMMIT;")
@@ -475,6 +435,10 @@ WHERE (id IN ({product_ids}) OR slug LIKE '{SEED_PREFIX}%')
 
 -- Events before vendors/profiles: tickets reference holders and events
 -- reference the organiser vendor.
+-- The certification ticket has a real free-RSVP order spine. Remove its
+-- restrict-FK dependants in the same deterministic order as its issuer.
+{build_scanner_rsvp_cleanup_sql()}
+
 DELETE FROM public.tickets
 WHERE id IN ({ticket_ids})
    OR instance_id IN ({instance_ids});

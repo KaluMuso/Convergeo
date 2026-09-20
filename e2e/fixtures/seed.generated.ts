@@ -4,9 +4,9 @@
 // Regenerate:      python3 scripts/ci/generate-e2e-fixtures.py
 // Drift is a CI failure (STG-01 guard + generator --check).
 //
-// NON-SECRET identity only. OTP codes and the run-scoped ticket scanner PIN are
-// credentials: they arrive through the environment at run time and are never
-// generated into source.
+// NON-SECRET identity only. OTP codes and the environment-bound ticket scanner
+// PIN are credentials: they arrive through the environment at run time and are
+// never generated into source.
 
 /** Reserved synthetic namespace. Every identifier below sits under it. */
 export const SEED_PREFIX = "stg-rv-20260719";
@@ -16,7 +16,7 @@ export const SEED_PREFIX = "stg-rv-20260719";
  * staging database was seeded from this exact generation. Derived only from
  * fixture identity — never from a timestamp, run id, or credential.
  */
-export const FIXTURE_VERSION = "73d9223c0c8d6033093b96d31e037755";
+export const FIXTURE_VERSION = "4434c23fdd1d33520ca84808b4f4f170";
 
 /**
  * Canonical synthetic fixtures the specs depend on. These are public,
@@ -63,7 +63,7 @@ export const SEED = {
     title: "Synthetic staging launch expo",
     /** The session the seeded ticket belongs to. */
     instanceId: "e2000000-0000-4000-8000-000000000001",
-    ticketTypeName: "General admission",
+    ticketTypeName: "Scanner certification RSVP",
     ticketId: "e4000000-0000-4000-8000-000000000001",
   },
   /** Landmark/GPS-style delivery address used at checkout (Lusaka). */

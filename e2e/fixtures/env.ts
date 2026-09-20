@@ -196,9 +196,9 @@ export function vendorOtpReady(): boolean {
  *
  * This is the stable PIN fallback, not the rotating QR: the real QR window code
  * changes every 60 seconds (`services/tickets/qr.py`), so no stored value could
- * stay valid. It is minted per run by the canonical seed step, masked, and
- * exported into the job — never committed. `E2E_TICKET_QR` remains a temporary
- * backward-compatible alias.
+ * stay valid. It is deterministically derived from the staging service-role key
+ * and canonical free-RSVP ticket, masked, and exported into the job — never
+ * committed. `E2E_TICKET_QR` remains a temporary backward-compatible alias.
  */
 export function ticketPin(): string {
   return str("E2E_TICKET_PIN") || str("E2E_TICKET_QR");

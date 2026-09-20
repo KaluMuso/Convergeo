@@ -81,7 +81,9 @@ def test_event_sql_is_created_and_cleaned_in_dependency_order() -> None:
     assert "public.events" in seed
     assert "public.event_instances" in seed
     assert "public.ticket_types" in seed
-    assert "public.tickets" in seed
+    assert "INSERT INTO public.tickets" not in seed, (
+        "the static seed must not fabricate an issued ticket"
+    )
 
     cleanup = build_cleanup_sql()
     # Children before parents, and events before the vendors/users they point at.
@@ -96,10 +98,8 @@ def test_event_sql_is_created_and_cleaned_in_dependency_order() -> None:
     )
 
 
-def test_reseeding_restores_an_unscanned_ticket() -> None:
-    # Idempotency that matters for the scanner: a re-run must clear checked_in_at
-    # or the duplicate-reject assertion inverts on the second run.
-    assert "checked_in_at = NULL" in build_events_sql()
+def test_static_event_seed_leaves_ticket_issuance_to_the_rsvp_service() -> None:
+    assert "INSERT INTO public.tickets" not in build_events_sql()
 
 
 def test_event_verification_queries_are_scoped_to_the_synthetic_prefix() -> None:
@@ -123,7 +123,7 @@ def test_event_verification_rejects_a_missing_issued_ticket() -> None:
         "zero_price_guard": ["0"],
         "event_published": ["1"],
         "event_instances_scheduled": ["1"],
-        "event_ticket_types": ["1"],
+        "event_ticket_types": ["2"],
         "issued_tickets": ["0"],
     }
     with pytest.raises(RuntimeError, match="issued-ticket"):
@@ -145,6 +145,19 @@ def test_contract_rejects_an_event_slug_without_the_seed_prefix(
     broken = replace(EVENTS[0], slug="launch-expo")
     monkeypatch.setattr("app.staging.synthetic_contract.EVENTS", (broken,))
     with pytest.raises(StagingIsolationError, match="seed prefix"):
+        assert_contract_valid()
+
+
+def test_contract_rejects_aggregate_ticket_allocations_over_capacity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ticket_types = tuple(
+        replace(item, allocation=EVENTS[0].capacity)
+        for item in EVENTS[0].ticket_types
+    )
+    broken = replace(EVENTS[0], ticket_types=ticket_types)
+    monkeypatch.setattr("app.staging.synthetic_contract.EVENTS", (broken,))
+    with pytest.raises(StagingIsolationError, match="allocations exceed"):
         assert_contract_valid()
 
 
@@ -212,11 +225,12 @@ def test_a_tampered_pin_is_rejected(service_role_key: str) -> None:
     )
 
 
-def test_pin_is_run_scoped_not_a_committed_constant(service_role_key: str) -> None:
+def test_pin_is_deterministic_but_not_a_committed_constant(service_role_key: str) -> None:
     first = mint_ticket_credentials()[0]
     second = mint_ticket_credentials()[0]
     assert first.ticket_id == second.ticket_id, "ticket identity is canonical"
-    assert (first.pin, first.qr_secret) != (second.pin, second.qr_secret)
+    assert (first.pin, first.qr_secret) == (second.pin, second.qr_secret)
+    assert first.pin not in json.dumps(canonical_contract_document(), default=str)
 
 
 def test_credential_repr_never_prints_the_pin(service_role_key: str) -> None:
@@ -229,10 +243,11 @@ def test_service_role_value_never_appears_in_seed_output_or_errors(
     service_role_key: str,
 ) -> None:
     credentials = mint_ticket_credentials()
-    seed = build_seed_sql(credentials)
+    seed = build_seed_sql()
     assert SERVICE_ROLE_STUB not in seed
-    # Only the sealed hash reaches SQL — never the PIN itself.
-    assert credentials[0].pin_hash in seed
+    # Credentials reach the DB only after real RSVP issuance, never through the
+    # static event SQL.
+    assert credentials[0].pin_hash not in seed
     assert credentials[0].pin not in seed
 
 
@@ -263,11 +278,11 @@ def test_fixture_version_is_stable_across_processes() -> None:
     assert runs == {fixture_version()}
 
 
-def test_fixture_version_excludes_run_scoped_credentials(service_role_key: str) -> None:
+def test_fixture_version_excludes_environment_credentials(service_role_key: str) -> None:
     before = fixture_version()
     credentials = mint_ticket_credentials()
     after = fixture_version()
-    assert before == after, "minting a run PIN must not move fixture identity"
+    assert before == after, "deriving a PIN must not move fixture identity"
     document = json.dumps(canonical_contract_document(), default=str)
     assert credentials[0].pin not in document
     assert credentials[0].qr_secret not in document

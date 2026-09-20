@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import uuid
@@ -19,6 +20,9 @@ from app.core.env_guards import (
     StagingIsolationError,
     assert_staging_project_target,
 )
+from app.errors import AppError
+from app.routers.ticket_verify import verify_and_check_in_ticket
+from app.staging.scanner_ticket import issue_scanner_certification_ticket
 from app.staging.seed_sql import (
     IMAGE_IDS,
     build_cleanup_sql,
@@ -33,10 +37,12 @@ from app.staging.synthetic_contract import (
     VENDOR_LOCATIONS,
     all_contract_uuid_literals,
     assert_contract_valid,
+    event_fixture,
     guard_seed_targets,
     persona_by_key,
     product_fixture,
 )
+from app.staging.ticket_credentials import certification_ticket_credentials
 from app.staging.transactional import (
     TransactionalState,
     classify_state,
@@ -387,11 +393,21 @@ def _assert_contract_proof(conn: PgConn) -> None:
     )
     assert zero_price.ok and zero_price.rows == ["0"]
 
-    for table in ("orders", "payments", "ledger_transactions"):
+    # The only order is the legitimate zero-priced free RSVP created through
+    # the ticket service. No payment or ledger row is fabricated (the service's
+    # one-ngwee order-line placeholder satisfies the legacy positive-price DB
+    # constraint without initiating or claiming a charge).
+    orders = conn.run(
+        "SELECT count(*)::text FROM public.orders o "
+        "JOIN public.order_items oi ON oi.order_id = o.id "
+        "JOIN public.order_item_tickets oit ON oit.order_item_id = oi.id "
+        "JOIN public.ticket_types tt ON tt.id = oit.ticket_type_id "
+        "WHERE tt.kind = 'free_rsvp' AND tt.price_ngwee = 0"
+    )
+    assert orders.ok and orders.rows == ["1"]
+    for table in ("payments", "ledger_transactions"):
         count = conn.run(f"SELECT count(*)::text FROM public.{table}")
-        assert count.ok and count.rows == ["0"], (
-            f"static seed must not create {table} rows"
-        )
+        assert count.ok and count.rows == ["0"], f"seed must not create {table} rows"
 
 
 def test_seed_sql_executes_idempotently_and_cleans_up(migrated_db: PgConn) -> None:
@@ -445,6 +461,86 @@ def test_seed_sql_executes_idempotently_and_cleans_up(migrated_db: PgConn) -> No
         assert str(parsed) == location.location_id
 
 
+def test_seeded_scanner_ticket_checks_in_once_through_production_verifier(
+    migrated_db: PgConn,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SUPABASE_DB_URL", migrated_db.dsn)
+    monkeypatch.setenv(
+        "SUPABASE_SERVICE_ROLE_KEY", "staging-seed-regression-service-role"
+    )
+    seeded = _seed(migrated_db)
+    assert seeded.ok, seeded.error or "seed failed"
+
+    event = event_fixture("EVENT_LAUNCH_EXPO")
+    ticket = event.tickets[0]
+    credential = certification_ticket_credentials()[0]
+    vendor_id = persona_by_key(event.organiser_key).vendor_id
+    assert vendor_id is not None
+
+    try:
+        checked_in = verify_and_check_in_ticket(
+            ticket_id=ticket.ticket_id,
+            vendor_id=vendor_id,
+            pin=credential.pin,
+            expected_event_id=event.event_id,
+            expected_instance_id=event.instance_id,
+        )
+        assert checked_in.to_status == "checked_in"
+
+        with pytest.raises(AppError) as duplicate:
+            verify_and_check_in_ticket(
+                ticket_id=ticket.ticket_id,
+                vendor_id=vendor_id,
+                pin=credential.pin,
+                expected_event_id=event.event_id,
+                expected_instance_id=event.instance_id,
+            )
+        assert duplicate.value.code == "ticket_already_checked_in"
+        assert duplicate.value.http_status == 409
+    finally:
+        cleanup = migrated_db.run_script(build_cleanup_sql())
+        assert cleanup.ok, cleanup.error or "cleanup failed"
+
+
+def test_seed_cli_cleanup_apply_succeeds_on_migrated_postgres(
+    migrated_db: PgConn,
+    monkeypatch: pytest.MonkeyPatch,
+    seed_module: Any,
+) -> None:
+    def provision_local_personas(_client: Any, **_kwargs: Any) -> tuple[()]:
+        provisioned = migrated_db.run_script(_bare_auth_users_sql())
+        assert provisioned.ok, provisioned.error or "local auth persona setup failed"
+        return ()
+
+    monkeypatch.setattr(seed_module, "create_client", lambda *_args: object())
+    monkeypatch.setattr(seed_module, "ensure_auth_personas", provision_local_personas)
+    monkeypatch.setattr(seed_module, "verify_auth_personas", lambda *_args, **_kwargs: None)
+    monkeypatch.setenv("SUPABASE_DB_URL", migrated_db.dsn)
+    monkeypatch.setenv(
+        "STAGING_SUPABASE_URL",
+        f"https://{STAGING_SUPABASE_PROJECT_REF}.supabase.co",
+    )
+    monkeypatch.setenv("STAGING_SUPABASE_PROJECT_ID", STAGING_SUPABASE_PROJECT_REF)
+    monkeypatch.setenv("STAGING_API_BASE_URL", "https://api.staging.vergeo5.com")
+    monkeypatch.setenv(
+        "SUPABASE_SERVICE_ROLE_KEY", "staging-seed-regression-service-role"
+    )
+    monkeypatch.setattr(
+        seed_module.sys,
+        "argv",
+        ["seed_staging.py", "--env", "staging", "--cleanup", "--apply"],
+    )
+
+    try:
+        assert seed_module.main() == 0
+        _run_verification(migrated_db)
+        _assert_contract_proof(migrated_db)
+    finally:
+        cleanup = migrated_db.run_script(build_cleanup_sql())
+        assert cleanup.ok, cleanup.error or "cleanup failed"
+
+
 # ---------------------------------------------------------------------------
 # auth.users/auth.identities are no longer created by build_seed_sql() at
 # all (RC-3's fix, then the later discovery that a hand-authored auth.users
@@ -486,13 +582,28 @@ INSERT INTO auth.users (
     return "\n".join(parts)
 
 
-def _seed(
-    conn: PgConn, ticket_credentials: tuple[Any, ...] | None = None
-) -> Any:
+def _seed(conn: PgConn) -> Any:
     bare = conn.run_script(_bare_auth_users_sql())
     assert bare.ok, bare.error or "test-only bare auth.users seed failed"
-    sql = build_seed_sql(ticket_credentials) if ticket_credentials else build_seed_sql()
-    return conn.run_script(sql)
+    seeded = conn.run_script(build_seed_sql())
+    if not seeded.ok:
+        return seeded
+    previous_db = os.environ.get("SUPABASE_DB_URL")
+    previous_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    os.environ["SUPABASE_DB_URL"] = conn.dsn
+    os.environ["SUPABASE_SERVICE_ROLE_KEY"] = "staging-seed-regression-service-role"
+    try:
+        issue_scanner_certification_ticket(object())
+    finally:
+        if previous_db is None:
+            os.environ.pop("SUPABASE_DB_URL", None)
+        else:
+            os.environ["SUPABASE_DB_URL"] = previous_db
+        if previous_key is None:
+            os.environ.pop("SUPABASE_SERVICE_ROLE_KEY", None)
+        else:
+            os.environ["SUPABASE_SERVICE_ROLE_KEY"] = previous_key
+    return seeded
 
 
 # ---------------------------------------------------------------------------

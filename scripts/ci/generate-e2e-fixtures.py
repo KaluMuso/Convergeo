@@ -9,8 +9,8 @@ view of the canonical contract instead, and `--check` fails CI when the committe
 output drifts from the Python source.
 
 Only NON-SECRET identity is emitted: slugs, handles, phone numbers and ids that
-already live in the committed Python contract. OTP codes and the run-scoped
-ticket PIN are credentials and are never written here.
+already live in the committed Python contract. OTP codes and the
+environment-bound ticket PIN are credentials and are never written here.
 
 Usage:
   python3 scripts/ci/generate-e2e-fixtures.py            # write the file
@@ -52,8 +52,10 @@ def render() -> str:
     vendor = persona_by_key("APPROVED_VENDOR_A")
     product = CATALOG_FIXTURES[0]
     event = event_fixture("EVENT_LAUNCH_EXPO")
-    ticket_type = event.ticket_types[0]
     ticket = event.tickets[0]
+    ticket_type = next(
+        item for item in event.ticket_types if item.ticket_type_id == ticket.ticket_type_id
+    )
     location = next(loc for loc in VENDOR_LOCATIONS if loc.vendor_key == "APPROVED_VENDOR_A")
     cod = cod_placed_fixture()
 
@@ -63,9 +65,9 @@ def render() -> str:
 // Regenerate:      python3 scripts/ci/generate-e2e-fixtures.py
 // Drift is a CI failure (STG-01 guard + generator --check).
 //
-// NON-SECRET identity only. OTP codes and the run-scoped ticket scanner PIN are
-// credentials: they arrive through the environment at run time and are never
-// generated into source.
+// NON-SECRET identity only. OTP codes and the environment-bound ticket scanner
+// PIN are credentials: they arrive through the environment at run time and are
+// never generated into source.
 
 /** Reserved synthetic namespace. Every identifier below sits under it. */
 export const SEED_PREFIX = {_ts(SEED_PREFIX)};

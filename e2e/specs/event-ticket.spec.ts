@@ -12,9 +12,9 @@ import { expect, test } from "../fixtures/test-base";
  * Legs and their gates:
  *  - Ticket PURCHASE is a Lenco charge → gated behind `LENCO_SANDBOX` (F9b).
  *  - Scanner VERIFY / duplicate-reject runs on the vendor app (separate origin)
- *    and needs an organiser session → gated behind OTP test creds. A seeded
- *    run-scoped single-use ticket PIN is supplied via `E2E_TICKET_PIN` so the
- *    duplicate-reject assertion can run without a live purchase.
+ *    and needs an organiser session → gated behind OTP test creds. Its canonical
+ *    ticket is issued through the real FREE-RSVP service path; the private
+ *    `E2E_TICKET_PIN` lets this leg run without forging a paid purchase.
  *
  * The scanner leg drives the EVENT scanner's manual fallback (`event-scan-*`),
  * not the order-pickup scanner: the event surface identifies a ticket by
@@ -53,8 +53,8 @@ test.describe("event · ticket lifecycle", () => {
     }
 
     // ── Scanner verify + duplicate-reject leg (vendor app, OTP-gated) ─────────
-    // Stable PIN fallback, minted per run by the canonical seed step — not the
-    // rotating 60-second QR window code, which no stored secret could outlive.
+    // Stable, environment-bound PIN fallback derived by the canonical seed —
+    // not the rotating 60-second QR code, which no stored value could outlive.
     const scannerPin = ticketPin();
     // The organiser scanner route and the verify API are both keyed on the
     // event's primary key, never its public slug.
