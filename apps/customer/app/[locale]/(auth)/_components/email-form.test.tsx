@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const signInWithPassword = vi.fn();
 const getSession = vi.fn();
 const getPreferences = vi.fn();
+const mergeGuestCartIntoAccount = vi.fn();
 const push = vi.fn();
 const refresh = vi.fn();
 
@@ -21,6 +22,10 @@ vi.mock("../../account/_components/account-api", () => ({
   createAccountApiClient: () => ({
     getPreferences,
   }),
+}));
+
+vi.mock("../../../../lib/cart-merge", () => ({
+  mergeGuestCartIntoAccount: (accessToken: string) => mergeGuestCartIntoAccount(accessToken),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -54,6 +59,7 @@ describe("EmailForm portal post-auth", () => {
     signInWithPassword.mockResolvedValue({ error: null });
     getSession.mockResolvedValue({ data: { session: { access_token: "tok" } } });
     getPreferences.mockResolvedValue({ onboarding: { completed_at: "2026-01-01T00:00:00Z" } });
+    mergeGuestCartIntoAccount.mockResolvedValue(undefined);
   });
 
   async function submit(user: ReturnType<typeof userEvent.setup>) {
@@ -78,6 +84,7 @@ describe("EmailForm portal post-auth", () => {
 
     await waitFor(() => {
       expect(signInWithPassword).toHaveBeenCalled();
+      expect(mergeGuestCartIntoAccount).toHaveBeenCalledWith("tok");
       expect(getPreferences).toHaveBeenCalled();
       expect(push).toHaveBeenCalledWith("/en");
     });
@@ -100,6 +107,7 @@ describe("EmailForm portal post-auth", () => {
 
     await waitFor(() => {
       expect(signInWithPassword).toHaveBeenCalled();
+      expect(mergeGuestCartIntoAccount).not.toHaveBeenCalled();
       expect(getPreferences).not.toHaveBeenCalled();
       expect(push).toHaveBeenCalledWith("/en/listings");
     });

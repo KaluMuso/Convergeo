@@ -11,6 +11,7 @@ const verifyOtp = vi.fn();
 const exchangeCodeForSession = vi.fn();
 const getSession = vi.fn();
 const getPreferences = vi.fn();
+const mergeGuestCartIntoAccount = vi.fn();
 
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   getBrowserClient: async () => ({
@@ -27,6 +28,10 @@ vi.mock("../../account/_components/account-api", () => ({
   createAccountApiClient: () => ({
     getPreferences,
   }),
+}));
+
+vi.mock("../../../../lib/cart-merge", () => ({
+  mergeGuestCartIntoAccount: (accessToken: string) => mergeGuestCartIntoAccount(accessToken),
 }));
 
 const push = vi.fn();
@@ -49,6 +54,7 @@ beforeEach(() => {
   getPreferences.mockResolvedValue({
     onboarding: { completed_at: "2026-01-01T00:00:00Z" },
   });
+  mergeGuestCartIntoAccount.mockResolvedValue(undefined);
 });
 
 import { OtpForm } from "./otp-form";
@@ -255,6 +261,7 @@ describe("OtpForm", () => {
         token: "123456",
         type: "sms",
       });
+      expect(mergeGuestCartIntoAccount).toHaveBeenCalledWith("tok");
       expect(getPreferences).toHaveBeenCalled();
       expect(push).toHaveBeenCalledWith("/en");
       expect(refresh).toHaveBeenCalled();
@@ -281,6 +288,7 @@ describe("OtpForm", () => {
 
     await waitFor(() => {
       expect(verifyOtp).toHaveBeenCalled();
+      expect(mergeGuestCartIntoAccount).not.toHaveBeenCalled();
       expect(getPreferences).not.toHaveBeenCalled();
       expect(push).toHaveBeenCalledWith("/en/listings");
     });

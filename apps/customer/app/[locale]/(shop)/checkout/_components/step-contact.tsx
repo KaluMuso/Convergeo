@@ -19,6 +19,7 @@ import {
 } from "../../../(auth)/_components/auth-utils";
 import { ResendCountdown } from "../../../(auth)/_components/resend-countdown";
 import { getApiBaseUrl } from "../../../../../lib/api-base-url";
+import { mergeGuestCartIntoAccount } from "../../../../../lib/cart-merge";
 
 export type ContactStepLabels = {
   title: string;
@@ -63,6 +64,8 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
   const skippedRef = useRef(false);
   /** Single-flight lock for OTP verification — see handleVerifyOtp. */
   const verifyingRef = useRef(false);
+  /** Reuse an accepted session on post-auth retries; never resubmit a spent OTP. */
+  const acceptedTokenRef = useRef<string | null>(null);
 
   const completeContactStep = async (accessToken: string, contactPhone?: string) => {
     const client = createApiClient({
@@ -158,48 +161,51 @@ export function StepContact({ labels, onComplete }: StepContactProps) {
     setErrorMessage(null);
     setLoading(true);
 
-    let codeAccepted = false;
-
     try {
-      const supabase = await getBrowserClient();
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone,
-        token: otpCode,
-        type: "sms",
-      });
-      if (error) {
-        const parsed = parseAuthError(error);
-        if (parsed.code === "wrong_code") {
-          setErrorMessage(labels.wrongCode);
-        } else if (parsed.code === "expired") {
-          setErrorMessage(labels.expired);
-        } else if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
-          setErrorMessage(labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)));
-        } else {
-          setErrorMessage(labels.generic);
-        }
-        // Recoverable — let the buyer correct and resubmit the code.
-        verifyingRef.current = false;
-        setLoading(false);
-        return;
-      }
-      const token = data.session?.access_token;
+      let token = acceptedTokenRef.current;
+
       if (!token) {
-        setErrorMessage(labels.generic);
-        verifyingRef.current = false;
-        setLoading(false);
-        return;
+        const supabase = await getBrowserClient();
+        const { data, error } = await supabase.auth.verifyOtp({
+          phone,
+          token: otpCode,
+          type: "sms",
+        });
+        if (error) {
+          const parsed = parseAuthError(error);
+          if (parsed.code === "wrong_code") {
+            setErrorMessage(labels.wrongCode);
+          } else if (parsed.code === "expired") {
+            setErrorMessage(labels.expired);
+          } else if (parsed.code === "throttled" && parsed.retryAfterSeconds) {
+            setErrorMessage(
+              labels.throttled.replace("{seconds}", String(parsed.retryAfterSeconds)),
+            );
+          } else {
+            setErrorMessage(labels.generic);
+          }
+          // Recoverable — let the buyer correct and resubmit the code.
+          verifyingRef.current = false;
+          setLoading(false);
+          return;
+        }
+        token = data.session?.access_token ?? null;
+        if (!token) {
+          setErrorMessage(labels.generic);
+          verifyingRef.current = false;
+          setLoading(false);
+          return;
+        }
+
+        acceptedTokenRef.current = token;
       }
 
-      codeAccepted = true;
-
-      // Held through the step transition: the code is spent, so re-arming
-      // submission could only ever fire a doomed second verifyOtp.
+      await mergeGuestCartIntoAccount(token);
       await completeContactStep(token, phone);
     } catch {
-      if (!codeAccepted) {
-        verifyingRef.current = false;
-      }
+      // Before acceptance this retries verification; after acceptance it
+      // retries only merge/contact with the saved session token.
+      verifyingRef.current = false;
       setLoading(false);
       setErrorMessage(labels.generic);
     }

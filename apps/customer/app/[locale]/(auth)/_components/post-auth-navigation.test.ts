@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const getSession = vi.fn();
-const getPreferences = vi.fn();
+const { getSession, getPreferences, mergeGuestCartIntoAccount } = vi.hoisted(() => ({
+  getSession: vi.fn(),
+  getPreferences: vi.fn(),
+  mergeGuestCartIntoAccount: vi.fn(),
+}));
 
 vi.mock("@vergeo/auth/browser-client-lazy", () => ({
   getBrowserClient: async () => ({
@@ -15,6 +18,10 @@ vi.mock("../../account/_components/account-api", () => ({
   }),
 }));
 
+vi.mock("../../../../lib/cart-merge", () => ({
+  mergeGuestCartIntoAccount,
+}));
+
 import { navigateAfterPortalAuth } from "./post-auth-navigation";
 
 describe("navigateAfterPortalAuth", () => {
@@ -23,6 +30,8 @@ describe("navigateAfterPortalAuth", () => {
   beforeEach(() => {
     getSession.mockReset();
     getPreferences.mockReset();
+    mergeGuestCartIntoAccount.mockReset();
+    mergeGuestCartIntoAccount.mockResolvedValue(undefined);
     router.push.mockReset();
     router.refresh.mockReset();
   });
@@ -44,6 +53,13 @@ describe("navigateAfterPortalAuth", () => {
     });
 
     expect(getPreferences).toHaveBeenCalledOnce();
+    expect(mergeGuestCartIntoAccount).toHaveBeenCalledWith("tok");
+    expect(mergeGuestCartIntoAccount.mock.invocationCallOrder[0]).toBeLessThan(
+      getPreferences.mock.invocationCallOrder[0]!,
+    );
+    expect(getPreferences.mock.invocationCallOrder[0]).toBeLessThan(
+      router.push.mock.invocationCallOrder[0]!,
+    );
     expect(router.push).toHaveBeenCalledWith("/en/welcome?next=%2Fen%2Faccount");
     expect(router.refresh).toHaveBeenCalled();
   });
@@ -76,6 +92,7 @@ describe("navigateAfterPortalAuth", () => {
     });
 
     expect(getSession).not.toHaveBeenCalled();
+    expect(mergeGuestCartIntoAccount).not.toHaveBeenCalled();
     expect(getPreferences).not.toHaveBeenCalled();
     expect(router.push).toHaveBeenCalledWith("/en/listings");
     expect(router.refresh).toHaveBeenCalled();
@@ -91,6 +108,7 @@ describe("navigateAfterPortalAuth", () => {
     });
 
     expect(getPreferences).not.toHaveBeenCalled();
+    expect(mergeGuestCartIntoAccount).not.toHaveBeenCalled();
     expect(router.push).toHaveBeenCalledWith("/en");
   });
 
@@ -104,6 +122,7 @@ describe("navigateAfterPortalAuth", () => {
     });
 
     expect(getPreferences).not.toHaveBeenCalled();
+    expect(mergeGuestCartIntoAccount).not.toHaveBeenCalled();
     expect(router.push).toHaveBeenCalledWith("/fr/kyc");
   });
 
@@ -117,6 +136,26 @@ describe("navigateAfterPortalAuth", () => {
     });
 
     expect(getPreferences).not.toHaveBeenCalled();
+    expect(mergeGuestCartIntoAccount).not.toHaveBeenCalled();
     expect(router.push).toHaveBeenCalledWith("/en");
+  });
+
+  it("fails closed when the Customer cart merge fails", async () => {
+    getSession.mockResolvedValue({ data: { session: { access_token: "tok" } } });
+    mergeGuestCartIntoAccount.mockRejectedValue(new Error("merge failed"));
+
+    await expect(
+      navigateAfterPortalAuth({
+        router,
+        locale: "en",
+        portal: "customer",
+        nextParam: "/en/account",
+        fallbackPath: "/en",
+      }),
+    ).rejects.toThrow("merge failed");
+
+    expect(getPreferences).not.toHaveBeenCalled();
+    expect(router.push).not.toHaveBeenCalled();
+    expect(router.refresh).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@
 
 import { getBrowserClient } from "@vergeo/auth/browser-client-lazy";
 
+import { mergeGuestCartIntoAccount } from "../../../../lib/cart-merge";
 import { createAccountApiClient } from "../../account/_components/account-api";
 
 import {
@@ -48,18 +49,23 @@ export async function navigateAfterPortalAuth({
     return;
   }
 
+  const supabase = await getBrowserClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    router.push(fallback);
+    router.refresh();
+    return;
+  }
+
+  // This is the shared Customer-only post-auth seam used by email, phone OTP,
+  // and OAuth. Let merge failures reach the caller's existing auth error path
+  // instead of navigating as though the guest cart had been preserved.
+  await mergeGuestCartIntoAccount(session.access_token);
+
   try {
-    const supabase = await getBrowserClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.access_token) {
-      router.push(fallback);
-      router.refresh();
-      return;
-    }
-
     const api = createAccountApiClient(() => session.access_token);
     const preferences = await api.getPreferences();
     const destination = resolveCustomerPostAuthPath(
