@@ -37,9 +37,17 @@ import { describe, expect, it } from "vitest";
  * classification (`ƒ` for all ten `[id]` routes) is verified separately by the
  * Vendor build.
  *
- * SCOPE: arbitrary-ID segments only. This is deliberately NOT an app-wide ban
- * on `generateStaticParams()` — the locale-only export is correct for every
- * single-param segment, and the Vendor app as a whole must not become dynamic.
+ * The final sweep added the eleventh and last such route,
+ * `intake/[sessionId]`: its page body calls `isIntakeRouteAccessible()`, which
+ * reads `cookies()`, the feature flag, `supabase.auth.getUser()` and the vendor
+ * allowlist on every render. Its flag being off does not make prerendering it
+ * safe — a static route risks that runtime failure instead of the clean
+ * fail-closed 404 it is supposed to return.
+ *
+ * SCOPE: segments with a non-locale dynamic param only. This is deliberately
+ * NOT an app-wide ban on `generateStaticParams()` — the locale-only export is
+ * correct for every single-param segment, and the Vendor app as a whole must
+ * not become dynamic.
  */
 
 const APP_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -47,59 +55,86 @@ const APP_DIR = path.dirname(fileURLToPath(import.meta.url));
 type ProtectedRoute = {
   label: string;
   segments: readonly string[];
+  /** The segment's non-locale dynamic param name. */
+  param: string;
   /** Surfaces that must survive the fix. */
   keeps: readonly string[];
 };
 
 /**
- * Every server-rendered `[id]` page that serves authenticated, per-record data.
- * All nine must be `force-dynamic`.
+ * Every server-rendered page with a non-locale dynamic segment that serves
+ * authenticated, per-record data. All ten must be `force-dynamic`.
  */
-const PROTECTED_ID_ROUTES: readonly ProtectedRoute[] = [
+const PROTECTED_DYNAMIC_ROUTES: readonly ProtectedRoute[] = [
   {
     label: "ƒ /[locale]/orders/[id]",
     segments: ["[locale]", "orders", "[id]"],
+    param: "id",
     keeps: ["generateMetadata", "setRequestLocale", "OrderDetailView"],
   },
   {
     label: "ƒ /[locale]/events/[id]/scan",
     segments: ["[locale]", "events", "[id]", "scan"],
+    param: "id",
     keeps: ["generateMetadata", "setRequestLocale", "ScannerView"],
   },
   {
     label: "ƒ /[locale]/disputes/[id]",
     segments: ["[locale]", "disputes", "[id]"],
+    param: "id",
     keeps: ["generateMetadata", "setRequestLocale", "VendorDisputeDetailView"],
   },
   {
     label: "ƒ /[locale]/events/[id]/dashboard",
     segments: ["[locale]", "events", "[id]", "dashboard"],
+    param: "id",
     keeps: ["generateMetadata", "setRequestLocale", "EventDashboard"],
   },
   {
     label: "ƒ /[locale]/events/[id]/edit",
     segments: ["[locale]", "events", "[id]", "edit"],
+    param: "id",
     keeps: ["generateMetadata", "setRequestLocale", "EventEditView"],
   },
   {
     label: "ƒ /[locale]/events/[id]/roster",
     segments: ["[locale]", "events", "[id]", "roster"],
+    param: "id",
     keeps: ["generateMetadata", "setRequestLocale", "RosterView"],
   },
   {
     label: "ƒ /[locale]/events/[id]/tickets",
     segments: ["[locale]", "events", "[id]", "tickets"],
+    param: "id",
     keeps: ["generateMetadata", "setRequestLocale", "TicketTypeConfig"],
   },
   {
     label: "ƒ /[locale]/listings/[id]/edit",
     segments: ["[locale]", "listings", "[id]", "edit"],
+    param: "id",
     keeps: ["generateMetadata", "setRequestLocale", "ListingEditForm"],
   },
   {
     label: "ƒ /[locale]/services/[id]/edit",
     segments: ["[locale]", "services", "[id]", "edit"],
+    param: "id",
     keeps: ["generateMetadata", "setRequestLocale", "ServiceEditView"],
+  },
+  {
+    // Flag-gated (waha_vendor_intake, default off) and still request-specific:
+    // isIntakeRouteAccessible() reads cookies(), the flag, auth.getUser() and
+    // the vendor allowlist. A disabled route must 404 cleanly, not risk a
+    // static-to-dynamic runtime failure.
+    label: "ƒ /[locale]/intake/[sessionId]",
+    segments: ["[locale]", "intake", "[sessionId]"],
+    param: "sessionId",
+    keeps: [
+      "generateMetadata",
+      "setRequestLocale",
+      "isIntakeRouteAccessible",
+      "notFound",
+      "IntakeReview",
+    ],
   },
 ] as const;
 
@@ -112,10 +147,11 @@ const PROTECTED_ID_ROUTES: readonly ProtectedRoute[] = [
  * against someone adding an incomplete `generateStaticParams` to it later —
  * which is exactly how the other nine acquired this defect.
  */
-const CLIENT_ID_ROUTES = [
+const CLIENT_DYNAMIC_ROUTES = [
   {
     label: "/[locale]/jobs/[id]",
     segments: ["[locale]", "jobs", "[id]"],
+    param: "id",
   },
 ] as const;
 
@@ -136,21 +172,34 @@ function readCode(file: string): string {
   return stripComments(readFileSync(file, "utf8"));
 }
 
-/** Every `page.tsx` under a directory named `[id]`, discovered from disk. */
-function discoverIdPages(dir: string, found: string[] = []): string[] {
+/** True when a path contains a dynamic segment other than `[locale]`. */
+function hasNonLocaleDynamicSegment(file: string): boolean {
+  return path
+    .relative(APP_DIR, file)
+    .split(path.sep)
+    .some((segment) => /^\[.+\]$/.test(segment) && segment !== "[locale]");
+}
+
+/**
+ * Every `page.tsx` under a non-locale dynamic segment, discovered from disk.
+ *
+ * Deliberately not `[id]`-specific: `intake/[sessionId]` is the route that
+ * escaped the previous sweep precisely because its param is not named `id`.
+ */
+function discoverDynamicPages(dir: string, found: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      discoverIdPages(full, found);
-    } else if (entry.name === "page.tsx" && full.includes(`${path.sep}[id]${path.sep}`)) {
+      discoverDynamicPages(full, found);
+    } else if (entry.name === "page.tsx" && hasNonLocaleDynamicSegment(full)) {
       found.push(full);
     }
   }
   return found;
 }
 
-describe("vendor protected [id] routes cannot regress to static generation", () => {
-  for (const route of PROTECTED_ID_ROUTES) {
+describe("vendor protected dynamic routes cannot regress to static generation", () => {
+  for (const route of PROTECTED_DYNAMIC_ROUTES) {
     describe(route.label, () => {
       it('exports dynamic = "force-dynamic"', () => {
         expect(readCode(routeFile(route.segments))).toMatch(
@@ -158,7 +207,7 @@ describe("vendor protected [id] routes cannot regress to static generation", () 
         );
       });
 
-      it("declares no page-level generateStaticParams for the arbitrary [id]", () => {
+      it("declares no page-level generateStaticParams for the arbitrary param", () => {
         expect(readCode(routeFile(route.segments))).not.toMatch(/generateStaticParams/);
       });
 
@@ -178,15 +227,17 @@ describe("vendor protected [id] routes cannot regress to static generation", () 
         }
       });
 
-      it("still receives both route params", () => {
+      it(`still receives both route params (locale + ${route.param})`, () => {
         expect(readCode(routeFile(route.segments))).toMatch(
-          /params:\s*Promise<\{\s*locale:\s*string;\s*id:\s*string\s*\}>/,
+          new RegExp(
+            `params:\\s*Promise<\\{\\s*locale:\\s*string;\\s*${route.param}:\\s*string\\s*\\}>`,
+          ),
         );
       });
     });
   }
 
-  for (const route of CLIENT_ID_ROUTES) {
+  for (const route of CLIENT_DYNAMIC_ROUTES) {
     describe(`${route.label} (client page — inventoried, not converted)`, () => {
       it("is a client component, so it is not a server prerender candidate", () => {
         expect(readFileSync(routeFile(route.segments), "utf8")).toMatch(/^\s*"use client";/m);
@@ -205,25 +256,31 @@ describe("vendor protected [id] routes cannot regress to static generation", () 
         expect(code).not.toMatch(/export\s+const\s+revalidate\s*=/);
       });
 
-      it("still receives both route params", () => {
+      it(`still receives both route params (locale + ${route.param})`, () => {
         expect(readCode(routeFile(route.segments))).toMatch(
-          /params:\s*Promise<\{\s*locale:\s*string;\s*id:\s*string\s*\}>/,
+          new RegExp(
+            `params:\\s*Promise<\\{\\s*locale:\\s*string;\\s*${route.param}:\\s*string\\s*\\}>`,
+          ),
         );
       });
     });
   }
 
-  it("the inventory is exhaustive — every [id] page on disk is covered", () => {
-    // The real guard against this defect returning: a NEW [id] route added
+  it("the inventory is exhaustive — every non-locale dynamic page on disk is covered", () => {
+    // The real guard against this defect returning: a NEW dynamic route added
     // later is caught here instead of in a staging 500. Discovery is from the
     // filesystem, so the table cannot silently fall behind the app.
-    const discovered = discoverIdPages(APP_DIR).sort();
-    const covered = [...PROTECTED_ID_ROUTES, ...CLIENT_ID_ROUTES]
+    //
+    // Matching ANY non-locale dynamic segment, not just `[id]`, is the lesson
+    // from intake/[sessionId]: it survived the previous sweep only because its
+    // param happens to be named something else.
+    const discovered = discoverDynamicPages(APP_DIR).sort();
+    const covered = [...PROTECTED_DYNAMIC_ROUTES, ...CLIENT_DYNAMIC_ROUTES]
       .map((route) => routeFile(route.segments))
       .sort();
 
     expect(discovered).toEqual(covered);
-    expect(discovered).toHaveLength(10);
+    expect(discovered).toHaveLength(11);
   });
 
   it("no ancestor segment forces these routes back to static", () => {
@@ -231,7 +288,7 @@ describe("vendor protected [id] routes cannot regress to static generation", () 
     // would override the page-level intent. Walk the REAL chain from each
     // route file up to app/, so a layout added later is covered automatically.
     const ancestors = new Set<string>();
-    for (const route of [...PROTECTED_ID_ROUTES, ...CLIENT_ID_ROUTES]) {
+    for (const route of [...PROTECTED_DYNAMIC_ROUTES, ...CLIENT_DYNAMIC_ROUTES]) {
       let dir = path.dirname(routeFile(route.segments));
       while (dir.startsWith(APP_DIR)) {
         const layout = path.join(dir, "layout.tsx");
@@ -275,6 +332,7 @@ describe("vendor protected [id] routes cannot regress to static generation", () 
       ["[locale]", "disputes", "page.tsx"],
       ["[locale]", "listings", "page.tsx"],
       ["[locale]", "services", "page.tsx"],
+      ["[locale]", "intake", "page.tsx"],
     ];
     for (const segments of stillStatic) {
       const file = path.join(APP_DIR, ...segments);
