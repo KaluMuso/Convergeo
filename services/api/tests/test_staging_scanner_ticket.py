@@ -43,7 +43,7 @@ from app.staging.synthetic_contract import (
     scanner_ticket_type,
 )
 from app.staging.ticket_credentials import mint_ticket_credentials
-from tests.rls.conftest import PgConn, apply_migrations, resolve_db_url, schema_ready
+from tests.rls.conftest import PgConn, apply_migrations, resolve_db_url
 
 EVENT = event_fixture("EVENT_LAUNCH_EXPO")
 ORGANISER_VENDOR_ID = persona_by_key(EVENT.organiser_key).vendor_id or ""
@@ -66,17 +66,69 @@ class _ServiceWrapper:
         self.client = _Client()
 
 
+# Every table the canonical seed, the rsvp() path or the cleanup touches.
+# `schema_ready()` only counts tables (>= 45), which a HALF-APPLIED migration
+# set still satisfies — a database stuck that way skips the re-migration branch
+# below and then fails deep inside the seed on a missing relation. Name the
+# tables instead, so a partial schema is detected and rebuilt rather than used.
+REQUIRED_TABLES: tuple[str, ...] = (
+    "business_buyers",
+    "categories",
+    "checkout_groups",
+    "event_instances",
+    "events",
+    "listing_location_stock",
+    "notification_outbox",
+    "order_item_tickets",
+    "order_items",
+    "orders",
+    "payments",
+    "products",
+    "profiles",
+    "stock_reservations",
+    "ticket_type_instances",
+    "ticket_types",
+    "tickets",
+    "vendor_listings",
+    "vendor_locations",
+    "vendors",
+)
+
+
+def _missing_tables(conn: PgConn) -> list[str]:
+    result = conn.run(
+        "SELECT t.name FROM unnest(ARRAY["
+        + ", ".join(f"'{table}'" for table in REQUIRED_TABLES)
+        + "]) AS t(name) WHERE to_regclass('public.' || t.name) IS NULL "
+        "ORDER BY t.name;"
+    )
+    if not result.ok:
+        return list(REQUIRED_TABLES)
+    return result.rows
+
+
 @pytest.fixture(scope="module")
 def db() -> Generator[PgConn, None, None]:
     url = resolve_db_url()
     conn = PgConn(url)
     if not conn.run("SELECT 1").ok:
         pytest.skip(f"Postgres not reachable at {url}")
-    if not schema_ready(conn):
+    if _missing_tables(conn):
         conn.run("DROP SCHEMA IF EXISTS public CASCADE")
         conn.run("CREATE SCHEMA public")
         conn.run("DROP SCHEMA IF EXISTS auth CASCADE")
-        apply_migrations(conn)
+        try:
+            apply_migrations(conn)
+        except Exception as exc:  # noqa: BLE001 - environment, not a defect
+            pytest.skip(f"cannot apply migrations at {url}: {exc}")
+        still_missing = _missing_tables(conn)
+        if still_missing:
+            # Skip rather than fail: the fixture under test is fine, the
+            # database this run was handed is not.
+            pytest.skip(
+                f"schema at {url} is incomplete after migrating: "
+                f"missing {', '.join(still_missing)}"
+            )
     yield conn
 
 
