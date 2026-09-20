@@ -187,13 +187,8 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
 
         const outcome = resolveMomoPollOutcome(payload);
         if (outcome === "confirming") {
-          // Redirect to the order page (real escrow/payment state) — do not
-          // claim a standalone "paid" success without ledger confirmation.
-          router.replace(
-            payload.order_id
-              ? `/${locale}/account/orders/${payload.order_id}`
-              : `/${locale}/account/orders`,
-          );
+          // Stop polling and hand the buyer to the effect below. Navigation
+          // deliberately does NOT happen here — see the redirect effect.
           return;
         }
 
@@ -225,15 +220,46 @@ export function PendingPaymentShell({ locale, groupId, labels }: PendingPaymentS
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [
-    fetchStatus,
-    labels.error,
-    locale,
-    router,
-    schedulePoll,
-    session?.access_token,
-    sessionLoading,
-  ]);
+    // `locale`/`router` are deliberately absent: this effect no longer
+    // navigates. Redirecting is the separate, state-driven effect below.
+  }, [fetchStatus, labels.error, schedulePoll, session?.access_token, sessionLoading]);
+
+  /**
+   * Provider success -> authoritative order state, in two committed steps.
+   *
+   * This used to live inside the polling effect: `setStatusPayload(payload)`
+   * and `router.replace(...)` were issued back to back in the same callback,
+   * so navigation could begin before React had committed the state that
+   * renders the honest `payment-confirming` surface. The buyer could be moved
+   * off the pending page without that surface ever entering the DOM, which
+   * breaks the contract the E2E certification asserts and, worse, hides the
+   * one screen that tells the truth about where the money is.
+   *
+   * Splitting it fixes the ordering by construction rather than by timing:
+   * the poll only records the payload, React commits and paints the
+   * `payment-confirming` branch below, and THEN this effect runs and
+   * navigates. No sleep, no timer, no artificial delay for Playwright — the
+   * effect is exactly React's "after the render this state produced" hook.
+   *
+   * Both contracts are preserved: the confirming surface is still not a
+   * "paid" claim (resolveMomoPollOutcome never returns success), and the
+   * authoritative order route is still where the buyer lands.
+   */
+  useEffect(() => {
+    if (!statusPayload) {
+      return;
+    }
+    // One outcome rule, one place: resolveMomoPollOutcome already returns
+    // "cod" for a COD group, so the COD timer below stays the only COD path.
+    if (resolveMomoPollOutcome(statusPayload) !== "confirming") {
+      return;
+    }
+    router.replace(
+      statusPayload.order_id
+        ? `/${locale}/account/orders/${statusPayload.order_id}`
+        : `/${locale}/account/orders`,
+    );
+  }, [locale, router, statusPayload]);
 
   useEffect(() => {
     if (!statusPayload?.cod) {

@@ -1,4 +1,5 @@
 import { clickAddToCartAndAwaitOutcome } from "../fixtures/add-to-cart";
+import { checkoutSurface } from "../fixtures/checkout";
 import {
   BASE_URL,
   LOCALE,
@@ -119,12 +120,28 @@ test.describe("critical-path", () => {
       await page.goto(path("/cart"));
       await expect(page.getByTestId("cart-page")).toBeVisible();
       await page.goto(path("/checkout"));
-      await expect(
-        page
-          .getByRole("heading", { name: /checkout|payment|delivery|contact/i })
-          .or(page.getByText(/sign in|phone|loading/i))
-          .first(),
-      ).toBeVisible({ timeout: 30_000 });
+      /**
+       * Run 35456698878: this assertion used to be
+       *
+       *   getByRole("heading", { name: /checkout|payment|delivery|contact/i })
+       *     .or(getByText(/sign in|phone|loading/i))
+       *     .first()
+       *
+       * whose `.or()` arm matched the shop chrome's hidden global
+       * "Loading categories…" rail — earlier in the DOM than the Checkout
+       * heading, so `.first()` resolved to an invisible, unrelated node and
+       * the journey timed out without ever saying what it had actually found.
+       *
+       * Scoped now to Checkout's own step content. `li[aria-current="step"]`
+       * is published only by packages/ui/src/stepper.tsx, and Checkout is the
+       * only Customer surface that renders a Stepper — in BOTH its loading and
+       * its loaded branch, so this is true from first paint. No copy is read,
+       * so no unrelated global string can satisfy it; the timeout is unchanged
+       * and the journey is not weakened.
+       */
+      await expect(checkoutSurface(page)).toBeVisible({ timeout: 30_000 });
+      // Exactly one step is current: the wizard is live, not an empty shell.
+      await expect(page.locator('li[aria-current="step"]')).toHaveCount(1);
     }
 
     // 6–7. Payment branch appropriate to environment — UI must match authoritative state.

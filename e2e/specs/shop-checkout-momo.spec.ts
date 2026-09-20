@@ -1,5 +1,6 @@
 import { clickAddToCartAndAwaitOutcome } from "../fixtures/add-to-cart";
-import { customerOtp, lenco, path, whatsappMockReady } from "../fixtures/env";
+import { checkoutSurface, completeCheckout } from "../fixtures/checkout";
+import { customerOtp, customerOtpReady, lenco, path, whatsappMockReady } from "../fixtures/env";
 import { resolveGate } from "../fixtures/gating";
 import { completeSandboxMomoPush, sandboxEnabled } from "../fixtures/lenco";
 import { captureSearchStateOnFailure } from "../fixtures/search-diagnostics";
@@ -8,32 +9,65 @@ import { expect, test } from "../fixtures/test-base";
 import { expectWhatsAppMessage } from "../fixtures/whatsapp";
 
 /**
- * Critical path: browse → search → PDP → cart → checkout → MoMo pay →
- * confirmation → WhatsApp-mock assertion.
+ * Critical path: browse → PDP → cart → the REAL four-step checkout → MoMo pay
+ * → confirmation → WhatsApp-mock assertion.
  *
- * The live Lenco sandbox charge (and the confirmation/WhatsApp legs that depend
- * on a settled payment) are ENV-GATED behind `LENCO_SANDBOX=1` + creds
- * (founder gate F9b). Without them the spec asserts up to the pay-initiation
- * boundary and skips the charge with an annotation — it never hammers a real
- * payment endpoint.
+ * Same S2 defect as shop-cod: the spec reached /checkout and immediately went
+ * for `[name="payment-method"][value="momo"]` and a pay button while the app
+ * was still on "Step 1 of 4 · Your contact details". The wizard is now driven
+ * for real through `fixtures/checkout.ts`:
+ * Contact → Fulfilment → Payment (MoMo rail + payer number) → Review → Place
+ * order, and only then is the Lenco sandbox leg considered.
+ *
+ * SEARCH: this spec's own doc comment has always said search ranking is not
+ * its subject, so search is no longer a prerequisite for the commerce journey.
+ * It stays as a DIAGNOSTIC leg — recorded, never gating — and the PDP is
+ * opened canonically by seeded slug. Independent browse/search coverage is
+ * unchanged and still enforced in critical-path.spec.ts and
+ * browse-journey.spec.ts.
+ *
+ * The live Lenco sandbox charge (and the confirmation/WhatsApp legs that
+ * depend on a settled payment) remain ENV-GATED behind `LENCO_SANDBOX` + creds
+ * (founder gate F9b). Without them the spec asserts up to the real
+ * pay-initiation boundary — which is now an actually-placed order sitting on
+ * the USSD wait — and skips the charge with an annotation.
  */
 test.describe("shop · checkout · momo", () => {
   test("buyer pays a listing by MTN/Airtel MoMo and gets a WhatsApp receipt", async ({ page }) => {
+    // Checkout is authenticated. As in shop-cod, the identical fixture is
+    // already REQUIRED_STRICT at auth-otp.spec.ts, so certification coverage
+    // cannot be lost silently by classifying it OPTIONAL_GATE here.
+    if (!customerOtpReady()) {
+      const gate = resolveGate({
+        kind: "OPTIONAL_GATE",
+        journey: "MoMo checkout placement (authenticated buyer)",
+        fixtures: ["E2E_CUSTOMER_TEST_OTP"],
+      });
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test.skip(true, gate.reason);
+      return;
+    }
+
     // 1. Browse home.
     await page.goto(path("/"));
 
-    // 2. Search for the seeded, buyable product.
+    // 2. Search — DIAGNOSTIC ONLY on this spec (see the note above). A zero-hit
+    //    or unavailable search surface is recorded and the commerce journey
+    //    continues; it is browse-journey/critical-path that own search as a
+    //    gating assertion.
     await page.goto(path(`/search?q=${encodeURIComponent(SEED.searchTerm)}`));
-    // Assertion unchanged and still strict — no fallback selector, no extra
-    // wait. The wrapper only records WHICH honest state the page was in if it
-    // fails, so a repeat of Run #68's single search retry tells us whether the
-    // canonical term genuinely returned zero hits (a separate seed/index root
-    // cause) instead of leaving a bare locator timeout.
-    await captureSearchStateOnFailure(page, () =>
-      expect(page.getByTestId("search-results-list")).toBeVisible(),
-    );
+    const searchReady = await captureSearchStateOnFailure(page, () =>
+      page
+        .getByTestId("search-results-list")
+        .waitFor({ state: "visible", timeout: 15_000 })
+        .then(() => true),
+    ).catch(() => false);
+    test.info().annotations.push({
+      type: "search-diagnostic",
+      description: `search-results-list visible for "${SEED.searchTerm}": ${searchReady}`,
+    });
 
-    // 3. Open the seeded PDP directly (search ranking is not under test here).
+    // 3. Open the canonical seeded PDP directly — the actual subject of this spec.
     await page.goto(path(`/p/${SEED.product.slug}`));
     await expect(page.getByTestId("pdp-buy-box")).toBeVisible();
     await expect(page.getByTestId("pdp-price")).toBeVisible();
@@ -46,28 +80,31 @@ test.describe("shop · checkout · momo", () => {
     await expect(page.getByTestId("cart-page")).toBeVisible();
     await expect(page.getByTestId("cart-subtotal")).toBeVisible();
 
-    // 6. Checkout — choose MoMo as the payment method.
+    // 6. The real four-step checkout, paying by MoMo.
     await page.goto(path("/checkout"));
-    const momo = page.locator('[name="payment-method"][value="momo"]');
-    await momo
-      .first()
-      .check()
-      .catch(async () => {
-        // Fallback: some renders expose MoMo as the rail select rather than radio.
-        await page.locator('[name="momo-rail"]').first().waitFor();
-      });
+    await expect(checkoutSurface(page)).toBeVisible({ timeout: 30_000 });
 
-    // Fill the escrow/delivery contact (landmark + phone — Zambia addressing).
-    const phoneField = page.getByLabel(/phone|mobile|momo/i).first();
-    if (await phoneField.count()) {
-      await phoneField.fill(lenco.testMomoNumber || SEED.address.phone);
-    }
+    const run = await completeCheckout(page, {
+      payment: "momo",
+      rail: "mtn",
+      // The sandbox MSISDN Lenco auto-approves when the F9b gate is open;
+      // otherwise the canonical synthetic buyer number. Both are normalised to
+      // the 9-digit national form the payer field accepts.
+      payerPhone: lenco.testMomoNumber || SEED.address.phone,
+    });
+    expect(run.payment).toBe("momo");
+    expect(run.payerNationalNumber).not.toBeNull();
+    test.info().annotations.push({
+      type: "checkout",
+      description: `contact=${run.contact}; fulfilment=${run.fulfilment.join(",")}`,
+    });
 
-    // 7. Initiate payment (submit checkout). This is the pay-initiation boundary.
-    await page
-      .getByRole("button", { name: /pay|place order|checkout/i })
-      .first()
-      .click();
+    // 7. Pay-initiation boundary — a REAL placed order awaiting USSD approval.
+    await expect(
+      page.getByTestId("ussd-wait").or(page.getByTestId("payment-confirming")).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    // MoMo is not COD: the COD surface must never appear on this journey.
+    await expect(page.getByTestId("payment-cod")).toHaveCount(0);
 
     // ── ENV-GATED: live Lenco sandbox charge (F9b) ───────────────────────────
     if (!sandboxEnabled()) {
@@ -77,11 +114,6 @@ test.describe("shop · checkout · momo", () => {
         fixtures: ["LENCO_SANDBOX"],
       });
       test.info().annotations.push({ type: "founder-gated", description: gate.reason });
-      // We still expect the app to have moved past the pay button into a
-      // pending/USSD-wait or hosted-widget state (initiation succeeded).
-      await expect(page.getByTestId("ussd-wait").or(page.getByTestId("payment-cod"))).toBeVisible({
-        timeout: 30_000,
-      });
       test.skip(true, gate.reason);
       return;
     }
