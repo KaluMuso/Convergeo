@@ -15,6 +15,11 @@ import {
 } from "../../../e2e/fixtures/spec-classification.ts";
 import { CERTIFICATION_VIEWPORTS } from "../../../e2e/fixtures/viewports.ts";
 import {
+  CERTIFICATION_WORKERS,
+  CI_WORKERS,
+  resolveWorkers,
+} from "../../../e2e/fixtures/worker-policy.ts";
+import {
   computeCompleteness,
   evaluateCompleteness,
   flattenTests,
@@ -22,6 +27,20 @@ import {
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const SPEC_DIR = path.join(REPO_ROOT, "e2e", "specs");
+const PLAYWRIGHT_CONFIG = path.join(REPO_ROOT, "e2e", "playwright.config.ts");
+
+function playwrightConfigSource() {
+  return readFileSync(PLAYWRIGHT_CONFIG, "utf8");
+}
+
+/** Strips comments so a pattern discussed in prose never counts as live code. */
+function stripComments(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("//"))
+    .join("\n");
+}
 
 function specSource(file) {
   return readFileSync(path.join(SPEC_DIR, file), "utf8");
@@ -335,5 +354,95 @@ describe("verify-e2e-matrix.mjs — execution-completeness contract", () => {
     const report = computeCompleteness(doc([t]), doc([t]));
     assert.equal(report.PASSED, 1);
     assert.equal(report.FAILED, 0);
+  });
+});
+/**
+ * Strict-certification worker isolation.
+ *
+ * The real checkout specs drive the deployed wizard as ONE synthetic Customer
+ * (SEED.personas.customer), and the API resolves that buyer's cart by owner:
+ *
+ *   .eq("user_id", user_id).eq("status", "active").limit(1)
+ *
+ * so every spec running as that persona shares a single active cart row.
+ * `fullyParallel: true` with two CI workers therefore let one spec's
+ * add-to-cart / reservation / placement land inside another's checkout — a
+ * non-deterministic certification failure caused by the harness, not the
+ * product. A strict run serialises to one worker; nothing else about the
+ * matrix moves.
+ */
+describe("worker policy — strict certification serialises the shared synthetic Customer", () => {
+  it("CI + integrated-staging runs on a single worker", () => {
+    assert.equal(resolveWorkers({ isCI: true, mode: "integrated-staging" }), 1);
+    assert.equal(resolveWorkers({ isCI: true, mode: "integrated-staging" }), CERTIFICATION_WORKERS);
+  });
+
+  it("CI + production-readiness runs on a single worker", () => {
+    assert.equal(resolveWorkers({ isCI: true, mode: "production-readiness" }), 1);
+  });
+
+  it("CI + ordinary ci keeps two workers", () => {
+    assert.equal(resolveWorkers({ isCI: true, mode: "ci" }), 2);
+    assert.equal(resolveWorkers({ isCI: true, mode: "ci" }), CI_WORKERS);
+  });
+
+  it("local-development keeps Playwright's own default (undefined)", () => {
+    assert.equal(resolveWorkers({ isCI: false, mode: "local-development" }), undefined);
+    // Off CI, a certification mode label must not conjure a worker count.
+    assert.equal(resolveWorkers({ isCI: false, mode: "integrated-staging" }), undefined);
+    // On CI, local-development is not a certification run.
+    assert.equal(resolveWorkers({ isCI: true, mode: "local-development" }), CI_WORKERS);
+  });
+
+  it("playwright.config.ts takes its worker count from the policy, not a literal", () => {
+    const source = playwrightConfigSource();
+    assert.ok(
+      source.includes("resolveWorkers({ isCI, mode: certificationMode() })"),
+      "playwright.config.ts no longer resolves workers through fixtures/worker-policy.ts",
+    );
+    assert.ok(
+      !/workers:\s*isCI\s*\?\s*\d+\s*:/.test(source),
+      "playwright.config.ts reintroduced a hard-coded workers ternary, bypassing the policy",
+    );
+  });
+
+  it("the policy changes ONLY workers — every other matrix knob is untouched", () => {
+    const source = playwrightConfigSource();
+    // Explicitly out of scope for this repair; a regression here would change
+    // the certification matrix rather than its concurrency.
+    assert.ok(source.includes("fullyParallel: true"), "fullyParallel changed");
+    assert.ok(source.includes("retries: isCI ? 2 : 0"), "retries changed");
+    assert.ok(source.includes("timeout: 90_000"), "per-test timeout changed");
+    assert.ok(source.includes("globalTimeout: 720 * 1000"), "globalTimeout is no longer 720s");
+    assert.ok(
+      source.includes("projects: [...responsiveProjects(), fast3gProject()]"),
+      "project list changed",
+    );
+    assert.ok(
+      source.includes("specsForProject(projectName)"),
+      "spec assignment no longer comes from fixtures/spec-classification.ts",
+    );
+    assert.ok(source.includes("CERTIFICATION_VIEWPORTS"), "viewport source changed");
+  });
+
+  it("the policy does not re-parse CERTIFICATION_MODE — it reuses the env contract", () => {
+    const policy = readFileSync(
+      path.join(REPO_ROOT, "e2e", "fixtures", "worker-policy.ts"),
+      "utf8",
+    );
+    // The policy takes the mode as an argument; the config supplies it from
+    // the one existing helper. Neither may grow a second parser.
+    assert.ok(
+      policy.includes('import type { CertificationMode } from "./env"'),
+      "worker-policy.ts must take the CertificationMode from the existing env contract",
+    );
+    assert.ok(
+      !stripComments(policy).includes("CERTIFICATION_MODE"),
+      "worker-policy.ts duplicates CERTIFICATION_MODE parsing instead of reusing certificationMode()",
+    );
+    assert.ok(
+      playwrightConfigSource().includes("certificationMode()"),
+      "playwright.config.ts must supply the mode from certificationMode()",
+    );
   });
 });

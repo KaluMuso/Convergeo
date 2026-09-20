@@ -1,17 +1,56 @@
 import { clickAddToCartAndAwaitOutcome } from "../fixtures/add-to-cart";
-import { path } from "../fixtures/env";
+import { checkoutSurface, completeCheckout } from "../fixtures/checkout";
+import { customerOtpReady, path } from "../fixtures/env";
+import { resolveGate } from "../fixtures/gating";
 import { SEED } from "../fixtures/seed";
 import { expect, test } from "../fixtures/test-base";
 
 /**
- * Critical path: browse → PDP → cart → checkout → Cash-on-Delivery.
+ * Critical path: browse → PDP → cart → the REAL four-step checkout →
+ * Cash-on-Delivery placement.
  *
- * COD is a launch payment option capped at K500 (Zambia guardrail). This flow
- * needs no external payment provider, so it runs end-to-end against any live
- * target (staging or a local dev server) with seed data — no founder gate.
+ * S2's staging run proved this spec was never placing an order. It landed on
+ * /checkout and went straight for `[name="payment-method"][value="cod"]` and a
+ * `/place order|confirm|checkout|pay/i` button, while the deployed app was
+ * still on
+ *
+ *   Checkout
+ *   Step 1 of 4
+ *   Your contact details
+ *
+ * Two defects, not one: the wizard was never advanced past Contact, and the
+ * COD radio has no `value` attribute at all (StepPayment renders
+ * `<Radio name="payment-method">` with a label, no value), so that selector
+ * could not have matched even on the Payment step. The terminal assertion then
+ * accepted `cart-empty-state`, which an abandoned cart also produces — so the
+ * spec could report green having bought nothing.
+ *
+ * It now drives Contact → Fulfilment → Payment → Review → Place order through
+ * `fixtures/checkout.ts`, against the real deployed UI and the real API, and
+ * asserts the one honest COD terminal state.
+ *
+ * COD needs no payment provider, so there is still no Lenco gate. It DOES need
+ * a Customer session, because `POST /checkout/session` is authenticated — that
+ * is the app's contract, not a test convenience.
  */
 test.describe("shop · cash on delivery", () => {
   test("buyer places a COD order and reaches confirmation", async ({ page }) => {
+    // Checkout is authenticated. The same fixture is already REQUIRED_STRICT at
+    // auth-otp.spec.ts, so a certification run cannot silently lose customer-OTP
+    // coverage; escalating the identical missing fixture a second time here
+    // would report one gap twice. Outside a certification run this stays an
+    // honest, annotated skip.
+    if (!customerOtpReady()) {
+      const gate = resolveGate({
+        kind: "OPTIONAL_GATE",
+        journey: "COD checkout placement (authenticated buyer)",
+        fixtures: ["E2E_CUSTOMER_TEST_OTP"],
+      });
+      test.info().annotations.push({ type: "founder-gated", description: gate.reason });
+      test.skip(true, gate.reason);
+      return;
+    }
+
     // Open the seeded PDP and add to cart.
     await page.goto(path(`/p/${SEED.product.slug}`));
     await expect(page.getByTestId("pdp-buy-box")).toBeVisible();
@@ -22,40 +61,23 @@ test.describe("shop · cash on delivery", () => {
     await expect(page.getByTestId("cart-page")).toBeVisible();
     await page.goto(path("/checkout"));
 
-    // Select Cash-on-Delivery.
-    const cod = page
-      .locator('[name="payment-method"][value="cod"]')
-      .or(page.getByTestId("payment-cod"));
-    await cod
-      .first()
-      .check()
-      .catch(async () => {
-        await page.getByTestId("payment-cod").first().click();
-      });
+    // The Checkout surface itself — the Stepper, which only Checkout renders.
+    await expect(checkoutSurface(page)).toBeVisible({ timeout: 30_000 });
 
-    // Provide landmark + phone delivery contact.
-    const phoneField = page.getByLabel(/phone|mobile/i).first();
-    if (await phoneField.count()) {
-      await phoneField.fill(SEED.address.phone);
-    }
-    const landmark = page.getByLabel(/landmark|address|location/i).first();
-    if (await landmark.count()) {
-      await landmark.fill(SEED.address.landmark);
-    }
+    // The real wizard, end to end.
+    const run = await completeCheckout(page, { payment: "cod" });
+    expect(run.payment).toBe("cod");
+    expect(run.fulfilment.length).toBeGreaterThan(0);
+    test.info().annotations.push({
+      type: "checkout",
+      description: `contact=${run.contact}; fulfilment=${run.fulfilment.join(",")}`,
+    });
 
-    // Place the COD order.
-    await page
-      .getByRole("button", { name: /place order|confirm|checkout|pay/i })
-      .first()
-      .click();
-
-    // COD needs no gateway — UI shows payment-cod (honest COD confirmation),
-    // never a local payment-success claim (payment-outcome honesty).
-    await expect(
-      page
-        .getByTestId("payment-cod")
-        .or(page.getByTestId("payment-confirming"))
-        .or(page.getByTestId("cart-empty-state")),
-    ).toBeVisible({ timeout: 30_000 });
+    // COD needs no gateway: the honest terminal state is "order placed, pay the
+    // courier" — never a local payment-success claim (payment-outcome honesty),
+    // and never an empty cart, which an abandoned checkout also produces.
+    await expect(page.getByTestId("payment-cod")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("payment-confirming")).toHaveCount(0);
+    await expect(page.getByTestId("ussd-wait")).toHaveCount(0);
   });
 });

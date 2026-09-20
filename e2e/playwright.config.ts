@@ -1,12 +1,13 @@
 import { defineConfig, devices } from "@playwright/test";
 
-import { BASE_URL } from "./fixtures/env";
+import { BASE_URL, certificationMode } from "./fixtures/env";
 import {
   FAST_3G_PROJECT,
   RESPONSIVE_PROJECTS,
   specsForProject,
 } from "./fixtures/spec-classification";
 import { CERTIFICATION_VIEWPORTS } from "./fixtures/viewports";
+import { resolveWorkers } from "./fixtures/worker-policy";
 
 const isCI = !!process.env.CI;
 
@@ -112,7 +113,16 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,
-  workers: isCI ? 2 : undefined,
+  /**
+   * Worker count comes from fixtures/worker-policy.ts: 1 in a strict
+   * certification run (integrated-staging / production-readiness), 2 in
+   * ordinary CI, Playwright's default locally. The real checkout specs share
+   * one synthetic Customer whose cart the API resolves by owner, so two
+   * workers could interleave one buyer's cart/reservation state. Everything
+   * else here -- fullyParallel, retries, the per-test timeout, globalTimeout,
+   * the projects, the viewports and the spec assignment -- is unchanged.
+   */
+  workers: resolveWorkers({ isCI, mode: certificationMode() }),
   reporter: [
     ["list"],
     ["html", { outputFolder: "playwright-report", open: "never" }],
