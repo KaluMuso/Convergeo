@@ -268,6 +268,41 @@ describe("OtpForm", () => {
     });
   });
 
+  it("retries failed post-auth reconciliation without consuming the OTP twice", async () => {
+    verifyOtp.mockResolvedValue({ error: null });
+    mergeGuestCartIntoAccount
+      .mockRejectedValueOnce(new Error("merge failed"))
+      .mockResolvedValueOnce(undefined);
+    const user = userEvent.setup();
+
+    render(
+      <OtpForm
+        locale="en"
+        phone="+260971234567"
+        labels={otpLabels}
+        loginPath="/login"
+        defaultNextPath="/en"
+      />,
+    );
+
+    await fillOtp(user);
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("Generic error");
+    });
+
+    expect(verifyOtp).toHaveBeenCalledTimes(1);
+    expect(mergeGuestCartIntoAccount).toHaveBeenCalledTimes(1);
+    expect(push).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Verify" }));
+
+    await waitFor(() => {
+      expect(mergeGuestCartIntoAccount).toHaveBeenCalledTimes(2);
+      expect(push).toHaveBeenCalledWith("/en");
+    });
+    expect(verifyOtp).toHaveBeenCalledTimes(1);
+  });
+
   it("vendor OTP never calls customer preferences", async () => {
     verifyOtp.mockResolvedValue({ error: null });
     const user = userEvent.setup();
