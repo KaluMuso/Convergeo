@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { path } from "../fixtures/env";
 import {
   FIXTURE_GROUP_ID,
@@ -16,6 +18,15 @@ import {
 import { expect, test } from "../fixtures/test-base";
 
 import type { Route } from "@playwright/test";
+
+const checkoutMessages = JSON.parse(
+  readFileSync(new URL("../../packages/i18n/messages/en/checkout.json", import.meta.url), "utf8"),
+) as {
+  checkout: {
+    card: { successBody: string };
+    pending: { confirmingBody: string };
+  };
+};
 
 /**
  * VB-P07 / S6 / G4 — checkout honesty: pending/failed/unknown must never render
@@ -125,6 +136,11 @@ test.describe("checkout · false-success", () => {
   });
 
   test("MoMo provider success shows confirming — not a final paid claim", async ({ page }) => {
+    // Keep the shared guard tied to the real English catalogue: it must catch
+    // terminal success semantics while allowing the honest transitional copy.
+    expect(checkoutMessages.checkout.card.successBody).toMatch(FORBIDDEN_SUCCESS_COPY);
+    expect(checkoutMessages.checkout.pending.confirmingBody).not.toMatch(FORBIDDEN_SUCCESS_COPY);
+
     await installMockBuyerSession(page);
     await mockPaymentStatus(page, statusFixture({ status: "success", cod: false }));
 
@@ -205,8 +221,14 @@ test.describe("checkout · false-success", () => {
       await expect(page.getByText(FORBIDDEN_SUCCESS_COPY)).toHaveCount(0);
 
       // "Confirming" is a transition, not a terminal screen: the attempted
-      // destination must identify the authoritative fixture order.
-      expect(orderNavigations.some((url) => url.includes(FIXTURE_ORDER_ID))).toBe(true);
+      // destinations must all target the exact locale-prefixed fixture order
+      // path. A matching ID in a query string is not routing evidence.
+      const expectedOrderPath = path(`/account/orders/${FIXTURE_ORDER_ID}`);
+      expect(
+        orderNavigations.every(
+          (recordedUrl) => new URL(recordedUrl).pathname === expectedOrderPath,
+        ),
+      ).toBe(true);
     } finally {
       // Always release the barrier, even after a failed assertion. Removing
       // this test's handler prevents later requests from joining the hold;
