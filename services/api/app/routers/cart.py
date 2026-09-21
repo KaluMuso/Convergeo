@@ -20,7 +20,6 @@ from app.services.cart.store import (
     fetch_active_cart_by_guest,
     fetch_listing,
     fetch_listings_for_items,
-    mark_guest_cart_converted,
     service_db_client,
 )
 from app.services.cart.totals import cart_subtotal_ngwee, line_total_ngwee
@@ -976,6 +975,12 @@ async def merge_cart_on_login(
     settings: Annotated[Settings, Depends(get_settings)],
     request: Request,
 ) -> CartResponse:
+    from app.services.cart.merge_atomic import (
+        AtomicMergeOutcome,
+        apply_login_cart_merge_atomic,
+    )
+    from app.services.rfq.listing_cart_authority import fetch_rfq_threads_for_items
+
     guest_token = _resolve_guest_token(request, settings)
     user_client = get_user_client(current_user.token, settings)
 
@@ -984,64 +989,65 @@ async def merge_cart_on_login(
         user_cart = _create_user_cart(user_client, current_user.id)
     user_cart_id = str(user_cart["id"])
 
-    user_items = _fetch_cart_items(user_client, user_cart_id)
-    guest_items: list[dict[str, Any]] = []
-    guest_cart_id: str | None = None
+    service = service_db_client()
+    business_eligible = _business_eligible_for_user(current_user.id)
+    conflicts: list[MergeConflict] = []
 
-    if guest_token is not None:
-        guest_cart = fetch_active_cart_by_guest(guest_token)
-        if guest_cart is not None:
-            guest_cart_id = str(guest_cart["id"])
-            guest_items = _fetch_cart_items(service_db_client(), guest_cart_id)
+    # Three deterministic optimistic attempts cover a concurrent ordinary cart
+    # mutation without ever applying a stale proposal. A concurrent duplicate
+    # login request becomes ALREADY_CONVERTED and never rewrites the account.
+    for attempt in range(3):
+        user_items = _fetch_cart_items(user_client, user_cart_id)
+        guest_cart = fetch_active_cart_by_guest(guest_token) if guest_token is not None else None
 
-    all_items = user_items + guest_items
-    listings = fetch_listings_for_items(all_items)
-    from app.services.rfq.listing_cart_authority import fetch_rfq_threads_for_items
+        # No verified active guest cart means there is nothing to merge. In
+        # particular, do not delete/reinsert the authenticated cart.
+        if guest_cart is None or guest_token is None:
+            break
 
-    rfq_threads_by_id = fetch_rfq_threads_for_items(service_db_client(), all_items)
-    merged_items, conflicts = merge_cart_items(
-        user_items=user_items,
-        guest_items=guest_items,
-        listings_by_id=listings,
-        business_eligible=_business_eligible_for_user(current_user.id),
-        customer_id=current_user.id,
-        rfq_threads_by_id=rfq_threads_by_id,
-    )
+        guest_cart_id = str(guest_cart["id"])
+        guest_items = _fetch_cart_items(service, guest_cart_id)
+        all_items = user_items + guest_items
+        listings = fetch_listings_for_items(all_items)
+        rfq_threads_by_id = fetch_rfq_threads_for_items(service, all_items)
+        merged_items, conflicts = merge_cart_items(
+            user_items=user_items,
+            guest_items=guest_items,
+            listings_by_id=listings,
+            business_eligible=business_eligible,
+            customer_id=current_user.id,
+            rfq_threads_by_id=rfq_threads_by_id,
+        )
 
-    # DELETE stays on the user client — 0086 left client DELETE granted, and
-    # exercising it here keeps the RLS delete path honest. The INSERT of the
-    # re-derived lines must be the service client (0086, B0-P02a).
-    user_client.table("cart_items").delete().eq("cart_id", user_cart_id).execute()
-    if merged_items:
-        service_db_client().table("cart_items").insert(
-            [
-                {
-                    "cart_id": user_cart_id,
-                    "listing_id": item.listing_id,
-                    "qty": item.qty,
-                    "unit_price_ngwee": item.unit_price_ngwee,
-                    "wholesale": item.wholesale,
-                    **(
-                        {"rfq_thread_id": item.rfq_thread_id}
-                        if item.rfq_thread_id is not None
-                        else {}
-                    ),
-                }
-                for item in merged_items
-            ]
-        ).execute()
-
-    if guest_cart_id is not None:
-        mark_guest_cart_converted(guest_cart_id)
+        outcome = apply_login_cart_merge_atomic(
+            service,
+            user_id=current_user.id,
+            user_cart_id=user_cart_id,
+            guest_cart_id=guest_cart_id,
+            guest_token=guest_token,
+            expected_user_items=user_items,
+            expected_guest_items=guest_items,
+            merged_items=merged_items,
+        )
+        if outcome is not AtomicMergeOutcome.STALE_SNAPSHOT:
+            break
+        if attempt == 2:
+            raise AppError(
+                code="cart.merge_conflict",
+                message="Cart changed while sign-in merge was being prepared",
+                http_status=409,
+                details={"retry": True},
+            )
 
     _clear_guest_cookie(response)
 
     final_items = _fetch_cart_items(user_client, user_cart_id)
+    listings = fetch_listings_for_items(final_items)
     return _cart_response(
         cart_id=user_cart_id,
         items=final_items,
         listings_by_id=listings,
-        business_eligible=_business_eligible_for_user(current_user.id),
+        business_eligible=business_eligible,
         conflicts=conflicts,
         customer_id=current_user.id,
     )
