@@ -2,8 +2,14 @@ import { path, requireVendorBaseUrl, ticketPin, urlOn, vendorOtpReady } from "..
 import { enforceGate, resolveGate } from "../fixtures/gating";
 import { sandboxEnabled } from "../fixtures/lenco";
 import { loginVendorViaOtp } from "../fixtures/otp-login";
+import {
+  expect,
+  SCANNER_ARTIFACT_POLICY,
+  test,
+} from "../fixtures/scanner-artifact-test";
 import { SEED } from "../fixtures/seed";
-import { expect, test } from "../fixtures/test-base";
+
+test.use(SCANNER_ARTIFACT_POLICY);
 
 /**
  * Critical path: buy an event ticket → see it in the wallet → organiser scanner
@@ -53,8 +59,8 @@ test.describe("event · ticket lifecycle", () => {
     }
 
     // ── Scanner verify + duplicate-reject leg (vendor app, OTP-gated) ─────────
-    // Stable, environment-bound PIN fallback derived by the canonical seed —
-    // not the rotating 60-second QR code, which no stored value could outlive.
+    // Private holder-visible PIN recovered from this run's real free-RSVP
+    // issuance — not the rotating QR code and never a reusable derivation.
     const scannerPin = ticketPin();
     // The organiser scanner route and the verify API are both keyed on the
     // event's primary key, never its public slug.

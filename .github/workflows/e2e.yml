@@ -460,6 +460,10 @@ jobs:
         working-directory: e2e
         run: npx playwright install --with-deps chromium
 
+      - name: Guard scanner credential artifact containment
+        working-directory: e2e
+        run: npm run test:scanner-artifacts
+
       # Focus groups map to HARDCODED spec paths. The workflow input only
       # selects a branch of this case statement — its value never reaches a
       # command line, so there is no injection surface even before GitHub's
