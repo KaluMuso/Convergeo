@@ -9,7 +9,7 @@ from typing import Any
 import pytest
 from app.errors import AppError
 from app.services.tickets import purchase
-from app.services.tickets.qr import verify_pin
+from app.services.tickets.qr import seal_pin_storage, verify_pin
 from app.staging import scanner_ticket
 from app.staging.scanner_ticket import (
     SCANNER_RSVP_IDEMPOTENCY_KEY,
@@ -17,10 +17,11 @@ from app.staging.scanner_ticket import (
     issue_scanner_certification_ticket,
 )
 from app.staging.synthetic_contract import event_fixture
-from app.staging.ticket_credentials import certification_ticket_credentials
+from app.staging.ticket_credentials import recover_service_issued_credential
 
 SERVICE_ROLE_A = "staging-scanner-service-role-a"
-SERVICE_ROLE_B = "staging-scanner-service-role-b"
+GENERATED_TICKET_ID = "01000000-0000-4000-8000-000000000001"
+SERVICE_ISSUED_PIN = "421937"
 
 
 @pytest.fixture(autouse=True)
@@ -45,26 +46,23 @@ def test_paid_purchase_type_remains_separate() -> None:
     assert event.tickets[0].ticket_type_id not in {item.ticket_type_id for item in paid}
 
 
-def test_certification_credentials_are_deterministic() -> None:
-    assert certification_ticket_credentials() == certification_ticket_credentials()
-
-
-def test_certification_credentials_are_environment_bound(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    first = certification_ticket_credentials()[0]
-    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", SERVICE_ROLE_B)
-    second = certification_ticket_credentials()[0]
-    assert first.ticket_id == second.ticket_id
-    assert (first.pin, first.qr_secret, first.pin_hash) != (
-        second.pin,
-        second.qr_secret,
-        second.pin_hash,
+def _recovered_credential(pin: str = SERVICE_ISSUED_PIN) -> Any:
+    event = event_fixture("EVENT_LAUNCH_EXPO")
+    return recover_service_issued_credential(
+        issued_ticket_id=GENERATED_TICKET_ID,
+        canonical_ticket_id=event.tickets[0].ticket_id,
+        stored_pin_hash=seal_pin_storage(pin=pin, ticket_id=GENERATED_TICKET_ID),
     )
 
 
-def test_certification_pin_uses_the_production_verifier() -> None:
-    credential = certification_ticket_credentials()[0]
+def test_production_issuance_generates_fresh_credentials() -> None:
+    first = purchase._ticket_secrets(GENERATED_TICKET_ID)
+    second = purchase._ticket_secrets(GENERATED_TICKET_ID)
+    assert first != second
+
+
+def test_service_issued_pin_is_resealed_for_the_canonical_ticket() -> None:
+    credential = _recovered_credential()
     assert verify_pin(
         pin=credential.pin,
         ticket_id=credential.ticket_id,
@@ -73,7 +71,7 @@ def test_certification_pin_uses_the_production_verifier() -> None:
 
 
 def test_credential_repr_redacts_the_pin() -> None:
-    credential = certification_ticket_credentials()[0]
+    credential = _recovered_credential()
     assert credential.pin not in repr(credential)
     assert "<redacted>" in repr(credential)
 
@@ -104,7 +102,7 @@ def test_cleanup_is_scoped_to_canonical_identity() -> None:
 
 def _rsvp_outcome() -> SimpleNamespace:
     return SimpleNamespace(
-        ticket_ids=("01000000-0000-4000-8000-000000000001",),
+        ticket_ids=(GENERATED_TICKET_ID,),
         order_item_id="01000000-0000-4000-8000-000000000002",
         order_id="01000000-0000-4000-8000-000000000003",
         checkout_group_id="01000000-0000-4000-8000-000000000004",
@@ -123,6 +121,11 @@ def test_issuer_calls_real_rsvp_with_the_free_type(
 
     def fake_sql(sql: str) -> SimpleNamespace:
         sql_calls.append(sql)
+        if "SELECT pin_hash" in sql:
+            return SimpleNamespace(
+                ok=True,
+                rows=[seal_pin_storage(pin=SERVICE_ISSUED_PIN, ticket_id=GENERATED_TICKET_ID)],
+            )
         return SimpleNamespace(ok=True, rows=["1"] if "SELECT count(*)" in sql else [])
 
     monkeypatch.setattr(scanner_ticket, "rsvp", fake_rsvp)
@@ -138,7 +141,8 @@ def test_issuer_calls_real_rsvp_with_the_free_type(
         "qty": 1,
     }
     assert credential.ticket_id == ticket.ticket_id
-    assert len(sql_calls) == 2
+    assert credential.pin == SERVICE_ISSUED_PIN
+    assert len(sql_calls) == 3
 
 
 def test_canonicalisation_keeps_free_order_semantics_and_no_payment_write(
@@ -149,6 +153,11 @@ def test_canonicalisation_keeps_free_order_semantics_and_no_payment_write(
 
     def fake_sql(sql: str) -> SimpleNamespace:
         sql_calls.append(sql)
+        if "SELECT pin_hash" in sql:
+            return SimpleNamespace(
+                ok=True,
+                rows=[seal_pin_storage(pin=SERVICE_ISSUED_PIN, ticket_id=GENERATED_TICKET_ID)],
+            )
         return SimpleNamespace(ok=True, rows=["1"] if "SELECT count(*)" in sql else [])
 
     monkeypatch.setattr(scanner_ticket, "run_sql_script", fake_sql)
@@ -159,6 +168,7 @@ def test_canonicalisation_keeps_free_order_semantics_and_no_payment_write(
     assert "NOT EXISTS" in finalise and "public.payments" in finalise
     assert "INSERT INTO public.payments" not in finalise
     assert "UPDATE public.payments" not in finalise
+    assert "qr_secret =" not in finalise
 
 
 def test_issuer_refuses_a_paid_scanner_fixture_before_any_write(
@@ -189,13 +199,19 @@ def test_failed_canonicalisation_removes_the_partial_rsvp(
         if len(sql_calls) == 1:
             return SimpleNamespace(ok=True, rows=[], error=None)
         if len(sql_calls) == 2:
+            return SimpleNamespace(
+                ok=True,
+                rows=[seal_pin_storage(pin=SERVICE_ISSUED_PIN, ticket_id=GENERATED_TICKET_ID)],
+                error=None,
+            )
+        if len(sql_calls) == 3:
             return SimpleNamespace(ok=True, rows=["0"], error=None)
         return SimpleNamespace(ok=True, rows=[], error=None)
 
     monkeypatch.setattr(scanner_ticket, "run_sql_script", fake_sql)
     with pytest.raises(RuntimeError, match="canonicalisation failed"):
         issue_scanner_certification_ticket(object())
-    assert len(sql_calls) == 3
+    assert len(sql_calls) == 4
     assert _rsvp_outcome().checkout_group_id in sql_calls[-1]
     assert _rsvp_outcome().ticket_ids[0] in sql_calls[-1]
 

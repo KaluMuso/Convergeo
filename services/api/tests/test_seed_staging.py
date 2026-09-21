@@ -22,6 +22,7 @@ from app.core.env_guards import (
 )
 from app.errors import AppError
 from app.routers.ticket_verify import verify_and_check_in_ticket
+from app.services.tickets.qr import extract_pin_for_holder
 from app.staging.scanner_ticket import issue_scanner_certification_ticket
 from app.staging.seed_sql import (
     IMAGE_IDS,
@@ -42,7 +43,6 @@ from app.staging.synthetic_contract import (
     persona_by_key,
     product_fixture,
 )
-from app.staging.ticket_credentials import certification_ticket_credentials
 from app.staging.transactional import (
     TransactionalState,
     classify_state,
@@ -474,7 +474,12 @@ def test_seeded_scanner_ticket_checks_in_once_through_production_verifier(
 
     event = event_fixture("EVENT_LAUNCH_EXPO")
     ticket = event.tickets[0]
-    credential = certification_ticket_credentials()[0]
+    pin_hash = migrated_db.run(
+        f"SELECT pin_hash FROM public.tickets WHERE id = '{ticket.ticket_id}' AND status = 'issued'"
+    )
+    assert pin_hash.ok and len(pin_hash.rows) == 1
+    pin = extract_pin_for_holder(pin_hash.rows[0], ticket_id=ticket.ticket_id)
+    assert pin is not None
     vendor_id = persona_by_key(event.organiser_key).vendor_id
     assert vendor_id is not None
 
@@ -482,7 +487,7 @@ def test_seeded_scanner_ticket_checks_in_once_through_production_verifier(
         checked_in = verify_and_check_in_ticket(
             ticket_id=ticket.ticket_id,
             vendor_id=vendor_id,
-            pin=credential.pin,
+            pin=pin,
             expected_event_id=event.event_id,
             expected_instance_id=event.instance_id,
         )
@@ -492,7 +497,7 @@ def test_seeded_scanner_ticket_checks_in_once_through_production_verifier(
             verify_and_check_in_ticket(
                 ticket_id=ticket.ticket_id,
                 vendor_id=vendor_id,
-                pin=credential.pin,
+                pin=pin,
                 expected_event_id=event.event_id,
                 expected_instance_id=event.instance_id,
             )

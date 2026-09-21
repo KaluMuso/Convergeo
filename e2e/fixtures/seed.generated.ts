@@ -4,8 +4,8 @@
 // Regenerate:      python3 scripts/ci/generate-e2e-fixtures.py
 // Drift is a CI failure (STG-01 guard + generator --check).
 //
-// NON-SECRET identity only. OTP codes and the environment-bound ticket scanner
-// PIN are credentials: they arrive through the environment at run time and are
+// NON-SECRET identity only. OTP codes and the run-issued ticket scanner PIN are
+// credentials: they arrive through the environment at run time and are
 // never generated into source.
 
 /** Reserved synthetic namespace. Every identifier below sits under it. */

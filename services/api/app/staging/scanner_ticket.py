@@ -9,7 +9,7 @@ from app.services.tickets.purchase import rsvp
 from app.staging.synthetic_contract import SEED_PREFIX, event_fixture, persona_by_key
 from app.staging.ticket_credentials import (
     TicketCredential,
-    certification_ticket_credentials,
+    recover_service_issued_credential,
 )
 
 SCANNER_RSVP_IDEMPOTENCY_KEY = f"{SEED_PREFIX}-scanner-certification-rsvp-v1"
@@ -154,7 +154,34 @@ def issue_scanner_certification_ticket(service_client: Any) -> TicketCredential:
         raise RuntimeError("scanner RSVP did not issue exactly one ticket")
 
     generated_ticket_id = outcome.ticket_ids[0]
-    credential = certification_ticket_credentials()[0]
+    issued_credential = run_sql_script(
+        f"""
+SELECT pin_hash
+FROM public.tickets
+WHERE id = {_sql_text(generated_ticket_id)}
+  AND order_item_id = {_sql_text(outcome.order_item_id)}
+  AND status = 'issued';
+"""
+    )
+    if not issued_credential.ok or len(issued_credential.rows) != 1:
+        _cleanup_failed_rsvp(
+            checkout_group_id=outcome.checkout_group_id,
+            ticket_id=generated_ticket_id,
+        )
+        detail = issued_credential.error or "service-issued scanner credential missing"
+        raise RuntimeError(f"scanner RSVP credential recovery failed: {detail}")
+    try:
+        credential = recover_service_issued_credential(
+            issued_ticket_id=generated_ticket_id,
+            canonical_ticket_id=ticket.ticket_id,
+            stored_pin_hash=issued_credential.rows[0],
+        )
+    except RuntimeError:
+        _cleanup_failed_rsvp(
+            checkout_group_id=outcome.checkout_group_id,
+            ticket_id=generated_ticket_id,
+        )
+        raise
     finalise = run_sql_script(
         f"""
 BEGIN;
@@ -162,7 +189,6 @@ UPDATE public.tickets
 SET id = {_sql_text(ticket.ticket_id)},
     status = 'issued',
     checked_in_at = NULL,
-    qr_secret = {_sql_text(credential.qr_secret)},
     pin_hash = {_sql_text(credential.pin_hash)}
 WHERE id = {_sql_text(generated_ticket_id)}
   AND order_item_id = {_sql_text(outcome.order_item_id)}
