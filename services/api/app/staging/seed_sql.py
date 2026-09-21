@@ -746,12 +746,6 @@ def parse_verification(results: dict[str, list[str]]) -> None:
             "synthetic issued-ticket verification failed — the static unpaid-hold "
             "fixture is missing or already scanned"
         )
-    if int(results["scanner_ticket_checkinable"][0]) < 1:
-        raise RuntimeError(
-            "scanner-ticket verification failed — the organiser scanner journey "
-            "needs a free_rsvp ticket carrying a real order_item_id, which only "
-            "the rsvp() service path produces (app.staging.event_scanner)"
-        )
     expected_holds = sum(
         1
         for e in EVENTS
@@ -769,11 +763,32 @@ def parse_verification(results: dict[str, list[str]]) -> None:
         )
 
 
+def parse_scanner_verification(results: dict[str, list[str]]) -> None:
+    """Assert the organiser scanner ticket exists and is check-in-able.
+
+    Deliberately NOT part of `parse_verification()`. That function is the
+    STATIC seed's contract — everything `build_seed_sql()` alone is expected to
+    produce — and it has callers that apply the SQL and nothing else
+    (`tests/test_seed_staging.py::_run_verification`). The scanner ticket is not
+    written by SQL at all: it is claimed by the real `rsvp()` service path in
+    `app.staging.event_scanner`, which only `scripts/seed_staging.py` runs.
+    Folding this check into the static contract would fail every SQL-only
+    caller for a row they were never supposed to create.
+    """
+    if int(results["scanner_ticket_checkinable"][0]) < 1:
+        raise RuntimeError(
+            "scanner-ticket verification failed — the organiser scanner journey "
+            "needs a free_rsvp ticket carrying a real order_item_id, which only "
+            "the rsvp() service path produces (app.staging.event_scanner)"
+        )
+
+
 __all__ = [
     "IMAGE_IDS",
     "build_cleanup_sql",
     "build_events_sql",
     "build_seed_sql",
+    "parse_scanner_verification",
     "parse_verification",
     "verification_queries",
 ]

@@ -34,7 +34,12 @@ from app.staging.event_scanner import (
     apply_rsvp_scanner_ticket,
     scanner_ticket_fixture,
 )
-from app.staging.seed_sql import build_cleanup_sql, build_seed_sql, parse_verification
+from app.staging.seed_sql import (
+    build_cleanup_sql,
+    build_seed_sql,
+    parse_scanner_verification,
+    parse_verification,
+)
 from app.staging.seed_sql import verification_queries as seed_verification_queries
 from app.staging.synthetic_contract import (
     PERSONAS,
@@ -279,6 +284,7 @@ def test_seed_verification_passes_against_the_live_fixture(
         assert result.ok, f"{key}: {result.error}"
         results[key] = result.rows
     parse_verification(results)
+    parse_scanner_verification(results)
     assert results["scanner_ticket_checkinable"] == ["1"]
     assert results["unpaid_paid_holds"] == ["1"]
 

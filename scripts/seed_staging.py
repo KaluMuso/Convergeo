@@ -54,6 +54,7 @@ from app.staging.event_scanner import (  # noqa: E402
 from app.staging.seed_sql import (  # noqa: E402
     build_cleanup_sql,
     build_seed_sql,
+    parse_scanner_verification,
     parse_verification,
     verification_queries,
 )
@@ -227,6 +228,11 @@ def _verify_contract(conn: StagingPgConn) -> None:
             raise RuntimeError(result.error or f"cannot verify {key}")
         results[key] = result.rows
     parse_verification(results)
+    # Separate gate: the scanner ticket is issued by the rsvp() service path,
+    # not by build_seed_sql(), so it is only assertable here — after
+    # apply_rsvp_scanner_ticket() has run. SQL-only callers of
+    # parse_verification() must not be held to it.
+    parse_scanner_verification(results)
 
 
 def main() -> int:

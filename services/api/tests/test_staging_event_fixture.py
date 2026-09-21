@@ -25,6 +25,7 @@ from app.staging.seed_sql import (
     build_cleanup_sql,
     build_events_sql,
     build_seed_sql,
+    parse_scanner_verification,
     parse_verification,
     verification_queries,
 )
@@ -244,7 +245,7 @@ def test_event_verification_rejects_a_missing_issued_ticket() -> None:
         parse_verification(results)
 
 
-def test_event_verification_rejects_a_scanner_ticket_without_an_order_item() -> None:
+def test_scanner_verification_rejects_a_scanner_ticket_without_an_order_item() -> None:
     """The exact S3 failure, caught at seed time instead of in the browser.
 
     A scanner ticket with no `order_item_id` is an unpaid hold, and
@@ -253,7 +254,22 @@ def test_event_verification_rejects_a_scanner_ticket_without_an_order_item() -> 
     """
     results = _passing_verification() | {"scanner_ticket_checkinable": ["0"]}
     with pytest.raises(RuntimeError, match="order_item_id"):
-        parse_verification(results)
+        parse_scanner_verification(results)
+
+
+def test_static_contract_does_not_require_the_rsvp_issued_scanner_ticket() -> None:
+    """`parse_verification()` covers build_seed_sql() and nothing more.
+
+    Callers that apply the static SQL alone — `test_seed_staging.py` is one —
+    must not be failed for a row only `app.staging.event_scanner` creates. The
+    scanner gate lives in `parse_scanner_verification()` for exactly that
+    reason; folding it back in would break every SQL-only caller.
+    """
+    parse_verification(_passing_verification() | {"scanner_ticket_checkinable": ["0"]})
+
+
+def test_scanner_verification_accepts_a_linked_scanner_ticket() -> None:
+    parse_scanner_verification(_passing_verification())
 
 
 def test_event_verification_rejects_a_hand_linked_paid_hold() -> None:
